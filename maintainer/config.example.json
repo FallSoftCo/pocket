@@ -5,6 +5,10 @@
   "notifyErrors": false,
   "dataDir": "/absolute/private/pocket-maintainer/state",
   "maxReviewsPerDay": 20,
+  "alerts": {
+    "credentialsFile": "/absolute/private/pocket-maintainer/push-only-service-account.json",
+    "targetsFile": "/absolute/private/pocket-maintainer/alert-targets.json"
+  },
   "webhook": {
     "port": 18881,
     "repositoryId": 1391353198,

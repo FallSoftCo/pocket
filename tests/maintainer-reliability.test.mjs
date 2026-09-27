@@ -95,3 +95,8 @@ test('health reports stranded work and signed events route comments, CI, and mer
  assert.deepEqual(eventJobs('issue_comment',{repository,action:'created',issue:{pull_request:{}},comment:{id:8,body:'/pocket reconsider Evidence here'}},42),['comment:8']);
  assert.deepEqual(eventJobs('workflow_run',{repository,action:'completed',workflow_run:{id:9,path:'.github/workflows/check.yml',event:'pull_request'}},42),['run:9']);
 });
+test('external health includes failed or stalled webhook recovery',()=>{
+ const q=new EventQueue(':memory:');q.set('recovery-health',{at:Date.now(),ok:false});assert.equal(q.healthy(),false);
+ q.set('recovery-health',{at:Date.now()-46*60000,ok:true});assert.equal(q.healthy(),false);
+ q.set('recovery-health',{at:Date.now(),ok:true});assert.equal(q.healthy(),true);q.close();
+});

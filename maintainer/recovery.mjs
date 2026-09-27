@@ -28,7 +28,12 @@ export async function recover(gh,hookId){
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const config=JSON.parse(readFileSync(process.env.MAINTAINER_CONFIG,'utf8'));
  const queue=new EventQueue(config.dataDir+'/events.sqlite');
- try{console.log(JSON.stringify({redelivered:await recover(new GitHub(githubCredential(config)),config.webhook.hookId)}));}
- catch(e){await failureNotifier(config,queue)('webhook-recovery','Pocket webhook recovery failed','Missed-delivery recovery could not contact GitHub. Check the maintainer recovery service.');throw e;}
+ try{
+  console.log(JSON.stringify({redelivered:await recover(new GitHub(githubCredential(config)),config.webhook.hookId)}));
+  queue.set('recovery-health',{at:Date.now(),ok:true});
+ }catch(e){
+  queue.set('recovery-health',{at:Date.now(),ok:false});
+  await failureNotifier(config,queue)('webhook-recovery','Pocket webhook recovery failed','Missed-delivery recovery could not contact GitHub. Check the maintainer recovery service.');throw e;
+ }
  finally{queue.close();}
 }

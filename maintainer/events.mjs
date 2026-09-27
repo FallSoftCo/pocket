@@ -69,6 +69,8 @@ export class EventQueue{
  get(key){const row=this.db.prepare('SELECT value FROM metadata WHERE key=?').get(key);return row?JSON.parse(row.value):null;}
  set(key,value){this.db.prepare('INSERT INTO metadata(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify(value));}
  healthy(now=Date.now()){
+  const recovery=this.get('recovery-health');
+  if(recovery&&(!recovery.ok||now-recovery.at>45*60000))return false;
   return !this.db.prepare('SELECT key FROM jobs WHERE not_before IS NULL OR attempts>=3 OR not_before < ? LIMIT 1').get(now-20*60000);
  }
 }
