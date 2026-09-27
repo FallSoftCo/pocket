@@ -34,7 +34,7 @@ export class GitHub {
   // Reopening a closed PR explicitly requests reconsideration. Comments are never prompts.
   const events=await this.pages(`${this.root}/issues/${number}/events`);
   const reopened=events.filter(e=>e.event==='reopened').map(e=>e.id).at(-1)||0;
-  const s={number,state:p.state,draft:p.draft,title:p.title,body:p.body||'',head:p.head.sha,base,author:p.user.login,labels:p.labels.map(x=>x.name),url:p.html_url,files,incomplete,policy,principles,policyHash:digest({policy,principles}),reopened};
+  const s={number,state:p.state,draft:p.draft,title:p.title,body:p.body||'',head:p.head.sha,base,behind:p.mergeable_state==='behind',maintainable:p.maintainer_can_modify||p.head.repo?.full_name?.toLowerCase()===this.repo.toLowerCase(),author:p.user.login,labels:p.labels.map(x=>x.name),url:p.html_url,files,incomplete,policy,principles,policyHash:digest({policy,principles}),reopened};
   s.key=snapshotKey(s);return s;
  }
  async checksPass(s){
@@ -43,6 +43,20 @@ export class GitHub {
   if(!run||run.status!=='completed'||run.conclusion!=='success')return false;
   const jobs=await this.request(`${this.root}/actions/runs/${run.id}/jobs?filter=latest&per_page=100`);
   return s.policy.requiredChecks.every(name=>jobs.jobs.some(j=>j.name===name&&j.status==='completed'&&j.conclusion==='success'));
+ }
+ async prepareCI(s){
+  // Called only after policy/code approval. Never approve a modified workflow.
+  if(s.files.some(f=>[f.filename,f.previous_filename].filter(Boolean).some(p=>p.startsWith('.github/'))))return false;
+  const fresh=await this.snapshot(s.number);
+  if(fresh.key!==s.key||fresh.state!=='open'||fresh.draft||fresh.labels.includes('maintainer:hold'))return false;
+  if(fresh.behind&&fresh.maintainable){
+   await this.request(`${this.root}/pulls/${s.number}/update-branch`,{method:'PUT',body:{expected_head_sha:s.head}});
+   return false; // The updated commit needs fresh review and CI.
+  }
+  const runs=await this.request(`${this.root}/actions/workflows/check.yml/runs?event=pull_request&head_sha=${s.head}&per_page=20`);
+  const run=runs.workflow_runs.find(r=>r.head_sha===s.head&&r.event==='pull_request'&&r.pull_requests.some(p=>p.number===s.number));
+  if(run&&(run.status==='action_required'||run.conclusion==='action_required'))await this.request(`${this.root}/actions/runs/${run.id}/approve`,{method:'POST'});
+  return true;
  }
  async pages(path){
   const all=[];

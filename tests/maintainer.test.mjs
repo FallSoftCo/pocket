@@ -15,7 +15,7 @@ function fake(s=snapshot()){
  const calls=[],comments=[],reviews=[],checks=[];
  const gh={root:'/repos/FallSoftCo/pocket',calls,commentsList:comments,reviews,checks,ready:true,snapshots:0,
   snapshot:async()=>{gh.snapshots++;return structuredClone(s);},
-  comments:async()=>comments,pages:async()=>reviews,checksPass:async()=>gh.ready,
+  comments:async()=>comments,pages:async()=>reviews,checksPass:async()=>gh.ready,prepareCI:async()=>true,
   request:async(path,options={})=>{
    calls.push({path,...options});
    if(path.includes('/pulls?'))return [{number:s.number,draft:s.draft,base:{ref:'main'},labels:s.labels.map(name=>({name}))}];
@@ -114,6 +114,19 @@ test('dry runs never notify or dispatch; reviewer failures never become approval
 test('daily budget prevents unbounded inference',async()=>{
  const gh=fake(),state={items:{},day:new Date().toISOString().slice(0,10),reviews:20};let calls=0;
  await tick({gh,config:{maxReviewsPerDay:20},state,save:()=>{},reviewer:async()=>{calls++;return good;}});assert.equal(calls,0);assert.equal(gh.calls.filter(c=>c.method).length,0);
+});
+test('worker obtains two code reviews and sends no unsolicited review alerts',async()=>{
+ const s=snapshot();s.files[0].filename='server/index.mjs';s.key=snapshotKey(s);const gh=fake(s),state={items:{}};let calls=0,notifications=0;
+ await tick({gh,config:{},state,save:()=>{},reviewer:async()=>{calls++;return good;},notify:async()=>notifications++});
+ assert.equal(calls,2);assert.equal(state.items['1'].decision.action,'merge');assert.equal(notifications,0);
+});
+test('CI preparation checks revision and hold, updates behind branches, and approves only reviewed CI',async()=>{
+ const s=snapshot(),gh=new GitHub('unused'),calls=[];let fresh=s;
+ gh.snapshot=async()=>fresh;gh.request=async(path,options={})=>{calls.push({path,...options});return {workflow_runs:[{id:9,event:'pull_request',head_sha:s.head,pull_requests:[{number:1}],conclusion:'action_required'}]};};
+ fresh={...s,labels:['maintainer:hold']};assert.equal(await gh.prepareCI(s),false);assert.equal(calls.length,0);
+ fresh={...s,behind:true,maintainable:true};assert.equal(await gh.prepareCI(s),false);assert.deepEqual(calls.pop().body,{expected_head_sha:s.head});
+ fresh=s;assert.equal(await gh.prepareCI(s),true);assert.ok(calls.some(c=>c.path.endsWith('/9/approve')));
+ const protectedChange=snapshot();protectedChange.files[0].filename='.github/workflows/check.yml';calls.length=0;assert.equal(await gh.prepareCI(protectedChange),false);assert.equal(calls.length,0);
 });
 test('GitHub pagination finds later receipts and fails closed beyond its limit',async()=>{
  const gh=new GitHub('unused');let calls=0;gh.request=async()=>++calls===1?Array(100).fill({id:1}):[{id:2}];

@@ -34,6 +34,7 @@ export async function tick({gh,config,state,save,reviewer=review,notify=async()=
   if(!item.result){delete state.items[String(s.number)];save();continue;}
   const action=item.decision.action;
   if(config.dryRun){console.log(JSON.stringify({pr:s.number,action,head:s.head}));continue;}
+  if(action==='merge'&&!await gh.prepareCI(s))continue;
   if(config.notifyReviews===true&&!item.notified&&['owner','approve'].includes(action)){
    await notify({number:s.number,url:s.url,head:s.head,title:`Pocket PR #${s.number} needs your review`,message:`${s.title}\n\n${item.decision.reason}\n\n${s.url}\nReviewed commit: ${s.head.slice(0,12)}. Open GitHub to review or merge; maintainer:hold pauses automation.`});
    item.notified=true;save();
