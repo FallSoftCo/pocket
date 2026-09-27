@@ -108,6 +108,8 @@ Start a new Codex client session so it loads the tool. Ask it when you want a no
 
 ## Everyday use
 
+Search tasks by title or project folder. Use Recent, Working, and Following to narrow the list.
+
 **New task** selects an existing absolute workstation folder and prompt. Codex inherits the workstation's model, approval settings, and project instructions. Task creation and replies use durable IDs; ambiguous delivery is shown for review instead of automatically duplicating work.
 
 Open a task and tap its bell to follow it. Replying also follows it. The conversation preserves turn/item order, including compact expandable commands and diffs. Scroll up without losing your place; **Latest** returns to live activity. **Load earlier turns** pages backward. Public reasoning summaries can appear; raw reasoning is excluded.
