@@ -6,7 +6,7 @@ Public APKs use package `co.fallsoft.pocket`, a stable private FallSoft signing 
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-$ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose --print-certs pocket-0.4.1-alpha.1.apk
+$ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose --print-certs pocket-0.4.2-alpha.1.apk
 ```
 
 The initial signing certificate SHA-256 fingerprint is:

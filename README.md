@@ -8,7 +8,7 @@ Start tasks from your phone, follow the conversation in order, and reply when Co
 
 [Download the Android alpha](https://github.com/fallsoftco/pocket/releases) · [Setup](#setup) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Verification](docs/VERIFICATION.md)
 
-> **Experimental alpha.** Tested with Codex CLI 0.157.1 on Linux. Pocket requires that CLI's existing shared app-server Unix socket. This transport is experimental; installations without it are not supported yet. Run `npm run doctor` to check yours. This is an independent project, not an OpenAI product.
+> **Experimental alpha.** Tested with Codex CLI 0.157.1 on Linux. Pocket requires that CLI's existing shared app-server Unix socket. This transport is experimental; installations without it are not supported yet. Run `npm run doctor -- --preflight` to check yours before setup. This is an independent project, not an OpenAI product.
 
 ## What it does
 
@@ -55,17 +55,26 @@ cd pocket
 npm ci
 ```
 
-Run Codex normally and authenticate it. Pocket connects to the existing socket at `~/.codex/app-server-control/app-server-control.sock` (or under `CODEX_HOME`). Set `CODEX_SOCKET` if your installation uses another existing shared socket. Pocket does not start a competing app-server or migrate your conversations.
+Run Codex CLI **0.157.1** interactively and authenticate it. In another terminal, from the Pocket checkout, check compatibility **before configuring Firebase**:
+
+```bash
+codex --version
+npm run doctor -- --preflight
+```
+
+The preflight does not require Firebase or a running Pocket backend. It checks that the existing shared Codex runtime responds. Stop here if it fails; see [missing-socket troubleshooting](docs/DEPLOYMENT.md#diagnosis). Other Codex versions are unverified.
+
+Pocket connects to the existing socket at `~/.codex/app-server-control/app-server-control.sock` (or under `CODEX_HOME`). Set `CODEX_SOCKET` if your installation uses another existing shared socket. Use the same OS user and Codex home as the interactive CLI. Pocket does not start a competing app-server or migrate your conversations.
 
 ### 2. Configure your Firebase project
 
-Create or choose a project in the [Firebase console](https://console.firebase.google.com/). Enable the Firebase Cloud Messaging API and Firebase Management API. Obtain a private service-account JSON credential for your project; never put it in the repository.
+Follow the [Firebase setup walkthrough](docs/FIREBASE.md). It gives copyable commands for enabling APIs, creating a temporary setup account and a separate push-only sender, and removing the setup account afterward. You need your own Firebase project and permission to manage those project resources.
 
 ```bash
-node scripts/configure-firebase.mjs YOUR_PROJECT_ID /private/path/service-account.json
+node scripts/configure-firebase.mjs YOUR_PROJECT_ID /private/path/setup.json /private/path/sender.json
 ```
 
-This registers the Android package `co.fallsoft.pocket` if needed and writes private configuration into ignored `data/`. Setup needs permission to list/create Firebase Android apps and read their configuration. Sending requires `cloudmessaging.messages.create`; for ongoing operation use a suitably scoped service account (for example, the Firebase Cloud Messaging API Admin role). The setup script copies the supplied credential into `data/firebase-admin.json`; you may replace it with a narrower sending credential after setup. See [Firebase's server authorization guide](https://firebase.google.com/docs/cloud-messaging/auth-server).
+This registers the Android package `co.fallsoft.pocket` if needed and writes private configuration into ignored `data/`. With separate credentials, only the sender key is retained. Its sole required permission is `cloudmessaging.messages.create`. Keep keys outside the checkout and out of support reports.
 
 The same signed APK works with each owner's Firebase project. You do not need to rebuild it, add `google-services.json`, or share credentials with FallSoft.
 
@@ -86,7 +95,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.4.1-alpha.1.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.1-alpha.1.apk`.
+Download `pocket-0.4.2-alpha.1.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.2-alpha.1.apk`.
 
 On the workstation, from the checkout:
 

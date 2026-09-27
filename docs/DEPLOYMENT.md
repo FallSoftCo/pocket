@@ -36,7 +36,7 @@ codex mcp add pocket --env POCKET_DATA=/absolute/private/pocket-data --env POCKE
 
 ## Diagnosis
 
-Run `npm run doctor` with the same environment as the backend. It checks Node, Codex presence, socket/protocol access, Firebase configuration, and backend health without submitting a task or printing tokens.
+Before cloud setup, run `npm run doctor -- --preflight`. It checks Node, Codex presence and socket/protocol access without requiring Firebase or the Pocket backend. After starting Pocket, run `npm run doctor` with the same environment as the backend; it also checks Firebase configuration, backend health and the backend's live Codex connection. Neither mode submits a task or prints tokens.
 
 - **Missing socket:** start your authenticated Codex CLI normally. Confirm the tested version and shared-runtime support. A different/newer installation may not expose this experimental transport. Do not create a separate app-server and expect it to control an existing live CLI task.
 - **Cannot reach workstation:** both devices need their private network connected, HTTPS reachable, and the backend running. Check Tailscale Serve's printed URL and port.

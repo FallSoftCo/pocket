@@ -3,6 +3,7 @@ data/
 .env*
 !.env.example
 android/.gradle/
+android/.kotlin/
 android/local.properties
 android/**/build/
 *.keystore

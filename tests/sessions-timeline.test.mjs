@@ -13,6 +13,8 @@ test('session creation is durable, idempotent, project-scoped, and inherits Code
  const codex={ready:false,call:async(method,params)=>{calls.push({method,params});return {thread:{id:'new-thread',cwd:params.cwd,turns:[]}};}};
  const starts=new SessionStarts(db,codex,(thread,row)=>created.push({thread,row}));
  const req={id:'phone-request-1',cwd:dir,prompt:'Read the project'};
+ assert.throws(()=>starts.enqueue({...req,cwd:join(dir,'missing')}),{status:400});
+ assert.equal(starts.get(req.id),undefined,'Rejected input must not persist a request');
  assert.equal(starts.enqueue(req).state,'queued');assert.equal(calls.length,0);
  assert.equal(starts.enqueue(req).id,req.id);assert.throws(()=>starts.enqueue({...req,prompt:'Different task'}),/already belongs/);
  assert.throws(()=>projectPath('relative/path'),/absolute/);assert.throws(()=>projectPath(join(dir,'missing')),/does not exist/);

@@ -1,9 +1,10 @@
 import {isAbsolute,basename} from 'node:path';
 import {realpathSync,statSync} from 'node:fs';
+const invalid=message=>Object.assign(Error(message),{status:400});
 
 export function projectPath(value){
-  if(typeof value!=='string'||!isAbsolute(value)||value.length>4096)throw Error('Choose an absolute folder path on your workstation.');
-  let cwd;try{cwd=realpathSync(value);if(!statSync(cwd).isDirectory())throw Error();}catch{throw Error('That workstation folder does not exist or is not accessible.');}
+  if(typeof value!=='string'||!isAbsolute(value)||value.length>4096)throw invalid('Choose an absolute folder path on your workstation.');
+  let cwd;try{cwd=realpathSync(value);if(!statSync(cwd).isDirectory())throw Error();}catch{throw invalid('That workstation folder does not exist or is not accessible.');}
   return cwd;
 }
 export class SessionStarts {
@@ -11,9 +12,9 @@ export class SessionStarts {
     db.exec("UPDATE session_starts SET state='unknown',error='The bridge restarted during creation. Check recent tasks before starting again.' WHERE state='creating'");
   }
   get(id){return this.db.prepare('SELECT * FROM session_starts WHERE id=?').get(id);}
-  enqueue({id,cwd,prompt}){
-    if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id))throw Error('Invalid task request identifier.');
-    if(typeof prompt!=='string'||!prompt.trim()||prompt.length>32000)throw Error('Enter a task of 1–32000 characters.');
+  enqueue({id,cwd,prompt}={}){
+    if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id))throw invalid('Invalid task request identifier.');
+    if(typeof prompt!=='string'||!prompt.trim()||prompt.length>32000)throw invalid('Enter a task of 1–32000 characters.');
     cwd=projectPath(cwd);prompt=prompt.trim();
     const old=this.get(id);
     if(old){if(old.cwd!==cwd||old.prompt!==prompt)throw Object.assign(Error('This request already belongs to another task.'),{status:409});return old;}

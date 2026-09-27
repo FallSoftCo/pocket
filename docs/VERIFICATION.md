@@ -1,8 +1,24 @@
 # Verification
 
-## Tested platform
+## Tested platforms
 
-Stock Codex CLI **0.157.1**, Linux, Node **22.23.1**, and Pixel 9 Pro Fold on Android **API 36**. The shared Unix app-server was used without a fork or competing runtime.
+Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x**. Physical testing covers a Pixel 9 Pro Fold on Android **API 36**; the public release also runs on an Android **API 35** emulator with Google Play services. The shared Unix app-server was used without a fork or competing runtime.
+
+## Fresh-install and upgrade check: 0.4.2-alpha.1
+
+Verified on September 27, 2026, with Android version code **6**:
+
+- Started from a new Debian 12 container with Node **22.23.3**, a public HTTPS repository clone, `npm ci`, and a newly installed stock Codex CLI. Only the owner's Codex authentication was supplied; no existing Codex configuration, history, Pocket data, or host source directory was mounted. Opening the normal Codex TUI created its shared runtime. The new preflight passed before Firebase or Pocket was running.
+- Created a separate Firebase project on the free plan, registered Pocket with the documented setup flow, and retained a sender whose sole project permission was `cloudmessaging.messages.create`. Removed the temporary setup administrator after configuration. The full doctor passed with the backend running.
+- Installed the previous public signed APK on a wiped API 35 emulator, paired through the actual app UI over private HTTPS, and confirmed registration against the new Firebase project. Started a task from New task and received its final response and completion notification.
+- Upgraded to the signed **0.4.2-alpha.1** APK without uninstalling. Pairing survived, the release certificate matched, and Android reported a non-debuggable package. No personal server or Firebase configuration is embedded in the APK.
+- Answered a real stock-Codex command approval through **Allow once**. The requested test file was absent before approval and contained the expected text afterward; the pending request resolved. This was isolated test work, not an approval in the owner's existing projects.
+- Replied through Android's notification **Reply** action to an idle session. The outbox recorded one accepted reply, Codex completed the continuation with the requested marker, and Android displayed both the sent status and the resulting completion notification.
+- Confirmed the release app process was absent, sent a notification through the fresh Firebase sender, and observed Android start the process and display that notification. This was a background process-death test, not force-stop or overnight Doze.
+- Rejected a nonexistent project folder with a clear error and a usable **Start task** button, selected a valid folder, then started successfully. Tapped **Stop task** during a running command and observed the turn become **Interrupted**.
+- All **47 backend tests** pass locally and in the isolated Linux environment. `npm audit --omit=dev` reports zero known vulnerabilities. Signed `assembleRelease`, `lintRelease`, signature verification, and the public-source scan pass. The release includes checksums and the maintained signing certificate fingerprint.
+
+The fresh-install exercise used automated interaction and an existing Codex account. It is not a usability study with new human users. The test Firebase project and Linux environment are disposable; they are not required services for other installations.
 
 ## Physical-device evidence from 0.4
 
@@ -30,4 +46,4 @@ Release **0.4.1-alpha.1**, Android version code **5**:
 
 ## Limits
 
-Physical reply evidence covers an active turn. Idle continuation, approvals, and stop-task routing use controlled protocol fixtures; no permission request was induced in ongoing user work. Other physical phone vendors, overnight Doze, full 30-minute snooze, reboot recovery, and other Codex versions are unverified. Force-stop prevents push until reopening. FCM acceptance alone never proves phone delivery. This is not an independent security audit or broad compatibility certification.
+Physical reply evidence covers an active turn; the isolated 0.4.2 exercise additionally covers idle continuation, a live command approval, and stopping a running task. No permission request was induced in ongoing user work. Other physical phone vendors, overnight Doze, full 30-minute snooze, reboot recovery, and other Codex versions are unverified. Force-stop prevents push until reopening. FCM acceptance alone never proves phone delivery. This is not an independent security audit or broad compatibility certification.

@@ -19,6 +19,7 @@ fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
 fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback else optString(key,fallback)
 data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean)
 data class Message(val id:String,val role:String,val text:String)
+class PocketApiException(val status:Int,message:String):Exception(message)
 
 object Pocket {
     lateinit var context:Context
@@ -58,7 +59,7 @@ object Pocket {
         if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
         http.newCall(request.build()).execute().use { r ->
             val raw=r.body?.string()?:"{}"; val json=try{JSONObject(raw)}catch(e:Exception){JSONObject().put("error","Unexpected server response (${r.code})")}
-            if(!r.isSuccessful)throw Exception(json.s("error","Request failed (${r.code})"));json
+            if(!r.isSuccessful)throw PocketApiException(r.code,json.s("error","Request failed (${r.code})"));json
         }
     }
     fun pair(server:String,code:String){scope.launch{
@@ -105,16 +106,24 @@ object Pocket {
         val previous=prefs.getString("newTaskRequest",null)?.let{JSONObject(it)}
         val request=if(previous?.s("cwd")==cwd&&previous.s("prompt")==prompt)previous else JSONObject().put("id",UUID.randomUUID().toString()).put("cwd",cwd).put("prompt",prompt)
         prefs.edit().putString("newTaskRequest",request.toString()).commit()
+        var submitted=false
         try{
             var result=api("/api/threads",request)
+            submitted=true
             var attempts=0
             while(result.s("state") in listOf("queued","creating")&&attempts++<45){startStatus=if(result.s("state")=="queued")"Waiting for your workstation…" else "Creating your session…";delay(1000);result=api("/api/session-starts/${request.s("id")}")}
             when(result.s("state")){
                 "started"->{prefs.edit().remove("newTaskRequest").remove("newTaskPrompt").putString("lastProject",cwd).apply();open(result.getString("thread_id"));refresh()}
-                "failed","unknown"->{error=result.s("error","Could not confirm session creation. Check recent tasks.");startStatus=""}
+                "failed"->{prefs.edit().remove("newTaskRequest").apply();error=result.s("error","Session creation failed. You can correct the request and try again.");startStatus=""}
+                "unknown"->{error=result.s("error","Could not confirm session creation. Check recent tasks.");startStatus="Check recent tasks before trying again. This request may already have started."}
                 else->startStatus="Still queued. Check status to continue without creating a duplicate."
             }
-        }catch(e:Exception){error=e.message?:"Could not reach the workstation";startStatus="Your request is saved. Check status before starting again."}finally{starting=false}
+        }catch(e:Exception){
+            error=e.message?:"Could not reach the workstation"
+            if(!submitted&&e is PocketApiException&&e.status in listOf(400,401,403,413)){
+                prefs.edit().remove("newTaskRequest").apply();startStatus=""
+            }else startStatus="Your request is saved. Check status before starting again."
+        }finally{starting=false}
     }}
     fun interrupt(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/interrupt",JSONObject());scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not stop task"}}}
     fun messages():List<Message>{
