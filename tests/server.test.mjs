@@ -1,0 +1,52 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn,spawnSync } from 'node:child_process';
+import { mkdtemp, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import WebSocket from 'ws';
+import {once} from 'node:events';
+
+test('pairing, device auth, durable replies, idempotency and revocation',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'pocket-test-'));const port=19000+Math.floor(Math.random()*1000);
+  const child=spawn(process.execPath,['server/index.mjs'],{env:{...process.env,PORT:String(port),POCKET_DATA:dir,CODEX_SOCKET:join(dir,'missing.sock')},stdio:['ignore','pipe','pipe']});
+  t.after(()=>child.kill());
+  for(let i=0;i<50;i++){try{const r=await fetch(`http://127.0.0.1:${port}/health`);if(r.ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json'),'utf8'));
+  const api=async(path,body,token=adminToken,method=body?'POST':'GET')=>{
+    const r=await fetch(`http://127.0.0.1:${port}${path}`,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};
+  };
+  assert.equal((await api('/api/status',null,'bad')).status,401);
+  assert.equal((await api('/api/files/not-a-file',null,'bad')).status,401,'files require authentication');
+  const denied=new WebSocket(`ws://127.0.0.1:${port}/events`);
+  const deniedStatus=await new Promise(resolve=>{denied.on('unexpected-response',(_req,r)=>{resolve(r.statusCode);r.resume();denied.terminate();});denied.on('error',()=>{});});
+  assert.equal(deniedStatus,401,'WebSocket requires authentication');
+  const cliEnv={...process.env,POCKET_DATA:dir,PORT:String(port),POCKET_PUBLIC_URL:'https://workstation.example.test'};
+  const cli=spawnSync(process.execPath,['scripts/pair-device.mjs'],{env:cliEnv,encoding:'utf8'});
+  assert.equal(cli.status,0,cli.stderr);
+  const cliPair=JSON.parse(cli.stdout);assert.equal(cliPair.server,'https://workstation.example.test');
+  assert.match(cliPair.code,/^[A-F0-9]{10}$/,'generic pairing command uses configured data and port');
+  const unsafe=spawnSync(process.execPath,['scripts/devices.mjs'],{env:{...cliEnv,POCKET_URL:'https://attacker.example.test'},encoding:'utf8'});
+  assert.equal(unsafe.status,1);assert.match(unsafe.stderr,/loopback/,'owner helper refuses remote token disclosure');
+  const pair=await api('/api/pairing',{});
+  const device=await api('/api/pair',{code:pair.data.code,name:'test device'},'');
+  assert.equal(device.status,200);assert.ok(device.data.token);
+  assert.equal((await api('/api/pair',{code:pair.data.code},'')).status,401,'pairing code single-use');
+  assert.equal((await api('/api/pairing',{},device.data.token)).status,403,'device cannot mint pairing codes');
+  assert.equal((await api('/api/notify',{message:'attempt'},device.data.token)).status,403,'device cannot use local owner tool endpoint');
+  const tid=randomUUID(),id=randomUUID();
+  const reply={id,text:'Check delivery without executing a Codex turn'};
+  assert.equal((await api(`/api/threads/${tid}/reply`,reply,device.data.token)).status,202);
+  assert.equal((await api(`/api/threads/${tid}/reply`,reply,device.data.token)).data.state,'queued');
+  assert.equal((await api(`/api/threads/${tid}/reply`,{...reply,text:'different'},device.data.token)).status,409);
+  assert.equal((await api('/api/requests/123/answer',{decision:'accept'},device.data.token)).status,409,'expired approval cannot execute');
+  const n=await api('/api/test-notification',{},device.data.token);
+  const feed=await api('/api/notifications',null,device.data.token);assert.equal(feed.data.notifications[0].id,n.data.id);
+  const ws=new WebSocket(`ws://127.0.0.1:${port}/events`,{headers:{Authorization:`Bearer ${device.data.token}`}});
+  await once(ws,'open');t.after(()=>ws.terminate());
+  const closed=once(ws,'close');
+  await api(`/api/devices/${device.data.id}`,null,adminToken,'DELETE');
+  await closed;
+  assert.equal((await api('/api/status',null,device.data.token)).status,401,'revoked device no longer authenticated');
+});

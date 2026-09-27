@@ -1,0 +1,19 @@
+[Unit]
+Description=Pocket companion for Codex
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=REPLACE_CHECKOUT_PATH
+ExecStart=REPLACE_NODE_PATH REPLACE_CHECKOUT_PATH/server/index.mjs
+Environment=NODE_ENV=production
+Environment=PORT=18880
+Environment=POCKET_DATA=REPLACE_PRIVATE_DATA_PATH
+# Optional: Environment=CODEX_SOCKET=/absolute/path/to/existing.sock
+UMask=0077
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

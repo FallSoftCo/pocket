@@ -1,0 +1,27 @@
+import { DatabaseSync } from 'node:sqlite';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
+import { randomBytes, createHash } from 'node:crypto';
+import path from 'node:path';
+export const hash = s => createHash('sha256').update(s).digest('hex');
+export function openStore(dir) {
+  mkdirSync(dir,{recursive:true,mode:0o700});
+  chmodSync(dir,0o700);
+  const secretsPath=path.join(dir,'secrets.json');
+  const secrets=existsSync(secretsPath)?JSON.parse(readFileSync(secretsPath)): {adminToken:randomBytes(32).toString('hex')};
+  if(!existsSync(secretsPath))writeFileSync(secretsPath,JSON.stringify(secrets),{mode:0o600});
+  chmodSync(secretsPath,0o600);
+  const db=new DatabaseSync(path.join(dir,'pocket.sqlite'));
+  db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
+    CREATE TABLE IF NOT EXISTS devices(id TEXT PRIMARY KEY, name TEXT, token_hash TEXT UNIQUE, created_at INTEGER, last_seen INTEGER DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS pairing(code_hash TEXT PRIMARY KEY, expires INTEGER);
+    CREATE TABLE IF NOT EXISTS watches(thread_id TEXT PRIMARY KEY, name TEXT, enabled INTEGER DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS notifications(id INTEGER PRIMARY KEY AUTOINCREMENT, thread_id TEXT, title TEXT, body TEXT, kind TEXT, attachments TEXT DEFAULT '[]', created_at INTEGER);
+    CREATE TABLE IF NOT EXISTS outgoing(id TEXT PRIMARY KEY, thread_id TEXT, text TEXT, state TEXT, result TEXT, created_at INTEGER, updated_at INTEGER);
+    CREATE TABLE IF NOT EXISTS files(id TEXT PRIMARY KEY, name TEXT, mime TEXT, disk_path TEXT, thread_id TEXT);
+    CREATE TABLE IF NOT EXISTS push_tokens(device_id TEXT PRIMARY KEY REFERENCES devices(id) ON DELETE CASCADE, token TEXT UNIQUE NOT NULL, project_id TEXT NOT NULL, updated_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS push_deliveries(notification_id INTEGER REFERENCES notifications(id) ON DELETE CASCADE, device_id TEXT REFERENCES devices(id) ON DELETE CASCADE, state TEXT NOT NULL, attempts INTEGER DEFAULT 0, next_attempt_at INTEGER DEFAULT 0, message_id TEXT, error TEXT, updated_at INTEGER, PRIMARY KEY(notification_id,device_id));
+    CREATE TABLE IF NOT EXISTS notification_attention(notification_id INTEGER PRIMARY KEY REFERENCES notifications(id) ON DELETE CASCADE, request_id TEXT, resolved_at INTEGER);
+    CREATE TABLE IF NOT EXISTS session_starts(id TEXT PRIMARY KEY,cwd TEXT NOT NULL,prompt TEXT NOT NULL,state TEXT NOT NULL,thread_id TEXT,error TEXT,created_at INTEGER,updated_at INTEGER);
+  `);
+  return {db,secrets};
+}
