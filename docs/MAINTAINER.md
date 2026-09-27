@@ -1,6 +1,6 @@
 # Pocket Maintainer operations
 
-This optional Linux worker implements [the contribution policy](../MAINTAINER_POLICY.md). It polls GitHub every two minutes, reviews immutable PR snapshots with the owner's existing Codex login, and dispatches the trusted main-branch workflow. Public comments and the required `Pocket review` check come from GitHub's built-in Actions App, `github-actions[bot]`. Approval is recorded as a successful check rather than a formal PR approval, so this works even when organization policy prohibits approving reviews from Actions. There is no hosted FallSoft review service, webhook endpoint, or API key stored in Actions.
+This optional Linux worker implements [the contribution policy](../MAINTAINER_POLICY.md). It subscribes to signed GitHub webhooks, reviews immutable PR snapshots with the owner's existing Codex login, and dispatches the trusted main-branch workflow. PR changes and completed CI runs trigger work; an empty queue has no timer, GitHub polling, or model calls. Public comments and the required `Pocket review` check come from GitHub's built-in Actions App, `github-actions[bot]`. Approval is recorded as a successful check rather than a formal PR approval, so this works even when organization policy prohibits approving reviews from Actions. There is no hosted FallSoft review service or API key stored in Actions.
 
 ## Decision and trust boundaries
 
@@ -22,20 +22,28 @@ Requirements: Linux user namespaces, `bwrap`, Node 22.13+, `gh auth login` with 
 3. Publish `maintainer/`, MAINTAINER_POLICY.md, and `.github/workflows/maintainer.yml` on the repository's default branch. This initial distribution targets `FallSoftCo/pocket`; a fork must deliberately update the repository identity in the adapter, workflow guard, and policy.
 4. Configure main-branch protection: require successful `backend`, `android`, and `Pocket review` checks from the GitHub Actions App, and require branches up to date. Do not give the Actions bot a bypass. Formal approving PR reviews are not required; `Pocket review` supplies the automatic review gate. The default workflow token remains read-only and organization settings need not permit Actions approval reviews.
 5. Create labels `maintainer:hold`, `maintainer:owner`, `maintainer:changes`, `maintainer:out-of-scope`, and `maintainer:ready`.
-6. Adapt the [service](../deploy/pocket-maintainer.service.example) and [timer](../deploy/pocket-maintainer.timer.example) into your user systemd directory. Run a cycle with `dryRun: true`, inspect the result, then set it to false and enable the timer.
+6. Generate a private webhook secret (at least 32 random bytes) at `webhook.secretFile`, and set `webhook.repositoryId` to the repository's numeric GitHub ID. Adapt the [service](../deploy/pocket-maintainer.service.example) into your user systemd directory. Run once with `dryRun: true`, inspect the result, then set it to false and enable the service. When upgrading from the polling version, stop and disable `pocket-maintainer.timer` and remove its unit file.
+7. Expose only the webhook listener through an HTTPS reverse proxy. It binds `127.0.0.1:18881`, accepts only `POST /github/events`, validates HMAC-SHA256 over the raw body, checks the repository ID, and durably queues identifiers before acknowledging. It has no app, transcript, file-serving, or administration routes. Keep Pocket's main port private.
+8. Register the subscription with `node maintainer/register-webhook.mjs https://YOUR_WEBHOOK_HOST/github/events`. This creates or updates the matching repository webhook for `pull_request`, `workflow_run`, and `push`; the secret is read from the private config path and never printed. An HTTPS proxy on a dedicated port is supported. For example, a separate Tailscale Funnel on port 10000 can route to this listener; never turn on Funnel for the Pocket application port.
+
+GitHub's [webhook signature guidance](https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries) explains authentication. A dedicated [Tailscale Funnel](https://tailscale.com/docs/reference/tailscale-cli/funnel) is one optional HTTPS transport; any suitable reverse proxy works.
 
 The controller obtains its GitHub credential using `gh auth token` (or `GH_TOKEN`). Never place credentials in the example config or repository. The review subprocess receives only its separate Codex login. Use a fine-grained GitHub token limited to this repository when provisioning a separate worker account.
 
 ## Control and troubleshooting
 
 ```bash
-systemctl --user status pocket-maintainer.timer
+systemctl --user status pocket-maintainer.service
 journalctl --user -u pocket-maintainer.service -n 50
-systemctl --user stop pocket-maintainer.timer pocket-maintainer.service
+systemctl --user stop pocket-maintainer.service
 ```
 
-Apply `maintainer:hold` before editing or manually deciding a PR to pause pending automatic actions. Disabling the GitHub `Pocket Maintainer` workflow also prevents queued dispatches from acting. Stopping the local timer alone does not cancel an already-running Actions job. To resume, remove the hold or start the timer again.
+Apply `maintainer:hold` before editing or manually deciding a PR to pause pending automatic actions. Disabling the GitHub `Pocket Maintainer` workflow also prevents queued dispatches from acting. Stopping the listener alone does not cancel an already-running Actions job. To resume, remove the hold or start the service again.
 
-Offline workstations pause polling. Failed or unavailable reviews do not approve anything; optional error alerts are bounded. A dispatch is retried after ten minutes if no bot receipt appears; feedback is idempotent for the reviewed snapshot. Merges awaiting checks are reconsidered on subsequent polls. GitHub history above 1,000 records fails closed. Only the ten most recently updated open PRs are handled per cycle; sustained high-volume use needs pagination and a proper work queue.
+The listener stores delivery IDs, payload digests, and a coalescing work queue in private SQLite. Duplicate deliveries do not repeat work; events arriving during a review remain queued. PR changes target that PR. CI completion triggers the merge decision immediately. Main-branch changes and completed maintainer actions reconcile open PRs. Bot labels/comments and unrelated workflows do not create review loops.
+
+There is no recurring scan. A service start performs one catch-up reconciliation, so current open PRs are recovered after a host outage. Already accepted work survives restart. GitHub [does not automatically redeliver failed deliveries](https://docs.github.com/en/webhooks/using-webhooks/handling-failed-webhook-deliveries); maintainers can redeliver them through repository webhook settings. A host that is offline cannot receive or process events; deploy the listener and reviewer on an always-on Linux host if continuous availability is required.
+
+Only known outstanding work can schedule a timeout: failed jobs have six bounded backoff retries, a dispatch without a bot receipt is checked after ten minutes (at most three dispatch attempts per snapshot), and a depleted inference budget defers queued work to the next UTC day. Jobs that exhaust retries remain recorded for inspection; a new relevant event reactivates them. Failed reviews never approve anything. GitHub histories and catch-up lists above 1,000 records fail closed. Review notifications remain off by default.
 
 Keep state outside the checkout. Never delete it casually: it records inference budgets and notification/dispatch receipts. If Codex authentication expires, authenticate again on the workstation. After changing the policy, worker, model, or CLI version, run `npm test`, validate isolation and a real review, then deploy the trusted code copy. This is deliberately a narrow initial maintainer, not an autonomous security auditor.

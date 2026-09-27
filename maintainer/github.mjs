@@ -61,7 +61,7 @@ export class GitHub {
  async pages(path){
   const all=[];
   for(let page=1;page<=10;page++){
-   const rows=await this.request(`${path}?per_page=100&page=${page}`);
+   const rows=await this.request(`${path}${path.includes('?')?'&':'?'}per_page=100&page=${page}`);
    if(!Array.isArray(rows))throw Error('Expected paginated GitHub records');
    all.push(...rows);if(rows.length<100)return all;
   }

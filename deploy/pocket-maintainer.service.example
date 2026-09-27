@@ -1,14 +1,18 @@
 [Unit]
-Description=Pocket repository maintainer
+Description=Pocket repository webhook listener and maintainer
 After=network-online.target
 
 [Service]
-Type=oneshot
+Type=simple
 Environment=MAINTAINER_CONFIG=%h/.config/pocket-maintainer/config.json
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 # Adapt node, app, and lock paths; create the private state directory first.
-ExecStart=/usr/bin/flock -n %h/.local/share/pocket-maintainer/worker.lock /usr/bin/node %h/.local/share/pocket-maintainer/app/worker.mjs
+ExecStart=/usr/bin/flock -n %h/.local/share/pocket-maintainer/listener.lock /usr/bin/node %h/.local/share/pocket-maintainer/app/listen.mjs
 UMask=0077
 NoNewPrivileges=yes
-TimeoutStartSec=30min
+Restart=on-failure
+RestartSec=10s
 KillMode=control-group
+
+[Install]
+WantedBy=default.target

@@ -5,6 +5,11 @@
   "notifyErrors": false,
   "dataDir": "/absolute/private/pocket-maintainer/state",
   "maxReviewsPerDay": 20,
+  "webhook": {
+    "port": 18881,
+    "repositoryId": 1391353198,
+    "secretFile": "/absolute/private/pocket-maintainer/webhook-secret"
+  },
   "reviewer": {
     "binary": "/absolute/path/to/codex",
     "authFile": "/absolute/private/codex/auth.json",

@@ -7,16 +7,20 @@ import {GitHub} from './github.mjs';
 import {review} from './reviewer.mjs';
 import {decide,eligible,secretLike,proseOnly} from './core.mjs';
 const ownerReview=summary=>({verdict:'owner',summary,findings:[],policyRule:'',evidence:[],risk:'high'});
-export async function tick({gh,config,state,save,reviewer=review,notify=async()=>{}}){
+export async function tick({gh,config,state,save,reviewer=review,notify=async()=>{},numbers=null}){
  const now=Date.now(),day=new Date(now).toISOString().slice(0,10);
+ let retryAt=null;
+ const retry=at=>{retryAt=retryAt===null?at:Math.min(retryAt,at);};
+ const tomorrow=Date.parse(day+'T00:00:00Z')+86401000;
  if(state.day!==day){state.day=day;state.reviews=0;}
- const prs=await gh.request(`${gh.root}/pulls?state=open&sort=updated&direction=desc&per_page=30`);
- for(const p of prs.slice(0,10)){
+ if(numbers&&numbers.some(n=>!Number.isSafeInteger(n)||n<1))throw Error('Invalid PR work item');
+ const prs=numbers?[...new Set(numbers)].map(number=>({number,base:{ref:'main'},labels:[]})):await gh.request(`${gh.root}/pulls?state=open&sort=updated&direction=desc&per_page=30`);
+ for(const p of prs){
   if(p.draft||p.base.ref!=='main'||p.labels.some(l=>l.name==='maintainer:hold'))continue;
   const s=await gh.snapshot(p.number);if(s.state!=='open'||s.draft||s.labels.includes('maintainer:hold'))continue;
   let item=state.items[String(s.number)];
-  if(!item||item.key!==s.key){
-   if(state.reviews>=(config.maxReviewsPerDay||20))break;
+  if(!item||item.key!==s.key||!item.result){
+   if(state.reviews>=(config.maxReviewsPerDay||20)){retry(tomorrow);continue;}
    item={key:s.key,head:s.head,base:s.base};state.items[String(s.number)]=item;
    let r,second=null;
    if(!eligible(s))r=ownerReview('This change exceeds the automatic review context limits; a maintainer should review it.');
@@ -26,6 +30,7 @@ export async function tick({gh,config,state,save,reviewer=review,notify=async()=
     state.reviews++;save();r=await reviewer(s,config.reviewer||{});
     if(r.verdict==='decline'||(r.verdict==='approve'&&!(r.risk==='low'&&proseOnly(s)))){
      if(state.reviews<(config.maxReviewsPerDay||20)){state.reviews++;save();second=await reviewer(s,config.reviewer||{});}
+     else{retry(tomorrow);continue;}
     }
    }
    item.result={review:r,second};item.decision=decide(s,r,second);save();
@@ -43,11 +48,13 @@ export async function tick({gh,config,state,save,reviewer=review,notify=async()=
    const comments=await gh.comments(s.number);const receipt=comments.some(c=>c.user.login==='github-actions[bot]'&&c.body.includes(`<!-- pocket-maintainer:${s.key} -->`));
    if(receipt&&action!=='merge')continue;
    if(receipt&&action==='merge'&&!await gh.checksPass(s))continue;
-   if(now-item.dispatched<(receipt?2:10)*60000)continue;
+   if(!receipt&&now-item.dispatched<10*60000){retry(item.dispatched+10*60000);continue;}
+   if((item.dispatchAttempts||0)>=3)throw Error('Three workflow dispatches did not resolve this snapshot; inspect the Actions logs.');
   }
   await gh.request(`${gh.root}/actions/workflows/maintainer.yml/dispatches`,{method:'POST',body:{ref:'main',inputs:{pr:String(s.number),head:s.head,base:s.base,key:s.key,result:JSON.stringify(item.result)}}});
-  item.dispatched=now;save();console.log(JSON.stringify({pr:s.number,action,state:'dispatched',head:s.head.slice(0,12)}));
+  item.dispatched=now;item.dispatchAttempts=(item.dispatchAttempts||0)+1;retry(now+10*60000);save();console.log(JSON.stringify({pr:s.number,action,state:'dispatched',head:s.head.slice(0,12)}));
  }
+ return {retryAt};
 }
 async function main(){
  const configPath=process.env.MAINTAINER_CONFIG||join(homedir(),'.config/pocket-maintainer/config.json');
@@ -66,7 +73,8 @@ async function main(){
   const r=await fetch(new URL('/api/notify',url),{method:'POST',redirect:'error',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},body:JSON.stringify({thread_id:config.pocket.threadId,title:n.title,message:n.message,kind:'question'}),signal:AbortSignal.timeout(30000)});
   if(!r.ok)throw Error('Pocket notification failed');
  };
- try{await tick({gh,config,state,save,notify});delete state.lastError;save();}
+ const number=process.argv[2]==='--pr'?Number(process.argv[3]):null;
+ try{const result=await tick({gh,config,state,save,notify,numbers:number===null?null:[number]});delete state.lastError;save();console.log(JSON.stringify({workerResult:result}));}
  catch(e){
   const reason=e.message||'Worker error';console.error(reason);
   if(config.notifyErrors===true&&(!state.lastError||Date.now()-state.lastError.at>6*3600000)){

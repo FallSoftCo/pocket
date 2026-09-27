@@ -111,6 +111,12 @@ test('dry runs never notify or dispatch; reviewer failures never become approval
  await assert.rejects(tick({gh,config:{},state:{items:{}},save:()=>{},reviewer:async()=>{throw Error('offline');}}),/offline/);
  assert.equal(gh.calls.filter(c=>c.method).length,0);
 });
+test('a PR event targets only that PR, and CI completion can merge immediately',async()=>{
+ const s=snapshot(),gh=fake(s),state={items:{}},options={gh,config:{},state,save:()=>{},reviewer:async()=>good,numbers:[1]};
+ await tick(options);assert.ok(!gh.calls.some(c=>c.path.includes('/pulls?')));
+ gh.commentsList.push({user:{login:'github-actions[bot]'},body:`<!-- pocket-maintainer:${s.key} -->`});
+ await tick(options);assert.equal(gh.calls.filter(c=>c.path.endsWith('/dispatches')).length,2,'CI completion must not wait for a periodic cooldown');
+});
 test('daily budget prevents unbounded inference',async()=>{
  const gh=fake(),state={items:{},day:new Date().toISOString().slice(0,10),reviews:20};let calls=0;
  await tick({gh,config:{maxReviewsPerDay:20},state,save:()=>{},reviewer:async()=>{calls++;return good;}});assert.equal(calls,0);assert.equal(gh.calls.filter(c=>c.method).length,0);
