@@ -17,7 +17,7 @@ Start tasks from your phone, follow the conversation in order, and reply when Co
 - Reply from an Android notification, guide an active turn, or stop a selected task.
 - Receive Firebase push when followed work finishes or needs your attention.
 - Ask Codex to notify you under a condition: **“Use Pocket to notify me when the tests pass, with a short summary.”**
-- Choose synthesized tones, optional offline spoken labels, or system notification audio. Actionable items have bounded reminders, dismissal, and snooze.
+- Choose synthesized tones, offline spoken labels or content summaries, or system notification audio. Actionable items have bounded reminders, dismissal, and snooze.
 - Open explicitly shared attachments from your authenticated workstation.
 
 Pocket is for **one owner and their trusted phones**. A paired phone can read and control that owner's Codex tasks. It is not a shared hosting or multi-user permissions system.
@@ -95,7 +95,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.4.2-alpha.1.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.2-alpha.1.apk`.
+Download `pocket-0.4.3-alpha.1.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.3-alpha.1.apk`.
 
 On the workstation, from the checkout:
 
@@ -121,13 +121,17 @@ Search tasks by title or project folder. Use Recent, Working, and Following to n
 
 **New task** selects an existing absolute workstation folder and prompt. Codex inherits the workstation's model, approval settings, and project instructions. Task creation and replies use durable IDs; ambiguous delivery is shown for review instead of automatically duplicating work.
 
+Followed tasks recover missed completion/failure alerts after the Pocket backend reconnects or restarts, using saved turn IDs to prevent duplicates. The first upgrade establishes a baseline without notifying for old completed work.
+
 Open a task and tap its bell to follow it. Replying also follows it. The conversation preserves turn/item order, including compact expandable commands and diffs. Scroll up without losing your place; **Latest** returns to live activity. **Load earlier turns** pages backward. Public reasoning summaries can appear; raw reasoning is excluded.
 
 **Queued** means Pocket received a reply; **sent** means Codex accepted it, not that the task finished. Native questions and supported command/file approvals retain their exact outstanding request IDs. Unsupported request types must be handled in the terminal. Nothing is automatically approved.
 
 Questions, approvals, and errors appear in **Needs you**. Reminders use delays of 5 minutes, then 15 and 30 minutes between repeats, up to three repeats. Swipe away, dismiss, reply, or resolve the request to stop them. **Later · 30m** snoozes. Android may delay these approximate timers; opening a task alone does not dismiss its request.
 
-Optional Speech prepares generic labels using an installed offline English voice; it never reads task text aloud. Tones are the fallback. Audio respects notification volume, Android channel settings, and Do Not Disturb.
+**Labels** prepares generic phrases using an installed offline English voice. **Speak summaries** opts into reading a short excerpt of actual notification content, including while the phone is locked. Codex can supply an optional `spoken_summary` to `notify_user`; otherwise the backend creates a bounded, cleaned excerpt of the title and message. This is an excerpt, not a separate AI interpretation. Code blocks, URLs and long paths are removed.
+
+Summary speech runs locally in a short-lived playback service with a Stop action and a 30-second lifetime limit. There is no permanent service. Normal notification delivery is immediate, with a tone as fallback when speech cannot run. Speech respects silent/vibrate mode, notification volume, channel mute, Do Not Disturb, and audio-focus loss. It does not read a backlog of historical notifications or repeatedly speak reminders. Nothing is sent to an external speech service.
 
 ## Manage devices and data
 

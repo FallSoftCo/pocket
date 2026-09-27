@@ -81,6 +81,7 @@ object Pocket {
         }catch(_:Exception){}}
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention")
+        context.stopService(Intent(context,PocketSpeechService::class.java))
         PocketLive.stop();token="";base="";connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0;pushStatus="Not paired";prefs.edit().clear().apply()
     }
     fun refresh(){scope.launch{
@@ -162,6 +163,8 @@ object Pocket {
         val bounded=seen.sortedByDescending{it.toLongOrNull()?:0}.take(512).toSet()
         prefs.edit().putStringSet("seenIds",bounded).putString("lastDeliveryTransport",transport).putLong("lastDeliveryId",id).putLong("lastDeliveryAt",System.currentTimeMillis()).apply()
         PocketNotifications.show(context,n)
+        val age=System.currentTimeMillis()-n.optLong("created_at")
+        if(transport in listOf("fcm","socket")&&age in 0..120000)PocketSpeech.request(context,n)
     }
     fun catchUp(){scope.launch{try{
         val after=if(prefs.getBoolean("needsHistorySync",false))0 else lastNotification

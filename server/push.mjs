@@ -6,20 +6,20 @@ import {getMessaging} from 'firebase-admin/messaging';
 export function pushData(n) {
   // FCM data has a 4096-byte limit. Full content and files stay on the host.
   const clip=(text,bytes)=>{let out='';for(const char of String(text||'')){if(Buffer.byteLength(out+char)>bytes)break;out+=char;}return out;};
-  return {id:String(n.id),thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2400),kind:n.kind||'update',created_at:String(n.created_at)};
+  return {id:String(n.id),thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2000),spoken_summary:clip(n.spoken_summary,600),kind:n.kind||'update',created_at:String(n.created_at)};
 }
 export class PushDelivery {
   constructor(db,{config=null,send=null,clock=()=>Date.now()}={}){this.db=db;this.config=config;this.send=send;this.clock=clock;this.busy=false;}
   get enabled(){return !!this.config&&!!this.send;}
-  enqueue(notificationId){
+  enqueue(notificationId,{flush=true}={}){
     if(!this.enabled)return;
     this.db.prepare("INSERT OR IGNORE INTO push_deliveries(notification_id,device_id,state,updated_at) SELECT ?,device_id,'queued',? FROM push_tokens WHERE project_id=?").run(notificationId,this.clock(),this.config.projectId);
-    void this.flush();
+    if(flush)void this.flush().catch(e=>console.error('Push retry',e.message));
   }
   async flush(){
     if(!this.enabled||this.busy)return;this.busy=true;
     try{
-      const rows=this.db.prepare("SELECT p.*,t.token,n.thread_id,n.title,n.body,n.kind,n.created_at FROM push_deliveries p JOIN push_tokens t ON t.device_id=p.device_id JOIN notifications n ON n.id=p.notification_id WHERE p.state IN ('queued','retry') AND p.next_attempt_at<=? AND t.project_id=? ORDER BY p.notification_id LIMIT 100").all(this.clock(),this.config.projectId);
+      const rows=this.db.prepare("SELECT p.*,t.token,n.thread_id,n.title,n.body,n.kind,n.created_at,n.spoken_summary FROM push_deliveries p JOIN push_tokens t ON t.device_id=p.device_id JOIN notifications n ON n.id=p.notification_id WHERE p.state IN ('queued','retry') AND p.next_attempt_at<=? AND t.project_id=? ORDER BY p.notification_id LIMIT 100").all(this.clock(),this.config.projectId);
       for(const row of rows){
         // Recheck revocation immediately before handing the token to Firebase.
         if(!this.db.prepare('SELECT 1 FROM push_tokens WHERE device_id=? AND token=?').get(row.device_id,row.token))continue;

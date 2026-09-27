@@ -23,5 +23,11 @@ export function openStore(dir) {
     CREATE TABLE IF NOT EXISTS notification_attention(notification_id INTEGER PRIMARY KEY REFERENCES notifications(id) ON DELETE CASCADE, request_id TEXT, resolved_at INTEGER);
     CREATE TABLE IF NOT EXISTS session_starts(id TEXT PRIMARY KEY,cwd TEXT NOT NULL,prompt TEXT NOT NULL,state TEXT NOT NULL,thread_id TEXT,error TEXT,created_at INTEGER,updated_at INTEGER);
   `);
+  const columns=db.prepare('PRAGMA table_info(notifications)').all().map(c=>c.name);
+  if(!columns.includes('source_turn_id'))db.exec('ALTER TABLE notifications ADD COLUMN source_turn_id TEXT');
+  if(!columns.includes('spoken_summary'))db.exec("ALTER TABLE notifications ADD COLUMN spoken_summary TEXT NOT NULL DEFAULT ''");
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS notification_turn ON notifications(thread_id,source_turn_id) WHERE source_turn_id IS NOT NULL;
+    CREATE TABLE IF NOT EXISTS completion_watches(thread_id TEXT PRIMARY KEY,since INTEGER NOT NULL,initialized INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS completion_seen(thread_id TEXT NOT NULL,turn_id TEXT NOT NULL,PRIMARY KEY(thread_id,turn_id));`);
   return {db,secrets};
 }

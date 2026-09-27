@@ -2,7 +2,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id(
 android {
     namespace = "co.fallsoft.pocket"
     compileSdk = 36
-    defaultConfig { applicationId = "co.fallsoft.pocket"; minSdk = 28; targetSdk = 36; versionCode = 6; versionName = "0.4.2-alpha.1" }
+    defaultConfig { applicationId = "co.fallsoft.pocket"; minSdk = 28; targetSdk = 36; versionCode = 7; versionName = "0.4.3-alpha.1" }
     signingConfigs {
         if (System.getenv("POCKET_SIGNING_STORE") != null) {
             create("release") {

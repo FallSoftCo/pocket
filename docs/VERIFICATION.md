@@ -4,6 +4,19 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x**. Physical testing covers a Pixel 9 Pro Fold on Android **API 36**; the public release also runs on an Android **API 35** emulator with Google Play services. The shared Unix app-server was used without a fork or competing runtime.
 
+## Recovery and spoken summaries: 0.4.3-alpha.1
+
+Verified on September 27, 2026, with Android version code **7**:
+
+- A controlled app-server test follows a running task, stops the Pocket process, completes the task while disconnected, and restarts Pocket against the same database. Exactly one completion notification is recovered. Another restart and a replayed completion event do not duplicate it. An inaccessible watched task does not block recovery of another task.
+- Recovery tests cover existing-history baselines, offline subscription boundaries, failed turns, deliberate interruption, and unfollow/refollow behavior. Notification persistence and push enqueue share a database transaction; completed turns have a unique notification identity.
+- Upgraded the owner's Pixel in place, retaining pairing and preferences, and enabled Speak summaries. A real Firebase notification caused offline TTS playback. The owner confirmed hearing the speech.
+- Held Do Not Disturb active until a separate notification was confirmed received; no speech started. Restored the original setting, confirmed the Android app process was absent, then sent another FCM notification. Android restarted Pocket, the TTS engine reported playback completion, and the playback service stopped. The owner confirmed this corrected check worked. The first attempted quiet-mode check ended before confirming delivery and is not counted as evidence.
+- Spoken text uses an optional explicit summary or a bounded, cleaned excerpt. Tests verify removal of code/markup/URLs, content bounds, and total FCM payload size. Historical catch-up and reminder delivery do not start automatic speech.
+- **51 backend tests** pass. Android debug/release builds and release lint pass. The phone retained its existing debug signing identity; the separate public APK uses the maintained FallSoft release certificate.
+
+Native approval requests still belong to their original bridge connection and must be handled in the terminal if that connection is lost. Speech is optional and falls back to the notification tone if an offline voice, audio focus, or background-start permission is unavailable. This is not a guarantee of delivery under Android force-stop.
+
 ## Fresh-install and upgrade check: 0.4.2-alpha.1
 
 Verified on September 27, 2026, with Android version code **6**:

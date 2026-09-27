@@ -10,6 +10,8 @@ import { Codex } from './codex.mjs';
 import { openStore, hash } from './store.mjs';
 import { loadPush } from './push.mjs';
 import { SessionStarts,recentProjects } from './sessions.mjs';
+import { CompletionRecovery } from './completions.mjs';
+import { spokenSummary } from './speech.mjs';
 import { LiveTimeline,timelinePage } from './timeline.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
@@ -22,7 +24,7 @@ const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1
 const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
 const attached=new Set(), pending=new Map(), syncing=new Set();
 const timeline=new LiveTimeline();
-const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{attached.add(thread.id);timeline.seed(thread);emit('sessionStarted',{threadId:thread.id});void sendOutgoing(row,thread);});
+const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id});void sendOutgoing(row,thread);});
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...payload}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
 const safeEqual=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
@@ -33,12 +35,19 @@ const owner=(req,res,next)=>{if(req.device.id!=='owner')return res.status(403).j
 const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 const requireId=id=>{if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(id))throw new Error('Invalid thread identifier');return id;};
 const notificationRow=r=>({...r,attachments:JSON.parse(r.attachments||'[]')});
-function notify(threadId,title,body,kind='update',attachments=[],requestId=null) {
+const completions=new CompletionRecovery(db,(threadId,title,body,kind,turnId)=>notify(threadId,title,body,kind,[],null,null,turnId));
+function notify(threadId,title,body,kind='update',attachments=[],requestId=null,speech=null,turnId=null) {
   const at=now();
-  const r=db.prepare('INSERT INTO notifications(thread_id,title,body,kind,attachments,created_at) VALUES(?,?,?,?,?,?)').run(threadId,title,body,kind,JSON.stringify(attachments),at);
-  const n={id:Number(r.lastInsertRowid),thread_id:threadId,title,body,kind,attachments,created_at:at};
-  if(threadId&&['question','approval','error'].includes(kind))db.prepare('INSERT INTO notification_attention(notification_id,request_id) VALUES(?,?)').run(n.id,requestId);
-  emit('notification',{notification:n}); push.enqueue(n.id); return n;
+  let n;
+  db.exec('BEGIN IMMEDIATE');
+  try{
+    const r=db.prepare('INSERT OR IGNORE INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,source_turn_id) VALUES(?,?,?,?,?,?,?,?)').run(threadId,title,body,kind,JSON.stringify(attachments),at,spokenSummary(title,body,speech),turnId);
+    if(!r.changes){db.exec('COMMIT');return null;}
+    n={id:Number(r.lastInsertRowid),thread_id:threadId,title,body,kind,attachments,created_at:at,spoken_summary:spokenSummary(title,body,speech)};
+    if(threadId&&['question','approval','error'].includes(kind))db.prepare('INSERT INTO notification_attention(notification_id,request_id) VALUES(?,?)').run(n.id,requestId);
+    push.enqueue(n.id,{flush:false});db.exec('COMMIT');
+  }catch(e){db.exec('ROLLBACK');throw e;}
+  emit('notification',{notification:n});void push.flush().catch(e=>console.error('Push retry',e.message));return n;
 }
 function resolveAttention(where,...args){
   const ids=db.prepare(`SELECT notification_id FROM notification_attention WHERE resolved_at IS NULL AND (${where})`).all(...args).map(x=>x.notification_id);
@@ -51,7 +60,7 @@ resolveAttention('request_id IS NOT NULL');
 async function attach(threadId){
   requireId(threadId); await codex.connect();
   if(!attached.has(threadId)){
-    const r=await codex.call('thread/resume',{threadId});timeline.seed(r.thread);attached.add(threadId); return r.thread;
+    const r=await codex.call('thread/resume',{threadId});timeline.seed(r.thread);completions.observe(r.thread);attached.add(threadId); return r.thread;
   }
   return (await codex.call('thread/read',{threadId,includeTurns:true})).thread;
 }
@@ -97,31 +106,26 @@ codex.on('event',m=>{
     if(!duplicate)notify(threadId,question?'Codex has a question':'Codex needs your attention',p.questions?.map(q=>q.question).join('\n')||p.reason||p.command||p.message||'Open the task to review the request.',question?'question':'approval',[],String(m.id));
   }
   if(m.method==='item/completed' && p.item?.type==='agentMessage')emit('message',{threadId,item:p.item});
-  if(m.method==='turn/completed'){
-    const watch=db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(threadId);
-    if(watch){
-      const msg=p.turn?.items?.filter(x=>x.type==='agentMessage').at(-1)?.text;
-      const failed=p.turn?.status==='failed';
-      notify(threadId,failed?'Codex hit a problem':watch.name||'Codex finished',failed?(p.turn?.error?.message||msg||'Open the task to review what stopped the work.'):(msg||'The latest turn is ready to review.'),failed?'error':'complete');
-    }
-  }
+  if(m.method==='turn/completed')completions.complete(threadId,p.turn);
   // Only forward subscribed task events, never unrelated global messages or credentials.
   if(threadId && attached.has(threadId))emit('codex',{event:{method:m.method,...(m.id!==undefined?{id:m.id}:{}),params:{threadId,turnId:p.turnId}}});
 });
 codex.on('connected',()=>emit('status',{connected:true}));
 codex.on('disconnected',()=>{attached.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',{connected:false});});
+let reconnecting=false;
 setInterval(async()=>{
+  if(reconnecting)return;reconnecting=true;
   try{
     await codex.connect();
     await sessionStarts.flush();
-    for(const w of db.prepare('SELECT thread_id FROM watches').all())if(!attached.has(w.thread_id))await attach(w.thread_id);
+    for(const w of db.prepare('SELECT thread_id FROM watches').all())if(!attached.has(w.thread_id)){try{await attach(w.thread_id);}catch{if(!codex.ready)break;}}
     await flush();
-  }catch(e){ /* Reconnect without changing the running Codex process. */ }
+  }catch(e){ /* Reconnect without changing the running Codex process. */ }finally{reconnecting=false;}
 },5000).unref();
 codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.2-alpha.1'}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.3-alpha.1'}));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -141,7 +145,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>res.json({connected:codex.ready,host:hostname(),version:'0.4.2-alpha.1',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
+app.get('/api/status',(req,res)=>res.json({connected:codex.ready,host:hostname(),version:'0.4.3-alpha.1',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -188,7 +192,9 @@ app.post('/api/threads/:id/interrupt',route(async(req,res)=>{
 }));
 app.post('/api/threads/:id/watch',route(async(req,res)=>{
   const t=await attach(req.params.id);
+  const wasFollowing=!!db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(t.id);
   db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET name=excluded.name,enabled=excluded.enabled').run(t.id,t.name||t.preview?.slice(0,60)||'Codex',req.body.enabled?1:0);
+  if(req.body.enabled&&!wasFollowing)completions.follow(t.id,t);
   res.json({ok:true});
 }));
 app.post('/api/threads/:id/reply',route(async(req,res)=>{
@@ -197,8 +203,10 @@ app.post('/api/threads/:id/reply',route(async(req,res)=>{
   const existing=db.prepare('SELECT * FROM outgoing WHERE id=?').get(id);
   if(existing){if(existing.thread_id!==threadId||existing.text!==text)return res.status(409).json({error:'Reply id already belongs to a different message.'});return res.json({id,state:existing.state});}
   db.prepare('INSERT INTO outgoing(id,thread_id,text,state,created_at,updated_at) VALUES(?,?,?,?,?,?)').run(id,threadId,text,'queued',now(),now());
+  const wasFollowing=!!db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId);
   // A phone reply explicitly opts this task into a completion notification.
   db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1) ON CONFLICT(thread_id) DO UPDATE SET enabled=1').run(threadId,'Codex replied');
+  if(!wasFollowing)completions.follow(threadId);
   res.status(202).json({id,state:'queued'}); if(codex.ready)void sendOutgoing({id,thread_id:threadId,text,created_at:now()});
 }));
 app.get('/api/replies/:id',(req,res)=>{
@@ -238,10 +246,11 @@ function saveAttachment(file,threadId){
 app.post('/api/notify',owner,route(async(req,res)=>{
   const b=req.body, threadId=requireId(b.thread_id);
   if(!b.message||String(b.message).length>32000)return res.status(400).json({error:'A message up to 32000 characters is required.'});
+  if(b.spoken_summary!==undefined&&(typeof b.spoken_summary!=='string'||b.spoken_summary.length>240))return res.status(400).json({error:'Spoken summary must be at most 240 characters.'});
   const t=await attach(threadId);
   db.prepare('INSERT OR IGNORE INTO watches(thread_id,name,enabled) VALUES(?,?,0)').run(threadId,t.name||'Codex');
   const attachments=(b.files||[]).slice(0,5).map(f=>saveAttachment(f,threadId));
-  res.json({notification:notify(threadId,String(b.title||t.name||'Codex update').slice(0,180),String(b.message),['update','complete','question','error'].includes(b.kind)?b.kind:'update',attachments)});
+  res.json({notification:notify(threadId,String(b.title||t.name||'Codex update').slice(0,180),String(b.message),['update','complete','question','error'].includes(b.kind)?b.kind:'update',attachments,null,b.spoken_summary)});
 }));
 app.get('/api/files/:id',(req,res)=>{const f=db.prepare('SELECT * FROM files WHERE id=?').get(req.params.id);if(!f)return res.sendStatus(404);res.set('Content-Type',f.mime);res.set('Content-Disposition',`inline; filename*=UTF-8''${encodeURIComponent(f.name)}`);res.sendFile(f.disk_path);});
 app.get('/api/devices',owner,(_req,res)=>res.json({devices:db.prepare('SELECT id,name,created_at,last_seen FROM devices').all()}));

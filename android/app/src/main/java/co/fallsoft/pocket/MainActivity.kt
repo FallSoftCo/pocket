@@ -174,11 +174,12 @@ fun relative(time:Long):String{val seconds=(System.currentTimeMillis()-(if(time<
         Text("Hear what happened.",fontSize=21.sp,fontWeight=FontWeight.Medium)
         Text("A different sound for results, questions, approvals and problems.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            listOf("tones" to "Tones","voice" to "Speech","system" to "System").forEach{(value,label)->
+            listOf("tones" to "Tones","voice" to "Labels","system" to "System").forEach{(value,label)->
                 FilterChip(selected=PocketAudio.mode==value,onClick={PocketAudio.select(value)},label={Text(label,fontSize=12.sp)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
             }
         }
-        Text(when(PocketAudio.mode){"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        FilterChip(selected=PocketAudio.mode=="summaries",onClick={PocketAudio.select("summaries")},label={Text("Speak summaries")},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
+        Text(when(PocketAudio.mode){"summaries"->"A short tone, then a brief summary in an offline voice. Reads notification content aloud, including while locked. Quiet mode and Do Not Disturb silence speech.";"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
         if(PocketAudio.status.isNotBlank())Text(PocketAudio.status,color=Mint,fontSize=12.sp)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
             listOf("complete" to "Finished","question" to "Question","error" to "Problem").forEach{(kind,label)->TextButton({PocketAudio.preview(kind)}){Text("▶ $label",color=Mint,fontSize=11.sp)}}

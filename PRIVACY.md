@@ -16,7 +16,7 @@ This is self-hosted application infrastructure, **not** independence from Google
 
 ## Audio, access, and retention
 
-Speech labels are generic, prepared with an offline English Android TTS voice; Pocket does not send task text to a speech service. Notification previews can appear on your device according to Android's lock-screen settings.
+Speech is optional. Labels are generic; Speak summaries reads a bounded excerpt of notification content aloud, including while locked. Summaries travel with the existing Firebase notification payload and use an installed offline English Android TTS voice. No external summarization or speech service is used. Excerpt cleanup is not a guarantee that sensitive task content will be removed; enable content speech only where reading your notifications aloud is appropriate. Notification previews can appear on your device according to Android's lock-screen settings.
 
 History and copied attachments have no automatic expiry in this alpha. Stop the backend and delete its data directory to erase Pocket server state (and invalidate all devices); this does not erase Codex history. Revoke a lost device using `node scripts/devices.mjs revoke DEVICE_ID`. Revocation prevents subsequent backend access and future push dispatches, but cannot recall already delivered or in-flight notifications. Protect the workstation, phone, backups, and tailnet accordingly.
 

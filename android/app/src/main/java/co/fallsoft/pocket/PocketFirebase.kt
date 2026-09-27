@@ -82,7 +82,7 @@ class PocketFirebaseService:FirebaseMessagingService(){
         val n=JSONObject(message.data)
         if(n.optLong("id")<=0)return
         // Render immediately within FCM's execution window. No network request is needed.
-        Pocket.acceptNotification(n,"fcm")
+        Pocket.acceptNotification(n,if(message.priority==RemoteMessage.PRIORITY_HIGH)"fcm" else "fcm-normal")
         Log.i("PocketPush","Received FCM notification ${n.optLong("id")}")
     }
     override fun onDeletedMessages(){Pocket.prefs.edit().putBoolean("needsHistorySync",true).apply()}

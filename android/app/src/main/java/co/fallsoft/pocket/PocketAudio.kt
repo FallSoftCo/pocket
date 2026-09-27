@@ -38,7 +38,7 @@ object PocketAudio {
     private fun voiceReady()=labels.keys.all{file(Pocket.context,"voice",it).length()>44}
     @Synchronized fun channel(c:Context,raw:String):String {
         val event=kind(raw)
-        val profile=if(mode=="voice"&&!voiceReady())"tones" else mode
+        val profile=if(mode=="summaries"||(mode=="voice"&&!voiceReady()))"tones" else mode
         if(profile=="tones")ensureTone(c,event)
         val id="audio-$profile-v1-$event"
         val manager=c.getSystemService(NotificationManager::class.java)
@@ -51,8 +51,9 @@ object PocketAudio {
         return id
     }
     fun select(value:String){
-        if(value !in listOf("tones","voice","system"))return
+        if(value !in listOf("tones","voice","system","summaries"))return
         mode=value;Pocket.prefs.edit().putString("audioMode",value).apply();status=""
+        if(value!="summaries")Pocket.context.stopService(android.content.Intent(Pocket.context,PocketSpeechService::class.java))
         if(value=="voice")prepareVoice()
     }
     fun prepareVoice(){
@@ -93,6 +94,7 @@ object PocketAudio {
     fun preview(raw:String){
         val event=kind(raw)
         PocketNotifications.show(Pocket.context,org.json.JSONObject().put("id",900000000L+labels.keys.indexOf(event)).put("kind",event).put("title",phrases[event]).put("body","Sound preview · ${labels[event]}"))
+        if(mode=="summaries")PocketSpeech.request(Pocket.context,org.json.JSONObject().put("id",System.currentTimeMillis()).put("kind",event).put("spoken_summary",when(event){"complete"->"Pocket: all tests passed. The release is ready.";"question"->"Website: should I publish the preview or keep it private?";else->"Build failed: signing credentials are missing."}))
     }
     private fun ensureTone(c:Context,event:String){
         val dest=file(c,"tones",event);if(dest.length()>44)return
