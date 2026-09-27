@@ -22,7 +22,7 @@ export function executionArgs(binary,dir,{model='gpt-6-astra',provider=null}={})
  if(provider)args.push('-c','model_provider="probe"','-c',`model_providers.probe={name="probe",base_url=${JSON.stringify(provider)},wire_api="responses",requires_openai_auth=false}`);
  args.push('-');return args;
 }
-export async function review(snapshot,{binary=process.env.MAINTAINER_CODEX_BIN||'codex',authFile=join(homedir(),'.codex/auth.json'),model='gpt-6-astra',timeoutMs=180000,provider=null,persistAuth=false}={}){
+export async function review(snapshot,{binary=process.env.MAINTAINER_CODEX_BIN||'codex',bubblewrap='/usr/bin/bwrap',authFile=join(homedir(),'.codex/auth.json'),model='gpt-6-astra',timeoutMs=180000,provider=null,persistAuth=false}={}){
  const version=execFileSync(binary,['--version'],{encoding:'utf8'}).trim();
  if(version!=='codex-cli 0.157.1')throw Error('Reviewer isolation is verified only for Codex CLI 0.157.1; revalidate before upgrading.');
  binary=realpathSync(binary.includes('/')?binary:execFileSync('/usr/bin/which',[binary],{encoding:'utf8'}).trim());
@@ -35,7 +35,7 @@ export async function review(snapshot,{binary=process.env.MAINTAINER_CODEX_BIN||
   const contribution={title:snapshot.title,body:snapshot.body,files:snapshot.files.map(({filename,status,patch,context})=>({filename,status,patch,context}))};
   const prompt=`TRUSTED POLICY:\n${snapshot.principles}\nRULES:\n${JSON.stringify(snapshot.policy.declineRules)}\nUNTRUSTED CONTRIBUTION JSON:\n${JSON.stringify(contribution)}`;
   if(Buffer.byteLength(prompt)>200000)throw Error('Review prompt exceeds context budget');
-  const child=spawn('/usr/bin/bwrap',executionArgs(binary,dir,{model,provider}),{env:{PATH:'/usr/bin:/bin'},stdio:['pipe','pipe','pipe'],detached:true});
+  const child=spawn(bubblewrap,executionArgs(binary,dir,{model,provider}),{env:{PATH:'/usr/bin:/bin'},stdio:['pipe','pipe','pipe'],detached:true});
   let output='',errors='',toolAttempt=false,overflow=false,timedOut=false;
   const stop=()=>{try{process.kill(-child.pid,'SIGKILL');}catch{}};
   const timer=setTimeout(()=>{timedOut=true;stop();},timeoutMs);
