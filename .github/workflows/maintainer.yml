@@ -32,6 +32,7 @@ jobs:
       pull-requests: write
       issues: write
       actions: read
+      checks: write
     steps:
       # This job never checks out, builds, imports, or executes a PR's code.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

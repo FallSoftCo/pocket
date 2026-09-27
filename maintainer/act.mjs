@@ -17,13 +17,16 @@ export async function act(gh,input){
  const body=makeComment(s,review,decision,s.key);
  // Re-fetch immediately before writing, never act on an old revision or new hold.
  s=await gh.snapshot(number);if(!current())return {state:'stale-or-held'};
+ // A required GitHub check records approval without needing organization-wide
+ // permission for Actions to submit approving PR reviews.
+ const checks=await gh.request(`${gh.root}/commits/${s.head}/check-runs?check_name=Pocket%20review&per_page=100`);
+ const existing=checks.check_runs.find(c=>c.app?.slug==='github-actions'&&c.external_id===s.key);
+ const conclusion=decision.action==='merge'?'success':'action_required';
+ if(!existing||existing.conclusion!==conclusion){
+  const result={name:'Pocket review',head_sha:s.head,status:'completed',conclusion,external_id:s.key,output:{title:decision.action==='merge'?'Approved by Pocket Maintainer':'Pocket Maintainer: '+decision.action,summary:body}};
+  await gh.request(existing?`${gh.root}/check-runs/${existing.id}`:`${gh.root}/check-runs`,{method:existing?'PATCH':'POST',body:result});
+ }
  if(!prior){
-  const event=decision.action==='changes'?'REQUEST_CHANGES':['approve','merge'].includes(decision.action)?'APPROVE':'COMMENT';
-  // Reviews pin approval to the reviewed commit. A separate comment is the durable idempotency receipt.
-  if(event!=='COMMENT'){
-   const reviews=await gh.pages(`${gh.root}/pulls/${number}/reviews`);
-   if(!reviews.some(r=>r.user.login==='github-actions[bot]'&&r.commit_id===s.head&&r.body.includes(marker)))await gh.request(`${gh.root}/pulls/${number}/reviews`,{method:'POST',body:{commit_id:s.head,event,body}});
-  }
   await gh.request(`${gh.root}/issues/${number}/comments`,{method:'POST',body:{body}});
  }
  const label={owner:'maintainer:owner',approve:'maintainer:owner',changes:'maintainer:changes',decline:'maintainer:out-of-scope',merge:'maintainer:ready'}[decision.action];
@@ -37,7 +40,7 @@ export async function act(gh,input){
  }
  if(decision.action==='merge'&&await gh.checksPass(s)){
   s=await gh.snapshot(number);if(!current())return {state:'stale-or-held'};
-  // Required status checks and stale-approval protection remain enforced by GitHub.
+  // Required CI and commit-bound review checks remain enforced by GitHub.
   const r=await gh.request(`${gh.root}/pulls/${number}/merge`,{method:'PUT',body:{sha:s.head,merge_method:'squash'}});
   return {state:r.merged?'merged':'waiting-for-checks'};
  }

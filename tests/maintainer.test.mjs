@@ -12,13 +12,15 @@ function snapshot(extra={}){
  s.key=snapshotKey(s);return s;
 }
 function fake(s=snapshot()){
- const calls=[],comments=[],reviews=[];
- const gh={root:'/repos/FallSoftCo/pocket',calls,commentsList:comments,reviews,ready:true,snapshots:0,
+ const calls=[],comments=[],reviews=[],checks=[];
+ const gh={root:'/repos/FallSoftCo/pocket',calls,commentsList:comments,reviews,checks,ready:true,snapshots:0,
   snapshot:async()=>{gh.snapshots++;return structuredClone(s);},
   comments:async()=>comments,pages:async()=>reviews,checksPass:async()=>gh.ready,
   request:async(path,options={})=>{
    calls.push({path,...options});
    if(path.includes('/pulls?'))return [{number:s.number,draft:s.draft,base:{ref:'main'},labels:s.labels.map(name=>({name}))}];
+   if(path.includes('/check-runs?'))return {check_runs:checks};
+   if(options.method==='POST'&&path.endsWith('/check-runs'))checks.push({id:checks.length+1,app:{slug:'github-actions'},...options.body});
    if(options.method==='POST'&&path.endsWith('/comments'))comments.push({user:{login:'github-actions[bot]'},body:options.body.body});
    if(options.method==='POST'&&path.endsWith('/reviews'))reviews.push({user:{login:'github-actions[bot]'},commit_id:options.body.commit_id,body:options.body.body});
    if(path.endsWith('/merge'))return {merged:true};
@@ -70,22 +72,22 @@ test('a revision arriving immediately before writes cancels the action',async()=
 test('approval is commit-bound, failed checks prevent merge, receipts avoid duplicate feedback',async()=>{
  const s=snapshot(),gh=fake(s);gh.ready=false;
  assert.equal((await act(gh,input(s))).state,'waiting-for-checks');
- assert.equal(gh.calls.find(c=>c.path.endsWith('/reviews')).body.commit_id,s.head);
+ assert.equal(gh.checks[0].head_sha,s.head);assert.equal(gh.checks[0].conclusion,'success');
  assert.ok(!gh.calls.some(c=>c.path.endsWith('/merge')));
  gh.ready=true;assert.equal((await act(gh,input(s))).state,'merged');
- assert.equal(gh.calls.filter(c=>c.path.endsWith('/reviews')).length,1);
+ assert.equal(gh.checks.length,1);
  assert.equal(gh.calls.filter(c=>c.path.endsWith('/comments')).length,1);
  assert.deepEqual(gh.calls.find(c=>c.path.endsWith('/merge')).body,{sha:s.head,merge_method:'squash'});
 });
 test('a contributor cannot spoof a bot receipt, and partial writes recover',async()=>{
  const s=snapshot(),gh=fake(s),marker=`<!-- pocket-maintainer:${s.key} -->`;
  gh.commentsList.push({user:{login:'contributor'},body:marker});
- gh.reviews.push({user:{login:'github-actions[bot]'},commit_id:s.head,body:marker});
- await act(gh,input(s));assert.equal(gh.calls.filter(c=>c.path.endsWith('/reviews')).length,0);assert.equal(gh.calls.filter(c=>c.path.endsWith('/comments')).length,1);
+ gh.checks.push({id:1,app:{slug:'github-actions'},external_id:s.key,conclusion:'success'});
+ await act(gh,input(s));assert.equal(gh.checks.length,1);assert.equal(gh.calls.filter(c=>c.path.endsWith('/comments')).length,1);
 });
 test('changes request corrections; corroborated scope decisions explain and close',async()=>{
  const s=snapshot(),gh=fake(s),r={...good,verdict:'changes',findings:['The described search field does not exist.']};
- assert.equal((await act(gh,input(s,r))).state,'changes');assert.equal(gh.calls.find(c=>c.path.endsWith('/reviews')).body.event,'REQUEST_CHANGES');
+ assert.equal((await act(gh,input(s,r))).state,'changes');assert.equal(gh.checks[0].conclusion,'action_required');assert.match(gh.commentsList[0].body,/search field does not exist/);
  s.files[0].patch='+A mandatory product account is required.';s.key=snapshotKey(s);
  const decline={...good,verdict:'decline',policyRule:'mandatory-hosting',evidence:[{path:'README.md',quote:'A mandatory product account is required.'}]};
  const other=fake(s);assert.equal((await act(other,input(s,decline,decline))).state,'closed');assert.match(other.commentsList[0].body,/fork under the MIT license/);
@@ -93,7 +95,7 @@ test('changes request corrections; corroborated scope decisions explain and clos
 test('secret gate never publishes reviewer findings or approves',async()=>{
  const s=snapshot();s.files[0].patch='+'+'ghp_'+'x'.repeat(35);s.key=snapshotKey(s);const gh=fake(s);
  assert.equal((await act(gh,input(s,{...good,summary:'Sensitive content should not be published.'}))).state,'owner');
- assert.ok(!gh.calls.some(c=>c.path.endsWith('/reviews')));assert.doesNotMatch(gh.commentsList[0].body,/ghp_/);
+ assert.equal(gh.checks[0].conclusion,'action_required');assert.doesNotMatch(gh.commentsList[0].body,/ghp_/);
 });
 test('worker caches reviews, waits for checks, and reviews changed revisions',async()=>{
  let s=snapshot(),gh=fake(s),reviews=0;const state={items:{}},options={gh,config:{},state,save:()=>{},reviewer:async()=>{reviews++;return good;}};

@@ -27,6 +27,6 @@ Apply `maintainer:hold` to stop automatic actions on a PR. Removing it allows pr
 
 Worker decisions are bound to the PR's current commit, target branch commit, title/body, and current trusted policy. New code requires a fresh review. Contributor text, comments, and files are evidence, never instructions to the worker. The worker does not check out or execute contributor code on the workstation or inside its privileged Actions job.
 
-Public actions appear as **github-actions[bot]** using GitHub's built-in App. Review inference runs on the owner's workstation with an isolated Codex invocation; GitHub receives neither the Codex login nor Pocket credentials. Polling pauses when that workstation is offline and resumes later. See [worker operations](docs/MAINTAINER.md) for limits and shutdown instructions.
+Public actions appear as **github-actions[bot]** using GitHub's built-in App. Approval is recorded in a required, commit-bound **Pocket review** check; the bot posts its findings as a PR comment. Review inference runs on the owner's workstation with an isolated Codex invocation; GitHub receives neither the Codex login nor Pocket credentials. Polling pauses when that workstation is offline and resumes later. See [worker operations](docs/MAINTAINER.md) for limits and shutdown instructions.
 
 Private security reports belong in [GitHub security advisories](https://github.com/FallSoftCo/pocket/security/advisories/new), not public PR comments. A suspected secret or exploit is escalated without quoting it publicly.
