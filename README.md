@@ -108,7 +108,7 @@ Start a new Codex client session so it loads the tool. Ask it when you want a no
 
 ## Everyday use
 
-Search tasks by title or project folder. Use Recent, Working, and Following to narrow the list. Search matches titles and full project paths without regard to letter case.
+Search tasks by title or project folder. Use Recent, Working, and Following to narrow the list. Search matches titles and full project paths without regard to letter case. Clear the search field to show all tasks in the selected view again.
 
 **New task** selects an existing absolute workstation folder and prompt. Codex inherits the workstation's model, approval settings, and project instructions. Task creation and replies use durable IDs; ambiguous delivery is shown for review instead of automatically duplicating work.
 
