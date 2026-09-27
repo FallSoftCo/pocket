@@ -17,7 +17,7 @@ export function missedDeliveries(deliveries,now=Date.now()){
 }
 export async function recover(gh,hookId){
  if(!Number.isSafeInteger(hookId)||hookId<1)throw Error('Webhook ID required');
- const rows=await gh.pages(`${gh.root}/hooks/${hookId}/deliveries`);
+ const rows=await gh.cursorPages(`${gh.root}/hooks/${hookId}/deliveries`);
  const missed=missedDeliveries(rows);
  for(const d of missed){
   if(!/^\d+$/.test(String(d.id)))throw Error('Invalid delivery ID');

@@ -1,14 +1,28 @@
 import {digest,snapshotKey} from './core.mjs';
 export class GitHub {
  constructor(token,repo='FallSoftCo/pocket'){this.token=token;this.repo=repo;this.root=`/repos/${repo}`;}
- async request(path,{method='GET',body}={}){
+ async request(path,{method='GET',body,responseMeta=false}={}){
   if(!path.startsWith(this.root+'/')&&path!==this.root)throw Error('Repository-scoped API path required');
   const token=typeof this.token==='function'?await this.token():this.token;
   const r=await fetch('https://api.github.com'+path,{method,redirect:'error',headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(30000)});
   const raw=await r.text();if(!r.ok)throw Object.assign(Error(`GitHub ${method} returned ${r.status}`),{status:r.status});
   if(raw.length>5000000)throw Error('GitHub response exceeds context limit');
   // GitHub webhook delivery IDs exceed JavaScript's safe integer range.
-  return raw?JSON.parse(raw.replace(/("id"\s*:\s*)(\d{16,})/g,'$1"$2"')):null;
+  const data=raw?JSON.parse(raw.replace(/("id"\s*:\s*)(\d{16,})/g,'$1"$2"')):null;
+  if(!responseMeta)return data;
+  const match=(r.headers.get('link')||'').match(/<([^>]+)>;\s*rel="next"/);
+  let next=null;
+  if(match){const u=new URL(match[1]);if(u.origin!=='https://api.github.com'||!u.pathname.startsWith(this.root+'/'))throw Error('Invalid pagination target');next=u.pathname+u.search;}
+  return {data,next};
+ }
+ async cursorPages(path){
+  let next=path+(path.includes('?')?'&':'?')+'per_page=100';const all=[];
+  for(let page=0;next&&page<10;page++){
+   const response=await this.request(next,{responseMeta:true});
+   if(!Array.isArray(response.data))throw Error('Expected paginated GitHub records');
+   all.push(...response.data);next=response.next;
+  }
+  if(next)throw Error('GitHub delivery history exceeds recovery limit');return all;
  }
  async file(path,ref,expectedSha=null){
   const data=await this.request(`${this.root}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(ref)}`);

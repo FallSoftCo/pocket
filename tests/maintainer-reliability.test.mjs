@@ -70,8 +70,16 @@ test('missed-delivery recovery uses delivery history, retains exact IDs, and ski
  const now=Date.now(),d=(id,guid,status_code,age=120000)=>({id,guid,status_code,delivered_at:new Date(now-age).toISOString()});
  const rows=[d('12345678901234567890','failed',503),d('2','fixed',503),d('3','fixed',202),d('4','recent',503,1000),d('5','expired',503,4*86400000)];
  assert.deepEqual(missedDeliveries(rows,now).map(x=>x.id),['12345678901234567890']);
- const calls=[];const gh={root,pages:async path=>{assert.match(path,/\/hooks\/123\/deliveries$/);return rows;},request:async(path,o)=>calls.push({path,...o})};
+ const calls=[];const gh={root,cursorPages:async path=>{assert.match(path,/\/hooks\/123\/deliveries$/);return rows;},request:async(path,o)=>calls.push({path,...o})};
  assert.equal(await recover(gh,123),1);assert.match(calls[0].path,/12345678901234567890\/attempts$/);
+});
+test('webhook history follows cursor links without sending page parameters',async()=>{
+ const gh=new GitHub('unused'),seen=[];
+ gh.request=async(path,options)=>{
+  seen.push(path);assert.equal(options.responseMeta,true);assert.ok(!/[?&]page=/.test(path));
+  return seen.length===1?{data:[{id:'12345678901234567890'}],next:root+'/hooks/123/deliveries?cursor=abc&per_page=100'}:{data:[{id:'12345678901234567891'}],next:null};
+ };
+ assert.equal((await gh.cursorPages(root+'/hooks/123/deliveries')).length,2);assert.equal(seen.length,2);
 });
 test('installation tokens refresh before expiry and never request other repositories',async()=>{
  const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});let now=Date.now(),calls=0;
