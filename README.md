@@ -22,6 +22,8 @@ Start tasks from your phone, follow the conversation in order, and reply when Co
 
 Pocket is for **one owner and their trusted phones**. A paired phone can read and control that owner's Codex tasks. It is not a shared hosting or multi-user permissions system.
 
+<p><img src="docs/images/onboarding.png" width="280" alt="Pocket Android first-run screen with empty server and pairing-code fields"></p>
+
 ## How it connects
 
 ```text
