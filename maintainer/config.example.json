@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "dryRun": true,
+  "notifyReviews": false,
+  "notifyErrors": false,
+  "dataDir": "/absolute/private/pocket-maintainer/state",
+  "maxReviewsPerDay": 20,
+  "reviewer": {
+    "binary": "/absolute/path/to/codex",
+    "authFile": "/absolute/private/codex/auth.json",
+    "model": "gpt-6-astra"
+  },
+  "pocket": {
+    "url": "http://127.0.0.1:18880",
+    "dataDir": "/absolute/private/pocket/data",
+    "threadId": "EXISTING_OWNER_THREAD_ID"
+  }
+}

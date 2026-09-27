@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "repository": "FallSoftCo/pocket",
+  "defaultBranch": "main",
+  "maxFiles": 20,
+  "maxChangedLines": 600,
+  "maxContextBytes": 160000,
+  "autoMergeMaxChangedLines": 120,
+  "autoMergePaths": ["README.md", "docs/DEPLOYMENT.md"],
+  "protectedPrefixes": [".github/", "maintainer/", "deploy/", "server/", "scripts/"],
+  "protectedPaths": ["MAINTAINER_POLICY.md", "CONTRIBUTING.md", "SECURITY.md", "PRIVACY.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "package.json", "package-lock.json", "android/app/build.gradle.kts", "android/build.gradle.kts", "android/settings.gradle.kts", "android/gradle.properties", "android/gradle/wrapper/gradle-wrapper.properties", "android/app/src/main/AndroidManifest.xml"],
+  "declineRules": {
+    "mandatory-hosting": "Pocket must remain usable with an owner's own backend and Firebase project, without a mandatory FallSoft/third-party product account or operated application relay.",
+    "codex-fork": "Pocket must work with stock Codex; requiring a maintained Codex fork is outside scope.",
+    "permission-bypass": "Preserve Codex permissions and exact request routing; do not automatically grant approvals, silently retry ambiguous actions, or circumvent authentication.",
+    "unrelated-messaging": "Pocket notifies the owner about their own Codex work. Arbitrary-recipient messaging and unrelated monitoring are outside scope.",
+    "mandatory-telemetry": "Do not add mandatory product analytics, advertising, or collection of private task data by FallSoft. Existing FCM preview transport remains documented."
+  },
+  "requiredChecks": ["backend", "android"]
+}

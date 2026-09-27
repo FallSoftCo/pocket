@@ -7,3 +7,5 @@ Open focused issues or pull requests with the behavior, reproduction, tested Cod
 Maintain stock Codex compatibility, exact thread/request routing, inherited permissions, durable delivery states, and the distinction between accepted, delivered, and read. Do not silently retry ambiguous task creation or replies. Tests should exercise behavior and trust boundaries. New protocol support needs a documented tested Codex version.
 
 Contributions are under the repository's MIT license.
+
+Read the [contribution policy](MAINTAINER_POLICY.md) for project direction and automated review. Pocket Maintainer can request corrections, approve and merge suitable changes after checks, or explain why a direction belongs in a fork. Code changes require two agreeing reviews. Uncertain decisions stay open with an explanation. Maintainers can override its decisions or apply `maintainer:hold` to pause a PR.

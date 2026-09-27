@@ -1,0 +1,46 @@
+name: Pocket Maintainer
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+      head:
+        description: Reviewed head SHA
+        required: true
+      base:
+        description: Reviewed base SHA
+        required: true
+      key:
+        description: Immutable snapshot and policy digest
+        required: true
+      result:
+        description: Validated structured review JSON
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: pocket-maintainer-${{ inputs.pr }}
+  cancel-in-progress: false
+jobs:
+  apply:
+    if: github.ref == 'refs/heads/main' && github.repository == 'FallSoftCo/pocket'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+    steps:
+      # This job never checks out, builds, imports, or executes a PR's code.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: refs/heads/main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - run: node maintainer/act.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
