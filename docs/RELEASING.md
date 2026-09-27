@@ -9,7 +9,12 @@ sha256sum -c SHA256SUMS.txt
 $ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose --print-certs pocket-0.4.1-alpha.1.apk
 ```
 
-The initial signing certificate SHA-256 fingerprint is recorded below after generation. Keep the same certificate for future updates. Checksums prove artifact consistency; the certificate is the maintained Android update identity.
+The initial signing certificate SHA-256 fingerprint is:
+
+```text
+b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf
+```
+ Keep the same certificate for future updates. Checksums prove artifact consistency; the certificate is the maintained Android update identity.
 
 ## Signed build
 
