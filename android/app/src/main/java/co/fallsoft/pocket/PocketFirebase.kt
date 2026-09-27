@@ -75,6 +75,10 @@ class PocketFirebaseService:FirebaseMessagingService(){
     }
     override fun onMessageReceived(message:RemoteMessage){
         if(Pocket.token.isBlank()||message.data["device_id"]!=Pocket.prefs.getString("deviceId",null))return
+        if(message.data["operations"]=="failure"){
+            PocketNotifications.operations(this,message.notification?.title?:"Pocket needs attention",message.notification?.body?:"Check GitHub Actions for details.")
+            return
+        }
         val n=JSONObject(message.data)
         if(n.optLong("id")<=0)return
         // Render immediately within FCM's execution window. No network request is needed.

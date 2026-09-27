@@ -1,0 +1,11 @@
+[Unit]
+Description=Recover failed Pocket webhook deliveries
+After=network-online.target
+[Service]
+Type=oneshot
+User=pocket-maintainer
+Group=pocket-maintainer
+Environment=MAINTAINER_CONFIG=/var/lib/pocket-maintainer/private/config.json
+ExecStart=/usr/bin/node /opt/pocket-maintainer/app/recovery.mjs
+NoNewPrivileges=yes
+UMask=0077

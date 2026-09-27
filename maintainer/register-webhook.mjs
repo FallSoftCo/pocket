@@ -1,9 +1,9 @@
 import {readFileSync,writeFileSync,mkdirSync,existsSync} from 'node:fs';
 import {randomBytes} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
 import {join,dirname} from 'node:path';
 import {homedir} from 'node:os';
 import {GitHub} from './github.mjs';
+import {githubCredential} from './auth.mjs';
 
 const configPath=process.env.MAINTAINER_CONFIG||join(homedir(),'.config/pocket-maintainer/config.json');
 const config=JSON.parse(readFileSync(configPath,'utf8'));
@@ -13,11 +13,11 @@ const secretFile=config.webhook.secretFile;
 mkdirSync(dirname(secretFile),{recursive:true,mode:0o700});
 if(!existsSync(secretFile))writeFileSync(secretFile,randomBytes(32).toString('hex')+'\n',{mode:0o600,flag:'wx'});
 const secret=readFileSync(secretFile,'utf8').trim();if(secret.length<32)throw Error('Webhook secret is too short');
-const gh=new GitHub(process.env.GH_TOKEN||execFileSync('gh',['auth','token'],{encoding:'utf8'}).trim());
+const gh=new GitHub(githubCredential(config));
 const repo=await gh.request(gh.root);if(repo.id!==config.webhook.repositoryId)throw Error('Configured repository ID does not match');
 const hooks=await gh.pages(`${gh.root}/hooks`);
 const existing=hooks.find(h=>h.config.url===url.href);
-const body={name:'web',active:true,events:['pull_request','workflow_run','push'],config:{url:url.href,content_type:'json',insecure_ssl:'0',secret}};
+const body={name:'web',active:true,events:['pull_request','issue_comment','workflow_run','push'],config:{url:url.href,content_type:'json',insecure_ssl:'0',secret}};
 const hook=await gh.request(existing?`${gh.root}/hooks/${existing.id}`:`${gh.root}/hooks`,{method:existing?'PATCH':'POST',body});
 config.webhook.hookId=hook.id;
 writeFileSync(configPath,JSON.stringify(config,null,2)+'\n',{mode:0o600});

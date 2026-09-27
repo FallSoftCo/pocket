@@ -61,7 +61,14 @@ class MainActivity:ComponentActivity(){
         }}
     }
     override fun onNewIntent(intent:Intent){super.onNewIntent(intent);readIntent(intent)}
-    private fun readIntent(i:Intent){initialServer=i.getStringExtra("server")?:initialServer;initialCode=i.getStringExtra("code")?:initialCode;i.getStringExtra("thread")?.let{if(Pocket.token.isNotBlank())Pocket.open(it)}}
+    private fun readIntent(i:Intent){
+        initialServer=i.getStringExtra("server")?:initialServer;initialCode=i.getStringExtra("code")?:initialCode
+        i.getStringExtra("thread")?.let{if(Pocket.token.isNotBlank())Pocket.open(it)}
+        if(Pocket.token.isNotBlank()&&i.getStringExtra("operations_url")=="https://github.com/FallSoftCo/pocket/actions"){
+            i.removeExtra("operations_url")
+            startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/FallSoftCo/pocket/actions")))
+        }
+    }
     override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketLive.start()}
     override fun onStop(){PocketLive.stop();super.onStop()}
     override fun onResume(){super.onResume();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail()}}

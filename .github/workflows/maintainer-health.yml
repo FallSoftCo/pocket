@@ -1,0 +1,30 @@
+name: Maintainer health
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: maintainer-health
+  cancel-in-progress: false
+jobs:
+  health:
+    if: github.repository == 'FallSoftCo/pocket'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: refs/heads/main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: node maintainer/monitor.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MAINTAINER_HEALTH_URL: ${{ vars.MAINTAINER_HEALTH_URL }}
+          MAINTAINER_FIREBASE_CREDENTIALS: ${{ secrets.MAINTAINER_FIREBASE_CREDENTIALS }}
+          MAINTAINER_ALERT_TARGETS: ${{ secrets.MAINTAINER_ALERT_TARGETS }}

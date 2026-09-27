@@ -32,7 +32,7 @@ export async function review(snapshot,{binary=process.env.MAINTAINER_CODEX_BIN||
   const originalAuth=readFileSync(authFile,'utf8');
   copyFileSync(authFile,join(dir,'auth/auth.json'));
   writeFileSync(join(dir,'job/schema.json'),JSON.stringify(schema));writeFileSync(join(dir,'job/instructions.md'),instructions);
-  const contribution={title:snapshot.title,body:snapshot.body,files:snapshot.files.map(({filename,status,patch,context})=>({filename,status,patch,context}))};
+  const contribution={title:snapshot.title,body:snapshot.body,clarifications:snapshot.clarifications||[],files:snapshot.files.map(({filename,status,patch,context})=>({filename,status,patch,context}))};
   const prompt=`TRUSTED POLICY:\n${snapshot.principles}\nRULES:\n${JSON.stringify(snapshot.policy.declineRules)}\nUNTRUSTED CONTRIBUTION JSON:\n${JSON.stringify(contribution)}`;
   if(Buffer.byteLength(prompt)>200000)throw Error('Review prompt exceeds context budget');
   const child=spawn(bubblewrap,executionArgs(binary,dir,{model,provider}),{env:{PATH:'/usr/bin:/bin'},stdio:['pipe','pipe','pipe'],detached:true});

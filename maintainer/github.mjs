@@ -3,10 +3,12 @@ export class GitHub {
  constructor(token,repo='FallSoftCo/pocket'){this.token=token;this.repo=repo;this.root=`/repos/${repo}`;}
  async request(path,{method='GET',body}={}){
   if(!path.startsWith(this.root+'/')&&path!==this.root)throw Error('Repository-scoped API path required');
-  const r=await fetch('https://api.github.com'+path,{method,redirect:'error',headers:{Authorization:`Bearer ${this.token}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(30000)});
+  const token=typeof this.token==='function'?await this.token():this.token;
+  const r=await fetch('https://api.github.com'+path,{method,redirect:'error',headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(30000)});
   const raw=await r.text();if(!r.ok)throw Object.assign(Error(`GitHub ${method} returned ${r.status}`),{status:r.status});
   if(raw.length>5000000)throw Error('GitHub response exceeds context limit');
-  return raw?JSON.parse(raw):null;
+  // GitHub webhook delivery IDs exceed JavaScript's safe integer range.
+  return raw?JSON.parse(raw.replace(/("id"\s*:\s*)(\d{16,})/g,'$1"$2"')):null;
  }
  async file(path,ref,expectedSha=null){
   const data=await this.request(`${this.root}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(ref)}`);
@@ -31,15 +33,46 @@ export class GitHub {
    try{f.context=await this.file(f.status==='removed'?(f.previous_filename||f.filename):f.filename,f.status==='removed'?base:p.head.sha,f.sha);budget+=Buffer.byteLength(f.context);if(f.context.includes('\0')||budget>policy.maxContextBytes){delete f.context;incomplete=true;}}
    catch{incomplete=true;}
   }
-  // Reopening a closed PR explicitly requests reconsideration. Comments are never prompts.
+  // Only explicit, authorized reconsideration commands supply untrusted evidence.
   const events=await this.pages(`${this.root}/issues/${number}/events`);
   const reopened=events.filter(e=>e.event==='reopened').map(e=>e.id).at(-1)||0;
   const s={number,state:p.state,draft:p.draft,title:p.title,body:p.body||'',head:p.head.sha,base,behind:p.mergeable_state==='behind',maintainable:p.maintainer_can_modify||p.head.repo?.full_name?.toLowerCase()===this.repo.toLowerCase(),author:p.user.login,labels:p.labels.map(x=>x.name),url:p.html_url,files,incomplete,policy,principles,policyHash:digest({policy,principles}),reopened};
+  Object.assign(s,{headRepoId:p.head.repo?.id,headRepo:p.head.repo?.full_name,headRef:p.head.ref,merged:p.merged,mergeCommit:p.merge_commit_sha});
+  s.clarifications=await this.clarifications(p);
   s.key=snapshotKey(s);return s;
  }
+ async clarifications(p){
+  const selected=[];const permissions=new Map();
+  for(const c of await this.comments(p.number)){
+   if(c.user?.type==='Bot'||typeof c.body!=='string'||c.body.length>4000||!/^\/pocket reconsider\s+\S/.test(c.body.trim()))continue;
+   const login=c.user.login;
+   let allowed=login===p.user.login;
+   if(!allowed){
+    if(!permissions.has(login)){
+     if(permissions.size>=10)continue;
+     try{const access=await this.request(`${this.root}/collaborators/${encodeURIComponent(login)}/permission`);permissions.set(login,['admin','maintain','write'].includes(access.permission));}
+     catch(e){if(e.status!==404)throw e;permissions.set(login,false);}
+    }
+    allowed=permissions.get(login);
+   }
+   if(allowed)selected.push({id:c.id,author:login,updatedAt:c.updated_at,body:c.body.trim().slice('/pocket reconsider'.length).trim()});
+   if(selected.length===3)break;
+  }
+  return selected;
+ }
+ async ciRun(s){
+  const runs=await this.request(`${this.root}/actions/workflows/check.yml/runs?event=pull_request&head_sha=${s.head}&per_page=100`);
+  return runs.workflow_runs.find(r=>this.matchesCI(r,s));
+ }
+ matchesCI(r,s){
+  if(r.event!=='pull_request'||r.head_sha!==s.head||r.path!=='.github/workflows/check.yml')return false;
+  if(r.pull_requests?.length)return r.pull_requests.some(p=>p.number===s.number&&(!p.head?.sha||p.head.sha===s.head));
+  // Fork runs can omit pull_requests. Require both the immutable commit and
+  // originating repository/branch, never merely a same-SHA successful run.
+  return !!s.headRepoId&&r.head_repository?.id===s.headRepoId&&r.head_branch===s.headRef;
+ }
  async checksPass(s){
-  const runs=await this.request(`${this.root}/actions/workflows/check.yml/runs?event=pull_request&head_sha=${s.head}&per_page=20`);
-  const run=runs.workflow_runs.find(r=>r.event==='pull_request'&&r.head_sha===s.head&&r.pull_requests.some(p=>p.number===s.number));
+  const run=await this.ciRun(s);
   if(!run||run.status!=='completed'||run.conclusion!=='success')return false;
   const jobs=await this.request(`${this.root}/actions/runs/${run.id}/jobs?filter=latest&per_page=100`);
   return s.policy.requiredChecks.every(name=>jobs.jobs.some(j=>j.name===name&&j.status==='completed'&&j.conclusion==='success'));
@@ -53,8 +86,7 @@ export class GitHub {
    await this.request(`${this.root}/pulls/${s.number}/update-branch`,{method:'PUT',body:{expected_head_sha:s.head}});
    return false; // The updated commit needs fresh review and CI.
   }
-  const runs=await this.request(`${this.root}/actions/workflows/check.yml/runs?event=pull_request&head_sha=${s.head}&per_page=20`);
-  const run=runs.workflow_runs.find(r=>r.head_sha===s.head&&r.event==='pull_request'&&r.pull_requests.some(p=>p.number===s.number));
+  const run=await this.ciRun(s);
   if(run&&(run.status==='action_required'||run.conclusion==='action_required'))await this.request(`${this.root}/actions/runs/${run.id}/approve`,{method:'POST'});
   return true;
  }

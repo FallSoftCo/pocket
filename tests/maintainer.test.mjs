@@ -128,7 +128,7 @@ test('worker obtains two code reviews and sends no unsolicited review alerts',as
 });
 test('CI preparation checks revision and hold, updates behind branches, and approves only reviewed CI',async()=>{
  const s=snapshot(),gh=new GitHub('unused'),calls=[];let fresh=s;
- gh.snapshot=async()=>fresh;gh.request=async(path,options={})=>{calls.push({path,...options});return {workflow_runs:[{id:9,event:'pull_request',head_sha:s.head,pull_requests:[{number:1}],conclusion:'action_required'}]};};
+ gh.snapshot=async()=>fresh;gh.request=async(path,options={})=>{calls.push({path,...options});return {workflow_runs:[{id:9,path:'.github/workflows/check.yml',event:'pull_request',head_sha:s.head,pull_requests:[{number:1}],conclusion:'action_required'}]};};
  fresh={...s,labels:['maintainer:hold']};assert.equal(await gh.prepareCI(s),false);assert.equal(calls.length,0);
  fresh={...s,behind:true,maintainable:true};assert.equal(await gh.prepareCI(s),false);assert.deepEqual(calls.pop().body,{expected_head_sha:s.head});
  fresh=s;assert.equal(await gh.prepareCI(s),true);assert.ok(calls.some(c=>c.path.endsWith('/9/approve')));

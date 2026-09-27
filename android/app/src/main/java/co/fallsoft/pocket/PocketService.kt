@@ -14,6 +14,15 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 object PocketNotifications {
+    fun operations(c:Context,title:String,body:String){
+        channels(c)
+        val intent=Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://github.com/FallSoftCo/pocket/actions"))
+        val open=PendingIntent.getActivity(c,900, intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val b=NotificationCompat.Builder(c,"work").setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body)).setContentIntent(open).setAutoCancel(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setCategory(NotificationCompat.CATEGORY_ERROR)
+        try{NotificationManagerCompat.from(c).notify("pocket-operations",900,b.build())}catch(_:SecurityException){}
+    }
     fun channels(c:Context){
         val m=c.getSystemService(NotificationManager::class.java)
         m.createNotificationChannel(NotificationChannel("work","Codex updates & replies",NotificationManager.IMPORTANCE_HIGH).apply{description="Updates you request from Codex, questions, and replies to your phone messages."})

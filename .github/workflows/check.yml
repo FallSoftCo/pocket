@@ -1,9 +1,15 @@
 name: Check
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Post-merge {0}', inputs.commit) || github.event.head_commit.message || github.event.pull_request.title || 'Check' }}
 on:
   push:
     branches: [main]
     tags: ['v*']
   pull_request:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Immutable merged commit to verify
+        required: true
 permissions:
   contents: read
 jobs:
@@ -11,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.commit || '' }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -23,6 +32,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.commit || '' }}
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

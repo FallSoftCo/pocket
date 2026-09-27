@@ -1,9 +1,9 @@
-import {execFileSync} from 'node:child_process';
 import {readFileSync,writeFileSync,mkdirSync,renameSync,existsSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {GitHub} from './github.mjs';
+import {githubCredential} from './auth.mjs';
 import {review} from './reviewer.mjs';
 import {decide,eligible,secretLike,proseOnly} from './core.mjs';
 const ownerReview=summary=>({verdict:'owner',summary,findings:[],policyRule:'',evidence:[],risk:'high'});
@@ -63,7 +63,7 @@ async function main(){
  const data=resolve(config.dataDir);mkdirSync(data,{recursive:true,mode:0o700});
  const stateFile=join(data,'state.json');const state=existsSync(stateFile)?JSON.parse(readFileSync(stateFile,'utf8')):{items:{}};
  const save=()=>{writeFileSync(stateFile+'.tmp',JSON.stringify(state),{mode:0o600});renameSync(stateFile+'.tmp',stateFile);};
- const token=process.env.GH_TOKEN||execFileSync('gh',['auth','token'],{encoding:'utf8'}).trim();
+ const token=githubCredential(config);
  const gh=new GitHub(token);
  const notify=async n=>{
   if(!config.pocket)return;

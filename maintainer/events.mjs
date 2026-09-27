@@ -15,13 +15,16 @@ export function eventJobs(event,payload,repositoryId){
   if(!['opened','synchronize','reopened','edited','ready_for_review','converted_to_draft','closed','labeled','unlabeled'].includes(payload.action))return [];
   if(['labeled','unlabeled'].includes(payload.action)&&payload.label?.name!=='maintainer:hold')return [];
   const n=payload.number;
-  return payload.pull_request?.base?.ref==='main'&&Number.isSafeInteger(n)&&n>0?[`pr:${n}`]:[];
+  return payload.pull_request?.base?.ref==='main'&&Number.isSafeInteger(n)&&n>0?[payload.action==='closed'&&payload.pull_request.merged?`postmerge:${n}`:`pr:${n}`]:[];
  }
+ if(event==='issue_comment'&&['created','edited'].includes(payload.action)&&payload.issue?.pull_request&&Number.isSafeInteger(payload.comment?.id)&&/^\/pocket reconsider\s+\S/.test((payload.comment.body||'').trim()))return [`comment:${payload.comment.id}`];
  if(event==='workflow_run'&&payload.action==='completed'){
   const run=payload.workflow_run;
   const path=payload.workflow?.path||run?.path;
   if(path==='.github/workflows/maintainer.yml'&&run.event==='workflow_dispatch')return ['reconcile'];
-  if(path!=='.github/workflows/check.yml'||run.event!=='pull_request')return [];
+  if(path!=='.github/workflows/check.yml')return [];
+  if(Number.isSafeInteger(run.id)&&run.id>0)return [`run:${run.id}`];
+  if(run.event!=='pull_request')return [];
   const prs=(run.pull_requests||[]).filter(p=>Number.isSafeInteger(p.number)&&p.number>0).map(p=>`pr:${p.number}`);
   return prs.length?prs:/^[a-f0-9]{40}$/.test(run.head_sha)?[`commit:${run.head_sha}`]:[];
  }
@@ -35,10 +38,11 @@ export class EventQueue{
   this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
    CREATE TABLE IF NOT EXISTS deliveries(id TEXT PRIMARY KEY, digest TEXT UNIQUE NOT NULL, received INTEGER NOT NULL);
    CREATE TABLE IF NOT EXISTS jobs(key TEXT PRIMARY KEY, version INTEGER NOT NULL DEFAULT 1, attempts INTEGER NOT NULL DEFAULT 0, not_before INTEGER, error TEXT);
+   CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `);
  }
  enqueue(key,at=Date.now()){
-  if(!/^(?:reconcile|pr:[1-9][0-9]*|commit:[a-f0-9]{40})$/.test(key))throw Error('Invalid event work key');
+  if(!/^(?:reconcile|(?:pr|comment|run|postmerge):[1-9][0-9]*|commit:[a-f0-9]{40})$/.test(key))throw Error('Invalid event work key');
   this.db.prepare(`INSERT INTO jobs(key,not_before) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET version=version+1,attempts=0,not_before=excluded.not_before,error=NULL`).run(key,at);
  }
  accept(id,digest,jobs,at=Date.now()){
@@ -62,12 +66,18 @@ export class EventQueue{
   return at;
  }
  close(){this.db.close();}
+ get(key){const row=this.db.prepare('SELECT value FROM metadata WHERE key=?').get(key);return row?JSON.parse(row.value):null;}
+ set(key,value){this.db.prepare('INSERT INTO metadata(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify(value));}
+ healthy(now=Date.now()){
+  return !this.db.prepare('SELECT key FROM jobs WHERE not_before IS NULL OR attempts>=3 OR not_before < ? LIMIT 1').get(now-20*60000);
+ }
 }
 
 export function webhookServer({secret,repositoryId,queue,wake=()=>{}}){
  if(typeof secret!=='string'||secret.length<32||!Number.isSafeInteger(repositoryId))throw Error('Webhook secret and repository ID are required');
  return createServer({requestTimeout:15000,headersTimeout:10000},async(req,res)=>{
   const respond=(code,text)=>{res.writeHead(code,{'Content-Type':'text/plain','Cache-Control':'no-store'});res.end(text);};
+  if(req.url==='/healthz'&&req.method==='GET'){respond(queue.healthy()?200:503,queue.healthy()?'Healthy':'Needs attention');return;}
   if(req.url!=='/github/events'||req.method!=='POST'){respond(404,'Not found');return;}
   if(req.headers['content-encoding']&&req.headers['content-encoding']!=='identity'){respond(415,'Unsupported encoding');return;}
   try{
@@ -92,7 +102,7 @@ export function webhookServer({secret,repositoryId,queue,wake=()=>{}}){
 // One timeout exists only while queued work has a future retry deadline.
 // An empty queue has no timer and makes no API calls.
 export class EventPump{
- constructor(queue,processJob,{log=console.error}={}){this.queue=queue;this.processJob=processJob;this.log=log;this.busy=false;this.timer=null;this.stopped=false;}
+ constructor(queue,processJob,{log=console.error,onFailure=async()=>{}}={}){this.queue=queue;this.processJob=processJob;this.log=log;this.onFailure=onFailure;this.busy=false;this.timer=null;this.stopped=false;}
  wake(){
   if(this.stopped||this.busy)return;
   clearTimeout(this.timer);this.timer=null;
@@ -100,8 +110,9 @@ export class EventPump{
   const delay=job.not_before-Date.now();
   if(delay>0){this.timer=setTimeout(()=>this.wake(),Math.min(delay,2147483647));return;}
   this.busy=true;
-  Promise.resolve().then(()=>this.processJob(job)).then(result=>this.queue.complete(job,result?.retryAt??null)).catch(e=>{
+  Promise.resolve().then(()=>this.processJob(job)).then(result=>this.queue.complete(job,result?.retryAt??null)).catch(async e=>{
    const retryAt=this.queue.fail(job);this.log(JSON.stringify({job:job.key,error:e.message,retryAt}));
+   try{await this.onFailure(job,retryAt);}catch{this.log('Failure alert could not be delivered');}
   }).finally(()=>{this.busy=false;this.wake();});
  }
  stop(){this.stopped=true;clearTimeout(this.timer);this.timer=null;}
