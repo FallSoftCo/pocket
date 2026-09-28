@@ -4,6 +4,17 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x**. Physical testing covers a Pixel 9 Pro Fold on Android **API 36**; the public release also runs on an Android **API 35** emulator with Google Play services. The shared Unix app-server was used without a fork or competing runtime.
 
+## Paged history and connection errors: 0.4.4-alpha.1
+
+Verified on September 28, 2026, with the installed stock Codex CLI **0.158.0**:
+
+- Reproduced the reported failure against a real large conversation: full-history reading exceeded the WebSocket client's 100 MiB frame limit and closed Pocket's connection. The original error handler discarded that cause and returned “Codex disconnected.”
+- Used the installed CLI's generated schema to verify metadata-only reads/resumes and turn/item pagination. These are described in the [official app-server documentation](https://learn.chatgpt.com/docs/app-server). Both affected conversations now return their recent and preceding history pages successfully through the deployed backend, while its Codex connection remains open.
+- The phone receives display content rather than inline image data, raw reasoning, or unbounded command output from paginated history. Live deltas retain chronology, and older pages do not acquire unrelated live turns.
+- **57 backend tests** cover both paginated and legacy history, cursor traversal, actual HTTP endpoints, oversized-frame diagnostics, reconnects without replaying writes, and completion recovery beyond a page of missed turns. The automatic reload path performs reads; ambiguous replies remain marked unknown.
+
+The connection fix does not remove the 100 MiB limit on individual upstream messages. Exceptionally large individual items and legacy full-history responses can still fail with a specific explanation. Native approvals retain the existing reconnect limitation below. This targeted 0.158.0 validation does not repeat every earlier fresh-install, approval, and Firebase test.
+
 ## DNS recovery: 0.4.3-alpha.3
 
 Verified on September 28, 2026, with Android version code **9**:

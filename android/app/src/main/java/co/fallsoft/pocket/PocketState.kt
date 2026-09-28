@@ -31,6 +31,7 @@ object Pocket {
     var base by mutableStateOf(""); var token by mutableStateOf("")
     var connected by mutableStateOf(false); var codexOnline by mutableStateOf(false)
     var connectionError by mutableStateOf("")
+    var codexConnectionMessage by mutableStateOf("")
     var error by mutableStateOf(""); var busy by mutableStateOf(false)
     var tasks by mutableStateOf(listOf<Task>())
     var notifications by mutableStateOf(listOf<JSONObject>())
@@ -63,7 +64,7 @@ object Pocket {
         if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
         http.newCall(request.build()).execute().use { r ->
             val raw=r.body?.string()?:"{}"; val json=try{JSONObject(raw)}catch(e:Exception){JSONObject().put("error","Unexpected server response (${r.code})")}
-            if(!r.isSuccessful)throw PocketApiException(r.code,json.s("error","Request failed (${r.code})"));json
+            if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Request failed (${r.code})")));json
         }
     }
     fun pair(server:String,code:String){scope.launch{
@@ -90,7 +91,7 @@ object Pocket {
     }
     fun refresh(){scope.launch{
         try{
-            val r=api("/api/status");codexOnline=r.optBoolean("connected");host=r.s("host")
+            val r=api("/api/status");codexOnline=r.optBoolean("connected");codexConnectionMessage=r.optJSONObject("problem")?.s("message")?:"";host=r.s("host")
             prefs.edit().putString("deviceId",r.s("deviceId")).apply()
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
             tasks=api("/api/threads").optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"))}?:emptyList()
@@ -104,6 +105,7 @@ object Pocket {
     }}
     fun open(id:String){selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
     fun refreshDetail(){scope.launch{PocketTranscript.load()}}
+    fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();refreshDetail()}
     fun scheduleRefresh(){if(refreshJob?.isActive==true)return;refreshJob=scope.launch{delay(400);PocketTranscript.load()}}
     fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains("newTaskRequest"))"A task request is saved. Check its status to continue." else "";scope.launch{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){error=e.message?:"Could not load projects"}}}
     fun startTask(cwd:String,prompt:String){if(starting)return;scope.launch{
@@ -151,7 +153,11 @@ object Pocket {
     fun test(){scope.launch{try{api("/api/test-notification",JSONObject())}catch(e:Exception){error=e.message?:"Test failed"}}}
     fun event(json:JSONObject){scope.launch{
         when(json.s("type")){
-            "status" -> codexOnline=json.optBoolean("connected")
+            "status" -> {
+                val recovered=!codexOnline&&json.optBoolean("connected")
+                codexOnline=json.optBoolean("connected");codexConnectionMessage=json.optJSONObject("problem")?.s("message")?:""
+                if(recovered){refresh();scheduleRefresh()}
+            }
             "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");refresh()}
             "reply" -> {if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}

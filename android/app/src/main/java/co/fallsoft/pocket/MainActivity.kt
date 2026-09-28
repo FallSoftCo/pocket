@@ -76,7 +76,17 @@ class MainActivity:ComponentActivity(){
 
 @Composable fun Mark(size:Int=44){Box(Modifier.size(size.dp).clip(RoundedCornerShape((size/3).dp)).background(Color(0xff142323)),contentAlignment=Alignment.Center){Icon(painterResource(R.drawable.ic_pocket_mark),"Pocket",tint=Color.Unspecified,modifier=Modifier.size((size*.82f).dp))}}
 @Composable fun Label(text:String,color:Color=Muted){Text(text.uppercase(),color=color,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.8.sp)}
-@Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Text(Pocket.error,color=Coral,fontSize=13.sp,modifier=Modifier.padding(16.dp))}}
+@Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){Text(Pocket.error,color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){Text("Reload conversation",color=Mint)}}}}
+@Composable fun ConnectionNotice(){
+    if(Pocket.connected&&Pocket.codexOnline)return
+    Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
+        Column(Modifier.padding(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+            Text(if(Pocket.connected)"Waiting for Codex on your workstation" else "Reconnecting to your workstation",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
+            Text(if(Pocket.connected)Pocket.codexConnectionMessage.ifBlank{"Your phone is connected to ${Pocket.host}, but Pocket cannot reach Codex there. Retrying automatically. If this continues, check that Codex is open on that workstation."} else Pocket.connectionError.ifBlank{"Pocket is trying to reach ${Pocket.host}. Check that the workstation is awake and Tailscale is connected on both devices."},color=Muted,fontSize=12.sp,lineHeight=17.sp)
+            TextButton({Pocket.retryConnection()},contentPadding=PaddingValues(0.dp)){Text("Retry now",color=Mint)}
+        }
+    }
+}
 @Composable fun PairScreen(server:String,code:String){
     var address by remember(server){mutableStateOf(server)};var pin by remember(code){mutableStateOf(code)}
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(28.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
@@ -93,6 +103,7 @@ class MainActivity:ComponentActivity(){
 @Composable fun PocketApp(){
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else{Pocket.selected=null;Pocket.detail=null}}
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
+        ConnectionNotice()
         if(Pocket.newTask)NewTaskScreen()
         else if(Pocket.selected!=null)key(Pocket.selected){ConversationScreen()}
         else{
@@ -159,9 +170,9 @@ fun relative(time:Long):String{val seconds=(System.currentTimeMillis()-(if(time<
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(23.dp)){
         Label("MADE TO BE YOURS",Mint);Text("Your connection.",fontSize=34.sp,letterSpacing=(-1).sp)
         Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){ConnectionPill();Text(Pocket.host,fontSize=23.sp);Text(Pocket.base,color=Muted,fontSize=12.sp);HorizontalDivider(color=Line);Text(Pocket.pushStatus,fontSize=16.sp,color=Mint);Text("Notifications arrive through Firebase, even when Pocket is closed. Conversations and files load from your workstation.",color=Muted,fontSize=14.sp,lineHeight=21.sp)}}
-        if(!Pocket.connected){
+        if(!Pocket.connected||!Pocket.codexOnline){
             if(Pocket.connectionError.isNotBlank())Text(Pocket.connectionError,color=Coral,fontSize=13.sp,lineHeight=20.sp)
-            OutlinedButton({PocketLive.retryNow();Pocket.refresh();Pocket.refreshDetail()},modifier=Modifier.fillMaxWidth()){Text("Reconnect now")}
+            OutlinedButton({Pocket.retryConnection()},modifier=Modifier.fillMaxWidth()){Text("Reconnect now")}
         }
         NotificationAudioSettings()
         Button({Pocket.test()},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){Icon(Icons.Rounded.NotificationsActive,null);Spacer(Modifier.width(10.dp));Text("Send a test notification")}

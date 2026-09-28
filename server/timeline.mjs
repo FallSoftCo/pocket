@@ -1,6 +1,7 @@
 const clip=(v,n=12000)=>String(v??'').slice(-n);
 const textContent=v=>typeof v==='string'?v:Array.isArray(v)?v.map(x=>typeof x==='string'?x:x.text||'').filter(Boolean).join('\n'):'';
 export function itemRow(item,turnId,version=0){
+  if(item._pocketRow)return {...item._pocketRow,version};
   const r={id:`${turnId}/${item.id}`,itemId:item.id,turnId,version,kind:'activity',type:item.type,status:item.status||'completed',title:'',text:'',detail:''};
   switch(item.type){
     case 'userMessage':return {...r,kind:'user',title:'You',text:textContent(item.content),clientId:item.clientId};
@@ -47,27 +48,28 @@ export class LiveTimeline {
     else if(p.itemId){
       const cached=turn.items.get(p.itemId)?.item;
       if(m.method==='item/agentMessage/delta'||m.method==='item/plan/delta')item={...(cached||{id:p.itemId,type:m.method.includes('/plan/')?'plan':'agentMessage',status:'inProgress'}),text:(cached?.text||'')+(p.delta||'')};
-      else if(m.method==='item/commandExecution/outputDelta')item={...(cached||{id:p.itemId,type:'commandExecution',status:'inProgress'}),aggregatedOutput:clip((cached?.aggregatedOutput||'')+(p.delta||''))};
+      else if(m.method==='item/commandExecution/outputDelta')item={...(cached||{id:p.itemId,type:'commandExecution',status:'inProgress'}),command:cached?.command||cached?._pocketRow?.text,aggregatedOutput:clip((cached?.aggregatedOutput||cached?._pocketRow?.detail||'')+(p.delta||''))};
       else if(m.method==='item/reasoning/summaryTextDelta'){
-        item={...(cached||{id:p.itemId,type:'reasoning',status:'inProgress'}),summary:[...(cached?.summary||[])]};
+        item={...(cached||{id:p.itemId,type:'reasoning',status:'inProgress'}),summary:[...(cached?.summary||(cached?._pocketRow?.text?[cached._pocketRow.text]:[]))]};
         item.summary[p.summaryIndex||0]=(item.summary[p.summaryIndex||0]||'')+(p.delta||'');
       }
     }
     if(!item)return null;
+    delete item._pocketRow;
     // Raw reasoning and raw Responses API content never enter the phone transcript.
     if(item.type==='reasoning')delete item.content;
     turn.items.set(item.id,{item,version});
     const row=itemRow(item,turnId,version);return row?{threadId,turnId,version,row}:null;
   }
-  merge(thread){
+  merge(thread,{includeMissing=true}={}){
     const result={...thread,turns:(thread.turns||[]).map(t=>({...t,items:[...(t.items||[])]}))};
     for(const [id,live] of this.threads.get(thread.id)||[]){
       let turn=result.turns.find(x=>x.id===id);
-      if(!turn){turn={...live,items:[]};result.turns.push(turn);}
+      if(!turn){if(!includeMissing)continue;turn={...live,items:[]};result.turns.push(turn);}
       if(live.version)Object.assign(turn,{status:live.status,startedAt:turn.startedAt||live.startedAt,completedAt:live.completedAt||turn.completedAt,durationMs:live.durationMs??turn.durationMs});
       for(const {item,version} of live.items.values()){
         const at=turn.items.findIndex(x=>x.id===item.id);const next={...item,_version:version};
-        if(at<0)turn.items.push(next);else turn.items[at]={...turn.items[at],...next};
+        if(at<0)turn.items.push(next);else turn.items[at]={...turn.items[at],...next,...(!next._pocketRow?{_pocketRow:undefined}:{})};
       }
     }
     return result;

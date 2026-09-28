@@ -40,3 +40,14 @@ test('spoken summaries remove markup/code/URLs, remain bounded and travel within
  const data=pushData({title:'🌿'.repeat(1000),body:'🌿'.repeat(10000),spoken_summary:'🌿'.repeat(1000),id:1,thread_id:'thread',created_at:1});
  assert.ok(Buffer.byteLength(JSON.stringify(data))<4096);assert.ok(data.spoken_summary);assert.ok(!data.spoken_summary.includes('\uFFFD'));
 });
+
+test('paged recovery continues beyond eight missed completions and stops at the subscription boundary',t=>{
+ const dir=mkdtempSync(join(tmpdir(),'pocket-paged-recovery-'));const {db}=openStore(dir);t.after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});
+ db.prepare('INSERT INTO watches VALUES(?,?,1)').run('thread-one','Project');const sent=[];const recovery=new CompletionRecovery(db,(...a)=>sent.push(a));
+ recovery.follow('thread-one');const at=Date.now()/1000+1;
+ const page={id:'thread-one',turns:Array.from({length:8},(_,i)=>({id:'new-'+i,status:'completed',completedAt:at+i,items:[]}))};
+ assert.equal(recovery.needsEarlier(page),true);recovery.observe(page);
+ const older={id:'thread-one',turns:[{id:'baseline',status:'completed',completedAt:1},{id:'missed',status:'completed',completedAt:at}]};
+ assert.equal(recovery.needsEarlier(older),false);recovery.observe(older);
+ assert.equal(sent.length,9);assert.equal(recovery.needsEarlier(page),false);
+});

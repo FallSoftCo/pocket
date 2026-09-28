@@ -95,7 +95,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.4.3-alpha.3.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.3-alpha.3.apk`.
+Download `pocket-0.4.4-alpha.1.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.4-alpha.1.apk`.
 
 On the workstation, from the checkout:
 
@@ -134,6 +134,10 @@ Questions, approvals, and errors appear in **Needs you**. Reminders use delays o
 Summary speech runs locally in a short-lived playback service with a Stop action and a 30-second lifetime limit. There is no permanent service. Normal notification delivery is immediate, with a tone as fallback when speech cannot run. Speech respects silent/vibrate mode, notification volume, channel mute, Do Not Disturb, and audio-focus loss. It does not read a backlog of historical notifications or repeatedly speak reminders. Nothing is sent to an external speech service.
 
 ## Connection troubleshooting
+
+Pocket distinguishes **phone → workstation** failures from **workstation → Codex** failures. The connection banner explains which link needs attention and offers **Retry now**. Failed loads offer **Reload conversation**; reconnecting refreshes the open task automatically. These actions reload data without resending replies.
+
+Large conversations using Codex’s paginated history load recent turns and bounded item pages. **Load earlier turns** fetches the preceding page. This avoids requesting an entire long conversation in one WebSocket message. If a single response still exceeds the limit, Pocket reports that specific cause instead of just “Codex disconnected.”
 
 If Pocket reports that it cannot resolve the workstation name, check that Tailscale is connected on both devices and that the phone is using Tailscale DNS. In Pocket settings, **Reconnect now** retries immediately without unpairing.
 

@@ -13,6 +13,8 @@ import { SessionStarts,recentProjects } from './sessions.mjs';
 import { CompletionRecovery } from './completions.mjs';
 import { spokenSummary } from './speech.mjs';
 import { LiveTimeline,timelinePage } from './timeline.mjs';
+import { ThreadHistory } from './history.mjs';
+import { ambiguousDelivery } from './connection-errors.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const dir=process.env.POCKET_DATA || resolve(root,'data');
@@ -24,6 +26,7 @@ const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1
 const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
 const attached=new Set(), pending=new Map(), syncing=new Set();
 const timeline=new LiveTimeline();
+const history=new ThreadHistory(codex);
 const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id});void sendOutgoing(row,thread);});
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...payload}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
@@ -57,12 +60,23 @@ function resolveAttention(where,...args){
 }
 // Native request IDs belong to the current bridge connection and cannot be answered after restart.
 resolveAttention('request_id IS NOT NULL');
-async function attach(threadId){
+async function attach(threadId,{before=null}={}){
   requireId(threadId); await codex.connect();
+  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread;
   if(!attached.has(threadId)){
-    const r=await codex.call('thread/resume',{threadId});timeline.seed(r.thread);completions.observe(r.thread);attached.add(threadId); return r.thread;
+    metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true})).thread;attached.add(threadId);
+    // Recover missed completions in bounded summary pages, stopping at the saved boundary.
+    let page=await history.read(metadata,{summary:true});const cursors=new Set(),recoveryPages=[];
+    while(true){
+      const earlier=completions.needsEarlier(page);recoveryPages.push(page);
+      const cursor=page._pocketPage?.before;
+      if(!earlier||!cursor)break;
+      if(cursors.has(cursor))throw Error('Codex returned a repeated history cursor.');
+      cursors.add(cursor);page=await history.read(metadata,{before:cursor,summary:true});
+    }
+    for(const recovered of recoveryPages.reverse())completions.observe(recovered);
   }
-  return (await codex.call('thread/read',{threadId,includeTurns:true})).thread;
+  const thread=await history.read(metadata,{before});if(!before)timeline.seed(thread);return thread;
 }
 const isActive=t=>t.status?.type==='active';
 async function sendOutgoing(row,initialThread=null){
@@ -86,7 +100,7 @@ async function sendOutgoing(row,initialThread=null){
     resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=? AND created_at<=?)',row.thread_id,row.created_at||now());
     emit('reply',{id:row.id,threadId:row.thread_id,state:'accepted'});
   }catch(e){
-    const state=/timed out|disconnected/.test(e.message)?'unknown':'failed';
+    const state=ambiguousDelivery(e)?'unknown':'failed';
     db.prepare('UPDATE outgoing SET state=?,result=?,updated_at=? WHERE id=?').run(state,e.message,now(),row.id);
     emit('reply',{id:row.id,threadId:row.thread_id,state,error:e.message});
   }finally{syncing.delete(row.thread_id);}
@@ -110,8 +124,8 @@ codex.on('event',m=>{
   // Only forward subscribed task events, never unrelated global messages or credentials.
   if(threadId && attached.has(threadId))emit('codex',{event:{method:m.method,...(m.id!==undefined?{id:m.id}:{}),params:{threadId,turnId:p.turnId}}});
 });
-codex.on('connected',()=>emit('status',{connected:true}));
-codex.on('disconnected',()=>{attached.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',{connected:false});});
+codex.on('connected',()=>emit('status',codex.status()));
+codex.on('disconnected',error=>{console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
 let reconnecting=false;
 setInterval(async()=>{
   if(reconnecting)return;reconnecting=true;
@@ -125,7 +139,7 @@ setInterval(async()=>{
 codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.3-alpha.3'}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.4-alpha.1'}));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -145,7 +159,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>res.json({connected:codex.ready,host:hostname(),version:'0.4.3-alpha.3',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
+app.get('/api/status',(req,res)=>res.json({...codex.status(),host:hostname(),version:'0.4.4-alpha.1',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -178,9 +192,11 @@ app.get('/api/threads',route(async(req,res)=>{
   res.json({threads:(r.data||[]).map(t=>({id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',preview:t.preview?.slice(0,200),cwd:t.cwd,status:t.status,updatedAt:t.updatedAt,watched:!!watches.find(w=>w.thread_id===t.id&&w.enabled)}))});
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
-  const t=timeline.merge(await attach(req.params.id));
+  const raw=await attach(req.params.id,{before:req.query.before||null});
+  const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage});
   const requests=[...pending.values()].filter(m=>m.params.threadId===t.id);
-  const page=timelinePage(t,requests,{before:req.query.before||null,limit:8,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=?').all(t.id).map(notificationRow)});
+  const page=timelinePage(t,requests,{before:raw._pocketPage?null:req.query.before||null,limit:8,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=?').all(t.id).map(notificationRow)});
+  if(raw._pocketPage)Object.assign(page,raw._pocketPage);
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
   res.json({thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:timeline.version,pending:requests,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),outgoing:db.prepare('SELECT id,text,state,result,created_at FROM outgoing WHERE thread_id=? ORDER BY created_at').all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)});
@@ -257,9 +273,9 @@ app.get('/api/devices',owner,(_req,res)=>res.json({devices:db.prepare('SELECT id
 app.delete('/api/devices/:id',owner,(req,res)=>{db.prepare('DELETE FROM devices WHERE id=?').run(req.params.id);for(const s of sockets.clients)if(s.deviceId===req.params.id)s.close();res.json({ok:true});});
 server.on('upgrade',(req,socket,head)=>{
   const device=identity(req);if(!device||req.url!=='/events'){socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');socket.destroy();return;}
-  sockets.handleUpgrade(req,socket,head,ws=>{ws.deviceId=device.id;ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.on('error',()=>{});db.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(now(),device.id);ws.send(JSON.stringify({type:'status',connected:codex.ready}));sockets.emit('connection',ws,req);});
+  sockets.handleUpgrade(req,socket,head,ws=>{ws.deviceId=device.id;ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.on('error',()=>{});db.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(now(),device.id);ws.send(JSON.stringify({type:'status',...codex.status()}));sockets.emit('connection',ws,req);});
 });
 setInterval(()=>{for(const ws of sockets.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000).unref();
-app.use((err,req,res,next)=>{console.error(req.method,req.path,err.message);res.status(400).json({error:err.message});});
+app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.message);res.status(err.status||400).json({error:err.message,...(err.code?{code:err.code}:{})});});
 const port=Number(process.env.PORT||18880);
 server.listen(port,'127.0.0.1',()=>console.log(`Pocket listening on 127.0.0.1:${port}`));

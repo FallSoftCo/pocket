@@ -7,6 +7,14 @@ export class CompletionRecovery {
   }
   seen(threadId,turnId){return this.db.prepare('SELECT 1 FROM completion_seen WHERE thread_id=? AND turn_id=?').get(threadId,turnId);}
   mark(threadId,turnId){this.db.prepare('INSERT OR IGNORE INTO completion_seen VALUES(?,?)').run(threadId,turnId);}
+  needsEarlier(thread){
+    if(!this.db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(thread.id))return false;
+    const checkpoint=this.db.prepare('SELECT * FROM completion_watches WHERE thread_id=?').get(thread.id);
+    if(!checkpoint)return false;
+    const finished=(thread.turns||[]).filter(t=>['completed','failed','interrupted'].includes(t.status));
+    if(finished.some(t=>this.seen(thread.id,t.id)||(Number(t.completedAt)>0&&Number(t.completedAt)*1000<checkpoint.since)))return false;
+    return !!checkpoint.initialized||finished.some(t=>Number(t.completedAt)*1000>=checkpoint.since);
+  }
   complete(threadId,turn){
     const watch=this.db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(threadId);
     if(!watch||!turn||!['completed','failed','interrupted'].includes(turn.status))return;

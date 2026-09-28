@@ -12,7 +12,8 @@ object PocketTranscript {
     var revision by mutableIntStateOf(0);private set
     private val buffered=mutableListOf<JSONObject>()
     private var owner:String?=null
-    fun reset(id:String){owner=id;rows=emptyList();earlier=false;before=null;loading=false;buffered.clear();revision++}
+    private var historyLoaded=false
+    fun reset(id:String){owner=id;rows=emptyList();earlier=false;before=null;loading=false;historyLoaded=false;buffered.clear();revision++}
     suspend fun load(older:Boolean=false){
         val id=Pocket.selected?:return;if(loading||owner!=id)return
         loading=true;buffered.clear()
@@ -27,7 +28,8 @@ object PocketTranscript {
                 val retained=if(at>0)rows.take(at)else emptyList()
                 rows=retained+incoming
             }
-            if(older||before==null){before=page.s("before").takeIf{it.isNotBlank()};earlier=page.optBoolean("hasEarlier")}
+            if(older||!historyLoaded){before=page.s("before").takeIf{it.isNotBlank()};earlier=page.optBoolean("hasEarlier")}
+            historyLoaded=true
             Pocket.detail=d
             val updates=buffered.toList();buffered.clear()
             updates.filter{it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}

@@ -21,8 +21,5 @@ object PocketNetwork {
                 }
             }
         }).build()
-    fun error(e:Throwable):String {
-        if(generateSequence(e){it.cause}.any{it is UnknownHostException})return "Could not resolve your workstation’s name. Check that Tailscale is connected and using Tailscale DNS, then retry. Your pairing is saved."
-        return e.message?:"Could not reach your workstation"
-    }
+    fun error(e:Throwable)=ConnectionMessages.error(e)
 }
