@@ -31,12 +31,17 @@ test('bridge restart backfills missed completion, survives replay and keeps work
  const {openStore}=await import('../server/store.mjs');const {db}=openStore(dir);const watch=db.prepare('SELECT * FROM watches WHERE thread_id=?').get('thread-one');db.prepare('DELETE FROM watches WHERE thread_id=?').run('thread-one');db.prepare('INSERT INTO watches VALUES(?,?,1)').run('broken-thread','Missing');db.prepare('INSERT INTO watches VALUES(?,?,1)').run(watch.thread_id,watch.name);db.close();
  completed=true;await start();
  await wait(async()=>(await api('/api/notifications')).notifications.length===1);
- let rows=(await api('/api/notifications')).notifications;assert.equal(rows[0].body,'Recovery passed.');assert.ok(rows[0].spoken_summary);
+ let rows=(await api('/api/notifications')).notifications;assert.equal(rows[0].body,'Recovery passed.');assert.ok(rows[0].spoken_summary);assert.ok(rows[0].spoken_text);
+ const fullSpeech=('A complete update should reach the phone without an arbitrary word limit. ').repeat(80).trim();
+ const created=await api('/api/notify',{thread_id:'thread-one',title:'Speech transport test',message:fullSpeech,spoken_summary:fullSpeech});
+ const loaded=await api('/api/notifications/'+created.notification.id);assert.equal(loaded.notification.spoken_text,fullSpeech);
+ const unauthenticated=await fetch(`http://127.0.0.1:${port}/api/notifications/${created.notification.id}`);assert.equal(unauthenticated.status,401);
+
  peer.send(JSON.stringify({method:'turn/completed',params:{threadId:'thread-one',turn:turn()}}));
  const before=resumes;await stop();await start();await wait(()=>resumes>before);
- rows=(await api('/api/notifications')).notifications;assert.equal(rows.length,1,'restart and live replay must not duplicate the completion');
+ rows=(await api('/api/notifications')).notifications;assert.equal(rows.length,2,'restart and live replay must not duplicate the completion');
  // A socket-only outage must recover without restarting the Pocket process.
  turnId='turn-during-disconnect';peer.terminate();
- await wait(async()=>(await api('/api/notifications')).notifications.length===2);
+ await wait(async()=>(await api('/api/notifications')).notifications.length===3);
  assert.equal((await api('/api/notifications')).notifications.at(-1).source_turn_id,turnId);
 });

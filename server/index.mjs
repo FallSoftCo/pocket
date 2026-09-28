@@ -11,7 +11,7 @@ import { openStore, hash } from './store.mjs';
 import { loadPush } from './push.mjs';
 import { SessionStarts,recentProjects } from './sessions.mjs';
 import { CompletionRecovery } from './completions.mjs';
-import { spokenSummary } from './speech.mjs';
+import { spokenSummary,spokenText } from './speech.mjs';
 import { LiveTimeline,timelinePage } from './timeline.mjs';
 import { ThreadHistory } from './history.mjs';
 import { ambiguousDelivery } from './connection-errors.mjs';
@@ -38,16 +38,16 @@ const requireAuth=(req,res,next)=>{req.device=identity(req); if(!req.device)retu
 const owner=(req,res,next)=>{if(req.device.id!=='owner')return res.status(403).json({error:'Local owner access required'});next();};
 const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 const requireId=id=>{if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(id))throw new Error('Invalid thread identifier');return id;};
-const notificationRow=r=>({...r,attachments:JSON.parse(r.attachments||'[]')});
+const notificationRow=r=>({...r,spoken_text:r.spoken_text||spokenText(r.title,r.body),attachments:JSON.parse(r.attachments||'[]')});
 const completions=new CompletionRecovery(db,(threadId,title,body,kind,turnId)=>notify(threadId,title,body,kind,[],null,null,turnId));
 function notify(threadId,title,body,kind='update',attachments=[],requestId=null,speech=null,turnId=null) {
   const at=now();
   let n;
   db.exec('BEGIN IMMEDIATE');
   try{
-    const r=db.prepare('INSERT OR IGNORE INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,source_turn_id) VALUES(?,?,?,?,?,?,?,?)').run(threadId,title,body,kind,JSON.stringify(attachments),at,spokenSummary(title,body,speech),turnId);
+    const r=db.prepare('INSERT OR IGNORE INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,source_turn_id,spoken_text) VALUES(?,?,?,?,?,?,?,?,?)').run(threadId,title,body,kind,JSON.stringify(attachments),at,spokenSummary(title,body,speech),turnId,spokenText(title,body,speech));
     if(!r.changes){db.exec('COMMIT');return null;}
-    n={id:Number(r.lastInsertRowid),thread_id:threadId,title,body,kind,attachments,created_at:at,spoken_summary:spokenSummary(title,body,speech)};
+    n={id:Number(r.lastInsertRowid),thread_id:threadId,title,body,kind,attachments,created_at:at,spoken_summary:spokenSummary(title,body,speech),spoken_text:spokenText(title,body,speech)};
     if(threadId&&['question','approval','error'].includes(kind))db.prepare('INSERT INTO notification_attention(notification_id,request_id) VALUES(?,?)').run(n.id,requestId);
     push.enqueue(n.id,{flush:false});db.exec('COMMIT');
   }catch(e){db.exec('ROLLBACK');throw e;}
@@ -142,7 +142,7 @@ setInterval(async()=>{
 codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.4-alpha.2'}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.4-alpha.3'}));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -162,7 +162,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>res.json({...codex.status(),host:hostname(),version:'0.4.4-alpha.2',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
+app.get('/api/status',(req,res)=>res.json({...codex.status(),host:hostname(),version:'0.4.4-alpha.3',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -253,6 +253,7 @@ app.get('/api/notifications/:id/attention',(req,res)=>{
   const row=db.prepare('SELECT * FROM notification_attention WHERE notification_id=?').get(req.params.id);
   res.json({needsAttention:!!row&&row.resolved_at===null});
 });
+app.get('/api/notifications/:id',(req,res)=>{const n=db.prepare('SELECT * FROM notifications WHERE id=?').get(req.params.id);if(!n)return res.status(404).json({error:'Notification not found.'});res.json({notification:notificationRow(n)});});
 app.get('/api/notifications',(req,res)=>{const after=Math.max(0,Number(req.query.after)||0);res.json({notifications:db.prepare('SELECT * FROM notifications WHERE id>? ORDER BY id DESC LIMIT 100').all(after).reverse().map(notificationRow)});});
 app.post('/api/test-notification',(req,res)=>res.json(notify(null,'Your work, within reach.','Pocket is connected. Updates from Codex will arrive here, with a direct route back to your task.','test')));
 const mimeFor=n=>({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.pdf':'application/pdf','.mp4':'video/mp4','.txt':'text/plain','.md':'text/plain'})[extname(n).toLowerCase()]||'application/octet-stream';
@@ -265,7 +266,7 @@ function saveAttachment(file,threadId){
 app.post('/api/notify',owner,route(async(req,res)=>{
   const b=req.body, threadId=requireId(b.thread_id);
   if(!b.message||String(b.message).length>32000)return res.status(400).json({error:'A message up to 32000 characters is required.'});
-  if(b.spoken_summary!==undefined&&(typeof b.spoken_summary!=='string'||b.spoken_summary.length>240))return res.status(400).json({error:'Spoken summary must be at most 240 characters.'});
+  if(b.spoken_summary!==undefined&&(typeof b.spoken_summary!=='string'||b.spoken_summary.length>32000))return res.status(400).json({error:'Spoken text must be at most 32000 characters.'});
   const t=await attach(threadId);
   db.prepare('INSERT OR IGNORE INTO watches(thread_id,name,enabled) VALUES(?,?,0)').run(threadId,t.name||'Codex');
   const attachments=(b.files||[]).slice(0,5).map(f=>saveAttachment(f,threadId));

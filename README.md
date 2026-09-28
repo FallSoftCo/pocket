@@ -95,7 +95,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.4.4-alpha.2.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.4-alpha.2.apk`.
+Download `pocket-0.4.4-alpha.3.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.4-alpha.3.apk`.
 
 On the workstation, from the checkout:
 
@@ -129,9 +129,9 @@ Open a task and tap its bell to follow it. Replying also follows it. The convers
 
 Questions, approvals, and errors appear in **Needs you**. Reminders use delays of 5 minutes, then 15 and 30 minutes between repeats, up to three repeats. Swipe away, dismiss, reply, or resolve the request to stop them. **Later · 30m** snoozes. Android may delay these approximate timers; opening a task alone does not dismiss its request.
 
-**Labels** prepares generic phrases using an installed offline English voice. **Speak summaries** opts into reading a short excerpt of actual notification content, including while the phone is locked. Codex can supply an optional `spoken_summary` to `notify_user`; otherwise the backend creates a bounded, cleaned excerpt of the title and message. This is an excerpt, not a separate AI interpretation. Code blocks, URLs and long paths are removed.
+**Labels** prepares generic phrases using an installed offline English voice. **Speak messages** opts into reading the complete spoken version of notification content, including while the phone is locked. Codex can supply an optional `spoken_summary` to `notify_user`; otherwise the backend reads the cleaned title and message. The spoken version supports the same 32,000-character input budget as a notification, without a separate word cutoff. It is not a separate AI interpretation. Code blocks, URLs and long paths are removed.
 
-Summary speech runs locally in a short-lived playback service with a Stop action and a 30-second lifetime limit. There is no permanent service. Normal notification delivery is immediate, with a tone as fallback when speech cannot run. Speech respects silent/vibrate mode, notification volume, channel mute, Do Not Disturb, and audio-focus loss. It does not read a backlog of historical notifications or repeatedly speak reminders. Nothing is sent to an external speech service.
+Speech runs locally in a playback service with a Stop action. Long messages are played in ordered chunks with no overall 30-second cutoff; each chunk has its own stall watchdog. The service ends when playback finishes. There is no permanent service. Normal notification delivery is immediate, with a tone as fallback when speech cannot run. Speech respects silent/vibrate mode, notification volume, channel mute, Do Not Disturb, and audio-focus loss. It does not read a backlog of historical notifications or repeatedly speak reminders. Nothing is sent to an external speech service. Firebase carries short speech directly; longer speech is fetched through the authenticated workstation connection. If that connection is unavailable, Pocket reads the preview and explains that the full message could not be retrieved.
 
 ## Connection troubleshooting
 

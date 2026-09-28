@@ -4,6 +4,14 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x**. Physical testing covers a Pixel 9 Pro Fold on Android **API 36**; the public release also runs on an Android **API 35** emulator with Google Play services. The shared Unix app-server was used without a fork or competing runtime.
 
+## Full-message speech: 0.4.4-alpha.3
+
+The server preserves the complete cleaned spoken text separately from the short compatibility preview. The optional `spoken_summary` input now accepts the same 32,000-character budget as notification messages. The phone plays all text in ordered chunks, preferring sentence boundaries and retaining long sentences and Unicode without dropping the ending. Initialization and each utterance have separate stall watchdogs; there is no shared 30-second playback deadline. TTS queueing does not flush an active utterance. Stop, audio-focus loss, mute and Do Not Disturb remain intentional interruptions.
+
+Short speech travels directly in FCM data; longer speech is fetched from the authenticated notification-by-ID endpoint. Notifications still display immediately. If the workstation is unreachable, the phone reads the compatibility preview and explicitly says the full spoken message is unavailable. Old app versions still receive a short preview. Nothing is sent to a cloud speech provider.
+
+Validation: 68 backend tests and 11 Android unit tests passed, including lossless multi-chunk playback text, exact full-message storage/retrieval, unauthorized retrieval rejection, sentence-complete compatibility previews and escaped/Unicode push payload budgets. Signed release build and lint passed. The paired Pixel was upgraded in place to version code 12 with pairing and its speech preference retained. A real 727-character, 125-word Firebase notification required full-text retrieval and played in two chunks (538 + 189 characters): start 14:26:45.474, final completion 14:27:28.698 on the device clock, approximately 43.2 seconds. Both utterance completion callbacks arrived and the playback service exited. This establishes playback completion, not a subjective voice-quality judgment.
+
 ## Display cache limits: 0.4.4-alpha.2
 
 Verified on September 28, 2026:

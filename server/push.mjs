@@ -1,3 +1,4 @@
+import {speechText,spokenText} from './speech.mjs';
 import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {initializeApp,cert,applicationDefault} from 'firebase-admin/app';
@@ -6,7 +7,12 @@ import {getMessaging} from 'firebase-admin/messaging';
 export function pushData(n) {
   // FCM data has a 4096-byte limit. Full content and files stay on the host.
   const clip=(text,bytes)=>{let out='';for(const char of String(text||'')){if(Buffer.byteLength(out+char)>bytes)break;out+=char;}return out;};
-  return {id:String(n.id),thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2000),spoken_summary:clip(n.spoken_summary,600),kind:n.kind||'update',created_at:String(n.created_at)};
+  const full=n.spoken_text||spokenText(n.title,n.body,n.spoken_summary);
+  const spoken=Buffer.byteLength(full)<=600?{spoken_text:full}:{speech_pending:'1'};
+  const data={...spoken,id:String(n.id),thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2000),spoken_summary:speechText(n.spoken_summary),kind:n.kind||'update',created_at:String(n.created_at)};
+  // Leave room for the device ID and envelope, including JSON-escaped characters.
+  while(Buffer.byteLength(JSON.stringify(data))>3700&&data.body)data.body=clip(data.body,Math.floor(Buffer.byteLength(data.body)/2));
+  return data;
 }
 export class PushDelivery {
   constructor(db,{config=null,send=null,clock=()=>Date.now()}={}){this.db=db;this.config=config;this.send=send;this.clock=clock;this.busy=false;}
@@ -19,7 +25,7 @@ export class PushDelivery {
   async flush(){
     if(!this.enabled||this.busy)return;this.busy=true;
     try{
-      const rows=this.db.prepare("SELECT p.*,t.token,n.thread_id,n.title,n.body,n.kind,n.created_at,n.spoken_summary FROM push_deliveries p JOIN push_tokens t ON t.device_id=p.device_id JOIN notifications n ON n.id=p.notification_id WHERE p.state IN ('queued','retry') AND p.next_attempt_at<=? AND t.project_id=? ORDER BY p.notification_id LIMIT 100").all(this.clock(),this.config.projectId);
+      const rows=this.db.prepare("SELECT p.*,t.token,n.thread_id,n.title,n.body,n.kind,n.created_at,n.spoken_summary,n.spoken_text FROM push_deliveries p JOIN push_tokens t ON t.device_id=p.device_id JOIN notifications n ON n.id=p.notification_id WHERE p.state IN ('queued','retry') AND p.next_attempt_at<=? AND t.project_id=? ORDER BY p.notification_id LIMIT 100").all(this.clock(),this.config.projectId);
       for(const row of rows){
         // Recheck revocation immediately before handing the token to Firebase.
         if(!this.db.prepare('SELECT 1 FROM push_tokens WHERE device_id=? AND token=?').get(row.device_id,row.token))continue;
