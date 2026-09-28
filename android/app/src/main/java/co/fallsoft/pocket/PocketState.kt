@@ -55,6 +55,7 @@ object Pocket {
         if(!prefs.contains("seenIds"))prefs.edit().putStringSet("seenIds",((lastNotification-511).coerceAtLeast(1)..lastNotification).map{it.toString()}.toSet()).apply()
         context.getSystemService(android.app.NotificationManager::class.java).apply{cancel(1);deleteNotificationChannel("connection")}
         PocketAudio.init()
+        PocketSpeech.init()
         PocketAttention.init()
         if(token.isNotBlank())try{PocketPush.initialize()}catch(_:Exception){}
         if(prefs.getBoolean("pushReady",false))pushStatus="Firebase push is ready"
@@ -87,7 +88,7 @@ object Pocket {
         }catch(_:Exception){}}
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention")
-        context.stopService(Intent(context,PocketSpeechService::class.java))
+        PocketSpeech.clear()
         PocketTranscript.clear();PocketLive.stop();token="";base="";connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0;pushStatus="Not paired";prefs.edit().clear().apply()
     }
     fun refresh(){scope.launch{

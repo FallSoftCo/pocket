@@ -37,6 +37,7 @@ object PocketNotifications {
             .setStyle(NotificationCompat.BigTextStyle().bigText(n.s("body")))
             .setColor(0xffb3f5cb.toInt()).setAutoCancel(!attention).setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(open(c,thread,id))
+        if(PocketSpeech.count>0&&!PocketSpeech.paused)b.setSilent(true)
         if(reminder)b.setSubText("Still needs your attention")
         if(attention){PocketAttention.remember(n);b.setDeleteIntent(PocketAttention.action(c,n.optLong("id"),"dismiss"))}
         if(thread!=null){

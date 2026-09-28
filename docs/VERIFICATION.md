@@ -4,6 +4,14 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x**. Physical testing covers a Pixel 9 Pro Fold on Android **API 36**; the public release also runs on an Android **API 35** emulator with Google Play services. The shared Unix app-server was used without a fork or competing runtime.
 
+## Resumable on-device speech: 0.4.4-alpha.4
+
+Speech now synthesizes one private offline audio chunk and plays it through Android MediaPlayer, with media-session Pause controls and a saved Resume notification. The in-app player exposes the same controls and a separate menu to clear saved speech. Pausing stops the service and releases audio focus; notification text, the current audio file and playback position survive process recreation. Incoming speech remains queued while paused. Completed chunks are deleted; disabling speech or disconnecting clears saved content. No overlay permission or cloud speech service is used.
+
+On the physical Pixel, manual Pause saved a position of 17,689 ms. An in-place upgrade preserved that queue; Resume started at exactly 17,689 ms. A separate, temporary foreground app then requested music audio focus and played silent local audio. Pocket paused at 17,694 ms, kept both queued messages and stopped its service. The test app was removed afterward. An earlier process-death/relaunch check also preserved the current chunk, its 10,683 ms position and all queued IDs. Pairing, device identity and Speak messages remained intact. The player and paused notification were visually inspected on the phone.
+
+Validation: 68 backend tests, 14 Android unit tests, debug and signed release builds, and release lint passed (zero lint errors; advisory warnings remain). Queue tests cover late completion callbacks after pause, duplicate arrivals, message ordering, restored multi-chunk progress and retention beyond the old three-message queue cap. Audio is checkpointed every two seconds during playback; abrupt process death can replay the interval since the last checkpoint. Explicit Pause saves its current position immediately. This does not claim speech can continue during Android force-stop or after clearing app data.
+
 ## Full-message speech: 0.4.4-alpha.3
 
 The server preserves the complete cleaned spoken text separately from the short compatibility preview. The optional `spoken_summary` input now accepts the same 32,000-character budget as notification messages. The phone plays all text in ordered chunks, preferring sentence boundaries and retaining long sentences and Unicode without dropping the ending. Initialization and each utterance have separate stall watchdogs; there is no shared 30-second playback deadline. TTS queueing does not flush an active utterance. Stop, audio-focus loss, mute and Do Not Disturb remain intentional interruptions.

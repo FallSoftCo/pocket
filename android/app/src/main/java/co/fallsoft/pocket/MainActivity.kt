@@ -103,6 +103,7 @@ class MainActivity:ComponentActivity(){
 @Composable fun PocketApp(){
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
+        SpeechPlayer()
         ConnectionNotice()
         if(Pocket.newTask)NewTaskScreen()
         else if(Pocket.selected!=null)key(Pocket.selected){ConversationScreen()}
@@ -118,6 +119,24 @@ class MainActivity:ComponentActivity(){
         }
     }
 }
+@Composable fun SpeechPlayer(){
+    if(PocketSpeech.count==0)return
+    var discard by remember{mutableStateOf(false)}
+    Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
+        Row(Modifier.padding(horizontal=18.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f)){
+                Text(if(PocketSpeech.paused)"Speech paused · ${PocketSpeech.count} saved" else "Listening · ${PocketSpeech.count} queued",color=Mint,fontSize=12.sp)
+                Text(if(PocketSpeech.paused)PocketSpeech.status else PocketSpeech.title,color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            }
+            TextButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")}){Text(if(PocketSpeech.paused)"Resume" else "Pause")}
+            if(PocketSpeech.paused)Box{
+                IconButton({discard=true}){Icon(Icons.Rounded.MoreVert,"Speech options",tint=Muted)}
+                DropdownMenu(discard,{discard=false}){DropdownMenuItem(text={Text("Clear saved speech")},onClick={discard=false;PocketSpeech.clear()})}
+            }
+        }
+    }
+}
+
 @Composable fun ConnectionPill(){val ok=Pocket.connected&&Pocket.codexOnline;Row(Modifier.clip(CircleShape).background(Panel).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){Box(Modifier.size(6.dp).background(if(ok)Mint else Coral,CircleShape));Text(if(ok)"Connected" else if(Pocket.connected)"Codex offline" else "Reconnecting",fontSize=11.sp,color=if(ok)Mint else Coral)}}
 @Composable fun WorkScreen(){
     var filter by remember{mutableIntStateOf(0)};var query by remember{mutableStateOf("")}
@@ -194,12 +213,12 @@ fun relative(time:Long):String{val seconds=(System.currentTimeMillis()-(if(time<
             }
         }
         FilterChip(selected=PocketAudio.mode=="summaries",onClick={PocketAudio.select("summaries")},label={Text("Speak messages")},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
-        Text(when(PocketAudio.mode){"summaries"->"A short tone, then the complete spoken message in an offline voice. Long messages continue in chunks, including while locked. Stop playback from its notification. Quiet mode and Do Not Disturb silence speech.";"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        Text(when(PocketAudio.mode){"summaries"->"A short tone, then the complete spoken message in an offline voice. Pause and resume from the player or notification, including while locked. Other audio pauses speech and saves your place. Quiet mode and Do Not Disturb silence speech.";"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
         if(PocketAudio.status.isNotBlank())Text(PocketAudio.status,color=Mint,fontSize=12.sp)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
             listOf("complete" to "Finished","question" to "Question","error" to "Problem").forEach{(kind,label)->TextButton({PocketAudio.preview(kind)}){Text("▶ $label",color=Mint,fontSize=11.sp)}}
         }
-        Text("Uses your notification volume and Do Not Disturb settings.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
+        Text("Speech uses media volume; quiet mode, notification mute and Do Not Disturb still silence it.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
         HorizontalDivider(color=Line)
         Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Remind me when I’m needed",fontSize=14.sp);Text("Questions, approvals and problems only",color=Muted,fontSize=11.sp)};Switch(PocketAttention.enabled,{PocketAttention.toggle(it)})}
         Text("Up to three reminders: 5, 15, then 30 minutes apart. Dismiss, reply or resolve the request to stop. Later snoozes for 30 minutes.",color=Muted,fontSize=11.sp,lineHeight=17.sp)

@@ -53,7 +53,7 @@ object PocketAudio {
     fun select(value:String){
         if(value !in listOf("tones","voice","system","summaries"))return
         mode=value;Pocket.prefs.edit().putString("audioMode",value).apply();status=""
-        if(value!="summaries")Pocket.context.stopService(android.content.Intent(Pocket.context,PocketSpeechService::class.java))
+        if(value!="summaries")PocketSpeech.clear()
         if(value=="voice")prepareVoice()
     }
     fun prepareVoice(){

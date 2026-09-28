@@ -4,22 +4,49 @@ import android.app.*
 import android.content.*
 import android.content.pm.ServiceInfo
 import android.media.*
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.*
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
-import androidx.core.app.NotificationCompat
+import androidx.compose.runtime.*
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import org.json.JSONObject
-import java.util.Locale
 import kotlinx.coroutines.*
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.security.MessageDigest
+import java.util.Locale
 
-/** Only runs for the duration of a short, explicitly enabled spoken notification. */
 object PocketSpeech {
-    fun text(n:JSONObject):String {
-        val source=n.s("spoken_text").ifBlank{n.s("spoken_summary").ifBlank{n.s("title")+". "+n.s("body")}}
-        return SpeechText.clean(source)
+    internal var queue=SpeechQueue()
+    internal var service:PocketSpeechService?=null
+    var count by mutableIntStateOf(0); private set
+    var paused by mutableStateOf(false); private set
+    var title by mutableStateOf(""); private set
+    var status by mutableStateOf(""); private set
+    private val storage get()=Pocket.context.getSharedPreferences("speech-playback",Context.MODE_PRIVATE)
+    internal val directory get()=File(Pocket.context.filesDir,"speech-playback").apply{mkdirs()}
+    fun text(n:JSONObject)=SpeechText.clean(n.s("spoken_text").ifBlank{n.s("spoken_summary").ifBlank{n.s("title")+". "+n.s("body")}})
+    fun init(){
+        queue=try{
+            val s=JSONObject(storage.getString("queue","{}")!!)
+            SpeechQueue(s.optJSONArray("messages")?.objects()?.map{SpokenMessage(it.getLong("id"),it.s("title"),it.s("kind"),it.s("text"),it.optBoolean("needsFetch"))}?.toMutableList()?:mutableListOf(),s.optInt("chunk"),s.optInt("position"),true,"Saved for later")
+        }catch(_:Exception){SpeechQueue()}
+        if(Pocket.token.isBlank()||PocketAudio.mode!="summaries")clear() else {publish();if(count>0)showPaused()}
+    }
+    internal fun publish(){count=queue.messages.size;paused=queue.paused;title=queue.current?.title.orEmpty().ifBlank{"Pocket update"};status=queue.reason}
+    internal fun save(durable:Boolean=false){
+        val messages=JSONArray();queue.messages.forEach{messages.put(JSONObject().put("id",it.id).put("title",it.title).put("kind",it.kind).put("text",it.text).put("needsFetch",it.needsFetch))}
+        val edit=storage.edit().putString("queue",JSONObject().put("messages",messages).put("chunk",queue.chunkIndex).put("position",queue.positionMs).toString())
+        if(durable)edit.commit() else edit.apply()
+        publish()
+    }
+    fun clear(){
+        service?.discard();queue=SpeechQueue();storage.edit().clear().commit();directory.deleteRecursively()
+        Pocket.context.getSystemService(NotificationManager::class.java).cancel(998);publish()
     }
     fun allowed(c:Context,kind:String):Boolean {
         if(PocketAudio.mode!="summaries"||Pocket.token.isBlank())return false
@@ -30,108 +57,218 @@ object PocketSpeech {
         val channel=manager.getNotificationChannel(PocketAudio.channel(c,kind))
         return channel!=null&&channel.importance>=NotificationManager.IMPORTANCE_DEFAULT&&channel.sound!=null
     }
-    fun request(c:Context,n:JSONObject){
-        if(!allowed(c,n.s("kind")))return
-        try{ContextCompat.startForegroundService(c,Intent(c,PocketSpeechService::class.java).putExtra("notification",n.toString()))}
-        catch(_:RuntimeException){Log.i("PocketSpeech","Speech unavailable; notification retained")}
+    fun request(c:Context,n:JSONObject){Pocket.scope.launch{
+        if(!allowed(c,n.s("kind")))return@launch
+        val hadSaved=queue.messages.isNotEmpty()&&queue.paused
+        queue.enqueue(SpokenMessage(n.optLong("id"),n.s("title"),n.s("kind"),text(n),n.s("speech_pending")=="1"));save(true)
+        if(hadSaved){showPaused();return@launch}
+        if(service==null)queue.resume()
+        if(service==null&&c.getSystemService(AudioManager::class.java).isMusicActive){hold("Waiting while other audio plays");return@launch}
+        service?.next()?:start(c,"play")
+    }}
+    fun control(action:String){
+        if(action=="pause"){service?.pause("Paused by you");return}
+        if(queue.current!=null)start(Pocket.context,"resume")
     }
+    private fun start(c:Context,action:String){
+        try{ContextCompat.startForegroundService(c,Intent(c,PocketSpeechService::class.java).setAction(action))}
+        catch(_:RuntimeException){hold("Ready when you are")}
+    }
+    internal fun hold(reason:String){queue.pause(queue.positionMs,reason);save(true);showPaused()}
+    internal fun notification(session:MediaSession?=null):Notification {
+        val c=Pocket.context;val manager=c.getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(NotificationChannel("spoken-playback","Spoken message controls",NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
+        val action=if(queue.paused)"resume" else "pause"
+        val intent=PendingIntent.getForegroundService(c,998,Intent(c,PocketSpeechService::class.java).setAction(action),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val open=PendingIntent.getActivity(c,998,Intent(c,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val label=if(queue.paused)"Resume" else "Pause"
+        val detail=if(queue.paused)queue.reason+" · Your place is saved" else "${queue.messages.size} message${if(queue.messages.size==1)"" else "s"} · Pause any time"
+        val builder=Notification.Builder(c,"spoken-playback").setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(if(queue.paused)"Pocket speech paused" else "Listening to Pocket").setContentText(detail)
+            .setContentIntent(open).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PRIVATE).setOngoing(!queue.paused)
+            .addAction(Notification.Action.Builder(if(queue.paused)android.R.drawable.ic_media_play else android.R.drawable.ic_media_pause,label,intent).build())
+        if(session!=null)builder.setStyle(Notification.MediaStyle().setMediaSession(session.sessionToken).setShowActionsInCompactView(0))
+        return builder.build()
+    }
+    internal fun showPaused(){if(queue.current!=null)try{Pocket.context.getSystemService(NotificationManager::class.java).notify(998,notification())}catch(_:SecurityException){}}
 }
 
+/** Local TTS synthesizes one private audio chunk; MediaPlayer provides real pause/seek. */
 class PocketSpeechService:Service(){
     private val handler=Handler(Looper.getMainLooper())
-    private var engine:TextToSpeech?=null
-    private var ready=false
-    private var speaking=false
-    private var closed=false
-    private var focus:AudioFocusRequest?=null
-    private val queue=ArrayDeque<JSONObject>()
-    private val chunks=ArrayDeque<String>()
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
+    private var engine:TextToSpeech?=null
+    private var initializing=false
+    private var ready=false
+    private var closed=false
+    private var finished=false
     private var loading=false
-    private var activeKind="update"
-    private var notificationId=0L
-    private var chunkIndex=0
-    private val seen=mutableSetOf<Long>()
-    private val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
-    private var activeId:String?=null
-    private val timeout=Runnable{Log.w("PocketSpeech","Speech initialization or utterance stalled");stopSelf()}
-    private fun armTimeout(milliseconds:Long){handler.removeCallbacks(timeout);handler.postDelayed(timeout,milliseconds)}
+    private var explicitPlayback=false
+    private val noisy=object:BroadcastReceiver(){override fun onReceive(c:Context?,i:Intent?){pause("Headphones disconnected")}}
+    private var synthesizing:String?=null
+    private var player:MediaPlayer?=null
+    private var prepared=false
+    private var started=false
+    private var focus:AudioFocusRequest?=null
+    private lateinit var session:MediaSession
+    private val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+    private val queue get()=PocketSpeech.queue
+    private val timeout=Runnable{pause("Speech stalled · Tap Resume to retry")}
+    private val checkpoint=object:Runnable{override fun run(){
+        if(closed||queue.paused)return
+        if(prepared)player?.let{queue.positionMs=it.currentPosition;PocketSpeech.save()}
+        handler.postDelayed(this,2000)
+    }}
     override fun onBind(intent:Intent?)=null
     override fun onCreate(){
-        super.onCreate()
-        val manager=getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel("spoken-playback","Spoken summary playback",NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
-        val stop=PendingIntent.getService(this,998,Intent(this,PocketSpeechService::class.java).setAction("stop"),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification=NotificationCompat.Builder(this,"spoken-playback").setSmallIcon(R.drawable.ic_notification).setContentTitle("Speaking a Pocket summary")
-            .setSilent(true).setOngoing(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE).addAction(R.drawable.ic_notification,"Stop",stop).build()
+        super.onCreate();PocketSpeech.service=this
+        ContextCompat.registerReceiver(this,noisy,IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),ContextCompat.RECEIVER_NOT_EXPORTED)
+        session=MediaSession(this,"Pocket speech").apply{
+            setCallback(object:MediaSession.Callback(){
+                override fun onPause(){pause("Paused by you")}
+                override fun onStop(){pause("Saved for later")}
+                override fun onPlay(){queue.resume();PocketSpeech.save();next()}
+            },handler)
+            setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,"Pocket spoken updates").putString(MediaMetadata.METADATA_KEY_ARTIST,"Pocket").build())
+            isActive=true
+        }
         try{
-            if(Build.VERSION.SDK_INT>=29)startForeground(998,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(998,notification)
-        }catch(_:RuntimeException){stopSelf();return}
-        armTimeout(30000)
-        engine=TextToSpeech(this){result->handler.post{
-            if(closed)return@post
-            val tts=engine?:return@post
-            if(result!=TextToSpeech.SUCCESS){stopSelf();return@post}
-            val voice=tts.voices?.filter{!it.isNetworkConnectionRequired&&it.locale.language=="en"&&!(it.features?.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)?:false)}
-                ?.sortedWith(compareByDescending<android.speech.tts.Voice>{it.locale.country==Locale.getDefault().country}.thenByDescending{it.quality})?.firstOrNull()
-            if(voice==null||tts.setVoice(voice)!=TextToSpeech.SUCCESS){Log.i("PocketSpeech","Offline voice unavailable; tone retained");stopSelf();return@post}
-            tts.setAudioAttributes(attributes);tts.setSpeechRate(1.0f)
-            Log.i("PocketSpeech","Using offline voice ${voice.name}")
-            tts.setOnUtteranceProgressListener(object:UtteranceProgressListener(){
-                override fun onStart(id:String?){handler.post{if(!closed&&id==activeId){Log.i("PocketSpeech","Started summary $id");armTimeout(90000)}}}
-                override fun onDone(id:String?){handler.post{if(!closed&&id==activeId){Log.i("PocketSpeech","Completed summary $id");handler.removeCallbacks(timeout);activeId=null;speaking=false;next()}}}
-                override fun onError(id:String?){handler.post{Log.w("PocketSpeech","Speech engine failed for $id");stopSelf()}}
-                override fun onStop(id:String?,interrupted:Boolean){Log.i("PocketSpeech","Stopped summary $id; interrupted=$interrupted")}
-            })
-            ready=true;handler.removeCallbacks(timeout);handler.postDelayed({next()},400)
-        }}
+            val n=PocketSpeech.notification(session)
+            if(Build.VERSION.SDK_INT>=29)startForeground(998,n,ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(998,n)
+        }catch(_:RuntimeException){pause("Ready when you are")}
     }
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
-        if(intent?.action=="stop"){stopSelf();return START_NOT_STICKY}
-        val n=try{JSONObject(intent?.getStringExtra("notification")?:"")}catch(_:Exception){stopSelf();return START_NOT_STICKY}
-        if(!PocketSpeech.allowed(this@PocketSpeechService,n.s("kind"))){stopSelf();return START_NOT_STICKY}
-        if(seen.add(n.optLong("id"))){if(queue.size>=3)queue.removeFirst();queue.addLast(n)}
-        if(ready&&!speaking&&!loading)next()
+        if(finished)return START_NOT_STICKY
+        if(intent?.action=="pause"){pause("Paused by you");return START_NOT_STICKY}
+        if(queue.current==null){finish();return START_NOT_STICKY}
+        if(intent?.action=="resume"){explicitPlayback=true;queue.resume()}
+        if(queue.paused){pause(queue.reason);return START_NOT_STICKY}
+        PocketSpeech.save();next()
         return START_NOT_STICKY
     }
-    private fun next(){
-        if(closed||!ready||speaking||loading)return
-        if(chunks.isNotEmpty()){if(PocketSpeech.allowed(this,activeKind))speakChunk() else stopSelf();return}
-        if(queue.isEmpty()){stopSelf();return}
-        val n=queue.removeFirst()
-        if(!PocketSpeech.allowed(this@PocketSpeechService,n.s("kind"))){stopSelf();return}
-        loading=true;armTimeout(30000)
-        scope.launch{
-            val full=if(n.s("speech_pending")=="1")try{
-                Pocket.api("/api/notifications/${n.optLong("id")}").getJSONObject("notification")
-            }catch(_:Exception){
-                Log.i("PocketSpeech","Full message unavailable for ${n.optLong("id")}")
-                JSONObject(n.toString()).put("spoken_text",n.s("spoken_summary").ifBlank{"A Pocket update has arrived."}+" The full spoken message is unavailable until the workstation reconnects.")
-            }else n
-            if(closed)return@launch
-            loading=false;handler.removeCallbacks(timeout)
-            if(!PocketSpeech.allowed(this@PocketSpeechService,n.s("kind"))){stopSelf();return@launch}
-            notificationId=n.optLong("id");activeKind=n.s("kind");chunkIndex=0
-            chunks.addAll(SpeechText.chunks(PocketSpeech.text(full),minOf(600,TextToSpeech.getMaxSpeechInputLength())))
-            next()
-        }
+    private fun armTimeout(){handler.removeCallbacks(timeout);handler.postDelayed(timeout,90000)}
+    private fun initializeVoice(){
+        if(initializing)return
+        initializing=true;armTimeout()
+        engine=TextToSpeech(this){result->handler.post{
+            if(closed||finished)return@post
+            val tts=engine?:return@post
+            if(result!=TextToSpeech.SUCCESS){pause("Offline voice unavailable · Tap Resume to retry");return@post}
+            val voice=tts.voices?.filter{!it.isNetworkConnectionRequired&&it.locale.language=="en"&&!(it.features?.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)?:false)}
+                ?.sortedWith(compareByDescending<android.speech.tts.Voice>{it.locale.country==Locale.getDefault().country}.thenByDescending{it.quality})?.firstOrNull()
+            if(voice==null||tts.setVoice(voice)!=TextToSpeech.SUCCESS){pause("Install an offline English voice to listen");return@post}
+            tts.setSpeechRate(1.0f)
+            Log.i("PocketSpeech","Using offline voice ${voice.name}")
+            tts.setOnUtteranceProgressListener(object:UtteranceProgressListener(){
+                override fun onStart(id:String?){}
+                override fun onDone(id:String?){handler.post{
+                    if(!closed&&!finished&&id==synthesizing){
+                        synthesizing=null;handler.removeCallbacks(timeout)
+                        val temp=File(PocketSpeech.directory,"pending.wav");val dest=audioFile()
+                        if(dest==null||temp.length()<=44||!temp.renameTo(dest)){pause("Could not prepare speech · Tap Resume to retry");return@post}
+                        next()
+                    }
+                }}
+                override fun onError(id:String?){handler.post{if(!closed&&!finished&&id==synthesizing)pause("Could not prepare speech · Tap Resume to retry")}}
+            })
+            ready=true;handler.removeCallbacks(timeout);next()
+        }}
     }
-    private fun speakChunk(){
-        val audio=getSystemService(AudioManager::class.java)
+    private fun audioFile():File?=queue.chunk?.let{chunk->
+        val hash=MessageDigest.getInstance("SHA-256").digest(chunk.toByteArray()).joinToString(""){"%02x".format(it)}
+        File(PocketSpeech.directory,"$hash.wav")
+    }
+    internal fun next(){
+        if(closed||finished||queue.paused)return
+        if(player!=null){if(prepared)updateControls(PlaybackState.STATE_PLAYING);return}
+        if(loading||synthesizing!=null)return
+        val message=queue.current?:run{finish();return}
+        if(!PocketSpeech.allowed(this,message.kind)){pause("Waiting for sound to be enabled");return}
+        updateControls(PlaybackState.STATE_BUFFERING)
+        if(message.needsFetch){
+            loading=true;armTimeout()
+            scope.launch{
+                val full=try{Pocket.api("/api/notifications/${message.id}").getJSONObject("notification")}catch(e:CancellationException){throw e}catch(_:Exception){null}
+                if(closed||finished)return@launch
+                loading=false;handler.removeCallbacks(timeout)
+                if(full==null){pause("Reconnect to your workstation to load the full message");return@launch}
+                queue.messages[0]=message.copy(text=PocketSpeech.text(full),needsFetch=false);PocketSpeech.save(true);next()
+            }
+            return
+        }
+        val text=queue.chunk
+        if(text==null){queue.completed(message.id,queue.chunkIndex);PocketSpeech.save(true);next();return}
+        val file=audioFile()!!
+        if(file.length()>44){play(file,message.id,queue.chunkIndex);return}
+        if(!ready){initializeVoice();return}
+        // Only the current chunk is retained. Text for the rest stays in the private queue.
+        PocketSpeech.directory.listFiles()?.forEach{it.delete()}
+        synthesizing="${message.id}/${queue.chunkIndex}";armTimeout()
+        if(engine?.synthesizeToFile(text,Bundle(),File(PocketSpeech.directory,"pending.wav"),synthesizing)!=TextToSpeech.SUCCESS)pause("Could not prepare speech · Tap Resume to retry")
+    }
+    private fun play(file:File,id:Long,index:Int){
         if(focus==null){
-            val request=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attributes)
-                .setOnAudioFocusChangeListener({change->if(change<0){Log.i("PocketSpeech","Stopped for audio focus loss ($change)");stopSelf()}},handler).build()
-            if(audio.requestAudioFocus(request)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED){stopSelf();return}
+            if(!explicitPlayback&&getSystemService(AudioManager::class.java).isMusicActive){pause("Waiting while other audio plays");return}
+            val request=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attributes).setWillPauseWhenDucked(true)
+                .setOnAudioFocusChangeListener({change->if(change<0)pause("Paused for other audio")},handler).build()
+            if(getSystemService(AudioManager::class.java).requestAudioFocus(request)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED){pause("Waiting for other audio to finish");return}
             focus=request
         }
-        val text=chunks.removeFirst()
-        speaking=true;activeId="$notificationId/${chunkIndex++}";armTimeout(90000)
-        Log.i("PocketSpeech","Queued summary $activeId (${text.length} characters)")
-        if(engine?.speak(text,TextToSpeech.QUEUE_ADD,Bundle(),activeId)!=TextToSpeech.SUCCESS)stopSelf()
+        try{
+            val media=MediaPlayer();player=media
+            media.setAudioAttributes(attributes);media.setWakeMode(this,PowerManager.PARTIAL_WAKE_LOCK);media.setDataSource(file.path)
+            media.setOnErrorListener{_,_,_->pause("Playback interrupted · Tap Resume to retry");true}
+            media.setOnPreparedListener{
+                if(player!==media||finished)return@setOnPreparedListener
+                prepared=true
+                if(queue.positionMs>0){
+                    media.setOnSeekCompleteListener{if(player===media&&!finished)startPlayer(media,id,index)}
+                    media.seekTo(queue.positionMs.toLong().coerceAtMost(media.duration.toLong()),MediaPlayer.SEEK_CLOSEST)
+                }else startPlayer(media,id,index)
+            }
+            media.setOnCompletionListener{
+                if(player!==media||finished)return@setOnCompletionListener
+                Log.i("PocketSpeech","Completed audio $id/$index")
+                handler.removeCallbacks(checkpoint);handler.removeCallbacks(timeout);media.release();player=null;prepared=false;started=false
+                if(queue.completed(id,index)){PocketSpeech.save(true);file.delete()}
+                next()
+            }
+            armTimeout();media.prepareAsync()
+        }catch(_:Exception){pause("Playback interrupted · Tap Resume to retry")}
+    }
+    private fun startPlayer(media:MediaPlayer,id:Long,index:Int){
+        handler.removeCallbacks(timeout);media.start();started=true
+        handler.postDelayed(timeout,(media.duration-media.currentPosition).toLong().coerceAtLeast(0)+15000)
+        Log.i("PocketSpeech","Playing audio $id/$index from ${media.currentPosition} ms")
+        updateControls(PlaybackState.STATE_PLAYING);handler.removeCallbacks(checkpoint);handler.post(checkpoint)
+    }
+    private fun updateControls(state:Int){
+        PocketSpeech.publish()
+        session.setPlaybackState(PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_STOP)
+            .setState(state,queue.positionMs.toLong(),if(state==PlaybackState.STATE_PLAYING)1f else 0f).build())
+        getSystemService(NotificationManager::class.java).notify(998,PocketSpeech.notification(session))
+    }
+    internal fun pause(reason:String){
+        if(finished)return
+        if(started)player?.let{try{it.pause();queue.positionMs=it.currentPosition}catch(_:IllegalStateException){}}
+        queue.pause(queue.positionMs,reason);PocketSpeech.save(true)
+        Log.i("PocketSpeech","Paused audio ${queue.current?.id}/${queue.chunkIndex} at ${queue.positionMs} ms: $reason")
+        finished=true;releasePlayback();stopForeground(STOP_FOREGROUND_DETACH);PocketSpeech.showPaused();stopSelf()
+    }
+    internal fun discard(){finished=true;releasePlayback();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}
+    private fun finish(){finished=true;releasePlayback();queue.positionMs=0;PocketSpeech.save(true);PocketSpeech.directory.deleteRecursively();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}
+    private fun releasePlayback(){
+        handler.removeCallbacksAndMessages(null);scope.cancel();player?.release();player=null;prepared=false;started=false;engine?.stop();engine?.shutdown();engine=null
+        focus?.let{getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it)};focus=null
+        session.isActive=false;session.release()
     }
     override fun onDestroy(){
-        closed=true;scope.cancel();handler.removeCallbacksAndMessages(null);queue.clear();chunks.clear();engine?.stop();engine?.shutdown();engine=null
-        focus?.let{getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it)}
-        stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()
+        if(!finished){
+            if(started)player?.let{try{queue.positionMs=it.currentPosition}catch(_:IllegalStateException){}}
+            PocketSpeech.hold("Saved for later");releasePlayback();stopForeground(STOP_FOREGROUND_DETACH)
+        }
+        unregisterReceiver(noisy)
+        closed=true;if(PocketSpeech.service===this)PocketSpeech.service=null
+        super.onDestroy()
     }
 }

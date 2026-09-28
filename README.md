@@ -95,7 +95,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.4.4-alpha.3.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.4-alpha.3.apk`.
+Download `pocket-0.4.4-alpha.4.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.4-alpha.4.apk`.
 
 On the workstation, from the checkout:
 
@@ -131,7 +131,9 @@ Questions, approvals, and errors appear in **Needs you**. Reminders use delays o
 
 **Labels** prepares generic phrases using an installed offline English voice. **Speak messages** opts into reading the complete spoken version of notification content, including while the phone is locked. Codex can supply an optional `spoken_summary` to `notify_user`; otherwise the backend reads the cleaned title and message. The spoken version supports the same 32,000-character input budget as a notification, without a separate word cutoff. It is not a separate AI interpretation. Code blocks, URLs and long paths are removed.
 
-Speech runs locally in a playback service with a Stop action. Long messages are played in ordered chunks with no overall 30-second cutoff; each chunk has its own stall watchdog. The service ends when playback finishes. There is no permanent service. Normal notification delivery is immediate, with a tone as fallback when speech cannot run. Speech respects silent/vibrate mode, notification volume, channel mute, Do Not Disturb, and audio-focus loss. It does not read a backlog of historical notifications or repeatedly speak reminders. Nothing is sent to an external speech service. Firebase carries short speech directly; longer speech is fetched through the authenticated workstation connection. If that connection is unavailable, Pocket reads the preview and explains that the full message could not be retrieved.
+Speech is generated entirely on the phone and played with Android media controls. **Pause** saves the current audio position; **Resume** continues from there. Controls appear in the playback notification and a compact player inside Pocket. Music or another app taking audio focus pauses speech until you choose Resume. If media is already playing, new speech waits; new notifications also wait behind a paused message. Notification chimes do not interrupt Pocket's own active speech. Pausing releases the audio focus and stops the playback service; the private queue and current audio chunk remain on the phone. Dismissing the paused notification does not erase them: reopen Pocket to resume, or use the player's menu to **Clear saved speech**. Disabling Speak messages or disconnecting the phone clears saved speech. Normal process recreation restores the saved queue in a paused state; abrupt process death may replay up to the last two seconds since the last checkpoint.
+
+Long messages continue in ordered chunks without a total playback deadline. Completed audio chunks are deleted. Speech uses media volume and also respects silent/vibrate mode, notification mute, Do Not Disturb and headphone disconnection. It does not read historical notification catch-up or repeatedly speak reminders. Nothing is sent to an external speech service. Firebase carries short speech directly; longer text is fetched through the authenticated workstation connection. If that connection is unavailable, the message stays saved with a reconnect explanation; Resume retries loading it.
 
 ## Connection troubleshooting
 
