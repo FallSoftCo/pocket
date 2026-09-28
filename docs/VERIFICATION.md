@@ -4,6 +4,17 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x**. Physical testing covers a Pixel 9 Pro Fold on Android **API 36**; the public release also runs on an Android **API 35** emulator with Google Play services. The shared Unix app-server was used without a fork or competing runtime.
 
+## DNS recovery: 0.4.3-alpha.3
+
+Verified on September 28, 2026, with Android version code **9**:
+
+- Four Android resolver tests cover a saved route surviving resolver failure and a new resolver instance, preference for working system DNS, IPv4/IPv6 Tailscale address bounds, and rejection of unrelated hosts, public/LAN addresses, and malformed cache entries. DNS failures are injected in these tests.
+- API calls, WebSocket connections, and Coil attachment loading use the same resolver. Routes are saved after an authenticated HTTPS connection to the configured workstation. The URL hostname, default certificate validation, and hostname verification remain unchanged.
+- Upgraded the Pixel in place, preserving pairing and Speak summaries. The app connected and automatically saved the workstation’s authenticated Tailscale route. Reopening after process termination retained that route and loaded the active conversation. DNS was already working again during this device check; forced DNS failure is covered by the resolver tests above.
+- **51 backend tests** pass; Android debug/release builds, unit tests, release lint, and maintained-certificate verification pass. No lint errors; advisory warnings remain.
+
+The fallback requires a previously saved route and does not repair a disconnected VPN, expired HTTPS certificate, or stopped workstation. Initial pairing still needs working DNS.
+
 ## Recovery and spoken summaries: 0.4.3-alpha.1
 
 Verified on September 27, 2026, with Android version code **7**:

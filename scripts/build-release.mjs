@@ -9,7 +9,7 @@ if(!isAbsolute(process.env.POCKET_SIGNING_STORE))throw Error('Use an absolute si
 const store=resolve(process.env.POCKET_SIGNING_STORE);
 if(store.startsWith(root))throw Error('Keep the signing key outside the checkout.');
 const version=JSON.parse(readFileSync(join(root,'package.json'))).version;
-const result=spawnSync('./gradlew',['--no-daemon','assembleRelease','lintRelease'],{cwd:join(root,'android'),stdio:'inherit'});
+const result=spawnSync('./gradlew',['--no-daemon','testDebugUnitTest','assembleRelease','lintRelease'],{cwd:join(root,'android'),stdio:'inherit'});
 if(result.status!==0)process.exit(result.status||1);
 const sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT;
 if(!sdk)throw Error('Set ANDROID_HOME so the release can be checked with apksigner.');

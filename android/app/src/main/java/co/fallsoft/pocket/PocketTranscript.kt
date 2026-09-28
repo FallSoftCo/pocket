@@ -32,7 +32,7 @@ object PocketTranscript {
             val updates=buffered.toList();buffered.clear()
             updates.filter{it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             revision++;Pocket.error=""
-        }catch(e:Exception){if(Pocket.selected==id)Pocket.error=e.message?:"Could not load conversation"}
+        }catch(e:Exception){if(Pocket.selected==id)Pocket.error=PocketNetwork.error(e)}
         finally{if(owner==id)loading=false}
     }
     fun apply(update:JSONObject,buffer:Boolean=true){

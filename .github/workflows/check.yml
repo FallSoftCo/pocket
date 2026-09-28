@@ -44,5 +44,5 @@ jobs:
           packages: platform-tools
       - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew --no-daemon assembleRelease lintRelease
+      - run: ./gradlew --no-daemon testDebugUnitTest assembleRelease lintRelease
         working-directory: android

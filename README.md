@@ -95,7 +95,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.4.3-alpha.2.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.3-alpha.2.apk`.
+Download `pocket-0.4.3-alpha.3.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.3-alpha.3.apk`.
 
 On the workstation, from the checkout:
 
@@ -133,6 +133,12 @@ Questions, approvals, and errors appear in **Needs you**. Reminders use delays o
 
 Summary speech runs locally in a short-lived playback service with a Stop action and a 30-second lifetime limit. There is no permanent service. Normal notification delivery is immediate, with a tone as fallback when speech cannot run. Speech respects silent/vibrate mode, notification volume, channel mute, Do Not Disturb, and audio-focus loss. It does not read a backlog of historical notifications or repeatedly speak reminders. Nothing is sent to an external speech service.
 
+## Connection troubleshooting
+
+If Pocket reports that it cannot resolve the workstation name, check that Tailscale is connected on both devices and that the phone is using Tailscale DNS. In Pocket settings, **Reconnect now** retries immediately without unpairing.
+
+After a successful HTTPS connection, Pocket remembers the workstation’s verified Tailscale address. If Android later fails to resolve that same `.ts.net` hostname, API calls, the live connection, and attachment loading can use the saved address. The HTTPS hostname and certificate checks stay unchanged. Normal DNS always takes precedence; the fallback requires an earlier successful connection and a working Tailscale route.
+
 ## Manage devices and data
 
 ```bash
@@ -150,10 +156,10 @@ Revocation closes that device's live connections and removes its push registrati
 npm test
 npm audit --omit=dev
 cd android
-./gradlew assembleDebug lintRelease
+./gradlew testDebugUnitTest assembleDebug lintRelease
 ```
 
-Android builds need JDK 17+, SDK 36, and an SDK path in `ANDROID_HOME` or ignored `android/local.properties`. The Gradle wrapper is included. See [release signing and upgrades](docs/RELEASING.md) for signed builds. GitHub Actions runs backend tests, dependency audit, Android lint, and an unsigned release build.
+Android builds need JDK 17+, SDK 36, and an SDK path in `ANDROID_HOME` or ignored `android/local.properties`. The Gradle wrapper is included. See [release signing and upgrades](docs/RELEASING.md) for signed builds. GitHub Actions runs backend tests, dependency audit, Android resolver tests, lint, and an unsigned release build.
 
 Public alpha builds use a stable FallSoft release certificate. They cannot update earlier personal debug builds or independently signed builds in place. See the migration instructions before uninstalling anything.
 

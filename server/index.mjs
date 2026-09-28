@@ -125,7 +125,7 @@ setInterval(async()=>{
 codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.3-alpha.2'}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.3-alpha.3'}));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -145,7 +145,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>res.json({connected:codex.ready,host:hostname(),version:'0.4.3-alpha.2',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
+app.get('/api/status',(req,res)=>res.json({connected:codex.ready,host:hostname(),version:'0.4.3-alpha.3',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});

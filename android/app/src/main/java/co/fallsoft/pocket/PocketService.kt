@@ -53,28 +53,29 @@ object PocketNotifications {
 
 /** Live conversation events only; Firebase handles notifications while the app is closed. */
 object PocketLive {
-    private val client=OkHttpClient.Builder().pingInterval(25,TimeUnit.SECONDS).readTimeout(0,TimeUnit.MILLISECONDS).connectTimeout(15,TimeUnit.SECONDS).build()
+    private val client=Pocket.http.newBuilder().pingInterval(25,TimeUnit.SECONDS).readTimeout(20,TimeUnit.SECONDS).build()
     private var ws:WebSocket?=null
     private var retry:Job?=null
     private var active=false
     private var attempt=0
     fun start(){if(active)return;active=true;connect()}
+    fun retryNow(){stop();start()}
     fun stop(){active=false;retry?.cancel();val old=ws;ws=null;old?.close(1000,"App in background");Pocket.connected=false}
     private fun connect(){
         if(!active||Pocket.token.isBlank())return
         retry?.cancel()
         val request=Request.Builder().url(Pocket.base.replaceFirst("https://","wss://")+"/events").header("Authorization","Bearer ${Pocket.token}").build()
         ws=client.newWebSocket(request,object:WebSocketListener(){
-            override fun onOpen(webSocket:WebSocket,response:Response){Pocket.scope.launch{if(webSocket!==ws)return@launch;attempt=0;Pocket.connected=true;Pocket.catchUp();Pocket.refresh();Pocket.refreshDetail()}}
+            override fun onOpen(webSocket:WebSocket,response:Response){Pocket.scope.launch{if(webSocket!==ws)return@launch;attempt=0;Pocket.connected=true;Pocket.connectionError="";Pocket.catchUp();Pocket.refresh();Pocket.refreshDetail()}}
             override fun onMessage(webSocket:WebSocket,text:String){if(webSocket===ws)try{Pocket.event(JSONObject(text))}catch(_:Exception){}}
-            override fun onFailure(webSocket:WebSocket,t:Throwable,response:Response?){reconnect(webSocket)}
+            override fun onFailure(webSocket:WebSocket,t:Throwable,response:Response?){reconnect(webSocket,PocketNetwork.error(t))}
             override fun onClosing(webSocket:WebSocket,code:Int,reason:String){webSocket.close(code,reason)}
             override fun onClosed(webSocket:WebSocket,code:Int,reason:String){reconnect(webSocket)}
         })
     }
-    private fun reconnect(socket:WebSocket){Pocket.scope.launch{
+    private fun reconnect(socket:WebSocket,error:String="Connection lost. Retrying…"){Pocket.scope.launch{
         if(socket!==ws)return@launch
-        Pocket.connected=false
+        Pocket.connected=false;Pocket.connectionError=error
         if(active){retry?.cancel();retry=Pocket.scope.launch{delay((2000L*(++attempt)).coerceAtMost(30000));connect()}}
     }}
 }

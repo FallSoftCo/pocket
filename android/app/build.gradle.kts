@@ -2,7 +2,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id(
 android {
     namespace = "co.fallsoft.pocket"
     compileSdk = 36
-    defaultConfig { applicationId = "co.fallsoft.pocket"; minSdk = 28; targetSdk = 36; versionCode = 8; versionName = "0.4.3-alpha.2" }
+    defaultConfig { applicationId = "co.fallsoft.pocket"; minSdk = 28; targetSdk = 36; versionCode = 9; versionName = "0.4.3-alpha.3" }
     signingConfigs {
         if (System.getenv("POCKET_SIGNING_STORE") != null) {
             create("release") {
@@ -32,6 +32,7 @@ android {
 }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation(platform("androidx.compose:compose-bom:2025.10.00"))
     implementation("androidx.activity:activity-compose:1.12.4")
     // Prevent an older transitive Fragment from breaking ActivityResult permissions.

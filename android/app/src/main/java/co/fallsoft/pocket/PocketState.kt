@@ -14,7 +14,10 @@ import org.json.JSONObject
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-class PocketApplication: Application() { override fun onCreate(){super.onCreate();Pocket.init(this)} }
+class PocketApplication: Application(), coil.ImageLoaderFactory {
+    override fun onCreate(){super.onCreate();Pocket.init(this)}
+    override fun newImageLoader()=coil.ImageLoader.Builder(this).okHttpClient(Pocket.http).build()
+}
 fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
 fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback else optString(key,fallback)
 data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean)
@@ -24,9 +27,10 @@ class PocketApiException(val status:Int,message:String):Exception(message)
 object Pocket {
     lateinit var context:Context
     val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main)
-    val http=OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(40,TimeUnit.SECONDS).build()
+    val http=PocketNetwork.client()
     var base by mutableStateOf(""); var token by mutableStateOf("")
     var connected by mutableStateOf(false); var codexOnline by mutableStateOf(false)
+    var connectionError by mutableStateOf("")
     var error by mutableStateOf(""); var busy by mutableStateOf(false)
     var tasks by mutableStateOf(listOf<Task>())
     var notifications by mutableStateOf(listOf<JSONObject>())
@@ -71,7 +75,7 @@ object Pocket {
             token=r.getString("token");host=r.s("host")
             prefs.edit().putString("server",base).putString("token",token).putString("deviceId",r.s("id")).apply()
             PocketPush.configure(r.optJSONObject("firebase"));PocketLive.start();refresh()
-        }catch(e:Exception){error=e.message?:"Could not pair"}finally{busy=false}
+        }catch(e:Exception){error=PocketNetwork.error(e)}finally{busy=false}
     }}
     fun disconnect(){
         val oldBase=base;val oldToken=token
@@ -96,7 +100,7 @@ object Pocket {
             prefs.all.keys.filter{it.startsWith("attention:")}.mapNotNull{it.substringAfter(':').toLongOrNull()}.filter{it !in activeIds}.forEach{PocketAttention.dismiss(it)}
             attention=latestAttention
             error=""
-        }catch(e:Exception){error=e.message?:"Unable to reach your workstation"}
+        }catch(e:Exception){error=PocketNetwork.error(e)}
     }}
     fun open(id:String){selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
     fun refreshDetail(){scope.launch{PocketTranscript.load()}}

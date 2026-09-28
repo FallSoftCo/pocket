@@ -107,7 +107,7 @@ class MainActivity:ComponentActivity(){
         }
     }
 }
-@Composable fun ConnectionPill(){val ok=Pocket.connected&&Pocket.codexOnline;Row(Modifier.clip(CircleShape).background(Panel).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){Box(Modifier.size(6.dp).background(if(ok)Mint else Coral,CircleShape));Text(if(ok)"Connected" else "Reconnecting",fontSize=11.sp,color=if(ok)Mint else Coral)}}
+@Composable fun ConnectionPill(){val ok=Pocket.connected&&Pocket.codexOnline;Row(Modifier.clip(CircleShape).background(Panel).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){Box(Modifier.size(6.dp).background(if(ok)Mint else Coral,CircleShape));Text(if(ok)"Connected" else if(Pocket.connected)"Codex offline" else "Reconnecting",fontSize=11.sp,color=if(ok)Mint else Coral)}}
 @Composable fun WorkScreen(){
     var filter by remember{mutableIntStateOf(0)};var query by remember{mutableStateOf("")}
     val shown=Pocket.tasks.filter{(filter!=1||it.status=="active")&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true))}
@@ -159,6 +159,10 @@ fun relative(time:Long):String{val seconds=(System.currentTimeMillis()-(if(time<
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(23.dp)){
         Label("MADE TO BE YOURS",Mint);Text("Your connection.",fontSize=34.sp,letterSpacing=(-1).sp)
         Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){ConnectionPill();Text(Pocket.host,fontSize=23.sp);Text(Pocket.base,color=Muted,fontSize=12.sp);HorizontalDivider(color=Line);Text(Pocket.pushStatus,fontSize=16.sp,color=Mint);Text("Notifications arrive through Firebase, even when Pocket is closed. Conversations and files load from your workstation.",color=Muted,fontSize=14.sp,lineHeight=21.sp)}}
+        if(!Pocket.connected){
+            if(Pocket.connectionError.isNotBlank())Text(Pocket.connectionError,color=Coral,fontSize=13.sp,lineHeight=20.sp)
+            OutlinedButton({PocketLive.retryNow();Pocket.refresh();Pocket.refreshDetail()},modifier=Modifier.fillMaxWidth()){Text("Reconnect now")}
+        }
         NotificationAudioSettings()
         Button({Pocket.test()},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){Icon(Icons.Rounded.NotificationsActive,null);Spacer(Modifier.width(10.dp));Text("Send a test notification")}
         OutlinedButton({c.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,c.packageName))},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){Text("Notification settings")}
