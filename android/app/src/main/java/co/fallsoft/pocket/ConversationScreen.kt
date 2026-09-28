@@ -65,15 +65,23 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val active=t?.optJSONObject("status")?.s("type")=="active"||rows.lastOrNull{it.s("kind")=="turn"}?.s("status")=="inProgress"
     val list=rememberLazyListState();val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
     var follow by remember{mutableStateOf(true)}
+    var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
+    var confirmStop by remember(Pocket.selected){mutableStateOf(false)}
     val draftKey="draft:${Pocket.selected}";var draft by remember{mutableStateOf(Pocket.prefs.getString(draftKey,"")?:"")}
+    LaunchedEffect(active){if(!active)confirmStop=false}
     LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
     LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){delay(32);val count=list.layoutInfo.totalItemsCount;if(count>0)list.scrollToItem(count-1)}}
     Column(Modifier.fillMaxSize().imePadding()){
         Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton({Pocket.selected=null;Pocket.detail=null}){Icon(Icons.AutoMirrored.Rounded.ArrowBack,"Back",tint=Paper)}
             Column(Modifier.weight(1f)){Text(t?.s("name")?.ifBlank{t.s("preview").take(80)}?.ifBlank{"New task"}?:"Opening task…",fontSize=15.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis);Text(listOf(project(t?.s("cwd")?:""),t?.s("model")?.takeIf{it.isNotBlank()},if(Pocket.connected)if(active)"working" else "ready" else "reconnecting").filterNotNull().joinToString(" · "),fontSize=10.sp,color=if(active)Mint else Muted,maxLines=1,overflow=TextOverflow.Ellipsis)}
-            if(active)IconButton({Pocket.interrupt()}){Icon(Icons.Rounded.StopCircle,"Stop task",tint=Coral,modifier=Modifier.size(22.dp))}
             IconButton({Pocket.watch(!(d?.optBoolean("watched")?:false))}){Icon(if(d?.optBoolean("watched")==true)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,"Follow task",tint=Mint,modifier=Modifier.size(21.dp))}
+            Box{
+                IconButton({actionsOpen=true}){Icon(Icons.Rounded.MoreVert,"Task actions",tint=Muted)}
+                DropdownMenu(expanded=actionsOpen,onDismissRequest={actionsOpen=false}){
+                    DropdownMenuItem(text={Text("Stop task…",color=if(active)Coral else Muted)},enabled=active,onClick={actionsOpen=false;confirmStop=true},leadingIcon={Icon(Icons.Rounded.StopCircle,null,tint=if(active)Coral else Muted)})
+                }
+            }
         }
         HorizontalDivider(color=Line)
         Box(Modifier.weight(1f).fillMaxWidth()){
@@ -97,6 +105,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             }
         }
     }
+    if(confirmStop&&active)AlertDialog(
+        onDismissRequest={confirmStop=false},
+        title={Text("Stop this task?")},
+        text={Text("Codex will stop the current work in this conversation. Changes already made will remain. You can send another message to continue later.")},
+        confirmButton={TextButton({confirmStop=false;Pocket.interrupt()}){Text("Stop task",color=Coral)}},
+        dismissButton={TextButton({confirmStop=false}){Text("Keep working",color=Mint)}}
+    )
 }
 
 @Composable fun TranscriptRow(row:JSONObject){
