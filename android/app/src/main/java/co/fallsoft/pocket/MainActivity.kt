@@ -110,6 +110,7 @@ class MainActivity:ComponentActivity(){
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
         SpeechPlayer()
         ConnectionNotice()
+        PhoneControlNotice()
         if(Pocket.newTask)NewTaskScreen()
         else if(Pocket.selected!=null)key(Pocket.selected){ConversationScreen()}
         else{
@@ -121,6 +122,18 @@ class MainActivity:ComponentActivity(){
                     }
                 }
             }
+        }
+    }
+}
+@Composable fun PhoneControlNotice(){
+    if(!Pocket.local||!PocketAutomation.allowed)return
+    val c=LocalContext.current
+    var enabled by remember{mutableStateOf(PocketAutomation.systemEnabled(c)||PocketAutomation.connected)}
+    LaunchedEffect(Pocket.local){while(true){enabled=PocketAutomation.systemEnabled(c)||PocketAutomation.connected;delay(1500)}}
+    if(!enabled)Surface(color=Color(0xff35312a),modifier=Modifier.fillMaxWidth()){
+        Row(Modifier.padding(horizontal=18.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f)){Text("Phone control needs Android access",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold);Text("An update turned off Pocket’s Accessibility service.",color=Muted,fontSize=11.sp)}
+            TextButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))}){Text("Restore",color=Mint)}
         }
     }
 }
@@ -143,11 +156,19 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun ConnectionPill(){val ok=Pocket.connected&&Pocket.codexOnline;Row(Modifier.clip(CircleShape).background(Panel).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){Box(Modifier.size(6.dp).background(if(ok)Mint else Coral,CircleShape));Text(if(ok)"Connected" else if(Pocket.connected)"Codex offline" else "Reconnecting",fontSize=11.sp,color=if(ok)Mint else Coral)}}
+@Composable fun ProfileSwitcher(){
+    if(Pocket.savedToken(false).isBlank()||Pocket.savedToken(true).isBlank())return
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+        FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={Text("Workstation")},leadingIcon={Icon(Icons.Rounded.Computer,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
+        FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={Text("This phone")},leadingIcon={Icon(Icons.Rounded.PhoneAndroid,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
+    }
+}
 @Composable fun WorkScreen(){
     var filter by remember{mutableIntStateOf(0)};var query by remember{mutableStateOf("")}
     val shown=Pocket.tasks.filter{(filter!=1||it.status=="active")&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true))}
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(top=20.dp,bottom=24.dp)){
         item{Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Mark(30);Text("Pocket",fontSize=22.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.padding(start=9.dp).weight(1f));ConnectionPill()}}
+        item{ProfileSwitcher()}
         item{Row(Modifier.fillMaxWidth().padding(top=14.dp,bottom=6.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Your sessions",fontSize=27.sp,fontWeight=FontWeight.Medium);Text(Pocket.host,color=Muted,fontSize=12.sp)};FilledTonalButton({Pocket.composeTask()},shape=RoundedCornerShape(14.dp)){Icon(Icons.Rounded.Add,null,Modifier.size(18.dp));Spacer(Modifier.width(5.dp));Text("New task")}}}
         item{OutlinedTextField(query,{query=it},placeholder={Text("Find a session or project",fontSize=13.sp)},leadingIcon={Icon(Icons.Rounded.Search,null,tint=Muted)},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=Line,focusedBorderColor=Mint))}
         item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following").forEachIndexed{i,s->FilterChip(selected=filter==i,onClick={filter=i},label={Text(s,fontSize=12.sp)},shape=CircleShape,colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))}};ErrorBanner()}
@@ -221,11 +242,11 @@ fun relative(time:Long):String{val seconds=(System.currentTimeMillis()-(if(time<
     Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){Text("Control this phone",fontSize=21.sp,fontWeight=FontWeight.Medium);Text(if(systemEnabled)"Android access is enabled" else "Android access still needs to be enabled",color=if(systemEnabled)Mint else Coral,fontSize=12.sp)}
-            Switch(PocketAutomation.allowed,{PocketAutomation.allowed=it},enabled=systemEnabled)
+            Switch(PocketAutomation.allowed&&systemEnabled,{PocketAutomation.allowed=it},enabled=systemEnabled)
         }
         Text("When both controls are enabled, Codex on this phone can inspect the foreground screen, take screenshots, tap, scroll, enter non-password text, and use Back, Home or Recents.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
         if(!systemEnabled)OutlinedButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))},modifier=Modifier.fillMaxWidth()){Text("Enable Pocket in Accessibility")}
-        Text(if(PocketAutomation.allowed&&systemEnabled)"Phone control is live · pause it here at any time" else "Phone control is paused",color=if(PocketAutomation.allowed&&systemEnabled)Mint else Muted,fontSize=12.sp)
+        Text(if(PocketAutomation.allowed&&systemEnabled)"Phone control is live · pause it here at any time" else if(!systemEnabled&&PocketAutomation.allowed)"Android disabled the service · restore access above" else "Phone control is paused",color=if(PocketAutomation.allowed&&systemEnabled)Mint else if(!systemEnabled&&PocketAutomation.allowed)Coral else Muted,fontSize=12.sp)
         Text("Screen structure and screenshots are sent to your signed-in Codex only when its phone tools are used. Password fields are never returned or filled.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
     }}
 }

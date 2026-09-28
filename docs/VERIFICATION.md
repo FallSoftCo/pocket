@@ -4,6 +4,14 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x** for workstation mode. Phone-local testing uses stock Codex CLI **0.158.0**, Node **26.1.0**, Termux **0.118.3**, and PRoot on a Pixel 9 Pro Fold with Android **API 36**. The public release also runs on an Android **API 35** emulator with Google Play services. No Codex fork is used.
 
+## Profile-specific task folders: 0.5.0-alpha.2
+
+The phone profile no longer inherits the workstation's last project folder or pending new-task state. The local bridge advertises Termux's real home directory, and the physical New task screen defaulted to `/data/data/com.termux/files/home`. Workstation and phone project folders, prompts, and saved creation requests now use separate preference keys. The main session screen also exposes a persistent Workstation / This phone switch when both profiles are paired.
+
+The development APK upgrade cleared Android's enabled Accessibility-services list while leaving Pocket's independent automation switch enabled. After restoring the Android service, an authenticated loopback snapshot returned the foreground package with 24 nodes. A new real phone-local Codex turn then called `phone_screen` through the configured MCP server and completed with the correct foreground package. A disconnected service now returns an explicit instruction to re-enable Pocket in Android Accessibility rather than a generic fetch failure.
+
+Android does not let an ordinary app silently enable its own Accessibility service. Pocket now polls the independent system gate while its local monitor runs. If an update clears that gate, the main workflow shows a persistent Restore control and the foreground notification opens Android Accessibility directly. The in-app switch no longer appears enabled while the system service is off.
+
 ## Phone-local Codex and control: 0.5.0-alpha.1
 
 Pocket's Android profile paired with a bridge at `127.0.0.1:18880`, listed the phone's real Codex sessions, and retained the existing workstation profile. A real app-server turn created and read a local proof file through stock Codex. The installed CLI reports paginated history capability but rejects `thread/turns/list`; Pocket detected that runtime mismatch and loaded the turn through bounded `thread/read` fallback.

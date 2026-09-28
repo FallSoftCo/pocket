@@ -4,7 +4,7 @@ const invalid=message=>Object.assign(Error(message),{status:400});
 
 export function projectPath(value){
   if(typeof value!=='string'||!isAbsolute(value)||value.length>4096)throw invalid('Choose an absolute folder path on your workstation.');
-  let cwd;try{cwd=realpathSync(value);if(!statSync(cwd).isDirectory())throw Error();}catch{throw invalid('That workstation folder does not exist or is not accessible.');}
+  let cwd;try{cwd=realpathSync(value);if(!statSync(cwd).isDirectory())throw Error();}catch{throw invalid('That project folder does not exist or is not accessible on the selected device.');}
   return cwd;
 }
 export class SessionStarts {

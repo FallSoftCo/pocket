@@ -25,7 +25,7 @@ const run=(command,args)=>{const result=spawnSync(command,args,{stdio:'inherit'}
 async function install(){
   mkdirSync(service,{recursive:true,mode:0o700});mkdirSync(join(service,'log'),{recursive:true,mode:0o700});mkdirSync(data,{recursive:true,mode:0o700});mkdirSync(log,{recursive:true,mode:0o700});
   const command=JSON.stringify([codex,'app-server']);
-  const script=`#!${prefix}/bin/sh\nexec 2>&1\nexport NODE_ENV=production\nexport PORT=18880\nexport POCKET_LOCAL=1\nexport POCKET_HOST_NAME='This phone'\nexport POCKET_DATA='${data}'\nexport POCKET_CODEX_COMMAND='${command}'\nexport POCKET_CODEX_SANDBOX=danger-full-access\nexport POCKET_CODEX_APPROVAL_POLICY=on-request\ncd '${root}'\nexec '${prefix}/bin/node' '${root}/server/index.mjs'\n`;
+  const script=`#!${prefix}/bin/sh\nexec 2>&1\nexport NODE_ENV=production\nexport PORT=18880\nexport POCKET_LOCAL=1\nexport POCKET_HOST_NAME='This phone'\nexport POCKET_DEFAULT_CWD='${home}'\nexport POCKET_DATA='${data}'\nexport POCKET_CODEX_COMMAND='${command}'\nexport POCKET_CODEX_SANDBOX=danger-full-access\nexport POCKET_CODEX_APPROVAL_POLICY=on-request\ncd '${root}'\nexec '${prefix}/bin/node' '${root}/server/index.mjs'\n`;
   const logger=`#!${prefix}/bin/sh\nmkdir -p '${log}'\nexec '${prefix}/bin/svlogd' -tt '${log}'\n`;
   writeFileSync(join(service,'run'),script,{mode:0o700});writeFileSync(join(service,'log/run'),logger,{mode:0o700});chmodSync(service,0o700);chmodSync(join(service,'log'),0o700);
   rmSync(join(service,'down'),{force:true});
@@ -57,6 +57,7 @@ async function pair(){
 }
 
 if(action==='install'){await install();await pair();}
+else if(action==='restart')await install();
 else if(action==='pair')await pair();
 else if(action==='status'){const health=await request('/health');console.log(JSON.stringify(health));}
-else throw Error('Usage: node scripts/android-local.mjs [install|pair|status]');
+else throw Error('Usage: node scripts/android-local.mjs [install|restart|pair|status]');

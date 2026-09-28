@@ -46,6 +46,7 @@ object Pocket {
     var detail by mutableStateOf<JSONObject?>(null)
     var tab by mutableIntStateOf(0)
     var host by mutableStateOf("Your workstation")
+    var defaultCwd by mutableStateOf("")
     var sending by mutableStateOf(false)
     var pairingMode by mutableStateOf(false)
     var pushStatus by mutableStateOf("Setting up notifications…")
@@ -99,7 +100,7 @@ object Pocket {
         if(local==forLocal)return
         val nextBase=savedBase(forLocal);val nextToken=savedToken(forLocal);if(nextBase.isBlank()||nextToken.isBlank())return
         PocketLive.stop();PocketTranscript.clear();local=forLocal;base=nextBase;token=nextToken;host=if(local)"This phone" else "Your workstation"
-        connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";tasks=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
+        connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
         lastNotification=prefs.getLong(key("lastNotification"),0);prefs.edit().putBoolean("activeLocal",local).apply()
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean("pushReady",false))"Firebase push is ready" else "Setting up notifications…"
         if(local)LocalMonitorService.start(context) else LocalMonitorService.stop(context)
@@ -122,7 +123,7 @@ object Pocket {
     }
     fun refresh(){scope.launch{
         try{
-            val r=api("/api/status");codexOnline=r.optBoolean("connected");codexConnectionMessage=r.optJSONObject("problem")?.s("message")?:"";host=r.s("host")
+            val r=api("/api/status");codexOnline=r.optBoolean("connected");codexConnectionMessage=r.optJSONObject("problem")?.s("message")?:"";host=r.s("host");defaultCwd=r.s("defaultCwd")
             prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply()
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
             tasks=api("/api/threads").optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"))}?:emptyList()
@@ -139,12 +140,13 @@ object Pocket {
     fun closeTask(){selected=null;detail=null;PocketTranscript.clear()}
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
     fun scheduleRefresh(){if(refreshJob?.isActive==true)return;refreshJob=scope.launch{delay(400);PocketTranscript.load()}}
-    fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains("newTaskRequest"))"A task request is saved. Check its status to continue." else "";scope.launch{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){error=e.message?:"Could not load projects"}}}
+    fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains(key("newTaskRequest")))"A task request is saved. Check its status to continue." else "";scope.launch{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){error=e.message?:"Could not load projects"}}}
     fun startTask(cwd:String,prompt:String){if(starting)return;scope.launch{
         starting=true;error="";startStatus=if(local)"Starting on this phone…" else "Starting on your workstation…"
-        val previous=prefs.getString("newTaskRequest",null)?.let{JSONObject(it)}
+        val requestKey=key("newTaskRequest");val promptKey=key("newTaskPrompt");val projectKey=key("lastProject")
+        val previous=prefs.getString(requestKey,null)?.let{JSONObject(it)}
         val request=if(previous?.s("cwd")==cwd&&previous.s("prompt")==prompt)previous else JSONObject().put("id",UUID.randomUUID().toString()).put("cwd",cwd).put("prompt",prompt)
-        prefs.edit().putString("newTaskRequest",request.toString()).commit()
+        prefs.edit().putString(requestKey,request.toString()).commit()
         var submitted=false
         try{
             var result=api("/api/threads",request)
@@ -152,15 +154,15 @@ object Pocket {
             var attempts=0
             while(result.s("state") in listOf("queued","creating")&&attempts++<45){startStatus=if(result.s("state")=="queued")"Waiting for Codex…" else "Creating your session…";delay(1000);result=api("/api/session-starts/${request.s("id")}")}
             when(result.s("state")){
-                "started"->{prefs.edit().remove("newTaskRequest").remove("newTaskPrompt").putString("lastProject",cwd).apply();open(result.getString("thread_id"));refresh()}
-                "failed"->{prefs.edit().remove("newTaskRequest").apply();error=result.s("error","Session creation failed. You can correct the request and try again.");startStatus=""}
+                "started"->{prefs.edit().remove(requestKey).remove(promptKey).putString(projectKey,cwd).apply();open(result.getString("thread_id"));refresh()}
+                "failed"->{prefs.edit().remove(requestKey).apply();error=result.s("error","Session creation failed. You can correct the request and try again.");startStatus=""}
                 "unknown"->{error=result.s("error","Could not confirm session creation. Check recent tasks.");startStatus="Check recent tasks before trying again. This request may already have started."}
                 else->startStatus="Still queued. Check status to continue without creating a duplicate."
             }
         }catch(e:Exception){
             error=e.message?:"Could not reach the workstation"
             if(!submitted&&e is PocketApiException&&e.status in listOf(400,401,403,413)){
-                prefs.edit().remove("newTaskRequest").apply();startStatus=""
+                prefs.edit().remove(requestKey).apply();startStatus=""
             }else startStatus="Your request is saved. Check status before starting again."
         }finally{starting=false}
     }}
