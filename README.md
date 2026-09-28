@@ -99,7 +99,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.5.0-alpha.2.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.5.0-alpha.2.apk`.
+Download `pocket-0.5.0-alpha.3.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.5.0-alpha.3.apk`.
 
 On the workstation, from the checkout:
 
@@ -132,7 +132,7 @@ npm run android-local
 
 The installer creates a private loopback bridge, a managed Termux service, reboot startup for Termux:Boot, and the `pocket-phone` MCP server. Pocket keeps workstation and phone profiles side by side.
 
-Phone control is optional. Enable **Pocket** in Android Accessibility, then enable **Control this phone** in Pocket. Screen reads and screenshots are pre-approved after those two controls are enabled; taps, text entry, scrolling, and navigation retain Codex's approval flow. Password fields are omitted and cannot be filled. Ask naturally, for example: **“Open Instagram, scroll my feed, and tell me which posts are about music.”** Custom-drawn surfaces and some WebViews may require screenshot-and-coordinate control rather than semantic elements.
+Phone control is optional. Enable **Pocket** in Android Accessibility, then enable **Control this phone** in Pocket. After those two owner-controlled gates are enabled, all `pocket-phone` tools are preapproved so requested taps, text entry, scrolling, and navigation can proceed without repeated prompts. Password fields are omitted and cannot be filled. Ask naturally, for example: **“Open Instagram, scroll my feed, and tell me which posts are about music.”** Posting, messaging, purchases, deletion, and account or security changes still require a direct instruction for that exact action. Custom-drawn surfaces and some WebViews may require screenshot-and-coordinate control rather than semantic elements.
 
 ## Everyday use
 

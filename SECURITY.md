@@ -20,7 +20,7 @@ Run the backend as the same OS user as Codex, bound to loopback behind authentic
 - Native approval answers use exact pending IDs and allowed decisions. Resolved/restarted requests expire. No automatic approvals.
 - HTTPS is required by the Android client, cleartext is disabled, and app backups are disabled.
 - Phone-local mode permits cleartext only for the fixed `127.0.0.1:18880` loopback endpoint. Its automation service binds only to `127.0.0.1:18881`, requires a random per-install secret, and refuses calls unless both Android Accessibility and Pocket's independent control switch are enabled.
-- Phone screen snapshots omit password text and phone text entry refuses password fields. Read tools are locally approved after the owner enables both controls; phone actions retain Codex approval handling. Accessibility cannot bypass Android secure surfaces, biometric prompts, or app sandboxing.
+- Phone screen snapshots omit password text and phone text entry refuses password fields. All phone-only tools are locally preapproved after the owner enables Android Accessibility and Pocket's independent control switch. Posting, messaging, purchases, deletion, and account or security changes require a direct instruction for that exact action. Accessibility cannot bypass Android secure surfaces, biometric prompts, or app sandboxing.
 - The exported audio provider serves only allowlisted generic sound clips. Attachments require authentication; only the owner/MCP path can copy explicitly supplied local files.
 - Requests and attachments are size bounded. Durable reply/session creation records prevent ordinary duplicate submissions; uncertain RPC outcomes are surfaced for review.
 

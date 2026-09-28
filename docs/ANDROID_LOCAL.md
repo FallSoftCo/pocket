@@ -51,7 +51,7 @@ Pocket's optional accessibility service provides these local tools to Codex:
 
 Enable **Pocket** in Android's Accessibility settings, then turn on **Control this phone** inside Pocket. Either control can pause access. The service binds only to `127.0.0.1:18881`, requires a random secret stored separately in both app sandboxes, and refuses every request while the Pocket switch is off. Password text is omitted from screen snapshots and password fields reject text entry.
 
-Screen reads and screenshots are configured as approved tools once both Android controls are enabled. Actions retain Codex's normal approval handling. A direct request such as “open YouTube and browse my subscriptions” supplies the task intent; posting, sending messages, purchases, deletion, and account or security changes should be stated explicitly for that exact action.
+All phone tools are configured as approved once both Android controls are enabled, allowing an explicitly requested multi-step interaction to continue without a prompt for each tap or scroll. A direct request such as “open YouTube and browse my subscriptions” supplies the task intent; posting, sending messages, purchases, deletion, and account or security changes must still be stated explicitly for that exact action.
 
 Accessibility structure varies by app. Standard Android views and Compose usually expose useful labels. Games, video surfaces, canvases, and some WebViews may expose little structure; Codex can inspect a screenshot and use coordinates, but visual automation is less deterministic. CAPTCHAs, biometric prompts, Android permission dialogs, and protected or secure screens may block inspection or control.
 

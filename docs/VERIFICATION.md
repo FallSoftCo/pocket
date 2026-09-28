@@ -4,6 +4,10 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x** for workstation mode. Phone-local testing uses stock Codex CLI **0.158.0**, Node **26.1.0**, Termux **0.118.3**, and PRoot on a Pixel 9 Pro Fold with Android **API 36**. The public release also runs on an Android **API 35** emulator with Google Play services. No Codex fork is used.
 
+## Preapproved phone tools: 0.5.0-alpha.3
+
+The Termux installer now marks all seven `pocket-phone` tools approved after the owner enables Android Accessibility and Pocket's independent phone-control switch. This removes per-tap, per-scroll, per-text, and navigation approval interruptions during an explicitly requested phone task. Android secure surfaces, password-field refusal, loopback authentication, and the requirement for direct instructions before consequential actions remain in place.
+
 ## Profile-specific task folders: 0.5.0-alpha.2
 
 The phone profile no longer inherits the workstation's last project folder or pending new-task state. The local bridge advertises Termux's real home directory, and the physical New task screen defaulted to `/data/data/com.termux/files/home`. Workstation and phone project folders, prompts, and saved creation requests now use separate preference keys. The main session screen also exposes a persistent Workstation / This phone switch when both profiles are paired.

@@ -35,9 +35,11 @@ async function install(){
   const configured=spawnSync(codex,['mcp','get','pocket-phone'],{stdio:'ignore'}).status===0;
   if(configured)run(codex,['mcp','remove','pocket-phone']);
   run(codex,['mcp','add','pocket-phone','--env',`POCKET_AUTOMATION_SECRET_FILE=${join(data,'automation.json')}`,'--',join(prefix,'bin/node'),join(root,'server/phone-mcp.mjs')]);
-  // Screen reads stay frictionless. Actions retain Codex's normal approval
-  // policy so content on screen cannot silently authorize a tap or text entry.
-  appendFileSync(join(home,'.codex/config.toml'),`\n[mcp_servers.pocket-phone.tools.phone_screen]\napproval_mode = "approve"\n\n[mcp_servers.pocket-phone.tools.phone_screenshot]\napproval_mode = "approve"\n`);
+  // The owner explicitly enables phone control through Android Accessibility
+  // and Pocket's independent switch. Once enabled, every phone-only tool is
+  // preapproved so a requested multi-step interaction can proceed unattended.
+  const tools=['phone_screen','phone_screenshot','phone_tap','phone_click','phone_scroll','phone_type','phone_key'];
+  appendFileSync(join(home,'.codex/config.toml'),tools.map(name=>`\n[mcp_servers.pocket-phone.tools.${name}]\napproval_mode = "approve"\n`).join(''));
   const bootDir=join(home,'.termux/boot');mkdirSync(bootDir,{recursive:true,mode:0o700});
   const boot=`#!${prefix}/bin/sh\ntermux-wake-lock 2>/dev/null || true\n. '${prefix}/etc/profile.d/start-services.sh'\n'${prefix}/bin/sv' up '${service}'\n`;
   writeFileSync(join(bootDir,'20-pocket-local'),boot,{mode:0o700});
