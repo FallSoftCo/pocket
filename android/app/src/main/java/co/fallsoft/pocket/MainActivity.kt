@@ -101,7 +101,7 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun PocketApp(){
-    BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else{Pocket.selected=null;Pocket.detail=null}}
+    BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
         ConnectionNotice()
         if(Pocket.newTask)NewTaskScreen()

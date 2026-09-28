@@ -21,7 +21,7 @@ export class Codex extends EventEmitter {
       });
       ws.on('open', async () => {
         try {
-          await this.call('initialize', { clientInfo: { name: 'codex_pocket', title: 'Pocket', version: '0.4.4-alpha.1' }, capabilities: { experimentalApi: true } });
+          await this.call('initialize', { clientInfo: { name: 'codex_pocket', title: 'Pocket', version: '0.4.4-alpha.2' }, capabilities: { experimentalApi: true } });
           ws.send(JSON.stringify({method:'initialized'})); this.ready = true; this.problem=null;this.emit('connected'); resolve();
         } catch(e) { reject(e); ws.close(); }
       });

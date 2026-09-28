@@ -26,6 +26,7 @@ const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1
 const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
 const attached=new Set(), pending=new Map(), syncing=new Set();
 const timeline=new LiveTimeline();
+setInterval(()=>timeline.prune(),60000).unref();
 const history=new ThreadHistory(codex);
 const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id});void sendOutgoing(row,thread);});
 const now=()=>Date.now();
@@ -62,21 +63,23 @@ function resolveAttention(where,...args){
 resolveAttention('request_id IS NOT NULL');
 async function attach(threadId,{before=null}={}){
   requireId(threadId); await codex.connect();
-  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread;
+  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;
   if(!attached.has(threadId)){
     metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true})).thread;attached.add(threadId);
-    // Recover missed completions in bounded summary pages, stopping at the saved boundary.
-    let page=await history.read(metadata,{summary:true});const cursors=new Set(),recoveryPages=[];
-    while(true){
-      const earlier=completions.needsEarlier(page);recoveryPages.push(page);
-      const cursor=page._pocketPage?.before;
-      if(!earlier||!cursor)break;
-      if(cursors.has(cursor))throw Error('Codex returned a repeated history cursor.');
-      cursors.add(cursor);page=await history.read(metadata,{before:cursor,summary:true});
+    if(metadata.historyMode!=='paginated'){initial=await history.read(metadata);completions.observe(initial);}
+    else if(db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId)){
+      // Retain only cursors while finding the recovery boundary, not every summary page.
+      const positions=[],seen=new Set();let cursor=null;
+      while(true){
+        const page=await history.read(metadata,{before:cursor,summary:true});positions.push(cursor);
+        if(!completions.needsEarlier(page)||!page._pocketPage?.before)break;
+        cursor=page._pocketPage.before;if(seen.has(cursor))throw Error('Codex returned a repeated history cursor.');seen.add(cursor);
+      }
+      for(const position of positions.reverse())completions.observe(await history.read(metadata,{before:position,summary:true}));
     }
-    for(const recovered of recoveryPages.reverse())completions.observe(recovered);
   }
-  const thread=await history.read(metadata,{before});if(!before)timeline.seed(thread);return thread;
+  const snapshotRevision=timeline.version;
+  const thread=initial||await history.read(metadata,{before});if(!before)timeline.seed(thread,{throughVersion:snapshotRevision});return {...thread,_pocketSnapshotRevision:snapshotRevision};
 }
 const isActive=t=>t.status?.type==='active';
 async function sendOutgoing(row,initialThread=null){
@@ -125,7 +128,7 @@ codex.on('event',m=>{
   if(threadId && attached.has(threadId))emit('codex',{event:{method:m.method,...(m.id!==undefined?{id:m.id}:{}),params:{threadId,turnId:p.turnId}}});
 });
 codex.on('connected',()=>emit('status',codex.status()));
-codex.on('disconnected',error=>{console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
+codex.on('disconnected',error=>{console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
 let reconnecting=false;
 setInterval(async()=>{
   if(reconnecting)return;reconnecting=true;
@@ -139,7 +142,7 @@ setInterval(async()=>{
 codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.4-alpha.1'}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.4-alpha.2'}));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -159,7 +162,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>res.json({...codex.status(),host:hostname(),version:'0.4.4-alpha.1',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
+app.get('/api/status',(req,res)=>res.json({...codex.status(),host:hostname(),version:'0.4.4-alpha.2',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -193,13 +196,13 @@ app.get('/api/threads',route(async(req,res)=>{
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null});
-  const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage});
+  const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});
   const requests=[...pending.values()].filter(m=>m.params.threadId===t.id);
   const page=timelinePage(t,requests,{before:raw._pocketPage?null:req.query.before||null,limit:8,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=?').all(t.id).map(notificationRow)});
   if(raw._pocketPage)Object.assign(page,raw._pocketPage);
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
-  res.json({thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:timeline.version,pending:requests,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),outgoing:db.prepare('SELECT id,text,state,result,created_at FROM outgoing WHERE thread_id=? ORDER BY created_at').all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)});
+  res.json({thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),outgoing:db.prepare('SELECT id,text,state,result,created_at FROM outgoing WHERE thread_id=? ORDER BY created_at').all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)});
 }));
 app.post('/api/threads/:id/interrupt',route(async(req,res)=>{
   const t=await attach(req.params.id);const active=t.turns?.findLast(x=>x.status==='inProgress');

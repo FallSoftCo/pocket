@@ -22,7 +22,7 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
    if(['thread/read','thread/resume'].includes(m.method))result={thread:metadata};
    if(m.method==='thread/list')result={data:[metadata]};
    if(m.method==='thread/turns/list'){
-     const end=m.params.cursor?8:16;result={data:Array.from({length:8},(_,i)=>({id:'turn-'+(end-i-1),status:'completed',items:[]})),nextCursor:end===16?'older+/=':null};
+     const end=m.params.cursor?Number(m.params.cursor):16;const limit=m.params.limit;result={data:Array.from({length:Math.min(limit,end)},(_,i)=>({id:'turn-'+(end-i-1),status:'completed',items:[]})),nextCursor:end>limit?String(end-limit):null,backwardsCursor:String(end)};
    }
    if(m.method==='thread/items/list')result={data:[{turnId:m.params.turnId,item:{id:'answer',type:'agentMessage',text:m.params.turnId}}]};
    ws.send(JSON.stringify({id:m.id,result}));

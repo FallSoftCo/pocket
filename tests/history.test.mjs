@@ -8,14 +8,14 @@ test('paged history preserves chronology, strips binary output and never request
   const codex={async call(method,p){
     calls.push({method,p});
     if(method==='thread/turns/list'){
-      assert.equal(p.itemsView,'notLoaded');const end=p.cursor?Number(p.cursor):19;
-      return {data:Array.from({length:Math.min(8,end)},(_,i)=>({id:'turn-'+(end-i-1),status:'completed',items:[]})),nextCursor:end>8?String(end-8):null};
+      assert.equal(p.itemsView,'notLoaded');const end=p.cursor?Number(p.cursor.replace('at:',''))+(p.sortDirection==='asc'?1:0):19;
+      return {data:Array.from({length:Math.min(p.limit,end)},(_,i)=>({id:'turn-'+(end-i-1),status:'completed',items:[]})),nextCursor:end>p.limit?String(end-p.limit):null,backwardsCursor:'at:'+(end-1)};
     }
-    assert.equal(method,'thread/items/list');assert.equal(p.limit,20);
-    return p.cursor?{data:[{item:{id:'answer',type:'agentMessage',phase:'final_answer',text:'Finished'}}]}:{data:[
-      {item:{id:'user',type:'userMessage',content:[{type:'text',text:p.turnId},{type:'image',url:'PRIVATE IMAGE DATA'}]}},
-      {item:{id:'tool',type:'commandExecution',command:'test',aggregatedOutput:'x'.repeat(20000)}},
-      {item:{id:'reason',type:'reasoning',content:['PRIVATE REASONING'],summary:['Checked']}}
+    assert.equal(method,'thread/items/list');assert.ok(p.limit<=8);assert.equal(p.sortDirection,'desc');
+    return p.cursor?{data:[{item:{id:'user',type:'userMessage',content:[{type:'text',text:p.turnId},{type:'image',url:'PRIVATE IMAGE DATA'}]}}]}:{data:[
+      {item:{id:'answer',type:'agentMessage',phase:'final_answer',text:'Finished'}},
+      {item:{id:'reason',type:'reasoning',content:['PRIVATE REASONING'],summary:['Checked']}},
+      {item:{id:'tool',type:'commandExecution',command:'test',aggregatedOutput:'x'.repeat(20000)}}
     ],nextCursor:'next-items'};
   }};
   const reader=new ThreadHistory(codex),all=[];let before=null;
@@ -34,8 +34,8 @@ test('paged history preserves chronology, strips binary output and never request
 test('paged snapshots accept live deltas without replaying stale display rows or inserting other pages',async()=>{
   const metadata={id:'thread',historyMode:'paginated'};
   const reader=new ThreadHistory({async call(method){return method==='thread/turns/list'?{data:[{id:'turn',status:'inProgress'}]}:{data:[
-    {item:{id:'message',type:'agentMessage',text:'Hello '}},
-    {item:{id:'tool',type:'commandExecution',command:'test',aggregatedOutput:'one '}}
+    {item:{id:'tool',type:'commandExecution',command:'test',aggregatedOutput:'one '}},
+    {item:{id:'message',type:'agentMessage',text:'Hello '}}
   ]};}});
   const thread=await reader.read(metadata);const live=new LiveTimeline();live.seed(thread);
   live.ingest({method:'item/agentMessage/delta',params:{threadId:'thread',turnId:'turn',itemId:'message',delta:'world'}});

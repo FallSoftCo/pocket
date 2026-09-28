@@ -95,7 +95,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.4.4-alpha.1.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.4-alpha.1.apk`.
+Download `pocket-0.4.4-alpha.2.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.4-alpha.2.apk`.
 
 On the workstation, from the checkout:
 
@@ -123,7 +123,7 @@ Search tasks by title or project folder. Use Recent, Working, and Following to n
 
 Followed tasks recover missed completion/failure alerts after the Pocket backend reconnects or restarts, using saved turn IDs to prevent duplicates. The first upgrade establishes a baseline without notifying for old completed work.
 
-Open a task and tap its bell to follow it. Replying also follows it. The conversation preserves turn/item order, including compact expandable commands and diffs. Scroll up without losing your place; **Latest** returns to live activity. **Load earlier turns** pages backward. Public reasoning summaries can appear; raw reasoning is excluded.
+Open a task and tap its bell to follow it. Replying also follows it. The conversation preserves turn/item order, including compact expandable commands and diffs. Scroll up without losing your place; **Latest** returns to live activity. **Load earlier activity** pages backward. Public reasoning summaries can appear; raw reasoning is excluded.
 
 **Queued** means Pocket received a reply; **sent** means Codex accepted it, not that the task finished. Native questions and supported command/file approvals retain their exact outstanding request IDs. Unsupported request types must be handled in the terminal. Nothing is automatically approved.
 
@@ -135,9 +135,13 @@ Summary speech runs locally in a short-lived playback service with a Stop action
 
 ## Connection troubleshooting
 
+Pocket releases the displayed transcript when you leave a task and replaces the previous history page when you load earlier activity. **Back to latest** returns to live work. Reload clears the current display state; Android memory-pressure cleanup releases it too. Pairing, drafts, pending replies, and the original Codex history are preserved.
+
+The workstation’s live display cache has an 8 MiB serialized-entry budget, a 32-thread limit, and a 15-minute idle expiry. It clears on Codex disconnection and replaces stale entries with fresh snapshots. Paginated history loads at most 400 display items and 1 MiB of serialized display items per page, including continuation within a long turn. Large individual text fields are marked as excerpts; original content remains on the workstation.
+
 Pocket distinguishes **phone → workstation** failures from **workstation → Codex** failures. The connection banner explains which link needs attention and offers **Retry now**. Failed loads offer **Reload conversation**; reconnecting refreshes the open task automatically. These actions reload data without resending replies.
 
-Large conversations using Codex’s paginated history load recent turns and bounded item pages. **Load earlier turns** fetches the preceding page. This avoids requesting an entire long conversation in one WebSocket message. If a single response still exceeds the limit, Pocket reports that specific cause instead of just “Codex disconnected.”
+Large conversations using Codex’s paginated history load recent turns and bounded item pages. **Load earlier activity** fetches the preceding page. This avoids requesting an entire long conversation in one WebSocket message. If a single response still exceeds the limit, Pocket reports that specific cause instead of just “Codex disconnected.”
 
 If Pocket reports that it cannot resolve the workstation name, check that Tailscale is connected on both devices and that the phone is using Tailscale DNS. In Pocket settings, **Reconnect now** retries immediately without unpairing.
 

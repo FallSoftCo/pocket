@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit
 
 class PocketApplication: Application(), coil.ImageLoaderFactory {
     override fun onCreate(){super.onCreate();Pocket.init(this)}
+    override fun onTrimMemory(level:Int){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN)PocketTranscript.release()}
     override fun newImageLoader()=coil.ImageLoader.Builder(this).okHttpClient(Pocket.http).build()
 }
 fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
@@ -87,7 +88,7 @@ object Pocket {
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention")
         context.stopService(Intent(context,PocketSpeechService::class.java))
-        PocketLive.stop();token="";base="";connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0;pushStatus="Not paired";prefs.edit().clear().apply()
+        PocketTranscript.clear();PocketLive.stop();token="";base="";connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0;pushStatus="Not paired";prefs.edit().clear().apply()
     }
     fun refresh(){scope.launch{
         try{
@@ -105,7 +106,8 @@ object Pocket {
     }}
     fun open(id:String){selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
     fun refreshDetail(){scope.launch{PocketTranscript.load()}}
-    fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();refreshDetail()}
+    fun closeTask(){selected=null;detail=null;PocketTranscript.clear()}
+    fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
     fun scheduleRefresh(){if(refreshJob?.isActive==true)return;refreshJob=scope.launch{delay(400);PocketTranscript.load()}}
     fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains("newTaskRequest"))"A task request is saved. Check its status to continue." else "";scope.launch{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){error=e.message?:"Could not load projects"}}}
     fun startTask(cwd:String,prompt:String){if(starting)return;scope.launch{

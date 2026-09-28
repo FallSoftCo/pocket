@@ -4,6 +4,15 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x**. Physical testing covers a Pixel 9 Pro Fold on Android **API 36**; the public release also runs on an Android **API 35** emulator with Google Play services. The shared Unix app-server was used without a fork or competing runtime.
 
+## Display cache limits: 0.4.4-alpha.2
+
+Verified on September 28, 2026:
+
+- **60 backend tests** pass. Cache stress covers 30 conversations with 50 tool events each, binary payload exclusion, byte/thread/item limits, idle expiration, and explicit clearing. Fresh snapshots replace stale cache entries; an evicted streaming prefix requests a reload instead of showing a suffix as the complete message.
+- A long-turn regression traverses every original item exactly once across bounded pages while a new item arrives. Cursors anchor history positions rather than offsets into a changing latest page. Individual large display text is explicitly marked as an excerpt; the source data is unchanged.
+- The 8 MiB budget counts serialized live display entries, not total process heap. JavaScript objects, bounded metadata, upstream frames, and temporary request buffers also use memory. The existing 100 MiB individual upstream-message limit and legacy full-history limitation remain.
+- The phone replaces earlier pages rather than accumulating them, offers Back to latest, bounds live rows and coalesced in-flight updates, and releases the transcript on task exit or Android memory-pressure callbacks. Completion recovery retains cursors instead of whole summary pages during its boundary scan.
+
 ## Paged history and connection errors: 0.4.4-alpha.1
 
 Verified on September 28, 2026, with the installed stock Codex CLI **0.158.0**:
@@ -82,3 +91,5 @@ Release **0.4.1-alpha.1**, Android version code **5**:
 ## Limits
 
 Physical reply evidence covers an active turn; the isolated 0.4.2 exercise additionally covers idle continuation, a live command approval, and stopping a running task. No permission request was induced in ongoing user work. Other physical phone vendors, overnight Doze, full 30-minute snooze, reboot recovery, and other Codex versions are unverified. Force-stop prevents push until reopening. FCM acceptance alone never proves phone delivery. This is not an independent security audit or broad compatibility certification.
+
+Device check for alpha.2: in-place debug upgrade to version code 11 succeeded on the paired Pixel. A previously failing large conversation loaded 383 display rows with an empty event buffer. Pairing token hash, device ID, server, and spoken-summary preference matched the pre-upgrade values. Physical earlier-page/back-navigation checks were not completed because the phone was locked; pagination and replacement have automated coverage. Signed release build, six Android unit tests and release lint passed.

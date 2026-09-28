@@ -1,33 +1,55 @@
-import {itemRow} from './timeline.mjs';
+import {displayItem} from './timeline.mjs';
 
-// Never hydrate an entire paginated conversation in a single app-server frame.
+const encode=(prefix,value)=>prefix+Buffer.from(JSON.stringify(value)).toString('base64url');
 export class ThreadHistory {
-  constructor(codex){this.codex=codex;}
+  constructor(codex,{maxItems=400,maxBytes=1024*1024}={}){Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
   async read(metadata,{before=null,summary=false}={}){
     const threadId=metadata.id;
     if(metadata.historyMode!=='paginated')return (await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;
-    let cursor;
+    if(summary){
+      const cursor=before?Buffer.from(before.slice(5),'base64url').toString():null;
+      const page=await this.codex.call('thread/turns/list',{threadId,limit:8,sortDirection:'desc',itemsView:'summary',...(cursor?{cursor}:{})});
+      return {...metadata,turns:[...page.data].reverse(),_pocketPage:{hasEarlier:!!page.nextCursor,before:page.nextCursor?'page:'+Buffer.from(page.nextCursor).toString('base64url'):null}};
+    }
+    let state={nextTurn:null};
     if(before){
-      if(typeof before!=='string'||!before.startsWith('page:')||before.length>16000)throw Error('That history position is no longer available. Reopen the task.');
-      cursor=Buffer.from(before.slice(5),'base64url').toString();
+      if(typeof before!=='string'||before.length>16000)throw Error('Invalid history position. Reopen the task.');
+      if(before.startsWith('items:')){
+        try{state=JSON.parse(Buffer.from(before.slice(6),'base64url').toString());}catch{throw Error('Invalid history position. Reopen the task.');}
+        if(!state||typeof state!=='object'||Array.isArray(state)||['anchor','nextTurn','itemCursor'].some(k=>state[k]!=null&&typeof state[k]!=='string'))throw Error('Invalid history position. Reopen the task.');
+      }else if(before.startsWith('page:'))state={nextTurn:Buffer.from(before.slice(5),'base64url').toString()};
+      else throw Error('That history position is no longer available. Reopen the task.');
     }
-    const page=await this.codex.call('thread/turns/list',{threadId,limit:8,sortDirection:'desc',itemsView:summary?'summary':'notLoaded',...(cursor?{cursor}:{})});
-    const turns=[...page.data].reverse();
-    if(!summary)for(const turn of turns){
-      const items=[];let next=null;const visited=new Set();
-      do{
-        const part=await this.codex.call('thread/items/list',{threadId,turnId:turn.id,limit:20,sortDirection:'asc',...(next?{cursor:next}:{})});
-        for(const entry of part.data){
-          const item=entry.item,row=itemRow(item,turn.id);
-          // Keep display content, not inline images, raw reasoning, or unbounded tool output.
-          if(row)items.push({id:item.id,type:item.type,status:item.status,phase:item.phase,text:item.type==='agentMessage'?item.text:undefined,_pocketRow:row});
+    const turns=[];let count=0,bytes=0;const visited=new Set();
+    const finish=next=>({...metadata,turns:turns.reverse(),_pocketPage:{hasEarlier:!!next,before:next?encode('items:',next):null}});
+    for(let turnCount=0;turnCount<8;turnCount++){
+      const resumed=!!state.anchor;
+      const headers=await this.codex.call('thread/turns/list',{threadId,limit:1,sortDirection:resumed?'asc':'desc',itemsView:'notLoaded',...((state.anchor||state.nextTurn)?{cursor:state.anchor||state.nextTurn}:{})});
+      const header=headers.data[0];if(!header)return finish(null);
+      const anchor=resumed?state.anchor:headers.backwardsCursor;
+      const nextTurn=resumed?state.nextTurn:headers.nextCursor;
+      const turn={...header,items:[],_pocketHideEnd:resumed&&!!state.itemCursor};turns.push(turn);
+      let cursor=state.itemCursor||null;
+      while(true){
+        const key=JSON.stringify([header.id,cursor]);if(visited.has(key))throw Error('Codex returned a repeated history cursor.');visited.add(key);
+        const limit=Math.max(1,Math.min(8,this.maxItems,Math.floor(this.maxBytes/64000)));
+        const part=await this.codex.call('thread/items/list',{threadId,turnId:header.id,limit,sortDirection:'desc',...(cursor?{cursor}:{})});
+        const items=part.data.map(entry=>displayItem(entry.item,header.id)).filter(Boolean);
+        const size=items.reduce((n,item)=>n+Buffer.byteLength(JSON.stringify(item)),0);
+        if(count&&(count+items.length>this.maxItems||bytes+size>this.maxBytes)){
+          turn.items.reverse();if(!turn.items.length)turns.pop();
+          if(!anchor)throw Error('Codex did not provide a history anchor. Update Codex to continue paging.');
+          return finish({anchor,nextTurn,itemCursor:cursor});
         }
-        next=part.nextCursor;
-        if(next&&visited.has(next))throw Error('Codex returned a repeated history cursor. Reopen the task to retry.');
-        if(next)visited.add(next);
-      }while(next);
-      turn.items=items;
+        turn.items.push(...items);count+=items.length;bytes+=size;
+        if(!part.nextCursor)break;
+        cursor=part.nextCursor;
+      }
+      turn.items.reverse();
+      if(!nextTurn)return finish(null);
+      state={nextTurn};
+      if(count>=this.maxItems||bytes>=this.maxBytes)return finish(state);
     }
-    return {...metadata,turns,_pocketPage:{hasEarlier:!!page.nextCursor,before:page.nextCursor?'page:'+Buffer.from(page.nextCursor).toString('base64url'):null}};
+    return finish(state);
   }
 }
