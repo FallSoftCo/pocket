@@ -6,6 +6,14 @@ export class ThreadHistory {
   async read(metadata,{before=null,summary=false}={}){
     const threadId=metadata.id;
     if(metadata.historyMode!=='paginated')return (await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;
+    if(this.paginationSupported!==true){
+      if(this.paginationSupported===false)return this.legacyPage(threadId,metadata,before);
+      try{await this.codex.call('thread/turns/list',{threadId,limit:1,sortDirection:'desc',itemsView:'notLoaded'});this.paginationSupported=true;}
+      catch(e){
+        if(!/list_turns|thread\/turns\/list.*not supported|not supported yet/i.test(e.message))throw e;
+        this.paginationSupported=false;return this.legacyPage(threadId,metadata,before);
+      }
+    }
     if(summary){
       const cursor=before?Buffer.from(before.slice(5),'base64url').toString():null;
       const page=await this.codex.call('thread/turns/list',{threadId,limit:8,sortDirection:'desc',itemsView:'summary',...(cursor?{cursor}:{})});
@@ -51,5 +59,10 @@ export class ThreadHistory {
       if(count>=this.maxItems||bytes>=this.maxBytes)return finish(state);
     }
     return finish(state);
+  }
+  async legacyPage(threadId,metadata,before){
+    if(before)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
+    const thread=(await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;
+    return {...thread,_pocketPage:{hasEarlier:false,before:null}};
   }
 }

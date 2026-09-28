@@ -8,7 +8,7 @@ Start tasks from your phone, follow the conversation in order, and reply when Co
 
 [Download the Android alpha](https://github.com/fallsoftco/pocket/releases) · [Setup](#setup) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Verification](docs/VERIFICATION.md)
 
-> **Experimental alpha.** Tested with Codex CLI 0.157.1 on Linux. Pocket requires that CLI's existing shared app-server Unix socket. This transport is experimental; installations without it are not supported yet. Run `npm run doctor -- --preflight` to check yours before setup. This is an independent project, not an OpenAI product.
+> **Experimental alpha.** Workstation mode is tested with Codex CLI 0.157.1 on Linux. Phone-local mode is tested with stock Codex CLI 0.158.0 in Termux on a Pixel 9 Pro Fold. Both use Codex's experimental app-server protocol without a fork. This is an independent project, not an OpenAI product.
 
 ## What it does
 
@@ -19,6 +19,8 @@ Start tasks from your phone, follow the conversation in order, and reply when Co
 - Ask Codex to notify you under a condition: **“Use Pocket to notify me when the tests pass, with a short summary.”**
 - Choose synthesized tones, offline spoken labels or content summaries, or system notification audio. Actionable items have bounded reminders, dismissal, and snooze.
 - Open explicitly shared attachments from your authenticated workstation.
+- Run Codex on the Android phone itself and switch between **Workstation** and **This phone**.
+- Optionally let phone-local Codex inspect the foreground Android screen, take screenshots, tap, scroll, enter non-password text, and use Android navigation.
 
 Pocket is for **one owner and their trusted phones**. A paired phone can read and control that owner's Codex tasks. It is not a shared hosting or multi-user permissions system.
 
@@ -27,11 +29,13 @@ Pocket is for **one owner and their trusted phones**. A paired phone can read an
 ## How it connects
 
 ```text
-Codex CLI ← shared local app-server socket → Pocket backend
-                                                ↕ HTTPS / WebSocket
-                                           Android app
-                                                ↑ background alerts
-                                       Your Firebase project
+Workstation: Codex CLI ← shared socket → Pocket backend ← HTTPS/WebSocket → Android
+                                                       ↑ FCM alerts
+                                                  your Firebase project
+
+On phone:    stock Codex app-server ← stdio → Pocket bridge ← loopback → Android
+                                                   ↕ authenticated loopback
+                                           accessibility control service
 ```
 
 Your workstation hosts the application and stores task data. Firebase Cloud Messaging (FCM) transports notification titles and bounded text previews through Google. Full transcripts and attachments are fetched from your workstation. The APK gets your Firebase client configuration when paired; it contains no shared Firebase project or server credential.
@@ -95,7 +99,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.4.4-alpha.4.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.4.4-alpha.4.apk`.
+Download `pocket-0.5.0-alpha.1.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.5.0-alpha.1.apk`.
 
 On the workstation, from the checkout:
 
@@ -115,6 +119,21 @@ codex mcp add pocket -- node /absolute/path/pocket/server/mcp.mjs
 
 Start a new Codex client session so it loads the tool. Ask it when you want a notification. The `notify_user` tool uses the current `CODEX_THREAD_ID`; it never chooses another recipient. Custom data directories/ports must also be passed to the MCP command; see [deployment](docs/DEPLOYMENT.md).
 
+## Run Codex on the phone
+
+Pocket can also connect to stock Codex CLI running in Termux on the same Android device. This mode needs no Firebase project, Tailscale route, hosted relay, or app-store install. Install the APK and follow the [Android-local setup](docs/ANDROID_LOCAL.md). The short path from a Termux clone is:
+
+```bash
+./scripts/install-codex-android.sh
+codex-phone login --device-auth
+npm ci
+npm run android-local
+```
+
+The installer creates a private loopback bridge, a managed Termux service, reboot startup for Termux:Boot, and the `pocket-phone` MCP server. Pocket keeps workstation and phone profiles side by side.
+
+Phone control is optional. Enable **Pocket** in Android Accessibility, then enable **Control this phone** in Pocket. Screen reads and screenshots are pre-approved after those two controls are enabled; taps, text entry, scrolling, and navigation retain Codex's approval flow. Password fields are omitted and cannot be filled. Ask naturally, for example: **“Open Instagram, scroll my feed, and tell me which posts are about music.”** Custom-drawn surfaces and some WebViews may require screenshot-and-coordinate control rather than semantic elements.
+
 ## Everyday use
 
 Search tasks by title or project folder. Use Recent, Working, and Following to narrow the list. Search matches titles and full project paths without regard to letter case. Clear the search field to show all tasks in the selected view again.
@@ -131,7 +150,7 @@ Questions, approvals, and errors appear in **Needs you**. Reminders use delays o
 
 **Labels** prepares generic phrases using an installed offline English voice. **Speak messages** opts into reading the complete spoken version of notification content, including while the phone is locked. Codex can supply an optional `spoken_summary` to `notify_user`; otherwise the backend reads the cleaned title and message. The spoken version supports the same 32,000-character input budget as a notification, without a separate word cutoff. It is not a separate AI interpretation. Code blocks, URLs and long paths are removed.
 
-Speech is generated entirely on the phone and played with Android media controls. **Pause** saves the current audio position; **Resume** continues from there. Controls appear in the playback notification and a compact player inside Pocket. Music or another app taking audio focus pauses speech until you choose Resume. If media is already playing, new speech waits; new notifications also wait behind a paused message. Notification chimes do not interrupt Pocket's own active speech. Pausing releases the audio focus and stops the playback service; the private queue and current audio chunk remain on the phone. Dismissing the paused notification does not erase them: reopen Pocket to resume, or use the player's menu to **Clear saved speech**. Disabling Speak messages or disconnecting the phone clears saved speech. Normal process recreation restores the saved queue in a paused state; abrupt process death may replay up to the last two seconds since the last checkpoint.
+Speech is generated entirely on the phone and played with Android media controls. **Pause** saves the current audio position; **Resume** continues from there. Controls appear in the playback notification and a compact player inside Pocket. Music taking audio focus saves and pauses speech until you choose Resume. Brief interruptions pause and resume automatically, while notification chimes duck the voice without stranding the queue. If media is already playing, new speech waits; new notifications also wait behind a manually paused message. Pausing releases the audio focus and stops the playback service; the private queue and current audio chunk remain on the phone. Dismissing the paused notification does not erase them: reopen Pocket to resume, or use the player's menu to **Clear saved speech**. Disabling Speak messages or disconnecting the phone clears saved speech. Normal process recreation restores the saved queue in a paused state; abrupt process death may replay up to the last two seconds since the last checkpoint.
 
 Long messages continue in ordered chunks without a total playback deadline. Completed audio chunks are deleted. Speech uses media volume and also respects silent/vibrate mode, notification mute, Do Not Disturb and headphone disconnection. It does not read historical notification catch-up or repeatedly speak reminders. Nothing is sent to an external speech service. Firebase carries short speech directly; longer text is fetched through the authenticated workstation connection. If that connection is unavailable, the message stays saved with a reconnect explanation; Resume retries loading it.
 

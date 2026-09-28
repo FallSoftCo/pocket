@@ -109,6 +109,7 @@ class PocketSpeechService:Service(){
     private var player:MediaPlayer?=null
     private var prepared=false
     private var started=false
+    private var transientPaused=false
     private var focus:AudioFocusRequest?=null
     private lateinit var session:MediaSession
     private val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
@@ -209,8 +210,13 @@ class PocketSpeechService:Service(){
     private fun play(file:File,id:Long,index:Int){
         if(focus==null){
             if(!explicitPlayback&&getSystemService(AudioManager::class.java).isMusicActive){pause("Waiting while other audio plays");return}
-            val request=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attributes).setWillPauseWhenDucked(true)
-                .setOnAudioFocusChangeListener({change->if(change<0)pause("Paused for other audio")},handler).build()
+            val request=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attributes).setWillPauseWhenDucked(false)
+                .setOnAudioFocusChangeListener({change->when(change){
+                    AudioManager.AUDIOFOCUS_GAIN->{player?.setVolume(1f,1f);resumeTransient()}
+                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK->player?.setVolume(.25f,.25f)
+                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT->pauseTransient()
+                    AudioManager.AUDIOFOCUS_LOSS->pause("Paused for other audio")
+                }},handler).build()
             if(getSystemService(AudioManager::class.java).requestAudioFocus(request)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED){pause("Waiting for other audio to finish");return}
             focus=request
         }
@@ -242,6 +248,20 @@ class PocketSpeechService:Service(){
         Log.i("PocketSpeech","Playing audio $id/$index from ${media.currentPosition} ms")
         updateControls(PlaybackState.STATE_PLAYING);handler.removeCallbacks(checkpoint);handler.post(checkpoint)
     }
+    private fun pauseTransient(){
+        if(!started||transientPaused)return
+        player?.let{try{it.pause();queue.positionMs=it.currentPosition}catch(_:IllegalStateException){return}}
+        transientPaused=true;handler.removeCallbacks(timeout);handler.removeCallbacks(checkpoint);PocketSpeech.save(true);updateControls(PlaybackState.STATE_PAUSED)
+    }
+    private fun resumeTransient(){
+        if(!transientPaused)return
+        val media=player?:return
+        try{
+            media.start();transientPaused=false
+            handler.postDelayed(timeout,(media.duration-media.currentPosition).toLong().coerceAtLeast(0)+15000)
+            updateControls(PlaybackState.STATE_PLAYING);handler.removeCallbacks(checkpoint);handler.post(checkpoint)
+        }catch(_:IllegalStateException){pause("Playback interrupted · Tap Resume to retry")}
+    }
     private fun updateControls(state:Int){
         PocketSpeech.publish()
         session.setPlaybackState(PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_STOP)
@@ -258,7 +278,7 @@ class PocketSpeechService:Service(){
     internal fun discard(){finished=true;releasePlayback();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}
     private fun finish(){finished=true;releasePlayback();queue.positionMs=0;PocketSpeech.save(true);PocketSpeech.directory.deleteRecursively();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}
     private fun releasePlayback(){
-        handler.removeCallbacksAndMessages(null);scope.cancel();player?.release();player=null;prepared=false;started=false;engine?.stop();engine?.shutdown();engine=null
+        handler.removeCallbacksAndMessages(null);scope.cancel();player?.release();player=null;prepared=false;started=false;transientPaused=false;engine?.stop();engine?.shutdown();engine=null
         focus?.let{getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it)};focus=null
         session.isActive=false;session.release()
     }

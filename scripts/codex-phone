@@ -1,0 +1,12 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# Codex's Linux build expects conventional DNS and temporary-file paths.
+# PRoot maps only those two locations; Android's app sandbox remains the
+# outer security boundary.
+set -eu
+: "${PREFIX:=/data/data/com.termux/files/usr}"
+export SSL_CERT_FILE="$PREFIX/etc/tls/cert.pem"
+exec "$PREFIX/bin/proot" \
+  -b "$PREFIX/etc/resolv.conf:/etc/resolv.conf" \
+  -b "$PREFIX/tmp:/tmp" \
+  "$PREFIX/bin/node" \
+  "$PREFIX/lib/node_modules/@openai/codex/bin/codex.js" "$@"

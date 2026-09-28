@@ -27,8 +27,9 @@ export class SessionStarts {
       if(this.running.has(row.id))continue;this.running.add(row.id);
       try{
         this.db.prepare("UPDATE session_starts SET state='creating',updated_at=? WHERE id=?").run(Date.now(),row.id);
-        // Omit model/permission overrides: use the owner's actual project and Codex configuration.
-        const {thread}=await this.codex.call('thread/start',{cwd:row.cwd});
+        // Desktop installs inherit their normal configuration. Android-local installs opt in
+        // explicitly because the desktop workspace sandbox cannot run under Termux/PRoot.
+        const {thread}=await this.codex.call('thread/start',{cwd:row.cwd,...this.codex.executionOptions?.()});
         this.db.exec('BEGIN IMMEDIATE');
         try{
           this.db.prepare("UPDATE session_starts SET state='started',thread_id=?,updated_at=? WHERE id=?").run(thread.id,Date.now(),row.id);

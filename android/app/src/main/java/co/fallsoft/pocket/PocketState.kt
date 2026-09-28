@@ -30,6 +30,7 @@ object Pocket {
     val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main)
     val http=PocketNetwork.client()
     var base by mutableStateOf(""); var token by mutableStateOf("")
+    var local by mutableStateOf(false); private set
     var connected by mutableStateOf(false); var codexOnline by mutableStateOf(false)
     var connectionError by mutableStateOf("")
     var codexConnectionMessage by mutableStateOf("")
@@ -46,19 +47,31 @@ object Pocket {
     var tab by mutableIntStateOf(0)
     var host by mutableStateOf("Your workstation")
     var sending by mutableStateOf(false)
+    var pairingMode by mutableStateOf(false)
     var pushStatus by mutableStateOf("Setting up notifications…")
     var refreshJob:Job?=null
     var lastNotification:Long=0
     val prefs get()=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+    fun key(name:String,forLocal:Boolean=local)=if(forLocal)"local:$name" else name
+    fun savedBase(forLocal:Boolean)=prefs.getString(key("server",forLocal),"")!!
+    fun savedToken(forLocal:Boolean)=prefs.getString(key("token",forLocal),"")!!
     fun init(c:Context){
-        context=c.applicationContext;base=prefs.getString("server","")!!;token=prefs.getString("token","")!!;lastNotification=prefs.getLong("lastNotification",0)
-        if(!prefs.contains("seenIds"))prefs.edit().putStringSet("seenIds",((lastNotification-511).coerceAtLeast(1)..lastNotification).map{it.toString()}.toSet()).apply()
+        context=c.applicationContext;local=prefs.getBoolean("activeLocal",false);base=savedBase(local);token=savedToken(local);lastNotification=prefs.getLong(key("lastNotification"),0)
+        if(!prefs.contains(key("seenIds")))prefs.edit().putStringSet(key("seenIds"),((lastNotification-511).coerceAtLeast(1)..lastNotification).map{it.toString()}.toSet()).apply()
         context.getSystemService(android.app.NotificationManager::class.java).apply{cancel(1);deleteNotificationChannel("connection")}
         PocketAudio.init()
         PocketSpeech.init()
         PocketAttention.init()
         if(token.isNotBlank())try{PocketPush.initialize()}catch(_:Exception){}
-        if(prefs.getBoolean("pushReady",false))pushStatus="Firebase push is ready"
+        if(local)pushStatus="Notifications stay on this phone" else if(prefs.getBoolean("pushReady",false))pushStatus="Firebase push is ready"
+        if(local&&token.isNotBlank())LocalMonitorService.start(context)
+    }
+    suspend fun apiFor(forLocal:Boolean,path:String,body:JSONObject?=null,authorized:Boolean=true):JSONObject=withContext(Dispatchers.IO){
+        val endpoint=savedBase(forLocal);val credential=savedToken(forLocal)
+        val request=Request.Builder().url(endpoint.trimEnd('/')+path)
+        if(authorized)request.header("Authorization","Bearer $credential")
+        if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
+        http.newCall(request.build()).execute().use{r->val raw=r.body?.string()?:"{}";val json=try{JSONObject(raw)}catch(_:Exception){JSONObject().put("error","Unexpected server response (${r.code})")};if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Request failed (${r.code})")));json}
     }
     suspend fun api(path:String, body:JSONObject?=null, authorized:Boolean=true):JSONObject=withContext(Dispatchers.IO){
         val request=Request.Builder().url(base.trimEnd('/')+path)
@@ -72,16 +85,28 @@ object Pocket {
     fun pair(server:String,code:String){scope.launch{
         busy=true;error=""
         try {
-            val url=server.trim().trimEnd('/');require(url.startsWith("https://")){"Use your server’s HTTPS address."}
+            val url=server.trim().trimEnd('/');val pairingLocal=url in listOf("http://127.0.0.1:18880","http://localhost:18880")
+            require(url.startsWith("https://")||pairingLocal){"Use your server’s HTTPS address, or Pocket’s local phone address."}
             base=url
             val r=api("/api/pair",JSONObject().put("code",code).put("name",Build.MODEL),false)
             token=r.getString("token");host=r.s("host")
-            prefs.edit().putString("server",base).putString("token",token).putString("deviceId",r.s("id")).apply()
-            PocketPush.configure(r.optJSONObject("firebase"));PocketLive.start();refresh()
+            local=pairingLocal||r.optBoolean("local");prefs.edit().putBoolean("activeLocal",local).putString(key("server"),base).putString(key("token"),token).putString(key("deviceId"),r.s("id")).apply()
+            if(local&&r.s("automationSecret").isNotBlank())prefs.edit().putString(key("automationSecret",true),r.s("automationSecret")).apply()
+            PocketPush.configure(r.optJSONObject("firebase"));if(local)LocalMonitorService.start(context);pairingMode=false;PocketLive.start();refresh()
         }catch(e:Exception){error=PocketNetwork.error(e)}finally{busy=false}
     }}
+    fun activate(forLocal:Boolean){
+        if(local==forLocal)return
+        val nextBase=savedBase(forLocal);val nextToken=savedToken(forLocal);if(nextBase.isBlank()||nextToken.isBlank())return
+        PocketLive.stop();PocketTranscript.clear();local=forLocal;base=nextBase;token=nextToken;host=if(local)"This phone" else "Your workstation"
+        connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";tasks=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
+        lastNotification=prefs.getLong(key("lastNotification"),0);prefs.edit().putBoolean("activeLocal",local).apply()
+        pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean("pushReady",false))"Firebase push is ready" else "Setting up notifications…"
+        if(local)LocalMonitorService.start(context) else LocalMonitorService.stop(context)
+        PocketLive.start();refresh()
+    }
     fun disconnect(){
-        val oldBase=base;val oldToken=token
+        val wasLocal=local;val oldBase=base;val oldToken=token
         scope.launch(Dispatchers.IO){try{
             val req=Request.Builder().url(oldBase+"/api/device/disconnect").header("Authorization","Bearer $oldToken").post("{}".toRequestBody("application/json".toMediaType())).build()
             http.newCall(req).execute().close()
@@ -89,18 +114,22 @@ object Pocket {
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention")
         PocketSpeech.clear()
-        PocketTranscript.clear();PocketLive.stop();token="";base="";connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0;pushStatus="Not paired";prefs.edit().clear().apply()
+        val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal))
+        if(wasLocal)edit.remove(key("automationSecret",true)).putBoolean("automationAllowed",false)
+        edit.apply();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
+        val fallback=if(wasLocal)false else true
+        if(savedToken(fallback).isNotBlank()){local=wasLocal;activate(fallback)}else{token="";base="";pushStatus="Not paired";local=false;prefs.edit().putBoolean("activeLocal",false).apply();LocalMonitorService.stop(context)}
     }
     fun refresh(){scope.launch{
         try{
             val r=api("/api/status");codexOnline=r.optBoolean("connected");codexConnectionMessage=r.optJSONObject("problem")?.s("message")?:"";host=r.s("host")
-            prefs.edit().putString("deviceId",r.s("deviceId")).apply()
+            prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply()
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
             tasks=api("/api/threads").optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"))}?:emptyList()
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
             val latestAttention=api("/api/attention").optJSONArray("notifications")?.objects()?:emptyList()
             val activeIds=latestAttention.map{it.optLong("id")}.toSet()
-            prefs.all.keys.filter{it.startsWith("attention:")}.mapNotNull{it.substringAfter(':').toLongOrNull()}.filter{it !in activeIds}.forEach{PocketAttention.dismiss(it)}
+            prefs.all.keys.filter{it.startsWith(key("attention:"))}.mapNotNull{it.substringAfterLast(':').toLongOrNull()}.filter{it !in activeIds}.forEach{PocketAttention.dismiss(it)}
             attention=latestAttention
             error=""
         }catch(e:Exception){error=PocketNetwork.error(e)}
@@ -112,7 +141,7 @@ object Pocket {
     fun scheduleRefresh(){if(refreshJob?.isActive==true)return;refreshJob=scope.launch{delay(400);PocketTranscript.load()}}
     fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains("newTaskRequest"))"A task request is saved. Check its status to continue." else "";scope.launch{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){error=e.message?:"Could not load projects"}}}
     fun startTask(cwd:String,prompt:String){if(starting)return;scope.launch{
-        starting=true;error="";startStatus="Starting on your workstation…"
+        starting=true;error="";startStatus=if(local)"Starting on this phone…" else "Starting on your workstation…"
         val previous=prefs.getString("newTaskRequest",null)?.let{JSONObject(it)}
         val request=if(previous?.s("cwd")==cwd&&previous.s("prompt")==prompt)previous else JSONObject().put("id",UUID.randomUUID().toString()).put("cwd",cwd).put("prompt",prompt)
         prefs.edit().putString("newTaskRequest",request.toString()).commit()
@@ -121,7 +150,7 @@ object Pocket {
             var result=api("/api/threads",request)
             submitted=true
             var attempts=0
-            while(result.s("state") in listOf("queued","creating")&&attempts++<45){startStatus=if(result.s("state")=="queued")"Waiting for your workstation…" else "Creating your session…";delay(1000);result=api("/api/session-starts/${request.s("id")}")}
+            while(result.s("state") in listOf("queued","creating")&&attempts++<45){startStatus=if(result.s("state")=="queued")"Waiting for Codex…" else "Creating your session…";delay(1000);result=api("/api/session-starts/${request.s("id")}")}
             when(result.s("state")){
                 "started"->{prefs.edit().remove("newTaskRequest").remove("newTaskPrompt").putString("lastProject",cwd).apply();open(result.getString("thread_id"));refresh()}
                 "failed"->{prefs.edit().remove("newTaskRequest").apply();error=result.s("error","Session creation failed. You can correct the request and try again.");startStatus=""}
@@ -171,20 +200,22 @@ object Pocket {
     }}
     @Synchronized fun acceptNotification(n:JSONObject,transport:String="history"){
         val id=n.optLong("id");if(id<=0)return
-        val seen=prefs.getStringSet("seenIds",emptySet())!!.toMutableSet()
+        val notificationLocal=n.optBoolean("_local",local)
+        val seen=prefs.getStringSet(key("seenIds",notificationLocal),emptySet())!!.toMutableSet()
         if(!seen.add(id.toString()))return
         val bounded=seen.sortedByDescending{it.toLongOrNull()?:0}.take(512).toSet()
-        prefs.edit().putStringSet("seenIds",bounded).putString("lastDeliveryTransport",transport).putLong("lastDeliveryId",id).putLong("lastDeliveryAt",System.currentTimeMillis()).apply()
+        n.put("_local",notificationLocal)
+        prefs.edit().putStringSet(key("seenIds",notificationLocal),bounded).putString(key("lastDeliveryTransport",notificationLocal),transport).putLong(key("lastDeliveryId",notificationLocal),id).putLong(key("lastDeliveryAt",notificationLocal),System.currentTimeMillis()).apply()
         PocketNotifications.show(context,n)
         val age=System.currentTimeMillis()-n.optLong("created_at")
         if(transport in listOf("fcm","socket")&&age in 0..120000)PocketSpeech.request(context,n)
     }
     fun catchUp(){scope.launch{try{
-        val after=if(prefs.getBoolean("needsHistorySync",false))0 else lastNotification
+        val after=if(prefs.getBoolean(key("needsHistorySync"),false))0 else lastNotification
         val r=api("/api/notifications?after=$after")
         val entries=r.optJSONArray("notifications")?.objects()?:emptyList()
         entries.forEach{acceptNotification(it)}
         entries.maxOfOrNull{it.optLong("id")}?.let{lastNotification=maxOf(lastNotification,it)}
-        prefs.edit().putLong("lastNotification",lastNotification).putBoolean("needsHistorySync",false).apply()
+        prefs.edit().putLong(key("lastNotification"),lastNotification).putBoolean(key("needsHistorySync"),false).apply()
     }catch(_:Exception){}}}
 }

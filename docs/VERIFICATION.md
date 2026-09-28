@@ -2,7 +2,19 @@
 
 ## Tested platforms
 
-Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x**. Physical testing covers a Pixel 9 Pro Fold on Android **API 36**; the public release also runs on an Android **API 35** emulator with Google Play services. The shared Unix app-server was used without a fork or competing runtime.
+Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x** for workstation mode. Phone-local testing uses stock Codex CLI **0.158.0**, Node **26.1.0**, Termux **0.118.3**, and PRoot on a Pixel 9 Pro Fold with Android **API 36**. The public release also runs on an Android **API 35** emulator with Google Play services. No Codex fork is used.
+
+## Phone-local Codex and control: 0.5.0-alpha.1
+
+Pocket's Android profile paired with a bridge at `127.0.0.1:18880`, listed the phone's real Codex sessions, and retained the existing workstation profile. A real app-server turn created and read a local proof file through stock Codex. The installed CLI reports paginated history capability but rejects `thread/turns/list`; Pocket detected that runtime mismatch and loaded the turn through bounded `thread/read` fallback.
+
+The physical Pixel bound Pocket's Accessibility service after both controls were enabled. An authenticated loopback snapshot reported the foreground Pocket package and 42 useful nodes. Screenshot capture returned a valid 181,967-byte PNG. A Home action succeeded, and the next authenticated snapshot reported the Pixel Launcher with 74 nodes; Pocket was then reopened. An invalid or missing secret is rejected, the in-app switch can pause all calls, password text is omitted, and password fields reject entry by construction.
+
+An in-place development upgrade correctly preserved 13 queued spoken updates but left the queue in its explicit saved state. After Resume, Android reported active playback. A normal System UI notification then delivered `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK` followed by gain; Pocket stayed in `PLAYING` before and after the two-second chime. This reproduces and fixes the prior behavior where any negative focus event permanently paused the queue. Transient loss now resumes automatically, ducking only lowers volume, and permanent loss still saves the exact playback position.
+
+Codex CLI discovered `pocket-phone`; its default noninteractive `never` approval policy correctly refused the first unconfigured read. The installed configuration explicitly approves only `phone_screen` and `phone_screenshot`; tap, click, scroll, text, and navigation keep the normal approval path. After configuration, Pocket started a real phone-local Codex session whose model called `phone_screen` and returned the foreground package `co.fallsoft.pocket`. The turn completed idle through the Android UI bridge without a Codex fork.
+
+Validation: 72 backend tests and 14 Android unit tests pass. Debug and signed release builds, release lint, maintained-certificate verification, clean-source validation, in-place installation, and the physical checks above pass. GitHub Actions independently repeats the public test and build checks for the tagged commit.
 
 ## Resumable on-device speech: 0.4.4-alpha.4
 

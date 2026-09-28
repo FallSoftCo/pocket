@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { randomUUID, randomBytes, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, basename, extname } from 'node:path';
-import { readFileSync, writeFileSync, mkdirSync, statSync, realpathSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, statSync, realpathSync, existsSync, chmodSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { Codex } from './codex.mjs';
 import { openStore, hash } from './store.mjs';
@@ -18,7 +18,13 @@ import { ambiguousDelivery } from './connection-errors.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const dir=process.env.POCKET_DATA || resolve(root,'data');
+const hostName=process.env.POCKET_HOST_NAME||hostname();
+const localMode=process.env.POCKET_LOCAL==='1';
 const {db,secrets}=openStore(dir);
+const automationPath=resolve(dir,'automation.json');
+const automation=localMode?(existsSync(automationPath)?JSON.parse(readFileSync(automationPath)):{secret:randomBytes(32).toString('hex')}):null;
+if(automation&&!existsSync(automationPath))writeFileSync(automationPath,JSON.stringify(automation),{mode:0o600});
+if(automation)chmodSync(automationPath,0o600);
 const push=loadPush(db,dir);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex();
@@ -65,7 +71,7 @@ async function attach(threadId,{before=null}={}){
   requireId(threadId); await codex.connect();
   let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;
   if(!attached.has(threadId)){
-    metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true})).thread;attached.add(threadId);
+    metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true,...codex.executionOptions()})).thread;attached.add(threadId);
     if(metadata.historyMode!=='paginated'){initial=await history.read(metadata);completions.observe(initial);}
     else if(db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId)){
       // Retain only cursors while finding the recovery boundary, not every summary page.
@@ -142,7 +148,7 @@ setInterval(async()=>{
 codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.4.4-alpha.4'}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.5.0-alpha.1'}));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -155,14 +161,14 @@ app.post('/api/pair',(req,res)=>{
   db.prepare('DELETE FROM pairing WHERE code_hash=?').run(row.code_hash);
   const token=randomBytes(32).toString('hex'), id=randomUUID();
   db.prepare('INSERT INTO devices(id,name,token_hash,created_at) VALUES(?,?,?,?)').run(id,String(req.body.name||'Android phone').slice(0,100),hash(token),now());
-  res.json({token,id,host:hostname(),firebase:push.config});
+  res.json({token,id,host:hostName,firebase:push.config,local:localMode,...(automation?{automationSecret:automation.secret}:{})});
 });
 app.use('/api',requireAuth);
 app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>res.json({...codex.status(),host:hostname(),version:'0.4.4-alpha.4',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
+app.get('/api/status',(req,res)=>res.json({...codex.status(),host:hostName,local:localMode,version:'0.5.0-alpha.1',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}}));
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});

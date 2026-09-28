@@ -28,7 +28,7 @@ object PocketPush {
         return true
     }
     fun configure(config:JSONObject?,registered:Boolean=false){
-        if(config==null){Pocket.pushStatus="Firebase is not configured on your server";return}
+        if(config==null){Pocket.pushStatus=if(Pocket.local)"Notifications stay on this phone" else "Firebase is not configured on your server";return}
         val changed=Pocket.prefs.getString("firebase",null)!=config.toString()
         Pocket.prefs.edit().putString("firebase",config.toString()).apply()
         try{
@@ -42,11 +42,11 @@ object PocketPush {
 
 class PushRegistrationWorker(c:Context,p:WorkerParameters):Worker(c,p){
     override fun doWork():Result {
-        if(Pocket.token.isBlank()||!PocketPush.initialize())return Result.success()
+        if(Pocket.savedToken(false).isBlank()||!PocketPush.initialize())return Result.success()
         return try{
             val token=Tasks.await(FirebaseMessaging.getInstance().token,20,TimeUnit.SECONDS)
             val config=JSONObject(Pocket.prefs.getString("firebase","{}")!!)
-            runBlocking {Pocket.api("/api/device/push",JSONObject().put("token",token).put("projectId",config.getString("projectId")))}
+            runBlocking {Pocket.apiFor(false,"/api/device/push",JSONObject().put("token",token).put("projectId",config.getString("projectId")))}
             Pocket.prefs.edit().putBoolean("pushReady",true).apply()
             Pocket.scope.launch{Pocket.pushStatus="Firebase push is ready"}
             Result.success()
@@ -68,24 +68,24 @@ class PushRegistrationWorker(c:Context,p:WorkerParameters):Worker(c,p){
 
 class PocketFirebaseService:FirebaseMessagingService(){
     override fun onNewToken(token:String){
-        if(Pocket.token.isNotBlank()){
+        if(Pocket.savedToken(false).isNotBlank()){
             Pocket.prefs.edit().putBoolean("pushReady",false).apply()
             PushRegistrationWorker.enqueue(this)
         }
     }
     override fun onMessageReceived(message:RemoteMessage){
-        if(Pocket.token.isBlank()||message.data["device_id"]!=Pocket.prefs.getString("deviceId",null))return
+        if(Pocket.savedToken(false).isBlank()||message.data["device_id"]!=Pocket.prefs.getString(Pocket.key("deviceId",false),null))return
         if(message.data["operations"]=="failure"){
             PocketNotifications.operations(this,message.notification?.title?:"Pocket needs attention",message.notification?.body?:"Check GitHub Actions for details.")
             return
         }
-        val n=JSONObject(message.data)
+        val n=JSONObject(message.data).put("_local",false)
         if(n.optLong("id")<=0)return
         // Render immediately within FCM's execution window. No network request is needed.
         Pocket.acceptNotification(n,if(message.priority==RemoteMessage.PRIORITY_HIGH)"fcm" else "fcm-normal")
         Log.i("PocketPush","Received FCM notification ${n.optLong("id")}")
     }
-    override fun onDeletedMessages(){Pocket.prefs.edit().putBoolean("needsHistorySync",true).apply()}
+    override fun onDeletedMessages(){Pocket.prefs.edit().putBoolean(Pocket.key("needsHistorySync",false),true).apply()}
 }
 
 /** Durable inline replies survive process death and use one stable server idempotency key. */
@@ -93,12 +93,13 @@ class ReplyDeliveryWorker(c:Context,p:WorkerParameters):Worker(c,p){
     override fun doWork():Result {
         val id=inputData.getString("id")?:return Result.success()
         val raw=Pocket.prefs.getString("outbox:$id",null)?:return Result.success()
-        if(Pocket.token.isBlank())return Result.success()
         val reply=JSONObject(raw);val thread=reply.getString("thread")
+        val local=reply.optBoolean("local",false)
+        if(Pocket.savedToken(local).isBlank())return Result.success()
         return try{
             val response=runBlocking{
-                var status=Pocket.api("/api/threads/$thread/reply",JSONObject().put("id",id).put("text",reply.getString("text")))
-                repeat(5){if(status.s("state") in listOf("queued","sending")){kotlinx.coroutines.delay(1000);status=Pocket.api("/api/replies/$id")}}
+                var status=Pocket.apiFor(local,"/api/threads/$thread/reply",JSONObject().put("id",id).put("text",reply.getString("text")))
+                repeat(5){if(status.s("state") in listOf("queued","sending")){kotlinx.coroutines.delay(1000);status=Pocket.apiFor(local,"/api/replies/$id")}}
                 status
             }
             when(response.s("state")){
@@ -106,7 +107,7 @@ class ReplyDeliveryWorker(c:Context,p:WorkerParameters):Worker(c,p){
                     update(reply,"Reply sent to Codex")
                     val edit=Pocket.prefs.edit().remove("outbox:$id")
                     if(Pocket.prefs.getString("draft:$thread",null)==reply.getString("text"))edit.remove("draft:$thread")
-                    edit.apply();PocketAttention.dismiss((reply.getInt("notificationId")-1000).toLong())
+                    edit.apply();reply.optLong("notificationDbId").takeIf{it>0}?.let{PocketAttention.dismiss(it,local)}
                     // Dismiss the old attention state, then retain this delivery confirmation.
                     update(reply,"Reply sent to Codex");Result.success()
                 }
@@ -118,7 +119,7 @@ class ReplyDeliveryWorker(c:Context,p:WorkerParameters):Worker(c,p){
             }
         }catch(_:Exception){
             Pocket.prefs.edit().putString("draft:$thread",reply.getString("text")).apply()
-            update(reply,if(runAttemptCount<8)"Reply saved · waiting for your workstation" else "Reply needs attention · open Pocket")
+            update(reply,if(runAttemptCount<8)"Reply saved · waiting for Codex" else "Reply needs attention · open Pocket")
             if(runAttemptCount<8)Result.retry()else Result.failure()
         }
     }
@@ -126,7 +127,7 @@ class ReplyDeliveryWorker(c:Context,p:WorkerParameters):Worker(c,p){
         val id=reply.getInt("notificationId")
         val b=androidx.core.app.NotificationCompat.Builder(applicationContext,"work").setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title).setContentText(reply.getString("text")).setSilent(true).setAutoCancel(true)
-            .setContentIntent(PocketNotifications.open(applicationContext,reply.getString("thread"),id))
+            .setContentIntent(PocketNotifications.open(applicationContext,reply.getString("thread"),id,reply.optBoolean("local",false)))
         try{androidx.core.app.NotificationManagerCompat.from(applicationContext).notify(id,b.build())}catch(_:SecurityException){}
     }
     companion object{

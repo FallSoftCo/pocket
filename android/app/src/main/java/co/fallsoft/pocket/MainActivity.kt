@@ -57,20 +57,23 @@ class MainActivity:ComponentActivity(){
         if(Build.VERSION.SDK_INT>=33)permissions.launch(Manifest.permission.POST_NOTIFICATIONS)
         if(Pocket.token.isNotBlank()){Pocket.refresh()}
         setContent{MaterialTheme(colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,background=Ink,surface=Panel,onSurface=Paper,onBackground=Paper,outline=Line,secondary=Coral)){
-            Surface(Modifier.fillMaxSize(),color=Ink){if(Pocket.token.isBlank())PairScreen(initialServer,initialCode)else PocketApp()}
+            Surface(Modifier.fillMaxSize(),color=Ink){if(Pocket.token.isBlank()||Pocket.pairingMode)PairScreen(initialServer.ifBlank{if(Pocket.pairingMode)"http://127.0.0.1:18880" else ""},initialCode)else PocketApp()}
         }}
     }
     override fun onNewIntent(intent:Intent){super.onNewIntent(intent);readIntent(intent)}
     private fun readIntent(i:Intent){
         initialServer=i.getStringExtra("server")?:initialServer;initialCode=i.getStringExtra("code")?:initialCode
+        i.data?.takeIf{it.scheme=="pocket"&&it.host=="pair"}?.let{initialServer=it.getQueryParameter("server")?:initialServer;initialCode=it.getQueryParameter("code")?:initialCode;Pocket.pairingMode=true}
+        if(i.hasExtra("local"))Pocket.activate(i.getBooleanExtra("local",false))
+        if(initialServer.isNotBlank()&&initialCode.isNotBlank())Pocket.pairingMode=true
         i.getStringExtra("thread")?.let{if(Pocket.token.isNotBlank())Pocket.open(it)}
         if(Pocket.token.isNotBlank()&&i.getStringExtra("operations_url")=="https://github.com/FallSoftCo/pocket/actions"){
             i.removeExtra("operations_url")
             startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/FallSoftCo/pocket/actions")))
         }
     }
-    override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketLive.start()}
-    override fun onStop(){PocketLive.stop();super.onStop()}
+    override fun onStart(){super.onStart();if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
+    override fun onStop(){if(!Pocket.local)PocketLive.stop();super.onStop()}
     override fun onResume(){super.onResume();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail()}}
 }
 
@@ -79,10 +82,11 @@ class MainActivity:ComponentActivity(){
 @Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){Text(Pocket.error,color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){Text("Reload conversation",color=Mint)}}}}
 @Composable fun ConnectionNotice(){
     if(Pocket.connected&&Pocket.codexOnline)return
+    val place=if(Pocket.local)"this phone" else "your workstation"
     Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
         Column(Modifier.padding(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
-            Text(if(Pocket.connected)"Waiting for Codex on your workstation" else "Reconnecting to your workstation",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
-            Text(if(Pocket.connected)Pocket.codexConnectionMessage.ifBlank{"Your phone is connected to ${Pocket.host}, but Pocket cannot reach Codex there. Retrying automatically. If this continues, check that Codex is open on that workstation."} else Pocket.connectionError.ifBlank{"Pocket is trying to reach ${Pocket.host}. Check that the workstation is awake and Tailscale is connected on both devices."},color=Muted,fontSize=12.sp,lineHeight=17.sp)
+            Text(if(Pocket.connected)"Waiting for Codex on $place" else "Reconnecting to $place",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
+            Text(if(Pocket.connected)Pocket.codexConnectionMessage.ifBlank{"Pocket reached ${Pocket.host}, but Codex is not responding there. Retrying automatically."} else Pocket.connectionError.ifBlank{if(Pocket.local)"Pocket is trying to reach Codex through this phone’s private loopback connection." else "Pocket is trying to reach ${Pocket.host}. Check that the workstation is awake and Tailscale is connected on both devices."},color=Muted,fontSize=12.sp,lineHeight=17.sp)
             TextButton({Pocket.retryConnection()},contentPadding=PaddingValues(0.dp)){Text("Retry now",color=Mint)}
         }
     }
@@ -92,10 +96,11 @@ class MainActivity:ComponentActivity(){
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(28.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
         Spacer(Modifier.height(34.dp));Mark(70);Spacer(Modifier.height(18.dp));Label("CODEX, WITH YOU",Mint)
         Text("Good work.\nWithin reach.",fontSize=46.sp,lineHeight=49.sp,fontWeight=FontWeight.Medium,letterSpacing=(-1.8).sp)
-        Text("Your tasks, updates and next ideas.\nConnected directly to your own workstation.",color=Muted,fontSize=17.sp,lineHeight=25.sp)
-        Spacer(Modifier.height(14.dp));OutlinedTextField(address,{address=it},label={Text("Your server’s HTTPS address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp))
+        Text("Your tasks, updates and next ideas.\nConnected to Codex here or on your workstation.",color=Muted,fontSize=17.sp,lineHeight=25.sp)
+        Spacer(Modifier.height(14.dp));OutlinedTextField(address,{address=it},label={Text("Pocket server address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp))
         OutlinedTextField(pin,{pin=it},label={Text("One-time pairing code")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp))
-        ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(18.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{Text("Connect my workstation",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));Icon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
+        ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(18.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{Text("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));Icon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
+        if(Pocket.token.isNotBlank())TextButton({Pocket.pairingMode=false},modifier=Modifier.fillMaxWidth()){Text("Cancel",color=Muted)}
         Text("Self-hosted. Private by design.\nYour Codex stays exactly where it is.",color=Muted,fontSize=12.sp,lineHeight=19.sp)
     }
 }
@@ -188,18 +193,41 @@ fun relative(time:Long):String{val seconds=(System.currentTimeMillis()-(if(time<
 @Composable fun SettingsScreen(){val c=LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(23.dp)){
         Label("MADE TO BE YOURS",Mint);Text("Your connection.",fontSize=34.sp,letterSpacing=(-1).sp)
-        Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){ConnectionPill();Text(Pocket.host,fontSize=23.sp);Text(Pocket.base,color=Muted,fontSize=12.sp);HorizontalDivider(color=Line);Text(Pocket.pushStatus,fontSize=16.sp,color=Mint);Text("Notifications arrive through Firebase, even when Pocket is closed. Conversations and files load from your workstation.",color=Muted,fontSize=14.sp,lineHeight=21.sp)}}
+        Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+            ConnectionPill();Text(Pocket.host,fontSize=23.sp);Text(Pocket.base,color=Muted,fontSize=12.sp)
+            if(Pocket.savedToken(false).isNotBlank()&&Pocket.savedToken(true).isNotBlank())Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={Text("Workstation")})
+                FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={Text("This phone")})
+            }
+            if(Pocket.savedToken(true).isBlank())OutlinedButton({Pocket.pairingMode=true},modifier=Modifier.fillMaxWidth()){Text("Connect Codex on this phone")}
+            HorizontalDivider(color=Line);Text(Pocket.pushStatus,fontSize=16.sp,color=Mint)
+            Text(if(Pocket.local)"Pocket connects over this phone’s loopback interface. A visible monitor keeps local task results and requests flowing while the app is closed." else "Notifications arrive through Firebase, even when Pocket is closed. Conversations and files load from your workstation.",color=Muted,fontSize=14.sp,lineHeight=21.sp)
+        }}
         if(!Pocket.connected||!Pocket.codexOnline){
             if(Pocket.connectionError.isNotBlank())Text(Pocket.connectionError,color=Coral,fontSize=13.sp,lineHeight=20.sp)
             OutlinedButton({Pocket.retryConnection()},modifier=Modifier.fillMaxWidth()){Text("Reconnect now")}
         }
+        if(Pocket.savedToken(true).isNotBlank())PhoneControlSettings()
         NotificationAudioSettings()
         Button({Pocket.test()},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){Icon(Icons.Rounded.NotificationsActive,null);Spacer(Modifier.width(10.dp));Text("Send a test notification")}
         OutlinedButton({c.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,c.packageName))},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){Text("Notification settings")}
-        Text("Keep notifications enabled. Tailscale connects you to your conversations and lets you reply. Firebase handles alerts without a permanent connection to the app.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        Text(if(Pocket.local)"The local monitor uses no cloud push service. Keep its notification enabled while Codex is working on this phone." else "Keep notifications enabled. Tailscale connects you to your conversations and lets you reply. Firebase handles alerts without a permanent connection to the app.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
         ErrorBanner();OutlinedButton({Pocket.disconnect()},modifier=Modifier.fillMaxWidth()){Text("Disconnect this phone",color=Coral)}
         Spacer(Modifier.height(12.dp));Label("POCKET ${BuildConfig.VERSION_NAME} · FALLSOFT");Text("Built around stock Codex.\nNo fork. No hosted account. No app store.",color=Muted,fontSize=12.sp,lineHeight=20.sp)
     }
+}
+
+@Composable fun PhoneControlSettings(){val c=LocalContext.current;val systemEnabled=PocketAutomation.systemEnabled(c)||PocketAutomation.connected
+    Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f)){Text("Control this phone",fontSize=21.sp,fontWeight=FontWeight.Medium);Text(if(systemEnabled)"Android access is enabled" else "Android access still needs to be enabled",color=if(systemEnabled)Mint else Coral,fontSize=12.sp)}
+            Switch(PocketAutomation.allowed,{PocketAutomation.allowed=it},enabled=systemEnabled)
+        }
+        Text("When both controls are enabled, Codex on this phone can inspect the foreground screen, take screenshots, tap, scroll, enter non-password text, and use Back, Home or Recents.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        if(!systemEnabled)OutlinedButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))},modifier=Modifier.fillMaxWidth()){Text("Enable Pocket in Accessibility")}
+        Text(if(PocketAutomation.allowed&&systemEnabled)"Phone control is live · pause it here at any time" else "Phone control is paused",color=if(PocketAutomation.allowed&&systemEnabled)Mint else Muted,fontSize=12.sp)
+        Text("Screen structure and screenshots are sent to your signed-in Codex only when its phone tools are used. Password fields are never returned or filled.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
+    }}
 }
 
 @Composable fun NotificationAudioSettings(){

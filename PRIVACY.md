@@ -8,6 +8,8 @@ The workstation stores pairing/device records, hashed device bearer tokens, Fire
 
 The phone stores its bearer token, server address, Firebase public configuration, notification/reminder state, and queued reply drafts in app-private storage. Opened attachments may be cached on the phone and shared with another app when you choose to open them. Android backup is disabled. Uninstalling clears app-private data, but does not retract content shared with another app or erase server data.
 
+Phone-local mode also stores Pocket bridge state in Termux private storage and a random automation secret separately in Pocket and Termux. It uses loopback connections and does not send local notifications through Firebase. Codex prompts, transcripts, tool inputs, screen structure, and requested screenshots still go to the owner's signed-in Codex service according to that account's OpenAI settings. Pocket sends screen data only when a phone tool is called; password text is omitted. Accessibility data and screenshots are not sent to FallSoft.
+
 ## Google Firebase
 
 FCM processes device registration and notification delivery. Notification title, bounded text preview, task/notification identifiers, event type, and timestamp pass through Google. Full transcripts and attachments are fetched from the owner's HTTPS backend. Firebase service-account credentials stay on the workstation. Pocket includes no Analytics SDK and disables Firebase analytics collection.

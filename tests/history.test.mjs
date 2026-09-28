@@ -51,3 +51,11 @@ test('legacy history remains supported and repeated item cursors fail visibly',a
   const looping=new ThreadHistory({async call(method){return method==='thread/turns/list'?{data:[{id:'turn'}]}:{data:[],nextCursor:'same'};}});
   await assert.rejects(looping.read({id:'thread',historyMode:'paginated'}),/repeated history cursor/);
 });
+
+test('older app-server falls back when paginated metadata precedes list support',async()=>{
+  const calls=[];const codex={async call(method,p){calls.push(method);if(method==='thread/turns/list')throw Error('list_turns is not supported yet');return {thread:{id:p.threadId,historyMode:'paginated',turns:[{id:'turn',items:[]}]}};}};
+  const reader=new ThreadHistory(codex);const first=await reader.read({id:'phone',historyMode:'paginated'});
+  assert.equal(first.turns.length,1);assert.deepEqual(first._pocketPage,{hasEarlier:false,before:null});
+  const earlier=await reader.read({id:'phone',historyMode:'paginated'},{before:'page:any'});
+  assert.equal(earlier.turns.length,0);assert.deepEqual(calls,['thread/turns/list','thread/read']);
+});
