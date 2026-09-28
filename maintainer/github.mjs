@@ -12,7 +12,26 @@ export class GitHub {
   if(!responseMeta)return data;
   const match=(r.headers.get('link')||'').match(/<([^>]+)>;\s*rel="next"/);
   let next=null;
-  if(match){const u=new URL(match[1]);if(u.origin!=='https://api.github.com'||!u.pathname.startsWith(this.root+'/'))throw Error('Invalid pagination target');next=u.pathname+u.search;}
+  if(match){
+   const u=new URL(match[1]);
+   if(u.origin!=='https://api.github.com'||u.username||u.password||u.hash)throw Error('Invalid pagination target');
+   let pathname=u.pathname;
+   // GitHub returns numeric repository routes in webhook-history Link headers.
+   // Resolve the configured repository first; never trust an arbitrary numeric ID.
+   if(/^\/repositories\/[1-9][0-9]*\//.test(pathname)){
+    if(!this.repositoryId){
+     const repository=await this.request(this.root);
+     if(!Number.isSafeInteger(repository.id)||repository.id<1)throw Error('Invalid repository identity');
+     this.repositoryId=repository.id;
+    }
+    const prefix=`/repositories/${this.repositoryId}/`;
+    if(!pathname.startsWith(prefix))throw Error('Invalid pagination target');
+    pathname=this.root+'/'+pathname.slice(prefix.length);
+   }
+   // Pagination can only continue this same collection, not another API route.
+   if(pathname!==new URL('https://api.github.com'+path).pathname)throw Error('Invalid pagination target');
+   next=pathname+u.search;
+  }
   return {data,next};
  }
  async cursorPages(path){
