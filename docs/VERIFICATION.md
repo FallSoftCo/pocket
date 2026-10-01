@@ -4,6 +4,14 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x** for workstation mode. Phone-local testing uses stock Codex CLI **0.158.0**, Node **26.1.0**, Termux **0.118.3**, and PRoot on a Pixel 9 Pro Fold with Android **API 36**. The public release also runs on an Android **API 35** emulator with Google Play services. No Codex fork is used.
 
+## Conversation controls: 0.5.0-alpha.6
+
+The composer labels running-turn input as Steer. Holding its button queues a follow-up, with an explicit menu option and accessibility action for the same operation. Queue entries can be edited, removed, or sent immediately. Stop is visible beside the composer and pauses pending queued messages; interruptions and failed turns also pause them. Resume is explicit. The bridge persists queue mode/order and distinguishes a definite busy rejection from an unconfirmed delivery.
+
+Conversation actions expose model and reasoning effort from the connected Codex catalogue, plus Plan/Build mode, rename, archive and restore through the Archived filter. Saved model/effort/mode settings apply to future `turn/start` requests, never an active steer. Archiving requires an idle conversation and leaves its queue paused after restoration.
+
+Validation: all 89 backend tests passed, including HTTP tests for queue order, edit/remove, steering promotion, stop/resume, failure/restart recovery, definite busy rejection, unknown delivery without duplicate sends, next-turn overrides, rename and archive/restore. Generated stock Codex 0.160.0 schemas confirm the request shapes; a live read-only model catalogue check succeeded. Android unit tests, debug build and debug lint passed. An isolated API35 emulator with synthetic task data verified long-press queue creation, queue controls, stop confirmation, paused-queue display, effort selection and saving Plan mode. Release build/signature checks and paired-phone deployment are recorded in the release notes.
+
 ## New-task permissions and spoken context: 0.5.0-alpha.5
 
 Android keeps the existing package and signing identity so upgrades preserve pairing, preferences and drafts.

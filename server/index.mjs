@@ -16,6 +16,7 @@ import { LiveTimeline,timelinePage } from './timeline.mjs';
 import { ThreadHistory } from './history.mjs';
 import { ambiguousDelivery } from './connection-errors.mjs';
 import { AccountRateLimits } from './rate-limits.mjs';
+import { modelCatalogue,validateTurnSettings,turnOverrides } from './turn-settings.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const dir=process.env.POCKET_DATA || resolve(root,'data');
@@ -100,33 +101,44 @@ async function attach(threadId,{before=null}={}){
   const thread=initial||await history.read(metadata,{before});if(!before){timeline.seed(thread,{throughVersion:snapshotRevision});rememberSpeechContext(threadId,thread.turns?.at(-1));}return {...thread,_pocketSnapshotRevision:snapshotRevision};
 }
 const isActive=t=>t.status?.type==='active';
+const savedTurnSettings=id=>{const row=db.prepare('SELECT settings FROM turn_settings WHERE thread_id=?').get(id);return row?JSON.parse(row.settings):null;};
 async function sendOutgoing(row,initialThread=null){
-  if(syncing.has(row.thread_id))return;
-  syncing.add(row.thread_id);
+  const threadId=row.thread_id,id=row.id;
+  if(syncing.has(threadId))return;
+  syncing.add(threadId);
   try{
     const t=initialThread||await attach(row.thread_id);
-    db.prepare("UPDATE outgoing SET state='sending',updated_at=? WHERE id=?").run(now(),row.id);
-    const input=[{type:'text',text:row.text}];
+    // Re-read after attachment: the user may have edited or removed the waiting message.
+    row=db.prepare('SELECT * FROM outgoing WHERE id=?').get(row.id);
+    if(!row||row.state!=='queued')return;
+    if(row.mode==='queue'){
+      if(isActive(t)||t.turns?.some(x=>x.status==='inProgress'))return;
+      const earlier=db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(row.thread_id,row.id);
+      if(earlier)return;
+    }
+    if(!db.prepare("UPDATE outgoing SET state='sending',updated_at=? WHERE id=? AND state='queued'").run(now(),row.id).changes)return;
+    const input=[{type:'text',text:row.text}],overrides=turnOverrides(savedTurnSettings(t.id));
     let result;
     const active=t.turns?.findLast(x=>x.status==='inProgress');
-    if(isActive(t)&&active) {
+    if(row.mode!=='queue'&&isActive(t)&&active) {
       try {result=await codex.call('turn/steer',{threadId:t.id,expectedTurnId:active.id,input});}
       catch(e){
         // Retry only when Codex explicitly reports that the turn has finished.
-        if(e.rpc && /no active turn|no turn in progress/i.test(e.message))result=await codex.call('turn/start',{threadId:t.id,input});else throw e;
+        if(e.rpc && /no active turn|no turn in progress/i.test(e.message))result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});else throw e;
       }
     }else if(isActive(t))throw new Error('The active turn is not ready for replies. Try again shortly.');
-    else result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id});
+    else result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
     db.prepare("UPDATE outgoing SET state='accepted',result=?,updated_at=? WHERE id=?").run(JSON.stringify(result),now(),row.id);
     resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=? AND created_at<=?)',row.thread_id,row.created_at||now());
     emit('reply',{id:row.id,threadId:row.thread_id,state:'accepted'});
   }catch(e){
-    const state=ambiguousDelivery(e)?'unknown':'failed';
-    db.prepare('UPDATE outgoing SET state=?,result=?,updated_at=? WHERE id=?').run(state,e.message,now(),row.id);
-    emit('reply',{id:row.id,threadId:row.thread_id,state,error:e.message});
-  }finally{syncing.delete(row.thread_id);}
+    // A definite busy rejection is safe to retry as a queued next turn; lost acknowledgements aren't.
+    const state=row?.mode==='queue'&&e.rpc&&/already active|turn.*in progress|active turn/i.test(e.message)?'queued':ambiguousDelivery(e)?'unknown':'failed';
+    db.prepare('UPDATE outgoing SET state=?,result=?,updated_at=? WHERE id=?').run(state,e.message,now(),id);
+    emit('reply',{id,threadId,state,error:e.message});
+  }finally{syncing.delete(threadId);}
 }
-async function flush(){if(!codex.ready)return;for(const row of db.prepare("SELECT * FROM outgoing WHERE state='queued' ORDER BY created_at").all())await sendOutgoing(row);}
+async function flush(){if(!codex.ready)return;for(const row of db.prepare("SELECT * FROM outgoing WHERE state='queued' ORDER BY rowid").all())await sendOutgoing(row);}
 db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during delivery; check the conversation before resending.' WHERE state='sending'").run();
 
 codex.on('event',m=>{
@@ -148,7 +160,13 @@ codex.on('event',m=>{
     if(!duplicate)notify(threadId,question?'Codex has a question':'Codex needs your attention',p.questions?.map(q=>q.question).join('\n')||p.reason||p.command||p.message||'Open the task to review the request.',question?'question':'approval',[],String(m.id));
   }
   if(m.method==='item/completed' && p.item?.type==='agentMessage')emit('message',{threadId,item:p.item});
-  if(m.method==='turn/completed')completions.complete(threadId,p.turn);
+  if(m.method==='turn/completed'){
+    completions.complete(threadId,p.turn);
+    if(['interrupted','failed'].includes(p.turn?.status)){
+      db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND mode='queue' AND state='queued'").run(now(),threadId);
+      emit('reply',{threadId,state:'held'});
+    }else if(p.turn?.status==='completed')void flush();
+  }
   // Only forward subscribed task events, never unrelated global messages or credentials.
   if(threadId && attached.has(threadId))emit('codex',{event:{method:m.method,...(m.id!==undefined?{id:m.id}:{}),params:{threadId,turnId:p.turnId}}});
 });
@@ -167,7 +185,7 @@ setInterval(async()=>{
 codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.5.0-alpha.5'}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.5.0-alpha.6'}));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -187,7 +205,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>{void rateLimits.refresh();res.json({...codex.status(),usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:'0.5.0-alpha.5',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
+app.get('/api/status',(req,res)=>{void rateLimits.refresh();res.json({...codex.status(),usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:'0.5.0-alpha.6',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -215,9 +233,9 @@ app.post('/api/threads',(req,res)=>{
 app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.params.id);if(!row)return res.status(404).json({error:'Task request not found.'});res.json(row);});
 app.get('/api/threads',route(async(req,res)=>{
   await codex.connect();
-  const r=await codex.call('thread/list',{limit:70,sortKey:'updated_at',sortDirection:'desc',archived:false});
+  const r=await codex.call('thread/list',{limit:70,sortKey:'updated_at',sortDirection:'desc',archived:req.query.archived==='true'});
   const watches=db.prepare('SELECT * FROM watches').all();
-  res.json({threads:(r.data||[]).map(t=>({id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',preview:t.preview?.slice(0,200),cwd:t.cwd,status:t.status,updatedAt:t.updatedAt,watched:!!watches.find(w=>w.thread_id===t.id&&w.enabled)}))});
+  res.json({threads:(r.data||[]).map(t=>({id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',preview:t.preview?.slice(0,200),cwd:t.cwd,status:t.status,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:!!watches.find(w=>w.thread_id===t.id&&w.enabled)}))});
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null});
@@ -227,11 +245,39 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   if(raw._pocketPage)Object.assign(page,raw._pocketPage);
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
-  res.json({thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),outgoing:db.prepare('SELECT id,text,state,result,created_at FROM outgoing WHERE thread_id=? ORDER BY created_at').all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)});
+  res.json({turnSettings:savedTurnSettings(t.id),thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)});
+}));
+app.get('/api/models',route(async(_req,res)=>{
+  await codex.connect();res.json({models:(await modelCatalogue(codex)).map(m=>({model:m.model,name:m.displayName,defaultEffort:m.defaultReasoningEffort,efforts:m.supportedReasoningEfforts}))});
+}));
+app.post('/api/threads/:id/settings',route(async(req,res)=>{
+  const threadId=requireId(req.params.id);await codex.connect();
+  const settings=validateTurnSettings(req.body,await modelCatalogue(codex));
+  db.prepare('INSERT INTO turn_settings(thread_id,settings) VALUES(?,?) ON CONFLICT(thread_id) DO UPDATE SET settings=excluded.settings').run(threadId,JSON.stringify(settings));
+  res.json({settings});
+}));
+app.post('/api/threads/:id/rename',route(async(req,res)=>{
+  const threadId=requireId(req.params.id),name=String(req.body.name||'').trim();
+  if(!name||name.length>120)return res.status(400).json({error:'Name must be 1–120 characters.'});
+  await codex.connect();await codex.call('thread/name/set',{threadId,name});res.json({ok:true});
+}));
+app.post('/api/threads/:id/unarchive',route(async(req,res)=>{
+  const threadId=requireId(req.params.id);await codex.connect();
+  await codex.call('thread/unarchive',{threadId});res.json({ok:true});
+}));
+app.post('/api/threads/:id/archive',route(async(req,res)=>{
+  const t=await attach(req.params.id);
+  if(isActive(t)||t.turns?.some(x=>x.status==='inProgress'))return res.status(409).json({error:'Stop the running turn before archiving.'});
+  await codex.call('thread/archive',{threadId:t.id});
+  db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND state='queued'").run(now(),t.id);
+  db.prepare('UPDATE watches SET enabled=0 WHERE thread_id=?').run(t.id);attached.delete(t.id);res.json({ok:true});
 }));
 app.post('/api/threads/:id/interrupt',route(async(req,res)=>{
   const t=await attach(req.params.id);const active=t.turns?.findLast(x=>x.status==='inProgress');
   if(!active)return res.status(409).json({error:'This task has already stopped.'});
+  // Hold the queue before stopping so an idle snapshot cannot restart the task.
+  db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND mode='queue' AND state='queued'").run(now(),t.id);
+  emit('reply',{threadId:t.id,state:'held'});
   await codex.call('turn/interrupt',{threadId:t.id,turnId:active.id});res.json({ok:true});
 }));
 app.post('/api/threads/:id/watch',route(async(req,res)=>{
@@ -242,16 +288,35 @@ app.post('/api/threads/:id/watch',route(async(req,res)=>{
   res.json({ok:true});
 }));
 app.post('/api/threads/:id/reply',route(async(req,res)=>{
-  const threadId=requireId(req.params.id), text=String(req.body.text||'').trim(), id=String(req.body.id||randomUUID());
+  const threadId=requireId(req.params.id), text=String(req.body.text||'').trim(), id=String(req.body.id||randomUUID()), mode=req.body.mode||'auto';
   if(!text||text.length>32000||id.length>100)return res.status(400).json({error:'Reply must be 1–32000 characters.'});
+  if(!['auto','steer','queue'].includes(mode))return res.status(400).json({error:'Choose steer or queue.'});
   const existing=db.prepare('SELECT * FROM outgoing WHERE id=?').get(id);
-  if(existing){if(existing.thread_id!==threadId||existing.text!==text)return res.status(409).json({error:'Reply id already belongs to a different message.'});return res.json({id,state:existing.state});}
-  db.prepare('INSERT INTO outgoing(id,thread_id,text,state,created_at,updated_at) VALUES(?,?,?,?,?,?)').run(id,threadId,text,'queued',now(),now());
+  if(existing){if(existing.thread_id!==threadId||existing.text!==text||existing.mode!==mode)return res.status(409).json({error:'Reply id already belongs to a different message.'});return res.json({id,state:existing.state});}
+  db.prepare('INSERT INTO outgoing(id,thread_id,text,mode,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run(id,threadId,text,mode,'queued',now(),now());
   const wasFollowing=!!db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId);
   // A phone reply explicitly opts this task into a completion notification.
   db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1) ON CONFLICT(thread_id) DO UPDATE SET enabled=1').run(threadId,'Codex replied');
   if(!wasFollowing)completions.follow(threadId);
-  res.status(202).json({id,state:'queued'}); if(codex.ready)void sendOutgoing({id,thread_id:threadId,text,created_at:now()});
+  res.status(202).json({id,state:'queued'}); if(codex.ready)void sendOutgoing({id,thread_id:threadId,text,mode,created_at:now()});
+}));
+app.post('/api/threads/:id/queue/resume',route(async(req,res)=>{
+  const threadId=requireId(req.params.id);
+  db.prepare("UPDATE outgoing SET state='queued',updated_at=? WHERE thread_id=? AND mode='queue' AND state='held'").run(now(),threadId);
+  emit('reply',{threadId,state:'queued'});res.json({ok:true});void flush();
+}));
+app.post('/api/threads/:id/replies/:replyId',route(async(req,res)=>{
+  const threadId=requireId(req.params.id),id=req.params.replyId;
+  const row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
+  if(!row)return res.status(404).json({error:'Reply not found.'});
+  if(!['queued','held'].includes(row.state))return res.status(409).json({error:'This message has already left the queue. Refresh the conversation.'});
+  const action=req.body.action;
+  if(!['edit','remove','send'].includes(action))return res.status(400).json({error:'Choose edit, remove, or send.'});
+  const text=action==='edit'?String(req.body.text||'').trim():row.text;
+  if(!text||text.length>32000)return res.status(400).json({error:'Reply must be 1–32000 characters.'});
+  const state=action==='remove'?'cancelled':action==='send'?'queued':row.state;
+  db.prepare('UPDATE outgoing SET text=?,mode=?,state=?,updated_at=? WHERE id=?').run(text,action==='send'?'steer':row.mode,state,now(),id);
+  emit('reply',{threadId,id,state});res.json({id,state});if(action==='send')void sendOutgoing({id,thread_id:threadId});
 }));
 app.get('/api/replies/:id',(req,res)=>{
   const row=db.prepare('SELECT id,thread_id,state,result FROM outgoing WHERE id=?').get(req.params.id);

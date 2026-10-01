@@ -15,7 +15,9 @@ Start tasks from your phone, follow the conversation in order, and reply when Co
 - See your weekly Codex allowance, remaining percentage, and reset time in a persistent strip on every screen. Cached usage is marked as last known when disconnected.
 - Start a task in a workstation project, or continue an existing conversation.
 - Read prompts, progress, commands, tool results, file changes, questions, and final responses in chronological order. Expand output and load earlier turns.
-- Reply from an Android notification, guide an active turn, or stop a selected task through its action menu and confirmation.
+- Tap **Steer** to guide a running turn, or hold the send button to **Queue** a follow-up. Edit, remove, or send queued messages immediately. Stop pauses the queue until you resume it.
+- Choose the next turn’s model, reasoning effort, and Plan/Build mode from conversation actions. Rename, archive, and restore conversations.
+- Reply from an Android notification and answer native questions and supported approvals.
 - Receive Firebase push when followed work finishes or needs your attention.
 - Ask Codex to notify you under a condition: **“Use Pocket to notify me when the tests pass, with a short summary.”**
 - Choose synthesized tones, offline spoken labels or content summaries, or system notification audio. Actionable items have bounded reminders, dismissal, and snooze.
@@ -100,7 +102,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.5.0-alpha.5.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.5.0-alpha.5.apk`.
+Download `pocket-0.5.0-alpha.6.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.5.0-alpha.6.apk`.
 
 On the workstation, from the checkout:
 
