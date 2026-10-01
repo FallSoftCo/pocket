@@ -90,7 +90,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var queueOpen by remember(Pocket.selected){mutableStateOf(false)}
     val draftKey=Pocket.key("draft:${Pocket.selected}");var editor by remember(Pocket.local,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})}
     val draft=editor.text
-    val submit:(String)->Unit={mode->val submitted=draft;follow=true;Pocket.reply(submitted,mode=mode){if(editor.text==submitted){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
+    val submit:(String)->Unit={mode->val submitted=editor.text;follow=true;Pocket.reply(submitted,mode=mode){if(editor.text==submitted){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
     val waiting=d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") in listOf("queued","held")&&it.s("mode")=="queue"}?:emptyList()
     LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
     LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){delay(32);val count=list.layoutInfo.totalItemsCount;if(count>0)list.scrollToItem(count-1)}}
@@ -132,14 +132,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                             if(event.type==KeyEventType.KeyDown){
                                 if(event.isShiftPressed){
                                     val position=editor.selection.min
-                                    editor=TextFieldValue(draft.replaceRange(position,editor.selection.max,"\n"),TextRange(position+1))
+                                    editor=TextFieldValue(editor.text.replaceRange(position,editor.selection.max,"\n"),TextRange(position+1))
                                     Pocket.prefs.edit().putString(draftKey,editor.text).apply()
-                                }else if(draft.isNotBlank()&&!Pocket.sending)submit("steer")
+                                }else if(editor.text.isNotBlank()&&!Pocket.sending)submit("steer")
                             }
                             true
                         }else false
                     },maxLines=6,
-                    keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={if(draft.isNotBlank()&&!Pocket.sending)submit("steer")}),
+                    keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={if(editor.text.isNotBlank()&&!Pocket.sending)submit("steer")}),
                     textStyle=LocalTextStyle.current.copy(color=Paper,fontSize=15.sp,lineHeight=22.sp),cursorBrush=SolidColor(Mint),
                     decorationBox={inner->Box(contentAlignment=Alignment.CenterStart){if(draft.isEmpty())Text(if(active)"Steer this task…" else "Message Codex…",color=Muted,fontSize=15.sp);inner()}})
                 if(waiting.isNotEmpty())TextButton({queueOpen=true},modifier=Modifier.height(48.dp),contentPadding=PaddingValues(horizontal=10.dp)){
