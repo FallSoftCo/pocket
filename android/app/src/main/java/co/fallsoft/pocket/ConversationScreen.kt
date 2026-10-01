@@ -7,7 +7,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
@@ -64,25 +74,24 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class)
 @Composable fun ConversationScreen(){
     val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
     val active=t?.optJSONObject("status")?.s("type")=="active"||rows.lastOrNull{it.s("kind")=="turn"}?.s("status")=="inProgress"
     val list=rememberLazyListState();val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
     var follow by remember{mutableStateOf(true)}
     var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
-    var confirmStop by remember(Pocket.selected){mutableStateOf(false)}
     var settingsOpen by remember(Pocket.selected){mutableStateOf(false)}
     var renameOpen by remember(Pocket.selected){mutableStateOf(false)}
     var taskName by remember(Pocket.selected){mutableStateOf("")}
     var confirmArchive by remember(Pocket.selected){mutableStateOf(false)}
     var editingQueue by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     var queuedText by remember(Pocket.selected){mutableStateOf("")}
-    var sendOptions by remember(Pocket.selected){mutableStateOf(false)}
-    val draftKey=Pocket.key("draft:${Pocket.selected}");var draft by remember(Pocket.local,Pocket.selected){mutableStateOf(Pocket.prefs.getString(draftKey,"")?:"")}
-    val submit:(String)->Unit={mode->follow=true;Pocket.reply(draft,mode=mode){draft="";Pocket.prefs.edit().remove(draftKey).apply()}}
+    var queueOpen by remember(Pocket.selected){mutableStateOf(false)}
+    val draftKey=Pocket.key("draft:${Pocket.selected}");var editor by remember(Pocket.local,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})}
+    val draft=editor.text
+    val submit:(String)->Unit={mode->val submitted=draft;follow=true;Pocket.reply(submitted,mode=mode){if(editor.text==submitted){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
     val waiting=d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") in listOf("queued","held")&&it.s("mode")=="queue"}?:emptyList()
-    LaunchedEffect(active){if(!active)confirmStop=false}
     LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
     LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){delay(32);val count=list.layoutInfo.totalItemsCount;if(count>0)list.scrollToItem(count-1)}}
     Column(Modifier.fillMaxSize().imePadding()){
@@ -97,7 +106,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     DropdownMenuItem(text={Text("Rename conversation")},onClick={actionsOpen=false;taskName=t?.s("name").orEmpty();renameOpen=true},leadingIcon={Icon(Icons.Rounded.Edit,null)})
                     DropdownMenuItem(text={Text("Archive conversation…")},enabled=!active,onClick={actionsOpen=false;confirmArchive=true},leadingIcon={Icon(Icons.Rounded.Archive,null)})
                     DropdownMenuItem(text={Text("Queue message")},enabled=draft.isNotBlank()&&!Pocket.sending,onClick={actionsOpen=false;submit("queue")},leadingIcon={Icon(Icons.AutoMirrored.Rounded.PlaylistAdd,null)})
-                    DropdownMenuItem(text={Text("Stop task…",color=if(active)Coral else Muted)},enabled=active,onClick={actionsOpen=false;confirmStop=true},leadingIcon={Icon(Icons.Rounded.StopCircle,null,tint=if(active)Coral else Muted)})
+                    DropdownMenuItem(text={Text("Stop task",color=if(active)Coral else Muted)},enabled=active,onClick={actionsOpen=false;Pocket.interrupt()},leadingIcon={Icon(Icons.Rounded.StopCircle,null,tint=if(active)Coral else Muted)})
                 }
             }
         }
@@ -108,41 +117,67 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 item(key="history"){if(PocketTranscript.earlier)TextButton({follow=false;scope.launch{PocketTranscript.load(true);list.scrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},enabled=!PocketTranscript.loading,modifier=Modifier.fillMaxWidth()){Text(if(PocketTranscript.loading)"Loading…" else "Load earlier activity",color=Mint)}}
                 if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(35.dp),contentAlignment=Alignment.Center){CircularProgressIndicator(color=Mint,strokeWidth=2.dp)}}
                 items(rows,key={it.s("id")}){row->TranscriptRow(row)}
-                d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state")!="accepted"}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(13.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Label("YOU · ${if(r.s("state")=="held")"queue paused" else if(r.s("mode")=="queue"&&r.s("state")=="queued")"queued for next turn" else r.s("state")}",if(r.s("state") in listOf("failed","unknown"))Coral else Muted);Text(r.s("text"),fontSize=14.sp);if(r.s("state") in listOf("failed","unknown"))Text(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)
-                    if(r.s("mode")=="queue"&&r.s("state") in listOf("queued","held"))Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                        TextButton({editingQueue=r;queuedText=r.s("text")}){Text("Edit")}
-                        TextButton({Pocket.queuedReply(r.s("id"),"send")}){Text(if(active)"Steer now" else "Send now")}
-                        TextButton({Pocket.queuedReply(r.s("id"),"remove")}){Text("Remove",color=Coral)}
-                    }}}}
+                d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state")!="accepted"&&it !in waiting}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(13.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Label("YOU · ${r.s("state")}",if(r.s("state") in listOf("failed","unknown"))Coral else Muted);Text(r.s("text"),fontSize=14.sp);if(r.s("state") in listOf("failed","unknown"))Text(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)}}}
                 if(active)item(key="working"){Row(Modifier.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){CircularProgressIndicator(Modifier.size(13.dp),strokeWidth=1.5.dp,color=Mint);Text("Codex is working",fontSize=12.sp,color=Mint)}}
                 if(!active&&rows.isEmpty()&&d!=null)item{Text("Your task is ready. Send a message to begin.",color=Muted,fontSize=14.sp)}
                 item(key="errors"){ErrorBanner()}
             }
             if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){Icon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));Text("Latest",fontSize=12.sp)}
         }
-        HorizontalDivider(color=Line)
-        Column(Modifier.fillMaxWidth().background(Panel).padding(horizontal=12.dp,vertical=10.dp)){
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-                Text(if(active)"Tap to steer · Hold to queue" else "Tap to send · Hold to queue",fontSize=10.sp,color=Muted,modifier=Modifier.weight(1f).padding(start=8.dp,bottom=6.dp))
-                if(waiting.any{it.s("state")=="held"})TextButton({Pocket.resumeQueue()}){Text("Resume queue (${waiting.size})",fontSize=11.sp)}
-                else if(waiting.isNotEmpty())Text("${waiting.size} queued",fontSize=11.sp,color=Mint)
-                if(active)IconButton({confirmStop=true},modifier=Modifier.size(36.dp)){Icon(Icons.Rounded.StopCircle,"Stop current turn",tint=Coral)}
-            }
-            Row(verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                OutlinedTextField(draft,{draft=it;Pocket.prefs.edit().putString(draftKey,it).apply()},placeholder={Text(if(active)"Add guidance…" else "Message Codex…",fontSize=14.sp)},modifier=Modifier.weight(1f),shape=RoundedCornerShape(19.dp),maxLines=6,colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Mint,unfocusedBorderColor=Line))
-                val enabled=draft.isNotBlank()&&!Pocket.sending
-                Box{
-                    Box(Modifier.padding(bottom=4.dp).size(52.dp).clip(RoundedCornerShape(18.dp)).background(if(enabled)Mint else Line)
-                        .combinedClickable(enabled=enabled,onClickLabel=if(active)"Steer running turn" else "Send message",onLongClickLabel="Queue for next turn",onLongClick={submit("queue")},onClick={submit("steer")})
-                        .semantics{role=androidx.compose.ui.semantics.Role.Button;customActions=listOf(CustomAccessibilityAction("Queue for next turn"){if(enabled){submit("queue");true}else false})},contentAlignment=Alignment.Center){
-                        if(Pocket.sending)CircularProgressIndicator(Modifier.size(18.dp),color=Ink,strokeWidth=2.dp)
-                        else Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Rounded.ArrowUpward,null,tint=Ink,modifier=Modifier.size(22.dp));Text(if(active)"Steer" else "Send",fontSize=10.sp,color=Ink)}
-                    }
+        Box(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=10.dp)){
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(25.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically){
+                BasicTextField(editor,{editor=it;Pocket.prefs.edit().putString(draftKey,it.text).apply()},
+                    modifier=Modifier.weight(1f).heightIn(min=46.dp).padding(top=12.dp,bottom=12.dp,end=8.dp).onPreviewKeyEvent{event->
+                        if(event.key==Key.Enter||event.key==Key.NumPadEnter){
+                            if(event.type==KeyEventType.KeyDown){
+                                if(event.isShiftPressed){
+                                    val position=editor.selection.min
+                                    editor=TextFieldValue(draft.replaceRange(position,editor.selection.max,"\n"),TextRange(position+1))
+                                    Pocket.prefs.edit().putString(draftKey,editor.text).apply()
+                                }else if(draft.isNotBlank()&&!Pocket.sending)submit("steer")
+                            }
+                            true
+                        }else false
+                    },maxLines=6,
+                    keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={if(draft.isNotBlank()&&!Pocket.sending)submit("steer")}),
+                    textStyle=LocalTextStyle.current.copy(color=Paper,fontSize=15.sp,lineHeight=22.sp),cursorBrush=SolidColor(Mint),
+                    decorationBox={inner->Box(contentAlignment=Alignment.CenterStart){if(draft.isEmpty())Text(if(active)"Steer this task…" else "Message Codex…",color=Muted,fontSize=15.sp);inner()}})
+                if(waiting.isNotEmpty())TextButton({queueOpen=true},modifier=Modifier.height(48.dp),contentPadding=PaddingValues(horizontal=10.dp)){
+                    Icon(if(waiting.any{it.s("state")=="held"})Icons.Rounded.Pause else Icons.AutoMirrored.Rounded.PlaylistAdd,"Open queued messages",tint=if(waiting.any{it.s("state")=="held"})Coral else Mint,modifier=Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp));Text("${waiting.size}",fontSize=12.sp,color=Paper)
                 }
-                IconButton({sendOptions=true},enabled=enabled,modifier=Modifier.padding(bottom=4.dp).size(36.dp)){Icon(Icons.Rounded.ExpandMore,"Message options",tint=Mint)}
-                DropdownMenu(expanded=sendOptions,onDismissRequest={sendOptions=false}){
-                    DropdownMenuItem(text={Text(if(active)"Steer running turn" else "Send now")},onClick={sendOptions=false;submit("steer")})
-                    DropdownMenuItem(text={Text("Queue for next turn")},onClick={sendOptions=false;submit("queue")})
+                val hasDraft=draft.isNotBlank();val stop=active&&!hasDraft&&!Pocket.sending
+                val enabled=!Pocket.sending&&(hasDraft||stop)
+                val label=if(stop)"Stop current turn" else if(active)"Steer running turn" else "Send message"
+                Box(Modifier.size(48.dp).clip(CircleShape).background(if(hasDraft&&enabled)Mint else if(stop)Paper.copy(alpha=.08f) else Color.Transparent)
+                    .combinedClickable(enabled=enabled,onClickLabel=label,onLongClickLabel=if(hasDraft)"Queue for next turn" else label,
+                        onLongClick={if(hasDraft)submit("queue")else if(stop)Pocket.interrupt()},onClick={if(stop)Pocket.interrupt() else submit("steer")})
+                    .semantics{role=androidx.compose.ui.semantics.Role.Button;contentDescription=label;if(hasDraft)customActions=listOf(CustomAccessibilityAction("Queue for next turn"){if(enabled){submit("queue");true}else false})},contentAlignment=Alignment.Center){
+                    if(Pocket.sending)CircularProgressIndicator(Modifier.size(18.dp),color=Mint,strokeWidth=2.dp)
+                    else Icon(if(stop)Icons.Rounded.Stop else Icons.Rounded.ArrowUpward,null,tint=if(hasDraft&&enabled)Ink else if(stop)Paper else Muted.copy(alpha=.45f),modifier=Modifier.size(if(stop)19.dp else 23.dp))
+                }
+            }
+        }
+    }
+    if(queueOpen)ModalBottomSheet(onDismissRequest={queueOpen=false},containerColor=Panel){
+        Column(Modifier.fillMaxWidth().padding(horizontal=22.dp).padding(bottom=28.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+            Text("Queued messages",fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+            Text(if(waiting.any{it.s("state")=="held"})"Paused until you resume." else "Sent in order when the current turn finishes.",color=Muted,fontSize=13.sp)
+            if(waiting.any{it.s("state")=="held"})Button({Pocket.resumeQueue();queueOpen=false},modifier=Modifier.fillMaxWidth()){Text("Resume queue")}
+            if(waiting.isEmpty())Text("The queue is empty.",color=Muted)
+            LazyColumn(Modifier.heightIn(max=400.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+                items(waiting,key={it.s("id")}){r->
+                    var menu by remember(r.s("id")){mutableStateOf(false)}
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Ink.copy(alpha=.3f)).clickable{editingQueue=r;queuedText=r.s("text")}.padding(start=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
+                        Text(r.s("text"),fontSize=14.sp,lineHeight=21.sp,modifier=Modifier.weight(1f),maxLines=3,overflow=TextOverflow.Ellipsis)
+                        Box{IconButton({menu=true}){Icon(Icons.Rounded.MoreVert,"Queued message actions",tint=Muted)}
+                            DropdownMenu(menu,{menu=false}){
+                                DropdownMenuItem(text={Text("Edit")},onClick={menu=false;editingQueue=r;queuedText=r.s("text")})
+                                DropdownMenuItem(text={Text(if(active)"Steer now" else "Send now")},onClick={menu=false;Pocket.queuedReply(r.s("id"),"send")})
+                                DropdownMenuItem(text={Text("Remove",color=Coral)},onClick={menu=false;Pocket.queuedReply(r.s("id"),"remove")})
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -156,13 +191,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         confirmButton={TextButton({Pocket.queuedReply(queued.s("id"),"edit",queuedText){editingQueue=null}},enabled=queuedText.isNotBlank()){Text("Save")}},
         dismissButton={TextButton({editingQueue=null}){Text("Cancel")}}
     )}
-    if(confirmStop&&active)AlertDialog(
-        onDismissRequest={confirmStop=false},
-        title={Text("Stop this task?")},
-        text={Text("Codex will stop the current work in this conversation. Changes already made will remain. Queued messages will pause. Resume the queue or send another message to continue later.")},
-        confirmButton={TextButton({confirmStop=false;Pocket.interrupt()}){Text("Stop task",color=Coral)}},
-        dismissButton={TextButton({confirmStop=false}){Text("Keep working",color=Mint)}}
-    )
+
 }
 
 @Composable fun TranscriptRow(row:JSONObject){

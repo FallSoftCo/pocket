@@ -4,6 +4,14 @@
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x** for workstation mode. Phone-local testing uses stock Codex CLI **0.158.0**, Node **26.1.0**, Termux **0.118.3**, and PRoot on a Pixel 9 Pro Fold with Android **API 36**. The public release also runs on an Android **API 35** emulator with Google Play services. No Codex fork is used.
 
+## Composer layout and Enter: 0.5.0-alpha.7
+
+The composer is one rounded input area with one main button. An empty field shows Stop while a turn is running; entering text shows Send/Steer. Holding that button queues input. Queue count opens a management sheet with edit, send-now, remove and resume actions. The always-visible instruction row, second dropdown button, and inline queue action rows were removed. Stop now acts immediately and retains the bridge’s queue-pause behavior.
+
+Enter and the Android keyboard’s Send action submit the message. Shift+Enter inserts a line break. Empty Enter does not interrupt a task. Backend queue and permission behavior is unchanged.
+
+Validation: Android debug build and lint passed. Synthetic API35 emulator checks confirmed single-row composer layout, long-press queueing, queue-sheet navigation, Enter sending one accepted message, and Shift+Enter preserving a newline inside one accepted message. Release build and upgrade checks are recorded in the release notes.
+
 ## Conversation controls: 0.5.0-alpha.6
 
 The composer labels running-turn input as Steer. Holding its button queues a follow-up, with an explicit menu option and accessibility action for the same operation. Queue entries can be edited, removed, or sent immediately. Stop is visible beside the composer and pauses pending queued messages; interruptions and failed turns also pause them. Resume is explicit. The bridge persists queue mode/order and distinguishes a definite busy rejection from an unconfirmed delivery.
