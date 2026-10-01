@@ -17,7 +17,7 @@ const source=join(root,'android/app/build/outputs/apk/release/app-release.apk');
 const verify=spawnSync(join(sdk,'build-tools/36.0.0/apksigner'),['verify','--verbose','--print-certs',source],{encoding:'utf8'});
 if(verify.status!==0)throw Error('APK signature verification failed: '+verify.stderr);
 const out=join(root,'dist');mkdirSync(out,{recursive:true});
-const name=`pocket-${version}.apk`;copyFileSync(source,join(out,name));
+const name=`pocodex-${version}.apk`;copyFileSync(source,join(out,name));
 writeFileSync(join(out,'SHA256SUMS.txt'),createHash('sha256').update(readFileSync(source)).digest('hex')+'  '+name+'\n');
 writeFileSync(join(out,'SIGNING-CERTIFICATE.txt'),verify.stdout);
 console.log(`Signed release prepared in dist/${name}. Verify the certificate against the maintained release identity before publishing.`);

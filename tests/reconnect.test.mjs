@@ -34,13 +34,13 @@ test('bridge restart backfills missed completion, survives replay and keeps work
  let rows=(await api('/api/notifications')).notifications;assert.equal(rows[0].body,'Recovery passed.');assert.ok(rows[0].spoken_summary);assert.ok(rows[0].spoken_text);
  const fullSpeech=('A complete update should reach the phone without an arbitrary word limit. ').repeat(80).trim();
  const created=await api('/api/notify',{thread_id:'thread-one',title:'Speech transport test',message:fullSpeech,spoken_summary:fullSpeech});
- const loaded=await api('/api/notifications/'+created.notification.id);assert.equal(loaded.notification.spoken_text,fullSpeech);
+ const loaded=await api('/api/notifications/'+created.notification.id);assert.equal(loaded.notification.spoken_text,'Task update. '+fullSpeech);
  const unauthenticated=await fetch(`http://127.0.0.1:${port}/api/notifications/${created.notification.id}`);assert.equal(unauthenticated.status,401);
 
  peer.send(JSON.stringify({method:'turn/completed',params:{threadId:'thread-one',turn:turn()}}));
  const before=resumes;await stop();await start();await wait(()=>resumes>before);
  rows=(await api('/api/notifications')).notifications;assert.equal(rows.length,2,'restart and live replay must not duplicate the completion');
- // A socket-only outage must recover without restarting the Pocket process.
+ // A socket-only outage must recover without restarting the Pocodex process.
  turnId='turn-during-disconnect';peer.terminate();
  await wait(async()=>(await api('/api/notifications')).notifications.length===3);
  assert.equal((await api('/api/notifications')).notifications.at(-1).source_turn_id,turnId);

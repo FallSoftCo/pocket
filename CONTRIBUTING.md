@@ -8,4 +8,4 @@ Maintain stock Codex compatibility, exact thread/request routing, inherited perm
 
 Contributions are under the repository's MIT license.
 
-Read the [contribution policy](MAINTAINER_POLICY.md) for project direction and automated review. Pocket Maintainer can request corrections, approve and merge suitable changes after checks, or explain why a direction belongs in a fork. Code changes require two agreeing reviews. Uncertain decisions stay open with an explanation. Maintainers can override its decisions or apply `maintainer:hold` to pause a PR.
+Read the [contribution policy](MAINTAINER_POLICY.md) for project direction and automated review. Pocodex Maintainer can request corrections, approve and merge suitable changes after checks, or explain why a direction belongs in a fork. Code changes require two agreeing reviews. Uncertain decisions stay open with an explanation. Maintainers can override its decisions or apply `maintainer:hold` to pause a PR.

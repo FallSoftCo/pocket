@@ -25,7 +25,7 @@ if(hasSocket){
 }
 if(!preflight){
  check(existsSync(join(dataDir,'firebase-client.json')),'Firebase client configured');
- try{const r=await fetch(new URL('/health',localUrl),{signal:AbortSignal.timeout(3000)});const s=await r.json();check(r.ok&&s.ok,'Pocket backend');check(s.codex===true,'Pocket backend connected to Codex');check(s.push==='fcm','Firebase sender configured');}
- catch{check(false,'Pocket backend: start npm start first');}
+ try{const r=await fetch(new URL('/health',localUrl),{signal:AbortSignal.timeout(3000)});const s=await r.json();check(r.ok&&s.ok,'Pocodex backend');check(s.codex===true,'Pocodex backend connected to Codex');check(s.push==='fcm','Firebase sender configured');}
+ catch{check(false,'Pocodex backend: start npm start first');}
 }else if(!failed)console.log('Preflight passed. Continue with Firebase and private HTTPS setup.');
 process.exitCode=failed?1:0;

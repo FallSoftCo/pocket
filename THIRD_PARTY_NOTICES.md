@@ -1,6 +1,6 @@
 # Third-party components
 
-Pocket's original code is MIT licensed. Dependencies retain their own licenses.
+Pocodex's original code is MIT licensed. Dependencies retain their own licenses.
 The npm lockfile and Android Gradle declarations identify the exact components.
 
 - AndroidX (including WorkManager), Jetpack Compose, Gradle wrapper, Kotlin, OkHttp and Coil: Apache 2.0.
@@ -8,7 +8,7 @@ The npm lockfile and Android Gradle declarations identify the exact components.
 - Firebase Android SDK, Firebase Admin SDK and Google Auth Library: Apache 2.0.
 - System fonts and platform services are supplied by Android.
 
-Pocket is an independent companion. Codex is an OpenAI product and is not
+Pocodex is an independent companion. Codex is an OpenAI product and is not
 bundled with this source package or APK. Authentication remains in the user's
 existing Codex installation. Tailscale is independently installed by the user.
 

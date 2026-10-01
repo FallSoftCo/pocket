@@ -17,9 +17,9 @@ if(!existsSync(codex))throw Error('Install and sign in to Codex first; the codex
 
 const request=async(path,body,token)=>{
   const response=await fetch(`http://127.0.0.1:18880${path}`,{method:body?'POST':'GET',headers:{...(token?{Authorization:`Bearer ${token}`} :{}),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
-  const value=await response.json();if(!response.ok)throw Error(value.error||`Pocket returned HTTP ${response.status}`);return value;
+  const value=await response.json();if(!response.ok)throw Error(value.error||`Pocodex returned HTTP ${response.status}`);return value;
 };
-const wait=async()=>{for(let n=0;n<30;n++){try{const health=await request('/health');if(health.ok&&health.codex)return health;}catch{}await new Promise(r=>setTimeout(r,1000));}throw Error(`Pocket did not become ready. Check ${log}/current`);};
+const wait=async()=>{for(let n=0;n<30;n++){try{const health=await request('/health');if(health.ok&&health.codex)return health;}catch{}await new Promise(r=>setTimeout(r,1000));}throw Error(`Pocodex did not become ready. Check ${log}/current`);};
 const run=(command,args)=>{const result=spawnSync(command,args,{stdio:'inherit'});if(result.status!==0)throw Error(`${command} failed.`);};
 
 async function install(){
@@ -36,14 +36,14 @@ async function install(){
   if(configured)run(codex,['mcp','remove','pocket-phone']);
   run(codex,['mcp','add','pocket-phone','--env',`POCKET_AUTOMATION_SECRET_FILE=${join(data,'automation.json')}`,'--',join(prefix,'bin/node'),join(root,'server/phone-mcp.mjs')]);
   // The owner explicitly enables phone control through Android Accessibility
-  // and Pocket's independent switch. Once enabled, every phone-only tool is
+  // and Pocodex's independent switch. Once enabled, every phone-only tool is
   // preapproved so a requested multi-step interaction can proceed unattended.
   const tools=['phone_screen','phone_screenshot','phone_tap','phone_click','phone_scroll','phone_type','phone_key'];
   appendFileSync(join(home,'.codex/config.toml'),tools.map(name=>`\n[mcp_servers.pocket-phone.tools.${name}]\napproval_mode = "approve"\n`).join(''));
   const bootDir=join(home,'.termux/boot');mkdirSync(bootDir,{recursive:true,mode:0o700});
   const boot=`#!${prefix}/bin/sh\ntermux-wake-lock 2>/dev/null || true\n. '${prefix}/etc/profile.d/start-services.sh'\n'${prefix}/bin/sv' up '${service}'\n`;
   writeFileSync(join(bootDir,'20-pocket-local'),boot,{mode:0o700});
-  console.log('Pocket local runtime is ready on 127.0.0.1:18880.');
+  console.log('Pocodex local runtime is ready on 127.0.0.1:18880.');
 }
 async function pair(){
   await wait();const {adminToken}=JSON.parse(readFileSync(join(data,'secrets.json')));const result=await request('/api/pairing',{},adminToken);
@@ -55,7 +55,7 @@ async function pair(){
   const clipboard=join(prefix,'bin/termux-clipboard-set');
   const copied=existsSync(clipboard)&&spawnSync(clipboard,{input:result.code,stdio:['pipe','ignore','ignore'],timeout:5000}).status===0;
   if(existsSync(openUrl))spawnSync(openUrl,[uri],{stdio:'ignore'});
-  console.log(`Open Pocket and connect Codex on this phone. The one-time code${copied?' is copied to your clipboard':` is ${result.code}`}.`);
+  console.log(`Open Pocodex and connect Codex on this phone. The one-time code${copied?' is copied to your clipboard':` is ${result.code}`}.`);
 }
 
 if(action==='install'){await install();await pair();}

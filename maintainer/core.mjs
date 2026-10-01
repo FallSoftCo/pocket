@@ -7,7 +7,7 @@ export function validateReview(r){
 }
 export function snapshotKey(s){return digest({number:s.number,head:s.head,base:s.base,title:s.title,body:s.body,policy:s.policyHash,files:s.files.map(f=>({path:f.filename,sha:f.sha,status:f.status,patch:f.patch})),reopened:s.reopened,clarifications:s.clarifications||[]});}
 export const addedLines=f=>(f.patch||'').split('\n').filter(l=>l.startsWith('+')&&!l.startsWith('+++')).map(l=>l.slice(1)).join('\n');
-export function sensitive(s){return s.files.some(f=>[f.filename,f.previous_filename].filter(Boolean).some(p=>s.policy.protectedPaths.includes(p)||s.policy.protectedPrefixes.some(x=>p.startsWith(x))||/(^|\/)(AGENTS\.md|.*\.rules|.*\.gradle\.kts|.*\.pem|.*\.keystore|.*\.jks)$/.test(p)||/Pocket(State|Firebase|Service|Attention|Audio)\.kt$/.test(p)||p.startsWith('android/gradle/')));}
+export function sensitive(s){return s.files.some(f=>[f.filename,f.previous_filename].filter(Boolean).some(p=>s.policy.protectedPaths.includes(p)||s.policy.protectedPrefixes.some(x=>p.startsWith(x))||/(^|\/)(AGENTS\.md|.*\.rules|.*\.gradle\.kts|.*\.pem|.*\.keystore|.*\.jks)$/.test(p)||/Pocodex(State|Firebase|Service|Attention|Audio)\.kt$/.test(p)||p.startsWith('android/gradle/')));}
 export function eligible(s){
  const lines=s.files.reduce((n,f)=>n+f.additions+f.deletions,0);
  if(s.incomplete||s.files.length===0||s.files.length>s.policy.maxFiles||lines>s.policy.maxChangedLines)return false;
@@ -44,8 +44,8 @@ export function publicText(text){
 }
 export function secretLike(s){return /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\b(?:gh[pousr]_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{35,}|sk-(?:proj-)?[A-Za-z0-9_-]{35,})\b|"private_key"\s*:\s*"/.test(JSON.stringify(s.files));}
 export function makeComment(s,r,d,key){
- const footer=`\n\nAutomated review by Pocket Maintainer · commit \`${s.head.slice(0,12)}\`. Maintainers can override this decision. [Contribution policy](https://github.com/${s.policy.repository}/blob/main/MAINTAINER_POLICY.md).\n<!-- pocket-maintainer:${key} -->`;
- const intro={merge:'This fits Pocket’s direction and qualifies for automatic merging after the required checks pass.',approve:'This fits Pocket’s direction. I recommend approval; a maintainer will handle the merge.',changes:'This fits the project, but the following changes need attention.',decline:'Thank you for the contribution. This takes Pocket in a direction outside the contribution policy, so I’m closing it upstream.',owner:'This needs a maintainer decision. I’m leaving the pull request open.'}[d.action];
+ const footer=`\n\nAutomated review by Pocodex Maintainer · commit \`${s.head.slice(0,12)}\`. Maintainers can override this decision. [Contribution policy](https://github.com/${s.policy.repository}/blob/main/MAINTAINER_POLICY.md).\n<!-- pocket-maintainer:${key} -->`;
+ const intro={merge:'This fits Pocodex’s direction and qualifies for automatic merging after the required checks pass.',approve:'This fits Pocodex’s direction. I recommend approval; a maintainer will handle the merge.',changes:'This fits the project, but the following changes need attention.',decline:'Thank you for the contribution. This takes Pocodex in a direction outside the contribution policy, so I’m closing it upstream.',owner:'This needs a maintainer decision. I’m leaving the pull request open.'}[d.action];
  let body=`${intro}\n\n${publicText(d.reason)}`;
  if(d.action==='changes')body+='\n\n'+(d.findings||r.findings).map(f=>'- '+publicText(f)).join('\n');
  if(d.action==='decline')body+=`\n\nPolicy: **${r.policyRule}** — ${s.policy.declineRules[r.policyRule]}\n\nYou’re welcome to maintain this direction in a fork under the MIT license. If I’ve misunderstood the change, comment with \`/pocket reconsider <reason>\` for a fresh review (up to three clarification comments per PR).`;

@@ -8,7 +8,7 @@ import {SessionStarts,projectPath,recentProjects} from '../server/sessions.mjs';
 import {LiveTimeline,timelinePage} from '../server/timeline.mjs';
 const wait=async f=>{for(let i=0;i<50;i++){if(f())return;await new Promise(r=>setTimeout(r,10));}assert.fail('Condition not reached');};
 
-test('session creation is durable, idempotent, project-scoped, and inherits Codex settings',async()=>{
+test('session creation is durable, idempotent, project-scoped, and defaults to full permissions',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'pocket-start-'));const {db}=openStore(dir);const calls=[],created=[];
  const codex={ready:false,call:async(method,params)=>{calls.push({method,params});return {thread:{id:'new-thread',cwd:params.cwd,turns:[]}};}};
  const starts=new SessionStarts(db,codex,(thread,row)=>created.push({thread,row}));
@@ -19,7 +19,7 @@ test('session creation is durable, idempotent, project-scoped, and inherits Code
  assert.equal(starts.enqueue(req).id,req.id);assert.throws(()=>starts.enqueue({...req,prompt:'Different task'}),/already belongs/);
  assert.throws(()=>projectPath('relative/path'),/absolute/);assert.throws(()=>projectPath(join(dir,'missing')),/does not exist/);
  codex.ready=true;await starts.flush();await starts.flush();
- assert.deepEqual(calls,[{method:'thread/start',params:{cwd:dir}}]);
+ assert.deepEqual(calls,[{method:'thread/start',params:{cwd:dir,sandbox:'danger-full-access',approvalPolicy:'never'}}]);
  assert.equal(starts.get(req.id).state,'started');assert.equal(starts.enqueue(req).thread_id,'new-thread');assert.equal(created.length,1);
  assert.equal(created[0].row.text,req.prompt);assert.equal(created[0].row.state,'queued');
  assert.equal(db.prepare('SELECT enabled FROM watches WHERE thread_id=?').get('new-thread').enabled,1);
@@ -59,4 +59,23 @@ test('history paging preserves full turns and can reach the oldest message',()=>
  const recent=timelinePage(thread);assert.equal(recent.before,'t11');assert.equal(recent.hasEarlier,true);
  const earlier=timelinePage(thread,[],{before:recent.before});assert.equal(earlier.before,'t3');
  const oldest=timelinePage(thread,[],{before:earlier.before});assert.equal(oldest.hasEarlier,false);assert.equal(oldest.rows[1].text,'Message 0');
+});
+
+test('permission selection persists across retries and reconnects and rejects invalid modes',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'pocket-permissions-'));const {db}=openStore(dir);const calls=[];
+ const codex={ready:false,call:async(method,params)=>{calls.push(params);return {thread:{id:'review-thread'}};}};
+ const starts=new SessionStarts(db,codex,()=>{});const request={id:'review-request',cwd:dir,prompt:'Review task',permissions:'review'};
+ assert.throws(()=>starts.enqueue({...request,permissions:'invalid'}),{status:400});
+ starts.enqueue(request);assert.throws(()=>starts.enqueue({...request,permissions:'full'}),{status:409});
+ const restarted=new SessionStarts(db,codex,()=>{});codex.ready=true;await restarted.flush();
+ assert.equal(calls[0].approvalPolicy,'on-request');assert.equal(calls[0].sandbox,'workspace-write');
+ assert.equal(restarted.get(request.id).permissions,'review');db.close();
+});
+
+test('upgrading legacy task records preserves inherited permissions',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'pocodex-legacy-'));const {db}=openStore(dir);const calls=[];
+ db.prepare("INSERT INTO session_starts(id,cwd,prompt,state,created_at,updated_at) VALUES(?,?,?,'queued',?,?)").run('legacy-request',dir,'Legacy task',1,1);
+ const codex={ready:true,executionOptions:()=>({approvalPolicy:'on-request'}),call:async(method,params)=>{calls.push(params);return {thread:{id:'legacy-thread'}};}};
+ const starts=new SessionStarts(db,codex,()=>{});await starts.flush();
+ assert.deepEqual(calls,[{cwd:dir,approvalPolicy:'on-request'}]);db.close();
 });

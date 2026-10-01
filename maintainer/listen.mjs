@@ -47,11 +47,11 @@ async function processJob(job){
  return result;
 }
 const pump=new EventPump(queue,processJob,{onFailure:async(job,retryAt)=>{
- if(job.attempts>=1||retryAt===null)await alert(`worker:${job.key}`,'Pocket maintainer needs attention',`Automatic processing of ${job.key} has failed repeatedly. ${retryAt===null?'Retries are exhausted.':'Recovery will retry automatically.'} Check the maintainer service log.`);
+ if(job.attempts>=1||retryAt===null)await alert(`worker:${job.key}`,'Pocodex maintainer needs attention',`Automatic processing of ${job.key} has failed repeatedly. ${retryAt===null?'Retries are exhausted.':'Recovery will retry automatically.'} Check the maintainer service log.`);
 }});
 const server=webhookServer({secret,repositoryId:config.webhook.repositoryId,queue,wake:()=>pump.wake()});
 server.listen(config.webhook.port||18881,'127.0.0.1',()=>{
- console.log('Pocket Maintainer subscribed webhook listener ready');
+ console.log('Pocodex Maintainer subscribed webhook listener ready');
  // One catch-up on service start recovers current state after a host outage.
  queue.enqueue('reconcile');pump.wake();
 });

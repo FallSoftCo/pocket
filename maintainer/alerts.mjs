@@ -15,7 +15,7 @@ export async function sendFailurePush(config,{key,title,body},{request=fetch}={}
  if(!token.ok)throw Error(`Failure alert authentication failed (${token.status})`);
  const {access_token}=await token.json();
  for(const target of targets){
-  const response=await request(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(credentials.project_id)}/messages:send`,{method:'POST',redirect:'error',headers:{Authorization:`Bearer ${access_token}`,'Content-Type':'application/json'},body:JSON.stringify({message:{token:target.token,notification:{title,body},data:{operations:'failure',device_id:target.device_id,operations_url:'https://github.com/FallSoftCo/pocket/actions'},android:{priority:'high',ttl:'86400s',restricted_package_name:'co.fallsoft.pocket',notification:{channel_id:'work',tag:'pocket-ops-'+createHash('sha256').update(key).digest('hex').slice(0,16),icon:'ic_notification',visibility:'PRIVATE'}}}}),signal:AbortSignal.timeout(30000)});
+  const response=await request(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(credentials.project_id)}/messages:send`,{method:'POST',redirect:'error',headers:{Authorization:`Bearer ${access_token}`,'Content-Type':'application/json'},body:JSON.stringify({message:{token:target.token,notification:{title,body},data:{operations:'failure',device_id:target.device_id,operations_url:'https://github.com/FallSoftCo/pocodex/actions'},android:{priority:'high',ttl:'86400s',restricted_package_name:'co.fallsoft.pocket',notification:{channel_id:'work',tag:'pocket-ops-'+createHash('sha256').update(key).digest('hex').slice(0,16),icon:'ic_notification',visibility:'PRIVATE'}}}}),signal:AbortSignal.timeout(30000)});
   if(!response.ok)throw Error(`Failure alert delivery failed (${response.status})`);
  }
 }

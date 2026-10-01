@@ -6,7 +6,7 @@ Create a project in the [Firebase console](https://console.firebase.google.com/)
 
 The setup account below temporarily has `roles/firebase.admin` to register the Android app and download its configuration. The runtime sender gets a custom role containing **only** `cloudmessaging.messages.create`. Neither account receives access to other projects. These commands use dedicated account names; do not reuse an account belonging to another application.
 
-From the Pocket checkout, set your existing Firebase project ID and a private key directory **outside the checkout**:
+From the Pocodex checkout, set your existing Firebase project ID and a private key directory **outside the checkout**:
 
 ```bash
 export POCKET_FIREBASE_PROJECT=your-firebase-project-id
@@ -19,7 +19,7 @@ gcloud services enable firebase.googleapis.com fcm.googleapis.com \
   --project="$POCKET_FIREBASE_PROJECT"
 
 gcloud iam service-accounts create pocket-setup \
-  --project="$POCKET_FIREBASE_PROJECT" --display-name='Temporary Pocket setup'
+  --project="$POCKET_FIREBASE_PROJECT" --display-name='Temporary Pocodex setup'
 gcloud projects add-iam-policy-binding "$POCKET_FIREBASE_PROJECT" \
   --member="serviceAccount:pocket-setup@$POCKET_FIREBASE_PROJECT.iam.gserviceaccount.com" \
   --role=roles/firebase.admin --condition=None
@@ -28,10 +28,10 @@ gcloud iam service-accounts keys create "$POCKET_KEY_DIR/setup.json" \
   --project="$POCKET_FIREBASE_PROJECT"
 
 gcloud iam roles create pocketPushSender --project="$POCKET_FIREBASE_PROJECT" \
-  --title='Pocket push sender' --stage=GA \
+  --title='Pocodex push sender' --stage=GA \
   --permissions=cloudmessaging.messages.create
 gcloud iam service-accounts create pocket-sender \
-  --project="$POCKET_FIREBASE_PROJECT" --display-name='Pocket push sender'
+  --project="$POCKET_FIREBASE_PROJECT" --display-name='Pocodex push sender'
 gcloud projects add-iam-policy-binding "$POCKET_FIREBASE_PROJECT" \
   --member="serviceAccount:pocket-sender@$POCKET_FIREBASE_PROJECT.iam.gserviceaccount.com" \
   --role="projects/$POCKET_FIREBASE_PROJECT/roles/pocketPushSender" --condition=None
@@ -45,7 +45,7 @@ node scripts/configure-firebase.mjs "$POCKET_FIREBASE_PROJECT" \
 
 IAM changes can take several minutes to propagate. If a role grant says a newly created service account does not exist, wait briefly and retry that grant before continuing. If setup returns HTTP 403 immediately after granting permissions, wait a few minutes and rerun the final `node` command. Do not broaden the sender's role. If an account or custom role already exists from a previous attempt, inspect it and continue with the remaining steps instead of recreating it.
 
-The script writes client configuration and a copy of **only the sending key** into the private `POCKET_DATA` directory (default `data/`). With a separate sender argument, the setup key is never retained by Pocket. Once the script succeeds, remove the temporary setup identity:
+The script writes client configuration and a copy of **only the sending key** into the private `POCKET_DATA` directory (default `data/`). With a separate sender argument, the setup key is never retained by Pocodex. Once the script succeeds, remove the temporary setup identity:
 
 ```bash
 gcloud projects remove-iam-policy-binding "$POCKET_FIREBASE_PROJECT" \
@@ -57,7 +57,7 @@ gcloud iam service-accounts delete \
 rm "$POCKET_KEY_DIR/setup.json"
 ```
 
-Continue with the [backend and Android setup](../README.md#3-start-and-expose-pocket-privately). After pairing, wait for **Firebase push is ready** and use Settings to send a test notification. Confirm it appears on the phone while Pocket is in the background. A successful server response alone does not prove delivery.
+Continue with the [backend and Android setup](../README.md#3-start-and-expose-pocket-privately). After pairing, wait for **Firebase push is ready** and use Settings to send a test notification. Confirm it appears on the phone while Pocodex is in the background. A successful server response alone does not prove delivery.
 
 For existing credentials, the original two-argument setup command remains supported, but copies that credential for ongoing sending. Prefer the separate sender argument. Changing Firebase projects requires re-pairing/reconfiguring each phone and obtaining its new FCM registration; tokens from the old project cannot receive from the new sender.
 

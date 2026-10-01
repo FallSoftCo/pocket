@@ -21,8 +21,11 @@ export function openStore(dir) {
     CREATE TABLE IF NOT EXISTS push_tokens(device_id TEXT PRIMARY KEY REFERENCES devices(id) ON DELETE CASCADE, token TEXT UNIQUE NOT NULL, project_id TEXT NOT NULL, updated_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS push_deliveries(notification_id INTEGER REFERENCES notifications(id) ON DELETE CASCADE, device_id TEXT REFERENCES devices(id) ON DELETE CASCADE, state TEXT NOT NULL, attempts INTEGER DEFAULT 0, next_attempt_at INTEGER DEFAULT 0, message_id TEXT, error TEXT, updated_at INTEGER, PRIMARY KEY(notification_id,device_id));
     CREATE TABLE IF NOT EXISTS notification_attention(notification_id INTEGER PRIMARY KEY REFERENCES notifications(id) ON DELETE CASCADE, request_id TEXT, resolved_at INTEGER);
+    CREATE TABLE IF NOT EXISTS speech_contexts(thread_id TEXT PRIMARY KEY,turn_id TEXT,context TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS thread_permissions(thread_id TEXT PRIMARY KEY,permissions TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS session_starts(id TEXT PRIMARY KEY,cwd TEXT NOT NULL,prompt TEXT NOT NULL,state TEXT NOT NULL,thread_id TEXT,error TEXT,created_at INTEGER,updated_at INTEGER);
   `);
+  if(!db.prepare('PRAGMA table_info(session_starts)').all().some(c=>c.name==='permissions'))db.exec("ALTER TABLE session_starts ADD COLUMN permissions TEXT NOT NULL DEFAULT ''");
   const columns=db.prepare('PRAGMA table_info(notifications)').all().map(c=>c.name);
   if(!columns.includes('source_turn_id'))db.exec('ALTER TABLE notifications ADD COLUMN source_turn_id TEXT');
   if(!columns.includes('spoken_summary'))db.exec("ALTER TABLE notifications ADD COLUMN spoken_summary TEXT NOT NULL DEFAULT ''");

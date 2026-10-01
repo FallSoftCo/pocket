@@ -76,7 +76,7 @@ class PocketFirebaseService:FirebaseMessagingService(){
     override fun onMessageReceived(message:RemoteMessage){
         if(Pocket.savedToken(false).isBlank()||message.data["device_id"]!=Pocket.prefs.getString(Pocket.key("deviceId",false),null))return
         if(message.data["operations"]=="failure"){
-            PocketNotifications.operations(this,message.notification?.title?:"Pocket needs attention",message.notification?.body?:"Check GitHub Actions for details.")
+            PocketNotifications.operations(this,message.notification?.title?:"Pocodex needs attention",message.notification?.body?:"Check GitHub Actions for details.")
             return
         }
         val n=JSONObject(message.data).put("_local",false)
@@ -113,13 +113,13 @@ class ReplyDeliveryWorker(c:Context,p:WorkerParameters):Worker(c,p){
                 }
                 "failed","unknown"->{
                     Pocket.prefs.edit().putString("draft:$thread",reply.getString("text")).apply()
-                    update(reply,"Reply needs attention · open Pocket");Result.failure()
+                    update(reply,"Reply needs attention · open Pocodex");Result.failure()
                 }
                 else->{update(reply,"Reply queued · waiting for Codex");Result.retry()}
             }
         }catch(_:Exception){
             Pocket.prefs.edit().putString("draft:$thread",reply.getString("text")).apply()
-            update(reply,if(runAttemptCount<8)"Reply saved · waiting for Codex" else "Reply needs attention · open Pocket")
+            update(reply,if(runAttemptCount<8)"Reply saved · waiting for Codex" else "Reply needs attention · open Pocodex")
             if(runAttemptCount<8)Result.retry()else Result.failure()
         }
     }

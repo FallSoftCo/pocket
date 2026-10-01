@@ -33,7 +33,7 @@ test('a first reconnect can recover turns finished after an offline subscription
 });
 
 test('spoken summaries remove markup/code/URLs, remain bounded and travel within FCM limits',()=>{
- const summary=spokenSummary('Pocket','```sh\nsecret command\n```\n**Tests passed.** See [report](https://example.org/results). token=hidden /very/long/private/path');
+ const summary=spokenSummary('Pocodex','```sh\nsecret command\n```\n**Tests passed.** See [report](https://example.org/results). token=hidden /very/long/private/path');
  assert.match(summary,/Tests passed/);assert.doesNotMatch(summary,/secret command|https:|hidden|\/private/);
  assert.equal(spokenSummary('Title','Ignored','Release ready for review.'),'Release ready for review.');
  assert.ok(speechText('word '.repeat(100)).length<=181);
@@ -50,4 +50,12 @@ test('paged recovery continues beyond eight missed completions and stops at the 
  const older={id:'thread-one',turns:[{id:'baseline',status:'completed',completedAt:1},{id:'missed',status:'completed',completedAt:at}]};
  assert.equal(recovery.needsEarlier(older),false);recovery.observe(older);
  assert.equal(sent.length,9);assert.equal(recovery.needsEarlier(page),false);
+});
+
+test('completion context belongs to the completed turn, including recovery',t=>{
+ const dir=mkdtempSync(join(tmpdir(),'pocodex-context-'));const {db}=openStore(dir);t.after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});
+ db.prepare('INSERT INTO watches VALUES(?,?,1)').run('thread-context','Unrelated generic title');
+ const sent=[];const recovery=new CompletionRecovery(db,(...a)=>sent.push(a));
+ recovery.complete('thread-context',{id:'specific-turn',status:'completed',items:[{type:'userMessage',content:[{type:'text',text:'Please add dark mode'}]},{type:'agentMessage',text:'Dark mode is ready.'}]});
+ assert.equal(sent[0][5],'Please add dark mode');assert.equal(sent[0][2],'Dark mode is ready.');
 });

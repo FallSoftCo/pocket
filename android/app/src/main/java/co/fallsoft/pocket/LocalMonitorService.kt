@@ -19,7 +19,7 @@ class LocalMonitorService:Service(){
         super.onCreate()
         val manager=getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL,"Codex running on this phone",NotificationManager.IMPORTANCE_LOW).apply{
-            description="Keeps Pocket connected to the local Codex runtime";setSound(null,null)
+            description="Keeps Pocodex connected to the local Codex runtime";setSound(null,null)
         })
         val notification=notification()
         if(Build.VERSION.SDK_INT>=34)startForeground(ID,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID,notification)
@@ -35,8 +35,8 @@ class LocalMonitorService:Service(){
         val intent=if(repair)Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS) else Intent(this,MainActivity::class.java).putExtra("local",true)
         val open=PendingIntent.getActivity(this,if(repair)992 else 991,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this,CHANNEL).setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(if(repair)"Pocket phone control needs attention" else "Pocket · Codex on this phone")
-            .setContentText(if(repair)"Tap to re-enable Pocket in Android Accessibility" else "Listening for local tasks, questions and results")
+            .setContentTitle(if(repair)"Pocodex phone control needs attention" else "Pocodex · Codex on this phone")
+            .setContentText(if(repair)"Tap to re-enable Pocodex in Android Accessibility" else "Listening for local tasks, questions and results")
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).build()
     }
     private fun updateNotification(){getSystemService(NotificationManager::class.java).notify(ID,notification())}

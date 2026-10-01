@@ -7,18 +7,24 @@ export function projectPath(value){
   let cwd;try{cwd=realpathSync(value);if(!statSync(cwd).isDirectory())throw Error();}catch{throw invalid('That project folder does not exist or is not accessible on the selected device.');}
   return cwd;
 }
+export function permissionOptions(permissions){
+  if(permissions==='full')return {sandbox:'danger-full-access',approvalPolicy:'never'};
+  if(permissions==='review')return {sandbox:process.env.POCKET_CODEX_SANDBOX||'workspace-write',approvalPolicy:'on-request'};
+  throw invalid('Choose full or review permissions.');
+}
 export class SessionStarts {
   constructor(db,codex,onCreated){this.db=db;this.codex=codex;this.onCreated=onCreated;this.running=new Set();
     db.exec("UPDATE session_starts SET state='unknown',error='The bridge restarted during creation. Check recent tasks before starting again.' WHERE state='creating'");
   }
   get(id){return this.db.prepare('SELECT * FROM session_starts WHERE id=?').get(id);}
-  enqueue({id,cwd,prompt}={}){
+  enqueue({id,cwd,prompt,permissions='full'}={}){
     if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id))throw invalid('Invalid task request identifier.');
     if(typeof prompt!=='string'||!prompt.trim()||prompt.length>32000)throw invalid('Enter a task of 1–32000 characters.');
+    permissionOptions(permissions);
     cwd=projectPath(cwd);prompt=prompt.trim();
     const old=this.get(id);
-    if(old){if(old.cwd!==cwd||old.prompt!==prompt)throw Object.assign(Error('This request already belongs to another task.'),{status:409});return old;}
-    const at=Date.now();this.db.prepare('INSERT INTO session_starts(id,cwd,prompt,state,created_at,updated_at) VALUES(?,?,?,\'queued\',?,?)').run(id,cwd,prompt,at,at);
+    if(old){if(old.cwd!==cwd||old.prompt!==prompt||(old.permissions||'full')!==permissions)throw Object.assign(Error('This request already belongs to another task.'),{status:409});return old;}
+    const at=Date.now();this.db.prepare('INSERT INTO session_starts(id,cwd,prompt,permissions,state,created_at,updated_at) VALUES(?,?,?,?,\'queued\',?,?)').run(id,cwd,prompt,permissions,at,at);
     void this.flush();return this.get(id);
   }
   async flush(){
@@ -27,9 +33,7 @@ export class SessionStarts {
       if(this.running.has(row.id))continue;this.running.add(row.id);
       try{
         this.db.prepare("UPDATE session_starts SET state='creating',updated_at=? WHERE id=?").run(Date.now(),row.id);
-        // Desktop installs inherit their normal configuration. Android-local installs opt in
-        // explicitly because the desktop workspace sandbox cannot run under Termux/PRoot.
-        const {thread}=await this.codex.call('thread/start',{cwd:row.cwd,...this.codex.executionOptions?.()});
+        const {thread}=await this.codex.call('thread/start',{cwd:row.cwd,...(row.permissions?permissionOptions(row.permissions):this.codex.executionOptions?.())});
         this.db.exec('BEGIN IMMEDIATE');
         try{
           this.db.prepare("UPDATE session_starts SET state='started',thread_id=?,updated_at=? WHERE id=?").run(thread.id,Date.now(),row.id);

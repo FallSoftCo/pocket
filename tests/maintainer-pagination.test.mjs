@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {GitHub} from '../maintainer/github.mjs';
 import {recover} from '../maintainer/recovery.mjs';
-const root='/repos/FallSoftCo/pocket',collection=root+'/hooks/123/deliveries';
+const root='/repos/FallSoftCo/pocodex',collection=root+'/hooks/123/deliveries';
 const response=(body,link)=>new Response(body,{status:200,headers:link?{link}:undefined});
 
 test('real request adapter follows numeric repository cursors and recovers an exact delivery ID on page two',async t=>{

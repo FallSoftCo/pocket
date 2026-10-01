@@ -5,7 +5,7 @@ import java.util.Locale
 
 /** A bounded excerpt ends at a sentence boundary; never chop words for speech. */
 object SpeechText {
-    private const val more="Open Pocket for the full update."
+    private const val more="Open Pocodex for the full update."
     fun clean(source:String):String = source.replace(Regex("```[\\s\\S]*?(?:```|$)")," ")
         .replace(Regex("`[^`]*`")," ").replace(Regex("\\[([^]]+)]\\([^)]*\\)"),"$1")
         .replace(Regex("https?://\\S+|(?:^|\\s)(?:/?[\\w.-]+/){2,}\\S*")," ")

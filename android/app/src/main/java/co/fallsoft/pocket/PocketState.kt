@@ -34,6 +34,7 @@ object Pocket {
     var connected by mutableStateOf(false); var codexOnline by mutableStateOf(false)
     var connectionError by mutableStateOf("")
     var codexConnectionMessage by mutableStateOf("")
+    var weeklyUsage by mutableStateOf(WeeklyUsage())
     var error by mutableStateOf(""); var busy by mutableStateOf(false)
     var tasks by mutableStateOf(listOf<Task>())
     var notifications by mutableStateOf(listOf<JSONObject>())
@@ -57,9 +58,10 @@ object Pocket {
     fun savedBase(forLocal:Boolean)=prefs.getString(key("server",forLocal),"")!!
     fun savedToken(forLocal:Boolean)=prefs.getString(key("token",forLocal),"")!!
     fun init(c:Context){
-        context=c.applicationContext;local=prefs.getBoolean("activeLocal",false);base=savedBase(local);token=savedToken(local);lastNotification=prefs.getLong(key("lastNotification"),0)
+        context=c.applicationContext;local=prefs.getBoolean("activeLocal",false);base=savedBase(local);token=savedToken(local);lastNotification=prefs.getLong(key("lastNotification"),0);restoreUsage()
         if(!prefs.contains(key("seenIds")))prefs.edit().putStringSet(key("seenIds"),((lastNotification-511).coerceAtLeast(1)..lastNotification).map{it.toString()}.toSet()).apply()
         context.getSystemService(android.app.NotificationManager::class.java).apply{cancel(1);deleteNotificationChannel("connection")}
+        fullPermissions=prefs.getBoolean("fullPermissions",true)
         PocketAudio.init()
         PocketSpeech.init()
         PocketAttention.init()
@@ -87,12 +89,13 @@ object Pocket {
         busy=true;error=""
         try {
             val url=server.trim().trimEnd('/');val pairingLocal=url in listOf("http://127.0.0.1:18880","http://localhost:18880")
-            require(url.startsWith("https://")||pairingLocal){"Use your server’s HTTPS address, or Pocket’s local phone address."}
+            require(url.startsWith("https://")||pairingLocal){"Use your server’s HTTPS address, or Pocodex’s local phone address."}
             base=url
             val r=api("/api/pair",JSONObject().put("code",code).put("name",Build.MODEL),false)
             token=r.getString("token");host=r.s("host")
             local=pairingLocal||r.optBoolean("local");prefs.edit().putBoolean("activeLocal",local).putString(key("server"),base).putString(key("token"),token).putString(key("deviceId"),r.s("id")).apply()
             if(local&&r.s("automationSecret").isNotBlank())prefs.edit().putString(key("automationSecret",true),r.s("automationSecret")).apply()
+            weeklyUsage=WeeklyUsage();prefs.edit().remove(key("weeklyUsage")).apply()
             PocketPush.configure(r.optJSONObject("firebase"));if(local)LocalMonitorService.start(context);pairingMode=false;PocketLive.start();refresh()
         }catch(e:Exception){error=PocketNetwork.error(e)}finally{busy=false}
     }}
@@ -104,7 +107,7 @@ object Pocket {
         lastNotification=prefs.getLong(key("lastNotification"),0);prefs.edit().putBoolean("activeLocal",local).apply()
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean("pushReady",false))"Firebase push is ready" else "Setting up notifications…"
         if(local)LocalMonitorService.start(context) else LocalMonitorService.stop(context)
-        PocketLive.start();refresh()
+        restoreUsage();PocketLive.start();refresh()
     }
     fun disconnect(){
         val wasLocal=local;val oldBase=base;val oldToken=token
@@ -115,15 +118,21 @@ object Pocket {
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention")
         PocketSpeech.clear()
-        val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal))
+        val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal))
         if(wasLocal)edit.remove(key("automationSecret",true)).putBoolean("automationAllowed",false)
-        edit.apply();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
+        edit.apply();weeklyUsage=WeeklyUsage();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
         val fallback=if(wasLocal)false else true
         if(savedToken(fallback).isNotBlank()){local=wasLocal;activate(fallback)}else{token="";base="";pushStatus="Not paired";local=false;prefs.edit().putBoolean("activeLocal",false).apply();LocalMonitorService.stop(context)}
     }
-    fun refresh(){scope.launch{
+    private fun restoreUsage(){weeklyUsage=try{prefs.getString(key("weeklyUsage"),null)?.let{WeeklyUsage.fromJson(JSONObject(it)).copy(stale=true)}?:WeeklyUsage()}catch(_:Exception){WeeklyUsage()}}
+    private fun acceptUsage(json:JSONObject?){
+        weeklyUsage=WeeklyUsage.fromJson(json)
+        val edit=prefs.edit();if(json==null)edit.remove(key("weeklyUsage"))else edit.putString(key("weeklyUsage"),json.toString());edit.apply()
+    }
+    fun refresh(){val profileLocal=local;val profileToken=token;scope.launch{
         try{
-            val r=api("/api/status");codexOnline=r.optBoolean("connected");codexConnectionMessage=r.optJSONObject("problem")?.s("message")?:"";host=r.s("host");defaultCwd=r.s("defaultCwd")
+            val r=api("/api/status");if(local!=profileLocal||token!=profileToken)return@launch
+            acceptUsage(r.optJSONObject("usage"));codexOnline=r.optBoolean("connected");codexConnectionMessage=r.optJSONObject("problem")?.s("message")?:"";host=r.s("host");defaultCwd=r.s("defaultCwd")
             prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply()
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
             tasks=api("/api/threads").optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"))}?:emptyList()
@@ -141,11 +150,13 @@ object Pocket {
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
     fun scheduleRefresh(){if(refreshJob?.isActive==true)return;refreshJob=scope.launch{delay(400);PocketTranscript.load()}}
     fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains(key("newTaskRequest")))"A task request is saved. Check its status to continue." else "";scope.launch{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){error=e.message?:"Could not load projects"}}}
+    var fullPermissions by mutableStateOf(true); private set
+    fun updateFullPermissions(value:Boolean){fullPermissions=value;prefs.edit().putBoolean("fullPermissions",value).apply()}
     fun startTask(cwd:String,prompt:String){if(starting)return;scope.launch{
         starting=true;error="";startStatus=if(local)"Starting on this phone…" else "Starting on your workstation…"
         val requestKey=key("newTaskRequest");val promptKey=key("newTaskPrompt");val projectKey=key("lastProject")
         val previous=prefs.getString(requestKey,null)?.let{JSONObject(it)}
-        val request=if(previous?.s("cwd")==cwd&&previous.s("prompt")==prompt)previous else JSONObject().put("id",UUID.randomUUID().toString()).put("cwd",cwd).put("prompt",prompt)
+        val request=if(previous?.s("cwd")==cwd&&previous.s("prompt")==prompt)previous else JSONObject().put("id",UUID.randomUUID().toString()).put("cwd",cwd).put("prompt",prompt).put("permissions",if(fullPermissions)"full" else "review")
         prefs.edit().putString(requestKey,request.toString()).commit()
         var submitted=false
         try{
@@ -187,6 +198,7 @@ object Pocket {
     fun test(){scope.launch{try{api("/api/test-notification",JSONObject())}catch(e:Exception){error=e.message?:"Test failed"}}}
     fun event(json:JSONObject){scope.launch{
         when(json.s("type")){
+            "rateLimits" -> acceptUsage(json.optJSONObject("usage"))
             "status" -> {
                 val recovered=!codexOnline&&json.optBoolean("connected")
                 codexOnline=json.optBoolean("connected");codexConnectionMessage=json.optJSONObject("problem")?.s("message")?:""

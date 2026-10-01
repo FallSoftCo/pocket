@@ -1,3 +1,4 @@
+import {turnPrompt} from './speech.mjs';
 // Persist the subscription boundary and completed turn IDs across bridge restarts.
 export class CompletionRecovery {
   constructor(db,publish){this.db=db;this.publish=publish;}
@@ -23,7 +24,7 @@ export class CompletionRecovery {
     if(turn.status!=='interrupted'){
       const failed=turn.status==='failed';
       const message=turn.items?.filter(x=>x.type==='agentMessage').at(-1)?.text;
-      this.publish(threadId,failed?'Codex hit a problem':watch.name||'Codex finished',failed?(turn.error?.message||message||'Open the task to review what stopped the work.'):(message||'The latest turn is ready to review.'),failed?'error':'complete',turn.id||null);
+      this.publish(threadId,failed?'Codex hit a problem':watch.name||'Codex finished',failed?(turn.error?.message||message||'Open the task to review what stopped the work.'):(message||'The latest turn is ready to review.'),failed?'error':'complete',turn.id||null,turnPrompt(turn));
     }
     if(turn.id)this.mark(threadId,turn.id);
   }

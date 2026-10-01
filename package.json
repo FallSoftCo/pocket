@@ -1,6 +1,6 @@
 {
-  "name": "codex-pocket",
-  "version": "0.5.0-alpha.3",
+  "name": "pocodex",
+  "version": "0.5.0-alpha.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -25,7 +25,7 @@
   "description": "Self-hosted Android companion for stock Codex CLI",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fallsoftco/pocket.git"
+    "url": "https://github.com/fallsoftco/pocodex.git"
   },
   "overrides": {
     "uuid": "11.1.1"

@@ -70,7 +70,7 @@ class PocketAutomationService:AccessibilityService(){
             val headers=mutableMapOf<String,String>();while(true){val line=reader.readLine()?:break;if(line.isEmpty())break;val at=line.indexOf(':');if(at>0)headers[line.substring(0,at).lowercase()]=line.substring(at+1).trim()}
             val expected=Pocket.prefs.getString(Pocket.key("automationSecret",true),null)
             if(expected.isNullOrBlank()||headers["authorization"]!="Bearer $expected"){respond(c,401,"text/plain","Unauthorized".toByteArray());return}
-            if(!PocketAutomation.allowed){respond(c,423,"text/plain","Phone control is paused in Pocket settings.".toByteArray());return}
+            if(!PocketAutomation.allowed){respond(c,423,"text/plain","Phone control is paused in Pocodex settings.".toByteArray());return}
             val length=(headers["content-length"]?.toIntOrNull()?:0).coerceIn(0,65536);val chars=CharArray(length);var read=0
             while(read<length){val count=reader.read(chars,read,length-read);if(count<0)break;read+=count}
             when(parts[1]){

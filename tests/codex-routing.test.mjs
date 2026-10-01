@@ -13,7 +13,7 @@ test('same-thread steering, idle continuation, and exact pending request respons
  const dir=await mkdtemp(join(tmpdir(),'pocket-routing-')),socket=join(dir,'codex.sock');
  const h=http.createServer(),wss=new WebSocketServer({server:h});await new Promise(r=>h.listen(socket,r));
  let peer;const calls=[],answers=[];let active=true;
- const thread=()=>({id:'thread-live',name:'Routing test',status:{type:active?'active':'idle'},turns:[{id:'turn-original',status:active?'inProgress':'completed',items:[]}]});
+ const thread=()=>({id:'thread-live',name:'Routing test',status:{type:active?'active':'idle'},turns:[{id:'turn-original',status:active?'inProgress':'completed',items:[{type:'userMessage',content:[{type:'text',text:'Please fix notification speech'}]}]}]});
  wss.on('connection',ws=>{peer=ws;ws.on('message',raw=>{const m=JSON.parse(raw);if(m.result){answers.push(m);return;}if(!m.id)return;calls.push(m);let result={};
  if(m.method==='thread/resume'||m.method==='thread/read')result={thread:thread()};
  if(m.method==='turn/steer')result={turnId:'turn-original'};
@@ -28,6 +28,10 @@ test('same-thread steering, idle continuation, and exact pending request respons
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json'),'utf8'));
  const api=async(path,body)=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};};
  await api('/api/threads/thread-live');
+ const notice=await api('/api/notify',{thread_id:'thread-live',title:'Generic conversation title',message:'The update is installed.'});
+ assert.equal(notice.status,200);assert.equal(notice.data.notification.spoken_text,'fix notification speech. The update is installed.');
+ const modelNotice=await api('/api/notify',{thread_id:'thread-live',title:'Wrong context',message:'All tests pass.',spoken_context:'Improve spoken notifications',spoken_summary:'The fix is ready.'});
+ assert.equal(modelNotice.data.notification.spoken_text,'Improve spoken notifications. The fix is ready.');
  const first=randomUUID();await api('/api/threads/thread-live/reply',{id:first,text:'Steer the same live task'});
  await waitFor(async()=>(await api('/api/threads/thread-live')).data.outgoing.find(x=>x.id===first&&x.state==='accepted'));
  assert.equal((await api(`/api/replies/${first}`)).data.state,'accepted');
@@ -67,7 +71,7 @@ test('same-thread steering, idle continuation, and exact pending request respons
  await waitFor(async()=>(await api(`/api/replies/start-${request.id}`)).data.state==='accepted');
  assert.equal((await api('/api/threads',request)).data.thread_id,'thread-phone');
  assert.equal(calls.filter(c=>c.method==='thread/start').length,1);
- assert.deepEqual(calls.find(c=>c.method==='thread/start').params,{cwd:dir});
+ assert.deepEqual(calls.find(c=>c.method==='thread/start').params,{cwd:dir,sandbox:'danger-full-access',approvalPolicy:'never'});
  assert.equal(calls.findLast(c=>c.method==='turn/start').params.threadId,'thread-phone');
  active=true;assert.equal((await api('/api/threads/thread-live/interrupt',{})).status,200);
  assert.deepEqual(calls.find(c=>c.method==='turn/interrupt').params,{threadId:'thread-live',turnId:'turn-original'});

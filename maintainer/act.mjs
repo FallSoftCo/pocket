@@ -19,11 +19,11 @@ export async function act(gh,input){
  s=await gh.snapshot(number);if(!current())return {state:'stale-or-held'};
  // A required GitHub check records approval without needing organization-wide
  // permission for Actions to submit approving PR reviews.
- const checks=await gh.request(`${gh.root}/commits/${s.head}/check-runs?check_name=Pocket%20review&per_page=100`);
+ const checks=await gh.request(`${gh.root}/commits/${s.head}/check-runs?check_name=Pocodex%20review&per_page=100`);
  const existing=checks.check_runs.find(c=>c.app?.slug==='github-actions'&&c.external_id===s.key);
  const conclusion=decision.action==='merge'?'success':'action_required';
  if(!existing||existing.conclusion!==conclusion){
-  const result={name:'Pocket review',head_sha:s.head,status:'completed',conclusion,external_id:s.key,output:{title:decision.action==='merge'?'Approved by Pocket Maintainer':'Pocket Maintainer: '+decision.action,summary:body}};
+  const result={name:'Pocodex review',head_sha:s.head,status:'completed',conclusion,external_id:s.key,output:{title:decision.action==='merge'?'Approved by Pocodex Maintainer':'Pocodex Maintainer: '+decision.action,summary:body}};
   await gh.request(existing?`${gh.root}/check-runs/${existing.id}`:`${gh.root}/check-runs`,{method:existing?'PATCH':'POST',body:result});
  }
  if(!prior){
@@ -48,7 +48,7 @@ export async function act(gh,input){
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const event=JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH,'utf8'));
- if(process.env.GITHUB_EVENT_NAME!=='workflow_dispatch'||process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY?.toLowerCase()!=='fallsoftco/pocket')throw Error('Only trusted main-branch dispatches are allowed');
+ if(process.env.GITHUB_EVENT_NAME!=='workflow_dispatch'||process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY?.toLowerCase()!=='fallsoftco/pocodex')throw Error('Only trusted main-branch dispatches are allowed');
  const gh=new GitHub(process.env.GITHUB_TOKEN);
  console.log(JSON.stringify(await act(gh,event.inputs)));
 }

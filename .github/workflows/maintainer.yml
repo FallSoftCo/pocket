@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   apply:
-    if: github.ref == 'refs/heads/main' && github.repository == 'FallSoftCo/pocket'
+    if: github.ref == 'refs/heads/main' && github.repository == 'FallSoftCo/pocodex'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
