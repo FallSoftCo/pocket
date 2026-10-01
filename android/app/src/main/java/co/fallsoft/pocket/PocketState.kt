@@ -89,7 +89,7 @@ object Pocket {
         busy=true;error=""
         try {
             val url=server.trim().trimEnd('/');val pairingLocal=url in listOf("http://127.0.0.1:18880","http://localhost:18880")
-            require(url.startsWith("https://")||pairingLocal){"Use your server’s HTTPS address, or Pocodex’s local phone address."}
+            require(url.startsWith("https://")||pairingLocal){"Use your server’s HTTPS address, or Pocket’s local phone address."}
             base=url
             val r=api("/api/pair",JSONObject().put("code",code).put("name",Build.MODEL),false)
             token=r.getString("token");host=r.s("host")

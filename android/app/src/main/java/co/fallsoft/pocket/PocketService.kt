@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 object PocketNotifications {
     fun operations(c:Context,title:String,body:String){
         channels(c)
-        val intent=Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://github.com/FallSoftCo/pocodex/actions"))
+        val intent=Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://github.com/FallSoftCo/pocket/actions"))
         val open=PendingIntent.getActivity(c,900, intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val b=NotificationCompat.Builder(c,"work").setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body)).setContentIntent(open).setAutoCancel(true)

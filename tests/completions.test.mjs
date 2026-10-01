@@ -33,7 +33,7 @@ test('a first reconnect can recover turns finished after an offline subscription
 });
 
 test('spoken summaries remove markup/code/URLs, remain bounded and travel within FCM limits',()=>{
- const summary=spokenSummary('Pocodex','```sh\nsecret command\n```\n**Tests passed.** See [report](https://example.org/results). token=hidden /very/long/private/path');
+ const summary=spokenSummary('Pocket','```sh\nsecret command\n```\n**Tests passed.** See [report](https://example.org/results). token=hidden /very/long/private/path');
  assert.match(summary,/Tests passed/);assert.doesNotMatch(summary,/secret command|https:|hidden|\/private/);
  assert.equal(spokenSummary('Title','Ignored','Release ready for review.'),'Release ready for review.');
  assert.ok(speechText('word '.repeat(100)).length<=181);

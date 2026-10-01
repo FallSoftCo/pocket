@@ -41,7 +41,7 @@ export async function tick({gh,config,state,save,reviewer=review,notify=async()=
   if(config.dryRun){console.log(JSON.stringify({pr:s.number,action,head:s.head}));continue;}
   if(action==='merge'&&!await gh.prepareCI(s))continue;
   if(config.notifyReviews===true&&!item.notified&&['owner','approve'].includes(action)){
-   await notify({number:s.number,url:s.url,head:s.head,title:`Pocodex PR #${s.number} needs your review`,message:`${s.title}\n\n${item.decision.reason}\n\n${s.url}\nReviewed commit: ${s.head.slice(0,12)}. Open GitHub to review or merge; maintainer:hold pauses automation.`});
+   await notify({number:s.number,url:s.url,head:s.head,title:`Pocket PR #${s.number} needs your review`,message:`${s.title}\n\n${item.decision.reason}\n\n${s.url}\nReviewed commit: ${s.head.slice(0,12)}. Open GitHub to review or merge; maintainer:hold pauses automation.`});
    item.notified=true;save();
   }
   if(item.dispatched){
@@ -68,17 +68,17 @@ async function main(){
  const notify=async n=>{
   if(!config.pocket)return;
   const url=new URL(config.pocket.url||'http://127.0.0.1:18880');
-  if(url.hostname!=='127.0.0.1'||url.protocol!=='http:')throw Error('Pocodex notification endpoint must be loopback');
+  if(url.hostname!=='127.0.0.1'||url.protocol!=='http:')throw Error('Pocket notification endpoint must be loopback');
   const {adminToken}=JSON.parse(readFileSync(join(config.pocket.dataDir,'secrets.json'),'utf8'));
   const r=await fetch(new URL('/api/notify',url),{method:'POST',redirect:'error',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},body:JSON.stringify({thread_id:config.pocket.threadId,title:n.title,message:n.message,kind:'question'}),signal:AbortSignal.timeout(30000)});
-  if(!r.ok)throw Error('Pocodex notification failed');
+  if(!r.ok)throw Error('Pocket notification failed');
  };
  const number=process.argv[2]==='--pr'?Number(process.argv[3]):null;
  try{const result=await tick({gh,config,state,save,notify,numbers:number===null?null:[number]});delete state.lastError;save();console.log(JSON.stringify({workerResult:result}));}
  catch(e){
   const reason=e.message||'Worker error';console.error(reason);
   if(config.notifyErrors===true&&(!state.lastError||Date.now()-state.lastError.at>6*3600000)){
-   try{await notify({title:'Pocodex maintainer needs attention',message:'Automatic PR processing paused for this run. Check the local pocket-maintainer service log. No failed review is treated as approval.'});state.lastError={at:Date.now()};save();}catch{}
+   try{await notify({title:'Pocket maintainer needs attention',message:'Automatic PR processing paused for this run. Check the local pocket-maintainer service log. No failed review is treated as approval.'});state.lastError={at:Date.now()};save();}catch{}
   }
   process.exitCode=1;
  }

@@ -8,12 +8,12 @@ import {GitHub} from '../maintainer/github.mjs';
 const policy=JSON.parse(readFileSync(new URL('../maintainer/policy.json',import.meta.url)));
 const good={verdict:'approve',summary:'A clear documentation improvement with no material findings.',findings:[],policyRule:'',evidence:[],risk:'low'};
 function snapshot(extra={}){
- const s={number:1,state:'open',draft:false,title:'Clarify search',body:'Explain the session filter.',head:'a'.repeat(40),base:'b'.repeat(40),author:'contributor',labels:[],url:'https://github.com/FallSoftCo/pocodex/pull/1',policy,principles:'Trusted policy',policyHash:digest(policy),reopened:0,incomplete:false,files:[{filename:'README.md',sha:'c'.repeat(40),status:'modified',additions:1,deletions:1,patch:'@@ -1 +1 @@\n-Search sessions.\n+Search sessions by title or project folder.',context:'Search sessions by title or project folder.'}],...extra};
+ const s={number:1,state:'open',draft:false,title:'Clarify search',body:'Explain the session filter.',head:'a'.repeat(40),base:'b'.repeat(40),author:'contributor',labels:[],url:'https://github.com/FallSoftCo/pocket/pull/1',policy,principles:'Trusted policy',policyHash:digest(policy),reopened:0,incomplete:false,files:[{filename:'README.md',sha:'c'.repeat(40),status:'modified',additions:1,deletions:1,patch:'@@ -1 +1 @@\n-Search sessions.\n+Search sessions by title or project folder.',context:'Search sessions by title or project folder.'}],...extra};
  s.key=snapshotKey(s);return s;
 }
 function fake(s=snapshot()){
  const calls=[],comments=[],reviews=[],checks=[];
- const gh={root:'/repos/FallSoftCo/pocodex',calls,commentsList:comments,reviews,checks,ready:true,snapshots:0,
+ const gh={root:'/repos/FallSoftCo/pocket',calls,commentsList:comments,reviews,checks,ready:true,snapshots:0,
   snapshot:async()=>{gh.snapshots++;return structuredClone(s);},
   comments:async()=>comments,pages:async()=>reviews,checksPass:async()=>gh.ready,prepareCI:async()=>true,
   request:async(path,options={})=>{

@@ -40,7 +40,7 @@ test('bridge restart backfills missed completion, survives replay and keeps work
  peer.send(JSON.stringify({method:'turn/completed',params:{threadId:'thread-one',turn:turn()}}));
  const before=resumes;await stop();await start();await wait(()=>resumes>before);
  rows=(await api('/api/notifications')).notifications;assert.equal(rows.length,2,'restart and live replay must not duplicate the completion');
- // A socket-only outage must recover without restarting the Pocodex process.
+ // A socket-only outage must recover without restarting the Pocket process.
  turnId='turn-during-disconnect';peer.terminate();
  await wait(async()=>(await api('/api/notifications')).notifications.length===3);
  assert.equal((await api('/api/notifications')).notifications.at(-1).source_turn_id,turnId);

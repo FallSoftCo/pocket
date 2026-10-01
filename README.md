@@ -1,14 +1,12 @@
-<p align="center"><img src="branding/pocket-icon.png" width="112" alt="Pocodex icon"></p>
+<p align="center"><img src="branding/pocket-icon.png" width="112" alt="Pocket icon"></p>
 
-# Pocodex
-
-Previously Pocket. The Android package, saved profiles, and existing command/environment names remain compatible with earlier installations.
+# Pocket
 
 **Your Codex workstation, within reach.** A self-hosted Android companion for stock Codex CLI by [FallSoft](https://github.com/fallsoftco).
 
-Start tasks from your phone, follow the conversation in order, and reply when Codex needs you. Pocodex connects to your existing Codex runtime; no fork, app store, or FallSoft-operated server is required.
+Start tasks from your phone, follow the conversation in order, and reply when Codex needs you. Pocket connects to your existing Codex runtime; no fork, app store, or FallSoft-operated server is required.
 
-[Download the Android alpha](https://github.com/fallsoftco/pocodex/releases) · [Setup](#setup) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Verification](docs/VERIFICATION.md)
+[Download the Android alpha](https://github.com/fallsoftco/pocket/releases) · [Setup](#setup) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Verification](docs/VERIFICATION.md)
 
 > **Experimental alpha.** Workstation mode is tested with Codex CLI 0.157.1 on Linux. Phone-local mode is tested with stock Codex CLI 0.158.0 in Termux on a Pixel 9 Pro Fold. Both use Codex's experimental app-server protocol without a fork. This is an independent project, not an OpenAI product.
 
@@ -19,24 +17,24 @@ Start tasks from your phone, follow the conversation in order, and reply when Co
 - Read prompts, progress, commands, tool results, file changes, questions, and final responses in chronological order. Expand output and load earlier turns.
 - Reply from an Android notification, guide an active turn, or stop a selected task through its action menu and confirmation.
 - Receive Firebase push when followed work finishes or needs your attention.
-- Ask Codex to notify you under a condition: **“Use Pocodex to notify me when the tests pass, with a short summary.”**
+- Ask Codex to notify you under a condition: **“Use Pocket to notify me when the tests pass, with a short summary.”**
 - Choose synthesized tones, offline spoken labels or content summaries, or system notification audio. Actionable items have bounded reminders, dismissal, and snooze.
 - Open explicitly shared attachments from your authenticated workstation.
 - Run Codex on the Android phone itself and switch between **Workstation** and **This phone**.
 - Optionally let phone-local Codex inspect the foreground Android screen, take screenshots, tap, scroll, enter non-password text, and use Android navigation.
 
-Pocodex is for **one owner and their trusted phones**. A paired phone can read and control that owner's Codex tasks. It is not a shared hosting or multi-user permissions system.
+Pocket is for **one owner and their trusted phones**. A paired phone can read and control that owner's Codex tasks. It is not a shared hosting or multi-user permissions system.
 
-<p><img src="docs/images/onboarding.png" width="280" alt="Pocodex Android first-run screen with empty server and pairing-code fields"></p>
+<p><img src="docs/images/onboarding.png" width="280" alt="Pocket Android first-run screen with empty server and pairing-code fields"></p>
 
 ## How it connects
 
 ```text
-Workstation: Codex CLI ← shared socket → Pocodex backend ← HTTPS/WebSocket → Android
+Workstation: Codex CLI ← shared socket → Pocket backend ← HTTPS/WebSocket → Android
                                                        ↑ FCM alerts
                                                   your Firebase project
 
-On phone:    stock Codex app-server ← stdio → Pocodex bridge ← loopback → Android
+On phone:    stock Codex app-server ← stdio → Pocket bridge ← loopback → Android
                                                    ↕ authenticated loopback
                                            accessibility control service
 ```
@@ -57,21 +55,21 @@ The workstation must remain online for Codex work and new notifications. There i
 ### 1. Install the backend
 
 ```bash
-git clone https://github.com/fallsoftco/pocodex.git pocket
+git clone https://github.com/fallsoftco/pocket.git pocket
 cd pocket
 npm ci
 ```
 
-Run Codex CLI **0.157.1** interactively and authenticate it. In another terminal, from the Pocodex checkout, check compatibility **before configuring Firebase**:
+Run Codex CLI **0.157.1** interactively and authenticate it. In another terminal, from the Pocket checkout, check compatibility **before configuring Firebase**:
 
 ```bash
 codex --version
 npm run doctor -- --preflight
 ```
 
-The preflight does not require Firebase or a running Pocodex backend. It checks that the existing shared Codex runtime responds. Stop here if it fails; see [missing-socket troubleshooting](docs/DEPLOYMENT.md#diagnosis). Other Codex versions are unverified.
+The preflight does not require Firebase or a running Pocket backend. It checks that the existing shared Codex runtime responds. Stop here if it fails; see [missing-socket troubleshooting](docs/DEPLOYMENT.md#diagnosis). Other Codex versions are unverified.
 
-Pocodex connects to the existing socket at `~/.codex/app-server-control/app-server-control.sock` (or under `CODEX_HOME`). Set `CODEX_SOCKET` if your installation uses another existing shared socket. Use the same OS user and Codex home as the interactive CLI. Pocodex does not start a competing app-server or migrate your conversations.
+Pocket connects to the existing socket at `~/.codex/app-server-control/app-server-control.sock` (or under `CODEX_HOME`). Set `CODEX_SOCKET` if your installation uses another existing shared socket. Use the same OS user and Codex home as the interactive CLI. Pocket does not start a competing app-server or migrate your conversations.
 
 ### 2. Configure your Firebase project
 
@@ -85,7 +83,7 @@ This registers the Android package `co.fallsoft.pocket` if needed and writes pri
 
 The same signed APK works with each owner's Firebase project. You do not need to rebuild it, add `google-services.json`, or share credentials with FallSoft.
 
-### 3. Start and expose Pocodex privately
+### 3. Start and expose Pocket privately
 
 ```bash
 npm start
@@ -102,7 +100,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocodex-0.5.0-alpha.5.apk` from [Releases](https://github.com/fallsoftco/pocodex/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocodex-0.5.0-alpha.5.apk`.
+Download `pocket-0.5.0-alpha.5.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.5.0-alpha.5.apk`.
 
 On the workstation, from the checkout:
 
@@ -110,7 +108,7 @@ On the workstation, from the checkout:
 POCKET_PUBLIC_URL=https://YOUR_WORKSTATION.YOUR_TAILNET.ts.net:8447 node scripts/pair-device.mjs
 ```
 
-Enter that HTTPS address and the one-time code in Pocodex, then grant notification permission. Codes expire after 15 minutes and work once. An optional ADB device argument opens the prefilled form; it still requires tapping Connect.
+Enter that HTTPS address and the one-time code in Pocket, then grant notification permission. Codes expire after 15 minutes and work once. An optional ADB device argument opens the prefilled form; it still requires tapping Connect.
 
 In Settings, wait for **Firebase push is ready**, then send a test notification. This checks your own project/device configuration.
 
@@ -124,7 +122,7 @@ Start a new Codex client session so it loads the tool. Ask it when you want a no
 
 ## Run Codex on the phone
 
-Pocodex can also connect to stock Codex CLI running in Termux on the same Android device. This mode needs no Firebase project, Tailscale route, hosted relay, or app-store install. Install the APK and follow the [Android-local setup](docs/ANDROID_LOCAL.md). The short path from a Termux clone is:
+Pocket can also connect to stock Codex CLI running in Termux on the same Android device. This mode needs no Firebase project, Tailscale route, hosted relay, or app-store install. Install the APK and follow the [Android-local setup](docs/ANDROID_LOCAL.md). The short path from a Termux clone is:
 
 ```bash
 ./scripts/install-codex-android.sh
@@ -133,9 +131,9 @@ npm ci
 npm run android-local
 ```
 
-The installer creates a private loopback bridge, a managed Termux service, reboot startup for Termux:Boot, and the `pocket-phone` MCP server. Pocodex keeps workstation and phone profiles side by side.
+The installer creates a private loopback bridge, a managed Termux service, reboot startup for Termux:Boot, and the `pocket-phone` MCP server. Pocket keeps workstation and phone profiles side by side.
 
-Phone control is optional. Enable **Pocodex** in Android Accessibility, then enable **Control this phone** in Pocodex. After those two owner-controlled gates are enabled, all `pocket-phone` tools are preapproved so requested taps, text entry, scrolling, and navigation can proceed without repeated prompts. Password fields are omitted and cannot be filled. Ask naturally, for example: **“Open Instagram, scroll my feed, and tell me which posts are about music.”** Posting, messaging, purchases, deletion, and account or security changes still require a direct instruction for that exact action. Custom-drawn surfaces and some WebViews may require screenshot-and-coordinate control rather than semantic elements.
+Phone control is optional. Enable **Pocket** in Android Accessibility, then enable **Control this phone** in Pocket. After those two owner-controlled gates are enabled, all `pocket-phone` tools are preapproved so requested taps, text entry, scrolling, and navigation can proceed without repeated prompts. Password fields are omitted and cannot be filled. Ask naturally, for example: **“Open Instagram, scroll my feed, and tell me which posts are about music.”** Posting, messaging, purchases, deletion, and account or security changes still require a direct instruction for that exact action. Custom-drawn surfaces and some WebViews may require screenshot-and-coordinate control rather than semantic elements.
 
 ## Everyday use
 
@@ -143,11 +141,11 @@ Search tasks by title or project folder. Use Recent, Working, and Following to n
 
 **New task** selects an existing absolute workstation folder and prompt. Codex inherits the workstation's model, approval settings, and project instructions. Task creation and replies use durable IDs; ambiguous delivery is shown for review instead of automatically duplicating work.
 
-Followed tasks recover missed completion/failure alerts after the Pocodex backend reconnects or restarts, using saved turn IDs to prevent duplicates. The first upgrade establishes a baseline without notifying for old completed work.
+Followed tasks recover missed completion/failure alerts after the Pocket backend reconnects or restarts, using saved turn IDs to prevent duplicates. The first upgrade establishes a baseline without notifying for old completed work.
 
 Open a task and tap its bell to follow it. Replying also follows it. The conversation preserves turn/item order, including compact expandable commands and diffs. Scroll up without losing your place; **Latest** returns to live activity. **Load earlier activity** pages backward. Public reasoning summaries can appear; raw reasoning is excluded.
 
-**Queued** means Pocodex received a reply; **sent** means Codex accepted it, not that the task finished. Native questions and supported command/file approvals retain their exact outstanding request IDs. Unsupported request types must be handled in the terminal. Approval requests are shown when the task uses approval mode; full-permission tasks run commands without approval prompts.
+**Queued** means Pocket received a reply; **sent** means Codex accepted it, not that the task finished. Native questions and supported command/file approvals retain their exact outstanding request IDs. Unsupported request types must be handled in the terminal. Approval requests are shown when the task uses approval mode; full-permission tasks run commands without approval prompts.
 
 Questions, approvals, and errors appear in **Needs you**. Reminders use delays of 5 minutes, then 15 and 30 minutes between repeats, up to three repeats. Swipe away, dismiss, reply, or resolve the request to stop them. **Later · 30m** snoozes. Android may delay these approximate timers; opening a task alone does not dismiss its request.
 
@@ -155,23 +153,23 @@ Questions, approvals, and errors appear in **Needs you**. Reminders use delays o
 
 Each new spoken notification starts with an approximately three-word summary of the input being answered, then reads the response. It uses the turn’s user message instead of the conversation title. Notification tools can supply a natural `spoken_context`; automatic alerts fall back to a short prompt-derived topic.
 
-Speech is generated entirely on the phone and played with Android media controls. **Pause** saves the current audio position; **Resume** continues from there. Controls appear in the playback notification and a compact player inside Pocodex. Music taking audio focus saves and pauses speech until you choose Resume. Brief interruptions pause and resume automatically, while notification chimes duck the voice without stranding the queue. If media is already playing, new speech waits; new notifications also wait behind a manually paused message. Pausing releases the audio focus and stops the playback service; the private queue and current audio chunk remain on the phone. Dismissing the paused notification does not erase them: reopen Pocodex to resume, or use the player's menu to **Clear saved speech**. Disabling Speak messages or disconnecting the phone clears saved speech. Normal process recreation restores the saved queue in a paused state; abrupt process death may replay up to the last two seconds since the last checkpoint.
+Speech is generated entirely on the phone and played with Android media controls. **Pause** saves the current audio position; **Resume** continues from there. Controls appear in the playback notification and a compact player inside Pocket. Music taking audio focus saves and pauses speech until you choose Resume. Brief interruptions pause and resume automatically, while notification chimes duck the voice without stranding the queue. If media is already playing, new speech waits; new notifications also wait behind a manually paused message. Pausing releases the audio focus and stops the playback service; the private queue and current audio chunk remain on the phone. Dismissing the paused notification does not erase them: reopen Pocket to resume, or use the player's menu to **Clear saved speech**. Disabling Speak messages or disconnecting the phone clears saved speech. Normal process recreation restores the saved queue in a paused state; abrupt process death may replay up to the last two seconds since the last checkpoint.
 
 Long messages continue in ordered chunks without a total playback deadline. Completed audio chunks are deleted. Speech uses media volume and also respects silent/vibrate mode, notification mute, Do Not Disturb and headphone disconnection. It does not read historical notification catch-up or repeatedly speak reminders. Nothing is sent to an external speech service. Firebase carries short speech directly; longer text is fetched through the authenticated workstation connection. If that connection is unavailable, the message stays saved with a reconnect explanation; Resume retries loading it.
 
 ## Connection troubleshooting
 
-Pocodex releases the displayed transcript when you leave a task and replaces the previous history page when you load earlier activity. **Back to latest** returns to live work. Reload clears the current display state; Android memory-pressure cleanup releases it too. Pairing, drafts, pending replies, and the original Codex history are preserved.
+Pocket releases the displayed transcript when you leave a task and replaces the previous history page when you load earlier activity. **Back to latest** returns to live work. Reload clears the current display state; Android memory-pressure cleanup releases it too. Pairing, drafts, pending replies, and the original Codex history are preserved.
 
 The workstation’s live display cache has an 8 MiB serialized-entry budget, a 32-thread limit, and a 15-minute idle expiry. It clears on Codex disconnection and replaces stale entries with fresh snapshots. Paginated history loads at most 400 display items and 1 MiB of serialized display items per page, including continuation within a long turn. Large individual text fields are marked as excerpts; original content remains on the workstation.
 
-Pocodex distinguishes **phone → workstation** failures from **workstation → Codex** failures. The connection banner explains which link needs attention and offers **Retry now**. Failed loads offer **Reload conversation**; reconnecting refreshes the open task automatically. These actions reload data without resending replies.
+Pocket distinguishes **phone → workstation** failures from **workstation → Codex** failures. The connection banner explains which link needs attention and offers **Retry now**. Failed loads offer **Reload conversation**; reconnecting refreshes the open task automatically. These actions reload data without resending replies.
 
-Large conversations using Codex’s paginated history load recent turns and bounded item pages. **Load earlier activity** fetches the preceding page. This avoids requesting an entire long conversation in one WebSocket message. If a single response still exceeds the limit, Pocodex reports that specific cause instead of just “Codex disconnected.”
+Large conversations using Codex’s paginated history load recent turns and bounded item pages. **Load earlier activity** fetches the preceding page. This avoids requesting an entire long conversation in one WebSocket message. If a single response still exceeds the limit, Pocket reports that specific cause instead of just “Codex disconnected.”
 
-If Pocodex reports that it cannot resolve the workstation name, check that Tailscale is connected on both devices and that the phone is using Tailscale DNS. In Pocodex settings, **Reconnect now** retries immediately without unpairing.
+If Pocket reports that it cannot resolve the workstation name, check that Tailscale is connected on both devices and that the phone is using Tailscale DNS. In Pocket settings, **Reconnect now** retries immediately without unpairing.
 
-After a successful HTTPS connection, Pocodex remembers the workstation’s verified Tailscale address. If Android later fails to resolve that same `.ts.net` hostname, API calls, the live connection, and attachment loading can use the saved address. The HTTPS hostname and certificate checks stay unchanged. Normal DNS always takes precedence; the fallback requires an earlier successful connection and a working Tailscale route.
+After a successful HTTPS connection, Pocket remembers the workstation’s verified Tailscale address. If Android later fails to resolve that same `.ts.net` hostname, API calls, the live connection, and attachment loading can use the saved address. The HTTPS hostname and certificate checks stay unchanged. Normal DNS always takes precedence; the fallback requires an earlier successful connection and a working Tailscale route.
 
 ## Manage devices and data
 
@@ -199,4 +197,4 @@ Public alpha builds use a stable FallSoft release certificate. They cannot updat
 
 Original code and icon are [MIT licensed](LICENSE). Third-party components retain their own licenses; see [notices](THIRD_PARTY_NOTICES.md). Contributions and reproducible bug reports are welcome; remove private task text and credentials first.
 
-New Pocodex tasks default to full filesystem/network access with command approvals disabled. Change **Full permissions for new tasks** in Settings or on the New task screen; turning it off uses workspace access and approval requests on the workstation (phone-local tasks keep their required full filesystem access). The choice is saved for future tasks, and each task retains its permissions when Pocodex reconnects.
+New Pocket tasks default to full filesystem/network access with command approvals disabled. Change **Full permissions for new tasks** in Settings or on the New task screen; turning it off uses workspace access and approval requests on the workstation (phone-local tasks keep their required full filesystem access). The choice is saved for future tasks, and each task retains its permissions when Pocket reconnects.

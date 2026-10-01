@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Pocodex</string>
-    <string name="automation_service_description">Lets your local Codex inspect and control the screen only while phone control is enabled inside Pocodex.</string>
+    <string name="app_name">Pocket</string>
+    <string name="automation_service_description">Lets your local Codex inspect and control the screen only while phone control is enabled inside Pocket.</string>
 </resources>

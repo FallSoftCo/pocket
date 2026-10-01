@@ -1,6 +1,6 @@
 import {digest,snapshotKey} from './core.mjs';
 export class GitHub {
- constructor(token,repo='FallSoftCo/pocodex'){this.token=token;this.repo=repo;this.root=`/repos/${repo}`;}
+ constructor(token,repo='FallSoftCo/pocket'){this.token=token;this.repo=repo;this.root=`/repos/${repo}`;}
  async request(path,{method='GET',body,responseMeta=false}={}){
   if(!path.startsWith(this.root+'/')&&path!==this.root)throw Error('Repository-scoped API path required');
   const token=typeof this.token==='function'?await this.token():this.token;

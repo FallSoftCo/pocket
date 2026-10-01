@@ -7,7 +7,7 @@ import {EventQueue,eventJobs} from '../maintainer/events.mjs';
 import {reconsider,completedRun,postMerge} from '../maintainer/jobs.mjs';
 import {missedDeliveries,recover} from '../maintainer/recovery.mjs';
 import {failureNotifier,sendFailurePush} from '../maintainer/alerts.mjs';
-const head='a'.repeat(40),base='b'.repeat(40),root='/repos/FallSoftCo/pocodex';
+const head='a'.repeat(40),base='b'.repeat(40),root='/repos/FallSoftCo/pocket';
 
 test('fork CI requires workflow, head, repository and branch even without PR associations',async()=>{
  const gh=new GitHub('unused');const s={number:7,head,headRepoId:55,headRef:'fix',policy:{requiredChecks:['backend','android']}};
@@ -54,7 +54,7 @@ test('post-merge verification dispatches immutable SHA once and alerts on failur
  runs=[{id:9,event:'workflow_dispatch',display_title:'Post-merge '+head,head_branch:'main',status:'completed',conclusion:'failure',run_attempt:1}];
  await postMerge(gh,q,7,alert);assert.equal(alerts.length,1);q.close();
 });
-test('failure push is independent of Pocodex backend and targets only configured devices',async()=>{
+test('failure push is independent of Pocket backend and targets only configured devices',async()=>{
  const {privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});const requests=[];
  await sendFailurePush({credentials:{client_email:'test@example.org',project_id:'synthetic',private_key:privateKey},targets:[{device_id:'phone',token:'synthetic-device-token'}]},
   {key:'failure',title:'Attention',body:'Processing failed'}, {request:async(url,o)=>{requests.push({url,...o});return {ok:true,json:async()=>({access_token:'synthetic-access'})};}});

@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   health:
-    if: github.repository == 'FallSoftCo/pocodex'
+    if: github.repository == 'FallSoftCo/pocket'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:

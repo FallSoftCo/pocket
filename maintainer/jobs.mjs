@@ -34,7 +34,7 @@ export async function completedRun(gh,queue,id,alert){
    if(live.state==='open'&&live.base.ref==='main'&&live.head.sha===r.head_sha&&gh.matchesCI(r,{number:live.number,head:live.head.sha,headRepoId:live.head.repo?.id,headRef:live.head.ref}))queue.enqueue(`pr:${p.number}`);
   }
  }else if(['push','workflow_dispatch'].includes(r.event)&&r.head_branch==='main'&&r.conclusion!=='success'){
-  await alert(`ci:${r.id}:${r.run_attempt}`,'Pocodex main checks failed',`The main-branch check ended with ${r.conclusion}. Open GitHub Actions to inspect run ${r.id}.`);
+  await alert(`ci:${r.id}:${r.run_attempt}`,'Pocket main checks failed',`The main-branch check ended with ${r.conclusion}. Open GitHub Actions to inspect run ${r.id}.`);
  }
 }
 
@@ -45,7 +45,7 @@ export async function postMerge(gh,queue,number,alert){
  const {workflow_runs:runs}=await gh.request(`${gh.root}/actions/workflows/check.yml/runs?event=workflow_dispatch&per_page=100`);
  const run=runs.find(r=>r.event==='workflow_dispatch'&&r.display_title===title&&r.head_branch==='main');
  if(run){
-  if(run.status==='completed'&&run.conclusion!=='success')await alert(`ci:${run.id}:${run.run_attempt}`,'Pocodex post-merge checks failed',`Checks for merged PR #${number} ended with ${run.conclusion}. Open GitHub Actions to inspect run ${run.id}.`);
+  if(run.status==='completed'&&run.conclusion!=='success')await alert(`ci:${run.id}:${run.run_attempt}`,'Pocket post-merge checks failed',`Checks for merged PR #${number} ended with ${run.conclusion}. Open GitHub Actions to inspect run ${run.id}.`);
   return run.status==='completed'?undefined:{retryAt:Date.now()+10*60000};
  }
  const receipt=queue.get(`postmerge:${sha}`);

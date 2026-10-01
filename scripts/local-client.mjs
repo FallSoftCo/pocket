@@ -9,7 +9,7 @@ export async function ownerRequest(path,{method='GET',body}={}){
   if(!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||!['http:','https:'].includes(url.protocol)||url.username||url.password)throw Error('Owner commands require a loopback POCKET_URL. Run them on the workstation.');
   let adminToken;
   try{({adminToken}=JSON.parse(readFileSync(resolve(dataDir,'secrets.json'),'utf8')));}
-  catch{throw Error('Start Pocodex first, and use the same POCKET_DATA directory as the server.');}
+  catch{throw Error('Start Pocket first, and use the same POCKET_DATA directory as the server.');}
   const r=await fetch(new URL(path,url),{method,redirect:'error',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(10000)});
-  const result=await r.json();if(!r.ok)throw Error(result.error||`Pocodex returned ${r.status}`);return result;
+  const result=await r.json();if(!r.ok)throw Error(result.error||`Pocket returned ${r.status}`);return result;
 }

@@ -22,7 +22,7 @@ for(let page=0;page<10&&!app;page++){
 }
 if(!app&&pageToken)throw Error('App listing exceeds setup limit');
 if(!app){
- const op=await request(`projects/${projectId}/androidApps`,'POST',{packageName:'co.fallsoft.pocket',displayName:'Pocodex — Codex companion'});
+ const op=await request(`projects/${projectId}/androidApps`,'POST',{packageName:'co.fallsoft.pocket',displayName:'Pocket — Codex companion'});
  for(let n=0;n<60;n++){
   const result=await request(op.name);
   if(result.error)throw Error(result.error.message);

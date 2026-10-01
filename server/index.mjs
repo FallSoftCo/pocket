@@ -280,7 +280,7 @@ app.get('/api/notifications/:id/attention',(req,res)=>{
 });
 app.get('/api/notifications/:id',(req,res)=>{const n=db.prepare('SELECT * FROM notifications WHERE id=?').get(req.params.id);if(!n)return res.status(404).json({error:'Notification not found.'});res.json({notification:notificationRow(n)});});
 app.get('/api/notifications',(req,res)=>{const after=Math.max(0,Number(req.query.after)||0);res.json({notifications:db.prepare('SELECT * FROM notifications WHERE id>? ORDER BY id DESC LIMIT 100').all(after).reverse().map(notificationRow)});});
-app.post('/api/test-notification',(req,res)=>res.json(notify(null,'Your work, within reach.','Pocodex is connected. Updates from Codex will arrive here, with a direct route back to your task.','test')));
+app.post('/api/test-notification',(req,res)=>res.json(notify(null,'Your work, within reach.','Pocket is connected. Updates from Codex will arrive here, with a direct route back to your task.','test')));
 const mimeFor=n=>({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.pdf':'application/pdf','.mp4':'video/mp4','.txt':'text/plain','.md':'text/plain'})[extname(n).toLowerCase()]||'application/octet-stream';
 function saveAttachment(file,threadId){
   const actual=realpathSync(file), st=statSync(actual);if(!st.isFile()||st.size>12*1024*1024)throw new Error('Attachment must be a regular file under 12 MB.');
@@ -308,4 +308,4 @@ server.on('upgrade',(req,socket,head)=>{
 setInterval(()=>{for(const ws of sockets.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000).unref();
 app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.message);res.status(err.status||400).json({error:err.message,...(err.code?{code:err.code}:{})});});
 const port=Number(process.env.PORT||18880);
-server.listen(port,'127.0.0.1',()=>console.log(`Pocodex listening on 127.0.0.1:${port}`));
+server.listen(port,'127.0.0.1',()=>console.log(`Pocket listening on 127.0.0.1:${port}`));
