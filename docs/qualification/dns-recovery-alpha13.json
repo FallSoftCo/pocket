@@ -22,7 +22,14 @@
     "phoneHostnameLookup": "Stalled and failed",
     "phoneTailscaleDnsSetting": "Enabled; refresh did not repair resolver",
     "phoneDirectTailscaleDnsQuery": "Timed out",
-    "phoneUpgrade": "Pending",
-    "freshPhoneConversation": "Pending"
+    "phoneUpgrade": "Verified compatible version-26 APK transferred through SSH; Android protected Update confirmation is visible and requires a physical tap",
+    "freshPhoneConversation": "Not yet verified; connection label and cached list alone are insufficient",
+    "debugAndReleaseBuild": "Pass",
+    "debugAndReleaseLint": "Pass",
+    "publicSigningIdentity": "Maintained release certificate verified",
+    "sourceCommit": "497c798",
+    "release": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.13",
+    "compatiblePrivateUpdateVariants": 2,
+    "updateAnnouncement": "Accepted; one device announced"
   }
 }
