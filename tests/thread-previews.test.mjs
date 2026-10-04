@@ -13,3 +13,15 @@ test('preview hydration is bounded and does not resume sessions',async()=>{
  assert.equal(max,3);waiting.splice(0).forEach(r=>r());await new Promise(r=>setImmediate(r));waiting.splice(0).forEach(r=>r());await new Promise(r=>setImmediate(r));
  assert.equal(changed.length,5);assert.equal(p.get({id:'0',updatedAt:1}).preview,'latest 0');assert.equal(max,3);
 });
+test('live response deltas update cards and late hydration cannot overwrite them',async()=>{
+ let resolve;const changed=[];
+ const p=new ThreadPreviews({read:()=>new Promise(r=>resolve=r)},(id,v)=>changed.push({id,...v}));
+ p.get({id:'task',updatedAt:1});
+ p.observe({method:'item/agentMessage/delta',params:{threadId:'task',itemId:'reply',delta:'Checking '}});
+ p.observe({method:'item/agentMessage/delta',params:{threadId:'task',itemId:'reply',delta:'the build.'}});
+ assert.equal(changed.at(-1).preview,'Checking the build.');assert.equal(changed.at(-1).previewRole,'assistant');
+ resolve({turns:[{items:[{type:'userMessage',content:'old request'}]}]});await new Promise(r=>setImmediate(r));
+ assert.equal(p.get({id:'task',updatedAt:1}).preview,'Checking the build.');
+ p.observe({method:'item/completed',params:{threadId:'task',item:{id:'reply',type:'agentMessage',text:'Build passed.'}}});
+ assert.equal(changed.at(-1).preview,'Build passed.');
+});

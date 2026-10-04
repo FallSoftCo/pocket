@@ -10,10 +10,10 @@ test('a complete summary beyond 28 words and 180 characters reaches the phone in
 });
 test('long fallback excerpts finish a sentence instead of pretending a clipped clause is complete',()=>{
  const input='The update is installed. '+('We still need to check the rest of this very long detail ').repeat(15)+'.';
- assert.equal(speechText(input),'The update is installed. Open Pocket for the full update.');
- assert.equal(speechText('word '.repeat(200)),'Open Pocket for the full update.');
+ assert.equal(speechText(input),'The update is installed. Open NextComp for the full update.');
+ assert.equal(speechText('word '.repeat(200)),'Open NextComp for the full update.');
  const joined=spokenSummary('Build ready',input);
- assert.equal(joined,'Build ready. The update is installed. Open Pocket for the full update.');
+ assert.equal(joined,'Build ready. The update is installed. Open NextComp for the full update.');
 });
 test('UTF-8 transport budget preserves complete speech rather than clipping a multibyte sentence',()=>{
  const input='完了しました。 '+('詳しい報告内容を確認してください').repeat(30)+'。';

@@ -1,4 +1,4 @@
-name: Pocket Maintainer
+name: NextComp Maintainer
 on:
   workflow_dispatch:
     inputs:

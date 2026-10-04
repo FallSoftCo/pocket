@@ -16,7 +16,7 @@ try{
  const alreadyToday=runs.some(r=>String(r.id)!==process.env.GITHUB_RUN_ID&&r.status==='completed'&&r.conclusion==='failure'&&r.created_at.startsWith(today));
  if(previous?.conclusion!=='failure'||!alreadyToday){
   await sendFailurePush({credentials:JSON.parse(process.env.MAINTAINER_FIREBASE_CREDENTIALS),targets:JSON.parse(process.env.MAINTAINER_ALERT_TARGETS)},
-   {key:'host-health',title:'Pocket maintainer is unavailable',body:'The independent health check could not reach a healthy worker. Automatic PR handling may be delayed. Check the Hetzner service.'});
+   {key:'host-health',title:'NextComp maintainer is unavailable',body:'The independent health check could not reach a healthy worker. Automatic PR handling may be delayed. Check the Hetzner service.'});
  }
  throw Error('Maintainer health check failed');
 }

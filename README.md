@@ -1,6 +1,8 @@
-<p align="center"><img src="branding/pocket-icon.png" width="112" alt="Pocket icon"></p>
+<p align="center"><img src="branding/nextcomp-icon.svg" width="112" alt="NextComp icon"></p>
 
-# Pocket
+# NextComp
+
+Formerly Pocket; existing installs, pairings, package IDs and deep links remain compatible.
 
 **Your Codex workstation, within reach.** A self-hosted Android companion for stock Codex CLI by [FallSoft](https://github.com/fallsoftco).
 
@@ -205,7 +207,7 @@ New Pocket tasks default to full filesystem/network access with command approval
 
 Tap **Talk to Codex** on the session list for the persistent coordinator, or tap the microphone inside a conversation to focus voice on that existing session. Speak naturally; no command vocabulary is required. The coordinator can inspect and direct real sessions, create tasks, steer or queue follow-ups, handle pending questions, and change session settings. Ask to return to the coordinator to clear session focus.
 
-The coordinator is pinned in a mint-accented section above regular sessions. The row opens chat; its microphone or the main FAB starts recording immediately. One stop tap automatically sends the turn. The chat includes a message composer, microphone FAB and on-screen speech-volume slider. Session cards show labeled last-activity times and dates for older sessions. Volume down starts recording; pressing it again sends the completed turn. Volume up pauses/resumes or replays a response. Starting another recording interrupts speech. Grant microphone access on first use. Enable Pocket's Accessibility service for volume controls outside the app; foreground controls also work without that service.
+The bottom Talk control opens the coordinator and starts recording immediately. Each session card has direct Talk and Keyboard entry. One stop tap automatically sends the turn. Chat uses large bottom microphone, keyboard, back and playback controls with an on-screen speech-volume slider. Session cards show labeled last-activity times and dates for older sessions. Volume down starts recording; pressing it again sends the completed turn. Volume up pauses/resumes or replays a response. Starting another recording interrupts speech. Grant microphone access on first use. Enable NextComp's Accessibility service for volume controls outside the app; foreground controls also work without that service.
 
 Voice uses stock Codex's native WebRTC transport with the host's ChatGPT authentication. No separate audio API key is required. A dedicated audio-only connection transcribes the completed recording; the persistent Codex controller handles the full transcript and real session tools. Speech is buffered before playback so pause and replay preserve the entire response. Recordings are capped at 120 seconds, silence is discarded, and saved turn IDs prevent automatic replay of uncertain actions. Native voice uses account usage; task-model usage is separate. Experimental app-server voice availability depends on the CLI and account.
 

@@ -37,7 +37,7 @@ object PocketSpeech {
         }catch(_:Exception){SpeechQueue()}
         if(Pocket.token.isBlank()||PocketAudio.mode!="summaries")clear() else {publish();if(count>0)showPaused()}
     }
-    internal fun publish(){count=queue.messages.size;paused=queue.paused;title=queue.current?.title.orEmpty().ifBlank{"Pocket update"};status=queue.reason}
+    internal fun publish(){count=queue.messages.size;paused=queue.paused;title=queue.current?.title.orEmpty().ifBlank{"NextComp update"};status=queue.reason}
     internal fun save(durable:Boolean=false){
         val messages=JSONArray();queue.messages.forEach{messages.put(JSONObject().put("id",it.id).put("title",it.title).put("kind",it.kind).put("text",it.text).put("needsFetch",it.needsFetch))}
         val edit=storage.edit().putString("queue",JSONObject().put("messages",messages).put("chunk",queue.chunkIndex).put("position",queue.positionMs).toString())
@@ -84,7 +84,7 @@ object PocketSpeech {
         val label=if(queue.paused)"Resume" else "Pause"
         val detail=if(queue.paused)queue.reason+" · Your place is saved" else "${queue.messages.size} message${if(queue.messages.size==1)"" else "s"} · Pause any time"
         val builder=Notification.Builder(c,"spoken-playback").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(if(queue.paused)"Pocket speech paused" else "Listening to Pocket").setContentText(detail)
+            .setContentTitle(if(queue.paused)"NextComp speech paused" else "Listening to NextComp").setContentText(detail)
             .setContentIntent(open).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PRIVATE).setOngoing(!queue.paused)
             .addAction(Notification.Action.Builder(if(queue.paused)android.R.drawable.ic_media_play else android.R.drawable.ic_media_pause,label,intent).build())
         if(session!=null)builder.setStyle(Notification.MediaStyle().setMediaSession(session.sessionToken).setShowActionsInCompactView(0))
@@ -124,13 +124,13 @@ class PocketSpeechService:Service(){
     override fun onCreate(){
         super.onCreate();PocketSpeech.service=this
         ContextCompat.registerReceiver(this,noisy,IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),ContextCompat.RECEIVER_NOT_EXPORTED)
-        session=MediaSession(this,"Pocket speech").apply{
+        session=MediaSession(this,"NextComp speech").apply{
             setCallback(object:MediaSession.Callback(){
                 override fun onPause(){pause("Paused by you")}
                 override fun onStop(){pause("Saved for later")}
                 override fun onPlay(){queue.resume();PocketSpeech.save();next()}
             },handler)
-            setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,"Pocket spoken updates").putString(MediaMetadata.METADATA_KEY_ARTIST,"Pocket").build())
+            setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,"NextComp spoken updates").putString(MediaMetadata.METADATA_KEY_ARTIST,"NextComp").build())
             isActive=true
         }
         try{

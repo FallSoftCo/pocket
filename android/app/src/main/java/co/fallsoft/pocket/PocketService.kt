@@ -35,7 +35,7 @@ object PocketNotifications {
         val b=NotificationCompat.Builder(c,PocketAudio.channel(c,n.s("kind"))).setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(n.s("title")).setContentText(n.s("body"))
             .setStyle(NotificationCompat.BigTextStyle().bigText(n.s("body")))
-            .setColor(0xffb3f5cb.toInt()).setAutoCancel(!attention).setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setColor(0xffffc600.toInt()).setAutoCancel(!attention).setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(open(c,thread,id,local))
         if(PocketSpeech.count>0&&!PocketSpeech.paused)b.setSilent(true)
         if(reminder)b.setSubText("Still needs your attention")

@@ -41,7 +41,7 @@ object PocketVoice {
     var targetThread by mutableStateOf<String?>(null);internal set
     fun start(c:Context,threadId:String?=null,recordImmediately:Boolean=true){
         if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){problem="Allow microphone access to use voice.";return}
-        targetThread=threadId;problem="";try{ContextCompat.startForegroundService(c,Intent(c,PocketVoiceService::class.java).setAction("start").putExtra("recordImmediately",recordImmediately))}catch(e:RuntimeException){problem="Open Pocket to start voice mode."}
+        targetThread=threadId;problem="";try{ContextCompat.startForegroundService(c,Intent(c,PocketVoiceService::class.java).setAction("start").putExtra("recordImmediately",recordImmediately))}catch(e:RuntimeException){problem="Open NextComp to start voice mode."}
     }
     fun stop(){service?.leave()}
     fun record(){service?.toggleRecord()}
@@ -96,9 +96,9 @@ class PocketVoiceService:Service(){
         manager.createNotificationChannel(NotificationChannel("voice-mode","Voice mode",NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
         val open=PendingIntent.getActivity(this,1120,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val stop=PendingIntent.getService(this,1121,Intent(this,PocketVoiceService::class.java).setAction("stop"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val n=NotificationCompat.Builder(this,"voice-mode").setSmallIcon(R.drawable.ic_notification).setContentTitle("Pocket voice is on").setContentText("Volume down: talk · Volume up: pause or replay").setContentIntent(open).setOngoing(true).setCategory(NotificationCompat.CATEGORY_SERVICE).addAction(0,"End voice",stop).build()
+        val n=NotificationCompat.Builder(this,"voice-mode").setSmallIcon(R.drawable.ic_notification).setContentTitle("NextComp voice is on").setContentText("Volume down: talk · Volume up: pause or replay").setContentIntent(open).setOngoing(true).setCategory(NotificationCompat.CATEGORY_SERVICE).addAction(0,"End voice",stop).build()
         if(Build.VERSION.SDK_INT>=29)startForeground(1120,n,ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(1120,n)
-        lock=getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"Pocket:Voice").apply{setReferenceCounted(false)}
+        lock=getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"NextComp:Voice").apply{setReferenceCounted(false)}
     }
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{
         if(intent?.action=="stop"){leave();return START_NOT_STICKY}
@@ -216,7 +216,7 @@ class PocketVoiceService:Service(){
     private fun applyActions(actions:List<JSONObject>){for(a in actions)when(a.s("type")){
         "select"->{PocketVoice.targetThread=a.s("threadId").takeIf{it.isNotBlank()};if(Pocket.local==local){if(PocketVoice.targetThread==null)Pocket.closeTask()else Pocket.open(PocketVoice.targetThread!!) }}
         "permissions"->{Pocket.updateFullPermissions(a.optBoolean("full"))}
-        "profile"->{stopNativeRemote();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeHeartbeat?.cancel();val next=a.optBoolean("local");if(Pocket.savedToken(next).isBlank()){PocketVoice.problem="That device is not paired. Pair it in Pocket first.";beep(false)}else{Pocket.activate(next);local=next;coordinatorReady=false;captureProfile();loadHistory();boot()}}
+        "profile"->{stopNativeRemote();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeHeartbeat?.cancel();val next=a.optBoolean("local");if(Pocket.savedToken(next).isBlank()){PocketVoice.problem="That device is not paired. Pair it in NextComp first.";beep(false)}else{Pocket.activate(next);local=next;coordinatorReady=false;captureProfile();loadHistory();boot()}}
         "exit"->leave()
     }}
     fun retry(){if(starting||recorder!=null)return;PocketVoice.problem="";work?.cancel();if(turnId!=null){nativeId=null;deliver()}else boot()}

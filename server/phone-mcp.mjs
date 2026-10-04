@@ -10,7 +10,7 @@ const base=process.env.POCKET_AUTOMATION_URL||'http://127.0.0.1:18881';
 async function call(path,body){
   let response;
   try{response=await fetch(base+path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${secret}`,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});}
-  catch{throw Error('Phone control is unavailable because Pocket’s Android Accessibility service is not connected. Open Pocket Settings, choose Control this phone, enable Pocket in Android Accessibility, and retry.');}
+  catch{throw Error('Phone control is unavailable because NextComp’s Android Accessibility service is not connected. Open NextComp Settings, choose Control this phone, enable NextComp in Android Accessibility, and retry.');}
   if(!response.ok)throw Error((await response.text())||`Phone control failed (${response.status})`);return response;
 }
 const text=value=>({content:[{type:'text',text:typeof value==='string'?value:JSON.stringify(value)}]});

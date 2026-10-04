@@ -33,7 +33,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   queue.set('recovery-health',{at:Date.now(),ok:true});
  }catch(e){
   queue.set('recovery-health',{at:Date.now(),ok:false});
-  await failureNotifier(config,queue)('webhook-recovery','Pocket webhook recovery failed','The missed-delivery audit could not finish. Automatic recovery of missed events is delayed. Check the maintainer recovery service log.');throw e;
+  await failureNotifier(config,queue)('webhook-recovery','NextComp webhook recovery failed','The missed-delivery audit could not finish. Automatic recovery of missed events is delayed. Check the maintainer recovery service log.');throw e;
  }
  finally{queue.close();}
 }

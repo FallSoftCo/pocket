@@ -23,7 +23,7 @@ export async function act(gh,input){
  const existing=checks.check_runs.find(c=>c.app?.slug==='github-actions'&&c.external_id===s.key);
  const conclusion=decision.action==='merge'?'success':'action_required';
  if(!existing||existing.conclusion!==conclusion){
-  const result={name:'Pocket review',head_sha:s.head,status:'completed',conclusion,external_id:s.key,output:{title:decision.action==='merge'?'Approved by Pocket Maintainer':'Pocket Maintainer: '+decision.action,summary:body}};
+  const result={name:'Pocket review',head_sha:s.head,status:'completed',conclusion,external_id:s.key,output:{title:decision.action==='merge'?'Approved by NextComp Maintainer':'NextComp Maintainer: '+decision.action,summary:body}};
   await gh.request(existing?`${gh.root}/check-runs/${existing.id}`:`${gh.root}/check-runs`,{method:existing?'PATCH':'POST',body:result});
  }
  if(!prior){

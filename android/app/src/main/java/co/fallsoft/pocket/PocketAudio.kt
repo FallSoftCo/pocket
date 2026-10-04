@@ -94,7 +94,7 @@ object PocketAudio {
     fun preview(raw:String){
         val event=kind(raw)
         PocketNotifications.show(Pocket.context,org.json.JSONObject().put("id",900000000L+labels.keys.indexOf(event)).put("kind",event).put("title",phrases[event]).put("body","Sound preview · ${labels[event]}"))
-        if(mode=="summaries")PocketSpeech.request(Pocket.context,org.json.JSONObject().put("id",System.currentTimeMillis()).put("kind",event).put("spoken_summary",when(event){"complete"->"Pocket: all tests passed. The release is ready.";"question"->"Website: should I publish the preview or keep it private?";else->"Build failed: signing credentials are missing."}))
+        if(mode=="summaries")PocketSpeech.request(Pocket.context,org.json.JSONObject().put("id",System.currentTimeMillis()).put("kind",event).put("spoken_summary",when(event){"complete"->"NextComp: all tests passed. The release is ready.";"question"->"Website: should I publish the preview or keep it private?";else->"Build failed: signing credentials are missing."}))
     }
     private fun ensureTone(c:Context,event:String){
         val dest=file(c,"tones",event);if(dest.length()>44)return

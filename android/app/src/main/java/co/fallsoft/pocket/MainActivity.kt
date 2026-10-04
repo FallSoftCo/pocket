@@ -29,6 +29,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -49,14 +50,18 @@ import java.util.Date
 import java.util.Locale
 import androidx.core.content.FileProvider
 
-val Ink=Color(0xff0e1516);val Panel=Color(0xff192324);val Mint=Color(0xffb3f5cb);val Paper=Color(0xffedf2ef);val Muted=Color(0xff92a6a0);val Line=Color(0xff2b3836);val Coral=Color(0xffefb399)
+// Neutral grays and the exact RGB accents in Paul Rand's official NeXT logo SVG.
+val Ink=Color(0xff000000);val Panel=Color(0xff181818);val Mint=Color(0xffffc600);val Paper=Color(0xffffffff);val Muted=Color(0xffaaaaaa);val Line=Color(0xff383838);val Coral=Color(0xffff675d)
+val AppFont=FontFamily(androidx.compose.ui.text.font.Font(R.font.inter_regular,FontWeight.Normal),androidx.compose.ui.text.font.Font(R.font.inter_medium,FontWeight.Medium),androidx.compose.ui.text.font.Font(R.font.inter_semibold,FontWeight.SemiBold),androidx.compose.ui.text.font.Font(R.font.inter_bold,FontWeight.Bold))
+val NextGreen=Color(0xff00a85d);val NextCerise=Color(0xffeb4d97)
+
 class MainActivity:ComponentActivity(){
     private var initialServer by mutableStateOf("");private var initialCode by mutableStateOf("")
     private val permissions=registerForActivityResult(ActivityResultContracts.RequestPermission()){}
     override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);enableEdgeToEdge(statusBarStyle=SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),navigationBarStyle=SystemBarStyle.dark(android.graphics.Color.TRANSPARENT));readIntent(intent)
         if(Build.VERSION.SDK_INT>=33)permissions.launch(Manifest.permission.POST_NOTIFICATIONS)
         if(Pocket.token.isNotBlank()){Pocket.refresh()}
-        setContent{MaterialTheme(colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,background=Ink,surface=Panel,onSurface=Paper,onBackground=Paper,outline=Line,secondary=Coral)){
+        setContent{MaterialTheme(shapes=Shapes(extraSmall=RoundedCornerShape(2.dp),small=RoundedCornerShape(4.dp),medium=RoundedCornerShape(6.dp),large=RoundedCornerShape(8.dp),extraLarge=RoundedCornerShape(10.dp)),typography=Typography(titleLarge=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=20.sp,fontWeight=FontWeight.Medium),titleMedium=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=16.sp,fontWeight=FontWeight.Medium),bodyLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,lineHeight=22.sp,fontFamily=AppFont),bodyMedium=androidx.compose.ui.text.TextStyle(fontSize=14.sp,lineHeight=20.sp,fontFamily=AppFont),labelLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont)),colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,background=Ink,surface=Panel,onSurface=Paper,onBackground=Paper,outline=Muted,secondary=Coral,onSecondary=Ink,surfaceVariant=Panel,onSurfaceVariant=Paper,surfaceContainer=Panel,surfaceContainerHigh=Panel,surfaceContainerHighest=Panel,surfaceContainerLow=Panel,surfaceContainerLowest=Ink,secondaryContainer=Panel,onSecondaryContainer=Paper,primaryContainer=Panel,onPrimaryContainer=Paper,tertiary=NextCerise,onTertiary=Ink,tertiaryContainer=Panel,onTertiaryContainer=Paper)){
             Surface(Modifier.fillMaxSize(),color=Ink){Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
                 WeeklyLimitBar()
                 Box(Modifier.weight(1f)){if(Pocket.token.isBlank()||Pocket.pairingMode)PairScreen(initialServer.ifBlank{if(Pocket.pairingMode)"http://127.0.0.1:18880" else ""},initialCode)else PocketApp()}
@@ -82,16 +87,16 @@ class MainActivity:ComponentActivity(){
     override fun onResume(){super.onResume();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail()}}
 }
 
-@Composable fun Mark(size:Int=44){Box(Modifier.size(size.dp).clip(RoundedCornerShape((size/3).dp)).background(Color(0xff142323)),contentAlignment=Alignment.Center){Icon(painterResource(R.drawable.ic_pocket_mark),"Pocket",tint=Color.Unspecified,modifier=Modifier.size((size*.82f).dp))}}
+@Composable fun Mark(size:Int=44){Box(Modifier.size(size.dp).clip(RoundedCornerShape(4.dp)).background(Ink),contentAlignment=Alignment.Center){Icon(painterResource(R.drawable.ic_pocket_mark),"NextComp",tint=Color.Unspecified,modifier=Modifier.size((size*.82f).dp))}}
 @Composable fun Label(text:String,color:Color=Muted){Text(text.uppercase(),color=color,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.8.sp)}
-@Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){Text(Pocket.error,color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){Text("Reload conversation",color=Mint)}}}}
+@Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){Text(Pocket.error,color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){Text("Reload conversation",color=Mint)}}}}
 @Composable fun ConnectionNotice(){
     if(Pocket.connected&&Pocket.codexOnline)return
     val place=if(Pocket.local)"this phone" else "your workstation"
     Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
         Column(Modifier.padding(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
             Text(if(Pocket.connected)"Waiting for Codex on $place" else "Reconnecting to $place",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
-            Text(if(Pocket.connected)Pocket.codexConnectionMessage.ifBlank{"Pocket reached ${Pocket.host}, but Codex is not responding there. Retrying automatically."} else Pocket.connectionError.ifBlank{if(Pocket.local)"Pocket is trying to reach Codex through this phone’s private loopback connection." else "Pocket is trying to reach ${Pocket.host}. Check that the workstation is awake and Tailscale is connected on both devices."},color=Muted,fontSize=12.sp,lineHeight=17.sp)
+            Text(if(Pocket.connected)Pocket.codexConnectionMessage.ifBlank{"NextComp reached ${Pocket.host}, but Codex is not responding there. Retrying automatically."} else Pocket.connectionError.ifBlank{if(Pocket.local)"NextComp is trying to reach Codex through this phone’s private loopback connection." else "NextComp is trying to reach ${Pocket.host}. Check that the workstation is awake and Tailscale is connected on both devices."},color=Muted,fontSize=12.sp,lineHeight=17.sp)
             TextButton({Pocket.retryConnection()},contentPadding=PaddingValues(0.dp)){Text("Retry now",color=Mint)}
         }
     }
@@ -102,11 +107,11 @@ class MainActivity:ComponentActivity(){
         Spacer(Modifier.height(34.dp));Mark(70);Spacer(Modifier.height(18.dp));Label("CODEX, WITH YOU",Mint)
         Text("Good work.\nWithin reach.",fontSize=46.sp,lineHeight=49.sp,fontWeight=FontWeight.Medium,letterSpacing=(-1.8).sp)
         Text("Your tasks, updates and next ideas.\nConnected to Codex here or on your workstation.",color=Muted,fontSize=17.sp,lineHeight=25.sp)
-        Spacer(Modifier.height(14.dp));OutlinedTextField(address,{address=it},label={Text("Pocket server address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp))
-        OutlinedTextField(pin,{pin=it},label={Text("One-time pairing code")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp))
-        ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(18.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{Text("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));Icon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
+        Spacer(Modifier.height(14.dp));OutlinedTextField(address,{address=it},label={Text("NextComp server address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
+        OutlinedTextField(pin,{pin=it},label={Text("One-time pairing code")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
+        ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(6.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{Text("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));Icon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
         if(Pocket.token.isNotBlank())TextButton({Pocket.pairingMode=false},modifier=Modifier.fillMaxWidth()){Text("Cancel",color=Muted)}
-        Text("Self-hosted. Private by design.\nYour Codex stays exactly where it is.",color=Muted,fontSize=12.sp,lineHeight=19.sp)
+
     }
 }
 
@@ -121,7 +126,7 @@ class MainActivity:ComponentActivity(){
         if(Pocket.newTask)NewTaskScreen()
         else if(Pocket.selected!=null)key(Pocket.selected){ConversationScreen()}
         else{
-            Box(Modifier.weight(1f)){when(Pocket.tab){0->WorkScreen();1->UpdatesScreen();else->SettingsScreen()};if(Pocket.tab==0)VoiceLaunchButton(Modifier.align(Alignment.BottomEnd).padding(20.dp))}
+            Box(Modifier.weight(1f)){when(Pocket.tab){0->WorkScreen();1->UpdatesScreen();else->SettingsScreen()}}
             Row(Modifier.fillMaxWidth().background(Ink).border(1.dp,Line).padding(vertical=12.dp),horizontalArrangement=Arrangement.SpaceEvenly){
                 listOf(Triple("Work",Icons.Rounded.Layers,0),Triple("Updates",Icons.Rounded.NotificationsNone,1),Triple("Settings",Icons.Rounded.Tune,2)).forEach{(title,icon,index)->
                     Column(Modifier.width(88.dp).clip(RoundedCornerShape(18.dp)).clickable{Pocket.tab=index;Pocket.refresh()}.padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
@@ -137,9 +142,9 @@ class MainActivity:ComponentActivity(){
     val c=LocalContext.current
     var enabled by remember{mutableStateOf(PocketAutomation.systemEnabled(c)||PocketAutomation.connected)}
     LaunchedEffect(Pocket.local){while(true){enabled=PocketAutomation.systemEnabled(c)||PocketAutomation.connected;delay(1500)}}
-    if(!enabled)Surface(color=Color(0xff35312a),modifier=Modifier.fillMaxWidth()){
+    if(!enabled)Surface(color=Coral.copy(alpha=.12f),modifier=Modifier.fillMaxWidth()){
         Row(Modifier.padding(horizontal=18.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
-            Column(Modifier.weight(1f)){Text("Phone control needs Android access",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold);Text("An update turned off Pocket’s Accessibility service.",color=Muted,fontSize=11.sp)}
+            Column(Modifier.weight(1f)){Text("Phone control needs Android access",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold);Text("An update turned off NextComp’s Accessibility service.",color=Muted,fontSize=11.sp)}
             TextButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))}){Text("Restore",color=Mint)}
         }
     }
@@ -170,20 +175,37 @@ class MainActivity:ComponentActivity(){
         FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={Text("This phone")},leadingIcon={Icon(Icons.Rounded.PhoneAndroid,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun WorkScreen(){
+    LaunchedEffect(Pocket.local,Pocket.token){while(true){delay(5000);if(Pocket.connected)Pocket.refresh()}}
     var filter by remember{mutableIntStateOf(if(Pocket.showArchived)3 else 0)};var query by remember{mutableStateOf("")}
-    val shown=Pocket.tasks.filter{(filter!=1||it.status=="active")&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true)||it.preview.contains(query,true))}
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(top=20.dp,bottom=120.dp)){
-        item{Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Mark(30);Text("Pocket",fontSize=22.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.padding(start=9.dp).weight(1f));ConnectionPill()}}
-        item{ProfileSwitcher()}
-        item{Row(Modifier.fillMaxWidth().padding(top=14.dp,bottom=6.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Your sessions",fontSize=27.sp,fontWeight=FontWeight.Medium);Text(Pocket.host,color=Muted,fontSize=12.sp)};FilledTonalButton({Pocket.composeTask()},shape=RoundedCornerShape(14.dp)){Icon(Icons.Rounded.Add,null,Modifier.size(18.dp));Spacer(Modifier.width(5.dp));Text("New task")}}}
-        item{OutlinedTextField(query,{query=it},placeholder={Text("Find a session or project",fontSize=13.sp)},leadingIcon={Icon(Icons.Rounded.Search,null,tint=Muted)},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=Line,focusedBorderColor=Mint))}
-        item{Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived").forEachIndexed{i,s->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={Text(s,fontSize=12.sp)},shape=CircleShape,colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))}};ErrorBanner()}
-        item(key="pinned-coordinator"){Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Label("COORDINATOR",Mint);CoordinatorCard();HorizontalDivider(modifier=Modifier.padding(top=8.dp),color=Line)}}
+    var toolsOpen by remember{mutableStateOf(false)}
+    val shown=Pocket.tasks.sortedByDescending{if(it.updated<100000000000L)it.updated*1000 else it.updated}.filter{(filter!=1||it.status=="active")&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true)||it.preview.contains(query,true))}
+    Column(Modifier.fillMaxSize()){
+    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp),reverseLayout=true,verticalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(top=12.dp,bottom=12.dp)){
+
+        item{ErrorBanner()}
+
         val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
         if(attention.isNotEmpty()){item{Label("NEEDS YOU · ${attention.size}",Coral)};items(attention,key={"attention-${it.optLong("id")}"}){AttentionCard(it)}}
         if(shown.isEmpty())item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
         items(shown,key={it.id}){TaskCard(it)}
+    }
+    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
+        VoiceLaunchButton(modifier=Modifier.weight(1f),bar=true)
+        ChatActionButton("Find / New",Icons.Rounded.Search,Modifier.weight(1f),{toolsOpen=true})
+    }
+    }
+    if(toolsOpen)ModalBottomSheet(onDismissRequest={toolsOpen=false},containerColor=Panel){
+        Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=16.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+            OutlinedTextField(query,{query=it},placeholder={Text("Find sessions")},singleLine=true,modifier=Modifier.fillMaxWidth())
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={Text(title)})}}
+            ProfileSwitcher()
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
+                Button({toolsOpen=false;Pocket.composeTask()},modifier=Modifier.weight(1f).height(56.dp)){Text("New task")}
+                FilledTonalButton({toolsOpen=false},modifier=Modifier.weight(1f).height(56.dp)){Text("Show sessions")}
+            }
+        }
     }
 }
 
@@ -194,18 +216,39 @@ fun lastActivity(time:Long):String{
     val millis=if(time<100000000000L)time*1000 else time
     return if(System.currentTimeMillis()-millis<7*86400000L)relative(time) else java.text.SimpleDateFormat("MMM d, yyyy",java.util.Locale.getDefault()).format(java.util.Date(millis))
 }
-@Composable fun TaskCard(t:Task){val active=t.status=="active";var rename by remember(t.id){mutableStateOf(false)};var name by remember(t.id){mutableStateOf(t.title)}
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Panel).clickable(enabled=!t.archived){Pocket.open(t.id)}.padding(19.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Rounded.FolderOpen,null,tint=Muted,modifier=Modifier.size(14.dp));Text(project(t.cwd),color=Muted,fontSize=11.sp,modifier=Modifier.padding(start=6.dp).weight(1f),maxLines=1);Text("Last active · "+lastActivity(t.updated),color=Muted,fontSize=11.sp);IconButton({name=t.title;rename=true},modifier=Modifier.size(32.dp)){Icon(Icons.Rounded.Edit,"Rename conversation",tint=Muted,modifier=Modifier.size(17.dp))}}
-        Text(t.title,fontSize=18.sp,lineHeight=24.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis)
-        if(t.preview.isNotBlank()){Column(verticalArrangement=Arrangement.spacedBy(4.dp)){Text(when(t.previewRole){"user"->"YOU";"assistant"->"CODEX";else->"CONTEXT"},color=Mint,fontSize=10.sp);Text(t.preview,color=Muted,fontSize=13.sp,lineHeight=19.sp,maxLines=3,overflow=TextOverflow.Ellipsis)}}
-        Row(verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(6.dp).background(if(active)Mint else Muted.copy(alpha=.5f),CircleShape));Text(if(t.archived)"Archived" else if(active)"Working" else "Ready to continue",color=if(active)Mint else Muted,fontSize=11.sp,modifier=Modifier.padding(start=7.dp).weight(1f));if(t.archived)TextButton({Pocket.restoreTask(t.id)}){Text("Restore",fontSize=12.sp)};if(t.watched)Icon(Icons.Rounded.NotificationsActive,"Following",tint=Mint,modifier=Modifier.size(15.dp));Spacer(Modifier.width(8.dp));Icon(Icons.AutoMirrored.Rounded.ArrowForward,null,tint=Muted,modifier=Modifier.size(17.dp))}
+fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
+    val millis=if(time<100000000000L)time*1000 else time
+    val days=((now-millis).coerceAtLeast(0)/86400000.0)
+    val p=if(days<=1)days*0.35 else 0.35+0.65*(kotlin.math.ln(days)/kotlin.math.ln(90.0)).coerceIn(0.0,1.0)
+    return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
+}
+@Composable fun TaskCard(t:Task){val active=t.status=="active";val ageColor=sessionAgeColor(t.updated);var rename by remember(t.id){mutableStateOf(false)};var name by remember(t.id){mutableStateOf(t.title)}
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(6.dp)).background(Panel).clickable(enabled=!t.archived){Pocket.open(t.id)}){
+    Box(Modifier.width(10.dp).fillMaxHeight().background(ageColor))
+    Column(Modifier.weight(1f).padding(start=14.dp,end=8.dp,top=8.dp,bottom=12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Text(t.title,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            IconButton({name=t.title;rename=true},modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.Edit,"Rename conversation",tint=Muted,modifier=Modifier.size(18.dp))}
+        }
+        if(t.preview.isNotBlank())Text((when(t.previewRole){"user"->"You: ";"assistant"->"Codex: ";else->""})+t.preview,color=Paper,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(end=8.dp))
+        if(!t.archived)Row(Modifier.fillMaxWidth().padding(end=8.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=t.id,bar=true)
+            ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{Pocket.open(t.id,keyboard=true)})
+        }
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Text("Last active · "+lastActivity(t.updated),color=Ink,fontSize=11.sp,fontWeight=FontWeight.Medium,modifier=Modifier.clip(RoundedCornerShape(3.dp)).background(ageColor).padding(horizontal=8.dp,vertical=4.dp))
+            Spacer(Modifier.weight(1f))
+            if(active)Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){CircularProgressIndicator(Modifier.size(12.dp),color=Mint,strokeWidth=1.5.dp);Text("Working",color=Mint,fontSize=12.sp,fontWeight=FontWeight.Medium)}
+            if(t.watched)Icon(Icons.Rounded.NotificationsActive,"Following",tint=Mint,modifier=Modifier.padding(start=8.dp).size(16.dp))
+            if(t.archived)TextButton({Pocket.restoreTask(t.id)},colors=ButtonDefaults.textButtonColors(contentColor=Mint)){Text("Restore")}
+        }
+    }
     }
     if(rename)AlertDialog(onDismissRequest={rename=false},title={Text("Rename conversation")},text={OutlinedTextField(name,{name=it.take(120)},singleLine=true,label={Text("Name")})},confirmButton={TextButton({Pocket.renameTask(t.id,name.trim()){rename=false}},enabled=name.trim().isNotEmpty()){Text("Save")}},dismissButton={TextButton({rename=false}){Text("Cancel")}})
 }
 @Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){Icon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));Text(title,fontSize=19.sp);Text(body,color=Muted,fontSize=13.sp)}}
 @Composable fun AttentionCard(n:JSONObject){
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xff35312a)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
         Label(when(n.s("kind")){"approval"->"REVIEW A REQUEST";"question"->"ANSWER A QUESTION";else->"CHECK A PROBLEM"},Coral)
         Text(n.s("title"),fontSize=17.sp,fontWeight=FontWeight.Medium)
         Text(n.s("body"),color=Muted,fontSize=13.sp,lineHeight=19.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
@@ -245,7 +288,7 @@ fun lastActivity(time:Long):String{
             }
             if(Pocket.savedToken(true).isBlank())OutlinedButton({Pocket.pairingMode=true},modifier=Modifier.fillMaxWidth()){Text("Connect Codex on this phone")}
             HorizontalDivider(color=Line);Text(Pocket.pushStatus,fontSize=16.sp,color=Mint)
-            Text(if(Pocket.local)"Pocket connects over this phone’s loopback interface. A visible monitor keeps local task results and requests flowing while the app is closed." else "Notifications arrive through Firebase, even when Pocket is closed. Conversations and files load from your workstation.",color=Muted,fontSize=14.sp,lineHeight=21.sp)
+            Text(if(Pocket.local)"NextComp connects over this phone’s loopback interface. A visible monitor keeps local task results and requests flowing while the app is closed." else "Notifications arrive through Firebase, even when NextComp is closed. Conversations and files load from your workstation.",color=Muted,fontSize=14.sp,lineHeight=21.sp)
         }}
         if(!Pocket.connected||!Pocket.codexOnline){
             if(Pocket.connectionError.isNotBlank())Text(Pocket.connectionError,color=Coral,fontSize=13.sp,lineHeight=20.sp)
@@ -268,7 +311,7 @@ fun lastActivity(time:Long):String{
             Switch(PocketAutomation.allowed&&systemEnabled,{PocketAutomation.allowed=it},enabled=systemEnabled)
         }
         Text("When both controls are enabled, Codex on this phone can inspect the foreground screen, take screenshots, tap, scroll, enter non-password text, and use Back, Home or Recents.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
-        if(!systemEnabled)OutlinedButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))},modifier=Modifier.fillMaxWidth()){Text("Enable Pocket in Accessibility")}
+        if(!systemEnabled)OutlinedButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))},modifier=Modifier.fillMaxWidth()){Text("Enable NextComp in Accessibility")}
         Text(if(PocketAutomation.allowed&&systemEnabled)"Phone control is live · pause it here at any time" else if(!systemEnabled&&PocketAutomation.allowed)"Android disabled the service · restore access above" else "Phone control is paused",color=if(PocketAutomation.allowed&&systemEnabled)Mint else if(!systemEnabled&&PocketAutomation.allowed)Coral else Muted,fontSize=12.sp)
         Text("Screen structure and screenshots are sent to your signed-in Codex only when its phone tools are used. Password fields are never returned or filled.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
     }}
@@ -301,7 +344,7 @@ fun lastActivity(time:Long):String{
     val c=LocalContext.current;val pieces=raw.split("```")
     Column(verticalArrangement=Arrangement.spacedBy(9.dp)){
         pieces.forEachIndexed{index,part->
-            if(index%2==1)Surface(color=Color(0xff070d0e),shape=RoundedCornerShape(12.dp)){Text(codeBlock(part),fontFamily=FontFamily.Monospace,fontSize=12.sp,color=Mint,lineHeight=18.sp,modifier=Modifier.padding(14.dp).horizontalScroll(rememberScrollState()))}
+            if(index%2==1)Surface(color=Ink,shape=RoundedCornerShape(12.dp)){Text(codeBlock(part),fontFamily=FontFamily.Monospace,fontSize=12.sp,color=Mint,lineHeight=18.sp,modifier=Modifier.padding(14.dp).horizontalScroll(rememberScrollState()))}
             else if(part.isNotBlank()){
                 val display=part.trim().replace(Regex("\\*\\*(.*?)\\*\\*"),"$1").replace(Regex("\\[([^]]+)\\]\\(([^)]+)\\)"),"$1 ↗")
                 Text(display,fontSize=15.sp,lineHeight=24.sp,color=Paper.copy(alpha=.93f))
@@ -318,7 +361,7 @@ fun lastActivity(time:Long):String{
     }
 }
 @Composable fun RequestCard(r:JSONObject){val p=r.optJSONObject("params")?:return;val id=r.s("id");val isQuestion=r.s("method").contains("requestUserInput");val answers=remember(id){mutableStateMapOf<String,String>()}
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xff35312a)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(22.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(22.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Label(if(isQuestion)"YOUR INPUT" else "NEEDS YOUR APPROVAL",Coral)
         if(isQuestion){p.optJSONArray("questions")?.objects()?.forEach{q->Text(q.s("question"),fontSize=16.sp,lineHeight=23.sp);q.optJSONArray("options")?.objects()?.forEach{o->val label=o.s("label");OutlinedButton({answers[q.s("id")]=label},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){Text(label,color=Paper)}};OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={Text("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){Text("Send answers")}}
         else{Text(p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({Pocket.answer(id,JSONObject().put("decision","accept"))}){Text("Allow once")};OutlinedButton({Pocket.answer(id,JSONObject().put("decision","decline"))}){Text("Decline",color=Coral)}}}else Text("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}

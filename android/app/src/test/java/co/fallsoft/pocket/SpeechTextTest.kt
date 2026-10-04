@@ -10,8 +10,8 @@ class SpeechTextTest {
     }
     @Test fun longFallbackStopsAtACompleteSentence(){
         val source="The update is installed. "+"We still need to check the rest of this very long detail ".repeat(15)+"."
-        assertEquals("The update is installed. Open Pocket for the full update.",SpeechText.excerpt(source))
-        assertEquals("Open Pocket for the full update.",SpeechText.excerpt("word ".repeat(200)))
+        assertEquals("The update is installed. Open NextComp for the full update.",SpeechText.excerpt(source))
+        assertEquals("Open NextComp for the full update.",SpeechText.excerpt("word ".repeat(200)))
     }
     @Test fun transportBudgetDoesNotSplitUnicodeSpeech(){
         val result=SpeechText.excerpt("完了しました。 "+"詳しい報告内容を確認してください".repeat(30)+"。")

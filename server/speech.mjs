@@ -1,4 +1,4 @@
-const MORE='Open Pocket for the full update.';
+const MORE='Open NextComp for the full update.';
 export function cleanSpeech(value){
   return String(value||'').replace(/```[\s\S]*?(?:```|$)/g,' ')
     .replace(/`[^`]*`/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')

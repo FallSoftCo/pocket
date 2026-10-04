@@ -28,7 +28,7 @@ export class VoiceSpeech {
   status(){return {...speechPolicy(this.clock()),configured:!!this.apiKey};}
   async synthesize(text,{signal}={}){
     if(typeof text!=='string'||!text.trim()||text.length>4000)throw failure('Speech text must contain 1–4000 characters.',400);
-    if(!this.apiKey)throw failure('Configure a server-side Pocket voice API key first.',503);
+    if(!this.apiKey)throw failure('Configure a server-side NextComp voice API key first.',503);
     const policy=speechPolicy(this.clock());
     if(policy.transport==='realtime')return this.realtime(text,signal);
     const response=await this.fetchImpl('https://api.openai.com/v1/audio/speech',{
