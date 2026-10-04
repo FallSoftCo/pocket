@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-04",
+  "version": "0.5.0-alpha.12",
+  "versionCode": 25,
+  "sourceCommit": "f98296a",
+  "checks": {
+    "backendTests": 140,
+    "androidTests": 50,
+    "githubSourceCi": "passed",
+    "stableReleaseSignature": "verified against maintained signing identity",
+    "privateVariants": 2,
+    "authenticatedCompatibleMetadata": true,
+    "ownerAnnouncementCount": 1,
+    "repeatAnnouncementCount": 0,
+    "firebaseAcceptedCount": 1
+  },
+  "physicalPhone": {
+    "existingVersionCode": 23,
+    "bootstrapTransferredOverSsh": true,
+    "remoteChecksumMatches": true,
+    "installed": false,
+    "blocker": "Device is locked; Android installer has not been accessible",
+    "adbRequiredForFutureUpdates": false
+  },
+  "limitations": [
+    "Firebase acceptance is not a device delivery acknowledgement.",
+    "The initial bootstrap still needs the phone unlocked and Android installation completed."
+  ]
+}

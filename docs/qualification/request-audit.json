@@ -49,8 +49,7 @@
         "github",
         "phone",
         "webhook",
-        "durable-ledger",
-        "adb-free-app-updates"
+        "durable-ledger"
       ],
       "evidence": [
         "docs/UX-REQUESTS.json",
@@ -327,6 +326,20 @@
       ],
       "assessment": "implemented-final-alpha11-emulator-qualified",
       "limits": "Actual final APK verified heading, visibly bold text, bullet lists and inline code in conversation, plus compact card/retained-note formatting with delimiters removed. Synthetic screenshots reviewed, not private phone content."
+    },
+    {
+      "id": "app-updates",
+      "requestIds": [
+        "adb-free-app-updates"
+      ],
+      "evidence": [
+        "server/app-updates.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketUpdates.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/UpdateDownloadWorker.kt",
+        "docs/qualification/app-updater-runtime.json"
+      ],
+      "assessment": "implemented-runtime-qualified-emulator",
+      "limits": "Paired authenticated signer-specific update discovery/download, manifest/hash/certificate checks, actionable ready notification, Android permission and installer confirmation, serial captured-request queue and preserved immutable staging qualified. Actual system upgrade to26 and debug rollback25 retain pairing. Production phone delivery remains root-owned receipt."
     }
   ],
   "requests": [
@@ -851,9 +864,9 @@
     {
       "id": "adb-free-app-updates",
       "requirement": "Announce and deliver verified in-app upgrades via push without ADB; preserve installed signing identity and Android install confirmation",
-      "ledgerStatusAtAudit": "delegated-alpha12-implementation",
-      "auditGroup": "delivery",
-      "assessment": "release-install-gap"
+      "ledgerStatusAtAudit": "implemented-under-final-runtime-verification",
+      "auditGroup": "app-updates",
+      "assessment": "implemented-runtime-qualified-emulator"
     }
   ],
   "changesAfterInitialAudit": [
@@ -876,5 +889,9 @@
       "qualification": "Source integration present; actual runtime review separate."
     }
   ],
-  "qualificationAddendum": "docs/qualification/questions-markdown-alpha11.json"
+  "qualificationAddendum": "docs/qualification/questions-markdown-alpha11.json",
+  "qualificationAddenda": [
+    "docs/qualification/questions-markdown-alpha11.json",
+    "docs/qualification/app-updater-runtime.json"
+  ]
 }

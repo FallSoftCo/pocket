@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-04",
+  "application": "NextComp",
+  "version": "0.5.0-alpha.12",
+  "platform": "Owned Android API 35 emulator",
+  "providerInferenceCalls": 0,
+  "syntheticFixture": true,
+  "updateTransport": {
+    "appUpdateSocketEventAutoDownloads": true,
+    "metadataAuthenticated": true,
+    "apkDownloadAuthenticated": true,
+    "metadataPath": "/api/app/update",
+    "apkPath": "/api/app/update/apk",
+    "downloadHashVerified": true,
+    "embeddedArchiveVersionVerified": true,
+    "embeddedArchiveSignerVerified": true
+  },
+  "rejections": {
+    "wrongMetadataSignerBeforeDownload": true,
+    "staleVersionBeforeDownload": true,
+    "wrongDownloadHashAfterDownload": true,
+    "embeddedArchiveVersionMismatchAfterDownload": true
+  },
+  "stateGuards": {
+    "lateOffersQueuedDuringDownload": true,
+    "oneDownloadAcrossFourOffers": true,
+    "failedCandidatePreservesVerifiedStage": true,
+    "equalOrLowerVersionDoesNotReplaceStage": true,
+    "metadataOnlyUnavailablePreservesInstall": true,
+    "restartPreservesInstall": true,
+    "immutableArtifactPreserved": true
+  },
+  "installer": {
+    "actualUpdaterNotificationAction": true,
+    "settingsBehindInstaller": true,
+    "unknownSourceConsentShown": true,
+    "realHttpSystemUpgradeTo26": true,
+    "restoredDebug25PreservingPairing": true,
+    "stageSurvivesRestartAndMetadataCheck": true,
+    "privateFixtureUploadedForScan": false,
+    "globalPlayProtectChanged": false,
+    "providerInferenceCalls": 0,
+    "syntheticFixture": true
+  },
+  "fixtureArtifact": {
+    "packageName": "co.fallsoft.pocket",
+    "versionCode": 26,
+    "versionName": "0.5.0-alpha.12-verification",
+    "size": 8538,
+    "sha256": "240a76ea064aba572aea460a0b5d748f4bc1e05f1dec66b6d841eb6822acf32f",
+    "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+    "description": "Locally authored minimal manifest-only fixture, same development signer; never published or sent to the phone."
+  },
+  "restoration": {
+    "actualPackageVersionAfterSystemInstall": 26,
+    "actualPackageVersionAfterDebugRollback": 25,
+    "pairingRetainedAndAuthenticatedRequestSucceeded": true,
+    "unknownSourceGrantPreserved": true,
+    "notificationPermissionRestored": true
+  },
+  "visualReview": {
+    "normalSettingsInstallControl": true,
+    "fontScale2InstallControlVisible": true,
+    "androidInstallerConfirmation": true
+  },
+  "limitations": [
+    "Android notification and actual system installer tested on synthetic emulator. Firebase delivery and physical-phone update availability are separate delivery receipts.",
+    "Private fixture validates the HTTP/download/package/installer pipeline; it contains no application code and does not qualify future application behavior.",
+    "ADB controls the test emulator and restores development version after the actual HTTP/system-UI upgrade; the tested update download and upgrade themselves do not use ADB installation.",
+    "Play Protect offered a per-install scan. The authored empty fixture was installed without uploading it; global Play Protect settings were unchanged."
+  ]
+}

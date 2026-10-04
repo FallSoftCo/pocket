@@ -389,13 +389,13 @@
     {
       "id": "adb-free-app-updates",
       "requirement": "Announce and deliver verified in-app upgrades via push without ADB; preserve installed signing identity and Android install confirmation",
-      "status": "implemented-under-final-runtime-verification"
+      "status": "implemented-qualified-alpha12"
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "7f3b397",
-    "published_release": "v0.5.0-alpha.11",
-    "unreleased_version": "0.5.0-alpha.12",
+    "latest_pushed_commit": "f98296a",
+    "published_release": "v0.5.0-alpha.12",
+    "unreleased_version": null,
     "server_tests": 140,
     "android_tests": 50,
     "phone_endpoint": "100.101.220.29:34953",
@@ -415,12 +415,11 @@
     "speech_caption_review": "Synthetic persistent passage banner, expanded sheet and dismissal verified; actual audio playback not claimed",
     "gallery_review": "Synthetic list, Mission, retained answer, enlarged text, voice controls and captions published to main gallery; layout and reduced-motion checks pass",
     "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
-    "update_delivery": "Authenticated same-signer metadata/APK routes deployed; two verified variants prepared privately; push announcement delivered once and repeat deduplicated"
+    "update_delivery": "Private compatible APK variants deployed; one push accepted by Firebase, repeats deduplicated; device acknowledgement not claimed",
+    "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved"
   },
   "remaining": [
-    "Install latest same-signer bootstrap on Pixel using SSH and Android installer; preserve pairing",
-    "Qualify signer-safe push updater including a real newer-APK install on emulator, then publish and announce",
-    "Validate latest release CI and gallery; clean up only task-owned fixture/emulator",
+    "Install the verified alpha12 bootstrap on Pixel once unlocked, via SSH and Android installer without ADB; pairing is preserved and the APK is already transferred",
     "Physical secure-keyguard captions and real-provider voice language quality remain distinct qualifications",
     "Review public launch separately when sufficiently qualified"
   ]
