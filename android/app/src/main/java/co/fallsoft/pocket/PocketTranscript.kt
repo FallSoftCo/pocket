@@ -35,6 +35,7 @@ object PocketTranscript {
             before=page.s("before").takeIf{it.isNotBlank()};earlier=page.optBoolean("hasEarlier")
             historyLoaded=true
             d.remove("timeline");Pocket.detail=d
+            if(PocketVoice.foreground&&!PocketVoice.active&&!older)PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList())
             val updates=buffered.values.toList();buffered.clear()
             updates.filter{it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             revision++;Pocket.error="";trace()

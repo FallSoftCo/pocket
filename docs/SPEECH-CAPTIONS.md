@@ -1,0 +1,13 @@
+# Spoken update captions
+
+Notification speech exposes the exact text of the currently synthesized chunk, both in the app banner and the existing speech notification. Progress is labelled by chunk (Part X of Y): this audio path has no word timestamps, so it never guesses highlighted words or invents transcription timing.
+
+The compact app banner is tappable: it opens a scrollable sheet containing the entire current spoken passage, with Close and Dismiss captions controls. The sheet follows actual chunk updates while open.
+
+The latest caption remains after playback ends. Dismiss hides that message across further progress updates and app restarts; a different spoken message can appear normally. Dismiss does not stop playback. Pause/Resume remain separate playback actions.
+
+The same notification ID (998) is reused when playback ends, avoiding an extra caption notification. Retained updates are silent. Lock-screen visibility uses Android's notification permission, channel settings, and private visibility; the public version contains only “Unlock to read.” No overlay or lock-screen bypass permission is requested. Android may collapse or hide notification text according to the user's device settings.
+
+Caption storage is app-private and includes only the latest spoken chunk. This does not expose raw model reasoning: captions show what the speech pipeline actually speaks.
+
+`SpeechCaptionStateTest` checks persistent dismissal, new-message behavior, retained text, and truthful chunk progress. Device verification should exercise playback, pause/resume, completion, dismissal during playback, and locked-screen privacy.

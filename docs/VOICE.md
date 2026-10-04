@@ -35,3 +35,9 @@ A local, per-profile usage history estimates depletion only after at least 30 mi
 The session list sorts by last interaction and lays out from bottom to top: the newest session rests directly above the bottom dock, and scrolling upward reveals older sessions. Recency remains an absolute linear/logarithmic color scale on a 10dp rail and solid timestamp badge, without large bright card surfaces.
 
 Dark typography refinement uses bundled Inter by Rasmus Andersson (SIL Open Font License; license included), regular body text and medium-weight controls. The [ChatGPT dark project chat list on Mobbin](https://mobbin.com/screens/6ff3b745-b7b6-479e-94fa-16558a5c7839) informed the black surfaces, lighter hierarchy and compact text treatment. The list refreshes while visible and live response deltas update its previews; working sessions show a progress indicator.
+
+### Compact glowing cards (alpha 10)
+
+Cards use a radial recency-colored glow over charcoal rather than a left rail. A compact timestamp and animated working indicator share the title row; latest text and Talk/Keyboard are the remaining two rows. Actual preview, status or activity changes illuminate a yellow outline that fades after 2.5 seconds, with no slide animation or initial-load flash. The bottom-first ordering is retained.
+
+Alpha 10 replaces the initial NC monogram with an original faceted N mark, carrying the NeXT palette in green/yellow stems and cerise/vermilion diagonal accents. Launcher, header, notification silhouette and repository SVG share the same geometry.

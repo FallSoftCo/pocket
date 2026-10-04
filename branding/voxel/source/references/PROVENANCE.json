@@ -1,0 +1,10 @@
+{
+  "asset": "codex-official.svg",
+  "publisher": "OpenAI",
+  "package": "openai.chatgpt",
+  "version": "26.5928.31416",
+  "source": "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/openai/vsextensions/chatgpt/latest/vspackage",
+  "internalPath": "extension/webview/assets/codex-d905da579253.svg",
+  "sha256": "a82453719b4ebdcc53eb7582063c1751f4fa5324ccdc1a45d4eaa9a96fa058d1",
+  "interpretation": "Native voxel extrusion of official circle-terminal mark. OpenAI trademark; not an original NextComp symbol. User silhouette is original."
+}

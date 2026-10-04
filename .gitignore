@@ -17,3 +17,6 @@ dist/
 google-services.json
 signing.properties
 .DS_Store
+
+__pycache__/
+*.pyc

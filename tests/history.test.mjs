@@ -59,3 +59,17 @@ test('older app-server falls back when paginated metadata precedes list support'
   const earlier=await reader.read({id:'phone',historyMode:'paginated'},{before:'page:any'});
   assert.equal(earlier.turns.length,0);assert.deepEqual(calls,['thread/turns/list','thread/read']);
 });
+test('list preview reads latest public thinking items instead of message-only turn summaries',async()=>{
+ const calls=[];
+ const h=new ThreadHistory({async call(method,p){
+  calls.push({method,p});
+  if(method==='thread/turns/list')return {data:[{id:'turn',status:'inProgress',items:[{id:'user',type:'userMessage',content:'old request'}]}]};
+  return {data:[{item:{id:'thought',type:'reasoning',summary:['Comparing two designs'],content:['hidden']}},{item:{id:'user',type:'userMessage',content:'old request'}}]};
+ }});
+ const {latestActivity}=await import('../server/thread-previews.mjs');
+ const t=await h.preview({id:'desktop',historyMode:'paginated'});
+ assert.equal(latestActivity(t).preview,'Thinking · Comparing two designs');
+ assert.ok(!JSON.stringify(t).includes('hidden'));
+ assert.equal(calls.at(-1).p.limit,6);
+ assert.ok(calls.every(c=>!['thread/read','thread/resume'].includes(c.method)));
+});

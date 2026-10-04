@@ -21,7 +21,7 @@ class PocketApplication: Application(), coil.ImageLoaderFactory {
 }
 fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
 fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback else optString(key,fallback)
-data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context")
+data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message")
 data class Message(val id:String,val role:String,val text:String)
 class PocketApiException(val status:Int,message:String):Exception(message)
 
@@ -40,6 +40,7 @@ object Pocket {
     var error by mutableStateOf(""); var busy by mutableStateOf(false)
     var showArchived by mutableStateOf(false)
     var tasks by mutableStateOf(listOf<Task>())
+    var activities by mutableStateOf(listOf<JSONObject>())
     var notifications by mutableStateOf(listOf<JSONObject>())
     var attention by mutableStateOf(listOf<JSONObject>())
     var selected by mutableStateOf<String?>(null)
@@ -68,6 +69,7 @@ object Pocket {
         PocketAudio.init()
         PocketSpeech.init()
         PocketAttention.init()
+        PocketImmersion.restore()
         if(token.isNotBlank())try{PocketPush.initialize()}catch(_:Exception){}
         if(local)pushStatus="Notifications stay on this phone" else if(prefs.getBoolean("pushReady",false))pushStatus="Firebase push is ready"
         if(local&&token.isNotBlank())LocalMonitorService.start(context)
@@ -99,18 +101,18 @@ object Pocket {
             local=pairingLocal||r.optBoolean("local");prefs.edit().putBoolean("activeLocal",local).putString(key("server"),base).putString(key("token"),token).putString(key("deviceId"),r.s("id")).apply()
             if(local&&r.s("automationSecret").isNotBlank())prefs.edit().putString(key("automationSecret",true),r.s("automationSecret")).apply()
             weeklyUsage=WeeklyUsage();prefs.edit().remove(key("weeklyUsage")).apply()
-            PocketPush.configure(r.optJSONObject("firebase"));if(local)LocalMonitorService.start(context);pairingMode=false;PocketLive.start();refresh()
+            PocketPush.configure(r.optJSONObject("firebase"));if(local)LocalMonitorService.start(context);pairingMode=false;PocketImmersion.restore();PocketLive.start();refresh()
         }catch(e:Exception){error=PocketNetwork.error(e)}finally{busy=false}
     }}
     fun activate(forLocal:Boolean){
         if(local==forLocal)return
         val nextBase=savedBase(forLocal);val nextToken=savedToken(forLocal);if(nextBase.isBlank()||nextToken.isBlank())return
         PocketLive.stop();PocketTranscript.clear();local=forLocal;base=nextBase;token=nextToken;host=if(local)"This phone" else "Your workstation"
-        connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
+        connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
         lastNotification=prefs.getLong(key("lastNotification"),0);prefs.edit().putBoolean("activeLocal",local).apply()
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean("pushReady",false))"Firebase push is ready" else "Setting up notifications…"
         if(local)LocalMonitorService.start(context) else LocalMonitorService.stop(context)
-        restoreUsage();PocketLive.start();refresh()
+        restoreUsage();PocketImmersion.restore();PocketLive.start();refresh()
     }
     fun disconnect(){
         val wasLocal=local;val oldBase=base;val oldToken=token
@@ -138,11 +140,13 @@ object Pocket {
         try{
             val r=api("/api/status");if(local!=profileLocal||token!=profileToken)return@launch
             acceptUsage(r.optJSONObject("usage"));codexOnline=r.optBoolean("connected");codexConnectionMessage=r.optJSONObject("problem")?.s("message")?:"";host=r.s("host");defaultCwd=r.s("defaultCwd")
-            prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply()
+            val deviceChanged=prefs.getString(key("deviceId"),"")!=r.s("deviceId")
+            prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply();if(deviceChanged)PocketImmersion.restore()
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
             val taskResult=api(if(profileArchived)"/api/threads?archived=true" else "/api/threads")
             if(local!=profileLocal||token!=profileToken||showArchived!=profileArchived)return@launch
-            tasks=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"))}?:emptyList()
+            activities=try{api("/api/activity").optJSONArray("items")?.objects()?:emptyList()}catch(e:PocketApiException){if(e.status==404)emptyList() else throw e}
+            tasks=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"),it.s("previewKind","message"))}?:emptyList()
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
             val latestAttention=api("/api/attention").optJSONArray("notifications")?.objects()?:emptyList()
             val activeIds=latestAttention.map{it.optLong("id")}.toSet()
@@ -207,6 +211,11 @@ object Pocket {
     fun renameTask(id:String,name:String,onDone:()->Unit){scope.launch{try{api("/api/threads/$id/rename",JSONObject().put("name",name));onDone();scheduleRefresh();refresh()}catch(e:Exception){error=e.message?:"Could not rename task"}}}
     fun restoreTask(id:String){scope.launch{try{api("/api/threads/$id/unarchive",JSONObject());refresh()}catch(e:Exception){error=e.message?:"Could not restore task"}}}
     fun archiveTask(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/archive",JSONObject());if(selected==id)closeTask();refresh()}catch(e:Exception){error=e.message?:"Could not archive task"}}}
+    fun watchTask(id:String,enabled:Boolean){scope.launch{try{
+        api("/api/threads/$id/watch",JSONObject().put("enabled",enabled))
+        tasks=tasks.map{if(it.id==id)it.copy(watched=enabled)else it}
+        if(selected==id)refreshDetail()
+    }catch(e:Exception){error=PocketNetwork.error(e)}}}
     fun watch(enabled:Boolean){val id=selected?:return;scope.launch{try{api("/api/threads/$id/watch",JSONObject().put("enabled",enabled));refreshDetail()}catch(e:Exception){error=e.message?:"Could not update notifications"}}}
     fun answer(id:String,body:JSONObject){scope.launch{try{api("/api/requests/$id/answer",body);refreshDetail();refresh()}catch(e:Exception){error=e.message?:"Could not answer"}}}
     fun test(){scope.launch{try{api("/api/test-notification",JSONObject())}catch(e:Exception){error=e.message?:"Test failed"}}}
@@ -218,11 +227,14 @@ object Pocket {
                 codexOnline=json.optBoolean("connected");codexConnectionMessage=json.optJSONObject("problem")?.s("message")?:""
                 if(recovered){refresh();scheduleRefresh()}
             }
-            "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");refresh()}
+            "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");if(PocketVoice.foreground&&!PocketVoice.active&&selected==n.s("thread_id"))refreshDetail();refresh()}
             "reply" -> {if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}
             "timeline" -> {PocketTranscript.apply(json);if(json.has("turn"))scheduleRefresh()}
-            "sessionPreview" -> {tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),updated=json.optLong("activityAt",if(it.updated<100000000000L)it.updated*1000 else it.updated))else it}}
+            "immersion" -> PocketImmersion.accept(json)
+            "contextNotes" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("notes",json.optJSONArray("notes"))}}
+            "activity" -> {activities=json.optJSONArray("items")?.objects()?:emptyList()}
+            "sessionPreview" -> {tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),updated=json.optLong("activityAt",if(it.updated<100000000000L)it.updated*1000 else it.updated))else it}}
             "sessionStarted" -> refresh()
             "codex" -> {val e=json.optJSONObject("event");val p=e?.optJSONObject("params");val id=p?.s("threadId")?.ifBlank{p.optJSONObject("thread")?.s("id")?:""};val method=e?.s("method")
                 val status=when(method){"turn/started"->"active";"turn/completed"->"idle";"thread/status/changed"->p?.optJSONObject("status")?.s("type");else->null}
@@ -240,7 +252,7 @@ object Pocket {
         prefs.edit().putStringSet(key("seenIds",notificationLocal),bounded).putString(key("lastDeliveryTransport",notificationLocal),transport).putLong(key("lastDeliveryId",notificationLocal),id).putLong(key("lastDeliveryAt",notificationLocal),System.currentTimeMillis()).apply()
         PocketNotifications.show(context,n)
         val age=System.currentTimeMillis()-n.optLong("created_at")
-        if(transport in listOf("fcm","socket")&&age in 0..120000)PocketSpeech.request(context,n)
+        if(!PocketNotificationReads.isRead(n)&&transport in listOf("fcm","socket")&&age in 0..120000)PocketSpeech.request(context,n)
     }
     fun catchUp(){scope.launch{try{
         val after=if(prefs.getBoolean(key("needsHistorySync"),false))0 else lastNotification

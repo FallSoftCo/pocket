@@ -45,7 +45,10 @@ test('same-thread steering, idle continuation, and exact pending request respons
  assert.equal((await api(`/api/notifications/${approval.id}/attention`)).data.needsAttention,true);
  assert.equal((await api('/api/requests/901/answer',{decision:'acceptForSession'})).status,400);
  assert.equal((await api('/api/requests/901/answer',{decision:'accept'})).status,200);
- assert.equal((await api(`/api/notifications/${approval.id}/attention`)).data.needsAttention,false);
+ assert.equal((await api(`/api/notifications/${approval.id}/attention`)).data.needsAttention,true);
+ assert.equal((await api('/api/requests/901/answer',{decision:'accept'})).status,200);
+ peer.send(JSON.stringify({method:'serverRequest/resolved',params:{requestId:901}}));
+ await waitFor(async()=>!(await api(`/api/notifications/${approval.id}/attention`)).data.needsAttention);
  await waitFor(()=>answers.length===1);assert.deepEqual(answers[0],{id:901,result:{decision:'accept'}});
  assert.equal((await api('/api/requests/901/answer',{decision:'accept'})).status,409);
  peer.send(JSON.stringify({id:902,method:'item/tool/requestUserInput',params:{threadId:'thread-live',questions:[{id:'choice',header:'Style',question:'Which style?'}]}}));
@@ -53,6 +56,8 @@ test('same-thread steering, idle continuation, and exact pending request respons
  assert.equal((await api('/api/requests/902/answer',{answers:{}})).status,400);
  await api('/api/requests/902/answer',{answers:{choice:'Mint'}});await waitFor(()=>answers.length===2);
  assert.deepEqual(answers[1],{id:902,result:{answers:{choice:{answers:['Mint']}}}});
+ peer.send(JSON.stringify({method:'serverRequest/resolved',params:{requestId:902}}));
+ await waitFor(async()=>(await api('/api/attention')).data.notifications.length===0);
  peer.send(JSON.stringify({id:903,method:'item/tool/requestUserInput',params:{threadId:'thread-live',questions:[{id:'other',question:'Another question?'}]}}));
  await waitFor(async()=>(await api('/api/attention')).data.notifications.length===1);
  peer.send(JSON.stringify({method:'serverRequest/resolved',params:{requestId:903}}));

@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {NotificationReads} from '../server/notification-reads.mjs';
+function setup(){const db=new DatabaseSync(':memory:');db.exec(`CREATE TABLE notifications(id INTEGER PRIMARY KEY,thread_id TEXT,kind TEXT);CREATE TABLE notification_attention(notification_id INTEGER PRIMARY KEY,resolved_at INTEGER);INSERT INTO notifications VALUES(1,'a','update'),(2,'a','question'),(3,'b','update'),(4,'a','complete'),(5,'a','approval'),(6,'a','error');INSERT INTO notification_attention VALUES(2,NULL),(5,NULL),(6,NULL);`);return {db,reads:new NotificationReads(db)};}
+test('visible read cursor affects only its conversation and device, preserving unresolved attention',()=>{const {db,reads}=setup();assert.deepEqual(reads.ack('phone1','a',6).ids,[1,4]);const rows=db.prepare('SELECT * FROM notifications').all();assert.deepEqual(reads.decorate(rows,'phone1').map(n=>n._read),[true,false,false,true,false,false]);assert.ok(reads.decorate(rows,'phone2').every(n=>!n._read));db.close();});
+test('read cursors cannot jump across conversations or regress; resolved attention becomes read',()=>{const {db,reads}=setup();assert.throws(()=>reads.ack('p','a',3),{status:400});reads.ack('p','a',6);reads.ack('p','a',1);assert.equal(reads.watermark('p','a'),6);db.exec('UPDATE notification_attention SET resolved_at=1 WHERE notification_id=2');assert.equal(reads.decorate([{id:2,thread_id:'a',kind:'question'}],'p')[0]._read,true);db.close();});

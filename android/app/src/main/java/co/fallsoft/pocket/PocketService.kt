@@ -29,6 +29,7 @@ object PocketNotifications {
     }
     fun open(c:Context,thread:String?,code:Int,local:Boolean=Pocket.local):PendingIntent=PendingIntent.getActivity(c,code,Intent(c,MainActivity::class.java).apply{flags=Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP;putExtra("thread",thread);putExtra("local",local)},PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     fun show(c:Context,n:JSONObject,reminder:Boolean=false){
+        if(PocketNotificationReads.isRead(n))return
         channels(c)
         val local=n.optBoolean("_local",Pocket.local);val id=n.optLong("id").toInt()+(if(local)500000 else 1000); val thread=n.s("thread_id").takeIf{it.isNotBlank()}
         val attention=PocketAttention.needs(n)&&!PocketAttention.dismissed(n.optLong("id"),local)
@@ -40,7 +41,11 @@ object PocketNotifications {
         if(PocketSpeech.count>0&&!PocketSpeech.paused)b.setSilent(true)
         if(reminder)b.setSubText("Still needs your attention")
         if(attention){PocketAttention.remember(n);b.setDeleteIntent(PocketAttention.action(c,n.optLong("id"),"dismiss",local))}
-        if(thread!=null){
+        if(thread!=null&&n.s("kind")=="question"){
+            b.addAction(R.drawable.ic_notification,"Answer",open(c,thread,id,local))
+            if(attention)b.addAction(R.drawable.ic_notification,"Skip",PocketAttention.action(c,n.optLong("id"),"skip",local))
+            if(attention)b.addAction(R.drawable.ic_notification,"Later · 30m",PocketAttention.action(c,n.optLong("id"),"snooze",local))
+        }else if(thread!=null){
             val intent=Intent(c,ReplyReceiver::class.java).putExtra("thread",thread).putExtra("notificationId",id).putExtra("notificationDbId",n.optLong("id")).putExtra("local",local)
             val pi=PendingIntent.getBroadcast(c,id,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
             b.addAction(NotificationCompat.Action.Builder(R.drawable.ic_notification,"Reply",pi)

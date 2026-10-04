@@ -2,7 +2,16 @@ import {displayItem} from './timeline.mjs';
 
 const encode=(prefix,value)=>prefix+Buffer.from(JSON.stringify(value)).toString('base64url');
 export class ThreadHistory {
-  constructor(codex,{maxItems=400,maxBytes=1024*1024}={}){Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
+  constructor(codex,{maxItems=400,maxBytes=1024*1024,onPreview=()=>{}}={}){this.onPreview=onPreview;Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
+  async preview(metadata){
+    const thread=await this.read(metadata,{summary:true});this.onPreview(thread);
+    const latest=thread.turns?.at(-1);
+    if(!latest||metadata.historyMode!=='paginated'||this.paginationSupported!==true)return thread;
+    // Turn summaries omit action/reasoning items. Read only the newest bounded item page,
+    // without resuming a desktop-owned conversation or downloading its whole transcript.
+    const page=await this.codex.call('thread/items/list',{threadId:metadata.id,turnId:latest.id,limit:6,sortDirection:'desc'});
+    return {...thread,turns:[{...latest,items:[...page.data].reverse().map(entry=>displayItem(entry.item,latest.id)).filter(Boolean)}]};
+  }
   async read(metadata,{before=null,summary=false}={}){
     const threadId=metadata.id;
     if(metadata.historyMode!=='paginated')return (await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;

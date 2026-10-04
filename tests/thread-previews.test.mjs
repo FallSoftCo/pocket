@@ -25,3 +25,29 @@ test('live response deltas update cards and late hydration cannot overwrite them
  p.observe({method:'item/completed',params:{threadId:'task',item:{id:'reply',type:'agentMessage',text:'Build passed.'}}});
  assert.equal(changed.at(-1).preview,'Build passed.');
 });
+test('cards follow commands, progress, edits and then the latest answer',async()=>{
+ const {latestActivity}=await import('../server/thread-previews.mjs');const changed=[];
+ const p=new ThreadPreviews({read:async()=>({turns:[]})},(id,v)=>changed.push(v));
+ p.observe({method:'item/started',params:{threadId:'work',item:{id:'cmd',type:'commandExecution',command:'npm test'}}});
+ assert.equal(changed.at(-1).preview,'Running · npm test');assert.equal(changed.at(-1).previewKind,'command');
+ p.observe({method:'item/commandExecution/outputDelta',params:{threadId:'work',itemId:'cmd',delta:'old line\n23 tests passed\n'}});
+ assert.match(changed.at(-1).preview,/23 tests passed/);
+ p.observe({method:'item/started',params:{threadId:'work',item:{id:'edit',type:'fileChange',changes:[{path:'/project/app.ts'}]}}});
+ assert.equal(changed.at(-1).preview,'Editing · app.ts');
+ p.observe({method:'item/agentMessage/delta',params:{threadId:'work',itemId:'answer',delta:'All checks passed.'}});
+ assert.equal(changed.at(-1).preview,'All checks passed.');assert.equal(changed.at(-1).previewRole,'assistant');
+ assert.equal(latestActivity({turns:[{items:[{type:'userMessage',content:'Fix it'},{type:'commandExecution',command:'npm test',status:'inProgress'}]}]}).previewKind,'command');
+});
+test('thinking summaries stream by part and raw reasoning never becomes a preview',async()=>{
+ const {latestActivity}=await import('../server/thread-previews.mjs');const changed=[];
+ const p=new ThreadPreviews({read:async()=>({turns:[]})},(_,v)=>changed.push(v));
+ p.observe({method:'item/started',params:{threadId:'work',item:{id:'r',type:'reasoning',summary:[],content:['hidden']}}});
+ assert.equal(changed.at(-1).preview,'Thinking…');
+ for(const delta of ['Comparing ','the layouts'])p.observe({method:'item/reasoning/summaryTextDelta',params:{threadId:'work',itemId:'r',summaryIndex:0,delta}});
+ assert.equal(changed.at(-1).preview,'Thinking · Comparing the layouts');
+ p.observe({method:'item/reasoning/textDelta',params:{threadId:'work',itemId:'r',delta:'hidden'}});
+ assert.equal(changed.at(-1).preview,'Thinking · Comparing the layouts');
+ p.observe({method:'item/reasoning/summaryTextDelta',params:{threadId:'work',itemId:'r',summaryIndex:1,delta:'Checking thumb reach'}});
+ assert.equal(changed.at(-1).preview,'Thinking · Checking thumb reach');
+ assert.equal(latestActivity({turns:[{items:[{type:'userMessage',content:'request'},{type:'reasoning',summary:['Checking thumb reach'],content:['hidden']}]}]}).preview,'Thinking · Checking thumb reach');
+});

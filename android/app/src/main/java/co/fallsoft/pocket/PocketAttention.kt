@@ -46,8 +46,8 @@ object PocketAttention {
     }
 }
 class AttentionReceiver:BroadcastReceiver(){
-    override fun onReceive(c:Context,i:Intent){val id=i.getLongExtra("id",0);val local=i.getBooleanExtra("local",false);if(id<=0)return
-        if(i.action=="snooze")PocketAttention.snooze(id,local)else PocketAttention.dismiss(id,local)
+    override fun onReceive(c:Context,i:Intent){if(i.action=="caption-dismiss"){PocketSpeechCaptions.dismiss();return};val id=i.getLongExtra("id",0);val local=i.getBooleanExtra("local",false);if(id<=0)return
+        when(i.action){"skip"->PocketQuestionActions.skipNotification(id,local);"snooze"->PocketAttention.snooze(id,local);else->PocketAttention.dismiss(id,local)}
     }
 }
 class AttentionWorker(c:Context,p:WorkerParameters):Worker(c,p){

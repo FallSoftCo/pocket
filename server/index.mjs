@@ -1,3 +1,9 @@
+import {NotificationReads} from './notification-reads.mjs';
+import {ImmersionWorker} from './immersion-worker.mjs';
+import {QuestionActions} from './question-actions.mjs';
+import {ConversationNotes} from "./conversation-notes.mjs";
+import {LiveActivityDelivery} from "./live-activity-delivery.mjs";
+import {ActivityBoard} from './activity-board.mjs';
 import {NativeVoice} from './native-voice.mjs';
 import {ThreadPreviews} from './thread-previews.mjs';
 import express from 'express';
@@ -28,6 +34,7 @@ const hostName=process.env.POCKET_HOST_NAME||hostname();
 const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
 const {db,secrets}=openStore(dir);
+const notificationReads=new NotificationReads(db);
 const voiceKeyPath=resolve(dir,'voice-key');
 const voiceSpeech=new VoiceSpeech({apiKey:process.env.POCKET_VOICE_API_KEY||(existsSync(voiceKeyPath)?readFileSync(voiceKeyPath,'utf8').trim():'')});
 let speechRequests=0;
@@ -41,6 +48,9 @@ const codex=new Codex();
 const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
 const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
 const attached=new Set(), pending=new Map(), syncing=new Set();
+db.exec('CREATE TABLE IF NOT EXISTS immersion_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
+const immersionCwd=resolve(dir,'immersion');mkdirSync(immersionCwd,{recursive:true,mode:0o700});
+const immersion=new ImmersionWorker({codex:new Codex(),cwd:immersionCwd,load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
 const voiceCodex=new Codex();
 const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,host:hostName,
   api:async(path,body)=>{const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`,'Content-Type':'application/json'},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:AbortSignal.timeout(35000)});const data=await r.json();if(!r.ok)throw Error(data.error||'Pocket control failed.');return data;},
@@ -55,8 +65,11 @@ const nativeVoiceCodex=new Codex();
 const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:voiceController,cwd:defaultCwd});
 const timeline=new LiveTimeline();
 setInterval(()=>timeline.prune(),60000).unref();
-const history=new ThreadHistory(codex);
-const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>emit('sessionPreview',{threadId,...preview}));
+const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
+const history=new ThreadHistory(codex,{onPreview:thread=>conversationNotes.remember(thread)});
+const activityBoard=new ActivityBoard();
+const liveDelivery=new LiveActivityDelivery((type,payload)=>emit(type,payload));
+const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery.preview(threadId,preview));
 const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id});void sendOutgoing(row,thread);});
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...payload}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
@@ -98,6 +111,7 @@ function resolveAttention(where,...args){
 }
 // Native request IDs belong to the current bridge connection and cannot be answered after restart.
 resolveAttention('request_id IS NOT NULL');
+const questionActions=new QuestionActions({pending,codex,db,resolve:resolveAttention});
 async function attach(threadId,{before=null}={}){
   requireId(threadId); await codex.connect();
   let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;
@@ -163,8 +177,11 @@ db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during 
 
 codex.on('event',m=>{
   const p=m.params||{}, threadId=p.threadId || p.thread?.id;
-  if(threadId&&(voiceController.owns(threadId)||nativeVoice.owns(threadId)))return;
-  threadPreviews.observe(m);
+  if(threadId&&(voiceController.owns(threadId)||nativeVoice.owns(threadId)||immersion.ownsThread(threadId)))return;
+  threadPreviews.observe(m);activityBoard.observe(m);
+  if(m.method==="item/completed"||p.item?.type==="userMessage")conversationNotes.observe(threadId,p.turnId,p.item);
+  if(m.method==="turn/completed")for(const item of p.turn?.items||[])conversationNotes.observe(threadId,p.turn.id,item);
+  if(threadId&&/^(item\/|turn\/completed)/.test(m.method))liveDelivery.activity(()=>activityBoard.snapshot());
   if(m.method==='account/rateLimits/updated')rateLimits.liveUpdate(p);
   if(m.method==='account/updated'){rateLimits.clear();void rateLimits.refresh({force:true});}
   if(threadId&&attached.has(threadId)){const update=timeline.ingest(m);if(update)emit('timeline',update);}
@@ -207,7 +224,7 @@ setInterval(async()=>{
 codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.5.0-alpha.9'}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.5.0-alpha.10'}));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -251,7 +268,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>{void rateLimits.refresh();res.json({...codex.status(),usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:'0.5.0-alpha.9',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
+app.get('/api/status',(req,res)=>{void rateLimits.refresh();res.json({...codex.status(),usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:'0.5.0-alpha.10',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -277,11 +294,12 @@ app.post('/api/threads',(req,res)=>{
   catch(e){res.status(e.status||500).json({error:e.message});}
 });
 app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.params.id);if(!row)return res.status(404).json({error:'Task request not found.'});res.json(row);});
+app.get('/api/activity',(_req,res)=>res.json({items:activityBoard.snapshot()}));
 app.get('/api/threads',route(async(req,res)=>{
   await codex.connect();
   const r=await codex.call('thread/list',{limit:70,sortKey:'updated_at',sortDirection:'desc',archived:req.query.archived==='true'});
   const watches=db.prepare('SELECT * FROM watches').all();
-  res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)).map(t=>({id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...threadPreviews.get(t),cwd:t.cwd,status:t.status,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:!!watches.find(w=>w.thread_id===t.id&&w.enabled)}))});
+  res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>({id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...threadPreviews.get(t),cwd:t.cwd,status:t.status,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:!!watches.find(w=>w.thread_id===t.id&&w.enabled)}))});
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null});
@@ -291,11 +309,14 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   if(raw._pocketPage)Object.assign(page,raw._pocketPage);
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
-  res.json({turnSettings:savedTurnSettings(t.id),thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)});
+  conversationNotes.remember(t);
+  res.json({notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)});
 }));
 app.get('/api/models',route(async(_req,res)=>{
   await codex.connect();res.json({models:(await modelCatalogue(codex)).map(m=>({model:m.model,name:m.displayName,defaultEffort:m.defaultReasoningEffort,efforts:m.supportedReasoningEfforts}))});
 }));
+app.post('/api/threads/:id/notes',(req,res)=>{try{const id=requireId(req.params.id);conversationNotes.put(id,{...req.body,manual:true});res.json({notes:conversationNotes.list(id)});}catch(e){res.status(e.status||400).json({error:e.message});}});
+app.post('/api/threads/:id/notes/remove',(req,res)=>{const id=requireId(req.params.id);conversationNotes.remove(id,String(req.body.id||''));res.json({notes:conversationNotes.list(id)});});
 app.post('/api/threads/:id/settings',route(async(req,res)=>{
   const threadId=requireId(req.params.id);await codex.connect();
   const settings=validateTurnSettings(req.body,await modelCatalogue(codex));
@@ -369,28 +390,19 @@ app.get('/api/replies/:id',(req,res)=>{
   if(!row)return res.status(404).json({error:'Reply not found.'});
   res.json(row);
 });
-app.post('/api/requests/:id/answer',route(async(req,res)=>{
-  const m=pending.get(req.params.id);
-  if(!m)return res.status(409).json({error:'This request has already been answered or expired.'});
-  let result;
-  if(/requestUserInput/.test(m.method)){
-    const answers={};
-    for(const q of m.params.questions||[]){const answer=req.body.answers?.[q.id];if(typeof answer!=='string'||!answer.trim())return res.status(400).json({error:`Answer ${q.header||q.id} first.`});answers[q.id]={answers:[answer.slice(0,8000)]};}
-    result={answers};
-  }else if(/item\/(commandExecution|fileChange)\/requestApproval/.test(m.method)){
-    if(!['accept','decline','cancel'].includes(req.body.decision))return res.status(400).json({error:'Invalid approval decision'});
-    if(m.params.availableDecisions && !m.params.availableDecisions.includes(req.body.decision))return res.status(400).json({error:'This decision is not offered by Codex.'});
-    result={decision:req.body.decision};
-  }else return res.status(400).json({error:'Please answer this request in the terminal; this request type is not supported yet.'});
-  codex.answer(m.id,result);pending.delete(req.params.id);resolveAttention('request_id=?',req.params.id);res.json({ok:true});
-}));
-app.get('/api/attention',(_req,res)=>res.json({notifications:db.prepare('SELECT n.* FROM notifications n JOIN notification_attention a ON a.notification_id=n.id WHERE a.resolved_at IS NULL ORDER BY n.id DESC LIMIT 100').all().map(notificationRow)}));
+app.post('/api/requests/:id/answer',route(async(req,res)=>res.json(questionActions.answer(req.params.id,req.body))));
+app.post('/api/notifications/:id/skip',route(async(req,res)=>res.json(questionActions.skipNotification(req.params.id))));
+app.get('/api/immersion',(req,res)=>res.json(immersion.snapshot(req.device.id)));
+app.post('/api/immersion',route(async(req,res)=>res.json(immersion.setEnabled(req.device.id,req.body.enabled))));
+app.post('/api/immersion/translate',route(async(req,res)=>res.json(immersion.submit(req.device.id,req.body.sources))));
+app.post('/api/threads/:id/notifications/read',route(async(req,res)=>res.json(notificationReads.ack(req.device.id,requireId(req.params.id),req.body.throughId))));
+app.get('/api/attention',(req,res)=>res.json({notifications:notificationReads.decorate(db.prepare('SELECT n.* FROM notifications n JOIN notification_attention a ON a.notification_id=n.id WHERE a.resolved_at IS NULL ORDER BY n.id DESC LIMIT 100').all().map(notificationRow),req.device.id)}));
 app.get('/api/notifications/:id/attention',(req,res)=>{
   const row=db.prepare('SELECT * FROM notification_attention WHERE notification_id=?').get(req.params.id);
   res.json({needsAttention:!!row&&row.resolved_at===null});
 });
-app.get('/api/notifications/:id',(req,res)=>{const n=db.prepare('SELECT * FROM notifications WHERE id=?').get(req.params.id);if(!n)return res.status(404).json({error:'Notification not found.'});res.json({notification:notificationRow(n)});});
-app.get('/api/notifications',(req,res)=>{const after=Math.max(0,Number(req.query.after)||0);res.json({notifications:db.prepare('SELECT * FROM notifications WHERE id>? ORDER BY id DESC LIMIT 100').all(after).reverse().map(notificationRow)});});
+app.get('/api/notifications/:id',(req,res)=>{const n=db.prepare('SELECT * FROM notifications WHERE id=?').get(req.params.id);if(!n)return res.status(404).json({error:'Notification not found.'});res.json({notification:notificationReads.decorate([notificationRow(n)],req.device.id)[0]});});
+app.get('/api/notifications',(req,res)=>{const after=Math.max(0,Number(req.query.after)||0);res.json({notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE id>? ORDER BY id DESC LIMIT 100').all(after).reverse().map(notificationRow),req.device.id)});});
 app.post('/api/test-notification',(req,res)=>res.json(notify(null,'Your work, within reach.','NextComp is connected. Updates from Codex will arrive here, with a direct route back to your task.','test')));
 const mimeFor=n=>({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.pdf':'application/pdf','.mp4':'video/mp4','.txt':'text/plain','.md':'text/plain'})[extname(n).toLowerCase()]||'application/octet-stream';
 function saveAttachment(file,threadId){

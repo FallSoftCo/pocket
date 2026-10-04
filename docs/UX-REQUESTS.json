@@ -181,7 +181,7 @@
     {
       "id": "mission-view",
       "requirement": "Replace repetitive Updates page with spatial mission command view of all current/latest actions/messages, clustered by relationships; no whole histories or ordinary word cloud",
-      "status": "implemented-build-passed-ux-qualification-pending"
+      "status": "superseded-by-mission-fixed-board"
     },
     {
       "id": "conversation-header",
@@ -253,29 +253,78 @@
       "id": "animated-3d-motion",
       "requirement": "Original 3D icon/wordfont and spinning logo, squeeze/stretch tap response; preserved tap bounds and reduced-motion support",
       "status": "delegated-voxel_motion"
+    },
+    {
+      "id": "mission-fixed-board",
+      "requirement": "Mission is a fixed dense viewport with no pan or scroll. Meaningful statuses fade in place as updates arrive; tapping opens the conversation directly. Thinking adds no value in this overview.",
+      "status": "implemented-built-tested-installed",
+      "evidence": "MissionBoard.kt / MissionScreen.kt; actual 18-conversation synthetic Android portrait/wide checks, stable bounds on update, direct open/Back, zero scrollable nodes and no generic thinking. Five layout/selection unit tests and backend activity tests pass; debug build/lint pass. Pixel in-place upgrade retains signer and pairing; physical Mission navigation check pending. Readable overflow is explicitly counted rather than clipped."
+    },
+    {
+      "id": "speech-live-subtitles",
+      "requirement": "Persistent dismissible banner showing live spoken notification subtitles; support lock screen where Android permits, preserving privacy controls",
+      "status": "implemented-tests-passed-integration-under-verification"
+    },
+    {
+      "id": "mission-sentence-field",
+      "requirement": "Mission Control is an adaptable readable 2D field of latest sentences at XY coordinates, no nested cards or tiny grid",
+      "status": "implemented-and-emulator-verified-alpha10"
+    },
+    {
+      "id": "dense-card-touch-regions",
+      "requirement": "Remove list card bottom button row; left mic, center conversation, right keyboard touch regions with visible discoverable cues",
+      "status": "implemented-and-emulator-verified-alpha10"
+    },
+    {
+      "id": "taller-distinct-footer",
+      "requirement": "Taller ergonomic footer with Talk and Find distinct permanent controls",
+      "status": "implemented-and-emulator-verified-alpha10"
+    },
+    {
+      "id": "footer-visible-knowledge",
+      "requirement": "Single footer tab item immediately displays all useful former header knowledge: colored remaining percentage, reset deadline, usage run-out forecast if estimable, connection status; details must not require tapping",
+      "status": "in-progress"
+    },
+    {
+      "id": "inline-session-rename",
+      "requirement": "Remove edit icon from cards; tappable title edits inline, Enter/Done saves",
+      "status": "in-progress"
+    },
+    {
+      "id": "conversation-notification-reads",
+      "requirement": "Intelligently clear read conversation update/result notifications upon interaction; preserve unresolved question/approval/error attention, respect profile/device and successful visible fetch",
+      "status": "implemented-tests-passed-integration-under-verification"
+    },
+    {
+      "id": "cubic-n-voxels",
+      "requirement": "N geometry uses equal XYZ cubic voxels, not prismatic blocks; preserve proportions by occupancy, rerender animation and icons",
+      "status": "delegated-voxel_motion"
     }
   ],
   "current_state": {
     "latest_pushed_commit": "d39d3a0",
     "published_release": "v0.5.0-alpha.9",
     "unreleased_version": "0.5.0-alpha.10",
-    "server_tests": 108,
-    "android_tests": 23,
+    "server_tests": 128,
+    "android_tests": 39,
     "phone_endpoint": "100.101.220.29:34953",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
     "owned_emulator": "emulator-5560",
     "owned_fixture_port": 19984,
-    "installed_development_version": "0.5.0-alpha.10"
+    "installed_development_version": "0.5.0-alpha.10",
+    "farm_geometry_revision": "v05 cubic equal-XYZ N",
+    "native_uhd_masters": "queued behind existing GPU work; UI assets use reviewed farm proof renders",
+    "mission_visual_review": "emulator stable XY targets under parallel updates; font scale 2 passed",
+    "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable"
   },
   "remaining": [
-    "Complete native voxel build and render preview; inspect at icon scale",
-    "Render and package original symbol atlas + N loop through guarded farm, verify RGBA and GPU use",
-    "Replace stock app symbols and logo with baked assets; respect reduced animation/background",
-    "Implement mission command current-activity board and consolidate conversation header",
-    "Verify compact card fade, action previews, spatial navigation and original voice/keyboard flows",
-    "Install final debug-signed APK on Pixel; stable-sign public release; push and gallery publish",
-    "Clean up owned emulator/fixture only"
+    "Complete cubic N launcher/spin proof renders and verify asset geometry",
+    "Verify inline rename, role icons, footer visible knowledge, persistent notes, read notifications and speech captions on integrated APK",
+    "Install verified alpha10 on Pixel without changing pairing; enable its Italian immersion preference",
+    "Push complete code and stable-sign/publish alpha10 release; update main 8bar reviews",
+    "Deliver queued native3840 masters when guarded GPU lane becomes available",
+    "Clean up only owned emulator/fixture"
   ]
 }

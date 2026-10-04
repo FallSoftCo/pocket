@@ -51,7 +51,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var cwd by remember(Pocket.local){mutableStateOf(Pocket.prefs.getString(cwdKey,Pocket.prefs.getString(projectKey,Pocket.tasks.firstOrNull()?.cwd?:Pocket.defaultCwd))?:Pocket.defaultCwd)}
     var prompt by remember(Pocket.local){mutableStateOf(Pocket.prefs.getString(promptKey,"")?:"")}
     Column(Modifier.fillMaxSize().imePadding()){
-        Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){IconButton({Pocket.newTask=false}){Icon(Icons.AutoMirrored.Rounded.ArrowBack,"Back")};Text("New task",fontSize=23.sp,fontWeight=FontWeight.Medium)}
+        Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){IconButton({Pocket.newTask=false}){SymbolIcon(Icons.AutoMirrored.Rounded.ArrowBack,"Back")};Text("New task",fontSize=23.sp,fontWeight=FontWeight.Medium)}
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
             Text("Start where the work lives.",fontSize=26.sp,lineHeight=32.sp)
             Text("Choose a folder on ${Pocket.host}. Choose permissions below before starting.",color=Muted,fontSize=14.sp,lineHeight=21.sp)
@@ -59,7 +59,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(Pocket.projects.isNotEmpty()){
                 Label("RECENT PROJECTS")
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel)){
-                    Pocket.projects.take(5).forEach{p->Row(Modifier.fillMaxWidth().clickable(enabled=!Pocket.starting){cwd=p.s("cwd");Pocket.prefs.edit().putString(cwdKey,cwd).apply()}.padding(horizontal=14.dp,vertical=11.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Rounded.FolderOpen,null,tint=if(cwd==p.s("cwd"))Mint else Muted,modifier=Modifier.size(18.dp));Column(Modifier.weight(1f).padding(start=10.dp)){Text(p.s("name"),fontSize=14.sp,color=if(cwd==p.s("cwd"))Mint else Paper);Text(p.s("cwd"),fontSize=10.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)};if(cwd==p.s("cwd"))Icon(Icons.Rounded.Check,null,tint=Mint,modifier=Modifier.size(16.dp))}}
+                    Pocket.projects.take(5).forEach{p->Row(Modifier.fillMaxWidth().clickable(enabled=!Pocket.starting){cwd=p.s("cwd");Pocket.prefs.edit().putString(cwdKey,cwd).apply()}.padding(horizontal=14.dp,vertical=11.dp),verticalAlignment=Alignment.CenterVertically){SymbolIcon(Icons.Rounded.FolderOpen,null,tint=if(cwd==p.s("cwd"))Mint else Muted,modifier=Modifier.size(18.dp));Column(Modifier.weight(1f).padding(start=10.dp)){Text(p.s("name"),fontSize=14.sp,color=if(cwd==p.s("cwd"))Mint else Paper);Text(p.s("cwd"),fontSize=10.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)};if(cwd==p.s("cwd"))SymbolIcon(Icons.Rounded.Check,null,tint=Mint,modifier=Modifier.size(16.dp))}}
                 }
             }
             TaskPermissionsControl()
@@ -69,7 +69,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             ErrorBanner();Spacer(Modifier.height(10.dp))
         }
         Button({Pocket.startTask(cwd.trim(),prompt.trim())},enabled=cwd.isNotBlank()&&prompt.isNotBlank()&&!Pocket.starting,modifier=Modifier.fillMaxWidth().padding(20.dp).height(54.dp),shape=RoundedCornerShape(6.dp)){
-            if(Pocket.starting)CircularProgressIndicator(Modifier.size(20.dp),strokeWidth=2.dp,color=Ink)else Icon(Icons.Rounded.ArrowUpward,null)
+            if(Pocket.starting)CircularProgressIndicator(Modifier.size(20.dp),strokeWidth=2.dp,color=Ink)else SymbolIcon(Icons.Rounded.ArrowUpward,null)
             Spacer(Modifier.width(9.dp));Text(if(Pocket.starting)"Starting…" else if(Pocket.startStatus.isNotBlank())"Check task status" else "Start task")
         }
     }
@@ -101,16 +101,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
     LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){delay(32);val count=list.layoutInfo.totalItemsCount;if(count>0)list.scrollToItem(count-1)}}
     Column(Modifier.fillMaxSize().imePadding()){
-        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
-            Column(Modifier.weight(1f)){
-                Text(t?.s("name")?.ifBlank{t.s("preview").take(80)}?.ifBlank{"New task"}?:(if(Pocket.error.isNotBlank())"Couldn’t load task" else "Opening task…"),fontSize=17.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
-                val meta=listOf(t?.s("model")?.takeIf{it.isNotBlank()},if(!Pocket.connected)"Workstation unreachable" else if(!Pocket.codexOnline)"Waiting for Codex" else if(active)"Working" else null).filterNotNull().joinToString(" · ")
-                if(meta.isNotBlank())Text(meta,fontSize=11.sp,color=if(active)Mint else Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
-            }
-
-        }
-        if(PocketTranscript.browsingEarlier)TextButton({follow=true;PocketTranscript.latest()},modifier=Modifier.fillMaxWidth()){Text("Viewing earlier activity · Back to latest")}
-        HorizontalDivider(color=Line)
+        ConversationNotesCard()
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 item(key="history"){if(PocketTranscript.earlier)TextButton({follow=false;scope.launch{PocketTranscript.load(true);list.scrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},enabled=!PocketTranscript.loading,modifier=Modifier.fillMaxWidth()){Text(if(PocketTranscript.loading)"Loading…" else "Load earlier activity",color=Mint)}}
@@ -121,7 +112,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 
                 item(key="errors"){ErrorBanner()}
             }
-            if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){Icon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));Text("Latest",fontSize=12.sp)}
+            if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));Text("Latest",fontSize=12.sp)}
         }
         if(keyboardInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically){
@@ -150,7 +141,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                         onLongClick={if(hasDraft)submit("queue")},onClick={submit("steer")})
                     .semantics{role=androidx.compose.ui.semantics.Role.Button;contentDescription=label;if(hasDraft)customActions=listOf(CustomAccessibilityAction("Queue for next turn"){if(enabled){submit("queue");true}else false})},contentAlignment=Alignment.Center){
                     if(Pocket.sending)CircularProgressIndicator(Modifier.size(18.dp),color=Mint,strokeWidth=2.dp)
-                    else Icon(Icons.Rounded.ArrowUpward,null,tint=if(hasDraft&&enabled)Ink else Muted.copy(alpha=.45f),modifier=Modifier.size(23.dp))
+                    else SymbolIcon(Icons.Rounded.ArrowUpward,null,tint=if(hasDraft&&enabled)Ink else Muted.copy(alpha=.45f),modifier=Modifier.size(23.dp))
                 }
             }
         }
@@ -160,7 +151,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
             ChatActionButton("Back",Icons.AutoMirrored.Rounded.ArrowBack,Modifier.weight(1f),{keyboard?.hide();Pocket.closeTask()})
-            FilledTonalIconButton(onClick={actionsOpen=true},modifier=Modifier.size(64.dp),shape=RoundedCornerShape(6.dp)){Icon(Icons.Rounded.MoreHoriz,"Conversation options",Modifier.size(28.dp))}
+            UsageDock(Modifier.width(58.dp))
+            FilledTonalIconButton(onClick={actionsOpen=true},modifier=Modifier.size(64.dp),shape=RoundedCornerShape(6.dp)){SymbolIcon(Icons.Rounded.MoreHoriz,"Conversation options",Modifier.size(28.dp))}
             if(active)ChatActionButton("Stop",Icons.Rounded.Stop,Modifier.weight(1f),{Pocket.interrupt()},recording=true)
         }
     }
@@ -168,6 +160,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         Column(Modifier.fillMaxWidth().padding(horizontal=16.dp).padding(bottom=24.dp)){
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){Text(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
             if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){Text("Queue · ${waiting.size}")}
+            TextButton({rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"},modifier=Modifier.fillMaxWidth()){Text("Keep latest reply in notes")}
             TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){Text("Model, effort & mode")}
             TextButton({actionsOpen=false;taskName=t?.s("name").orEmpty();renameOpen=true},modifier=Modifier.fillMaxWidth()){Text("Rename")}
             TextButton({actionsOpen=false;confirmArchive=true},enabled=!active,modifier=Modifier.fillMaxWidth()){Text("Archive")}
@@ -185,7 +178,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     var menu by remember(r.s("id")){mutableStateOf(false)}
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Ink.copy(alpha=.3f)).clickable{editingQueue=r;queuedText=r.s("text")}.padding(start=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
                         Text(r.s("text"),fontSize=14.sp,lineHeight=21.sp,modifier=Modifier.weight(1f),maxLines=3,overflow=TextOverflow.Ellipsis)
-                        Box{IconButton({menu=true}){Icon(Icons.Rounded.MoreVert,"Queued message actions",tint=Muted)}
+                        Box{IconButton({menu=true}){SymbolIcon(Icons.Rounded.MoreVert,"Queued message actions",tint=Muted)}
                             DropdownMenu(menu,{menu=false}){
                                 DropdownMenuItem(text={Text("Edit")},onClick={menu=false;editingQueue=r;queuedText=r.s("text")})
                                 DropdownMenuItem(text={Text(if(active)"Steer now" else "Send now")},onClick={menu=false;Pocket.queuedReply(r.s("id"),"send")})
@@ -216,24 +209,29 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         "request"->row.optJSONObject("request")?.let{RequestCard(it)}
         "attachments"->Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Label("SHARED FILES · ${row.s("title")}",Mint);row.optJSONArray("attachments")?.objects()?.forEach{Attachment(it)}}
         "user","message"->{val you=row.s("kind")=="user";Column(Modifier.fillMaxWidth().then(if(you)Modifier.clip(RoundedCornerShape(6.dp)).background(Panel).padding(14.dp)else Modifier.padding(vertical=5.dp)),verticalArrangement=Arrangement.spacedBy(7.dp)){
-            Text(if(you)"› You" else row.s("title","Codex"),fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=if(you)Mint else Muted)
-            SelectionContainer{RichText(row.s("text"))}
+            SymbolIcon(if(you)"User" else "Codex",if(you)"Your message" else "Codex message",Modifier.size(20.dp))
+            val sourceId="row:"+row.s("id")
+            LaunchedEffect(row.s("text"),PocketImmersion.enabled){PocketImmersion.offer(sourceId,row.s("text"),if(you)"user message" else "Codex response")}
+            SelectionContainer{RichText(PocketImmersion.display(sourceId,row.s("text")))}
+            if(PocketImmersion.enabled)TextButton({PocketImmersion.revealOriginal(sourceId)}){Text("Original / Italiano",fontSize=10.sp)}
             if(row.optBoolean("truncated"))Text("Excerpt · full content remains on the workstation",fontSize=10.sp,color=Muted)
         }}
         else->ActivityRow(row)
     }
 }
 @Composable fun ActivityRow(row:JSONObject){
+    val sourceId="activity:"+row.s("id")
+    LaunchedEffect(row.s("text"),PocketImmersion.enabled){if(row.s("type")!="commandExecution")PocketImmersion.offer(sourceId,row.s("text"),"public thought or activity")}
     var expanded by remember(row.s("id")){mutableStateOf(false)}
     val running=row.s("status")=="inProgress";val failed=row.s("status") in listOf("failed","declined")||(!row.isNull("exitCode")&&row.optInt("exitCode")!=0)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Panel.copy(alpha=.6f)).clickable{expanded=!expanded}.padding(horizontal=11.dp,vertical=9.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            if(running)CircularProgressIndicator(Modifier.size(12.dp),strokeWidth=1.5.dp,color=Mint)else Icon(if(failed)Icons.Rounded.ErrorOutline else Icons.Rounded.Check,null,tint=if(failed)Coral else Muted,modifier=Modifier.size(13.dp))
+            if(running)CircularProgressIndicator(Modifier.size(12.dp),strokeWidth=1.5.dp,color=Mint)else SymbolIcon(if(failed)Icons.Rounded.ErrorOutline else Icons.Rounded.Check,null,tint=if(failed)Coral else Muted,modifier=Modifier.size(13.dp))
             Text(row.s("title"),fontSize=12.sp,color=if(running)Mint else Muted,modifier=Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
             if(row.optLong("durationMs")>0)Text("${row.optLong("durationMs")/1000}s",fontSize=10.sp,color=Muted)
-            Icon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse activity" else "Expand activity",tint=Muted,modifier=Modifier.size(16.dp))
+            SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse activity" else "Expand activity",tint=Muted,modifier=Modifier.size(16.dp))
         }
-        if(row.s("text").isNotBlank())Text(row.s("text"),fontSize=11.sp,lineHeight=17.sp,color=Paper.copy(alpha=.82f),fontFamily=if(row.s("type")=="commandExecution")FontFamily.Monospace else FontFamily.Default,maxLines=if(expanded)Int.MAX_VALUE else 2,overflow=TextOverflow.Ellipsis)
+        if(row.s("text").isNotBlank())Text(PocketImmersion.display(sourceId,row.s("text")),fontSize=11.sp,lineHeight=17.sp,color=Paper.copy(alpha=.82f),fontFamily=if(row.s("type")=="commandExecution")FontFamily.Monospace else FontFamily.Default,maxLines=if(expanded)Int.MAX_VALUE else 2,overflow=TextOverflow.Ellipsis)
         if(expanded&&row.s("detail").isNotBlank())SelectionContainer{Text(row.s("detail"),fontSize=11.sp,lineHeight=16.sp,fontFamily=FontFamily.Monospace,color=Muted,modifier=Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()))}
         if(expanded&&row.optBoolean("truncated"))Text("Output excerpt · full content remains on the workstation",fontSize=10.sp,color=Muted)
     }
@@ -259,9 +257,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         if(loading)CircularProgressIndicator(Modifier.size(22.dp),strokeWidth=2.dp)
         if(problem.isNotBlank())Text(problem,color=Coral,fontSize=12.sp)
         if(Pocket.error.isNotBlank())Text(Pocket.error,color=Coral,fontSize=12.sp)
-        Box{OutlinedButton({modelMenu=true},enabled=models.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text(selected?.s("name")?:model.ifBlank{"Model"});Spacer(Modifier.weight(1f));Icon(Icons.Rounded.ExpandMore,null)}
+        Box{OutlinedButton({modelMenu=true},enabled=models.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text(selected?.s("name")?:model.ifBlank{"Model"});Spacer(Modifier.weight(1f));SymbolIcon(Icons.Rounded.ExpandMore,null)}
             DropdownMenu(modelMenu,{modelMenu=false}){models.forEach{m->DropdownMenuItem(text={Text(m.s("name"))},onClick={model=m.s("model");effort=m.s("defaultEffort");modelMenu=false})}}}
-        Box{OutlinedButton({effortMenu=true},enabled=efforts.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text("Reasoning: ${effort.ifBlank{"default"}}");Spacer(Modifier.weight(1f));Icon(Icons.Rounded.ExpandMore,null)}
+        Box{OutlinedButton({effortMenu=true},enabled=efforts.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text("Reasoning: ${effort.ifBlank{"default"}}");Spacer(Modifier.weight(1f));SymbolIcon(Icons.Rounded.ExpandMore,null)}
             DropdownMenu(effortMenu,{effortMenu=false}){efforts.forEach{e->DropdownMenuItem(text={Text(e.s("reasoningEffort"))},onClick={effort=e.s("reasoningEffort");effortMenu=false})}}}
         Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(if(plan)"Plan mode" else "Build mode");Text(if(plan)"Propose a plan before implementation" else "Carry out the requested work",fontSize=11.sp,color=Muted)};Switch(plan,{plan=it})}
     }},confirmButton={TextButton({Pocket.updateTurnSettings(JSONObject().put("model",model).put("effort",effort).put("mode",if(plan)"plan" else "default"),onDismiss)},enabled=selected!=null&&effort.isNotBlank()&&!loading){Text("Save")}},dismissButton={TextButton(onDismiss){Text("Cancel")}})

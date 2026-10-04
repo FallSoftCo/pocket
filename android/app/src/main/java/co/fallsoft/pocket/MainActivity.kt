@@ -13,7 +13,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,12 +34,17 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
@@ -63,7 +75,6 @@ class MainActivity:ComponentActivity(){
         if(Pocket.token.isNotBlank()){Pocket.refresh()}
         setContent{MaterialTheme(shapes=Shapes(extraSmall=RoundedCornerShape(2.dp),small=RoundedCornerShape(4.dp),medium=RoundedCornerShape(6.dp),large=RoundedCornerShape(8.dp),extraLarge=RoundedCornerShape(10.dp)),typography=Typography(titleLarge=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=20.sp,fontWeight=FontWeight.Medium),titleMedium=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=16.sp,fontWeight=FontWeight.Medium),bodyLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,lineHeight=22.sp,fontFamily=AppFont),bodyMedium=androidx.compose.ui.text.TextStyle(fontSize=14.sp,lineHeight=20.sp,fontFamily=AppFont),labelLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont)),colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,background=Ink,surface=Panel,onSurface=Paper,onBackground=Paper,outline=Muted,secondary=Coral,onSecondary=Ink,surfaceVariant=Panel,onSurfaceVariant=Paper,surfaceContainer=Panel,surfaceContainerHigh=Panel,surfaceContainerHighest=Panel,surfaceContainerLow=Panel,surfaceContainerLowest=Ink,secondaryContainer=Panel,onSecondaryContainer=Paper,primaryContainer=Panel,onPrimaryContainer=Paper,tertiary=NextCerise,onTertiary=Ink,tertiaryContainer=Panel,onTertiaryContainer=Paper)){
             Surface(Modifier.fillMaxSize(),color=Ink){Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
-                WeeklyLimitBar()
                 Box(Modifier.weight(1f)){if(Pocket.token.isBlank()||Pocket.pairingMode)PairScreen(initialServer.ifBlank{if(Pocket.pairingMode)"http://127.0.0.1:18880" else ""},initialCode)else PocketApp()}
             }}
         }}
@@ -87,7 +98,7 @@ class MainActivity:ComponentActivity(){
     override fun onResume(){super.onResume();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail()}}
 }
 
-@Composable fun Mark(size:Int=44){Box(Modifier.size(size.dp).clip(RoundedCornerShape(4.dp)).background(Ink),contentAlignment=Alignment.Center){Icon(painterResource(R.drawable.ic_pocket_mark),"NextComp",tint=Color.Unspecified,modifier=Modifier.size((size*.82f).dp))}}
+@Composable fun Mark(size:Int=44){AnimatedMark(size)}
 @Composable fun Label(text:String,color:Color=Muted){Text(text.uppercase(),color=color,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.8.sp)}
 @Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){Text(Pocket.error,color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){Text("Reload conversation",color=Mint)}}}}
 @Composable fun ConnectionNotice(){
@@ -109,7 +120,7 @@ class MainActivity:ComponentActivity(){
         Text("Your tasks, updates and next ideas.\nConnected to Codex here or on your workstation.",color=Muted,fontSize=17.sp,lineHeight=25.sp)
         Spacer(Modifier.height(14.dp));OutlinedTextField(address,{address=it},label={Text("NextComp server address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
         OutlinedTextField(pin,{pin=it},label={Text("One-time pairing code")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
-        ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(6.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{Text("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));Icon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
+        ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(6.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{Text("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));SymbolIcon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
         if(Pocket.token.isNotBlank())TextButton({Pocket.pairingMode=false},modifier=Modifier.fillMaxWidth()){Text("Cancel",color=Muted)}
 
     }
@@ -118,21 +129,28 @@ class MainActivity:ComponentActivity(){
 @Composable fun PocketApp(){
     if(PocketVoice.active){VoiceScreen();return}
 
+    var workToolsOpen by remember{mutableStateOf(false)}
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
     Column(Modifier.fillMaxSize()){
         SpeechPlayer()
+        SpeechCaptionBanner()
         ConnectionNotice()
         PhoneControlNotice()
         if(Pocket.newTask)NewTaskScreen()
         else if(Pocket.selected!=null)key(Pocket.selected){ConversationScreen()}
         else{
-            Box(Modifier.weight(1f)){when(Pocket.tab){0->WorkScreen();1->UpdatesScreen();else->SettingsScreen()}}
-            Row(Modifier.fillMaxWidth().background(Ink).padding(horizontal=deviceCornerInset(),vertical=8.dp),horizontalArrangement=Arrangement.SpaceEvenly){
-                listOf(Triple("Work",Icons.Rounded.Layers,0),Triple("Updates",Icons.Rounded.NotificationsNone,1),Triple("Settings",Icons.Rounded.Tune,2)).forEach{(title,icon,index)->
-                    Column(Modifier.width(88.dp).clip(RoundedCornerShape(18.dp)).clickable{Pocket.tab=index;Pocket.refresh()}.padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
-                        Icon(icon,title,tint=if(Pocket.tab==index)Mint else Muted,modifier=Modifier.size(24.dp));Text(title,fontSize=11.sp,color=if(Pocket.tab==index)Mint else Muted,fontWeight=FontWeight.Medium)
+            AnimatedContent(targetState=Pocket.tab,modifier=Modifier.weight(1f).fillMaxWidth(),label="tab",transitionSpec={
+                (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
+            }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it});1->MissionScreen();else->SettingsScreen()}}
+            Row(Modifier.fillMaxWidth().padding(horizontal=deviceCornerInset(),vertical=8.dp).height(usageDockHeight()+8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)).padding(4.dp),horizontalArrangement=Arrangement.spacedBy(2.dp)){
+                listOf(Triple("Work",Icons.Rounded.Layers,0),Triple("Mission",Icons.Rounded.TravelExplore,1),Triple("Settings",Icons.Rounded.Tune,2)).forEach{(title,icon,index)->
+                    DockButton(title,icon,Modifier.weight(1f),selected=Pocket.tab==index){
+                        workToolsOpen=false;Pocket.tab=index;Pocket.refresh()
                     }
                 }
+                DockButton("Find",Icons.Rounded.Search,Modifier.weight(1f),primary=true){Pocket.tab=0;workToolsOpen=true}
+                VoiceLaunchButton(modifier=Modifier.weight(1.15f),dock=true)
+                UsageDock(Modifier.weight(1f))
             }
         }
     }
@@ -160,7 +178,7 @@ class MainActivity:ComponentActivity(){
             }
             TextButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")}){Text(if(PocketSpeech.paused)"Resume" else "Pause")}
             if(PocketSpeech.paused)Box{
-                IconButton({discard=true}){Icon(Icons.Rounded.MoreVert,"Speech options",tint=Muted)}
+                IconButton({discard=true}){SymbolIcon(Icons.Rounded.MoreVert,"Speech options",tint=Muted)}
                 DropdownMenu(discard,{discard=false}){DropdownMenuItem(text={Text("Clear saved speech")},onClick={discard=false;PocketSpeech.clear()})}
             }
         }
@@ -171,18 +189,41 @@ class MainActivity:ComponentActivity(){
 @Composable fun ProfileSwitcher(){
     if(Pocket.savedToken(false).isBlank()||Pocket.savedToken(true).isBlank())return
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-        FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={Text("Workstation")},leadingIcon={Icon(Icons.Rounded.Computer,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
-        FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={Text("This phone")},leadingIcon={Icon(Icons.Rounded.PhoneAndroid,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
+        FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={Text("Workstation")},leadingIcon={SymbolIcon(Icons.Rounded.Computer,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
+        FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={Text("This phone")},leadingIcon={SymbolIcon(Icons.Rounded.PhoneAndroid,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun WorkScreen(){
+@Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={}){
     LaunchedEffect(Pocket.local,Pocket.token){while(true){delay(5000);if(Pocket.connected)Pocket.refresh()}}
     var filter by remember{mutableIntStateOf(if(Pocket.showArchived)3 else 0)};var query by remember{mutableStateOf("")}
-    var toolsOpen by remember{mutableStateOf(false)}
-    val shown=Pocket.tasks.sortedByDescending{if(it.updated<100000000000L)it.updated*1000 else it.updated}.filter{(filter!=1||it.status=="active")&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true)||it.preview.contains(query,true))}
+    val listState=rememberLazyListState()
+    var touching by remember{mutableStateOf(false)}
+    var displayed by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf(Pocket.tasks)}
+    var order by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(Pocket.key("sessionOrder"),"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{if(it.updated<100000000000L)it.updated*1000 else it.updated}.map{it.id}})}
+    LaunchedEffect(Pocket.local,Pocket.token,Pocket.showArchived){
+        val pacing=SessionListPacing();var observed=Pocket.tasks.associateBy{it.id}
+        while(true){
+            val latest=Pocket.tasks;val now=android.os.SystemClock.elapsedRealtime()
+            val changed=latest.count{observed[it.id]!=it};observed=latest.associateBy{it.id}
+            pacing.record(now,changed)
+            val active=latest.count{it.status=="active"}
+            if(pacing.contentDue(now,active)){displayed=latest;pacing.contentDelivered(now)}
+            if(pacing.orderDue(now,active,listState.isScrollInProgress||touching||toolsOpen)){
+                // Keep equal timestamps stable; bottom-first layout retains its visible keyed anchor.
+                val next=stableSessionOrder(order,latest.map{SessionRank(it.id,if(it.updated<100000000000L)it.updated*1000 else it.updated,it.status=="active")},System.currentTimeMillis())
+                if(next!=order){order=next;Pocket.prefs.edit().putString(Pocket.key("sessionOrder"),org.json.JSONArray(next).toString()).apply()}
+                pacing.orderDelivered(now)
+            }
+            delay(100)
+        }
+    }
+    val rank=order.withIndex().associate{it.value to it.index}
+    val shown=displayed.sortedBy{rank[it.id]?:Int.MAX_VALUE}.filter{(filter!=1||it.status=="active")&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true)||it.preview.contains(query,true))}
     Column(Modifier.fillMaxSize()){
-    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp),reverseLayout=true,verticalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(top=12.dp,bottom=12.dp)){
+    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp).pointerInput(Unit){
+        awaitPointerEventScope{try{while(true){touching=awaitPointerEvent(PointerEventPass.Initial).changes.any{it.pressed}}}finally{touching=false}}
+    },state=listState,reverseLayout=true,verticalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(top=12.dp,bottom=12.dp)){
 
         item{ErrorBanner()}
 
@@ -191,19 +232,16 @@ class MainActivity:ComponentActivity(){
         if(shown.isEmpty())item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
         items(shown,key={it.id}){TaskCard(it)}
     }
-    Row(Modifier.fillMaxWidth().padding(horizontal=deviceCornerInset(),vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
-        VoiceLaunchButton(modifier=Modifier.weight(1f),bar=true)
-        ChatActionButton("Find / New",Icons.Rounded.Search,Modifier.weight(1f),{toolsOpen=true})
+
     }
-    }
-    if(toolsOpen)ModalBottomSheet(onDismissRequest={toolsOpen=false},containerColor=Panel){
+    if(toolsOpen)ModalBottomSheet(onDismissRequest={onToolsOpen(false)},containerColor=Panel){
         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=16.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             OutlinedTextField(query,{query=it},placeholder={Text("Find sessions")},singleLine=true,modifier=Modifier.fillMaxWidth())
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={Text(title)})}}
             ProfileSwitcher()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
-                Button({toolsOpen=false;Pocket.composeTask()},modifier=Modifier.weight(1f).height(56.dp)){Text("New task")}
-                FilledTonalButton({toolsOpen=false},modifier=Modifier.weight(1f).height(56.dp)){Text("Show sessions")}
+                Button({onToolsOpen(false);Pocket.composeTask()},modifier=Modifier.weight(1f).height(56.dp)){Text("New task")}
+                FilledTonalButton({onToolsOpen(false)},modifier=Modifier.weight(1f).height(56.dp)){Text("Show sessions")}
             }
         }
     }
@@ -214,7 +252,7 @@ fun relative(time:Long):String{val seconds=(System.currentTimeMillis()-(if(time<
 fun lastActivity(time:Long):String{
     if(time<=0)return "unknown"
     val millis=if(time<100000000000L)time*1000 else time
-    return if(System.currentTimeMillis()-millis<7*86400000L)relative(time) else java.text.SimpleDateFormat("MMM d, yyyy",java.util.Locale.getDefault()).format(java.util.Date(millis))
+    return if(System.currentTimeMillis()-millis<7*86400000L)relative(time) else java.text.SimpleDateFormat(if(System.currentTimeMillis()-millis<365*86400000L)"MMM d" else "MMM yy",java.util.Locale.getDefault()).format(java.util.Date(millis))
 }
 fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     val millis=if(time<100000000000L)time*1000 else time
@@ -222,31 +260,45 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     val p=if(days<=1)days*0.35 else 0.35+0.65*(kotlin.math.ln(days)/kotlin.math.ln(90.0)).coerceIn(0.0,1.0)
     return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
 }
-@Composable fun TaskCard(t:Task){val active=t.status=="active";val ageColor=sessionAgeColor(t.updated);var rename by remember(t.id){mutableStateOf(false)};var name by remember(t.id){mutableStateOf(t.title)}
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(6.dp)).background(Panel).clickable(enabled=!t.archived){Pocket.open(t.id)}){
-    Box(Modifier.width(10.dp).fillMaxHeight().background(ageColor))
-    Column(Modifier.weight(1f).padding(start=14.dp,end=8.dp,top=8.dp,bottom=12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically){
-            Text(t.title,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
-            IconButton({name=t.title;rename=true},modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.Edit,"Rename conversation",tint=Muted,modifier=Modifier.size(18.dp))}
+@Composable fun TaskCard(t:Task){
+    val active=t.status=="active";val ageColor=sessionAgeColor(t.updated)
+    LaunchedEffect(t.preview,PocketImmersion.enabled){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
+    val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
+    var rename by remember(t.id){mutableStateOf(false)};var name by remember(t.id){mutableStateOf(t.title)}
+    val highlight=remember(t.id){Animatable(0f)}
+    val revision=Triple(t.preview,t.status,t.updated)
+    var observed by remember(t.id){mutableStateOf(revision)}
+    LaunchedEffect(revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
+    val shape=RoundedCornerShape(8.dp)
+    Column(Modifier.fillMaxWidth().clip(shape).background(Panel).drawBehind{
+        drawRoundRect(Brush.radialGradient(colors=listOf(ageColor.copy(alpha=.26f),ageColor.copy(alpha=.06f),Color.Transparent),center=Offset(size.width*.85f,0f),radius=size.width*.95f),cornerRadius=CornerRadius(8.dp.toPx()))
+    }.border(1.dp,Line.copy(alpha=.7f),shape).border(2.dp,Mint.copy(alpha=highlight.value),shape).clickable(enabled=!t.archived){Pocket.open(t.id)}.padding(start=8.dp,end=8.dp,top=2.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            if(rename){
+                val focus=remember{androidx.compose.ui.focus.FocusRequester()}
+                LaunchedEffect(Unit){focus.requestFocus()}
+                OutlinedTextField(name,{name=it.take(120)},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.trim().isNotEmpty())Pocket.renameTask(t.id,name.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.trim().isNotEmpty())Pocket.renameTask(t.id,name.trim()){rename=false}}))
+            }else Text(t.title,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f).heightIn(min=48.dp).wrapContentHeight().clickable{name=t.title;rename=true})
+            Text(lastActivity(t.updated),color=Ink,fontSize=10.sp,fontWeight=FontWeight.Medium,modifier=Modifier.semantics{contentDescription="Last active "+lastActivity(t.updated)}.width(58.dp).clip(RoundedCornerShape(4.dp)).background(ageColor).padding(horizontal=7.dp,vertical=4.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
+            Box(Modifier.size(16.dp)){if(active)CircularProgressIndicator(Modifier.fillMaxSize().semantics{contentDescription="Working"},color=Mint,strokeWidth=1.5.dp)}
+            IconButton({Pocket.watchTask(t.id,!t.watched)},modifier=Modifier.size(48.dp)){SymbolIcon(if(t.watched)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,if(t.watched)"Turn off notifications" else "Turn on notifications",modifier=Modifier.size(18.dp))}
+            if(t.archived)IconButton({Pocket.restoreTask(t.id)},modifier=Modifier.size(48.dp)){SymbolIcon(Icons.Rounded.Unarchive,"Restore conversation",tint=Mint,modifier=Modifier.size(18.dp))}
+
         }
-        if(t.preview.isNotBlank())Text((when(t.previewRole){"user"->"You: ";"assistant"->"Codex: ";else->""})+t.preview,color=Paper,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(end=8.dp))
-        if(!t.archived)Row(Modifier.fillMaxWidth().padding(end=8.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=t.id,bar=true)
-            ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{Pocket.open(t.id,keyboard=true)})
+        Row(Modifier.fillMaxWidth().height(previewHeight),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+            if(!t.archived)VoiceLaunchButton(modifier=Modifier.width(48.dp).fillMaxHeight(),threadId=t.id,compact=true)
+            Box(Modifier.width(18.dp).height(previewHeight)){
+            if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
+            else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
+            }
+            Text(PocketImmersion.display("card:"+t.id,t.preview),color=Paper,fontSize=14.sp,lineHeight=20.sp,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            if(!t.archived)IconButton({Pocket.open(t.id,keyboard=true)},modifier=Modifier.width(48.dp).fillMaxHeight()){SymbolIcon(Icons.Rounded.Keyboard,"Open keyboard in this conversation",modifier=Modifier.size(24.dp))}
         }
-        Row(verticalAlignment=Alignment.CenterVertically){
-            Text("Last active · "+lastActivity(t.updated),color=Ink,fontSize=11.sp,fontWeight=FontWeight.Medium,modifier=Modifier.clip(RoundedCornerShape(3.dp)).background(ageColor).padding(horizontal=8.dp,vertical=4.dp))
-            Spacer(Modifier.weight(1f))
-            if(active)Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){CircularProgressIndicator(Modifier.size(12.dp),color=Mint,strokeWidth=1.5.dp);Text("Working",color=Mint,fontSize=12.sp,fontWeight=FontWeight.Medium)}
-            if(t.watched)Icon(Icons.Rounded.NotificationsActive,"Following",tint=Mint,modifier=Modifier.padding(start=8.dp).size(16.dp))
-            if(t.archived)TextButton({Pocket.restoreTask(t.id)},colors=ButtonDefaults.textButtonColors(contentColor=Mint)){Text("Restore")}
-        }
+
     }
-    }
-    if(rename)AlertDialog(onDismissRequest={rename=false},title={Text("Rename conversation")},text={OutlinedTextField(name,{name=it.take(120)},singleLine=true,label={Text("Name")})},confirmButton={TextButton({Pocket.renameTask(t.id,name.trim()){rename=false}},enabled=name.trim().isNotEmpty()){Text("Save")}},dismissButton={TextButton({rename=false}){Text("Cancel")}})
+
 }
-@Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){Icon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));Text(title,fontSize=19.sp);Text(body,color=Muted,fontSize=13.sp)}}
+@Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){SymbolIcon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));Text(title,fontSize=19.sp);Text(body,color=Muted,fontSize=13.sp)}}
 @Composable fun AttentionCard(n:JSONObject){
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
         Label(when(n.s("kind")){"approval"->"REVIEW A REQUEST";"question"->"ANSWER A QUESTION";else->"CHECK A PROBLEM"},Coral)
@@ -254,6 +306,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         Text(n.s("body"),color=Muted,fontSize=13.sp,lineHeight=19.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
             TextButton({Pocket.open(n.s("thread_id"))}){Text("Review",color=Mint)}
+            if(n.s("kind")=="question")TextButton({PocketQuestionActions.skipNotification(n.optLong("id"),Pocket.local)}){Text("Skip",color=Mint)}
             TextButton({PocketAttention.snooze(n.optLong("id"))}){Text("Later · 30m",color=Muted)}
             TextButton({PocketAttention.dismiss(n.optLong("id"))}){Text("Dismiss",color=Muted)}
         }
@@ -279,6 +332,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 @Composable fun SettingsScreen(){val c=LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(23.dp)){
         TaskPermissionsControl()
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("Italian immersion",modifier=Modifier.weight(1f));Switch(PocketImmersion.enabled,{PocketImmersion.setEnabled(it)})}
+        if(PocketImmersion.unavailable)Text("Translation unavailable · showing originals",color=Muted,fontSize=12.sp)
         Label("MADE TO BE YOURS",Mint);Text("Your connection.",fontSize=34.sp,letterSpacing=(-1).sp)
         Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             ConnectionPill();Text(Pocket.host,fontSize=23.sp);Text(Pocket.base,color=Muted,fontSize=12.sp)
@@ -296,7 +351,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         }
         if(Pocket.savedToken(true).isNotBlank())PhoneControlSettings()
         NotificationAudioSettings()
-        Button({Pocket.test()},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){Icon(Icons.Rounded.NotificationsActive,null);Spacer(Modifier.width(10.dp));Text("Send a test notification")}
+        Button({Pocket.test()},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){SymbolIcon(Icons.Rounded.NotificationsActive,null);Spacer(Modifier.width(10.dp));Text("Send a test notification")}
         OutlinedButton({c.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,c.packageName))},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){Text("Notification settings")}
         Text(if(Pocket.local)"The local monitor uses no cloud push service. Keep its notification enabled while Codex is working on this phone." else "Keep notifications enabled. Tailscale connects you to your conversations and lets you reply. Firebase handles alerts without a permanent connection to the app.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
         ErrorBanner();OutlinedButton({Pocket.disconnect()},modifier=Modifier.fillMaxWidth()){Text("Disconnect this phone",color=Coral)}
@@ -348,7 +403,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             else if(part.isNotBlank()){
                 val display=part.trim().replace(Regex("\\*\\*(.*?)\\*\\*"),"$1").replace(Regex("\\[([^]]+)\\]\\(([^)]+)\\)"),"$1 ↗")
                 Text(display,fontSize=15.sp,lineHeight=24.sp,color=Paper.copy(alpha=.93f))
-                Regex("\\[([^]]+)\\]\\((https?://[^)]+)\\)").findAll(part).forEach{link->TextButton({try{c.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(link.groupValues[2])))}catch(_:Exception){}}){Text(link.groupValues[1],fontSize=12.sp,color=Mint);Icon(Icons.AutoMirrored.Rounded.OpenInNew,null,Modifier.padding(start=5.dp).size(14.dp),tint=Mint)}}
+                Regex("\\[([^]]+)\\]\\((https?://[^)]+)\\)").findAll(part).forEach{link->TextButton({try{c.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(link.groupValues[2])))}catch(_:Exception){}}){Text(link.groupValues[1],fontSize=12.sp,color=Mint);SymbolIcon(Icons.AutoMirrored.Rounded.OpenInNew,null,Modifier.padding(start=5.dp).size(14.dp),tint=Mint)}}
             }
         }
     }
@@ -357,13 +412,24 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     fun open(){Pocket.scope.launch{try{val file=withContext(Dispatchers.IO){val folder=File(c.cacheDir,"shared");folder.mkdirs();val f=File(folder,a.s("id")+"-"+a.s("name").substringAfterLast('/'));val req=okhttp3.Request.Builder().url(Pocket.base+a.s("url")).header("Authorization","Bearer ${Pocket.token}").build();Pocket.http.newCall(req).execute().use{r->if(!r.isSuccessful)throw Exception("Could not download attachment");f.writeBytes(r.body!!.bytes())};f};val u=FileProvider.getUriForFile(c,"co.fallsoft.pocket.files",file);c.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(u,a.s("mime")).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))}catch(e:Exception){Pocket.error=e.message?:"No app can open this file"}}}
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Panel).clickable{open()},verticalArrangement=Arrangement.spacedBy(6.dp)){
         if(a.s("mime").startsWith("image/"))AsyncImage(model=ImageRequest.Builder(c).data(Pocket.base+a.s("url")).addHeader("Authorization","Bearer ${Pocket.token}").build(),contentDescription=a.s("name"),modifier=Modifier.fillMaxWidth().heightIn(min=100.dp,max=300.dp))
-        Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Rounded.AttachFile,null,tint=Mint,modifier=Modifier.size(18.dp));Text(a.s("name"),color=Mint,fontSize=12.sp,modifier=Modifier.padding(start=8.dp).weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis);Icon(Icons.AutoMirrored.Rounded.OpenInNew,null,tint=Muted,modifier=Modifier.size(16.dp))}
+        Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){SymbolIcon(Icons.Rounded.AttachFile,null,tint=Mint,modifier=Modifier.size(18.dp));Text(a.s("name"),color=Mint,fontSize=12.sp,modifier=Modifier.padding(start=8.dp).weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis);SymbolIcon(Icons.AutoMirrored.Rounded.OpenInNew,null,tint=Muted,modifier=Modifier.size(16.dp))}
     }
 }
 @Composable fun RequestCard(r:JSONObject){val p=r.optJSONObject("params")?:return;val id=r.s("id");val isQuestion=r.s("method").contains("requestUserInput");val answers=remember(id){mutableStateMapOf<String,String>()}
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(22.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Label(if(isQuestion)"YOUR INPUT" else "NEEDS YOUR APPROVAL",Coral)
-        if(isQuestion){p.optJSONArray("questions")?.objects()?.forEach{q->Text(q.s("question"),fontSize=16.sp,lineHeight=23.sp);q.optJSONArray("options")?.objects()?.forEach{o->val label=o.s("label");OutlinedButton({answers[q.s("id")]=label},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){Text(label,color=Paper)}};OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={Text("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){Text("Send answers")}}
+        if(isQuestion){p.optJSONArray("questions")?.objects()?.forEach{q->Text(q.s("question"),fontSize=16.sp,lineHeight=23.sp);q.optJSONArray("options")?.objects()?.forEach{o->val label=o.s("label");OutlinedButton({answers[q.s("id")]=label},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){Text(label,color=Paper)}};OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={Text("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){Text("Send answers")};TextButton({PocketQuestionActions.skipRequest(id)}){Text("Skip")}}
         else{Text(p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({Pocket.answer(id,JSONObject().put("decision","accept"))}){Text("Allow once")};OutlinedButton({Pocket.answer(id,JSONObject().put("decision","decline"))}){Text("Decline",color=Coral)}}}else Text("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
+    }
+}
+
+@Composable fun DockButton(label:String,icon:ImageVector,modifier:Modifier=Modifier,selected:Boolean=false,primary:Boolean=false,onClick:()->Unit){
+    val color by animateColorAsState(if(selected||primary)Mint else Muted,label="dock tint")
+    val surface by animateColorAsState(if(primary)Mint.copy(alpha=.15f) else if(selected)Paper.copy(alpha=.07f) else Color.Transparent,label="dock surface")
+    Surface(onClick=onClick,modifier=modifier.height(usageDockHeight()),color=surface,shape=RoundedCornerShape(20.dp)){
+        Column(Modifier.fillMaxSize().pressMotion().padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+            SymbolIcon(icon,label,Modifier.size(if(primary)28.dp else 24.dp),tint=color)
+            Spacer(Modifier.height(3.dp));Text(label,color=color,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        }
     }
 }

@@ -229,7 +229,7 @@ class PocketVoiceService:Service(){
         if(nativeId==null)connectNative()
         stopPlayer();if(!requestFocus())throw IllegalStateException("Another app is using audio. Retry when it finishes.")
         afterSpeech=done;speechGeneration++;nativeAudio?.speak(speechGeneration)
-        api("/api/voice/native/speak",JSONObject().put("connectionId",nativeId).put("text",text))
+        api("/api/voice/native/speak",JSONObject().put("connectionId",nativeId).put("text",PocketImmersion.spoken("speech:"+text.hashCode(),text)))
     }
 
     private fun requestFocus():Boolean{

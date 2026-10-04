@@ -1,0 +1,50 @@
+{
+  "runtime": "codex-cli 0.160.0",
+  "authentication": "chatgpt",
+  "model": "gpt-6-luna",
+  "latencyMs": 5583,
+  "synthetic": true,
+  "translations": [
+    {
+      "id": "message",
+      "version": "b10c42084acfcb11fa17684574e6027252b0bede15d27b581c44ae113faa6865",
+      "original": "The preview is ready. Open `notes.md` to review the 3 changes.",
+      "text": "L’anteprima è pronta. Apri `notes.md` per esaminare le 3 modifiche.",
+      "language": "it"
+    },
+    {
+      "id": "thought-summary",
+      "version": "61a5b0227987241320763c12b1635171286f6fcf7dd87d5df2cdb583b88cf9e0",
+      "original": "Checking whether the button stays easy to reach while the keyboard is open.",
+      "text": "Verifico che il pulsante resti facilmente raggiungibile con la tastiera aperta.",
+      "language": "it"
+    }
+  ],
+  "success": true,
+  "events": [
+    {
+      "type": "immersion",
+      "translations": [
+        {
+          "id": "message",
+          "version": "b10c42084acfcb11fa17684574e6027252b0bede15d27b581c44ae113faa6865",
+          "original": "The preview is ready. Open `notes.md` to review the 3 changes.",
+          "text": "L’anteprima è pronta. Apri `notes.md` per esaminare le 3 modifiche.",
+          "language": "it"
+        }
+      ]
+    },
+    {
+      "type": "immersion",
+      "translations": [
+        {
+          "id": "thought-summary",
+          "version": "61a5b0227987241320763c12b1635171286f6fcf7dd87d5df2cdb583b88cf9e0",
+          "original": "Checking whether the button stays easy to reach while the keyboard is open.",
+          "text": "Verifico che il pulsante resti facilmente raggiungibile con la tastiera aperta.",
+          "language": "it"
+        }
+      ]
+    }
+  ]
+}
