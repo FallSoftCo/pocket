@@ -68,5 +68,25 @@
     "Private fixture validates the HTTP/download/package/installer pipeline; it contains no application code and does not qualify future application behavior.",
     "ADB controls the test emulator and restores development version after the actual HTTP/system-UI upgrade; the tested update download and upgrade themselves do not use ADB installation.",
     "Play Protect offered a per-install scan. The authored empty fixture was installed without uploading it; global Play Protect settings were unchanged."
-  ]
+  ],
+  "galleryIds": [
+    "nextcomp-alpha12-update-system-installer",
+    "nextcomp-alpha12-update-large-text",
+    "nextcomp-alpha12-update-ready"
+  ],
+  "galleryValidation": {
+    "cards": 1577,
+    "desktop": true,
+    "mobile": true,
+    "reducedMotion": true,
+    "automaticReload": true,
+    "errors": 0
+  },
+  "cleanup": {
+    "ownedEmulatorClosed": true,
+    "ownedSyntheticServerStopped": true,
+    "otherEmulatorsPreserved": true,
+    "privateFutureStageRemovedFromTestEmulator": true,
+    "pairedProfileDataPreserved": true
+  }
 }
