@@ -15,8 +15,8 @@
     {
       "id": "connectivity",
       "requirement": "Resolve false workstation connection failures while messages still arrive",
-      "status": "implemented-alpha13-phone-recovery-verification-pending",
-      "evidence": "Phone tailnet transport and HTTPS work; Android system hostname resolution stalls/fails despite Tailscale DNS enabled. Cached previously HTTPS-verified tailnet routes now use a 1.2s fresh-DNS deadline, bounded two-worker/two-waiting lookup pool and shared stalled lookups; late fresh results take precedence. Eight DNS tests cover trust, bounded wait, recovery, cold lookup and saturation. Actual phone DNS refresh, connection recovery and compatible in-place upgrade are being verified through authorized SSH/accessibility."
+      "status": "implemented-alpha13-physical-upgrade-confirmed",
+      "evidence": "Phone tailnet transport and HTTPS work; Android system hostname resolution stalls/fails despite Tailscale DNS enabled. Cached previously HTTPS-verified tailnet routes now use a 1.2s fresh-DNS deadline, bounded two-worker/two-waiting lookup pool and shared stalled lookups; late fresh results take precedence. Eight DNS tests cover trust, bounded wait, recovery, cold lookup and saturation. Actual phone DNS refresh, connection recovery and compatible in-place upgrade are being verified through authorized SSH/accessibility. Compatible in-place version-26 phone upgrade independently verified by APK hash; user confirms the app works and shows the updates. Active phone UI was preserved rather than opening private conversations for testing."
     },
     {
       "id": "permissions",
@@ -391,6 +391,23 @@
       "id": "adb-free-app-updates",
       "requirement": "Announce and deliver verified in-app upgrades via push without ADB; preserve installed signing identity and Android install confirmation",
       "status": "implemented-qualified-alpha12"
+    },
+    {
+      "id": "coordinator-text-list-entry",
+      "requirement": "Coordinator must be directly accessible from the conversation list for keyboard text as well as voice, with shared history and a normal chat window",
+      "status": "implemented-alpha14-final-qualification",
+      "evidence": "Pinned coordinator card nearest the footer, with Mic/Chat/Keyboard tap regions. Dedicated text-only chat reuses the per-profile/device coordinator and history without microphone permission, voice foreground service or speech synthesis."
+    },
+    {
+      "id": "strong-bilingual-immersion",
+      "requirement": "Strengthen optional Italian immersion with cached common interface and command language, a deliberate bilingual approach, and review of Mosis on BLD",
+      "status": "implemented-alpha14-final-qualification",
+      "evidence": "Keep translation work on dedicated Codex usage worker; preserve per-profile opt-in. Review actual Mosis UX before choosing bilingual presentation, and reuse cached common language rather than waiting for every translation."
+    },
+    {
+      "id": "notification-renamed-conversation",
+      "requirement": "Notification conversation names must track renames, including notifications already visible, without losing unread attention or actions",
+      "status": "implemented-alpha14-final-qualification"
     }
   ],
   "current_state": {

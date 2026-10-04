@@ -153,6 +153,7 @@ object Pocket {
             activities=try{api("/api/activity").optJSONArray("items")?.objects()?:emptyList()}catch(e:PocketApiException){if(e.status==404)emptyList() else throw e}
             tasks=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"),it.s("previewKind","message"))}?:emptyList()
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
+            if(local==profileLocal&&token==profileToken)notifications.forEach{PocketNotificationTitles.remember(it.put("_local",profileLocal))}
             val latestAttention=api("/api/attention").optJSONArray("notifications")?.objects()?:emptyList()
             val activeIds=latestAttention.map{it.optLong("id")}.toSet()
             prefs.all.keys.filter{it.startsWith(key("attention:"))}.mapNotNull{it.substringAfterLast(':').toLongOrNull()}.filter{it !in activeIds}.forEach{PocketAttention.dismiss(it)}
@@ -221,7 +222,7 @@ object Pocket {
     fun resumeQueue(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/queue/resume",JSONObject());scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not resume queue"}}}
     fun updateTurnSettings(body:JSONObject,onDone:()->Unit){val id=selected?:return;scope.launch{try{api("/api/threads/$id/settings",body);onDone();scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not save turn settings"}}}
     fun renameTask(name:String,onDone:()->Unit){val id=selected?:return;renameTask(id,name,onDone)}
-    fun renameTask(id:String,name:String,onDone:()->Unit){scope.launch{try{api("/api/threads/$id/rename",JSONObject().put("name",name));onDone();scheduleRefresh();refresh()}catch(e:Exception){error=e.message?:"Could not rename task"}}}
+    fun renameTask(id:String,name:String,onDone:()->Unit){scope.launch{try{val renamed=api("/api/threads/$id/rename",JSONObject().put("name",name));PocketNotificationTitles.rename(id,name,renamed.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=renamed.optLong("revision"));onDone();scheduleRefresh();refresh()}catch(e:Exception){error=e.message?:"Could not rename task"}}}
     fun restoreTask(id:String){scope.launch{try{api("/api/threads/$id/unarchive",JSONObject());refresh()}catch(e:Exception){error=e.message?:"Could not restore task"}}}
     fun archiveTask(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/archive",JSONObject());if(selected==id)closeTask();refresh()}catch(e:Exception){error=e.message?:"Could not archive task"}}}
     fun watchTask(id:String,enabled:Boolean){scope.launch{try{
@@ -234,6 +235,7 @@ object Pocket {
     fun test(){scope.launch{try{api("/api/test-notification",JSONObject())}catch(e:Exception){error=e.message?:"Test failed"}}}
     fun event(json:JSONObject){scope.launch{
         when(json.s("type")){
+            "threadRenamed" -> {val applied=PocketNotificationTitles.rename(json.s("threadId"),json.s("name"),json.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=json.optLong("revision"));if(applied)tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(title=json.s("name"))else it}}
             "rateLimits" -> acceptUsage(json.optJSONObject("usage"))
             "status" -> {
                 statusRevision++

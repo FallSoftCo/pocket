@@ -75,6 +75,10 @@ class PocketFirebaseService:FirebaseMessagingService(){
     }
     override fun onMessageReceived(message:RemoteMessage){
         if(Pocket.savedToken(false).isBlank()||message.data["device_id"]!=Pocket.prefs.getString(Pocket.key("deviceId",false),null))return
+        if(message.data["thread_renamed"]=="1"){
+            val ids=runCatching{org.json.JSONArray(message.data["notification_ids"]?:"[]")}.getOrNull()
+            PocketNotificationTitles.rename(message.data["thread_id"].orEmpty(),message.data["thread_title"].orEmpty(),ids?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),false,message.data["title_revision"]?.toLongOrNull()?:0);return
+        }
         if(message.data["kind"]=="app_update"){PocketUpdates.offer(false);return}
         if(message.data["operations"]=="failure"){
             PocketNotifications.operations(this,message.notification?.title?:"NextComp needs attention",message.notification?.body?:"Check GitHub Actions for details.")

@@ -9,18 +9,27 @@ export function pushData(n) {
   const clip=(text,bytes)=>{let out='';for(const char of String(text||'')){if(Buffer.byteLength(out+char)>bytes)break;out+=char;}return out;};
   const full=n.spoken_text||spokenText(n.title,n.body,n.spoken_summary);
   const spoken=Buffer.byteLength(full)<=600?{spoken_text:full}:{speech_pending:'1'};
-  const data={...spoken,id:String(n.id),thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2000),spoken_summary:speechText(n.spoken_summary),kind:n.kind||'update',created_at:String(n.created_at)};
+  const data={...spoken,id:String(n.id),thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2000),spoken_summary:speechText(n.spoken_summary),kind:n.kind||'update',created_at:String(n.created_at),title_revision:String(n.title_revision||0)};
   // Leave room for the device ID and envelope, including JSON-escaped characters.
   while(Buffer.byteLength(JSON.stringify(data))>3700&&data.body)data.body=clip(data.body,Math.floor(Buffer.byteLength(data.body)/2));
   return data;
 }
 export class PushDelivery {
-  constructor(db,{config=null,send=null,clock=()=>Date.now()}={}){this.db=db;this.config=config;this.send=send;this.clock=clock;this.busy=false;}
+  constructor(db,{config=null,send=null,clock=()=>Date.now()}={}){this.db=db;this.config=config;this.send=send;this.clock=clock;this.busy=false;this.hasTitles=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='notification_thread_titles'").get();}
   get enabled(){return !!this.config&&!!this.send;}
   enqueue(notificationId,{flush=true}={}){
     if(!this.enabled)return;
     this.db.prepare("INSERT OR IGNORE INTO push_deliveries(notification_id,device_id,state,updated_at) SELECT ?,device_id,'queued',? FROM push_tokens WHERE project_id=?").run(notificationId,this.clock(),this.config.projectId);
     if(flush)void this.flush().catch(e=>console.error('Push retry',e.message));
+  }
+  async renameThread({threadId,name,notificationIds,revision=0}){
+    if(!this.enabled)return;
+    const tokens=this.db.prepare('SELECT device_id,token FROM push_tokens WHERE project_id=?').all(this.config.projectId);
+    for(const row of tokens){
+      if(!this.db.prepare('SELECT 1 FROM push_tokens WHERE device_id=? AND token=?').get(row.device_id,row.token))continue;
+      // A data-only label refresh is ignored by older clients and never becomes another chat alert.
+      await this.send({token:row.token,data:{thread_renamed:'1',thread_id:threadId,thread_title:name,title_revision:String(revision),notification_ids:JSON.stringify(notificationIds.slice(-128)),device_id:row.device_id},android:{priority:'high',ttl:86400000,restrictedPackageName:'co.fallsoft.pocket'}});
+    }
   }
   async flush(){
     if(!this.enabled||this.busy)return;this.busy=true;
@@ -32,7 +41,8 @@ export class PushDelivery {
         const at=this.clock(),attempts=row.attempts+1;
         if(at-row.created_at>86400000){this.db.prepare("UPDATE push_deliveries SET state='expired',updated_at=? WHERE notification_id=? AND device_id=?").run(at,row.notification_id,row.device_id);continue;}
         try{
-          const messageId=await this.send({token:row.token,data:{...pushData({...row,id:row.notification_id}),device_id:row.device_id},android:{priority:'high',ttl:86400000,restrictedPackageName:'co.fallsoft.pocket'}});
+          const canonical=this.hasTitles?this.db.prepare('SELECT title,revision FROM notification_thread_titles WHERE thread_id=?').get(row.thread_id):null;
+          const messageId=await this.send({token:row.token,data:{...pushData({...row,title:canonical?.title||row.title,title_revision:canonical?.revision||0,id:row.notification_id}),device_id:row.device_id},android:{priority:'high',ttl:86400000,restrictedPackageName:'co.fallsoft.pocket'}});
           this.db.prepare("UPDATE push_deliveries SET state='accepted_by_fcm',attempts=?,message_id=?,error=NULL,updated_at=? WHERE notification_id=? AND device_id=?").run(attempts,messageId,this.clock(),row.notification_id,row.device_id);
         }catch(e){
           const code=e.code||'push/send-failed';

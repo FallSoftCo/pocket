@@ -1,3 +1,4 @@
+import {NotificationTitles} from './notification-titles.mjs';
 import {NotificationReads} from './notification-reads.mjs';
 import {ImmersionWorker} from './immersion-worker.mjs';
 import {QuestionActions} from './question-actions.mjs';
@@ -37,6 +38,7 @@ const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
 const {db,secrets}=openStore(dir);
 const notificationReads=new NotificationReads(db);
+const notificationTitles=new NotificationTitles(db);
 const voiceKeyPath=resolve(dir,'voice-key');
 const voiceSpeech=new VoiceSpeech({apiKey:process.env.POCKET_VOICE_API_KEY||(existsSync(voiceKeyPath)?readFileSync(voiceKeyPath,'utf8').trim():'')});
 let speechRequests=0;
@@ -84,13 +86,14 @@ const requireAuth=(req,res,next)=>{req.device=identity(req); if(!req.device)retu
 const owner=(req,res,next)=>{if(req.device.id!=='owner')return res.status(403).json({error:'Local owner access required'});next();};
 const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 const requireId=id=>{if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(id))throw new Error('Invalid thread identifier');return id;};
-const notificationRow=r=>({...r,spoken_text:r.spoken_text||spokenText(r.title,r.body),attachments:JSON.parse(r.attachments||'[]')});
+const notificationRow=r=>({...r,title_revision:notificationTitles.revision(r.thread_id),spoken_text:r.spoken_text||spokenText(r.title,r.body),attachments:JSON.parse(r.attachments||'[]')});
 function rememberSpeechContext(threadId,turn){
   const prompt=turnPrompt(turn);if(!threadId||!prompt)return;
   db.prepare('INSERT INTO speech_contexts(thread_id,turn_id,context) VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET turn_id=excluded.turn_id,context=excluded.context').run(threadId,turn.id||null,promptContext(prompt));
 }
 const completions=new CompletionRecovery(db,(threadId,title,body,kind,turnId,prompt)=>notify(threadId,title,body,kind,[],null,null,turnId,prompt?promptContext(prompt):null));
 function notify(threadId,title,body,kind='update',attachments=[],requestId=null,speech=null,turnId=null,context=null) {
+  title=notificationTitles.title(threadId,title);
   const saved=threadId?db.prepare('SELECT * FROM speech_contexts WHERE thread_id=?').get(threadId):null;
   const speechContext=context||(saved&&(!turnId||saved.turn_id===turnId)?saved.context:'Task update');
   const at=now();
@@ -99,7 +102,7 @@ function notify(threadId,title,body,kind='update',attachments=[],requestId=null,
   try{
     const r=db.prepare('INSERT OR IGNORE INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,source_turn_id,spoken_text) VALUES(?,?,?,?,?,?,?,?,?)').run(threadId,title,body,kind,JSON.stringify(attachments),at,spokenSummary(title,body,speech,speechContext),turnId,spokenText(title,body,speech,speechContext));
     if(!r.changes){db.exec('COMMIT');return null;}
-    n={id:Number(r.lastInsertRowid),thread_id:threadId,title,body,kind,attachments,created_at:at,spoken_summary:spokenSummary(title,body,speech,speechContext),spoken_text:spokenText(title,body,speech,speechContext)};
+    n={id:Number(r.lastInsertRowid),thread_id:threadId,title_revision:notificationTitles.revision(threadId),title,body,kind,attachments,created_at:at,spoken_summary:spokenSummary(title,body,speech,speechContext),spoken_text:spokenText(title,body,speech,speechContext)};
     if(threadId&&['question','approval','error'].includes(kind))db.prepare('INSERT INTO notification_attention(notification_id,request_id) VALUES(?,?)').run(n.id,requestId);
     push.enqueue(n.id,{flush:false});db.exec('COMMIT');
   }catch(e){db.exec('ROLLBACK');throw e;}
@@ -311,6 +314,7 @@ app.get('/api/threads',route(async(req,res)=>{
   await codex.connect();
   const r=await codex.call('thread/list',{limit:70,sortKey:'updated_at',sortDirection:'desc',archived:req.query.archived==='true'});
   const watches=db.prepare('SELECT * FROM watches').all();
+  for(const renamed of notificationTitles.reconcile(r.data||[])){emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));}
   res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>({id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...threadPreviews.get(t),cwd:t.cwd,status:t.status,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:!!watches.find(w=>w.thread_id===t.id&&w.enabled)}))});
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
@@ -338,7 +342,10 @@ app.post('/api/threads/:id/settings',route(async(req,res)=>{
 app.post('/api/threads/:id/rename',route(async(req,res)=>{
   const threadId=requireId(req.params.id),name=String(req.body.name||'').trim();
   if(!name||name.length>120)return res.status(400).json({error:'Name must be 1–120 characters.'});
-  await codex.connect();await codex.call('thread/name/set',{threadId,name});res.json({ok:true});
+  await codex.connect();await codex.call('thread/name/set',{threadId,name});
+  const renamed=notificationTitles.rename(threadId,name);
+  emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));
+  res.json({ok:true,...renamed});
 }));
 app.post('/api/threads/:id/unarchive',route(async(req,res)=>{
   const threadId=requireId(req.params.id);await codex.connect();

@@ -36,7 +36,7 @@ import androidx.core.content.ContextCompat
     LaunchedEffect(PocketVoice.problem,PocketVoice.active,attempted){showError=attempted&&PocketVoice.problem.isNotBlank()&&!PocketVoice.active;if(PocketVoice.active)attempted=false}
     val startVoice:()->Unit={attempted=true;keyboard?.hide();if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)PocketVoice.start(c,threadId)else permission.launch(Manifest.permission.RECORD_AUDIO)}
     if(cardRegion)CardInteractionRegion("Mic",modifier,startVoice)else if(dock)DockButton("Talk",Icons.Rounded.Mic,modifier,primary=true,onClick=startVoice)else if(bar)ChatActionButton("Talk",Icons.Rounded.Mic,modifier,startVoice)else if(compact)IconButton(startVoice,modifier=modifier){SymbolIcon(Icons.Rounded.Mic,"Start voice in this conversation",tint=Mint,modifier=Modifier.size(44.dp))}else ExtendedFloatingActionButton(onClick=startVoice,modifier=modifier.height(72.dp),containerColor=Panel,contentColor=Paper,icon={SymbolIcon(Icons.Rounded.Mic,"Start voice",Modifier.size(44.dp))},text={Text("Talk to Codex",fontWeight=FontWeight.Bold,fontSize=17.sp)})
-    if(showError)AlertDialog(onDismissRequest={showError=false},title={Text("Voice setup")},text={Text(PocketVoice.problem)},confirmButton={TextButton({showError=false;c.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:${c.packageName}")))}){Text("App settings")}},dismissButton={TextButton({showError=false}){Text("Close")}})
+    if(showError)AlertDialog(onDismissRequest={showError=false},title={Text("Voice setup")},text={Text(PocketVoice.problem)},confirmButton={TextButton({showError=false;c.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:${c.packageName}")))}){Text("App settings")}},dismissButton={TextButton({showError=false}){BilingualLabel("Close")}})
 }
 @Composable fun VoiceScreen(){
     val c=LocalContext.current
@@ -51,12 +51,12 @@ import androidx.core.content.ContextCompat
     Column(Modifier.fillMaxSize().imePadding()){
         HorizontalDivider()
         androidx.compose.foundation.lazy.LazyColumn(state=scroll,modifier=Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
-            if(PocketVoice.historyEarlier)item{TextButton({PocketVoice.olderHistory()},enabled=!PocketVoice.historyLoading){Text("Load earlier messages")}}
+            if(PocketVoice.historyEarlier)item{TextButton({PocketVoice.olderHistory()},enabled=!PocketVoice.historyLoading){BilingualLabel("Load earlier messages")}}
             if(PocketVoice.historyLoading)item{Text("Loading history…",color=Muted)}
-            if(PocketVoice.historyProblem.isNotBlank())item{Text(PocketVoice.historyProblem,color=Coral);TextButton({PocketVoice.service?.loadHistory()}){Text("Retry history")}}
+            if(PocketVoice.historyProblem.isNotBlank())item{Text(PocketVoice.historyProblem,color=Coral);TextButton({PocketVoice.service?.loadHistory()}){BilingualLabel("Retry history")}}
             items(PocketVoice.messages.size){i->val turn=PocketVoice.messages[i];VoiceChatMessage("You",turn.first,true);Spacer(Modifier.height(12.dp));VoiceChatMessage("Codex",turn.second,false)}
             if(PocketVoice.heard.isNotBlank()&&PocketVoice.messages.lastOrNull()?.first!=PocketVoice.heard)item{VoiceChatMessage("You",PocketVoice.heard,true)}
-            if(PocketVoice.problem.isNotBlank())item{Text(PocketVoice.problem,color=Coral);TextButton({PocketVoice.retry()}){Text("Retry saved turn")}}
+            if(PocketVoice.problem.isNotBlank())item{Text(PocketVoice.problem,color=Coral);TextButton({PocketVoice.retry()}){BilingualLabel("Retry saved turn")}}
         }
         SpeechCaptionBanner()
         SpeechPlayer()
@@ -69,7 +69,7 @@ import androidx.core.content.ContextCompat
             }
             if(keyboardInput)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                 FilledTonalIconButton(onClick={keyboardInput=false;keyboard?.hide();PocketVoice.record()},modifier=Modifier.size(64.dp)){SymbolIcon(if(recording)Icons.Rounded.Stop else Icons.Rounded.Mic,if(recording)"Stop and send recording" else "Talk",Modifier.size(32.dp))}
-                OutlinedTextField(value=draft,onValueChange={value->if(value.contains('\n')){PocketVoice.sendText(value.replace("\n","").trim());draft=""}else draft=value},placeholder={Text("Message coordinator")},modifier=Modifier.weight(1f).focusRequester(inputFocus).onPreviewKeyEvent{event->if(event.key==Key.Enter||event.key==Key.NumPadEnter){if(event.type==KeyEventType.KeyDown){PocketVoice.sendText(draft);draft=""};true}else false},singleLine=true,keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Send),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSend={PocketVoice.sendText(draft);draft=""}))
+                OutlinedTextField(value=draft,onValueChange={value->if(value.contains('\n')){PocketVoice.sendText(value.replace("\n","").trim());draft=""}else draft=value},placeholder={Text(PocketImmersion.label("Message coordinator"))},modifier=Modifier.weight(1f).focusRequester(inputFocus).onPreviewKeyEvent{event->if(event.key==Key.Enter||event.key==Key.NumPadEnter){if(event.type==KeyEventType.KeyDown){PocketVoice.sendText(draft);draft=""};true}else false},singleLine=true,keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Send),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSend={PocketVoice.sendText(draft);draft=""}))
                 IconButton({PocketVoice.sendText(draft);draft=""},enabled=draft.isNotBlank(),modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,"Send message")}
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
@@ -80,13 +80,13 @@ import androidx.core.content.ContextCompat
         }
     }
 }
-@Composable private fun VoiceChatMessage(speaker:String,text:String,user:Boolean){
+@Composable internal fun VoiceChatMessage(speaker:String,text:String,user:Boolean){
     if(text.isBlank())return
     val sourceId="voice:"+text.hashCode()+":"+user
     LaunchedEffect(text,PocketImmersion.enabled){PocketImmersion.offer(sourceId,text,if(user)"user message" else "Codex response")}
     Column(Modifier.fillMaxWidth(),horizontalAlignment=if(user)Alignment.End else Alignment.Start){
         SymbolIcon(if(user)"User" else "Codex",if(user)"Your message" else "Codex message",Modifier.size(20.dp))
-        Surface(color=if(user)Mint.copy(alpha=0.12f) else MaterialTheme.colorScheme.surfaceVariant,shape=androidx.compose.foundation.shape.RoundedCornerShape(6.dp),modifier=Modifier.padding(top=5.dp)){Column(Modifier.padding(14.dp)){RichText(PocketImmersion.display(sourceId,text))}}
+        Surface(color=if(user)Mint.copy(alpha=0.12f) else MaterialTheme.colorScheme.surfaceVariant,shape=androidx.compose.foundation.shape.RoundedCornerShape(6.dp),modifier=Modifier.padding(top=5.dp)){Column(Modifier.padding(14.dp)){BilingualMessage(sourceId,text)}}
     }
 }
 @Composable fun VoiceVolumeControls(modifier:Modifier=Modifier){
@@ -103,15 +103,15 @@ import androidx.core.content.ContextCompat
 @Composable fun ChatActionButton(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier=Modifier,onClick:()->Unit,recording:Boolean=false){
     val density=androidx.compose.ui.platform.LocalDensity.current
     val large=density.fontScale>1.4f
-    val height=if(large)with(density){24.sp.toDp()+52.dp}else 72.dp
+    val height=if(large)with(density){(if(PocketImmersion.enabled&&PocketImmersion.supportEnabled)36.sp else 24.sp).toDp()+52.dp}else 72.dp
     Surface(onClick=onClick,modifier=modifier.height(height),shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),border=androidx.compose.foundation.BorderStroke(1.dp,if(recording)Coral else Line),color=if(recording)androidx.compose.ui.graphics.Color(0xff451e2a)else Panel,contentColor=Paper){
         if(large)Column(Modifier.fillMaxSize().pressMotion().padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)
-            Text(label,fontSize=15.sp,lineHeight=18.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont,maxLines=1)
+            BilingualLabel(label,fontSize=15.sp,fontWeight=FontWeight.Medium)
         }else Row(Modifier.pressMotion().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
             SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)
             Spacer(Modifier.width(10.dp))
-            Text(label,fontSize=15.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont,maxLines=1)
+            BilingualLabel(label,fontSize=15.sp,fontWeight=FontWeight.Medium)
         }
     }
 }

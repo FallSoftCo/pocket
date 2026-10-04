@@ -1,0 +1,32 @@
+{
+  "version": "0.5.0-alpha.14",
+  "reference": {
+    "product": "Mosis",
+    "liveDeployment": "Its gateway process was verified on the authorized Windows host through read-only SSH.",
+    "reviewedSources": [
+      "Windows ImmersiveRail.xaml",
+      "Windows ReaderFrame.cs"
+    ],
+    "pattern": "Paired learner-language and English-gloss lanes keep support at the same focus. NextComp adapts the paired reading pattern to controls and paragraphs; it does not invent word alignment or audio timing."
+  },
+  "behavior": {
+    "enabled": "Existing Italian preference remains opt-in and isolated by paired profile/device.",
+    "commonVocabulary": "116 authored Italian control and activity entries are available offline immediately, including common task commands. Unlisted interface labels use the same exact-content Codex cache.",
+    "englishSupport": "Italian stays primary; optional English support defaults on within Italian mode. Paragraph glosses are limited to two lines until tapped.",
+    "alignment": "Matching paragraph structures pair directly. Different structures use whole-message support rather than guessed alignment.",
+    "commands": "Executable command text remains unchanged. Recognized command actions have separate Italian and English explanations.",
+    "code": "Backtick and tilde code fences of length three or more retain their exact executable text and appear once; closers must match marker and minimum length. The unaligned English fallback excludes source code fences.",
+    "clientCache": "Exact-content translations survive restart inside the same private profile, bounded to 200 entries and 500000 serialized characters. Saving coalesces for 400ms; JSON construction and serialization run off the UI thread from immutable strings, and profile switches cancel stale writes.",
+    "serverCache": "A persisted exact source translation is reused under another surface ID within the same device, without a new Codex turn.",
+    "provider": "Dynamic translations retain the existing read-only stock Codex ChatGPT worker; API-key login remains refused. No translation API or audio API was added."
+  },
+  "validation": {
+    "backendImmersionTests": 9,
+    "backendFailures": 0,
+    "newAndroidBilingualTests": 6,
+    "androidTests": 63,
+    "androidFailures": 0,
+    "paidInferenceCalls": 0,
+    "physicalUi": "Pending release installation; the active phone UI was left untouched."
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": "0.5.0-alpha.14",
+  "priorSourceVersion": "0.5.0-alpha.9",
+  "sourceSync": {
+    "files": 39,
+    "verifiedByChecksum": 39,
+    "scope": "Tracked backend modules, scripts, package metadata and lockfile only",
+    "backup": "Private source-only backup retained on the phone",
+    "phoneOverrides": "Audited older source against repository history; no phone-specific source adaptations required preservation",
+    "dependencies": "Dependency declarations, engine requirements and overrides are identical; no package installation was needed",
+    "newModules": ["immersion-worker.mjs", "app-updates.mjs"]
+  },
+  "preservation": {
+    "privateDataAndConfiguration": "Checksums unchanged before and after sync and qualification",
+    "codexWrapper": "Unchanged",
+    "serviceAndBootScripts": "Unchanged",
+    "serviceState": "The production backend and its supervisor remain stopped; neither was started",
+    "pairings": "Unchanged",
+    "desktopCredentialsTransferred": false,
+    "phoneUiInteractions": 0
+  },
+  "validation": {
+    "phoneNodeVersion": "26.1.0",
+    "phoneCodexCliVersion": "0.160.0",
+    "syntaxCheckedModules": 37,
+    "syntaxFailures": 0,
+    "syntheticPhoneTests": 30,
+    "testFailures": 0,
+    "coverage": ["Compatible authenticated app updates", "Recent-first history", "Italian worker and cache isolation", "Notification read policy", "Question actions"],
+    "productionDaemonStarted": false,
+    "inferenceCalls": 0,
+    "temporaryTests": "Removed after qualification"
+  }
+}

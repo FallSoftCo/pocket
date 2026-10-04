@@ -27,9 +27,10 @@ object PocketSpeechCaptions {
     fun update(id:Long,title:String,text:String?,part:Int,parts:Int,sourceProfile:String=profile()){
         if(sourceProfile!=profile())return
         if(text.isNullOrBlank())return
-        val next=state.update(id,title,text,part,parts)
+        val next=state.update(id,PocketNotificationTitles.forId(id,title),text,part,parts)
         if(next!=state){state=next;save()}
     }
+    fun rename(ids:Set<Long>,title:String){if(state.id !in ids)return;state=state.copy(title=title);save();PocketVoice.service?.refreshCaptionNotification();PocketSpeech.service?.refreshCaptionNotification();if(PocketVoice.service==null&&PocketSpeech.service==null&&state.visible)showRetained()}
     fun pause(sourceProfile:String=profile()){if(sourceProfile!=profile())return;state=state.pause();save()}
     fun complete(sourceProfile:String=profile(),retain:Boolean=true){if(sourceProfile!=profile())return;state=state.complete();save();if(retain)showRetained()}
     fun retain(){showRetained()}

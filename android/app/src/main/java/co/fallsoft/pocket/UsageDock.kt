@@ -29,9 +29,9 @@ import java.util.Locale
     val usage=Pocket.weeklyUsage
     val now=System.currentTimeMillis()
     Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
-    usage.resetsAt?.let{Text("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=13.sp)}
+    usage.resetsAt?.let{Text("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=13.sp)}
     UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)?.let{
-        Text("Estimated run-out "+SimpleDateFormat("EEE HH:mm",Locale.getDefault()).format(Date(it)),color=Muted,fontSize=13.sp)
+        Text("Estimated run-out "+SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it)),color=Muted,fontSize=13.sp)
     }
     ConnectionPill()
 }
@@ -47,12 +47,12 @@ import java.util.Locale
     val color=when{remaining==null||stale->Muted;remaining<=20->Coral;remaining<=50->Mint;else->NextGreen}
     val forecast=UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)
     val forecastLabel=forecast?.let{val minutes=((it-now)/60000).coerceAtLeast(1);"~"+when{minutes<60->"${minutes}m";minutes<2880->"${minutes/60}h";else->"${minutes/1440}d"}}
-    val day=usage.resetsAt?.let{SimpleDateFormat("EEE",Locale.getDefault()).format(Date(it*1000))}.orEmpty()
-    val time=usage.resetsAt?.let{SimpleDateFormat("HH:mm",Locale.getDefault()).format(Date(it*1000))}.orEmpty()
+    val day=usage.resetsAt?.let{SimpleDateFormat("EEE",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
+    val time=usage.resetsAt?.let{SimpleDateFormat("HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     Surface(onClick={open=true},modifier=modifier.height(usageDockHeight()).semantics{contentDescription="Usage and connection details"},color=Ink,shape=RoundedCornerShape(20.dp)){
         Column(Modifier.fillMaxSize().padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){AnimatedMark(16);Text(usage.remainingLabel().replace(" left","")+(if(stale)"*" else ""),color=color,fontSize=14.sp,lineHeight=18.sp,fontWeight=FontWeight.SemiBold,maxLines=1)}
-            Text(if(day.isBlank())"Reset —" else "↻ $day",color=Muted,fontSize=10.sp,lineHeight=12.sp,maxLines=1)
+            Text(if(day.isBlank())"↻ —" else "↻ $day",color=Muted,fontSize=10.sp,lineHeight=12.sp,maxLines=1)
             if(time.isNotBlank())Text(time,color=Muted,fontSize=10.sp,lineHeight=12.sp,maxLines=1)
             Row(Modifier.heightIn(min=20.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
                 val online=Pocket.connected&&Pocket.codexOnline
@@ -68,8 +68,8 @@ import java.util.Locale
         Column(Modifier.fillMaxWidth().padding(24.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             Pocket.selected?.let{id->Pocket.tasks.firstOrNull{it.id==id}?.title?.let{Text(it,fontWeight=FontWeight.Medium,fontSize=18.sp)}}
             Text(usage.remainingLabel(),color=color,fontWeight=FontWeight.SemiBold,fontSize=24.sp)
-            usage.resetsAt?.let{Text("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",Locale.getDefault()).format(Date(it*1000)),color=Muted)}
-            UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)?.let{Text("At this pace: approximately "+SimpleDateFormat("EEE HH:mm",Locale.getDefault()).format(Date(it)),color=Muted)}
+            usage.resetsAt?.let{Text("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),color=Muted)}
+            UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)?.let{Text("At this pace: approximately "+SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it)),color=Muted)}
             if(stale)Text("Waiting for fresh usage",color=Muted)
             ConnectionPill()
             TextButton({Pocket.retryConnection()}){Text("Refresh")}

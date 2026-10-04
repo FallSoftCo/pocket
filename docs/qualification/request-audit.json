@@ -1,8 +1,8 @@
 {
   "project": "NextComp",
   "date": "2026-10-04",
-  "scope": "All current durable UX requests checked against source; final alpha11 Android questions and Markdown also qualified with synthetic emulator UI. Historical phone-install gap retained until final delivery receipt. No inference or private phone content involved.",
-  "requestsAudited": 75,
+  "scope": "All current durable UX requests checked against source; synthetic Android qualification extends through alpha14 coordinator text, stronger bilingual Italian and silent notification retitle. Physical-phone delivery and provider audio are separate receipts. No inference or private phone content involved.",
+  "requestsAudited": 78,
   "priority": [
     {
       "priority": 1,
@@ -867,6 +867,27 @@
       "ledgerStatusAtAudit": "implemented-under-final-runtime-verification",
       "auditGroup": "app-updates",
       "assessment": "implemented-runtime-qualified-emulator"
+    },
+    {
+      "id": "coordinator-text-list-entry",
+      "requirement": "Coordinator must be directly accessible from the conversation list for keyboard text as well as voice, with shared history and a normal chat window",
+      "ledgerStatusAtAudit": "implementing-alpha14",
+      "auditGroup": "coordinator-and-immersion",
+      "assessment": "implemented-alpha14-emulator-qualified"
+    },
+    {
+      "id": "strong-bilingual-immersion",
+      "requirement": "Strengthen optional Italian immersion with cached common interface and command language, a deliberate bilingual approach, and review of Mosis on BLD",
+      "ledgerStatusAtAudit": "investigating-mosis-and-implementing",
+      "auditGroup": "coordinator-and-immersion",
+      "assessment": "implemented-alpha14-emulator-qualified"
+    },
+    {
+      "id": "notification-renamed-conversation",
+      "requirement": "Notification conversation names must track renames, including notifications already visible, without losing unread attention or actions",
+      "ledgerStatusAtAudit": "investigating-and-implementing-alpha14",
+      "auditGroup": "notification-names",
+      "assessment": "implemented-alpha14-emulator-qualified"
     }
   ],
   "changesAfterInitialAudit": [
@@ -892,6 +913,21 @@
   "qualificationAddendum": "docs/qualification/questions-markdown-alpha11.json",
   "qualificationAddenda": [
     "docs/qualification/questions-markdown-alpha11.json",
-    "docs/qualification/app-updater-runtime.json"
+    "docs/qualification/app-updater-runtime.json",
+    {
+      "date": "2026-10-04",
+      "scope": "Coordinator keyboard entry and stronger bilingual Italian",
+      "receipt": "docs/qualification/coordinator-text-runtime.json",
+      "evidence": "Actual enlarged-text emulator: pinned three-region coordinator, microphone denied for text, one Enter submission, UUID poll completion, shared history and Mic recording discarded without provider; Italian labels/gloss/support toggle and disk cache under translation503 qualified. Initial-history-scroll race reported and root fixed; final build retest pending.",
+      "notificationRename": "Canonical title updates and silent Android recoverBuilder retitle are in source; actual posted notification check pending final build.",
+      "gallery": "nextcomp-coordinator-text, four synthetic screenshot cards; desktop/mobile/reduced-motion/reload pass, zero errors."
+    },
+    {
+      "date": "2026-10-04",
+      "scope": "Final alpha14 coordinator layout and notification names",
+      "receipt": "docs/qualification/coordinator-text-runtime.json",
+      "evidence": "Final version27 APK cold restart under translation503 opens latest Italian answer immediately without swipe; deliberate older-reading drag stays stable. Actual posted Android notification retitles with body, exact Skip PendingIntent and pending attention retained, ONLY_ALERT_ONCE set. Emulator fixture only; physical phone installation and real FCM delivery belong to separate root receipts.",
+      "providerInferenceCalls": 0
+    }
   ]
 }

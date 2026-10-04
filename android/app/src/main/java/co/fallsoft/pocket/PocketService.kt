@@ -30,12 +30,14 @@ object PocketNotifications {
     }
     fun open(c:Context,thread:String?,code:Int,local:Boolean=Pocket.local):PendingIntent=PendingIntent.getActivity(c,code,Intent(c,MainActivity::class.java).apply{flags=Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP;putExtra("thread",thread);putExtra("local",local)},PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     fun show(c:Context,n:JSONObject,reminder:Boolean=false){
+        PocketNotificationTitles.remember(n)
         if(PocketNotificationReads.isRead(n))return
         channels(c)
         val local=n.optBoolean("_local",Pocket.local);val id=n.optLong("id").toInt()+(if(local)500000 else 1000); val thread=n.s("thread_id").takeIf{it.isNotBlank()}
         val attention=PocketAttention.needs(n)&&!PocketAttention.dismissed(n.optLong("id"),local)
         val b=NotificationCompat.Builder(c,PocketAudio.channel(c,n.s("kind"))).setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(n.s("title")).setContentText(n.s("body"))
+            .addExtras(PocketNotificationTitles.extras(n))
             .setStyle(NotificationCompat.BigTextStyle().bigText(n.s("body")))
             .setColor(0xffffc600.toInt()).setAutoCancel(!attention).setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(open(c,thread,id,local))

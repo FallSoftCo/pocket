@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-04",
+  "scope": "Coordinator text access and shared history",
+  "platform": "Android API35 emulator, 1080\u00d72400, enlarged text 2\u00d7",
+  "artifact": "0.5.0-alpha.14 development-signed APK, versionCode27",
+  "fixture": "Synthetic paired backend with provider audio endpoints explicitly blocked",
+  "providerInferenceCalls": 0,
+  "checks": {
+    "pinnedCoordinatorNearestFooter": true,
+    "keyboardRegionOpensComposer": true,
+    "microphonePermissionRevokedDuringText": true,
+    "enterSubmitsOnce": true,
+    "authenticatedTextSubmission": true,
+    "stableTurnIdPollsToCompletion": true,
+    "markdownResponseVisible": true,
+    "noVoiceForegroundServiceForText": true,
+    "noAudioOrNativeEndpointsForText": true,
+    "chatOpensHistoryWithoutComposer": true,
+    "backAndReopenPreserveHistory": true,
+    "sharedPriorVoiceAndNewTextHistory": true,
+    "micRegionStartsRecording": true,
+    "backDiscardsRecording": true,
+    "coldRestartLatestReplyVisibleWithoutSwipe": true,
+    "manualOlderReadingNotForcedToLatest": true
+  },
+  "clarifications": [
+    "Text initialization uses the existing /api/voice/start route to prepare the dedicated coordinator, followed by /api/voice/text and turn polling. This route is not an audio connection.",
+    "The local paired app already runs its existing monitor service. Qualification asserts no PocketVoiceService starts for text, not the absence of every foreground service.",
+    "Mic entry was tested with a synthetic native:false backend and discarded without sending; real-provider audio remains separately qualified.",
+    "A long ADB synthetic input lost trailing characters before Enter; the stable short input Continue, followed by a typing-settle delay, passed the exact body assertion. This is test harness timing, not a demonstrated application defect."
+  ],
+  "galleryIds": [
+    "nextcomp-coordinator-latest-cache",
+    "nextcomp-coordinator-italian-bilingual",
+    "nextcomp-coordinator-text-history",
+    "nextcomp-coordinator-text-text",
+    "nextcomp-coordinator-text-list"
+  ],
+  "pending": [],
+  "italian": {
+    "immediateBuiltInControlLabels": true,
+    "alignedEnglishControlSupport": true,
+    "coordinatorSentenceGlosses": true,
+    "englishGlossExpandsOnTap": true,
+    "supportToggleHidesEnglish": true,
+    "diskCacheSurvivesRestartWithTranslation503": true,
+    "fontScale": 2,
+    "syntheticDisplayTranslations": true
+  },
+  "discoveredAndFixed": [
+    "Initial-layout and later history/translation sizing could leave the coordinator at older messages. A keyed end marker and layout-aware follow while not dragging were added by root, then qualified on cold restart with translation503 and at 2\u00d7 font. Deliberate older-reading drag remains stable."
+  ],
+  "notificationRename": {
+    "actualPostedAndroidNotificationRetitled": true,
+    "sameAndroidNotificationId": true,
+    "bodyPreserved": true,
+    "exactSkipPendingIntentIdentityPreserved": true,
+    "pendingUnreadAttentionPreserved": true,
+    "onlyAlertOnce": true,
+    "monotonicRevisionFixture": true,
+    "qualification": "Actual emulator notification via paired WebSocket rename event; real Firebase delivery not claimed."
+  },
+  "apkSha256": "12c9bc0e294b079767c95732332b8768bc000caa8f94b09ab35c5934d5ee7ef9",
+  "galleryQualification": {
+    "cards": 1591,
+    "desktop1440": true,
+    "mobile390": true,
+    "reducedMotion": true,
+    "automaticReload": true,
+    "errors": 0
+  },
+  "cleanup": {
+    "ownedEmulatorStopped": true,
+    "ownedFixtureStopped": true,
+    "unrelatedEmulatorPreserved": true,
+    "phoneUntouched": true
+  }
+}

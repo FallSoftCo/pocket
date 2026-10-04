@@ -130,6 +130,7 @@ class MainActivity:ComponentActivity(){
 
 @Composable fun PocketApp(){
     if(PocketVoice.active){VoiceScreen();return}
+    if(PocketCoordinator.visible){CoordinatorScreen();return}
 
     var workToolsOpen by remember{mutableStateOf(false)}
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
@@ -196,8 +197,8 @@ class MainActivity:ComponentActivity(){
 @Composable fun ProfileSwitcher(){
     if(Pocket.savedToken(false).isBlank()||Pocket.savedToken(true).isBlank())return
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-        FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={Text("Workstation")},leadingIcon={SymbolIcon(Icons.Rounded.Computer,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
-        FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={Text("This phone")},leadingIcon={SymbolIcon(Icons.Rounded.PhoneAndroid,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
+        FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={BilingualLabel("Workstation")},leadingIcon={SymbolIcon(Icons.Rounded.Computer,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
+        FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={BilingualLabel("This phone")},leadingIcon={SymbolIcon(Icons.Rounded.PhoneAndroid,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
@@ -226,6 +227,7 @@ class MainActivity:ComponentActivity(){
         }
     }
     val rank=order.withIndex().associate{it.value to it.index}
+    val showCoordinator=filter!=3&&(filter!=1||PocketCoordinator.busy)&&(query.isBlank()||"Coordinator".contains(query,true)||PocketCoordinator.preview.contains(query,true))
     val shown=displayed.sortedBy{rank[it.id]?:Int.MAX_VALUE}.filter{(filter!=1||it.status=="active")&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true)||it.preview.contains(query,true))}
     Column(Modifier.fillMaxSize()){
     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp).pointerInput(Unit){
@@ -233,22 +235,23 @@ class MainActivity:ComponentActivity(){
     },state=listState,reverseLayout=true,verticalArrangement=Arrangement.spacedBy(8.dp,Alignment.Bottom),contentPadding=PaddingValues(top=12.dp,bottom=12.dp)){
 
         item{ErrorBanner()}
+        if(showCoordinator)item(key="nextcomp-coordinator"){CoordinatorCard()}
 
         val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
         if(attention.isNotEmpty()){item{Label("NEEDS YOU · ${attention.size}",Coral)};items(attention,key={"attention-${it.optLong("id")}"}){AttentionCard(it)}}
-        if(shown.isEmpty())item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
+        if(shown.isEmpty()&&!showCoordinator)item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
         items(shown,key={it.id}){TaskCard(it)}
     }
 
     }
     if(toolsOpen)ModalBottomSheet(onDismissRequest={onToolsOpen(false)},containerColor=Panel){
         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=16.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-            OutlinedTextField(query,{query=it},placeholder={Text("Find sessions")},singleLine=true,modifier=Modifier.fillMaxWidth())
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={Text(title)})}}
+            OutlinedTextField(query,{query=it},placeholder={Text(PocketImmersion.label("Find sessions"))},singleLine=true,modifier=Modifier.fillMaxWidth())
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={BilingualLabel(title)})}}
             ProfileSwitcher()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
-                Button({onToolsOpen(false);Pocket.composeTask()},modifier=Modifier.weight(1f).height(56.dp)){Text("New task")}
-                FilledTonalButton({onToolsOpen(false)},modifier=Modifier.weight(1f).height(56.dp)){Text("Show sessions")}
+                Button({onToolsOpen(false);Pocket.composeTask()},modifier=Modifier.weight(1f).height(56.dp)){BilingualLabel("New task")}
+                FilledTonalButton({onToolsOpen(false)},modifier=Modifier.weight(1f).height(56.dp)){BilingualLabel("Show sessions")}
             }
         }
     }
@@ -353,14 +356,15 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(23.dp)){
         PocketUpdateControl()
         TaskPermissionsControl()
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("Italian immersion",modifier=Modifier.weight(1f));Switch(PocketImmersion.enabled,{PocketImmersion.setEnabled(it)})}
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Italian immersion",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.enabled,{PocketImmersion.setEnabled(it)})}
+        if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("English support",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.supportEnabled,{PocketImmersion.setSupportEnabled(it)})}
         if(PocketImmersion.unavailable)Text("Translation unavailable · showing originals",color=Muted,fontSize=12.sp)
         Label("MADE TO BE YOURS",Mint);Text("Your connection.",fontSize=34.sp,letterSpacing=(-1).sp)
         Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             ConnectionPill();Text(Pocket.host,fontSize=23.sp);Text(Pocket.base,color=Muted,fontSize=12.sp)
             if(Pocket.savedToken(false).isNotBlank()&&Pocket.savedToken(true).isNotBlank())Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={Text("Workstation")})
-                FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={Text("This phone")})
+                FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={BilingualLabel("Workstation")})
+                FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={BilingualLabel("This phone")})
             }
             if(Pocket.savedToken(true).isBlank())OutlinedButton({Pocket.pairingMode=true},modifier=Modifier.fillMaxWidth()){Text("Connect Codex on this phone")}
             HorizontalDivider(color=Line);Text(Pocket.pushStatus,fontSize=16.sp,color=Mint)
@@ -445,8 +449,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                         if(description.isNotBlank())MarkdownPreview(PocketImmersion.display("$optionId:description",description),color=Muted,fontSize=12.sp)
                     }
                 }
-            };OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={Text("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){Text("Send answers")}}
-        else{Text(p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({Pocket.answer(id,JSONObject().put("decision","accept"))}){Text("Allow once")};OutlinedButton({Pocket.answer(id,JSONObject().put("decision","decline"))}){Text("Decline",color=Coral)}}}else Text("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
+            };OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={Text("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){BilingualLabel("Send answers")}}
+        else{Text(p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({Pocket.answer(id,JSONObject().put("decision","accept"))}){BilingualLabel("Allow once")};OutlinedButton({Pocket.answer(id,JSONObject().put("decision","decline"))}){Text("Decline",color=Coral)}}}else Text("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
     }
 }
 
@@ -456,7 +460,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     Surface(onClick=onClick,modifier=modifier.height(usageDockHeight()),color=surface,shape=RoundedCornerShape(20.dp)){
         Column(Modifier.fillMaxSize().pressMotion().padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             SymbolIcon(icon,label,Modifier.size(if(primary)44.dp else 36.dp),tint=color)
-            Spacer(Modifier.height(3.dp));Text(label,color=color,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Spacer(Modifier.height(3.dp));BilingualLabel(label,color=color,fontSize=10.sp)
         }
     }
 }
