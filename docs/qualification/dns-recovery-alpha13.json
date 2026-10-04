@@ -1,0 +1,28 @@
+{
+  "version": "0.5.0-alpha.13",
+  "versionCode": 26,
+  "problem": "Phone tailnet traffic works while Android hostname resolution and the local Tailscale DNS service stall.",
+  "policy": {
+    "freshDnsDeadlineMs": 1200,
+    "fallback": "Only a persisted numeric tailnet route learned after HTTPS authenticated the configured hostname",
+    "hostnameVerification": "Unchanged",
+    "coldDns": "Normal platform lookup",
+    "workers": 2,
+    "waitingLookups": 2,
+    "stalledLookupReuse": true,
+    "lateFreshResults": "Take precedence when available"
+  },
+  "validation": {
+    "dnsTests": 8,
+    "androidTests": 54,
+    "unitFailures": 0,
+    "backendAuthenticatedStatus": "Connected, no problem",
+    "backendAuthenticatedConversationList": "Successful",
+    "phoneNumericRoute": "HTTPS health successful; ping successful",
+    "phoneHostnameLookup": "Stalled and failed",
+    "phoneTailscaleDnsSetting": "Enabled; refresh did not repair resolver",
+    "phoneDirectTailscaleDnsQuery": "Timed out",
+    "phoneUpgrade": "Pending",
+    "freshPhoneConversation": "Pending"
+  }
+}

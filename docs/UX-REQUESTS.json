@@ -15,7 +15,8 @@
     {
       "id": "connectivity",
       "requirement": "Resolve false workstation connection failures while messages still arrive",
-      "status": "implemented-alpha8"
+      "status": "implemented-alpha13-phone-recovery-verification-pending",
+      "evidence": "Phone tailnet transport and HTTPS work; Android system hostname resolution stalls/fails despite Tailscale DNS enabled. Cached previously HTTPS-verified tailnet routes now use a 1.2s fresh-DNS deadline, bounded two-worker/two-waiting lookup pool and shared stalled lookups; late fresh results take precedence. Eight DNS tests cover trust, bounded wait, recovery, cold lookup and saturation. Actual phone DNS refresh, connection recovery and compatible in-place upgrade are being verified through authorized SSH/accessibility."
     },
     {
       "id": "permissions",
