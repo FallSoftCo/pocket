@@ -1,0 +1,850 @@
+{
+  "project": "NextComp",
+  "date": "2026-10-04",
+  "scope": "Source inspection against every durable UX request; no physical-phone or real-audio claims inferred from source. Ledger remains the request authority.",
+  "requestsAudited": 73,
+  "priority": [
+    {
+      "priority": 1,
+      "action": "Reconnect and install the final same-signer APK without clearing pairings, then verify actual visible feature version."
+    },
+    {
+      "priority": 2,
+      "action": "Requalify alpha11 footer after removing Mission and verify touch regions, large text and motion."
+    },
+    {
+      "priority": 3,
+      "action": "Qualify real native recorded turn, spoken response, persistent subtitles, background and lock-screen behavior on phone."
+    },
+    {
+      "priority": 4,
+      "action": "Close Italian untranslated prompt/body surfaces without changing original submitted answers or tool commands."
+    },
+    {
+      "priority": 5,
+      "action": "Keep public launch decision separate until release behavior is qualified."
+    }
+  ],
+  "changesThisAudit": {
+    "files": [
+      "server/voice-controller.mjs",
+      "tests/voice.test.mjs"
+    ],
+    "behavior": "Voice read now retrieves bounded recent timeline instead of materializing full history; exposes recent scope and older-context presence; retains pending questions and saved answers.",
+    "validation": {
+      "command": "node --test tests/voice.test.mjs",
+      "passed": 11,
+      "failed": 0,
+      "integration": {
+        "command": "node --test tests/voice.test.mjs tests/history.test.mjs tests/history-server.test.mjs",
+        "passed": 18,
+        "failed": 0
+      }
+    }
+  },
+  "groups": [
+    {
+      "id": "delivery",
+      "requestIds": [
+        "github",
+        "phone",
+        "webhook",
+        "durable-ledger"
+      ],
+      "evidence": [
+        "docs/UX-REQUESTS.json",
+        "package.json"
+      ],
+      "assessment": "release-install-gap",
+      "limits": "Source and release are ahead of the recorded physical-phone install. Phone reconnection and final same-signer installation are required before claiming the user sees these changes."
+    },
+    {
+      "id": "permissions",
+      "requestIds": [
+        "permissions",
+        "existing-permissions"
+      ],
+      "evidence": [
+        "server/sessions.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketState.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt"
+      ],
+      "assessment": "implemented-existing-session-history-unverified",
+      "limits": "New sessions default full; Settings exposes a shared preference across phone/workstation profiles. Historical grant of two specific conversations and CGI interrupt/resume are not proven by source inspection."
+    },
+    {
+      "id": "controls",
+      "requestIds": [
+        "fundamental-controls",
+        "enter",
+        "keyboard",
+        "conversation-voice",
+        "session-shortcuts",
+        "recording",
+        "volume",
+        "coordinator",
+        "thumb-ergonomics"
+      ],
+      "evidence": [
+        "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt",
+        "server/voice-controller.mjs",
+        "tests/voice.test.mjs"
+      ],
+      "assessment": "implemented-device-audio-qualification-pending",
+      "limits": "One start/stop-and-send, hidden keyboard composer, back handling, queue/steer/stop and session-scoped voice exist. Runtime device audio and background hardware-key behavior still require actual phone qualification."
+    },
+    {
+      "id": "voice",
+      "requestIds": [
+        "voice",
+        "voice-economy",
+        "notification-speech",
+        "speech-live-subtitles",
+        "speech-controls-bottom"
+      ],
+      "evidence": [
+        "server/native-voice.mjs",
+        "server/voice-controller.mjs",
+        "server/speech.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketSpeechCaptions.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt"
+      ],
+      "assessment": "implemented-audio-end-to-end-pending",
+      "limits": "Native stock Codex transport and durable coordinator exist; transcript-to-controller commands are tools behind conversational intent. Captions track actual passage/chunk boundaries, not word-level timestamps. Synthetic caption UI does not prove real audio or lock-screen playback."
+    },
+    {
+      "id": "list-context",
+      "requestIds": [
+        "session-previews",
+        "live-cards",
+        "live-thinking",
+        "card-polish",
+        "stable-live-list",
+        "recency-ties",
+        "bottom-order"
+      ],
+      "evidence": [
+        "server/thread-previews.mjs",
+        "server/live-activity-delivery.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+        "tests/thread-previews.test.mjs"
+      ],
+      "assessment": "implemented-reported-emulator-qualified",
+      "limits": "Newest public reasoning/action previews, reserved fixed rows and icons, coalesced content, separately damped order, stable hot cohort, bottom anchoring and finger hold exist. Never exposes raw hidden reasoning."
+    },
+    {
+      "id": "card-interaction",
+      "requestIds": [
+        "dense-card-touch-regions",
+        "icon-free-card-zones",
+        "card-zones-and-follow-state",
+        "card-bell",
+        "inline-session-rename",
+        "title-edit-text-bounds",
+        "conversation-notification-reads"
+      ],
+      "evidence": [
+        "android/app/src/main/java/co/fallsoft/pocket/CardInteractionRegion.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketNotificationReads.kt",
+        "server/notification-reads.mjs",
+        "tests/notification-reads.test.mjs"
+      ],
+      "assessment": "implemented-reported-emulator-qualified",
+      "limits": "Full-height left/center/right voice/chat/keyboard targets with press feedback, title-only inline editing, explicit bell On/Off, successful-read watermark acknowledgements and preserved unresolved attention exist."
+    },
+    {
+      "id": "navigation-and-usage",
+      "requestIds": [
+        "header",
+        "conversation-header",
+        "conversation-activity-header",
+        "activity-controls-drawer",
+        "footer-usage",
+        "footer-visible-knowledge",
+        "symbolic-footer-status",
+        "taller-distinct-footer",
+        "device-footer",
+        "forecast",
+        "tab-dock"
+      ],
+      "evidence": [
+        "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/UsageForecast.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/DeviceCorners.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt"
+      ],
+      "assessment": "implemented-alpha11-requalification-needed",
+      "limits": "Conversation activity header opens consolidated drawer. Footer holds percentage/reset and only supported forecast; symbolic connection; rounded-device insets and enlarged-text adaptation. Mission removal changes footer counts and needs final visual/tap qualification."
+    },
+    {
+      "id": "retained-answers",
+      "requestIds": [
+        "interim-notes",
+        "retained-answer-distinction"
+      ],
+      "evidence": [
+        "server/conversation-notes.mjs",
+        "tests/conversation-notes.test.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt"
+      ],
+      "assessment": "implemented",
+      "limits": "Warm distinct retained-excerpt card, automatic actual excerpts, manual Keep, persistent removal tombstones and source question exist. No generated unsupported answer summary."
+    },
+    {
+      "id": "questions",
+      "requestIds": [
+        "question-actions"
+      ],
+      "evidence": [
+        "server/question-actions.mjs",
+        "tests/question-actions.test.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketQuestionActions.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketAttention.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt"
+      ],
+      "assessment": "implemented-live-delivery-qualification-pending",
+      "limits": "Question notifications support one-tap Skip; in-app options/free text; durable profile-bound retry; server acknowledgement governs resolution. Actual phone notification interaction still needs current build qualification."
+    },
+    {
+      "id": "immersion",
+      "requestIds": [
+        "italian-immersion"
+      ],
+      "evidence": [
+        "server/immersion-worker.mjs",
+        "tests/immersion-worker.test.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketImmersion.kt",
+        "docs/qualification/italian-immersion-stock-codex.json"
+      ],
+      "assessment": "implemented-partial-display-coverage",
+      "limits": "Dedicated bounded ChatGPT-authenticated stock Codex worker, optional per-device/profile, public thoughts/chat/list/notes/speech translated with original preserved. Question prompts/options, note-source questions and notification-list bodies were identified as remaining untranslated display surfaces at audit time; sibling agent notified. Commands/control labels remain original intentionally."
+    },
+    {
+      "id": "fast-open",
+      "requestIds": [
+        "recent-first-conversation"
+      ],
+      "evidence": [
+        "server/history.mjs",
+        "server/index.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketTranscript.kt",
+        "docs/qualification/recent-first-stock-cli.json",
+        "server/voice-controller.mjs",
+        "tests/voice.test.mjs"
+      ],
+      "assessment": "implemented-voice-read-gap-fixed-in-audit",
+      "limits": "Conversation opens newest bounded page; old history and watched missed-history recovery detached. Voice read previously fetched full history; now uses same bounded recent timeline, preserves pending/retained notes and explicitly flags older context. Targeted voice tests pass."
+    },
+    {
+      "id": "connection",
+      "requestIds": [
+        "connectivity",
+        "live-connection-truth"
+      ],
+      "evidence": [
+        "android/app/src/main/java/co/fallsoft/pocket/PocketNetwork.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketState.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/ConnectionMessages.kt",
+        "tests/reconnect.test.mjs"
+      ],
+      "assessment": "implemented-reported-emulator-qualified",
+      "limits": "Valid live messages establish connection; background refresh errors separated, 8-second outage debounce and stale-socket guards; persistent outage remains visible, actual Codex status separate."
+    },
+    {
+      "id": "visual-system",
+      "requestIds": [
+        "name",
+        "ui-copy",
+        "research",
+        "recency",
+        "theme",
+        "glow",
+        "icon",
+        "voxel-ui",
+        "icon-revision",
+        "animated-3d-motion",
+        "cubic-n-voxels",
+        "large-animated-symbols",
+        "symbol-scale-readability",
+        "rendered-symbol-motion-review",
+        "native-loading-indicators",
+        "quiet-recency-labels"
+      ],
+      "evidence": [
+        "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/AnimatedMark.kt",
+        "docs/qualification/nextcomp-cubic-geometry.json",
+        "docs/qualification/nextcomp-readable-symbols.json",
+        "docs/qualification/nextcomp-symbol-swivel-native.json",
+        "docs/qualification/nextcomp-symbol-spin-native.json",
+        "docs/qualification/ergonomics-review.json"
+      ],
+      "assessment": "implemented-native-evidence-present-phone-install-pending",
+      "limits": "True cubic original N, native rendered symbol silhouettes/swivels/full spins, reduced motion, press motion, high contrast, older-only plain age labels and semilog glow exist. Native asset qualification is distinct from app deployment; phone may still show old resources."
+    },
+    {
+      "id": "mission",
+      "requestIds": [
+        "mission-view",
+        "mission-fixed-board",
+        "mission-sentence-field",
+        "retire-mission-view"
+      ],
+      "evidence": [
+        "docs/UX-REQUESTS.json",
+        "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt"
+      ],
+      "assessment": "superseded-removed-by-latest-user-request",
+      "limits": "Earlier Mission variants are superseded by explicit request to remove Mission because the list now supplies the useful overview."
+    },
+    {
+      "id": "public-launch",
+      "requestIds": [
+        "launch"
+      ],
+      "evidence": [
+        "docs/UX-REQUESTS.json"
+      ],
+      "assessment": "pending",
+      "limits": "No launch completion or researched venue decision is demonstrated by this implementation audit. Keep separate from installation/feature completion."
+    }
+  ],
+  "requests": [
+    {
+      "id": "connectivity",
+      "requirement": "Resolve false workstation connection failures while messages still arrive",
+      "ledgerStatusAtAudit": "implemented-alpha8",
+      "auditGroup": "connection",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "permissions",
+      "requirement": "Full permissions by default for new tasks, with an app control; apply across workstation/phone environments",
+      "ledgerStatusAtAudit": "implemented-alpha8",
+      "auditGroup": "permissions",
+      "assessment": "implemented-existing-session-history-unverified"
+    },
+    {
+      "id": "existing-permissions",
+      "requirement": "Grant the latest two conversations full permissions and interrupt/resume CGI task to apply them",
+      "ledgerStatusAtAudit": "historical-request-check-prior-session",
+      "auditGroup": "permissions",
+      "assessment": "implemented-existing-session-history-unverified"
+    },
+    {
+      "id": "github",
+      "requirement": "Push all authorized Pocket fixes to GitHub",
+      "ledgerStatusAtAudit": "ongoing-authorized",
+      "auditGroup": "delivery",
+      "assessment": "release-install-gap"
+    },
+    {
+      "id": "name",
+      "requirement": "Use NextComp; do not use Pocodex; preserve existing package and pairings",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "launch",
+      "requirement": "Investigate suitable public launch venue and launch only if confident",
+      "ledgerStatusAtAudit": "pending-separate-launch-decision",
+      "auditGroup": "public-launch",
+      "assessment": "pending"
+    },
+    {
+      "id": "notification-speech",
+      "requirement": "Summarize answered input in about three words before speaking the response; do not read only the chat title",
+      "ledgerStatusAtAudit": "implemented-prior",
+      "auditGroup": "voice",
+      "assessment": "implemented-audio-end-to-end-pending"
+    },
+    {
+      "id": "webhook",
+      "requirement": "Fix webhook delivery failures and update visible branding for NextComp",
+      "ledgerStatusAtAudit": "deployed-healthy-alpha9",
+      "auditGroup": "delivery",
+      "assessment": "release-install-gap"
+    },
+    {
+      "id": "fundamental-controls",
+      "requirement": "Preserve steer, queue, stop, model/effort/mode and all fundamental conversation controls; long-press Send queues",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "controls",
+      "assessment": "implemented-device-audio-qualification-pending"
+    },
+    {
+      "id": "enter",
+      "requirement": "Enter sends; Shift+Enter inserts a newline",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "controls",
+      "assessment": "implemented-device-audio-qualification-pending"
+    },
+    {
+      "id": "voice-economy",
+      "requirement": "Investigate Pro grant versus API audio costs and economy; later select stock Codex native voice",
+      "ledgerStatusAtAudit": "historical-research-completed-native-voice",
+      "auditGroup": "voice",
+      "assessment": "implemented-audio-end-to-end-pending"
+    },
+    {
+      "id": "voice",
+      "requirement": "Eyes-free coordinator controls stock Codex sessions; volume start/stop turns; create/select/read/steer/queue/etc",
+      "ledgerStatusAtAudit": "implemented-alpha8-background-qualification-pending",
+      "auditGroup": "voice",
+      "assessment": "implemented-audio-end-to-end-pending"
+    },
+    {
+      "id": "recording",
+      "requirement": "Exactly one tap starts and one tap stops+automatically sends recording; no coordinator/finish modal",
+      "ledgerStatusAtAudit": "implemented-alpha8",
+      "auditGroup": "controls",
+      "assessment": "implemented-device-audio-qualification-pending"
+    },
+    {
+      "id": "volume",
+      "requirement": "Visible on-screen volume controls since hardware keys are taken over",
+      "ledgerStatusAtAudit": "implemented-alpha8",
+      "auditGroup": "controls",
+      "assessment": "implemented-device-audio-qualification-pending"
+    },
+    {
+      "id": "coordinator",
+      "requirement": "Coordinator is a regular chat with saved history; obsolete separate pinned card removed, bottom Talk accesses it",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "controls",
+      "assessment": "implemented-device-audio-qualification-pending"
+    },
+    {
+      "id": "session-previews",
+      "requirement": "List shows recent input/output and directly renames sessions",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "list-context",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "session-shortcuts",
+      "requirement": "Card Talk/Keyboard directly enters that specific session",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "controls",
+      "assessment": "implemented-device-audio-qualification-pending"
+    },
+    {
+      "id": "conversation-voice",
+      "requirement": "Starting voice from a conversation selects that conversation in full voice mode",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "controls",
+      "assessment": "implemented-device-audio-qualification-pending"
+    },
+    {
+      "id": "phone",
+      "requirement": "Use verified Pixel ADB endpoint 100.101.220.29:34953; install without resetting data",
+      "ledgerStatusAtAudit": "ongoing",
+      "auditGroup": "delivery",
+      "assessment": "release-install-gap"
+    },
+    {
+      "id": "thumb-ergonomics",
+      "requirement": "Most controls at bottom, large equal mic/keyboard targets, input hidden until keyboard selected; ergonomic Back/Stop",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "controls",
+      "assessment": "implemented-device-audio-qualification-pending"
+    },
+    {
+      "id": "keyboard",
+      "requirement": "Hide Keyboard selector while composing; back swipe exits to session list even when IME is open",
+      "ledgerStatusAtAudit": "verified-alpha9",
+      "auditGroup": "controls",
+      "assessment": "implemented-device-audio-qualification-pending"
+    },
+    {
+      "id": "ui-copy",
+      "requirement": "Remove unnecessary app name, developer descriptions, subtitles and recency legend",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "research",
+      "requirement": "Consult Mobbin and Built for Mars on mobile ergonomics and dark typography",
+      "ledgerStatusAtAudit": "completed",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "recency",
+      "requirement": "Continuous strong color encoding: linear through one day, semi-logarithmic after; retain useful activity times",
+      "ledgerStatusAtAudit": "implemented-alpha9-refining-alpha10",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "theme",
+      "requirement": "Contemporary NeXT palette, black dark theme; avoid heavy gray blocks; bundled Inter typography",
+      "ledgerStatusAtAudit": "implemented-alpha9-refining-alpha10",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "header",
+      "requirement": "One tight row with icon, colored remaining percentage, reset deadline and estimated depletion if supported by history",
+      "ledgerStatusAtAudit": "implemented-alpha9-refining-conversation-row",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "forecast",
+      "requirement": "Estimate when allowance runs out from real fresh usage history; suppress unreliable forecasts",
+      "ledgerStatusAtAudit": "verified-alpha9",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "bottom-order",
+      "requirement": "Newest conversation anchors above bottom controls; older sessions extend upward",
+      "ledgerStatusAtAudit": "implemented-alpha9",
+      "auditGroup": "list-context",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "live-cards",
+      "requirement": "Show working state and the livest action/message, not just the previous response; include commands/progress, file edits, search and tool calls",
+      "ledgerStatusAtAudit": "in-progress-alpha10-server106-tests-pass",
+      "auditGroup": "list-context",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "card-polish",
+      "requirement": "Three compact rows; consolidate activity/status into icons; fade update border rather than sliding cards",
+      "ledgerStatusAtAudit": "in-progress-alpha10",
+      "auditGroup": "list-context",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "glow",
+      "requirement": "Remove left recency stripe; use glowing recency gradient and tight colored timestamp badge",
+      "ledgerStatusAtAudit": "in-progress-alpha10",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "icon",
+      "requirement": "Original polished NeXT-inheriting N, more dimensional than NC monogram",
+      "ledgerStatusAtAudit": "in-progress-alpha10",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "voxel-ui",
+      "requirement": "Houdini-baked voxel skeuomorphism; animated 3D N and original 3D symbol alphabet replacing all app stock icons",
+      "ledgerStatusAtAudit": "native-proof-rendered-needs-look-revision",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "mission-view",
+      "requirement": "Replace repetitive Updates page with spatial mission command view of all current/latest actions/messages, clustered by relationships; no whole histories or ordinary word cloud",
+      "ledgerStatusAtAudit": "superseded-by-retire-mission-view",
+      "auditGroup": "mission",
+      "assessment": "superseded-removed-by-latest-user-request"
+    },
+    {
+      "id": "conversation-header",
+      "requirement": "Single conversation title/status/allowance/deadline in one compact row, not stacked header rows",
+      "ledgerStatusAtAudit": "implemented-build-passed-ux-qualification-pending",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "durable-ledger",
+      "requirement": "Record all requests durably so compaction cannot drop them",
+      "ledgerStatusAtAudit": "implemented-this-file",
+      "auditGroup": "delivery",
+      "assessment": "release-install-gap"
+    },
+    {
+      "id": "device-footer",
+      "requirement": "Footer controls and borders must respect rounded device screen corners; use Android corner radius where available and safe fallback insets",
+      "ledgerStatusAtAudit": "installed-pushed-verified-emulator",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "stable-live-list",
+      "requirement": "Cards keep invariant height and truncate text; reserve icon space. Live content is coalesced, ordering separately damped adaptively by parallel activity; never move cards while touched/scrolled; continuous traffic must not starve updates.",
+      "ledgerStatusAtAudit": "in-progress-alpha10",
+      "auditGroup": "list-context",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "live-thinking",
+      "requirement": "List cards including Gavin show actual stock Codex public thinking summaries and newest activity; never remain on old input; support desktop-owned sessions via bounded read-only polling",
+      "ledgerStatusAtAudit": "implemented-tests-pass-qualifying-live",
+      "auditGroup": "list-context",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "tab-dock",
+      "requirement": "Smooth tab/content and action transitions; improve bottom toolbar into a single stable ergonomic dock",
+      "ledgerStatusAtAudit": "in-progress",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "icon-revision",
+      "requirement": "Reject literal current icon concept; refine original sculptural 3D N with NeXT color accents in its depth/edges",
+      "ledgerStatusAtAudit": "in-progress-v03",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "interim-notes",
+      "requirement": "Persistent top Answers & notes card preserving useful interim answers before final response; automatic actual excerpts and manual Keep action",
+      "ledgerStatusAtAudit": "in-progress",
+      "auditGroup": "retained-answers",
+      "assessment": "implemented"
+    },
+    {
+      "id": "question-actions",
+      "requirement": "Codex questions surface via actionable notifications and in-app attention; one-tap Skip without needing to fill answers",
+      "ledgerStatusAtAudit": "in-progress",
+      "auditGroup": "questions",
+      "assessment": "implemented-live-delivery-qualification-pending"
+    },
+    {
+      "id": "recency-ties",
+      "requirement": "Sessions actively changing within seconds are tied for first and retain relative positions, not periodic timestamp shuffles",
+      "ledgerStatusAtAudit": "in-progress",
+      "auditGroup": "list-context",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "card-bell",
+      "requirement": "Bell on every session card toggles notification following directly, with a full touch target",
+      "ledgerStatusAtAudit": "in-progress",
+      "auditGroup": "card-interaction",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "footer-usage",
+      "requirement": "Remove top header; usage percentage/deadline move into bottom dock at same row height as tabs; maximize content",
+      "ledgerStatusAtAudit": "in-progress",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "italian-immersion",
+      "requirement": "Optional Italian immersion, enabled for current user but off for others; dedicated background stock Codex worker using Codex usage only; public thoughts, activity, chat, notifications with preserved controls and source",
+      "ledgerStatusAtAudit": "delegated-italian_immersion",
+      "auditGroup": "immersion",
+      "assessment": "implemented-partial-display-coverage"
+    },
+    {
+      "id": "animated-3d-motion",
+      "requirement": "Original 3D icon/wordfont and spinning logo, squeeze/stretch tap response; preserved tap bounds and reduced-motion support",
+      "ledgerStatusAtAudit": "delegated-voxel_motion",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "mission-fixed-board",
+      "requirement": "Mission is a fixed dense viewport with no pan or scroll. Meaningful statuses fade in place as updates arrive; tapping opens the conversation directly. Thinking adds no value in this overview.",
+      "ledgerStatusAtAudit": "superseded-by-retire-mission-view",
+      "auditGroup": "mission",
+      "assessment": "superseded-removed-by-latest-user-request"
+    },
+    {
+      "id": "speech-live-subtitles",
+      "requirement": "Persistent dismissible banner showing live spoken notification subtitles; support lock screen where Android permits, preserving privacy controls",
+      "ledgerStatusAtAudit": "implemented-tests-passed-integration-under-verification",
+      "auditGroup": "voice",
+      "assessment": "implemented-audio-end-to-end-pending"
+    },
+    {
+      "id": "mission-sentence-field",
+      "requirement": "Mission Control is an adaptable readable 2D field of latest sentences at XY coordinates, no nested cards or tiny grid; fixed viewport, no scrolling/pan/zoom, no thinking in this overview, inherited candidate navigation and fade behavior",
+      "ledgerStatusAtAudit": "superseded-by-retire-mission-view",
+      "auditGroup": "mission",
+      "assessment": "superseded-removed-by-latest-user-request"
+    },
+    {
+      "id": "dense-card-touch-regions",
+      "requirement": "Remove list card bottom button row; left mic, center conversation, right keyboard touch regions with visible discoverable cues",
+      "ledgerStatusAtAudit": "implemented-and-emulator-verified-alpha10",
+      "auditGroup": "card-interaction",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "taller-distinct-footer",
+      "requirement": "Taller ergonomic footer with Talk and Find distinct permanent controls",
+      "ledgerStatusAtAudit": "implemented-and-emulator-verified-alpha10",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "footer-visible-knowledge",
+      "requirement": "Single footer tab item immediately displays all useful former header knowledge: colored remaining percentage, reset deadline, usage run-out forecast if estimable, connection status; details must not require tapping",
+      "ledgerStatusAtAudit": "in-progress",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "inline-session-rename",
+      "requirement": "Remove edit icon from cards; tappable title edits inline, Enter/Done saves",
+      "ledgerStatusAtAudit": "in-progress",
+      "auditGroup": "card-interaction",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "conversation-notification-reads",
+      "requirement": "Intelligently clear read conversation update/result notifications upon interaction; preserve unresolved question/approval/error attention, respect profile/device and successful visible fetch",
+      "ledgerStatusAtAudit": "implemented-tests-passed-integration-under-verification",
+      "auditGroup": "card-interaction",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "cubic-n-voxels",
+      "requirement": "N geometry uses equal XYZ cubic voxels, not prismatic blocks; preserve proportions by occupancy, rerender animation and icons",
+      "ledgerStatusAtAudit": "delegated-voxel_motion",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "live-connection-truth",
+      "requirement": "Do not report disconnects while live delivery is working; distinguish failed background refresh from transport loss and debounce short reconnects",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "connection",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "conversation-activity-header",
+      "requirement": "Restore compact per-conversation header and move live activity monitor there",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "retained-answer-distinction",
+      "requirement": "Make retained answer area visually distinct; omit redundant Answers & notes heading",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "retained-answers",
+      "assessment": "implemented"
+    },
+    {
+      "id": "large-animated-symbols",
+      "requirement": "Larger animated 3D mic/keyboard/send symbols with strong contrast; send arrow must remain visible",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "icon-free-card-zones",
+      "requirement": "Keep mic/keyboard card regions icon-free; show feedback and label on press with accessible targets",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "card-interaction",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "symbol-scale-readability",
+      "requirement": "Improve 3D icon palette, silhouette, edge contrast and small-size readability; native render revision delegated",
+      "ledgerStatusAtAudit": "rendered-native-qualified-assets-integrated",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "card-zones-and-follow-state",
+      "requirement": "Verify full-height left voice/center chat/right keyboard card regions; notification bell shows explicit On/Off state",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "card-interaction",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "title-edit-text-bounds",
+      "requirement": "Title inline-edit tap region covers title text only, not the full title row",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "card-interaction",
+      "assessment": "implemented-reported-emulator-qualified"
+    },
+    {
+      "id": "speech-controls-bottom",
+      "requirement": "Speech playback controls and persistent subtitles sit above footer, not in the header",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "voice",
+      "assessment": "implemented-audio-end-to-end-pending"
+    },
+    {
+      "id": "recent-first-conversation",
+      "requirement": "Open newest bounded message/action page first; older history and missed-watch recovery must not block conversation display",
+      "ledgerStatusAtAudit": "implemented-under-test",
+      "auditGroup": "fast-open",
+      "assessment": "implemented-voice-read-gap-fixed-in-audit"
+    },
+    {
+      "id": "rendered-symbol-motion-review",
+      "requirement": "Show actual rendered spinning/motion previews for 3D symbols in gallery and rendered readable loops in app, with reduced motion fallback",
+      "ledgerStatusAtAudit": "delegated-voxel_motion",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "activity-controls-drawer",
+      "requirement": "Activity monitor opens one conversation drawer containing all controls and data; remove separate ellipsis menu",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "symbolic-footer-status",
+      "requirement": "Represent connection status and usage forecast symbolically; remove Connected and Out text; absent forecast has no useless placeholder",
+      "ledgerStatusAtAudit": "implemented-qualified-alpha10",
+      "auditGroup": "navigation-and-usage",
+      "assessment": "implemented-alpha11-requalification-needed"
+    },
+    {
+      "id": "native-loading-indicators",
+      "requirement": "Replace generic card busy spinner with spinning Codex/thinking icon; use large original rotating 3D N for conversation loading; reduced-motion fallback",
+      "ledgerStatusAtAudit": "implemented-qualified-alpha10",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "quiet-recency-labels",
+      "requirement": "Remove Now/fresh badges; older sessions retain a subtle plain age/date without badge background",
+      "ledgerStatusAtAudit": "implemented-qualified-alpha10",
+      "auditGroup": "visual-system",
+      "assessment": "implemented-native-evidence-present-phone-install-pending"
+    },
+    {
+      "id": "retire-mission-view",
+      "requirement": "Remove Mission view; enhanced conversation list already provides live overview; redistribute footer space",
+      "ledgerStatusAtAudit": "implemented-under-verification",
+      "auditGroup": "mission",
+      "assessment": "superseded-removed-by-latest-user-request"
+    }
+  ],
+  "changesAfterInitialAudit": [
+    {
+      "feature": "one-tap question Skip",
+      "files": [
+        "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt"
+      ],
+      "behavior": "Skip moved to a minimum 48dp heading action; automatic follow anchors newest pending request heading so long question forms do not hide Skip. Manual scrolling remains respected.",
+      "qualification": "Final-build emulator test prepared; runtime result not yet claimed."
+    },
+    {
+      "feature": "Italian display coverage",
+      "files": [
+        "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt"
+      ],
+      "behavior": "Sibling agent added translated question prompts/options/explanations, notification bodies and retained-note source questions while preserving original submitted answers.",
+      "qualification": "Source integration present; actual runtime review separate."
+    }
+  ]
+}

@@ -10,9 +10,10 @@ async function connect(){
  dc.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='error')report('error',m.error?.message||'Voice provider error.');}catch{}};
  pc.onconnectionstatechange=()=>{if(['failed','disconnected'].includes(pc.connectionState))report('error','Voice audio disconnected. Reconnect to continue.');};
  pc.ontrack=e=>{
-  remote=document.createElement('audio');remote.srcObject=e.streams[0];remote.autoplay=true;remote.muted=true;document.body.append(remote);remote.play().catch(e=>report('error',e.message));
-  analyser=ctx.createAnalyser();analyser.fftSize=1024;ctx.createMediaStreamSource(e.streams[0]).connect(analyser);
-  recorder=new MediaRecorder(e.streams[0]);let chunks=[];
+  const stream=e.streams[0]||new MediaStream([e.track]);
+  remote=document.createElement('audio');remote.srcObject=stream;remote.autoplay=true;remote.muted=true;document.body.append(remote);remote.play().catch(e=>report('error',e.message));
+  analyser=ctx.createAnalyser();analyser.fftSize=1024;ctx.createMediaStreamSource(stream).connect(analyser);
+  recorder=new MediaRecorder(stream);let chunks=[];
   recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
   recorder.onstop=()=>{if(chunks.length&&recordToken===renderToken&&allowOutput){const token=recordToken;lastBlob=new Blob(chunks,{type:recorder.mimeType});const reader=new FileReader();reader.onload=()=>{if(token===renderToken&&allowOutput){allowOutput=false;report('audio',JSON.stringify({token,data:String(reader.result).split(',')[1]}))}};reader.readAsDataURL(lastBlob);}chunks=[]};
  };

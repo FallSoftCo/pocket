@@ -85,7 +85,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         Row(Modifier.heightIn(min=48.dp).padding(horizontal=18.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
             if(active)SymbolIcon(if(task?.previewKind=="thinking")"Psychology" else "Codex","Working",Modifier.size(28.dp),spinning=true)
             else SymbolIcon("Codex",null,Modifier.size(20.dp))
-            Text(PocketImmersion.display(key,action),color=if(active)Mint else Muted,fontSize=12.sp,lineHeight=17.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            MarkdownPreview(PocketImmersion.display(key,action),color=if(active)Mint else Muted,fontSize=12.sp,lineHeight=17.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
             SymbolIcon(Icons.Rounded.ExpandMore,null,Modifier.size(24.dp))
         }
     }
@@ -116,7 +116,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val submit:(String)->Unit={mode->val submitted=editor.text;follow=true;Pocket.reply(submitted,mode=mode){if(editor.text==submitted){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
     val waiting=d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") in listOf("queued","held")&&it.s("mode")=="queue"}?:emptyList()
     LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
-    LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){delay(32);val count=list.layoutInfo.totalItemsCount;if(count>0)list.scrollToItem(count-1)}}
+    LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){
+        delay(32)
+        val count=list.layoutInfo.totalItemsCount
+        // Keep the question heading and its one-tap Skip visible even when a
+        // multi-question form is taller than the conversation viewport.
+        val request=rows.indexOfLast{it.s("kind")=="request"}
+        if(count>0)list.scrollToItem(if(request>=0)(request+1).coerceAtMost(count-1) else count-1)
+    }}
     Column(Modifier.fillMaxSize().imePadding()){
         ConversationActivityHeader(active){actionsOpen=true}
         ConversationNotesCard()
@@ -256,7 +263,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(row.optLong("durationMs")>0)Text("${row.optLong("durationMs")/1000}s",fontSize=10.sp,color=Muted)
             SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse activity" else "Expand activity",tint=Muted,modifier=Modifier.size(16.dp))
         }
-        if(row.s("text").isNotBlank())Text(PocketImmersion.display(sourceId,row.s("text")),fontSize=11.sp,lineHeight=17.sp,color=Paper.copy(alpha=.82f),fontFamily=if(row.s("type")=="commandExecution")FontFamily.Monospace else FontFamily.Default,maxLines=if(expanded)Int.MAX_VALUE else 2,overflow=TextOverflow.Ellipsis)
+        if(row.s("text").isNotBlank()){
+            val text=PocketImmersion.display(sourceId,row.s("text"))
+            if(row.s("type")=="commandExecution")Text(text,fontSize=11.sp,lineHeight=17.sp,color=Paper.copy(alpha=.82f),fontFamily=FontFamily.Monospace,maxLines=if(expanded)Int.MAX_VALUE else 2,overflow=TextOverflow.Ellipsis)
+            else MarkdownPreview(text,fontSize=11.sp,lineHeight=17.sp,color=Paper.copy(alpha=.82f),maxLines=if(expanded)Int.MAX_VALUE else 2,overflow=TextOverflow.Ellipsis)
+        }
         if(expanded&&row.s("detail").isNotBlank())SelectionContainer{Text(row.s("detail"),fontSize=11.sp,lineHeight=16.sp,fontFamily=FontFamily.Monospace,color=Muted,modifier=Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()))}
         if(expanded&&row.optBoolean("truncated"))Text("Output excerpt · full content remains on the workstation",fontSize=10.sp,color=Muted)
     }

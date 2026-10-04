@@ -24,3 +24,28 @@ test('coordinator history persists, paginates equal-time turns and is device sco
  const page=controller.history('phone');assert.equal(page.turns.length,100);assert.equal(page.hasEarlier,true);assert.equal(page.turns[0].transcript,'Input 5');assert.equal(page.turns.at(-1).response,'Reply 104');
  const earlier=controller.history('phone',page.before);assert.equal(earlier.turns.length,5);assert.equal(earlier.hasEarlier,false);assert.equal(earlier.turns[0].transcript,'Input 0');assert.equal(controller.history('unpaired').turns.length,0);db.close();
 });
+
+
+test('voice read retrieves only the bounded recent timeline and exposes missing older context',async()=>{
+ const {controller,db}=setup();await controller.ensure('phone');const paths=[];
+ const thread={id:'task-123',name:'Work',cwd:'/project',status:{type:'active'}};
+ Object.defineProperty(thread,'turns',{get(){throw Error('Full-history turns must not be read');}});
+ controller.api=async path=>{
+  paths.push(path);assert.equal(path,'/api/threads/task-123?view=timeline');
+  return {thread,timeline:{hasEarlier:true,rows:[
+   {kind:'turn',turnId:'recent-turn',status:'inProgress'},
+   {kind:'user',type:'userMessage',turnId:'recent-turn',itemId:'input',text:'Check the button'},
+   {kind:'activity',type:'reasoning',turnId:'recent-turn',text:'Public summary'},
+   {kind:'message',type:'agentMessage',turnId:'recent-turn',itemId:'reply',text:'It stays reachable.',phase:'commentary'},
+   {kind:'activity',type:'commandExecution',turnId:'recent-turn',detail:'Large tool output'}
+  ]},notes:[{id:'kept',text:'An earlier useful answer'}],pending:[{id:'question'}],outgoing:[],turnSettings:{model:'test'}};
+ };
+ const result=await controller.control({device:'phone',id:'read-turn'},{operation:'read',arguments:{threadId:'task-123'}});
+ assert.deepEqual(paths,['/api/threads/task-123?view=timeline']);
+ assert.deepEqual(result.history,{scope:'recent',hasEarlier:true});
+ assert.equal(result.thread.turns.length,1);assert.equal(result.thread.turns[0].status,'inProgress');
+ assert.deepEqual(result.thread.turns[0].items.map(i=>i.type),['userMessage','agentMessage']);
+ assert.equal(result.thread.turns[0].items[0].content[0].text,'Check the button');
+ assert.equal(result.thread.turns[0].items[1].text,'It stays reachable.');
+ assert.equal(result.notes[0].id,'kept');assert.equal(result.pending[0].id,'question');db.close();
+});

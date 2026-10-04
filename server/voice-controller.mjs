@@ -81,7 +81,20 @@ export class VoiceController {
     switch(operation){
       case 'sessions':{const r=await get(`/api/threads${a.archived?'?archived=true':''}`);return {...r,threads:r.threads.filter(t=>!this.owns(t.id))};}
       case 'projects':return get('/api/projects');case 'models':return get('/api/models');case 'updates':return get('/api/notifications');case 'attention':return get('/api/attention');
-      case 'read':{const r=await get(`/api/threads/${thread()}`);return {thread:{id:r.thread.id,name:r.thread.name,cwd:r.thread.cwd,status:r.thread.status,turns:r.thread.turns.slice(-3).map(t=>({id:t.id,status:t.status,items:t.items.filter(i=>['agentMessage','userMessage'].includes(i.type))}))},pending:r.pending,outgoing:r.outgoing.slice(-10),turnSettings:r.turnSettings};}
+      case 'read':{
+        // Read the same bounded newest page as the phone; never load all history
+        // before selecting the few messages needed for an eyes-free response.
+        const r=await get(`/api/threads/${thread()}?view=timeline`),turns=new Map();
+        for(const row of r.timeline?.rows||[]){
+          if(row.kind==='turn'){turns.set(row.turnId,{id:row.turnId,status:row.status,items:[]});continue;}
+          if(!['userMessage','agentMessage'].includes(row.type))continue;
+          if(!turns.has(row.turnId))turns.set(row.turnId,{id:row.turnId,items:[]});
+          turns.get(row.turnId).items.push(row.type==='userMessage'
+            ?{id:row.itemId,type:row.type,content:[{type:'text',text:row.text||''}]}
+            :{id:row.itemId,type:row.type,text:row.text||'',phase:row.phase});
+        }
+        return {thread:{id:r.thread.id,name:r.thread.name,cwd:r.thread.cwd,status:r.thread.status,turns:[...turns.values()]},history:{scope:'recent',hasEarlier:!!r.timeline?.hasEarlier},notes:(r.notes||[]).slice(0,10),pending:r.pending,outgoing:(r.outgoing||[]).slice(-10),turnSettings:r.turnSettings};
+      }
       case 'select':{if(a.coordinator===true){this.db.prepare('UPDATE voice_sessions SET selected=NULL WHERE device=?').run(active.device);this.action(active,{type:'select',threadId:null});return {selected:null,name:'NextComp coordinator'};}const r=await get(`/api/threads/${thread()}?view=timeline`);this.db.prepare('UPDATE voice_sessions SET selected=? WHERE device=?').run(id,active.device);this.action(active,{type:'select',threadId:id});return {selected:id,name:r.thread.name||r.thread.preview,status:r.thread.status};}
       case 'create':{const r=await post('/api/threads',{id:`voice-${active.id}-${active.counter=(active.counter||0)+1}`,cwd:a.cwd,prompt:a.prompt,permissions:a.permissions||(s.full?'full':'review')});let result=r;
         for(let n=0;result.state==='queued'||result.state==='creating';n++){if(n>=60)return {...result,note:'Creation is still pending. Check sessions before creating another.'};await new Promise(resolve=>setTimeout(resolve,250));result=await get(`/api/session-starts/${r.id}`);}

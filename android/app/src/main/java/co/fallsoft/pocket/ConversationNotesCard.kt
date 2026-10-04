@@ -36,7 +36,7 @@ fun keepConversationReply(row:JSONObject){val thread=Pocket.selected?:return;Poc
     Surface(onClick={expanded=true},color=Color(0xff302713),border=BorderStroke(1.dp,Mint.copy(alpha=.7f)),shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).semantics{contentDescription="Retained answers, ${notes.size}; tap to expand"}){
         Row(Modifier.padding(14.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(10.dp)){
             SymbolIcon("Codex",null,Modifier.size(22.dp))
-            Text(PocketImmersion.display(id,first.s("text")),fontSize=14.sp,lineHeight=20.sp,minLines=2,maxLines=3,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            MarkdownPreview(PocketImmersion.display(id,first.s("text")),fontSize=14.sp,lineHeight=20.sp,minLines=2,maxLines=3,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
             Text("${notes.size} ›",fontSize=12.sp,color=Mint)
         }
     }

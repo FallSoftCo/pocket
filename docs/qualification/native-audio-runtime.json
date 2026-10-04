@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-04",
+  "scope": "Actual Android native voice transport and playback on an owned API 35 emulator; synthetic local WebRTC peer, no model or provider inference.",
+  "input": {
+    "audio": "20-second local 440 Hz signal plus silent carrier",
+    "remoteTrack": "Valid streamless WebRTC audio track",
+    "captionRequest": "This exact passage should stay visible while the audio plays and after it finishes."
+  },
+  "observations": {
+    "iceConnected": true,
+    "dataChannelOpened": true,
+    "remoteCaptureCompleted": true,
+    "capturedFilePlayedByMediaPlayer": true,
+    "actualCaptionVisibleDuringPlayback": true,
+    "backgroundMediaForegroundServiceId": 1120,
+    "screenOffWakefulness": "Asleep",
+    "screenOffAudioMixer": "App-owned active mono speech PCM track, content type speech",
+    "completionCaptionPhase": "Spoken",
+    "completedCaptionPersists": true,
+    "notificationHasPrivateTextAndRedactedPublicVersion": true,
+    "providerInferenceCalls": 0
+  },
+  "fix": "Accept streamless ontrack events by constructing a MediaStream from the supplied track before attaching the audio element, analyser and recorder.",
+  "limitations": [
+    "Audio was a synthesized test signal rather than intelligible model-generated speech.",
+    "This checks actual PCM playback, captions and screen-off service continuity; it does not qualify provider pronunciation or live transcription quality.",
+    "No secure keyguard was configured on this emulator; private/redacted notification metadata was inspected, but a physical secure-lock-screen presentation was not exercised."
+  ],
+  "otherChecks": {
+    "focusedBackendTests": 15,
+    "focusedBackendFailures": 0,
+    "italianDrainRegressions": 3,
+    "italianDrainFailures": 0,
+    "italianSubmissionValues": "Question option labels remain original in submitted answers; only prompt, label and explanation presentation is translated."
+  }
+}

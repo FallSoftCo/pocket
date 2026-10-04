@@ -86,7 +86,7 @@ import androidx.core.content.ContextCompat
     LaunchedEffect(text,PocketImmersion.enabled){PocketImmersion.offer(sourceId,text,if(user)"user message" else "Codex response")}
     Column(Modifier.fillMaxWidth(),horizontalAlignment=if(user)Alignment.End else Alignment.Start){
         SymbolIcon(if(user)"User" else "Codex",if(user)"Your message" else "Codex message",Modifier.size(20.dp))
-        Surface(color=if(user)Mint.copy(alpha=0.12f) else MaterialTheme.colorScheme.surfaceVariant,shape=androidx.compose.foundation.shape.RoundedCornerShape(6.dp),modifier=Modifier.padding(top=5.dp)){Text(PocketImmersion.display(sourceId,text),modifier=Modifier.padding(14.dp))}
+        Surface(color=if(user)Mint.copy(alpha=0.12f) else MaterialTheme.colorScheme.surfaceVariant,shape=androidx.compose.foundation.shape.RoundedCornerShape(6.dp),modifier=Modifier.padding(top=5.dp)){Column(Modifier.padding(14.dp)){RichText(PocketImmersion.display(sourceId,text))}}
     }
 }
 @Composable fun VoiceVolumeControls(modifier:Modifier=Modifier){

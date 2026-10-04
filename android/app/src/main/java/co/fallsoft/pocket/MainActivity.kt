@@ -140,7 +140,7 @@ class MainActivity:ComponentActivity(){
         else{
             AnimatedContent(targetState=Pocket.tab,modifier=Modifier.weight(1f).fillMaxWidth(),label="tab",transitionSpec={
                 (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
-            }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it});1->MissionScreen();else->SettingsScreen()}}
+            }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it});else->SettingsScreen()}}
             SpeechCaptionBanner()
             SpeechPlayer()
             PocketDock(onFind={Pocket.tab=0;workToolsOpen=true},onTab={workToolsOpen=false})
@@ -148,14 +148,14 @@ class MainActivity:ComponentActivity(){
     }
 }
 @Composable fun PocketDock(onFind:()->Unit,onTab:()->Unit){
-    val rows=if(LocalDensity.current.fontScale>1.4f)listOf(0..2,3..5)else listOf(0..5)
+    val rows=if(LocalDensity.current.fontScale>1.4f)listOf(0..2,3..4)else listOf(0..4)
     Column(Modifier.fillMaxWidth().padding(horizontal=deviceCornerInset(),vertical=8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)).padding(4.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
         rows.forEach{range->Row(Modifier.fillMaxWidth().height(usageDockHeight()),horizontalArrangement=Arrangement.spacedBy(2.dp)){
             range.forEach{index->when(index){
-                0,1,2->{val (title,icon)=listOf("Work" to Icons.Rounded.Layers,"Mission" to Icons.Rounded.TravelExplore,"Settings" to Icons.Rounded.Tune)[index]
+                0,1->{val (title,icon)=listOf("Work" to Icons.Rounded.Layers,"Settings" to Icons.Rounded.Tune)[index]
                     DockButton(title,icon,Modifier.weight(1f),selected=Pocket.tab==index){onTab();Pocket.tab=index;Pocket.refresh()}}
-                3->DockButton("Find",Icons.Rounded.Search,Modifier.weight(1f),primary=true,onClick=onFind)
-                4->VoiceLaunchButton(modifier=Modifier.weight(1f),dock=true)
+                2->DockButton("Find",Icons.Rounded.Search,Modifier.weight(1f),primary=true,onClick=onFind)
+                3->VoiceLaunchButton(modifier=Modifier.weight(1f),dock=true)
                 else->UsageDock(Modifier.weight(1f))
             }}
         }}
@@ -310,7 +310,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            Text(PocketImmersion.display("card:"+t.id,t.preview),color=Paper,fontSize=14.sp,lineHeight=20.sp,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            MarkdownPreview(PocketImmersion.display("card:"+t.id,t.preview),color=Paper,fontSize=14.sp,lineHeight=20.sp,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
         }
 
     }
@@ -415,19 +415,6 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     }}
 }
 
-@Composable fun RichText(raw:String){
-    val c=LocalContext.current;val pieces=raw.split("```")
-    Column(verticalArrangement=Arrangement.spacedBy(9.dp)){
-        pieces.forEachIndexed{index,part->
-            if(index%2==1)Surface(color=Ink,shape=RoundedCornerShape(12.dp)){Text(codeBlock(part),fontFamily=FontFamily.Monospace,fontSize=12.sp,color=Mint,lineHeight=18.sp,modifier=Modifier.padding(14.dp).horizontalScroll(rememberScrollState()))}
-            else if(part.isNotBlank()){
-                val display=part.trim().replace(Regex("\\*\\*(.*?)\\*\\*"),"$1").replace(Regex("\\[([^]]+)\\]\\(([^)]+)\\)"),"$1 ↗")
-                Text(display,fontSize=15.sp,lineHeight=24.sp,color=Paper.copy(alpha=.93f))
-                Regex("\\[([^]]+)\\]\\((https?://[^)]+)\\)").findAll(part).forEach{link->TextButton({try{c.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(link.groupValues[2])))}catch(_:Exception){}}){Text(link.groupValues[1],fontSize=12.sp,color=Mint);SymbolIcon(Icons.AutoMirrored.Rounded.OpenInNew,null,Modifier.padding(start=5.dp).size(14.dp),tint=Mint)}}
-            }
-        }
-    }
-}
 @Composable fun Attachment(a:JSONObject){val c=LocalContext.current
     fun open(){Pocket.scope.launch{try{val file=withContext(Dispatchers.IO){val folder=File(c.cacheDir,"shared");folder.mkdirs();val f=File(folder,a.s("id")+"-"+a.s("name").substringAfterLast('/'));val req=okhttp3.Request.Builder().url(Pocket.base+a.s("url")).header("Authorization","Bearer ${Pocket.token}").build();Pocket.http.newCall(req).execute().use{r->if(!r.isSuccessful)throw Exception("Could not download attachment");f.writeBytes(r.body!!.bytes())};f};val u=FileProvider.getUriForFile(c,"co.fallsoft.pocket.files",file);c.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(u,a.s("mime")).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))}catch(e:Exception){Pocket.error=e.message?:"No app can open this file"}}}
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Panel).clickable{open()},verticalArrangement=Arrangement.spacedBy(6.dp)){
@@ -437,8 +424,26 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 }
 @Composable fun RequestCard(r:JSONObject){val p=r.optJSONObject("params")?:return;val id=r.s("id");val isQuestion=r.s("method").contains("requestUserInput");val answers=remember(id){mutableStateMapOf<String,String>()}
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(22.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-        Label(if(isQuestion)"YOUR INPUT" else "NEEDS YOUR APPROVAL",Coral)
-        if(isQuestion){p.optJSONArray("questions")?.objects()?.forEach{q->Text(q.s("question"),fontSize=16.sp,lineHeight=23.sp);q.optJSONArray("options")?.objects()?.forEach{o->val label=o.s("label");OutlinedButton({answers[q.s("id")]=label},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){Text(label,color=Paper)}};OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={Text("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){Text("Send answers")};TextButton({PocketQuestionActions.skipRequest(id)}){Text("Skip")}}
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+            Box(Modifier.weight(1f)){Label(if(isQuestion)"YOUR INPUT" else "NEEDS YOUR APPROVAL",Coral)}
+            if(isQuestion)TextButton({PocketQuestionActions.skipRequest(id)},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp)){Text("Skip",color=Mint)}
+        }
+        if(isQuestion){p.optJSONArray("questions")?.objects()?.forEach{q->
+            val questionId="request:$id:"+q.s("id")
+            val prompt=q.s("question")
+            LaunchedEffect(prompt,PocketImmersion.enabled){PocketImmersion.offer(questionId,prompt,"question")}
+            MarkdownPreview(PocketImmersion.display(questionId,prompt),fontSize=16.sp,lineHeight=23.sp)
+            q.optJSONArray("options")?.objects()?.forEachIndexed{index,o->
+                val label=o.s("label");val optionId="$questionId:option:$index"
+                val description=o.s("description")
+                LaunchedEffect(label,description,PocketImmersion.enabled){PocketImmersion.offer(optionId,label,"question option");PocketImmersion.offer("$optionId:description",description,"question option explanation")}
+                OutlinedButton({answers[q.s("id")]=label},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){
+                    Column(Modifier.fillMaxWidth()){
+                        MarkdownPreview(PocketImmersion.display(optionId,label),color=Paper)
+                        if(description.isNotBlank())MarkdownPreview(PocketImmersion.display("$optionId:description",description),color=Muted,fontSize=12.sp)
+                    }
+                }
+            };OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={Text("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){Text("Send answers")}}
         else{Text(p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({Pocket.answer(id,JSONObject().put("decision","accept"))}){Text("Allow once")};OutlinedButton({Pocket.answer(id,JSONObject().put("decision","decline"))}){Text("Decline",color=Coral)}}}else Text("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
     }
 }

@@ -181,7 +181,7 @@
     {
       "id": "mission-view",
       "requirement": "Replace repetitive Updates page with spatial mission command view of all current/latest actions/messages, clustered by relationships; no whole histories or ordinary word cloud",
-      "status": "superseded-by-mission-fixed-board"
+      "status": "superseded-by-retire-mission-view"
     },
     {
       "id": "conversation-header",
@@ -257,7 +257,7 @@
     {
       "id": "mission-fixed-board",
       "requirement": "Mission is a fixed dense viewport with no pan or scroll. Meaningful statuses fade in place as updates arrive; tapping opens the conversation directly. Thinking adds no value in this overview.",
-      "status": "reconciled-with-later-mission-sentence-field",
+      "status": "superseded-by-retire-mission-view",
       "evidence": "MissionBoard.kt / MissionScreen.kt; actual 18-conversation synthetic Android portrait/wide checks, stable bounds on update, direct open/Back, zero scrollable nodes and no generic thinking. Five layout/selection unit tests and backend activity tests pass; debug build/lint pass. Pixel in-place upgrade retains signer and pairing; physical Mission navigation check pending. Readable overflow is explicitly counted rather than clipped. Root retained fixed/no-scroll/stable positions/direct open/no thinking; replaces microcard grid with later requested readable XY sentences. Candidate review: review/mission-board-2026-10-04.json."
     },
     {
@@ -268,7 +268,7 @@
     {
       "id": "mission-sentence-field",
       "requirement": "Mission Control is an adaptable readable 2D field of latest sentences at XY coordinates, no nested cards or tiny grid; fixed viewport, no scrolling/pan/zoom, no thinking in this overview, inherited candidate navigation and fade behavior",
-      "status": "implemented-and-emulator-verified-alpha10"
+      "status": "superseded-by-retire-mission-view"
     },
     {
       "id": "dense-card-touch-regions",
@@ -375,30 +375,46 @@
       "id": "quiet-recency-labels",
       "requirement": "Remove Now/fresh badges; older sessions retain a subtle plain age/date without badge background",
       "status": "implemented-qualified-alpha10"
+    },
+    {
+      "id": "retire-mission-view",
+      "requirement": "Remove Mission view; enhanced conversation list already provides live overview; redistribute footer space",
+      "status": "implemented-qualified-alpha11"
+    },
+    {
+      "id": "markdown-rendering",
+      "requirement": "Render Markdown including bold formatting instead of raw ** delimiters in conversation and compact contexts",
+      "status": "implemented-qualified-alpha11"
+    },
+    {
+      "id": "adb-free-app-updates",
+      "requirement": "Announce and deliver verified in-app upgrades via push without ADB; preserve installed signing identity and Android install confirmation",
+      "status": "delegated-alpha12-implementation"
     }
   ],
   "current_state": {
     "latest_pushed_commit": "8c6187c",
     "published_release": "v0.5.0-alpha.10",
-    "unreleased_version": null,
-    "server_tests": 129,
-    "android_tests": 43,
+    "unreleased_version": "0.5.0-alpha.11",
+    "server_tests": 130,
+    "android_tests": 44,
     "phone_endpoint": "100.101.220.29:34953",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
     "owned_emulator": "emulator-5560",
     "owned_fixture_port": 19984,
-    "installed_development_version": "0.5.0-alpha.10",
+    "installed_development_version": "0.5.0-alpha.10 (earlier build; verified stale)",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 native readable swivels and full 360 Codex/thinking spins integrated; shared bounded cache and reduced-motion fallback",
-    "phone_install": "Final APK ready; prior endpoint now refuses ADB, installation pending reconnection",
+    "phone_install": "Final alpha11 same-signer APK transferred and hash verified; installation waiting for device unlock",
     "qualification": "129 backend tests, 43 Android tests; debug/release lint and signed release build pass; final APK emulator tap regions, drawer, notes, Mission, font2, list height/hold and connection recovery pass",
     "speech_caption_review": "Synthetic persistent passage banner, expanded sheet and dismissal verified; actual audio playback not claimed",
-    "gallery_review": "Synthetic list, Mission, retained answer, enlarged text, voice controls and captions published to main gallery; layout and reduced-motion checks pass"
+    "gallery_review": "Synthetic list, Mission, retained answer, enlarged text, voice controls and captions published to main gallery; layout and reduced-motion checks pass",
+    "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified"
   },
   "remaining": [
     "Install final alpha10 on Pixel once its ADB endpoint is reachable; preserve pairing and enabled Italian preference",

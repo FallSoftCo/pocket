@@ -38,5 +38,35 @@ object PocketImmersion {
     fun hasTranslation(id:String,text:String)=enabled&&translations[id]?.s("version")==version(text)
     fun display(id:String,text:String):String {if(!enabled||id in originals)return text;val row=translations[id];return if(row?.s("version")==version(text))row.s("text",text) else text}
     /** Call after coalescing visible state; never for every incoming token. */
-    fun offer(id:String,text:String,kind:String="message") {if(!enabled||text.isBlank()||text.length>12000||hasTranslation(id,text))return;pending[id]=JSONObject().put("id",id).put("text",text).put("kind",kind);while(pending.size>60)pending.remove(pending.keys.first());if(job?.isActive==true)return;val captured=profileKey();job=Pocket.scope.launch{delay(2500);if(!enabled||captured!=profileKey())return@launch;val batch=JSONArray(pending.values.toList());pending.clear();try{val result=Pocket.api("/api/immersion/translate",JSONObject().put("sources",batch));if(captured==profileKey())accept(result)}catch(_:Exception){if(captured==profileKey())unavailable=true}}}
+    fun offer(id:String,text:String,kind:String="message") {
+        if(!enabled||text.isBlank()||text.length>12000||hasTranslation(id,text))return
+        pending[id]=JSONObject().put("id",id).put("text",text).put("kind",kind)
+        while(pending.size>60)pending.remove(pending.keys.first())
+        if(job?.isActive==true)return
+        val captured=profileKey()
+        job=Pocket.scope.launch {
+            try {
+                drainTranslationBatches(
+                    isCurrent={enabled&&captured==profileKey()},
+                    coalesce={delay(2500)},
+                    nextBatch={pending.values.toList().also{pending.clear()}},
+                    submit={batch->
+                        try {
+                            val result=Pocket.api("/api/immersion/translate",JSONObject().put("sources",JSONArray(batch)))
+                            if(captured==profileKey())accept(result)
+                        } catch(e:Exception) {
+                            if(e is CancellationException)throw e
+                            if(captured==profileKey()){
+                                // Preserve a newer version offered while this request was in flight.
+                                batch.forEach{pending.putIfAbsent(it.s("id"),it)}
+                                while(pending.size>60)pending.remove(pending.keys.first())
+                                unavailable=true
+                            }
+                            throw e // Retry on the next visible offer, never in a failing loop.
+                        }
+                    }
+                )
+            } catch(e:Exception) {if(e is CancellationException)throw e}
+        }
+    }
 }
