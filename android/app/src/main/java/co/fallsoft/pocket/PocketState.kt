@@ -21,7 +21,7 @@ class PocketApplication: Application(), coil.ImageLoaderFactory {
 }
 fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
 fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback else optString(key,fallback)
-data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false)
+data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context")
 data class Message(val id:String,val role:String,val text:String)
 class PocketApiException(val status:Int,message:String):Exception(message)
 
@@ -138,7 +138,7 @@ object Pocket {
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
             val taskResult=api(if(profileArchived)"/api/threads?archived=true" else "/api/threads")
             if(local!=profileLocal||token!=profileToken||showArchived!=profileArchived)return@launch
-            tasks=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"))}?:emptyList()
+            tasks=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"))}?:emptyList()
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
             val latestAttention=api("/api/attention").optJSONArray("notifications")?.objects()?:emptyList()
             val activeIds=latestAttention.map{it.optLong("id")}.toSet()
@@ -199,7 +199,8 @@ object Pocket {
     fun queuedReply(id:String,action:String,text:String="",onDone:()->Unit={}){val threadId=selected?:return;scope.launch{try{api("/api/threads/$threadId/replies/$id",JSONObject().put("action",action).put("text",text));onDone();scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not update queued message"}}}
     fun resumeQueue(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/queue/resume",JSONObject());scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not resume queue"}}}
     fun updateTurnSettings(body:JSONObject,onDone:()->Unit){val id=selected?:return;scope.launch{try{api("/api/threads/$id/settings",body);onDone();scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not save turn settings"}}}
-    fun renameTask(name:String,onDone:()->Unit){val id=selected?:return;scope.launch{try{api("/api/threads/$id/rename",JSONObject().put("name",name));onDone();scheduleRefresh();refresh()}catch(e:Exception){error=e.message?:"Could not rename task"}}}
+    fun renameTask(name:String,onDone:()->Unit){val id=selected?:return;renameTask(id,name,onDone)}
+    fun renameTask(id:String,name:String,onDone:()->Unit){scope.launch{try{api("/api/threads/$id/rename",JSONObject().put("name",name));onDone();scheduleRefresh();refresh()}catch(e:Exception){error=e.message?:"Could not rename task"}}}
     fun restoreTask(id:String){scope.launch{try{api("/api/threads/$id/unarchive",JSONObject());refresh()}catch(e:Exception){error=e.message?:"Could not restore task"}}}
     fun archiveTask(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/archive",JSONObject());if(selected==id)closeTask();refresh()}catch(e:Exception){error=e.message?:"Could not archive task"}}}
     fun watch(enabled:Boolean){val id=selected?:return;scope.launch{try{api("/api/threads/$id/watch",JSONObject().put("enabled",enabled));refreshDetail()}catch(e:Exception){error=e.message?:"Could not update notifications"}}}
@@ -217,6 +218,7 @@ object Pocket {
             "reply" -> {if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}
             "timeline" -> {PocketTranscript.apply(json);if(json.has("turn"))scheduleRefresh()}
+            "sessionPreview" -> {tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"))else it}}
             "sessionStarted" -> refresh()
             "codex" -> {val e=json.optJSONObject("event");if(e?.has("id")==true||e?.s("method") in listOf("turn/completed","thread/status/changed"))scheduleRefresh()}
         }

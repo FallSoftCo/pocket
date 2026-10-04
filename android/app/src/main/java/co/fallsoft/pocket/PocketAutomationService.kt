@@ -49,7 +49,7 @@ class PocketAutomationService:AccessibilityService(){
     @Volatile private var socket:ServerSocket?=null
 
     override fun onServiceConnected(){
-        super.onServiceConnected();PocketAutomation.connected=true
+        super.onServiceConnected();serviceInfo=serviceInfo.apply{flags=flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS};android.util.Log.i("PocketVoice","Key filter connected: ${serviceInfo.flags}");PocketAutomation.connected=true;PocketVoice.keysEnabled=true
         if(socket!=null)return
         pool.execute{
             try{
@@ -59,8 +59,9 @@ class PocketAutomationService:AccessibilityService(){
         }
     }
     override fun onAccessibilityEvent(event:AccessibilityEvent?){}
+    override fun onKeyEvent(event:android.view.KeyEvent):Boolean{if(event.keyCode in listOf(24,25))android.util.Log.d("PocketVoice","Volume key ${event.keyCode} action ${event.action}");return PocketVoice.key(event)||super.onKeyEvent(event)}
     override fun onInterrupt(){}
-    override fun onDestroy(){socket?.close();socket=null;pool.shutdownNow();PocketAutomation.connected=false;super.onDestroy()}
+    override fun onDestroy(){socket?.close();socket=null;pool.shutdownNow();PocketAutomation.connected=false;PocketVoice.keysEnabled=false;super.onDestroy()}
 
     private fun handle(client:Socket){client.use{c->
         c.soTimeout=10000

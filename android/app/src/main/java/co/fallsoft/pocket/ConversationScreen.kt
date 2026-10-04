@@ -99,6 +99,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             IconButton({Pocket.closeTask()}){Icon(Icons.AutoMirrored.Rounded.ArrowBack,"Back",tint=Paper)}
             Column(Modifier.weight(1f)){Text(t?.s("name")?.ifBlank{t.s("preview").take(80)}?.ifBlank{"New task"}?:(if(Pocket.error.isNotBlank())"Couldn’t load task" else "Opening task…"),fontSize=15.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis);Text(listOf(project(t?.s("cwd")?:""),t?.s("model")?.takeIf{it.isNotBlank()},if(!Pocket.connected)"workstation unreachable" else if(!Pocket.codexOnline)"waiting for Codex" else if(active)"working" else "ready").filterNotNull().joinToString(" · "),fontSize=10.sp,color=if(active)Mint else Muted,maxLines=1,overflow=TextOverflow.Ellipsis)}
             IconButton({Pocket.watch(!(d?.optBoolean("watched")?:false))}){Icon(if(d?.optBoolean("watched")==true)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,"Follow task",tint=Mint,modifier=Modifier.size(21.dp))}
+            VoiceLaunchButton(threadId=Pocket.selected,compact=true)
             Box{
                 IconButton({actionsOpen=true}){Icon(Icons.Rounded.MoreVert,"Task actions",tint=Muted)}
                 DropdownMenu(expanded=actionsOpen,onDismissRequest={actionsOpen=false}){

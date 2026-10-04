@@ -102,7 +102,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.5.0-alpha.7.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.5.0-alpha.7.apk`.
+Download `pocket-0.5.0-alpha.8.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.5.0-alpha.8.apk`.
 
 On the workstation, from the checkout:
 
@@ -200,3 +200,15 @@ Public alpha builds use a stable FallSoft release certificate. They cannot updat
 Original code and icon are [MIT licensed](LICENSE). Third-party components retain their own licenses; see [notices](THIRD_PARTY_NOTICES.md). Contributions and reproducible bug reports are welcome; remove private task text and credentials first.
 
 New Pocket tasks default to full filesystem/network access with command approvals disabled. Change **Full permissions for new tasks** in Settings or on the New task screen; turning it off uses workspace access and approval requests on the workstation (phone-local tasks keep their required full filesystem access). The choice is saved for future tasks, and each task retains its permissions when Pocket reconnects.
+
+## Eyes-free voice mode
+
+Tap **Talk to Codex** on the session list for the persistent coordinator, or tap the microphone inside a conversation to focus voice on that existing session. Speak naturally; no command vocabulary is required. The coordinator can inspect and direct real sessions, create tasks, steer or queue follow-ups, handle pending questions, and change session settings. Ask to return to the coordinator to clear session focus.
+
+The coordinator is pinned in a mint-accented section above regular sessions. The row opens chat; its microphone or the main FAB starts recording immediately. One stop tap automatically sends the turn. The chat includes a message composer, microphone FAB and on-screen speech-volume slider. Session cards show labeled last-activity times and dates for older sessions. Volume down starts recording; pressing it again sends the completed turn. Volume up pauses/resumes or replays a response. Starting another recording interrupts speech. Grant microphone access on first use. Enable Pocket's Accessibility service for volume controls outside the app; foreground controls also work without that service.
+
+Voice uses stock Codex's native WebRTC transport with the host's ChatGPT authentication. No separate audio API key is required. A dedicated audio-only connection transcribes the completed recording; the persistent Codex controller handles the full transcript and real session tools. Speech is buffered before playback so pause and replay preserve the entire response. Recordings are capped at 120 seconds, silence is discarded, and saved turn IDs prevent automatic replay of uncertain actions. Native voice uses account usage; task-model usage is separate. Experimental app-server voice availability depends on the CLI and account.
+
+Session cards show recent input or output beneath their titles, identify the speaker, support preview search, and offer renaming directly from the list. Recent previews load without resuming tasks.
+
+See [voice verification and limits](docs/VOICE.md).

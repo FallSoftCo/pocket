@@ -57,7 +57,7 @@ object PocketSpeech {
         val channel=manager.getNotificationChannel(PocketAudio.channel(c,kind))
         return channel!=null&&channel.importance>=NotificationManager.IMPORTANCE_DEFAULT&&channel.sound!=null
     }
-    fun request(c:Context,n:JSONObject){Pocket.scope.launch{
+    fun request(c:Context,n:JSONObject){if(PocketVoice.active){PocketVoice.notification(n);return};Pocket.scope.launch{
         if(!allowed(c,n.s("kind")))return@launch
         val hadSaved=queue.messages.isNotEmpty()&&queue.paused
         queue.enqueue(SpokenMessage(n.optLong("id"),n.s("title"),n.s("kind"),text(n),n.s("speech_pending")=="1"));save(true)
