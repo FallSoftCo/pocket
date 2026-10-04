@@ -1,0 +1,225 @@
+{
+  "project": "NextComp / codex-pocket",
+  "updated": "2026-10-04",
+  "user_authorization": {
+    "push_and_install": true,
+    "no_phone_reset": true,
+    "render_hosts": [
+      "OZZZ-OS",
+      "OZZZ-GPU-RENDER"
+    ],
+    "do_not_stop_other_jobs": true,
+    "no_subagents_without_explicit_authorization": true
+  },
+  "requests": [
+    {
+      "id": "connectivity",
+      "requirement": "Resolve false workstation connection failures while messages still arrive",
+      "status": "implemented-alpha8"
+    },
+    {
+      "id": "permissions",
+      "requirement": "Full permissions by default for new tasks, with an app control; apply across workstation/phone environments",
+      "status": "implemented-alpha8"
+    },
+    {
+      "id": "existing-permissions",
+      "requirement": "Grant the latest two conversations full permissions and interrupt/resume CGI task to apply them",
+      "status": "historical-request-check-prior-session"
+    },
+    {
+      "id": "github",
+      "requirement": "Push all authorized Pocket fixes to GitHub",
+      "status": "ongoing-authorized"
+    },
+    {
+      "id": "name",
+      "requirement": "Use NextComp; do not use Pocodex; preserve existing package and pairings",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "launch",
+      "requirement": "Investigate suitable public launch venue and launch only if confident",
+      "status": "pending-separate-launch-decision"
+    },
+    {
+      "id": "notification-speech",
+      "requirement": "Summarize answered input in about three words before speaking the response; do not read only the chat title",
+      "status": "implemented-prior"
+    },
+    {
+      "id": "webhook",
+      "requirement": "Fix webhook delivery failures and update visible branding for NextComp",
+      "status": "deployed-healthy-alpha9"
+    },
+    {
+      "id": "fundamental-controls",
+      "requirement": "Preserve steer, queue, stop, model/effort/mode and all fundamental conversation controls; long-press Send queues",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "enter",
+      "requirement": "Enter sends; Shift+Enter inserts a newline",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "voice-economy",
+      "requirement": "Investigate Pro grant versus API audio costs and economy; later select stock Codex native voice",
+      "status": "historical-research-completed-native-voice"
+    },
+    {
+      "id": "voice",
+      "requirement": "Eyes-free coordinator controls stock Codex sessions; volume start/stop turns; create/select/read/steer/queue/etc",
+      "status": "implemented-alpha8-background-qualification-pending"
+    },
+    {
+      "id": "recording",
+      "requirement": "Exactly one tap starts and one tap stops+automatically sends recording; no coordinator/finish modal",
+      "status": "implemented-alpha8"
+    },
+    {
+      "id": "volume",
+      "requirement": "Visible on-screen volume controls since hardware keys are taken over",
+      "status": "implemented-alpha8"
+    },
+    {
+      "id": "coordinator",
+      "requirement": "Coordinator is a regular chat with saved history; obsolete separate pinned card removed, bottom Talk accesses it",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "session-previews",
+      "requirement": "List shows recent input/output and directly renames sessions",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "session-shortcuts",
+      "requirement": "Card Talk/Keyboard directly enters that specific session",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "conversation-voice",
+      "requirement": "Starting voice from a conversation selects that conversation in full voice mode",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "phone",
+      "requirement": "Use verified Pixel ADB endpoint 100.101.220.29:34953; install without resetting data",
+      "status": "ongoing"
+    },
+    {
+      "id": "thumb-ergonomics",
+      "requirement": "Most controls at bottom, large equal mic/keyboard targets, input hidden until keyboard selected; ergonomic Back/Stop",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "keyboard",
+      "requirement": "Hide Keyboard selector while composing; back swipe exits to session list even when IME is open",
+      "status": "verified-alpha9"
+    },
+    {
+      "id": "ui-copy",
+      "requirement": "Remove unnecessary app name, developer descriptions, subtitles and recency legend",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "research",
+      "requirement": "Consult Mobbin and Built for Mars on mobile ergonomics and dark typography",
+      "status": "completed"
+    },
+    {
+      "id": "recency",
+      "requirement": "Continuous strong color encoding: linear through one day, semi-logarithmic after; retain useful activity times",
+      "status": "implemented-alpha9-refining-alpha10"
+    },
+    {
+      "id": "theme",
+      "requirement": "Contemporary NeXT palette, black dark theme; avoid heavy gray blocks; bundled Inter typography",
+      "status": "implemented-alpha9-refining-alpha10"
+    },
+    {
+      "id": "header",
+      "requirement": "One tight row with icon, colored remaining percentage, reset deadline and estimated depletion if supported by history",
+      "status": "implemented-alpha9-refining-conversation-row"
+    },
+    {
+      "id": "forecast",
+      "requirement": "Estimate when allowance runs out from real fresh usage history; suppress unreliable forecasts",
+      "status": "verified-alpha9"
+    },
+    {
+      "id": "bottom-order",
+      "requirement": "Newest conversation anchors above bottom controls; older sessions extend upward",
+      "status": "implemented-alpha9"
+    },
+    {
+      "id": "live-cards",
+      "requirement": "Show working state and the livest action/message, not just the previous response; include commands/progress, file edits, search and tool calls",
+      "status": "in-progress-alpha10-server106-tests-pass"
+    },
+    {
+      "id": "card-polish",
+      "requirement": "Three compact rows; consolidate activity/status into icons; fade update border rather than sliding cards",
+      "status": "in-progress-alpha10"
+    },
+    {
+      "id": "glow",
+      "requirement": "Remove left recency stripe; use glowing recency gradient and tight colored timestamp badge",
+      "status": "in-progress-alpha10"
+    },
+    {
+      "id": "icon",
+      "requirement": "Original polished NeXT-inheriting N, more dimensional than NC monogram",
+      "status": "in-progress-alpha10"
+    },
+    {
+      "id": "voxel-ui",
+      "requirement": "Houdini-baked voxel skeuomorphism; animated 3D N and original 3D symbol alphabet replacing all app stock icons",
+      "status": "native-proof-rendered-needs-look-revision",
+      "evidence": "v01 proof inspected: lighting too flat/bright and N incorrectly visible over atlas; revise before production"
+    },
+    {
+      "id": "mission-view",
+      "requirement": "Replace repetitive Updates page with spatial mission command view of all current/latest actions/messages, clustered by relationships; no whole histories or ordinary word cloud",
+      "status": "implemented-build-passed-ux-qualification-pending"
+    },
+    {
+      "id": "conversation-header",
+      "requirement": "Single conversation title/status/allowance/deadline in one compact row, not stacked header rows",
+      "status": "implemented-build-passed-ux-qualification-pending"
+    },
+    {
+      "id": "durable-ledger",
+      "requirement": "Record all requests durably so compaction cannot drop them",
+      "status": "implemented-this-file"
+    },
+    {
+      "id": "device-footer",
+      "requirement": "Footer controls and borders must respect rounded device screen corners; use Android corner radius where available and safe fallback insets",
+      "status": "implemented-build-lint-verified-installing",
+      "evidence": "157cf04; Android rounded-corner radius with 24dp fallback; both footer rows inset; border removed; synthetic emulator inspected"
+    }
+  ],
+  "current_state": {
+    "latest_pushed_commit": "60beda86cec92519c18352462db583d677b41434",
+    "published_release": "v0.5.0-alpha.9",
+    "unreleased_version": "0.5.0-alpha.10",
+    "server_tests": 108,
+    "android_tests": 23,
+    "phone_endpoint": "100.101.220.29:34953",
+    "farm_preparation_job": "nextcomp-voxel-v01-prepare",
+    "farm_source": "branding/voxel/source/build_symbols.py",
+    "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
+    "owned_emulator": "emulator-5560",
+    "owned_fixture_port": 19984
+  },
+  "remaining": [
+    "Complete native voxel build and render preview; inspect at icon scale",
+    "Render and package original symbol atlas + N loop through guarded farm, verify RGBA and GPU use",
+    "Replace stock app symbols and logo with baked assets; respect reduced animation/background",
+    "Implement mission command current-activity board and consolidate conversation header",
+    "Verify compact card fade, action previews, spatial navigation and original voice/keyboard flows",
+    "Install final debug-signed APK on Pixel; stable-sign public release; push and gallery publish",
+    "Clean up owned emulator/fixture only"
+  ]
+}
