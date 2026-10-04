@@ -49,6 +49,7 @@ import java.util.Locale
     val forecastLabel=forecast?.let{val minutes=((it-now)/60000).coerceAtLeast(1);"~"+when{minutes<60->"${minutes}m";minutes<2880->"${minutes/60}h";else->"${minutes/1440}d"}}
     val day=usage.resetsAt?.let{SimpleDateFormat("EEE",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     val time=usage.resetsAt?.let{SimpleDateFormat("HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
+    Box {
     Surface(onClick={open=true},modifier=modifier.height(usageDockHeight()).semantics{contentDescription="Usage and connection details"},color=Ink,shape=RoundedCornerShape(20.dp)){
         Column(Modifier.fillMaxSize().padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){AnimatedMark(16);Text(usage.remainingLabel().replace(" left","")+(if(stale)"*" else ""),color=color,fontSize=14.sp,lineHeight=18.sp,fontWeight=FontWeight.SemiBold,maxLines=1)}
@@ -64,15 +65,10 @@ import java.util.Locale
             }
         }
     }
-    if(open)ModalBottomSheet(onDismissRequest={open=false},containerColor=Panel){
-        Column(Modifier.fillMaxWidth().padding(24.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-            Pocket.selected?.let{id->Pocket.tasks.firstOrNull{it.id==id}?.title?.let{Text(it,fontWeight=FontWeight.Medium,fontSize=18.sp)}}
-            Text(usage.remainingLabel(),color=color,fontWeight=FontWeight.SemiBold,fontSize=24.sp)
-            usage.resetsAt?.let{Text("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),color=Muted)}
-            UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)?.let{Text("At this pace: approximately "+SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it)),color=Muted)}
-            if(stale)Text("Waiting for fresh usage",color=Muted)
-            ConnectionPill()
-            TextButton({Pocket.retryConnection()}){Text("Refresh")}
-        }
+    ActivityPopup(open,{open=false},Pocket.selected){
+        UsageDetails()
+        if(stale)Text("Waiting for fresh usage",color=Muted)
+        TextButton({Pocket.retryConnection()}){Text("Refresh")}
+    }
     }
 }

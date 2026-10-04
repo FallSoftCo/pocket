@@ -5,6 +5,8 @@ import java.util.Locale
 /** Authored, offline learning vocabulary. Match whole labels; never rewrite executable syntax. */
 object ImmersionLexicon {
     val common=mapOf(
+        "Activity" to "Attività", "Hide controls" to "Nascondi controlli", "Controls & usage" to "Controlli e utilizzo",
+        "Message Codex…" to "Scrivi a Codex…", "Sending…" to "Invio in corso…",
         "English support" to "Supporto in inglese", "Message coordinator" to "Scrivi al coordinatore",
         "New task" to "Nuova attività", "Show sessions" to "Mostra sessioni", "Find sessions" to "Cerca sessioni",
         "Recent" to "Recenti", "Following" to "Seguiti", "Archived" to "Archiviati", "Allow once" to "Consenti una volta",

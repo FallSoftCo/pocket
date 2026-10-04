@@ -8,7 +8,10 @@
     "backup": "Private source-only backup retained on the phone",
     "phoneOverrides": "Audited older source against repository history; no phone-specific source adaptations required preservation",
     "dependencies": "Dependency declarations, engine requirements and overrides are identical; no package installation was needed",
-    "newModules": ["immersion-worker.mjs", "app-updates.mjs"]
+    "newModules": [
+      "immersion-worker.mjs",
+      "app-updates.mjs"
+    ]
   },
   "preservation": {
     "privateDataAndConfiguration": "Checksums unchanged before and after sync and qualification",
@@ -26,9 +29,30 @@
     "syntaxFailures": 0,
     "syntheticPhoneTests": 30,
     "testFailures": 0,
-    "coverage": ["Compatible authenticated app updates", "Recent-first history", "Italian worker and cache isolation", "Notification read policy", "Question actions"],
+    "coverage": [
+      "Compatible authenticated app updates",
+      "Recent-first history",
+      "Italian worker and cache isolation",
+      "Notification read policy",
+      "Question actions"
+    ],
     "productionDaemonStarted": false,
     "inferenceCalls": 0,
     "temporaryTests": "Removed after qualification"
+  },
+  "alpha15Addendum": {
+    "version": "0.5.0-alpha.15",
+    "files": [
+      "package.json",
+      "package-lock.json",
+      "server/index.mjs"
+    ],
+    "verifiedByChecksum": 3,
+    "privateSourceBackup": true,
+    "protectedChecksumsUnchanged": true,
+    "serviceRemainsStopped": true,
+    "indexSyntaxCheckPassed": true,
+    "broadQualificationRepeated": false,
+    "inferenceCalls": 0
   }
 }

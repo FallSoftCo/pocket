@@ -301,7 +301,7 @@ app.post('/api/device/disconnect',(req,res)=>{
 });
 app.get('/api/notifications/:id/delivery',owner,(req,res)=>res.json({deliveries:db.prepare('SELECT p.device_id,d.name,p.state,p.attempts,p.message_id,p.error,p.updated_at FROM push_deliveries p JOIN devices d ON d.id=p.device_id WHERE p.notification_id=?').all(req.params.id)}));
 app.get('/api/projects',route(async(_req,res)=>{
-  await codex.connect();const r=await codex.call('thread/list',{limit:100,sortKey:'updated_at',sortDirection:'desc',archived:false});
+  await codex.connect();const r=await codex.call('thread/list',{limit:100,sortKey:'updated_at',sortDirection:'desc',archived:false,useStateDbOnly:true});
   res.json({projects:recentProjects(r.data||[])});
 }));
 app.post('/api/threads',(req,res)=>{
@@ -312,7 +312,7 @@ app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.pa
 app.get('/api/activity',(_req,res)=>res.json({items:activityBoard.snapshot()}));
 app.get('/api/threads',route(async(req,res)=>{
   await codex.connect();
-  const r=await codex.call('thread/list',{limit:70,sortKey:'updated_at',sortDirection:'desc',archived:req.query.archived==='true'});
+  const r=await codex.call('thread/list',{limit:70,sortKey:'updated_at',sortDirection:'desc',archived:req.query.archived==='true',useStateDbOnly:true});
   const watches=db.prepare('SELECT * FROM watches').all();
   for(const renamed of notificationTitles.reconcile(r.data||[])){emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));}
   res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>({id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...threadPreviews.get(t),cwd:t.cwd,status:t.status,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:!!watches.find(w=>w.thread_id===t.id&&w.enabled)}))});

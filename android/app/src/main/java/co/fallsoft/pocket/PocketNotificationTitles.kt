@@ -14,6 +14,7 @@ object PocketNotificationTitles {
         return MessageDigest.getInstance("SHA-256").digest(raw.toByteArray()).joinToString(""){"%02x".format(it.toInt() and 255)}
     }
     fun title(thread:String,fallback:String,local:Boolean=Pocket.local)=Pocket.prefs.getString("notification-title:${profile(local)}:$thread",null)?:fallback
+    fun threadForId(id:Long,local:Boolean=Pocket.local):String?=Pocket.prefs.getString("notification-thread:${profile(local)}:$id",null)
     fun forId(id:Long,fallback:String,local:Boolean=Pocket.local):String {
         val thread=Pocket.prefs.getString("notification-thread:${profile(local)}:$id",null)?:return fallback
         return title(thread,fallback,local)

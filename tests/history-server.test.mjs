@@ -22,7 +22,7 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
    if(m.method==='thread/read'&&m.params.includeTurns||m.method==='thread/resume'&&!m.params.excludeTurns){ws.close(1009,'Full history is too large');return;}
    let result={};
    if(['thread/read','thread/resume'].includes(m.method))result={thread:metadata};
-   if(m.method==='thread/list')result={data:[metadata]};
+   if(m.method==='thread/list')result={data:m.params.archived?[{...metadata,id:'archived-thread',name:'Archived conversation'}]:[metadata]};
    if(m.method==='thread/turns/list'){
      const end=m.params.cursor?Number(m.params.cursor):16;const limit=m.params.limit;result={data:Array.from({length:Math.min(limit,end)},(_,i)=>({id:'turn-'+(end-i-1),status:'completed',items:[]})),nextCursor:end>limit?String(end-limit):null,backwardsCursor:String(end)};
    }
@@ -48,5 +48,10 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
  assert.ok(calls.filter(c=>c.method==='thread/read').every(c=>!c.params.includeTurns));
  disconnect=true;const failed=await api('/api/threads/large-thread?view=timeline');assert.equal(failed.status,503);assert.equal(failed.data.code,'CODEX_DISCONNECTED');assert.match(failed.data.error,/phone can reach the workstation/);
  assert.equal((await api('/api/status')).data.connected,false);
- assert.equal((await api('/api/threads')).status,200);assert.equal((await api('/api/status')).data.problem,null);
+ const listing=await api('/api/threads');assert.equal(listing.status,200);assert.equal(listing.data.threads[0].id,metadata.id);assert.equal(listing.data.threads[0].archived,false);
+ const archived=await api('/api/threads?archived=true');assert.equal(archived.status,200);assert.equal(archived.data.threads[0].id,'archived-thread');assert.equal(archived.data.threads[0].archived,true);
+ assert.equal((await api('/api/projects')).status,200);
+ const listCalls=calls.filter(c=>c.method==='thread/list');assert.ok(listCalls.length>=3);assert.ok(listCalls.every(c=>c.params.useStateDbOnly===true),'interactive lists must bypass expensive JSONL repair scans');
+ assert.ok(listCalls.some(c=>c.params.limit===70&&c.params.archived===false));assert.ok(listCalls.some(c=>c.params.limit===70&&c.params.archived===true));assert.ok(listCalls.some(c=>c.params.limit===100&&c.params.archived===false));
+ assert.equal((await api('/api/status')).data.problem,null);
 });

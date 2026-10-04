@@ -2,7 +2,7 @@
   "project": "NextComp",
   "date": "2026-10-04",
   "scope": "All current durable UX requests checked against source; synthetic Android qualification extends through alpha14 coordinator text, stronger bilingual Italian and silent notification retitle. Physical-phone delivery and provider audio are separate receipts. No inference or private phone content involved.",
-  "requestsAudited": 78,
+  "requestsAudited": 79,
   "priority": [
     {
       "priority": 1,
@@ -888,6 +888,13 @@
       "ledgerStatusAtAudit": "investigating-and-implementing-alpha14",
       "auditGroup": "notification-names",
       "assessment": "implemented-alpha14-emulator-qualified"
+    },
+    {
+      "id": "anchored-activity-switch-reply",
+      "requirement": "Tapping alerts/latest activity opens a compact popup at the tap rather than an animated drawer, with one-tap session switching and reply directly there.",
+      "ledgerStatusAtAudit": "implemented-awaiting-qualification",
+      "auditGroup": "anchored-activity-popup",
+      "assessment": "implemented-alpha15-emulator-qualified"
     }
   ],
   "changesAfterInitialAudit": [
@@ -927,6 +934,19 @@
       "scope": "Final alpha14 coordinator layout and notification names",
       "receipt": "docs/qualification/coordinator-text-runtime.json",
       "evidence": "Final version27 APK cold restart under translation503 opens latest Italian answer immediately without swipe; deliberate older-reading drag stays stable. Actual posted Android notification retitles with body, exact Skip PendingIntent and pending attention retained, ONLY_ALERT_ONCE set. Emulator fixture only; physical phone installation and real FCM delivery belong to separate root receipts.",
+      "providerInferenceCalls": 0
+    },
+    {
+      "date": "2026-10-04",
+      "scope": "Alpha15 anchored activity switch and reply",
+      "receipt": "docs/qualification/activity-popup-runtime-alpha15.json",
+      "evidence": "Actual Android anchored subpanel, direct session/reply,503draft retention, actual keyboard/hardware Enter, delayed target acceptance and stable IDs qualified at2\u00d7font with bilingual controls. Final29 speech source actions before long passage qualified. No paid provider or physical-phone claims. Primary Send label contrast flagged to root before final qualification."
+    },
+    {
+      "date": "2026-10-04",
+      "scope": "Final alpha15 development32 contrast, adaptive labels and keyboard popup",
+      "receipt": "docs/qualification/activity-popup-runtime-alpha15.json",
+      "evidence": "Actual2\u00d7 system font, Italian with English support: New task/Show sessions retain both languages; Ink-on-gold Send fully visible above Gboard from list footer and conversation footer. Actual app Send and hardware Enter each accepted one authenticated explicit-target steer reply without navigation. Header anchor and source actions preceding long speech remain visible. All provider endpoints blocked.",
       "providerInferenceCalls": 0
     }
   ]

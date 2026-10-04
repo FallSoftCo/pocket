@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-04",
+  "version": "0.5.0-alpha.15",
+  "versionCode": 32,
+  "developmentApkSha256": "8aa966a496adb7a2e923607db54e44d319fe80b08dbd95f97c7501fae2fc1567",
+  "platform": "Android API35 owned emulator, 1080\u00d72400, actual system font_scale2.0",
+  "fixture": "Synthetic paired activity, explicit-target reply and persisted retained-caption fixtures; provider endpoints blocked",
+  "providerInferenceCalls": 0,
+  "checks": {
+    "footerPopupAboveAnchor": true,
+    "conversationPopupBelowHeaderAnchor": true,
+    "actualAndroidApplicationSubPanel": true,
+    "noPopupWindowAnimationAttribute": true,
+    "noAnimatedSheetTransitionInSource": true,
+    "oneTapSessionSwitchBoundedRead": true,
+    "oneTapReplyComposerVisibleAboveIme": true,
+    "replyTargetsExplicitDifferentSessionWithoutNavigation": true,
+    "physicalEnterSubmits": true,
+    "actualGboardSendTouchSubmits": true,
+    "acceptedEachTurnExactlyOnce": true,
+    "reply503ShowsInlineError": true,
+    "reply503PreservesDraft": true,
+    "tenSecondAcceptanceAfterTargetSwitchClearsOriginalSentDraft": true,
+    "otherTargetDraftUnaffected": true,
+    "popupTargetOrderStableDuringNewLiveActivity": true,
+    "retainedSpeechSourceActionsBeforeLongPassage": true,
+    "speechSourceOpenOneTap": true,
+    "speechSourceReplyOneTap": true,
+    "final29EnterReplySmoke": true,
+    "italianAndEnglishSupportAtFont2": true,
+    "offlineVocabularyEntries": 121,
+    "newTaskInkOnGoldActualPixels": true,
+    "sendUsesMaterialInkContentContract": true,
+    "footerReplySendFullyVisibleAboveIme": true,
+    "conversationFooterReplySendFullyVisibleAboveIme": true,
+    "actualTapSendAuthenticatedExplicitTarget": true,
+    "newTaskAdaptiveTwoLineLabelAndEnglishGlossVisible": true,
+    "showSessionsAdaptiveLabelAndEnglishGlossVisible": true
+  },
+  "actualReplyEvidence": {
+    "failureThenRetry": [
+      "Check failed503",
+      "Check accepted once"
+    ],
+    "ime": "Ready accepted once by touching visible Gboard Send after verifying input shown",
+    "delayed": "Race accepted once after10seconds while selecting another reply target; returning original target shows empty saved draft",
+    "final29": "Final accepted once from speech source Reply using hardware Enter",
+    "final32": [
+      "FinalSend accepted once via visible app Send",
+      "FooterEnter accepted once via hardware Enter from conversation-footer popup"
+    ]
+  },
+  "qualifications": [
+    "Core failure/IME and delayed callback checks ran on source-equivalent development28; final development29 includes the callback plus source controls above retained speech and passed the final source-open/reply/Enter smoke.",
+    "Speech passage was seeded as persisted retained-caption state for UI qualification. This does not claim synthesis, provider audio, real Firebase delivery or physical-phone qualification.",
+    "Gboard does not expose its virtual Send key in this focusable Popup accessibility dump. Actual Send was touched at inspected coordinates on the fixed emulator after checking input shown; authenticated receipt proves the resulting single submission.",
+    "At2\u00d7 font, titles/previews truncate and the popup scrolls within48% ofscreen; composer, Close and source actions remain reachable.",
+    "Final development32 repeats footer and conversation-footer Send with the actual2\u00d7 system font and Gboard visible; both accepted authenticated steer replies to the explicit different session without navigation. Header anchor and speech source actions remain accessible."
+  ],
+  "discoveredAndFixed": [
+    "Reply composer initially followed all rows; agent moved it to top with focus.",
+    "Hardware Enter handling added alongside IME Send; pasted text does not auto-send.",
+    "Root added visible inline503 error and cleared original-target submitted draft when acceptance finishes after selecting another target.",
+    "Long speech could hide source actions; root placed source Open/Reply above passage.",
+    "Root replaced hardcoded Paper default in BilingualLabel with LocalContentColor.current so primary buttons inherit theme Ink overgold; actual Newtask pixels qualified.",
+    "IME could obscure footer popup Send; host keyboard insets now clamp popup above keyboard and Send is pinned outside scrolling content.",
+    "New task fixed height clipped bilingual labels at2\u00d7 font; adaptive height and two-line primary labels now retain both languages."
+  ],
+  "pending": [],
+  "cleanup": {
+    "ownedEmulatorStopped": true,
+    "ownedFixtureStopped": true,
+    "captionSeedRestored": true,
+    "phoneUntouched": true,
+    "unrelatedEmulatorsPreserved": true
+  },
+  "gallery": {
+    "category": "nextcomp-alpha15-activity-popup",
+    "screenshotCount": 5,
+    "synthetic": true,
+    "layoutCheckPassed": true,
+    "desktopMobileReducedMotionReload": true,
+    "errors": 0,
+    "cardsAtCheck": 1610
+  }
+}

@@ -124,8 +124,23 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         val request=rows.indexOfLast{it.s("kind")=="request"}
         if(count>0)list.scrollToItem(if(request>=0)(request+1).coerceAtMost(count-1) else count-1)
     }}
+    val ConversationActivityControls:@Composable ColumnScope.()->Unit={
+            UsageDetails()
+            d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
+            Text(Pocket.tasks.firstOrNull{it.id==Pocket.selected}?.preview.orEmpty(),fontSize=13.sp,lineHeight=19.sp,color=Muted,modifier=Modifier.padding(vertical=12.dp))
+            TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){Text(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
+            if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){Text("Queue · ${waiting.size}")}
+            TextButton({rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"},modifier=Modifier.fillMaxWidth()){Text("Keep latest reply in notes")}
+            TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){Text("Model, effort & mode")}
+            TextButton({actionsOpen=false;taskName=t?.s("name").orEmpty();renameOpen=true},modifier=Modifier.fillMaxWidth()){Text("Rename")}
+            TextButton({actionsOpen=false;confirmArchive=true},enabled=!active,modifier=Modifier.fillMaxWidth()){Text("Archive")}
+            TextButton({actionsOpen=false;submit("queue")},enabled=draft.isNotBlank()&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){Text("Queue message")}
+    }
     Column(Modifier.fillMaxSize().imePadding()){
-        ConversationActivityHeader(active){actionsOpen=true}
+        Box {
+            ConversationActivityHeader(active){actionsOpen=true}
+            ActivityPopup(actionsOpen,{actionsOpen=false},Pocket.selected){ConversationActivityControls()}
+        }
         ConversationNotesCard()
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
@@ -179,21 +194,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             ChatActionButton("Back",Icons.AutoMirrored.Rounded.ArrowBack,Modifier.weight(1f),{keyboard?.hide();Pocket.closeTask()})
             UsageDock(Modifier.width(usageDockWidth()))
             if(active)ChatActionButton("Stop",Icons.Rounded.Stop,Modifier.weight(1f),{Pocket.interrupt()},recording=true)
-        }
-    }
-    if(actionsOpen)ModalBottomSheet(onDismissRequest={actionsOpen=false},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=Panel){
-        Column(Modifier.fillMaxWidth().heightIn(max=(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp*.8f).dp).verticalScroll(rememberScrollState()).padding(horizontal=16.dp).padding(bottom=24.dp)){
-            Text(t?.s("name").orEmpty(),fontSize=18.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.padding(vertical=12.dp))
-            UsageDetails()
-            d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
-            Text(Pocket.tasks.firstOrNull{it.id==Pocket.selected}?.preview.orEmpty(),fontSize=13.sp,lineHeight=19.sp,color=Muted,modifier=Modifier.padding(vertical=12.dp))
-            TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){Text(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
-            if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){Text("Queue · ${waiting.size}")}
-            TextButton({rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"},modifier=Modifier.fillMaxWidth()){Text("Keep latest reply in notes")}
-            TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){Text("Model, effort & mode")}
-            TextButton({actionsOpen=false;taskName=t?.s("name").orEmpty();renameOpen=true},modifier=Modifier.fillMaxWidth()){Text("Rename")}
-            TextButton({actionsOpen=false;confirmArchive=true},enabled=!active,modifier=Modifier.fillMaxWidth()){Text("Archive")}
-            TextButton({actionsOpen=false;submit("queue")},enabled=draft.isNotBlank()&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){Text("Queue message")}
         }
     }
     if(queueOpen)ModalBottomSheet(onDismissRequest={queueOpen=false},containerColor=Panel){

@@ -68,6 +68,7 @@ object PocketSpeechCaptions {
     val s=PocketSpeechCaptions.state
     if(!s.visible)return
     var expanded by remember { mutableStateOf(false) }
+    Box {
     Surface(modifier=modifier.fillMaxWidth(),color=Panel,tonalElevation=0.dp){
         Row(Modifier.padding(start=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
             Column(Modifier.weight(1f).heightIn(min=48.dp).clickable(role=Role.Button,onClickLabel="Read full spoken passage"){expanded=true}.padding(vertical=8.dp)){
@@ -77,21 +78,8 @@ object PocketSpeechCaptions {
             TextButton(onClick={PocketSpeechCaptions.dismiss()},modifier=Modifier.heightIn(min=48.dp)){Text("Dismiss")}
         }
     }
-    if(expanded){
-        val sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)
-        val sheetHeight=(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp*.7f).dp
-        ModalBottomSheet(onDismissRequest={expanded=false},sheetState=sheetState,containerColor=Panel){
-            Column(Modifier.fillMaxWidth().height(sheetHeight).padding(horizontal=16.dp)){
-                Text(s.title.ifBlank{"Spoken update"},color=Paper,style=MaterialTheme.typography.titleMedium)
-                Text(s.label,color=Muted,style=MaterialTheme.typography.labelSmall)
-                val scroll=rememberScrollState()
-                LaunchedEffect(s.id,s.part){scroll.scrollTo(0)}
-                Text(s.text,color=Paper,style=MaterialTheme.typography.bodyLarge,modifier=Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(vertical=16.dp))
-                Row(Modifier.fillMaxWidth().navigationBarsPadding(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    TextButton(onClick={expanded=false},modifier=Modifier.weight(1f).heightIn(min=64.dp)){Text("Close")}
-                    TextButton(onClick={PocketSpeechCaptions.dismiss();expanded=false},modifier=Modifier.weight(1f).heightIn(min=64.dp)){Text("Dismiss captions")}
-                }
-            }
-        }
+    ActivityPopup(expanded,{expanded=false},PocketNotificationTitles.threadForId(s.id),passage=s.text){
+        TextButton({PocketSpeechCaptions.dismiss();expanded=false}){Text("Dismiss captions")}
+    }
     }
 }

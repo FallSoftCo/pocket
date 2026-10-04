@@ -1,0 +1,36 @@
+{
+  "version": "alpha15",
+  "stockCliVersion": "0.160.0",
+  "source": "https://learn.chatgpt.com/docs/app-server#threads",
+  "change": "thread/list useStateDbOnly true on conversation and project lists skips JSONL metadata repair scanning; keeps stock state database response and existing limits/archive semantics.",
+  "readOnlyQualification": {
+    "defaultLimit20Milliseconds": 19089,
+    "defaultLimit70TimeoutMilliseconds": 25040,
+    "stateDbOnlyLimit70Milliseconds": [
+      21,
+      39
+    ],
+    "stateDbOnlyActiveCount": 70,
+    "uniqueActiveIds": 70,
+    "namedActiveCount": 54,
+    "liveActiveStatuses": 4,
+    "nextPageCount": 5,
+    "nextPageOverlap": 0,
+    "archivedCount": 2,
+    "archivedMilliseconds": 11,
+    "recentMetadataReadMilliseconds": 8,
+    "recentIdNameUpdatedAtStatusAllMatch": true
+  },
+  "validation": [
+    "HTTP synthetic stock-socket regression passes for active70, archived70 and project100 requests, requires useStateDbOnly and preserves archived response separation.",
+    "No daemon resets, active session interruptions, state database modifications or paid inference calls."
+  ],
+  "tradeoff": "List reads intentionally use indexed metadata rather than scanning historical JSONL to repair metadata during every interactive request. Conversation loading still reads the selected stock thread normally.",
+  "deployedHttpQualification": {
+    "authenticatedThreadListMilliseconds": 336,
+    "visibleConversations": 68,
+    "nativeCoordinatorRowsFiltered": 2,
+    "healthCodexConnected": true,
+    "backendTestsPassing": 146
+  }
+}

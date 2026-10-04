@@ -250,8 +250,8 @@ class MainActivity:ComponentActivity(){
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={BilingualLabel(title)})}}
             ProfileSwitcher()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
-                Button({onToolsOpen(false);Pocket.composeTask()},modifier=Modifier.weight(1f).height(56.dp)){BilingualLabel("New task")}
-                FilledTonalButton({onToolsOpen(false)},modifier=Modifier.weight(1f).height(56.dp)){BilingualLabel("Show sessions")}
+                Button({onToolsOpen(false);Pocket.composeTask()},modifier=Modifier.weight(1f).heightIn(min=56.dp)){BilingualLabel("New task",maxLines=2)}
+                FilledTonalButton({onToolsOpen(false)},modifier=Modifier.weight(1f).heightIn(min=56.dp)){BilingualLabel("Show sessions",maxLines=2)}
             }
         }
     }
@@ -324,11 +324,14 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 @Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){SymbolIcon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));Text(title,fontSize=19.sp);Text(body,color=Muted,fontSize=13.sp)}}
 @Composable fun AttentionCard(n:JSONObject){
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
+        Column(Modifier.fillMaxWidth().clickable{Pocket.open(n.s("thread_id"))}){
         Label(when(n.s("kind")){"approval"->"REVIEW A REQUEST";"question"->"ANSWER A QUESTION";else->"CHECK A PROBLEM"},Coral)
         Text(n.s("title"),fontSize=17.sp,fontWeight=FontWeight.Medium)
         Text(n.s("body"),color=Muted,fontSize=13.sp,lineHeight=19.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
+        }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
             TextButton({Pocket.open(n.s("thread_id"))}){Text("Review",color=Mint)}
+            TextButton({Pocket.open(n.s("thread_id"),keyboard=true)}){Text("Reply",color=Mint)}
             if(n.s("kind")=="question")TextButton({PocketQuestionActions.skipNotification(n.optLong("id"),Pocket.local)}){Text("Skip",color=Mint)}
             TextButton({PocketAttention.snooze(n.optLong("id"))}){Text("Later · 30m",color=Muted)}
             TextButton({PocketAttention.dismiss(n.optLong("id"))}){Text("Dismiss",color=Muted)}
