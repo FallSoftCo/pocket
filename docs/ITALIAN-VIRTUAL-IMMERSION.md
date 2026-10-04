@@ -22,8 +22,8 @@ All safety-sensitive action payloads continue to use originals. During a transla
 
 Inspected the maintained local Mosis BLD review sources:
 
-- `/home/ai/Development/mosis-bld-review/automation/anime_interlinear/README.md`
-- `/home/ai/Development/mosis-bld-review/product/docs/MOSIS_PRODUCT_UX.md`
+- `Mosis source review: automation/anime_interlinear/README.md`
+- `Mosis source review: product/docs/MOSIS_PRODUCT_UX.md`
 
 Mosis preserves the native experience and the original media, uses contextual source/gloss relationships, explicitly records alignment evidence and rejects unsupported timing claims. Its media interlinear display solves a different problem from NextComp controls and chat: copying a permanently compressed subtitle lane would undermine mobile legibility here. Transfer the truthful contextual relationship and original preservation; use normal-size, optional English rescue in NextComp. Do not transfer Mosis's separately billed API pipeline or claim NextComp provides word-timed language lessons.
 
