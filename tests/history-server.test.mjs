@@ -6,16 +6,18 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import http from 'node:http';
 import {once} from 'node:events';
+import {DatabaseSync} from 'node:sqlite';
 import {WebSocketServer} from 'ws';
 
 test('HTTP conversation loading uses metadata-only resume and opaque history pages; outages identify the failed connection',async t=>{
  const dir=await mkdtemp(join(tmpdir(),'pocket-history-http-')),socket=join(dir,'codex.sock');
  const upstream=http.createServer(),wss=new WebSocketServer({server:upstream});await new Promise(r=>upstream.listen(socket,r));
  const allocator=http.createServer();await new Promise(r=>allocator.listen(0,'127.0.0.1',r));const port=allocator.address().port;await new Promise(r=>allocator.close(r));
- const calls=[];let disconnect=false;
+ const calls=[];let disconnect=false;const blockedRecovery=[];
  const metadata={id:'large-thread',historyMode:'paginated',name:'Large conversation',status:{type:'idle'},turns:[]};
  wss.on('connection',ws=>ws.on('message',raw=>{
    const m=JSON.parse(raw);if(!m.id)return;calls.push(m);
+   if(m.method==='thread/turns/list'&&m.params.itemsView==='summary'){blockedRecovery.push(m);return;}
    if(disconnect&&m.method==='thread/read'){disconnect=false;ws.terminate();return;}
    if(m.method==='thread/read'&&m.params.includeTurns||m.method==='thread/resume'&&!m.params.excludeTurns){ws.close(1009,'Full history is too large');return;}
    let result={};
@@ -31,9 +33,17 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
  t.after(async()=>{if(child.exitCode===null){const done=once(child,'exit');child.kill();await done;}for(const ws of wss.clients)ws.terminate();wss.close();await new Promise(r=>upstream.close(r));await rm(dir,{recursive:true,force:true});});
  for(let i=0;i<100;i++){try{if((await fetch(`http://127.0.0.1:${port}/health`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,30));}
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json')));
+ const watchDb=new DatabaseSync(join(dir,'pocket.sqlite'));watchDb.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1)').run(metadata.id,'Synthetic watched conversation');watchDb.close();
  const api=async path=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{headers:{Authorization:`Bearer ${adminToken}`}});return {status:r.status,data:await r.json()};};
- const recent=await api('/api/threads/large-thread?view=timeline');assert.equal(recent.status,200);assert.equal(recent.data.timeline.rows[0].turnId,'turn-8');assert.ok(recent.data.timeline.hasEarlier);
- const older=await api('/api/threads/large-thread?view=timeline&before='+encodeURIComponent(recent.data.timeline.before));assert.equal(older.status,200);assert.equal(older.data.timeline.rows[0].turnId,'turn-0');assert.equal(older.data.timeline.hasEarlier,false);
+ const recent=await api('/api/threads/large-thread?view=timeline');assert.equal(recent.status,200);assert.equal(recent.data.timeline.rows[0].turnId,'turn-15');assert.ok(recent.data.timeline.hasEarlier);
+ assert.equal(blockedRecovery.length,1,'recent HTTP response must finish while missed-history recovery is still blocked');
+ assert.equal(calls.filter(c=>c.method==='thread/items/list').length,1,'opening must read only the newest item batch');
+ let page=recent.data.timeline;const seen=['turn-15'];
+ while(page.hasEarlier){
+   const older=await api('/api/threads/large-thread?view=timeline&before='+encodeURIComponent(page.before));assert.equal(older.status,200);page=older.data.timeline;
+   seen.push(page.rows[0].turnId);
+ }
+ assert.deepEqual(seen,Array.from({length:16},(_,i)=>'turn-'+(15-i)),'older pages must remain complete and ordered');
  assert.ok(calls.filter(c=>c.method==='thread/resume').every(c=>c.params.excludeTurns));
  assert.ok(calls.filter(c=>c.method==='thread/read').every(c=>!c.params.includeTurns));
  disconnect=true;const failed=await api('/api/threads/large-thread?view=timeline');assert.equal(failed.status,503);assert.equal(failed.data.code,'CODEX_DISCONNECTED');assert.match(failed.data.error,/phone can reach the workstation/);

@@ -75,10 +75,27 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
 }
 
+@Composable fun ConversationActivityHeader(active:Boolean,onOpen:()->Unit){
+    val task=Pocket.tasks.firstOrNull{it.id==Pocket.selected}
+    val action=task?.preview?.takeIf{task.previewRole=="activity"||task.previewRole=="assistant"}
+        ?:if(active)"Working" else "Ready"
+    val key="conversation-activity:${Pocket.selected}"
+    LaunchedEffect(action,PocketImmersion.enabled){PocketImmersion.offer(key,action,task?.previewKind?:"message")}
+    Surface(onClick=onOpen,color=Panel,modifier=Modifier.fillMaxWidth().semantics{contentDescription="Activity and conversation controls"}){
+        Row(Modifier.heightIn(min=48.dp).padding(horizontal=18.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
+            if(active)SymbolIcon(if(task?.previewKind=="thinking")"Psychology" else "Codex","Working",Modifier.size(28.dp),spinning=true)
+            else SymbolIcon("Codex",null,Modifier.size(20.dp))
+            Text(PocketImmersion.display(key,action),color=if(active)Mint else Muted,fontSize=12.sp,lineHeight=17.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            SymbolIcon(Icons.Rounded.ExpandMore,null,Modifier.size(24.dp))
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class)
 @Composable fun ConversationScreen(){
     val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
-    val active=t?.optJSONObject("status")?.s("type")=="active"||rows.lastOrNull{it.s("kind")=="turn"}?.s("status")=="inProgress"
+    val active=Pocket.tasks.firstOrNull{it.id==Pocket.selected}?.status?.let{it=="active"}
+        ?:(t?.optJSONObject("status")?.s("type")=="active"||rows.lastOrNull{it.s("kind")=="turn"}?.s("status")=="inProgress")
     val list=rememberLazyListState();val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
     var follow by remember{mutableStateOf(true)}
     var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
@@ -101,14 +118,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
     LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){delay(32);val count=list.layoutInfo.totalItemsCount;if(count>0)list.scrollToItem(count-1)}}
     Column(Modifier.fillMaxSize().imePadding()){
+        ConversationActivityHeader(active){actionsOpen=true}
         ConversationNotesCard()
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 item(key="history"){if(PocketTranscript.earlier)TextButton({follow=false;scope.launch{PocketTranscript.load(true);list.scrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},enabled=!PocketTranscript.loading,modifier=Modifier.fillMaxWidth()){Text(if(PocketTranscript.loading)"Loading…" else "Load earlier activity",color=Mint)}}
-                if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(35.dp),contentAlignment=Alignment.Center){CircularProgressIndicator(color=Mint,strokeWidth=2.dp)}}
+                if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
                 items(rows,key={it.s("id")}){row->TranscriptRow(row)}
                 d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state")!="accepted"&&it !in waiting}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(6.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Label("YOU · ${r.s("state")}",if(r.s("state") in listOf("failed","unknown"))Coral else Muted);Text(r.s("text"),fontSize=14.sp);if(r.s("state") in listOf("failed","unknown"))Text(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)}}}
-                if(active)item(key="working"){Row(Modifier.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){CircularProgressIndicator(Modifier.size(13.dp),strokeWidth=1.5.dp,color=Mint);Text("Codex is working",fontSize=12.sp,color=Mint)}}
 
                 item(key="errors"){ErrorBanner()}
             }
@@ -136,12 +153,12 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 val hasDraft=draft.isNotBlank()
                 val enabled=!Pocket.sending&&hasDraft
                 val label=if(active)"Steer running turn" else "Send message"
-                Box(Modifier.size(64.dp).clip(RoundedCornerShape(6.dp)).background(if(hasDraft&&enabled)Mint else Color.Transparent)
+                Box(Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(Ink).border(1.dp,if(hasDraft&&enabled)Mint else Muted.copy(alpha=.4f),RoundedCornerShape(12.dp))
                     .combinedClickable(enabled=enabled,onClickLabel=label,onLongClickLabel=if(hasDraft)"Queue for next turn" else label,
                         onLongClick={if(hasDraft)submit("queue")},onClick={submit("steer")})
                     .semantics{role=androidx.compose.ui.semantics.Role.Button;contentDescription=label;if(hasDraft)customActions=listOf(CustomAccessibilityAction("Queue for next turn"){if(enabled){submit("queue");true}else false})},contentAlignment=Alignment.Center){
                     if(Pocket.sending)CircularProgressIndicator(Modifier.size(18.dp),color=Mint,strokeWidth=2.dp)
-                    else SymbolIcon(Icons.Rounded.ArrowUpward,null,tint=if(hasDraft&&enabled)Ink else Muted.copy(alpha=.45f),modifier=Modifier.size(23.dp))
+                    else SymbolIcon(Icons.Rounded.ArrowUpward,null,tint=Paper,modifier=Modifier.size(44.dp))
                 }
             }
         }
@@ -149,15 +166,20 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=Pocket.selected,bar=true)
             ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
         }
+        SpeechCaptionBanner()
+        SpeechPlayer()
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
             ChatActionButton("Back",Icons.AutoMirrored.Rounded.ArrowBack,Modifier.weight(1f),{keyboard?.hide();Pocket.closeTask()})
-            UsageDock(Modifier.width(58.dp))
-            FilledTonalIconButton(onClick={actionsOpen=true},modifier=Modifier.size(64.dp),shape=RoundedCornerShape(6.dp)){SymbolIcon(Icons.Rounded.MoreHoriz,"Conversation options",Modifier.size(28.dp))}
+            UsageDock(Modifier.width(usageDockWidth()))
             if(active)ChatActionButton("Stop",Icons.Rounded.Stop,Modifier.weight(1f),{Pocket.interrupt()},recording=true)
         }
     }
-    if(actionsOpen)ModalBottomSheet(onDismissRequest={actionsOpen=false},containerColor=Panel){
-        Column(Modifier.fillMaxWidth().padding(horizontal=16.dp).padding(bottom=24.dp)){
+    if(actionsOpen)ModalBottomSheet(onDismissRequest={actionsOpen=false},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=Panel){
+        Column(Modifier.fillMaxWidth().heightIn(max=(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp*.8f).dp).verticalScroll(rememberScrollState()).padding(horizontal=16.dp).padding(bottom=24.dp)){
+            Text(t?.s("name").orEmpty(),fontSize=18.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.padding(vertical=12.dp))
+            UsageDetails()
+            d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
+            Text(Pocket.tasks.firstOrNull{it.id==Pocket.selected}?.preview.orEmpty(),fontSize=13.sp,lineHeight=19.sp,color=Muted,modifier=Modifier.padding(vertical=12.dp))
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){Text(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
             if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){Text("Queue · ${waiting.size}")}
             TextButton({rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"},modifier=Modifier.fillMaxWidth()){Text("Keep latest reply in notes")}
@@ -226,7 +248,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val running=row.s("status")=="inProgress";val failed=row.s("status") in listOf("failed","declined")||(!row.isNull("exitCode")&&row.optInt("exitCode")!=0)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Panel.copy(alpha=.6f)).clickable{expanded=!expanded}.padding(horizontal=11.dp,vertical=9.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            if(running)CircularProgressIndicator(Modifier.size(12.dp),strokeWidth=1.5.dp,color=Mint)else SymbolIcon(if(failed)Icons.Rounded.ErrorOutline else Icons.Rounded.Check,null,tint=if(failed)Coral else Muted,modifier=Modifier.size(13.dp))
+            Box(Modifier.size(24.dp),contentAlignment=Alignment.Center){
+                if(running)SymbolIcon(if(row.s("type")=="reasoning")"Psychology" else "Codex","Working",Modifier.size(24.dp),spinning=true)
+                else SymbolIcon(if(failed)Icons.Rounded.ErrorOutline else Icons.Rounded.Check,null,tint=if(failed)Coral else Muted,modifier=Modifier.size(18.dp))
+            }
             Text(row.s("title"),fontSize=12.sp,color=if(running)Mint else Muted,modifier=Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
             if(row.optLong("durationMs")>0)Text("${row.optLong("durationMs")/1000}s",fontSize=10.sp,color=Muted)
             SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse activity" else "Expand activity",tint=Muted,modifier=Modifier.size(16.dp))

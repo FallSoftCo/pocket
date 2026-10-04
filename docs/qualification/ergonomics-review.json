@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-04",
+  "sources": [
+    {
+      "title": "Seating previews",
+      "url": "https://builtformars.com/ux-bites/seating-previews"
+    },
+    {
+      "title": "Editing the preview",
+      "url": "https://builtformars.com/ux-bites/editing-the-preview"
+    },
+    {
+      "title": "Live preview of cookies",
+      "url": "https://builtformars.com/ux-bites/live-preview-of-cookies"
+    },
+    {
+      "title": "LinkedIn",
+      "url": "https://mobbin.com/screens/52b88e3c-34af-4c9b-bda7-04d3b32fa4d8"
+    },
+    {
+      "title": "Luma",
+      "url": "https://mobbin.com/screens/d344cda6-0073-40fd-b48d-ae3239115371"
+    },
+    {
+      "title": "Android accessibility: large simple controls",
+      "url": "https://developer.android.com/guide/topics/ui/accessibility/apps#use-large-simple-controls"
+    }
+  ],
+  "observations": [
+    "Mobbin Luma preview visibly combines compact chat rows, latest-message excerpts and bottom navigation.",
+    "Mobbin LinkedIn preview visibly places secondary conversation actions in a bottom sheet.",
+    "BFM advice was adapted from general affordance examples; the returned articles do not establish thumb-ergonomics measurements.",
+    "Android primary guidance specifies at least48dp square touch targets."
+  ],
+  "implementation": [
+    "48dp list-side mic and keyboard targets",
+    "88dp minimum dock, adapting to font scale",
+    "bottom-aligned recent sessions and stable active cohorts",
+    "separate title inline-edit, bell and conversation body regions",
+    "secondary controls in bottom sheets"
+  ],
+  "limitations": [
+    "Reference screens are iOS, while implementation is native Android.",
+    "No claim of controlled human usability testing."
+  ]
+}

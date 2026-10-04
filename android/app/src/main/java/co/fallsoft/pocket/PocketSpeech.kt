@@ -152,7 +152,7 @@ class PocketSpeechService:Service(){
     private val timeout=Runnable{pause("Speech stalled · Tap Resume to retry")}
     private val checkpoint=object:Runnable{override fun run(){
         if(closed||queue.paused)return
-        if(prepared)player?.let{queue.positionMs=it.currentPosition;PocketSpeech.save();queue.current?.let{m->PocketSpeechCaptions.update(m.id,m.title,queue.chunk,queue.chunkIndex,SpeechText.chunks(m.text).size)}}
+        if(prepared)player?.let{queue.positionMs=it.currentPosition;PocketSpeech.save();queue.current?.let{m->PocketSpeechCaptions.update(m.id,m.title,spokenChunk,queue.chunkIndex,renderedChunks.size,speakingProfile)}}
         handler.postDelayed(this,2000)
     }}
     override fun onBind(intent:Intent?)=null
@@ -305,7 +305,7 @@ class PocketSpeechService:Service(){
     }
     private fun startPlayer(media:MediaPlayer,id:Long,index:Int){
         handler.removeCallbacks(timeout);media.start();started=true
-        queue.current?.let{PocketSpeechCaptions.update(it.id,it.title,spokenChunk,queue.chunkIndex,renderedChunks.size)}
+        queue.current?.let{PocketSpeechCaptions.update(it.id,it.title,spokenChunk,queue.chunkIndex,renderedChunks.size,speakingProfile)}
         handler.postDelayed(timeout,(media.duration-media.currentPosition).toLong().coerceAtLeast(0)+15000)
         Log.i("PocketSpeech","Playing audio $id/$index from ${media.currentPosition} ms")
         updateControls(PlaybackState.STATE_PLAYING);handler.removeCallbacks(checkpoint);handler.post(checkpoint)
@@ -324,6 +324,7 @@ class PocketSpeechService:Service(){
             updateControls(PlaybackState.STATE_PLAYING);handler.removeCallbacks(checkpoint);handler.post(checkpoint)
         }catch(_:IllegalStateException){pause("Playback interrupted · Tap Resume to retry")}
     }
+    internal fun refreshCaptionNotification(){getSystemService(NotificationManager::class.java).notify(998,PocketSpeech.notification(session))}
     private fun updateControls(state:Int){
         PocketSpeech.publish()
         session.setPlaybackState(PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_STOP)
@@ -335,10 +336,10 @@ class PocketSpeechService:Service(){
         if(started)player?.let{try{it.pause();queue.positionMs=it.currentPosition}catch(_:IllegalStateException){}}
         queue.pause(queue.positionMs,reason);PocketSpeech.save(true)
         Log.i("PocketSpeech","Paused audio ${queue.current?.id}/${queue.chunkIndex} at ${queue.positionMs} ms: $reason")
-        finished=true;releasePlayback();stopForeground(STOP_FOREGROUND_DETACH);PocketSpeechCaptions.pause();PocketSpeech.showPaused();stopSelf()
+        finished=true;releasePlayback();stopForeground(STOP_FOREGROUND_DETACH);PocketSpeechCaptions.pause(speakingProfile);PocketSpeech.showPaused();stopSelf()
     }
     internal fun discard(){finished=true;releasePlayback();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}
-    private fun finish(){finished=true;releasePlayback();queue.positionMs=0;PocketSpeech.save(true);PocketSpeech.directory.deleteRecursively();stopForeground(STOP_FOREGROUND_REMOVE);PocketSpeechCaptions.complete();stopSelf()}
+    private fun finish(){finished=true;releasePlayback();queue.positionMs=0;PocketSpeech.save(true);PocketSpeech.directory.deleteRecursively();stopForeground(STOP_FOREGROUND_REMOVE);PocketSpeechCaptions.complete(speakingProfile);stopSelf()}
     private fun releasePlayback(){
         handler.removeCallbacksAndMessages(null);scope.cancel();player?.release();player=null;prepared=false;started=false;transientPaused=false;engine?.stop();engine?.shutdown();engine=null
         focus?.let{getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it)};focus=null

@@ -1,0 +1,249 @@
+{
+  "symbols": {
+    "verified": true,
+    "engine": "Karma XPU",
+    "license": "Houdini Indie22.0.429",
+    "nativeSize": [
+      3840,
+      3840
+    ],
+    "samples": 32,
+    "frames": [
+      1,
+      12
+    ],
+    "files": [
+      {
+        "name": "frame.000001.exr",
+        "sha256": "c26a222681ca337f9ca1c8ba15fa20cadc1325642b82ef07896851b5415c0849",
+        "bytes": 5989559,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000002.exr",
+        "sha256": "aff35fcf13cfb4095ff03029a8cafbe405d146b2537c5e85468be0b165a751c1",
+        "bytes": 6502051,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000003.exr",
+        "sha256": "f3b82d34a3a3090b2809f7bcc8db0e429cace9a9709f01e257bc87937d1e6c50",
+        "bytes": 6359351,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000004.exr",
+        "sha256": "f6bab54c2574511c450482d021e007182f9321c26021033c53de687e7a047c49",
+        "bytes": 6393301,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000005.exr",
+        "sha256": "be2702020332421f76ef075e8201056dbb7414b2347f5b08682c6247de6df026",
+        "bytes": 6576849,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000006.exr",
+        "sha256": "86c2bc6d9a070a3967a7c505604d03b28a8e43a8d232a2567ce692a7fb3fb1d2",
+        "bytes": 6306045,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000007.exr",
+        "sha256": "45c71a1ecd24409543197ed963e14181c925181a7c61df7191d5d27c946c73c6",
+        "bytes": 6458135,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000008.exr",
+        "sha256": "7c97885599c720303794fc56ecfc3a27206347978bafb302b382114212248fb8",
+        "bytes": 5997521,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000009.exr",
+        "sha256": "95a0cf07ff1763d38455531e7389ac3f59d9ae8655a985be910c21e3f0ceeccf",
+        "bytes": 6076618,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000010.exr",
+        "sha256": "1b01ab29fdf007ba78ad415740678c0090b9da316029bdb9c06ca1079ff6e23b",
+        "bytes": 5831332,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000011.exr",
+        "sha256": "740778cda34016c15a7c47f5813b36e09cf03b343f2c25338301709a40262ab8",
+        "bytes": 5815163,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000012.exr",
+        "sha256": "a8442e1c77d507fea936ef8d76b4c1e2cce02888aec9b7094d528c4d3f7977d7",
+        "bytes": 5735285,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      }
+    ],
+    "gpuPeakUtilization": 94,
+    "gpuPeakVRAMMiB": 1959,
+    "cpuFallbackDisabled": true
+  }
+}

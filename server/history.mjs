@@ -12,7 +12,7 @@ export class ThreadHistory {
     const page=await this.codex.call('thread/items/list',{threadId:metadata.id,turnId:latest.id,limit:6,sortDirection:'desc'});
     return {...thread,turns:[{...latest,items:[...page.data].reverse().map(entry=>displayItem(entry.item,latest.id)).filter(Boolean)}]};
   }
-  async read(metadata,{before=null,summary=false}={}){
+  async read(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8}={}){
     const threadId=metadata.id;
     if(metadata.historyMode!=='paginated')return (await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;
     if(this.paginationSupported!==true){
@@ -39,7 +39,7 @@ export class ThreadHistory {
     }
     const turns=[];let count=0,bytes=0;const visited=new Set();
     const finish=next=>({...metadata,turns:turns.reverse(),_pocketPage:{hasEarlier:!!next,before:next?encode('items:',next):null}});
-    for(let turnCount=0;turnCount<8;turnCount++){
+    for(let turnCount=0;turnCount<maxTurns;turnCount++){
       const resumed=!!state.anchor;
       const headers=await this.codex.call('thread/turns/list',{threadId,limit:1,sortDirection:resumed?'asc':'desc',itemsView:'notLoaded',...((state.anchor||state.nextTurn)?{cursor:state.anchor||state.nextTurn}:{})});
       const header=headers.data[0];if(!header)return finish(null);
@@ -49,11 +49,11 @@ export class ThreadHistory {
       let cursor=state.itemCursor||null;
       while(true){
         const key=JSON.stringify([header.id,cursor]);if(visited.has(key))throw Error('Codex returned a repeated history cursor.');visited.add(key);
-        const limit=Math.max(1,Math.min(8,this.maxItems,Math.floor(this.maxBytes/64000)));
+        const limit=Math.max(1,Math.min(8,maxItems,Math.floor(maxBytes/64000)));
         const part=await this.codex.call('thread/items/list',{threadId,turnId:header.id,limit,sortDirection:'desc',...(cursor?{cursor}:{})});
         const items=part.data.map(entry=>displayItem(entry.item,header.id)).filter(Boolean);
         const size=items.reduce((n,item)=>n+Buffer.byteLength(JSON.stringify(item)),0);
-        if(count&&(count+items.length>this.maxItems||bytes+size>this.maxBytes)){
+        if(count&&(count+items.length>maxItems||bytes+size>maxBytes)){
           turn.items.reverse();if(!turn.items.length)turns.pop();
           if(!anchor)throw Error('Codex did not provide a history anchor. Update Codex to continue paging.');
           return finish({anchor,nextTurn,itemCursor:cursor});
@@ -61,11 +61,16 @@ export class ThreadHistory {
         turn.items.push(...items);count+=items.length;bytes+=size;
         if(!part.nextCursor)break;
         cursor=part.nextCursor;
+        if(count>=maxItems||bytes>=maxBytes){
+          turn.items.reverse();
+          if(!anchor)throw Error('Codex did not provide a history anchor. Update Codex to continue paging.');
+          return finish({anchor,nextTurn,itemCursor:cursor});
+        }
       }
       turn.items.reverse();
       if(!nextTurn)return finish(null);
       state={nextTurn};
-      if(count>=this.maxItems||bytes>=this.maxBytes)return finish(state);
+      if(count>=maxItems||bytes>=maxBytes)return finish(state);
     }
     return finish(state);
   }

@@ -1,0 +1,40 @@
+{
+  "symbols": {
+    "verified": true,
+    "engine": "Karma XPU",
+    "license": "Houdini Indie22.0.429",
+    "nativeSize": [
+      3840,
+      3840
+    ],
+    "samples": 64,
+    "frames": [
+      1,
+      1
+    ],
+    "files": [
+      {
+        "name": "frame.000001.exr",
+        "sha256": "cb183ad4bce011b3e335ea5b93ff291c183df55e20f8f5a989ea00073d64db4e",
+        "bytes": 6065462,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      }
+    ],
+    "gpuPeakUtilization": 74,
+    "gpuPeakVRAMMiB": 1927,
+    "cpuFallbackDisabled": true
+  }
+}

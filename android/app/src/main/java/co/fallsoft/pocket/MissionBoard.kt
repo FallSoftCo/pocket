@@ -8,7 +8,7 @@ data class MissionItem(
 )
 
 fun usefulMissionStatus(kind: String, text: String): Boolean =
-    !Regex("^thinking(?:\\.{3}|…)?$", RegexOption.IGNORE_CASE).matches(text.trim())
+    kind != "thinking" && !Regex("^thinking(?:\\.{3}|…)?$", RegexOption.IGNORE_CASE).matches(text.trim())
 
 /** Each conversation gets a place before a second action can crowd another out. */
 fun missionItems(activity: List<MissionItem>, sessions: List<MissionItem>, now: Long): List<MissionItem> {

@@ -1,0 +1,728 @@
+{
+  "verified": true,
+  "symbols": 37,
+  "palette": "Ivory faces, cyan primary sidewalls, graphite secondary sidewalls",
+  "contactSheetSizes": [
+    24,
+    32,
+    44
+  ],
+  "nativeAtlas": [
+    3840,
+    3840
+  ],
+  "hdAtlas": [
+    1920,
+    1920
+  ],
+  "files": {
+    "ArrowBack": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        100,
+        100,
+        396,
+        380
+      ],
+      "alphaBounds": [
+        16,
+        21,
+        240,
+        234
+      ],
+      "sha256": "d291b4a938fcbbb3ec15405192432a17bb511c4cb7c4600c8e637e438177405d"
+    },
+    "ArrowDownward": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        100,
+        83,
+        380,
+        380
+      ],
+      "alphaBounds": [
+        22,
+        16,
+        234,
+        240
+      ],
+      "sha256": "88e97f2197d03e7fbfbe79913dea3685aa6558a911eea8489a16c5b4b72d8115"
+    },
+    "ArrowForward": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        84,
+        100,
+        380,
+        380
+      ],
+      "alphaBounds": [
+        16,
+        21,
+        240,
+        234
+      ],
+      "sha256": "120d6205fc16bfac2748bb5303c9fbb14fd9b6d25d04585f814be4eed9537e79"
+    },
+    "ArrowUpward": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        100,
+        100,
+        380,
+        397
+      ],
+      "alphaBounds": [
+        22,
+        15,
+        234,
+        240
+      ],
+      "sha256": "8ed64276bdad64b04dedc272929f6a888fda40c2a3cf5f997bc68ffc5f673943"
+    },
+    "AttachFile": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        120,
+        54,
+        328,
+        426
+      ],
+      "alphaBounds": [
+        64,
+        15,
+        191,
+        240
+      ],
+      "sha256": "18a0a7b16e21d901a4450d59c632b86c39e9dcf43c09d0551394ac89451aa1fa"
+    },
+    "Build": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        93,
+        48,
+        432,
+        386
+      ],
+      "alphaBounds": [
+        16,
+        15,
+        240,
+        240
+      ],
+      "sha256": "f90c81de4f2712839ddadbf8ce911c83a0a4f471af7c0cfada7b76900449e256"
+    },
+    "Check": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        80,
+        98,
+        415,
+        367
+      ],
+      "alphaBounds": [
+        15,
+        37,
+        240,
+        218
+      ],
+      "sha256": "47677cd204c8d4998123259d951eb9dcf28b68914099d3a5bb39e007f606fee7"
+    },
+    "Computer": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        87,
+        101,
+        392,
+        410
+      ],
+      "alphaBounds": [
+        17,
+        16,
+        239,
+        240
+      ],
+      "sha256": "266389ab95e6efc920c03c5ba8148c62cca34ab1f4592f18003c7185c21327b2"
+    },
+    "Edit": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        89,
+        105,
+        375,
+        391
+      ],
+      "alphaBounds": [
+        15,
+        16,
+        240,
+        240
+      ],
+      "sha256": "b734cb27658f1ed43015d7577646070b92da7036aba034e52a2feed339f14fc2"
+    },
+    "EditNote": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        73,
+        105,
+        410,
+        428
+      ],
+      "alphaBounds": [
+        15,
+        20,
+        240,
+        236
+      ],
+      "sha256": "25c37ca73916474c8541b46bf0c12040e5343fd1e0e699c64d9bc4f303a7e613"
+    },
+    "ErrorOutline": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        67,
+        67,
+        412,
+        414
+      ],
+      "alphaBounds": [
+        17,
+        15,
+        239,
+        240
+      ],
+      "sha256": "84aba3604e4563de660aa29abd45166918305c6c49c31aa465e57d9e598d8659"
+    },
+    "ExpandLess": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        97,
+        145,
+        384,
+        320
+      ],
+      "alphaBounds": [
+        15,
+        59,
+        240,
+        197
+      ],
+      "sha256": "e96f1e88e71abe6b3b95a9ce2e505db9779bde418663ddb2c51daa1e5cd16a58"
+    },
+    "ExpandMore": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        96,
+        160,
+        383,
+        335
+      ],
+      "alphaBounds": [
+        15,
+        59,
+        240,
+        197
+      ],
+      "sha256": "9314801a23f0fe9084ef30987b36c252f47ec453c2f9558ab9eae0eac11eaf75"
+    },
+    "FolderOpen": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        71,
+        118,
+        409,
+        395
+      ],
+      "alphaBounds": [
+        16,
+        35,
+        240,
+        220
+      ],
+      "sha256": "78e0df7aacf33b4d4af70e487157b530d196bb9dcd025d592aad64304af6a190"
+    },
+    "Inbox": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        71,
+        151,
+        410,
+        395
+      ],
+      "alphaBounds": [
+        16,
+        46,
+        240,
+        209
+      ],
+      "sha256": "3d4751d2f3464cf68b496ed7cc2310bc3ca20542283859ee97224ebc0a618e40"
+    },
+    "Keyboard": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        71,
+        118,
+        409,
+        362
+      ],
+      "alphaBounds": [
+        16,
+        46,
+        240,
+        210
+      ],
+      "sha256": "38f8aa3a6ef5684c1127848f9f390e21b5c30087a499881cf18e454aca10b4d1"
+    },
+    "Layers": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        71,
+        104,
+        409,
+        392
+      ],
+      "alphaBounds": [
+        16,
+        32,
+        240,
+        224
+      ],
+      "sha256": "b95445ab0dc8a9054822c98ed01931c42cfc40ed336c7981c0e4dab5a342dedc"
+    },
+    "Mic": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        100,
+        54,
+        380,
+        410
+      ],
+      "alphaBounds": [
+        39,
+        16,
+        217,
+        241
+      ],
+      "sha256": "b1f476f75b937fb0598718dab9313505ea265dcc911bf6c5fe4c8f3a19b71522"
+    },
+    "MoreHoriz": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        92,
+        205,
+        388,
+        275
+      ],
+      "alphaBounds": [
+        16,
+        100,
+        240,
+        155
+      ],
+      "sha256": "c4f274dd7bbdbab9b747da243eff5b175f47518f9dd522932b7bdd80bf99e7db"
+    },
+    "MoreVert": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        205,
+        91,
+        274,
+        388
+      ],
+      "alphaBounds": [
+        100,
+        16,
+        156,
+        240
+      ],
+      "sha256": "f66995ae2b6dcfbced43f69a847ecbfe64a57cfe9705d8f7fa0d19c7e329c0a9"
+    },
+    "NotificationsActive": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        43,
+        83,
+        436,
+        393
+      ],
+      "alphaBounds": [
+        15,
+        39,
+        240,
+        217
+      ],
+      "sha256": "8e8ef4026f05b08212961d40add797e206cb94538bc5fec28718eb4371abb787"
+    },
+    "NotificationsNone": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        89,
+        83,
+        393,
+        393
+      ],
+      "alphaBounds": [
+        17,
+        15,
+        238,
+        240
+      ],
+      "sha256": "506d0f722bec24dd52178d2eb17ae4afa77ac0c11a62774b5bfdcad004f5b582"
+    },
+    "OpenInNew": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        87,
+        71,
+        408,
+        394
+      ],
+      "alphaBounds": [
+        16,
+        15,
+        239,
+        240
+      ],
+      "sha256": "6b59393c6d0bff7de26dbe1fee0886c7a09d56e1318fb454bfb08c33123445a3"
+    },
+    "Pause": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        136,
+        102,
+        344,
+        378
+      ],
+      "alphaBounds": [
+        43,
+        16,
+        213,
+        240
+      ],
+      "sha256": "612761e20ac2a487ca1955835b2871e1a0755960122d10688b9002737a8e74e1"
+    },
+    "PhoneAndroid": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        152,
+        70,
+        328,
+        410
+      ],
+      "alphaBounds": [
+        69,
+        15,
+        187,
+        241
+      ],
+      "sha256": "e233a0259048dbfbbfb172183ff840425f214bd51f2afe50dc357c2c20e59e80"
+    },
+    "PlayArrow": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        136,
+        98,
+        371,
+        378
+      ],
+      "alphaBounds": [
+        33,
+        16,
+        223,
+        241
+      ],
+      "sha256": "310df9f9258d56ece55d381309aecd88f5b07499a2732715295a1eee5cd84801"
+    },
+    "Psychology": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        84,
+        66,
+        425,
+        426
+      ],
+      "alphaBounds": [
+        21,
+        15,
+        234,
+        240
+      ],
+      "sha256": "9a5e60e5527babe5746a09f95a2be9b46cfd46ad173030de4a8c3ced73b165c3"
+    },
+    "Search": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        80,
+        79,
+        418,
+        420
+      ],
+      "alphaBounds": [
+        16,
+        15,
+        239,
+        240
+      ],
+      "sha256": "743b83ccdef2f6a418066346dec22e9f4b355c40c2da06fe188aedecb8b10d94"
+    },
+    "Send": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        136,
+        99,
+        371,
+        378
+      ],
+      "alphaBounds": [
+        33,
+        15,
+        223,
+        241
+      ],
+      "sha256": "48faf85461bcf5ebcaa7dec4d7758771b27e602a3695f93f31bbdf48d9a24eba"
+    },
+    "Stop": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        120,
+        119,
+        360,
+        361
+      ],
+      "alphaBounds": [
+        17,
+        15,
+        239,
+        241
+      ],
+      "sha256": "d95e058de02125b2c7c9924068159889f6c382fd795110de16eae916f4465b65"
+    },
+    "Terminal": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        71,
+        101,
+        409,
+        379
+      ],
+      "alphaBounds": [
+        16,
+        35,
+        240,
+        220
+      ],
+      "sha256": "752ef189856d2260c434eea66b2939dcb2a4ab84e4d7815ec21d74118f57b7a9"
+    },
+    "TravelExplore": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        80,
+        78,
+        418,
+        420
+      ],
+      "alphaBounds": [
+        17,
+        16,
+        239,
+        240
+      ],
+      "sha256": "ab0a381065fac427426a1807e95aa106be760049b2aca5609475ab5a28589cba"
+    },
+    "Tune": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        75,
+        86,
+        405,
+        392
+      ],
+      "alphaBounds": [
+        16,
+        24,
+        240,
+        233
+      ],
+      "sha256": "c089d2e7f0e35ed695f5c78d16a13c335dc3f8840472b7334f6973d9de36901b"
+    },
+    "Unarchive": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        71,
+        71,
+        409,
+        395
+      ],
+      "alphaBounds": [
+        16,
+        20,
+        240,
+        236
+      ],
+      "sha256": "985cf1b212fced63ce02da5c4c838c621fb3ec1bd55affa7d9f369378845ac70"
+    },
+    "VolumeUp": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        88,
+        89,
+        408,
+        394
+      ],
+      "alphaBounds": [
+        15,
+        21,
+        240,
+        235
+      ],
+      "sha256": "d49b77614be2730ec47cd89e5bbbe9490180c6ae232f0fdc18b0a8b1bc075a63"
+    },
+    "Codex": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        72,
+        71,
+        408,
+        410
+      ],
+      "alphaBounds": [
+        16,
+        15,
+        239,
+        240
+      ],
+      "sha256": "38cd8ddd841f7ef3f249a2e595b0e07148f67ca0c185520449705b239362f8d1"
+    },
+    "User": {
+      "size": [
+        256,
+        256
+      ],
+      "nativeCrop": [
+        105,
+        87,
+        377,
+        395
+      ],
+      "alphaBounds": [
+        29,
+        16,
+        227,
+        240
+      ],
+      "sha256": "bd5aa981615f0071a5ddf9b39d7a1508e7aa91e2d1a858345fcbf31f8f41e91f"
+    }
+  },
+  "visualReview": {
+    "passed": true,
+    "criterion": "All 37 silhouettes inspected at exact 24/32/44 px on dark background; clear mic, keyboard, arrow and role marks; no voxel face seams",
+    "contactSheet": "readability-24-32-44.png"
+  }
+}

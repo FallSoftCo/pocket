@@ -112,7 +112,22 @@ function resolveAttention(where,...args){
 // Native request IDs belong to the current bridge connection and cannot be answered after restart.
 resolveAttention('request_id IS NOT NULL');
 const questionActions=new QuestionActions({pending,codex,db,resolve:resolveAttention});
-async function attach(threadId,{before=null}={}){
+const historyRecovery=new Map();
+function recoverHistory(metadata){
+  if(historyRecovery.has(metadata.id))return historyRecovery.get(metadata.id);
+  const work=(async()=>{
+    const positions=[],seen=new Set();let cursor=null;
+    while(true){
+      const page=await history.read(metadata,{before:cursor,summary:true});positions.push(cursor);
+      if(!completions.needsEarlier(page)||!page._pocketPage?.before)break;
+      cursor=page._pocketPage.before;if(seen.has(cursor))throw Error('Codex returned a repeated history cursor.');seen.add(cursor);
+    }
+    for(const position of positions.reverse())completions.observe(await history.read(metadata,{before:position,summary:true}));
+  })();
+  historyRecovery.set(metadata.id,work);void work.finally(()=>historyRecovery.delete(metadata.id)).catch(()=>{});
+  return work;
+}
+async function attach(threadId,{before=null,recent=false}={}){
   requireId(threadId); await codex.connect();
   let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;
   if(!attached.has(threadId)){
@@ -120,19 +135,13 @@ async function attach(threadId,{before=null}={}){
     metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true,...(started?.permissions?permissionOptions(started.permissions):codex.executionOptions())})).thread;attached.add(threadId);
     if(metadata.historyMode!=='paginated'){initial=await history.read(metadata);completions.observe(initial);}
     else if(db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId)){
-      // Retain only cursors while finding the recovery boundary, not every summary page.
-      const positions=[],seen=new Set();let cursor=null;
-      while(true){
-        const page=await history.read(metadata,{before:cursor,summary:true});positions.push(cursor);
-        if(!completions.needsEarlier(page)||!page._pocketPage?.before)break;
-        cursor=page._pocketPage.before;if(seen.has(cursor))throw Error('Codex returned a repeated history cursor.');seen.add(cursor);
-      }
-      for(const position of positions.reverse())completions.observe(await history.read(metadata,{before:position,summary:true}));
+      if(recent)void recoverHistory(metadata).catch(e=>console.error('History recovery',e.message));
+      else await recoverHistory(metadata);
     }
   }
   const latestTurn=initial?.turns?.at(-1);if(latestTurn)rememberSpeechContext(threadId,latestTurn);
   const snapshotRevision=timeline.version;
-  const thread=initial||await history.read(metadata,{before});if(!before){timeline.seed(thread,{throughVersion:snapshotRevision});rememberSpeechContext(threadId,thread.turns?.at(-1));}return {...thread,_pocketSnapshotRevision:snapshotRevision};
+  const thread=initial||await history.read(metadata,{before,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});if(!before){timeline.seed(thread,{throughVersion:snapshotRevision});rememberSpeechContext(threadId,thread.turns?.at(-1));}return {...thread,_pocketSnapshotRevision:snapshotRevision};
 }
 const isActive=t=>t.status?.type==='active';
 const savedTurnSettings=id=>{const row=db.prepare('SELECT settings FROM turn_settings WHERE thread_id=?').get(id);return row?JSON.parse(row.settings):null;};
@@ -302,7 +311,7 @@ app.get('/api/threads',route(async(req,res)=>{
   res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>({id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...threadPreviews.get(t),cwd:t.cwd,status:t.status,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:!!watches.find(w=>w.thread_id===t.id&&w.enabled)}))});
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
-  const raw=await attach(req.params.id,{before:req.query.before||null});
+  const raw=await attach(req.params.id,{before:req.query.before||null,recent:req.query.view==='timeline'});
   const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});
   const requests=[...pending.values()].filter(m=>m.params.threadId===t.id);
   const page=timelinePage(t,requests,{before:raw._pocketPage?null:req.query.before||null,limit:8,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=?').all(t.id).map(notificationRow)});

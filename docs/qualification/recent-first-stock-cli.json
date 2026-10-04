@@ -1,0 +1,10 @@
+{
+  "stockCli": "0.160.0",
+  "recentTimelineHttp": "passed",
+  "elapsedSeconds": 0.042,
+  "recentRows": 5,
+  "hasEarlier": true,
+  "historyMode": "paginated",
+  "providerInferenceCalls": 0,
+  "conversationContentPublished": false
+}

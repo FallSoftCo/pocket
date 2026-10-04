@@ -1,0 +1,413 @@
+{
+  "symbols": {
+    "verified": true,
+    "engine": "Karma XPU",
+    "license": "Houdini Indie22.0.429",
+    "nativeSize": [
+      3840,
+      3840
+    ],
+    "samples": 64,
+    "frames": [
+      1,
+      1
+    ],
+    "files": [
+      {
+        "name": "frame.000001.exr",
+        "sha256": "263bf9cc706b56072e33220705021d04aa1fc5b98a6767c8bb5d86479de5d562",
+        "bytes": 11879142,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      }
+    ],
+    "gpuPeakUtilization": 100,
+    "gpuPeakVRAMMiB": 1655,
+    "cpuFallbackDisabled": true
+  },
+  "roles": {
+    "verified": true,
+    "engine": "Karma XPU",
+    "license": "Houdini Indie22.0.429",
+    "nativeSize": [
+      3840,
+      3840
+    ],
+    "samples": 64,
+    "frames": [
+      1,
+      1
+    ],
+    "files": [
+      {
+        "name": "frame.000001.exr",
+        "sha256": "7e18f0b59d7bcc599964499c2b49cc1cd8759750e4ede8d18003bc7bff6cc1ae",
+        "bytes": 6428460,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      }
+    ],
+    "gpuPeakUtilization": 100,
+    "gpuPeakVRAMMiB": 1621,
+    "cpuFallbackDisabled": true
+  },
+  "cubicN": {
+    "verified": true,
+    "engine": "Karma XPU",
+    "license": "Houdini Indie22.0.429",
+    "nativeSize": [
+      3840,
+      3840
+    ],
+    "samples": 128,
+    "frames": [
+      1,
+      16
+    ],
+    "files": [
+      {
+        "name": "frame.000001.exr",
+        "sha256": "ecf3c4f08514ca1507e6fed779144fdaadd9325072b83b74746f80bd67c31016",
+        "bytes": 17228795,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000002.exr",
+        "sha256": "faff1238fa5af1c841dd94811508656a3bc22a5be368ce57b5a6c634ecdc48d4",
+        "bytes": 17345505,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000003.exr",
+        "sha256": "65044c6a3e38a86c5f33fb24f8f368b7470f3af7d584ce28f65c488f20b4acec",
+        "bytes": 14535149,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000004.exr",
+        "sha256": "e72bc72144c81d4bd287b328fc2239a8e2df1a259804ce00cf7a78718d0d9fbb",
+        "bytes": 10887410,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000005.exr",
+        "sha256": "440b60df80f5448f22db3c9e2a0a99f2f12c535c2a6acbb7fe4f86e2b85f0b24",
+        "bytes": 14778401,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000006.exr",
+        "sha256": "1e29c35268026d34ff80e28198fb675fe3b7965af6c172191ba69c9570ab45d4",
+        "bytes": 17064816,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000007.exr",
+        "sha256": "eca5bfea11d7fc391d2ac2df60da5f118fff9a0e46521349a82301e74537bb01",
+        "bytes": 15801011,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000008.exr",
+        "sha256": "8e0e8105798f57c6006e8d5552bd8931be50665075a4274010629a62446cde2c",
+        "bytes": 14453879,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000009.exr",
+        "sha256": "00c0db7034d7004c59fb8c29d9396b857b0230c908886aa1d57d437c0e5152e1",
+        "bytes": 17084105,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000010.exr",
+        "sha256": "9b0fbeeffc5fdde760715fe3eabd57362940e3d6b71c8d7857545c2930fd6cbd",
+        "bytes": 16978255,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000011.exr",
+        "sha256": "574d8036c7d08bd53a5fbfcb2b8b47b1907df5a2da93a7493634790408c545ef",
+        "bytes": 14460644,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000012.exr",
+        "sha256": "e9546bf8379fb3473bbb6a3916dde28cb399b127080bf4b9025a97a5d2ec6e22",
+        "bytes": 11135686,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000013.exr",
+        "sha256": "334ca35dbc57b8a5631234a46e28171c4d1ac37131ac9c6a35a4b1b1523f0c0b",
+        "bytes": 15801657,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000014.exr",
+        "sha256": "9e55b381c082bd302657639482920477475a8fc31e72723b5339787cf397555e",
+        "bytes": 17334779,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000015.exr",
+        "sha256": "dd49b109a3133294645ff5a2ea8683d19591e749e7da68e29b68f0ea67ae4b91",
+        "bytes": 16347344,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "frame.000016.exr",
+        "sha256": "32e3401b9ef70ab2ec821b189ae59da13889ec8b1860372ac591e13ea13109c3",
+        "bytes": 14788892,
+        "size": [
+          3840,
+          3840
+        ],
+        "channels": [
+          "R",
+          "G",
+          "B",
+          "A"
+        ],
+        "alphaRange": [
+          0.0,
+          1.0
+        ]
+      }
+    ],
+    "gpuPeakUtilization": 100,
+    "gpuPeakVRAMMiB": 1667,
+    "cpuFallbackDisabled": true
+  },
+  "visualReview": {
+    "passed": true,
+    "checked": [
+      "cubic N hero",
+      "quarter-turn side",
+      "35-symbol HD atlas",
+      "Codex/User HD atlas"
+    ],
+    "geometryProof": "nextcomp-cubic-geometry.json",
+    "appResourcesChanged": false
+  },
+  "sourceSceneSha256": "a5b7091ef3c492d6f8abd2e0cf2ef4b63e1bedfbd0a726ee81f6b18bdd5daf38"
+}

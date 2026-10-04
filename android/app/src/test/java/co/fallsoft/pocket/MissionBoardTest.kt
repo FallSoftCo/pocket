@@ -19,7 +19,7 @@ class MissionBoardTest {
         assertEquals("", result.first { it.threadId == "b" }.text)
         assertFalse(usefulMissionStatus("message", "Thinking..."))
         assertTrue(usefulMissionStatus("message", "We are thinking about the launch."))
-        assertTrue(usefulMissionStatus("thinking", "Thinking · Comparing layouts"))
+        assertFalse(usefulMissionStatus("thinking", "Thinking · Comparing layouts"))
     }
     @Test fun latestWorkReplacesOldStatusAndExpiredCompletionsLeave() {
         val result = missionItems(listOf(item("a", at = 1), item("a", at = 2, text = "Built APK"),

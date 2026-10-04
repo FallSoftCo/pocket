@@ -1,0 +1,622 @@
+{
+  "mode": "spin",
+  "symbols": 37,
+  "frames": 16,
+  "frameSize": [
+    160,
+    160
+  ],
+  "fps": 6,
+  "nativeMaster": [
+    3840,
+    3840
+  ],
+  "hd": [
+    1920,
+    1920
+  ],
+  "staticFallback": "v06 unchanged",
+  "rotationDegrees": 360,
+  "files": {
+    "ArrowBack": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "43a202410f51694b15eb5bc99e365b3944743e5aa6af1ed431b331233d335859",
+      "fixedBounds": [
+        84,
+        100,
+        396,
+        380
+      ],
+      "distinctFrames": 16
+    },
+    "ArrowDownward": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "384f3a683f97ada19331f97b8550af4089d8600c3bd567005968644c8fbd8b2f",
+      "fixedBounds": [
+        100,
+        83,
+        380,
+        380
+      ],
+      "distinctFrames": 16
+    },
+    "ArrowForward": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "18330aa5038bc97ae924ebaba00e6aba1f561653095c5bf4ac5dc8c0b0bb7035",
+      "fixedBounds": [
+        84,
+        100,
+        396,
+        380
+      ],
+      "distinctFrames": 16
+    },
+    "ArrowUpward": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "74d27aab4fbd76f83332557acefbd30e1ade2ee6929b72de99e97f8bf20a1986",
+      "fixedBounds": [
+        100,
+        100,
+        380,
+        397
+      ],
+      "distinctFrames": 16
+    },
+    "AttachFile": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "eb90891d32a0cf5611fe5fe06192a2764228641ed8dcf2f889ca1eb71d978d86",
+      "fixedBounds": [
+        117,
+        54,
+        363,
+        427
+      ],
+      "distinctFrames": 16
+    },
+    "Build": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "64303a1f9267778ca7fd31a85fe1edeceda7a7af23fb022c2cb35d58c943dab0",
+      "fixedBounds": [
+        46,
+        44,
+        437,
+        391
+      ],
+      "distinctFrames": 16
+    },
+    "Check": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "dea2e7e71fcad4747d57165eb102463bf493c5bd1433fd2f3e2b2867c908f397",
+      "fixedBounds": [
+        63,
+        93,
+        421,
+        368
+      ],
+      "distinctFrames": 16
+    },
+    "Computer": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "5fa83c7278a900a188dabb05a7febf7506d14f092218bada74d07ac41c376257",
+      "fixedBounds": [
+        85,
+        102,
+        397,
+        411
+      ],
+      "distinctFrames": 16
+    },
+    "Edit": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "1f7ec4edf2281fb8a26bcd68b4d6fea5e0a95fc4048b7c4a06b776f25d9cc106",
+      "fixedBounds": [
+        82,
+        102,
+        393,
+        395
+      ],
+      "distinctFrames": 16
+    },
+    "EditNote": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "eb133c9243167c480625bb628587d103297484bcf6fddf20340e350b6af85129",
+      "fixedBounds": [
+        65,
+        102,
+        409,
+        428
+      ],
+      "distinctFrames": 16
+    },
+    "ErrorOutline": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "ff6ad8037a30848f2edefe9172c3d54b10f0bdea841b26c77367ebbfce9bd8d5",
+      "fixedBounds": [
+        66,
+        67,
+        413,
+        414
+      ],
+      "distinctFrames": 16
+    },
+    "ExpandLess": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "e5327fbc5a5c82ea5033e19c26f9e8db9abb4c6ba6abb7b29bf8eaa7e5714abf",
+      "fixedBounds": [
+        94,
+        145,
+        384,
+        320
+      ],
+      "distinctFrames": 16
+    },
+    "ExpandMore": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "60c8d2594e2fa8642847be05b015ed866109c7c1a37b2c57d7df62075e7b0fd2",
+      "fixedBounds": [
+        96,
+        159,
+        386,
+        335
+      ],
+      "distinctFrames": 16
+    },
+    "FolderOpen": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "709fa904abdde70ed567af6277571828c8789b0e1aeee6b923703ccdd49c7eff",
+      "fixedBounds": [
+        66,
+        118,
+        412,
+        395
+      ],
+      "distinctFrames": 16
+    },
+    "Inbox": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "a1de6c7dbda6987e65fa9af397c40e28bc2434bbfd52a41a0a9909e72923a51a",
+      "fixedBounds": [
+        66,
+        151,
+        411,
+        395
+      ],
+      "distinctFrames": 16
+    },
+    "Keyboard": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "35f103276cab3d9c068d0d1ab790251284cc01bcaf8161b9de70176aab51d08c",
+      "fixedBounds": [
+        68,
+        118,
+        413,
+        362
+      ],
+      "distinctFrames": 16
+    },
+    "Layers": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "f0df6b84c63323be82a28d6d67d466a13b76502eb0946da86e1259aad0c9c98b",
+      "fixedBounds": [
+        69,
+        104,
+        411,
+        393
+      ],
+      "distinctFrames": 16
+    },
+    "Mic": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "fc9c9171fc6c6fe05a2d7bc8bb5d76234a199aa5f96c3bed0e876e172cd9fed9",
+      "fixedBounds": [
+        100,
+        54,
+        380,
+        411
+      ],
+      "distinctFrames": 16
+    },
+    "MoreHoriz": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "313d0e692c11e3210e5d8e4ab0c2dff6aa3b5629127f08bf9e8fba3d066d342b",
+      "fixedBounds": [
+        92,
+        205,
+        388,
+        274
+      ],
+      "distinctFrames": 16
+    },
+    "MoreVert": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "b11c95b663e4c44294a794367d5fd2cd1d275296be5de02e2a795806fae44e1d",
+      "fixedBounds": [
+        194,
+        91,
+        287,
+        388
+      ],
+      "distinctFrames": 16
+    },
+    "NotificationsActive": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "3826c12acbe9cb3f12359c43bb317fe1427a76badfa920ac946b143e3957d828",
+      "fixedBounds": [
+        43,
+        83,
+        441,
+        393
+      ],
+      "distinctFrames": 16
+    },
+    "NotificationsNone": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "1d7501644fab96979791ee56a855258b639dd492e8f6b9db68a090d915473e64",
+      "fixedBounds": [
+        84,
+        83,
+        393,
+        393
+      ],
+      "distinctFrames": 16
+    },
+    "OpenInNew": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "e296f14aa47f2d1c4cc0a2672ba3587c8ead57a06234f8f4039fe84186274265",
+      "fixedBounds": [
+        71,
+        68,
+        415,
+        395
+      ],
+      "distinctFrames": 16
+    },
+    "Pause": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "4a18203e6bd74cbfbf47625ee69b58f27336af8b1575256f7516678234850413",
+      "fixedBounds": [
+        132,
+        102,
+        348,
+        378
+      ],
+      "distinctFrames": 16
+    },
+    "PhoneAndroid": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "ed28395f5ca69d6c83990617c951a75f41c4f5cfcf59ea003d623e48798e00dc",
+      "fixedBounds": [
+        145,
+        69,
+        335,
+        410
+      ],
+      "distinctFrames": 16
+    },
+    "PlayArrow": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "120d8b4dc9ffa4c08c4deb152924b42fc925f4e2b2caa044222ca1a078d0adf0",
+      "fixedBounds": [
+        108,
+        98,
+        371,
+        382
+      ],
+      "distinctFrames": 16
+    },
+    "Psychology": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "d0ccfb6a5a17cf43d012880fdcb0f7149fbc7a996262ce05d0252f1e6ba1a37e",
+      "fixedBounds": [
+        54,
+        66,
+        424,
+        426
+      ],
+      "distinctFrames": 16
+    },
+    "Search": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "b59cb0c117eaad51300b4bbca48325c64dc961133970e680248ad496ddceec92",
+      "fixedBounds": [
+        58,
+        79,
+        417,
+        420
+      ],
+      "distinctFrames": 16
+    },
+    "Send": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "c29f139a99f0c736fa6a8411bf4309a1536130b74233c11fa29ac532291e2b8d",
+      "fixedBounds": [
+        108,
+        98,
+        371,
+        382
+      ],
+      "distinctFrames": 16
+    },
+    "Stop": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "bcc176c03d342d2e1b33ff94c41ce5f9fb19ca465290873200e04e957b3a587d",
+      "fixedBounds": [
+        116,
+        119,
+        364,
+        362
+      ],
+      "distinctFrames": 16
+    },
+    "Terminal": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "a1bc7e2f4b21c6e9707121eb24e38d77a9013330eb91b38730d2a3b2bf47dec2",
+      "fixedBounds": [
+        67,
+        101,
+        413,
+        379
+      ],
+      "distinctFrames": 16
+    },
+    "TravelExplore": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "ebeecf0a4c09b2c20859cdbac0ac55368d8b5743888842bfc9a73705d01623d6",
+      "fixedBounds": [
+        58,
+        78,
+        417,
+        420
+      ],
+      "distinctFrames": 16
+    },
+    "Tune": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "742651965b7ef1241c9c4afd37385b2876a20cdd821edf34cd2681c7e1ddd857",
+      "fixedBounds": [
+        71,
+        86,
+        409,
+        394
+      ],
+      "distinctFrames": 16
+    },
+    "Unarchive": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "fdf63951c9ba571986798040ffaaf84c9ae68858c69202d4755d4acc4d382d82",
+      "fixedBounds": [
+        66,
+        71,
+        411,
+        396
+      ],
+      "distinctFrames": 16
+    },
+    "VolumeUp": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "0726f7bcc2ccf7cd4595b9477add43bbda6fe716d8e94d49766778e1d4e657a4",
+      "fixedBounds": [
+        71,
+        86,
+        409,
+        394
+      ],
+      "distinctFrames": 16
+    },
+    "Codex": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "84c0bbbe4f51f4e3ebf89b8e9c715d7e3dd7d4a4e07d2b3bf7981fa43d3c00fe",
+      "fixedBounds": [
+        71,
+        70,
+        409,
+        410
+      ],
+      "distinctFrames": 16
+    },
+    "User": {
+      "size": [
+        2560,
+        160
+      ],
+      "frames": 16,
+      "fps": 6,
+      "sha256": "6560e89b3dc0ba1712771f60d7a4a0d701e86bd3ae240ba4978b982bf0565ea3",
+      "fixedBounds": [
+        99,
+        87,
+        377,
+        395
+      ],
+      "distinctFrames": 16
+    }
+  },
+  "visualReview": {
+    "passed": true,
+    "checks": [
+      "Native full360 rotation visibly exposes sidewalls and colored backs",
+      "Codex and Psychology busy strips contain 16 distinct rendered frames"
+    ],
+    "keyframes": "keyframes-review.png"
+  }
+}

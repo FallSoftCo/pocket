@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 
-@Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false){
+@Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false,cardRegion:Boolean=false){
     val c=LocalContext.current
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ok->if(ok)PocketVoice.start(c,threadId)else PocketVoice.problem="Microphone access is needed for voice mode. Enable it in Android app settings."}
@@ -35,7 +35,7 @@ import androidx.core.content.ContextCompat
     var attempted by remember{mutableStateOf(false)}
     LaunchedEffect(PocketVoice.problem,PocketVoice.active,attempted){showError=attempted&&PocketVoice.problem.isNotBlank()&&!PocketVoice.active;if(PocketVoice.active)attempted=false}
     val startVoice:()->Unit={attempted=true;keyboard?.hide();if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)PocketVoice.start(c,threadId)else permission.launch(Manifest.permission.RECORD_AUDIO)}
-    if(dock)DockButton("Talk",Icons.Rounded.Mic,modifier,primary=true,onClick=startVoice)else if(bar)ChatActionButton("Talk",Icons.Rounded.Mic,modifier,startVoice)else if(compact)IconButton(startVoice,modifier=modifier){SymbolIcon(Icons.Rounded.Mic,"Start voice in this conversation",tint=Mint,modifier=Modifier.size(32.dp))}else ExtendedFloatingActionButton(onClick=startVoice,modifier=modifier.height(72.dp),containerColor=Mint,contentColor=Ink,icon={SymbolIcon(Icons.Rounded.Mic,"Start voice",Modifier.size(30.dp))},text={Text("Talk to Codex",fontWeight=FontWeight.Bold,fontSize=17.sp)})
+    if(cardRegion)CardInteractionRegion("Mic",modifier,startVoice)else if(dock)DockButton("Talk",Icons.Rounded.Mic,modifier,primary=true,onClick=startVoice)else if(bar)ChatActionButton("Talk",Icons.Rounded.Mic,modifier,startVoice)else if(compact)IconButton(startVoice,modifier=modifier){SymbolIcon(Icons.Rounded.Mic,"Start voice in this conversation",tint=Mint,modifier=Modifier.size(44.dp))}else ExtendedFloatingActionButton(onClick=startVoice,modifier=modifier.height(72.dp),containerColor=Panel,contentColor=Paper,icon={SymbolIcon(Icons.Rounded.Mic,"Start voice",Modifier.size(44.dp))},text={Text("Talk to Codex",fontWeight=FontWeight.Bold,fontSize=17.sp)})
     if(showError)AlertDialog(onDismissRequest={showError=false},title={Text("Voice setup")},text={Text(PocketVoice.problem)},confirmButton={TextButton({showError=false;c.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:${c.packageName}")))}){Text("App settings")}},dismissButton={TextButton({showError=false}){Text("Close")}})
 }
 @Composable fun VoiceScreen(){
@@ -58,6 +58,8 @@ import androidx.core.content.ContextCompat
             if(PocketVoice.heard.isNotBlank()&&PocketVoice.messages.lastOrNull()?.first!=PocketVoice.heard)item{VoiceChatMessage("You",PocketVoice.heard,true)}
             if(PocketVoice.problem.isNotBlank())item{Text(PocketVoice.problem,color=Coral);TextButton({PocketVoice.retry()}){Text("Retry saved turn")}}
         }
+        SpeechCaptionBanner()
+        SpeechPlayer()
         VoiceVolumeControls(Modifier.fillMaxWidth().padding(horizontal=16.dp))
         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             val recording=PocketVoice.state in listOf("Listening","Starting microphone","Finishing recording")
@@ -72,7 +74,7 @@ import androidx.core.content.ContextCompat
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 ChatActionButton("Back",Icons.Rounded.ArrowBack,Modifier.weight(1f),{keyboard?.hide();PocketVoice.stop();Pocket.closeTask()})
-                UsageDock(Modifier.width(58.dp))
+                UsageDock(Modifier.width(usageDockWidth()))
                 ChatActionButton(if(PocketVoice.state=="Speaking")"Pause" else "Replay",if(PocketVoice.state=="Speaking")Icons.Rounded.Pause else Icons.Rounded.PlayArrow,Modifier.weight(1f),{PocketVoice.playback()})
             }
         }
@@ -99,9 +101,15 @@ import androidx.core.content.ContextCompat
 }
 
 @Composable fun ChatActionButton(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier=Modifier,onClick:()->Unit,recording:Boolean=false){
-    Surface(onClick=onClick,modifier=modifier.height(64.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(6.dp),color=if(recording)Coral else androidx.compose.ui.graphics.Color(0xff242424),contentColor=if(recording)Ink else Paper){
-        Row(Modifier.pressMotion().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
-            SymbolIcon(icon,null,Modifier.size(24.dp),tint=if(recording)Ink else Mint)
+    val density=androidx.compose.ui.platform.LocalDensity.current
+    val large=density.fontScale>1.4f
+    val height=if(large)with(density){24.sp.toDp()+52.dp}else 72.dp
+    Surface(onClick=onClick,modifier=modifier.height(height),shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),border=androidx.compose.foundation.BorderStroke(1.dp,if(recording)Coral else Line),color=if(recording)androidx.compose.ui.graphics.Color(0xff451e2a)else Panel,contentColor=Paper){
+        if(large)Column(Modifier.fillMaxSize().pressMotion().padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+            SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)
+            Text(label,fontSize=15.sp,lineHeight=18.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont,maxLines=1)
+        }else Row(Modifier.pressMotion().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
+            SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)
             Spacer(Modifier.width(10.dp))
             Text(label,fontSize=15.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont,maxLines=1)
         }

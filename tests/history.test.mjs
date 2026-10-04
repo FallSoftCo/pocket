@@ -3,6 +3,26 @@ import assert from 'node:assert/strict';
 import {ThreadHistory} from '../server/history.mjs';
 import {LiveTimeline,timelinePage} from '../server/timeline.mjs';
 
+test('recent opening returns newest batch without walking older items, then resumes losslessly',async()=>{
+  const calls=[];
+  const reader=new ThreadHistory({async call(method,p){
+    calls.push({method,p});
+    if(method==='thread/turns/list')return {data:[{id:'latest',status:'completed'}],backwardsCursor:'latest-anchor',nextCursor:null};
+    assert.equal(method,'thread/items/list');
+    const start=p.cursor?Number(p.cursor):100;
+    return {data:Array.from({length:p.limit},(_,i)=>({item:{id:'item-'+(start-i),type:'agentMessage',text:'Message '+(start-i)}})),nextCursor:String(start-p.limit)};
+  }});
+  const metadata={id:'very-long',historyMode:'paginated'};
+  const first=await reader.read(metadata,{maxItems:8,maxBytes:512000,maxTurns:1});
+  assert.equal(calls.filter(c=>c.method==='thread/items/list').length,1);
+  assert.deepEqual(first.turns[0].items.map(i=>i.id),Array.from({length:8},(_,i)=>'item-'+(93+i)));
+  assert.equal(first._pocketPage.hasEarlier,true);
+  const older=await reader.read(metadata,{before:first._pocketPage.before,maxItems:8,maxBytes:512000,maxTurns:1});
+  assert.deepEqual(older.turns[0].items.map(i=>i.id),Array.from({length:8},(_,i)=>'item-'+(85+i)));
+  assert.equal(older.turns[0]._pocketHideEnd,true);
+  assert.ok(calls.every(c=>!['thread/read','thread/resume'].includes(c.method)));
+});
+
 test('paged history preserves chronology, strips binary output and never requests full history',async()=>{
   const calls=[],metadata={id:'large-thread',historyMode:'paginated',turns:[]};
   const codex={async call(method,p){

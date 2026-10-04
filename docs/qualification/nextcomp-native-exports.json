@@ -1,0 +1,313 @@
+{
+  "verified": true,
+  "files": {
+    "voxel-v03/delivery/symbols-3840.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "2da6ca7e9a86d5d2ce55b88eb5847f3927920d85198f28b9e4c18f3436223269"
+    },
+    "voxel-v03/delivery/symbols-1920.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "bac8aef875bab6e6e1f6744719049a086f29ac7a3dd74ec9f6e1f436521229ba"
+    },
+    "voxel-v03/delivery/logo-3840.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "8f70a2c9d7520f7a68791e3096995c48a21e0d63be6e838f44fc37e13b6a73a9"
+    },
+    "voxel-v03/delivery/logo-1920.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "0af0263c31f884c78b14f26f60483de4d86a4e1700dd606bbb997fb1e34f77af"
+    },
+    "roles-v01/delivery/roles-3840.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "3cb797af8fa804dd3256cd8d8abc3fc1d49bc4c8e86a35c8cfcdeec6cf65d4a4"
+    },
+    "roles-v01/delivery/roles-1920.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "207303299557c16f4e9924fcc5357455553592068f0447cefb17b44a539dbee6"
+    },
+    "voxel-v03/delivery/frames-3840/frame-00.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "8f70a2c9d7520f7a68791e3096995c48a21e0d63be6e838f44fc37e13b6a73a9"
+    },
+    "voxel-v03/delivery/frames-3840/frame-01.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "1013493151ee4f7b9995dcd19fc0611c4f080788c791870010574077b8ed40eb"
+    },
+    "voxel-v03/delivery/frames-3840/frame-02.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "2387b9359c1b7323c80a0ce4ded9ae05dbce8a3bcfee183670a541ac53319a2e"
+    },
+    "voxel-v03/delivery/frames-3840/frame-03.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "6bd1db8d970dbadaaee2a97bd3fa2a7a039437b050c782e2cdbb5fe0f8b4ceff"
+    },
+    "voxel-v03/delivery/frames-3840/frame-04.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "62f2291569a32ff9c3208e38252e701c3f9f5e51e4c9d04f93e952e72b252aef"
+    },
+    "voxel-v03/delivery/frames-3840/frame-05.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "0761e385c929d7cc540d40229daa91c8513d58e316ec6b4117fb0f35a78e85ba"
+    },
+    "voxel-v03/delivery/frames-3840/frame-06.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "a41e0f63285124f75f76607f488fa40d34bfd3d5eb5751e66dd6a66c16ae2e4e"
+    },
+    "voxel-v03/delivery/frames-3840/frame-07.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "992f9bc90f211b3b958875336ca84e5e4dc4838d805d6839b088dc566cd39fa0"
+    },
+    "voxel-v03/delivery/frames-3840/frame-08.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "c29a0cced60cf90683c49288fbd1b451ff9cecfec760dfb1a44cf00db5369364"
+    },
+    "voxel-v03/delivery/frames-3840/frame-09.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "38455f76838095c89fe6239b11ee88e24a6f60ad2e8bd1dcc9b8632460299d5f"
+    },
+    "voxel-v03/delivery/frames-3840/frame-10.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "f04510fcfcd6bf435ce7b1bc371bd621a366fa951efef466ec8ed5f1f36ea0e7"
+    },
+    "voxel-v03/delivery/frames-3840/frame-11.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "b860a91458428ec2d57474de751665b2d086342a996ddcdb5d431a6548cb9afc"
+    },
+    "voxel-v03/delivery/frames-3840/frame-12.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "91351f5b85b9164eac76faa90b848a4733af9b0d7578940ece4ff404877ddf2d"
+    },
+    "voxel-v03/delivery/frames-3840/frame-13.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "a1e1db98b3638867b650564191b5f29ad85b727373303879fc0e5a564f5ccdde"
+    },
+    "voxel-v03/delivery/frames-3840/frame-14.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "7854425fdeead7cb115cc86b4c011b0f4dc6c05312950289a4395ac3beffea4a"
+    },
+    "voxel-v03/delivery/frames-3840/frame-15.png": {
+      "size": [
+        3840,
+        3840
+      ],
+      "mode": "RGBA",
+      "sha256": "ab8e4612998bb47a7777e761d375c8576c374a3e6d374256d897edd36dcef7ae"
+    },
+    "voxel-v03/delivery/frames-1920/frame-00.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "0af0263c31f884c78b14f26f60483de4d86a4e1700dd606bbb997fb1e34f77af"
+    },
+    "voxel-v03/delivery/frames-1920/frame-01.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "37172d6ed27b898ca05552f63d4a08fff8fd3b07b9cddb0d3b941f60852a79e0"
+    },
+    "voxel-v03/delivery/frames-1920/frame-02.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "95929d4221c0407d0e52395477c6e1c501d45de4c0658d8a7b121922d9dd716e"
+    },
+    "voxel-v03/delivery/frames-1920/frame-03.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "40c343fd7102d5138cfdb06dc6cd5ced9dbdd5494926b65738b2d6b95128fb92"
+    },
+    "voxel-v03/delivery/frames-1920/frame-04.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "3bd29eaeee4d43ba143820170b81a0bbc7c80c5dd2899b348b36e932de97c0ef"
+    },
+    "voxel-v03/delivery/frames-1920/frame-05.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "5faa293df65dbac53d0128cdc15112b79fe50b529201e89caa4289c17e12da54"
+    },
+    "voxel-v03/delivery/frames-1920/frame-06.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "15cf96daea8c545125563a9f2ac43470cceda9f3c2be71eeaaea09211b2454c0"
+    },
+    "voxel-v03/delivery/frames-1920/frame-07.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "6355fea7dc44659cb898f439f15f80aabe6feead64b955393e15dda3168cd311"
+    },
+    "voxel-v03/delivery/frames-1920/frame-08.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "baa9203b0db8f1d33a3c254d2eb405f65148c889a9fdab29d3e642532da5fd73"
+    },
+    "voxel-v03/delivery/frames-1920/frame-09.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "d53d7908fb5056bb75774a57a77de17336dbfe21154eac4f31951ce4ec7ec28a"
+    },
+    "voxel-v03/delivery/frames-1920/frame-10.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "38de405d5f70217e45562cb98649997e8d4a6846d45a2b946a4b2cb21e0fe583"
+    },
+    "voxel-v03/delivery/frames-1920/frame-11.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "2ce36cd00188cc5dbffb0ca7e8d779cec415c5c2e51c559a59b1c5180118f34e"
+    },
+    "voxel-v03/delivery/frames-1920/frame-12.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "c1696c01205ca223468e26ab407d19e4e5f93ef5a66ca54cd345585ad0bc9475"
+    },
+    "voxel-v03/delivery/frames-1920/frame-13.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "c5fca903efb2f2f335d75b7ce2e4a6b3c0f011ad81ee2417a8c8aa845823ee02"
+    },
+    "voxel-v03/delivery/frames-1920/frame-14.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "33a1dd85853eb07bd37b967e1b2f74cba00dadc19e1bb02f3b019d71492bc13d"
+    },
+    "voxel-v03/delivery/frames-1920/frame-15.png": {
+      "size": [
+        1920,
+        1920
+      ],
+      "mode": "RGBA",
+      "sha256": "c057a4a8ee3105005562b94cee6d08bb717cd601751c2b017842f01b67dc2279"
+    }
+  },
+  "symbols": 35,
+  "roles": 2,
+  "distinctRotationFrames": 16,
+  "pngTransfer": "tone mapped sRGB unassociated RGBA; original HDR EXR preserved"
+}

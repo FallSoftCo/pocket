@@ -9,6 +9,35 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.*
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+private object SymbolMotionCache {
+    private val decodeLock=Mutex()
+    private val frames=object:LinkedHashMap<Int,ImageBitmap>(8,.75f,true){
+        override fun removeEldestEntry(eldest:MutableMap.MutableEntry<Int,ImageBitmap>?)=size>8
+    }
+    suspend fun load(context:android.content.Context,id:Int):ImageBitmap=withContext(Dispatchers.IO){
+        decodeLock.withLock{
+            synchronized(frames){frames[id]}?:android.graphics.BitmapFactory.decodeResource(context.resources,id).asImageBitmap().also{
+                synchronized(frames){frames[id]=it}
+            }
+        }
+    }
+}
 
 // Authored Houdini symbols: preserve baked lighting rather than flattening with tint.
 private val symbolResources = mapOf(
@@ -50,11 +79,29 @@ private val symbolResources = mapOf(
     "Unarchive" to R.drawable.symbol_unarchive,
     "VolumeUp" to R.drawable.symbol_volumeup
 )
-@Composable fun SymbolIcon(imageVector: ImageVector, contentDescription: String?, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current) {
-    SymbolIcon(imageVector.name.substringAfterLast('.'), contentDescription, modifier, tint)
+@Composable fun SymbolIcon(imageVector: ImageVector, contentDescription: String?, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current,spinning:Boolean=false) {
+    SymbolIcon(imageVector.name.substringAfterLast('.'), contentDescription, modifier, tint,spinning)
 }
 
-@Composable fun SymbolIcon(name: String, contentDescription: String?, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current) {
+@Composable fun SymbolIcon(name: String, contentDescription: String?, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current,spinning:Boolean=false) {
     val resource = requireNotNull(symbolResources[name]) { "Missing authored symbol: $name" }
-    Image(painterResource(resource), contentDescription, modifier.size(24.dp), alpha = tint.alpha)
+    val context=LocalContext.current
+    val animated=motionAllowed()
+    val stripId=remember(name,spinning){context.resources.getIdentifier((if(spinning)"symbol_spin_" else "symbol_motion_")+name.lowercase(java.util.Locale.ROOT),"drawable",context.packageName)}
+    val frameCount=if(spinning)16 else 12
+    var strip by remember(stripId){mutableStateOf<ImageBitmap?>(null)}
+    var frame by remember{mutableIntStateOf(0)}
+    LaunchedEffect(animated,stripId){
+        frame=0
+        if(animated&&stripId!=0){
+            strip=SymbolMotionCache.load(context,stripId)
+            while(true){delay(166);frame=(frame+1)%frameCount}
+        }
+    }
+    val sheet=strip
+    if(animated&&sheet!=null){
+        Canvas(modifier.size(32.dp).pressMotion().semantics{if(contentDescription!=null)this.contentDescription=contentDescription}){
+            drawImage(sheet,srcOffset=IntOffset(frame*160,0),srcSize=IntSize(160,160),dstSize=IntSize(size.width.toInt(),size.height.toInt()),alpha=tint.alpha.coerceAtLeast(.65f))
+        }
+    }else Image(painterResource(resource), contentDescription, modifier.size(32.dp).pressMotion(), alpha = tint.alpha.coerceAtLeast(.65f))
 }

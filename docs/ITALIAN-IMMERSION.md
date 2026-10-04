@@ -20,7 +20,7 @@ Ordinary notification playback uses installed offline Android voices. When immer
 
 ## Ozzz study
 
-Inspected `/home/ai/Development/ozzz-camera-release-3eb6543/lib/realtime-immersion-product-prompt.ts` and `docs/language-intent-vision-plan.md`. Relevant transferable patterns are practice-language output with a native-language reveal layer, replay and eyes-free controls, and retaining the software's primary surface rather than adding a lesson/chat shell. NextComp adopts those interaction principles, not Ozzz's paid realtime billing pipeline or a separate teaching screen.
+Inspected `realtime-immersion-product-prompt.ts` and `docs/language-intent-vision-plan.md`. Relevant transferable patterns are practice-language output with a native-language reveal layer, replay and eyes-free controls, and retaining the software's primary surface rather than adding a lesson/chat shell. NextComp adopts those interaction principles, not Ozzz's paid realtime billing pipeline or a separate teaching screen.
 
 ## Official protocol reference
 

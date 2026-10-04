@@ -18,25 +18,36 @@ import org.json.JSONObject
 /** Reuses speech notification 998 after playback; lock-screen text remains private by default. */
 object PocketSpeechCaptions {
     var state by mutableStateOf(SpeechCaptionState());private set
-    private val storage get()=Pocket.context.getSharedPreferences("speech-captions",Context.MODE_PRIVATE)
+    private fun profile()="${Pocket.local}:${Pocket.base}:${Pocket.prefs.getString(Pocket.key("deviceId"),"")}"
+    private val storage get()=Pocket.context.getSharedPreferences("speech-captions-"+java.security.MessageDigest.getInstance("SHA-256").digest(profile().toByteArray()).joinToString(""){"%02x".format(it)},Context.MODE_PRIVATE)
     fun init(){
         state=try{val s=JSONObject(storage.getString("last","{}")!!);SpeechCaptionState(s.optLong("id"),s.s("title"),s.s("text"),s.optInt("part"),s.optInt("parts"),s.s("phase"),s.optBoolean("dismissed"))}catch(_:Exception){SpeechCaptionState()}
     }
     private fun save(){val s=state;storage.edit().putString("last",JSONObject().put("id",s.id).put("title",s.title).put("text",s.text).put("part",s.part).put("parts",s.parts).put("phase",s.phase).put("dismissed",s.dismissed).toString()).apply()}
-    fun update(id:Long,title:String,text:String?,part:Int,parts:Int){
+    fun update(id:Long,title:String,text:String?,part:Int,parts:Int,sourceProfile:String=profile()){
+        if(sourceProfile!=profile())return
         if(text.isNullOrBlank())return
         val next=state.update(id,title,text,part,parts)
         if(next!=state){state=next;save()}
     }
-    fun pause(){state=state.pause();save()}
-    fun complete(){state=state.complete();save();showRetained()}
-    fun dismiss(){state=state.dismiss();save();if(PocketSpeech.service==null)Pocket.context.getSystemService(NotificationManager::class.java).cancel(998)}
+    fun pause(sourceProfile:String=profile()){if(sourceProfile!=profile())return;state=state.pause();save()}
+    fun complete(sourceProfile:String=profile(),retain:Boolean=true){if(sourceProfile!=profile())return;state=state.complete();save();if(retain)showRetained()}
+    fun retain(){showRetained()}
+    fun dismiss(){state=state.dismiss();save();PocketVoice.service?.refreshCaptionNotification();PocketSpeech.service?.refreshCaptionNotification();if(PocketSpeech.service==null)Pocket.context.getSystemService(NotificationManager::class.java).cancel(998)}
+    private fun dismissIntent()=PendingIntent.getBroadcast(Pocket.context,997,Intent(Pocket.context,AttentionReceiver::class.java).setAction("caption-dismiss"),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     fun decorate(builder:Notification.Builder):Notification.Builder {
         if(!state.visible)return builder
         val public=Notification.Builder(Pocket.context,"spoken-playback").setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("NextComp spoken update").setContentText("Unlock to read").build()
         return builder.setContentText(state.text).setSubText(state.label).setVisibility(Notification.VISIBILITY_PRIVATE)
-            .setPublicVersion(public).setStyle(Notification.BigTextStyle().bigText(state.text))
+            .setPublicVersion(public).setStyle(Notification.BigTextStyle().bigText(state.text)).addAction(Notification.Action.Builder(R.drawable.ic_notification,"Dismiss captions",dismissIntent()).build())
+    }
+    fun decorate(builder:androidx.core.app.NotificationCompat.Builder):androidx.core.app.NotificationCompat.Builder {
+        if(!state.visible)return builder
+        val public=androidx.core.app.NotificationCompat.Builder(Pocket.context,"voice-mode").setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("NextComp voice is on").setContentText("Unlock to read").build()
+        return builder.setContentText(state.text).setSubText(state.label).setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(public).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(state.text)).addAction(R.drawable.ic_notification,"Dismiss captions",dismissIntent())
     }
     private fun showRetained(){
         if(!state.visible)return
@@ -66,8 +77,10 @@ object PocketSpeechCaptions {
         }
     }
     if(expanded){
-        ModalBottomSheet(onDismissRequest={expanded=false},containerColor=Panel){
-            Column(Modifier.fillMaxWidth().fillMaxHeight(.8f).padding(horizontal=16.dp)){
+        val sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)
+        val sheetHeight=(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp*.7f).dp
+        ModalBottomSheet(onDismissRequest={expanded=false},sheetState=sheetState,containerColor=Panel){
+            Column(Modifier.fillMaxWidth().height(sheetHeight).padding(horizontal=16.dp)){
                 Text(s.title.ifBlank{"Spoken update"},color=Paper,style=MaterialTheme.typography.titleMedium)
                 Text(s.label,color=Muted,style=MaterialTheme.typography.labelSmall)
                 val scroll=rememberScrollState()

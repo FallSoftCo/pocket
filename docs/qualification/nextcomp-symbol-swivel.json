@@ -1,0 +1,632 @@
+{
+  "mode": "swivel",
+  "symbols": 37,
+  "frames": 12,
+  "frameSize": [
+    160,
+    160
+  ],
+  "fps": 6,
+  "nativeMaster": [
+    3840,
+    3840
+  ],
+  "hd": [
+    1920,
+    1920
+  ],
+  "staticFallback": "v06 unchanged",
+  "rotationDegrees": [
+    -12,
+    12
+  ],
+  "files": {
+    "ArrowBack": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "766a12c83acabbe504c4a181199dbade8f54b828121da5eabe51af3bd93e4a28",
+      "fixedBounds": [
+        100,
+        100,
+        397,
+        380
+      ],
+      "distinctFrames": 12
+    },
+    "ArrowDownward": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "3654e4ef740c50b5a15138bc4f48b8829cb2cc01cf55b3a45059c8fca2ac9d16",
+      "fixedBounds": [
+        100,
+        83,
+        380,
+        380
+      ],
+      "distinctFrames": 12
+    },
+    "ArrowForward": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "bb7f021680252b8aebbead327c3bd345a0bc4ec5f47fb0fd3306810530dbc7a1",
+      "fixedBounds": [
+        83,
+        100,
+        380,
+        380
+      ],
+      "distinctFrames": 12
+    },
+    "ArrowUpward": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "103bed8d760fab545079361c074f136ad8f3283efdf8a55b58acbe00b6acbebd",
+      "fixedBounds": [
+        100,
+        100,
+        380,
+        397
+      ],
+      "distinctFrames": 12
+    },
+    "AttachFile": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "2e59ddb6310d22f65c8a4246c302a1830fb2924756fd11a5715689497ca12918",
+      "fixedBounds": [
+        119,
+        54,
+        330,
+        426
+      ],
+      "distinctFrames": 12
+    },
+    "Build": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "e3d5e3a63d7f68be12a81f5f518bc60362687007ba1890ce2eed1011fd611636",
+      "fixedBounds": [
+        90,
+        47,
+        435,
+        387
+      ],
+      "distinctFrames": 12
+    },
+    "Check": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "2f16e325cad0cc9358056eb74f14f32759473ee823521af2ac6ddf3f2d68aa4e",
+      "fixedBounds": [
+        79,
+        98,
+        418,
+        367
+      ],
+      "distinctFrames": 12
+    },
+    "Computer": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "aa11deba18140769bb87577b8e0c4974924464e4255052bd98a79dbb9fcb635e",
+      "fixedBounds": [
+        85,
+        102,
+        394,
+        411
+      ],
+      "distinctFrames": 12
+    },
+    "Edit": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "6c55294b59718eae4901ae453a8352b903e9fc436ceded2bf54a48492a7f2eef",
+      "fixedBounds": [
+        86,
+        106,
+        377,
+        391
+      ],
+      "distinctFrames": 12
+    },
+    "EditNote": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "c2d2b791e1eadcfaf4ac1d6e86920b1d64cd912630c6b88c4590eb6f4896cc91",
+      "fixedBounds": [
+        69,
+        105,
+        412,
+        429
+      ],
+      "distinctFrames": 12
+    },
+    "ErrorOutline": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "835925d9af9192805c733ef3842ea208bbc8228ffe8a0a8030b4830da6a55715",
+      "fixedBounds": [
+        66,
+        66,
+        414,
+        414
+      ],
+      "distinctFrames": 12
+    },
+    "ExpandLess": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "315a191d16b34767915003da1df6e206a284968c4bbb463ad5cdd02c968089bd",
+      "fixedBounds": [
+        96,
+        145,
+        385,
+        320
+      ],
+      "distinctFrames": 12
+    },
+    "ExpandMore": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "ff6a14662d98970ad16b0ac1638d24a0118c4bcb0a75c27ff2e325c023cd477c",
+      "fixedBounds": [
+        96,
+        160,
+        385,
+        334
+      ],
+      "distinctFrames": 12
+    },
+    "FolderOpen": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "39879608c28a5e6bbde87cb48be43a0fe157e6dadf9c6a3efafcf3a16fb4cacf",
+      "fixedBounds": [
+        70,
+        118,
+        411,
+        395
+      ],
+      "distinctFrames": 12
+    },
+    "Inbox": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "0679018481293e925055547a21e294bc9ad088a8e094e16b724c42dbb0290394",
+      "fixedBounds": [
+        70,
+        150,
+        411,
+        395
+      ],
+      "distinctFrames": 12
+    },
+    "Keyboard": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "cfa2e07b2cd644f14658ded9d5e3a86cf96a624f543f290a36cd3387d6038489",
+      "fixedBounds": [
+        70,
+        118,
+        411,
+        362
+      ],
+      "distinctFrames": 12
+    },
+    "Layers": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "9b22e5147b6ede56dc4b6402de0cf40c41c267135c45e7fd62ba1439faee8093",
+      "fixedBounds": [
+        70,
+        104,
+        410,
+        393
+      ],
+      "distinctFrames": 12
+    },
+    "Mic": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "f5c10a73f962499d5cc585321332285779648526477cd44a9ec3ecfccf02d21b",
+      "fixedBounds": [
+        100,
+        54,
+        380,
+        410
+      ],
+      "distinctFrames": 12
+    },
+    "MoreHoriz": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "0bb5cc0b5a60c9b1af661d742ddfb68abf8d8d3fe640e2d194e215ba509047f1",
+      "fixedBounds": [
+        92,
+        204,
+        388,
+        276
+      ],
+      "distinctFrames": 12
+    },
+    "MoreVert": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "cdb9aa7a3bb9adc69c9861d0e3189864a1a5c105e5becc9b75ce25f75e62cdf6",
+      "fixedBounds": [
+        200,
+        91,
+        280,
+        388
+      ],
+      "distinctFrames": 12
+    },
+    "NotificationsActive": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "c4c4ad16168d0db49a386f4df19ad47f5f964d0398d076917a0fe6432d3259a5",
+      "fixedBounds": [
+        42,
+        83,
+        439,
+        393
+      ],
+      "distinctFrames": 12
+    },
+    "NotificationsNone": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "7bb1da16dac132fa91ff16c3aaeeb7110aff3ea4f522bca51f05d6cf193af621",
+      "fixedBounds": [
+        87,
+        83,
+        394,
+        393
+      ],
+      "distinctFrames": 12
+    },
+    "OpenInNew": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "fe89539adcf58a9f6229fedb390db5bf89cd9b4649510bc802918aeb42830159",
+      "fixedBounds": [
+        86,
+        71,
+        411,
+        394
+      ],
+      "distinctFrames": 12
+    },
+    "Pause": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "4f72aac8a5740d8563c004534081e13c1430eafc590cf8c89d7d7f2982be0b1f",
+      "fixedBounds": [
+        133,
+        103,
+        347,
+        378
+      ],
+      "distinctFrames": 12
+    },
+    "PhoneAndroid": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "239d65d176f98a3c7219901763d3fab4ef9fb0f0f35a37a24e75f8533570ce02",
+      "fixedBounds": [
+        148,
+        70,
+        332,
+        410
+      ],
+      "distinctFrames": 12
+    },
+    "PlayArrow": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "0289bfc5dbe3c3d50ba9955f4acfc097601e3ad27925c42b3d4c08ee9ee87e6b",
+      "fixedBounds": [
+        133,
+        98,
+        372,
+        378
+      ],
+      "distinctFrames": 12
+    },
+    "Psychology": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "d487af0f6fcd7ab7e18a8ed8c8d1e22857d5e425a19cd1b13c19bcb4aefcb371",
+      "fixedBounds": [
+        83,
+        66,
+        426,
+        426
+      ],
+      "distinctFrames": 12
+    },
+    "Search": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "ae5ed7a4d648abdca51163f1a4a8857f026861a3441b03b6b01df564f1f7adb5",
+      "fixedBounds": [
+        79,
+        79,
+        419,
+        420
+      ],
+      "distinctFrames": 12
+    },
+    "Send": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "0190ccf0a55d0965a2ffbba537f5c7758cb711c15cc9e9181beb1b8ea76aa8b8",
+      "fixedBounds": [
+        133,
+        98,
+        372,
+        379
+      ],
+      "distinctFrames": 12
+    },
+    "Stop": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "42e62a5bfc2a41e1c5d6bf5e63bdc153aad0c883ee409cc1ce1ad192e6dba6b1",
+      "fixedBounds": [
+        118,
+        118,
+        362,
+        362
+      ],
+      "distinctFrames": 12
+    },
+    "Terminal": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "56ebc5bbf299be9373f2d3e3609400dd647d5463d292dfcfbadfe3cce27664d9",
+      "fixedBounds": [
+        69,
+        101,
+        411,
+        379
+      ],
+      "distinctFrames": 12
+    },
+    "TravelExplore": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "19d9f6d02658c3f509fd34db0ea3c45ddb015aa59b8ae830eb21e03e54b53415",
+      "fixedBounds": [
+        79,
+        79,
+        420,
+        420
+      ],
+      "distinctFrames": 12
+    },
+    "Tune": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "772651d08df3d58a98975b4808f3dc91da84fbf44bdb7bd6ec8a4e5dfb382f4a",
+      "fixedBounds": [
+        74,
+        86,
+        407,
+        393
+      ],
+      "distinctFrames": 12
+    },
+    "Unarchive": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "2d6f83f61c3f43d3fbc369a8b776a5c63105a9f9e5a72bb908391e88c596fa97",
+      "fixedBounds": [
+        69,
+        71,
+        411,
+        395
+      ],
+      "distinctFrames": 12
+    },
+    "VolumeUp": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "8f7ddd779bedae6c04aa0fba0e77f28db5028e792ec58f95b975394ceca46224",
+      "fixedBounds": [
+        87,
+        89,
+        409,
+        394
+      ],
+      "distinctFrames": 12
+    },
+    "Codex": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "31c804dcfe529d75fa8bae9570272dcd203e8bb1e2fc5d8fe60cb231c0b91ed6",
+      "fixedBounds": [
+        71,
+        71,
+        409,
+        409
+      ],
+      "distinctFrames": 12
+    },
+    "User": {
+      "size": [
+        1920,
+        160
+      ],
+      "frames": 12,
+      "fps": 6,
+      "sha256": "9c038043bd448800074d37ecac8556804d898359d2f76be8d92b453f1cb9a046",
+      "fixedBounds": [
+        102,
+        87,
+        379,
+        395
+      ],
+      "distinctFrames": 12
+    }
+  },
+  "visualReview": {
+    "passed": true,
+    "primaryControls": [
+      "Mic",
+      "Keyboard",
+      "Send"
+    ],
+    "checks": [
+      "Fixed framing across phases",
+      "Cyan sidewall rotation visible",
+      "Ivory front silhouettes preserved",
+      "All 37 strips contain 12 distinct rendered frames"
+    ],
+    "nativeKeyframes": "keyframes-review.png"
+  }
+}
