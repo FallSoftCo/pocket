@@ -198,6 +198,61 @@
       "requirement": "Footer controls and borders must respect rounded device screen corners; use Android corner radius where available and safe fallback insets",
       "status": "installed-pushed-verified-emulator",
       "evidence": "157cf04; Android corner radius with 24dp minimum; both footer rows inset; border removed; build/lint passed; Pixel installation confirmed; synthetic screenshot gallery validated"
+    },
+    {
+      "id": "stable-live-list",
+      "requirement": "Cards keep invariant height and truncate text; reserve icon space. Live content is coalesced, ordering separately damped adaptively by parallel activity; never move cards while touched/scrolled; continuous traffic must not starve updates.",
+      "status": "in-progress-alpha10"
+    },
+    {
+      "id": "live-thinking",
+      "requirement": "List cards including Gavin show actual stock Codex public thinking summaries and newest activity; never remain on old input; support desktop-owned sessions via bounded read-only polling",
+      "status": "implemented-tests-pass-qualifying-live"
+    },
+    {
+      "id": "tab-dock",
+      "requirement": "Smooth tab/content and action transitions; improve bottom toolbar into a single stable ergonomic dock",
+      "status": "in-progress"
+    },
+    {
+      "id": "icon-revision",
+      "requirement": "Reject literal current icon concept; refine original sculptural 3D N with NeXT color accents in its depth/edges",
+      "status": "in-progress-v03"
+    },
+    {
+      "id": "interim-notes",
+      "requirement": "Persistent top Answers & notes card preserving useful interim answers before final response; automatic actual excerpts and manual Keep action",
+      "status": "in-progress"
+    },
+    {
+      "id": "question-actions",
+      "requirement": "Codex questions surface via actionable notifications and in-app attention; one-tap Skip without needing to fill answers",
+      "status": "in-progress"
+    },
+    {
+      "id": "recency-ties",
+      "requirement": "Sessions actively changing within seconds are tied for first and retain relative positions, not periodic timestamp shuffles",
+      "status": "in-progress"
+    },
+    {
+      "id": "card-bell",
+      "requirement": "Bell on every session card toggles notification following directly, with a full touch target",
+      "status": "in-progress"
+    },
+    {
+      "id": "footer-usage",
+      "requirement": "Remove top header; usage percentage/deadline move into bottom dock at same row height as tabs; maximize content",
+      "status": "in-progress"
+    },
+    {
+      "id": "italian-immersion",
+      "requirement": "Optional Italian immersion, enabled for current user but off for others; dedicated background stock Codex worker using Codex usage only; public thoughts, activity, chat, notifications with preserved controls and source",
+      "status": "delegated-italian_immersion"
+    },
+    {
+      "id": "animated-3d-motion",
+      "requirement": "Original 3D icon/wordfont and spinning logo, squeeze/stretch tap response; preserved tap bounds and reduced-motion support",
+      "status": "delegated-voxel_motion"
     }
   ],
   "current_state": {
