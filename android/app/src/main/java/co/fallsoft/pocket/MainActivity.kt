@@ -127,7 +127,7 @@ class MainActivity:ComponentActivity(){
         else if(Pocket.selected!=null)key(Pocket.selected){ConversationScreen()}
         else{
             Box(Modifier.weight(1f)){when(Pocket.tab){0->WorkScreen();1->UpdatesScreen();else->SettingsScreen()}}
-            Row(Modifier.fillMaxWidth().background(Ink).border(1.dp,Line).padding(vertical=12.dp),horizontalArrangement=Arrangement.SpaceEvenly){
+            Row(Modifier.fillMaxWidth().background(Ink).padding(horizontal=deviceCornerInset(),vertical=8.dp),horizontalArrangement=Arrangement.SpaceEvenly){
                 listOf(Triple("Work",Icons.Rounded.Layers,0),Triple("Updates",Icons.Rounded.NotificationsNone,1),Triple("Settings",Icons.Rounded.Tune,2)).forEach{(title,icon,index)->
                     Column(Modifier.width(88.dp).clip(RoundedCornerShape(18.dp)).clickable{Pocket.tab=index;Pocket.refresh()}.padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
                         Icon(icon,title,tint=if(Pocket.tab==index)Mint else Muted,modifier=Modifier.size(24.dp));Text(title,fontSize=11.sp,color=if(Pocket.tab==index)Mint else Muted,fontWeight=FontWeight.Medium)
@@ -191,7 +191,7 @@ class MainActivity:ComponentActivity(){
         if(shown.isEmpty())item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
         items(shown,key={it.id}){TaskCard(it)}
     }
-    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
+    Row(Modifier.fillMaxWidth().padding(horizontal=deviceCornerInset(),vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
         VoiceLaunchButton(modifier=Modifier.weight(1f),bar=true)
         ChatActionButton("Find / New",Icons.Rounded.Search,Modifier.weight(1f),{toolsOpen=true})
     }
