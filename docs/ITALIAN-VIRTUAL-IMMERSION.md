@@ -1,32 +1,25 @@
-# Italian as the working language
+# Contextual inline Italian immersion
 
-The owner's requirement is virtual immersion while using NextComp normally, rather than an Italian label over an English application. The earlier permanent miniature English gloss is rejected. Italian should carry the controls, public reasoning summaries, actions, questions, conversations and spoken updates at their normal readable size. English is contextual rescue, requested at the point of need and shown at full reading size. The mode remains optional and off for other paired devices.
+The current requirement is contextual Italian phrases inside ordinary NextComp content. English remains the surrounding working content; chosen constituents become Italian at the same readable size. There is no permanent miniature English lane or duplicated whole-paragraph translation. The mode is optional per paired device/profile, off for other devices, and enabled for the owner's configured profile.
 
-## Experience contract
+## Rendering contract
 
-- Italian is the first and primary rendering, not an extra subtitle.
-- A paragraph's English rescue opens beside that paragraph, then closes to return to Italian. It is never an always-visible tiny line.
-- Control-label rescue works with touch, keyboard focus and accessibility custom actions. It must not steal the control's ordinary tap or require long press exclusively.
-- Labels use the authored offline lexicon immediately. Visible prose uses the bounded stock-Codex worker and durable exact-version cache. No separate API or audio bill is introduced.
-- New live source text must not silently pair an earlier Italian translation with a different English source. A pending rendering should explicitly signal preparation in Italian; English remains available through rescue.
-- Copied commands, paths, URLs, model identifiers, question option values and original task input remain exact. Rescuing an English source does not change the working language of speech.
-- Paragraph alignment is checked structurally; no word-level correspondence, audio timing or grammar knowledge is invented. On alignment mismatch, use whole-message rescue rather than false pairing.
+A dedicated, isolated, read-only stock Codex worker proposes contextual constituent replacements with exact quoted source anchors. The server resolves UTF-16 offsets, verifies the source hash and reconstructs the complete hybrid text before accepting it. Noun phrases include determiners and agreement; person, tense and word order changes require an appropriate clause. Density is manually adjustable between starter, balanced and strong; grammar takes priority over a numeric quota.
 
-## Coverage audit before alpha16
+Original messages, commands, copied text, URLs, code, filenames, model identifiers, numeric literals, deadlines and question payloads stay intact. Protected ranges cannot be included in translated spans. Overlaps, partial words, broken grapheme boundaries, source-version mismatches and inconsistent complete text are rejected. These structural checks do not prove universal grammatical correctness.
 
-Existing helpers cover ordinary conversation messages, voice bubbles and expanded public activity. Coverage still needs integration for new-task prose, conversation action and queue menus, settings/rename/archive dialogs, model question prompts and options, voice error/setup states, notification text/actions, caption controls and screen-reader icon descriptions. Command descriptions need ordinary reading size; executable syntax stays unmodified.
+Normal-size highlighted phrases open their English source and a short grammar note on demand. Control rescue uses tooltips, accessibility actions and keyboard assistance without taking ordinary taps or the Send long-press queue gesture. Compact session targets preserve their original tap behavior. Ambiguous repeated target phrases are not falsely aligned for phrase tapping; whole-source rescue remains available.
 
-All safety-sensitive action payloads continue to use originals. During a translation delay, their original meaning must remain accessible immediately. Switching profiles clears display/reveal state and ignores old asynchronous responses. Speech uses the Italian target even if English is temporarily revealed on screen.
+Speech uses the same accepted hybrid rendering, independently of temporary English rescue. Source text is preserved in the speech queue. Without an accepted rendering, source text remains readable and speakable. A previous accepted public update may remain visible while streaming, explicitly marked as updating and paired with its matching original rather than the newer source.
 
-## Mosis firsthand source review
+## Usage and bounds
 
-Inspected the maintained local Mosis BLD review sources:
+The helper requires stock ChatGPT authentication and refuses API-key accounts. It receives only visible public text, never hidden raw reasoning or tool payloads. Same-source plans are reused within the same profile and density. Batches contain at most six ordinary sources or two when urgent work is present, globally prioritizing urgent sources, with a 16,000-character bound. Failed plans do not create an automatic retry loop. This adds Codex usage; it does not add a separately billed translation or audio API.
 
-- `Mosis source review: automation/anime_interlinear/README.md`
-- `Mosis source review: product/docs/MOSIS_PRODUCT_UX.md`
+## Qualification and limitations
 
-Mosis preserves the native experience and the original media, uses contextual source/gloss relationships, explicitly records alignment evidence and rejects unsupported timing claims. Its media interlinear display solves a different problem from NextComp controls and chat: copying a permanently compressed subtitle lane would undermine mobile legibility here. Transfer the truthful contextual relationship and original preservation; use normal-size, optional English rescue in NextComp. Do not transfer Mosis's separately billed API pipeline or claim NextComp provides word-timed language lessons.
+Synthetic stock CLI 0.160.0 / advertised gpt-6-luna qualification accepted contextual noun agreement, first-person progressive clauses and contracted prepositions. A two-source run took 14,425 ms and rejected its more complex protected example safely. A bounded protected retry took 5,844 ms and accepted “due nuove sessioni” and “una domanda importante” while preserving `notes.md` and gpt-6-luna. Receipts are in `qualification/inline-qualification.json` and `qualification/inline-protected-qualification.json`.
 
-## Qualification evidence to record
+Debug33 emulator review at 2× font confirmed readable inline phrases and phrase-local full-size English/grammar help with protected literals retained. Final release runtime verification belongs to the release QA receipt. These examples are not native-speaker qualification of every possible sentence, guaranteed translation latency, word-timed audio alignment or a guarantee of mixed-language offline voice quality. Constituent teaching currently uses each submitted public text; it does not infer missing conversational antecedents.
 
-Verify Italian-first controls and prose, full-size paragraph/source rescue, keyboard and screen-reader rescue, no default miniature English duplicate, pending/failure handling, exact command copy and option payloads, unchanged microphone/keyboard/session controls, normal and enlarged-font readability, per-device/profile opt-in and replay in the working language. Review synthetic phone-sized examples before release; do not substitute unit tests for visual qualification.
+The contextual-inline proposal supplied by the collaborating OZZZ agent and the maintained Mosis source-review package informed source preservation, truthful alignment and contextual assistance. Their separate media/API pipelines are not imported into NextComp.

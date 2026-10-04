@@ -13,6 +13,9 @@ object PocketImmersion {
     private var supportState by mutableStateOf(true)
     val supportEnabled get()=supportState
     fun setSupportEnabled(value:Boolean){supportState=value;Pocket.prefs.edit().putBoolean(profileKey()+":englishSupport",value).apply()}
+    private var densityState by mutableStateOf("strong")
+    val density get()=densityState
+    fun setDensity(value:String){densityState=if(value in listOf("starter","balanced","strong"))value else "strong";Pocket.prefs.edit().putString(profileKey()+":density",densityState).apply();translations=emptyMap();byContent=emptyMap();originals=emptySet();pending.clear();job?.cancel();sync()}
     var unavailable by mutableStateOf(false); private set
     private var translations by mutableStateOf<Map<String,JSONObject>>(emptyMap())
     private var byContent by mutableStateOf<Map<String,JSONObject>>(emptyMap())
@@ -20,43 +23,30 @@ object PocketImmersion {
     private var job:Job?=null
     private var originals by mutableStateOf(setOf<String>())
     private fun profileKey()=Pocket.key("immersionItalian")+":"+Pocket.prefs.getString(Pocket.key("deviceId"),"").orEmpty()
-    private fun version(text:String)=MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it.toInt() and 255)}
-    private fun cacheKey()="immersion-display-cache-v2:"+profileKey()
-    private fun cached(id:String,text:String):JSONObject? {val hash=version(text);return translations[id]?.takeIf{it.s("version")==hash}?:byContent[hash]}
-    private data class CacheRow(val id:String,val version:String,val text:String)
+    private fun version(text:String)=immersionSourceHash(text)
+    private fun cacheKey()="immersion-display-cache-v3:"+profileKey()
+    private fun eligible(row:JSONObject)=row.s("planVersion")=="contextual-hybrid-v1"&&row.s("density")==density
+    private fun cached(id:String,text:String):JSONObject? {val hash=version(text);return translations[id]?.takeIf{it.s("version")==hash&&eligible(it)}?:byContent[hash]?.takeIf{eligible(it)}}
     private var cacheSave:Job?=null
     private fun persistCache(){
-        cacheSave?.cancel()
-        val captured=profileKey();val key=cacheKey()
-        cacheSave=Pocket.scope.launch {
-            delay(400)
-            if(captured!=profileKey())return@launch
-            // Snapshot only immutable strings. JSON construction and its size bound run off the UI thread.
-            val rows=translations.values.toList().asReversed().map{CacheRow(it.s("id"),it.s("version"),it.s("text"))}
-            val encoded=withContext(Dispatchers.IO){
-                val saved=JSONArray();var chars=0
-                for(row in rows){
-                    ensureActive()
-                    val compact=JSONObject().put("id",row.id).put("version",row.version).put("text",row.text).put("language","it")
-                    val length=compact.toString().length;if(saved.length()>=200||chars+length>500000)break
-                    saved.put(compact);chars+=length
-                }
-                saved.toString()
-            }
+        cacheSave?.cancel();val captured=profileKey();val key=cacheKey()
+        val rows=translations.values.toList().asReversed().map{it.toString()}
+        cacheSave=Pocket.scope.launch {delay(400);if(captured!=profileKey())return@launch
+            val encoded=withContext(Dispatchers.IO){val saved=JSONArray();var chars=0;for(row in rows){ensureActive();if(saved.length()>=200||chars+row.length>500000)break;saved.put(JSONObject(row));chars+=row.length};saved.toString()}
             if(captured==profileKey())Pocket.prefs.edit().putString(key,encoded).apply()
         }
     }
     fun restore(){
-        job?.cancel();cacheSave?.cancel();pending.clear();enabledState=Pocket.prefs.getBoolean(profileKey(),false);supportState=Pocket.prefs.getBoolean(profileKey()+":englishSupport",true)
+        job?.cancel();cacheSave?.cancel();pending.clear();enabledState=Pocket.prefs.getBoolean(profileKey(),false);supportState=Pocket.prefs.getBoolean(profileKey()+":englishSupport",true);densityState=Pocket.prefs.getString(profileKey()+":density","strong")?:"strong"
         val saved=try{JSONArray(Pocket.prefs.getString(cacheKey(),"[]"))}catch(_:Exception){JSONArray()}
         translations=saved.objects().asReversed().associateBy{it.s("id")};byContent=translations.values.associateBy{it.s("version")}
         originals=emptySet();unavailable=false;if(enabled)sync()
     }
     fun offerLabel(text:String){if(text.length<=200)offer("label:"+version(text),text,"interface label")}
-    fun label(text:String):String=if(enabled)ImmersionLexicon.italian(text)?:cached("label:"+version(text),text)?.s("text",text)?:text else text
+    fun label(text:String):String=if(enabled)(ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text))?:cached("label:"+version(text),text)?.s("text",text)?:text else text
     fun setEnabled(value:Boolean){enabledState=value;Pocket.prefs.edit().putBoolean(profileKey(),value).apply();pending.clear();job?.cancel();originals=emptySet();sync()}
-    private fun sync(){val captured=profileKey();Pocket.scope.launch{try{val result=Pocket.api("/api/immersion",JSONObject().put("enabled",enabled));if(captured==profileKey())accept(result)}catch(_:Exception){if(captured==profileKey())unavailable=enabled}}}
-    fun accept(event:JSONObject){if(!enabled)return;unavailable=event.optBoolean("unavailable",false);val list=event.optJSONArray("translations")?.objects()?:return;translations=(translations+list.associateBy{it.s("id")}).entries.toList().takeLast(600).associate{it.toPair()};byContent=translations.values.associateBy{it.s("version")};persistCache()}
+    private fun sync(){val captured=profileKey();Pocket.scope.launch{try{val result=Pocket.api("/api/immersion",JSONObject().put("enabled",enabled).put("density",density));if(captured==profileKey())accept(result)}catch(_:Exception){if(captured==profileKey())unavailable=enabled}}}
+    fun accept(event:JSONObject){if(!enabled)return;unavailable=event.optBoolean("unavailable",false);val list=event.optJSONArray("translations")?.objects()?:return;translations=(translations+list.associateBy{it.s("id")}).entries.toList().takeLast(600).associate{it.toPair()};byContent=translations.values.associateBy{it.s("version")};persistCache();if(list.isNotEmpty())PocketNotifications.refreshImmersion()}
     /** Bound speech preparation; use the existing native Codex audio transport for pronunciation. */
     suspend fun spoken(id:String,text:String,waitMs:Long=8000):String {
         if(!enabled)return text
@@ -64,15 +54,34 @@ object PocketImmersion {
         offer(id,text,"speech")
         val deadline=System.currentTimeMillis()+waitMs
         while(enabled&&captured==profileKey()&&System.currentTimeMillis()<deadline){
-            if(hasTranslation(id,text))return display(id,text)
+            if(hasTranslation(id,text))return target(id,text)
             delay(600)
             try{val result=Pocket.api("/api/immersion");if(captured==profileKey())accept(result)}catch(_:Exception){return text}
         }
         return text
     }
+    fun originalShown(id:String)=id in originals
+    fun target(id:String,text:String):String {
+        if(!enabled)return text
+        val offline=ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text);if(offline!=null)return offline
+        val row=cached(id,text)?:return text
+        return if(contextualHybridText(text,spans(row))==row.s("text"))row.s("text") else text
+    }
+    private fun spans(row:JSONObject)=row.optJSONArray("spans")?.objects()?.map{ImmersionSpan(it.optInt("start"),it.optInt("end"),it.s("source"),it.s("target"),it.s("note"),it.s("unit","phrase"))}?:emptyList()
+    fun presentation(id:String,text:String):ImmersionPresentation {
+        if(!enabled)return ImmersionPresentation(text,text,true)
+        val offline=ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text)
+        if(offline!=null)return ImmersionPresentation(offline,text,true,listOf(ImmersionSpan(0,text.length,text,offline)))
+        val exact=cached(id,text)
+        if(exact!=null){val plan=spans(exact);if(contextualHybridText(text,plan)==exact.s("text"))return ImmersionPresentation(exact.s("text"),text,true,plan)}
+        val older=translations[id]?.takeIf{eligible(it)&&it.s("original").isNotBlank()}
+        if(older!=null){val source=older.s("original");val plan=spans(older);if(immersionSourceHash(source)==older.s("version")&&contextualHybridText(source,plan)==older.s("text"))return ImmersionPresentation(older.s("text"),source,false,plan)}
+        // Source stays readable during first-plan latency; do not invent a translation or alignment.
+        return ImmersionPresentation(text,text,false)
+    }
     fun revealOriginal(id:String){originals=if(id in originals)originals-id else originals+id}
-    fun hasTranslation(id:String,text:String)=enabled&&(ImmersionLexicon.italian(text)!=null||cached(id,text)!=null)
-    fun display(id:String,text:String):String {if(!enabled||id in originals)return text;return ImmersionLexicon.italian(text)?:cached(id,text)?.s("text",text)?:text}
+    fun hasTranslation(id:String,text:String)=enabled&&((ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text))!=null||cached(id,text)?.let{contextualHybridText(text,spans(it))==it.s("text")}==true)
+    fun display(id:String,text:String):String {if(!enabled||id in originals)return text;return target(id,text)}
     /** Call after coalescing visible state; never for every incoming token. */
     fun offer(id:String,text:String,kind:String="message") {
         if(!enabled||text.isBlank()||text.length>12000||hasTranslation(id,text))return
@@ -84,7 +93,7 @@ object PocketImmersion {
             try {
                 drainTranslationBatches(
                     isCurrent={enabled&&captured==profileKey()},
-                    coalesce={delay(2500)},
+                    coalesce={delay(if(pending.values.any{it.s("kind").contains("urgent")})150 else 2500)},
                     nextBatch={pending.values.toList().also{pending.clear()}},
                     submit={batch->
                         try {

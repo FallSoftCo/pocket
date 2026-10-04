@@ -1,0 +1,57 @@
+{
+  "runtime": "codex-cli 0.160.0",
+  "model": "gpt-6-luna",
+  "authentication": "chatgpt",
+  "latencyMs": 14425,
+  "synthetic": true,
+  "enabled": true,
+  "language": "it",
+  "density": "strong",
+  "planVersion": "contextual-hybrid-v1",
+  "translations": [
+    {
+      "id": "grammar",
+      "text": "I opened due nuove sessioni and ho una domanda importante. Sto verificando il modello, then return alla sessione.",
+      "spans": [
+        {
+          "start": 9,
+          "end": 25,
+          "source": "two new sessions",
+          "target": "due nuove sessioni",
+          "note": "The determiner and adjective agree with feminine plural sessioni.",
+          "unit": "nounPhrase"
+        },
+        {
+          "start": 30,
+          "end": 56,
+          "source": "have an important question",
+          "target": "ho una domanda importante",
+          "note": "This completes the verb phrase with its object and agreement.",
+          "unit": "phrase"
+        },
+        {
+          "start": 58,
+          "end": 80,
+          "source": "I'm checking the model",
+          "target": "Sto verificando il modello",
+          "note": "A complete clause uses Italian subject omission and present progressive.",
+          "unit": "clause"
+        },
+        {
+          "start": 94,
+          "end": 108,
+          "source": "to the session",
+          "target": "alla sessione",
+          "note": "The preposition contracts with the feminine article.",
+          "unit": "prepositionPhrase"
+        }
+      ],
+      "planVersion": "contextual-hybrid-v1",
+      "version": "25fd11d1b426e5c0bb8e976afe7279c62bb053bc222f7a923337488f7841931e",
+      "original": "I opened two new sessions and have an important question. I'm checking the model, then return to the session.",
+      "language": "it",
+      "density": "strong"
+    }
+  ],
+  "success": false
+}

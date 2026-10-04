@@ -91,7 +91,7 @@ class PocketVoiceService:Service(){
     private fun voiceNotification():Notification {
         val open=PendingIntent.getActivity(this,1120,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val stop=PendingIntent.getService(this,1121,Intent(this,PocketVoiceService::class.java).setAction("stop"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val b=NotificationCompat.Builder(this,"voice-mode").setSmallIcon(R.drawable.ic_notification).setContentTitle("NextComp voice is on").setContentText("Volume down: talk · Volume up: pause or replay").setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setCategory(NotificationCompat.CATEGORY_SERVICE).addAction(0,"End voice",stop)
+        val b=NotificationCompat.Builder(this,"voice-mode").setSmallIcon(R.drawable.ic_notification).setContentTitle(PocketImmersion.label("NextComp voice is on")).setContentText(PocketImmersion.label("Volume down: talk · Volume up: pause or replay")).setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setCategory(NotificationCompat.CATEGORY_SERVICE).addAction(0,PocketImmersion.label("End voice"),stop)
         return PocketSpeechCaptions.decorate(b).build()
     }
     internal fun refreshCaptionNotification(){try{getSystemService(NotificationManager::class.java).notify(1120,voiceNotification())}catch(_:SecurityException){}}
@@ -105,7 +105,7 @@ class PocketVoiceService:Service(){
     override fun onBind(intent:Intent?)=null
     override fun onCreate(){super.onCreate();PocketVoice.service=this
         val manager=getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel("voice-mode","Voice mode",NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
+        manager.createNotificationChannel(NotificationChannel("voice-mode",PocketImmersion.label("Voice mode"),NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
         val n=voiceNotification()
         if(Build.VERSION.SDK_INT>=29)startForeground(1120,n,ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(1120,n)
         lock=getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"NextComp:Voice").apply{setReferenceCounted(false)}
@@ -234,7 +234,9 @@ class PocketVoiceService:Service(){
         val name=if(turnId!=null)"voice-turn-error" else "voice-setup-error";val cached=File(filesDir,"$name.wav");try{if(!cached.exists())assets.open("$name.wav").use{input->cached.outputStream().use{input.copyTo(it)}};play(cached)}catch(_:Exception){state("Retry needed")}
     }
     private suspend fun speak(text:String,notification:JSONObject?=null,done:(()->Unit)?=null){
-        val spoken=PocketImmersion.spoken("speech:"+text.hashCode(),text)
+        val speechId="speech:"+text.hashCode()
+        PocketImmersion.offer(speechId,text,"speech urgent")
+        val spoken=PocketImmersion.spoken(speechId,text,waitMs=12000)
         caption=notification?.let{NativeCaption(it.optLong("id"),it.s("title"),spoken,captionProfile)}
         if(text.isBlank()){done?.invoke();state("Ready");return}
         state("Preparing speech")

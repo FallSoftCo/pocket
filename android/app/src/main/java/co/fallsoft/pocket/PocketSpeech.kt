@@ -86,14 +86,14 @@ object PocketSpeech {
     internal fun hold(reason:String){queue.pause(queue.positionMs,reason);save(true);showPaused()}
     internal fun notification(session:MediaSession?=null):Notification {
         val c=Pocket.context;val manager=c.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel("spoken-playback","Spoken message controls",NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
+        manager.createNotificationChannel(NotificationChannel("spoken-playback",PocketImmersion.label("Spoken message controls"),NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
         val action=if(queue.paused)"resume" else "pause"
         val intent=PendingIntent.getForegroundService(c,998,Intent(c,PocketSpeechService::class.java).setAction(action),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val open=PendingIntent.getActivity(c,998,Intent(c,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val label=if(queue.paused)"Resume" else "Pause"
-        val detail=if(queue.paused)queue.reason+" · Your place is saved" else "${queue.messages.size} message${if(queue.messages.size==1)"" else "s"} · Pause any time"
+        val label=PocketImmersion.label(if(queue.paused)"Resume" else "Pause")
+        val detail=if(queue.paused)PocketImmersion.label(queue.reason)+" · "+PocketImmersion.label("Your place is saved") else if(PocketImmersion.enabled)"${queue.messages.size} ${if(queue.messages.size==1)"messaggio" else "messaggi"} · "+PocketImmersion.label("Pause any time") else "${queue.messages.size} message${if(queue.messages.size==1)"" else "s"} · Pause any time"
         val builder=Notification.Builder(c,"spoken-playback").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(if(queue.paused)"NextComp speech paused" else "Listening to NextComp").setContentText(detail)
+            .setContentTitle(PocketImmersion.label(if(queue.paused)"NextComp speech paused" else "Listening to NextComp")).setContentText(detail)
             .setContentIntent(open).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PRIVATE).setOngoing(!queue.paused)
             .addAction(Notification.Action.Builder(if(queue.paused)android.R.drawable.ic_media_play else android.R.drawable.ic_media_pause,label,intent).build())
         if(session!=null)builder.setStyle(Notification.MediaStyle().setMediaSession(session.sessionToken).setShowActionsInCompactView(0))
@@ -125,7 +125,7 @@ class PocketSpeechService:Service(){
     private val spokenChunk get()=renderedChunks.getOrNull(queue.chunkIndex)
     private fun renderKey(message:SpokenMessage):String {
         val source=MessageDigest.getInstance("SHA-256").digest(message.text.toByteArray()).joinToString(""){"%02x".format(it.toInt() and 255)}
-        return "${PocketImmersion.enabled}:${Pocket.local}:${Pocket.base}:${Pocket.prefs.getString(Pocket.key("deviceId"),"")}:${message.id}:$source"
+        return "inline-v1:${PocketImmersion.enabled}:${Pocket.local}:${Pocket.base}:${Pocket.prefs.getString(Pocket.key("deviceId"),"")}:${message.id}:$source"
     }
     private fun installedVoice(language:String)=engine?.voices?.filter {
         !it.isNetworkConnectionRequired&&it.locale.language==language&&
@@ -165,7 +165,7 @@ class PocketSpeechService:Service(){
                 override fun onStop(){pause("Saved for later")}
                 override fun onPlay(){queue.resume();PocketSpeech.save();next()}
             },handler)
-            setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,"NextComp spoken updates").putString(MediaMetadata.METADATA_KEY_ARTIST,"NextComp").build())
+            setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,PocketImmersion.label("NextComp spoken updates")).putString(MediaMetadata.METADATA_KEY_ARTIST,"NextComp").build())
             isActive=true
         }
         try{
@@ -240,7 +240,7 @@ class PocketSpeechService:Service(){
                 var language=if(cached)saved.s("language","en") else "en"
                 var rendering=if(cached)saved.s("text",message.text) else message.text
                 if(!cached&&PocketImmersion.enabled&&installedVoice("it")!=null){
-                    val translated=PocketImmersion.spoken("notification-speech:${message.id}",message.text)
+                    val translated=PocketImmersion.spoken("notification-speech:${message.id}",message.text,waitMs=12000)
                     if(translated!=message.text){rendering=translated;language="it"}
                 }
                 if(closed||finished)return@launch

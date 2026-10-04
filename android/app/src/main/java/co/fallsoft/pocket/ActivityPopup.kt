@@ -52,18 +52,18 @@ import androidx.compose.ui.window.*
             Column(Modifier.heightIn(max=popupHeight).padding(12.dp)){
             Column(Modifier.weight(1f,fill=false).verticalScroll(scroll)){
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Box(Modifier.padding(12.dp)){BilingualLabel("Activity")};TextButton(onDismiss){BilingualLabel("Close")}}
-                replyTarget?.let{id->Text(Pocket.tasks.firstOrNull{it.id==id}?.title?:"Reply",color=Mint,fontSize=12.sp,modifier=Modifier.padding(8.dp));OutlinedTextField(text,{text=it;drafts[id]=it},modifier=Modifier.fillMaxWidth().focusRequester(inputFocus).onPreviewKeyEvent{event->if((event.key==Key.Enter||event.key==Key.NumPadEnter)&&!event.isShiftPressed){if(event.type==KeyEventType.KeyDown)send();true}else false},placeholder={BilingualLabel("Message Codex…",centered=false)},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}),maxLines=4)}
-                if(replyTarget!=null&&Pocket.error.isNotBlank())Text(Pocket.error,color=Coral,modifier=Modifier.padding(8.dp))
+                replyTarget?.let{id->ImmersionText("popup-title:"+id,Pocket.tasks.firstOrNull{it.id==id}?.title?:"Reply",rescue=false,color=Mint,fontSize=12.sp,modifier=Modifier.padding(8.dp));OutlinedTextField(text,{text=it;drafts[id]=it},modifier=Modifier.fillMaxWidth().focusRequester(inputFocus).onPreviewKeyEvent{event->if((event.key==Key.Enter||event.key==Key.NumPadEnter)&&!event.isShiftPressed){if(event.type==KeyEventType.KeyDown)send();true}else false},placeholder={BilingualLabel("Message Codex…",centered=false)},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}),maxLines=4)}
+                if(replyTarget!=null&&Pocket.error.isNotBlank())WorkflowText(Pocket.error,color=Coral,modifier=Modifier.padding(8.dp))
                 if(passage!=null&&sourceThread!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
-                    Text(Pocket.tasks.firstOrNull{it.id==sourceThread}?.title?:"Conversation",modifier=Modifier.weight(1f).heightIn(min=56.dp).clickable{onDismiss();Pocket.open(sourceThread)}.padding(12.dp),maxLines=2,overflow=TextOverflow.Ellipsis,color=Paper)
+                    ImmersionText("popup-title:"+sourceThread,Pocket.tasks.firstOrNull{it.id==sourceThread}?.title?:"Conversation",rescue=false,modifier=Modifier.weight(1f).heightIn(min=56.dp).clickable{onDismiss();Pocket.open(sourceThread)}.padding(12.dp),maxLines=2,overflow=TextOverflow.Ellipsis,color=Paper)
                     TextButton({replyTarget=sourceThread}){BilingualLabel("Reply")}
                 }
                 passage?.let{Text(it,color=Paper,modifier=Modifier.padding(12.dp))}
                 ids.filterNot{passage!=null&&it==sourceThread}.forEach{id->val task=Pocket.tasks.firstOrNull{it.id==id};val alert=Pocket.attention.firstOrNull{it.s("thread_id")==id}
                     Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
                         Column(Modifier.weight(1f).heightIn(min=56.dp).clickable{onDismiss();Pocket.open(id)}.padding(horizontal=12.dp,vertical=8.dp)){
-                            Text(task?.title?:alert?.s("title")?:"Conversation",maxLines=1,overflow=TextOverflow.Ellipsis,color=if(id in attention)Coral else Paper)
-                            Text(task?.preview?.takeIf{it.isNotBlank()}?:alert?.s("body").orEmpty(),maxLines=2,overflow=TextOverflow.Ellipsis,color=Muted,fontSize=12.sp)
+                            ImmersionText("popup-title:"+id,task?.title?:alert?.s("title")?:"Conversation",rescue=false,maxLines=1,overflow=TextOverflow.Ellipsis,color=if(id in attention)Coral else Paper)
+                            ImmersionText("popup-preview:"+id,task?.preview?.takeIf{it.isNotBlank()}?:alert?.s("body").orEmpty(),rescue=false,maxLines=2,overflow=TextOverflow.Ellipsis,color=Muted,fontSize=12.sp)
                         }
                         TextButton({replyTarget=id}){BilingualLabel("Reply")}
                     }

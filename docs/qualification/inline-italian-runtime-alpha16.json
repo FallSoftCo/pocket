@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-04",
+  "versionCode": 33,
+  "debugApkSha256": "a238ee766d8d45ec95b4584927447a3b47afc027ca2e336f277de1ce442306b2",
+  "fixture": "Provider-blocked synthetic conversation reuses previously accepted contextual-hybrid plan; no inference performed by this UI test",
+  "providerInferenceCalls": 0,
+  "fontScale": 2,
+  "checks": {
+    "normalSizeInlineItalianPhrases": true,
+    "protectedFilenameAndModelPreserved": true,
+    "noDefaultEnglishMicrolines": true,
+    "phraseTapShowsFullSizeEnglish": true,
+    "grammarNoteVisible": true,
+    "italianInterfaceLabels": true,
+    "originalSteerTextSubmittedUnchanged": true,
+    "longPressQueueSubmitsUnchangedOriginalText": true,
+    "authenticatedOnceEach": true
+  },
+  "submissionEvidence": [
+    {
+      "text": "OriginalCheck",
+      "mode": "steer",
+      "target": "fixture-task",
+      "accepted": true
+    },
+    {
+      "text": "OriginalQueue",
+      "mode": "queue",
+      "target": "fixture-task",
+      "accepted": true
+    }
+  ],
+  "qualifications": [
+    "This tests Android display and gestures using a validated synthetic plan; actual Codex helper model qualification belongs to the helper receipt.",
+    "The fixture deliberately supplies one protected phrase plan; other fixture messages remain original English when no matching plan exists."
+  ],
+  "gallery": {
+    "category": "nextcomp-inline-italian",
+    "count": 2,
+    "layoutCheckPassed": true,
+    "cardCount": 1614,
+    "errors": 0
+  }
+}

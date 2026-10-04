@@ -23,7 +23,7 @@ import java.util.Locale
     18.sp.toDp()+12.sp.toDp()*2+18.sp.toDp()+18.dp
 }.coerceAtLeast(88.dp)
 
-@Composable fun usageDockWidth()=(58*LocalDensity.current.fontScale.coerceAtLeast(1f)).dp
+@Composable fun usageDockWidth()=(72*LocalDensity.current.fontScale.coerceAtLeast(1f)).dp
 
 @Composable fun UsageDetails(){
     val usage=Pocket.weeklyUsage
@@ -49,19 +49,18 @@ import java.util.Locale
     val forecastLabel=forecast?.let{val minutes=((it-now)/60000).coerceAtLeast(1);"~"+when{minutes<60->"${minutes}m";minutes<2880->"${minutes/60}h";else->"${minutes/1440}d"}}
     val day=usage.resetsAt?.let{SimpleDateFormat("EEE",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     val time=usage.resetsAt?.let{SimpleDateFormat("HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
-    Box {
-    Surface(onClick={open=true},modifier=modifier.height(usageDockHeight()).semantics{contentDescription="Usage and connection details"},color=Ink,shape=RoundedCornerShape(20.dp)){
+    Box(modifier.height(usageDockHeight())) {
+    Surface(onClick={open=true},modifier=Modifier.fillMaxSize().semantics{contentDescription="Usage and connection details"},color=Ink,shape=RoundedCornerShape(20.dp)){
         Column(Modifier.fillMaxSize().padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){AnimatedMark(16);Text(usage.remainingLabel().replace(" left","")+(if(stale)"*" else ""),color=color,fontSize=14.sp,lineHeight=18.sp,fontWeight=FontWeight.SemiBold,maxLines=1)}
-            Text(if(day.isBlank())"↻ —" else "↻ $day",color=Muted,fontSize=10.sp,lineHeight=12.sp,maxLines=1)
-            if(time.isNotBlank())Text(time,color=Muted,fontSize=10.sp,lineHeight=12.sp,maxLines=1)
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){AnimatedMark(20);Text(usage.remainingLabel().replace(" left",""),color=color,fontSize=18.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1)}
+            Text(if(day.isBlank())"↻ —" else "$day $time",color=Muted,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
             Row(Modifier.heightIn(min=20.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
                 val online=Pocket.connected&&Pocket.codexOnline
                 val stateColor=if(online)NextGreen else if(Pocket.connected||PocketLive.outageVisible)Coral else Muted
-                Box(Modifier.size(20.dp).background(stateColor.copy(alpha=.35f),RoundedCornerShape(6.dp)),contentAlignment=Alignment.Center){
-                    SymbolIcon(if(Pocket.local)"PhoneAndroid" else "Computer",if(online)"Connected" else if(Pocket.connected)"Codex offline" else if(PocketLive.outageVisible)"Live updates reconnecting" else "Connecting",Modifier.size(16.dp))
+                Box(Modifier.size(24.dp).background(stateColor.copy(alpha=.35f),RoundedCornerShape(6.dp)),contentAlignment=Alignment.Center){
+                    SymbolIcon(if(Pocket.local)"PhoneAndroid" else "Computer",if(online)"Connected" else if(Pocket.connected)"Codex offline" else if(PocketLive.outageVisible)"Live updates reconnecting" else "Connecting",Modifier.size(20.dp))
                 }
-                if(forecastLabel!=null){SymbolIcon("ArrowDownward","Estimated usage run-out",Modifier.size(12.dp));Text(forecastLabel,color=color,fontSize=9.sp,lineHeight=12.sp,maxLines=1)}
+                if(forecastLabel!=null){SymbolIcon("ArrowDownward","Estimated usage run-out",Modifier.size(12.dp));Text(forecastLabel,color=color,fontSize=12.sp,lineHeight=16.sp,maxLines=1)}
             }
         }
     }

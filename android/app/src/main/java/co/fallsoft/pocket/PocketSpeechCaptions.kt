@@ -18,6 +18,7 @@ import org.json.JSONObject
 /** Reuses speech notification 998 after playback; lock-screen text remains private by default. */
 object PocketSpeechCaptions {
     var state by mutableStateOf(SpeechCaptionState());private set
+    internal fun label(s:SpeechCaptionState=state):String=listOf(PocketImmersion.label(s.phase),if(s.parts>1){if(PocketImmersion.enabled)"Parte ${s.part+1} di ${s.parts}" else "Part ${s.part+1} of ${s.parts}"}else "").filter{it.isNotBlank()}.joinToString(" · ")
     private fun profile()="${Pocket.local}:${Pocket.base}:${Pocket.prefs.getString(Pocket.key("deviceId"),"")}"
     private val storage get()=Pocket.context.getSharedPreferences("speech-captions-"+java.security.MessageDigest.getInstance("SHA-256").digest(profile().toByteArray()).joinToString(""){"%02x".format(it)},Context.MODE_PRIVATE)
     fun init(){
@@ -39,27 +40,27 @@ object PocketSpeechCaptions {
     fun decorate(builder:Notification.Builder):Notification.Builder {
         if(!state.visible)return builder
         val public=Notification.Builder(Pocket.context,"spoken-playback").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("NextComp spoken update").setContentText("Unlock to read").build()
-        return builder.setContentText(state.text).setSubText(state.label).setVisibility(Notification.VISIBILITY_PRIVATE)
-            .setPublicVersion(public).setStyle(Notification.BigTextStyle().bigText(state.text)).addAction(Notification.Action.Builder(R.drawable.ic_notification,"Dismiss captions",dismissIntent()).build())
+            .setContentTitle(PocketImmersion.label("NextComp spoken update")).setContentText(PocketImmersion.label("Unlock to read")).build()
+        return builder.setContentText(state.text).setSubText(label()).setVisibility(Notification.VISIBILITY_PRIVATE)
+            .setPublicVersion(public).setStyle(Notification.BigTextStyle().bigText(state.text)).addAction(Notification.Action.Builder(R.drawable.ic_notification,PocketImmersion.label("Dismiss captions"),dismissIntent()).build())
     }
     fun decorate(builder:androidx.core.app.NotificationCompat.Builder):androidx.core.app.NotificationCompat.Builder {
         if(!state.visible)return builder
         val public=androidx.core.app.NotificationCompat.Builder(Pocket.context,"voice-mode").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("NextComp voice is on").setContentText("Unlock to read").build()
-        return builder.setContentText(state.text).setSubText(state.label).setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE)
-            .setPublicVersion(public).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(state.text)).addAction(R.drawable.ic_notification,"Dismiss captions",dismissIntent())
+            .setContentTitle(PocketImmersion.label("NextComp voice is on")).setContentText(PocketImmersion.label("Unlock to read")).build()
+        return builder.setContentText(state.text).setSubText(label()).setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(public).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(state.text)).addAction(R.drawable.ic_notification,PocketImmersion.label("Dismiss captions"),dismissIntent())
     }
     private fun showRetained(){
         if(!state.visible)return
         val c=Pocket.context;val manager=c.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel("spoken-playback","Spoken message controls",NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
+        manager.createNotificationChannel(NotificationChannel("spoken-playback",PocketImmersion.label("Spoken message controls"),NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
         val dismiss=PendingIntent.getBroadcast(c,997,Intent(c,AttentionReceiver::class.java).setAction("caption-dismiss"),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val public=Notification.Builder(c,"spoken-playback").setSmallIcon(R.drawable.ic_notification).setContentTitle("NextComp spoken update").setContentText("Unlock to read").build()
-        val builder=Notification.Builder(c,"spoken-playback").setSmallIcon(R.drawable.ic_notification).setContentTitle(state.title.ifBlank{"NextComp spoken update"})
+        val public=Notification.Builder(c,"spoken-playback").setSmallIcon(R.drawable.ic_notification).setContentTitle(PocketImmersion.label("NextComp spoken update")).setContentText(PocketImmersion.label("Unlock to read")).build()
+        val builder=Notification.Builder(c,"spoken-playback").setSmallIcon(R.drawable.ic_notification).setContentTitle(PocketImmersion.target("caption-title:${state.id}",state.title).ifBlank{PocketImmersion.label("NextComp spoken update")})
             .setContentIntent(PocketNotifications.open(c,null,998)).setOnlyAlertOnce(true).setAutoCancel(false)
             .setVisibility(Notification.VISIBILITY_PRIVATE).setPublicVersion(public).setDeleteIntent(dismiss)
-            .addAction(Notification.Action.Builder(R.drawable.ic_notification,"Dismiss",dismiss).build())
+            .addAction(Notification.Action.Builder(R.drawable.ic_notification,PocketImmersion.label("Dismiss"),dismiss).build())
         try{manager.notify(998,decorate(builder).build())}catch(_:SecurityException){}
     }
 }
@@ -71,15 +72,15 @@ object PocketSpeechCaptions {
     Box {
     Surface(modifier=modifier.fillMaxWidth(),color=Panel,tonalElevation=0.dp){
         Row(Modifier.padding(start=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            Column(Modifier.weight(1f).heightIn(min=48.dp).clickable(role=Role.Button,onClickLabel="Read full spoken passage"){expanded=true}.padding(vertical=8.dp)){
-                Text(s.label+" · Read",color=Muted,style=MaterialTheme.typography.labelSmall)
+            Column(Modifier.weight(1f).heightIn(min=48.dp).clickable(role=Role.Button,onClickLabel=PocketImmersion.label("Read full spoken passage")){expanded=true}.padding(vertical=8.dp)){
+                Text(PocketSpeechCaptions.label(s)+" · "+PocketImmersion.label("Read"),color=Muted,style=MaterialTheme.typography.labelSmall)
                 Text(s.text,color=Paper,style=MaterialTheme.typography.bodyMedium,maxLines=3,overflow=TextOverflow.Ellipsis)
             }
-            TextButton(onClick={PocketSpeechCaptions.dismiss()},modifier=Modifier.heightIn(min=48.dp)){Text("Dismiss")}
+            TextButton(onClick={PocketSpeechCaptions.dismiss()},modifier=Modifier.heightIn(min=48.dp)){Text(PocketImmersion.label("Dismiss"))}
         }
     }
     ActivityPopup(expanded,{expanded=false},PocketNotificationTitles.threadForId(s.id),passage=s.text){
-        TextButton({PocketSpeechCaptions.dismiss();expanded=false}){Text("Dismiss captions")}
+        TextButton({PocketSpeechCaptions.dismiss();expanded=false}){Text(PocketImmersion.label("Dismiss captions"))}
     }
     }
 }

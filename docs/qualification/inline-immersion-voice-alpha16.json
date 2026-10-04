@@ -1,0 +1,26 @@
+{
+  "version": "0.5.0-alpha.16",
+  "status": "source compiled, signed and unit-tested; exact inline text and original action payloads runtime-qualified; real audio and physical notification refresh not tested",
+  "voice": {
+    "rendering": "Uses the shared exact-source inline phrase plan for spoken narration; original turn text and command payloads remain unchanged.",
+    "warmup": "Actual narration is offered urgently before bounded 12-second preparation; original text remains the safe fallback if no qualified plan arrives.",
+    "captions": "Store the exact text actually submitted for synthesis. Phase, chunk count, controls and lock-screen placeholders use authored Italian labels.",
+    "transport": "Existing native stock Codex speech transport; no new paid audio or translation API."
+  },
+  "notifications": {
+    "rendering": "Current exact-source hybrid title/body from the same cache; no stale plan applied to a newer source.",
+    "refresh": "Teacher completion updates only unread, still-active Android notifications from the current profile, silently.",
+    "bounds": "Thirty recent originals retained in process memory; inactive or other-profile entries removed before refresh.",
+    "actions": "Answer, Skip, Later, Reply, Open, captions and speech controls translated without changing action identifiers."
+  },
+  "controls": {
+    "recording": "One tap starts; one tap stops and automatically sends, unchanged.",
+    "input": "Keyboard and submitted contents remain originals.",
+    "rescue": "Shared on-demand phrase rescue rather than permanent miniature English subtitles."
+  },
+  "validation": [
+    "Source diff whitespace check passes; compilation, full tests and emulator qualification owned by root.",
+    "Final signed build, Android unit tests and debug/release lint passed. Synthetic emulator phrase rescue and unchanged Send/Queue payloads passed; see inline-italian-runtime-alpha16.json."
+  ],
+  "phoneUiInteractions": 0
+}

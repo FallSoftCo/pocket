@@ -49,3 +49,24 @@ object ImmersionCommands {
         return commands.entries.sortedByDescending{it.key.length}.firstOrNull{clean==it.key||clean.startsWith(it.key+" ")||clean.startsWith(it.key+"\n")}?.value
     }
 }
+
+/** Verified UTF-16 source offsets, resolved by the teacher worker from exact quoted phrases. */
+data class ImmersionSpan(val start:Int,val end:Int,val source:String,val target:String,val note:String="",val unit:String="phrase")
+data class ImmersionSegment(val text:String,val source:String?=null,val note:String="",val unit:String="phrase")
+data class ImmersionPresentation(val text:String,val source:String,val current:Boolean,val spans:List<ImmersionSpan> = emptyList())
+fun immersionSourceHash(text:String)=java.security.MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it.toInt() and 255)}
+/** Never splice a previous plan into a new source or infer word-level alignment. */
+fun contextualHybridText(original:String,spans:List<ImmersionSpan>):String? {
+    var cursor=0;val result=StringBuilder()
+    for(span in spans){
+        if(span.start<cursor||span.end<=span.start||span.end>original.length||original.substring(span.start,span.end)!=span.source||span.target.isBlank())return null
+        result.append(original.substring(cursor,span.start));result.append(span.target);cursor=span.end
+    }
+    result.append(original.substring(cursor));return result.toString()
+}
+fun immersionSegments(original:String,spans:List<ImmersionSpan>):List<ImmersionSegment>{
+    if(contextualHybridText(original,spans)==null)return listOf(ImmersionSegment(original))
+    val out=mutableListOf<ImmersionSegment>();var cursor=0
+    for(span in spans){if(span.start>cursor)out+=ImmersionSegment(original.substring(cursor,span.start));out+=ImmersionSegment(span.target,span.source,span.note,span.unit);cursor=span.end}
+    if(cursor<original.length)out+=ImmersionSegment(original.substring(cursor));return out
+}

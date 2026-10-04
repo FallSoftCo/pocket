@@ -412,7 +412,7 @@ app.get('/api/replies/:id',(req,res)=>{
 app.post('/api/requests/:id/answer',route(async(req,res)=>res.json(questionActions.answer(req.params.id,req.body))));
 app.post('/api/notifications/:id/skip',route(async(req,res)=>res.json(questionActions.skipNotification(req.params.id))));
 app.get('/api/immersion',(req,res)=>res.json(immersion.snapshot(req.device.id)));
-app.post('/api/immersion',route(async(req,res)=>res.json(immersion.setEnabled(req.device.id,req.body.enabled))));
+app.post('/api/immersion',route(async(req,res)=>res.json(immersion.setEnabled(req.device.id,req.body.enabled,req.body.density))));
 app.post('/api/immersion/translate',route(async(req,res)=>res.json(immersion.submit(req.device.id,req.body.sources))));
 app.post('/api/threads/:id/notifications/read',route(async(req,res)=>res.json(notificationReads.ack(req.device.id,requireId(req.params.id),req.body.throughId))));
 app.get('/api/attention',(req,res)=>res.json({notifications:notificationReads.decorate(db.prepare('SELECT n.* FROM notifications n JOIN notification_attention a ON a.notification_id=n.id WHERE a.resolved_at IS NULL ORDER BY n.id DESC LIMIT 100').all().map(notificationRow),req.device.id)}));

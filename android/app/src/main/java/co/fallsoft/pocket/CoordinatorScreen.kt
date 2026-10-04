@@ -36,15 +36,15 @@ import kotlinx.coroutines.flow.*
     Box(Modifier.fillMaxWidth().height(height).clip(shape).background(Panel).border(1.dp,Mint.copy(alpha=.55f),shape)){
         Row(Modifier.matchParentSize()){
             VoiceLaunchButton(modifier=Modifier.weight(.22f).fillMaxHeight(),cardRegion=true)
-            CardInteractionRegion("Coordinator chat",Modifier.weight(.56f).fillMaxHeight()){PocketCoordinator.open()}
-            CardInteractionRegion("Coordinator keyboard",Modifier.weight(.22f).fillMaxHeight()){PocketCoordinator.open(keyboard=true)}
+            CardInteractionRegion(PocketImmersion.label("Coordinator chat"),Modifier.weight(.56f).fillMaxHeight()){PocketCoordinator.open()}
+            CardInteractionRegion(PocketImmersion.label("Coordinator keyboard"),Modifier.weight(.22f).fillMaxHeight()){PocketCoordinator.open(keyboard=true)}
         }
         Column(Modifier.padding(horizontal=12.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                SymbolIcon("Codex","Coordinator",Modifier.size(24.dp),spinning=PocketCoordinator.state in listOf("Sending","Thinking"))
+                SymbolIcon("Codex",PocketImmersion.label("Coordinator"),Modifier.size(24.dp),spinning=PocketCoordinator.state in listOf("Sending","Thinking"))
                 BilingualLabel("Coordinator",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Mint,centered=false)
             }
-            MarkdownPreview(PocketImmersion.display("coordinator:preview",PocketCoordinator.preview).ifBlank{"Text or talk to coordinate your sessions."},fontSize=13.sp,lineHeight=19.sp,color=Paper,maxLines=2,overflow=TextOverflow.Ellipsis)
+            MarkdownPreview(PocketImmersion.display("coordinator:preview",PocketCoordinator.preview).ifBlank{PocketImmersion.label("Text or talk to coordinate your sessions.")},fontSize=13.sp,lineHeight=19.sp,color=Paper,maxLines=2,overflow=TextOverflow.Ellipsis)
         }
     }
 }
@@ -78,17 +78,17 @@ import kotlinx.coroutines.flow.*
     }
     Column(Modifier.fillMaxSize().imePadding()){
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
-            SymbolIcon("Codex","Coordinator",Modifier.size(28.dp),spinning=sending)
+            SymbolIcon("Codex",PocketImmersion.label("Coordinator"),Modifier.size(28.dp),spinning=sending)
             BilingualLabel("Coordinator",Modifier.weight(1f),color=Paper,fontSize=16.sp,fontWeight=FontWeight.Medium,centered=false)
             if(sending)BilingualLabel(PocketCoordinator.state,color=Mint,fontSize=12.sp)
         }
         LazyColumn(state=scroll,modifier=Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
             if(PocketCoordinator.historyEarlier)item{TextButton({followLatest=false;PocketCoordinator.olderHistory()},enabled=!PocketCoordinator.historyLoading){BilingualLabel("Load earlier messages")}}
-            if(PocketCoordinator.historyLoading)item{Text("Loading history…",color=Muted)}
-            if(PocketCoordinator.historyProblem.isNotBlank())item{Text(PocketCoordinator.historyProblem,color=Coral);TextButton({PocketCoordinator.loadHistory()}){BilingualLabel("Retry history")}}
+            if(PocketCoordinator.historyLoading)item{BilingualLabel("Loading history…",color=Muted)}
+            if(PocketCoordinator.historyProblem.isNotBlank())item{ImmersionText("coordinator:history-problem",PocketCoordinator.historyProblem,color=Coral);TextButton({PocketCoordinator.loadHistory()}){BilingualLabel("Retry history")}}
             items(PocketCoordinator.messages){turn->Column{VoiceChatMessage("You",turn.first,true);Spacer(Modifier.height(12.dp));VoiceChatMessage("Codex",turn.second,false)}}
             if(PocketCoordinator.pendingText.isNotBlank()&&!PocketCoordinator.pendingInHistory)item{VoiceChatMessage("You",PocketCoordinator.pendingText,true)}
-            if(PocketCoordinator.problem.isNotBlank())item{Text(PocketCoordinator.problem,color=Coral);TextButton({PocketCoordinator.retry()}){BilingualLabel("Retry saved turn")}}
+            if(PocketCoordinator.problem.isNotBlank())item{ImmersionText("coordinator:problem",PocketCoordinator.problem,color=Coral);TextButton({PocketCoordinator.retry()}){BilingualLabel("Retry saved turn")}}
             item(key="coordinator-end"){Spacer(Modifier.height(1.dp))}
         }
         SpeechCaptionBanner()
@@ -101,7 +101,7 @@ import kotlinx.coroutines.flow.*
                 },placeholder={Text(PocketImmersion.label("Message coordinator"))},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->
                     if(event.key==Key.Enter||event.key==Key.NumPadEnter){if(event.type==KeyEventType.KeyDown)send();true}else false
                 },keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}))
-                FilledTonalIconButton({send()},enabled=draft.isNotBlank()&&!sending,modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,"Send coordinator message",Modifier.size(40.dp),tint=Paper)}
+                FilledTonalIconButton({send()},enabled=draft.isNotBlank()&&!sending,modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,PocketImmersion.label("Send coordinator message"),Modifier.size(40.dp),tint=Paper)}
             }else Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 VoiceLaunchButton(modifier=Modifier.weight(1f),bar=true)
                 ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{PocketCoordinator.keyboard(true)})

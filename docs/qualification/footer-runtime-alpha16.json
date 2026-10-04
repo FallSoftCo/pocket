@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-04",
+  "versionCode": 33,
+  "phase": "Final full-build source33 installed; footer2x and usage tap smoke passed",
+  "debugApkSha256": "a238ee766d8d45ec95b4584927447a3b47afc027ca2e336f277de1ce442306b2",
+  "fixture": "Synthetic paired local fixture; provider endpoints blocked",
+  "providerInferenceCalls": 0,
+  "platform": "Owned API35 emulator1080x2400, actual Android system font1.0 and2.0",
+  "checks": [
+    {
+      "fontScale": 1,
+      "bounds": {
+        "Work": [
+          118,
+          2109,
+          213,
+          2204
+        ],
+        "Settings": [
+          306,
+          2109,
+          401,
+          2204
+        ],
+        "Find": [
+          483,
+          2099,
+          599,
+          2215
+        ],
+        "Talk": [
+          670,
+          2099,
+          786,
+          2215
+        ],
+        "Usage and connection details": [
+          824,
+          2074,
+          1006,
+          2305
+        ]
+      },
+      "allFiveVisibleAndTappable": true,
+      "talkReachedVoiceOrPermissionWithoutInference": true
+    },
+    {
+      "fontScale": 2,
+      "bounds": {
+        "Work": [
+          181,
+          1694,
+          276,
+          1789
+        ],
+        "Settings": [
+          493,
+          1694,
+          588,
+          1789
+        ],
+        "Find": [
+          795,
+          1684,
+          911,
+          1800
+        ],
+        "Talk": [
+          248,
+          2020,
+          364,
+          2136
+        ],
+        "Usage and connection details": [
+          542,
+          1974,
+          1006,
+          2305
+        ]
+      },
+      "allFiveVisibleAndTappable": true,
+      "talkReachedVoiceOrPermissionWithoutInference": true
+    }
+  ],
+  "visualInspection": {
+    "normalFiveInOneRow": true,
+    "largeFontThreePlusTwoRows": true,
+    "percentageAndResetCompleteBothScales": true,
+    "noFooterOverflow": true
+  },
+  "limitations": [
+    "Physical phone untouched; no provider inference or real audio delivery claimed.",
+    "Pre-existing card notification Off caption clips at actual2x font; separate follow-up, not footer."
+  ],
+  "gallery": {
+    "category": "nextcomp-footer-repair",
+    "count": 2,
+    "layoutCheckPassed": true,
+    "errors": 0,
+    "cardCount": 1612
+  }
+}

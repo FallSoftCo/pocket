@@ -1,0 +1,50 @@
+package co.fallsoft.pocket
+
+/** Complete, authored phrases for voice controls. These never rewrite recorded or submitted text. */
+object ImmersionVoiceLexicon {
+    private val phrases=mapOf(
+        "Talk to Codex" to "Parla con Codex", "Voice setup" to "Configurazione vocale", "App settings" to "Impostazioni dell’app",
+        "Start voice" to "Avvia la voce", "Start voice in this conversation" to "Parla in questa conversazione",
+        "Stop and send recording" to "Ferma e invia la registrazione", "Speech volume" to "Volume della voce",
+        "Your message" to "Il tuo messaggio", "Codex message" to "Messaggio di Codex",
+        "Loading history…" to "Caricamento della cronologia…", "Text or talk to coordinate your sessions." to "Scrivi o parla per coordinare le tue sessioni.",
+        "Coordinator chat" to "Chat del coordinatore", "Coordinator keyboard" to "Tastiera del coordinatore",
+        "Send coordinator message" to "Invia al coordinatore", "Starting microphone" to "Avvio del microfono",
+        "Finishing recording" to "Chiusura della registrazione", "Transcribing" to "Trascrizione", "Preparing speech" to "Preparazione della voce",
+        "Spoken" to "Ascoltato", "Read" to "Leggi", "Read full spoken passage" to "Leggi il brano completo",
+        "Dismiss captions" to "Chiudi i sottotitoli", "NextComp spoken update" to "Aggiornamento vocale di NextComp",
+        "NextComp voice is on" to "La voce di NextComp è attiva", "Unlock to read" to "Sblocca per leggere",
+        "Voice mode" to "Modalità vocale", "End voice" to "Termina la voce",
+        "Volume down: talk · Volume up: pause or replay" to "Volume giù: parla · Volume su: pausa o riascolto",
+        "Spoken message controls" to "Controlli dei messaggi vocali", "NextComp speech paused" to "Voce di NextComp in pausa",
+        "Listening to NextComp" to "Ascolto di NextComp", "NextComp spoken updates" to "Aggiornamenti vocali di NextComp",
+        "NextComp update" to "Aggiornamento di NextComp", "Your place is saved" to "Il punto di ascolto è salvato",
+        "Pause any time" to "Puoi mettere in pausa in qualsiasi momento", "Saved for later" to "Salvato per dopo",
+        "Waiting while other audio plays" to "In attesa che finisca l’altro audio", "Paused by you" to "Messo in pausa da te",
+        "Ready when you are" to "Pronto quando vuoi", "Headphones disconnected" to "Cuffie scollegate",
+        "Speech stalled · Tap Resume to retry" to "Voce bloccata · Tocca Riprendi per riprovare",
+        "Offline voice unavailable · Tap Resume to retry" to "Voce offline non disponibile · Tocca Riprendi per riprovare",
+        "Could not prepare speech · Tap Resume to retry" to "Preparazione della voce non riuscita · Tocca Riprendi per riprovare",
+        "Profile changed · Your place is saved" to "Profilo cambiato · Il punto di ascolto è salvato",
+        "Waiting for sound to be enabled" to "In attesa dell’attivazione dell’audio",
+        "Reconnect to your workstation to load the full message" to "Riconnettiti alla workstation per caricare il messaggio completo",
+        "Install an offline English voice to listen" to "Installa una voce inglese offline per ascoltare",
+        "Paused for other audio" to "In pausa per un altro audio", "Waiting for other audio to finish" to "In attesa che finisca l’altro audio",
+        "Playback interrupted · Tap Resume to retry" to "Riproduzione interrotta · Tocca Riprendi per riprovare",
+        "Allow microphone access to use voice." to "Consenti l’accesso al microfono per usare la voce.",
+        "Open NextComp to start voice mode." to "Apri NextComp per avviare la modalità vocale.",
+        "Microphone access is needed for voice mode. Enable it in Android app settings." to "La modalità vocale richiede il microfono. Attivalo nelle impostazioni Android dell’app.",
+        "Microphone access was revoked. Enable it in Android app settings." to "L’accesso al microfono è stato revocato. Attivalo nelle impostazioni Android dell’app.",
+        "Another app is using audio. Try again when it finishes." to "Un’altra app sta usando l’audio. Riprova quando ha finito.",
+        "Another app is using audio. Retry when it finishes." to "Un’altra app sta usando l’audio. Riprova quando ha finito.",
+        "Recording interrupted by another app. Please repeat your turn." to "Registrazione interrotta da un’altra app. Ripeti il messaggio.",
+        "That device is not paired. Pair it in NextComp first." to "Il dispositivo non è abbinato. Abbinalo prima in NextComp.",
+        "Unable to play speech. Press volume up to replay." to "Impossibile riprodurre la voce. Premi volume su per riascoltare.",
+        "Microphone stopped." to "Microfono arrestato.", "The voice turn stopped." to "Il messaggio vocale si è interrotto.",
+        "Codex updates & replies" to "Aggiornamenti e risposte di Codex",
+        "Updates you request from Codex, questions, and replies to your phone messages." to "Aggiornamenti richiesti a Codex, domande e risposte ai messaggi dal telefono.",
+        "Still needs your attention" to "Richiede ancora la tua attenzione", "Later · 30m" to "Più tardi · 30 min",
+        "Your reply…" to "La tua risposta…", "Open task" to "Apri l’attività", "Sending reply to Codex…" to "Invio della risposta a Codex…"
+    )
+    fun italian(text:String):String?=phrases[text]
+}

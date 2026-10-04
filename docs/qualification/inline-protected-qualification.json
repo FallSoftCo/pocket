@@ -1,0 +1,66 @@
+{
+  "runtime": "codex-cli 0.160.0",
+  "model": "gpt-6-luna",
+  "authentication": "chatgpt",
+  "latencyMs": 5844,
+  "synthetic": true,
+  "enabled": true,
+  "language": "it",
+  "density": "strong",
+  "planVersion": "contextual-hybrid-v1",
+  "translations": [
+    {
+      "id": "protected",
+      "text": "Check `notes.md` with gpt-6-luna. We opened due nuove sessioni and need una domanda importante answered.",
+      "spans": [
+        {
+          "start": 44,
+          "end": 60,
+          "source": "two new sessions",
+          "target": "due nuove sessioni",
+          "note": "Feminine plural agreement.",
+          "unit": "nounPhrase"
+        },
+        {
+          "start": 70,
+          "end": 91,
+          "source": "an important question",
+          "target": "una domanda importante",
+          "note": "Feminine singular agreement.",
+          "unit": "nounPhrase"
+        }
+      ],
+      "planVersion": "contextual-hybrid-v1",
+      "version": "c695cce0c9697600bd2864743d6e06d7378dd65b2f8a9012321d7c7ac07f827f",
+      "original": "Check `notes.md` with gpt-6-luna. We opened two new sessions and need an important question answered.",
+      "language": "it",
+      "density": "strong"
+    }
+  ],
+  "success": true,
+  "raw": {
+    "translations": [
+      {
+        "id": "0",
+        "version": "c695cce0c9697600bd2864743d6e06d7378dd65b2f8a9012321d7c7ac07f827f",
+        "text": "Check `notes.md` with gpt-6-luna. We opened due nuove sessioni and need una domanda importante answered.",
+        "spans": [
+          {
+            "source": "two new sessions",
+            "occurrence": 0,
+            "target": "due nuove sessioni",
+            "unit": "nounPhrase",
+            "note": "Feminine plural agreement."
+          },
+          {
+            "source": "an important question",
+            "occurrence": 0,
+            "target": "una domanda importante",
+            "unit": "nounPhrase",
+            "note": "Feminine singular agreement."
+          }
+        ]
+      }
+    ]
+  }
+}

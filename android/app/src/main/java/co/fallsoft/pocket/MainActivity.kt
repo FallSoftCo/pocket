@@ -50,6 +50,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -100,17 +101,21 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun Mark(size:Int=44){AnimatedMark(size)}
-@Composable fun Label(text:String,color:Color=Muted){Text(text.uppercase(),color=color,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.8.sp)}
-@Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){Text(Pocket.error,color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){Text("Reload conversation",color=Mint)}}}}
+/** Public workflow prose shares the teacher's contextual inline immersion plan. */
+@Composable fun WorkflowText(text:String,modifier:Modifier=Modifier,color:Color=Paper,fontSize:TextUnit=16.sp,lineHeight:TextUnit=TextUnit.Unspecified,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,overflow:TextOverflow=TextOverflow.Clip,letterSpacing:TextUnit=TextUnit.Unspecified){
+    ImmersionText("workflow:"+text,text,modifier=modifier,color=color,fontSize=fontSize,lineHeight=if(lineHeight==TextUnit.Unspecified)(fontSize.value*1.4f).sp else lineHeight,maxLines=maxLines,fontWeight=fontWeight,kind="workflow text",rescue=false,phraseRescue=true)
+}
+@Composable fun Label(text:String,color:Color=Muted){BilingualLabel(text,color=color,fontSize=10.sp,fontWeight=FontWeight.Bold,centered=false)}
+@Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){WorkflowText(Pocket.error,color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){BilingualLabel("Reload conversation",color=Mint)}}}}
 @Composable fun ConnectionNotice(){
     if(Pocket.connected&&Pocket.codexOnline)return
     if(!Pocket.connected&&!PocketLive.outageVisible)return
     val place=if(Pocket.local)"this phone" else "your workstation"
     Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
         Column(Modifier.padding(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
-            Text(if(Pocket.connected)"Waiting for Codex on $place" else "Reconnecting live updates",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
-            Text(if(Pocket.connected)Pocket.codexConnectionMessage.ifBlank{"NextComp reached ${Pocket.host}, but Codex is not responding there. Retrying automatically."} else "The live update channel is reconnecting. This does not cancel your conversations or messages.",color=Muted,fontSize=12.sp,lineHeight=17.sp)
-            TextButton({Pocket.retryConnection()},contentPadding=PaddingValues(0.dp)){Text("Retry now",color=Mint)}
+            WorkflowText(if(Pocket.connected)"Waiting for Codex on $place" else "Reconnecting live updates",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
+            WorkflowText(if(Pocket.connected)Pocket.codexConnectionMessage.ifBlank{"NextComp reached ${Pocket.host}, but Codex is not responding there. Retrying automatically."} else "The live update channel is reconnecting. This does not cancel your conversations or messages.",color=Muted,fontSize=12.sp,lineHeight=17.sp)
+            TextButton({Pocket.retryConnection()},contentPadding=PaddingValues(0.dp)){BilingualLabel("Retry now",color=Mint)}
         }
     }
 }
@@ -118,12 +123,12 @@ class MainActivity:ComponentActivity(){
     var address by remember(server){mutableStateOf(server)};var pin by remember(code){mutableStateOf(code)}
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(28.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
         Spacer(Modifier.height(34.dp));Mark(70);Spacer(Modifier.height(18.dp));Label("CODEX, WITH YOU",Mint)
-        Text("Good work.\nWithin reach.",fontSize=46.sp,lineHeight=49.sp,fontWeight=FontWeight.Medium,letterSpacing=(-1.8).sp)
-        Text("Your tasks, updates and next ideas.\nConnected to Codex here or on your workstation.",color=Muted,fontSize=17.sp,lineHeight=25.sp)
-        Spacer(Modifier.height(14.dp));OutlinedTextField(address,{address=it},label={Text("NextComp server address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
-        OutlinedTextField(pin,{pin=it},label={Text("One-time pairing code")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
-        ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(6.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{Text("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));SymbolIcon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
-        if(Pocket.token.isNotBlank())TextButton({Pocket.pairingMode=false},modifier=Modifier.fillMaxWidth()){Text("Cancel",color=Muted)}
+        WorkflowText("Good work.\nWithin reach.",fontSize=46.sp,lineHeight=49.sp,fontWeight=FontWeight.Medium,letterSpacing=(-1.8).sp)
+        WorkflowText("Your tasks, updates and next ideas.\nConnected to Codex here or on your workstation.",color=Muted,fontSize=17.sp,lineHeight=25.sp)
+        Spacer(Modifier.height(14.dp));OutlinedTextField(address,{address=it},label={WorkflowText("NextComp server address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
+        OutlinedTextField(pin,{pin=it},label={WorkflowText("One-time pairing code")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
+        ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(6.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{BilingualLabel("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));SymbolIcon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
+        if(Pocket.token.isNotBlank())TextButton({Pocket.pairingMode=false},modifier=Modifier.fillMaxWidth()){BilingualLabel("Cancel",color=Muted)}
 
     }
 }
@@ -170,8 +175,8 @@ class MainActivity:ComponentActivity(){
     LaunchedEffect(Pocket.local){while(true){enabled=PocketAutomation.systemEnabled(c)||PocketAutomation.connected;delay(1500)}}
     if(!enabled)Surface(color=Coral.copy(alpha=.12f),modifier=Modifier.fillMaxWidth()){
         Row(Modifier.padding(horizontal=18.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
-            Column(Modifier.weight(1f)){Text("Phone control needs Android access",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold);Text("An update turned off NextComp’s Accessibility service.",color=Muted,fontSize=11.sp)}
-            TextButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))}){Text("Restore",color=Mint)}
+            Column(Modifier.weight(1f)){WorkflowText("Phone control needs Android access",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold);WorkflowText("An update turned off NextComp’s Accessibility service.",color=Muted,fontSize=11.sp)}
+            TextButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))}){BilingualLabel("Restore",color=Mint)}
         }
     }
 }
@@ -181,19 +186,19 @@ class MainActivity:ComponentActivity(){
     Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
         Row(Modifier.padding(horizontal=18.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
-                Text(if(PocketSpeech.paused)"Speech paused · ${PocketSpeech.count} saved" else "Listening · ${PocketSpeech.count} queued",color=Mint,fontSize=12.sp)
-                Text(if(PocketSpeech.paused)PocketSpeech.status else PocketSpeech.title,color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                WorkflowText(if(PocketSpeech.paused)"Speech paused · ${PocketSpeech.count} saved" else "Listening · ${PocketSpeech.count} queued",color=Mint,fontSize=12.sp)
+                WorkflowText(if(PocketSpeech.paused)PocketSpeech.status else PocketSpeech.title,color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
-            TextButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")}){Text(if(PocketSpeech.paused)"Resume" else "Pause")}
+            TextButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")}){BilingualLabel(if(PocketSpeech.paused)"Resume" else "Pause")}
             if(PocketSpeech.paused)Box{
                 IconButton({discard=true}){SymbolIcon(Icons.Rounded.MoreVert,"Speech options",tint=Muted)}
-                DropdownMenu(discard,{discard=false}){DropdownMenuItem(text={Text("Clear saved speech")},onClick={discard=false;PocketSpeech.clear()})}
+                DropdownMenu(discard,{discard=false}){DropdownMenuItem(text={BilingualLabel("Clear saved speech")},onClick={discard=false;PocketSpeech.clear()})}
             }
         }
     }
 }
 
-@Composable fun ConnectionPill(){val ok=Pocket.connected&&Pocket.codexOnline;Row(Modifier.clip(CircleShape).background(Panel).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){Box(Modifier.size(6.dp).background(if(ok)Mint else Coral,CircleShape));Text(if(ok)"Connected" else if(Pocket.connected)"Codex offline" else "Reconnecting",fontSize=11.sp,color=if(ok)Mint else Coral)}}
+@Composable fun ConnectionPill(){val ok=Pocket.connected&&Pocket.codexOnline;Row(Modifier.clip(CircleShape).background(Panel).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){Box(Modifier.size(6.dp).background(if(ok)Mint else Coral,CircleShape));BilingualLabel(if(ok)"Connected" else if(Pocket.connected)"Codex offline" else "Reconnecting",fontSize=11.sp,color=if(ok)Mint else Coral)}}
 @Composable fun ProfileSwitcher(){
     if(Pocket.savedToken(false).isBlank()||Pocket.savedToken(true).isBlank())return
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
@@ -246,7 +251,7 @@ class MainActivity:ComponentActivity(){
     }
     if(toolsOpen)ModalBottomSheet(onDismissRequest={onToolsOpen(false)},containerColor=Panel){
         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=16.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-            OutlinedTextField(query,{query=it},placeholder={Text(PocketImmersion.label("Find sessions"))},singleLine=true,modifier=Modifier.fillMaxWidth())
+            OutlinedTextField(query,{query=it},placeholder={BilingualLabel("Find sessions",centered=false)},singleLine=true,modifier=Modifier.fillMaxWidth())
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={BilingualLabel(title)})}}
             ProfileSwitcher()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
@@ -295,7 +300,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                 LaunchedEffect(Unit){focus.requestFocus()}
                 OutlinedTextField(name,{name=it.take(120)},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.trim().isNotEmpty())Pocket.renameTask(t.id,name.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.trim().isNotEmpty())Pocket.renameTask(t.id,name.trim()){rename=false}}))
             }else Box(Modifier.weight(1f).heightIn(min=48.dp),contentAlignment=Alignment.CenterStart){
-                Text(t.title,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.clickable{name=t.title;rename=true})
+                ImmersionText("session-title:"+t.id,t.title,rescue=false,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.clickable{name=t.title;rename=true})
             }
             val updatedMillis=if(t.updated<100000000000L)t.updated*1000 else t.updated
             if(System.currentTimeMillis()-updatedMillis>=3600000L)Text(lastActivity(t.updated),color=Muted,fontSize=10.sp,modifier=Modifier.semantics{contentDescription="Last active "+lastActivity(t.updated)}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -303,7 +308,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             Surface(onClick={Pocket.watchTask(t.id,!t.watched)},modifier=Modifier.size(48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
                 Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
                     SymbolIcon(if(t.watched)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,null,modifier=Modifier.size(24.dp),tint=if(t.watched)Paper else Muted.copy(alpha=.65f))
-                    Text(if(t.watched)"On" else "Off",fontSize=10.sp,lineHeight=12.sp,color=if(t.watched)Mint else Muted)
+                    BilingualLabel(if(t.watched)"On" else "Off",fontSize=10.sp,color=if(t.watched)Mint else Muted)
                 }
             }
             if(t.archived)IconButton({Pocket.restoreTask(t.id)},modifier=Modifier.size(48.dp)){SymbolIcon(Icons.Rounded.Unarchive,"Restore conversation",tint=Mint,modifier=Modifier.size(18.dp))}
@@ -314,45 +319,45 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            MarkdownPreview(PocketImmersion.display("card:"+t.id,t.preview),color=Paper,fontSize=14.sp,lineHeight=20.sp,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            MarkdownPreview(PocketImmersion.target("card:"+t.id,t.preview),color=Paper,fontSize=14.sp,lineHeight=20.sp,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
         }
 
     }
     }
 
 }
-@Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){SymbolIcon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));Text(title,fontSize=19.sp);Text(body,color=Muted,fontSize=13.sp)}}
+@Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){SymbolIcon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));WorkflowText(title,fontSize=19.sp);WorkflowText(body,color=Muted,fontSize=13.sp)}}
 @Composable fun AttentionCard(n:JSONObject){
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
         Column(Modifier.fillMaxWidth().clickable{Pocket.open(n.s("thread_id"))}){
         Label(when(n.s("kind")){"approval"->"REVIEW A REQUEST";"question"->"ANSWER A QUESTION";else->"CHECK A PROBLEM"},Coral)
-        Text(n.s("title"),fontSize=17.sp,fontWeight=FontWeight.Medium)
-        Text(n.s("body"),color=Muted,fontSize=13.sp,lineHeight=19.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
+        ImmersionText("notification-title:"+n.optLong("id"),n.s("title"),rescue=false,fontSize=17.sp,fontWeight=FontWeight.Medium)
+        ImmersionText("notification-body:"+n.optLong("id"),n.s("body"),rescue=false,color=Muted,fontSize=13.sp,lineHeight=19.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
         }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-            TextButton({Pocket.open(n.s("thread_id"))}){Text("Review",color=Mint)}
-            TextButton({Pocket.open(n.s("thread_id"),keyboard=true)}){Text("Reply",color=Mint)}
-            if(n.s("kind")=="question")TextButton({PocketQuestionActions.skipNotification(n.optLong("id"),Pocket.local)}){Text("Skip",color=Mint)}
-            TextButton({PocketAttention.snooze(n.optLong("id"))}){Text("Later · 30m",color=Muted)}
-            TextButton({PocketAttention.dismiss(n.optLong("id"))}){Text("Dismiss",color=Muted)}
+            TextButton({Pocket.open(n.s("thread_id"))}){BilingualLabel("Review",color=Mint)}
+            TextButton({Pocket.open(n.s("thread_id"),keyboard=true)}){BilingualLabel("Reply",color=Mint)}
+            if(n.s("kind")=="question")TextButton({PocketQuestionActions.skipNotification(n.optLong("id"),Pocket.local)}){BilingualLabel("Skip",color=Mint)}
+            TextButton({PocketAttention.snooze(n.optLong("id"))}){BilingualLabel("Later · 30m",color=Muted)}
+            TextButton({PocketAttention.dismiss(n.optLong("id"))}){BilingualLabel("Dismiss",color=Muted)}
         }
     }
 }
 @Composable fun UpdatesScreen(){LazyColumn(Modifier.fillMaxSize().padding(horizontal=24.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(vertical=26.dp)){
-    item{Label("THE MOMENTS THAT MATTER",Mint);Spacer(Modifier.height(12.dp));Text("Your updates.",fontSize=36.sp,letterSpacing=(-1).sp);Spacer(Modifier.height(8.dp));Text("Results, questions, and a way forward.",color=Muted,fontSize=15.sp)}
+    item{Label("THE MOMENTS THAT MATTER",Mint);Spacer(Modifier.height(12.dp));WorkflowText("Your updates.",fontSize=36.sp,letterSpacing=(-1).sp);Spacer(Modifier.height(8.dp));WorkflowText("Results, questions, and a way forward.",color=Muted,fontSize=15.sp)}
     if(Pocket.notifications.isEmpty())item{Empty("You’re all caught up","Ask Codex to notify you when something is ready.")}
     items(Pocket.notifications,key={it.optLong("id")}){n->Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Panel).clickable{n.s("thread_id").takeIf{it.isNotBlank()}?.let{Pocket.open(it)}}.padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row{Label(n.s("kind","update"),if(n.s("kind")=="error")Coral else Mint);Spacer(Modifier.weight(1f));Text(relative(n.optLong("created_at")),fontSize=11.sp,color=Muted)}
-        Text(n.s("title"),fontSize=19.sp,fontWeight=FontWeight.Medium);Text(n.s("body"),fontSize=14.sp,color=Muted,lineHeight=21.sp,maxLines=5,overflow=TextOverflow.Ellipsis)
+        ImmersionText("notification-title:"+n.optLong("id"),n.s("title"),rescue=false,fontSize=19.sp,fontWeight=FontWeight.Medium);ImmersionText("notification-body:"+n.optLong("id"),n.s("body"),rescue=false,fontSize=14.sp,color=Muted,lineHeight=21.sp,maxLines=5,overflow=TextOverflow.Ellipsis)
         n.optJSONArray("attachments")?.objects()?.forEach{Attachment(it)}
-        if(n.s("thread_id").isNotBlank())Text("Open conversation  ↗",color=Mint,fontSize=12.sp)
+        if(n.s("thread_id").isNotBlank())WorkflowText("Open conversation  ↗",color=Mint,fontSize=12.sp)
     }}
 }}
 @Composable fun TaskPermissionsControl(){
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically){Text("Full permissions for new tasks",modifier=Modifier.weight(1f));Switch(checked=Pocket.fullPermissions,onCheckedChange={Pocket.updateFullPermissions(it)},enabled=!Pocket.starting)}
-        Text(if(Pocket.fullPermissions)"Full device access. Commands run without approval prompts." else if(Pocket.local)"Commands can ask for approval. Phone tasks retain full filesystem access." else "Workspace access. Commands can ask for approval.",color=Muted,fontSize=12.sp,lineHeight=18.sp)
-        Text("Applies to future tasks on the workstation and this phone.",color=Muted,fontSize=12.sp)
+        Row(verticalAlignment=Alignment.CenterVertically){WorkflowText("Full permissions for new tasks",modifier=Modifier.weight(1f));Switch(checked=Pocket.fullPermissions,onCheckedChange={Pocket.updateFullPermissions(it)},enabled=!Pocket.starting)}
+        WorkflowText(if(Pocket.fullPermissions)"Full device access. Commands run without approval prompts." else if(Pocket.local)"Commands can ask for approval. Phone tasks retain full filesystem access." else "Workspace access. Commands can ask for approval.",color=Muted,fontSize=12.sp,lineHeight=18.sp)
+        WorkflowText("Applies to future tasks on the workstation and this phone.",color=Muted,fontSize=12.sp)
     }
 }
 @Composable fun SettingsScreen(){val c=LocalContext.current
@@ -360,30 +365,31 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         PocketUpdateControl()
         TaskPermissionsControl()
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Italian immersion",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.enabled,{PocketImmersion.setEnabled(it)})}
+        if(PocketImmersion.enabled)ImmersionDensityControl()
         if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("English support",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.supportEnabled,{PocketImmersion.setSupportEnabled(it)})}
-        if(PocketImmersion.unavailable)Text("Translation unavailable · showing originals",color=Muted,fontSize=12.sp)
-        Label("MADE TO BE YOURS",Mint);Text("Your connection.",fontSize=34.sp,letterSpacing=(-1).sp)
+        if(PocketImmersion.unavailable)WorkflowText("Translation unavailable · showing originals",color=Muted,fontSize=12.sp)
+        Label("MADE TO BE YOURS",Mint);WorkflowText("Your connection.",fontSize=34.sp,letterSpacing=(-1).sp)
         Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             ConnectionPill();Text(Pocket.host,fontSize=23.sp);Text(Pocket.base,color=Muted,fontSize=12.sp)
             if(Pocket.savedToken(false).isNotBlank()&&Pocket.savedToken(true).isNotBlank())Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={BilingualLabel("Workstation")})
                 FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={BilingualLabel("This phone")})
             }
-            if(Pocket.savedToken(true).isBlank())OutlinedButton({Pocket.pairingMode=true},modifier=Modifier.fillMaxWidth()){Text("Connect Codex on this phone")}
-            HorizontalDivider(color=Line);Text(Pocket.pushStatus,fontSize=16.sp,color=Mint)
-            Text(if(Pocket.local)"NextComp connects over this phone’s loopback interface. A visible monitor keeps local task results and requests flowing while the app is closed." else "Notifications arrive through Firebase, even when NextComp is closed. Conversations and files load from your workstation.",color=Muted,fontSize=14.sp,lineHeight=21.sp)
+            if(Pocket.savedToken(true).isBlank())OutlinedButton({Pocket.pairingMode=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Connect Codex on this phone")}
+            HorizontalDivider(color=Line);WorkflowText(Pocket.pushStatus,fontSize=16.sp,color=Mint)
+            WorkflowText(if(Pocket.local)"NextComp connects over this phone’s loopback interface. A visible monitor keeps local task results and requests flowing while the app is closed." else "Notifications arrive through Firebase, even when NextComp is closed. Conversations and files load from your workstation.",color=Muted,fontSize=14.sp,lineHeight=21.sp)
         }}
         if(!Pocket.connected||!Pocket.codexOnline){
-            if(Pocket.connectionError.isNotBlank())Text(Pocket.connectionError,color=Coral,fontSize=13.sp,lineHeight=20.sp)
-            if(Pocket.refreshError.isNotBlank())Text("Background refresh: "+Pocket.refreshError,color=Muted,fontSize=12.sp,lineHeight=18.sp)
-            OutlinedButton({Pocket.retryConnection()},modifier=Modifier.fillMaxWidth()){Text("Reconnect now")}
+            if(Pocket.connectionError.isNotBlank())WorkflowText(Pocket.connectionError,color=Coral,fontSize=13.sp,lineHeight=20.sp)
+            if(Pocket.refreshError.isNotBlank())WorkflowText("Background refresh: "+Pocket.refreshError,color=Muted,fontSize=12.sp,lineHeight=18.sp)
+            OutlinedButton({Pocket.retryConnection()},modifier=Modifier.fillMaxWidth()){BilingualLabel("Reconnect now")}
         }
         if(Pocket.savedToken(true).isNotBlank())PhoneControlSettings()
         NotificationAudioSettings()
-        Button({Pocket.test()},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){SymbolIcon(Icons.Rounded.NotificationsActive,null);Spacer(Modifier.width(10.dp));Text("Send a test notification")}
-        OutlinedButton({c.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,c.packageName))},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){Text("Notification settings")}
-        Text(if(Pocket.local)"The local monitor uses no cloud push service. Keep its notification enabled while Codex is working on this phone." else "Keep notifications enabled. Tailscale connects you to your conversations and lets you reply. Firebase handles alerts without a permanent connection to the app.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
-        ErrorBanner();OutlinedButton({Pocket.disconnect()},modifier=Modifier.fillMaxWidth()){Text("Disconnect this phone",color=Coral)}
+        Button({Pocket.test()},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){SymbolIcon(Icons.Rounded.NotificationsActive,null);Spacer(Modifier.width(10.dp));BilingualLabel("Send a test notification")}
+        OutlinedButton({c.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,c.packageName))},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){BilingualLabel("Notification settings")}
+        WorkflowText(if(Pocket.local)"The local monitor uses no cloud push service. Keep its notification enabled while Codex is working on this phone." else "Keep notifications enabled. Tailscale connects you to your conversations and lets you reply. Firebase handles alerts without a permanent connection to the app.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        ErrorBanner();OutlinedButton({Pocket.disconnect()},modifier=Modifier.fillMaxWidth()){BilingualLabel("Disconnect this phone",color=Coral)}
         Spacer(Modifier.height(12.dp));Label("NEXTCOMP ${BuildConfig.VERSION_NAME} · FALLSOFT")
     }
 }
@@ -391,36 +397,36 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 @Composable fun PhoneControlSettings(){val c=LocalContext.current;val systemEnabled=PocketAutomation.systemEnabled(c)||PocketAutomation.connected
     Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
-            Column(Modifier.weight(1f)){Text("Control this phone",fontSize=21.sp,fontWeight=FontWeight.Medium);Text(if(systemEnabled)"Android access is enabled" else "Android access still needs to be enabled",color=if(systemEnabled)Mint else Coral,fontSize=12.sp)}
+            Column(Modifier.weight(1f)){WorkflowText("Control this phone",fontSize=21.sp,fontWeight=FontWeight.Medium);WorkflowText(if(systemEnabled)"Android access is enabled" else "Android access still needs to be enabled",color=if(systemEnabled)Mint else Coral,fontSize=12.sp)}
             Switch(PocketAutomation.allowed&&systemEnabled,{PocketAutomation.allowed=it},enabled=systemEnabled)
         }
-        Text("When both controls are enabled, Codex on this phone can inspect the foreground screen, take screenshots, tap, scroll, enter non-password text, and use Back, Home or Recents.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
-        if(!systemEnabled)OutlinedButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))},modifier=Modifier.fillMaxWidth()){Text("Enable NextComp in Accessibility")}
-        Text(if(PocketAutomation.allowed&&systemEnabled)"Phone control is live · pause it here at any time" else if(!systemEnabled&&PocketAutomation.allowed)"Android disabled the service · restore access above" else "Phone control is paused",color=if(PocketAutomation.allowed&&systemEnabled)Mint else if(!systemEnabled&&PocketAutomation.allowed)Coral else Muted,fontSize=12.sp)
-        Text("Screen structure and screenshots are sent to your signed-in Codex only when its phone tools are used. Password fields are never returned or filled.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
+        WorkflowText("When both controls are enabled, Codex on this phone can inspect the foreground screen, take screenshots, tap, scroll, enter non-password text, and use Back, Home or Recents.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        if(!systemEnabled)OutlinedButton({c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))},modifier=Modifier.fillMaxWidth()){BilingualLabel("Enable NextComp in Accessibility")}
+        WorkflowText(if(PocketAutomation.allowed&&systemEnabled)"Phone control is live · pause it here at any time" else if(!systemEnabled&&PocketAutomation.allowed)"Android disabled the service · restore access above" else "Phone control is paused",color=if(PocketAutomation.allowed&&systemEnabled)Mint else if(!systemEnabled&&PocketAutomation.allowed)Coral else Muted,fontSize=12.sp)
+        WorkflowText("Screen structure and screenshots are sent to your signed-in Codex only when its phone tools are used. Password fields are never returned or filled.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
     }}
 }
 
 @Composable fun NotificationAudioSettings(){
     LaunchedEffect(Unit){if(PocketAudio.mode=="voice")PocketAudio.prepareVoice()}
     Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-        Text("Hear what happened.",fontSize=21.sp,fontWeight=FontWeight.Medium)
-        Text("A different sound for results, questions, approvals and problems.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        WorkflowText("Hear what happened.",fontSize=21.sp,fontWeight=FontWeight.Medium)
+        WorkflowText("A different sound for results, questions, approvals and problems.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
             listOf("tones" to "Tones","voice" to "Labels","system" to "System").forEach{(value,label)->
-                FilterChip(selected=PocketAudio.mode==value,onClick={PocketAudio.select(value)},label={Text(label,fontSize=12.sp)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
+                FilterChip(selected=PocketAudio.mode==value,onClick={PocketAudio.select(value)},label={BilingualLabel(label,fontSize=12.sp)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
             }
         }
-        FilterChip(selected=PocketAudio.mode=="summaries",onClick={PocketAudio.select("summaries")},label={Text("Speak messages")},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
-        Text(when(PocketAudio.mode){"summaries"->"A short tone, then the complete spoken message in an offline voice. Pause and resume from the player or notification, including while locked. Other audio pauses speech and saves your place. Quiet mode and Do Not Disturb silence speech.";"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
-        if(PocketAudio.status.isNotBlank())Text(PocketAudio.status,color=Mint,fontSize=12.sp)
+        FilterChip(selected=PocketAudio.mode=="summaries",onClick={PocketAudio.select("summaries")},label={BilingualLabel("Speak messages")},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
+        WorkflowText(when(PocketAudio.mode){"summaries"->"A short tone, then the complete spoken message in an offline voice. Pause and resume from the player or notification, including while locked. Other audio pauses speech and saves your place. Quiet mode and Do Not Disturb silence speech.";"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        if(PocketAudio.status.isNotBlank())WorkflowText(PocketAudio.status,color=Mint,fontSize=12.sp)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-            listOf("complete" to "Finished","question" to "Question","error" to "Problem").forEach{(kind,label)->TextButton({PocketAudio.preview(kind)}){Text("▶ $label",color=Mint,fontSize=11.sp)}}
+            listOf("complete" to "Finished","question" to "Question","error" to "Problem").forEach{(kind,label)->TextButton({PocketAudio.preview(kind)}){BilingualLabel("▶ $label",color=Mint,fontSize=11.sp)}}
         }
-        Text("Speech uses media volume; quiet mode, notification mute and Do Not Disturb still silence it.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
+        WorkflowText("Speech uses media volume; quiet mode, notification mute and Do Not Disturb still silence it.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
         HorizontalDivider(color=Line)
-        Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Remind me when I’m needed",fontSize=14.sp);Text("Questions, approvals and problems only",color=Muted,fontSize=11.sp)};Switch(PocketAttention.enabled,{PocketAttention.toggle(it)})}
-        Text("Up to three reminders: 5, 15, then 30 minutes apart. Dismiss, reply or resolve the request to stop. Later snoozes for 30 minutes.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
+        Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){WorkflowText("Remind me when I’m needed",fontSize=14.sp);WorkflowText("Questions, approvals and problems only",color=Muted,fontSize=11.sp)};Switch(PocketAttention.enabled,{PocketAttention.toggle(it)})}
+        WorkflowText("Up to three reminders: 5, 15, then 30 minutes apart. Dismiss, reply or resolve the request to stop. Later snoozes for 30 minutes.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
     }}
 }
 
@@ -435,32 +441,32 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(22.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
             Box(Modifier.weight(1f)){Label(if(isQuestion)"YOUR INPUT" else "NEEDS YOUR APPROVAL",Coral)}
-            if(isQuestion)TextButton({PocketQuestionActions.skipRequest(id)},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp)){Text("Skip",color=Mint)}
+            if(isQuestion)TextButton({PocketQuestionActions.skipRequest(id)},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp)){BilingualLabel("Skip",color=Mint)}
         }
         if(isQuestion){p.optJSONArray("questions")?.objects()?.forEach{q->
             val questionId="request:$id:"+q.s("id")
             val prompt=q.s("question")
             LaunchedEffect(prompt,PocketImmersion.enabled){PocketImmersion.offer(questionId,prompt,"question")}
-            MarkdownPreview(PocketImmersion.display(questionId,prompt),fontSize=16.sp,lineHeight=23.sp)
+            ImmersionText(questionId,prompt,fontSize=16.sp,lineHeight=23.sp,kind="question")
             q.optJSONArray("options")?.objects()?.forEachIndexed{index,o->
                 val label=o.s("label");val optionId="$questionId:option:$index"
                 val description=o.s("description")
                 LaunchedEffect(label,description,PocketImmersion.enabled){PocketImmersion.offer(optionId,label,"question option");PocketImmersion.offer("$optionId:description",description,"question option explanation")}
                 OutlinedButton({answers[q.s("id")]=label},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){
                     Column(Modifier.fillMaxWidth()){
-                        MarkdownPreview(PocketImmersion.display(optionId,label),color=Paper)
-                        if(description.isNotBlank())MarkdownPreview(PocketImmersion.display("$optionId:description",description),color=Muted,fontSize=12.sp)
+                        ImmersionText(optionId,label,color=Paper,kind="question option",rescue=false)
+                        if(description.isNotBlank())ImmersionText("$optionId:description",description,color=Muted,fontSize=14.sp,kind="question option explanation",rescue=false)
                     }
                 }
-            };OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={Text("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){BilingualLabel("Send answers")}}
-        else{Text(p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({Pocket.answer(id,JSONObject().put("decision","accept"))}){BilingualLabel("Allow once")};OutlinedButton({Pocket.answer(id,JSONObject().put("decision","decline"))}){Text("Decline",color=Coral)}}}else Text("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
+            };OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={BilingualLabel("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){BilingualLabel("Send answers")}}
+        else{ImmersionText("approval:"+id,p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({Pocket.answer(id,JSONObject().put("decision","accept"))}){BilingualLabel("Allow once")};OutlinedButton({Pocket.answer(id,JSONObject().put("decision","decline"))}){BilingualLabel("Decline",color=Coral)}}}else WorkflowText("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
     }
 }
 
 @Composable fun DockButton(label:String,icon:ImageVector,modifier:Modifier=Modifier,selected:Boolean=false,primary:Boolean=false,onClick:()->Unit){
     val color by animateColorAsState(if(selected||primary)Mint else Muted,label="dock tint")
     val surface by animateColorAsState(if(primary)Mint.copy(alpha=.15f) else if(selected)Paper.copy(alpha=.07f) else Color.Transparent,label="dock surface")
-    Surface(onClick=onClick,modifier=modifier.height(usageDockHeight()),color=surface,shape=RoundedCornerShape(20.dp)){
+    Surface(onClick=onClick,modifier=modifier.height(usageDockHeight()).immersionRescue(label),color=surface,shape=RoundedCornerShape(20.dp)){
         Column(Modifier.fillMaxSize().pressMotion().padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             SymbolIcon(icon,label,Modifier.size(if(primary)44.dp else 36.dp),tint=color)
             Spacer(Modifier.height(3.dp));BilingualLabel(label,color=color,fontSize=10.sp)

@@ -35,6 +35,8 @@ object Pocket {
     var connectionError by mutableStateOf("")
     var refreshError by mutableStateOf("")
     private var backgroundRefreshJob:Job?=null
+    private var discoveryRefreshJob:Job?=null
+    private var lastDiscoveryRefreshAt=0L
     private var statusRevision=0L
     var codexConnectionMessage by mutableStateOf("")
     var weeklyUsage by mutableStateOf(WeeklyUsage())
@@ -110,7 +112,7 @@ object Pocket {
     fun activate(forLocal:Boolean){
         if(local==forLocal)return
         val nextBase=savedBase(forLocal);val nextToken=savedToken(forLocal);if(nextBase.isBlank()||nextToken.isBlank())return
-        backgroundRefreshJob?.cancel();backgroundRefreshJob=null;refreshError="";statusRevision++
+        backgroundRefreshJob?.cancel();backgroundRefreshJob=null;discoveryRefreshJob?.cancel();discoveryRefreshJob=null;lastDiscoveryRefreshAt=0L;refreshError="";statusRevision++
         PocketLive.stop();PocketTranscript.clear();local=forLocal;base=nextBase;token=nextToken;host=if(local)"This phone" else "Your workstation"
         connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
         lastNotification=prefs.getLong(key("lastNotification"),0);prefs.edit().putBoolean("activeLocal",local).apply()
@@ -165,6 +167,18 @@ object Pocket {
     fun refreshDetail(){scope.launch{PocketTranscript.load()}}
     fun closeTask(){selected=null;detail=null;PocketTranscript.clear()}
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
+    /** External stock sessions arrive through live previews; never refetch on every token. */
+    private fun discoverSession(id:String){
+        if(id.isBlank()||showArchived||tasks.any{it.id==id}||discoveryRefreshJob?.isActive==true)return
+        val profileLocal=local;val profileToken=token
+        discoveryRefreshJob=scope.launch {
+            val now=android.os.SystemClock.elapsedRealtime()
+            delay(maxOf(400L,3000L-(now-lastDiscoveryRefreshAt)))
+            if(local!=profileLocal||token!=profileToken||showArchived||tasks.any{it.id==id})return@launch
+            lastDiscoveryRefreshAt=android.os.SystemClock.elapsedRealtime()
+            refresh()
+        }
+    }
     fun scheduleRefresh(){if(refreshJob?.isActive==true)return;refreshJob=scope.launch{delay(400);PocketTranscript.load()}}
     fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains(key("newTaskRequest")))"A task request is saved. Check its status to continue." else "";scope.launch{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){error=e.message?:"Could not load projects"}}}
     var fullPermissions by mutableStateOf(true); private set
@@ -250,10 +264,11 @@ object Pocket {
             "immersion" -> PocketImmersion.accept(json)
             "contextNotes" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("notes",json.optJSONArray("notes"))}}
             "activity" -> {activities=json.optJSONArray("items")?.objects()?:emptyList()}
-            "sessionPreview" -> {tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),updated=json.optLong("activityAt",if(it.updated<100000000000L)it.updated*1000 else it.updated))else it}}
+            "sessionPreview" -> {discoverSession(json.s("threadId"));tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),updated=json.optLong("activityAt",if(it.updated<100000000000L)it.updated*1000 else it.updated))else it}}
             "sessionStarted" -> refresh()
             "codex" -> {val e=json.optJSONObject("event");val p=e?.optJSONObject("params");val id=p?.s("threadId")?.ifBlank{p.optJSONObject("thread")?.s("id")?:""};val method=e?.s("method")
                 statusRevision++;codexOnline=true;codexConnectionMessage=""
+                if(!id.isNullOrBlank())discoverSession(id)
                 val status=when(method){"turn/started"->"active";"turn/completed"->"idle";"thread/status/changed"->p?.optJSONObject("status")?.s("type");else->null}
                 if(!id.isNullOrBlank()&&!status.isNullOrBlank())tasks=tasks.map{if(it.id==id)it.copy(status=status,updated=System.currentTimeMillis())else it}
                 if(e?.has("id")==true||e?.s("method") in listOf("turn/completed","thread/status/changed"))scheduleRefresh()}
