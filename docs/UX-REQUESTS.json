@@ -378,9 +378,9 @@
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "858d940",
-    "published_release": "v0.5.0-alpha.9",
-    "unreleased_version": "0.5.0-alpha.10",
+    "latest_pushed_commit": "8c6187c",
+    "published_release": "v0.5.0-alpha.10",
+    "unreleased_version": null,
     "server_tests": 129,
     "android_tests": 43,
     "phone_endpoint": "100.101.220.29:34953",
@@ -396,11 +396,12 @@
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 native readable swivels and full 360 Codex/thinking spins integrated; shared bounded cache and reduced-motion fallback",
     "phone_install": "Final APK ready; prior endpoint now refuses ADB, installation pending reconnection",
-    "qualification": "129 backend tests, 43 Android tests; debug/release lint and signed release build pass; final APK emulator tap regions, drawer, notes, Mission, font2, list height/hold and connection recovery pass"
+    "qualification": "129 backend tests, 43 Android tests; debug/release lint and signed release build pass; final APK emulator tap regions, drawer, notes, Mission, font2, list height/hold and connection recovery pass",
+    "speech_caption_review": "Synthetic persistent passage banner, expanded sheet and dismissal verified; actual audio playback not claimed",
+    "gallery_review": "Synthetic list, Mission, retained answer, enlarged text, voice controls and captions published to main gallery; layout and reduced-motion checks pass"
   },
   "remaining": [
     "Install final alpha10 on Pixel once its ADB endpoint is reachable; preserve pairing and enabled Italian preference",
-    "Publish clean source and stable-signed alpha10 release; validate main 8bar reviews",
     "Complete actual native audio background/lock-screen qualification without claiming synthetic caption fixtures as audio playback",
     "Review public launch separately when release behavior is sufficiently qualified"
   ]
