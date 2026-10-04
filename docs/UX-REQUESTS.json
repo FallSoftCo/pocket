@@ -196,12 +196,12 @@
     {
       "id": "device-footer",
       "requirement": "Footer controls and borders must respect rounded device screen corners; use Android corner radius where available and safe fallback insets",
-      "status": "implemented-build-lint-verified-installing",
-      "evidence": "157cf04; Android rounded-corner radius with 24dp fallback; both footer rows inset; border removed; synthetic emulator inspected"
+      "status": "installed-pushed-verified-emulator",
+      "evidence": "157cf04; Android corner radius with 24dp minimum; both footer rows inset; border removed; build/lint passed; Pixel installation confirmed; synthetic screenshot gallery validated"
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "60beda86cec92519c18352462db583d677b41434",
+    "latest_pushed_commit": "d39d3a0",
     "published_release": "v0.5.0-alpha.9",
     "unreleased_version": "0.5.0-alpha.10",
     "server_tests": 108,
@@ -211,7 +211,8 @@
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
     "owned_emulator": "emulator-5560",
-    "owned_fixture_port": 19984
+    "owned_fixture_port": 19984,
+    "installed_development_version": "0.5.0-alpha.10"
   },
   "remaining": [
     "Complete native voxel build and render preview; inspect at icon scale",
