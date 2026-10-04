@@ -419,14 +419,14 @@
     {
       "id": "virtual-immersion-working-language",
       "requirement": "Replace weak microtext/subtitling bilingual UI with actual optional Italian working-language immersion: normal-sized Italian UI/prose/public thoughts/actions/questions/notifications/speech, normal-sized contextual English rescue on demand, keyboard/accessibility support, original command/action payloads preserved; user-enabled only.",
-      "status": "in-progress-alpha16-after-alpha15-freeze",
-      "evidence": "User explicitly rejected miniature bilingual subtitles. Coverage audit and experience contract recorded in docs/ITALIAN-VIRTUAL-IMMERSION.md; Mosis BLD source review inspected directly. Implementation owned BilingualLabel/Message/Content and PocketImmersion; alpha15 source frozen before edits."
+      "status": "released-alpha16-contextual-inline",
+      "evidence": "User explicitly rejected miniature bilingual subtitles. Coverage audit and experience contract recorded in docs/ITALIAN-VIRTUAL-IMMERSION.md; Mosis BLD source review inspected directly. Implementation owned BilingualLabel/Message/Content and PocketImmersion; alpha15 source frozen before edits. Contextual inline grammar examples qualified with stock Codex; emulator full-size phrase rescue and unchanged Send/Queue payloads verified. 155 backend tests and signed Android build/lint passed. Real audio and physical notification refresh remain unverified."
     },
     {
       "id": "footer-restored-navigation-readable-activity",
       "requirement": "Footer must retain all navigation and actions, with readable activity percentage and deadline rather than a tiny activity-only footer.",
-      "status": "runtime-qualified-alpha16-awaiting-release",
-      "evidence": "UsageDock popup wrapper lost caller layout weight. Weight now applies to outer Box and inner Surface fills allocated region. Percentage enlarged to 18sp; reset deadline to 12sp; connection icons enlarged. Actual emulator confirms five controls visible and tappable at normal and 2x font scale; readable 68% and reset date/time, no footer clipping. Receipt docs/qualification/footer-runtime-alpha16.json."
+      "status": "released-alpha16-runtime-qualified",
+      "evidence": "UsageDock popup wrapper lost caller layout weight. Weight now applies to outer Box and inner Surface fills allocated region. Percentage enlarged to 18sp; reset deadline to 12sp; connection icons enlarged. Actual emulator confirms five controls visible and tappable at normal and 2x font scale; readable 68% and reset date/time, no footer clipping. Receipt docs/qualification/footer-runtime-alpha16.json. Published compatible version33; update announcement accepted, device install not yet confirmed."
     },
     {
       "id": "coordinator-session-discovery",
