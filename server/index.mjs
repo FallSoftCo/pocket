@@ -17,6 +17,7 @@ import { hostname } from 'node:os';
 import { Codex } from './codex.mjs';
 import { openStore, hash } from './store.mjs';
 import { loadPush } from './push.mjs';
+import { AppUpdates,mountAppUpdates } from './app-updates.mjs';
 import { SessionStarts,recentProjects,permissionOptions } from './sessions.mjs';
 import { CompletionRecovery } from './completions.mjs';
 import { spokenSummary,spokenText,promptContext,turnPrompt } from './speech.mjs';
@@ -30,6 +31,7 @@ import { VoiceController } from './voice-controller.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const dir=process.env.POCKET_DATA || resolve(root,'data');
+const appVersion=JSON.parse(readFileSync(resolve(root,'package.json'),'utf8')).version;
 const hostName=process.env.POCKET_HOST_NAME||hostname();
 const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
@@ -233,7 +235,7 @@ setInterval(async()=>{
 codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:'0.5.0-alpha.11'}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:appVersion}));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -249,6 +251,7 @@ app.post('/api/pair',(req,res)=>{
   res.json({token,id,host:hostName,firebase:push.config,local:localMode,...(automation?{automationSecret:automation.secret}:{})});
 });
 app.use('/api',requireAuth);
+mountAppUpdates(app,{updates:new AppUpdates({dir,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
 app.get('/api/voice/history',(req,res)=>{const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before));});
 app.post('/api/voice/start',route(async(req,res)=>{
   const s=await voiceController.ensure(req.device.id);if(req.body.threadId){const threadId=requireId(req.body.threadId);if(voiceController.owns(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();await codex.call('thread/read',{threadId,includeTurns:false});db.prepare('UPDATE voice_sessions SET selected=? WHERE device=?').run(threadId,req.device.id);s.selected=threadId;}else{db.prepare('UPDATE voice_sessions SET selected=NULL WHERE device=?').run(req.device.id);s.selected=null;}if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);res.json({threadId:s.thread_id,selected:s.selected,host:hostName,speech:voiceSpeech.status(),native:true});
@@ -277,7 +280,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>{void rateLimits.refresh();res.json({...codex.status(),usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:'0.5.0-alpha.11',device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
+app.get('/api/status',(req,res)=>{void rateLimits.refresh();res.json({...codex.status(),usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});

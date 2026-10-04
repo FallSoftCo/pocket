@@ -389,15 +389,15 @@
     {
       "id": "adb-free-app-updates",
       "requirement": "Announce and deliver verified in-app upgrades via push without ADB; preserve installed signing identity and Android install confirmation",
-      "status": "delegated-alpha12-implementation"
+      "status": "implemented-under-final-runtime-verification"
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "8c6187c",
-    "published_release": "v0.5.0-alpha.10",
-    "unreleased_version": "0.5.0-alpha.11",
-    "server_tests": 130,
-    "android_tests": 44,
+    "latest_pushed_commit": "7f3b397",
+    "published_release": "v0.5.0-alpha.11",
+    "unreleased_version": "0.5.0-alpha.12",
+    "server_tests": 140,
+    "android_tests": 50,
     "phone_endpoint": "100.101.220.29:34953",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
@@ -410,15 +410,18 @@
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 native readable swivels and full 360 Codex/thinking spins integrated; shared bounded cache and reduced-motion fallback",
-    "phone_install": "Final alpha11 same-signer APK transferred and hash verified; installation waiting for device unlock",
+    "phone_install": "Final alpha12 same-signer bootstrap transferred and hash verified through SSH; device locked so installer is pending",
     "qualification": "129 backend tests, 43 Android tests; debug/release lint and signed release build pass; final APK emulator tap regions, drawer, notes, Mission, font2, list height/hold and connection recovery pass",
     "speech_caption_review": "Synthetic persistent passage banner, expanded sheet and dismissal verified; actual audio playback not claimed",
     "gallery_review": "Synthetic list, Mission, retained answer, enlarged text, voice controls and captions published to main gallery; layout and reduced-motion checks pass",
-    "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified"
+    "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
+    "update_delivery": "Authenticated same-signer metadata/APK routes deployed; two verified variants prepared privately; push announcement delivered once and repeat deduplicated"
   },
   "remaining": [
-    "Install final alpha10 on Pixel once its ADB endpoint is reachable; preserve pairing and enabled Italian preference",
-    "Complete actual native audio background/lock-screen qualification without claiming synthetic caption fixtures as audio playback",
-    "Review public launch separately when release behavior is sufficiently qualified"
+    "Install latest same-signer bootstrap on Pixel using SSH and Android installer; preserve pairing",
+    "Qualify signer-safe push updater including a real newer-APK install on emulator, then publish and announce",
+    "Validate latest release CI and gallery; clean up only task-owned fixture/emulator",
+    "Physical secure-keyguard captions and real-provider voice language quality remain distinct qualifications",
+    "Review public launch separately when sufficiently qualified"
   ]
 }

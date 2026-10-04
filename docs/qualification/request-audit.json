@@ -1,8 +1,8 @@
 {
   "project": "NextComp",
   "date": "2026-10-04",
-  "scope": "Source inspection against every durable UX request; no physical-phone or real-audio claims inferred from source. Ledger remains the request authority.",
-  "requestsAudited": 73,
+  "scope": "All current durable UX requests checked against source; final alpha11 Android questions and Markdown also qualified with synthetic emulator UI. Historical phone-install gap retained until final delivery receipt. No inference or private phone content involved.",
+  "requestsAudited": 75,
   "priority": [
     {
       "priority": 1,
@@ -49,7 +49,8 @@
         "github",
         "phone",
         "webhook",
-        "durable-ledger"
+        "durable-ledger",
+        "adb-free-app-updates"
       ],
       "evidence": [
         "docs/UX-REQUESTS.json",
@@ -207,8 +208,8 @@
         "android/app/src/main/java/co/fallsoft/pocket/PocketAttention.kt",
         "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt"
       ],
-      "assessment": "implemented-live-delivery-qualification-pending",
-      "limits": "Question notifications support one-tap Skip; in-app options/free text; durable profile-bound retry; server acknowledgement governs resolution. Actual phone notification interaction still needs current build qualification."
+      "assessment": "implemented-final-alpha11-emulator-qualified",
+      "limits": "Final APK verified: Skip visible immediately on initial open and late question arrival without scrolling; actual notification-shade Skip delivers all fields as empty answer arrays; pending request persists until separate server resolution. Synthetic fixture, no inference. Physical phone remains a separate delivery check."
     },
     {
       "id": "immersion",
@@ -221,8 +222,8 @@
         "android/app/src/main/java/co/fallsoft/pocket/PocketImmersion.kt",
         "docs/qualification/italian-immersion-stock-codex.json"
       ],
-      "assessment": "implemented-partial-display-coverage",
-      "limits": "Dedicated bounded ChatGPT-authenticated stock Codex worker, optional per-device/profile, public thoughts/chat/list/notes/speech translated with original preserved. Question prompts/options, note-source questions and notification-list bodies were identified as remaining untranslated display surfaces at audit time; sibling agent notified. Commands/control labels remain original intentionally."
+      "assessment": "implemented-display-coverage-and-queue-drain-fixed",
+      "limits": "Dedicated bounded ChatGPT-authenticated stock Codex worker, optional per-device/profile, public thoughts/chat/list/notes/speech translated with originals preserved. Identified question/option/explanation, note-source question and notification-body display gaps now implemented by sibling agent, which also corrected translation queue draining. Submitted answers and commands retain originals. Actual Italian phone display depends on enabled preference and current installation."
     },
     {
       "id": "fast-open",
@@ -312,6 +313,20 @@
       ],
       "assessment": "pending",
       "limits": "No launch completion or researched venue decision is demonstrated by this implementation audit. Keep separate from installation/feature completion."
+    },
+    {
+      "id": "markdown",
+      "requestIds": [
+        "markdown-rendering"
+      ],
+      "evidence": [
+        "android/app/src/main/java/co/fallsoft/pocket/MarkdownContent.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/MarkdownRenderer.kt",
+        "android/app/src/test/java/co/fallsoft/pocket/MarkdownContentTest.kt",
+        "docs/qualification/questions-markdown-alpha11.json"
+      ],
+      "assessment": "implemented-final-alpha11-emulator-qualified",
+      "limits": "Actual final APK verified heading, visibly bold text, bullet lists and inline code in conversation, plus compact card/retained-note formatting with delimiters removed. Synthetic screenshots reviewed, not private phone content."
     }
   ],
   "requests": [
@@ -614,7 +629,7 @@
       "requirement": "Codex questions surface via actionable notifications and in-app attention; one-tap Skip without needing to fill answers",
       "ledgerStatusAtAudit": "in-progress",
       "auditGroup": "questions",
-      "assessment": "implemented-live-delivery-qualification-pending"
+      "assessment": "implemented-final-alpha11-emulator-qualified"
     },
     {
       "id": "recency-ties",
@@ -642,7 +657,7 @@
       "requirement": "Optional Italian immersion, enabled for current user but off for others; dedicated background stock Codex worker using Codex usage only; public thoughts, activity, chat, notifications with preserved controls and source",
       "ledgerStatusAtAudit": "delegated-italian_immersion",
       "auditGroup": "immersion",
-      "assessment": "implemented-partial-display-coverage"
+      "assessment": "implemented-display-coverage-and-queue-drain-fixed"
     },
     {
       "id": "animated-3d-motion",
@@ -822,9 +837,23 @@
     {
       "id": "retire-mission-view",
       "requirement": "Remove Mission view; enhanced conversation list already provides live overview; redistribute footer space",
-      "ledgerStatusAtAudit": "implemented-under-verification",
+      "ledgerStatusAtAudit": "implemented-qualified-alpha11",
       "auditGroup": "mission",
       "assessment": "superseded-removed-by-latest-user-request"
+    },
+    {
+      "id": "markdown-rendering",
+      "requirement": "Render Markdown including bold formatting instead of raw ** delimiters in conversation and compact contexts",
+      "ledgerStatusAtAudit": "implemented-qualified-alpha11",
+      "auditGroup": "markdown",
+      "assessment": "implemented-final-alpha11-emulator-qualified"
+    },
+    {
+      "id": "adb-free-app-updates",
+      "requirement": "Announce and deliver verified in-app upgrades via push without ADB; preserve installed signing identity and Android install confirmation",
+      "ledgerStatusAtAudit": "delegated-alpha12-implementation",
+      "auditGroup": "delivery",
+      "assessment": "release-install-gap"
     }
   ],
   "changesAfterInitialAudit": [
@@ -835,7 +864,7 @@
         "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt"
       ],
       "behavior": "Skip moved to a minimum 48dp heading action; automatic follow anchors newest pending request heading so long question forms do not hide Skip. Manual scrolling remains respected.",
-      "qualification": "Final-build emulator test prepared; runtime result not yet claimed."
+      "qualification": "Final alpha11 emulator passed initial-open and late-arrival header visibility, both fields empty on Skip, pending retained until authoritative resolution and actual Android notification action."
     },
     {
       "feature": "Italian display coverage",
@@ -843,8 +872,9 @@
         "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
         "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt"
       ],
-      "behavior": "Sibling agent added translated question prompts/options/explanations, notification bodies and retained-note source questions while preserving original submitted answers.",
+      "behavior": "Sibling agent added translated question prompts/options/explanations, notification bodies and retained-note source questions while preserving original submitted answers. Translation worker queued batches also drain after successful translation.",
       "qualification": "Source integration present; actual runtime review separate."
     }
-  ]
+  ],
+  "qualificationAddendum": "docs/qualification/questions-markdown-alpha11.json"
 }

@@ -75,6 +75,7 @@ class PocketFirebaseService:FirebaseMessagingService(){
     }
     override fun onMessageReceived(message:RemoteMessage){
         if(Pocket.savedToken(false).isBlank()||message.data["device_id"]!=Pocket.prefs.getString(Pocket.key("deviceId",false),null))return
+        if(message.data["kind"]=="app_update"){PocketUpdates.offer(false);return}
         if(message.data["operations"]=="failure"){
             PocketNotifications.operations(this,message.notification?.title?:"NextComp needs attention",message.notification?.body?:"Check GitHub Actions for details.")
             return

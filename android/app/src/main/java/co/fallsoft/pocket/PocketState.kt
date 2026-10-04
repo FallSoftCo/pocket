@@ -258,6 +258,7 @@ object Pocket {
         }
     }}
     @Synchronized fun acceptNotification(n:JSONObject,transport:String="history"){
+        if(n.s("kind")=="app_update"){if(transport!="history")PocketUpdates.offer(n.optBoolean("_local",local));return}
         val id=n.optLong("id");if(id<=0)return
         val notificationLocal=n.optBoolean("_local",local)
         val seen=prefs.getStringSet(key("seenIds",notificationLocal),emptySet())!!.toMutableSet()

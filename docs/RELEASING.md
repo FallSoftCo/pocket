@@ -48,3 +48,15 @@ For a personal-debug → public-alpha migration, finish/check pending replies, r
 3. Install the signed APK in a clean Android test environment. Verify pairing, rendering, process restart, and upgrade behavior as applicable. Record tested limits honestly in VERIFICATION.md.
 4. Tag the reviewed commit, publish source under the MIT license, and attach only the signed APK, checksum, and certificate details to a GitHub prerelease. Never attach runtime state, keys, private screenshots, or R8 mapping files containing local source information.
 5. Check public unauthenticated access and GitHub Actions results. Maintain the same signer on future releases.
+
+## Updates without ADB
+
+The release builder prepares verified APK variants in the private runtime `data/app-updates` directory (or `POCKET_DATA/app-updates`). The manifest includes the actual APK package/version, SHA-256 and signing certificate. Stable release APKs remain the public GitHub artifacts; compatible development-signed APKs are only served to paired devices through authenticated endpoints. Do not upload development APKs or the private runtime directory.
+
+Once the new backend is deployed, announce the prepared update with:
+
+```sh
+node scripts/announce-app-update.mjs
+```
+
+Announcements are deduplicated per build/device. NextComp selects its installed signing identity, downloads and verifies the APK, and offers an Install notification and Settings control. Android requires allowing NextComp as an installation source once and confirming the system installer. No ADB connection is needed for subsequent updates. Existing pairings are retained.

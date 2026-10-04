@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-04",
+  "version": "0.5.0-alpha.11",
+  "platform": "Android API 35 emulator",
+  "fixture": "Synthetic two-question and Markdown content; no private conversations",
+  "providerInferenceCalls": 0,
+  "questions": {
+    "nativeQuestionSkipUi": true,
+    "initialSkipVisibleWithoutScrolling": true,
+    "lateArrivalSkipVisibleWithoutScrolling": true,
+    "emptyAnswersForEveryQuestion": true,
+    "pendingRetainedUntilAcknowledgement": true,
+    "actualAndroidNotificationSkipAction": true,
+    "providerInferenceCalls": 0,
+    "syntheticFixture": true
+  },
+  "markdown": {
+    "conversationMarkdownHeading": true,
+    "conversationBoldDelimitersRemoved": true,
+    "retainedNoteMarkdown": true,
+    "listPreviewMarkdown": true,
+    "actualAndroidRendering": true,
+    "syntheticContent": true,
+    "providerInferenceCalls": 0
+  },
+  "visualReview": {
+    "questionHeader": "Skip clearly visible above both-question form without scrolling",
+    "conversation": "Heading, bold user/assistant spans, bullet list, inline code, retained-note emphasis and activity-header emphasis visibly rendered",
+    "reviewed": true
+  },
+  "limitations": [
+    "Emulator question transport and Android notification actions qualified; physical-phone installation and live Codex question generation remain separate checks.",
+    "Markdown screenshots use authored synthetic input; no external URLs were opened during verification."
+  ]
+}

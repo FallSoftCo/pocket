@@ -81,6 +81,7 @@ class MainActivity:ComponentActivity(){
     }
     override fun onNewIntent(intent:Intent){super.onNewIntent(intent);readIntent(intent)}
     private fun readIntent(i:Intent){
+        if(i.getBooleanExtra("appUpdate",false)){i.removeExtra("appUpdate");if(!PocketVoice.active){Pocket.closeTask();Pocket.newTask=false;Pocket.tab=1};PocketUpdates.installOrCheck(this)}
         initialServer=i.getStringExtra("server")?:initialServer;initialCode=i.getStringExtra("code")?:initialCode
         i.data?.takeIf{it.scheme=="pocket"&&it.host=="pair"}?.let{initialServer=it.getQueryParameter("server")?:initialServer;initialCode=it.getQueryParameter("code")?:initialCode;Pocket.pairingMode=true}
         if(i.hasExtra("local"))Pocket.activate(i.getBooleanExtra("local",false))
@@ -91,7 +92,7 @@ class MainActivity:ComponentActivity(){
             startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/FallSoftCo/pocket/actions")))
         }
     }
-    override fun onStart(){super.onStart();PocketVoice.foreground=true;if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
+    override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
     override fun onStop(){PocketVoice.foreground=false;if(!Pocket.local&&!PocketVoice.active)PocketLive.stop();super.onStop()}
     override fun onKeyDown(keyCode:Int,event:android.view.KeyEvent):Boolean=PocketVoice.key(event)||super.onKeyDown(keyCode,event)
     override fun onKeyUp(keyCode:Int,event:android.view.KeyEvent):Boolean=PocketVoice.key(event)||super.onKeyUp(keyCode,event)
@@ -350,6 +351,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 }
 @Composable fun SettingsScreen(){val c=LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(23.dp)){
+        PocketUpdateControl()
         TaskPermissionsControl()
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("Italian immersion",modifier=Modifier.weight(1f));Switch(PocketImmersion.enabled,{PocketImmersion.setEnabled(it)})}
         if(PocketImmersion.unavailable)Text("Translation unavailable · showing originals",color=Muted,fontSize=12.sp)
