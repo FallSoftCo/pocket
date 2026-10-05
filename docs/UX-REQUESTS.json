@@ -306,7 +306,7 @@
       "id": "live-connection-truth",
       "requirement": "Do not report disconnects while live delivery is working; distinguish failed background refresh from transport loss and debounce short reconnects",
       "status": "implemented-under-verification",
-      "evidence": "Alpha15 fixed stock Codex thread/list rollout scan timeout with native useStateDbOnly metadata index; preserves70/archive contract, active statuses and latest metadata. Native70 result21–39ms; authenticated liveHTTP336ms68visible(native2filtered). 146 backend tests pass, no active-session restart. See qualification/session-list-state-db-alpha15.json."
+      "evidence": "Alpha15 fixed stock Codex thread/list rollout scan timeout with native useStateDbOnly metadata index; preserves70/archive contract, active statuses and latest metadata. Native70 result21\u201339ms; authenticated liveHTTP336ms68visible(native2filtered). 146 backend tests pass, no active-session restart. See qualification/session-list-state-db-alpha15.json."
     },
     {
       "id": "conversation-activity-header",
@@ -505,7 +505,7 @@
     },
     {
       "id": "tibo-dots-varied-brief-evaluation",
-      "requirement": "Prepare varied capability/workflow/evidence briefs for interacting with Tibo’s Dots rather than reducing NextComp to a sole concise remote coding pitch. Actually test how independent agents/ChatGPT interpret them; do not pretend actual Dots interaction occurred.",
+      "requirement": "Prepare varied capability/workflow/evidence briefs for interacting with Tibo\u2019s Dots rather than reducing NextComp to a sole concise remote coding pitch. Actually test how independent agents/ChatGPT interpret them; do not pretend actual Dots interaction occurred.",
       "status": "prepared-and-independently-evaluated-dots-access-unavailable",
       "evidence": [
         "docs/BRIEF-EVALUATION.md",
@@ -532,6 +532,24 @@
       "request": "Consolidate repeated conversation activity/actions/notes/captions into one actionable area above composer. Speech output is started/stopped directly from this area only; no duplicate in-conversation player, preview or popup. Preserve transcript history, distinct pending questions, direct reply/navigation/removal and keyboard focus.",
       "evidence": "docs/qualification/conversation-single-context-alpha22.json",
       "delivery": "docs/qualification/alpha22-release-delivery.json"
+    },
+    {
+      "id": "failed-outgoing-recovery",
+      "status": "implementing-alpha23",
+      "requirement": "Failed or uncertain unsent messages need direct Retry, Edit and Remove. Preserve accepted history; uncertain retry requires explicit duplicate-risk confirmation; never automatically resend."
+    },
+    {
+      "id": "important-conversation-filter",
+      "status": "implementing-alpha23",
+      "requirement": "Answers and heads-up act as a filter on the existing conversation, not a nested list. Reveal surrounding source in place and reply using same composer; speech only from consolidated control."
+    },
+    {
+      "id": "selectable-losangelex-hollywood-backend",
+      "status": "candidate-verified-pending-root-integration-after-alpha23",
+      "requirement": "Deliver selectable Codex and Losangelex+Hollywood backends; keep current recovery work first and avoid competing builds.",
+      "candidate": "b15a615",
+      "review": "Read docs/LOSANGELEX-BACKEND.md and docs/qualification/losangelex-*.json from candidate before integration. Root owns release; no live registration or migration yet. Team voice unavailable; full access labelled.",
+      "audit_followup": "fa14208: live history-scope guard, own direct recipient preservation, Enter/IME send, bottom selector and optional inline team immersion. Source corrections ready; build/runtime deferred to subsequent integration."
     }
   ],
   "current_state": {
@@ -559,7 +577,7 @@
     "update_delivery": "Alpha20/code38 privatecompatiblevariants published; one deduplicated updateannouncement421 acceptedbyFCM; actualhandsetacknotclaimed.",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
-    "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21–39ms. No active-session reset.",
+    "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21\u201339ms. No active-session reset.",
     "immersion_next": "Strong working-language Italian with normal-size contextual English rescue and all workflow/speech/public-thought coverage is in progress; docs/ITALIAN-VIRTUAL-IMMERSION.md records exactrequest andaudit.",
     "phone_access": "Termux SSH and automation recovered; on-device Codex installed alpha22/code40 in place. Root independently verified installed APK hash, live bridge HTTP200 and exactly one conversation context surface. Pairing and existing sessions visible.",
     "backend_runtime": "Alpha22 live, connected, no problem. 191 backend tests pass; cooperative computer-use broker configured and available.",

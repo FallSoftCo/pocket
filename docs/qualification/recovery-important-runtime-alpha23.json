@@ -1,0 +1,48 @@
+{
+  "version": "0.5.0-alpha.23",
+  "versionCode": 41,
+  "qualifiedAt": "2026-10-05T22:37:30.534676+00:00",
+  "apkSha256": "b082131efe5a09094644fcbfa7426bfe400fb223e1ee3494f01d22808f4b6e9c",
+  "installedEmulatorApkSha256": "b082131efe5a09094644fcbfa7426bfe400fb223e1ee3494f01d22808f4b6e9c",
+  "syntheticOnly": true,
+  "emulator": "owned5562 read-only pocket_verify_api35, 1080x2400",
+  "fixtures": [
+    "tests/fixtures/recovery-important-ui.mjs",
+    "tests/fixtures/recovery-important-ui.py"
+  ],
+  "nativeTapScenarios": {
+    "failed": "PASS",
+    "remove": "PASS",
+    "edit": "PASS",
+    "unknown": "PASS",
+    "remove-offline-history": "PASS",
+    "filter": "PASS",
+    "unsave-source": "PASS",
+    "orphan": "PASS",
+    "edit-offline-history": "PASS",
+    "source-go": "PASS",
+    "speech-keyboard": "PASS",
+    "large-font": "PASS",
+    "failed-important": "PASS"
+  },
+  "evidence": {
+    "retry": "One authenticated retry request; synthetic acceptance, no real model execution",
+    "unknown": "Cancel produced zero requests; explicit Retry anyway produced one request with confirmUnknown:true",
+    "acknowledgement": "Remove and Edit immediately update visible saved outgoing state while conversation history GET returns503",
+    "filter": "Same transcript viewport; retained source appears exactly once; user and routine commentary excluded; no nested app scroll list",
+    "source": "Surrounding conversation returns All with draft and visible IME unchanged",
+    "retention": "Unsave removes saved marker/actions while canonical answer remains; orphan saved answer accessible and removable without fake source",
+    "speech": "Single offline native Speak/Stop controls preserve draft and IME; no paid audio/model provider used",
+    "largeType": "Font scale2; wrapped Reply/Surrounding conversation/Unsave visible and actual Unsave tap works; reset font scale1 after check",
+    "importantRecovery": "Retry/Edit/Remove remain accessible in Important; actual Remove succeeds"
+  },
+  "visualReview": "Personally inspected normal Important with keyboard and2x layout; only synthetic conversation content",
+  "limitations": [
+    "No physical phone installation or inspection by this agent.",
+    "Emulator no-audio; speech control/state verified, no acoustic-quality claim.",
+    "At2x selected chip visually ellipsizes Important \u00b7 Back to all; accessibility label remains complete and chip remains tappable.",
+    "Backend acceptance in fixture is simulated and executes no Codex work; real backend recovery protocol is qualified separately."
+  ],
+  "gallery": "Pending publication of reviewed synthetic captures",
+  "resources": "Owned emulator/fixture retained temporarily pending root reuse/cleanup instruction"
+}

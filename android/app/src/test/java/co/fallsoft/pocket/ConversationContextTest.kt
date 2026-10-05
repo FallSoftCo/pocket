@@ -42,4 +42,13 @@ class ConversationContextTest {
             ConversationContextEntry("b","Ready","Speech","other"),
             ConversationContextEntry("c","Ready. Approval required.","Speech","t"))).size)
     }
+    @Test fun importantFilterExcludesRoutineProgressButKeepsFinalRetainedLatestAndRequests(){
+        assertFalse(importantConversationKind("message","","",false,"commentary",true))
+        assertTrue(importantConversationKind("message","","",false,"final_answer"))
+        assertTrue(importantConversationKind("message","","",true,"commentary"))
+        assertTrue(importantConversationKind("message","","",false,"",true))
+        assertFalse(importantConversationKind("message","","",false,"",false))
+        assertTrue(importantConversationKind("request","","",false))
+        assertFalse(importantConversationKind("activity","reasoning","inProgress",false))
+    }
 }

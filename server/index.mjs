@@ -1,4 +1,5 @@
 import {SessionDiscovery} from './session-discovery.mjs';
+import {recoverReply} from './reply-recovery.mjs';
 import {computerUseStatus} from './computer-use.mjs';
 import {NotificationTitles} from './notification-titles.mjs';
 import {NotificationReads} from './notification-reads.mjs';
@@ -186,8 +187,10 @@ async function sendOutgoing(row,initialThread=null){
   }catch(e){
     // A definite busy rejection is safe to retry as a queued next turn; lost acknowledgements aren't.
     const state=row?.mode==='queue'&&e.rpc&&/already active|turn.*in progress|active turn/i.test(e.message)?'queued':ambiguousDelivery(e)?'unknown':'failed';
-    db.prepare('UPDATE outgoing SET state=?,result=?,updated_at=? WHERE id=?').run(state,e.message,now(),id);
-    emit('reply',{id,threadId,state,error:e.message});
+    // Attachment may fail after a waiting reply was removed. Never resurrect
+    // that cancelled row, or overwrite a later accepted outcome.
+    const changed=db.prepare("UPDATE outgoing SET state=?,result=?,updated_at=? WHERE id=? AND state IN ('queued','sending')").run(state,e.message,now(),id);
+    if(changed.changes)emit('reply',{id,threadId,state,error:e.message});
   }finally{syncing.delete(threadId);}
 }
 async function flush(){if(!codex.ready)return;for(const row of db.prepare("SELECT * FROM outgoing WHERE state='queued' ORDER BY rowid").all())await sendOutgoing(row);}
@@ -407,16 +410,9 @@ app.post('/api/threads/:id/queue/resume',route(async(req,res)=>{
 }));
 app.post('/api/threads/:id/replies/:replyId',route(async(req,res)=>{
   const threadId=requireId(req.params.id),id=req.params.replyId;
-  const row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
-  if(!row)return res.status(404).json({error:'Reply not found.'});
-  if(!['queued','held'].includes(row.state))return res.status(409).json({error:'This message has already left the queue. Refresh the conversation.'});
-  const action=req.body.action;
-  if(!['edit','remove','send'].includes(action))return res.status(400).json({error:'Choose edit, remove, or send.'});
-  const text=action==='edit'?String(req.body.text||'').trim():row.text;
-  if(!text||text.length>32000)return res.status(400).json({error:'Reply must be 1–32000 characters.'});
-  const state=action==='remove'?'cancelled':action==='send'?'queued':row.state;
-  db.prepare('UPDATE outgoing SET text=?,mode=?,state=?,updated_at=? WHERE id=?').run(text,action==='send'?'steer':row.mode,state,now(),id);
-  emit('reply',{threadId,id,state});res.json({id,state});if(action==='send')void sendOutgoing({id,thread_id:threadId});
+  const outcome=recoverReply(db,threadId,id,req.body,now());
+  if(outcome.error)return res.status(outcome.status).json({error:outcome.error});
+  emit('reply',{threadId,id,state:outcome.state});res.json({id,state:outcome.state});if(outcome.dispatch)void sendOutgoing({id,thread_id:threadId});
 }));
 app.get('/api/replies/:id',(req,res)=>{
   const row=db.prepare('SELECT id,thread_id,state,result FROM outgoing WHERE id=?').get(req.params.id);

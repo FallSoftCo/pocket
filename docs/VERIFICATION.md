@@ -1,5 +1,13 @@
 # Verification
 
+## Reply recovery and Important conversation filter: 0.5.0-alpha.23
+
+Failed and uncertain outgoing input has direct Retry, Edit and Remove. A definitely rejected message is queued again only by explicit user action, with its original stable ID and mode. Unknown delivery requires a separate duplicate-risk acknowledgement. Accepted/in-flight input is protected, and removal during a failed asynchronous attachment cannot resurrect a cancelled row.
+
+Important filters the existing transcript: retained answers, final replies, pending questions and failures remain, while routine progress is excluded. Retained source passages outside loaded history appear in the same viewport, labeled as excerpts with direct navigation to surrounding history. The composer remains shared; one compact control starts/stops speech using actual displayed visible assistant text. Unsave removes retention metadata without deleting the original conversation.
+
+Validation: 199 backend tests, 106 Android tests, debug/release lint and maintained signing passed. Thirteen actual native tap scenarios on the exact APK include successful removal and editing while history returns 503, Important/All without changing draft or keyboard, source navigation, Unsave, orphan sources, uncertain-delivery confirmation and single Speak/Stop. See [synthetic runtime qualification](qualification/recovery-important-runtime-alpha23.json). Physical phone delivery is recorded separately; emulator speech checks do not establish acoustic quality. At 2× text the selected filter label ellipsizes while remaining accessible and tappable. Alpha22 evidence below applies to that earlier layout.
+
 ## Consolidated conversation context: 0.5.0-alpha.21
 
 Retained answers and equivalent speech from the same known conversation share one context surface above the composer. Reply and source navigation remain direct alongside Pause/Resume and Clear. The count opens all retained answers, where Remove remains available. Different-source or extended speech stays visible. The composer preserves its complete draft while showing at most three lines; coordinator typing places a compact microphone beside the editor.

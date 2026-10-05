@@ -75,13 +75,24 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
 @Composable fun ConversationScreen(){
     val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
     val active=Pocket.tasks.firstOrNull{it.id==Pocket.selected}?.status?.let{it=="active"}
         ?:(t?.optJSONObject("status")?.s("type")=="active"||rows.lastOrNull{it.s("kind")=="turn"}?.s("status")=="inProgress")
     val list=rememberLazyListState();val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
     var follow by remember{mutableStateOf(true)}
+    var important by remember(Pocket.local,Pocket.selected){mutableStateOf(false)}
+    var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
+    val notes=d?.optJSONArray("notes")?.objects().orEmpty()
+    fun noteFor(row:JSONObject)=notes.firstOrNull{it.s("id")==row.s("itemId",row.s("id"))||it.s("id")==row.s("id")}
+    val latestAnswer=rows.lastOrNull{it.s("kind")=="message"}
+    val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
+    val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
+    val queuedSpeech=PocketSpeech.queue.current?.takeIf{PocketSpeech.displayedOwner==null&&it.text.isNotBlank()}
+    val shownRows=if(queuedSpeech!=null&&filteredRows.none{canMergeConversationContext(Pocket.selected,PocketNotificationTitles.threadForId(queuedSpeech.id))&&sameConversationContext(it.s("text"),queuedSpeech.text)})filteredRows+JSONObject().put("id","speech:${queuedSpeech.id}").put("kind","message").put("text",queuedSpeech.text).put("speechThread",PocketNotificationTitles.threadForId(queuedSpeech.id)).put("speechTitle",queuedSpeech.title) else filteredRows
+    var removingNotes by remember(Pocket.local,Pocket.selected){mutableStateOf(setOf<String>())}
+    val spokenRows=remember(Pocket.local,Pocket.selected){mutableStateMapOf<String,String>()}
     var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
     var settingsOpen by remember(Pocket.selected){mutableStateOf(false)}
     var renameOpen by remember(Pocket.selected){mutableStateOf(false)}
@@ -105,7 +116,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         val count=list.layoutInfo.totalItemsCount
         // Keep the question heading and its one-tap Skip visible even when a
         // multi-question form is taller than the conversation viewport.
-        val request=rows.indexOfLast{it.s("kind")=="request"}
+        val request=shownRows.indexOfLast{it.s("kind")=="request"}
         if(count>0)list.scrollToItem(if(request>=0)(request+1).coerceAtMost(count-1) else count-1)
     }}
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
@@ -124,8 +135,29 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 item(key="history"){if(PocketTranscript.earlier)TextButton({follow=false;scope.launch{PocketTranscript.load(true);list.scrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},enabled=!PocketTranscript.loading,modifier=Modifier.fillMaxWidth()){BilingualLabel(if(PocketTranscript.loading)"Loading…" else "Load earlier activity",color=Mint)}}
                 if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
-                items(rows,key={it.s("id")}){row->TranscriptRow(row)}
-                d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state")!="accepted"&&it !in waiting}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(6.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Label("YOU · ${r.s("state")}",if(r.s("state") in listOf("failed","unknown"))Coral else Muted);ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp);if(r.s("state") in listOf("failed","unknown"))WorkflowText(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)}}}
+                items(shownRows,key={it.s("id")}){row->
+                    if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
+                    if(row.optBoolean("retainedExcerpt"))BilingualLabel("Retained passage · source outside loaded history",color=Muted,fontSize=12.sp)
+                    if(row.s("speechTitle").isNotBlank())BilingualLabel("Spoken update · "+row.s("speechTitle"),color=Muted,fontSize=12.sp)
+                    TranscriptRow(row){spokenRows[row.s("id")]=it}
+                    if(row.s("speechThread").isNotBlank())TextButton({Pocket.open(row.s("speechThread"))}){BilingualLabel("Open source conversation")}
+                    if(important)noteFor(row)?.let{note->FlowRow{
+                        TextButton({val context="Regarding your answer:\n"+row.s("text")+"\n\n";val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context;editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply();keyboardInput=true}){BilingualLabel("Reply")}
+                        TextButton({val sourceThread=Pocket.selected;val sourceProfile=Pocket.local;val sourceEndpoint=Pocket.base;important=false;follow=false;scope.launch{var found=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")};var pages=0;while(found<0&&PocketTranscript.earlier&&pages++<12&&Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint){PocketTranscript.load(true);found=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}};delay(32);if(Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint&&found>=0)list.scrollToItem((found+1).coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else if(Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint)Pocket.error="The original message is not available in loaded history."}}){BilingualLabel("Surrounding conversation")}
+                        TextButton({val thread=Pocket.selected;val profile=Pocket.local;val endpoint=Pocket.base;val credential=Pocket.token;val id=note.s("id");removingNotes=removingNotes+id;scope.launch{try{val response=Pocket.apiFor(profile,"/api/threads/$thread/notes/remove",JSONObject().put("id",id));require(response.optJSONArray("notes")!=null){"Removal was not acknowledged. Try again."};if(Pocket.selected==thread&&Pocket.local==profile&&Pocket.base==endpoint&&Pocket.token==credential)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}}catch(e:Exception){if(Pocket.selected==thread&&Pocket.local==profile)Pocket.error=PocketNetwork.error(e)}finally{removingNotes=removingNotes-id}}},enabled=note.s("id") !in removingNotes){BilingualLabel("Unsave",color=Muted)}
+                    }}
+                }
+                if(important&&shownRows.isEmpty())item{BilingualLabel("No important updates yet",color=Muted)}
+                d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") !in listOf("accepted","cancelled")&&it !in waiting}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(6.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+                    val recoverable=r.s("state") in listOf("failed","unknown");val busy="${Pocket.local}:${Pocket.selected}:${r.s("id")}" in Pocket.replyActionBusy
+                    Label("YOU · ${r.s("state")}",if(recoverable)Coral else Muted);ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp)
+                    if(recoverable){WorkflowText(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)
+                        Row{TextButton({if(r.s("state")=="unknown")confirmRetry=r else Pocket.queuedReply(r.s("id"),"retry")},enabled=!busy){BilingualLabel("Retry")}
+                            TextButton({editingQueue=r;queuedText=r.s("text")},enabled=!busy){BilingualLabel("Edit")}
+                            TextButton({Pocket.queuedReply(r.s("id"),"remove")},enabled=!busy){BilingualLabel("Remove",color=Coral)}}
+                    }
+                }}}
+
 
                 item(key="errors"){ErrorBanner()}
             }
@@ -133,25 +165,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
 
         Box{
-        ConversationNotesCard(active=active,onControls={actionsOpen=true},sourceVisible={entry->
-            val source=rows.firstOrNull{if(entry.sourceId.isBlank())sameConversationContext(it.s("text"),entry.text) else it.s("itemId",it.s("id"))==entry.sourceId||it.s("id")==entry.sourceId}
-            source!=null&&sameConversationContext(source.s("text"),entry.text)&&list.layoutInfo.visibleItemsInfo.any{it.key==source.s("id")&&it.offset>=list.layoutInfo.viewportStartOffset&&it.offset+it.size<=list.layoutInfo.viewportEndOffset}
-        },onReply={note->
-            val context="Regarding your answer:\n"+note.s("text")+"\n\n"
-            val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context
-            editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply()
-            keyboardInput=true;scope.launch{delay(50);inputFocus.requestFocus();keyboard?.show()}
-        },onGoTo={note->
-            val noteThread=Pocket.selected
-            follow=false
-            scope.launch{
-                fun index()=PocketTranscript.rows.indexOfFirst{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}
-                var found=index();var pages=0
-                while(found<0&&PocketTranscript.earlier&&pages<12&&Pocket.selected==noteThread){PocketTranscript.load(true);found=index();pages++}
-                if(found>=0&&Pocket.selected==noteThread){delay(32);list.scrollToItem((found+1).coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))}
-                else if(Pocket.selected==noteThread)Pocket.error="The original message is not available in loaded history."
-            }
-        })
+        val visibleKeys=list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()
+        val speechText=shownRows.filter{it.s("id") in visibleKeys&&it.s("kind")=="message"}.map{row->spokenRows[row.s("id")]?:PocketImmersion.display("row:"+row.s("id"),row.s("text"))}.filter{it.isNotBlank()}.joinToString("\n\n")
+        ConversationNotesCard(important=important,onFilter={follow=false;important=!important;scope.launch{list.scrollToItem(0)}},onControls={actionsOpen=true},speechText=speechText)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
         }
         if(keyboardInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
@@ -221,16 +237,17 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     if(settingsOpen)TurnSettingsDialog{settingsOpen=false}
     if(renameOpen)AlertDialog(onDismissRequest={renameOpen=false},title={BilingualLabel("Rename conversation")},text={OutlinedTextField(taskName,{taskName=it},singleLine=true)},confirmButton={TextButton({Pocket.renameTask(taskName){renameOpen=false}},enabled=taskName.isNotBlank()){BilingualLabel("Save")}},dismissButton={TextButton({renameOpen=false}){BilingualLabel("Cancel")}})
     if(confirmArchive)AlertDialog(onDismissRequest={confirmArchive=false},title={BilingualLabel("Archive conversation?")},text={WorkflowText("This hides the conversation from recent tasks, pauses queued messages, and stops its notifications. Its history stays on the Codex host.")},confirmButton={TextButton({confirmArchive=false;Pocket.archiveTask()}){BilingualLabel("Archive")}},dismissButton={TextButton({confirmArchive=false}){BilingualLabel("Cancel")}})
+    confirmRetry?.let{outgoing->AlertDialog(onDismissRequest={confirmRetry=null},title={BilingualLabel("Send this message again?")},text={WorkflowText("Codex may already have received this message. Retrying can send it twice. Check the conversation first.")},confirmButton={TextButton({Pocket.queuedReply(outgoing.s("id"),"retry",confirmUnknown=true){confirmRetry=null}},enabled="${Pocket.local}:${Pocket.selected}:${outgoing.s("id")}" !in Pocket.replyActionBusy){BilingualLabel("Retry anyway")}},dismissButton={TextButton({confirmRetry=null}){BilingualLabel("Cancel")}})}
     editingQueue?.let{queued->AlertDialog(
-        onDismissRequest={editingQueue=null},title={BilingualLabel("Edit queued message")},
+        onDismissRequest={editingQueue=null},title={BilingualLabel("Edit message")},
         text={OutlinedTextField(queuedText,{queuedText=it},modifier=Modifier.fillMaxWidth(),minLines=3,maxLines=8)},
-        confirmButton={TextButton({Pocket.queuedReply(queued.s("id"),"edit",queuedText){editingQueue=null}},enabled=queuedText.isNotBlank()){BilingualLabel("Save")}},
+        confirmButton={TextButton({Pocket.queuedReply(queued.s("id"),"edit",queuedText){editingQueue=null}},enabled=queuedText.isNotBlank()&&"${Pocket.local}:${Pocket.selected}:${queued.s("id")}" !in Pocket.replyActionBusy){BilingualLabel("Save")}},
         dismissButton={TextButton({editingQueue=null}){BilingualLabel("Cancel")}}
     )}
 
 }
 
-@Composable fun TranscriptRow(row:JSONObject){
+@Composable fun TranscriptRow(row:JSONObject,onDisplayedText:((String)->Unit)?=null){
     when(row.s("kind")){
         "turn"->Row(Modifier.fillMaxWidth().padding(top=15.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){HorizontalDivider(Modifier.weight(1f),color=Line);Text(turnTime(row.optLong("startedAt")),fontSize=10.sp,color=Muted);HorizontalDivider(Modifier.weight(1f),color=Line)}
         "turnEnd"->{val seconds=row.optLong("durationMs")/1000;WorkflowText(when(row.s("status")){"failed"->"Stopped · ${row.s("text")}";"interrupted"->"Interrupted";else->if(seconds>0)"Completed · ${seconds}s" else "Completed"},color=if(row.s("status")=="failed")Coral else Muted,fontSize=10.sp,modifier=Modifier.padding(vertical=6.dp))}
@@ -240,7 +257,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             SymbolIcon(if(you)"User" else "Codex",if(you)"Your message" else "Codex message",Modifier.size(20.dp))
             val sourceId="row:"+row.s("id")
             LaunchedEffect(row.s("text"),PocketImmersion.enabled){PocketImmersion.offer(sourceId,row.s("text"),if(you)"user message" else "Codex response")}
-            SelectionContainer{BilingualMessage(sourceId,row.s("text"))}
+            SelectionContainer{BilingualMessage(sourceId,row.s("text"),onDisplayedText=onDisplayedText)}
 
             if(row.optBoolean("truncated"))WorkflowText("Excerpt · full content remains on the workstation",fontSize=10.sp,color=Muted)
         }}

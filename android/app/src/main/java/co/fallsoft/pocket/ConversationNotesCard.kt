@@ -90,29 +90,20 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
     }
 }
 
-@Composable internal fun ConversationNotesCard(active:Boolean,onReply:(JSONObject)->Unit,onGoTo:(JSONObject)->Unit,onControls:()->Unit,sourceVisible:(ConversationContextEntry)->Boolean){
-    val thread=Pocket.selected
-    val host="context:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}:${thread.orEmpty()}"
-    val notes=Pocket.detail?.optJSONArray("notes")?.objects().orEmpty()
-    var pending by remember(host){mutableStateOf(setOf<String>())}
-    var problem by remember(host){mutableStateOf<String?>(null)}
-    val entries=mutableListOf<ConversationContextEntry>()
-    val task=Pocket.tasks.firstOrNull{it.id==thread}
-    if(active&&task?.previewRole in listOf("activity","assistant")&&!task?.preview.isNullOrBlank())entries.add(ConversationContextEntry("activity:$thread",task!!.preview,"Current action",thread))
-    notes.filter{it.s("id") !in pending}.forEach{note->entries.add(ConversationContextEntry("note:"+note.s("id"),note.s("text"),"Saved answer",thread,note.s("id"),note))}
-    PocketTranscript.rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{row->entries.add(ConversationContextEntry("reply:"+row.s("id"),row.s("text"),"Latest reply",thread,row.s("itemId",row.s("id"))))}
-    val manualOwner=PocketSpeech.displayedOwner
-    if(manualOwner?.startsWith("$host:")==true&&PocketSpeech.displayedRunning)entries.add(ConversationContextEntry("manual:$manualOwner",PocketSpeech.displayedText,PocketSpeech.displayedTitle,thread,owner=manualOwner))
-    val caption=PocketSpeechCaptions.state
-    if(caption.visible&&PocketSpeech.queue.current?.id!=caption.id&&!(caption.id<0&&manualOwner?.startsWith("$host:")==true))entries.add(ConversationContextEntry("caption:${caption.id}",caption.text,caption.title,PocketNotificationTitles.threadForId(caption.id),captionId=caption.id))
-    if(manualOwner==null)PocketSpeech.queue.current?.takeIf{it.text.isNotBlank()}?.let{speech->entries.add(ConversationContextEntry("caption:${speech.id}",speech.text,speech.title,PocketNotificationTitles.threadForId(speech.id),captionId=speech.id))}
-    ConversationContextHost(entries,host,sourceVisible,onReply,onGoTo={entry->if(entry.thread!=null&&entry.thread!=thread)Pocket.open(entry.thread)else onGoTo(entry.note?:JSONObject().put("id",entry.sourceId).put("text",entry.text))},onRemove={note->
-        val id=note.s("id");if(thread!=null&&id !in pending){pending=pending+id;problem=null;Pocket.scope.launch{
-            try{val response=Pocket.api("/api/threads/$thread/notes/remove",JSONObject().put("id",id));require(response.optJSONArray("notes")!=null){"Removal was not acknowledged. Try again."};if(Pocket.selected==thread)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}}
-            catch(e:Exception){if(Pocket.selected==thread)problem=PocketNetwork.error(e)}finally{pending=pending-id}
-        }}
-    },onControls=onControls,problem=problem)
+/** Filters the existing transcript; never displays another copy of its content. */
+@Composable internal fun ConversationNotesCard(important:Boolean,onFilter:()->Unit,onControls:()->Unit,speechText:String){
+    val host="filter:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}:${Pocket.selected}"
+    DisposableEffect(host){onDispose{PocketSpeech.displayedOwner?.takeIf{it==host}?.let{PocketSpeech.stopDisplayed(it)}}}
+    val speaking=PocketSpeech.displayedRunning||PocketSpeech.count>0&&!PocketSpeech.paused
+    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically){
+        FilterChip(selected=important,onClick=onFilter,label={BilingualLabel(if(important)"Important · Back to all" else "Important")},modifier=Modifier.weight(1f).heightIn(min=48.dp))
+        IconButton({if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}else if(speaking)PocketSpeech.control("pause")else PocketSpeech.speakDisplayed(host,speechText,"Conversation")},enabled=speaking||speechText.isNotBlank()){
+            SymbolIcon(if(speaking)Icons.Rounded.Stop else Icons.Rounded.VolumeUp,if(speaking)"Stop speaking conversation" else "Speak visible conversation",Modifier.size(30.dp),tint=if(speaking)Coral else Mint)
+        }
+        IconButton(onControls){SymbolIcon(Icons.Rounded.Tune,"Conversation controls",Modifier.size(24.dp))}
+    }
 }
+internal fun importantConversationKind(kind:String,type:String,status:String,retained:Boolean,phase:String="",latest:Boolean=false)=retained||kind=="request"||kind=="message"&&(phase=="final_answer"||phase.isBlank()&&latest)||kind=="turnEnd"&&status=="failed"||kind=="activity"&&type!="reasoning"&&status in listOf("failed","declined")
 
 internal fun sameConversationContext(note:String,speech:String):Boolean{
     fun normalize(text:String)=text.replace(Regex("[*_`#]"),"").replace(Regex("\\s+")," ").trim().lowercase(java.util.Locale.ROOT)

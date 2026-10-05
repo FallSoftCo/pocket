@@ -256,7 +256,16 @@ object Pocket {
         try{api("/api/threads/$threadId/reply",JSONObject().put("text",text).put("mode",mode).put("id",UUID.randomUUID().toString()));onDone();scheduleRefresh()}
         catch(e:Exception){error=e.message?:"Reply not sent"}finally{sending=false}
     }}
-    fun queuedReply(id:String,action:String,text:String="",onDone:()->Unit={}){val threadId=selected?:return;scope.launch{try{api("/api/threads/$threadId/replies/$id",JSONObject().put("action",action).put("text",text));onDone();scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not update queued message"}}}
+    var replyActionBusy by mutableStateOf(setOf<String>())
+    fun queuedReply(id:String,action:String,text:String="",confirmUnknown:Boolean=false,onDone:()->Unit={}){
+        val threadId=selected?:return;val profileLocal=local;val endpoint=base;val credential=token;val previousError=error;val busyKey="$profileLocal:$threadId:$id"
+        if(busyKey in replyActionBusy)return;replyActionBusy=replyActionBusy+busyKey
+        val body=JSONObject().put("action",action).put("text",text).put("confirmUnknown",confirmUnknown)
+        val request=Request.Builder().url(endpoint.trimEnd('/')+"/api/threads/$threadId/replies/$id").header("Authorization","Bearer $credential").post(body.toString().toRequestBody("application/json".toMediaType())).build()
+        scope.launch{try{val acknowledged=withContext(Dispatchers.IO){http.newCall(request).execute().use{r->val json=JSONObject(r.body?.string()?:"{}");if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Could not update outgoing message")));require(json.s("id")==id&&json.s("state").isNotBlank()){"Message update was not acknowledged. Refresh before trying again."};json}}
+            if(local==profileLocal&&base==endpoint&&token==credential){if(selected==threadId){detail=detail?.let{JSONObject(it.toString()).put("outgoing",acknowledgedOutgoing(it.optJSONArray("outgoing"),id,action,text,acknowledged.s("state")))};if(error==previousError)error="";onDone()};scheduleRefresh()}
+        }catch(e:Exception){if(local==profileLocal&&base==endpoint&&token==credential&&selected==threadId)error=e.message?:"Could not update outgoing message"}finally{replyActionBusy=replyActionBusy-busyKey}}
+    }
     fun resumeQueue(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/queue/resume",JSONObject());scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not resume queue"}}}
     fun updateTurnSettings(body:JSONObject,onDone:()->Unit){val id=selected?:return;scope.launch{try{api("/api/threads/$id/settings",body);onDone();scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not save turn settings"}}}
     fun renameTask(name:String,onDone:()->Unit){val id=selected?:return;renameTask(id,name,onDone)}
