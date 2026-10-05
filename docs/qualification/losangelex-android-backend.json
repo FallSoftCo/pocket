@@ -1,0 +1,12 @@
+{
+  "synthetic": true,
+  "device": "owned emulator-5564",
+  "checks": {
+    "backendSelection": true,
+    "nativeDirectMessageTarget": true,
+    "privateHistoryFiltered": true,
+    "draftRestoredAcrossBackendSwitch": true,
+    "nativeScopedStop": true,
+    "nativeNewTask": true
+  }
+}

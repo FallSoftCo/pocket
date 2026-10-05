@@ -1,0 +1,154 @@
+package co.fallsoft.pocket
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.*
+import org.json.JSONObject
+import java.util.UUID
+
+@Composable fun LosangelexScreen(owner:String){
+    val client=remember(owner){LosangelexClient(owner)}
+    val jobs=rememberCoroutineScope()
+    var teams by remember{mutableStateOf(emptyList<JSONObject>())}
+    var team by remember{mutableStateOf(Pocket.prefs.getString("team:$owner","")?:"")}
+    var task by remember{mutableStateOf("")}
+    var recipient by remember{mutableStateOf("")}
+    var direct by remember{mutableStateOf(false)}
+    var replyTo by remember{mutableStateOf<Long?>(null)}
+    var overview by remember{mutableStateOf(JSONObject())}
+    var messages by remember{mutableStateOf(emptyList<JSONObject>())}
+    var attention by remember{mutableStateOf(emptyList<JSONObject>())}
+    var older by remember{mutableStateOf<Long?>(null)}
+    var error by remember{mutableStateOf("")}
+    var receipt by remember{mutableStateOf("")}
+    var busy by remember{mutableStateOf(false)}
+    var newTask by remember{mutableStateOf(false)}
+    var inspected by remember{mutableStateOf<JSONObject?>(null)}
+    var inbox by remember{mutableStateOf(false)}
+    val target=TeamScope(team,task,recipient,direct,replyTo)
+    val currentTarget by rememberUpdatedState(target)
+    val taskTitle=overview.optJSONArray("tasks")?.objects()?.firstOrNull{it.s("id")==task}?.s("title")?:"Selected task"
+    var text by remember(target.draftKey(owner)){mutableStateOf(client.draft(target))}
+    var pending by remember(target.draftKey(owner)){mutableStateOf(client.pending(target))}
+
+    suspend fun refresh(destination:TeamScope,history:Boolean=true){
+        if(destination.team.isBlank())return
+        val snapshot=client.call("teams/${destination.team}/overview")
+        var rosterCursor=snapshot.s("teamNextCursor")
+        val roster=snapshot.optJSONObject("team")?:JSONObject()
+        val rosterSeen=mutableSetOf<String>()
+        while(rosterCursor.isNotBlank()){
+            if(!rosterSeen.add(rosterCursor))throw Exception("Repeated roster cursor")
+            val page=client.call("teams/${destination.team}/teammates?cursor=$rosterCursor&limit=100")
+            page.optJSONObject("team")?.let{members->members.keys().forEach{roster.put(it,members.get(it))}}
+            rosterCursor=page.s("next_cursor")
+        }
+        snapshot.put("team",roster)
+        val inbox=client.call("teams/${destination.team}/attention?limit=100")
+        if(currentTarget.team!=destination.team)return
+        overview=snapshot;attention=inbox.optJSONArray("data")?.objects().orEmpty()
+        if(task.isBlank()){task=snapshot.s("lobby","lobby");return}
+        if(history){
+            val visibility=if(destination.direct)"direct:${destination.recipient}" else "room"
+            val page=client.call("teams/${destination.team}/history?task=${destination.task}&visibility=$visibility&limit=50")
+            if(currentTarget.copy(replyTo=null)==destination.copy(replyTo=null)){
+                val batch=page.optJSONArray("data")?.objects().orEmpty()
+                val loadedEarlier=messages.minOfOrNull{it.optLong("id")}?.let{old->batch.minOfOrNull{it.optLong("id")}?.let{old<it}}==true
+                messages=(messages+batch).associateBy{it.optLong("id")}.values.sortedBy{it.optLong("id")}
+                if(!loadedEarlier)older=page.takeUnless{it.isNull("olderCursor")}?.optLong("olderCursor")
+            }
+        }
+    }
+    LaunchedEffect(owner){
+        try{
+            val all=mutableListOf<JSONObject>();var cursor="";val seen=mutableSetOf<String>()
+            do{val page=client.call("teams?limit=100"+if(cursor.isNotBlank())"&cursor=$cursor" else "");all+=page.optJSONArray("teams")?.objects().orEmpty();cursor=page.s("next_cursor");if(cursor.isNotBlank()&&!seen.add(cursor))throw Exception("Repeated team cursor")}while(cursor.isNotBlank())
+            teams=all;if(teams.none{it.s("id")==team})team=teams.firstOrNull()?.s("id").orEmpty()
+        }catch(e:Exception){if(e is CancellationException)throw e;error=e.message?:"Could not load teams"}
+    }
+    LaunchedEffect(BackendNavigation.notification){
+        val request=BackendNavigation.notification
+        if(request!=null&&request.first==backendOwner(Pocket.base,Pocket.token)){
+            try{
+                val origin=client.call("notification-target/${request.second}")
+                team=origin.s("team");task=origin.s("task");recipient=origin.s("agent")
+                val event=origin.getJSONObject("event");direct=event.s("visibility").startsWith("direct:")
+                inspected=JSONObject(event.toString()).put("team_id",team)
+                BackendNavigation.consumed()
+            }catch(e:Exception){if(e is CancellationException)throw e;error=e.message?:"Could not open the original request"}
+        }
+    }
+    LaunchedEffect(team,task,direct,recipient){
+        messages=emptyList();older=null;error=""
+        if(team.isNotBlank())Pocket.prefs.edit().putString("team:$owner",team).apply()
+        while(isActive){try{refresh(currentTarget);error=""}catch(e:Exception){if(e is CancellationException)throw e;error=e.message?:"Losangelex unavailable"};delay(3000)}
+    }
+    fun submit(command:JSONObject){
+        val destination=target;client.savePending(destination,command);pending=command;busy=true;receipt="Submitting…"
+        jobs.launch{
+            try{
+                client.call(command.getString("path"),command.getJSONObject("body"))
+                client.savePending(destination,null);client.saveDraft(destination,"")
+                if(currentTarget==destination){pending=null;text="";replyTo=null;receipt="Accepted · work may still be queued"}
+                refresh(destination)
+            }catch(e:Exception){
+                if(e is CancellationException)throw e
+                val rejected=e is PocketApiException&&e.status in listOf(400,404,422)
+                if(rejected)client.savePending(destination,null)
+                if(currentTarget==destination){if(rejected)pending=null;receipt=if(rejected)"Rejected · edit your message" else "Unconfirmed · retry the saved command";error=e.message?:"Submission unconfirmed"}
+            }
+            finally{busy=false}
+        }
+    }
+    Column(Modifier.fillMaxSize().imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+        WeeklyLimitBar()
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Losangelex · team work",style=MaterialTheme.typography.titleMedium);TextButton({newTask=true},enabled=team.isNotBlank()&&!busy){Text("New task")}}
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            TeamChoice("Team",teams.map{it.s("id") to it.s("name")},team,Modifier.weight(1f)){team=it;task="";recipient="";direct=false;replyTo=null}
+            TeamChoice("Task",overview.optJSONArray("tasks")?.objects().orEmpty().map{it.s("id") to it.s("title")},task,Modifier.weight(1f)){task=it;replyTo=null}
+            TeamChoice("To",listOf("" to "Coordinator")+(overview.optJSONObject("team")?.keys()?.asSequence()?.map{it to it}?.toList().orEmpty()),recipient,Modifier.weight(1f)){recipient=it;replyTo=null;if(it.isBlank())direct=false}
+        }
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            FilterChip(!direct,{direct=false;replyTo=null},label={Text("Room")})
+            FilterChip(direct,{direct=true;replyTo=null},label={Text("Direct")},enabled=recipient.isNotBlank())
+            TextButton({jobs.launch{try{refresh(target)}catch(e:Exception){error=e.message.orEmpty()}}}){Text("Refresh")}
+        }
+        Text("${if(direct)"Direct · $recipient" else "Room"} · ${if(task.isBlank())"Loading…" else taskTitle}",style=MaterialTheme.typography.labelMedium,color=Mint)
+        Text("Full access · team coordination through Hollywood",style=MaterialTheme.typography.labelSmall,color=Muted)
+        if(error.isNotBlank())Text(error,color=Coral,style=MaterialTheme.typography.bodySmall)
+        if(attention.isNotEmpty())TextButton({inbox=true}){Text("Needs you · ${attention.size}")}
+        LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            if(older!=null)item{TextButton({val destination=target;val cursor=older;jobs.launch{try{val visibility=if(destination.direct)"direct:${destination.recipient}" else "room";val page=client.call("teams/${destination.team}/history?task=${destination.task}&visibility=$visibility&limit=50&before=$cursor");if(target==destination){messages=(page.optJSONArray("data")?.objects().orEmpty()+messages).distinctBy{it.optLong("id")}.sortedBy{it.optLong("id")};older=page.takeUnless{it.isNull("olderCursor")}?.optLong("olderCursor")}}catch(e:Exception){error=e.message.orEmpty()}}}){Text("Earlier messages")}}
+            items(messages,key={it.optLong("id")}){event->
+                Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
+                    Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+                        Text(event.s("author")+" · "+event.s("kind"),style=MaterialTheme.typography.labelMedium,color=Mint)
+                        event.optJSONObject("reply")?.let{Text("Reply to ${it.s("author")}: ${it.s("body")}",style=MaterialTheme.typography.bodySmall,color=Muted)}
+                        RichText(event.s("body"))
+                        if(event.s("kind") in listOf("attention","approval")&&event.s("attentionState")=="open")TextButton({inspected=JSONObject(event.toString()).put("team_id",team)}){Text("Open request")}
+                        else if(event.s("kind")=="message")TextButton({replyTo=event.optLong("id");recipient=event.s("author").takeUnless{it in listOf("you","system")}.orEmpty()}){Text("Reply")}
+                    }
+                }
+            }
+        }
+        TeamAgentControls(client,team,task,overview,jobs,{receipt=it},{error=it})
+        if(replyTo!=null)TextButton({replyTo=null}){Text("Reply to #$replyTo · clear")}
+        if(receipt.isNotBlank())Text(receipt,style=MaterialTheme.typography.labelSmall,color=Muted)
+        OutlinedTextField(text,{text=it;client.saveDraft(target,it)},enabled=pending==null&&!busy,label={Text(if(direct)"Message $recipient" else "Message the team")},modifier=Modifier.fillMaxWidth(),maxLines=4)
+        Button({submit(pending?:JSONObject().put("path","teams/$team/messages").put("body",target.message(UUID.randomUUID().toString(),text)))},enabled=!busy&&team.isNotBlank()&&task.isNotBlank()&&(pending!=null||text.isNotBlank()&&text.length<=3500),modifier=Modifier.fillMaxWidth()){Text(if(busy)"Submitting…" else if(pending!=null)"Retry saved command" else "Send")}
+    }
+    if(newTask)TeamNewTask(client,team,{newTask=false}){id->task=id;recipient="";direct=false;replyTo=null;newTask=false}
+    if(inbox)TeamInbox(client,team,{inbox=false}){event->inspected=event;inbox=false}
+    inspected?.let{event->TeamAttentionDialog(client,team,event,{inspected=null}){jobs.launch{try{refresh(currentTarget)}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}}}
+}
+
+@Composable fun TeamChoice(label:String,choices:List<Pair<String,String>>,selected:String,modifier:Modifier=Modifier,onSelect:(String)->Unit){
+    var open by remember{mutableStateOf(false)}
+    Box(modifier){TextButton({open=true},modifier=Modifier.fillMaxWidth(),contentPadding=PaddingValues(horizontal=4.dp)){Text("$label: "+(choices.firstOrNull{it.first==selected}?.second?:selected),maxLines=1,overflow=TextOverflow.Ellipsis)};DropdownMenu(open,{open=false}){choices.forEach{(id,name)->DropdownMenuItem(text={Text(name)},onClick={open=false;onSelect(id)})}}}
+}

@@ -14,6 +14,14 @@
   },
   "requests": [
     {
+      "id": "select-codex-or-losangelex-backend",
+      "requirement": "Treat Losangelex and Hollywood as a separate backend; choose plain Codex or Losangelex and change the possible interaction modes. Work on it and deliver successfully.",
+      "status": "implemented_candidate_qualified",
+      "implementation": "BackendApp selector; fixed owner-registered Hollywood v2 adapter; team tasks, room/direct messages, scoped controls and origin-bound attention. Existing stock sessions preserved.",
+      "evidence": ["qualification/losangelex-live-backend.json", "qualification/losangelex-android-backend.json"],
+      "limits": "Root release handoff and physical delivery pending. Losangelex voice and existing stock-thread adoption excluded from this first integration."
+    },
+    {
       "id": "connectivity",
       "requirement": "Resolve false workstation connection failures while messages still arrive",
       "status": "implemented-alpha13-physical-upgrade-confirmed",

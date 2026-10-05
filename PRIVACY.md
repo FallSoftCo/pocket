@@ -4,6 +4,8 @@ Pocket is self-hosted. FallSoft does not operate an application backend, receive
 
 ## Workstation and phone
 
+The optional Losangelex backend keeps its owner-registered endpoint and token-file reference in the private NextComp data directory. NextComp sends scoped team commands to that service using the server-held token. Team execution and detailed history stay with the registered service. NextComp stores notification-origin mappings; the phone stores backend selection, scoped drafts and uncertain command payloads privately. Team push previews are generic, and opening them fetches the originating request through the authenticated NextComp connection.
+
 The workstation stores pairing/device records, hashed device bearer tokens, Firebase registration tokens, notification history, reply/task-creation outboxes, and copied attachments in its private data directory. Codex retains its own transcripts and account configuration separately. All paired devices belong to one owner and can access that owner's tasks.
 
 The phone stores its bearer token, server address, Firebase public configuration, notification/reminder state, and queued reply drafts in app-private storage. Opened attachments may be cached on the phone and shared with another app when you choose to open them. Android backup is disabled. Uninstalling clears app-private data, but does not retract content shared with another app or erase server data.

@@ -14,6 +14,7 @@ Run the backend as the same OS user as Codex, bound to loopback behind authentic
 
 ## Controls
 
+- Optional Losangelex access uses a fixed owner-registered backend and server-held token. Only a narrow set of team conversation/control routes is exposed to paired devices; redirects and arbitrary endpoint/RPC forwarding are rejected. Team execution currently uses full access with no runtime approval policy; the Codex review preference does not alter it. Origin-bound notification mappings cannot acquire stock thread writer ownership.
 - Random one-use pairing codes expire after 15 minutes; pairing attempts are rate limited.
 - Device bearer tokens are random, stored hashed on the server, and required for HTTP and WebSocket access. Owner-only endpoints create codes, list/revoke devices, and invoke the local notification tool.
 - Revocation removes push registration and closes active sockets. It does not undo already submitted Codex work or erase delivered phone content.

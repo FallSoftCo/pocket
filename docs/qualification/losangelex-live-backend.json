@@ -1,0 +1,33 @@
+{
+  "synthetic": false,
+  "disposableState": true,
+  "backendPath": "NextComp HTTP adapter to Hollywood v2",
+  "runtimeModel": "gpt-5.5",
+  "checks": {
+    "sameCommandSameEvent": true,
+    "mayaContribution": true,
+    "theoPeerConfirmation": true,
+    "peerToolAuthority": true,
+    "independentRoots": true,
+    "finished": true,
+    "realDirectAttention": true,
+    "genericNotificationPreview": true,
+    "notificationOriginPreserved": true,
+    "answerRetrySameEvent": true,
+    "resolvedAttentionReconciled": true
+  },
+  "bindingCount": 2,
+  "deliveries": [
+    {
+      "agent": "maya",
+      "authority": "user",
+      "state": "confirmed"
+    },
+    {
+      "agent": "theo",
+      "authority": "tool",
+      "state": "confirmed"
+    }
+  ],
+  "sourceFingerprint": "d0a20edb605b38b6e39a3564951086ec4dab38ad9b2428bfed7f038fefcbda31"
+}

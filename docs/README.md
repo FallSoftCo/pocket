@@ -1,6 +1,6 @@
 # NextComp documentation
 
-NextComp connects a person on Android to ongoing work in their own computing environments through stock Codex. Start with the briefing to understand the intended experience, then use the capability map to inspect mechanisms, evidence and limits. Installation instructions alone do not describe the product's scope.
+NextComp connects a person on Android to ongoing work in their own computing environments. Its default backend uses stock Codex; an optional Losangelex backend exposes Hollywood team interaction. Start with the briefing to understand the intended experience, then use the capability map to inspect mechanisms, evidence and limits. Installation instructions alone do not describe the product's scope.
 
 ## Understand and evaluate
 
@@ -13,6 +13,7 @@ NextComp connects a person on Android to ongoing work in their own computing env
 
 ## Install and operate
 
+- [Codex and Losangelex backend selection](LOSANGELEX-BACKEND.md): interaction modes, private registration, team controls and origin-bound attention.
 - [Setup](../README.md#setup), [deployment](DEPLOYMENT.md) and [Firebase configuration](FIREBASE.md).
 - [Android local execution and phone control](ANDROID_LOCAL.md).
 - [Voice architecture](VOICE.md) and [native voice investigation](NATIVE-VOICE-INVESTIGATION.md).

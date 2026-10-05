@@ -8,14 +8,15 @@ Formerly Pocket; existing installs, pairings, package IDs and deep links remain 
 
 Speak or type what you want done, continue ongoing work, act on intermediate findings, and respond when an agent needs you. A persistent coordinator can answer small read-only questions directly or route sustained work into real Codex sessions. Coding, research, machine inspection and creative work depend on the tools, access and permissions available in the selected environment.
 
-NextComp connects to your existing Codex runtime and can also target stock Codex running on Android through Termux. It uses no Codex fork or FallSoft-operated server.
+The Codex backend connects to your existing stock runtime and can also target Codex running on Android through Termux. An optional [Losangelex backend](docs/LOSANGELEX-BACKEND.md) adds shared team conversations, agent assignments and Hollywood communication through your own team service. Choose the backend in the app; conversations retain their original backend. FallSoft does not operate either server.
 
 [Download the Android alpha](https://github.com/fallsoftco/pocket/releases) · [Full briefing](docs/NEXTCOMP-BRIEF.md) · [Capabilities and evidence](docs/CAPABILITIES.md) · [Documentation](docs/README.md) · [Setup](#setup) · [Privacy](PRIVACY.md) · [Security](SECURITY.md)
 
-> **Experimental alpha.** Workstation mode is tested with Codex CLI 0.157.1 on Linux. Phone-local mode is tested with stock Codex CLI 0.158.0 in Termux on a Pixel 9 Pro Fold. Both use Codex's experimental app-server protocol without a fork. This is an independent project, not an OpenAI product.
+> **Experimental alpha.** The default Codex backend is tested with stock CLI 0.157.1 on Linux and 0.158.0 in Termux on a Pixel 9 Pro Fold, using the experimental app-server without a fork. Optional Losangelex team execution uses its separately configured runtime; capability and permission differences are [documented](docs/LOSANGELEX-BACKEND.md). This is an independent project, not an OpenAI product.
 
 ## What it does
 
+- Choose Codex sessions/coordinator or a Losangelex team room with task, recipient and direct-message controls. Team voice is not supported in this first integration.
 - Use a persistent coordinator by text or manually controlled voice turns, or address a work session directly.
 - Read useful intermediate answers and notes, reply with their context, or navigate to their source before the final response.
 - Optionally replace phrases inline for language immersion, with in-place text taps to reveal the source.
