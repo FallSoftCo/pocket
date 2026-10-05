@@ -433,6 +433,12 @@
       "requirement": "Coordinator-created PirateBae 2D crew and sprite sheets session 01a10930-47e3-7631-9152-3626c3958c7e must automatically appear, open, follow and support replies.",
       "status": "live-backend-and-phone-title-verified-refresh-audit-ongoing",
       "evidence": "Actual authenticated list contains exact thread, read endpoint opens it, watched true. Read-only actual phone accessibility snapshot contains provided title. No synthetic messages sent to real task. Unknown external Codex IDs now trigger bounded coalesced discovery refresh; normal five-second polling and reconnect refresh retained. No real task replies injected."
+    },
+    {
+      "id": "reachable-app-update-control",
+      "requirement": "Provide a visible reachable in-app update control even if Settings navigation is inaccessible.",
+      "status": "qualified-alpha17-ready-to-publish",
+      "evidence": "Activity popup UsageDetails now includes the same verified update/download/install controls as Settings. Existing user phone was locked during direct update-screen intent; compatible installer fallback preserves signing and pairing. Actual emulator Check performs authenticated download and verification; Install opens Android Update/Cancel. Normal/2x controls legible. Compatible34 APK transferred via SSH and checksum verified; installer intent requested but phone remains locked, installation not confirmed."
     }
   ],
   "current_state": {

@@ -34,6 +34,7 @@ import java.util.Locale
         Text("Estimated run-out "+SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it)),color=Muted,fontSize=13.sp)
     }
     ConnectionPill()
+    PocketUpdateControl()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

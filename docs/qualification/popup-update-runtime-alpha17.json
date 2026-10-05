@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-04",
+  "versionCode": 34,
+  "debugApkSha256": "5be2263ec95859ac0f2bb6bb6023b3b86ac18b043967cf12e760a62b9e512780",
+  "fixture": "Synthetic paired local updater, compatible same-debug-signer candidate35; provider endpoints blocked",
+  "providerInferenceCalls": 0,
+  "checks": {
+    "usagePopupControlsExpansion": true,
+    "checkButtonReachableNormalType": true,
+    "authenticatedMetadataAndApkDownload": true,
+    "metadataUsesInstalledSignerAndVersion34": true,
+    "verifiedCandidate35Ready": true,
+    "actualAndroidInstallerUpdateCancelHandoff": true,
+    "installerCancelledPreservingInstalled34": true,
+    "installButtonReachableActualSystemFont2": true,
+    "normalAndFont2LabelsUnclipped": true
+  },
+  "qualifications": [
+    "Controls & usage expansion and scrolling are needed to reach App updates below activity rows.",
+    "Android installer was opened by the actual app Install update action, then cancelled; this receipt does not claim an installed35 upgrade.",
+    "Physical phone untouched; paired synthetic fixture and emulator only."
+  ],
+  "gallery": {
+    "category": "nextcomp-popup-app-update",
+    "count": 3,
+    "layoutCheckPassed": true,
+    "cardCount": 1624,
+    "errors": 0
+  },
+  "cleanup": {
+    "ownedEmulatorStopped": true,
+    "ownedFixtureStopped": true,
+    "unrelatedEmulator5556Preserved": true,
+    "phoneUntouched": true,
+    "syntheticFutureStageRemoved": true
+  }
+}
