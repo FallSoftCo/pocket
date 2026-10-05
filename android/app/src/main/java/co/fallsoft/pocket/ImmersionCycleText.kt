@@ -109,7 +109,7 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
                     val start=length
                     appendInlineContent(name,shown.ifEmpty{"\u200B"})
                     // Parent owns link interaction/accessibility; decorative child has no duplicate text.
-                    styled.getLinkAnnotations(0,styled.length).forEach{addLink(it.item,start,length)}
+                    styled.getLinkAnnotations(0,styled.length).forEach{annotation->when(val link=annotation.item){is LinkAnnotation.Url->addLink(link,start,length);is LinkAnnotation.Clickable->addLink(link,start,length)}}
                     inline[name]=InlineTextContent(Placeholder(with(density){slotWidth.toSp()},with(density){slotHeight.toSp()},PlaceholderVerticalAlign.TextTop)){
                         Text(buildAnnotatedString{append(styled.text);styled.spanStyles.forEach{addStyle(it.item,it.start,it.end)};styled.getLinkAnnotations(0,styled.length).forEach{link->if(link.item is LinkAnnotation.Url)addStyle(SpanStyle(textDecoration=androidx.compose.ui.text.style.TextDecoration.Underline),link.start,link.end)}},fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,modifier=Modifier.fillMaxSize().graphicsLayer{this.alpha=alpha(span)}.clearAndSetSemantics{})
                     }
