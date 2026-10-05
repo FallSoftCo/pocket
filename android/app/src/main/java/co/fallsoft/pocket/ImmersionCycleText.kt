@@ -85,7 +85,7 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
                 val tag=link.item
                 val span=plan.spans.firstOrNull{tag=="${it.start}:${it.end}"}?:continue
                 val visible=content.text.substring(link.start,link.end)
-                val source=MarkdownContent.inline(span.source).text;val target=MarkdownContent.inline(span.target).text
+                val source=MarkdownContent.preview(span.source).text;val target=MarkdownContent.preview(span.target).text
                 if(link.start<cursor||visible!=source&&visible!=target)continue
                 append(content.subSequence(cursor,link.start))
                 val words=immersionReserveWords(source,target)
