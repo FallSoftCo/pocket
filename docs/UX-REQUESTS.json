@@ -450,8 +450,8 @@
     {
       "id": "inline-immersion-help-without-modal",
       "requirement": "Reveal or toggle original-language and contextual grammar help in place beside inline translated words/phrases, no modal interruption, normal-size text and preserved reading flow.",
-      "status": "qualified-alpha18-ready-to-release",
-      "evidence": "Phrase help now expands inside same AnnotatedString paragraph; label keyboard/accessibility rescue expands inside label. All translation Tooltip/Dialog helpers removed; originals/commands/speech target unaffected. Actual emulator confirms same-paragraph expand/collapse at normal and2x type, no Popup/Dialog, source changes clear stale help, Markdown links preserved and original Send/Queue plus card regions unchanged. Signed build/debug+release lint and68 Android tests pass; receipt inline-help-runtime-alpha18.json."
+      "status": "released-alpha18-physical-apk-install-verified",
+      "evidence": "Phrase help now expands inside same AnnotatedString paragraph; label keyboard/accessibility rescue expands inside label. All translation Tooltip/Dialog helpers removed; originals/commands/speech target unaffected. Actual emulator confirms same-paragraph expand/collapse at normal and2x type, no Popup/Dialog, source changes clear stale help, Markdown links preserved and original Send/Queue plus card regions unchanged. Signed build/debug+release lint and68 Android tests pass; receipt inline-help-runtime-alpha18.json. Actual phone code35 installed via authorized compatible debug recovery connection; independent APK hash and static pairing/config comparison passed. Physical interaction waits unlock; emulator interaction evidence remains separately recorded. OZZZ confirms matching candidate with browser tests underway."
     }
   ],
   "current_state": {

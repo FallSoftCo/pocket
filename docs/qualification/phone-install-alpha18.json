@@ -1,0 +1,21 @@
+{
+  "versionCode35": true,
+  "sha256": "f3cd764f14f72e1120a849e0d6f39231f9284259440975899cf75bac081fda17",
+  "expectedMatch": true,
+  "apkBytes": 34103770,
+  "privateConfigurationUnchanged": true,
+  "configurationFieldsChecked": 9,
+  "installMethod": "ADB compatible in-place install -r",
+  "dataReset": false,
+  "phoneUnlock": false,
+  "translationCache": "Mutable display cache refreshed; excluded from pairing/config preservation comparison",
+  "version": "0.5.0-alpha.18",
+  "deviceIdentityVerified": "Pixel 9 Pro Fold expected serial verified privately",
+  "installedPriorVersionCode": 34,
+  "installedAndCandidateSignerMatch": true,
+  "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+  "lastUpdateTime": "2026-10-04 22:27:27",
+  "backendState": "No backend started or changed",
+  "actualPhoneHelpUi": "Pending phone unlock; emulator runtime qualification completed separately",
+  "phoneCodexInstall": false
+}
