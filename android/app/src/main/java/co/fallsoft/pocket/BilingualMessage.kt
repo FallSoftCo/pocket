@@ -32,8 +32,8 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
     } }
     ranges.forEach { range ->
         val span=range.span
-        val rescued=span==selected
         val at=range.start-offset;val end=range.end-offset
+        val rescued=span==selected&&at>=0&&end<=content.text.length&&content.text.substring(at,end)==span.source
         if(at>=0&&end>at&&end<=content.text.length&&span.target!=span.source){
             val visible=content.text.substring(at,end)
             val agreement=agreementSegments(span)
@@ -41,13 +41,15 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
                 if(segment.role !in listOf("separator","punctuation"))addStyle(SpanStyle(color=grammarColor(segment),fontWeight=FontWeight.Medium,textDecoration=if(segmentIndex in agreement)TextDecoration.Underline else null),at+segment.start,at+segment.end)
             }
             if(rescued)addStyle(SpanStyle(color=Paper,background=Color(0xff292a30)),at,end)
-            if(help)addLink(LinkAnnotation.Clickable("immersion:${span.start}:${span.end}",TextLinkStyles(style=SpanStyle()),linkInteractionListener={onHelp(span)}),at,end)
+            addStringAnnotation("immersion-reserve","${span.start}:${span.end}",at,end)
+            if(help&&content.spans.none{it.kind=="link"&&it.start<end&&it.end>at})addLink(LinkAnnotation.Clickable("immersion:${span.start}:${span.end}",TextLinkStyles(style=SpanStyle()),linkInteractionListener={onHelp(span)}),at,end)
         }
     }
 }
 
 /** One native text flow. Help substitutes the selected phrase; it never adds another line. */
-@Composable private fun ImmersionReading(content:AnnotatedString,selected:ImmersionSpan?,fontSize:TextUnit,lineHeight:TextUnit,color:Color=Paper,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,overflow:TextOverflow=TextOverflow.Clip,onClose:()->Unit){
+@Composable private fun ImmersionReading(content:AnnotatedString,selected:ImmersionSpan?,fontSize:TextUnit,lineHeight:TextUnit,color:Color=Paper,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,overflow:TextOverflow=TextOverflow.Clip,cycle:ImmersionCycleRender?=null,plan:ImmersionPresentation?=null,onClose:()->Unit){
+    if(cycle!=null&&plan!=null){Box(if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose)){ReservedImmersionText(content,plan,cycle.alpha,fontSize,lineHeight,color,fontWeight,maxLines,overflow)};return}
     Text(content,fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,modifier=if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose))
 }
 
@@ -59,10 +61,11 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
     val readingKey=PocketImmersion.readingKey(id,plan)
     val selected=PocketImmersion.readingSelection(readingKey,plan)
     val originalOnly=PocketImmersion.supportEnabled&&PocketImmersion.originalShown(id)
-    val shown=immersionReplacementText(plan,selected.takeIf{PocketImmersion.supportEnabled},originalOnly)
+    val cycle=rememberImmersionCycle(plan,readingKey,selected.takeIf{PocketImmersion.supportEnabled},PocketImmersion.supportEnabled&&!originalOnly)
+    val shown=if(originalOnly)plan.source else cycle.plan.text
     ReportDisplayedImmersion(id,shown,onDisplayedText)
     val blocks=remember(shown){MarkdownContent.blocks(shown)}
-    val ranges=remember(plan,shown,selected,originalOnly){if(originalOnly)emptyList()else MarkdownContent.replacementRanges(plan,shown,selected.takeIf{PocketImmersion.supportEnabled})}
+    val ranges=remember(plan,shown,cycle.plan,originalOnly){if(originalOnly)emptyList()else MarkdownContent.replacementRanges(cycle.plan,shown,null).map{range->range.copy(span=plan.spans.first{it.start==range.span.start&&it.end==range.span.end})}}
     val offsets=remember(blocks){var offset=0;blocks.map{block->if(block.kind=="rule")-1 else {if(offset>0)offset++;offset+=block.prefix.length;val at=offset;offset+=block.content.text.length;at}}}
     Column(modifier,verticalArrangement=Arrangement.spacedBy(9.dp)){
         blocks.forEachIndexed { index,block -> when(block.kind){
@@ -70,7 +73,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
             "rule"->HorizontalDivider(color=Line)
             else->{val content=hybridAnnotated(block.content,ranges,offsets[index],selected,!originalOnly&&PocketImmersion.supportEnabled){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)};val size=if(block.kind=="heading")when(block.level){1->24.sp;2->21.sp;else->18.sp}else 17.sp
                 MarkdownImageFlow(buildAnnotatedString{append(block.prefix);append(content)},block.content.images,block.prefix.length){part->
-                    ImmersionReading(part,selected.takeIf{PocketImmersion.supportEnabled},fontSize=size,lineHeight=if(block.kind=="heading")size*1.3f else 26.sp,fontWeight=if(block.kind=="heading")FontWeight.SemiBold else FontWeight.Normal,onClose={PocketImmersion.selectReading(readingKey,null)})
+                    ImmersionReading(part,selected.takeIf{PocketImmersion.supportEnabled},fontSize=size,lineHeight=if(block.kind=="heading")size*1.3f else 26.sp,fontWeight=if(block.kind=="heading")FontWeight.SemiBold else FontWeight.Normal,cycle=cycle.takeIf{PocketImmersion.supportEnabled&&!originalOnly},plan=plan,onClose={PocketImmersion.selectReading(readingKey,null)})
                 }}
         } }
     }
@@ -82,13 +85,14 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
     val readingKey=PocketImmersion.readingKey(id,plan)
     val selected=PocketImmersion.readingSelection(readingKey,plan)
-    val shownText=immersionReplacementText(plan,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled})
+    val cycle=rememberImmersionCycle(plan,readingKey,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},PocketImmersion.enabled&&PocketImmersion.supportEnabled)
+    val shownText=cycle.plan.text
     ReportDisplayedImmersion(id,shownText,onDisplayedText)
     val inline=remember(shownText){MarkdownContent.preview(shownText)}
-    val ranges=remember(plan,shownText,selected){MarkdownContent.replacementRanges(plan,shownText,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled})}
+    val ranges=remember(plan,shownText,cycle.plan){MarkdownContent.replacementRanges(cycle.plan,shownText,null).map{range->range.copy(span=plan.spans.first{it.start==range.span.start&&it.end==range.span.end})}}
     val content=if(PocketImmersion.enabled)hybridAnnotated(inline,ranges,0,selected,phraseRescue&&PocketImmersion.supportEnabled){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)}else buildAnnotatedString{append(inline.text)}
     Column(modifier){
-        ImmersionReading(content,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},color=color,fontSize=fontSize,lineHeight=lineHeight,maxLines=maxLines,fontWeight=fontWeight,overflow=overflow,onClose={PocketImmersion.selectReading(readingKey,null)})
+        ImmersionReading(content,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},color=color,fontSize=fontSize,lineHeight=lineHeight,maxLines=maxLines,fontWeight=fontWeight,overflow=overflow,cycle=cycle.takeIf{PocketImmersion.enabled&&PocketImmersion.supportEnabled},plan=plan,onClose={PocketImmersion.selectReading(readingKey,null)})
     }
 }
 
