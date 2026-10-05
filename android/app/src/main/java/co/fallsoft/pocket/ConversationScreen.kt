@@ -75,22 +75,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
 }
 
-@Composable fun ConversationActivityHeader(active:Boolean,onOpen:()->Unit){
-    val task=Pocket.tasks.firstOrNull{it.id==Pocket.selected}
-    val action=task?.preview?.takeIf{task.previewRole=="activity"||task.previewRole=="assistant"}
-        ?:if(active)"Working" else "Ready"
-    val key="conversation-activity:${Pocket.selected}"
-    LaunchedEffect(action,PocketImmersion.enabled){PocketImmersion.offer(key,action,task?.previewKind?:"message")}
-    Surface(onClick=onOpen,color=Panel,modifier=Modifier.fillMaxWidth().semantics{contentDescription="Activity and conversation controls"}){
-        Row(Modifier.heightIn(min=48.dp).padding(horizontal=18.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
-            if(active)SymbolIcon(if(task?.previewKind=="thinking")"Psychology" else "Codex","Working",Modifier.size(28.dp),spinning=true)
-            else SymbolIcon("Codex",null,Modifier.size(20.dp))
-            MarkdownPreview(PocketImmersion.target(key,action),color=if(active)Mint else Muted,fontSize=12.sp,lineHeight=17.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
-            SymbolIcon(Icons.Rounded.ExpandMore,null,Modifier.size(24.dp))
-        }
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class)
 @Composable fun ConversationScreen(){
     val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
@@ -127,7 +111,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
             UsageDetails()
             d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
-            ImmersionText("controls-preview:"+Pocket.selected,Pocket.tasks.firstOrNull{it.id==Pocket.selected}?.preview.orEmpty(),fontSize=13.sp,lineHeight=19.sp,color=Muted,modifier=Modifier.padding(vertical=12.dp))
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
             if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue · ${waiting.size}")}
             TextButton({rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"},modifier=Modifier.fillMaxWidth()){BilingualLabel("Keep latest reply in notes")}
@@ -137,10 +120,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             TextButton({actionsOpen=false;submit("queue")},enabled=draft.isNotBlank()&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue message")}
     }
     Column(Modifier.fillMaxSize().imePadding()){
-        Box {
-            ConversationActivityHeader(active){actionsOpen=true}
-            ActivityPopup(actionsOpen,{actionsOpen=false},Pocket.selected){ConversationActivityControls()}
-        }
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 item(key="history"){if(PocketTranscript.earlier)TextButton({follow=false;scope.launch{PocketTranscript.load(true);list.scrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},enabled=!PocketTranscript.loading,modifier=Modifier.fillMaxWidth()){BilingualLabel(if(PocketTranscript.loading)"Loading…" else "Load earlier activity",color=Mint)}}
@@ -153,7 +132,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
         }
 
-        ConversationNotesCard(integrateSpeech=true,onReply={note->
+        Box{
+        ConversationNotesCard(active=active,onControls={actionsOpen=true},sourceVisible={entry->
+            val source=rows.firstOrNull{if(entry.sourceId.isBlank())sameConversationContext(it.s("text"),entry.text) else it.s("itemId",it.s("id"))==entry.sourceId||it.s("id")==entry.sourceId}
+            source!=null&&sameConversationContext(source.s("text"),entry.text)&&list.layoutInfo.visibleItemsInfo.any{it.key==source.s("id")&&it.offset>=list.layoutInfo.viewportStartOffset&&it.offset+it.size<=list.layoutInfo.viewportEndOffset}
+        },onReply={note->
             val context="Regarding your answer:\n"+note.s("text")+"\n\n"
             val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context
             editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply()
@@ -169,6 +152,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 else if(Pocket.selected==noteThread)Pocket.error="The original message is not available in loaded history."
             }
         })
+        DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
+        }
         if(keyboardInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically){
                 VoiceLaunchButton(modifier=Modifier.size(64.dp),threadId=Pocket.selected,compact=true)
@@ -206,7 +191,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
             ChatActionButton("Back",Icons.AutoMirrored.Rounded.ArrowBack,Modifier.weight(1f),{keyboard?.hide();Pocket.closeTask()})
-            UsageDock(Modifier.width(usageDockWidth()))
+            UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)
             if(active)ChatActionButton("Stop",Icons.Rounded.Stop,Modifier.weight(1f),{Pocket.interrupt()},recording=true)
         }
     }

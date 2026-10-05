@@ -25,4 +25,21 @@ class ConversationContextTest {
         assertFalse(sameConversationContext("The workstation temperature is normal.", "A different session needs your approval."))
         assertFalse(sameConversationContext("", ""))
     }
+    @Test fun mergedLiveAnswerPreservesRetainedActionsAndSpeechIdentity(){
+        val note=org.json.JSONObject()
+        val merged=uniqueConversationContexts(listOf(
+            ConversationContextEntry("activity:t","Ready","Current action","t"),
+            ConversationContextEntry("note:answer","Ready","Saved answer","t","answer",note),
+            ConversationContextEntry("caption:42","Ready","Speech","t",captionId=42),
+            ConversationContextEntry("manual","Ready","Manual","t",owner="reader"))).single()
+        assertEquals("note:answer",merged.id);assertSame(note,merged.note)
+        assertEquals("answer",merged.sourceId);assertEquals(42L,merged.captionId)
+        assertEquals("reader",merged.owner)
+    }
+    @Test fun distinctSessionsAndExtendedPassagesRemainSelectable(){
+        assertEquals(3,uniqueConversationContexts(listOf(
+            ConversationContextEntry("a","Ready","Answer","t"),
+            ConversationContextEntry("b","Ready","Speech","other"),
+            ConversationContextEntry("c","Ready. Approval required.","Speech","t"))).size)
+    }
 }

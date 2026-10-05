@@ -38,7 +38,7 @@ import java.util.Locale
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun UsageDock(modifier:Modifier=Modifier){
+@Composable fun UsageDock(modifier:Modifier=Modifier,conversationOnly:Boolean=false){
     var open by remember{mutableStateOf(false)}
     var now by remember{mutableLongStateOf(System.currentTimeMillis())}
     LaunchedEffect(Unit){while(true){delay(30_000);now=System.currentTimeMillis()}}
@@ -65,10 +65,12 @@ import java.util.Locale
             }
         }
     }
-    ActivityPopup(open,{open=false},Pocket.selected){
+    val details:@Composable ()->Unit={
         UsageDetails()
         if(stale)Text("Waiting for fresh usage",color=Muted)
         TextButton({Pocket.retryConnection()}){Text("Refresh")}
     }
+    if(conversationOnly)DropdownMenu(open,{open=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){details()}
+    else ActivityPopup(open,{open=false},Pocket.selected){details()}
     }
 }

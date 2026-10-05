@@ -30,6 +30,55 @@ internal fun completeRenderedSpeechChunk(queue:SpeechQueue,id:Long,index:Int,chu
 
 object PocketSpeech {
     internal var queue=SpeechQueue()
+    private val displayed=DisplayedSpeechSession()
+    var displayedOwner by mutableStateOf<String?>(null);private set
+    var displayedRunning by mutableStateOf(false);private set
+    var displayedProblem by mutableStateOf("");private set
+    var displayedText by mutableStateOf("");private set
+    var displayedTitle by mutableStateOf("");private set
+    private var displayedGeneration=0L
+    private var parkedRendering:String?=null
+    private var displayedProfile=""
+    private fun ownerProfile()=MessageDigest.getInstance("SHA-256").digest("${Pocket.local}:${Pocket.base}:${Pocket.token}".toByteArray()).joinToString(""){"%02x".format(it.toInt() and 255)}
+    fun speakDisplayed(owner:String,text:String,title:String){
+        if(owner.isBlank()||text.isBlank())return
+        if(displayed.owner!=null&&displayedProfile!=ownerProfile()){stopDisplayed(displayed.owner!!);init()}
+        val expectedProfile=ownerProfile()
+        val old=service
+        old?.pause("Saved for later")
+        PocketSpeechCaptions.dismiss()
+        if(displayed.owner==null){
+            displayedProfile=ownerProfile()
+            parkedRendering=storage.getString("currentRendering",null)
+            storage.edit().putBoolean("displayedParked",true).putString("displayedParkedRendering",parkedRendering).commit()
+        }
+        val generation=++displayedGeneration
+        queue=displayed.start(owner,queue,SpokenMessage(-generation,title,"displayed",SpeechText.clean(text)))
+        displayedOwner=owner;displayedRunning=true;displayedProblem="";displayedText=text;displayedTitle=title;publish();save(true)
+        Pocket.scope.launch {
+            var attempts=0
+            while(service===old&&old!=null){
+                kotlinx.coroutines.delay(20);if(generation!=displayedGeneration)return@launch
+                if(++attempts>=150){hold("Could not start speech · Tap Speak to retry");return@launch}
+            }
+            if(generation==displayedGeneration){if(expectedProfile==ownerProfile())start(Pocket.context,"displayed") else stopDisplayed(owner)}
+        }
+    }
+    fun stopDisplayed(owner:String){
+        if(displayed.owner!=owner)return
+        ++displayedGeneration
+        service?.discard()
+        val sameProfile=displayedProfile==ownerProfile()
+        if(sameProfile)PocketSpeechCaptions.dismiss()
+        queue=displayed.stop(owner)?:return
+        val edit=storage.edit();parkedRendering?.let{edit.putString("currentRendering",it)}?:edit.remove("currentRendering");edit.remove("displayedParked").remove("displayedParkedRendering").commit();parkedRendering=null
+        displayedOwner=null;displayedRunning=false;displayedProblem="";displayedText="";displayedTitle="";if(sameProfile)save(true) else publish()
+        Pocket.context.getSystemService(NotificationManager::class.java).cancel(998)
+        if(sameProfile&&queue.current!=null)showPaused()
+        if(!sameProfile){queue=SpeechQueue();publish()}
+        displayedProfile=""
+    }
+    internal fun displayedCompleted(){displayedOwner?.let{stopDisplayed(it)}}
     internal var service:PocketSpeechService?=null
     var count by mutableIntStateOf(0); private set
     var paused by mutableStateOf(false); private set
@@ -39,21 +88,39 @@ object PocketSpeech {
     internal val directory get()=File(Pocket.context.filesDir,"speech-playback").apply{mkdirs()}
     fun text(n:JSONObject)=SpeechText.clean(n.s("spoken_text").ifBlank{n.s("spoken_summary").ifBlank{n.s("title")+". "+n.s("body")}})
     fun init(){
+        displayedOwner?.let{stopDisplayed(it)}
+        if(storage.getBoolean("displayedParked",false)){
+            val original=storage.getString("displayedParkedRendering",null);val edit=storage.edit()
+            original?.let{edit.putString("currentRendering",it)}?:edit.remove("currentRendering")
+            edit.remove("displayedParked").remove("displayedParkedRendering").commit()
+        }
+        val currentProfile=ownerProfile()
+        val legacyProfile=storage.getString("queueProfile",null)
+        val rendering=storage.getString("rendering:"+currentProfile,null)
+        if(rendering!=null)storage.edit().putString("currentRendering",rendering).commit()
+        else if(legacyProfile!=null&&legacyProfile!=currentProfile)storage.edit().remove("currentRendering").commit()
         PocketSpeechCaptions.init()
         queue=try{
-            val s=JSONObject(storage.getString("queue","{}")!!)
+            val raw=storage.getString("queue:"+currentProfile,null) ?: if(legacyProfile==null||legacyProfile==currentProfile)storage.getString("queue","{}") else "{}"
+            val s=JSONObject(raw!!)
             SpeechQueue(s.optJSONArray("messages")?.objects()?.map{SpokenMessage(it.getLong("id"),it.s("title"),it.s("kind"),it.s("text"),it.optBoolean("needsFetch"))}?.toMutableList()?:mutableListOf(),s.optInt("chunk"),s.optInt("position"),true,"Saved for later")
         }catch(_:Exception){SpeechQueue()}
-        if(Pocket.token.isBlank()||PocketAudio.mode!="summaries")clear() else {publish();if(count>0)showPaused()}
+        if(Pocket.token.isBlank())clear() else {if(legacyProfile==null)save(true);publish();if(count>0)showPaused()}
     }
-    internal fun publish(){count=queue.messages.size;paused=queue.paused;title=queue.current?.title.orEmpty().ifBlank{"NextComp update"};status=queue.reason}
+    internal fun publish(){if(displayedOwner!=null){displayedRunning=!queue.paused&&queue.current!=null;displayedProblem=if(queue.paused)queue.reason else ""};count=queue.messages.size;paused=queue.paused;title=queue.current?.title.orEmpty().ifBlank{"NextComp update"};status=queue.reason}
     internal fun save(durable:Boolean=false){
-        val messages=JSONArray();queue.messages.forEach{messages.put(JSONObject().put("id",it.id).put("title",it.title).put("kind",it.kind).put("text",it.text).put("needsFetch",it.needsFetch))}
-        val edit=storage.edit().putString("queue",JSONObject().put("messages",messages).put("chunk",queue.chunkIndex).put("position",queue.positionMs).toString())
+        val savedQueue=displayed.parked?:queue
+        val messages=JSONArray();savedQueue.messages.forEach{messages.put(JSONObject().put("id",it.id).put("title",it.title).put("kind",it.kind).put("text",it.text).put("needsFetch",it.needsFetch))}
+        val profile=if(displayed.parked!=null)displayedProfile else ownerProfile()
+        val encoded=JSONObject().put("messages",messages).put("chunk",savedQueue.chunkIndex).put("position",savedQueue.positionMs).toString()
+        val edit=storage.edit().putString("queue",encoded).putString("queueProfile",profile).putString("queue:"+profile,encoded)
+        val rendering=if(displayed.parked!=null)parkedRendering else storage.getString("currentRendering",null)
+        rendering?.let{edit.putString("rendering:"+profile,it)}
         if(durable)edit.commit() else edit.apply()
         publish()
     }
     fun clear(){
+        displayedOwner?.let{stopDisplayed(it)}
         service?.discard();queue=SpeechQueue();storage.edit().clear().commit();directory.deleteRecursively()
         Pocket.context.getSystemService(NotificationManager::class.java).cancel(998);publish()
     }
@@ -68,6 +135,9 @@ object PocketSpeech {
     }
     fun request(c:Context,n:JSONObject){if(PocketVoice.active){PocketVoice.notification(n);return};Pocket.scope.launch{
         if(!allowed(c,n.s("kind")))return@launch
+        displayed.parked?.let{parked->
+            parked.enqueue(SpokenMessage(n.optLong("id"),n.s("title"),n.s("kind"),text(n),n.s("speech_pending")=="1"));save(true);return@launch
+        }
         val hadSaved=queue.messages.isNotEmpty()&&queue.paused
         queue.enqueue(SpokenMessage(n.optLong("id"),n.s("title"),n.s("kind"),text(n),n.s("speech_pending")=="1"));save(true)
         if(hadSaved){showPaused();return@launch}
@@ -76,7 +146,7 @@ object PocketSpeech {
         service?.next()?:start(c,"play")
     }}
     fun control(action:String){
-        if(action=="pause"){service?.pause("Paused by you");return}
+        if(action=="pause"){service?.pause("Paused by you")?:hold("Paused by you");return}
         if(queue.current!=null)start(Pocket.context,"resume")
     }
     private fun start(c:Context,action:String){
@@ -162,7 +232,7 @@ class PocketSpeechService:Service(){
         session=MediaSession(this,"NextComp speech").apply{
             setCallback(object:MediaSession.Callback(){
                 override fun onPause(){pause("Paused by you")}
-                override fun onStop(){pause("Saved for later")}
+                override fun onStop(){if(PocketSpeech.displayedOwner!=null)PocketSpeech.displayedCompleted() else pause("Saved for later")}
                 override fun onPlay(){queue.resume();PocketSpeech.save();next()}
             },handler)
             setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,PocketImmersion.label("NextComp spoken updates")).putString(MediaMetadata.METADATA_KEY_ARTIST,"NextComp").build())
@@ -177,7 +247,7 @@ class PocketSpeechService:Service(){
         if(finished)return START_NOT_STICKY
         if(intent?.action=="pause"){pause("Paused by you");return START_NOT_STICKY}
         if(queue.current==null){finish();return START_NOT_STICKY}
-        if(intent?.action=="resume"){explicitPlayback=true;queue.resume()}
+        if(intent?.action in listOf("resume","displayed")){explicitPlayback=true;queue.resume()}
         if(queue.paused){pause(queue.reason);return START_NOT_STICKY}
         PocketSpeech.save();next()
         return START_NOT_STICKY
@@ -212,11 +282,11 @@ class PocketSpeechService:Service(){
     }
     internal fun next(){
         if(closed||finished||queue.paused)return
-        if(speechProfile()!=speakingProfile){pause("Profile changed · Your place is saved");return}
+        if(speechProfile()!=speakingProfile){if(PocketSpeech.displayedOwner!=null)PocketSpeech.displayedCompleted() else pause("Profile changed · Your place is saved");return}
         if(player!=null){if(prepared)updateControls(PlaybackState.STATE_PLAYING);return}
         if(loading||synthesizing!=null)return
         val message=queue.current?:run{finish();return}
-        if(!PocketSpeech.allowed(this,message.kind)){pause("Waiting for sound to be enabled");return}
+        if(!explicitPlayback&&!PocketSpeech.allowed(this,message.kind)){pause("Waiting for sound to be enabled");return}
         updateControls(PlaybackState.STATE_BUFFERING)
         if(message.needsFetch){
             loading=true;armTimeout()
@@ -239,12 +309,12 @@ class PocketSpeechService:Service(){
                 if(!cached&&queue.chunkIndex>0){queue.chunkIndex=0;queue.positionMs=0;PocketSpeech.save(true)}
                 var language=if(cached)saved.s("language","en") else "en"
                 var rendering=if(cached)saved.s("text",message.text) else message.text
-                if(!cached&&PocketImmersion.enabled&&installedVoice("it")!=null){
+                if(!cached&&message.kind!="displayed"&&PocketImmersion.enabled&&installedVoice("it")!=null){
                     val translated=PocketImmersion.spoken("notification-speech:${message.id}",message.text,waitMs=12000)
                     if(translated!=message.text){rendering=translated;language="it"}
                 }
                 if(closed||finished)return@launch
-                if(speechProfile()!=speakingProfile){loading=false;pause("Profile changed · Your place is saved");return@launch}
+                if(speechProfile()!=speakingProfile){loading=false;if(PocketSpeech.displayedOwner!=null)PocketSpeech.displayedCompleted() else pause("Profile changed · Your place is saved");return@launch}
                 if(queue.current?.id!=message.id||renderKey(message)!=sourceKey){loading=false;handler.removeCallbacks(timeout);next();return@launch}
                 loading=false;handler.removeCallbacks(timeout)
                 if(!selectVoice(language)){
@@ -339,7 +409,7 @@ class PocketSpeechService:Service(){
         finished=true;releasePlayback();stopForeground(STOP_FOREGROUND_DETACH);PocketSpeechCaptions.pause(speakingProfile);PocketSpeech.showPaused();stopSelf()
     }
     internal fun discard(){finished=true;releasePlayback();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}
-    private fun finish(){finished=true;releasePlayback();queue.positionMs=0;PocketSpeech.save(true);PocketSpeech.directory.deleteRecursively();stopForeground(STOP_FOREGROUND_REMOVE);PocketSpeechCaptions.complete(speakingProfile);stopSelf()}
+    private fun finish(){if(PocketSpeech.displayedOwner!=null){PocketSpeech.displayedCompleted();return};finished=true;releasePlayback();queue.positionMs=0;PocketSpeech.save(true);PocketSpeech.directory.deleteRecursively();stopForeground(STOP_FOREGROUND_REMOVE);PocketSpeechCaptions.complete(speakingProfile);stopSelf()}
     private fun releasePlayback(){
         handler.removeCallbacksAndMessages(null);scope.cancel();player?.release();player=null;prepared=false;started=false;transientPaused=false;engine?.stop();engine?.shutdown();engine=null
         focus?.let{getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it)};focus=null

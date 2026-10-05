@@ -5,7 +5,7 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -86,12 +86,18 @@ import kotlinx.coroutines.flow.*
             if(PocketCoordinator.historyEarlier)item{TextButton({followLatest=false;PocketCoordinator.olderHistory()},enabled=!PocketCoordinator.historyLoading){BilingualLabel("Load earlier messages")}}
             if(PocketCoordinator.historyLoading)item{BilingualLabel("Loading history…",color=Muted)}
             if(PocketCoordinator.historyProblem.isNotBlank())item{ImmersionText("coordinator:history-problem",PocketCoordinator.historyProblem,color=Coral);TextButton({PocketCoordinator.loadHistory()}){BilingualLabel("Retry history")}}
-            items(PocketCoordinator.messages){turn->Column{VoiceChatMessage("You",turn.first,true);Spacer(Modifier.height(12.dp));VoiceChatMessage("Codex",turn.second,false)}}
+            itemsIndexed(PocketCoordinator.messages,key={index,_->"coordinator-turn-$index"}){_,turn->Column{VoiceChatMessage("You",turn.first,true);Spacer(Modifier.height(12.dp));VoiceChatMessage("Codex",turn.second,false)}}
             if(PocketCoordinator.pendingText.isNotBlank()&&!PocketCoordinator.pendingInHistory)item{VoiceChatMessage("You",PocketCoordinator.pendingText,true)}
             if(PocketCoordinator.problem.isNotBlank())item{ImmersionText("coordinator:problem",PocketCoordinator.problem,color=Coral);TextButton({PocketCoordinator.retry()}){BilingualLabel("Retry saved turn")}}
             item(key="coordinator-end"){Spacer(Modifier.height(1.dp))}
         }
-        ConversationSpeechDock()
+        val contextHost="context-coordinator:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}"
+        val contextEntries=mutableListOf<ConversationContextEntry>()
+        PocketCoordinator.messages.lastOrNull()?.second?.let{contextEntries.add(ConversationContextEntry("coordinator-reply",it,"Coordinator reply","coordinator"))}
+        val displayedOwner=PocketSpeech.displayedOwner
+        if(displayedOwner?.startsWith("$contextHost:")==true&&PocketSpeech.displayedRunning)contextEntries.add(ConversationContextEntry("manual:$displayedOwner",PocketSpeech.displayedText,PocketSpeech.displayedTitle,"coordinator",owner=displayedOwner))
+        if(displayedOwner==null)PocketSpeech.queue.current?.let{speech->contextEntries.add(ConversationContextEntry("caption:${speech.id}",speech.text,speech.title,PocketNotificationTitles.threadForId(speech.id),captionId=speech.id))}
+        ConversationContextHost(contextEntries,contextHost,sourceVisible={entry->entry.id=="coordinator-reply"&&scroll.layoutInfo.visibleItemsInfo.any{it.key=="coordinator-turn-${PocketCoordinator.messages.lastIndex}"&&it.offset>=scroll.layoutInfo.viewportStartOffset&&it.offset+it.size<=scroll.layoutInfo.viewportEndOffset}},onGoTo={entry->entry.thread?.takeIf{it!="coordinator"}?.let{PocketCoordinator.close();Pocket.open(it)}})
         Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(typing)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 VoiceLaunchButton(modifier=Modifier.size(56.dp),compact=true)
@@ -108,7 +114,7 @@ import kotlinx.coroutines.flow.*
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 ChatActionButton("Back",Icons.Rounded.ArrowBack,Modifier.weight(1f),{back()})
-                UsageDock(Modifier.width(usageDockWidth()))
+                UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)
             }
         }
     }

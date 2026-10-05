@@ -22,3 +22,20 @@ class SpeechQueue(
         return true
     }
 }
+
+/** Manual reading is temporary; notifications arriving meanwhile remain in the parked queue. */
+class DisplayedSpeechSession {
+    var owner:String?=null;private set
+    var parked:SpeechQueue?=null;private set
+    fun start(owner:String,original:SpeechQueue,message:SpokenMessage):SpeechQueue {
+        if(parked==null){original.pause(original.positionMs,"Saved for later");parked=original}
+        this.owner=owner
+        return SpeechQueue(mutableListOf(message))
+    }
+    fun stop(owner:String):SpeechQueue? {
+        if(this.owner!=owner)return null
+        val restored=parked;parked=null;this.owner=null
+        restored?.pause(restored.positionMs,"Saved for later")
+        return restored
+    }
+}

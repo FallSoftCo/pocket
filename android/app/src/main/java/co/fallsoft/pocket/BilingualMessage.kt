@@ -52,14 +52,15 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 }
 
 /** Context-aware target phrases remain inline at ordinary reading size. */
-@Composable fun BilingualMessage(id:String,original:String,modifier:Modifier=Modifier){
+@Composable fun BilingualMessage(id:String,original:String,modifier:Modifier=Modifier,onDisplayedText:((String)->Unit)?=null){
     LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offer(id,original)}
-    if(!PocketImmersion.enabled){Column(modifier){RichText(original)};return}
+    if(!PocketImmersion.enabled){ReportDisplayedImmersion(id,original,onDisplayedText);Column(modifier){RichText(original)};return}
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
     val readingKey=PocketImmersion.readingKey(id,plan)
     val selected=PocketImmersion.readingSelection(readingKey,plan)
     val originalOnly=PocketImmersion.supportEnabled&&PocketImmersion.originalShown(id)
     val shown=immersionReplacementText(plan,selected.takeIf{PocketImmersion.supportEnabled},originalOnly)
+    ReportDisplayedImmersion(id,shown,onDisplayedText)
     val blocks=remember(shown){MarkdownContent.blocks(shown)}
     val ranges=remember(plan,shown,selected,originalOnly){if(originalOnly)emptyList()else MarkdownContent.replacementRanges(plan,shown,selected.takeIf{PocketImmersion.supportEnabled})}
     val offsets=remember(blocks){var offset=0;blocks.map{block->if(block.kind=="rule")-1 else {if(offset>0)offset++;offset+=block.prefix.length;val at=offset;offset+=block.content.text.length;at}}}
@@ -76,16 +77,23 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 }
 
 /** Dense/tappable cards leave phraseRescue=false, so their native actions retain every tap. */
-@Composable fun ImmersionText(id:String,original:String,modifier:Modifier=Modifier,color:Color=Paper,fontSize:TextUnit=16.sp,lineHeight:TextUnit=24.sp,maxLines:Int=Int.MAX_VALUE,fontWeight:FontWeight?=null,kind:String="public display",rescue:Boolean=true,overflow:TextOverflow=TextOverflow.Ellipsis,phraseRescue:Boolean=rescue){
+@Composable fun ImmersionText(id:String,original:String,modifier:Modifier=Modifier,color:Color=Paper,fontSize:TextUnit=16.sp,lineHeight:TextUnit=24.sp,maxLines:Int=Int.MAX_VALUE,fontWeight:FontWeight?=null,kind:String="public display",rescue:Boolean=true,overflow:TextOverflow=TextOverflow.Ellipsis,phraseRescue:Boolean=rescue,onDisplayedText:((String)->Unit)?=null){
     LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offer(id,original,kind)}
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
     val readingKey=PocketImmersion.readingKey(id,plan)
     val selected=PocketImmersion.readingSelection(readingKey,plan)
     val shownText=immersionReplacementText(plan,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled})
+    ReportDisplayedImmersion(id,shownText,onDisplayedText)
     val inline=remember(shownText){MarkdownContent.preview(shownText)}
     val ranges=remember(plan,shownText,selected){MarkdownContent.replacementRanges(plan,shownText,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled})}
     val content=if(PocketImmersion.enabled)hybridAnnotated(inline,ranges,0,selected,phraseRescue&&PocketImmersion.supportEnabled){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)}else buildAnnotatedString{append(inline.text)}
     Column(modifier){
         ImmersionReading(content,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},color=color,fontSize=fontSize,lineHeight=lineHeight,maxLines=maxLines,fontWeight=fontWeight,overflow=overflow,onClose={PocketImmersion.selectReading(readingKey,null)})
     }
+}
+
+/** Report the one visible linguistic flow without restarting effects for recreated callbacks. */
+@Composable private fun ReportDisplayedImmersion(id:String,text:String,callback:((String)->Unit)?){
+    val latest by rememberUpdatedState(callback)
+    LaunchedEffect(id,text,callback!=null){latest?.invoke(text)}
 }
