@@ -20,25 +20,35 @@ class SessionListPacing {
     fun contentDelivered(now: Long) { lastContent = now }
     fun orderDue(now: Long, active: Int, interacting: Boolean): Boolean {
         if (interacting) heldUntil = now + 750
-        return !interacting && now >= heldUntil && (lastOrder == Long.MIN_VALUE || now - lastOrder >= orderInterval(active))
+        return interactionSettled(now,interacting) && (lastOrder == Long.MIN_VALUE || now - lastOrder >= orderInterval(active))
     }
+    fun interactionSettled(now: Long, interacting: Boolean): Boolean = !interacting && now >= heldUntil
     fun orderDelivered(now: Long) { lastOrder = now }
 }
 
 data class SessionRank(val id: String, val updated: Long, val active: Boolean)
 
-/** Live conversations share first place. Their token timestamps cannot shuffle their seats. */
+/** Refresh visible card content without adding/removing cards before order delivery. */
+fun <T> sessionContentInPlace(displayed: List<T>, latest: List<T>, id: (T) -> String): List<T> {
+    val byId=latest.associateBy(id)
+    return displayed.map { byId[id(it)] ?: it }
+}
+
+/** A timed-out discovery is partial; only a complete list can remove known sessions. */
+fun <T> mergeSessionSnapshot(previous: List<T>, latest: List<T>, partial: Boolean, id: (T) -> String): List<T> {
+    if(!partial)return latest
+    val fetched=latest.map(id).toSet()
+    return latest+previous.filter { id(it) !in fetched }
+}
+
+/** Activity updates content, never existing seats. New discoveries join in recency order.
+ * Keep absent seats as tombstones: a partial reconnect snapshot must not reset their order.
+ */
+@Suppress("UNUSED_PARAMETER")
 fun stableSessionOrder(previous: List<String>, entries: List<SessionRank>, now: Long): List<String> {
-    val seats = previous.withIndex().associate { it.value to it.index }
-    fun hot(e: SessionRank) = e.active || now - e.updated <= 30_000
-    return entries.sortedWith(Comparator { a, b ->
-        val aHot = hot(a); val bHot = hot(b)
-        when {
-            aHot && bHot -> (seats[a.id] ?: Int.MAX_VALUE).compareTo(seats[b.id] ?: Int.MAX_VALUE)
-            aHot -> -1
-            bHot -> 1
-            else -> b.updated.compareTo(a.updated).takeIf { it != 0 }
-                ?: (seats[a.id] ?: Int.MAX_VALUE).compareTo(seats[b.id] ?: Int.MAX_VALUE)
-        }
-    }).map { it.id }
+    val seats = previous.distinct()
+    val known = seats.toSet()
+    val added = entries.distinctBy { it.id }.filter { it.id !in known }
+        .sortedWith(compareByDescending<SessionRank> { it.updated }.thenBy { it.id }).map { it.id }
+    return added + seats
 }

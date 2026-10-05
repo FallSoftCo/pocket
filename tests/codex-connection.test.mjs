@@ -8,6 +8,34 @@ import {WebSocketServer} from 'ws';
 import {Codex} from '../server/codex.mjs';
 import {ambiguousDelivery} from '../server/connection-errors.mjs';
 
+test('draining RPC exposes restart state, lets existing events finish, and recovers without replay',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'pocket-drain-'));const socket=join(dir,'codex.sock');
+  const server=http.createServer(),wss=new WebSocketServer({server});await new Promise(r=>server.listen(socket,r));
+  let draining=true,writes=0;
+  wss.on('connection',ws=>ws.on('message',raw=>{
+    const m=JSON.parse(raw);if(!m.id)return;
+    if(m.method==='turn/start'){
+      writes++;
+      if(draining){ws.send(JSON.stringify({id:m.id,error:{code:-32600,message:'Server is draining; retry after reconnecting'}}));return;}
+    }
+    if(m.method==='invalid'){ws.send(JSON.stringify({id:m.id,error:{code:-32600,message:'Invalid thread id'}}));return;}
+    ws.send(JSON.stringify({id:m.id,result:{}}));
+  }));
+  const c=new Codex(socket);const states=[];c.on('status',s=>states.push(s));
+  t.after(async()=>{c.ws?.terminate();for(const ws of wss.clients)ws.terminate();wss.close();await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true});});
+  await c.connect();
+  await assert.rejects(c.call('turn/start'),e=>e.code==='CODEX_DRAINING'&&e.status===503&&e.rpc.code===-32600&&!ambiguousDelivery(e)&&/existing work finish/.test(e.message)&&/before resending/.test(e.message));
+  assert.equal(c.ready,true,'keep the old transport for finishing work');
+  assert.equal(c.status().connected,false);assert.equal(states.at(-1).problem.code,'CODEX_DRAINING');
+  const event=new Promise(resolve=>c.once('event',resolve));
+  [...wss.clients][0].send(JSON.stringify({method:'turn/completed',params:{threadId:'ongoing',turn:{status:'completed'}}}));
+  assert.equal((await event).method,'turn/completed');assert.equal(c.status().problem.code,'CODEX_DRAINING');
+  const closed=new Promise(resolve=>c.once('disconnected',resolve));[...wss.clients][0].close();await closed;
+  draining=false;await c.connect();assert.deepEqual(c.status(),{connected:true,problem:null});assert.equal(writes,1,'reconnect must not replay the rejected request');
+  await assert.rejects(c.call('invalid'),e=>e.message==='Invalid thread id'&&e.rpc.code===-32600&&!e.code);
+  await c.call('turn/start');assert.equal(writes,2,'only an explicit retry submits work');
+});
+
 test('oversized frames keep their real cause, reconnect cleanly, and never replay writes',async t=>{
   const dir=await mkdtemp(join(tmpdir(),'pocket-connection-'));const socket=join(dir,'codex.sock');
   const server=http.createServer(),wss=new WebSocketServer({server});await new Promise(r=>server.listen(socket,r));

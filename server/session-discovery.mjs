@@ -13,7 +13,7 @@ export class SessionDiscovery {
       for(const row of this.db.prepare(`SELECT ${column} AS id FROM ${table} WHERE ${where} ORDER BY ${table==='session_starts'?'updated_at':'rowid'} DESC LIMIT 200`).all())if(row.id)ids.add(row.id);
     }for(const row of this.db.prepare('SELECT thread_id FROM pocket_discovered_threads ORDER BY seen_at DESC LIMIT 200').all())ids.add(row.thread_id);return [...ids].filter(id=>!this.hidden(id)).slice(0,200);
   }
-  updateStatus(id,status){const saved=this.db.prepare('SELECT metadata,archived FROM pocket_discovered_threads WHERE thread_id=?').get(id);if(!saved)return;this.remember({...JSON.parse(saved.metadata),status,discoveryPending:false,updatedAt:Math.floor(Date.now()/1000)},{archived:!!saved.archived});this.readCache.delete(id);}
+  updateStatus(id,status){const saved=this.db.prepare('SELECT metadata,archived FROM pocket_discovered_threads WHERE thread_id=?').get(id);if(!saved)return;this.remember({...JSON.parse(saved.metadata),status,discoveryPending:false},{archived:!!saved.archived});this.readCache.delete(id);}
   markArchived(id,flag){this.db.prepare('UPDATE pocket_discovered_threads SET archived=? WHERE thread_id=?').run(flag?1:0,id);this.readCache.delete(id);}
   snapshot(flag){return {data:this.db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE archived=? ORDER BY seen_at DESC LIMIT 400').all(flag?1:0).map(row=>JSON.parse(row.metadata)).filter(t=>!this.hidden(t.id)).sort((a,b)=>timestamp(b)-timestamp(a)||a.id.localeCompare(b.id)),nextCursor:null,refreshPending:true};}
   async list({archived:flag=false}={}){

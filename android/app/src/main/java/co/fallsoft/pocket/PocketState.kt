@@ -146,14 +146,15 @@ object Pocket {
         try{
             val revision=statusRevision
             val r=api("/api/status");if(local!=profileLocal||token!=profileToken)return@launch
-            acceptUsage(r.optJSONObject("usage"));if(statusRevision==revision){codexOnline=r.optBoolean("connected");codexConnectionMessage=r.optJSONObject("problem")?.s("message")?:""};host=r.s("host");defaultCwd=r.s("defaultCwd")
+            acceptUsage(r.optJSONObject("usage"));if(statusRevision==revision){codexOnline=r.optBoolean("connected");codexConnectionMessage=ConnectionMessages.server(r.optJSONObject("problem")?.s("message")?:"")};host=r.s("host");defaultCwd=r.s("defaultCwd")
             val deviceChanged=prefs.getString(key("deviceId"),"")!=r.s("deviceId")
             prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply();if(deviceChanged){PocketImmersion.restore();PocketSpeechCaptions.init()}
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
             val taskResult=api(if(profileArchived)"/api/threads?archived=true" else "/api/threads")
             if(local!=profileLocal||token!=profileToken||showArchived!=profileArchived)return@launch
             activities=try{api("/api/activity").optJSONArray("items")?.objects()?:emptyList()}catch(e:PocketApiException){if(e.status==404)emptyList() else throw e}
-            tasks=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"),it.s("previewKind","message"))}?:emptyList()
+            val fetched=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"),it.s("previewKind","message"))}?:emptyList()
+            tasks=mergeSessionSnapshot(tasks,fetched,taskResult.optBoolean("refreshPending")){it.id}
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
             if(local==profileLocal&&token==profileToken)notifications.forEach{PocketNotificationTitles.remember(it.put("_local",profileLocal))}
             val latestAttention=api("/api/attention").optJSONArray("notifications")?.objects()?:emptyList()
@@ -254,7 +255,7 @@ object Pocket {
             "status" -> {
                 statusRevision++
                 val recovered=!codexOnline&&json.optBoolean("connected")
-                codexOnline=json.optBoolean("connected");codexConnectionMessage=json.optJSONObject("problem")?.s("message")?:""
+                codexOnline=json.optBoolean("connected");codexConnectionMessage=ConnectionMessages.server(json.optJSONObject("problem")?.s("message")?:"")
                 if(recovered){refresh();scheduleRefresh()}
             }
             "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");if(PocketVoice.foreground&&!PocketVoice.active&&selected==n.s("thread_id"))refreshDetail();refresh()}
@@ -278,10 +279,11 @@ object Pocket {
                 refresh()
             }
             "codex" -> {val e=json.optJSONObject("event");val p=e?.optJSONObject("params");val id=p?.s("threadId")?.ifBlank{p.optJSONObject("thread")?.s("id")?:""};val method=e?.s("method")
-                statusRevision++;codexOnline=true;codexConnectionMessage=""
+                // Events from existing work can continue while new work is refused for a restart.
+                if(codexConnectionMessage!=ConnectionMessages.draining){statusRevision++;codexOnline=true;codexConnectionMessage=""}
                 if(!id.isNullOrBlank())discoverSession(id)
                 val status=when(method){"turn/started"->"active";"turn/completed"->"idle";"thread/status/changed"->p?.optJSONObject("status")?.s("type");else->null}
-                if(!id.isNullOrBlank()&&!status.isNullOrBlank())tasks=tasks.map{if(it.id==id)it.copy(status=status,updated=System.currentTimeMillis())else it}
+                if(!id.isNullOrBlank()&&!status.isNullOrBlank())tasks=tasks.map{if(it.id==id)it.copy(status=status)else it}
                 if(e?.has("id")==true||e?.s("method") in listOf("turn/completed","thread/status/changed"))scheduleRefresh()}
         }
     }}

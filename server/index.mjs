@@ -227,6 +227,7 @@ codex.on('event',m=>{
   if(threadId && attached.has(threadId))emit('codex',{event:{method:m.method,...(m.id!==undefined?{id:m.id}:{}),params:{threadId,turnId:p.turnId,...(m.method==='thread/status/changed'?{status:p.status}:{})}}});
 });
 codex.on('connected',()=>{emit('status',codex.status());void rateLimits.refresh({force:true});});
+codex.on('status',status=>emit('status',status));
 codex.on('disconnected',error=>{rateLimits.disconnected();console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
 let reconnecting=false;
 setInterval(async()=>{
@@ -325,7 +326,7 @@ app.get('/api/threads',route(async(req,res)=>{
     const start=db.prepare("SELECT state FROM outgoing WHERE thread_id=? AND id LIKE 'start-%' ORDER BY created_at DESC LIMIT 1").get(t.id);
     const awaitingStart=start&&['queued','sending'].includes(start.state)&&['idle','notLoaded','pending',undefined].includes(t.status?.type);
     return {id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed};
-  })});
+  }),refreshPending:!!r.refreshPending});
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null,recent:req.query.view==='timeline'});

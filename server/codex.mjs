@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import { homedir } from 'node:os';
 import {spawn} from 'node:child_process';
 import {createInterface} from 'node:readline';
-import {codexConnectionError} from './connection-errors.mjs';
+import {codexConnectionError,isServerDraining} from './connection-errors.mjs';
 
 export class Codex extends EventEmitter {
   constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null}={}) {
@@ -22,7 +22,14 @@ export class Codex extends EventEmitter {
         let m; try { m = JSON.parse(data); } catch { return; }
         if (m.method) { this.emit('event', m); return; }
         const p = this.pending.get(m.id);
-        if (p) { clearTimeout(p.timer); this.pending.delete(m.id); m.error ? p.reject(Object.assign(new Error(m.error.message), { rpc: m.error })) : p.resolve(m.result); }
+        if (p) {
+          clearTimeout(p.timer); this.pending.delete(m.id);
+          if(m.error){
+            const error=isServerDraining(m.error)?Object.assign(codexConnectionError('CODEX_DRAINING'),{rpc:m.error}):Object.assign(new Error(m.error.message),{rpc:m.error});
+            if(error.code==='CODEX_DRAINING'&&this.transport===transport){this.problem=error;this.emit('status',this.status());}
+            p.reject(error);
+          }else p.resolve(m.result);
+        }
       };
       const opened=async()=>{
         try {
@@ -70,7 +77,7 @@ export class Codex extends EventEmitter {
   canSend(){return this.command?!!this.child?.stdin?.writable:this.ws?.readyState===WebSocket.OPEN;}
   send(value){const raw=JSON.stringify(value);if(this.command)this.child.stdin.write(raw+'\n');else this.ws.send(raw);}
   closeTransport(){if(this.command)this.child?.kill();else this.ws?.close();}
-  status(){return {connected:this.ready,problem:!this.ready&&this.problem?{code:this.problem.code,message:this.problem.message}:null};}
+  status(){return {connected:this.ready&&this.problem?.code!=='CODEX_DRAINING',problem:this.problem?{code:this.problem.code,message:this.problem.message}:null};}
 }
 
 function parseCommand(raw){

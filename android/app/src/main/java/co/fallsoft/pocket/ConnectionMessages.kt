@@ -7,8 +7,10 @@ import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 
 object ConnectionMessages {
-    fun server(message:String)=when(message){
-        "Codex disconnected","Codex is offline"->"Your phone reached the workstation, but NextComp lost its connection to Codex there. NextComp reconnects automatically. Reload the conversation; check it before resending a reply."
+    const val draining="Codex is preparing to restart on your workstation. It is letting existing work finish and temporarily refusing new work. NextComp reconnects automatically. Wait for it to reconnect, then retry this request; check the conversation before resending a reply."
+    fun server(message:String)=when{
+        message.trim().startsWith("Server is draining",ignoreCase=true)->draining
+        message in listOf("Codex disconnected","Codex is offline")->"Your phone reached the workstation, but NextComp lost its connection to Codex there. NextComp reconnects automatically. Reload the conversation; check it before resending a reply."
         else->message
     }
     fun error(e:Throwable):String {

@@ -106,16 +106,17 @@ class MainActivity:ComponentActivity(){
     ImmersionText("workflow:"+text,text,modifier=modifier,color=color,fontSize=fontSize,lineHeight=if(lineHeight==TextUnit.Unspecified)(fontSize.value*1.4f).sp else lineHeight,maxLines=maxLines,fontWeight=fontWeight,kind="workflow text",rescue=false,phraseRescue=true)
 }
 @Composable fun Label(text:String,color:Color=Muted){BilingualLabel(text,color=color,fontSize=10.sp,fontWeight=FontWeight.Bold,centered=false)}
-@Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){WorkflowText(Pocket.error,color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){BilingualLabel("Reload conversation",color=Mint)}}}}
+@Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){WorkflowText(ConnectionMessages.server(Pocket.error),color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){BilingualLabel("Reload conversation",color=Mint)}}}}
 @Composable fun ConnectionNotice(){
     if(Pocket.connected&&Pocket.codexOnline)return
     if(!Pocket.connected&&!PocketLive.outageVisible)return
     val place=if(Pocket.local)"this phone" else "your workstation"
+    val draining=Pocket.codexConnectionMessage==ConnectionMessages.draining
     Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
         Column(Modifier.padding(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
-            WorkflowText(if(Pocket.connected)"Waiting for Codex on $place" else "Reconnecting live updates",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
+            WorkflowText(if(draining)"Codex restarting on $place" else if(Pocket.connected)"Waiting for Codex on $place" else "Reconnecting live updates",color=Coral,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
             WorkflowText(if(Pocket.connected)Pocket.codexConnectionMessage.ifBlank{"NextComp reached ${Pocket.host}, but Codex is not responding there. Retrying automatically."} else "The live update channel is reconnecting. This does not cancel your conversations or messages.",color=Muted,fontSize=12.sp,lineHeight=17.sp)
-            TextButton({Pocket.retryConnection()},contentPadding=PaddingValues(0.dp)){BilingualLabel("Retry now",color=Mint)}
+            TextButton({Pocket.retryConnection()},contentPadding=PaddingValues(0.dp)){BilingualLabel(if(draining)"Check connection" else "Retry now",color=Mint)}
         }
     }
 }
@@ -138,6 +139,7 @@ class MainActivity:ComponentActivity(){
     if(PocketCoordinator.visible){CoordinatorScreen();return}
 
     var workToolsOpen by remember{mutableStateOf(false)}
+    val workListState=key(Pocket.local,Pocket.token,Pocket.showArchived){rememberLazyListState()}
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
     Column(Modifier.fillMaxSize()){
         ConnectionNotice()
@@ -147,7 +149,7 @@ class MainActivity:ComponentActivity(){
         else{
             AnimatedContent(targetState=Pocket.tab,modifier=Modifier.weight(1f).fillMaxWidth(),label="tab",transitionSpec={
                 (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
-            }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it});else->SettingsScreen()}}
+            }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it},workListState);else->SettingsScreen()}}
             SpeechCaptionBanner()
             SpeechPlayer()
             PocketDock(onFind={Pocket.tab=0;workToolsOpen=true},onTab={workToolsOpen=false})
@@ -202,13 +204,13 @@ class MainActivity:ComponentActivity(){
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={}){
+@Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={},listState:androidx.compose.foundation.lazy.LazyListState=rememberLazyListState()){
     LaunchedEffect(Pocket.local,Pocket.token){while(true){delay(5000);if(Pocket.connected)Pocket.refresh()}}
     var filter by remember{mutableIntStateOf(if(Pocket.showArchived)3 else 0)};var query by remember{mutableStateOf("")}
-    val listState=rememberLazyListState()
     var touching by remember{mutableStateOf(false)}
     var displayed by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf(Pocket.tasks)}
-    var order by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(Pocket.key("sessionOrder"),"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{if(it.updated<100000000000L)it.updated*1000 else it.updated}.map{it.id}})}
+    val orderKey=Pocket.key(if(Pocket.showArchived)"archivedSessionOrder" else "sessionOrder")
+    var order by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(orderKey,"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{if(it.updated<100000000000L)it.updated*1000 else it.updated}.map{it.id}})}
     LaunchedEffect(Pocket.local,Pocket.token,Pocket.showArchived){
         val pacing=SessionListPacing();var observed=Pocket.tasks.associateBy{it.id}
         while(true){
@@ -216,11 +218,19 @@ class MainActivity:ComponentActivity(){
             val changed=latest.count{observed[it.id]!=it};observed=latest.associateBy{it.id}
             pacing.record(now,changed)
             val active=latest.count{it.status in listOf("active","pending")}
-            if(pacing.contentDue(now,active)){displayed=latest;pacing.contentDelivered(now)}
-            if(pacing.orderDue(now,active,listState.isScrollInProgress||touching||toolsOpen)){
-                // Keep equal timestamps stable; bottom-first layout retains its visible keyed anchor.
+            val interacting=listState.isScrollInProgress||touching||toolsOpen
+            val orderDue=pacing.orderDue(now,active,interacting)
+            if(pacing.contentDue(now,active)&&pacing.interactionSettled(now,interacting)){
+                // Deliver live text/status in place; membership changes wait for a safe moment.
+                displayed=sessionContentInPlace(displayed,latest){it.id};pacing.contentDelivered(now)
+            }
+            if(orderDue){
+                // Existing keyed seats survive lifecycle changes; new work joins only when idle.
                 val next=stableSessionOrder(order,latest.map{SessionRank(it.id,if(it.updated<100000000000L)it.updated*1000 else it.updated,it.status in listOf("active","pending"))},System.currentTimeMillis())
-                if(next!=order){order=next;Pocket.prefs.edit().putString(Pocket.key("sessionOrder"),org.json.JSONArray(next).toString()).apply()}
+                if(next!=order)order=next
+                val encoded=org.json.JSONArray(next).toString()
+                if(Pocket.prefs.getString(orderKey,null)!=encoded)Pocket.prefs.edit().putString(orderKey,encoded).apply()
+                displayed=latest
                 pacing.orderDelivered(now)
             }
             delay(100)

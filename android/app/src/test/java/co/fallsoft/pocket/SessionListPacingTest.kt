@@ -49,10 +49,45 @@ class SessionListTiesTest {
             assertEquals(listOf("a", "b", "c"), seats)
         }
     }
-    @Test fun newLiveSessionPreservesOthersAndCompletionHasGracePeriod() {
+    @Test fun completionAndGraceExpiryNeverMoveExistingCards() {
         val entries=listOf(SessionRank("a", 0, true),SessionRank("b", 100_000, false),SessionRank("c", 0, false))
         assertEquals(listOf("a","b","c"),stableSessionOrder(listOf("a","b","c"),entries,120_000))
         assertEquals(listOf("b","a","c"),stableSessionOrder(listOf("b","a","c"),entries,120_000))
-        assertEquals(listOf("a","b","c"),stableSessionOrder(listOf("b","a","c"),entries,131_000))
+        assertEquals(listOf("b","a","c"),stableSessionOrder(listOf("b","a","c"),entries,131_000))
+    }
+    @Test fun drainingReconnectAndBackgroundTimestampsKeepSeats() {
+        val seats=listOf("old","working","recent")
+        val snapshots=listOf(
+            listOf(SessionRank("recent",30_000,true),SessionRank("working",20_000,true),SessionRank("old",1,false)),
+            listOf(SessionRank("working",100_000,false),SessionRank("old",100_000,false),SessionRank("recent",100_000,false)),
+            listOf(SessionRank("recent",200_000,true),SessionRank("old",300_000,false),SessionRank("working",400_000,false))
+        )
+        for(entries in snapshots)assertEquals(seats,stableSessionOrder(seats,entries,500_000))
+        assertEquals(seats,stableSessionOrder(seats,emptyList(),600_000))
+        assertEquals(seats,stableSessionOrder(seats,listOf(SessionRank("recent",700_000,true)),700_000))
+    }
+    @Test fun newDiscoveriesJoinByRecencyWithoutReorderingExistingOrDuplicateSeats() {
+        val entries=listOf(SessionRank("b",1,false),SessionRank("new-old",10,false),SessionRank("a",999,true),SessionRank("new",100,true),SessionRank("new",100,true))
+        assertEquals(listOf("new","new-old","b","a"),stableSessionOrder(listOf("b","a","a"),entries,100))
+    }
+    @Test fun contentUpdatesDoNotChangeMembershipOrOrderBeforeSafeDelivery() {
+        data class Card(val id:String,val text:String)
+        val before=listOf(Card("selected","old"),Card("other","old"))
+        val latest=listOf(Card("new","new"),Card("other","new status"),Card("selected","new preview"))
+        assertEquals(listOf(Card("selected","new preview"),Card("other","new status")),sessionContentInPlace(before,latest){it.id})
+        assertEquals(before,sessionContentInPlace(before,emptyList()){it.id})
+        val pacing=SessionListPacing()
+        assertFalse(pacing.orderDue(1_000,0,true))
+        assertFalse(pacing.interactionSettled(1_749,false))
+        assertTrue(pacing.interactionSettled(1_750,false))
+    }
+    @Test fun partialReconnectRetainsKnownWorkWhileCompleteArchiveResultRemovesIt() {
+        data class Card(val id:String,val text:String)
+        val previous=listOf(Card("selected","running"),Card("other","old"))
+        val fetched=listOf(Card("other","completed"))
+        assertEquals(listOf(Card("other","completed"),Card("selected","running")),mergeSessionSnapshot(previous,fetched,true){it.id})
+        assertEquals(previous,mergeSessionSnapshot(previous,emptyList(),true){it.id})
+        assertEquals(fetched,mergeSessionSnapshot(previous,fetched,false){it.id})
+        assertEquals(emptyList<Card>(),mergeSessionSnapshot(previous,emptyList(),false){it.id})
     }
 }
