@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {openStore} from '../server/store.mjs';
 import {SessionStarts,projectPath,recentProjects} from '../server/sessions.mjs';
+import {COMPUTER_USE_INSTRUCTIONS} from '../server/computer-use.mjs';
 import {LiveTimeline,timelinePage} from '../server/timeline.mjs';
 const wait=async f=>{for(let i=0;i<50;i++){if(f())return;await new Promise(r=>setTimeout(r,10));}assert.fail('Condition not reached');};
 
@@ -19,7 +20,7 @@ test('session creation is durable, idempotent, project-scoped, and defaults to f
  assert.equal(starts.enqueue(req).id,req.id);assert.throws(()=>starts.enqueue({...req,prompt:'Different task'}),/already belongs/);
  assert.throws(()=>projectPath('relative/path'),/absolute/);assert.throws(()=>projectPath(join(dir,'missing')),/does not exist/);
  codex.ready=true;await starts.flush();await starts.flush();
- assert.deepEqual(calls,[{method:'thread/start',params:{cwd:dir,sandbox:'danger-full-access',approvalPolicy:'never'}}]);
+ assert.deepEqual(calls,[{method:'thread/start',params:{cwd:dir,sandbox:'danger-full-access',approvalPolicy:'never',developerInstructions:COMPUTER_USE_INSTRUCTIONS}}]);
  assert.equal(starts.get(req.id).state,'started');assert.equal(starts.enqueue(req).thread_id,'new-thread');assert.equal(created.length,1);
  assert.equal(created[0].row.text,req.prompt);assert.equal(created[0].row.state,'queued');
  assert.equal(db.prepare('SELECT enabled FROM watches WHERE thread_id=?').get('new-thread').enabled,1);
@@ -77,5 +78,5 @@ test('upgrading legacy task records preserves inherited permissions',async()=>{
  db.prepare("INSERT INTO session_starts(id,cwd,prompt,state,created_at,updated_at) VALUES(?,?,?,'queued',?,?)").run('legacy-request',dir,'Legacy task',1,1);
  const codex={ready:true,executionOptions:()=>({approvalPolicy:'on-request'}),call:async(method,params)=>{calls.push(params);return {thread:{id:'legacy-thread'}};}};
  const starts=new SessionStarts(db,codex,()=>{});await starts.flush();
- assert.deepEqual(calls,[{cwd:dir,approvalPolicy:'on-request'}]);db.close();
+ assert.deepEqual(calls,[{cwd:dir,approvalPolicy:'on-request',developerInstructions:COMPUTER_USE_INSTRUCTIONS}]);db.close();
 });

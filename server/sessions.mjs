@@ -1,5 +1,6 @@
 import {isAbsolute,basename} from 'node:path';
 import {realpathSync,statSync} from 'node:fs';
+import {newThreadComputerUseOptions} from './computer-use.mjs';
 const invalid=message=>Object.assign(Error(message),{status:400});
 
 export function projectPath(value){
@@ -33,7 +34,7 @@ export class SessionStarts {
       if(this.running.has(row.id))continue;this.running.add(row.id);
       try{
         this.db.prepare("UPDATE session_starts SET state='creating',updated_at=? WHERE id=?").run(Date.now(),row.id);
-        const {thread}=await this.codex.call('thread/start',{cwd:row.cwd,...(row.permissions?permissionOptions(row.permissions):this.codex.executionOptions?.())});
+        const {thread}=await this.codex.call('thread/start',{cwd:row.cwd,...(row.permissions?permissionOptions(row.permissions):this.codex.executionOptions?.()),...newThreadComputerUseOptions()});
         this.db.exec('BEGIN IMMEDIATE');
         try{
           this.db.prepare("UPDATE session_starts SET state='started',thread_id=?,updated_at=? WHERE id=?").run(thread.id,Date.now(),row.id);

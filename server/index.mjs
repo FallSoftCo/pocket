@@ -1,4 +1,5 @@
 import {SessionDiscovery} from './session-discovery.mjs';
+import {computerUseStatus} from './computer-use.mjs';
 import {NotificationTitles} from './notification-titles.mjs';
 import {NotificationReads} from './notification-reads.mjs';
 import {ImmersionWorker} from './immersion-worker.mjs';
@@ -258,6 +259,7 @@ app.post('/api/pair',(req,res)=>{
   res.json({token,id,host:hostName,firebase:push.config,local:localMode,...(automation?{automationSecret:automation.secret}:{})});
 });
 app.use('/api',requireAuth);
+app.get('/api/computer-use',route(async(_req,res)=>res.json(await computerUseStatus())));
 mountAppUpdates(app,{updates:new AppUpdates({dir,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
 app.get('/api/voice/history',(req,res)=>{const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before));});
 app.post('/api/voice/start',route(async(req,res)=>{

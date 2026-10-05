@@ -1,3 +1,4 @@
+import {COMPUTER_USE_INSTRUCTIONS} from '../server/computer-use.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
@@ -76,7 +77,7 @@ test('same-thread steering, idle continuation, and exact pending request respons
  await waitFor(async()=>(await api(`/api/replies/start-${request.id}`)).data.state==='accepted');
  assert.equal((await api('/api/threads',request)).data.thread_id,'thread-phone');
  assert.equal(calls.filter(c=>c.method==='thread/start').length,1);
- assert.deepEqual(calls.find(c=>c.method==='thread/start').params,{cwd:dir,sandbox:'danger-full-access',approvalPolicy:'never'});
+ assert.deepEqual(calls.find(c=>c.method==='thread/start').params,{cwd:dir,sandbox:'danger-full-access',approvalPolicy:'never',developerInstructions:COMPUTER_USE_INSTRUCTIONS});
  assert.equal(calls.findLast(c=>c.method==='turn/start').params.threadId,'thread-phone');
  active=true;assert.equal((await api('/api/threads/thread-live/interrupt',{})).status,200);
  assert.deepEqual(calls.find(c=>c.method==='turn/interrupt').params,{threadId:'thread-live',turnId:'turn-original'});

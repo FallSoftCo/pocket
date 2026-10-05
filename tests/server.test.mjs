@@ -18,6 +18,8 @@ test('pairing, device auth, durable replies, idempotency and revocation',async t
     const r=await fetch(`http://127.0.0.1:${port}${path}`,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};
   };
   assert.equal((await api('/api/status',null,'bad')).status,401);
+  assert.equal((await api('/api/computer-use',null,'bad')).status,401);
+  assert.equal((await api('/api/computer-use')).status,200);
   assert.equal((await api('/api/files/not-a-file',null,'bad')).status,401,'files require authentication');
   const denied=new WebSocket(`ws://127.0.0.1:${port}/events`);
   const deniedStatus=await new Promise(resolve=>{denied.on('unexpected-response',(_req,r)=>{resolve(r.statusCode);r.resume();denied.terminate();});denied.on('error',()=>{});});

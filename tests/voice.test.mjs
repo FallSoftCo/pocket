@@ -1,10 +1,22 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {EventEmitter} from 'node:events';import {DatabaseSync} from 'node:sqlite';
 import {VoiceSpeech,speechPolicy,CHEAP_SPEECH_MODEL,NEXT_SPEECH_MODEL,SPEECH_UPGRADE_AT,normalizeSpeechWav} from '../server/voice-speech.mjs';
 import {VoiceController,validateVoiceAudio} from '../server/voice-controller.mjs';
+import {COMPUTER_USE_INSTRUCTIONS} from '../server/computer-use.mjs';
 const wav=()=>{const b=Buffer.alloc(3244);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(16000,24);b.writeUInt32LE(32000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(b.length-44,40);return b;};
 const tick=()=>new Promise(r=>setImmediate(r));
 class FakeCodex extends EventEmitter{constructor(){super();this.calls=[];}async connect(){} async call(method,params){this.calls.push({method,params});if(method==='thread/start')return {thread:{id:'controller-123'}};if(method==='turn/start')return {turn:{id:'turn-123'}};return {thread:{id:'controller-123'}};}answer(){}}
 function setup(){const db=new DatabaseSync(':memory:'),codex=new FakeCodex(),calls=[];const controller=new VoiceController({db,codex,cwd:'/tmp',host:'test',transcribe:async()=> 'Queue a fix',api:async(path,body)=>{calls.push({path,body});if(path.startsWith('/api/threads?')||path==='/api/threads')return {threads:[{id:'controller-123'},{id:'task-123'}]};if(path==='/api/threads/task-123?view=timeline')return {thread:{id:'task-123',name:'Work',status:{type:'idle'}}};return {state:'queued'};}});return {db,codex,calls,controller};}
+test('new voice threads append shared ownership policy without changing existing resume policy',async()=>{
+ const {controller,codex,db}=setup();await controller.ensure('phone');
+ const created=codex.calls.find(c=>c.method==='thread/start');
+ assert.match(created.params.developerInstructions,/persistent eyes-free Codex controller/);
+ assert.ok(created.params.developerInstructions.endsWith(COMPUTER_USE_INSTRUCTIONS));
+ controller.resumed.clear();await controller.ensure('phone');
+ const resumed=codex.calls.find(c=>c.method==='thread/resume');
+ assert.match(resumed.params.developerInstructions,/persistent eyes-free Codex controller/);
+ assert.equal(resumed.params.developerInstructions.includes(COMPUTER_USE_INSTRUCTIONS),false);
+ db.close();
+});
 test('speech migration changes on every request at the exact retirement boundary',()=>{assert.equal(speechPolicy(Date.parse(SPEECH_UPGRADE_AT)-1).model,CHEAP_SPEECH_MODEL);assert.equal(speechPolicy(Date.parse(SPEECH_UPGRADE_AT)).model,NEXT_SPEECH_MODEL);});
 test('cheap speech is used and authentication/quota/transient failures never silently upgrade',async()=>{let sent;const audio=wav();audio.writeUInt32LE(24000,24);const speech=new VoiceSpeech({apiKey:'secret',clock:()=>0,fetchImpl:async(_u,opts)=>{sent=JSON.parse(opts.body);return new Response(audio);}});assert.equal((await speech.synthesize('Hello')).model,CHEAP_SPEECH_MODEL);assert.equal(sent.voice,'marin');for(const status of [401,429,500]){speech.fetchImpl=async()=>new Response(JSON.stringify({error:{code:'model_not_found'}}),{status});speech.realtime=()=>{throw Error('Unexpected upgrade');};await assert.rejects(speech.synthesize('Hello'),new RegExp(String(status)));}assert.equal(JSON.stringify(speech.status()).includes('secret'),false);});
 test('explicit unavailable old model migrates, malformed audio fails, empty requests do not spend',async()=>{const speech=new VoiceSpeech({apiKey:'secret',clock:()=>0,fetchImpl:async()=>new Response(JSON.stringify({error:{code:'model_deprecated'}}),{status:404})});speech.realtime=async()=>({model:NEXT_SPEECH_MODEL});assert.equal((await speech.synthesize('Hello')).model,NEXT_SPEECH_MODEL);speech.fetchImpl=async()=>new Response('not audio');await assert.rejects(speech.synthesize('Hello'),/invalid audio/);await assert.rejects(speech.synthesize(''),/characters/);});
