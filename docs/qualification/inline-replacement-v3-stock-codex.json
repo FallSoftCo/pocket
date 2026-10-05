@@ -1,0 +1,543 @@
+{
+  "synthetic": true,
+  "authentication": "chatgpt",
+  "effort": "medium",
+  "model": "gpt-6-luna",
+  "latencyMs": 35900,
+  "planVersion": "inline-replacement-v3",
+  "source": "I opened two new sessions and reviewed the latest changes in `notes.md` with gpt-6-luna before lunch.",
+  "accepted": true,
+  "translations": [
+    {
+      "id": "inline-v3",
+      "text": "I opened due nuove sessioni and ho esaminato le ultime modifiche in `notes.md` with gpt-6-luna prima di pranzo.",
+      "spans": [
+        {
+          "start": 9,
+          "end": 25,
+          "targetSegments": [],
+          "source": "two new sessions",
+          "target": "due nuove sessioni",
+          "note": "",
+          "unit": "nounPhrase"
+        },
+        {
+          "start": 30,
+          "end": 57,
+          "targetSegments": [
+            {
+              "start": 0,
+              "end": 2,
+              "target": "ho",
+              "meaning": "have",
+              "role": "auxiliary",
+              "features": [
+                {
+                  "name": "person",
+                  "value": "first"
+                },
+                {
+                  "name": "number",
+                  "value": "singular"
+                },
+                {
+                  "name": "tense",
+                  "value": "present"
+                },
+                {
+                  "name": "mood",
+                  "value": "indicative"
+                }
+              ],
+              "relations": [
+                {
+                  "kind": "auxiliaryOf",
+                  "toSegment": 2,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 3,
+              "end": 12,
+              "target": "esaminato",
+              "meaning": "reviewed",
+              "role": "verb",
+              "features": [
+                {
+                  "name": "tense",
+                  "value": "past"
+                },
+                {
+                  "name": "mood",
+                  "value": "participle"
+                }
+              ],
+              "relations": []
+            },
+            {
+              "start": 12,
+              "end": 13,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 13,
+              "end": 15,
+              "target": "le",
+              "meaning": "the",
+              "role": "determiner",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "feminine"
+                },
+                {
+                  "name": "number",
+                  "value": "plural"
+                },
+                {
+                  "name": "definiteness",
+                  "value": "definite"
+                }
+              ],
+              "relations": [
+                {
+                  "kind": "head",
+                  "toSegment": 8,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 15,
+              "end": 16,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 16,
+              "end": 22,
+              "target": "ultime",
+              "meaning": "latest",
+              "role": "adjective",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "feminine"
+                },
+                {
+                  "name": "number",
+                  "value": "plural"
+                }
+              ],
+              "relations": [
+                {
+                  "kind": "agreesWith",
+                  "toSegment": 8,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 22,
+              "end": 23,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 23,
+              "end": 32,
+              "target": "modifiche",
+              "meaning": "changes",
+              "role": "noun",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "feminine"
+                },
+                {
+                  "name": "number",
+                  "value": "plural"
+                }
+              ],
+              "relations": []
+            }
+          ],
+          "source": "reviewed the latest changes",
+          "target": "ho esaminato le ultime modifiche",
+          "note": "",
+          "unit": "phrase"
+        },
+        {
+          "start": 88,
+          "end": 100,
+          "targetSegments": [
+            {
+              "start": 0,
+              "end": 5,
+              "target": "prima",
+              "meaning": "before",
+              "role": "preposition",
+              "features": [],
+              "relations": [
+                {
+                  "kind": "head",
+                  "toSegment": 4,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 5,
+              "end": 6,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 6,
+              "end": 8,
+              "target": "di",
+              "meaning": "of",
+              "role": "preposition",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 8,
+              "end": 9,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 9,
+              "end": 15,
+              "target": "pranzo",
+              "meaning": "lunch",
+              "role": "noun",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "masculine"
+                },
+                {
+                  "name": "number",
+                  "value": "singular"
+                }
+              ],
+              "relations": []
+            }
+          ],
+          "source": "before lunch",
+          "target": "prima di pranzo",
+          "note": "",
+          "unit": "prepositionPhrase"
+        }
+      ],
+      "planVersion": "inline-replacement-v3",
+      "version": "cec0a0caffb299baaff871e90764b21e2fd7fe0ac9554264c755c5e1d992de76",
+      "original": "I opened two new sessions and reviewed the latest changes in `notes.md` with gpt-6-luna before lunch.",
+      "language": "it",
+      "density": "strong"
+    }
+  ],
+  "raw": {
+    "translations": [
+      {
+        "id": "0",
+        "version": "cec0a0caffb299baaff871e90764b21e2fd7fe0ac9554264c755c5e1d992de76",
+        "spans": [
+          {
+            "source": "two new sessions",
+            "occurrence": 0,
+            "target": "due nuove sessioni",
+            "unit": "nounPhrase",
+            "note": "",
+            "targetSegments": [
+              {
+                "target": "due",
+                "occurrence": 0,
+                "meaning": "two",
+                "role": "numeral",
+                "features": [
+                  {
+                    "name": "number",
+                    "value": "invariable"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "head",
+                    "target": "sessioni",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "nuove",
+                "occurrence": 0,
+                "meaning": "new",
+                "role": "adjective",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "agreesWith",
+                    "target": "sessioni",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "sessioni",
+                "occurrence": 0,
+                "meaning": "sessions",
+                "role": "noun",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  }
+                ],
+                "relations": []
+              }
+            ]
+          },
+          {
+            "source": "reviewed the latest changes",
+            "occurrence": 0,
+            "target": "ho esaminato le ultime modifiche",
+            "unit": "phrase",
+            "note": "",
+            "targetSegments": [
+              {
+                "target": "ho",
+                "occurrence": 0,
+                "meaning": "have",
+                "role": "auxiliary",
+                "features": [
+                  {
+                    "name": "person",
+                    "value": "first"
+                  },
+                  {
+                    "name": "number",
+                    "value": "singular"
+                  },
+                  {
+                    "name": "tense",
+                    "value": "present"
+                  },
+                  {
+                    "name": "mood",
+                    "value": "indicative"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "auxiliaryOf",
+                    "target": "esaminato",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "esaminato",
+                "occurrence": 0,
+                "meaning": "reviewed",
+                "role": "verb",
+                "features": [
+                  {
+                    "name": "tense",
+                    "value": "past"
+                  },
+                  {
+                    "name": "mood",
+                    "value": "participle"
+                  }
+                ],
+                "relations": []
+              },
+              {
+                "target": "le",
+                "occurrence": 0,
+                "meaning": "the",
+                "role": "determiner",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  },
+                  {
+                    "name": "definiteness",
+                    "value": "definite"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "head",
+                    "target": "modifiche",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "ultime",
+                "occurrence": 0,
+                "meaning": "latest",
+                "role": "adjective",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "agreesWith",
+                    "target": "modifiche",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "modifiche",
+                "occurrence": 0,
+                "meaning": "changes",
+                "role": "noun",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  }
+                ],
+                "relations": []
+              }
+            ]
+          },
+          {
+            "source": "before lunch",
+            "occurrence": 0,
+            "target": "prima di pranzo",
+            "unit": "prepositionPhrase",
+            "note": "",
+            "targetSegments": [
+              {
+                "target": "prima",
+                "occurrence": 0,
+                "meaning": "before",
+                "role": "preposition",
+                "features": [],
+                "relations": [
+                  {
+                    "kind": "head",
+                    "target": "pranzo",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "di",
+                "occurrence": 0,
+                "meaning": "of",
+                "role": "preposition",
+                "features": [],
+                "relations": []
+              },
+              {
+                "target": "pranzo",
+                "occurrence": 0,
+                "meaning": "lunch",
+                "role": "noun",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "masculine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "singular"
+                  }
+                ],
+                "relations": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "Structural acceptance does not prove universal grammatical correctness.",
+    "No native UI runtime or audio qualification; only teacher selection and validated single-flow transport."
+  ],
+  "originalValidationAccepted": false,
+  "validationMode": "Recorded actual stock teacher response replayed through final optional-metadata validator; no second model turn.",
+  "qualifications": {
+    "singleExistingTextFlow": true,
+    "noAddedNewlines": true,
+    "noDuplicateOriginalTarget": true,
+    "sourceExact": true,
+    "protectedInlineCodeAndModel": true,
+    "shortReplacementSpans": true,
+    "someEligibleSourceContextUntouched": true,
+    "invalidGrammarMetadataOmittedForSpans": [
+      "two new sessions"
+    ],
+    "noInferredGrammarCues": true
+  }
+}

@@ -49,3 +49,10 @@ test('voice read retrieves only the bounded recent timeline and exposes missing 
  assert.equal(result.thread.turns[0].items[1].text,'It stays reachable.');
  assert.equal(result.notes[0].id,'kept');assert.equal(result.pending[0].id,'question');db.close();
 });
+
+test('coordinator light inspection uses its own stock session and review preference overrides prior full execution',async()=>{
+ const {controller,codex,db,calls}=setup();await controller.ensure('phone');db.prepare('UPDATE voice_sessions SET full=0 WHERE device=?').run('phone');
+ controller.submitText('phone','light-inspection-123','What are the workstation temperatures?');await tick();await tick();
+ const start=codex.calls.find(c=>c.method==='turn/start');assert.equal(start.params.threadId,'controller-123');assert.deepEqual(start.params.sandboxPolicy,{type:'readOnly',networkAccess:false});assert.equal(start.params.approvalPolicy,'never');assert.equal(calls.length,0);
+ codex.emit('event',{method:'item/completed',params:{threadId:'controller-123',item:{type:'agentMessage',phase:'final_answer',text:'CPU temperature is 48 degrees Celsius.'}}});codex.emit('event',{method:'turn/completed',params:{threadId:'controller-123',turn:{status:'completed'}}});assert.equal(controller.get('phone','light-inspection-123').response,'CPU temperature is 48 degrees Celsius.');assert.equal(controller.history('phone').turns.at(-1).response,'CPU temperature is 48 degrees Celsius.');db.close();
+});

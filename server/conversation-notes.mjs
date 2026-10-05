@@ -19,16 +19,26 @@ export class ConversationNotes {
   }
   const text=interimExcerpt(item);if(text)this.put(threadId,{id:item.id,turnId,text,question:this.questions.get(threadId+':'+turnId)||'',manual:false});
  }
- remember(thread){for(const turn of thread.turns||[])for(const item of turn.items||[])this.observe(thread.id,turn.id,item);}
+ remember(thread){
+  if(!thread?.id)return;this.db.exec('BEGIN IMMEDIATE');this.hydrating=true;this.backfillChanged=false;
+  try{for(const turn of thread.turns||[])for(const item of turn.items||[])this.observe(thread.id,turn.id,item);this.db.exec('COMMIT');}
+  catch(error){this.db.exec('ROLLBACK');throw error;}finally{this.hydrating=false;}
+  if(this.backfillChanged)this.changed(thread.id,this.list(thread.id));
+ }
  put(threadId,n){
   const text=String(n.text||'').trim().slice(0,12000),id=String(n.id||'').slice(0,512);if(!text||!id)throw Object.assign(Error('Choose a reply to keep.'),{status:400});
   const old=this.db.prepare('SELECT * FROM conversation_notes WHERE thread_id=? AND item_id=?').get(threadId,id);
-  if(old?.dismissed&&!n.manual||old?.text===text&&(!n.manual||old.manual))return;
+  if(old?.dismissed&&!n.manual||!old?.dismissed&&old?.text===text&&(!n.manual||old.manual))return;
   this.db.prepare('INSERT INTO conversation_notes(thread_id,item_id,turn_id,question,text,manual,at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(thread_id,item_id) DO UPDATE SET text=excluded.text,manual=MAX(conversation_notes.manual,excluded.manual),dismissed=CASE WHEN excluded.manual=1 THEN 0 ELSE conversation_notes.dismissed END,at=excluded.at').run(threadId,id,n.turnId||null,n.question||old?.question||'',text,n.manual?1:0,this.clock());
   // Retain dismissal tombstones so revisiting history does not resurrect removed notes.
-  this.db.prepare('DELETE FROM conversation_notes WHERE thread_id=? AND item_id NOT IN (SELECT item_id FROM conversation_notes WHERE thread_id=? ORDER BY manual DESC,at DESC LIMIT 100)').run(threadId,threadId);
-  this.changed(threadId,this.list(threadId));
+  this.db.prepare('DELETE FROM conversation_notes WHERE thread_id=? AND dismissed=0 AND item_id NOT IN (SELECT item_id FROM conversation_notes WHERE thread_id=? AND dismissed=0 ORDER BY manual DESC,at DESC LIMIT 100)').run(threadId,threadId);
+  if(this.hydrating)this.backfillChanged=true;else this.changed(threadId,this.list(threadId));
  }
  list(threadId){return this.db.prepare('SELECT item_id AS id,turn_id AS turnId,question,text,manual,at FROM conversation_notes WHERE thread_id=? AND dismissed=0 ORDER BY manual DESC,at DESC LIMIT 12').all(threadId);}
- remove(threadId,id){this.db.prepare('UPDATE conversation_notes SET dismissed=1 WHERE thread_id=? AND item_id=?').run(threadId,id);this.changed(threadId,this.list(threadId));}
+ remove(threadId,id){
+  if(typeof id!=='string'||!id.trim()||id.length>512)throw Object.assign(Error('Choose a note to remove.'),{status:400});
+  // A removal can race history backfill; retain its identity even before the row arrives.
+  this.db.prepare('INSERT INTO conversation_notes(thread_id,item_id,text,dismissed,at) VALUES(?,?,?,1,?) ON CONFLICT(thread_id,item_id) DO UPDATE SET dismissed=1').run(threadId,id,'',this.clock());
+  const notes=this.list(threadId);this.changed(threadId,notes);return notes;
+ }
 }

@@ -1,25 +1,37 @@
-# Contextual inline Italian immersion
+# One-flow inline replacement immersion
 
-The current requirement is contextual Italian phrases inside ordinary NextComp content. English remains the surrounding working content; chosen constituents become Italian at the same readable size. There is no permanent miniature English lane or duplicated whole-paragraph translation. The mode is optional per paired device/profile, off for other devices, and enabled for the owner's configured profile.
+The latest user correction replaces the earlier interlinear presentation: immersion uses the single existing text flow. Selected words or short phrases become Italian in place. No translated lines, parallel original/target text, subtitles, appended explanations or duplicated content are part of this mode. Partial mixed-language grammar is explicitly accepted; grammatical purity must not cause a full-sentence translation fallback.
 
-## Rendering contract
+## Accepted examples
 
-A dedicated, isolated, read-only stock Codex worker proposes contextual constituent replacements with exact quoted source anchors. The server resolves UTF-16 offsets, verifies the source hash and reconstructs the complete hybrid text before accepting it. Noun phrases include determiners and agreement; person, tense and word order changes require an appropriate clause. Density is manually adjustable between starter, balanced and strong; grammar takes priority over a numeric quota.
+Strong selection can replace substantial content while preserving context:
 
-Original messages, commands, copied text, URLs, code, filenames, model identifiers, numeric literals, deadlines and question payloads stay intact. Protected ranges cannot be included in translated spans. Overlaps, partial words, broken grapheme boundaries, source-version mismatches and inconsistent complete text are rejected. These structural checks do not prove universal grammatical correctness.
+Original: I opened two new sessions and reviewed the important changes before lunch.
 
-Tapping a normal-size highlighted phrase inserts its English source and short contextual grammar note immediately beside it in the same paragraph; tapping again collapses that explanation. No translation dialog, tooltip, popup or lesson panel interrupts reading. Control rescue expands English inside the same label through accessibility actions and keyboard assistance, without taking ordinary taps or the Send long-press queue gesture. Compact session targets preserve their original tap behavior. Ambiguous repeated target phrases are not falsely aligned for phrase tapping; whole-source rescue remains available.
+Rendered single flow: I opened due nuove sessioni and rivisto le modifiche importanti prima lunch.
 
-Speech uses the same accepted hybrid rendering, independently of temporary English rescue. Source text is preserved in the speech queue. Without an accepted rendering, source text remains readable and speakable. A previous accepted public update may remain visible while streaming, explicitly marked as updating and paired with its matching original rather than the newer source.
+Original: Please review the latest changes in `notes.md` using gpt-6-luna and https://example.com before lunch.
 
-## Usage and bounds
+Rendered single flow: Please review le ultime modifiche in `notes.md` using gpt-6-luna and https://example.com prima lunch.
 
-The helper requires stock ChatGPT authentication and refuses API-key accounts. It receives only visible public text, never hidden raw reasoning or tool payloads. Same-source plans are reused within the same profile and density. Batches contain at most six ordinary sources or two when urgent work is present, globally prioritizing urgent sources, with a 16,000-character bound. Failed plans do not create an automatic retry loop. This adds Codex usage; it does not add a separately billed translation or audio API.
+These examples describe alternative renderings for qualification, not simultaneous product lanes. The application shows one rendering at a time. Root-owned interaction assistance replaces content within that flow rather than appending another line.
 
-## Qualification and limitations
+## Selection and preservation
 
-Synthetic stock CLI 0.160.0 / advertised gpt-6-luna qualification accepted contextual noun agreement, first-person progressive clauses and contracted prepositions. A two-source run took 14,425 ms and rejected its more complex protected example safely. A bounded protected retry took 5,844 ms and accepted “due nuove sessioni” and “una domanda importante” while preserving `notes.md` and gpt-6-luna. Receipts are in `qualification/inline-qualification.json` and `qualification/inline-protected-qualification.json`.
+The isolated stock Codex teacher selects one to four words/short phrases per source, each containing at most six original lexical words. Density guides useful selection; there is no universal half-English ceiling. For ordinary content containing at least eight eligible lexical words, some unprotected original lexical context must remain. A complete sentence cannot be selected as one span inside that long content. Existing short labels may remain whole. Protected code, URLs, paths, filenames, model identifiers, numeric literals and action payloads retain their exact originals.
 
-Debug33 emulator review at 2× font confirmed readable inline phrases and phrase-local full-size English/grammar help with protected literals retained. Final release runtime verification belongs to the release QA receipt. These examples are not native-speaker qualification of every possible sentence, guaranteed translation latency, word-timed audio alignment or a guarantee of mixed-language offline voice quality. Constituent teaching currently uses each submitted public text; it does not infer missing conversational antecedents.
+The server reconstructs the single rendered text from quoted, bounded source anchors. UTF-16 offsets, grapheme/contraction boundaries, source hashes, overlap, protected ranges and exact lexical target coverage remain validated. Optional contextual grammar metadata remains available as honest role/relationship evidence; its existence does not require a dual meaning renderer. These structural checks do not prove universal grammatical correctness.
 
-The contextual-inline proposal supplied by the collaborating OZZZ agent and the maintained Mosis source-review package informed source preservation, truthful alignment and contextual assistance. Their separate media/API pipelines are not imported into NextComp.
+## Cache and usage
+
+The semantic plan revision is `inline-replacement-v3`. Earlier whole-line/interlinear-era plans are excluded from backend caches, and the Android integration uses the same revision. The mode remains optional per device/profile. Translation requires stock ChatGPT-authenticated Codex; no separately billed API is used. The bounded worker uses at most two ordinary sources or one urgent source per batch and has no automatic failure retry loop. Source fallback remains readable during delayed or rejected plans. Original outgoing input, copied commands and audit data are preserved.
+
+## Qualification scope
+
+Focused tests verify strong-density partial selection, permitted mixed grammar, rejection of whole-source/sentence fallback and long anchors, exact protected literals, source preservation and invalidation of earlier semantic-policy caches. The earlier contextual grammar stock receipt qualifies transport and the former grammar metadata schema; it does not qualify the revised teacher selection behavior. Any later actual teacher run must use synthetic data and the final revised prompt.
+
+## Actual v3 teacher qualification
+
+One isolated stock ChatGPT-authenticated Codex turn on advertised gpt-6-luna / medium effort returned three short replacements in 35,900 ms: “two new sessions” → “due nuove sessioni”; “reviewed the latest changes” → “ho esaminato le ultime modifiche”; “before lunch” → “prima di pranzo”. The final single flow keeps surrounding English and protected `notes.md` / gpt-6-luna exactly. The sanitized actual response is in `qualification/inline-replacement-v3-stock-codex.json`.
+
+Initial validation rejected a grammar relation on “due”. Under the current optional-metadata contract, replay of that same recorded response retains its exact safe replacement and omits only that span's invalid teaching metadata; the other spans retain valid metadata. No guessed grammar, source change or second model request was used. This qualifies teacher transport/selection and final backend replay, not live phone rendering or guaranteed latency. Source, protected-range, overlap, short-span and partial-selection safeguards still reject unsafe replacements.

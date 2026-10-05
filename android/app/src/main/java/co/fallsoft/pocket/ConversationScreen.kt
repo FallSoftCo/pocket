@@ -141,7 +141,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             ConversationActivityHeader(active){actionsOpen=true}
             ActivityPopup(actionsOpen,{actionsOpen=false},Pocket.selected){ConversationActivityControls()}
         }
-        ConversationNotesCard()
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 item(key="history"){if(PocketTranscript.earlier)TextButton({follow=false;scope.launch{PocketTranscript.load(true);list.scrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},enabled=!PocketTranscript.loading,modifier=Modifier.fillMaxWidth()){BilingualLabel(if(PocketTranscript.loading)"Loading…" else "Load earlier activity",color=Mint)}}
@@ -153,6 +152,22 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             }
             if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
         }
+        ConversationNotesCard(onReply={note->
+            val context="Regarding your answer:\n"+note.s("text")+"\n\n"
+            val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context
+            editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply()
+            keyboardInput=true;scope.launch{delay(50);inputFocus.requestFocus();keyboard?.show()}
+        },onGoTo={note->
+            val noteThread=Pocket.selected
+            follow=false
+            scope.launch{
+                fun index()=PocketTranscript.rows.indexOfFirst{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}
+                var found=index();var pages=0
+                while(found<0&&PocketTranscript.earlier&&pages<12&&Pocket.selected==noteThread){PocketTranscript.load(true);found=index();pages++}
+                if(found>=0&&Pocket.selected==noteThread){delay(32);list.scrollToItem((found+1).coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))}
+                else if(Pocket.selected==noteThread)Pocket.error="The original message is not available in loaded history."
+            }
+        })
         if(keyboardInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically){
                 VoiceLaunchButton(modifier=Modifier.size(64.dp),threadId=Pocket.selected,compact=true)
@@ -267,7 +282,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val text=PocketImmersion.target(sourceId,row.s("text"))
             if(row.s("type")=="commandExecution"){
                 Text(row.s("text"),fontSize=11.sp,lineHeight=17.sp,color=Paper.copy(alpha=.82f),fontFamily=FontFamily.Monospace,maxLines=if(expanded)Int.MAX_VALUE else 2,overflow=TextOverflow.Ellipsis)
-                BilingualCommandGloss(row.s("text"))
             }else if(expanded)BilingualMessage(sourceId,row.s("text"))
             else MarkdownPreview(text,fontSize=11.sp,lineHeight=17.sp,color=Paper.copy(alpha=.82f),maxLines=2,overflow=TextOverflow.Ellipsis)
         }

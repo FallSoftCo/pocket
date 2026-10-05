@@ -25,33 +25,57 @@ fun keepConversationReply(row:JSONObject){val thread=Pocket.selected?:return;Poc
         if(Pocket.selected==thread)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",r.optJSONArray("notes"))}
     }catch(e:Exception){Pocket.error=PocketNetwork.error(e)}
 }}
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable fun ConversationNotesCard(){
+@OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
+@Composable fun ConversationNotesCard(onReply:(JSONObject)->Unit,onGoTo:(JSONObject)->Unit){
+    val thread=Pocket.selected
     val notes=Pocket.detail?.optJSONArray("notes")?.objects().orEmpty()
-    if(notes.isEmpty())return
-    var expanded by remember(Pocket.selected){mutableStateOf(false)}
-    val first=notes.first()
-    val id="note:"+first.s("id")
-    LaunchedEffect(first.s("text"),PocketImmersion.enabled){PocketImmersion.offer(id,first.s("text"),"interim reply")}
-    Surface(onClick={expanded=true},color=Color(0xff302713),border=BorderStroke(1.dp,Mint.copy(alpha=.7f)),shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).semantics{contentDescription="Retained answers, ${notes.size}; tap to expand"}){
-        Row(Modifier.padding(14.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(10.dp)){
-            SymbolIcon("Codex",null,Modifier.size(22.dp))
-            MarkdownPreview(PocketImmersion.display(id,first.s("text")),fontSize=14.sp,lineHeight=20.sp,minLines=2,maxLines=3,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
-            Text("${notes.size} ›",fontSize=12.sp,color=Mint)
+    var pending by remember(thread){mutableStateOf(setOf<String>())}
+    var expanded by remember(thread){mutableStateOf(false)}
+    var problem by remember(thread){mutableStateOf<String?>(null)}
+    val visible=notes.filter{it.s("id") !in pending}
+    val remove:(JSONObject)->Unit={note->
+        val id=note.s("id")
+        if(thread!=null&&id !in pending){pending=pending+id;problem=null;Pocket.scope.launch{
+            try{
+                val response=Pocket.api("/api/threads/$thread/notes/remove",JSONObject().put("id",id))
+                require(response.optJSONArray("notes")!=null){"Removal was not acknowledged. Try again."}
+                if(Pocket.selected==thread)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}
+            }catch(e:Exception){problem=PocketNetwork.error(e)}finally{pending=pending-id}
+        }}
+    }
+    if(visible.isEmpty()&&pending.isEmpty()&&problem==null)return
+    Column(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=3.dp)){
+        if(visible.isNotEmpty()){
+            val first=visible.first()
+            LaunchedEffect(first.s("text"),PocketImmersion.enabled){PocketImmersion.offer("note:"+first.s("id"),first.s("text"),"interim reply")}
+            Surface(onClick={expanded=true},color=Color(0xff302713),border=BorderStroke(1.dp,Mint.copy(alpha=.7f)),shape=RoundedCornerShape(10.dp),modifier=Modifier.fillMaxWidth().semantics{contentDescription="Retained answers, ${visible.size}; tap to expand"}){
+                Row(Modifier.padding(horizontal=10.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    SymbolIcon("Codex",null,Modifier.size(20.dp))
+                    ImmersionText("note:"+first.s("id"),first.s("text"),rescue=true,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),kind="interim reply")
+                    Text("${visible.size} ›",fontSize=12.sp,color=Mint,modifier=Modifier.semantics{contentDescription="Open ${visible.size} retained answers"})
+                }
+            }
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                TextButton({onReply(first)}){BilingualLabel("Reply",maxLines=1)}
+                TextButton({onGoTo(first)}){BilingualLabel("Go to message",maxLines=1)}
+                TextButton({remove(first)}){BilingualLabel("Remove",color=Muted,maxLines=1)}
+            }
         }
+        if(pending.isNotEmpty())Text("Removing…",color=Muted,fontSize=13.sp)
+        problem?.let{Text(it,color=Coral,fontSize=14.sp)}
     }
     if(expanded)ModalBottomSheet(onDismissRequest={expanded=false},containerColor=Panel){
         Text("Answers & notes",fontSize=18.sp,fontWeight=FontWeight.Medium,modifier=Modifier.padding(horizontal=20.dp,vertical=12.dp))
+        problem?.let{Text(it,color=Coral,fontSize=14.sp,modifier=Modifier.padding(horizontal=20.dp))}
         LazyColumn(Modifier.fillMaxWidth().heightIn(max=520.dp).padding(horizontal=20.dp),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-            items(notes,key={it.s("id")}){n->
-                val noteId="note:"+n.s("id")
-                LaunchedEffect(n.s("text"),PocketImmersion.enabled){PocketImmersion.offer(noteId,n.s("text"),"interim reply")}
-                Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-                    if(n.s("question").isNotBlank())Text(n.s("question"),color=Muted,fontSize=12.sp)
-                    SelectionContainer{RichText(PocketImmersion.display(noteId,n.s("text")))}
-                    Row{
-                        if(PocketImmersion.enabled)TextButton({PocketImmersion.revealOriginal(noteId)}){Text("Original / Italiano")}
-                        TextButton({val thread=Pocket.selected?:return@TextButton;Pocket.scope.launch{try{val r=Pocket.api("/api/threads/$thread/notes/remove",JSONObject().put("id",n.s("id")));if(Pocket.selected==thread)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",r.optJSONArray("notes"))}}catch(e:Exception){Pocket.error=PocketNetwork.error(e)}}}){Text("Remove",color=Muted)}
+            items(visible,key={it.s("id")}){note->
+                Column(verticalArrangement=Arrangement.spacedBy(4.dp)){
+                    if(note.s("question").isNotBlank())BilingualMessage("note-question:"+note.s("id"),note.s("question"))
+                    SelectionContainer{BilingualMessage("note:"+note.s("id"),note.s("text"))}
+                    FlowRow(horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                        TextButton({expanded=false;onReply(note)}){BilingualLabel("Reply",maxLines=1)}
+                        TextButton({expanded=false;onGoTo(note)}){BilingualLabel("Go to message",maxLines=1)}
+                        TextButton({remove(note)}){BilingualLabel("Remove",color=Muted,maxLines=1)}
                     }
                 }
             }

@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {validateImmersionPlan,immersionHash,protectedImmersionRanges,validateTargetSegments,deriveImmersionText,resolveImmersionAnchor} from '../server/immersion-plan.mjs';
 const row=(source,text,spans)=>({version:immersionHash(source),text,spans:spans.map(([source,target,occurrence=0])=>({source,target,occurrence,unit:'phrase',note:'',targetSegments:[{target,occurrence:0,meaning:source,role:'other',features:[],relations:[]}]}))});
@@ -73,4 +74,32 @@ test('source reconstruction and validation share bounded occurrence semantics an
  const source='sessionish session and session';const r=row(source,'sessionish sessione and session',[['session','sessione',0]]);assert.equal(deriveImmersionText(source,r),r.text);assert.equal(validateImmersionPlan(source,r).spans[0].start,11);
  for(const [text,quote]of [["I'm checking","I"],["l’acqua pronta","acqua"],["ozzz’s project","ozzz"],['cafe\u0301 e','e'],['👩‍💻 i','👩']]){const match=resolveImmersionAnchor(text,quote,0);if(text==='cafe\u0301 e')assert.equal(match.start,6);else assert.equal(match,null);}
  const t='A    B   C';const parts=['A','B','C'].map(word=>lexical(word,word,'other'));assert.equal(validateTargetSegments(t,parts).map(s=>s.target).join(''),t);
+});
+
+test('inline replacement accepts strong density and partial mixed grammar in one preserved flow',()=>{
+ const source='I opened two new sessions and reviewed the important changes before lunch.';
+ const text='I opened due nuove sessioni and rivisto le modifiche importanti prima lunch.';
+ const r=validateImmersionPlan(source,row(source,text,[['two new sessions','due nuove sessioni'],['reviewed the important changes','rivisto le modifiche importanti'],['before','prima']]));assert.equal(r.text,text);assert.equal(r.original,source);assert.equal(r.planVersion,'inline-replacement-v3');assert.equal(r.spans.length,3);assert.ok(r.text.startsWith('I opened '));assert.ok(r.text.endsWith(' lunch.'));
+});
+test('ordinary long content rejects whole source coverage sentence fallback and overlong anchors',()=>{
+ const source='I review the latest changes and prepare the final report now.';
+ const all=row(source,'bad',[['I review the latest changes','Esamino le ultime modifiche'],['and prepare the final report now','e preparo il rapporto finale ora']]);assert.equal(validateImmersionPlan(source,{...all,text:deriveImmersionText(source,all)}),null);
+ const sentences='The new sessions are ready. I will review the final report after lunch.';
+ const full=row(sentences,'Le nuove sessioni sono pronte. I will review the final report after lunch.',[['The new sessions are ready','Le nuove sessioni sono pronte']]);assert.equal(validateImmersionPlan(sentences,full),null);
+ const long=row(source,'bad',[['review the latest changes and prepare the final report','esaminare le modifiche e preparare il rapporto']]);assert.equal(validateImmersionPlan(source,{...long,text:deriveImmersionText(source,long)}),null);
+ assert.ok(validateImmersionPlan('New session',row('New session','Nuova sessione',[['New session','Nuova sessione']])));
+});
+test('single-flow partial selection keeps protected literals and original send source exact',()=>{
+ const source='Please review the latest changes in `notes.md` using gpt-6-luna and https://example.com before lunch.';
+ const text='Please review le ultime modifiche in `notes.md` using gpt-6-luna and https://example.com prima lunch.';
+ const accepted=validateImmersionPlan(source,row(source,text,[['the latest changes','le ultime modifiche'],['before','prima']]));assert.equal(accepted.text,text);assert.equal(accepted.original,source);assert.ok(accepted.text.includes('`notes.md` using gpt-6-luna and https://example.com'));assert.equal(accepted.text.includes('\n'),false);
+});
+
+test('recorded stock inline teacher response retains safe replacements while omitting unsupported metadata only',()=>{
+ const receipt=JSON.parse(readFileSync(new URL('../docs/qualification/inline-replacement-v3-stock-codex.json',import.meta.url)));const raw=receipt.raw.translations[0];const text=deriveImmersionText(receipt.source,raw);const accepted=validateImmersionPlan(receipt.source,{...raw,text});assert.ok(accepted);assert.equal(accepted.spans.length,3);assert.deepEqual(accepted.spans[0].targetSegments,[]);assert.ok(accepted.spans[1].targetSegments.length>0);assert.ok(accepted.spans[2].targetSegments.length>0);assert.equal(accepted.text,'I opened due nuove sessioni and ho esaminato le ultime modifiche in `notes.md` with gpt-6-luna prima di pranzo.');assert.equal(accepted.original,receipt.source);assert.equal(accepted.text.includes('\n'),false);
+});
+test('cross-span grammatical references are omitted without relaxing protected-source or overlap guards',()=>{
+ const source='We review the new sessions using `notes.md` before lunch.';const r=row(source,'Noi review le nuove sessioni using `notes.md` before lunch.',[['We','Noi'],['the new sessions','le nuove sessioni']]);r.spans[0].targetSegments[0].relations=[{kind:'agreesWith',target:'sessioni',occurrence:0,note:''}];const accepted=validateImmersionPlan(source,r);assert.deepEqual(accepted.spans[0].targetSegments,[]);assert.ok(accepted.spans[1].targetSegments.length>0);
+ const unsafe=row(source,source.replace('notes.md','note.md'),[['notes.md','note.md']]);unsafe.spans[0].targetSegments=[];assert.equal(validateImmersionPlan(source,unsafe),null);
+ const overlap=row(source,'wrong',[['the new sessions','le nuove sessioni'],['new sessions','nuove sessioni']]);overlap.spans.forEach(s=>s.targetSegments=[]);assert.equal(validateImmersionPlan(source,overlap),null);
 });

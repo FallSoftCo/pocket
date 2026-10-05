@@ -1,0 +1,10 @@
+{
+  "protectedChecksumsUnchanged": true,
+  "backendStopped": true,
+  "privateBackupRetained": true,
+  "version": "0.5.0-alpha.20",
+  "changedFiles": 10,
+  "sourceHashesMatch": true,
+  "inferenceCalls": 0,
+  "daemonStarted": false
+}

@@ -1,3 +1,4 @@
+import {SessionDiscovery} from './session-discovery.mjs';
 import {NotificationTitles} from './notification-titles.mjs';
 import {NotificationReads} from './notification-reads.mjs';
 import {ImmersionWorker} from './immersion-worker.mjs';
@@ -67,14 +68,16 @@ const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,ho
 
 const nativeVoiceCodex=new Codex();
 const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:voiceController,cwd:defaultCwd});
+const sessionDiscovery=new SessionDiscovery({db,codex,hidden:id=>voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)});
 const timeline=new LiveTimeline();
 setInterval(()=>timeline.prune(),60000).unref();
 const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
-const history=new ThreadHistory(codex,{onPreview:thread=>conversationNotes.remember(thread)});
+// Notes hydrate when their conversation opens, not while hundreds of list cards load.
+const history=new ThreadHistory(codex);
 const activityBoard=new ActivityBoard();
 const liveDelivery=new LiveActivityDelivery((type,payload)=>emit(type,payload));
 const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery.preview(threadId,preview));
-const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id});void sendOutgoing(row,thread);});
+const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);});
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...payload}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
 const rateLimits=new AccountRateLimits(codex,usage=>emit('rateLimits',{usage}));
@@ -134,7 +137,7 @@ function recoverHistory(metadata){
 }
 async function attach(threadId,{before=null,recent=false}={}){
   requireId(threadId); await codex.connect();
-  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;
+  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);
   if(!attached.has(threadId)){
     const started=db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(threadId)||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(threadId);
     metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true,...(started?.permissions?permissionOptions(started.permissions):codex.executionOptions())})).thread;attached.add(threadId);
@@ -312,10 +315,17 @@ app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.pa
 app.get('/api/activity',(_req,res)=>res.json({items:activityBoard.snapshot()}));
 app.get('/api/threads',route(async(req,res)=>{
   await codex.connect();
-  const r=await codex.call('thread/list',{limit:70,sortKey:'updated_at',sortDirection:'desc',archived:req.query.archived==='true',useStateDbOnly:true});
+  const r=await sessionDiscovery.list({archived:req.query.archived==='true'});
   const watches=db.prepare('SELECT * FROM watches').all();
   for(const renamed of notificationTitles.reconcile(r.data||[])){emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));}
-  res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>({id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...threadPreviews.get(t),cwd:t.cwd,status:t.status,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:!!watches.find(w=>w.thread_id===t.id&&w.enabled)}))});
+  res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>{
+    const followed=!!watches.find(w=>w.thread_id===t.id&&w.enabled);
+    const updatedMs=t.updatedAt<1e11?t.updatedAt*1000:t.updatedAt;
+    const preview=threadPreviews.get(t,{hydrate:followed||t.status?.type==='active'||Date.now()-updatedMs<15*60000});
+    const start=db.prepare("SELECT state FROM outgoing WHERE thread_id=? AND id LIKE 'start-%' ORDER BY created_at DESC LIMIT 1").get(t.id);
+    const awaitingStart=start&&['queued','sending'].includes(start.state)&&['idle','notLoaded','pending',undefined].includes(t.status?.type);
+    return {id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed};
+  })});
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null,recent:req.query.view==='timeline'});
@@ -349,12 +359,12 @@ app.post('/api/threads/:id/rename',route(async(req,res)=>{
 }));
 app.post('/api/threads/:id/unarchive',route(async(req,res)=>{
   const threadId=requireId(req.params.id);await codex.connect();
-  await codex.call('thread/unarchive',{threadId});res.json({ok:true});
+  await codex.call('thread/unarchive',{threadId});sessionDiscovery.markArchived(threadId,false);res.json({ok:true});
 }));
 app.post('/api/threads/:id/archive',route(async(req,res)=>{
   const t=await attach(req.params.id);
   if(isActive(t)||t.turns?.some(x=>x.status==='inProgress'))return res.status(409).json({error:'Stop the running turn before archiving.'});
-  await codex.call('thread/archive',{threadId:t.id});
+  await codex.call('thread/archive',{threadId:t.id});sessionDiscovery.markArchived(t.id,true);
   db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND state='queued'").run(now(),t.id);
   db.prepare('UPDATE watches SET enabled=0 WHERE thread_id=?').run(t.id);attached.delete(t.id);res.json({ok:true});
 }));

@@ -265,7 +265,18 @@ object Pocket {
             "contextNotes" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("notes",json.optJSONArray("notes"))}}
             "activity" -> {activities=json.optJSONArray("items")?.objects()?:emptyList()}
             "sessionPreview" -> {discoverSession(json.s("threadId"));tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),updated=json.optLong("activityAt",if(it.updated<100000000000L)it.updated*1000 else it.updated))else it}}
-            "sessionStarted" -> refresh()
+            "sessionStarted" -> {
+                val thread=json.optJSONObject("thread")
+                if(thread!=null&&!showArchived){
+                    val id=thread.s("id",json.s("threadId"))
+                    if(id.isNotBlank()){
+                        val previous=tasks.firstOrNull{it.id==id}
+                        val next=Task(id,thread.s("name",previous?.title?:"New task"),thread.s("cwd",previous?.cwd?:""),thread.optJSONObject("status")?.s("type")?:"pending",thread.optLong("updatedAt",System.currentTimeMillis()),previous?.watched?:false,false,thread.s("preview",previous?.preview?:"Starting…"),previous?.previewRole?:"context",previous?.previewKind?:"message")
+                        tasks=tasks.filterNot{it.id==id}+next
+                    }
+                }
+                refresh()
+            }
             "codex" -> {val e=json.optJSONObject("event");val p=e?.optJSONObject("params");val id=p?.s("threadId")?.ifBlank{p.optJSONObject("thread")?.s("id")?:""};val method=e?.s("method")
                 statusRevision++;codexOnline=true;codexConnectionMessage=""
                 if(!id.isNullOrBlank())discoverSession(id)

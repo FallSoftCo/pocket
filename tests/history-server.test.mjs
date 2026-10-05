@@ -52,6 +52,6 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
  const archived=await api('/api/threads?archived=true');assert.equal(archived.status,200);assert.equal(archived.data.threads[0].id,'archived-thread');assert.equal(archived.data.threads[0].archived,true);
  assert.equal((await api('/api/projects')).status,200);
  const listCalls=calls.filter(c=>c.method==='thread/list');assert.ok(listCalls.length>=3);assert.ok(listCalls.every(c=>c.params.useStateDbOnly===true),'interactive lists must bypass expensive JSONL repair scans');
- assert.ok(listCalls.some(c=>c.params.limit===70&&c.params.archived===false));assert.ok(listCalls.some(c=>c.params.limit===70&&c.params.archived===true));assert.ok(listCalls.some(c=>c.params.limit===100&&c.params.archived===false));
+ assert.ok(listCalls.some(c=>c.params.archived===false&&c.params.sourceKinds?.includes('appServer')));assert.ok(listCalls.some(c=>c.params.archived===true&&c.params.sourceKinds?.includes('exec')));assert.ok(listCalls.some(c=>c.params.limit===100&&c.params.archived===false));
  assert.equal((await api('/api/status')).data.problem,null);
 });

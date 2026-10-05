@@ -2,18 +2,7 @@ package co.fallsoft.pocket
 import org.junit.Assert.*
 import org.junit.Test
 class BilingualContentTest {
- @Test fun paragraphsPairWithAnEnglishSupportLane(){val rows=bilingualUnits("Hello.\n\nReady?","Ciao.\n\nPronto?");assertEquals(2,rows.size);assertEquals("Hello.",rows[0].original);assertEquals("Pronto?",rows[1].target)}
- @Test fun fencedCodeAppearsOnlyOnce(){val original="Run this.\n\n```sh\ngit status\n```\n\nThen wait.";val target="Esegui questo.\n\n```sh\ngit status\n```\n\nPoi aspetta.";val rows=bilingualUnits(original,target);assertEquals(3,rows.size);assertTrue(rows[1].code);assertNull(rows[1].original);assertTrue(rows[1].target.contains("git status"))}
- @Test fun unmatchedParagraphsUseWholeMessageSupportWithoutDuplicatingCode(){val rows=bilingualUnits("First.\n\n```sh\nls\n```\n\nSecond.","Primo. Secondo.\n\n```sh\nls\n```");assertEquals(1,rows.size);assertFalse(rows[0].original!!.contains("```"));assertTrue(rows[0].target.contains("```"))}
- @Test fun commonLabelsAvailableOfflineButPathsAndShellSyntaxUntouched(){assertEquals("Invia",ImmersionLexicon.italian("Send"));assertEquals("In coda",ImmersionLexicon.italian("Queue"));assertNull(ImmersionLexicon.italian("git status"));assertNull(ImmersionLexicon.italian("/path/Send"));assertEquals("Checks Git status",ImmersionCommands.meaning("git status --short")!!.second);assertNull(ImmersionCommands.meaning("git statusful"))}
- @Test fun tildeAndFourBacktickFencesKeepNestedMarkersInSingleCodeUnit(){
-  for(fence in listOf("~~~","````")){
-   val original="Before.\n\n${fence}sh\n```\necho ok\n```\n$fence\n\nAfter."
-   val target="Prima.\n\n${fence}sh\n```\necho ok\n```\n$fence\n\nDopo."
-   val rows=bilingualUnits(original,target);assertEquals(3,rows.size);assertTrue(rows[1].code);assertNull(rows[1].original);assertTrue(rows[1].target.contains("echo ok"))
-  }
- }
- @Test fun fenceWithTrailingWordsDoesNotCloseCode(){val original="Before.\n\n~~~~sh\necho ok\n~~~~ not a closer\necho done\n~~~~\n\nAfter.";val target=original.replace("Before.","Prima.").replace("After.","Dopo.");val rows=bilingualUnits(original,target);assertEquals(3,rows.size);assertTrue(rows[1].code);assertTrue(rows[1].target.contains("echo done"));assertNull(rows[1].original)}
+ @Test fun labelsRemainOfflineAndTechnicalLiteralsUntouched(){assertEquals("Invia",ImmersionLexicon.italian("Send"));assertNull(ImmersionLexicon.italian("git status"));assertNull(ImmersionLexicon.italian("/path/Send"))}
 
  private fun phrase():ImmersionSpan {
   val target="una domanda importante"
@@ -32,15 +21,7 @@ class BilingualContentTest {
   assertFalse(alignedTargetValid(span.copy(targetSegments=span.targetSegments.mapIndexed{i,s->if(i==0)s.copy(relations=listOf(ImmersionRelation("agreesWith",99)))else s})))
   assertFalse(alignedTargetValid(span.copy(targetSegments=span.targetSegments.mapIndexed{i,s->if(i==1)s.copy(meaning="invented grammar")else s})))
  }
- @Test fun alignedReadingFlowKeepsItalianOrderSurroundingTextAndPunctuation(){
-  val span=phrase();val content="Ask una domanda importante, then continue."
-  val tokens=immersionReadingTokens(content,span)!!
-  assertEquals(content,tokens.joinToString(""){content.substring(it.start,it.end)})
-  assertEquals(listOf("a","question","important"),tokens.map{it.meaning}.filter{it.isNotBlank()})
-  assertEquals(listOf("una ","domanda ","importante, "),tokens.filter{it.segment!=null}.map{content.substring(it.start,it.end)})
-  assertEquals("Ask ",content.substring(tokens.first().start,tokens.first().end))
-  assertEquals("an important question",span.source)
- }
+
  @Test fun agreementHighlightsBothEndsWithoutInventingVerbAgreement(){
   assertEquals(setOf(0,2,4),agreementSegments(phrase()))
   val verb=ImmersionTargetSegment(0,4,"sono","are","verb",features=listOf(ImmersionFeature("number","plural")))
@@ -54,18 +35,7 @@ class BilingualContentTest {
   assertEquals("negation",grammarCue(v.copy(features=listOf(ImmersionFeature("aspect","perfect")),relations=listOf(ImmersionRelation("negates",0)))))
   assertEquals("verb",grammarCue(v))
  }
- @Test fun repeatedPhraseHasNoGuessedReadingAlignment(){
-  assertNull(immersionReadingTokens("una domanda importante, una domanda importante",phrase()))
-  assertNull(immersionReadingTokens("missing",phrase()))
- }
- @Test fun inseparableItalianContractionIsNeverSplicedIntoEnglish(){
-  val segment=ImmersionTargetSegment(0,4,"alla","to the","preposition")
-  val span=ImmersionSpan(0,6,"to the","alla",targetSegments=listOf(segment))
-  val tokens=immersionReadingTokens("Torna alla sessione.",span)!!
-  assertEquals(1,tokens.count{it.segment!=null})
-  assertEquals("alla ",tokens.single{it.segment!=null}.let{"Torna alla sessione.".substring(it.start,it.end)})
-  assertEquals("to the",tokens.single{it.segment!=null}.meaning)
- }
+
  @Test fun separateAgreementHeadsReceiveStableGroupsAndOtherRelationsDoNotJoin(){
   val target="le nuove sessioni e il modello"
   val segments=listOf(
@@ -92,4 +62,38 @@ class BilingualContentTest {
   assertTrue(agreementGroups(ImmersionSpan(0,3,"are","sono",targetSegments=listOf(s))).isEmpty())
  }
 
+ private fun replacementPlan():ImmersionPresentation {
+  val source="Check the sessions, then the sessions; ask a question with `notes.md` and gpt-6-luna."
+  val first=source.indexOf("the sessions");val second=source.indexOf("the sessions",first+1);val third=source.indexOf("a question")
+  val spans=listOf(ImmersionSpan(first,first+12,"the sessions","le sessioni"),ImmersionSpan(second,second+12,"the sessions","le sessioni"),ImmersionSpan(third,third+10,"a question","una domanda"))
+  return ImmersionPresentation(contextualHybridText(source,spans)!!,source,true,spans)
+ }
+ @Test fun replacementRescueUsesExactOffsetsDespiteRepeatedSourceAndTarget(){
+  val plan=replacementPlan()
+  assertEquals("Check le sessioni, then le sessioni; ask una domanda with `notes.md` and gpt-6-luna.",immersionReplacementText(plan))
+  assertEquals("Check le sessioni, then the sessions; ask una domanda with `notes.md` and gpt-6-luna.",immersionReplacementText(plan,plan.spans[1]))
+  assertEquals("Check le sessioni, then le sessioni; ask a question with `notes.md` and gpt-6-luna.",immersionReplacementText(plan,plan.spans[2]))
+ }
+ @Test fun replacementOriginalOverrideContainsOnlyOneOriginalFlow(){
+  val plan=replacementPlan();assertEquals(plan.source,immersionReplacementText(plan,plan.spans[1],true))
+  assertFalse(immersionReplacementText(plan,plan.spans[1]).contains("\n"))
+  assertFalse(immersionReplacementText(plan,plan.spans[1]).contains("["))
+  assertTrue(immersionReplacementText(plan,plan.spans[1]).endsWith("with `notes.md` and gpt-6-luna."))
+ }
+ @Test fun invalidOrStalePlanNeverSplicesTextIntoChangedSource(){
+  val plan=replacementPlan()
+  val changed=plan.copy(source=plan.source.replace("sessions","workers"))
+  assertEquals(changed.source,immersionReplacementText(changed,plan.spans[0]))
+  assertEquals(plan.source,immersionReplacementText(plan.copy(text=plan.text+" extra")))
+  assertEquals(plan.source,immersionReplacementText(plan.copy(spans=plan.spans.reversed())))
+  assertEquals(plan.text,immersionReplacementText(plan,plan.spans[0].copy(target="different")))
+ }
+ @Test fun replacementPreservesExistingNewlinesAndProtectedMarkupWithoutAddingAny(){
+  val source="Ready?\n\n[Open](https://example.test/a) `notes.md`\n```sh\ngit status\n```"
+  val span=ImmersionSpan(0,5,"Ready","Pronto");val plan=ImmersionPresentation(contextualHybridText(source,listOf(span))!!,source,true,listOf(span))
+  val shown=immersionReplacementText(plan)
+  assertEquals(source.count{it=='\n'},shown.count{it=='\n'})
+  assertEquals(source.substring(5),shown.substring(6))
+  assertEquals(source,immersionReplacementText(plan,span))
+ }
 }

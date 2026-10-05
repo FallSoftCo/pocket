@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-export const IMMERSION_PLAN_VERSION='contextual-aligned-v2';
+export const IMMERSION_PLAN_VERSION='inline-replacement-v3';
 export const immersionHash=source=>createHash('sha256').update(source).digest('hex');
 export const immersionDensity=value=>['starter','balanced','strong'].includes(value)?value:'strong';
 export function protectedImmersionRanges(source){
@@ -78,6 +78,22 @@ export function deriveImmersionText(source,row){
  const spans=[];for(const anchor of row.spans){if(!anchor||typeof anchor.source!=='string'||!anchor.source.length||typeof anchor.target!=='string'||!Number.isInteger(anchor.occurrence)||anchor.occurrence<0||anchor.occurrence>100)return null;const resolved=resolveImmersionAnchor(source,anchor.source,anchor.occurrence);if(!resolved)return null;spans.push({...resolved,target:anchor.target});}
  spans.sort((a,b)=>a.start-b.start);let text='',cursor=0;for(const span of spans){if(span.start<cursor)return null;text+=source.slice(cursor,span.start)+span.target;cursor=span.end;}return text+source.slice(cursor);
 }
+const lexicalWords=text=>[...text.matchAll(/[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*/gu)].map(m=>({start:m.index,end:m.index+m[0].length}));
+/** Selection stays partial without a universal density ceiling or grammatical-purity fallback. */
+export function validInlineSelection(source,spans){
+ if(!Array.isArray(spans)||spans.some(s=>!s||typeof s.source!=='string'||lexicalWords(s.source).length>6))return false;
+ const protectedRanges=protectedImmersionRanges(source);
+ const eligible=lexicalWords(source).filter(w=>!protectedRanges.some(p=>w.start<p.end&&w.end>p.start));
+ if(eligible.length<8)return true; // Short existing labels may remain whole.
+ if(spans.length&&!eligible.some(w=>!spans.some(s=>w.start<s.end&&w.end>s.start)))return false;
+ // Reject a whole-sentence anchor even when other sentences keep the source partially untouched.
+ for(const sentence of new Intl.Segmenter('en',{granularity:'sentence'}).segment(source)){
+  const words=lexicalWords(sentence.segment);if(words.length<2)continue;
+  const first=sentence.index+words[0].start,last=sentence.index+words.at(-1).end;
+  if(spans.some(s=>s.start<=first&&s.end>=last))return false;
+ }
+ return true;
+}
 /** Resolve quoted anchors locally into UTF-16 offsets; never trust model-estimated offsets. */
 export function validateImmersionPlan(source,row){
  if(!row||typeof row!=='object'||row.version!==immersionHash(source)||!Array.isArray(row.spans)||row.spans.length>12||typeof row.text!=='string')return null;
@@ -90,11 +106,12 @@ export function validateImmersionPlan(source,row){
   if(protectedRanges.some(p=>start<p.end&&end>p.start))return null;
   // Do not splice inside a word or a surrogate pair. Grammar units may contain punctuation.
   if(joins(source.slice(Math.max(0,start-4),start),source.slice(start,start+4))||joins(source.slice(Math.max(0,end-4),end),source.slice(end,end+4)))return null;
-  const targetSegments=validateTargetSegments(anchor.target,anchor.targetSegments);if(!targetSegments)return null;
+  // Grammar teaching evidence is optional; never discard a source-safe replacement or invent cues.
+  const targetSegments=validateTargetSegments(anchor.target,anchor.targetSegments)||[];
   spans.push({start,end,targetSegments,source:anchor.source,target:anchor.target,note:typeof anchor.note==='string'?anchor.note.slice(0,240):'',unit:typeof anchor.unit==='string'?anchor.unit:'phrase'});
  }
  spans.sort((a,b)=>a.start-b.start);if(spans.some((s,i)=>i>0&&s.start<spans[i-1].end))return null;
  let text='',cursor=0;for(const span of spans){text+=source.slice(cursor,span.start)+span.target;cursor=span.end;}text+=source.slice(cursor);
- if(text!==row.text)return null;
+ if(text!==row.text||!validInlineSelection(source,spans))return null;
  return {text,spans,planVersion:IMMERSION_PLAN_VERSION,version:row.version,original:source};
 }

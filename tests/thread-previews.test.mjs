@@ -51,3 +51,4 @@ test('thinking summaries stream by part and raw reasoning never becomes a previe
  assert.equal(changed.at(-1).preview,'Thinking · Checking thumb reach');
  assert.equal(latestActivity({turns:[{items:[{type:'userMessage',content:'request'},{type:'reasoning',summary:['Checking thumb reach'],content:['hidden']}]}]}).preview,'Thinking · Checking thumb reach');
 });
+test('cold historical cards keep metadata context without triggering history reads',()=>{let reads=0;const p=new ThreadPreviews({read:async()=>{reads++;return {turns:[]}}},()=>{});const value=p.get({id:'old',preview:'An earlier input',updatedAt:1},{hydrate:false});assert.equal(value.preview,'An earlier input');assert.equal(reads,0);assert.equal(p.queue.size,0);assert.equal(p.running.size,0);});

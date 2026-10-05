@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-04",
+  "updated": "2026-10-05",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -456,27 +456,57 @@
     {
       "id": "mosis-contextual-grammar-alignment",
       "requirement": "Keep fluent Italian words/phrases intact inline; use contextual lexical and grammatical alignment in source order, consistent role cues and agreement relationships, with normal-size in-place assistance. Adapt Mosis honestly to Italian rather than guessing suffixes or fabricating English meanings for gender. Coordinate schema/experience with OZZZ.",
-      "status": "released-alpha19-phone-install-pending",
-      "evidence": "Mosis source reviewed; contextual-aligned-v2 teacher annotations validated without suffix inference or invented meanings. Actual stock Codex teacher output qualified;165 backend and74 Android tests pass. Exact signed debug APK f1c7ccab3537657edfaf015a5160077118b9ea22715ebf0b750e5b7e3f22e739 qualified at1x/2x: source-order normal-size in-place meanings, distinct explicit agreement groups, expand/collapse, alignment/source invalidation, links and unchanged sending/card interactions. Runtime receipt contextual-grammar-runtime-alpha19.json; approved fresh screenshots published main8bar. OZZZ shared schema implementation underway separately. Source6b16405 pushed and GitHub alpha19 prerelease published. Compatible real-phone upgrade pending push baseline diagnosis. Followup deterministic quoted-anchor resolver counts only complete eligible lexical occurrences for source, target and relations, accepting short Italian articles after words with matching suffixes without relaxing grapheme/contraction bounds. Two added regressions and full167 backend tests pass; unchanged Android APK."
+      "status": "released-alpha19-interaction-superseded-by-inline-replacement",
+      "evidence": "Mosis source reviewed; contextual-aligned-v2 teacher annotations validated without suffix inference or invented meanings. Actual stock Codex teacher output qualified;165 backend and74 Android tests pass. Exact signed debug APK f1c7ccab3537657edfaf015a5160077118b9ea22715ebf0b750e5b7e3f22e739 qualified at1x/2x: source-order normal-size in-place meanings, distinct explicit agreement groups, expand/collapse, alignment/source invalidation, links and unchanged sending/card interactions. Runtime receipt contextual-grammar-runtime-alpha19.json; approved fresh screenshots published main8bar. OZZZ shared schema implementation underway separately. Source6b16405 pushed and GitHub alpha19 prerelease published. Compatible real-phone upgrade pending push baseline diagnosis. Followup deterministic quoted-anchor resolver counts only complete eligible lexical occurrences for source, target and relations, accepting short Italian articles after words with matching suffixes without relaxing grapheme/contraction bounds. Two added regressions and full167 backend tests pass; unchanged Android APK. User superseded the interlinear presentation on2026-10-05: use single-flow partial replacements and direct phrase taps; alpha20 implementation and qualification underway."
     },
     {
       "id": "tailscale-push-regression",
       "requirement": "Notifications must arrive while Tailscale stays connected. Trace real FCM delivery, VPN routing/DNS and Android background/post behavior on phone; diagnose before changing settings. SSH first for ordinary work, skill/helper when ADB needed, no Wi-Fi toggle or pairing reset. Preserve immersion delivery.",
       "status": "real-device-dns-and-background-push-restored",
       "evidence": "Backend FCM accepts high-priority data-only pushes; acceptance is not handset receipt. Phone background probe399 accepted by FCM, real receipt not yet observable. With VPN connected, Android Google hostname resolution stalls while numeric Google TLS and mtalk TCP5228/443 succeed. This isolates a DNS failure but does not yet prove push causality. No app VPN filter found; permission/channel/device matching and dedup remain separate checks. Scoped DNS settings inspection and remediation underway without disabling Tailscale. Phone subsequently locked; actual receipt and resolver settings remain blocked by Android permissions/keyguard. User asked to unlock; no VPN/DNS setting changed. Additional direct-query isolation: public DNS resolves Google name in103ms; Tailscale100.100.100.100 stub times out near2s. Scoped resolver repair still awaits unlocked Settings; no settings changed. Sanitized real-device receipt push-dns-phone-alpha19.json saved. No fix/handset delivery claimed; unlock is required for remaining settings checks. User renewed explicit phone DNS/routing repair request2026-10-05. ADB helper had no5555/USB route; user supplied36353, verified exact Pixel serial. SSH and bounded on-device Codex independently reproduce platform lookup failure versus healthy explicit public DNS. Custom Android PrivateDNS mode/specifier are null. Tailscale settings/core and network-change failure under inspection. No root cause or fixed delivery claimed yet. Targeted detached on-phone restart of Tailscale1.102.3 restored resolver without changing DNS/exclusions/exit-node settings. Before: platform Google lookups and local quad100/PeerAPI time out while direct public DNS/TLS/WireGuard work. After: quad100 public and MagicDNS74ms, platform mtalk98ms, PeerAPIHTTP200. Fresh background notification413 acceptedFCM and actual handset lastDeliveryTransport=fcm/id413 plus trayAndroid1413 importance4 in~3.5s; no foreground NextComp history/socket contamination. Pattern consistent with upstream Android netstack bug21155/mergedfix21332, exact TUN-error event not captured. Current outage recovered; installed core unchanged, so future recurrence not ruled out. Final normal-hostname Firebase/OpenAI TLS and phone-to-workstation HTTPS health pass; original NextComp focus and unchanged PrivateDNS null/null readback independently verified. Receipt phone-network-recovery-2026-10-05.json records recovery and exact remaining recurrence limitation."
+    },
+    {
+      "id": "inline-replacement-single-flow",
+      "requirement": "Replace short phrases inside a single existing text flow; partial mixed grammar accepted. No duplicate translated lines, subtitles, or modal help. Tap selected text to switch only that phrase in place.",
+      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+    },
+    {
+      "id": "notes-immediate-actions",
+      "requirement": "Keep retained answers near thumb with direct reply and source navigation; durable remove with authoritative acknowledgement and visible failure recovery.",
+      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+    },
+    {
+      "id": "title-exact-text-hit",
+      "requirement": "Conversation title rename hit region must end at visible text rather than include empty trailing space.",
+      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+    },
+    {
+      "id": "coordinator-immediate-session-discovery",
+      "requirement": "Coordinator-created and selected sessions must appear immediately with pending/working state before first response. Temperature thread appeared after response; verify it and PirateBae. Preserve running temperature task.",
+      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+    },
+    {
+      "id": "coordinator-lightweight-execution",
+      "requirement": "Short tasks such as temperature/fan checks should execute in coordinator chat or lightweight delegation returning results there without unnecessary user-managed session creation.",
+      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+    },
+    {
+      "id": "audio-bar-direct-controls",
+      "requirement": "Show pause/resume and clear directly in the speech footer bar, remove the menu, preserve keyboard focus and draft when operating playback.",
+      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "7c6f349",
+    "latest_pushed_commit": "105ff92",
     "published_release": "v0.5.0-alpha.19",
-    "server_tests": 167,
-    "android_tests": 74,
+    "server_tests": 184,
+    "android_tests": 72,
     "phone_endpoint": "Verified Tailscale wireless ADB100.101.220.29:36353; SSH phone also live",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
-    "owned_emulator": "Owned emulator5560 shut down after qualification; unrelated emulator5556 preserved",
-    "owned_fixture_port": "Owned fixture19984 stopped after qualification",
+    "owned_emulator": "Owned emulator5560 in use for alpha20 qualification; unrelated5556 preserved",
+    "owned_fixture_port": "Owned synthetic provider-blocked fixture19984 active for alpha20 QA",
     "installed_development_version": "0.5.0-alpha.18 (versionCode35 independently verified)",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
@@ -490,16 +520,16 @@
     "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
     "update_delivery": "Private compatible APK variants deployed; one push accepted by Firebase, repeats deduplicated; device acknowledgement not claimed",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
-    "remaining_source": "Alpha19 phone-local plan and worker followup exact hashes and syntax verified; protected configuration checksums unchanged and phone-local backend intentionally stopped.",
+    "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
     "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21\u201339ms. No active-session reset.",
     "immersion_next": "Strong working-language Italian with normal-size contextual English rescue and all workflow/speech/public-thought coverage is in progress; docs/ITALIAN-VIRTUAL-IMMERSION.md records exactrequest andaudit.",
     "phone_access": "Verified wireless ADB36353 and Termux SSH over Tailscale restored after autonomous phone-local process repair; phone-local backend remains intentionally stopped.",
-    "backend_runtime": "Alpha19 quoted-anchor followup live after167 backend tests and zero active voice turns; health confirms codex and FCM ready. Backend status does not establish handset push receipt.",
-    "native_validation": "Alpha19 signed debug/release build,74 Android tests and both lint variants passed; exact final debug APK qualified1x/2x with connected agreement markers. Runtime receipt and approved main8bar screenshots published.",
-    "pending_phone_update": "0.5.0-alpha.19 code36 compatible APK prepared; baseline35 retained during notification diagnosis"
+    "backend_runtime": "Alpha20 inline v3, direct coordinator checks, immediate discovery and bounded metadata refresh live;184 backend tests pass. Real list298rows with both target sessions1886/1831/166ms; status5ms. Temperature task preserved.",
+    "native_validation": "Alpha20/code38 signed debug/release,72 Android tests and bothlintvariants pass. Exact38APK e3e24ccf9cf21dc32340b1c94d2857e08f17747314efb4cc1e7d691dc9db302e independently installed/hashed on ownedemulator. Actual1x/2x Pause/Resume/Clear retain IME+draft; exacttitletext bounds verified; noteactions wrapwholelabels at2x. Singleflow directphrase/repeatedoccurrence runtime verified with unchanged renderer.",
+    "pending_phone_update": "Qualified alpha20/code38 same-signer APK staged and verified on phone; on-deviceCodex in-app installation and physical verification in progress."
   },
   "remaining": [
-    "Install qualified alpha19 through phone-native Codex; compatible artifacts prepared, network diagnosis restored actual FCM delivery",
+    "Install qualified alpha20 through phone-native Codex; compatible artifacts prepared, network diagnosis restored actual FCM delivery",
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",
     "Physical secure-keyguard captions and real-provider voice language quality remain distinct qualifications",
     "Review public launch separately when sufficiently qualified"

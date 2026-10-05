@@ -182,17 +182,17 @@ class MainActivity:ComponentActivity(){
 }
 @Composable fun SpeechPlayer(){
     if(PocketSpeech.count==0)return
-    var discard by remember{mutableStateOf(false)}
     Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
-        Row(Modifier.padding(horizontal=18.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
+        Row(Modifier.padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
             Column(Modifier.weight(1f)){
-                WorkflowText(if(PocketSpeech.paused)"Speech paused · ${PocketSpeech.count} saved" else "Listening · ${PocketSpeech.count} queued",color=Mint,fontSize=12.sp)
+                WorkflowText(if(PocketSpeech.paused)"Speech paused · ${PocketSpeech.count} saved" else "Listening · ${PocketSpeech.count} queued",color=Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 WorkflowText(if(PocketSpeech.paused)PocketSpeech.status else PocketSpeech.title,color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
-            TextButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")}){BilingualLabel(if(PocketSpeech.paused)"Resume" else "Pause")}
-            if(PocketSpeech.paused)Box{
-                IconButton({discard=true}){SymbolIcon(Icons.Rounded.MoreVert,"Speech options",tint=Muted)}
-                DropdownMenu(discard,{discard=false}){DropdownMenuItem(text={BilingualLabel("Clear saved speech")},onClick={discard=false;PocketSpeech.clear()})}
+            IconButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")},modifier=Modifier.size(48.dp)){
+                SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)"Resume" else "Pause"),modifier=Modifier.size(28.dp),tint=Mint)
+            }
+            TextButton({PocketSpeech.clear()},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp).semantics{contentDescription=PocketImmersion.label("Clear saved speech")},contentPadding=PaddingValues(horizontal=8.dp)){
+                BilingualLabel("Clear",color=Coral,fontSize=14.sp)
             }
         }
     }
@@ -220,11 +220,11 @@ class MainActivity:ComponentActivity(){
             val latest=Pocket.tasks;val now=android.os.SystemClock.elapsedRealtime()
             val changed=latest.count{observed[it.id]!=it};observed=latest.associateBy{it.id}
             pacing.record(now,changed)
-            val active=latest.count{it.status=="active"}
+            val active=latest.count{it.status in listOf("active","pending")}
             if(pacing.contentDue(now,active)){displayed=latest;pacing.contentDelivered(now)}
             if(pacing.orderDue(now,active,listState.isScrollInProgress||touching||toolsOpen)){
                 // Keep equal timestamps stable; bottom-first layout retains its visible keyed anchor.
-                val next=stableSessionOrder(order,latest.map{SessionRank(it.id,if(it.updated<100000000000L)it.updated*1000 else it.updated,it.status=="active")},System.currentTimeMillis())
+                val next=stableSessionOrder(order,latest.map{SessionRank(it.id,if(it.updated<100000000000L)it.updated*1000 else it.updated,it.status in listOf("active","pending"))},System.currentTimeMillis())
                 if(next!=order){order=next;Pocket.prefs.edit().putString(Pocket.key("sessionOrder"),org.json.JSONArray(next).toString()).apply()}
                 pacing.orderDelivered(now)
             }
@@ -233,7 +233,7 @@ class MainActivity:ComponentActivity(){
     }
     val rank=order.withIndex().associate{it.value to it.index}
     val showCoordinator=filter!=3&&(filter!=1||PocketCoordinator.busy)&&(query.isBlank()||"Coordinator".contains(query,true)||PocketCoordinator.preview.contains(query,true))
-    val shown=displayed.sortedBy{rank[it.id]?:Int.MAX_VALUE}.filter{(filter!=1||it.status=="active")&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true)||it.preview.contains(query,true))}
+    val shown=displayed.sortedBy{rank[it.id]?:Int.MAX_VALUE}.filter{(filter!=1||it.status in listOf("active","pending"))&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true)||it.preview.contains(query,true))}
     Column(Modifier.fillMaxSize()){
     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp).pointerInput(Unit){
         awaitPointerEventScope{try{while(true){touching=awaitPointerEvent(PointerEventPass.Initial).changes.any{it.pressed}}}finally{touching=false}}
@@ -276,7 +276,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
 }
 @Composable fun TaskCard(t:Task){
-    val active=t.status=="active";val ageColor=sessionAgeColor(t.updated)
+    val active=t.status in listOf("active","pending");val ageColor=sessionAgeColor(t.updated)
     LaunchedEffect(t.preview,PocketImmersion.enabled){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
     var rename by remember(t.id){mutableStateOf(false)};var name by remember(t.id){mutableStateOf(t.title)}
@@ -299,12 +299,19 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                 val focus=remember{androidx.compose.ui.focus.FocusRequester()}
                 LaunchedEffect(Unit){focus.requestFocus()}
                 OutlinedTextField(name,{name=it.take(120)},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.trim().isNotEmpty())Pocket.renameTask(t.id,name.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.trim().isNotEmpty())Pocket.renameTask(t.id,name.trim()){rename=false}}))
-            }else Box(Modifier.weight(1f).heightIn(min=48.dp),contentAlignment=Alignment.CenterStart){
-                ImmersionText("session-title:"+t.id,t.title,rescue=false,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.clickable{name=t.title;rename=true})
+            }else Box(Modifier.weight(1f),contentAlignment=Alignment.CenterStart){
+                val shownTitle=PocketImmersion.display("session-title:"+t.id,t.title)
+                LaunchedEffect(t.title,PocketImmersion.enabled){PocketImmersion.offer("session-title:"+t.id,t.title,"session title")}
+                val titleConfiguration=androidx.compose.ui.platform.LocalViewConfiguration.current
+                CompositionLocalProvider(androidx.compose.ui.platform.LocalViewConfiguration provides object:androidx.compose.ui.platform.ViewConfiguration by titleConfiguration {
+                    override val minimumTouchTargetSize=androidx.compose.ui.unit.DpSize.Zero
+                }){
+                    Text(shownTitle,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.clickable(onClickLabel="Rename conversation"){name=t.title;rename=true})
+                }
             }
             val updatedMillis=if(t.updated<100000000000L)t.updated*1000 else t.updated
             if(System.currentTimeMillis()-updatedMillis>=3600000L)Text(lastActivity(t.updated),color=Muted,fontSize=10.sp,modifier=Modifier.semantics{contentDescription="Last active "+lastActivity(t.updated)}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
-            Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex","Working",Modifier.fillMaxSize(),spinning=true)}
+            Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true)}
             Surface(onClick={Pocket.watchTask(t.id,!t.watched)},modifier=Modifier.size(48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
                 Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
                     SymbolIcon(if(t.watched)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,null,modifier=Modifier.size(24.dp),tint=if(t.watched)Paper else Muted.copy(alpha=.65f))

@@ -4,6 +4,26 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class MarkdownContentTest {
+    @Test fun repeatedWordsResolveOnlyTheSelectedSourceOccurrencesAcrossMarkupAndProtectedCode(){
+        val source="**sessions** then `sessioni` and sessions."
+        val first=ImmersionSpan(2,10,"sessions","sessioni");val last=ImmersionSpan(source.lastIndexOf("sessions"),source.lastIndexOf("sessions")+8,"sessions","sessioni")
+        val plan=ImmersionPresentation(contextualHybridText(source,listOf(first,last))!!,source,true,listOf(first,last))
+        val ranges=MarkdownContent.replacementRanges(plan,plan.text,null);val visible=MarkdownContent.preview(plan.text).text
+        assertEquals(2,ranges.size);assertEquals(0,ranges[0].start);assertEquals(visible.lastIndexOf("sessioni"),ranges[1].start)
+        val rescued=immersionReplacementText(plan,first);val mapped=MarkdownContent.replacementRanges(plan,rescued,first)
+        assertEquals("sessions then sessioni and sessioni.",MarkdownContent.preview(rescued).text)
+        assertEquals(listOf("sessions","sessioni"),mapped.map{MarkdownContent.preview(rescued).text.substring(it.start,it.end)})
+        assertTrue(MarkdownContent.preview(rescued).spans.any{it.kind=="bold"});assertTrue(MarkdownContent.preview(rescued).spans.any{it.kind=="code"})
+    }
+    @Test fun replacementRangesIgnoreLinkDestinationMatchesAndTrackHeadingListPrefixes(){
+        val source="# sessions\n\n- sessions with [docs](https://example.com/sessioni)"
+        val a=source.indexOf("sessions");val b=source.lastIndexOf("sessions");val spans=listOf(ImmersionSpan(a,a+8,"sessions","sessioni"),ImmersionSpan(b,b+8,"sessions","sessioni"))
+        val plan=ImmersionPresentation(contextualHybridText(source,spans)!!,source,true,spans)
+        val text=MarkdownContent.preview(plan.text).text;val ranges=MarkdownContent.replacementRanges(plan,plan.text,null)
+        assertEquals(2,ranges.size);assertEquals(text.indexOf("sessioni"),ranges[0].start);assertEquals(text.lastIndexOf("sessioni"),ranges[1].start)
+        assertEquals("https://example.com/sessioni",MarkdownContent.preview(plan.text).spans.single{it.kind=="link"}.destination)
+        assertFalse(text.contains('\uE000'));assertFalse(text.contains('\uE001'))
+    }
     @Test fun nestedFormattingHasStylesWithoutLiteralDelimiters(){
         val parsed=MarkdownContent.preview("**Bold with *emphasis*** and `a ** b`.")
         assertEquals("Bold with emphasis and a ** b.",parsed.text)
