@@ -17,9 +17,15 @@ NextComp connects a person on Android to ongoing work in their own computing env
 - [Android local execution and phone control](ANDROID_LOCAL.md).
 - [Voice architecture](VOICE.md) and [native voice investigation](NATIVE-VOICE-INVESTIGATION.md).
 - [Notification read handling](NOTIFICATION-READS.md) and [spoken captions](SPEECH-CAPTIONS.md).
+- [Native linked images](LINKED-IMAGES.md): previews and a zoomable viewer in the conversation, including authenticated shared images.
 - [Inline language immersion](ITALIAN-VIRTUAL-IMMERSION.md).
 - [Maintaining the backend](MAINTAINER.md) and [release process](RELEASING.md).
+- [Shared computer-use ownership](COMPUTER-USE.md): optional, separately installed broker and cooperative worker instructions; direct tools are not automatically fenced by NextComp.
 
 ## Read the evidence correctly
 
 An implemented route is not a verified end-to-end workflow. A passing fixture is not a provider or physical-phone test. A push sender's acceptance is not handset delivery. A historical successful phone upgrade does not establish the latest APK is installed. Use the [capability map](CAPABILITIES.md#release-and-evidence-boundaries) to separate those claims, and inspect the qualification record before making a stronger one.
+
+- [Single conversation context and direct speech qualification](qualification/conversation-single-context-alpha22.json) — alpha22 synthetic actions, layout, playback and keyboard checks.
+
+- [Alpha22 release and real-phone delivery](qualification/alpha22-release-delivery.json) — signatures, tests, installed hash and post-update UI observations.

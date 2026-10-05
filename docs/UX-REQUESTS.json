@@ -306,7 +306,7 @@
       "id": "live-connection-truth",
       "requirement": "Do not report disconnects while live delivery is working; distinguish failed background refresh from transport loss and debounce short reconnects",
       "status": "implemented-under-verification",
-      "evidence": "Alpha15 fixed stock Codex thread/list rollout scan timeout with native useStateDbOnly metadata index; preserves70/archive contract, active statuses and latest metadata. Native70 result21\u201339ms; authenticated liveHTTP336ms68visible(native2filtered). 146 backend tests pass, no active-session restart. See qualification/session-list-state-db-alpha15.json."
+      "evidence": "Alpha15 fixed stock Codex thread/list rollout scan timeout with native useStateDbOnly metadata index; preserves70/archive contract, active statuses and latest metadata. Native70 result21–39ms; authenticated liveHTTP336ms68visible(native2filtered). 146 backend tests pass, no active-session restart. See qualification/session-list-state-db-alpha15.json."
     },
     {
       "id": "conversation-activity-header",
@@ -505,25 +505,33 @@
     },
     {
       "id": "tibo-dots-varied-brief-evaluation",
-      "requirement": "Prepare varied capability/workflow/evidence briefs for interacting with Tibo\u2019s Dots rather than reducing NextComp to a sole concise remote coding pitch. Actually test how independent agents/ChatGPT interpret them; do not pretend actual Dots interaction occurred.",
+      "requirement": "Prepare varied capability/workflow/evidence briefs for interacting with Tibo’s Dots rather than reducing NextComp to a sole concise remote coding pitch. Actually test how independent agents/ChatGPT interpret them; do not pretend actual Dots interaction occurred.",
       "status": "prepared-and-independently-evaluated-dots-access-unavailable",
       "evidence": [
-        "docs/tibo-dots-brief-variants.json",
-        "docs/tibo-dots-briefing.json (superseded sole brief)"
+        "docs/BRIEF-EVALUATION.md",
+        "docs/NEXTCOMP-BRIEF.md"
       ],
-      "qualification": "Seven variants and nine actual evaluations recorded in docs/tibo-dots-brief-variants.json: two signed-out ChatGPT conversations and seven stock Codex evaluations/source reviews. Actual Dots unavailable because browser is signed out. No outreach sent."
+      "qualification": "Seven variants and nine actual evaluations: two signed-out ChatGPT conversations and seven stock Codex evaluations/source reviews. The public method and selected full brief preserve distinctions and corrections; raw private evaluation transcripts are excluded. Actual Dots access unverified; no outreach sent."
     },
     {
       "id": "public-agent-briefing",
       "requirement": "Publish the full NextComp agency/control story, capabilities, actionable notifications and bounded evidence on GitHub so Tibo and reviewing agents can inspect it; preserve broad computing scope.",
-      "status": "documentation-prepared-review-in-progress",
-      "evidence": "docs/NEXTCOMP-BRIEF.md, docs/CAPABILITIES.md, docs/BRIEF-EVALUATION.md and docs/README.md. Seven drafts/nine generic evaluations; not actual Dots or external outreach."
+      "status": "published-github-6c14302",
+      "evidence": "Full NextComp briefing, capability/evidence map, documentation index, generic evaluation method and AGENTS entry point published on GitHub; CI37361548862 passed. No external outreach or actual Dots test."
     },
     {
       "id": "native-linked-images",
       "requirement": "Images linked in conversations must be visible natively in NextComp without switching to an external gallery.",
-      "status": "implementation-and-runtime-review-in-progress",
-      "evidence": "Native Markdown/direct-image previews, bounded loading and exact-origin authenticated attachment handling are being tested."
+      "status": "released-alpha22-installed-phone",
+      "evidence": "docs/qualification/inline-images-alpha22.json: final code40 native PNG/SVG viewing, GIF animation, authenticated opaque image files, public no-token, PDF preservation, narrative order and inline phrase help; 102 Android tests (6 image regressions). Historical delayed/pinch/error cases are labeled separately. Phone delivery is recorded separately.",
+      "delivery": "docs/qualification/alpha22-release-delivery.json"
+    },
+    {
+      "id": "conversation-single-context-speech",
+      "status": "released-alpha22-installed-phone",
+      "request": "Consolidate repeated conversation activity/actions/notes/captions into one actionable area above composer. Speech output is started/stopped directly from this area only; no duplicate in-conversation player, preview or popup. Preserve transcript history, distinct pending questions, direct reply/navigation/removal and keyboard focus.",
+      "evidence": "docs/qualification/conversation-single-context-alpha22.json",
+      "delivery": "docs/qualification/alpha22-release-delivery.json"
     }
   ],
   "current_state": {
@@ -551,16 +559,15 @@
     "update_delivery": "Alpha20/code38 privatecompatiblevariants published; one deduplicated updateannouncement421 acceptedbyFCM; actualhandsetacknotclaimed.",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
-    "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21\u201339ms. No active-session reset.",
+    "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21–39ms. No active-session reset.",
     "immersion_next": "Strong working-language Italian with normal-size contextual English rescue and all workflow/speech/public-thought coverage is in progress; docs/ITALIAN-VIRTUAL-IMMERSION.md records exactrequest andaudit.",
-    "phone_access": "PhoneTailping77ms but SSH8022 andPeerAPI1 timeout; oldADB36353 andLAN36353/5555 refused. PrivateLANSSHsocketreachableandtrustedhostkeymatchesbutauthrejected; no network/security settings changed. User reconnect requested for recovery.",
-    "backend_runtime": "Alpha20 inline v3, direct coordinator checks, immediate discovery and bounded metadata refresh live;184 backend tests pass. Real list298rows with both target sessions1886/1831/166ms; status5ms. Temperature task preserved.",
-    "native_validation": "Alpha20/code38 signeddebug/release,72Androidtests, bothlintvariants andGitHubCIpass. Ownedemulator exactinstalledSHA e3e24ccf9cf21dc32340b1c94d2857e08f17747314efb4cc1e7d691dc9db302e verified;1x/2x directphrase, repeatedoccurrence, exacttitlebounds, readable noteactions, source/draft/removefailureandretry, pendingStartingcard andPause/Resume/Clear preservingIME+draft qualified.",
-    "pending_phone_update": "Verified same-signer code38 privateupdateavailable and announced once; notification421 acceptedbyFCM, handsetreceipt notverified. RestorephoneTailTCPaccess tocomplete physicalinstallationverification.",
-    "conversation_context": "Alpha21/code39 debug build, lint and 77 tests pass. Owned emulator synthetic normal/2x/360dp context, draft, direct playback, source identity, retained-note actions, inline help and coordinator typing qualified; public-safe screenshot stored in docs/images; 1660-card main-gallery checks pass."
+    "phone_access": "Termux SSH and automation recovered; on-device Codex installed alpha22/code40 in place. Root independently verified installed APK hash, live bridge HTTP200 and exactly one conversation context surface. Pairing and existing sessions visible.",
+    "backend_runtime": "Alpha22 live, connected, no problem. 191 backend tests pass; cooperative computer-use broker configured and available.",
+    "native_validation": "Alpha22 signed debug/release; 102 Android tests and both lint variants pass. Final exact debug installed on physical phone; single context area, direct Speak/Stop, retained keyboard, actual emulator local synthesis/playback, parked speech cursor, native linked images/SVG/GIF qualified with bounded records.",
+    "pending_phone_update": "Alpha22/code40 installed and independently verified. No ADB used.",
+    "conversation_context": "Alpha22/code40 single actionable area above composer, no repeated activity header/notes modal/separate player. Physical phone installed and exactly one context surface independently observed; synthetic direct actions/playback/large-font evidence recorded."
   },
   "remaining": [
-    "Install qualified alpha20 through phone-native Codex; compatible artifacts prepared, network diagnosis restored actual FCM delivery",
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",
     "Physical secure-keyguard captions and real-provider voice language quality remain distinct qualifications",
     "Review public launch separately when sufficiently qualified"

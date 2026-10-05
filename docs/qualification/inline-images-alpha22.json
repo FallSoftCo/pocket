@@ -1,0 +1,121 @@
+{
+  "qualifiedAt": "2026-10-05",
+  "scope": "Native conversation linked-image previews and viewing",
+  "environment": {
+    "device": "Owned API35 Android emulator",
+    "display": "1080x2400",
+    "fixture": "Synthetic HTTP backend with provider inference disabled",
+    "physicalPhoneVerified": false
+  },
+  "artifacts": {
+    "finalDebug": {
+      "version": "0.5.0-alpha.22",
+      "versionCode": 40,
+      "sha256": "0a0cda4e5758625ebb1c4fe344c5121dc81e560df1abddd350159c02421bb4a5"
+    },
+    "earlierInteractionCandidate": {
+      "versionCode": 39,
+      "sha256": "a1d00913e9263876e5b459009bb1ec9305520cf990a9bd65541aa858709b99a1",
+      "note": "Broader narrative, immersion and redirect checks preceded the targeted network-client inheritance correction; the final artifact was rechecked on the paths affected by that correction."
+    },
+    "historicalNetworkCandidate": {
+      "version": "0.5.0-alpha.22",
+      "versionCode": 40,
+      "sha256": "266c6fc03805746a252ccec5b879872ef021a83b74b9515dd0e15a7fc3609327"
+    }
+  },
+  "sourceSha256": {
+    "android/app/src/main/java/co/fallsoft/pocket/MarkdownContent.kt": "88fbd91292f71f02c8a775457844e033b2a2a23f66371470a399d19d18909d77",
+    "android/app/src/main/java/co/fallsoft/pocket/MarkdownRenderer.kt": "08245507b5bc6f434e83eff6cdb8e19e9c082d50a27458de97bd616306efeedd",
+    "android/app/src/main/java/co/fallsoft/pocket/BilingualMessage.kt": "ecfd523d9e4044ee421deac4b41b7664441d372894d7bc34b0b6069b06c81b0e",
+    "android/app/src/main/java/co/fallsoft/pocket/LinkedImage.kt": "75e233c52772dcf2451fcc70c1f9321969b5fe94bc17786bcfe57033176229d4",
+    "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt": "8bda6d84869ea2feb6bc5583ae3b59869ab1c0fb87cf86c755d03b4ddad69b63",
+    "android/app/src/test/java/co/fallsoft/pocket/LinkedImageTest.kt": "115807bef17f5294b894263228e60e1703908f04910175d33bc045a3e4353176"
+  },
+  "tests": {
+    "LinkedImageTest": {
+      "tests": 6,
+      "failures": 0,
+      "coverage": [
+        "Markdown images including empty alt text and extensionless explicit targets",
+        "Bare and ordinary linked image URLs; literal code exclusion",
+        "Mixed prose/image positions and inline replacement offset mapping",
+        "Opaque linked files require MIME before reserving a preview",
+        "Exact backend file-origin authentication and unsafe scheme rejection",
+        "SVG and animated GIF extension recognition"
+      ]
+    },
+    "combinedAndroidUnitTests": {
+      "tests": 102,
+      "failures": 0,
+      "errors": 0
+    }
+  },
+  "runtimeChecks": {
+    "earlierInteractionCandidate": [
+      "Bare image URL and public redirect render natively",
+      "Authenticated redirect is refused and 404 shows direct Retry",
+      "Prose, first image, intervening prose, second image and following prose retain narrative order",
+      "Italian inline replacement and direct original-word help retain both image positions without a translation dialog"
+    ],
+    "historicalNetworkCandidate": [
+      "Markdown PNG renders inside the conversation",
+      "Tap opens native full-screen viewer; actual two-pointer pinch zooms; bottom Close image returns to the same conversation",
+      "Opaque authenticated image file receives authorized HEAD and GET",
+      "Authenticated PDF receives MIME HEAD and remains one uninterrupted ordinary linked text node with no image-error gap",
+      "Public image server sees no Authorization header",
+      "12-second delayed image loads successfully through inherited client; subsequent text bounds remain exactly [47,1379][1033,1442] before and after load",
+      "Streamed 13MiB response shows image error; direct Retry stays inside the conversation"
+    ],
+    "finalConsolidatedCode40": [
+      "PNG native preview/viewer/close restores conversation",
+      "Opaque PNG authorized HEAD/GET; PDF remains uninterrupted normal linked text without image gap",
+      "Mixed prose/two-image narrative order preserved",
+      "Italian replacement word taps to original in place; both images remain without translation dialog",
+      "Maintained branding SVG renders in preview and native viewer",
+      "Authored two-frame GIF alternates yellow/green in preview, native viewer and after viewer closes",
+      "Opaque authenticated SVG/GIF MIME HEAD and GET accepted; public image requests carry no Authorization"
+    ]
+  },
+  "networking": {
+    "client": "Both image loaders and MIME preflight clone Pocket.http.newBuilder()",
+    "preservedMechanism": "Configured-workstation WorkstationDns fallback uses a previously HTTPS-verified tailnet route; public requests retain normal DNS behavior",
+    "observedCorrection": "Bare-client candidate used default10-second read timeout and rejected deliberate12-second fixture delay. Final inherited-client candidate loads it with the configured40-second read timeout and20-second overall call cap.",
+    "physicalDnsStallReproduced": false,
+    "permanentPhoneDnsRepairClaimed": false
+  },
+  "bounds": {
+    "previewHeightDp": 240,
+    "previewDecodePx": 1200,
+    "viewerDecodePx": 2400,
+    "zoomMaximum": 6,
+    "bodyMaximumBytes": 12582912,
+    "overallCallTimeoutSeconds": 20,
+    "imagesPerParagraphMaximum": 8
+  },
+  "knownImageMetadata": {
+    "integration": "Attachment image/* branch uses the same native bounded preview/viewer without parent external-open click behavior; nonimages keep the existing file behavior",
+    "separateRuntimeMetadataScreenQualified": false
+  },
+  "publication": {
+    "publicScreenshot": "docs/images/linked-image-preview.png",
+    "galleryIds": [
+      "nextcomp-linked-image-preview",
+      "nextcomp-linked-image-zoom",
+      "nextcomp-linked-image-inline-reading",
+      "nextcomp-linked-image-svg"
+    ]
+  },
+  "limits": [
+    "Raster, SVG and animated GIF image links and explicit Markdown image targets are supported. Gallery HTML pages are not scraped.",
+    "Opaque backend file links require successful image MIME detection; missing/unsupported MIME remains an ordinary link.",
+    "Arbitrary workstation filesystem path resolution is not added. Platform decoder support still governs malformed or unsupported codecs.",
+    "Decode and response limits intentionally bound previews; viewing is not an original-resolution export.",
+    "No phone installation or live Tailscale DNS-stall validation is claimed by this synthetic qualification."
+  ],
+  "sourceCommit": "4b311184f198c459fc531002044787225b927801",
+  "fixtureProvenance": {
+    "svg": "Maintained original NextComp branding SVG",
+    "gif": "Authored 85-byte GIF89a transport fixture, two 400ms 1px frames; not rendered artwork"
+  }
+}

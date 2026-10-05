@@ -1,0 +1,30 @@
+{
+  "sourceCommit": "4b311184f198c459fc531002044787225b927801",
+  "version": "alpha22/code40",
+  "apkSha256": "0a0cda4e5758625ebb1c4fe344c5121dc81e560df1abddd350159c02421bb4a5",
+  "syntheticOnly": true,
+  "checks": {
+    "assembleDebug": "PASS",
+    "unitTests": 102,
+    "lintDebug": "PASS",
+    "reply": "Original context draft inserted",
+    "go": "Actual transcript source visible",
+    "remove": "Acknowledged note removal drops retention actions without deleting transcript; failed request restores Remove/error",
+    "speech": "Idle Start/Stop and IME retained; GoogleTTS synthesis and MediaPlayer Playing -3/0 at17:13:32.753, Completed -3/0 at17:13:38.004; emulator no-audio, no acousticquality claim",
+    "parkedQueue": "After manual Stop id991/chunk1/position740 preserved. First assertion differed only serialized needsFetch=false. Pure cursor/arrival/completion regression tests pass.",
+    "layout": "Personally reviewed portrait/keyboard/2x, approved root"
+  },
+  "limitations": [
+    "No physical-phone installation by this agent.",
+    "Coordinator uses same host but not independently runtime-qualified here; full voice recording mode remains separate.",
+    "Owned emulator5562 and fixture19986 unexpectedly exited during final captures; handed back to image agent.",
+    "Final 2x screenshot includes synthetic paused notification source; final normal does not."
+  ],
+  "captures": [
+    "docs/images/conversation-context-consolidated-alpha22.png",
+    "nextcomp-context-dock/conversation-single-context-alpha22-normal.png",
+    "nextcomp-context-dock/conversation-single-context-alpha22-keyboard.png",
+    "nextcomp-context-dock/conversation-single-context-alpha22-large-type.png"
+  ],
+  "sourceNote": "Public-source sanitation changed only a private gallery-address reference in an inherited qualification document; compiled application source and qualified APK bytes are unchanged."
+}

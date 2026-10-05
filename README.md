@@ -30,6 +30,7 @@ NextComp connects to your existing Codex runtime and can also target stock Codex
 - Ask Codex to notify you under a condition: **“Use NextComp's notification tool to tell me when the tests pass, with a short summary.”**
 - Choose synthesized tones, offline spoken labels or content summaries, or system notification audio. Actionable items have bounded reminders, dismissal, and snooze.
 - Open explicitly shared attachments from your authenticated workstation.
+- See linked images and shared image attachments inside the conversation; tap for native pinch/zoom. [Image links and access](docs/LINKED-IMAGES.md).
 - Run Codex on the Android phone itself and switch between **Workstation** and **This phone**.
 - Optionally let phone-local Codex inspect the foreground Android screen, take screenshots, tap, scroll, enter non-password text, and use Android navigation.
 

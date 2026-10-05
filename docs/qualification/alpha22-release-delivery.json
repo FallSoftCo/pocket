@@ -1,0 +1,59 @@
+{
+  "verifiedAt": "2026-10-05",
+  "sourceCommit": "4b311184f198c459fc531002044787225b927801",
+  "artifacts": {
+    "debug": {
+      "version": "0.5.0-alpha.22",
+      "versionCode": 40,
+      "sha256": "0a0cda4e5758625ebb1c4fe344c5121dc81e560df1abddd350159c02421bb4a5",
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "publicArtifact": false
+    },
+    "release": {
+      "version": "0.5.0-alpha.22",
+      "versionCode": 40,
+      "sha256": "9d5d5696fb9c75db9dba159ceaebfea950b8cfb5c9cb59ae18880cc3141108e3",
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "publicArtifact": true
+    }
+  },
+  "checks": {
+    "backendTests": 191,
+    "androidTests": 102,
+    "failures": 0,
+    "lintDebug": "PASS",
+    "lintRelease": "PASS",
+    "releaseSignature": "PASS",
+    "releaseDebuggable": false
+  },
+  "phone": {
+    "device": "Pixel 9 Pro Fold",
+    "installation": "On-device Codex using Termux SSH and authorized phone UI automation; in-place update, no ADB",
+    "installedSha256": "0a0cda4e5758625ebb1c4fe344c5121dc81e560df1abddd350159c02421bb4a5",
+    "independentlyVerifiedViaSsh": true,
+    "automationHttp": 200,
+    "foregroundPackage": "co.fallsoft.pocket",
+    "conversationContextSurfaceCount": 1,
+    "pairing": "Existing pairing connected and sessions visible in on-device post-install check",
+    "messagesSentForQualification": false
+  },
+  "backend": {
+    "version": "0.5.0-alpha.22",
+    "connected": true,
+    "problem": null,
+    "computerUseBroker": {
+      "configured": true,
+      "available": true,
+      "enforcement": "cooperative"
+    }
+  },
+  "qualification": [
+    "conversation-single-context-alpha22.json",
+    "inline-images-alpha22.json",
+    "draining-session-stability-2026-10-05.json"
+  ],
+  "limits": [
+    "This installation and UI check does not qualify native voice acoustic quality, every background/lock-screen case or permanent phone DNS repair.",
+    "Draining/list lifecycle observations name their earlier code40 candidate; subsequent conversation/image changes do not alter that list implementation."
+  ]
+}
