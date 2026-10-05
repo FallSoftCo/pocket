@@ -4,7 +4,8 @@ import org.commonmark.node.*
 import org.commonmark.parser.Parser
 
 internal data class MarkdownSpan(val start:Int,val end:Int,val kind:String,val destination:String="")
-internal data class MarkdownInline(val text:String,val spans:List<MarkdownSpan> = emptyList())
+internal data class MarkdownImage(val destination:String,val description:String,val requiresMimeCheck:Boolean=false,val position:Int=Int.MAX_VALUE)
+internal data class MarkdownInline(val text:String,val spans:List<MarkdownSpan> = emptyList(),val images:List<MarkdownImage> = emptyList())
 internal data class MarkdownBlock(val content:MarkdownInline,val kind:String="paragraph",val level:Int=0,val prefix:String="",val language:String="")
 internal data class ImmersionDisplayRange(val span:ImmersionSpan,val start:Int,val end:Int)
 
@@ -39,7 +40,7 @@ internal object MarkdownContent {
         walk(parser.parse(raw));return result
     }
     private fun inline(parent:Node):MarkdownInline {
-        val text=StringBuilder();val spans=mutableListOf<MarkdownSpan>()
+        val text=StringBuilder();val spans=mutableListOf<MarkdownSpan>();val images=mutableListOf<MarkdownImage>()
         fun visit(node:Node){
             val start=text.length
             when(node){
@@ -50,11 +51,17 @@ internal object MarkdownContent {
                 is HtmlInline->text.append(node.literal)
                 else->{var child=node.firstChild;while(child!=null){visit(child);child=child.next}}
             }
+            if(node is Image)images.add(MarkdownImage(node.destination,text.substring(start),position=text.length))
+            if(node is Link&&LinkedImagePolicy.isImageUrl(node.destination))images.add(MarkdownImage(node.destination,text.substring(start),LinkedImagePolicy.isOpaqueFileLink(node.destination),text.length))
             val kind=when(node){is StrongEmphasis->"bold";is Emphasis->"italic";is Code->"code";is Link,is Image->"link";else->null}
             if(kind!=null&&text.length>start)spans.add(MarkdownSpan(start,text.length,kind,when(node){is Link->node.destination;is Image->node.destination;else->""}))
         }
         var child=parent.firstChild;while(child!=null){visit(child);child=child.next}
-        return MarkdownInline(text.toString(),spans)
+        Regex("https?://[^\\s<>]+",RegexOption.IGNORE_CASE).findAll(text).forEach{match->
+            val url=match.value.trimEnd('.',',',')',';','!')
+            if(spans.none{it.kind in listOf("code","link")&&it.start<=match.range.first&&it.end>match.range.first}&&LinkedImagePolicy.isImageUrl(url))images.add(MarkdownImage(url,"Image",LinkedImagePolicy.isOpaqueFileLink(url),match.range.first+url.length))
+        }
+        return MarkdownInline(text.toString(),spans,images.distinctBy{it.destination}.take(8))
     }
     fun preview(raw:String):MarkdownInline {
         val text=StringBuilder();val spans=mutableListOf<MarkdownSpan>()

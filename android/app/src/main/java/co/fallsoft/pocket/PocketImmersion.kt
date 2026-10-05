@@ -15,14 +15,22 @@ object PocketImmersion {
     fun setSupportEnabled(value:Boolean){supportState=value;Pocket.prefs.edit().putBoolean(profileKey()+":englishSupport",value).apply()}
     private var densityState by mutableStateOf("strong")
     val density get()=densityState
-    fun setDensity(value:String){densityState=if(value in listOf("starter","balanced","strong"))value else "strong";Pocket.prefs.edit().putString(profileKey()+":density",densityState).apply();translations=emptyMap();byContent=emptyMap();originals=emptySet();pending.clear();job?.cancel();sync()}
+    fun setDensity(value:String){densityState=if(value in listOf("starter","balanced","strong"))value else "strong";Pocket.prefs.edit().putString(profileKey()+":density",densityState).apply();translations=emptyMap();byContent=emptyMap();originals=emptySet();clearReadingChoices();pending.clear();job?.cancel();sync()}
     var unavailable by mutableStateOf(false); private set
     private var translations by mutableStateOf<Map<String,JSONObject>>(emptyMap())
     private var byContent by mutableStateOf<Map<String,JSONObject>>(emptyMap())
     private val pending=linkedMapOf<String,JSONObject>()
     private var job:Job?=null
     private var originals by mutableStateOf(setOf<String>())
+    private val readingChoices=ImmersionReadingChoices()
+    private var readingRevision by mutableIntStateOf(0)
     private fun profileKey()=Pocket.key("immersionItalian")+":"+Pocket.prefs.getString(Pocket.key("deviceId"),"").orEmpty()
+    // The credential establishes ownership before optional device/account metadata hydrates.
+    private fun readingOwner()=version(Pocket.key("immersionItalian")+"\u0000"+Pocket.base+"\u0000"+Pocket.token)
+    fun readingKey(id:String,plan:ImmersionPresentation)=immersionReadingKey(readingOwner(),if(id.startsWith("voice:"))PocketVoice.targetThread?:"voice-coordinator" else Pocket.selected.orEmpty(),id,plan,density=density)
+    fun readingSelection(key:ImmersionReadingKey,plan:ImmersionPresentation)=readingRevision.let{readingChoices.selected(key,plan)}
+    fun selectReading(key:ImmersionReadingKey,span:ImmersionSpan?){readingChoices.select(key,span);readingRevision++}
+    private fun clearReadingChoices(){readingChoices.clear();readingRevision++}
     private fun version(text:String)=immersionSourceHash(text)
     private fun cacheKey()="immersion-display-cache-v4:"+profileKey()
     private fun eligible(row:JSONObject)=row.s("planVersion")=="inline-replacement-v3"&&row.s("density")==density
@@ -37,14 +45,16 @@ object PocketImmersion {
         }
     }
     fun restore(){
+        val oldDensity=densityState
+        val ownerChanged=readingChoices.restore(readingOwner())
         job?.cancel();cacheSave?.cancel();pending.clear();enabledState=Pocket.prefs.getBoolean(profileKey(),false);supportState=Pocket.prefs.getBoolean(profileKey()+":englishSupport",true);densityState=Pocket.prefs.getString(profileKey()+":density","strong")?:"strong"
         val saved=try{JSONArray(Pocket.prefs.getString(cacheKey(),"[]"))}catch(_:Exception){JSONArray()}
         translations=saved.objects().asReversed().associateBy{it.s("id")};byContent=translations.values.associateBy{it.s("version")}
-        originals=emptySet();unavailable=false;if(enabled)sync()
+        if(ownerChanged||oldDensity!=densityState){originals=emptySet();clearReadingChoices()};unavailable=false;if(enabled)sync()
     }
     fun offerLabel(text:String){if(text.length<=200)offer("label:"+version(text),text,"interface label")}
     fun label(text:String):String=if(enabled)(ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text))?:cached("label:"+version(text),text)?.s("text",text)?:text else text
-    fun setEnabled(value:Boolean){enabledState=value;Pocket.prefs.edit().putBoolean(profileKey(),value).apply();pending.clear();job?.cancel();originals=emptySet();sync()}
+    fun setEnabled(value:Boolean){enabledState=value;Pocket.prefs.edit().putBoolean(profileKey(),value).apply();pending.clear();job?.cancel();originals=emptySet();clearReadingChoices();sync()}
     private fun sync(){val captured=profileKey();Pocket.scope.launch{try{val result=Pocket.api("/api/immersion",JSONObject().put("enabled",enabled).put("density",density));if(captured==profileKey())accept(result)}catch(_:Exception){if(captured==profileKey())unavailable=enabled}}}
     fun accept(event:JSONObject){if(!enabled)return;unavailable=event.optBoolean("unavailable",false);val list=event.optJSONArray("translations")?.objects()?:return;translations=(translations+list.associateBy{it.s("id")}).entries.toList().takeLast(600).associate{it.toPair()};byContent=translations.values.associateBy{it.s("version")};persistCache();if(list.isNotEmpty())PocketNotifications.refreshImmersion()}
     /** Bound speech preparation; use the existing native Codex audio transport for pronunciation. */

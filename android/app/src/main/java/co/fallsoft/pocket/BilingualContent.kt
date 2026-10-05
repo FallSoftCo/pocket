@@ -3,6 +3,29 @@ package co.fallsoft.pocket
 /** Verified UTF-16 source offsets, resolved by the teacher worker from exact quoted phrases. */
 data class ImmersionSpan(val start:Int,val end:Int,val source:String,val target:String,val note:String="",val unit:String="phrase",val targetSegments:List<ImmersionTargetSegment> = emptyList())
 data class ImmersionPresentation(val text:String,val source:String,val current:Boolean,val spans:List<ImmersionSpan> = emptyList())
+/** Reading identity excludes optional alignment metadata but includes every content/owner boundary. */
+data class ImmersionReadingKey(val owner:String,val conversation:String,val message:String,val sourceHash:String,val targetHash:String,val sourceLanguage:String,val targetLanguage:String,val density:String)
+data class ImmersionReadingChoice(val start:Int,val end:Int,val source:String,val target:String)
+fun immersionReadingKey(owner:String,conversation:String,message:String,plan:ImmersionPresentation,sourceLanguage:String="source",targetLanguage:String="it",density:String="strong")=
+    ImmersionReadingKey(owner,conversation,message,immersionSourceHash(plan.source),immersionSourceHash(plan.text),sourceLanguage,targetLanguage,density)
+/** Bounded session-local choices survive hydration/remount without leaking to another reading identity. */
+class ImmersionReadingChoices(private val limit:Int=200){
+    private var owner:String?=null
+    private val choices=linkedMapOf<ImmersionReadingKey,ImmersionReadingChoice>()
+    fun restore(nextOwner:String):Boolean {val changed=owner!=nextOwner;if(changed)choices.clear();owner=nextOwner;return changed}
+    fun clear(){choices.clear()}
+    fun select(key:ImmersionReadingKey,span:ImmersionSpan?){
+        if(key.owner!=owner)return
+        choices.remove(key)
+        if(span!=null)choices[key]=ImmersionReadingChoice(span.start,span.end,span.source,span.target)
+        while(choices.size>limit)choices.remove(choices.keys.first())
+    }
+    fun selected(key:ImmersionReadingKey,plan:ImmersionPresentation):ImmersionSpan? {
+        if(key.owner!=owner||key.sourceHash!=immersionSourceHash(plan.source)||key.targetHash!=immersionSourceHash(plan.text)||contextualHybridText(plan.source,plan.spans)!=plan.text)return null
+        val choice=choices[key]?:return null
+        return plan.spans.singleOrNull{it.start==choice.start&&it.end==choice.end&&it.source==choice.source&&it.target==choice.target}
+    }
+}
 fun immersionSourceHash(text:String)=java.security.MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it.toInt() and 255)}
 /** Never splice a previous plan into a new source or infer word-level alignment. */
 fun contextualHybridText(original:String,spans:List<ImmersionSpan>):String? {

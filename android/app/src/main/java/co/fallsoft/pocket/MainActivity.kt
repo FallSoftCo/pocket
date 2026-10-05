@@ -53,8 +53,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.File
@@ -446,9 +444,15 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 }
 
 @Composable fun Attachment(a:JSONObject){val c=LocalContext.current
+    if(a.s("mime").startsWith("image/")){
+        Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)){
+            LinkedImagePreview(MarkdownImage(a.s("url"),a.s("name")))
+            Text(a.s("name"),color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        }
+        return
+    }
     fun open(){Pocket.scope.launch{try{val file=withContext(Dispatchers.IO){val folder=File(c.cacheDir,"shared");folder.mkdirs();val f=File(folder,a.s("id")+"-"+a.s("name").substringAfterLast('/'));val req=okhttp3.Request.Builder().url(Pocket.base+a.s("url")).header("Authorization","Bearer ${Pocket.token}").build();Pocket.http.newCall(req).execute().use{r->if(!r.isSuccessful)throw Exception("Could not download attachment");f.writeBytes(r.body!!.bytes())};f};val u=FileProvider.getUriForFile(c,"co.fallsoft.pocket.files",file);c.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(u,a.s("mime")).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))}catch(e:Exception){Pocket.error=e.message?:"No app can open this file"}}}
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Panel).clickable{open()},verticalArrangement=Arrangement.spacedBy(6.dp)){
-        if(a.s("mime").startsWith("image/"))AsyncImage(model=ImageRequest.Builder(c).data(Pocket.base+a.s("url")).addHeader("Authorization","Bearer ${Pocket.token}").build(),contentDescription=a.s("name"),modifier=Modifier.fillMaxWidth().heightIn(min=100.dp,max=300.dp))
         Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){SymbolIcon(Icons.Rounded.AttachFile,null,tint=Mint,modifier=Modifier.size(18.dp));Text(a.s("name"),color=Mint,fontSize=12.sp,modifier=Modifier.padding(start=8.dp).weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis);SymbolIcon(Icons.AutoMirrored.Rounded.OpenInNew,null,tint=Muted,modifier=Modifier.size(16.dp))}
     }
 }

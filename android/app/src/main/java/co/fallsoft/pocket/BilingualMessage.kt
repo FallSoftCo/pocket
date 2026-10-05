@@ -56,7 +56,8 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
     LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offer(id,original)}
     if(!PocketImmersion.enabled){Column(modifier){RichText(original)};return}
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
-    var selected by remember(id,plan.text,plan.source,plan.spans,PocketImmersion.density){mutableStateOf<ImmersionSpan?>(null)}
+    val readingKey=PocketImmersion.readingKey(id,plan)
+    val selected=PocketImmersion.readingSelection(readingKey,plan)
     val originalOnly=PocketImmersion.supportEnabled&&PocketImmersion.originalShown(id)
     val shown=immersionReplacementText(plan,selected.takeIf{PocketImmersion.supportEnabled},originalOnly)
     val blocks=remember(shown){MarkdownContent.blocks(shown)}
@@ -66,8 +67,10 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
         blocks.forEachIndexed { index,block -> when(block.kind){
             "code"->Surface(color=Ink,shape=RoundedCornerShape(12.dp),modifier=Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp)){if(block.language.isNotBlank())Text(block.language,color=Muted,fontSize=12.sp);Text(block.content.text,fontFamily=FontFamily.Monospace,fontSize=14.sp,lineHeight=21.sp,color=Paper,modifier=Modifier.horizontalScroll(rememberScrollState()))}}
             "rule"->HorizontalDivider(color=Line)
-            else->{val content=hybridAnnotated(block.content,ranges,offsets[index],selected,!originalOnly&&PocketImmersion.supportEnabled){selected=if(selected==it)null else it};val size=if(block.kind=="heading")when(block.level){1->24.sp;2->21.sp;else->18.sp}else 17.sp
-                ImmersionReading(buildAnnotatedString{append(block.prefix);append(content)},selected.takeIf{PocketImmersion.supportEnabled},fontSize=size,lineHeight=if(block.kind=="heading")size*1.3f else 26.sp,fontWeight=if(block.kind=="heading")FontWeight.SemiBold else FontWeight.Normal,onClose={selected=null})}
+            else->{val content=hybridAnnotated(block.content,ranges,offsets[index],selected,!originalOnly&&PocketImmersion.supportEnabled){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)};val size=if(block.kind=="heading")when(block.level){1->24.sp;2->21.sp;else->18.sp}else 17.sp
+                MarkdownImageFlow(buildAnnotatedString{append(block.prefix);append(content)},block.content.images,block.prefix.length){part->
+                    ImmersionReading(part,selected.takeIf{PocketImmersion.supportEnabled},fontSize=size,lineHeight=if(block.kind=="heading")size*1.3f else 26.sp,fontWeight=if(block.kind=="heading")FontWeight.SemiBold else FontWeight.Normal,onClose={PocketImmersion.selectReading(readingKey,null)})
+                }}
         } }
     }
 }
@@ -76,12 +79,13 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 @Composable fun ImmersionText(id:String,original:String,modifier:Modifier=Modifier,color:Color=Paper,fontSize:TextUnit=16.sp,lineHeight:TextUnit=24.sp,maxLines:Int=Int.MAX_VALUE,fontWeight:FontWeight?=null,kind:String="public display",rescue:Boolean=true,overflow:TextOverflow=TextOverflow.Ellipsis,phraseRescue:Boolean=rescue){
     LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offer(id,original,kind)}
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
-    var selected by remember(id,plan.text,plan.source,plan.spans,PocketImmersion.density){mutableStateOf<ImmersionSpan?>(null)}
+    val readingKey=PocketImmersion.readingKey(id,plan)
+    val selected=PocketImmersion.readingSelection(readingKey,plan)
     val shownText=immersionReplacementText(plan,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled})
     val inline=remember(shownText){MarkdownContent.preview(shownText)}
     val ranges=remember(plan,shownText,selected){MarkdownContent.replacementRanges(plan,shownText,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled})}
-    val content=if(PocketImmersion.enabled)hybridAnnotated(inline,ranges,0,selected,phraseRescue&&PocketImmersion.supportEnabled){selected=if(selected==it)null else it}else buildAnnotatedString{append(inline.text)}
+    val content=if(PocketImmersion.enabled)hybridAnnotated(inline,ranges,0,selected,phraseRescue&&PocketImmersion.supportEnabled){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)}else buildAnnotatedString{append(inline.text)}
     Column(modifier){
-        ImmersionReading(content,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},color=color,fontSize=fontSize,lineHeight=lineHeight,maxLines=maxLines,fontWeight=fontWeight,overflow=overflow,onClose={selected=null})
+        ImmersionReading(content,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},color=color,fontSize=fontSize,lineHeight=lineHeight,maxLines=maxLines,fontWeight=fontWeight,overflow=overflow,onClose={PocketImmersion.selectReading(readingKey,null)})
     }
 }

@@ -47,9 +47,25 @@ private fun MarkdownInline.annotated(clickableLinks:Boolean=true):AnnotatedStrin
                     val content=remember(block){buildAnnotatedString{append(block.prefix);append(block.content.annotated())}}
                     val inset=if(block.level>0&&block.kind!="heading")((block.level-1)*12).dp else 0.dp
                     val modifier=Modifier.fillMaxWidth().padding(start=inset).then(if(block.kind=="quote")Modifier.background(Panel,RoundedCornerShape(6.dp)).padding(12.dp)else Modifier)
-                    Text(content,fontSize=size,lineHeight=if(block.kind=="heading")size*1.3f else 24.sp,fontWeight=if(block.kind=="heading")FontWeight.SemiBold else FontWeight.Normal,color=if(block.kind=="quote")Muted else Paper.copy(alpha=.93f),modifier=modifier)
+                    MarkdownImageFlow(content,block.content.images,block.prefix.length){part->
+                        Text(part,fontSize=size,lineHeight=if(block.kind=="heading")size*1.3f else 24.sp,fontWeight=if(block.kind=="heading")FontWeight.SemiBold else FontWeight.Normal,color=if(block.kind=="quote")Muted else Paper.copy(alpha=.93f),modifier=modifier)
+                    }
                 }
             }
         }
     }
+}
+
+/** Slice already annotated content, so image placement cannot shift immersion/link offsets. */
+@Composable internal fun MarkdownImageFlow(content:AnnotatedString,images:List<MarkdownImage>,prefixLength:Int=0,onText:@Composable (AnnotatedString)->Unit){
+    var cursor=0
+    val visible=mutableListOf<MarkdownImage>()
+    images.forEach {image->key(image.destination){if(linkedImageAllowed(image))visible.add(image)}}
+    visible.sortedBy{it.position}.forEach { image ->
+        val at=if(image.position==Int.MAX_VALUE)content.length else (image.position+prefixLength).coerceIn(cursor,content.length)
+        if(at>cursor)onText(content.subSequence(cursor,at))
+        LinkedImagePreview(image)
+        cursor=at
+    }
+    if(cursor<content.length)onText(content.subSequence(cursor,content.length))
 }
