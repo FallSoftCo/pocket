@@ -8,7 +8,7 @@ import {ConversationNotes} from "./conversation-notes.mjs";
 import {LiveActivityDelivery} from "./live-activity-delivery.mjs";
 import {ActivityBoard} from './activity-board.mjs';
 import {NativeVoice} from './native-voice.mjs';
-import {ThreadPreviews} from './thread-previews.mjs';
+import {ThreadPreviews,sessionInteraction} from './thread-previews.mjs';
 import express from 'express';
 import http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -196,6 +196,7 @@ db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during 
 codex.on('event',m=>{
   const p=m.params||{}, threadId=p.threadId || p.thread?.id;
   if(threadId&&(voiceController.owns(threadId)||nativeVoice.owns(threadId)||immersion.ownsThread(threadId)))return;
+  const interaction=sessionInteraction(m);if(interaction)emit('sessionInteraction',interaction);
   threadPreviews.observe(m);activityBoard.observe(m);
   if(m.method==="item/completed"||p.item?.type==="userMessage")conversationNotes.observe(threadId,p.turnId,p.item);
   if(m.method==="turn/completed")for(const item of p.turn?.items||[])conversationNotes.observe(threadId,p.turn.id,item);

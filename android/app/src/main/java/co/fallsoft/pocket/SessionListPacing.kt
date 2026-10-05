@@ -28,6 +28,30 @@ class SessionListPacing {
 
 data class SessionRank(val id: String, val updated: Long, val active: Boolean)
 
+data class SessionPromotionState(val pending: List<String> = emptyList(), val seen: List<String> = emptyList())
+
+/** Only origin-identified user work creates ordering intent; replay cannot renew it. */
+fun queueSessionPromotion(state: SessionPromotionState, id: String, eventId: String): SessionPromotionState {
+    if(id.isBlank()||eventId.isBlank()||eventId.endsWith(':')||eventId in state.seen)return state
+    return SessionPromotionState((state.pending+id).distinct(),(state.seen+eventId).takeLast(512))
+}
+
+fun acknowledgeSessionPromotions(state: SessionPromotionState, available: Set<String>) = state.copy(pending=state.pending.filter { it !in available })
+
+fun sessionReconcileAllowed(requested: Boolean, complete: Boolean, connected: Boolean, codexOnline: Boolean, settled: Boolean) = requested&&complete&&connected&&codexOnline&&settled
+
+/** Explicit Work intent reconciles active work and genuine interactions as stable ties.
+ * Merely returning, polling, reconnecting or receiving tokens never reconciles seats.
+ */
+fun reconciledSessionOrder(previous: List<String>, entries: List<SessionRank>, promotions: Set<String>, explicitBoundary: Boolean): List<String> {
+    val stable=stableSessionOrder(previous,entries,0)
+    if(!explicitBoundary)return stable
+    val active=entries.filter { it.active }.map { it.id }.toSet()
+    val available=entries.map { it.id }.toSet()
+    val recent=promotions.intersect(available)-active
+    return stable.filter { it in active }+stable.filter { it in recent }+stable.filter { it !in active && it !in recent }
+}
+
 /** Refresh visible card content without adding/removing cards before order delivery. */
 fun <T> sessionContentInPlace(displayed: List<T>, latest: List<T>, id: (T) -> String): List<T> {
     val byId=latest.associateBy(id)

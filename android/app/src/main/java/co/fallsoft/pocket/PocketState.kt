@@ -45,6 +45,9 @@ object Pocket {
     var error by mutableStateOf(""); var busy by mutableStateOf(false)
     var showArchived by mutableStateOf(false)
     var tasks by mutableStateOf(listOf<Task>())
+    var sessionSnapshotComplete=false; private set
+    var sessionOrderRequest=0L; private set
+    var sessionOrderHandled=0L; private set
     var activities by mutableStateOf(listOf<JSONObject>())
     var notifications by mutableStateOf(listOf<JSONObject>())
     var attention by mutableStateOf(listOf<JSONObject>())
@@ -66,6 +69,23 @@ object Pocket {
     fun key(name:String,forLocal:Boolean=local)=if(forLocal)"local:$name" else name
     fun savedBase(forLocal:Boolean)=prefs.getString(key("server",forLocal),"")!!
     fun savedToken(forLocal:Boolean)=prefs.getString(key("token",forLocal),"")!!
+    private fun promotionState(forLocal:Boolean=local):SessionPromotionState=try{
+        val json=JSONObject(prefs.getString(key("sessionPromotions",forLocal),"{}")!!)
+        fun ids(name:String)=json.optJSONArray(name)?.let{a->(0 until a.length()).map{a.optString(it)}.filter{it.isNotBlank()}}?:emptyList()
+        SessionPromotionState(ids("pending"),ids("seen"))
+    }catch(_:Exception){SessionPromotionState()}
+    private fun savePromotionState(state:SessionPromotionState,forLocal:Boolean=local){prefs.edit().putString(key("sessionPromotions",forLocal),JSONObject().put("pending",JSONArray(state.pending)).put("seen",JSONArray(state.seen)).toString()).apply()}
+    @Synchronized fun rememberSessionInteraction(id:String,eventId:String,forLocal:Boolean=local){val previous=promotionState(forLocal);val next=queueSessionPromotion(previous,id,eventId);if(next!=previous)savePromotionState(next,forLocal)}
+    @Synchronized fun pendingSessionPromotions()=promotionState().pending.toSet()
+    fun requestSessionOrder(){sessionOrderRequest++}
+    @Synchronized fun finishSessionOrderRequest(request:Long,visible:Set<String>){
+        sessionOrderHandled=request
+        if(!showArchived)savePromotionState(acknowledgeSessionPromotions(promotionState(),visible))
+    }
+    private fun rememberReplyIntent(path:String,body:JSONObject?,response:JSONObject,forLocal:Boolean){
+        val parts=path.substringBefore('?').split('/')
+        if(body!=null&&parts.size==5&&parts[1]=="api"&&parts[2]=="threads"&&parts[4]=="reply"&&response.s("state") in listOf("queued","sending","accepted"))rememberSessionInteraction(parts[3],"reply:"+body.s("id"),forLocal)
+    }
     fun init(c:Context){
         context=c.applicationContext;local=prefs.getBoolean("activeLocal",false);base=savedBase(local);token=savedToken(local);lastNotification=prefs.getLong(key("lastNotification"),0);restoreUsage()
         if(!prefs.contains(key("seenIds")))prefs.edit().putStringSet(key("seenIds"),((lastNotification-511).coerceAtLeast(1)..lastNotification).map{it.toString()}.toSet()).apply()
@@ -84,15 +104,16 @@ object Pocket {
         val request=Request.Builder().url(endpoint.trimEnd('/')+path)
         if(authorized)request.header("Authorization","Bearer $credential")
         if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
-        http.newCall(request.build()).execute().use{r->val raw=r.body?.string()?:"{}";val json=try{JSONObject(raw)}catch(_:Exception){JSONObject().put("error","Unexpected server response (${r.code})")};if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Request failed (${r.code})")));json}
+        http.newCall(request.build()).execute().use{r->val raw=r.body?.string()?:"{}";val json=try{JSONObject(raw)}catch(_:Exception){JSONObject().put("error","Unexpected server response (${r.code})")};if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Request failed (${r.code})")));rememberReplyIntent(path,body,json,forLocal);json}
     }
     suspend fun api(path:String, body:JSONObject?=null, authorized:Boolean=true):JSONObject=withContext(Dispatchers.IO){
+        val profileLocal=local
         val request=Request.Builder().url(base.trimEnd('/')+path)
         if(authorized)request.header("Authorization","Bearer $token")
         if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
         http.newCall(request.build()).execute().use { r ->
             val raw=r.body?.string()?:"{}"; val json=try{JSONObject(raw)}catch(e:Exception){JSONObject().put("error","Unexpected server response (${r.code})")}
-            if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Request failed (${r.code})")));json
+            if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Request failed (${r.code})")));rememberReplyIntent(path,body,json,profileLocal);json
         }
     }
     fun pair(server:String,code:String){scope.launch{
@@ -113,6 +134,7 @@ object Pocket {
         if(local==forLocal)return
         val nextBase=savedBase(forLocal);val nextToken=savedToken(forLocal);if(nextBase.isBlank()||nextToken.isBlank())return
         backgroundRefreshJob?.cancel();backgroundRefreshJob=null;discoveryRefreshJob?.cancel();discoveryRefreshJob=null;lastDiscoveryRefreshAt=0L;refreshError="";statusRevision++
+        sessionSnapshotComplete=false;sessionOrderRequest=0;sessionOrderHandled=0
         PocketLive.stop();PocketTranscript.clear();local=forLocal;base=nextBase;token=nextToken;host=if(local)"This phone" else "Your workstation"
         connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
         lastNotification=prefs.getLong(key("lastNotification"),0);prefs.edit().putBoolean("activeLocal",local).apply()
@@ -155,6 +177,7 @@ object Pocket {
             activities=try{api("/api/activity").optJSONArray("items")?.objects()?:emptyList()}catch(e:PocketApiException){if(e.status==404)emptyList() else throw e}
             val fetched=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"),it.s("previewKind","message"))}?:emptyList()
             tasks=mergeSessionSnapshot(tasks,fetched,taskResult.optBoolean("refreshPending")){it.id}
+            sessionSnapshotComplete=!taskResult.optBoolean("refreshPending")
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
             if(local==profileLocal&&token==profileToken)notifications.forEach{PocketNotificationTitles.remember(it.put("_local",profileLocal))}
             val latestAttention=api("/api/attention").optJSONArray("notifications")?.objects()?:emptyList()
@@ -252,6 +275,7 @@ object Pocket {
         when(json.s("type")){
             "threadRenamed" -> {val applied=PocketNotificationTitles.rename(json.s("threadId"),json.s("name"),json.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=json.optLong("revision"));if(applied)tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(title=json.s("name"))else it}}
             "rateLimits" -> acceptUsage(json.optJSONObject("usage"))
+            "sessionInteraction" -> {rememberSessionInteraction(json.s("threadId"),"item:"+json.s("interactionId"));discoverSession(json.s("threadId"))}
             "status" -> {
                 statusRevision++
                 val recovered=!codexOnline&&json.optBoolean("connected")
@@ -259,7 +283,7 @@ object Pocket {
                 if(recovered){refresh();scheduleRefresh()}
             }
             "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");if(PocketVoice.foreground&&!PocketVoice.active&&selected==n.s("thread_id"))refreshDetail();refresh()}
-            "reply" -> {if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
+            "reply" -> {if(json.s("state")=="accepted")rememberSessionInteraction(json.s("threadId"),"reply:"+json.s("id"));if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}
             "timeline" -> {PocketTranscript.apply(json);if(json.has("turn"))scheduleRefresh()}
             "immersion" -> PocketImmersion.accept(json)

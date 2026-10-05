@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {latestMessage,ThreadPreviews} from '../server/thread-previews.mjs';
+import {latestMessage,ThreadPreviews,sessionInteraction} from '../server/thread-previews.mjs';
+test('only a live started user message supplies origin-identified session ordering intent',()=>{
+  const params={threadId:'existing',item:{id:'user-1',type:'userMessage',content:[]}};
+  assert.deepEqual(sessionInteraction({method:'item/started',params}),{threadId:'existing',interactionId:'user-1'});
+  for(const method of ['item/completed','thread/status/changed','turn/completed','item/agentMessage/delta'])assert.equal(sessionInteraction({method,params}),null);
+  assert.equal(sessionInteraction({method:'item/started',params:{...params,item:{id:'tool',type:'commandExecution'}}}),null);
+  assert.equal(sessionInteraction({method:'item/started',params:{...params,item:{type:'userMessage'}}}),null);
+  assert.equal(sessionInteraction({method:'item/started',params:{item:params.item}}),null);
+});
 test('preview chooses latest actual message, ignores commands and nontext inputs',()=>{
   assert.deepEqual(latestMessage({turns:[{items:[{type:'userMessage',content:[{type:'text',text:'Make a tree'},{type:'image',url:'private'}]},{type:'agentMessage',text:'  Made\n a tree. '},{type:'commandExecution',aggregatedOutput:'noise'}]}]}),{preview:'Made a tree.',previewRole:'assistant'});
   assert.deepEqual(latestMessage({turns:[{items:[{type:'agentMessage',text:'Done.'}]},{items:[{type:'userMessage',content:[{type:'text',text:'Make it blue'}]}]}]}),{preview:'Make it blue',previewRole:'user'});

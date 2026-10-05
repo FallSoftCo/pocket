@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import time
 import urllib.request
 import xml.etree.ElementTree as ET
 
@@ -20,7 +21,7 @@ def fixture_request(base, path, body=None):
 parser = argparse.ArgumentParser(description=__doc__)
 commands = parser.add_subparsers(dest='command', required=True)
 action = commands.add_parser('action')
-action.add_argument('action', choices=['reset','drain','recover','reconnect','partial','complete','background','preview','discover','remove'])
+action.add_argument('action', choices=['reset','drain','recover','reconnect','partial','complete','background','preview','discover','remove','user','accept'])
 action.add_argument('--fixture', default='http://127.0.0.1:19987')
 action.add_argument('--id')
 snapshot = commands.add_parser('snapshot')
@@ -42,9 +43,18 @@ elif args.command == 'snapshot':
     if not args.device.startswith('emulator-'):
         raise SystemExit('This helper is restricted to an explicitly owned emulator')
     adb = ['adb', '-s', args.device]
-    subprocess.run(adb + ['shell', 'uiautomator', 'dump', '/sdcard/lifecycle-review.xml'], check=True, timeout=30, stdout=subprocess.DEVNULL)
-    xml = subprocess.check_output(adb + ['exec-out', 'cat', '/sdcard/lifecycle-review.xml'], timeout=10)
-    root = ET.fromstring(xml)
+    root = None
+    for _ in range(8):
+        subprocess.run(adb + ['shell', 'rm', '-f', '/sdcard/lifecycle-review.xml'], check=True, timeout=10)
+        subprocess.run(adb + ['shell', 'uiautomator', 'dump', '--compressed', '/sdcard/lifecycle-review.xml'], check=True, timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        xml = subprocess.check_output(adb + ['exec-out', 'cat', '/sdcard/lifecycle-review.xml'], timeout=10, stderr=subprocess.DEVNULL)
+        try:
+            root = ET.fromstring(xml)
+            break
+        except ET.ParseError:
+            time.sleep(.5)
+    if root is None:
+        raise SystemExit('Native accessibility tree unavailable after bounded retries')
     nodes = list(root.iter('node'))
     cards = []
     for node in nodes:

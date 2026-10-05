@@ -12,7 +12,7 @@ export function lifecycleFixture(){
   const app=express();app.use(express.json());
   const server=http.createServer(app),sockets=new WebSocketServer({noServer:true});
   const token='synthetic-lifecycle-only',control='synthetic-lifecycle-control';
-  let phase='ready',partial=false,revision=1,ticks=0;
+  let phase='ready',partial=false,revision=1,ticks=0,acceptReplies=false;
   const requests=[];
   const epoch=Math.floor(Date.now()/1000);
   let threads=Array.from({length:18},(_,i)=>({id:`lifecycle-${String(i+1).padStart(2,'0')}`,name:`Lifecycle session ${String(i+1).padStart(2,'0')}`,cwd:'/synthetic/project',preview:`Synthetic progress for session ${i+1}.`,previewRole:'assistant',previewKind:'message',status:{type:i<4?'active':'idle'},updatedAt:epoch-i*3600,watched:i%2===0,archived:false}));
@@ -23,7 +23,8 @@ export function lifecycleFixture(){
   app.get('/fixture/state',(_req,res)=>res.json({phase,partial,revision,ticks,ids:threads.map(t=>t.id),requests}));
   app.post('/fixture/action',(req,res)=>{
     const action=req.body.action;
-    if(!['reset','drain','recover','reconnect','partial','complete','background','preview','discover','remove'].includes(action))return res.status(400).json({error:'Unknown synthetic action'});
+    if(!['reset','drain','recover','reconnect','partial','complete','background','preview','discover','remove','user','accept'].includes(action))return res.status(400).json({error:'Unknown synthetic action'});
+    if(action==='accept')acceptReplies=true;
     if(action==='drain'){phase='draining';emit({type:'status',...status()});}
     if(action==='recover'){phase='ready';partial=false;emit({type:'status',...status()});}
     if(action==='reconnect'){phase='ready';for(const ws of sockets.clients)ws.close(1012,'Synthetic reconnect');}
@@ -42,6 +43,12 @@ export function lifecycleFixture(){
       threads.unshift(thread);emit({type:'sessionStarted',threadId:thread.id,thread});
     }
     if(action==='remove')threads=threads.filter(t=>t.id!==req.body.id);
+    if(action==='user'){
+      const id=req.body.id||'lifecycle-18',interactionId=`synthetic-user-${++ticks}`;
+      threads=threads.map(t=>t.id===id?{...t,status:{type:'active'},preview:'Genuine synthetic user work is underway.',updatedAt:epoch+20_000+ticks}:t);
+      emit({type:'sessionInteraction',threadId:id,interactionId});
+      emit({type:'codex',event:{method:'turn/started',params:{threadId:id}}});
+    }
     if(action==='reset'){phase='ready';partial=false;threads=threads.filter(t=>!t.id.startsWith('lifecycle-new-')).sort((a,b)=>a.id.localeCompare(b.id));emit({type:'status',...status()});}
     revision++;res.json({ok:true,action,phase,partial,revision});
   });
@@ -60,8 +67,8 @@ export function lifecycleFixture(){
   app.get('/api/app/update',(_req,res)=>res.json({available:false}));
   app.post('/api/device/push',(_req,res)=>res.json({ok:true}));
   app.post('/api/threads/:id/watch',(req,res)=>{threads=threads.map(t=>t.id===req.params.id?{...t,watched:!!req.body.enabled}:t);res.json({ok:true});});
-  // An accidental reply is observable but cannot submit real work or reach any provider.
-  app.post('/api/threads/:id/reply',(req,res)=>{requests.push({method:'reply',id:req.params.id,requestId:req.body.id});res.status(503).json({error:phase==='draining'?codexConnectionError('CODEX_DRAINING').message:'Synthetic review blocks execution'});});
+  // Controlled acceptance acknowledges synthetic intent only; it never executes work.
+  app.post('/api/threads/:id/reply',(req,res)=>{requests.push({method:'reply',id:req.params.id,requestId:req.body.id});if(acceptReplies&&phase!=='draining')return res.status(202).json({id:req.body.id,state:'queued'});res.status(503).json({error:phase==='draining'?codexConnectionError('CODEX_DRAINING').message:'Synthetic review blocks execution'});});
   app.use('/api',(_req,res)=>res.status(503).json({error:'Synthetic review blocks this operation'}));
   server.on('upgrade',(req,socket,head)=>{
     if(req.url!=='/events'||req.headers.authorization!==`Bearer ${token}`){socket.destroy();return;}

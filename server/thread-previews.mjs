@@ -1,4 +1,8 @@
 // Read recent conversation text without resuming or taking ownership of a task.
+export function sessionInteraction(event){
+  const p=event.params||{},threadId=p.threadId||p.thread?.id;
+  return event.method==='item/started'&&p.item?.type==='userMessage'&&threadId&&p.item.id?{threadId,interactionId:p.item.id}:null;
+}
 export function latestMessage(thread){
   for(const turn of [...(thread.turns||[])].reverse())for(const item of [...(turn.items||[])].reverse()){
     const role=item.type==='userMessage'?'user':item.type==='agentMessage'?'assistant':null;

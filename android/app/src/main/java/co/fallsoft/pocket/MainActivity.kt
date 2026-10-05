@@ -162,7 +162,7 @@ class MainActivity:ComponentActivity(){
         rows.forEach{range->Row(Modifier.fillMaxWidth().height(usageDockHeight()),horizontalArrangement=Arrangement.spacedBy(2.dp)){
             range.forEach{index->when(index){
                 0,1->{val (title,icon)=listOf("Work" to Icons.Rounded.Layers,"Settings" to Icons.Rounded.Tune)[index]
-                    DockButton(title,icon,Modifier.weight(1f),selected=Pocket.tab==index){onTab();Pocket.tab=index;Pocket.refresh()}}
+                    DockButton(title,icon,Modifier.weight(1f),selected=Pocket.tab==index){if(index==0)Pocket.requestSessionOrder();onTab();Pocket.tab=index;Pocket.refresh()}}
                 2->DockButton("Find",Icons.Rounded.Search,Modifier.weight(1f),primary=true,onClick=onFind)
                 3->VoiceLaunchButton(modifier=Modifier.weight(1f),dock=true)
                 else->UsageDock(Modifier.weight(1f))
@@ -219,18 +219,21 @@ class MainActivity:ComponentActivity(){
             pacing.record(now,changed)
             val active=latest.count{it.status in listOf("active","pending")}
             val interacting=listState.isScrollInProgress||touching||toolsOpen
-            val orderDue=pacing.orderDue(now,active,interacting)
+            val pacedOrderDue=pacing.orderDue(now,active,interacting)
+            val explicitBoundary=sessionReconcileAllowed(Pocket.sessionOrderRequest!=Pocket.sessionOrderHandled,Pocket.sessionSnapshotComplete,Pocket.connected,Pocket.codexOnline,pacing.interactionSettled(now,interacting))
+            val orderDue=pacedOrderDue||explicitBoundary
             if(pacing.contentDue(now,active)&&pacing.interactionSettled(now,interacting)){
                 // Deliver live text/status in place; membership changes wait for a safe moment.
                 displayed=sessionContentInPlace(displayed,latest){it.id};pacing.contentDelivered(now)
             }
             if(orderDue){
                 // Existing keyed seats survive lifecycle changes; new work joins only when idle.
-                val next=stableSessionOrder(order,latest.map{SessionRank(it.id,if(it.updated<100000000000L)it.updated*1000 else it.updated,it.status in listOf("active","pending"))},System.currentTimeMillis())
+                val next=reconciledSessionOrder(order,latest.map{SessionRank(it.id,if(it.updated<100000000000L)it.updated*1000 else it.updated,it.status in listOf("active","pending"))},if(Pocket.showArchived)emptySet() else Pocket.pendingSessionPromotions(),explicitBoundary&&!Pocket.showArchived)
                 if(next!=order)order=next
                 val encoded=org.json.JSONArray(next).toString()
                 if(Pocket.prefs.getString(orderKey,null)!=encoded)Pocket.prefs.edit().putString(orderKey,encoded).apply()
                 displayed=latest
+                if(explicitBoundary){Pocket.finishSessionOrderRequest(Pocket.sessionOrderRequest,latest.map{it.id}.toSet());listState.scrollToItem(0)}
                 pacing.orderDelivered(now)
             }
             delay(100)

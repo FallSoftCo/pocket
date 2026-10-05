@@ -41,6 +41,35 @@ class SessionListPacingTest {
 }
 
 class SessionListTiesTest {
+    @Test fun explicitWorkPromotesGenuineOldInteractionAndKeepsActiveTiesStable() {
+        val seats=listOf("recent","active-a","old","active-b","hydrated")
+        val entries=listOf(SessionRank("hydrated",999_999,false),SessionRank("recent",100,false),SessionRank("old",1,false),SessionRank("active-b",999_000,true),SessionRank("active-a",0,true))
+        assertEquals(seats,reconciledSessionOrder(seats,entries,setOf("old"),false))
+        val reconciled=listOf("active-a","active-b","old","recent","hydrated")
+        assertEquals(reconciled,reconciledSessionOrder(seats,entries,setOf("old"),true))
+        assertEquals(reconciled,reconciledSessionOrder(reconciled,entries.map{it.copy(updated=it.updated+1_000_000)},emptySet(),false))
+    }
+    @Test fun userBatchTiesUseExistingSeatsInsteadOfCallbackArrivalOrTokenTime() {
+        val entries=listOf(SessionRank("b",100,false),SessionRank("a",1,false),SessionRank("c",999_999,false))
+        assertEquals(listOf("a","b","c"),reconciledSessionOrder(listOf("c","a","b"),entries,setOf("b","a"),true))
+    }
+    @Test fun reconnectReplayCannotRenewConsumedUserIntentAndMissingSessionsRemainPending() {
+        var state=queueSessionPromotion(SessionPromotionState(),"old","item:user-1")
+        state=queueSessionPromotion(state,"missing","reply:queued-2")
+        state=acknowledgeSessionPromotions(state,setOf("old"))
+        assertEquals(listOf("missing"),state.pending)
+        assertEquals(state,queueSessionPromotion(state,"old","item:user-1"))
+        assertEquals(listOf("missing","old"),queueSessionPromotion(state,"old","item:user-2").pending)
+        assertEquals(state,queueSessionPromotion(state,"old","item:"))
+    }
+    @Test fun onlyExplicitSafeCompleteConnectedBoundaryCanReconcile() {
+        assertTrue(sessionReconcileAllowed(true,true,true,true,true))
+        assertFalse(sessionReconcileAllowed(false,true,true,true,true)) // Back / idle polling
+        assertFalse(sessionReconcileAllowed(true,false,true,true,true)) // partial snapshot
+        assertFalse(sessionReconcileAllowed(true,true,false,true,true)) // reconnect
+        assertFalse(sessionReconcileAllowed(true,true,true,false,true)) // draining
+        assertFalse(sessionReconcileAllowed(true,true,true,true,false)) // finger / scroll
+    }
     @Test fun simultaneousLiveSessionsKeepTheirSeatsAcrossUnlimitedTokens() {
         var seats = listOf("a", "b", "c")
         for (tick in 1..100) {
