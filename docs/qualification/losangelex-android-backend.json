@@ -7,6 +7,9 @@
     "privateHistoryFiltered": true,
     "draftRestoredAcrossBackendSwitch": true,
     "nativeScopedStop": true,
-    "nativeNewTask": true
-  }
+    "nativeNewTask": true,
+    "originBoundNativeNotificationOpen": true,
+    "nativeQuestionAnswer": true
+  },
+  "notificationQualification": "Synthetic source ID opened through MainActivity notification route; actual FCM handset delivery is not claimed."
 }
