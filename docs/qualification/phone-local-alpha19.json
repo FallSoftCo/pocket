@@ -1,0 +1,19 @@
+{
+  "version": "0.5.0-alpha.19",
+  "changedFiles": 4,
+  "allRelevantTrackedHashesVerified": 41,
+  "sourceHashesMatch": true,
+  "protectedChecksumsUnchanged": true,
+  "backendStopped": true,
+  "syntaxChecks": [
+    "server/immersion-plan.mjs",
+    "server/immersion-worker.mjs"
+  ],
+  "daemonStarted": false,
+  "inferenceCalls": 0,
+  "phoneUiInteractions": 0,
+  "privateSourceBackupRetained": true,
+  "lockMetadataFollowup": "Root and package lock version metadata aligned to alpha19; no dependency changes, matching hashes reverified after this final metadata transfer.",
+  "sourceBoundaryFollowup": "Final codepoint-safe apostrophe/contraction and Unicode-mark boundaries synced; exact hash and syntax verified with backend stopped and protected checksums unchanged.",
+  "finalImmersionPlanSha256": "7a546b2e8e2a99c2aa878884d090f5aa4440e1d5d9db39c493e247cec0e2920a"
+}

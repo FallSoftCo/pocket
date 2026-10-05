@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "appVersion": "0.5.0-alpha.19",
+  "versionCode": 36,
+  "apkSha256": "f1c7ccab3537657edfaf015a5160077118b9ea22715ebf0b750e5b7e3f22e739",
+  "installedApkHashVerified": true,
+  "environment": "Owned API35 emulator, synthetic authenticated fixture; provider routes blocked",
+  "teacherProvenance": "contextual-grammar-stock-codex.json accepted contextual-aligned-v2 replay; separate synthetic two-head agreement fixture",
+  "results": {
+    "normalAndDoubleFontReadingFlow": "pass",
+    "sameSizeItalianAndAlignedMeanings": "pass",
+    "expandCollapseWithoutModal": "pass",
+    "explicitTwoGroupColorAndShapeMarkers": "pass",
+    "alignmentOnlyUpdateClearsSelection": "pass",
+    "sourceUpdateClearsSelection": "pass",
+    "exactOutgoingSteerAndLongPressQueue": "pass",
+    "expandedMarkdownLinkLaunchesOriginalViewIntent": "pass",
+    "cardKeyboardOpensFocusedComposer": "pass",
+    "cardTitleInlineEdit": "pass",
+    "cardMicStartsVoiceRecordingDiscarded": "pass"
+  },
+  "linkQualification": "ActivityTaskManager records NextComp issuing ACTION_VIEW to the fixture URL. Chrome first-run prevented the original harness from finding the URL in foreground-activity dumps; this is a harness limitation, not a rendering failure.",
+  "testEvidence": {
+    "focusedPureTests": 14,
+    "totalAndroidTests": 74,
+    "failures": 0
+  },
+  "limitations": [
+    "Synthetic emulator UI evidence does not establish physical-phone installation.",
+    "Teacher relation quality is bounded by validated contextual-aligned-v2 output; no relation is inferred from suffixes or compatible features alone."
+  ],
+  "gallery": "Main review gallery: nextcomp-contextual-grammar-aligned-reading (deployment-specific URL retained privately)",
+  "cleanup": {
+    "ownedFixtureStopped": true,
+    "ownedEmulatorStopped": true,
+    "unrelatedEmulatorAndJobsPreserved": true,
+    "phoneUntouched": true
+  }
+}

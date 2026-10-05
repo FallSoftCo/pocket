@@ -1,0 +1,792 @@
+{
+  "synthetic": true,
+  "authentication": "chatgpt",
+  "effort": "medium",
+  "model": "gpt-6-luna",
+  "latencyMs": 28697,
+  "planVersion": "contextual-aligned-v2",
+  "source": "The new sessions are ready. I am not checking the model. Return to the session with `notes.md` and gpt-6-luna.",
+  "accepted": true,
+  "translations": [
+    {
+      "id": "grammar",
+      "text": "Le nuove sessioni sono pronte. Non sto controllando il modello. Torna alla sessione with `notes.md` and gpt-6-luna.",
+      "spans": [
+        {
+          "start": 0,
+          "end": 26,
+          "targetSegments": [
+            {
+              "start": 0,
+              "end": 2,
+              "target": "Le",
+              "meaning": "the",
+              "role": "determiner",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "feminine"
+                },
+                {
+                  "name": "number",
+                  "value": "plural"
+                },
+                {
+                  "name": "definiteness",
+                  "value": "definite"
+                }
+              ],
+              "relations": [
+                {
+                  "kind": "agreesWith",
+                  "toSegment": 4,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 3,
+              "end": 8,
+              "target": "nuove",
+              "meaning": "new",
+              "role": "adjective",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "feminine"
+                },
+                {
+                  "name": "number",
+                  "value": "plural"
+                }
+              ],
+              "relations": [
+                {
+                  "kind": "agreesWith",
+                  "toSegment": 4,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 8,
+              "end": 9,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 9,
+              "end": 17,
+              "target": "sessioni",
+              "meaning": "sessions",
+              "role": "noun",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "feminine"
+                },
+                {
+                  "name": "number",
+                  "value": "plural"
+                }
+              ],
+              "relations": []
+            },
+            {
+              "start": 17,
+              "end": 18,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 18,
+              "end": 22,
+              "target": "sono",
+              "meaning": "are",
+              "role": "verb",
+              "features": [
+                {
+                  "name": "person",
+                  "value": "third"
+                },
+                {
+                  "name": "number",
+                  "value": "plural"
+                },
+                {
+                  "name": "tense",
+                  "value": "present"
+                },
+                {
+                  "name": "mood",
+                  "value": "indicative"
+                }
+              ],
+              "relations": []
+            },
+            {
+              "start": 22,
+              "end": 23,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 23,
+              "end": 29,
+              "target": "pronte",
+              "meaning": "ready",
+              "role": "adjective",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "feminine"
+                },
+                {
+                  "name": "number",
+                  "value": "plural"
+                }
+              ],
+              "relations": [
+                {
+                  "kind": "agreesWith",
+                  "toSegment": 4,
+                  "note": ""
+                }
+              ]
+            }
+          ],
+          "source": "The new sessions are ready",
+          "target": "Le nuove sessioni sono pronte",
+          "note": "",
+          "unit": "clause"
+        },
+        {
+          "start": 28,
+          "end": 55,
+          "targetSegments": [
+            {
+              "start": 0,
+              "end": 3,
+              "target": "Non",
+              "meaning": "not",
+              "role": "adverb",
+              "features": [],
+              "relations": [
+                {
+                  "kind": "negates",
+                  "toSegment": 2,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 3,
+              "end": 4,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 4,
+              "end": 7,
+              "target": "sto",
+              "meaning": "am",
+              "role": "auxiliary",
+              "features": [
+                {
+                  "name": "person",
+                  "value": "first"
+                },
+                {
+                  "name": "number",
+                  "value": "singular"
+                },
+                {
+                  "name": "tense",
+                  "value": "present"
+                },
+                {
+                  "name": "mood",
+                  "value": "indicative"
+                },
+                {
+                  "name": "aspect",
+                  "value": "progressive"
+                }
+              ],
+              "relations": [
+                {
+                  "kind": "auxiliaryOf",
+                  "toSegment": 4,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 7,
+              "end": 8,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 8,
+              "end": 20,
+              "target": "controllando",
+              "meaning": "checking",
+              "role": "verb",
+              "features": [
+                {
+                  "name": "mood",
+                  "value": "gerund"
+                }
+              ],
+              "relations": []
+            },
+            {
+              "start": 20,
+              "end": 21,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 21,
+              "end": 23,
+              "target": "il",
+              "meaning": "the",
+              "role": "determiner",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "masculine"
+                },
+                {
+                  "name": "number",
+                  "value": "singular"
+                },
+                {
+                  "name": "definiteness",
+                  "value": "definite"
+                }
+              ],
+              "relations": [
+                {
+                  "kind": "agreesWith",
+                  "toSegment": 8,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 23,
+              "end": 24,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 24,
+              "end": 31,
+              "target": "modello",
+              "meaning": "model",
+              "role": "noun",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "masculine"
+                },
+                {
+                  "name": "number",
+                  "value": "singular"
+                }
+              ],
+              "relations": []
+            }
+          ],
+          "source": "I am not checking the model",
+          "target": "Non sto controllando il modello",
+          "note": "",
+          "unit": "clause"
+        },
+        {
+          "start": 57,
+          "end": 78,
+          "targetSegments": [
+            {
+              "start": 0,
+              "end": 5,
+              "target": "Torna",
+              "meaning": "return",
+              "role": "verb",
+              "features": [
+                {
+                  "name": "person",
+                  "value": "second"
+                },
+                {
+                  "name": "number",
+                  "value": "singular"
+                },
+                {
+                  "name": "mood",
+                  "value": "imperative"
+                }
+              ],
+              "relations": []
+            },
+            {
+              "start": 5,
+              "end": 6,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 6,
+              "end": 10,
+              "target": "alla",
+              "meaning": "to the",
+              "role": "preposition",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "feminine"
+                },
+                {
+                  "name": "number",
+                  "value": "singular"
+                }
+              ],
+              "relations": [
+                {
+                  "kind": "head",
+                  "toSegment": 4,
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "start": 10,
+              "end": 11,
+              "target": " ",
+              "meaning": "",
+              "role": "separator",
+              "features": [],
+              "relations": []
+            },
+            {
+              "start": 11,
+              "end": 19,
+              "target": "sessione",
+              "meaning": "session",
+              "role": "noun",
+              "features": [
+                {
+                  "name": "gender",
+                  "value": "feminine"
+                },
+                {
+                  "name": "number",
+                  "value": "singular"
+                }
+              ],
+              "relations": []
+            }
+          ],
+          "source": "Return to the session",
+          "target": "Torna alla sessione",
+          "note": "",
+          "unit": "clause"
+        }
+      ],
+      "planVersion": "contextual-aligned-v2",
+      "version": "d324bf8e23ea59406f5fd82750871dcd2c652e2150c8577fa9be71d917b46b8e",
+      "original": "The new sessions are ready. I am not checking the model. Return to the session with `notes.md` and gpt-6-luna.",
+      "language": "it",
+      "density": "strong"
+    }
+  ],
+  "raw": {
+    "translations": [
+      {
+        "id": "0",
+        "version": "d324bf8e23ea59406f5fd82750871dcd2c652e2150c8577fa9be71d917b46b8e",
+        "spans": [
+          {
+            "source": "The new sessions are ready",
+            "occurrence": 0,
+            "target": "Le nuove sessioni sono pronte",
+            "unit": "clause",
+            "note": "",
+            "targetSegments": [
+              {
+                "target": "Le",
+                "occurrence": 0,
+                "meaning": "the",
+                "role": "determiner",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  },
+                  {
+                    "name": "definiteness",
+                    "value": "definite"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "agreesWith",
+                    "target": "sessioni",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "nuove",
+                "occurrence": 0,
+                "meaning": "new",
+                "role": "adjective",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "agreesWith",
+                    "target": "sessioni",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "sessioni",
+                "occurrence": 0,
+                "meaning": "sessions",
+                "role": "noun",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  }
+                ],
+                "relations": []
+              },
+              {
+                "target": "sono",
+                "occurrence": 0,
+                "meaning": "are",
+                "role": "verb",
+                "features": [
+                  {
+                    "name": "person",
+                    "value": "third"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  },
+                  {
+                    "name": "tense",
+                    "value": "present"
+                  },
+                  {
+                    "name": "mood",
+                    "value": "indicative"
+                  }
+                ],
+                "relations": []
+              },
+              {
+                "target": "pronte",
+                "occurrence": 0,
+                "meaning": "ready",
+                "role": "adjective",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "plural"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "agreesWith",
+                    "target": "sessioni",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "source": "I am not checking the model",
+            "occurrence": 0,
+            "target": "Non sto controllando il modello",
+            "unit": "clause",
+            "note": "",
+            "targetSegments": [
+              {
+                "target": "Non",
+                "occurrence": 0,
+                "meaning": "not",
+                "role": "adverb",
+                "features": [],
+                "relations": [
+                  {
+                    "kind": "negates",
+                    "target": "sto",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "sto",
+                "occurrence": 0,
+                "meaning": "am",
+                "role": "auxiliary",
+                "features": [
+                  {
+                    "name": "person",
+                    "value": "first"
+                  },
+                  {
+                    "name": "number",
+                    "value": "singular"
+                  },
+                  {
+                    "name": "tense",
+                    "value": "present"
+                  },
+                  {
+                    "name": "mood",
+                    "value": "indicative"
+                  },
+                  {
+                    "name": "aspect",
+                    "value": "progressive"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "auxiliaryOf",
+                    "target": "controllando",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "controllando",
+                "occurrence": 0,
+                "meaning": "checking",
+                "role": "verb",
+                "features": [
+                  {
+                    "name": "mood",
+                    "value": "gerund"
+                  }
+                ],
+                "relations": []
+              },
+              {
+                "target": "il",
+                "occurrence": 0,
+                "meaning": "the",
+                "role": "determiner",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "masculine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "singular"
+                  },
+                  {
+                    "name": "definiteness",
+                    "value": "definite"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "agreesWith",
+                    "target": "modello",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "modello",
+                "occurrence": 0,
+                "meaning": "model",
+                "role": "noun",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "masculine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "singular"
+                  }
+                ],
+                "relations": []
+              }
+            ]
+          },
+          {
+            "source": "Return to the session",
+            "occurrence": 0,
+            "target": "Torna alla sessione",
+            "unit": "clause",
+            "note": "",
+            "targetSegments": [
+              {
+                "target": "Torna",
+                "occurrence": 0,
+                "meaning": "return",
+                "role": "verb",
+                "features": [
+                  {
+                    "name": "person",
+                    "value": "second"
+                  },
+                  {
+                    "name": "number",
+                    "value": "singular"
+                  },
+                  {
+                    "name": "mood",
+                    "value": "imperative"
+                  }
+                ],
+                "relations": []
+              },
+              {
+                "target": "alla",
+                "occurrence": 0,
+                "meaning": "to the",
+                "role": "preposition",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "singular"
+                  }
+                ],
+                "relations": [
+                  {
+                    "kind": "head",
+                    "target": "sessione",
+                    "occurrence": 0,
+                    "note": ""
+                  }
+                ]
+              },
+              {
+                "target": "sessione",
+                "occurrence": 0,
+                "meaning": "session",
+                "role": "noun",
+                "features": [
+                  {
+                    "name": "gender",
+                    "value": "feminine"
+                  },
+                  {
+                    "name": "number",
+                    "value": "singular"
+                  }
+                ],
+                "relations": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "Structural acceptance does not prove universal grammatical correctness.",
+    "No audio timing or native-speaker review."
+  ],
+  "teacherContract": "lexical-target-anchors; locally derived separator/punctuation coverage and reconstructed hybrid; quoted grammatical relation anchors",
+  "semanticReview": {
+    "reviewedSyntheticTargets": [
+      "Le nuove sessioni sono pronte",
+      "Non sto controllando il modello",
+      "Torna alla sessione"
+    ],
+    "sourceOrderMeaningsPreserved": true,
+    "nounDeterminerAdjectiveFemininePluralAgreement": true,
+    "firstPersonProgressiveAuxiliaryAndNegation": true,
+    "contractedAllaIntactMeaningToThe": true,
+    "protectedInlineCodeAndModelIdentifierExact": true,
+    "verbNumberFeaturePresent": true,
+    "verbToSubjectAgreementLinkReturned": false,
+    "universalGrammarClaim": false
+  },
+  "boundedWorker": {
+    "ordinarySources": 2,
+    "urgentSources": 1,
+    "maxSelectedPhrasesPerSourceInstruction": 4,
+    "timeoutMs": 60000,
+    "automaticRetry": false
+  },
+  "promptQualification": "Accepted current lexical-anchor schema. Subsequent prompt-only cleanup removed irrelevant separator and subject/object examples; exact cleaned wording has unit/schema validation but was not independently rerun."
+}

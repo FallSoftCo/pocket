@@ -1,0 +1,53 @@
+{
+  "status": "acceptance-cases-not-runtime-proof",
+  "language": "it",
+  "reference": "Maintained Mosis contextual segment alignment; adapted to Italian rather than reusing Japanese morpheme rules.",
+  "cases": [
+    {
+      "source": "The new sessions are ready.",
+      "targetExample": "Le nuove sessioni sono pronte.",
+      "required": [
+        "Article/adjective/noun/predicate adjective feminine plural agreement shown as relationships",
+        "sono third person plural subject agreement",
+        "Exact natural Italian retained; source-order meanings the/new/sessions/are/ready",
+        "Grammatical gender has no invented English gloss"
+      ]
+    },
+    {
+      "source": "Go to the session.",
+      "targetExample": "Vai alla sessione.",
+      "required": [
+        "Contracted alla retains its contextual to-the meaning as an honest inseparable construction",
+        "sessione feminine singular article agreement",
+        "No decomposition into fabricated English stems"
+      ]
+    },
+    {
+      "source": "I have not opened the new conversations.",
+      "targetExample": "Non ho aperto le nuove conversazioni.",
+      "required": [
+        "Negation cue remains consistent across utterances",
+        "ho aperto auxiliary construction preserves completed action meaning",
+        "aperto not blindly assumed agreement with feminine plural object",
+        "No literal English-order rewrite of Italian"
+      ]
+    },
+    {
+      "source": "The important questions are useful.",
+      "targetExample": "Le domande importanti sono utili.",
+      "required": [
+        "-i in importanti/utili indicates plural context; no assumed feminine ending palette",
+        "Teacher head relationships identify contextual agreement",
+        "Use whole words unless morpheme split is semantically honest"
+      ]
+    }
+  ],
+  "interactionAcceptance": [
+    "In-place phrase interaction at exact reading point, no modal, detached side explanation or bracket prose",
+    "Italian/meaning ordinary equal reading type sizes",
+    "Stable grammatical role cues plus non-color relationship signal",
+    "Original Markdown links and action payloads preserved",
+    "Updated source invalidates selected stale alignment",
+    "Normal and enlarged text wrap inside viewport; inseparable phrase allowed to wrap internally"
+  ]
+}

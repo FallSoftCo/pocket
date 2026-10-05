@@ -25,7 +25,7 @@ object PocketImmersion {
     private fun profileKey()=Pocket.key("immersionItalian")+":"+Pocket.prefs.getString(Pocket.key("deviceId"),"").orEmpty()
     private fun version(text:String)=immersionSourceHash(text)
     private fun cacheKey()="immersion-display-cache-v3:"+profileKey()
-    private fun eligible(row:JSONObject)=row.s("planVersion")=="contextual-hybrid-v1"&&row.s("density")==density
+    private fun eligible(row:JSONObject)=row.s("planVersion")=="contextual-aligned-v2"&&row.s("density")==density
     private fun cached(id:String,text:String):JSONObject? {val hash=version(text);return translations[id]?.takeIf{it.s("version")==hash&&eligible(it)}?:byContent[hash]?.takeIf{eligible(it)}}
     private var cacheSave:Job?=null
     private fun persistCache(){
@@ -67,7 +67,7 @@ object PocketImmersion {
         val row=cached(id,text)?:return text
         return if(contextualHybridText(text,spans(row))==row.s("text"))row.s("text") else text
     }
-    private fun spans(row:JSONObject)=row.optJSONArray("spans")?.objects()?.map{ImmersionSpan(it.optInt("start"),it.optInt("end"),it.s("source"),it.s("target"),it.s("note"),it.s("unit","phrase"))}?:emptyList()
+    private fun spans(row:JSONObject)=row.optJSONArray("spans")?.objects()?.map{r->ImmersionSpan(r.optInt("start"),r.optInt("end"),r.s("source"),r.s("target"),r.s("note"),r.s("unit","phrase"),r.optJSONArray("targetSegments")?.objects()?.map{s->ImmersionTargetSegment(s.optInt("start"),s.optInt("end"),s.s("target"),s.s("meaning"),s.s("role","other"),s.optJSONArray("features")?.objects()?.map{ImmersionFeature(it.s("name"),it.s("value"))}?:emptyList(),s.optJSONArray("relations")?.objects()?.map{ImmersionRelation(it.s("kind"),it.optInt("toSegment",-1))}?:emptyList())}?:emptyList())}?.takeIf{list->list.all(::alignedTargetValid)}?:emptyList()
     fun presentation(id:String,text:String):ImmersionPresentation {
         if(!enabled)return ImmersionPresentation(text,text,true)
         val offline=ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text)

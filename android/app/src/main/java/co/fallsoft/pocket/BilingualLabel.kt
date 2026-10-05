@@ -14,7 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 
-/** Ordinary action taps stay actions; English rescue expands inside the label's reading flow. */
+/** Ordinary action taps stay actions; English rescue replaces the same label in place. */
 @Composable fun BilingualLabel(text:String,modifier:Modifier=Modifier,color:Color=LocalContentColor.current,fontSize:TextUnit=14.sp,fontWeight:FontWeight?=null,maxLines:Int=1,centered:Boolean=true){
     LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offerLabel(text)}
     val target=PocketImmersion.label(text)
@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.*
     val size=if(PocketImmersion.enabled)fontSize.value.coerceAtLeast(14f).sp else fontSize
     val rescue=if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}else Modifier
     Box(modifier.then(rescue)){
-        Text(if(expanded)"$target [$text]" else target,color=color,fontSize=size,fontWeight=fontWeight,maxLines=if(expanded)Int.MAX_VALUE else maxLines,overflow=TextOverflow.Ellipsis,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
+        Text(if(expanded)text else target,color=color,fontSize=size,fontWeight=fontWeight,maxLines=if(expanded)Int.MAX_VALUE else maxLines,overflow=TextOverflow.Ellipsis,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
     }
 }
 
