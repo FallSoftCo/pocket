@@ -468,65 +468,65 @@
     {
       "id": "inline-replacement-single-flow",
       "requirement": "Replace short phrases inside a single existing text flow; partial mixed grammar accepted. No duplicate translated lines, subtitles, or modal help. Tap selected text to switch only that phrase in place.",
-      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+      "status": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access"
     },
     {
       "id": "notes-immediate-actions",
       "requirement": "Keep retained answers near thumb with direct reply and source navigation; durable remove with authoritative acknowledgement and visible failure recovery.",
-      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+      "status": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access"
     },
     {
       "id": "title-exact-text-hit",
       "requirement": "Conversation title rename hit region must end at visible text rather than include empty trailing space.",
-      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+      "status": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access"
     },
     {
       "id": "coordinator-immediate-session-discovery",
       "requirement": "Coordinator-created and selected sessions must appear immediately with pending/working state before first response. Temperature thread appeared after response; verify it and PirateBae. Preserve running temperature task.",
-      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+      "status": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access"
     },
     {
       "id": "coordinator-lightweight-execution",
       "requirement": "Short tasks such as temperature/fan checks should execute in coordinator chat or lightweight delegation returning results there without unnecessary user-managed session creation.",
-      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+      "status": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access"
     },
     {
       "id": "audio-bar-direct-controls",
       "requirement": "Show pause/resume and clear directly in the speech footer bar, remove the menu, preserve keyboard focus and draft when operating playback.",
-      "status": "implemented-alpha20-qualified-build38-phone-delivery-in-progress"
+      "status": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access"
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "105ff92",
-    "published_release": "v0.5.0-alpha.19",
+    "latest_pushed_commit": "b8db966",
+    "published_release": "v0.5.0-alpha.20",
     "server_tests": 184,
     "android_tests": 72,
     "phone_endpoint": "Verified Tailscale wireless ADB100.101.220.29:36353; SSH phone also live",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
-    "owned_emulator": "Owned emulator5560 in use for alpha20 qualification; unrelated5556 preserved",
-    "owned_fixture_port": "Owned synthetic provider-blocked fixture19984 active for alpha20 QA",
+    "owned_emulator": "Owned5560 shut down after finalqualification; unrelated5556 preserved.",
+    "owned_fixture_port": "Owned19984 stopped; task-ownedADB5041 shut down; shared5037/5039 preserved.",
     "installed_development_version": "0.5.0-alpha.18 (versionCode35 independently verified)",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 native readable swivels and full 360 Codex/thinking spins integrated; shared bounded cache and reduced-motion fallback",
-    "phone_install": "Alpha18/code35 retained throughout networking diagnosis; alpha19/code36 compatible artifacts and phone-native installer preserved for separate delivery.",
+    "phone_install": "Phonecode36/basehash independentlyverified before on-deviceCodex update38 attempt; SSHconnectiondroppedbefore finalresult. Code38installation notclaimed.",
     "qualification": "Alpha15 version32:146 backend tests,66 Android tests,debug/release lint and signing pass. Actual anchoredpopup, directswitch/inline targetreply, keyboardavoidance, contrast andfont2 labels qualified.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
-    "gallery_review": "Synthetic list, Mission, retained answer, enlarged text, voice controls and captions published to main gallery; layout and reduced-motion checks pass",
+    "gallery_review": "Six freshalpha20/code38 synthetic singleflow/notes/audio/pending cards published newestfirst;1654-card desktop/mobile/reducedmotion/reloadchecks pass. Rejectedalpha19 interlinear previews marked historical/superseded.",
     "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
-    "update_delivery": "Private compatible APK variants deployed; one push accepted by Firebase, repeats deduplicated; device acknowledgement not claimed",
+    "update_delivery": "Alpha20/code38 privatecompatiblevariants published; one deduplicated updateannouncement421 acceptedbyFCM; actualhandsetacknotclaimed.",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
     "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21\u201339ms. No active-session reset.",
     "immersion_next": "Strong working-language Italian with normal-size contextual English rescue and all workflow/speech/public-thought coverage is in progress; docs/ITALIAN-VIRTUAL-IMMERSION.md records exactrequest andaudit.",
-    "phone_access": "Verified wireless ADB36353 and Termux SSH over Tailscale restored after autonomous phone-local process repair; phone-local backend remains intentionally stopped.",
+    "phone_access": "PhoneTailping77ms but SSH8022 andPeerAPI1 timeout; oldADB36353 andLAN36353/5555 refused. PrivateLANSSHsocketreachableandtrustedhostkeymatchesbutauthrejected; no network/security settings changed. User reconnect requested for recovery.",
     "backend_runtime": "Alpha20 inline v3, direct coordinator checks, immediate discovery and bounded metadata refresh live;184 backend tests pass. Real list298rows with both target sessions1886/1831/166ms; status5ms. Temperature task preserved.",
-    "native_validation": "Alpha20/code38 signed debug/release,72 Android tests and bothlintvariants pass. Exact38APK e3e24ccf9cf21dc32340b1c94d2857e08f17747314efb4cc1e7d691dc9db302e independently installed/hashed on ownedemulator. Actual1x/2x Pause/Resume/Clear retain IME+draft; exacttitletext bounds verified; noteactions wrapwholelabels at2x. Singleflow directphrase/repeatedoccurrence runtime verified with unchanged renderer.",
-    "pending_phone_update": "Qualified alpha20/code38 same-signer APK staged and verified on phone; on-deviceCodex in-app installation and physical verification in progress."
+    "native_validation": "Alpha20/code38 signeddebug/release,72Androidtests, bothlintvariants andGitHubCIpass. Ownedemulator exactinstalledSHA e3e24ccf9cf21dc32340b1c94d2857e08f17747314efb4cc1e7d691dc9db302e verified;1x/2x directphrase, repeatedoccurrence, exacttitlebounds, readable noteactions, source/draft/removefailureandretry, pendingStartingcard andPause/Resume/Clear preservingIME+draft qualified.",
+    "pending_phone_update": "Verified same-signer code38 privateupdateavailable and announced once; notification421 acceptedbyFCM, handsetreceipt notverified. RestorephoneTailTCPaccess tocomplete physicalinstallationverification."
   },
   "remaining": [
     "Install qualified alpha20 through phone-native Codex; compatible artifacts prepared, network diagnosis restored actual FCM delivery",

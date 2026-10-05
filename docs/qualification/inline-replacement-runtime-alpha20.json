@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "appVersion": "0.5.0-alpha.20",
+  "versionCode": 38,
+  "apkSha256": "e3e24ccf9cf21dc32340b1c94d2857e08f17747314efb4cc1e7d691dc9db302e",
+  "installedApkHashVerified": true,
+  "environment": "Owned API35 emulator with authenticated synthetic fixture and blocked provider routes",
+  "displayContract": "A single source-ordered text flow; deliberate rescue replaces only the tapped target phrase with its source. No appended meaning, subtitle, parallel original, or immersion modal.",
+  "observations": [
+    {
+      "candidate": 38,
+      "result": "pass",
+      "checks": [
+        "single-flow partial replacement and restoration at1x and2x",
+        "compact retained-answer direct phrase rescue",
+        "expanded selectable retained-answer direct phrase rescue",
+        "alignment-only metadata update clears prior rescue",
+        "natural-width note actions wrap without word splits or truncation at2x",
+        "exact title Text bounds270x56px; text tap renames, trailing and vertically adjacent Chat-region taps open Chat",
+        "actual Resume/Pause/Clear retain focused KeepThisDraft and open keyboard at1x and2x; no speech options menu",
+        "synthetic pending session card and Starting icon appear before any response"
+      ]
+    },
+    {
+      "candidate": 37,
+      "result": "pass; unchanged functional paths confirmed by source review in38",
+      "checks": [
+        "notes Reply opens focused original contextual draft without an API reply",
+        "Go to message resolves actual transcript source",
+        "pending removal hides note;503 restores it with visible error; acknowledged retry removes it",
+        "second repeated target occurrence rescues independently and restores"
+      ]
+    }
+  ],
+  "pureTests": {
+    "focusedSingleFlowAndGrammarTests": 10,
+    "totalAndroidTestsReportedByRoot": 72,
+    "failures": 0
+  },
+  "limits": [
+    "Synthetic emulator qualification does not prove phone delivery.",
+    "Pending-card first immediate UI snapshot raced layout; following snapshot showed the card before any response.",
+    "Shared ADB5037 stalled; isolated task-owned ADB5041 qualified this emulator without restarting shared servers.",
+    "Outgoing steer/queue originals and protected Markdown/code are covered by unchanged sender qualification and pure regressions; this run did not repeat paid or real-session actions."
+  ],
+  "galleryAnchor": "#nextcomp-inline-replacement-mixed-reading",
+  "cleanup": {
+    "ownedEmulatorStopped": true,
+    "ownedFixtureStopped": true,
+    "ownedAdbServerStopped": true,
+    "sharedAdbServersAndOtherEmulatorPreserved": true,
+    "phoneUntouched": true
+  },
+  "galleryQualification": {
+    "cards": 1654,
+    "desktop": true,
+    "mobile": true,
+    "reducedMotion": true,
+    "automaticReload": true,
+    "errors": 0
+  }
+}
