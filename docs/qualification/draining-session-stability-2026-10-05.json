@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-05",
+  "sourceCommit": "7679c0d",
+  "status": "source-and-automated-checks-passed-native-qualification-pending",
+  "cause": {
+    "draining": "Codex app-server closes admission to new work during a graceful restart drain while waiting for running assistant turns and previously admitted requests. The rejected RPC says Server is draining; retry after reconnecting. NextComp previously exposed this implementation message without explaining the restart or retry behavior.",
+    "ordering": "Android lifecycle status changes assigned current-time activity timestamps. The list periodically promoted active/recent sessions and sorted older sessions by timestamp; completion, reconnect status changes and expiry of the thirty-second recent window could therefore reorder existing cards.",
+    "limits": "The observed service disconnect is consistent with a restart but does not establish which updater, signal or operator initiated it. No restart was induced in shared services."
+  },
+  "implementation": {
+    "drainingState": "CODEX_DRAINING with a user-facing restart explanation and safe retry guidance, emitted as connection status without closing the existing transport. Existing completion events do not clear the draining notice. Reconnect clears the state and does not replay writes.",
+    "list": "Persisted existing seats survive active/idle transitions, timestamp changes, grace expiry and partial reconnect snapshots. Initial/new discoveries use recency order. Card content remains paced; membership delivery and content changes wait for touch/scroll/tool interaction to settle. Current and archived lists have separate persisted orders.",
+    "navigation": "The Work list state is retained in the parent composition across conversation selection and return; reconnect does not change the selected conversation.",
+    "meaningfulUpdates": "Status badges and previews still update. Complete authoritative lists can remove archived sessions; partial discovery results retain known ongoing work."
+  },
+  "automatedEvidence": {
+    "backend": {"command": "npm test", "passed": 190, "failed": 0},
+    "android": {"command": "cd android && ./gradlew --no-daemon testDebugUnitTest", "passed": 85, "failed": 0, "compilation": "passed"},
+    "nativeFixturePreparation": {"isolatedSmoke": "passed", "checks": "Paired auth, restart status plus completing-work events, partial discovery, previews/background/new discovery, recovery/reconnect, provider/write blocking", "emulatorUsed": false, "fixtureSyntax": "passed", "pythonHelperSyntax": "passed"},
+    "coverage": [
+      "Draining RPC preserves the original RPC error identity and exposes CODEX_DRAINING/503.",
+      "Existing completion events continue over the original connection while draining.",
+      "Reconnect clears the problem without replaying a rejected write; only explicit retry sends new work.",
+      "Status-only metadata does not manufacture recent activity.",
+      "Existing list seats survive background timestamps, active/idle changes, grace expiry and empty/partial snapshots.",
+      "New discoveries preserve existing relative order; content delivery preserves membership until a safe update.",
+      "Partial snapshots retain known sessions; complete results permit deliberate removals.",
+      "Touch/scroll hold and settle interval prevent order delivery during interaction."
+    ],
+    "evidenceLevel": "Controlled WebSocket/RPC fixtures and Kotlin unit checks. These are not physical-phone or native gesture qualification."
+  },
+  "nativeReviewPlan": {
+    "ownership": "Wait for Pocket Dev to release its existing emulator and image fixture. Do not create another emulator, restart shared services or inject work into real conversations.",
+    "fixture": "tests/fixtures/lifecycle-ui.mjs",
+    "helper": "scripts/lifecycle-ui-review.py",
+    "start": "node tests/fixtures/lifecycle-ui.mjs",
+    "defaultLoopbackPort": 19987,
+    "providerInference": "Blocked by construction: fixture never connects to Codex, Firebase or a provider. Unknown operations and accidental replies return a synthetic failure.",
+    "pairing": "Synthetic token synthetic-lifecycle-only; pairing code LIFECYCLE. Configure only the explicitly granted emulator, preserving the owner's fixture preferences for restoration. Endpoint routing and app installation belong to the coordinated release owner.",
+    "control": "python3 scripts/lifecycle-ui-review.py action background",
+    "capture": "python3 scripts/lifecycle-ui-review.py snapshot --device <granted-emulator> --out review/lifecycle/before.json --screenshot",
+    "compare": "python3 scripts/lifecycle-ui-review.py compare review/lifecycle/before.json review/lifecycle/after.json --positions",
+    "scenarios": [
+      {"name": "background-status-and-recency", "steps": "Capture visible order/bounds; send background then preview; wait at least thirteen seconds; recapture.", "assert": "Same visible cards retain relative order and bounds; newest preview/status becomes visible."},
+      {"name": "drain-and-existing-completions", "steps": "Send drain (also emits idle/status events from finishing work); inspect heading/body; wait at least thirteen seconds.", "assert": "Restart meaning and safe retry instructions remain visible despite existing-work events; cards retain relative order. Banner changes viewport height, so compare keyed order separately from geometry."},
+      {"name": "recovery-and-reconnect", "steps": "Send recover then reconnect; wait for the automatic reconnect and list polling; recapture.", "assert": "Restart notice clears; existing seats remain; fixture logs contain no unsolicited reply."},
+      {"name": "partial-discovery", "steps": "Scroll until a baseline card outside the partial eight-session subset is visible; send partial; wait at least thirteen seconds; send complete.", "assert": "Known work never disappears during partial discovery; keyed visible anchor and relative order survive recovery."},
+      {"name": "touch-and-new-discovery", "steps": "Hold a pointer on a card region without activating a control; send preview/background/discover; capture during hold; release in finally; wait for safe delivery.", "assert": "No card/new membership moves under the pointer; after release, new work becomes visible and latest previews arrive. Preserve a during-hold screenshot for review; do not infer the result solely from an after-release dump."},
+      {"name": "scroll-and-return-anchor", "steps": "Scroll away from the newest end; record a fully visible title and pixel bounds; open that card's Chat region; inject background/reconnect while detail is selected; press Back; recapture.", "assert": "The selected synthetic conversation remains selected during reconnect; return restores the visible title and pixel offset."},
+      {"name": "meaningful-membership", "steps": "Discover a new synthetic session while idle; remove a known synthetic ID using a complete snapshot; switch Following/Working/Archived using explicit user controls.", "assert": "New work and deliberate removals are delivered; existing relative order remains stable; archived order does not overwrite current order."}
+    ],
+    "publication": "Review synthetic native captures before adding them and the coordinated APK/source to the main gallery; rebuild and check the gallery. No new native screenshots have been captured by this workstream yet."
+  },
+  "limits": [
+    "The deployed backend and physical phone have not been changed by this workstream.",
+    "Native pointer behavior, visual explanation, selected-conversation continuity and pixel scroll-anchor retention remain pending the coordinated emulator handoff.",
+    "Automated counts refer to the combined checkout at verification, including concurrent Markdown image tests; they do not certify a future alpha22 binary."
+  ]
+}
