@@ -306,7 +306,7 @@
       "id": "live-connection-truth",
       "requirement": "Do not report disconnects while live delivery is working; distinguish failed background refresh from transport loss and debounce short reconnects",
       "status": "implemented-under-verification",
-      "evidence": "Alpha15 fixed stock Codex thread/list rollout scan timeout with native useStateDbOnly metadata index; preserves70/archive contract, active statuses and latest metadata. Native70 result21\u201339ms; authenticated liveHTTP336ms68visible(native2filtered). 146 backend tests pass, no active-session restart. See qualification/session-list-state-db-alpha15.json."
+      "evidence": "Alpha15 fixed stock Codex thread/list rollout scan timeout with native useStateDbOnly metadata index; preserves70/archive contract, active statuses and latest metadata. Native70 result21–39ms; authenticated liveHTTP336ms68visible(native2filtered). 146 backend tests pass, no active-session restart. See qualification/session-list-state-db-alpha15.json."
     },
     {
       "id": "conversation-activity-header",
@@ -505,7 +505,7 @@
     },
     {
       "id": "tibo-dots-varied-brief-evaluation",
-      "requirement": "Prepare varied capability/workflow/evidence briefs for interacting with Tibo\u2019s Dots rather than reducing NextComp to a sole concise remote coding pitch. Actually test how independent agents/ChatGPT interpret them; do not pretend actual Dots interaction occurred.",
+      "requirement": "Prepare varied capability/workflow/evidence briefs for interacting with Tibo’s Dots rather than reducing NextComp to a sole concise remote coding pitch. Actually test how independent agents/ChatGPT interpret them; do not pretend actual Dots interaction occurred.",
       "status": "prepared-and-independently-evaluated-dots-access-unavailable",
       "evidence": [
         "docs/BRIEF-EVALUATION.md",
@@ -553,17 +553,17 @@
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "b8db966",
-    "published_release": "v0.5.0-alpha.20",
-    "server_tests": 184,
-    "android_tests": 72,
-    "phone_endpoint": "Verified Tailscale wireless ADB100.101.220.29:36353; SSH phone also live",
+    "latest_pushed_commit": "a72b9e7",
+    "published_release": "v0.5.0-alpha.22",
+    "server_tests": 199,
+    "android_tests": 106,
+    "phone_endpoint": "Termux SSH over Tailscale works; automation listener offline and both previously authorized ADB endpoints unavailable",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
-    "owned_emulator": "Owned5560 shut down after finalqualification; unrelated5556 preserved.",
-    "owned_fixture_port": "Owned19984 stopped; task-ownedADB5041 shut down; shared5037/5039 preserved.",
-    "installed_development_version": "0.5.0-alpha.18 (versionCode35 independently verified)",
+    "owned_emulator": "Owned5562 retained for next candidate; unrelated emulators preserved.",
+    "owned_fixture_port": "Owned19988 synthetic recovery fixture retained for next candidate; shared ADB servers preserved.",
+    "installed_development_version": "0.5.0-alpha.22 (versionCode40 independently verified)",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
@@ -572,18 +572,19 @@
     "phone_install": "Phonecode36/basehash independentlyverified before on-deviceCodex update38 attempt; SSHconnectiondroppedbefore finalresult. Code38installation notclaimed.",
     "qualification": "Alpha15 version32:146 backend tests,66 Android tests,debug/release lint and signing pass. Actual anchoredpopup, directswitch/inline targetreply, keyboardavoidance, contrast andfont2 labels qualified.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
-    "gallery_review": "Six freshalpha20/code38 synthetic singleflow/notes/audio/pending cards published newestfirst;1654-card desktop/mobile/reducedmotion/reloadchecks pass. Rejectedalpha19 interlinear previews marked historical/superseded.",
+    "gallery_review": "Five alpha23 synthetic recovery/filter captures published to main gallery. Full desktop/mobile/reduced-motion/reload checks pass.",
     "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
     "update_delivery": "Alpha20/code38 privatecompatiblevariants published; one deduplicated updateannouncement421 acceptedbyFCM; actualhandsetacknotclaimed.",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
-    "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21\u201339ms. No active-session reset.",
+    "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21–39ms. No active-session reset.",
     "immersion_next": "Strong working-language Italian with normal-size contextual English rescue and all workflow/speech/public-thought coverage is in progress; docs/ITALIAN-VIRTUAL-IMMERSION.md records exactrequest andaudit.",
-    "phone_access": "Termux SSH and automation recovered; on-device Codex installed alpha22/code40 in place. Root independently verified installed APK hash, live bridge HTTP200 and exactly one conversation context surface. Pairing and existing sessions visible.",
-    "backend_runtime": "Alpha22 live, connected, no problem. 191 backend tests pass; cooperative computer-use broker configured and available.",
-    "native_validation": "Alpha22 signed debug/release; 102 Android tests and both lint variants pass. Final exact debug installed on physical phone; single context area, direct Speak/Stop, retained keyboard, actual emulator local synthesis/playback, parked speech cursor, native linked images/SVG/GIF qualified with bounded records.",
-    "pending_phone_update": "Alpha22/code40 installed and independently verified. No ADB used.",
-    "conversation_context": "Alpha22/code40 single actionable area above composer, no repeated activity header/notes modal/separate player. Physical phone installed and exactly one context surface independently observed; synthetic direct actions/playback/large-font evidence recorded."
+    "phone_access": "Termux SSH works. Automation listener currently refuses connections; phone-side Accessibility restoration requested. No Wi-Fi/Tailscale or security settings changed.",
+    "backend_runtime": "Alpha23 live, connected, no problem. 199 backend tests pass.",
+    "native_validation": "Alpha23 signed debug/release; 106 Android tests, both lint variants and clean-checkout CI pass. Exact debug candidate qualified in 13 native synthetic recovery/filter cases.",
+    "pending_phone_update": "Verified alpha23/code41 same-signer APK transferred. Phone Codex verified hash/certificate but stopped before installation because Accessibility access is unavailable.",
+    "conversation_context": "Alpha23 Important/All filters the same transcript; direct Retry/Edit/Remove, immediate acknowledgements despite failed history, one speech control, preserved drafts/IME and source navigation qualified on native emulator.",
+    "qualified_build": "0.5.0-alpha.23 / code41"
   },
   "remaining": [
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",

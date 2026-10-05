@@ -43,6 +43,24 @@
     "At2x selected chip visually ellipsizes Important \u00b7 Back to all; accessibility label remains complete and chip remains tappable.",
     "Backend acceptance in fixture is simulated and executes no Codex work; real backend recovery protocol is qualified separately."
   ],
-  "gallery": "Pending publication of reviewed synthetic captures",
-  "resources": "Owned emulator/fixture retained temporarily pending root reuse/cleanup instruction"
+  "gallery": {
+    "category": "nextcomp-recovery-important",
+    "ids": [
+      "nextcomp-alpha23-important-large-type",
+      "nextcomp-alpha23-important-keyboard",
+      "nextcomp-alpha23-unknown-confirm",
+      "nextcomp-alpha23-failed-before",
+      "nextcomp-alpha23-speech-keyboard"
+    ],
+    "validation": {
+      "build": "PASS;1724 additive cards",
+      "desktop1440": "PASS; no page errors or failed requests",
+      "mobile390": "PASS; no page errors or failed requests",
+      "reducedMotion": "PASS",
+      "automaticReload": "PASS",
+      "initialReadiness": "First check hit transient30-second readiness timeout; bounded independent page check found initialized interface and poster/no errors; full required checker rerun passed"
+    },
+    "personallyReviewedCaptureCount": 5
+  },
+  "resources": "Owned nextcomp-alpha23-emulator and nextcomp-alpha23-fixture units explicitly retained for root alpha24 followup; no active tap processes."
 }

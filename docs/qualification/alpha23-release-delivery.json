@@ -1,0 +1,51 @@
+{
+  "release": "0.5.0-alpha.23",
+  "versionCode": 41,
+  "nodeTests": 199,
+  "androidTests": 106,
+  "lintDebug": "passed",
+  "lintRelease": "passed",
+  "auditVulnerabilities": 0,
+  "debugSha256": "b082131efe5a09094644fcbfa7426bfe400fb223e1ee3494f01d22808f4b6e9c",
+  "releaseSha256": "f7de673c9f0a263490365ba212c5ed6e108d3c53911e6b26bf6512c3cc614915",
+  "sourceHashes": {
+    "server/reply-recovery.mjs": "fecf785b15f38d7ce62913f4130943c42d01d4522536ac8bb139cb0a506bb0bf",
+    "server/index.mjs": "917da88a8c69983645b8e57a9b3b873ffc06a50fb55632791d2ef1076e70bbfd",
+    "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt": "d4d308aec0761e9a3dd79fde8db2aa74d83cc57bef31350ebdf29761af37d8c5",
+    "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt": "f7adfdd5c05a64c2b2223e2878ea8b2c3e805bb8ca33159ea24971e873e034b8",
+    "android/app/src/main/java/co/fallsoft/pocket/PocketState.kt": "b3324440c5dd180a3f585c8efd1db0298104d487b0d94a149ea545f3131add88",
+    "android/app/src/main/java/co/fallsoft/pocket/OutgoingRecovery.kt": "364f72d86ca7245719858ab56bd4f281369aa8c60eb3a00c6172e9f39fa23290"
+  },
+  "nativeQualification": {
+    "record": "recovery-important-runtime-alpha23.json",
+    "cases": 13,
+    "galleryCheck": "passed"
+  },
+  "phoneInstallation": {
+    "status": "blocked_before_installation",
+    "installedVersion": "0.5.0-alpha.22",
+    "installedVersionCode": 40,
+    "candidateHashVerified": true,
+    "candidateSignerMatchesInstalled": true,
+    "termuxSsh": "reachable",
+    "automationListener": "connection refused",
+    "authorizedAdb": "unavailable",
+    "settingsChanged": false,
+    "messagesSentRetriedOrRemoved": false
+  },
+  "sourceCommit": "a72b9e7c598dcc1b1b3f6aa060e9c2405a81bc43",
+  "backendDeployment": {
+    "version": "0.5.0-alpha.23",
+    "connected": true,
+    "problem": null
+  },
+  "ci": {
+    "run": 37384311734,
+    "status": "success",
+    "cleanCheckout": true
+  },
+  "knownLimitations": [
+    "At 2x font the Important/Back to all chip label ellipsizes; its full accessibility label and action remain available.",
+    "Physical phone installation and provider speech quality are not established by synthetic qualification."
+  ]
+}
