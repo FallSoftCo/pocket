@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-05",
+  "scope": "Physical Pixel: Tailscale DNS and background NextComp push recovery",
+  "installedNextCompVersionCode": 35,
+  "tailscale": {
+    "versionName": "1.102.3-t9329c3677-gaea8f60c0",
+    "versionCode": 297862600,
+    "connectedBefore": true,
+    "exitNode": "None",
+    "dnsSetting": "Using Tailscale DNS"
+  },
+  "before": {
+    "androidPlatformGoogleDns": "bounded 3\u20135 second timeout",
+    "tailscaleDnsStub": "bounded 2\u20133 second timeout",
+    "directPublicDns": "90\u2013140 ms success",
+    "numericGoogleTcp5228": "success",
+    "numericFirebaseTls": "valid TLS, HTTP 404",
+    "peerApi": "parent independent 3-second timeout"
+  },
+  "repair": {
+    "action": "Detached on-phone harness restarted only the Tailscale application and restored its saved connected state",
+    "harnessResult": "TAILSCALE_CONNECTED",
+    "persistentSettingsChanged": false,
+    "wifiToggled": false,
+    "vpnDataReset": false,
+    "apkInstalled": false,
+    "phoneBackendStarted": false
+  },
+  "after": {
+    "tailscalePublicDnsMs": 74,
+    "tailscaleMagicDnsMs": 74,
+    "androidPlatformGoogleDnsMs": 98,
+    "peerApi": "parent independent immediate HTTP 200",
+    "tailnetPingMs": 9,
+    "normalHostnameFirebaseTls": {
+      "verifiedBy": "parent independently over SSH",
+      "httpStatus": 404,
+      "seconds": 0.158
+    },
+    "normalHostnameOpenAiTls": {
+      "verifiedBy": "parent independently over SSH, unauthenticated request, no inference",
+      "httpStatus": 401,
+      "seconds": 0.187
+    },
+    "workstationHttpsHealth": {
+      "verifiedBy": "parent phone-side normal-hostname HTTPS request using saved paired base read privately",
+      "ok": true,
+      "codex": true,
+      "push": "fcm",
+      "version": "0.5.0-alpha.19"
+    },
+    "foregroundRestoration": "NextComp MainActivity launched by SSH; independent ADB window focus confirms package/activity",
+    "privateDnsReadback": {
+      "mode": null,
+      "specifier": null,
+      "unchanged": true
+    }
+  },
+  "backgroundPush": {
+    "nextCompRemainedBackgroundUntilProof": true,
+    "notificationId": 413,
+    "androidNotificationId": 1413,
+    "createdAt": 1791211368835,
+    "fcmAcceptedAt": 1791211370737,
+    "handsetDeliveryAt": 1791211372360,
+    "handsetTransport": "fcm",
+    "androidPostedNotificationVerified": true,
+    "importance": 4,
+    "receiptEvidence": "narrow Android notification record plus private app last-delivery fields; no private payload recorded",
+    "logcatReceipt": "not established; transient wireless ADB protocol error"
+  },
+  "limits": {
+    "cause": "Observed local DNS/PeerAPI failure with working numeric tailnet routes is consistent with stale Tailscale Android netstack; exact TUN-swap error was not captured",
+    "recurrence": "Targeted restart restores services, but installed client predates upstream fix; network-change recurrence remains possible until a verified fixed official release"
+  },
+  "primaryReferences": [
+    "https://github.com/tailscale/tailscale/issues/21155",
+    "https://github.com/tailscale/tailscale/pull/21332",
+    "https://firebase.google.com/docs/cloud-messaging/network-configuration"
+  ],
+  "privacy": "No private chat text, device tokens, account identifiers, hostnames, APK secrets, or raw phone captures included. Earlier probe399 receipt remains unknown.",
+  "onDeviceCodex": "User-requested bounded read-only Codex invocation independently saved diagnosis: Android Node/Python lookups timed out at5s, explicit public DNS resolved90\u2013140ms, quad100 timed out3s. No settings writes or nested agents. Invocation timed out after evidence file saved; no final completion message claimed.",
+  "cleanup": "ADB removed only completed task-owned recovery script/log and temporary diagnostic XML files, exit0; source diagnostic JSON, future installer, APKs and user artifacts preserved."
+}

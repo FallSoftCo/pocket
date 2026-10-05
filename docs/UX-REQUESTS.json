@@ -462,16 +462,16 @@
     {
       "id": "tailscale-push-regression",
       "requirement": "Notifications must arrive while Tailscale stays connected. Trace real FCM delivery, VPN routing/DNS and Android background/post behavior on phone; diagnose before changing settings. SSH first for ordinary work, skill/helper when ADB needed, no Wi-Fi toggle or pairing reset. Preserve immersion delivery.",
-      "status": "real-device-investigation-in-progress",
-      "evidence": "Backend FCM accepts high-priority data-only pushes; acceptance is not handset receipt. Phone background probe399 accepted by FCM, real receipt not yet observable. With VPN connected, Android Google hostname resolution stalls while numeric Google TLS and mtalk TCP5228/443 succeed. This isolates a DNS failure but does not yet prove push causality. No app VPN filter found; permission/channel/device matching and dedup remain separate checks. Scoped DNS settings inspection and remediation underway without disabling Tailscale. Phone subsequently locked; actual receipt and resolver settings remain blocked by Android permissions/keyguard. User asked to unlock; no VPN/DNS setting changed. Additional direct-query isolation: public DNS resolves Google name in103ms; Tailscale100.100.100.100 stub times out near2s. Scoped resolver repair still awaits unlocked Settings; no settings changed. Sanitized real-device receipt push-dns-phone-alpha19.json saved. No fix/handset delivery claimed; unlock is required for remaining settings checks."
+      "status": "real-device-dns-and-background-push-restored",
+      "evidence": "Backend FCM accepts high-priority data-only pushes; acceptance is not handset receipt. Phone background probe399 accepted by FCM, real receipt not yet observable. With VPN connected, Android Google hostname resolution stalls while numeric Google TLS and mtalk TCP5228/443 succeed. This isolates a DNS failure but does not yet prove push causality. No app VPN filter found; permission/channel/device matching and dedup remain separate checks. Scoped DNS settings inspection and remediation underway without disabling Tailscale. Phone subsequently locked; actual receipt and resolver settings remain blocked by Android permissions/keyguard. User asked to unlock; no VPN/DNS setting changed. Additional direct-query isolation: public DNS resolves Google name in103ms; Tailscale100.100.100.100 stub times out near2s. Scoped resolver repair still awaits unlocked Settings; no settings changed. Sanitized real-device receipt push-dns-phone-alpha19.json saved. No fix/handset delivery claimed; unlock is required for remaining settings checks. User renewed explicit phone DNS/routing repair request2026-10-05. ADB helper had no5555/USB route; user supplied36353, verified exact Pixel serial. SSH and bounded on-device Codex independently reproduce platform lookup failure versus healthy explicit public DNS. Custom Android PrivateDNS mode/specifier are null. Tailscale settings/core and network-change failure under inspection. No root cause or fixed delivery claimed yet. Targeted detached on-phone restart of Tailscale1.102.3 restored resolver without changing DNS/exclusions/exit-node settings. Before: platform Google lookups and local quad100/PeerAPI time out while direct public DNS/TLS/WireGuard work. After: quad100 public and MagicDNS74ms, platform mtalk98ms, PeerAPIHTTP200. Fresh background notification413 acceptedFCM and actual handset lastDeliveryTransport=fcm/id413 plus trayAndroid1413 importance4 in~3.5s; no foreground NextComp history/socket contamination. Pattern consistent with upstream Android netstack bug21155/mergedfix21332, exact TUN-error event not captured. Current outage recovered; installed core unchanged, so future recurrence not ruled out. Final normal-hostname Firebase/OpenAI TLS and phone-to-workstation HTTPS health pass; original NextComp focus and unchanged PrivateDNS null/null readback independently verified. Receipt phone-network-recovery-2026-10-05.json records recovery and exact remaining recurrence limitation."
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "6b16405",
+    "latest_pushed_commit": "7c6f349",
     "published_release": "v0.5.0-alpha.19",
     "server_tests": 167,
     "android_tests": 74,
-    "phone_endpoint": "SSH phone over Tailscale available; last wireless ADB100.101.220.29:37219 now refused",
+    "phone_endpoint": "Verified Tailscale wireless ADB100.101.220.29:36353; SSH phone also live",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
@@ -483,7 +483,7 @@
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 native readable swivels and full 360 Codex/thinking spins integrated; shared bounded cache and reduced-motion fallback",
-    "phone_install": "Alpha18 compatible APK remains installed for background push diagnosis; alpha19 signed artifacts and phone-native Codex installer prepared, not executed.",
+    "phone_install": "Alpha18/code35 retained throughout networking diagnosis; alpha19/code36 compatible artifacts and phone-native installer preserved for separate delivery.",
     "qualification": "Alpha15 version32:146 backend tests,66 Android tests,debug/release lint and signing pass. Actual anchoredpopup, directswitch/inline targetreply, keyboardavoidance, contrast andfont2 labels qualified.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Synthetic list, Mission, retained answer, enlarged text, voice controls and captions published to main gallery; layout and reduced-motion checks pass",
@@ -493,13 +493,13 @@
     "remaining_source": "Alpha19 phone-local plan and worker followup exact hashes and syntax verified; protected configuration checksums unchanged and phone-local backend intentionally stopped.",
     "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21\u201339ms. No active-session reset.",
     "immersion_next": "Strong working-language Italian with normal-size contextual English rescue and all workflow/speech/public-thought coverage is in progress; docs/ITALIAN-VIRTUAL-IMMERSION.md records exactrequest andaudit.",
-    "phone_access": "SSH repaired through scoped orphan sshd replacement; managed sshd and phone-local Codex callable. Phone-local backend remains intentionally stopped.",
+    "phone_access": "Verified wireless ADB36353 and Termux SSH over Tailscale restored after autonomous phone-local process repair; phone-local backend remains intentionally stopped.",
     "backend_runtime": "Alpha19 quoted-anchor followup live after167 backend tests and zero active voice turns; health confirms codex and FCM ready. Backend status does not establish handset push receipt.",
     "native_validation": "Alpha19 signed debug/release build,74 Android tests and both lint variants passed; exact final debug APK qualified1x/2x with connected agreement markers. Runtime receipt and approved main8bar screenshots published.",
     "pending_phone_update": "0.5.0-alpha.19 code36 compatible APK prepared; baseline35 retained during notification diagnosis"
   },
   "remaining": [
-    "Install qualified alpha19 through phone-native Codex after notification baseline diagnosis; OTA announcement deferred",
+    "Install qualified alpha19 through phone-native Codex; compatible artifacts prepared, network diagnosis restored actual FCM delivery",
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",
     "Physical secure-keyguard captions and real-provider voice language quality remain distinct qualifications",
     "Review public launch separately when sufficiently qualified"
