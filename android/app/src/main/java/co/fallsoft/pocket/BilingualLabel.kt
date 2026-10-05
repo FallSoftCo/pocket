@@ -14,33 +14,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 
-/** Ordinary action taps stay actions. English help lives at the point of need. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Ordinary action taps stay actions; English rescue expands inside the label's reading flow. */
 @Composable fun BilingualLabel(text:String,modifier:Modifier=Modifier,color:Color=LocalContentColor.current,fontSize:TextUnit=14.sp,fontWeight:FontWeight?=null,maxLines:Int=1,centered:Boolean=true){
     LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offerLabel(text)}
     val target=PocketImmersion.label(text)
-    var help by remember(text){mutableStateOf(false)}
+    val key="label-rescue:$text"
     val supported=PocketImmersion.enabled&&PocketImmersion.supportEnabled&&target!=text
+    val expanded=supported&&PocketImmersion.originalShown(key)
     val size=if(PocketImmersion.enabled)fontSize.value.coerceAtLeast(14f).sp else fontSize
-    val label:@Composable ()->Unit={Column(horizontalAlignment=if(centered)Alignment.CenterHorizontally else Alignment.Start,verticalArrangement=Arrangement.Center){Text(target,color=color,fontSize=size,fontWeight=fontWeight,maxLines=maxLines,overflow=TextOverflow.Ellipsis)}}
-    if(supported&&text.lowercase() !in setOf("send","send message","steer","queue","stop & send")){
-        TooltipBox(positionProvider=TooltipDefaults.rememberPlainTooltipPositionProvider(),tooltip={PlainTooltip{Text(text,fontSize=18.sp,lineHeight=26.sp)}},state=rememberTooltipState(),modifier=modifier.semantics{customActions=listOf(CustomAccessibilityAction("Spiega in inglese"){help=true;true})}){label()}
-    }else Box(modifier.then(if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction("Spiega in inglese"){help=true;true})}else Modifier)){label()}
-    if(help)ImmersionPhraseHelp(target,text,"",{help=false})
+    val rescue=if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}else Modifier
+    Box(modifier.then(rescue)){
+        Text(if(expanded)"$target [$text]" else target,color=color,fontSize=size,fontWeight=fontWeight,maxLines=if(expanded)Int.MAX_VALUE else maxLines,overflow=TextOverflow.Ellipsis,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
+    }
 }
 
-/** Put on the focusable parent control, not its text child: F1 and accessibility rescue. */
+/** Parent keyboard/accessibility assistance toggles the same inline label, without intercepting taps. */
 @Composable fun Modifier.immersionRescue(english:String):Modifier {
-    var help by remember(english){mutableStateOf(false)}
-    val target=PocketImmersion.label(english)
-    if(help)ImmersionPhraseHelp(target,english,"",{help=false})
     if(!PocketImmersion.enabled||!PocketImmersion.supportEnabled)return this
-    return this.onPreviewKeyEvent{if(it.key==Key.F1&&it.type==KeyEventType.KeyDown){help=true;true}else false}
-        .semantics{customActions=listOf(CustomAccessibilityAction("Spiega in inglese"){help=true;true})}
-}
-
-@Composable fun ImmersionPhraseHelp(target:String,source:String,note:String,onDismiss:()->Unit){
-    AlertDialog(onDismissRequest=onDismiss,title={Text(target,fontSize=21.sp,lineHeight=29.sp)},text={Column(verticalArrangement=Arrangement.spacedBy(14.dp)){Text(source,fontSize=18.sp,lineHeight=27.sp);if(note.isNotBlank())Text(note,fontSize=16.sp,lineHeight=24.sp,color=Muted)}},confirmButton={TextButton(onDismiss,modifier=Modifier.heightIn(min=48.dp)){Text("Continua",fontSize=16.sp)}})
+    val key="label-rescue:$english"
+    return this.onPreviewKeyEvent{if(it.key==Key.F1&&it.type==KeyEventType.KeyDown){PocketImmersion.revealOriginal(key);true}else false}
+        .semantics{customActions=listOf(CustomAccessibilityAction("Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}
 }
 
 @Composable fun ImmersionDensityControl(){

@@ -438,14 +438,20 @@
     {
       "id": "reachable-app-update-control",
       "requirement": "Provide a visible reachable in-app update control even if Settings navigation is inaccessible.",
-      "status": "released-alpha17-phone-install-awaiting-access-recovery",
-      "evidence": "Activity popup UsageDetails now includes the same verified update/download/install controls as Settings. Existing user phone was locked during direct update-screen intent; compatible installer fallback preserves signing and pairing. Actual emulator Check performs authenticated download and verification; Install opens Android Update/Cancel. Normal/2x controls legible. Compatible34 APK transferred via SSH and checksum verified; installer intent requested but phone remains locked, installation not confirmed. Phone-local Codex confirmed original phone still version32; shell handoff did not surface installer. UI attempt found APK in Files but SSH began repeated banner timeouts despite live Tailscale. See phone-install-alpha17.json; no successful device install claimed."
+      "status": "released-alpha17-physical-install-verified",
+      "evidence": "Activity popup UsageDetails now includes the same verified update/download/install controls as Settings. Existing user phone was locked during direct update-screen intent; compatible installer fallback preserves signing and pairing. Actual emulator Check performs authenticated download and verification; Install opens Android Update/Cancel. Normal/2x controls legible. Compatible34 APK transferred via SSH and checksum verified; installer intent requested but phone remains locked, installation not confirmed. Phone-local Codex confirmed original phone still version32; shell handoff did not surface installer. UI attempt found APK in Files but SSH began repeated banner timeouts despite live Tailscale. See phone-install-alpha17.json; no successful device install claimed. Independent package and installed APK hash now confirm phone code34. SSH isolated to stalled local service; no Tailscale fault, locked terminal prevents scoped recovery."
     },
     {
       "id": "phone-codex-update-installation",
       "requirement": "For future updates delegate installation to Codex on the phone: download and verify the compatible signed APK, drive the Android installer and verify the installed version without making the user perform routine steps.",
       "status": "authorized-preference-recorded",
       "evidence": "User explicitly requested phone-local Codex perform future installs. Use SSH/phone-local Codex and the authorized phone-control bridge; preserve pairing and signing identity. Do not claim silent privileged installation or bypass a locked screen; report any actual Android restriction."
+    },
+    {
+      "id": "inline-immersion-help-without-modal",
+      "requirement": "Reveal or toggle original-language and contextual grammar help in place beside inline translated words/phrases, no modal interruption, normal-size text and preserved reading flow.",
+      "status": "qualified-alpha18-ready-to-release",
+      "evidence": "Phrase help now expands inside same AnnotatedString paragraph; label keyboard/accessibility rescue expands inside label. All translation Tooltip/Dialog helpers removed; originals/commands/speech target unaffected. Actual emulator confirms same-paragraph expand/collapse at normal and2x type, no Popup/Dialog, source changes clear stale help, Markdown links preserved and original Send/Queue plus card regions unchanged. Signed build/debug+release lint and68 Android tests pass; receipt inline-help-runtime-alpha18.json."
     }
   ],
   "current_state": {

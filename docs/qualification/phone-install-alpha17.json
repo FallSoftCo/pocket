@@ -3,10 +3,12 @@
   "versionName": "0.5.0-alpha.17",
   "apkSha256": "5be2263ec95859ac0f2bb6bb6023b3b86ac18b043967cf12e760a62b9e512780",
   "actualPhone": {
-    "lastVerifiedInstalledVersionCode": 32,
+    "lastVerifiedInstalledVersionCode": 34,
     "apkChecksumMatches": true,
     "pairingPreserved": true,
-    "noUninstallOrDataClear": true
+    "noUninstallOrDataClear": true,
+    "installedApkHashMatches": true,
+    "verification": "Independent package/version and installed base-APK SHA via user-provided debug endpoint; no new install or data changes."
   },
   "phoneLocalCodex": {
     "firstAttempt": "Shell APK intents did not surface installer; independently verified version remains32.",
@@ -14,7 +16,9 @@
   },
   "connectivity": {
     "tailscaleReachable": true,
-    "sshNewSessions": "Repeated banner-exchange timeouts; cause not established."
+    "sshNewSessions": "Repeated banner-exchange timeouts; cause not established.",
+    "sshIsolation": "Local Android-debug tunnel to localhost8022 also opens TCP without SSH banner. Service-side issue, not Tailscale routing.",
+    "recovery": "Phone is locked; Termux RUN_COMMAND access from shell denied. Scoped SSH/supervisor repair awaits unlocked terminal. Global freezer/battery settings unchanged."
   },
-  "status": "awaiting-phone-access-recovery-install-not-confirmed"
+  "status": "installed-alpha17-code34-verified"
 }

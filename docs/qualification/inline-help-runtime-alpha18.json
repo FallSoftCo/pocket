@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-04",
+  "versionCode": 35,
+  "debugApkSha256": "f3cd764f14f72e1120a849e0d6f39231f9284259440975899cf75bac081fda17",
+  "fixture": "Provider-blocked synthetic paired conversation, validated contextual-hybrid plan and explicit updated-source fixture",
+  "providerInferenceCalls": 0,
+  "fontScales": [
+    1,
+    2
+  ],
+  "checks": {
+    "phraseTapExpandsEnglishAndGrammarInSameParagraph": true,
+    "sameReadingFontSize": true,
+    "secondTapCollapsesWithoutBack": true,
+    "noTranslationDialogOrPopupWindow": true,
+    "protectedFilenameAndModelUnchanged": true,
+    "sourceChangeWithSameHybridResetsExpandedHelp": true,
+    "nextTapUsesNewSourceEnglish": true,
+    "originalSendPreserved": true,
+    "longPressQueuePreserved": true,
+    "authenticatedAcceptedOnceEach": true,
+    "cardChatRegionOpensConversation": true,
+    "cardKeyboardRegionOpensFocusedComposer": true,
+    "cardTitleOpensInlineEdit": true,
+    "cardMicRegionReachesGuardedVoice": true,
+    "existingMarkdownUrlIntentPreserved": true
+  },
+  "qualification": [
+    "First-pass35 normal1x/2x expand-collapse screenshots are visually equivalent; final35 additionally strengthens source/density selection keys and passed updated-source/actions qualification.",
+    "At actual2x font, expanded paragraphs use normal conversation scrolling when exceeding the viewport.",
+    "Existing Markdown link launched a browser intent to task-owned local fixture health; owned Chrome process was force-stopped afterward.",
+    "No actual model inference, audio delivery or physical-phone update claim."
+  ],
+  "sourceResetExample": {
+    "oldSource": "two new sessions",
+    "newSource": "two fresh sessions",
+    "sameHybrid": "due nuove sessioni"
+  },
+  "submissions": [
+    {
+      "text": "OriginalCheck",
+      "mode": "steer",
+      "target": "fixture-task"
+    },
+    {
+      "text": "OriginalQueue",
+      "mode": "queue",
+      "target": "fixture-task"
+    }
+  ],
+  "gallery": {
+    "category": "nextcomp-inline-help",
+    "count": 3,
+    "layoutCheckPassed": true,
+    "cardCount": 1627,
+    "errors": 0
+  },
+  "cleanup": {
+    "ownedEmulatorStopped": true,
+    "ownedFixtureStopped": true,
+    "ownedAndroidChromeStopped": true,
+    "phoneUntouched": true
+  }
+}

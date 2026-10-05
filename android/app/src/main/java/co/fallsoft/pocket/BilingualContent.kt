@@ -70,3 +70,11 @@ fun immersionSegments(original:String,spans:List<ImmersionSpan>):List<ImmersionS
     for(span in spans){if(span.start>cursor)out+=ImmersionSegment(original.substring(cursor,span.start));out+=ImmersionSegment(span.target,span.source,span.note,span.unit);cursor=span.end}
     if(cursor<original.length)out+=ImmersionSegment(original.substring(cursor));return out
 }
+
+/** Help is inserted only beside one unambiguous displayed constituent, never into its source. */
+fun inlineImmersionHelp(content:String,span:ImmersionSpan):Pair<Int,String>? {
+    val at=content.indexOf(span.target)
+    if(at<0||content.lastIndexOf(span.target)!=at||span.target==span.source)return null
+    val note=span.note.trim().takeIf{it.isNotEmpty()}?.let{" · "+it}.orEmpty()
+    return (at+span.target.length) to (" ["+span.source+note+"]")
+}

@@ -15,4 +15,15 @@ class BilingualContentTest {
  }
  @Test fun fenceWithTrailingWordsDoesNotCloseCode(){val original="Before.\n\n~~~~sh\necho ok\n~~~~ not a closer\necho done\n~~~~\n\nAfter.";val target=original.replace("Before.","Prima.").replace("After.","Dopo.");val rows=bilingualUnits(original,target);assertEquals(3,rows.size);assertTrue(rows[1].code);assertTrue(rows[1].target.contains("echo done"));assertNull(rows[1].original)}
 
+ @Test fun phraseRescueIsInsertedBesideConstituentWithoutChangingSource(){
+  val span=ImmersionSpan(0,16,"two new sessions","due nuove sessioni","Feminine plural agreement.","nounPhrase")
+  val content="Open due nuove sessioni then continue."
+  val help=inlineImmersionHelp(content,span)!!
+  assertEquals("Open due nuove sessioni [two new sessions · Feminine plural agreement.] then continue.",content.substring(0,help.first)+help.second+content.substring(help.first))
+  assertEquals("two new sessions",span.source)
+ }
+ @Test fun repeatedOrMissingRenderedPhraseNeverReceivesGuessedInlineRescue(){
+  val span=ImmersionSpan(0,4,"hello","ciao")
+  assertNull(inlineImmersionHelp("ciao, ciao",span));assertNull(inlineImmersionHelp("missing",span))
+ }
 }
