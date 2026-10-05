@@ -58,3 +58,20 @@ fun immersionCapturedOriginals(plan:ImmersionPresentation,captured:String):Set<I
     }
     return starts.firstNotNullOfOrNull{match(0,it,emptySet())}
 }
+
+/** Natural phrase chunks; paired slots reserve geometry without inventing lexical alignment. */
+fun immersionReserveChunks(source:String,target:String,maxWidth:Int,width:(String)->Int):List<ImmersionReserveWord>{
+    fun chunks(text:String):List<String>{
+        if(text.isEmpty())return emptyList()
+        if(width(text)<=maxWidth)return listOf(text)
+        val result=mutableListOf<String>();var current=""
+        Regex("\\S+\\s*|\\s+").findAll(text).forEach{token->
+            if(current.isNotEmpty()&&width(current+token.value)>maxWidth){result.add(current);current=""}
+            current+=token.value
+        }
+        if(current.isNotEmpty())result.add(current)
+        return result
+    }
+    val a=chunks(source);val b=chunks(target)
+    return List(max(a.size,b.size)){ImmersionReserveWord(a.getOrElse(it){""},b.getOrElse(it){""})}
+}

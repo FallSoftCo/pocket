@@ -70,7 +70,7 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
     return ImmersionCycleRender(rendered){span->alphas[plan.spans.indexOfFirst{it.start==span.start&&it.end==span.end&&it.source==span.source}]?.value?:1f}
 }
 
-/** Native paragraph with word-sized inline placeholders; only one variant is ever composed. */
+/** Natural phrases reserve their maximum geometry; only one variant is ever composed. */
 @Composable internal fun ReservedImmersionText(content:AnnotatedString,plan:ImmersionPresentation,alpha:(ImmersionSpan)->Float,fontSize:TextUnit,lineHeight:TextUnit,color:Color,fontWeight:FontWeight?,maxLines:Int,overflow:TextOverflow){
     val measurer=rememberTextMeasurer()
     val density=LocalDensity.current
@@ -88,15 +88,18 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
                 val source=MarkdownContent.preview(span.source).text;val target=MarkdownContent.preview(span.target).text
                 if(link.start<cursor||visible!=source&&visible!=target)continue
                 append(content.subSequence(cursor,link.start))
-                val words=immersionReserveWords(source,target)
+                val inherited=content.subSequence(link.start,link.end).spanStyles.map{it.item}
+                val weight=(inherited.mapNotNull{it.fontWeight}+listOfNotNull(fontWeight,FontWeight.Medium)).maxBy{it.weight}
+                val italic=if(inherited.any{it.fontStyle==FontStyle.Italic})FontStyle.Italic else FontStyle.Normal
+                val style=baseStyle.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,fontWeight=weight,fontStyle=italic))
+                fun naturalWidth(text:String)=if(text.isEmpty())0 else measurer.measure(AnnotatedString(text),style=style,softWrap=false).size.width
+                fun measure(text:String)=measurer.measure(AnnotatedString(text.ifEmpty{" "}),style=style,constraints=Constraints(maxWidth=widthPx))
+                val words=immersionReserveChunks(source,target,widthPx,::naturalWidth)
                 var wordOffset=link.start
                 words.forEachIndexed{index,word->
                     val shown=if(visible==source)word.source else word.target
                     val styled=if(shown.isNotEmpty())content.subSequence(wordOffset,wordOffset+shown.length)else AnnotatedString("")
                     wordOffset+=shown.length
-                    // Reserve both forms using the same conservative style in every phase.
-                    val style=baseStyle.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,fontWeight=FontWeight.Bold,fontStyle=FontStyle.Italic))
-                    fun measure(text:String)=measurer.measure(AnnotatedString(text.ifEmpty{" "}),style=style,constraints=Constraints(maxWidth=widthPx))
                     val a=measure(word.source);val b=measure(word.target)
                     val slotWidth=max(a.size.width,b.size.width).coerceIn(1,widthPx)
                     val slotHeight=max(a.size.height,b.size.height).coerceAtLeast(1)

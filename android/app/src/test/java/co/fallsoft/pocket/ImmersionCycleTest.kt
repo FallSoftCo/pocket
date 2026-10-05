@@ -39,6 +39,18 @@ class ImmersionCycleTest {
             assertTrue(reserved.maxOrNull()!!<maxOf("to the new session".length,"alla nuova sessione".length)*scale)
         }
     }
+    @Test fun shortPhraseIsOneNaturalSlotAndLongFormsWrapWithoutWordColumns(){
+        val short=immersionReserveChunks("two new sessions","due nuove sessioni",200){it.length*5}
+        assertEquals(listOf(ImmersionReserveWord("two new sessions","due nuove sessioni")),short)
+        val source="to the very important new conversation tomorrow"
+        val target="alla nuova conversazione molto importante domani"
+        val long=immersionReserveChunks(source,target,100){it.length*5}
+        assertEquals(source,long.joinToString(""){it.source})
+        assertEquals(target,long.joinToString(""){it.target})
+        assertTrue(long.size>1)
+        assertTrue(long.size<source.split(" ").size)
+        assertTrue(long.all{it.source.length*5<=100&&it.target.length*5<=100})
+    }
     @Test fun recreatedCompositionRecoversCapturedMixedSnapshot(){
         val source="Read new sessions and important questions now."
         val a=source.indexOf("new sessions");val b=source.indexOf("important questions")
