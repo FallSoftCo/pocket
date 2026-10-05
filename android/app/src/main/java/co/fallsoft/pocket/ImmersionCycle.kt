@@ -32,3 +32,29 @@ fun immersionCyclePlan(plan:ImmersionPresentation,originals:Set<Int>):ImmersionP
     val spans=plan.spans.mapIndexed{index,span->if(index in originals)span.copy(target=span.source)else span}
     return plan.copy(text=contextualHybridText(plan.source,spans)?:plan.source,spans=spans)
 }
+
+/** Recover an exact captured mixed flow without relying on the current wall-clock phases. */
+fun immersionCapturedOriginals(plan:ImmersionPresentation,captured:String):Set<Int>? {
+    if(plan.spans.isEmpty()||contextualHybridText(plan.source,plan.spans)!=plan.text)return null
+    val prefix=plan.source.substring(0,plan.spans.first().start)
+    val anchors=if(prefix.isNotEmpty())listOf(prefix)else listOf(plan.spans.first().source,plan.spans.first().target).distinct()
+    val starts=linkedSetOf<Int>()
+    anchors.filter{it.isNotEmpty()}.forEach{anchor->var at=captured.indexOf(anchor);while(at>=0){starts.add(at);at=captured.indexOf(anchor,at+1)}}
+    fun match(index:Int,at:Int,originals:Set<Int>):Set<Int>? {
+        if(index==plan.spans.size){val tail=plan.source.substring(plan.spans.last().end);return originals.takeIf{captured.startsWith(tail,at)}}
+        val span=plan.spans[index]
+        val previous=if(index==0)0 else plan.spans[index-1].end
+        val gap=plan.source.substring(previous,span.start)
+        if(!captured.startsWith(gap,at))return null
+        val position=at+gap.length
+        for(original in listOf(false,true)){
+            val word=if(original)span.source else span.target
+            if(captured.startsWith(word,position)){
+                val result=match(index+1,position+word.length,if(original)originals+index else originals)
+                if(result!=null)return result
+            }
+        }
+        return null
+    }
+    return starts.firstNotNullOfOrNull{match(0,it,emptySet())}
+}

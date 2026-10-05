@@ -39,6 +39,17 @@ class ImmersionCycleTest {
             assertTrue(reserved.maxOrNull()!!<maxOf("to the new session".length,"alla nuova sessione".length)*scale)
         }
     }
+    @Test fun recreatedCompositionRecoversCapturedMixedSnapshot(){
+        val source="Read new sessions and important questions now."
+        val a=source.indexOf("new sessions");val b=source.indexOf("important questions")
+        val spans=listOf(ImmersionSpan(a,a+12,"new sessions","nuove sessioni"),ImmersionSpan(b,b+19,"important questions","domande importanti"))
+        val plan=ImmersionPresentation(contextualHybridText(source,spans)!!,source,true,spans)
+        val captured=immersionCyclePlan(plan,setOf(1)).text
+        assertEquals(setOf(1),immersionCapturedOriginals(plan,"Context: $captured"))
+        assertEquals(setOf(0,1),immersionCapturedOriginals(plan,source))
+        assertEquals(emptySet<Int>(),immersionCapturedOriginals(plan,plan.text))
+        assertNull(immersionCapturedOriginals(plan,captured.replace("now.","later.")))
+    }
     @Test fun invalidCanonicalPlanCannotCycleUnverifiedText(){
         val plan=ImmersionPresentation("wrong","original",true,listOf(ImmersionSpan(0,8,"original","nuovo")))
         assertEquals("original",immersionCyclePlan(plan,emptySet()).text)

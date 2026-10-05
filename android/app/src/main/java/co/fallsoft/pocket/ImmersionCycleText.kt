@@ -47,12 +47,7 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
     val proposed=if(enabled)immersionCyclePlan(plan,effective)else immersionCyclePlan(plan,if(selectedIndex>=0)setOf(selectedIndex)else emptySet())
     val frozen=remember(readingKey,PocketSpeech.displayedOwner,PocketSpeech.displayedText){
         val text=PocketSpeech.displayedText
-        if(PocketSpeech.displayedOwner==null) null else when {
-            proposed.text.isNotBlank()&&text.contains(proposed.text)->effective
-            plan.source.isNotBlank()&&text.contains(plan.source)->plan.spans.indices.toSet()
-            plan.text.isNotBlank()&&text.contains(plan.text)->emptySet()
-            else->null
-        }
+        if(PocketSpeech.displayedOwner==null)null else immersionCapturedOriginals(plan,text)
     }
     val rendered=if(frozen!=null)immersionCyclePlan(plan,frozen)else proposed
     val speaking=frozen!=null
