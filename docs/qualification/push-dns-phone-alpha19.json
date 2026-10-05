@@ -1,0 +1,73 @@
+{
+  "version": "0.5.0-alpha.19",
+  "phoneBaselineVersionCode": 35,
+  "installationAttempted": false,
+  "tailnetConnectedDuringTests": true,
+  "confirmedNetworkEvidence": {
+    "platformGoogleHostLookups": {
+      "completed": 0,
+      "requested": 2,
+      "deadlineMilliseconds": 3000
+    },
+    "publicResolverGoogleHostLookup": {
+      "succeeded": true,
+      "milliseconds": 103
+    },
+    "tailnetDnsStubGoogleHostLookup": {
+      "succeeded": false,
+      "error": "ETIMEOUT",
+      "milliseconds": 1999
+    },
+    "numericGoogleTcpRoutes": {
+      "pushPort5228Milliseconds": 79,
+      "pushPort443Milliseconds": 75,
+      "apiPort443Milliseconds": 76,
+      "allSucceeded": true
+    },
+    "apiTlsWithHostnamePreservedAndTemporaryResolvedAddress": {
+      "httpStatus": 404,
+      "tlsSucceeded": true,
+      "productionHardcoding": false
+    }
+  },
+  "pushProbe": {
+    "notificationId": 399,
+    "kind": "test",
+    "ownerAuthorized": true,
+    "appBackgroundAtSend": true,
+    "priorForeground": "Google Maps",
+    "acceptedByFcm": "Confirmed by parent backend audit; does not prove handset delivery",
+    "handsetReceipt": "Unverified",
+    "causality": "The DNS stub fault is confirmed; its causal relationship to missed FCM delivery is not yet established."
+  },
+  "inspectionLimits": {
+    "phoneLocked": true,
+    "suppliedWirelessAdbEndpoint": "No longer listening; helper found no authorized USB/default TCP route",
+    "privateDnsCommandReads": "Rejected by Android permissions",
+    "notificationShadeCommand": "Rejected by Android permissions",
+    "bridge": "Authenticated and reachable; available actions cannot inspect notification shade while locked",
+    "originalForegroundRestoration": "Phone locked before further navigation; no keyguard bypass or app-opening attempted afterward"
+  },
+  "settingsChanges": [],
+  "preservation": {
+    "vpnDisconnected": false,
+    "wifiToggled": false,
+    "phoneBackendStarted": false,
+    "appDataReset": false,
+    "pairingReset": false,
+    "privateLogsPublished": false
+  },
+  "followup": "After unlock, inspect current Android Private DNS and Tailscale DNS/exclusion settings; repair the narrow resolver path with Tailscale connected, then verify handset FCM receipt and general tailnet name resolution.",
+  "finalPhoneSource": {
+    "immersionPlanSha256": "7a546b2e8e2a99c2aa878884d090f5aa4440e1d5d9db39c493e247cec0e2920a",
+    "syntaxPassed": true,
+    "protectedChecksumsUnchanged": true,
+    "backendStopped": true
+  },
+  "activeMonitoring": "Stopped after bounded checks while unlock request remains pending",
+  "primaryReference": "https://firebase.google.com/docs/cloud-messaging/network-configuration",
+  "laterSourceFollowup": {
+    "receipt": "phone-local-alpha19.json",
+    "note": "The network observations and original recorded plan hash remain historical; a later frozen plan/worker update was safely synchronized without installation or settings changes."
+  }
+}

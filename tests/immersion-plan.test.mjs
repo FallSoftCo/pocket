@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {validateImmersionPlan,immersionHash,protectedImmersionRanges,validateTargetSegments,deriveImmersionText} from '../server/immersion-plan.mjs';
+import {validateImmersionPlan,immersionHash,protectedImmersionRanges,validateTargetSegments,deriveImmersionText,resolveImmersionAnchor} from '../server/immersion-plan.mjs';
 const row=(source,text,spans)=>({version:immersionHash(source),text,spans:spans.map(([source,target,occurrence=0])=>({source,target,occurrence,unit:'phrase',note:'',targetSegments:[{target,occurrence:0,meaning:source,role:'other',features:[],relations:[]}]}))});
 test('complete contextual grammar units produce exact inline bilingual source',()=>{
  const source="I opened two new sessions and have an important question. I'm checking the model, then return to the session.";
@@ -62,4 +62,15 @@ test('lexical teacher anchors receive only verified whitespace and punctuation g
 test('quoted source anchors cannot splice larger words or English contractions',()=>{
  for(const [source,part] of [['possessions','sessions'],['𐐀sessions','sessions'],['sessions𐐀','sessions'],["I can't continue",'can'],["I'm ready",'I'],["I'm ready", "I'"],["I'm ready", "'m"],['we’ll continue','we']]){const text=source.replace(part,'ciao');assert.equal(validateImmersionPlan(source,row(source,text,[[part,'ciao']])),null);}
  const source="Open 'the session'";assert.ok(validateImmersionPlan(source,row(source,"Open 'la sessione'",[['the session','la sessione']])));
+});
+
+test('lexical quoted occurrences exclude embedded i a il and preserve exact repeated complete anchors',()=>{
+ const target='Le nuove sessioni aiutano i nuovi clienti';const words=target.split(' ');const parts=words.map(word=>lexical(word,word,'other'));parts[4]={...lexical('i','the','determiner',{gender:'masculine',number:'plural'})};parts[6]={...lexical('clienti','clients','noun',{gender:'masculine',number:'plural'}),relations:[{kind:'agreesWith',target:'i',occurrence:0,note:''}]};const accepted=validateTargetSegments(target,parts);assert.ok(accepted);assert.equal(accepted[8].target,'i');assert.equal(accepted[12].relations[0].toSegment,8);
+ for(const [text,quote]of [['sessioni aiutano i clienti','i'],['alla casa a Roma','a'],['simili il modello','il']])assert.equal(resolveImmersionAnchor(text,quote,0).start,text.indexOf(' '+quote+' ')+1);
+ const repeated='simili il modello e il file';assert.equal(resolveImmersionAnchor(repeated,'il',0).start,7);assert.equal(resolveImmersionAnchor(repeated,'il',1).start,20);assert.equal(resolveImmersionAnchor(repeated,'il',2),null);
+});
+test('source reconstruction and validation share bounded occurrence semantics and reject unsafe joined graphemes',()=>{
+ const source='sessionish session and session';const r=row(source,'sessionish sessione and session',[['session','sessione',0]]);assert.equal(deriveImmersionText(source,r),r.text);assert.equal(validateImmersionPlan(source,r).spans[0].start,11);
+ for(const [text,quote]of [["I'm checking","I"],["l’acqua pronta","acqua"],["ozzz’s project","ozzz"],['cafe\u0301 e','e'],['👩‍💻 i','👩']]){const match=resolveImmersionAnchor(text,quote,0);if(text==='cafe\u0301 e')assert.equal(match.start,6);else assert.equal(match,null);}
+ const t='A    B   C';const parts=['A','B','C'].map(word=>lexical(word,word,'other'));assert.equal(validateTargetSegments(t,parts).map(s=>s.target).join(''),t);
 });

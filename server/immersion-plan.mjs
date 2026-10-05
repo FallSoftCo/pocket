@@ -11,6 +11,19 @@ export function protectedImmersionRanges(source){
  return ranges.sort((a,b)=>a.start-b.start||a.end-b.end);
 }
 
+const lexical=char=>/[\p{L}\p{M}\p{N}_]/u.test(char),apostrophe=char=>char==="'"||char==='’';
+const joins=(left,right)=>{const a=Array.from(left),b=Array.from(right);return lexical(a.at(-1)||'')&&lexical(b[0]||'')||apostrophe(a.at(-1))&&lexical(a.at(-2)||'')&&lexical(b[0]||'')||lexical(a.at(-1)||'')&&apostrophe(b[0])&&lexical(b[1]||'');};
+/** Occurrence counts complete eligible quotes, never suffixes or pieces of contractions/graphemes. */
+export function resolveImmersionAnchor(text,quote,occurrence){
+ if(typeof text!=='string'||typeof quote!=='string'||!quote.length||!Number.isInteger(occurrence)||occurrence<0||occurrence>100)return null;
+ const boundaries=new Set([0,text.length]);for(const part of new Intl.Segmenter('it',{granularity:'grapheme'}).segment(text))boundaries.add(part.index);
+ let search=0,count=0,start;
+ while((start=text.indexOf(quote,search))>=0){const end=start+quote.length;search=start+1;
+  if(!boundaries.has(start)||!boundaries.has(end)||joins(text.slice(Math.max(0,start-4),start),text.slice(start,start+4))||joins(text.slice(Math.max(0,end-4),end),text.slice(end,end+4)))continue;
+  if(count++===occurrence)return {start,end};
+ }
+ return null;
+}
 export const IMMERSION_ROLES=['noun','adjective','determiner','verb','auxiliary','preposition','pronoun','adverb','conjunction','numeral','punctuation','separator','other'];
 export const IMMERSION_FEATURES={gender:['masculine','feminine','common','neuter'],number:['singular','plural','invariable'],person:['first','second','third'],tense:['present','past','imperfect','future','conditional'],mood:['indicative','subjunctive','imperative','infinitive','participle','gerund'],aspect:['progressive','perfect','imperfective'],case:['subject','object','indirect','reflexive'],definiteness:['definite','indefinite']};
 export const IMMERSION_RELATIONS=['agreesWith','head','auxiliaryOf','negates','subjectOf','objectOf'];
@@ -19,8 +32,8 @@ export function completeTargetSegments(target,segments){
  if(typeof target!=='string'||!Array.isArray(segments)||!segments.length||segments.length>80)return null;
  if(segments.some(s=>s&&['separator','punctuation'].includes(s.role)))return segments;
  const out=[];let cursor=0;
- const appendGap=gap=>{if(!/^[\s\p{P}\p{S}]*$/u.test(gap))return false;for(const chunk of gap.matchAll(/\s+|[\p{P}\p{S}]+/gu)){const word=chunk[0],start=cursor+chunk.index;let occurrence=0,at=0;while((at=target.indexOf(word,at))>=0&&at<start){occurrence++;at+=word.length;}out.push({target:word,occurrence,meaning:'',role:/^\s+$/.test(word)?'separator':'punctuation',features:[],relations:[]});}return true;};
- for(const segment of segments){if(!segment||typeof segment.target!=='string'||!segment.target.length||!Number.isInteger(segment.occurrence)||segment.occurrence<0||segment.occurrence>100)return null;let start=-1,search=0;for(let i=0;i<=segment.occurrence;i++){start=target.indexOf(segment.target,search);if(start<0)return null;search=start+segment.target.length;}if(start<cursor||!appendGap(target.slice(cursor,start)))return null;out.push(segment);cursor=start+segment.target.length;}
+ const appendGap=gap=>{if(!/^[\s\p{P}\p{S}]*$/u.test(gap))return false;for(const chunk of gap.matchAll(/\s+|[\p{P}\p{S}]+/gu)){const word=chunk[0],start=cursor+chunk.index;let occurrence=0,match;while((match=resolveImmersionAnchor(target,word,occurrence))&&match.start<start)occurrence++;if(!match||match.start!==start)return false;out.push({target:word,occurrence,meaning:'',role:/^\s+$/.test(word)?'separator':'punctuation',features:[],relations:[]});}return true;};
+ for(const segment of segments){if(!segment||typeof segment.target!=='string'||!segment.target.length||!Number.isInteger(segment.occurrence)||segment.occurrence<0||segment.occurrence>100)return null;const resolved=resolveImmersionAnchor(target,segment.target,segment.occurrence);if(!resolved)return null;const {start}=resolved;if(start<cursor||!appendGap(target.slice(cursor,start)))return null;out.push(segment);cursor=start+segment.target.length;}
  if(!appendGap(target.slice(cursor)))return null;
  return out;
 }
@@ -30,7 +43,7 @@ export function validateTargetSegments(target,segments){
  const out=[];let cursor=0;
  for(const segment of segments){
   if(!segment||typeof segment!=='object'||typeof segment.target!=='string'||!segment.target.length||!Number.isInteger(segment.occurrence)||segment.occurrence<0||segment.occurrence>100||typeof segment.meaning!=='string'||segment.meaning.length>240||/[\r\n`]/.test(segment.meaning)||!IMMERSION_ROLES.includes(segment.role)||!Array.isArray(segment.features)||segment.features.length>8||!Array.isArray(segment.relations)||segment.relations.length>12)return null;
-  let start=-1,search=0;for(let i=0;i<=segment.occurrence;i++){start=target.indexOf(segment.target,search);if(start<0)return null;search=start+segment.target.length;}const end=start+segment.target.length;
+  const resolved=resolveImmersionAnchor(target,segment.target,segment.occurrence);if(!resolved)return null;const {start,end}=resolved;
   if(start!==cursor||!boundaries.has(start)||!boundaries.has(end))return null;
   const names=new Set();for(const f of segment.features){if(!f||typeof f!=='object'||!IMMERSION_FEATURES[f.name]?.includes(f.value)||names.has(f.name))return null;names.add(f.name);}
   if(['separator','punctuation'].includes(segment.role)&&(segment.meaning.trim()||segment.features.length||segment.relations.length))return null;
@@ -44,7 +57,7 @@ export function validateTargetSegments(target,segments){
    let toSegment=relation.toSegment;
    if(relation.target!==undefined){
     if(toSegment!==undefined||typeof relation.target!=='string'||!relation.target.length||!Number.isInteger(relation.occurrence)||relation.occurrence<0||relation.occurrence>100)return null;
-    let match=-1,search=0;for(let i=0;i<=relation.occurrence;i++){match=target.indexOf(relation.target,search);if(match<0)return null;search=match+relation.target.length;}
+    if(!resolveImmersionAnchor(target,relation.target,relation.occurrence))return null;
     toSegment=segments.findIndex(s=>s&&s.target===relation.target&&s.occurrence===relation.occurrence);
    }
    if(!Number.isInteger(toSegment)||toSegment<0||toSegment>=segments.length||toSegment===out.length)return null;
@@ -62,7 +75,7 @@ export function validateTargetSegments(target,segments){
 /** Teacher sends phrase replacements once; deterministic source reconstruction belongs here. */
 export function deriveImmersionText(source,row){
  if(!row||row.version!==immersionHash(source)||!Array.isArray(row.spans)||row.spans.length>12)return null;
- const spans=[];for(const anchor of row.spans){if(!anchor||typeof anchor.source!=='string'||!anchor.source.length||typeof anchor.target!=='string'||!Number.isInteger(anchor.occurrence)||anchor.occurrence<0||anchor.occurrence>100)return null;let start=-1,search=0;for(let i=0;i<=anchor.occurrence;i++){start=source.indexOf(anchor.source,search);if(start<0)return null;search=start+anchor.source.length;}spans.push({start,end:start+anchor.source.length,target:anchor.target});}
+ const spans=[];for(const anchor of row.spans){if(!anchor||typeof anchor.source!=='string'||!anchor.source.length||typeof anchor.target!=='string'||!Number.isInteger(anchor.occurrence)||anchor.occurrence<0||anchor.occurrence>100)return null;const resolved=resolveImmersionAnchor(source,anchor.source,anchor.occurrence);if(!resolved)return null;spans.push({...resolved,target:anchor.target});}
  spans.sort((a,b)=>a.start-b.start);let text='',cursor=0;for(const span of spans){if(span.start<cursor)return null;text+=source.slice(cursor,span.start)+span.target;cursor=span.end;}return text+source.slice(cursor);
 }
 /** Resolve quoted anchors locally into UTF-16 offsets; never trust model-estimated offsets. */
@@ -72,13 +85,10 @@ export function validateImmersionPlan(source,row){
  const boundaries=new Set([0,source.length]);for(const part of new Intl.Segmenter('en',{granularity:'grapheme'}).segment(source))boundaries.add(part.index);
  for(const anchor of row.spans){
   if(!anchor||typeof anchor!=='object'||typeof anchor.source!=='string'||!anchor.source.trim()||anchor.source.length>500||typeof anchor.target!=='string'||!anchor.target.trim()||anchor.target.length>900||!Number.isInteger(anchor.occurrence)||anchor.occurrence<0||anchor.occurrence>100||/[\r\n`]/.test(anchor.source)||/[\r\n`]/.test(anchor.target))return null;
-  let start=-1,search=0;for(let i=0;i<=anchor.occurrence;i++){start=source.indexOf(anchor.source,search);if(start<0)return null;search=start+anchor.source.length;}
-  const end=start+anchor.source.length;
+  const resolved=resolveImmersionAnchor(source,anchor.source,anchor.occurrence);if(!resolved)return null;const {start,end}=resolved;
   if(!boundaries.has(start)||!boundaries.has(end))return null;
   if(protectedRanges.some(p=>start<p.end&&end>p.start))return null;
   // Do not splice inside a word or a surrogate pair. Grammar units may contain punctuation.
-  const lexical=char=>/[\p{L}\p{M}\p{N}_]/u.test(char),apostrophe=char=>char==="'"||char==='’';
-  const joins=(left,right)=>{const a=Array.from(left),b=Array.from(right);return lexical(a.at(-1)||'')&&lexical(b[0]||'')||apostrophe(a.at(-1))&&lexical(a.at(-2)||'')&&lexical(b[0]||'')||lexical(a.at(-1)||'')&&apostrophe(b[0])&&lexical(b[1]||'');};
   if(joins(source.slice(Math.max(0,start-4),start),source.slice(start,start+4))||joins(source.slice(Math.max(0,end-4),end),source.slice(end,end+4)))return null;
   const targetSegments=validateTargetSegments(anchor.target,anchor.targetSegments);if(!targetSegments)return null;
   spans.push({start,end,targetSegments,source:anchor.source,target:anchor.target,note:typeof anchor.note==='string'?anchor.note.slice(0,240):'',unit:typeof anchor.unit==='string'?anchor.unit:'phrase'});

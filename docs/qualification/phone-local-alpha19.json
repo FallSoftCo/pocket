@@ -15,5 +15,7 @@
   "privateSourceBackupRetained": true,
   "lockMetadataFollowup": "Root and package lock version metadata aligned to alpha19; no dependency changes, matching hashes reverified after this final metadata transfer.",
   "sourceBoundaryFollowup": "Final codepoint-safe apostrophe/contraction and Unicode-mark boundaries synced; exact hash and syntax verified with backend stopped and protected checksums unchanged.",
-  "finalImmersionPlanSha256": "7a546b2e8e2a99c2aa878884d090f5aa4440e1d5d9db39c493e247cec0e2920a"
+  "finalImmersionPlanSha256": "25943125f8096d029dc60d3d9079ebd136d6df10631ae2faf69592a3061623ca",
+  "finalImmersionWorkerSha256": "796136cfac62bbe0078dc668ac33c8ce50ee85381d91cb7c55b321e6d57acd17",
+  "quotedAnchorFollowup": "Eligible whole lexical occurrence selection and bounded worker cache policy synced with exact hashes, both syntax checks passed, private source backup retained; protected checksums unchanged and backend stopped."
 }

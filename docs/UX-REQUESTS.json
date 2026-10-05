@@ -456,21 +456,20 @@
     {
       "id": "mosis-contextual-grammar-alignment",
       "requirement": "Keep fluent Italian words/phrases intact inline; use contextual lexical and grammatical alignment in source order, consistent role cues and agreement relationships, with normal-size in-place assistance. Adapt Mosis honestly to Italian rather than guessing suffixes or fabricating English meanings for gender. Coordinate schema/experience with OZZZ.",
-      "status": "qualified-alpha19-release-pending",
-      "evidence": "Mosis source reviewed; contextual-aligned-v2 teacher annotations validated without suffix inference or invented meanings. Actual stock Codex teacher output qualified;165 backend and74 Android tests pass. Exact signed debug APK f1c7ccab3537657edfaf015a5160077118b9ea22715ebf0b750e5b7e3f22e739 qualified at1x/2x: source-order normal-size in-place meanings, distinct explicit agreement groups, expand/collapse, alignment/source invalidation, links and unchanged sending/card interactions. Runtime receipt contextual-grammar-runtime-alpha19.json; approved fresh screenshots published main8bar. OZZZ shared schema implementation underway separately. Release and real-phone upgrade pending push baseline diagnosis."
+      "status": "released-alpha19-phone-install-pending",
+      "evidence": "Mosis source reviewed; contextual-aligned-v2 teacher annotations validated without suffix inference or invented meanings. Actual stock Codex teacher output qualified;165 backend and74 Android tests pass. Exact signed debug APK f1c7ccab3537657edfaf015a5160077118b9ea22715ebf0b750e5b7e3f22e739 qualified at1x/2x: source-order normal-size in-place meanings, distinct explicit agreement groups, expand/collapse, alignment/source invalidation, links and unchanged sending/card interactions. Runtime receipt contextual-grammar-runtime-alpha19.json; approved fresh screenshots published main8bar. OZZZ shared schema implementation underway separately. Source6b16405 pushed and GitHub alpha19 prerelease published. Compatible real-phone upgrade pending push baseline diagnosis. Followup deterministic quoted-anchor resolver counts only complete eligible lexical occurrences for source, target and relations, accepting short Italian articles after words with matching suffixes without relaxing grapheme/contraction bounds. Two added regressions and full167 backend tests pass; unchanged Android APK."
     },
     {
       "id": "tailscale-push-regression",
       "requirement": "Notifications must arrive while Tailscale stays connected. Trace real FCM delivery, VPN routing/DNS and Android background/post behavior on phone; diagnose before changing settings. SSH first for ordinary work, skill/helper when ADB needed, no Wi-Fi toggle or pairing reset. Preserve immersion delivery.",
       "status": "real-device-investigation-in-progress",
-      "evidence": "Backend FCM accepts high-priority data-only pushes; acceptance is not handset receipt. Phone background probe399 accepted by FCM, real receipt not yet observable. With VPN connected, Android Google hostname resolution stalls while numeric Google TLS and mtalk TCP5228/443 succeed. This isolates a DNS failure but does not yet prove push causality. No app VPN filter found; permission/channel/device matching and dedup remain separate checks. Scoped DNS settings inspection and remediation underway without disabling Tailscale. Phone subsequently locked; actual receipt and resolver settings remain blocked by Android permissions/keyguard. User asked to unlock; no VPN/DNS setting changed."
+      "evidence": "Backend FCM accepts high-priority data-only pushes; acceptance is not handset receipt. Phone background probe399 accepted by FCM, real receipt not yet observable. With VPN connected, Android Google hostname resolution stalls while numeric Google TLS and mtalk TCP5228/443 succeed. This isolates a DNS failure but does not yet prove push causality. No app VPN filter found; permission/channel/device matching and dedup remain separate checks. Scoped DNS settings inspection and remediation underway without disabling Tailscale. Phone subsequently locked; actual receipt and resolver settings remain blocked by Android permissions/keyguard. User asked to unlock; no VPN/DNS setting changed. Additional direct-query isolation: public DNS resolves Google name in103ms; Tailscale100.100.100.100 stub times out near2s. Scoped resolver repair still awaits unlocked Settings; no settings changed. Sanitized real-device receipt push-dns-phone-alpha19.json saved. No fix/handset delivery claimed; unlock is required for remaining settings checks."
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "b63fa1e",
-    "published_release": "v0.5.0-alpha.18",
-    "unreleased_version": "0.5.0-alpha.19",
-    "server_tests": 165,
+    "latest_pushed_commit": "6b16405",
+    "published_release": "v0.5.0-alpha.19",
+    "server_tests": 167,
     "android_tests": 74,
     "phone_endpoint": "SSH phone over Tailscale available; last wireless ADB100.101.220.29:37219 now refused",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
@@ -491,15 +490,16 @@
     "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
     "update_delivery": "Private compatible APK variants deployed; one push accepted by Firebase, repeats deduplicated; device acknowledgement not claimed",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
-    "remaining_source": "Alpha19 phone-local source and final codepoint-boundary amendment exact hash verified; protected configuration checksums unchanged and phone-local backend intentionally stopped.",
+    "remaining_source": "Alpha19 phone-local plan and worker followup exact hashes and syntax verified; protected configuration checksums unchanged and phone-local backend intentionally stopped.",
     "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21\u201339ms. No active-session reset.",
     "immersion_next": "Strong working-language Italian with normal-size contextual English rescue and all workflow/speech/public-thought coverage is in progress; docs/ITALIAN-VIRTUAL-IMMERSION.md records exactrequest andaudit.",
     "phone_access": "SSH repaired through scoped orphan sshd replacement; managed sshd and phone-local Codex callable. Phone-local backend remains intentionally stopped.",
-    "backend_runtime": "Alpha19 aligned-v2 live; health reports codex/push ready. Restart performed after164 backend tests passed and zero active voice turns.",
-    "native_validation": "Alpha19 signed debug/release build,74 Android tests and both lint variants passed; exact final debug APK qualified1x/2x with connected agreement markers. Runtime receipt and approved main8bar screenshots published."
+    "backend_runtime": "Alpha19 quoted-anchor followup live after167 backend tests and zero active voice turns; health confirms codex and FCM ready. Backend status does not establish handset push receipt.",
+    "native_validation": "Alpha19 signed debug/release build,74 Android tests and both lint variants passed; exact final debug APK qualified1x/2x with connected agreement markers. Runtime receipt and approved main8bar screenshots published.",
+    "pending_phone_update": "0.5.0-alpha.19 code36 compatible APK prepared; baseline35 retained during notification diagnosis"
   },
   "remaining": [
-    "Publish qualified alpha19 and install compatible update through phone-native Codex after notification baseline diagnosis",
+    "Install qualified alpha19 through phone-native Codex after notification baseline diagnosis; OTA announcement deferred",
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",
     "Physical secure-keyguard captions and real-provider voice language quality remain distinct qualifications",
     "Review public launch separately when sufficiently qualified"
