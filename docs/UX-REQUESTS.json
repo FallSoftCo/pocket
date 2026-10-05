@@ -494,6 +494,23 @@
       "id": "audio-bar-direct-controls",
       "requirement": "Show pause/resume and clear directly in the speech footer bar, remove the menu, preserve keyboard focus and draft when operating playback.",
       "status": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access"
+    },
+    {
+      "id": "conversation-bottom-context-consolidation",
+      "requirement": "Reduce stacked bottom text/input surfaces. Consolidate retained notes and matching speech in one surface above keyboard input; remove separate note action row, retain actionable reply/navigation and functioning removal, plus direct pause/clear without losing keyboard focus or draft. Distinct speech must remain available.",
+      "status": "implemented-alpha21-code39-synthetic-runtime-qualified-phone-install-not-claimed",
+      "implementation": "One retained-context surface above input; exact same-known-session speech is displayed once. Reply/source navigation and Pause/Clear remain direct. Secondary removal stays functional in expanded notes. Large-font/narrow screens preserve full-width text and 48dp controls within one surface. Composer shows at most three lines without truncating stored draft; coordinator mic sits beside typed editor.",
+      "evidence": "docs/qualification/conversation-context-alpha21.json"
+    },
+    {
+      "id": "tibo-dots-varied-brief-evaluation",
+      "requirement": "Prepare varied capability/workflow/evidence briefs for interacting with Tibo\u2019s Dots rather than reducing NextComp to a sole concise remote coding pitch. Actually test how independent agents/ChatGPT interpret them; do not pretend actual Dots interaction occurred.",
+      "status": "prepared-and-independently-evaluated-dots-access-unavailable",
+      "evidence": [
+        "docs/tibo-dots-brief-variants.json",
+        "docs/tibo-dots-briefing.json (superseded sole brief)"
+      ],
+      "qualification": "Seven variants and nine actual evaluations recorded in docs/tibo-dots-brief-variants.json: two signed-out ChatGPT conversations and seven stock Codex evaluations/source reviews. Actual Dots unavailable because browser is signed out. No outreach sent."
     }
   ],
   "current_state": {
@@ -526,7 +543,8 @@
     "phone_access": "PhoneTailping77ms but SSH8022 andPeerAPI1 timeout; oldADB36353 andLAN36353/5555 refused. PrivateLANSSHsocketreachableandtrustedhostkeymatchesbutauthrejected; no network/security settings changed. User reconnect requested for recovery.",
     "backend_runtime": "Alpha20 inline v3, direct coordinator checks, immediate discovery and bounded metadata refresh live;184 backend tests pass. Real list298rows with both target sessions1886/1831/166ms; status5ms. Temperature task preserved.",
     "native_validation": "Alpha20/code38 signeddebug/release,72Androidtests, bothlintvariants andGitHubCIpass. Ownedemulator exactinstalledSHA e3e24ccf9cf21dc32340b1c94d2857e08f17747314efb4cc1e7d691dc9db302e verified;1x/2x directphrase, repeatedoccurrence, exacttitlebounds, readable noteactions, source/draft/removefailureandretry, pendingStartingcard andPause/Resume/Clear preservingIME+draft qualified.",
-    "pending_phone_update": "Verified same-signer code38 privateupdateavailable and announced once; notification421 acceptedbyFCM, handsetreceipt notverified. RestorephoneTailTCPaccess tocomplete physicalinstallationverification."
+    "pending_phone_update": "Verified same-signer code38 privateupdateavailable and announced once; notification421 acceptedbyFCM, handsetreceipt notverified. RestorephoneTailTCPaccess tocomplete physicalinstallationverification.",
+    "conversation_context": "Alpha21/code39 debug build, lint and 77 tests pass. Owned emulator synthetic normal/2x/360dp context, draft, direct playback, source identity, retained-note actions, inline help and coordinator typing qualified; public-safe screenshot stored in docs/images; 1660-card main-gallery checks pass."
   },
   "remaining": [
     "Install qualified alpha20 through phone-native Codex; compatible artifacts prepared, network diagnosis restored actual FCM delivery",

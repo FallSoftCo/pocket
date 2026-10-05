@@ -1,5 +1,11 @@
 # Verification
 
+## Consolidated conversation context: 0.5.0-alpha.21
+
+Retained answers and equivalent speech from the same known conversation share one context surface above the composer. Reply and source navigation remain direct alongside Pause/Resume and Clear. The count opens all retained answers, where Remove remains available. Different-source or extended speech stays visible. The composer preserves its complete draft while showing at most three lines; coordinator typing places a compact microphone beside the editor.
+
+Validation: 184 backend tests and 77 Android tests passed, with zero dependency vulnerabilities. Debug and maintained-key signed release builds and lint passed. Synthetic API35 emulator checks cover normal, 2x text and narrow layouts, keyboard/draft preservation, actual authenticated Enter submission, notes navigation, failed-remove rollback and successful retry, and in-place Italian phrase toggling. See [runtime qualification](qualification/conversation-context-alpha21.json). The repository screenshot is explicitly synthetic. This qualification does not establish phone installation or real-provider audio quality.
+
 ## Tested platforms
 
 Stock Codex CLI **0.157.1**, Linux, and Node **22.23.x** for workstation mode. Phone-local testing uses stock Codex CLI **0.158.0**, Node **26.1.0**, Termux **0.118.3**, and PRoot on a Pixel 9 Pro Fold with Android **API 36**. The public release also runs on an Android **API 35** emulator with Google Play services. No Codex fork is used.

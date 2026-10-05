@@ -91,10 +91,10 @@ import kotlinx.coroutines.flow.*
             if(PocketCoordinator.problem.isNotBlank())item{ImmersionText("coordinator:problem",PocketCoordinator.problem,color=Coral);TextButton({PocketCoordinator.retry()}){BilingualLabel("Retry saved turn")}}
             item(key="coordinator-end"){Spacer(Modifier.height(1.dp))}
         }
-        SpeechCaptionBanner()
-        SpeechPlayer()
+        ConversationSpeechDock()
         Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(typing)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                VoiceLaunchButton(modifier=Modifier.size(56.dp),compact=true)
                 OutlinedTextField(draft,{value->
                     val enter=value.length==draft.length+1&&value.contains('\n')&&value.replace("\n","")==draft
                     updateDraft(value.replace('\n',' '));if(enter)send()
@@ -109,7 +109,6 @@ import kotlinx.coroutines.flow.*
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 ChatActionButton("Back",Icons.Rounded.ArrowBack,Modifier.weight(1f),{back()})
                 UsageDock(Modifier.width(usageDockWidth()))
-                if(typing)VoiceLaunchButton(modifier=Modifier.weight(1f),bar=true)
             }
         }
     }

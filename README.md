@@ -4,15 +4,21 @@
 
 Formerly Pocket; existing installs, pairings, package IDs and deep links remain compatible.
 
-**Your Codex workstation, within reach.** A self-hosted Android companion for stock Codex CLI by [FallSoft](https://github.com/fallsoftco).
+**Direct work on your own computers from Android.** A self-hosted interface for stock Codex CLI by [FallSoft](https://github.com/fallsoftco).
 
-Start tasks from your phone, follow the conversation in order, and reply when Codex needs you. Pocket connects to your existing Codex runtime; no fork, app store, or FallSoft-operated server is required.
+Speak or type what you want done, continue ongoing work, act on intermediate findings, and respond when an agent needs you. A persistent coordinator can answer small read-only questions directly or route sustained work into real Codex sessions. Coding, research, machine inspection and creative work depend on the tools, access and permissions available in the selected environment.
+
+NextComp connects to your existing Codex runtime and can also target stock Codex running on Android through Termux. It uses no Codex fork or FallSoft-operated server.
 
 [Download the Android alpha](https://github.com/fallsoftco/pocket/releases) · [Setup](#setup) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Verification](docs/VERIFICATION.md)
 
 > **Experimental alpha.** Workstation mode is tested with Codex CLI 0.157.1 on Linux. Phone-local mode is tested with stock Codex CLI 0.158.0 in Termux on a Pixel 9 Pro Fold. Both use Codex's experimental app-server protocol without a fork. This is an independent project, not an OpenAI product.
 
 ## What it does
+
+- Use a persistent coordinator by text or manually controlled voice turns, or address a work session directly.
+- Read useful intermediate answers and notes, reply with their context, or navigate to their source before the final response.
+- Optionally replace phrases inline for language immersion, with in-place text taps to reveal the source.
 
 - See your weekly Codex allowance, remaining percentage, and reset time in a persistent strip on every screen. Cached usage is marked as last known when disconnected.
 - Start a task in a workstation project, or continue an existing conversation.
@@ -104,7 +110,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download `pocket-0.5.0-alpha.8.apk` from [Releases](https://github.com/fallsoftco/pocket/releases), verify its checksum, and install it. Android will ask to allow installation from your browser or file manager. Alternatively use `adb install pocket-0.5.0-alpha.8.apk`.
+Download the APK from the [latest release](https://github.com/fallsoftco/pocket/releases/latest), verify its published checksum, and install it. Android will ask to allow installation from your browser or file manager. For an existing install, use an APK with the same signing certificate; the paired in-app update path preserves that certificate. Alternatively install the compatible APK with ADB.
 
 On the workstation, from the checkout:
 
@@ -157,7 +163,7 @@ Questions, approvals, and errors appear in **Needs you**. Reminders use delays o
 
 Each new spoken notification starts with an approximately three-word summary of the input being answered, then reads the response. It uses the turn’s user message instead of the conversation title. Notification tools can supply a natural `spoken_context`; automatic alerts fall back to a short prompt-derived topic.
 
-Speech is generated entirely on the phone and played with Android media controls. **Pause** saves the current audio position; **Resume** continues from there. Controls appear in the playback notification and a compact player inside Pocket. Music taking audio focus saves and pauses speech until you choose Resume. Brief interruptions pause and resume automatically, while notification chimes duck the voice without stranding the queue. If media is already playing, new speech waits; new notifications also wait behind a manually paused message. Pausing releases the audio focus and stops the playback service; the private queue and current audio chunk remain on the phone. Dismissing the paused notification does not erase them: reopen Pocket to resume, or use the player's menu to **Clear saved speech**. Disabling Speak messages or disconnecting the phone clears saved speech. Normal process recreation restores the saved queue in a paused state; abrupt process death may replay up to the last two seconds since the last checkpoint.
+Speech is generated entirely on the phone and played with Android media controls. **Pause** saves the current audio position; **Resume** continues from there. Controls appear in the playback notification and a compact player inside Pocket. Music taking audio focus saves and pauses speech until you choose Resume. Brief interruptions pause and resume automatically, while notification chimes duck the voice without stranding the queue. If media is already playing, new speech waits; new notifications also wait behind a manually paused message. Pausing releases the audio focus and stops the playback service; the private queue and current audio chunk remain on the phone. Dismissing the paused notification does not erase them: reopen Pocket to resume, or use the player's direct **Clear** control to clear saved speech. Disabling Speak messages or disconnecting the phone clears saved speech. Normal process recreation restores the saved queue in a paused state; abrupt process death may replay up to the last two seconds since the last checkpoint.
 
 Long messages continue in ordered chunks without a total playback deadline. Completed audio chunks are deleted. Speech uses media volume and also respects silent/vibrate mode, notification mute, Do Not Disturb and headphone disconnection. It does not read historical notification catch-up or repeatedly speak reminders. Nothing is sent to an external speech service. Firebase carries short speech directly; longer text is fetched through the authenticated workstation connection. If that connection is unavailable, the message stays saved with a reconnect explanation; Resume retries loading it.
 

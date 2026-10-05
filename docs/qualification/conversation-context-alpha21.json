@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-05",
+  "version": {
+    "versionCode": 39,
+    "versionName": "0.5.0-alpha.21",
+    "debugApkSha256": "01d3ce5014313eccbd0d9acc43c5b8332223de913ce394c3379b780cff680e92",
+    "installedApkMatchesBuiltApk": true,
+    "phoneInstallationClaimed": false
+  },
+  "environment": "Owned API35 Android emulator; authenticated synthetic fixture; provider audio routes blocked. No real private conversation screenshots.",
+  "checks": {
+    "androidUnitTests": 77,
+    "unitFailures": 0,
+    "debugBuild": "passed",
+    "debugLint": "passed",
+    "normalPortrait": "single context surface above composer; complete synthetic answer readable; notes count visible; Reply/Go/Resume/Clear direct",
+    "largeFont": "font scale 2 preserves full-width context, scalable count reservation, 48dp playback targets, active keyboard and draft",
+    "narrowPortrait": "360dp viewport keeps full-width context and a single action row inside the same surface",
+    "deduplication": "Exact normalized equivalent content shares context only for same known conversation; actual different-thread identical text remains separate; extra speech sentence remains visible",
+    "draftAndPlayback": "Reply appends original note context without sending or dropping existing draft; Resume/Clear keep active keyboard and full draft",
+    "notesNavigation": "Go to message reaches synthetic original transcript row",
+    "notesRemoval": "Expanded-note Remove sends authenticated request; failed request restores note with visible error; retry returns acknowledged empty notes; persistent speech captions remain independently available",
+    "notesExpansion": "Visible count/chevron opens all retained notes",
+    "immersion": "Direct phrase tap replaces Italian phrase in place without opening retained-notes panel",
+    "coordinator": "One compact mic beside typed editor; no redundant Keyboard control/full-width mic row; actual Enter submission authenticated once; response rendered after normal polling and prior history retained"
+  },
+  "screenshots": {
+    "publicRepository": "docs/images/conversation-context-consolidated.png",
+    "galleryIds": [
+      "conversation-context-consolidated",
+      "conversation-context-large-type",
+      "conversation-context-narrow"
+    ]
+  },
+  "galleryValidation": {
+    "cards": 1660,
+    "desktop": true,
+    "mobile": true,
+    "reducedMotion": true,
+    "automaticReload": true
+  },
+  "limits": [
+    "Synthetic qualification does not establish physical phone installation or real-provider voice quality.",
+    "Narrow/large-font screens deliberately place one action row beneath full-width text inside the same surface for legibility.",
+    "Secondary Remove remains in the existing expanded notes panel; Reply and source navigation are directly available.",
+    "Clear/dismiss controls use readable native glyphs because authored equivalents are not currently present; no new CGI render was started.",
+    "Unknown speech source identity is kept separate rather than inferred from matching words."
+  ]
+}

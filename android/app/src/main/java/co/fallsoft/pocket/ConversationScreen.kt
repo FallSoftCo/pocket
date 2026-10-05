@@ -152,7 +152,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             }
             if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
         }
-        ConversationNotesCard(onReply={note->
+
+        ConversationNotesCard(integrateSpeech=true,onReply={note->
             val context="Regarding your answer:\n"+note.s("text")+"\n\n"
             val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context
             editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply()
@@ -183,7 +184,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                             }
                             true
                         }else false
-                    },maxLines=6,
+                    },maxLines=3,
                     keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={if(editor.text.isNotBlank()&&!Pocket.sending)submit("steer")}),
                     textStyle=LocalTextStyle.current.copy(color=Paper,fontSize=15.sp,lineHeight=22.sp),cursorBrush=SolidColor(Mint),
                     decorationBox={inner->Box(contentAlignment=Alignment.CenterStart){if(draft.isEmpty())BilingualLabel(if(active)"Steer this task…" else "Message Codex…",centered=false,color=Muted,fontSize=15.sp);inner()}})
@@ -203,8 +204,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=Pocket.selected,bar=true)
             ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
         }
-        SpeechCaptionBanner()
-        SpeechPlayer()
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
             ChatActionButton("Back",Icons.AutoMirrored.Rounded.ArrowBack,Modifier.weight(1f),{keyboard?.hide();Pocket.closeTask()})
             UsageDock(Modifier.width(usageDockWidth()))

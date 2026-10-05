@@ -180,20 +180,15 @@ class MainActivity:ComponentActivity(){
         }
     }
 }
-@Composable fun SpeechPlayer(){
+@Composable fun SpeechPlayer(containerColor:androidx.compose.ui.graphics.Color=Panel){
     if(PocketSpeech.count==0)return
-    Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
+    Surface(color=containerColor,modifier=Modifier.fillMaxWidth()){
         Row(Modifier.padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
             Column(Modifier.weight(1f)){
                 WorkflowText(if(PocketSpeech.paused)"Speech paused · ${PocketSpeech.count} saved" else "Listening · ${PocketSpeech.count} queued",color=Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 WorkflowText(if(PocketSpeech.paused)PocketSpeech.status else PocketSpeech.title,color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
-            IconButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")},modifier=Modifier.size(48.dp)){
-                SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)"Resume" else "Pause"),modifier=Modifier.size(28.dp),tint=Mint)
-            }
-            TextButton({PocketSpeech.clear()},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp).semantics{contentDescription=PocketImmersion.label("Clear saved speech")},contentPadding=PaddingValues(horizontal=8.dp)){
-                BilingualLabel("Clear",color=Coral,fontSize=14.sp)
-            }
+            SpeechPlaybackControls()
         }
     }
 }
@@ -479,4 +474,22 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             Spacer(Modifier.height(3.dp));BilingualLabel(label,color=color,fontSize=10.sp)
         }
     }
+}
+
+/** Direct, non-focus-stealing controls shared by speech and its live caption surface. */
+@Composable fun SpeechPlaybackControls(iconOnly:Boolean=false){
+    IconButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")},modifier=Modifier.size(48.dp)){
+        SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)"Resume" else "Pause"),modifier=Modifier.size(28.dp),tint=Mint)
+    }
+    if(iconOnly)IconButton({PocketSpeech.clear()},modifier=Modifier.size(48.dp)){
+        Icon(Icons.Rounded.Close,PocketImmersion.label("Clear saved speech"),Modifier.size(28.dp),tint=Coral)
+    }else TextButton({PocketSpeech.clear()},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp).semantics{contentDescription=PocketImmersion.label("Clear saved speech")},contentPadding=PaddingValues(horizontal=8.dp)){
+        BilingualLabel("Clear",color=Coral,fontSize=14.sp)
+    }
+}
+
+/** Captions supply the playback context, so conversations need only one speech surface. */
+@Composable fun ConversationSpeechDock(containerColor:androidx.compose.ui.graphics.Color=Panel){
+    if(PocketSpeechCaptions.state.visible)SpeechCaptionBanner(playbackControls=PocketSpeech.count>0,containerColor=containerColor)
+    else SpeechPlayer(containerColor)
 }

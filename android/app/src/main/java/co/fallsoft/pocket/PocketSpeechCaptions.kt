@@ -10,6 +10,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,18 +68,22 @@ object PocketSpeechCaptions {
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun SpeechCaptionBanner(modifier:Modifier=Modifier){
+@Composable fun SpeechCaptionBanner(modifier:Modifier=Modifier,playbackControls:Boolean=false,containerColor:androidx.compose.ui.graphics.Color=Panel){
     val s=PocketSpeechCaptions.state
     if(!s.visible)return
     var expanded by remember { mutableStateOf(false) }
     Box {
-    Surface(modifier=modifier.fillMaxWidth(),color=Panel,tonalElevation=0.dp){
-        Row(Modifier.padding(start=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+    Surface(modifier=modifier.fillMaxWidth(),color=containerColor,tonalElevation=0.dp){
+        Row(Modifier.padding(start=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
             Column(Modifier.weight(1f).heightIn(min=48.dp).clickable(role=Role.Button,onClickLabel=PocketImmersion.label("Read full spoken passage")){expanded=true}.padding(vertical=8.dp)){
-                Text(PocketSpeechCaptions.label(s)+" · "+PocketImmersion.label("Read"),color=Muted,style=MaterialTheme.typography.labelSmall)
+                if(playbackControls)Text(s.title,color=Muted,style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                else Text(PocketSpeechCaptions.label(s)+" · "+PocketImmersion.label("Read"),color=Muted,style=MaterialTheme.typography.labelSmall)
                 Text(s.text,color=Paper,style=MaterialTheme.typography.bodyMedium,maxLines=3,overflow=TextOverflow.Ellipsis)
             }
-            TextButton(onClick={PocketSpeechCaptions.dismiss()},modifier=Modifier.heightIn(min=48.dp)){Text(PocketImmersion.label("Dismiss"))}
+            if(playbackControls)SpeechPlaybackControls()
+            IconButton(onClick={PocketSpeechCaptions.dismiss()},modifier=Modifier.size(48.dp)){
+                Icon(Icons.Rounded.Close,PocketImmersion.label("Dismiss captions"),Modifier.size(24.dp))
+            }
         }
     }
     ActivityPopup(expanded,{expanded=false},PocketNotificationTitles.threadForId(s.id),passage=s.text){
