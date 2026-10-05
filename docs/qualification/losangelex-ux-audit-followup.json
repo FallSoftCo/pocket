@@ -1,0 +1,29 @@
+{
+  "candidateBase": "b15a615",
+  "isolatedWorktree": "/tmp/nextcomp-team-ux",
+  "changes": [
+    "Delayed earlier-history responses compare live current scope before modifying messages, cursor or error. Reply context changes alone do not change history scope.",
+    "Direct replies to own/system messages retain current direct participant; replies to agents select that author.",
+    "Physical Enter/Numpad Enter and IME Send share the guarded submit path; Shift+Enter remains a native multiline editing key.",
+    "Backend selector moved to a bottom IME-aware row (outer MainActivity retains system-bar insets) above the keyboard, with48dp minimum targets and existing voice-active disable. Redundant team name/subtitle removed; Full access contract remains.",
+    "Team message body uses existing single-flow BilingualMessage with owner/team/message-scoped stable key and optional immersion offer; no translated second lines or dialogs."
+  ],
+  "checks": {
+    "gitDiffCheck": "PASS",
+    "unitRegressionsAdded": [
+      "Scope changes reject stale history; replyTo-only change keeps history",
+      "Own/system direct recipient preservation",
+      "Enter sends; Shift+Enter edits"
+    ]
+  },
+  "notRun": [
+    "Gradle/build/unit execution intentionally deferred while shared alpha23 build/QA is active.",
+    "No emulator/physical-phone visual qualification; inset/keyboard/fontscale must be checked after integration.",
+    "Team inline immersion runtime remains unqualified here; it uses the established renderer and optional worker rather than new provider/billing paths."
+  ],
+  "risks": [
+    "Bottom selector adds48dp to the existing footer space; verify small-screen+IME ergonomics.",
+    "Losangelex team/recipient/task controls remain in existing layout; this narrow correction only moves the backend selector.",
+    "This commit targets the candidate branch, not the active alpha23 checkout."
+  ]
+}

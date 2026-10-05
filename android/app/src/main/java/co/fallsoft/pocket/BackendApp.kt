@@ -32,6 +32,10 @@ object BackendNavigation {
     fun teamSelected()=Pocket.prefs.getString("backend:"+backendOwner(Pocket.base,Pocket.token),"codex")=="losangelex"
 }
 
+internal fun sameTeamHistoryScope(current:TeamScope,destination:TeamScope)=current.copy(replyTo=null)==destination.copy(replyTo=null)
+internal fun teamReplyRecipient(scope:TeamScope,author:String)=if(author in listOf("you","system"))if(scope.direct)scope.recipient else "" else author
+internal fun teamEnterSends(enter:Boolean,shift:Boolean)=enter&&!shift
+
 @Composable fun BackendApp(){
     val owner=backendOwner(Pocket.base,Pocket.token)
     var backend by remember(owner){mutableStateOf(Pocket.prefs.getString("backend:$owner","codex")?:"codex")}
@@ -46,11 +50,7 @@ object BackendNavigation {
     }
     LaunchedEffect(owner){discover()}
     LaunchedEffect(owner,BackendNavigation.desired){BackendNavigation.desired?.takeIf{it.first==owner}?.let{backend=it.second}}
-    Column(Modifier.fillMaxSize()){
-        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            FilterChip(selected=backend=="codex",onClick={backend="codex";Pocket.prefs.edit().putString("backend:$owner",backend).apply()},label={Text("Codex")},enabled=!PocketVoice.active,modifier=Modifier.weight(1f))
-            FilterChip(selected=backend=="losangelex",onClick={backend="losangelex";Pocket.prefs.edit().putString("backend:$owner",backend).apply()},label={Text("Losangelex")},enabled=!PocketVoice.active,modifier=Modifier.weight(1f))
-        }
+    Column(Modifier.fillMaxSize().imePadding()){
         if(backend=="losangelex")ProfileSwitcher()
         Box(Modifier.weight(1f)){
             if(backend=="codex")PocketApp()
@@ -63,5 +63,10 @@ object BackendNavigation {
             }
             else key(owner,losangelex.s("environmentId")){LosangelexScreen(owner+losangelex.s("environmentId"))}
         }
+        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            FilterChip(selected=backend=="codex",onClick={backend="codex";Pocket.prefs.edit().putString("backend:$owner",backend).apply()},label={BilingualLabel("Codex")},enabled=!PocketVoice.active,modifier=Modifier.weight(1f).heightIn(min=48.dp))
+            FilterChip(selected=backend=="losangelex",onClick={backend="losangelex";Pocket.prefs.edit().putString("backend:$owner",backend).apply()},label={BilingualLabel("Losangelex")},enabled=!PocketVoice.active,modifier=Modifier.weight(1f).heightIn(min=48.dp))
+        }
+
     }
 }

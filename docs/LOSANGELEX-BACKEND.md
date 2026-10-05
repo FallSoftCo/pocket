@@ -1,6 +1,6 @@
 # Select Codex or Losangelex
 
-NextComp can connect to two execution backends in each paired environment. Choose **Codex** or **Losangelex** at the top of the Android interface. Switching changes the available interaction modes; it does not migrate or combine conversations.
+NextComp can connect to two execution backends in each paired environment. Choose **Codex** or **Losangelex** in the bottom backend selector. Switching changes the available interaction modes; it does not migrate or combine conversations.
 
 | Backend | Available experience |
 | --- | --- |
@@ -30,7 +30,7 @@ This remains one owner and trusted paired devices. Losangelex currently executes
 
 ## Direct work and review results
 
-Choose the team and task, then a recipient. An unaddressed room message goes to the team's coordinator. Addressing a teammate in **Room** keeps the contribution public. **Direct** requires an explicit recipient and reads only that recipient's direct history. Reply binds the original message ID and author; clearing it restores the separate root draft.
+Choose the team and task, then a recipient. An unaddressed room message goes to the team's coordinator. Addressing a teammate in **Room** keeps the contribution public. **Direct** requires an explicit recipient and reads only that recipient's direct history. Reply binds the original message ID and author; replying to your own or a system message in Direct retains the selected recipient. Enter and the keyboard Send action submit; Shift+Enter inserts a newline. clearing it restores the separate root draft.
 
 **New task** creates fresh team task contexts. Assign work conversationally to the coordinator or selected agent; Hollywood's own tools perform delegation and peer messaging. **Agent** chooses an existing task participant for direct Stop/Pause/Resume controls. Stop requests interruption and pauses subsequent automatic work according to the team service's contract. A confirmed control receipt is distinct from a completed assignment.
 

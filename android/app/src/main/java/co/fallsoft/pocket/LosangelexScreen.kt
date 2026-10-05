@@ -3,11 +3,16 @@ package co.fallsoft.pocket
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.util.UUID
@@ -57,7 +62,7 @@ import java.util.UUID
         if(history){
             val visibility=if(destination.direct)"direct:${destination.recipient}" else "room"
             val page=client.call("teams/${destination.team}/history?task=${destination.task}&visibility=$visibility&limit=50")
-            if(currentTarget.copy(replyTo=null)==destination.copy(replyTo=null)){
+            if(sameTeamHistoryScope(currentTarget,destination)){
                 val batch=page.optJSONArray("data")?.objects().orEmpty()
                 val loadedEarlier=messages.minOfOrNull{it.optLong("id")}?.let{old->batch.minOfOrNull{it.optLong("id")}?.let{old<it}}==true
                 messages=(messages+batch).associateBy{it.optLong("id")}.values.sortedBy{it.optLong("id")}
@@ -106,33 +111,37 @@ import java.util.UUID
             finally{busy=false}
         }
     }
+    val canSend=!busy&&team.isNotBlank()&&task.isNotBlank()&&(pending!=null||text.isNotBlank()&&text.length<=3500)&&(!direct||recipient.isNotBlank())
+    fun send(){if(canSend&&!busy)submit(pending?:JSONObject().put("path","teams/$team/messages").put("body",target.message(UUID.randomUUID().toString(),text)))}
     Column(Modifier.fillMaxSize().imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         WeeklyLimitBar()
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Losangelex · team work",style=MaterialTheme.typography.titleMedium);TextButton({newTask=true},enabled=team.isNotBlank()&&!busy){Text("New task")}}
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){TextButton({newTask=true},enabled=team.isNotBlank()&&!busy){BilingualLabel("New task")}}
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
             TeamChoice("Team",teams.map{it.s("id") to it.s("name")},team,Modifier.weight(1f)){team=it;task="";recipient="";direct=false;replyTo=null}
             TeamChoice("Task",overview.optJSONArray("tasks")?.objects().orEmpty().map{it.s("id") to it.s("title")},task,Modifier.weight(1f)){task=it;replyTo=null}
             TeamChoice("To",listOf("" to "Coordinator")+(overview.optJSONObject("team")?.keys()?.asSequence()?.map{it to it}?.toList().orEmpty()),recipient,Modifier.weight(1f)){recipient=it;replyTo=null;if(it.isBlank())direct=false}
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            FilterChip(!direct,{direct=false;replyTo=null},label={Text("Room")})
-            FilterChip(direct,{direct=true;replyTo=null},label={Text("Direct")},enabled=recipient.isNotBlank())
-            TextButton({jobs.launch{try{refresh(target)}catch(e:Exception){error=e.message.orEmpty()}}}){Text("Refresh")}
+            FilterChip(!direct,{direct=false;replyTo=null},label={BilingualLabel("Room")})
+            FilterChip(direct,{direct=true;replyTo=null},label={BilingualLabel("Direct")},enabled=recipient.isNotBlank())
+            TextButton({jobs.launch{try{refresh(target)}catch(e:Exception){error=e.message.orEmpty()}}}){BilingualLabel("Refresh")}
         }
         Text("${if(direct)"Direct · $recipient" else "Room"} · ${if(task.isBlank())"Loading…" else taskTitle}",style=MaterialTheme.typography.labelMedium,color=Mint)
-        Text("Full access · team coordination through Hollywood",style=MaterialTheme.typography.labelSmall,color=Muted)
+        BilingualLabel("Full access",fontSize=12.sp,color=Muted)
         if(error.isNotBlank())Text(error,color=Coral,style=MaterialTheme.typography.bodySmall)
         if(attention.isNotEmpty())TextButton({inbox=true}){Text("Needs you · ${attention.size}")}
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)){
-            if(older!=null)item{TextButton({val destination=target;val cursor=older;jobs.launch{try{val visibility=if(destination.direct)"direct:${destination.recipient}" else "room";val page=client.call("teams/${destination.team}/history?task=${destination.task}&visibility=$visibility&limit=50&before=$cursor");if(target==destination){messages=(page.optJSONArray("data")?.objects().orEmpty()+messages).distinctBy{it.optLong("id")}.sortedBy{it.optLong("id")};older=page.takeUnless{it.isNull("olderCursor")}?.optLong("olderCursor")}}catch(e:Exception){error=e.message.orEmpty()}}}){Text("Earlier messages")}}
+            if(older!=null)item{TextButton({val destination=target;val cursor=older;jobs.launch{try{val visibility=if(destination.direct)"direct:${destination.recipient}" else "room";val page=client.call("teams/${destination.team}/history?task=${destination.task}&visibility=$visibility&limit=50&before=$cursor");if(sameTeamHistoryScope(currentTarget,destination)){messages=(page.optJSONArray("data")?.objects().orEmpty()+messages).distinctBy{it.optLong("id")}.sortedBy{it.optLong("id")};older=page.takeUnless{it.isNull("olderCursor")}?.optLong("olderCursor")}}catch(e:Exception){if(e is CancellationException)throw e;if(sameTeamHistoryScope(currentTarget,destination))error=e.message.orEmpty()}}}){BilingualLabel("Earlier messages")}}
             items(messages,key={it.optLong("id")}){event->
                 Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
                     Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
                         Text(event.s("author")+" · "+event.s("kind"),style=MaterialTheme.typography.labelMedium,color=Mint)
                         event.optJSONObject("reply")?.let{Text("Reply to ${it.s("author")}: ${it.s("body")}",style=MaterialTheme.typography.bodySmall,color=Muted)}
-                        RichText(event.s("body"))
+                        val sourceId="team-message:$owner:$team:${event.optLong("id")}"
+                        LaunchedEffect(sourceId,event.s("body"),PocketImmersion.enabled){PocketImmersion.offer(sourceId,event.s("body"),"team conversation")}
+                        BilingualMessage(sourceId,event.s("body"))
                         if(event.s("kind") in listOf("attention","approval")&&event.s("attentionState")=="open")TextButton({inspected=JSONObject(event.toString()).put("team_id",team)}){Text("Open request")}
-                        else if(event.s("kind")=="message")TextButton({replyTo=event.optLong("id");recipient=event.s("author").takeUnless{it in listOf("you","system")}.orEmpty()}){Text("Reply")}
+                        else if(event.s("kind")=="message")TextButton({replyTo=event.optLong("id");recipient=teamReplyRecipient(target,event.s("author"))}){BilingualLabel("Reply")}
                     }
                 }
             }
@@ -140,8 +149,11 @@ import java.util.UUID
         TeamAgentControls(client,team,task,overview,jobs,{receipt=it},{error=it})
         if(replyTo!=null)TextButton({replyTo=null}){Text("Reply to #$replyTo · clear")}
         if(receipt.isNotBlank())Text(receipt,style=MaterialTheme.typography.labelSmall,color=Muted)
-        OutlinedTextField(text,{text=it;client.saveDraft(target,it)},enabled=pending==null&&!busy,label={Text(if(direct)"Message $recipient" else "Message the team")},modifier=Modifier.fillMaxWidth(),maxLines=4)
-        Button({submit(pending?:JSONObject().put("path","teams/$team/messages").put("body",target.message(UUID.randomUUID().toString(),text)))},enabled=!busy&&team.isNotBlank()&&task.isNotBlank()&&(pending!=null||text.isNotBlank()&&text.length<=3500),modifier=Modifier.fillMaxWidth()){Text(if(busy)"Submitting…" else if(pending!=null)"Retry saved command" else "Send")}
+        OutlinedTextField(text,{text=it;client.saveDraft(target,it)},enabled=pending==null&&!busy,label={BilingualLabel(if(direct)"Message $recipient" else "Message the team")},modifier=Modifier.fillMaxWidth().onPreviewKeyEvent{event->
+            val enter=event.key==Key.Enter||event.key==Key.NumPadEnter
+            if(teamEnterSends(enter,event.isShiftPressed)){if(event.type==KeyEventType.KeyDown)send();true}else false
+        },maxLines=4,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}))
+        Button({send()},enabled=canSend,modifier=Modifier.fillMaxWidth()){BilingualLabel(if(busy)"Submitting…" else if(pending!=null)"Retry saved command" else "Send")}
     }
     if(newTask)TeamNewTask(client,team,{newTask=false}){id->task=id;recipient="";direct=false;replyTo=null;newTask=false}
     if(inbox)TeamInbox(client,team,{inbox=false}){event->inspected=event;inbox=false}

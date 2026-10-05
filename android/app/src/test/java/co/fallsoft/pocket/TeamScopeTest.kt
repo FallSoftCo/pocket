@@ -19,4 +19,23 @@ class TeamScopeTest {
         assertNotEquals(backendOwner("https://host","first-token"),backendOwner("https://host","second-token"))
         assertNotEquals(backendOwner("https://first-host","token"),backendOwner("https://second-host","token"))
     }
+    @Test fun delayedHistoryIsRejectedAfterAnyHistoryDestinationChanges(){
+        val captured=TeamScope("team","task","maya",true,1)
+        assertTrue(sameTeamHistoryScope(captured.copy(replyTo=2),captured))
+        assertFalse(sameTeamHistoryScope(captured.copy(team="other"),captured))
+        assertFalse(sameTeamHistoryScope(captured.copy(task="other"),captured))
+        assertFalse(sameTeamHistoryScope(captured.copy(recipient="theo"),captured))
+        assertFalse(sameTeamHistoryScope(captured.copy(direct=false),captured))
+    }
+    @Test fun replyingToOwnOrSystemDirectMessageKeepsTheOtherParticipant(){
+        val direct=TeamScope("team","task","maya",true)
+        assertEquals("maya",teamReplyRecipient(direct,"you"))
+        assertEquals("maya",teamReplyRecipient(direct,"system"))
+        assertEquals("theo",teamReplyRecipient(direct,"theo"))
+        assertEquals("",teamReplyRecipient(direct.copy(direct=false),"you"))
+    }
+    @Test fun physicalEnterSendsWhileShiftEnterRemainsAnEditingKey(){
+        assertTrue(teamEnterSends(true,false));assertFalse(teamEnterSends(true,true))
+        assertFalse(teamEnterSends(false,false));assertFalse(teamEnterSends(false,true))
+    }
 }
