@@ -9,7 +9,8 @@
       "OZZZ-GPU-RENDER"
     ],
     "do_not_stop_other_jobs": true,
-    "no_subagents_without_explicit_authorization": true
+    "no_subagents_without_explicit_authorization": true,
+    "phone_codex_installs_compatible_updates": true
   },
   "requests": [
     {
@@ -437,8 +438,14 @@
     {
       "id": "reachable-app-update-control",
       "requirement": "Provide a visible reachable in-app update control even if Settings navigation is inaccessible.",
-      "status": "qualified-alpha17-ready-to-publish",
-      "evidence": "Activity popup UsageDetails now includes the same verified update/download/install controls as Settings. Existing user phone was locked during direct update-screen intent; compatible installer fallback preserves signing and pairing. Actual emulator Check performs authenticated download and verification; Install opens Android Update/Cancel. Normal/2x controls legible. Compatible34 APK transferred via SSH and checksum verified; installer intent requested but phone remains locked, installation not confirmed."
+      "status": "released-alpha17-phone-install-awaiting-access-recovery",
+      "evidence": "Activity popup UsageDetails now includes the same verified update/download/install controls as Settings. Existing user phone was locked during direct update-screen intent; compatible installer fallback preserves signing and pairing. Actual emulator Check performs authenticated download and verification; Install opens Android Update/Cancel. Normal/2x controls legible. Compatible34 APK transferred via SSH and checksum verified; installer intent requested but phone remains locked, installation not confirmed. Phone-local Codex confirmed original phone still version32; shell handoff did not surface installer. UI attempt found APK in Files but SSH began repeated banner timeouts despite live Tailscale. See phone-install-alpha17.json; no successful device install claimed."
+    },
+    {
+      "id": "phone-codex-update-installation",
+      "requirement": "For future updates delegate installation to Codex on the phone: download and verify the compatible signed APK, drive the Android installer and verify the installed version without making the user perform routine steps.",
+      "status": "authorized-preference-recorded",
+      "evidence": "User explicitly requested phone-local Codex perform future installs. Use SSH/phone-local Codex and the authorized phone-control bridge; preserve pairing and signing identity. Do not claim silent privileged installation or bypass a locked screen; report any actual Android restriction."
     }
   ],
   "current_state": {
