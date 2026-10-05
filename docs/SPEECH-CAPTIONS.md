@@ -2,7 +2,7 @@
 
 Notification speech exposes the exact text of the currently synthesized chunk (or the exact translated passage submitted to native Codex audio), both in the app banner and the existing speech notification. Progress is labelled by chunk (Part X of Y): this audio path has no word timestamps, so it never guesses highlighted words or invents transcription timing.
 
-The compact app banner is tappable: it opens a scrollable sheet containing the entire current spoken passage, with Close and Dismiss captions controls. The sheet follows actual chunk updates while open.
+The current conversation places spoken context above the composer, together with an equivalent retained answer when its conversation identity and complete normalized text match. Pause/Resume and Clear remain direct controls, and tapping the preview expands retained context or the full passage. Extra or different-conversation speech is not silently hidden. The alpha21 context surface and keyboard-preservation interactions are qualified in [conversation context](qualification/conversation-context-alpha21.json); earlier caption-sheet behavior belongs to earlier releases.
 
 The latest caption remains after playback ends. Dismiss hides that message across further progress updates and app restarts; a different spoken message can appear normally. Dismiss does not stop playback. Pause/Resume remain separate playback actions.
 

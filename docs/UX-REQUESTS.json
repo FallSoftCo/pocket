@@ -512,6 +512,18 @@
         "docs/tibo-dots-briefing.json (superseded sole brief)"
       ],
       "qualification": "Seven variants and nine actual evaluations recorded in docs/tibo-dots-brief-variants.json: two signed-out ChatGPT conversations and seven stock Codex evaluations/source reviews. Actual Dots unavailable because browser is signed out. No outreach sent."
+    },
+    {
+      "id": "public-agent-briefing",
+      "requirement": "Publish the full NextComp agency/control story, capabilities, actionable notifications and bounded evidence on GitHub so Tibo and reviewing agents can inspect it; preserve broad computing scope.",
+      "status": "documentation-prepared-review-in-progress",
+      "evidence": "docs/NEXTCOMP-BRIEF.md, docs/CAPABILITIES.md, docs/BRIEF-EVALUATION.md and docs/README.md. Seven drafts/nine generic evaluations; not actual Dots or external outreach."
+    },
+    {
+      "id": "native-linked-images",
+      "requirement": "Images linked in conversations must be visible natively in NextComp without switching to an external gallery.",
+      "status": "implementation-and-runtime-review-in-progress",
+      "evidence": "Native Markdown/direct-image previews, bounded loading and exact-origin authenticated attachment handling are being tested."
     }
   ],
   "current_state": {

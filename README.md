@@ -10,7 +10,7 @@ Speak or type what you want done, continue ongoing work, act on intermediate fin
 
 NextComp connects to your existing Codex runtime and can also target stock Codex running on Android through Termux. It uses no Codex fork or FallSoft-operated server.
 
-[Download the Android alpha](https://github.com/fallsoftco/pocket/releases) · [Setup](#setup) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Verification](docs/VERIFICATION.md)
+[Download the Android alpha](https://github.com/fallsoftco/pocket/releases) · [Full briefing](docs/NEXTCOMP-BRIEF.md) · [Capabilities and evidence](docs/CAPABILITIES.md) · [Documentation](docs/README.md) · [Setup](#setup) · [Privacy](PRIVACY.md) · [Security](SECURITY.md)
 
 > **Experimental alpha.** Workstation mode is tested with Codex CLI 0.157.1 on Linux. Phone-local mode is tested with stock Codex CLI 0.158.0 in Termux on a Pixel 9 Pro Fold. Both use Codex's experimental app-server protocol without a fork. This is an independent project, not an OpenAI product.
 
@@ -20,20 +20,22 @@ NextComp connects to your existing Codex runtime and can also target stock Codex
 - Read useful intermediate answers and notes, reply with their context, or navigate to their source before the final response.
 - Optionally replace phrases inline for language immersion, with in-place text taps to reveal the source.
 
-- See your weekly Codex allowance, remaining percentage, and reset time in a persistent strip on every screen. Cached usage is marked as last known when disconnected.
+- See your weekly Codex allowance, remaining percentage and reset time in the bottom usage dock. Cached usage is marked as last known when disconnected; depletion estimates need enough recent history.
 - Start a task in a workstation project, or continue an existing conversation.
 - Read prompts, progress, commands, tool results, file changes, questions, and final responses in chronological order. Expand output and load earlier turns.
 - Tap Send or press Enter to send; active-turn input steers the task. Hold the button to queue a follow-up. Shift+Enter adds a line break. The queue count opens edit, remove, send-now and resume controls. An empty composer shows Stop while work is running.
 - Choose the next turn’s model, reasoning effort, and Plan/Build mode from conversation actions. Rename, archive, and restore conversations.
 - Reply from an Android notification and answer native questions and supported approvals.
 - Receive Firebase push when followed work finishes or needs your attention.
-- Ask Codex to notify you under a condition: **“Use Pocket to notify me when the tests pass, with a short summary.”**
+- Ask Codex to notify you under a condition: **“Use NextComp's notification tool to tell me when the tests pass, with a short summary.”**
 - Choose synthesized tones, offline spoken labels or content summaries, or system notification audio. Actionable items have bounded reminders, dismissal, and snooze.
 - Open explicitly shared attachments from your authenticated workstation.
 - Run Codex on the Android phone itself and switch between **Workstation** and **This phone**.
 - Optionally let phone-local Codex inspect the foreground Android screen, take screenshots, tap, scroll, enter non-password text, and use Android navigation.
 
-Pocket is for **one owner and their trusted phones**. A paired phone can read and control that owner's Codex tasks. It is not a shared hosting or multi-user permissions system.
+NextComp is for **one owner and their trusted phones**. A paired phone can read and control that owner's Codex tasks. It is not a shared hosting or multi-user permissions system.
+
+The [full briefing](docs/NEXTCOMP-BRIEF.md) explains the intended computing experience and its relationship to persistent personal agents. The [capability map](docs/CAPABILITIES.md) connects each interaction to source, versioned live observations and qualification limits, including actionable push, voice, phone-local execution and intermediate answers. Agents reviewing this repository should start there rather than infer the product from installation instructions alone.
 
 <p><img src="docs/images/onboarding.png" width="280" alt="Pocket Android first-run screen with empty server and pairing-code fields"></p>
 
@@ -110,7 +112,7 @@ Use the HTTPS address printed by Tailscale. Do **not** use Funnel or expose the 
 
 ### 4. Install and pair Android
 
-Download the APK from the [latest release](https://github.com/fallsoftco/pocket/releases/latest), verify its published checksum, and install it. Android will ask to allow installation from your browser or file manager. For an existing install, use an APK with the same signing certificate; the paired in-app update path preserves that certificate. Alternatively install the compatible APK with ADB.
+Download the APK from the [release list](https://github.com/fallsoftco/pocket/releases), verify its published checksum, and install it. Android will ask to allow installation from your browser or file manager. For an existing install, use an APK with the same signing certificate; the paired in-app update path preserves that certificate. Alternatively install the compatible APK with ADB.
 
 On the workstation, from the checkout:
 

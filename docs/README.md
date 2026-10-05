@@ -1,0 +1,25 @@
+# NextComp documentation
+
+NextComp connects a person on Android to ongoing work in their own computing environments through stock Codex. Start with the briefing to understand the intended experience, then use the capability map to inspect mechanisms, evidence and limits. Installation instructions alone do not describe the product's scope.
+
+## Understand and evaluate
+
+- [NextComp briefing for Tibo and agent reviewers](NEXTCOMP-BRIEF.md): the complete account of what a person can do, how the system fits personal-agent computing, and what warrants a technical conversation.
+- [Capabilities and evidence](CAPABILITIES.md): user actions, implementation entry points, versioned observations and unresolved gaps.
+- [Brief evaluation](BRIEF-EVALUATION.md): why this briefing was selected, what the evaluations actually tested, and their limits.
+- [Verification](VERIFICATION.md): historical runtime records; each applies to its named version and environment.
+- [Architecture decisions](DECISIONS.md), [privacy](../PRIVACY.md) and [security](../SECURITY.md): runtime ownership, delivery semantics and trust boundaries.
+- [Recorded UX requests](UX-REQUESTS.json): requirements and implementation status. Historical entries are not blanket current-release certification.
+
+## Install and operate
+
+- [Setup](../README.md#setup), [deployment](DEPLOYMENT.md) and [Firebase configuration](FIREBASE.md).
+- [Android local execution and phone control](ANDROID_LOCAL.md).
+- [Voice architecture](VOICE.md) and [native voice investigation](NATIVE-VOICE-INVESTIGATION.md).
+- [Notification read handling](NOTIFICATION-READS.md) and [spoken captions](SPEECH-CAPTIONS.md).
+- [Inline language immersion](ITALIAN-VIRTUAL-IMMERSION.md).
+- [Maintaining the backend](MAINTAINER.md) and [release process](RELEASING.md).
+
+## Read the evidence correctly
+
+An implemented route is not a verified end-to-end workflow. A passing fixture is not a provider or physical-phone test. A push sender's acceptance is not handset delivery. A historical successful phone upgrade does not establish the latest APK is installed. Use the [capability map](CAPABILITIES.md#release-and-evidence-boundaries) to separate those claims, and inspect the qualification record before making a stronger one.
