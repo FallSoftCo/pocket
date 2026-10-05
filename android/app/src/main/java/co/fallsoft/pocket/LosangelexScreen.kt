@@ -7,6 +7,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -39,7 +41,8 @@ import java.util.UUID
     val target=TeamScope(team,task,recipient,direct,replyTo)
     val currentTarget by rememberUpdatedState(target)
     val taskTitle=overview.optJSONArray("tasks")?.objects()?.firstOrNull{it.s("id")==task}?.s("title")?:"Selected task"
-    var text by remember(target.draftKey(owner)){mutableStateOf(client.draft(target))}
+    var input by remember(target.draftKey(owner)){mutableStateOf(client.draft(target).let{TextFieldValue(it,TextRange(it.length))})}
+    val text=input.text
     var pending by remember(target.draftKey(owner)){mutableStateOf(client.pending(target))}
 
     suspend fun refresh(destination:TeamScope,history:Boolean=true){
@@ -100,7 +103,7 @@ import java.util.UUID
             try{
                 client.call(command.getString("path"),command.getJSONObject("body"))
                 client.savePending(destination,null);client.saveDraft(destination,"")
-                if(currentTarget==destination){pending=null;text="";replyTo=null;receipt="Accepted · work may still be queued"}
+                if(currentTarget==destination){pending=null;input=TextFieldValue();replyTo=null;receipt="Accepted · work may still be queued"}
                 refresh(destination)
             }catch(e:Exception){
                 if(e is CancellationException)throw e
@@ -149,9 +152,15 @@ import java.util.UUID
         TeamAgentControls(client,team,task,overview,jobs,{receipt=it},{error=it})
         if(replyTo!=null)TextButton({replyTo=null}){Text("Reply to #$replyTo · clear")}
         if(receipt.isNotBlank())Text(receipt,style=MaterialTheme.typography.labelSmall,color=Muted)
-        OutlinedTextField(text,{text=it;client.saveDraft(target,it)},enabled=pending==null&&!busy,label={BilingualLabel(if(direct)"Message $recipient" else "Message the team")},modifier=Modifier.fillMaxWidth().onPreviewKeyEvent{event->
+        OutlinedTextField(input,{input=it;client.saveDraft(target,it.text)},enabled=pending==null&&!busy,label={BilingualLabel(if(direct)"Message $recipient" else "Message the team")},modifier=Modifier.fillMaxWidth().onPreviewKeyEvent{event->
             val enter=event.key==Key.Enter||event.key==Key.NumPadEnter
-            if(teamEnterSends(enter,event.isShiftPressed)){if(event.type==KeyEventType.KeyDown)send();true}else false
+            if(enter){
+                if(event.type==KeyEventType.KeyDown){
+                    if(event.isShiftPressed){if(pending==null&&!busy){input=teamInsertNewline(input);client.saveDraft(target,input.text)}}
+                    else send()
+                }
+                true
+            }else false
         },maxLines=4,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}))
         Button({send()},enabled=canSend,modifier=Modifier.fillMaxWidth()){BilingualLabel(if(busy)"Submitting…" else if(pending!=null)"Retry saved command" else "Send")}
     }

@@ -14,3 +14,7 @@ Pocket lets Codex notify its own user about its own work. Notifications lead int
 - **Distribution:** MIT source, sideloadable signed Android alpha, and owner-operated infrastructure. Release signing keys remain private and stable across updates. Public release artifacts never include runtime state or local review captures.
 
 The app-server protocol is version-sensitive. See [official protocol documentation](https://developers.openai.com/codex/app-server/) and the installed CLI's generated schema when adapting it. The implemented target and actual test evidence are in VERIFICATION.md.
+
+## Inline immersion cycling reserves geometry
+
+Automatic source/target cycling remains a display transformation of canonical content. Native inline phrase slots reserve the larger natural form at the current font scale; long forms split into contiguous chunks for wrapping. The initial per-word reservation was rejected after native large-font review exposed sparse columns. Phrase clocks are staggered and change displayed-text callbacks only at language changes; graphics-layer fades do not emit parent callbacks every frame. A deliberate source hold overrides its clock. Displayed speech recovers the captured variant set independently of current phases so navigation does not change the words underneath playback. Existing links and control targets keep their actions; no bilingual second lines or dialogs are added. Unequal word counts can leave blank reservation, which requires native review.

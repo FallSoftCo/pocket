@@ -75,3 +75,10 @@ fun immersionReserveChunks(source:String,target:String,maxWidth:Int,width:(Strin
     val a=chunks(source);val b=chunks(target)
     return List(max(a.size,b.size)){ImmersionReserveWord(a.getOrElse(it){""},b.getOrElse(it){""})}
 }
+
+/** Keep trailing punctuation in the same native reservation as its phrase. */
+fun immersionPhraseEnd(text:String,end:Int):Int {
+    var at=end.coerceIn(0,text.length)
+    while(at<text.length&&text[at] in ",.;:!?…)]}»”")at++
+    return at
+}

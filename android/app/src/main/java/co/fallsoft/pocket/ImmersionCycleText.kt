@@ -85,8 +85,11 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
                 val tag=link.item
                 val span=plan.spans.firstOrNull{tag=="${it.start}:${it.end}"}?:continue
                 val visible=content.text.substring(link.start,link.end)
-                val source=MarkdownContent.preview(span.source).text;val target=MarkdownContent.preview(span.target).text
-                if(link.start<cursor||visible!=source&&visible!=target)continue
+                val sourcePhrase=MarkdownContent.preview(span.source).text;val targetPhrase=MarkdownContent.preview(span.target).text
+                if(link.start<cursor||visible!=sourcePhrase&&visible!=targetPhrase)continue
+                val end=immersionPhraseEnd(content.text,link.end)
+                val suffix=content.text.substring(link.end,end)
+                val source=sourcePhrase+suffix;val target=targetPhrase+suffix
                 append(content.subSequence(cursor,link.start))
                 val inherited=content.subSequence(link.start,link.end).spanStyles.map{it.item}
                 val weight=(inherited.mapNotNull{it.fontWeight}+listOfNotNull(fontWeight,FontWeight.Medium)).maxBy{it.weight}
@@ -97,7 +100,7 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
                 val words=immersionReserveChunks(source,target,widthPx,::naturalWidth)
                 var wordOffset=link.start
                 words.forEachIndexed{index,word->
-                    val shown=if(visible==source)word.source else word.target
+                    val shown=if(visible==sourcePhrase)word.source else word.target
                     val styled=if(shown.isNotEmpty())content.subSequence(wordOffset,wordOffset+shown.length)else AnnotatedString("")
                     wordOffset+=shown.length
                     val a=measure(word.source);val b=measure(word.target)
@@ -112,7 +115,7 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
                         Text(buildAnnotatedString{append(styled.text);styled.spanStyles.forEach{addStyle(it.item,it.start,it.end)};styled.getLinkAnnotations(0,styled.length).forEach{link->if(link.item is LinkAnnotation.Url)addStyle(SpanStyle(textDecoration=androidx.compose.ui.text.style.TextDecoration.Underline),link.start,link.end)}},fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,modifier=Modifier.fillMaxSize().graphicsLayer{this.alpha=alpha(span)}.clearAndSetSemantics{})
                     }
                 }
-                cursor=link.end
+                cursor=end
             }
             append(content.subSequence(cursor,content.length))
         }

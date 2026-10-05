@@ -4,6 +4,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ImmersionCycleTest {
+    @Test fun punctuationStaysAttachedWithoutConsumingTheFollowingWord(){
+        assertEquals(7,immersionPhraseEnd("phrase, next",6))
+        assertEquals(9,immersionPhraseEnd("phrase…). next",6))
+        assertEquals(6,immersionPhraseEnd("phrase next",6))
+        assertEquals(6,immersionPhraseEnd("phrase's next",6))
+    }
     @Test fun longerTargetDwellAndStableIndependentStaggers(){
         val a=immersionCycleTiming("message:10","new sessions","nuove sessioni")
         assertTrue(a.targetMs>a.sourceMs)

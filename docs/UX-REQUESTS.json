@@ -18,7 +18,10 @@
       "requirement": "Treat Losangelex and Hollywood as a separate backend; choose plain Codex or Losangelex and change the possible interaction modes. Work on it and deliver successfully.",
       "status": "implemented_candidate_qualified",
       "implementation": "BackendApp selector; fixed owner-registered Hollywood v2 adapter; team tasks, room/direct messages, scoped controls and origin-bound attention. Existing stock sessions preserved.",
-      "evidence": ["qualification/losangelex-live-backend.json", "qualification/losangelex-android-backend.json"],
+      "evidence": [
+        "qualification/losangelex-live-backend.json",
+        "qualification/losangelex-android-backend.json"
+      ],
       "limits": "Root release handoff and physical delivery pending. Losangelex voice and existing stock-thread adoption excluded from this first integration."
     },
     {
@@ -543,26 +546,40 @@
     },
     {
       "id": "failed-outgoing-recovery",
-      "status": "implementing-alpha23",
+      "status": "qualified-alpha23-pending-phone-update",
       "requirement": "Failed or uncertain unsent messages need direct Retry, Edit and Remove. Preserve accepted history; uncertain retry requires explicit duplicate-risk confirmation; never automatically resend."
     },
     {
       "id": "important-conversation-filter",
-      "status": "implementing-alpha23",
+      "status": "qualified-alpha23-pending-phone-update",
       "requirement": "Answers and heads-up act as a filter on the existing conversation, not a nested list. Reveal surrounding source in place and reply using same composer; speech only from consolidated control."
     },
     {
       "id": "selectable-losangelex-hollywood-backend",
-      "status": "candidate-verified-pending-root-integration-after-alpha23",
+      "status": "integrated-alpha24-native-qualification",
       "requirement": "Deliver selectable Codex and Losangelex+Hollywood backends; keep current recovery work first and avoid competing builds.",
       "candidate": "b15a615",
-      "review": "Read docs/LOSANGELEX-BACKEND.md and docs/qualification/losangelex-*.json from candidate before integration. Root owns release; no live registration or migration yet. Team voice unavailable; full access labelled.",
+      "review": "Root integrated both candidate and audit corrections after alpha23 publication. Private registration staged; live activation awaits integrated qualification. No stock migration or Hollywood restart. Team voice unavailable; full access labelled.",
       "audit_followup": "fa14208: live history-scope guard, own direct recipient preservation, Enter/IME send, bottom selector and optional inline team immersion. Source corrections ready; build/runtime deferred to subsequent integration."
+    },
+    {
+      "id": "inline-immersion-auto-cycle",
+      "status": "implementing-alpha24",
+      "requirement": "Single-flow inline replacements automatically fade between target and source with reserved longer-form geometry and length-based timing. No parallel lines, subtitles or modal. Tap holds the phrase; speech holds its displayed snapshot.",
+      "candidate": "e5f8b47",
+      "coordination": "OZZZ direction shared in authorized message35553; no Stack mode added to NextComp."
+    },
+    {
+      "id": "durable-shared-computer-use-task-adapter",
+      "status": "isolated-candidate-pending-runtime-qualification-after-alpha24",
+      "requirement": "Preserve separately authorized durable shared computer-use request service work and integrate its authenticated NextComp adapters after owner runtime qualification.",
+      "candidate": "f510b204981ae1be2c358183994c8fc1358c510b",
+      "checks": "26 affected tests and public-source validation passed in isolated candidate, owner reported. Production activation and shared client/runtime qualification are separate; no restart or rollout in alpha24."
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "a72b9e7",
-    "published_release": "v0.5.0-alpha.22",
+    "latest_pushed_commit": "330d1fa",
+    "published_release": "v0.5.0-alpha.23",
     "server_tests": 199,
     "android_tests": 106,
     "phone_endpoint": "Termux SSH over Tailscale works; automation listener offline and both previously authorized ADB endpoints unavailable",
