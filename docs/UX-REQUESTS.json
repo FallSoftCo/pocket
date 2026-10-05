@@ -498,9 +498,10 @@
     {
       "id": "conversation-bottom-context-consolidation",
       "requirement": "Reduce stacked bottom text/input surfaces. Consolidate retained notes and matching speech in one surface above keyboard input; remove separate note action row, retain actionable reply/navigation and functioning removal, plus direct pause/clear without losing keyboard focus or draft. Distinct speech must remain available.",
-      "status": "implemented-alpha21-code39-synthetic-runtime-qualified-phone-install-not-claimed",
+      "status": "released-alpha21-code39-qualified-phone-install-awaits-control-restore",
       "implementation": "One retained-context surface above input; exact same-known-session speech is displayed once. Reply/source navigation and Pause/Clear remain direct. Secondary removal stays functional in expanded notes. Large-font/narrow screens preserve full-width text and 48dp controls within one surface. Composer shows at most three lines without truncating stored draft; coordinator mic sits beside typed editor.",
-      "evidence": "docs/qualification/conversation-context-alpha21.json"
+      "evidence": "docs/qualification/conversation-context-alpha21.json",
+      "delivery": "docs/qualification/alpha21-delivery.json"
     },
     {
       "id": "tibo-dots-varied-brief-evaluation",

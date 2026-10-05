@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-05",
+  "version": "0.5.0-alpha.21",
+  "versionCode": 39,
+  "sourceCommit": "6089f58455c3e603e847b102650c855b955cf380",
+  "release": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.21",
+  "publicReleaseApk": {
+    "sha256": "c6624c8815e03327f8bda5bb279e894af2170ffe6a6ba8354a5f0951f9fb91cf",
+    "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+    "debuggable": false,
+    "unauthenticatedDownloadHttp": 200
+  },
+  "pairedDevelopmentUpdate": {
+    "sha256": "01d3ce5014313eccbd0d9acc43c5b8332223de913ce394c3379b780cff680e92",
+    "sameAsQualifiedEmulatorApk": true,
+    "authenticatedManifestPrepared": true,
+    "publicDevelopmentApkUploaded": false
+  },
+  "checks": {
+    "backendTests": 184,
+    "androidTests": 77,
+    "dependencyVulnerabilities": 0,
+    "signedBuilds": "debug and release passed",
+    "lint": "debug and release passed",
+    "publicSourceCheck": "passed",
+    "githubChecks": {
+      "37356385183": "success",
+      "37356528769": "success"
+    }
+  },
+  "phone": {
+    "access": "SSH available; no usable connection from bounded ADB helper",
+    "installedVersionBeforeAttempt": "0.5.0-alpha.20 / code38",
+    "installedApkSha256BeforeAttempt": "e3e24ccf9cf21dc32340b1c94d2857e08f17747314efb4cc1e7d691dc9db302e",
+    "verification": "Independent ordinary phone shell package path and readable installed base APK hash, not an installer success inference.",
+    "onDeviceCodexUsed": true,
+    "alpha21Installed": false,
+    "blocker": "Phone-control accessibility bridge disconnected; on-device Codex cannot inspect or confirm installer. Owner restore requested.",
+    "pairing": "Visible in first bounded on-device inspection; not independently compared against protected preference hashes.",
+    "backendRestarted": false,
+    "phoneLocalDaemonStarted": false,
+    "wifiOrTailscaleChanged": false
+  },
+  "outreach": {
+    "briefs": 7,
+    "evaluations": 9,
+    "actualDotsTested": false,
+    "draftsKeptLocal": true,
+    "outboundMessageSent": false
+  },
+  "limits": [
+    "Historical alpha20 installation now confirmed, superseding its previously unknown status.",
+    "Source and release are public and verified; alpha21 phone installation remains incomplete.",
+    "No claim of permanent phone networking repair or new FCM delivery validation."
+  ]
+}
