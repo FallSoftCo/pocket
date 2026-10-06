@@ -46,22 +46,47 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
     var from by remember(plan.source){mutableStateOf(content)}
     var to by remember(plan.source){mutableStateOf(content)}
     val progress=remember(plan.source){Animatable(1f)}
-    LaunchedEffect(content.text,ready){
+    LaunchedEffect(content.text,ready,PocketSpeech.displayedOwner){
         if(content.text!=to.text){
             from=to;to=content
             if(ready&&PocketSpeech.displayedOwner==null){progress.snapTo(0f);progress.animateTo(1f,tween(600))}else progress.snapTo(1f)
-        }else if(!ready)progress.snapTo(1f)
+        }else if(!ready||PocketSpeech.displayedOwner!=null)progress.snapTo(1f)
     }
     BoxWithConstraints(Modifier.fillMaxWidth()){
         val width=with(density){maxWidth.roundToPx()}.coerceAtLeast(1)
         val marks=content.getStringAnnotations("immersion-reserve",0,content.length)
-        fun form(original:Boolean):String?=immersionParagraphForm(content.text,marks.mapNotNull{range->
+        fun form(original:Boolean):AnnotatedString?=immersionAnnotatedParagraph(content,marks.mapNotNull{range->
             val span=plan.spans.firstOrNull{range.item=="${it.start}:${it.end}"}?:return@mapNotNull null
-            Triple(range.start,range.end,MarkdownContent.preview(if(original)span.source else span.target).text)
+            val parsed=MarkdownContent.preview(if(original)span.source else span.target)
+            val replacement=buildAnnotatedString{
+                append(parsed.text)
+                parsed.spans.forEach{mark->when(mark.kind){
+                    "bold"->addStyle(SpanStyle(fontWeight=FontWeight.Bold),mark.start,mark.end)
+                    "italic"->addStyle(SpanStyle(fontStyle=FontStyle.Italic),mark.start,mark.end)
+                    "code"->addStyle(SpanStyle(fontFamily=FontFamily.Monospace),mark.start,mark.end)
+                }}
+            }
+            Triple(range.start,range.end,replacement)
         })
-        // Natural line layout; the envelope is deliberately vertical, not max-width lexical slots.
-        val forms=listOf(content,AnnotatedString(form(true)?:content.text),AnnotatedString(form(false)?:content.text))
+        val forms=listOf(content,form(true)?:content,form(false)?:content)
         val height=forms.maxOf{measurer.measure(it,style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(maxWidth=width)).size.height}
         BlendImmersionText(from,to,{progress.value},content,modifier=Modifier.heightIn(min=with(density){height.toDp()}),fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,fillWidth=true)
+    }
+}
+
+/** Replacements retain surrounding rich styles; internal styles come from their own exact Markdown. */
+internal fun immersionAnnotatedParagraph(content:AnnotatedString,replacements:List<Triple<Int,Int,AnnotatedString>>):AnnotatedString? {
+    var cursor=0
+    return buildAnnotatedString{
+        replacements.sortedBy{it.first}.forEach{(start,end,replacement)->
+            if(start<cursor||end<start||end>content.length)return null
+            append(content.subSequence(cursor,start))
+            val at=length;append(replacement)
+            val inherited=content.subSequence(start,end)
+            inherited.spanStyles.filter{it.start==0&&it.end==inherited.length}.forEach{addStyle(it.item,at,length)}
+            inherited.getLinkAnnotations(0,inherited.length).filter{it.start==0&&it.end==inherited.length}.forEach{annotation->when(val link=annotation.item){is LinkAnnotation.Url->addLink(link,at,length);is LinkAnnotation.Clickable->addLink(link,at,length)}}
+            cursor=end
+        }
+        append(content.subSequence(cursor,content.length))
     }
 }
