@@ -1,5 +1,5 @@
 {
-  "status": "isolated source candidate; not production deployed or provider qualified",
+  "status": "DO NOT SHIP: isolated compile/test candidate; real native completion protocol mismatch observed",
   "base": "a00616c",
   "purpose": "Replace ordinary notification and manual Speak offline TTS primary rendering with existing ChatGPT-authenticated native Codex speech, independent of full voice mode.",
   "implementation": [
@@ -26,7 +26,7 @@
   "checks": {
     "node": "26 existing focused tests plus4 explicit completion capture tests pass (30 total)",
     "android": "Both variants compile; each160 tests/36 suites pass (0 failures/errors); lintDebug and lintRelease pass. Final frozen source check1m56s. No APK assembly/provider run.",
-    "provider": "not contacted",
+    "provider": "One authorized existing-account native WebRTC output probe connected and generated assistant transcript, but failed closed after65s: actual turn.created/delta/done events differ from assumed response.created/done. No accepted audio cache.",
     "production": "no restart, release, version or signing changes"
   },
   "limitations": [
@@ -58,5 +58,22 @@
       ]
     }
   ],
-  "protocolEvidence": "Local generated Codex schema describes raw realtime item:any, transcriptDone and canonical completed transcript items but does not define WebRTC data-channel response.done shape. Provider event support is not claimed from that schema."
+  "protocolEvidence": "Current local generated schema leaves raw realtime items untyped. Real native provider emits turn.created/done; structural turn identity/status must be observed before adapting success gate. Source candidate must remain blocked until this and final-sentinel audio are qualified.",
+  "observedNativeProtocol": {
+    "eventTypes": [
+      "session.started",
+      "session.context.appended",
+      "output_transcript.added",
+      "turn.created",
+      "turn.delta",
+      "turn.done",
+      "session.usage.updated"
+    ],
+    "turnDoneAtMs": 10340,
+    "backendTranscriptDone": true,
+    "success": false,
+    "paidKeyEnvironmentRemoved": true,
+    "authoredText": "This is a short NextComp speech check. The final words are silver lantern.",
+    "cleanup": "Owned ephemeral realtime session, browser and loopback fixture stopped; no user work/controller input."
+  }
 }
