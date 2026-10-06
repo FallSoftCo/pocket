@@ -9,11 +9,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 internal class ImmersionCycleRender(
     val plan:ImmersionPresentation,val alpha:(ImmersionSpan)->Float={1f},
     val incomingPlan:ImmersionPresentation?=null,val cueProgress:()->Float={1f},
-    val cueActive:Boolean=false,val cueId:Long=0L
+    val cueActive:Boolean=false,val cueId:Long=0L,
+    val reportVisible:(String,Set<String>)->Unit={_,_->}
 )
 internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.end}:${span.source}:${span.target}"
 
@@ -22,6 +27,10 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
     val ready=immersionMotionReady()
     val identity=readingKey.copy(targetHash="")
     val owner=remember(identity){"body:"+java.util.UUID.randomUUID()}
+    val parts=remember(identity){mutableStateMapOf<String,Set<String>>()}
+    val visible by remember(identity){derivedStateOf{immersionVisibleUnion(parts)}}
+    val hasVisible=plan.spans.any{spanId(it) in visible}
+    val reportVisible=remember(identity){ {part:String,ids:Set<String>->if(ids.isEmpty())parts.remove(part)else if(parts[part]!=ids)parts[part]=ids;Unit} }
     val originals=remember(identity){mutableStateMapOf<String,Boolean>().apply{plan.spans.forEach{put(immersionPhraseIdentity(it),false)}}}
     val hydration=remember(identity){mutableStateListOf<String>()}
     var cursor by remember(identity){mutableIntStateOf(0)}
@@ -43,10 +52,14 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
     var cueActive by remember(identity){mutableStateOf(false)}
     var cueId by remember(identity){mutableLongStateOf(0L)}
     val progress=remember(identity){Animatable(1f)}
-    LaunchedEffect(identity,readingKey.targetHash,enabled,ready,PocketSpeech.displayedOwner,selectedIndex){
-        if(!enabled||!ready||PocketSpeech.displayedOwner!=null||selectedIndex>=0||plan.spans.isEmpty())return@LaunchedEffect
-        suspend fun cue(index:Int,original:Boolean){
+    LaunchedEffect(identity,readingKey.targetHash,enabled,ready,hasVisible,PocketSpeech.displayedOwner,selectedIndex){
+        if(!enabled||!ready||!hasVisible||PocketSpeech.displayedOwner!=null||selectedIndex>=0||plan.spans.isEmpty())return@LaunchedEffect
+        suspend fun cue(index:Int,original:Boolean):Boolean=immersionWhileVisible(
+            eligible={spanId(plan.spans[index]) in visible},
+            awaitHidden={snapshotFlow{spanId(plan.spans[index]) in visible}.first{!it}}
+        ){
             runImmersionCue(owner,true,onBegin={serial->
+                if(spanId(plan.spans[index]) !in visible)throw ImmersionCueHidden()
                 cueId=serial
                 val current=immersionKnownOriginals(plan.spans,originals)
                 incoming=immersionCyclePlan(plan,immersionCueOriginals(current,index,original))
@@ -60,23 +73,36 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
         val timing=immersionCycleTiming(identity.toString(),plan.source,plan.text)
         delay((if(hydration.isNotEmpty())timing.sourceMs else timing.targetMs)+timing.staggerMs%6000L)
         while(isActive){
-            val pending=hydration.firstOrNull()
-            val index=if(pending!=null)keys.indexOf(pending)else Math.floorMod(cursor,plan.spans.size)
-            if(index<0){pending?.let{hydration.remove(it)};continue}
+            val pending=hydration.firstOrNull{key->val index=keys.indexOf(key);index>=0&&spanId(plan.spans[index]) in visible}
+            val index=if(pending!=null)keys.indexOf(pending)else immersionNextVisible(plan.spans,cursor,visible)
+            if(index<0){snapshotFlow{visible}.first{it.isNotEmpty()};delay(timing.targetMs);continue}
             val span=plan.spans[index]
             val local=immersionCycleTiming(identity.toString()+span.start,span.source,span.target)
-            if(pending!=null){cue(index,false);hydration.remove(pending);delay(local.targetMs)}
+            if(pending!=null){if(cue(index,false))hydration.remove(pending);delay(local.targetMs)}
             else {
-                if(originals[keys[index]]!=true)cue(index,true)
+                if(originals[keys[index]]!=true&&!cue(index,true)){delay(timing.targetMs);continue}
                 delay(local.sourceMs)
-                cue(index,false)
+                if(!cue(index,false)){delay(timing.targetMs);continue}
                 delay(local.targetMs)
                 cursor=(index+1)%plan.spans.size
             }
         }
     }
-    return ImmersionCycleRender(rendered,incomingPlan=incoming,cueProgress={progress.value},cueActive=cueActive,cueId=cueId)
+    return ImmersionCycleRender(rendered,incomingPlan=incoming,cueProgress={progress.value},cueActive=cueActive,cueId=cueId,reportVisible=reportVisible)
 }
 
 internal fun immersionKnownOriginals(spans:List<ImmersionSpan>,known:Map<String,Boolean>):Set<Int> = spans.indices.filter{known[immersionPhraseIdentity(spans[it])]?:true}.toSet()
 internal fun immersionCueOriginals(current:Set<Int>,index:Int,original:Boolean):Set<Int> = if(original)current+index else current-index
+
+private fun spanId(span:ImmersionSpan)="${span.start}:${span.end}"
+internal fun immersionVisibleUnion(parts:Map<String,Set<String>>):Set<String> = parts.values.flatMap{it}.toSet()
+internal fun immersionNextVisible(spans:List<ImmersionSpan>,cursor:Int,visible:Set<String>):Int = spans.indices.map{Math.floorMod(cursor+it,spans.size)}.firstOrNull{spanId(spans[it]) in visible}?:-1
+internal class ImmersionCueHidden:CancellationException("Cue is no longer visible")
+internal suspend fun immersionWhileVisible(eligible:()->Boolean,awaitHidden:suspend ()->Unit,block:suspend ()->Unit):Boolean{
+    if(!eligible())return false
+    return try{coroutineScope{
+        val scope=this
+        val watcher=launch{awaitHidden();scope.cancel(ImmersionCueHidden())}
+        try{block()}finally{watcher.cancel()}
+    };true}catch(hidden:CancellationException){currentCoroutineContext().ensureActive();false}
+}

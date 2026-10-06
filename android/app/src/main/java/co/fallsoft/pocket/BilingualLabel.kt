@@ -33,7 +33,8 @@ import androidx.compose.ui.unit.*
             overflow=TextOverflow.Ellipsis,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
         return
     }
-    val ready=immersionMotionReady()
+    var nativeVisible by remember(text,target){mutableStateOf(false)}
+    val ready=immersionMotionReady()&&nativeVisible
     var original by remember(text,target){mutableStateOf(false)}
     val owner=remember(text,target){"control:"+java.util.UUID.randomUUID()}
     var from by remember(text,target){mutableStateOf(AnnotatedString(target))}
@@ -63,7 +64,8 @@ import androidx.compose.ui.unit.*
         BlendImmersionText(if(cueActive)from else AnnotatedString(shown),if(cueActive)to else AnnotatedString(shown),{if(cueActive)progress.value else 1f},AnnotatedString(shown),reserve=listOf(AnnotatedString(text),AnnotatedString(target)),color=color,fontSize=fontSize,
             lineHeight=LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
             fontWeight=fontWeight,maxLines=maxLines,overflow=TextOverflow.Ellipsis,
-            textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
+            textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
+            onVisibleRanges={_,readable->nativeVisible=readable})
     }
 }
 
