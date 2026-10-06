@@ -223,7 +223,7 @@ class MainActivity:ComponentActivity(){
             val interacting=listState.isScrollInProgress||touching||toolsOpen
             val pacedOrderDue=pacing.orderDue(now,active,interacting)
             val explicitBoundary=sessionReconcileAllowed(Pocket.sessionOrderRequest!=Pocket.sessionOrderHandled,Pocket.sessionSnapshotComplete,Pocket.connected,Pocket.codexOnline,pacing.interactionSettled(now,interacting))
-            val orderDue=pacedOrderDue&&Pocket.connected&&Pocket.codexOnline||explicitBoundary
+            val orderDue=pacedOrderDue||explicitBoundary
             if(pacing.contentDue(now,active)){
                 // Deliver live text/status in place; membership changes wait for a safe moment.
                 displayed=sessionContentInPlace(displayed,latest){it.id};pacing.contentDelivered(now)

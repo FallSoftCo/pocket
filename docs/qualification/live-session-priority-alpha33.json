@@ -10,7 +10,7 @@
   "implementation": [
     "Automatic priority: genuine last20-second work, last90-second work, quiet ongoing work, other sessions in coarse5-minute recency groups. Stable seats within live groups; no per-token reorder.",
     "Order reconsidered every750\u20131200ms; finger/scroll/drawer holds movement and waits750ms after release. Live content updates in place even while scrolling.",
-    "Actual activityAt milliseconds distinct from metadata updatedAt; historical hydration cannot enter live groups. Reconnect status cannot renew work recency.",
+    "Actual activityAt milliseconds distinct from metadata updatedAt; historical hydration cannot enter live groups. Reconnect status cannot renew work recency. Automatic order follows genuine activity even while the runtime reports draining; a connection label cannot suppress already-observed live work.",
     "Poll merge preserves newer live status, preview, activity and newly arriving sessions. Old reactivated work is metadata-discovered before first response.",
     "Existing card height and interaction regions preserved; ages after20seconds appear in existing title row, refreshed periodically."
   ],
