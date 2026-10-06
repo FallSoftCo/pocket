@@ -52,9 +52,21 @@
     "actualRequestedIdsMatched": true
   },
   "phone": {
-    "transfer": "in progress",
-    "installedVersionCode": 43,
-    "realMessagesSent": false
+    "installedVersionCode": 44,
+    "installedVersion": "0.5.0-alpha.26",
+    "installedSha256": "a2666b370160b9740e4333afaeda4e3d9c4185f2e30f5a67a67e45518ce4e719",
+    "rootIndependentInstalledHashMatches": true,
+    "method": "Bounded on-device Codex-assisted in-place update. Codex completed normally; exact installed APK independently verified by root.",
+    "persistentConversationState": "Root independently read Your turn; conversation controls in the actual app. On-device Codex also reported persistent status.",
+    "permanentBackendRow": "Root actual conversation snapshot has no standalone Codex/Losangelex labels. Settings paths qualified natively on synthetic emulator.",
+    "pairingConnected": true,
+    "realConversationContentModified": false,
+    "savedSpeechCountObserved": 9,
+    "savedSpeechPaused": true,
+    "uninstalled": false,
+    "securitySettingsChanged": false,
+    "installerActorLimitation": "No automated Android Update confirmation was observed. Installation completed while Files UI changed; confirmation actor is not established.",
+    "privateReceipts": "On-device result.json and root-ui-verification.json retained privately; no real-phone UI/transcript published."
   },
   "limitations": [
     "Synthetic native latency checks are deliberately delayed fixtures, not an acoustic/provider test or a phone-network benchmark.",

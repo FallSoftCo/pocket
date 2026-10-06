@@ -588,14 +588,14 @@
     },
     {
       "id": "conversation-fast-open-status-settings-backend",
-      "status": "qualified-alpha26-published-phone-install-underway",
+      "status": "qualified-alpha26-delivered",
       "requirement": "Conversation opening must be fast, show whether work continues or needs user input, and put Codex/Losangelex selection in Settings rather than an extra permanent row.",
       "implementation": "Recent cold-open history bounded, four owner-isolated recent pages cached for two minutes with background refresh; no TTL renewal merely by reopening. Persistent authored working/thinking icon or Needs you/Your turn label in existing context-control row; pending questions take priority. Backend selector lives in Settings, accessible from either backend while retaining team conversation state.",
-      "evidence": "205 backend/130 Android tests, both lint variants and clean-checkout CI pass. Exact signed44 native checks cover cached own page before12s response, cold page isolation and late-response ownership, Working/Needs you/Your turn, Settings paths for both backends. Four synthetic reviews published; full1759-card gallery check passes. Backend26 healthy after one scoped bridge restart; actual distinct reads matched IDs in109/88ms. Compatible update44 announced512 and public release digest verified; on-device Codex installation underway. See docs/qualification/conversation-speed-status-alpha26.json."
+      "evidence": "205 backend/130 Android tests, both lint variants and clean-checkout CI pass. Exact signed44 native checks cover cached own page before12s response, cold page isolation and late-response ownership, Working/Needs you/Your turn, Settings paths for both backends. Four synthetic reviews published; full1759-card gallery check passes. Backend26 healthy after one scoped bridge restart; actual distinct reads matched IDs in109/88ms. Compatible update44 announced512 and public release digest verified; bounded on-device Codex-assisted in-place update completed; root independently verified installed44 hash, actual persistent state control and no standalone backend footer labels. No real conversation content modified. See docs/qualification/conversation-speed-status-alpha26.json."
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "933eae9",
+    "latest_pushed_commit": "a169ce6",
     "published_release": "v0.5.0-alpha.26",
     "server_tests": 205,
     "android_tests": 130,
@@ -605,13 +605,13 @@
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
     "owned_emulator": "Owned switching emulator stopped; original preferences restored; unrelated emulators preserved.",
     "owned_fixture_port": "Owned switching fixture stopped; shared ADB preserved.",
-    "installed_development_version": "0.5.0-alpha.25 / code43; exact installed APK independently matches qualified 6243272c candidate",
+    "installed_development_version": "0.5.0-alpha.26 / code44; exact installed APK independently matches qualified a2666b37 candidate",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 native readable swivels and full 360 Codex/thinking spins integrated; shared bounded cache and reduced-motion fallback",
-    "phone_install": "Compatible in-place installation during on-device Codex attempt; independently verified installed43 hash and switching between two real chats. Codex attempt timed out before completion receipt. No real messages sent or drafts edited.",
+    "phone_install": "Bounded on-device Codex-assisted update completed. Root independently verified installed44 hash and actual persistent Your turn status/no standalone backend footer labels. Pairing connected; saved speech observed paused. No real conversation content modified; installer confirmation actor not established.",
     "qualification": "Alpha15 version32:146 backend tests,66 Android tests,debug/release lint and signing pass. Actual anchoredpopup, directswitch/inline targetreply, keyboardavoidance, contrast andfont2 labels qualified.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Four reviewed synthetic alpha26 status/cache/settings stills published. Full desktop/mobile/reduced-motion/reload check passes,1759 cards.",
@@ -624,8 +624,8 @@
     "phone_access": "SSH and authenticated automation work; no networking or security settings changed.",
     "backend_runtime": "Backend alpha26 healthy, Codex connected; one scoped bridge restart, stock runtime untouched.",
     "native_validation": "Alpha26 exact signed debug/release,205 backend/130 Android tests,both lint variants and successful clean-checkout CI; native delayed-response/cache/state/settings qualified.",
-    "pending_phone_update": "Exact44 candidate transferred/hash verified; bounded on-device Codex installation underway.",
-    "conversation_context": "Installed alpha24 includes qualified Important/All transcript filtering and direct Retry/Edit/Remove. Native recovery/filter proof is synthetic; exact requested handset thread was not opened.",
+    "pending_phone_update": null,
+    "conversation_context": "Installed alpha26 retains Important/All transcript filtering and recovery; persistent state and faster cached reopening qualified. No real messages sent during release QA.",
     "qualified_build": "0.5.0-alpha.26 / code44"
   },
   "remaining": [
