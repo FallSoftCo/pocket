@@ -605,8 +605,9 @@
       "id": "immersion-change-localization",
       "status": "implementation-and-native-review-underway",
       "requirement": "Language replacements must be noticeable and locatable. Report actual motion/intermediary and measured frame timing, not an invented human frame threshold. Preserve natural single-flow inline content and normal controls.",
-      "prototype": "One active phrase cue across the reading surface; actual native phrase geometry before/after; warm background ramp700ms, source hold800ms, one handoff at1500ms, target hold2200ms, fade500ms. Glyphs stay fully opaque. Phrase sequencing and late hydration staged; cancel without future semantic commit. These durations are hypotheses, not researched perceptibility thresholds.",
-      "acceptance": "Timestamped complete transition with separately measured cue lead, semantic switch and lingering trace, normal/double text, one global cue, links/help and cancellation. Continuous human perceptibility is not established by extracted frames."
+      "prototype": "One active phrase cue across the reading surface; actual native phrase geometry before/after; warm background ramp700ms, source hold800ms, one handoff at1500ms, target hold2200ms, fade500ms. Glyphs stay fully opaque. Phrase sequencing and late hydration staged; cancel without future semantic commit. These durations are hypotheses, not researched perceptibility thresholds. Completed cues enforce4200ms quiet; controls hold Italian120–180s. Native link-style resolution must not suppress lexical-range cues.",
+      "acceptance": "Timestamped complete transition with separately measured cue lead, semantic switch and lingering trace, normal/double text, one global cue, links/help and cancellation. Continuous human perceptibility is not established by extracted frames.",
+      "capture_limit": "Rejected prototype:717 original captured frames across79.809s, median101ms/max428ms gap;2394 CFR export samples include duplicates and do not measure display refresh."
     }
   ],
   "current_state": {
