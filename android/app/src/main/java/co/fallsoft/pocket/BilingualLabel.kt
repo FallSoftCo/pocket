@@ -45,7 +45,8 @@ import androidx.compose.ui.unit.*
     LaunchedEffect(text,target,ready,expanded,PocketSpeech.displayedOwner){
         if(!ready||expanded||PocketSpeech.displayedOwner!=null)return@LaunchedEffect
         // Separate queues replace the old synchronous screen-wide label clock.
-        delay(18000L+Math.floorMod(text.hashCode(),6000))
+        val cadence=immersionLabelCadence(text)
+        delay(cadence.initialMs)
         while(isActive){
             val next=!original
             runImmersionCue(owner,false,onBegin={
@@ -55,8 +56,8 @@ import androidx.compose.ui.unit.*
                 cueActive=true
             },onHandoff={original=next},onFinish={cueActive=false},animate={
                 progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
-            },awaitHandoff={snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}})
-            delay(if(original)6000L else 18000L)
+            },awaitHandoff={snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}},returningToTarget=!next)
+            delay(if(original)6000L else cadence.targetMs)
         }
     }
     val rescue=if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}else Modifier
@@ -84,4 +85,10 @@ import androidx.compose.ui.unit.*
             listOf("starter" to "Graduale","balanced" to "Bilanciato","strong" to "Intenso").forEach{(value,label)->FilterChip(selected=PocketImmersion.density==value,onClick={PocketImmersion.setDensity(value)},label={Text(label,fontSize=14.sp)},modifier=Modifier.weight(1f))}
         }
     }
+}
+
+internal data class ImmersionLabelCadence(val initialMs:Long,val targetMs:Long)
+internal fun immersionLabelCadence(label:String):ImmersionLabelCadence{
+    fun mix(value:Int):Int{var seed=value;seed=seed xor(seed ushr 16);seed*= -2048144789;seed=seed xor(seed ushr 13);seed*= -1028477387;return seed xor(seed ushr 16)}
+    return ImmersionLabelCadence(24000L+Math.floorMod(mix(label.hashCode()),96001),120000L+Math.floorMod(mix(label.hashCode() xor 0x517cc1b7),60001))
 }

@@ -41,10 +41,39 @@ class ImmersionCueCoordinatorTest {
         val reverse=immersionCueOriginals(incoming,0,true)
         assertEquals(setOf(0),reverse)
     }
+    @Test fun completedCueEnforcesMonotonicQuietGapAndPrioritizedReturns(){
+        var now=100L
+        val queue=ImmersionCueQueue(clock={now},quietGapMs=42)
+        queue.request("active",false);queue.request("source",false);queue.request("return",false,true);queue.request("body",true)
+        queue.cancel("active",completed=true)
+        assertNull(queue.active);assertEquals(42L,queue.quietRemainingMs())
+        now+=41;queue.refresh();assertNull(queue.active)
+        now++;queue.refresh();assertEquals("body",queue.active)
+        queue.cancel("body")
+        assertEquals("return",queue.active)
+        queue.cancel("return")
+        assertEquals("source",queue.active)
+    }
+    @Test fun waitingDuringQuietIntervalIsCancellableWithoutStartingCue()=runBlocking {
+        val broker=ImmersionCueBroker()
+        runImmersionCue("completed-local",false,onBegin={},onHandoff={},onFinish={},animate={},handoffMs=0,cooldownMs=10000,broker=broker)
+        var began=false
+        val job=launch(start=CoroutineStart.UNDISPATCHED){runImmersionCue("waiting-local",false,onBegin={began=true},onHandoff={},onFinish={},animate={},handoffMs=0,cooldownMs=0,broker=broker)}
+        job.cancelAndJoin()
+        assertFalse(began)
+    }
+    @Test fun labelsHaveDeterministicLongTargetHoldsAndDispersedStartup(){
+        val labels=(0..40).map{"Control $it"}
+        val cadences=labels.map(::immersionLabelCadence)
+        assertEquals(immersionLabelCadence("Important"),immersionLabelCadence("Important"))
+        assertTrue(cadences.all{it.initialMs in 24000L..120000L&&it.targetMs in 120000L..180000L})
+        assertTrue(cadences.map{it.initialMs}.distinct().size>35)
+        assertTrue(cadences.maxOf{it.initialMs}-cadences.minOf{it.initialMs}>60000)
+    }
     @Test fun cancellationBeforeHandoffPreservesVisibleSnapshot()=runBlocking {
         var actual="source";var finished=false
         val started=CompletableDeferred<Unit>()
-        val job=launch{runImmersionCue("test-before",true,onBegin={started.complete(Unit)},onHandoff={actual="target"},onFinish={finished=true},animate={awaitCancellation()},handoffMs=10000)}
+        val job=launch{runImmersionCue("test-before",true,onBegin={started.complete(Unit)},onHandoff={actual="target"},onFinish={finished=true},animate={awaitCancellation()},handoffMs=10000,cooldownMs=0)}
         started.await();job.cancelAndJoin()
         assertEquals("source",actual);assertTrue(finished)
         // The cancelled lease cannot block a later surface.
@@ -55,7 +84,7 @@ class ImmersionCueCoordinatorTest {
         var actual="source"
         val progress=MutableStateFlow(0f)
         val started=CompletableDeferred<Unit>();val switched=CompletableDeferred<Unit>()
-        val job=launch{runImmersionCue("test-progress",true,onBegin={started.complete(Unit)},onHandoff={actual="target";switched.complete(Unit)},onFinish={},animate={awaitCancellation()},handoffMs=0,awaitHandoff={progress.first{it>=.5f}})}
+        val job=launch{runImmersionCue("test-progress",true,onBegin={started.complete(Unit)},onHandoff={actual="target";switched.complete(Unit)},onFinish={},animate={awaitCancellation()},handoffMs=0,awaitHandoff={progress.first{it>=.5f}},cooldownMs=0)}
         started.await();yield()
         assertEquals("source",actual)
         progress.value=.25f;yield();assertEquals("source",actual)
@@ -65,7 +94,7 @@ class ImmersionCueCoordinatorTest {
     @Test fun cancellationAfterHandoffKeepsAlreadyVisibleTarget()=runBlocking {
         var actual="source"
         val switched=CompletableDeferred<Unit>()
-        val job=launch{runImmersionCue("test-after",true,onBegin={},onHandoff={actual="target";switched.complete(Unit)},onFinish={},animate={awaitCancellation()},handoffMs=0)}
+        val job=launch{runImmersionCue("test-after",true,onBegin={},onHandoff={actual="target";switched.complete(Unit)},onFinish={},animate={awaitCancellation()},handoffMs=0,cooldownMs=0)}
         switched.await();job.cancelAndJoin()
         assertEquals("target",actual)
     }

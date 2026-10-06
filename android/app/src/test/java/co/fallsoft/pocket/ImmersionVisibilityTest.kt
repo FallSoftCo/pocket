@@ -26,7 +26,7 @@ class ImmersionVisibilityTest {
         val started=CompletableDeferred<Unit>()
         var actual="source"
         val job=async{immersionWhileVisible({visible.value},{visible.first{!it}}){
-            runImmersionCue("visibility-test",true,onBegin={started.complete(Unit)},onHandoff={actual="target"},onFinish={},animate={awaitCancellation()},handoffMs=10000)
+            runImmersionCue("visibility-test",true,onBegin={started.complete(Unit)},onHandoff={actual="target"},onFinish={},animate={awaitCancellation()},handoffMs=10000,cooldownMs=0)
         }}
         started.await();visible.value=false
         assertFalse(withTimeout(1000){job.await()})
