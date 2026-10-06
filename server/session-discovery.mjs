@@ -3,11 +3,31 @@ const timestamp=t=>Number(t.updatedAt||t.createdAt||0);
 const archived=t=>t.archived===true||/(?:^|[\\/])archived_sessions(?:[\\/]|$)/.test(t.path||'');
 /** Lists metadata only: never resumes a session, reads histories, or runs work. */
 export class SessionDiscovery {
-  constructor({db,codex,hidden=()=>false,maxPages=3}){Object.assign(this,{db,codex,hidden,maxPages});this.readCache=new Map();this.refreshing=new Map();
+  constructor({db,codex,hidden=()=>false,maxPages=3}){Object.assign(this,{db,codex,hidden,maxPages});this.readCache=new Map();this.refreshing=new Map();this.live=new Map();this.liveReads=new Map();this.liveReadAt=new Map();this.persistedAt=new Map();
     db.exec('CREATE TABLE IF NOT EXISTS pocket_discovered_threads(thread_id TEXT PRIMARY KEY,metadata TEXT NOT NULL,archived INTEGER NOT NULL DEFAULT 0,seen_at INTEGER NOT NULL)');
   }
-  remember(thread,{archived:flag=archived(thread)}={}){if(!thread?.id||this.hidden(thread.id))return;const old=this.db.prepare('SELECT metadata,archived FROM pocket_discovered_threads WHERE thread_id=?').get(thread.id);if(old&&!thread.name&&!thread.preview)thread={...thread,name:JSON.parse(old.metadata).name};if(old?.metadata===JSON.stringify(thread)&&old.archived===(flag?1:0))return thread;this.db.prepare('INSERT INTO pocket_discovered_threads VALUES(?,?,?,?) ON CONFLICT(thread_id) DO UPDATE SET metadata=excluded.metadata,archived=excluded.archived,seen_at=excluded.seen_at').run(thread.id,JSON.stringify(thread),flag?1:0,Date.now());return thread;}
-  knownIds(){const ids=new Set();
+  remember(thread,{archived:flag=archived(thread)}={}){if(!thread?.id||this.hidden(thread.id))return;thread={...thread,...this.live.get(thread.id)};const old=this.db.prepare('SELECT metadata,archived FROM pocket_discovered_threads WHERE thread_id=?').get(thread.id);if(old){const previous=JSON.parse(old.metadata);thread={...thread,...(previous.activityAt&&!thread.activityAt?{activityAt:previous.activityAt}:{}),...(!thread.name&&!thread.preview?{name:previous.name}:{})};}if(old?.metadata===JSON.stringify(thread)&&old.archived===(flag?1:0))return thread;this.db.prepare('INSERT INTO pocket_discovered_threads VALUES(?,?,?,?) ON CONFLICT(thread_id) DO UPDATE SET metadata=excluded.metadata,archived=excluded.archived,seen_at=excluded.seen_at').run(thread.id,JSON.stringify(thread),flag?1:0,Date.now());return thread;}
+  observe(event,clock=Date.now){
+    const p=event.params||{},id=p.threadId||p.thread?.id;if(!id||this.hidden(id))return null;
+    if(event.method==='thread/started'&&p.thread)this.remember(p.thread);
+    const status=event.method==='thread/status/changed'?p.status:event.method==='turn/started'?{type:'active'}:event.method==='turn/completed'?{type:'idle'}:null;
+    const activity=/^item\/(?:started|completed|agentMessage\/delta|commandExecution\/outputDelta|reasoning\/summaryTextDelta|reasoning\/summaryPartAdded)$/.test(event.method)||['turn/started','turn/completed'].includes(event.method);
+    if(!status&&!activity)return null;
+    const old=this.live.get(id)||{},change={...(activity?{activityAt:clock()}:{}),...(status?{status,discoveryPending:false}:{})};
+    this.live.set(id,{...old,...change});while(this.live.size>512)this.live.delete(this.live.keys().next().value);
+    const saved=this.db.prepare('SELECT metadata,archived FROM pocket_discovered_threads WHERE thread_id=?').get(id);
+    if(saved&&(status||clock()-(this.persistedAt.get(id)||0)>=500)){this.remember({...JSON.parse(saved.metadata),...change},{archived:!!saved.archived});this.persistedAt.set(id,clock());while(this.persistedAt.size>512)this.persistedAt.delete(this.persistedAt.keys().next().value);}
+    return {threadId:id,...change};
+  }
+  clearLiveStatus(){for(const [id,value] of this.live){const {status,discoveryPending,...activity}=value;this.live.set(id,activity);}}
+  discoverLive(id){
+    if(this.hidden(id))return Promise.resolve(null);
+    if(this.liveReads.has(id))return this.liveReads.get(id);
+    if(Date.now()-(this.liveReadAt.get(id)||0)<2000)return Promise.resolve(null);this.liveReadAt.set(id,Date.now());while(this.liveReadAt.size>512)this.liveReadAt.delete(this.liveReadAt.keys().next().value);
+    const work=this.codex.call('thread/read',{threadId:id,includeTurns:false}).then(({thread})=>thread&&!archived(thread)?this.remember(thread):null).catch(()=>null).finally(()=>this.liveReads.delete(id));
+    this.liveReads.set(id,work);return work;
+  }
+  knownIds(){const ids=new Set([...this.live.keys()].reverse());
     for(const [table,column,where] of [['voice_sessions','selected','selected IS NOT NULL'],['session_starts','thread_id',"state='started'"],['watches','thread_id','enabled=1']]){
       if(!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table))continue;
       for(const row of this.db.prepare(`SELECT ${column} AS id FROM ${table} WHERE ${where} ORDER BY ${table==='session_starts'?'updated_at':'rowid'} DESC LIMIT 200`).all())if(row.id)ids.add(row.id);
@@ -50,6 +70,6 @@ export class SessionDiscovery {
       }
       if(fresh.length){let timer;await Promise.race([Promise.all(fresh),new Promise(resolve=>{timer=setTimeout(resolve,750);})]);clearTimeout(timer);}
     }
-    return {data:[...found.values()].sort((a,b)=>timestamp(b)-timestamp(a)||a.id.localeCompare(b.id)),nextCursor:cursor};
+    return {data:[...found.values()].map(t=>({...t,...this.live.get(t.id)})).sort((a,b)=>timestamp(b)-timestamp(a)||a.id.localeCompare(b.id)),nextCursor:cursor};
   }
 }

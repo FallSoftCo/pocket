@@ -16,3 +16,26 @@ test('archive filters and private coordinator threads remain excluded; unavailab
 test('created metadata remains immediately visible before a first response even if read index is not ready',async()=>{const f=setup(m=>m==='thread/list'?{data:[]}:Promise.reject(Error('state index pending')));f.discovery.remember({id:'new-task',name:'Check workstation temperatures and fans',cwd:'/project',updatedAt:10});const r=await f.discovery.list();assert.equal(r.data[0].id,'new-task');assert.equal(r.data[0].name,'Check workstation temperatures and fans');assert.equal(r.data[0].discoveryPending,true);f.discovery.markArchived('new-task',true);assert.ok(!(await f.discovery.list()).data.some(t=>t.id==='new-task'));f.db.close();});
 test('live turn status clears created pending metadata before the first assistant response',async()=>{const f=setup(m=>m==='thread/list'?{data:[]}:Promise.reject(Error('index pending')));f.discovery.remember({id:'new-task',name:'Inspection',status:{type:'pending'}});f.discovery.updateStatus('new-task',{type:'active'});assert.equal((await f.discovery.list()).data[0].status.type,'active');f.discovery.updateStatus('new-task',{type:'idle'});assert.equal((await f.discovery.list()).data[0].status.type,'idle');f.db.close();});
 test('a stalled list shares one refresh and returns remembered creation within a bounded deadline',async()=>{let release;const wait=new Promise(resolve=>{release=resolve});const f=setup(m=>m==='thread/list'?wait:{thread:{id:'new-task'}});f.discovery.remember({id:'new-task',name:'Temperature check',status:{type:'pending'}});const start=Date.now();const [a,b]=await Promise.all([f.discovery.list(),f.discovery.list()]);assert.equal(a.data[0].id,'new-task');assert.equal(b.data[0].id,'new-task');assert.ok(Date.now()-start<2500);assert.equal(f.calls.filter(c=>c.m==='thread/list').length,1);release({data:[]});await f.discovery.refreshing.get(false);f.db.close();});
+test('reactivated old work keeps live recency and status across stale list hydration',async()=>{
+ const f=setup(m=>m==='thread/list'?{data:[{id:'old',updatedAt:1,status:{type:'idle'}}]}:{thread:{id:'new-task',updatedAt:2}});
+ f.discovery.remember({id:'old',updatedAt:1,status:{type:'idle'}});
+ const event=f.discovery.observe({method:'turn/started',params:{threadId:'old',turn:{id:'turn'}}},()=>50000);
+ assert.deepEqual(event,{threadId:'old',activityAt:50000,status:{type:'active'},discoveryPending:false});
+ let row=(await f.discovery.list()).data.find(t=>t.id==='old');assert.equal(row.activityAt,50000);assert.equal(row.status.type,'active');assert.equal(row.updatedAt,1);
+ f.discovery.observe({method:'thread/status/changed',params:{threadId:'old',status:{type:'idle'}}},()=>60000);
+ row=(await f.discovery.list()).data.find(t=>t.id==='old');assert.equal(row.activityAt,50000);assert.equal(row.status.type,'idle');
+ f.discovery.observe({method:'item/agentMessage/delta',params:{threadId:'old',itemId:'reply',delta:'Now'}},()=>70000);
+ row=(await f.discovery.list()).data.find(t=>t.id==='old');assert.equal(row.activityAt,70000);f.db.close();
+});
+test('unknown live sessions discover metadata before any first response without resume',async()=>{
+ const f=setup((m,p)=>m==='thread/list'?{data:[]}:{thread:{id:p.threadId,name:'New work',updatedAt:1,status:{type:'idle'}}});
+ f.discovery.observe({method:'turn/started',params:{threadId:'new-live'}},()=>90000);
+ const thread=await f.discovery.discoverLive('new-live');assert.equal(thread.id,'new-live');assert.equal(thread.activityAt,90000);assert.equal(thread.status.type,'active');
+ assert.ok((await f.discovery.list()).data.some(t=>t.id==='new-live'));assert.ok(f.calls.every(c=>['thread/list','thread/read'].includes(c.m)));f.db.close();
+});
+test('reconnect releases stale live status while retaining genuine activity time',async()=>{
+ const f=setup(m=>m==='thread/list'?{data:[{id:'old',updatedAt:1,status:{type:'idle'}}]}:{thread:{id:'new-task',updatedAt:1}});
+ f.discovery.remember({id:'old',updatedAt:1});f.discovery.observe({method:'turn/started',params:{threadId:'old'}},()=>123456);
+ f.discovery.clearLiveStatus();const row=(await f.discovery.list()).data.find(t=>t.id==='old');
+ assert.equal(row.activityAt,123456);assert.equal(row.status.type,'idle');f.db.close();
+});

@@ -60,3 +60,10 @@ test('thinking summaries stream by part and raw reasoning never becomes a previe
  assert.equal(latestActivity({turns:[{items:[{type:'userMessage',content:'request'},{type:'reasoning',summary:['Checking thumb reach'],content:['hidden']}]}]}).preview,'Thinking · Checking thumb reach');
 });
 test('cold historical cards keep metadata context without triggering history reads',()=>{let reads=0;const p=new ThreadPreviews({read:async()=>{reads++;return {turns:[]}}},()=>{});const value=p.get({id:'old',preview:'An earlier input',updatedAt:1},{hydrate:false});assert.equal(value.preview,'An earlier input');assert.equal(reads,0);assert.equal(p.queue.size,0);assert.equal(p.running.size,0);});
+test('historical hydration changes context without manufacturing fresh activity',async()=>{
+ const events=[];const p=new ThreadPreviews({read:async()=>({turns:[{items:[{type:'agentMessage',text:'Old final answer'}]}]})},(_,value)=>events.push(value));
+ p.get({id:'old',updatedAt:1});await new Promise(r=>setImmediate(r));
+ assert.equal(events[0].preview,'Old final answer');assert.equal(events[0].activityAt,undefined);
+ p.observe({method:'item/agentMessage/delta',params:{threadId:'old',itemId:'new',delta:'Working again'}});
+ assert.ok(events.at(-1).activityAt>Date.now()-1000);
+});
