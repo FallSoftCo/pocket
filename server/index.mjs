@@ -271,7 +271,7 @@ app.get('/api/voice/history',(req,res)=>{const before=Number(req.query.before||N
 app.post('/api/voice/start',route(async(req,res)=>{
   const s=await voiceController.ensure(req.device.id);if(req.body.threadId){const threadId=requireId(req.body.threadId);if(voiceController.owns(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();await codex.call('thread/read',{threadId,includeTurns:false});db.prepare('UPDATE voice_sessions SET selected=? WHERE device=?').run(threadId,req.device.id);s.selected=threadId;}else{db.prepare('UPDATE voice_sessions SET selected=NULL WHERE device=?').run(req.device.id);s.selected=null;}if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);res.json({threadId:s.thread_id,selected:s.selected,host:hostName,speech:voiceSpeech.status(),native:true});
 }));
-app.post('/api/voice/native/start',route(async(req,res)=>res.json(await nativeVoice.start(req.device.id,req.body.sdp))));
+app.post('/api/voice/native/start',route(async(req,res)=>res.json(await nativeVoice.start(req.device.id,req.body.sdp,req.body.purpose))));
 app.post('/api/voice/native/stop',route(async(req,res)=>{await nativeVoice.stop(req.device.id,req.body.connectionId);res.json({ok:true});}));
 app.post('/api/voice/native/input',route(async(req,res)=>res.json(nativeVoice.begin(req.device.id,req.body.connectionId,req.body.turnId))));
 app.post('/api/voice/native/commit',route(async(req,res)=>res.json(await nativeVoice.commit(req.device.id,req.body.connectionId,req.body.turnId))));

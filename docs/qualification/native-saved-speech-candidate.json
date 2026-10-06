@@ -1,0 +1,62 @@
+{
+  "status": "isolated source candidate; not production deployed or provider qualified",
+  "base": "a00616c",
+  "purpose": "Replace ordinary notification and manual Speak offline TTS primary rendering with existing ChatGPT-authenticated native Codex speech, independent of full voice mode.",
+  "implementation": [
+    "PocketSpeech retains queue/MediaSession/MediaPlayer/captions/focus/background ownership; only chunk rendering changes.",
+    "New NativeSpeechRenderer negotiates bundled native WebRTC audio using synthetic silent input track, no microphone permission or coordinator turn. Captures remote bytes and closes render connection after each chunk.",
+    "Separate voice/speech purpose lanes are owned by the same authenticated device; speech cannot begin/commit task input. Starting a speech chunk never replaces controller audio.",
+    "Cancellable HTTP negotiation/speak/stop; cancellation destroys owned WebView and stops known exact connection. A negotiation cancelled before its id arrives can leave an orphan until the existing90-second server lease expires.",
+    "Provider-versioned render/cache identities prevent silent reuse of old offline audio. Existing offline cursor resets on first rerender because timings differ; native-rendered chunk files retain exact pause/seek cursor.",
+    "Italian rendering no longer requires an installed offline Italian voice. No offline fallback exposed; unavailable native provider leaves item paused and directly resumable/clearable. No paid API switch.",
+    "Playback-only capture opts into explicit response.created identity plus matching response.done completed gate; quiet tail alone cannot complete/copy audio. Legacy full-voice defaults unchanged."
+  ],
+  "files": [
+    "server/native-voice.mjs",
+    "server/index.mjs",
+    "tests/native-voice.test.mjs",
+    "android/app/src/main/java/co/fallsoft/pocket/PocketSpeech.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/NativeSpeechRenderer.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/NativeSpeechPolicy.kt",
+    "android/app/src/test/java/co/fallsoft/pocket/NativeSpeechPolicyTest.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/NativeVoiceAudio.kt",
+    "android/app/src/main/assets/native-voice.html",
+    "tests/native-speech-capture.test.mjs"
+  ],
+  "checks": {
+    "node": "26 existing focused tests plus4 explicit completion capture tests pass (30 total)",
+    "android": "Both variants compile; each160 tests/36 suites pass (0 failures/errors); lintDebug and lintRelease pass. Final frozen source check1m56s. No APK assembly/provider run.",
+    "provider": "not contacted",
+    "production": "no restart, release, version or signing changes"
+  },
+  "limitations": [
+    "Native Codex audio remains experimental and depends on account/CLI compatibility; exact grant/account debit not measured.",
+    "Saved speech capture requires matching explicit provider response completion plus2.5-second quiet tail; source tests verify long internal silence/stale/cancelled completion cannot cache truncated audio. Actual native WebRTC provider event availability and final sentinel completeness still require observed provider smoke; absent completion intentionally fails closed.",
+    "Buffered full chunk delays first speech by provider generation plus silence tail and negotiation each chunk.",
+    "Hidden WebView/AudioContext/MediaRecorder/background/screen-off behavior must be independently qualified for this playback-only service, not assumed from full voice mode.",
+    "No physical lockscreen/Bluetooth/readability or pronunciation quality claim."
+  ],
+  "acceptancePlan": [
+    {
+      "level": "synthetic native",
+      "scenarios": [
+        "Local WebRTC peer supplies known recorded speech; normal notification and manual Speak do not request RECORD_AUDIO or start coordinator/voice service.",
+        "Long saved queue, pause/seek/resume/process recreation preserve provider-cache identity and caption chunk; old offline rendering invalidates safely.",
+        "Cancel/profile change/clear during negotiation and late audio do not cache or play wrong profile; disconnected native leaves saved item with retry/clear.",
+        "Run speech renderer alongside active voice to verify separate ids and no interruption, then reverse start/stop ordering.",
+        "Background/screen-off actual MediaRecorder capture and player delivery; secure keyguard privacy separately."
+      ]
+    },
+    {
+      "level": "real provider coordinated by root",
+      "scenarios": [
+        "No paid key configuration/read/request. Host native ChatGPT gate observed; one short synthetic English read, one Italian phrase and one600-character multiple-sentence chunk.",
+        "Verify entire supplied passage including final sentinel is audible and transcribed/timestamped, not only nonempty audio bytes.",
+        "One manual Speak and one followed notification outside voice mode with Tailscale connected; preserve device drafts/tasks and avoid unsolicited microphone capture.",
+        "Observe long internal pause/chunk boundary and retry, actual chunk duration/latency; do not pronounce perfect provider verbatim compliance.",
+        "Bound connection stop/idle lease and exact owner cross-lane behavior; report actual billing evidence only if observed."
+      ]
+    }
+  ],
+  "protocolEvidence": "Local generated Codex schema describes raw realtime item:any, transcriptDone and canonical completed transcript items but does not define WebRTC data-channel response.done shape. Provider event support is not claimed from that schema."
+}

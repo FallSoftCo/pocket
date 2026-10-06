@@ -15,7 +15,7 @@ import kotlinx.coroutines.withTimeout
 
 /** An isolated bundled WebRTC audio transport; account credentials never enter JavaScript. */
 @SuppressLint("SetJavaScriptEnabled")
-class NativeVoiceAudio(context:Context,private val callback:(String,String)->Unit){
+class NativeVoiceAudio(context:Context,private val explicitCompletion:Boolean=false,private val callback:(String,String)->Unit){
     private val main=Handler(Looper.getMainLooper())
     private val view=WebView(context)
     private var sent:CompletableDeferred<Unit>?=null
@@ -30,7 +30,7 @@ class NativeVoiceAudio(context:Context,private val callback:(String,String)->Uni
         view.addJavascriptInterface(object{
             @JavascriptInterface fun event(kind:String,data:String){main.post{if(closed)return@post;if(kind=="sent")sent?.complete(Unit);if(kind=="error")sent?.completeExceptionally(IllegalStateException(data));callback(kind,data)}}
         },"PocketAudio")
-        view.loadDataWithBaseURL("https://pocket-voice.invalid/",context.assets.open("native-voice.html").bufferedReader().use{it.readText()},"text/html","UTF-8",null)
+        view.loadDataWithBaseURL("https://pocket-voice.invalid/",context.assets.open("native-voice.html").bufferedReader().use{it.readText()}.replace("const explicitCompletion=false;","const explicitCompletion=$explicitCompletion;"),"text/html","UTF-8",null)
     }
     private fun js(code:String){view.evaluateJavascript(code,null)}
     fun answer(sdp:String)=js("answer(${JSONObject.quote(sdp)}).catch(e=>report('error',e.message))")
