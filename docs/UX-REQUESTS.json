@@ -595,10 +595,18 @@
     },
     {
       "id": "immersion-perception-polish",
-      "status": "qualified-alpha27-delivered",
+      "status": "delivered-alpha27-perceptibility-rejected",
       "requirement": "Replace immature blink-to-black immersion with smooth readable 2D language transitions; correct jagged spacing/baselines and weird coloring; integrate controls into the same layered language experience. Research human reading and visual motion rather than copying generic app patterns. Preserve single inline replacements, contextual help in place, original action semantics and optional mode.",
       "design": "Exactly one native text layout with360ms shallow contrast fade to85% around one discrete semantic language handoff; no wipe, overlay or fade through black. Natural inherited rich typography and reserved paragraph/label envelopes; default grammar rainbow removed. Uncapped length-aware dwell, shared target-dominant controls,79 additional offline Italian labels and environment pauses. Horizontal positions/line breaks may differ; no claim of validated comprehension gains.",
-      "evidence": "206 Node and137 Android tests, both lint variants and clean-checkout CI pass. Root reviewed1x/2x native intermediate frames; continuous held touch, IME, reduced motion, source hold/retap, URL and English-support-off pass. Actual phone code45 independently hash-verified. See docs/qualification/immersion-perception-alpha27.json. Optimized public APK fresh install/native pairing and actual handoff pass; full gallery check1766 cards passes. Public release digest verified; compatible update announced516."
+      "evidence": "206 Node and137 Android tests, both lint variants and clean-checkout CI pass. Root reviewed1x/2x native intermediate frames; continuous held touch, IME, reduced motion, source hold/retap, URL and English-support-off pass. Actual phone code45 independently hash-verified. See docs/qualification/immersion-perception-alpha27.json. Optimized public APK fresh install/native pairing and actual handoff pass; full gallery check1766 cards passes. Public release digest verified; compatible update announced516.",
+      "user_feedback": "User reports the semantic change is too fast to notice or locate. Clean frame rendering did not establish perceptibility. Root personally reviewed extracted native frames, not uninterrupted playback; previous wording overstated that review."
+    },
+    {
+      "id": "immersion-change-localization",
+      "status": "implementation-and-native-review-underway",
+      "requirement": "Language replacements must be noticeable and locatable. Report actual motion/intermediary and measured frame timing, not an invented human frame threshold. Preserve natural single-flow inline content and normal controls.",
+      "prototype": "One active phrase cue across the reading surface; actual native phrase geometry before/after; warm background ramp700ms, source hold800ms, one handoff at1500ms, target hold2200ms, fade500ms. Glyphs stay fully opaque. Phrase sequencing and late hydration staged; cancel without future semantic commit. These durations are hypotheses, not researched perceptibility thresholds.",
+      "acceptance": "Timestamped complete transition with separately measured cue lead, semantic switch and lingering trace, normal/double text, one global cue, links/help and cancellation. Continuous human perceptibility is not established by extracted frames."
     }
   ],
   "current_state": {

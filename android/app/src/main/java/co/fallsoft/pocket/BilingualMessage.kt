@@ -32,7 +32,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 
 /** One native text flow. Help substitutes the selected phrase; it never adds another line. */
 @Composable private fun ImmersionReading(content:AnnotatedString,selected:ImmersionSpan?,fontSize:TextUnit,lineHeight:TextUnit,color:Color=Paper,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,overflow:TextOverflow=TextOverflow.Clip,cycle:ImmersionCycleRender?=null,plan:ImmersionPresentation?=null,onClose:()->Unit){
-    if(cycle!=null&&plan!=null){Box(if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose)){ReservedImmersionText(content,plan,cycle.alpha,fontSize,lineHeight,color,fontWeight,maxLines,overflow)};return}
+    if(cycle!=null&&plan!=null){Box(if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose)){ReservedImmersionText(content,plan,cycle.alpha,fontSize,lineHeight,color,fontWeight,maxLines,overflow,cycle)};return}
     Text(content,fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,modifier=if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose))
 }
 

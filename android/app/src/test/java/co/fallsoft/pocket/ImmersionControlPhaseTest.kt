@@ -14,12 +14,18 @@ class ImmersionControlPhaseTest {
     @Test fun handoverNeverBlanksOrRequiresTwoTextLayouts(){
         for(step in 0..100){
             val phase=immersionInkPhase(step/100f)
-            assertTrue(phase.opacity>=.85f&&phase.opacity<=1f)
-            assertEquals(step>=50,phase.incoming)
+            assertEquals(1f,phase.opacity,0f)
+            assertTrue(phase.cue in 0f..1f)
         }
-        assertEquals(1f,immersionInkPhase(0f).opacity,0f)
-        assertEquals(1f,immersionInkPhase(1f).opacity,0f)
-        assertEquals(.85f,immersionInkPhase(.5f).opacity,0f)
+        fun at(ms:Long)=immersionInkPhase(ms.toFloat()/IMMERSION_HANDOFF_DURATION_MS)
+        assertEquals(0f,at(0).cue,0f)
+        assertEquals(1f,at(700).cue,0f)
+        assertFalse(at(1499).incoming)
+        assertTrue(at(1501).incoming)
+        assertEquals(1f,at(3699).cue,0f)
+        assertEquals(0f,at(4200).cue,0f)
+        assertTrue(at(200).cue<at(500).cue)
+        assertTrue(at(3900).cue>at(4100).cue)
     }
 
 }
