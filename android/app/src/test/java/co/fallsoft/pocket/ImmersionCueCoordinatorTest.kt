@@ -1,6 +1,8 @@
 package co.fallsoft.pocket
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -48,6 +50,17 @@ class ImmersionCueCoordinatorTest {
         // The cancelled lease cannot block a later surface.
         assertTrue(withTimeout(500){ImmersionCueCoordinator.acquire("test-next",false)}>0)
         ImmersionCueCoordinator.release("test-next")
+    }
+    @Test fun explicitProgressGateControlsSemanticHandoffInsteadOfWallClock()=runBlocking {
+        var actual="source"
+        val progress=MutableStateFlow(0f)
+        val started=CompletableDeferred<Unit>();val switched=CompletableDeferred<Unit>()
+        val job=launch{runImmersionCue("test-progress",true,onBegin={started.complete(Unit)},onHandoff={actual="target";switched.complete(Unit)},onFinish={},animate={awaitCancellation()},handoffMs=0,awaitHandoff={progress.first{it>=.5f}})}
+        started.await();yield()
+        assertEquals("source",actual)
+        progress.value=.25f;yield();assertEquals("source",actual)
+        progress.value=.75f;switched.await();assertEquals("target",actual)
+        job.cancelAndJoin()
     }
     @Test fun cancellationAfterHandoffKeepsAlreadyVisibleTarget()=runBlocking {
         var actual="source"
