@@ -1,0 +1,15 @@
+{
+  "apkSha256": "b1c71484459d03c4c37fbe9c11554180ac4c444a5957c28fe33487595a6e768c",
+  "nativeEnvironment": "owned Android34 Pixel7 profile, emulator5584, Google SwiftShader software renderer,60Hz virtual display",
+  "scope": "complete168-page optimized release, test signed",
+  "warmedSampleWallSeconds": 14.070508774835616,
+  "animatedPixelChange": {
+    "mic": true,
+    "busyCodex": true,
+    "cubicN": true
+  },
+  "targetPhoneQualification": false,
+  "captureRateIsNotDisplayRate": true,
+  "gfxSummary": "Applications Graphics Acceleration Info:\nUptime: 8045678 Realtime: 8045678\n\n** Graphics info for pid 7227 [co.fallsoft.pocket] **\n\nStats since: 8031670277616ns\nTotal frames rendered: 407\nJanky frames: 314 (77.15%)\nJanky frames (legacy): 407 (100.00%)\n50th percentile: 69ms\n90th percentile: 85ms\n95th percentile: 93ms\n99th percentile: 109ms\nNumber Missed Vsync: 277\nNumber High input latency: 186\nNumber Slow UI thread: 212\nNumber Slow bitmap uploads: 9\nNumber Slow issue draw commands: 314\nNumber Frame deadline missed: 314\nNumber Frame deadline missed (legacy): 314\n",
+  "memorySummary": "App Summary\n                       Pss(KB)                        Rss(KB)\n                        ------                         ------\n           Java Heap:     5712                          29284\n         Native Heap:    98412                          99752\n                Code:     4692                          92096\n               Stack:     2268                           2276\n            Graphics:        0                              0\n       Private Other:     2636\n              System:     8436\n             Unknown:                                    5340\n \n           TOTAL PSS:   122156            TOTAL RSS:   228748       TOTAL SWAP PSS:      365\n \n "
+}

@@ -1,0 +1,11 @@
+{
+  "optimizedReleaseApkSha256": "b1c71484459d03c4c37fbe9c11554180ac4c444a5957c28fe33487595a6e768c",
+  "fixtureDelayMs": 8000,
+  "nativeNBounds": [
+    "[393,299][687,593]",
+    "[445,2127][498,2180]"
+  ],
+  "largeAtlasCell": 256,
+  "footerAtlasCell": 128,
+  "screenshot": "native-loading-n.png"
+}

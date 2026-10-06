@@ -1,0 +1,14 @@
+file://<private-workspace>/Development/computer-use-broker/client.mjs:12
+    const result=await response.json();if(!response.ok){const e=new Error(result.error||'Broker request failed');e.code=result.code;throw e;}return result;
+                                                                ^
+
+Error: Resource wait expired
+    at ComputerUseClient.request (file://<private-workspace>/Development/computer-use-broker/client.mjs:12:65)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async ComputerUseClient.withLease (file://<private-workspace>/Development/computer-use-broker/client.mjs:17:20)
+    at async chromium.launch (file:///tmp/nextcomp-gallery-broker.mjs:20:16)
+    at async file://<private-workspace>/Development/8bar-houdini/showcase/check.mjs:8:4 {
+  code: 'WAIT_TIMEOUT'
+}
+
+Node.js v22.23.1

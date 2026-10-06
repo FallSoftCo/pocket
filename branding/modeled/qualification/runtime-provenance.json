@@ -1,0 +1,8 @@
+{
+  "renderWorkerSha256": "2ec4b8e0790766abf9532e9167bd54e22828631a6a06fd091e5f73dea610967d",
+  "sceneValidationSha256": "7f6a95e0b19102e7a131184e650965db5310d698d08f4c7482592f08f4e01103",
+  "nativeSourceVersion": "Houdini22.0.429 Indie; actual activation and license checked by native worker",
+  "motionBlurContract": "v07 zero camera shutter, enablemblur=0, mblur=0, enableimageblur=0, xformsamples=1, geosamples=1. ROP motion-cache switch bypassed.",
+  "priorFailedAttempts": "no completed frames or native completion receipts; preserved render identity directories; not accepted or called completed renders",
+  "GPUOwnedScratch": "48GiB tmpfs capacity, allocated on demand; enlarged from40GiB to preserve the35GiB free-space guard without deleting completed frames"
+}

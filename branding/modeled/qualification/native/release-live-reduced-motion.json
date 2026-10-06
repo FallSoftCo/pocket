@@ -1,0 +1,10 @@
+{
+  "apkSha256": "b1c71484459d03c4c37fbe9c11554180ac4c444a5957c28fe33487595a6e768c",
+  "settingChangedLiveWithoutRestart": true,
+  "stationaryForTwoSeconds": {
+    "mic": true,
+    "busyCodex": true,
+    "cubicN": true
+  },
+  "originalSetting": "null"
+}

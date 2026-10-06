@@ -1,0 +1,683 @@
+{
+  "variant": "optimized resource-shrunk release, test-signed with standard Android debug key",
+  "productionSigner": false,
+  "sha256": "b1c71484459d03c4c37fbe9c11554180ac4c444a5957c28fe33487595a6e768c",
+  "bytes": 51816178,
+  "atlasPagesKeptWithExactBytesAndLookupNames": 168,
+  "underExisting80MiBUpdateLimit": true,
+  "unsignedProductionCandidate": "android/app/build/outputs/apk/release/app-release-unsigned.apk",
+  "resourceMapping": {
+    "symbol_motion_attachfile_p1": {
+      "id": "0x7f070060",
+      "packagedPath": "res/de.webp"
+    },
+    "nextcomp_motion_small_p3": {
+      "id": "0x7f07002b",
+      "packagedPath": "res/kh.webp"
+    },
+    "symbol_motion_travelexplore_p3": {
+      "id": "0x7f0700d2",
+      "packagedPath": "res/D_.webp"
+    },
+    "symbol_spin_codex_p2": {
+      "id": "0x7f0700ee",
+      "packagedPath": "res/zq.webp"
+    },
+    "symbol_motion_psychology_p0": {
+      "id": "0x7f0700bb",
+      "packagedPath": "res/AI.webp"
+    },
+    "symbol_motion_arrowupward_p0": {
+      "id": "0x7f07005b",
+      "packagedPath": "res/rP.webp"
+    },
+    "symbol_motion_keyboard_p2": {
+      "id": "0x7f070091",
+      "packagedPath": "res/LI1.webp"
+    },
+    "symbol_spin_psychology_p1": {
+      "id": "0x7f0700f2",
+      "packagedPath": "res/mt.webp"
+    },
+    "symbol_motion_layers_p0": {
+      "id": "0x7f070093",
+      "packagedPath": "res/rb.webp"
+    },
+    "symbol_motion_send_p2": {
+      "id": "0x7f0700c5",
+      "packagedPath": "res/Uy.webp"
+    },
+    "symbol_motion_check_p1": {
+      "id": "0x7f070068",
+      "packagedPath": "res/g6.webp"
+    },
+    "symbol_motion_terminal_p3": {
+      "id": "0x7f0700ce",
+      "packagedPath": "res/Vp.webp"
+    },
+    "symbol_motion_stop_p2": {
+      "id": "0x7f0700c9",
+      "packagedPath": "res/rN.webp"
+    },
+    "symbol_motion_codex_p0": {
+      "id": "0x7f07006b",
+      "packagedPath": "res/Kf.webp"
+    },
+    "symbol_motion_mic_p1": {
+      "id": "0x7f070098",
+      "packagedPath": "res/Mz.webp"
+    },
+    "symbol_motion_volumeup_p3": {
+      "id": "0x7f0700e2",
+      "packagedPath": "res/MP.webp"
+    },
+    "symbol_motion_unarchive_p2": {
+      "id": "0x7f0700d9",
+      "packagedPath": "res/1f.webp"
+    },
+    "symbol_motion_unarchive_p1": {
+      "id": "0x7f0700d8",
+      "packagedPath": "res/eB.webp"
+    },
+    "symbol_motion_notificationsactive_p3": {
+      "id": "0x7f0700a6",
+      "packagedPath": "res/Cp.webp"
+    },
+    "symbol_motion_pause_p0": {
+      "id": "0x7f0700af",
+      "packagedPath": "res/13.webp"
+    },
+    "symbol_motion_playarrow_p2": {
+      "id": "0x7f0700b9",
+      "packagedPath": "res/Sr.webp"
+    },
+    "symbol_motion_notificationsnone_p0": {
+      "id": "0x7f0700a7",
+      "packagedPath": "res/ZF.webp"
+    },
+    "symbol_motion_editnote_p2": {
+      "id": "0x7f070079",
+      "packagedPath": "res/9y.webp"
+    },
+    "symbol_motion_editnote_p1": {
+      "id": "0x7f070078",
+      "packagedPath": "res/GK.webp"
+    },
+    "symbol_motion_stop_p3": {
+      "id": "0x7f0700ca",
+      "packagedPath": "res/mQ.webp"
+    },
+    "symbol_motion_terminal_p0": {
+      "id": "0x7f0700cb",
+      "packagedPath": "res/Uf.webp"
+    },
+    "symbol_motion_expandmore_p0": {
+      "id": "0x7f070083",
+      "packagedPath": "res/C7.webp"
+    },
+    "symbol_motion_tune_p3": {
+      "id": "0x7f0700d6",
+      "packagedPath": "res/i1.webp"
+    },
+    "symbol_motion_notificationsactive_p2": {
+      "id": "0x7f0700a5",
+      "packagedPath": "res/Dk.webp"
+    },
+    "symbol_motion_search_p3": {
+      "id": "0x7f0700c2",
+      "packagedPath": "res/bv.webp"
+    },
+    "symbol_motion_mic_p3": {
+      "id": "0x7f07009a",
+      "packagedPath": "res/cb.webp"
+    },
+    "symbol_motion_phoneandroid_p2": {
+      "id": "0x7f0700b5",
+      "packagedPath": "res/gk.webp"
+    },
+    "nextcomp_motion_p2": {
+      "id": "0x7f070025",
+      "packagedPath": "res/d8.webp"
+    },
+    "symbol_motion_openinnew_p1": {
+      "id": "0x7f0700ac",
+      "packagedPath": "res/Tx.webp"
+    },
+    "symbol_motion_volumeup_p1": {
+      "id": "0x7f0700e0",
+      "packagedPath": "res/LI.webp"
+    },
+    "symbol_motion_morevert_p1": {
+      "id": "0x7f0700a0",
+      "packagedPath": "res/PL.webp"
+    },
+    "symbol_motion_arrowforward_p2": {
+      "id": "0x7f070059",
+      "packagedPath": "res/g4.webp"
+    },
+    "symbol_motion_user_p0": {
+      "id": "0x7f0700db",
+      "packagedPath": "res/FV.webp"
+    },
+    "symbol_motion_openinnew_p3": {
+      "id": "0x7f0700ae",
+      "packagedPath": "res/ks.webp"
+    },
+    "symbol_motion_user_p2": {
+      "id": "0x7f0700dd",
+      "packagedPath": "res/uW.webp"
+    },
+    "symbol_spin_psychology_p2": {
+      "id": "0x7f0700f3",
+      "packagedPath": "res/ES.webp"
+    },
+    "symbol_motion_mic_p0": {
+      "id": "0x7f070097",
+      "packagedPath": "res/fK.webp"
+    },
+    "symbol_motion_terminal_p2": {
+      "id": "0x7f0700cd",
+      "packagedPath": "res/0V.webp"
+    },
+    "symbol_motion_erroroutline_p1": {
+      "id": "0x7f07007c",
+      "packagedPath": "res/MK.webp"
+    },
+    "symbol_motion_build_p2": {
+      "id": "0x7f070065",
+      "packagedPath": "res/Kt.webp"
+    },
+    "symbol_motion_search_p0": {
+      "id": "0x7f0700bf",
+      "packagedPath": "res/is.webp"
+    },
+    "symbol_motion_layers_p3": {
+      "id": "0x7f070096",
+      "packagedPath": "res/V8.webp"
+    },
+    "symbol_motion_psychology_p2": {
+      "id": "0x7f0700bd",
+      "packagedPath": "res/pA.webp"
+    },
+    "symbol_motion_notificationsactive_p0": {
+      "id": "0x7f0700a3",
+      "packagedPath": "res/Hn.webp"
+    },
+    "symbol_motion_send_p3": {
+      "id": "0x7f0700c6",
+      "packagedPath": "res/5I.webp"
+    },
+    "symbol_motion_build_p0": {
+      "id": "0x7f070063",
+      "packagedPath": "res/TI.webp"
+    },
+    "symbol_motion_unarchive_p3": {
+      "id": "0x7f0700da",
+      "packagedPath": "res/gM.webp"
+    },
+    "symbol_motion_morevert_p2": {
+      "id": "0x7f0700a1",
+      "packagedPath": "res/-0.webp"
+    },
+    "symbol_motion_expandless_p2": {
+      "id": "0x7f070081",
+      "packagedPath": "res/vh.webp"
+    },
+    "nextcomp_motion_p0": {
+      "id": "0x7f070023",
+      "packagedPath": "res/ga.webp"
+    },
+    "symbol_motion_computer_p3": {
+      "id": "0x7f070072",
+      "packagedPath": "res/KT.webp"
+    },
+    "symbol_motion_expandless_p1": {
+      "id": "0x7f070080",
+      "packagedPath": "res/k9.webp"
+    },
+    "symbol_motion_erroroutline_p3": {
+      "id": "0x7f07007e",
+      "packagedPath": "res/om.webp"
+    },
+    "symbol_motion_arrowdownward_p3": {
+      "id": "0x7f070056",
+      "packagedPath": "res/TB.webp"
+    },
+    "symbol_motion_arrowback_p3": {
+      "id": "0x7f070052",
+      "packagedPath": "res/U6.webp"
+    },
+    "symbol_motion_terminal_p1": {
+      "id": "0x7f0700cc",
+      "packagedPath": "res/X2.webp"
+    },
+    "symbol_motion_pause_p1": {
+      "id": "0x7f0700b0",
+      "packagedPath": "res/1a.webp"
+    },
+    "symbol_motion_stop_p0": {
+      "id": "0x7f0700c7",
+      "packagedPath": "res/Rh.webp"
+    },
+    "symbol_motion_phoneandroid_p1": {
+      "id": "0x7f0700b4",
+      "packagedPath": "res/Cn.webp"
+    },
+    "symbol_motion_inbox_p2": {
+      "id": "0x7f07008d",
+      "packagedPath": "res/vy.webp"
+    },
+    "symbol_motion_travelexplore_p2": {
+      "id": "0x7f0700d1",
+      "packagedPath": "res/Mm.webp"
+    },
+    "nextcomp_motion_p3": {
+      "id": "0x7f070026",
+      "packagedPath": "res/Ro.webp"
+    },
+    "symbol_spin_psychology_p0": {
+      "id": "0x7f0700f1",
+      "packagedPath": "res/lU.webp"
+    },
+    "symbol_motion_tune_p2": {
+      "id": "0x7f0700d5",
+      "packagedPath": "res/7t.webp"
+    },
+    "symbol_spin_codex_p1": {
+      "id": "0x7f0700ed",
+      "packagedPath": "res/3o.webp"
+    },
+    "symbol_motion_search_p1": {
+      "id": "0x7f0700c0",
+      "packagedPath": "res/Pn.webp"
+    },
+    "symbol_motion_phoneandroid_p3": {
+      "id": "0x7f0700b6",
+      "packagedPath": "res/Ev.webp"
+    },
+    "symbol_motion_morehoriz_p2": {
+      "id": "0x7f07009d",
+      "packagedPath": "res/v2.webp"
+    },
+    "symbol_motion_playarrow_p3": {
+      "id": "0x7f0700ba",
+      "packagedPath": "res/6V.webp"
+    },
+    "symbol_motion_inbox_p0": {
+      "id": "0x7f07008b",
+      "packagedPath": "res/A4.webp"
+    },
+    "symbol_motion_computer_p2": {
+      "id": "0x7f070071",
+      "packagedPath": "res/yR.webp"
+    },
+    "symbol_motion_notificationsactive_p1": {
+      "id": "0x7f0700a4",
+      "packagedPath": "res/W-.webp"
+    },
+    "symbol_motion_edit_p3": {
+      "id": "0x7f070076",
+      "packagedPath": "res/37.webp"
+    },
+    "symbol_motion_travelexplore_p0": {
+      "id": "0x7f0700cf",
+      "packagedPath": "res/P2.webp"
+    },
+    "symbol_motion_build_p1": {
+      "id": "0x7f070064",
+      "packagedPath": "res/2z.webp"
+    },
+    "symbol_motion_morehoriz_p3": {
+      "id": "0x7f07009e",
+      "packagedPath": "res/VS.webp"
+    },
+    "symbol_motion_user_p3": {
+      "id": "0x7f0700de",
+      "packagedPath": "res/bS.webp"
+    },
+    "symbol_motion_folderopen_p0": {
+      "id": "0x7f070087",
+      "packagedPath": "res/gc.webp"
+    },
+    "symbol_spin_psychology_p4": {
+      "id": "0x7f0700f5",
+      "packagedPath": "res/Y9.webp"
+    },
+    "symbol_motion_build_p3": {
+      "id": "0x7f070066",
+      "packagedPath": "res/aB.webp"
+    },
+    "symbol_motion_notificationsnone_p1": {
+      "id": "0x7f0700a8",
+      "packagedPath": "res/0e.webp"
+    },
+    "symbol_motion_volumeup_p0": {
+      "id": "0x7f0700df",
+      "packagedPath": "res/Xj.webp"
+    },
+    "symbol_motion_folderopen_p2": {
+      "id": "0x7f070089",
+      "packagedPath": "res/gQ.webp"
+    },
+    "symbol_motion_check_p0": {
+      "id": "0x7f070067",
+      "packagedPath": "res/ne.webp"
+    },
+    "symbol_motion_playarrow_p0": {
+      "id": "0x7f0700b7",
+      "packagedPath": "res/sM.webp"
+    },
+    "symbol_motion_codex_p2": {
+      "id": "0x7f07006d",
+      "packagedPath": "res/yr.webp"
+    },
+    "symbol_motion_mic_p2": {
+      "id": "0x7f070099",
+      "packagedPath": "res/eB1.webp"
+    },
+    "symbol_motion_inbox_p1": {
+      "id": "0x7f07008c",
+      "packagedPath": "res/Tu.webp"
+    },
+    "symbol_motion_arrowupward_p1": {
+      "id": "0x7f07005c",
+      "packagedPath": "res/I6.webp"
+    },
+    "symbol_motion_expandless_p3": {
+      "id": "0x7f070082",
+      "packagedPath": "res/1M.webp"
+    },
+    "symbol_motion_editnote_p0": {
+      "id": "0x7f070077",
+      "packagedPath": "res/Rr.webp"
+    },
+    "nextcomp_motion_small_p2": {
+      "id": "0x7f07002a",
+      "packagedPath": "res/S0.webp"
+    },
+    "symbol_motion_edit_p2": {
+      "id": "0x7f070075",
+      "packagedPath": "res/QQ.webp"
+    },
+    "symbol_motion_stop_p1": {
+      "id": "0x7f0700c8",
+      "packagedPath": "res/BN.webp"
+    },
+    "symbol_motion_keyboard_p1": {
+      "id": "0x7f070090",
+      "packagedPath": "res/J1.webp"
+    },
+    "symbol_motion_arrowback_p2": {
+      "id": "0x7f070051",
+      "packagedPath": "res/2E.webp"
+    },
+    "symbol_spin_codex_p3": {
+      "id": "0x7f0700ef",
+      "packagedPath": "res/RV.webp"
+    },
+    "symbol_motion_attachfile_p0": {
+      "id": "0x7f07005f",
+      "packagedPath": "res/82.webp"
+    },
+    "symbol_motion_arrowforward_p0": {
+      "id": "0x7f070057",
+      "packagedPath": "res/3i1.webp"
+    },
+    "symbol_motion_playarrow_p1": {
+      "id": "0x7f0700b8",
+      "packagedPath": "res/Fd.webp"
+    },
+    "symbol_motion_expandmore_p3": {
+      "id": "0x7f070086",
+      "packagedPath": "res/TD.webp"
+    },
+    "symbol_motion_keyboard_p3": {
+      "id": "0x7f070092",
+      "packagedPath": "res/6Q.webp"
+    },
+    "symbol_motion_unarchive_p0": {
+      "id": "0x7f0700d7",
+      "packagedPath": "res/8R.webp"
+    },
+    "symbol_motion_layers_p2": {
+      "id": "0x7f070095",
+      "packagedPath": "res/Md.webp"
+    },
+    "symbol_spin_codex_p0": {
+      "id": "0x7f0700ec",
+      "packagedPath": "res/ow.webp"
+    },
+    "symbol_motion_layers_p1": {
+      "id": "0x7f070094",
+      "packagedPath": "res/oP.webp"
+    },
+    "symbol_motion_expandless_p0": {
+      "id": "0x7f07007f",
+      "packagedPath": "res/kX.webp"
+    },
+    "symbol_motion_morehoriz_p0": {
+      "id": "0x7f07009b",
+      "packagedPath": "res/qj.webp"
+    },
+    "symbol_motion_morevert_p0": {
+      "id": "0x7f07009f",
+      "packagedPath": "res/aM.webp"
+    },
+    "symbol_motion_travelexplore_p1": {
+      "id": "0x7f0700d0",
+      "packagedPath": "res/W0.webp"
+    },
+    "symbol_motion_search_p2": {
+      "id": "0x7f0700c1",
+      "packagedPath": "res/xN.webp"
+    },
+    "symbol_motion_notificationsnone_p2": {
+      "id": "0x7f0700a9",
+      "packagedPath": "res/4Y.webp"
+    },
+    "symbol_motion_inbox_p3": {
+      "id": "0x7f07008e",
+      "packagedPath": "res/Fr.webp"
+    },
+    "symbol_motion_phoneandroid_p0": {
+      "id": "0x7f0700b3",
+      "packagedPath": "res/sc.webp"
+    },
+    "symbol_motion_tune_p1": {
+      "id": "0x7f0700d4",
+      "packagedPath": "res/pV.webp"
+    },
+    "symbol_motion_attachfile_p3": {
+      "id": "0x7f070062",
+      "packagedPath": "res/d-.webp"
+    },
+    "symbol_motion_arrowdownward_p2": {
+      "id": "0x7f070055",
+      "packagedPath": "res/uV.webp"
+    },
+    "symbol_motion_pause_p2": {
+      "id": "0x7f0700b1",
+      "packagedPath": "res/8E.webp"
+    },
+    "symbol_motion_folderopen_p1": {
+      "id": "0x7f070088",
+      "packagedPath": "res/3Z.webp"
+    },
+    "symbol_motion_keyboard_p0": {
+      "id": "0x7f07008f",
+      "packagedPath": "res/IE.webp"
+    },
+    "symbol_motion_morevert_p3": {
+      "id": "0x7f0700a2",
+      "packagedPath": "res/We.webp"
+    },
+    "symbol_motion_psychology_p1": {
+      "id": "0x7f0700bc",
+      "packagedPath": "res/ux.webp"
+    },
+    "symbol_spin_psychology_p3": {
+      "id": "0x7f0700f4",
+      "packagedPath": "res/hK.webp"
+    },
+    "symbol_motion_expandmore_p2": {
+      "id": "0x7f070085",
+      "packagedPath": "res/qt.webp"
+    },
+    "symbol_spin_codex_p4": {
+      "id": "0x7f0700f0",
+      "packagedPath": "res/iL.webp"
+    },
+    "symbol_motion_edit_p0": {
+      "id": "0x7f070073",
+      "packagedPath": "res/u0.webp"
+    },
+    "symbol_motion_erroroutline_p2": {
+      "id": "0x7f07007d",
+      "packagedPath": "res/a8.webp"
+    },
+    "symbol_motion_arrowback_p0": {
+      "id": "0x7f07004f",
+      "packagedPath": "res/aG.webp"
+    },
+    "symbol_motion_edit_p1": {
+      "id": "0x7f070074",
+      "packagedPath": "res/Vn.webp"
+    },
+    "symbol_motion_openinnew_p2": {
+      "id": "0x7f0700ad",
+      "packagedPath": "res/ye.webp"
+    },
+    "symbol_motion_openinnew_p0": {
+      "id": "0x7f0700ab",
+      "packagedPath": "res/EM.webp"
+    },
+    "symbol_motion_notificationsnone_p3": {
+      "id": "0x7f0700aa",
+      "packagedPath": "res/8h.webp"
+    },
+    "symbol_motion_tune_p0": {
+      "id": "0x7f0700d3",
+      "packagedPath": "res/IK.webp"
+    },
+    "symbol_motion_psychology_p3": {
+      "id": "0x7f0700be",
+      "packagedPath": "res/Mf.webp"
+    },
+    "symbol_motion_arrowforward_p1": {
+      "id": "0x7f070058",
+      "packagedPath": "res/B7.webp"
+    },
+    "symbol_motion_arrowdownward_p0": {
+      "id": "0x7f070053",
+      "packagedPath": "res/Qv.webp"
+    },
+    "symbol_motion_folderopen_p3": {
+      "id": "0x7f07008a",
+      "packagedPath": "res/kM.webp"
+    },
+    "symbol_motion_arrowupward_p3": {
+      "id": "0x7f07005e",
+      "packagedPath": "res/Ci.webp"
+    },
+    "nextcomp_motion_small_p0": {
+      "id": "0x7f070028",
+      "packagedPath": "res/qU.webp"
+    },
+    "symbol_motion_morehoriz_p1": {
+      "id": "0x7f07009c",
+      "packagedPath": "res/OP.webp"
+    },
+    "symbol_motion_expandmore_p1": {
+      "id": "0x7f070084",
+      "packagedPath": "res/Il.webp"
+    },
+    "nextcomp_motion_small_p1": {
+      "id": "0x7f070029",
+      "packagedPath": "res/Em.webp"
+    },
+    "symbol_motion_arrowdownward_p1": {
+      "id": "0x7f070054",
+      "packagedPath": "res/Cm.webp"
+    },
+    "symbol_motion_arrowback_p1": {
+      "id": "0x7f070050",
+      "packagedPath": "res/xd.webp"
+    },
+    "symbol_motion_volumeup_p2": {
+      "id": "0x7f0700e1",
+      "packagedPath": "res/hS.webp"
+    },
+    "symbol_motion_erroroutline_p0": {
+      "id": "0x7f07007b",
+      "packagedPath": "res/rp.webp"
+    },
+    "symbol_motion_send_p0": {
+      "id": "0x7f0700c3",
+      "packagedPath": "res/Oh.webp"
+    },
+    "symbol_motion_user_p1": {
+      "id": "0x7f0700dc",
+      "packagedPath": "res/T1.webp"
+    },
+    "symbol_motion_attachfile_p2": {
+      "id": "0x7f070061",
+      "packagedPath": "res/3F.webp"
+    },
+    "nextcomp_motion_small_p4": {
+      "id": "0x7f07002c",
+      "packagedPath": "res/7Q.webp"
+    },
+    "nextcomp_motion_p4": {
+      "id": "0x7f070027",
+      "packagedPath": "res/di.webp"
+    },
+    "symbol_motion_check_p3": {
+      "id": "0x7f07006a",
+      "packagedPath": "res/Sm.webp"
+    },
+    "nextcomp_motion_p1": {
+      "id": "0x7f070024",
+      "packagedPath": "res/zJ.webp"
+    },
+    "symbol_motion_codex_p1": {
+      "id": "0x7f07006c",
+      "packagedPath": "res/V7.webp"
+    },
+    "symbol_motion_check_p2": {
+      "id": "0x7f070069",
+      "packagedPath": "res/SM.webp"
+    },
+    "symbol_motion_codex_p3": {
+      "id": "0x7f07006e",
+      "packagedPath": "res/s1.webp"
+    },
+    "symbol_motion_pause_p3": {
+      "id": "0x7f0700b2",
+      "packagedPath": "res/Y-.webp"
+    },
+    "symbol_motion_arrowforward_p3": {
+      "id": "0x7f07005a",
+      "packagedPath": "res/mJ.webp"
+    },
+    "symbol_motion_send_p1": {
+      "id": "0x7f0700c4",
+      "packagedPath": "res/Kh.webp"
+    },
+    "symbol_motion_arrowupward_p2": {
+      "id": "0x7f07005d",
+      "packagedPath": "res/3i.webp"
+    },
+    "symbol_motion_computer_p1": {
+      "id": "0x7f070070",
+      "packagedPath": "res/Ph.webp"
+    },
+    "symbol_motion_computer_p0": {
+      "id": "0x7f07006f",
+      "packagedPath": "res/cc.webp"
+    },
+    "symbol_motion_editnote_p3": {
+      "id": "0x7f07007a",
+      "packagedPath": "res/Do.webp"
+    }
+  }
+}

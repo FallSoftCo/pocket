@@ -1,0 +1,10 @@
+{
+  "candidate": "interim60fps with intentionally absent spin/N pages",
+  "settingChangedLiveWithoutActivityRestart": true,
+  "twoSecondStationaryIconCheck": {
+    "mic": true,
+    "search": true,
+    "settings": true
+  },
+  "originalAnimatorScale": "null"
+}

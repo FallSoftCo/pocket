@@ -1,0 +1,620 @@
+{
+  "passed": true,
+  "symbols": 37,
+  "resources": 76,
+  "files": {
+    "symbol_codex.png": {
+      "bytes": 49377,
+      "sha256": "93538e046494c2b5cb62916c697c7463afa49a38196b6254e5e4fa677b5e923e",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_codex.png": {
+      "bytes": 277710,
+      "sha256": "e51167471ece519a9b0b120dd733a1c0c115449fbb3923262225ea4eabe1af17",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_spin_codex.png": {
+      "bytes": 319774,
+      "sha256": "55763217f2a2a18a0a9f01b98445226cd8efbc70edeb317f6f8ad109895ef8bb",
+      "dimensions": [
+        2560,
+        160
+      ]
+    },
+    "symbol_user.png": {
+      "bytes": 44549,
+      "sha256": "5451e644ce7d83cb05fad72218f6a89f7097f5b55f34e8804d9396b351991551",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_user.png": {
+      "bytes": 217509,
+      "sha256": "fbbd8a0e563c7aa1f39a95a961f4481348973f088f42eddfbdfe5a1357dcd87d",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_arrowback.png": {
+      "bytes": 31450,
+      "sha256": "3821616af6f0477aa69bb372bf743888ab40c43e7d2e6fadf5fd86edeb186775",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_arrowback.png": {
+      "bytes": 162329,
+      "sha256": "f462af4bd19c810ce22909b00f76e52caaf515ebe1026653e48b16d55d431a01",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_arrowdownward.png": {
+      "bytes": 32554,
+      "sha256": "0c809b44b3a59d857339e37bd6411f5d25b8c6548f6da2cb6a44c800ffc72d2d",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_arrowdownward.png": {
+      "bytes": 166959,
+      "sha256": "c1b5ab30bdb5a34cf54dc7bf6ed37beca925cd6766e977471578f64fcbcfd7b7",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_arrowforward.png": {
+      "bytes": 32901,
+      "sha256": "83a7619159c01f1eeaf97c1065ec19be9279a373ef8782414ccd3319a3fbe472",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_arrowforward.png": {
+      "bytes": 167818,
+      "sha256": "5892854e2bd1f357673fe5195feb8afb7622000583533d5d30fb8cf02d84611b",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_arrowupward.png": {
+      "bytes": 32374,
+      "sha256": "03c059856b1b4ae789218fb72bb05e5649a8029622b0023812dbeea614ee1af9",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_arrowupward.png": {
+      "bytes": 167215,
+      "sha256": "dacef6b5bf12cd427503fe1f01691788a0f041ea0118133059c95b614ccf2fad",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_attachfile.png": {
+      "bytes": 41666,
+      "sha256": "cf77e451adbbbb091fa5ea93fa2fefac0409a5d5faf51f75f16c790c4d7c2ee9",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_attachfile.png": {
+      "bytes": 211184,
+      "sha256": "77e07303766e482be8a157cf5f27a5848194760b1a0f695f8ca4b1a94e87fae5",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_build.png": {
+      "bytes": 35663,
+      "sha256": "26a6380a01921d14b478f66a8ad94d838e0e5425c4053d7f3fd292830b17005e",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_build.png": {
+      "bytes": 187648,
+      "sha256": "7cef907ab6f2ccbf6c7f42a6d3ab60ac01a98b4bcbff5798966c8ae86b86e8a9",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_check.png": {
+      "bytes": 27107,
+      "sha256": "e5b6ef609465209fd781e6c883cf89fb84d3e17f639a95ebdd7d85d45ec1cc94",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_check.png": {
+      "bytes": 145752,
+      "sha256": "00c072632fc793cb73631a4e5c4d2de523dbcab0e93cb1bbbf1d982340846013",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_computer.png": {
+      "bytes": 56411,
+      "sha256": "e353166c56db7a0ad34827e32da741920569027d20b3448fc66d9cce27ef357d",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_computer.png": {
+      "bytes": 273199,
+      "sha256": "51654aed86d09948bac4fa0e395988f52f35a3398e3c84d834891f56d7ab64d3",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_edit.png": {
+      "bytes": 35340,
+      "sha256": "84fecb840286eee42c9fb0a56816b6ec2e124288fa2729c547af0ea5b45443de",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_edit.png": {
+      "bytes": 181760,
+      "sha256": "c46e851a4218e9de85c0a2af6c4add476a1ce9fa414e60402c0dfd7f2a136bf8",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_editnote.png": {
+      "bytes": 63967,
+      "sha256": "ee0795b3208142a80ff28056659770d84fb93073956996ea7288f48cb799f767",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_editnote.png": {
+      "bytes": 314810,
+      "sha256": "743422974fc699aa884db15fff2066b8b97e21389963cc924e3f0b5be7b3939f",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_erroroutline.png": {
+      "bytes": 49346,
+      "sha256": "4791f116ceea7868c6dd88189240364283f0d7254dd00d53c33bc4674c0d35c3",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_erroroutline.png": {
+      "bytes": 264381,
+      "sha256": "7b058b24c1b4ad240dc31056f49d6bf6c74f41bb9607dc4f14bba50f6a480aac",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_expandless.png": {
+      "bytes": 25395,
+      "sha256": "c8f260e0184c6cf4646db0a3075b0055f6c69f151a3f7b87fa0fca8480f081da",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_expandless.png": {
+      "bytes": 135552,
+      "sha256": "6cd26d3daf95434ce1dbe6618058e2f134ffd0c28624947bd3d67972196c78c0",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_expandmore.png": {
+      "bytes": 25883,
+      "sha256": "677f9c4412bec8bffe4df637e7a155bb566eecd299b6dba9565e96881ce09161",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_expandmore.png": {
+      "bytes": 137692,
+      "sha256": "e9f888125c931cc412d35f63662c1247e636ddb7425ca563590a350406dfacdc",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_folderopen.png": {
+      "bytes": 47346,
+      "sha256": "bbbb5ed3506cbe90dda6db7ec5474d275fead637c7e9266149ab6e656b3a9563",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_folderopen.png": {
+      "bytes": 226275,
+      "sha256": "5dd815a3ec25c06330d727d6a748273bfb6bf5c8996bc78446a7dfbdfa105397",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_inbox.png": {
+      "bytes": 48902,
+      "sha256": "0b080d704b924d6b2fb8ccae09d574683d64a54cb2f44e2fe3cbe1b81922efc6",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_inbox.png": {
+      "bytes": 221694,
+      "sha256": "2006b60c027da6e9b13fd500c58418aee8d6e6c477ea0503af905c281a1ad742",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_keyboard.png": {
+      "bytes": 50856,
+      "sha256": "9490644d371351564a229970bbba4a7fde6e3eb15e823a498e64516ff3cfd059",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_keyboard.png": {
+      "bytes": 238366,
+      "sha256": "6ebdedf5a32f0cda2cd8d12ba946edf45fd0e2d712b2c0312f18cf79c4e7e546",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_layers.png": {
+      "bytes": 41913,
+      "sha256": "2a17ac145e4c8cb0c84146f775df29a5c9b4407d44a6c60ac596d242cfc53616",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_layers.png": {
+      "bytes": 199198,
+      "sha256": "b82c9879af15a555933cf58868cf3fe5c87c8c4056e1f7ae60d6bb0e00cb8af9",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_mic.png": {
+      "bytes": 46331,
+      "sha256": "2f00a40cf09e926b3c7dc7cb4bbb6c19551e9b834b334627c4bf5d5f39a84476",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_mic.png": {
+      "bytes": 236696,
+      "sha256": "4fa9d1448154c9a029827b9b7f4f5c0b1e4fab3d08900f214c881a0f3729b17c",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_morehoriz.png": {
+      "bytes": 18223,
+      "sha256": "55a47670db8b2305bd8b87505ea64d5f764b46612df502c2c5ab717583d66219",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_morehoriz.png": {
+      "bytes": 92919,
+      "sha256": "36d7016ef8a77906e8833fee631494ef9bab00a89743727b244a80e45a09ee0d",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_morevert.png": {
+      "bytes": 19182,
+      "sha256": "491cf04e9e2cf4e2f4f78a22255c37d86202ef809bb59f71aa9956c3833a434c",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_morevert.png": {
+      "bytes": 98437,
+      "sha256": "12446d04ae0285b2253c024e0e5ca79c59f7bc9216e31b91c0f699912b975ff0",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_notificationsactive.png": {
+      "bytes": 42716,
+      "sha256": "f3e6159db4357debc1c9461edf8a3a0c8dd83576c135e532e2ae406affcd3ec9",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_notificationsactive.png": {
+      "bytes": 219333,
+      "sha256": "03ae24388c20b7f4fd559164a184fc1252f89e2cbd54d4a36853b4e023afd898",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_notificationsnone.png": {
+      "bytes": 42166,
+      "sha256": "9cf9916ce5621eb2768255f50ec5987ff5d1556d770fd878946fb546bd2ca4a6",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_notificationsnone.png": {
+      "bytes": 203541,
+      "sha256": "9d2fd46f33fca135325060f2227b66fbaafca361ccc7aa7c4f68715039015376",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_openinnew.png": {
+      "bytes": 53601,
+      "sha256": "9fb85b8e51853dfb096c7b7543c0206efcd4372c3f088ffda85ad02cfd247b61",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_openinnew.png": {
+      "bytes": 261930,
+      "sha256": "86fd5aa5cfe4386dd5293a8e2d942521e39e7aa04cbd6401bb0fde07e5db4c16",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_pause.png": {
+      "bytes": 41740,
+      "sha256": "96278401298dc4629bbdf35dcf9a08eba8aaa84bad7da058791893cbb2ad54f5",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_pause.png": {
+      "bytes": 205580,
+      "sha256": "d2f458e7d2110f6b116ec932ebec2f6f815d10479bf25ce4dcc4c258646f7968",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_phoneandroid.png": {
+      "bytes": 43485,
+      "sha256": "5815a563e6fbe57b0b67d52eb8b9366f7403780419710abd7672e1981c9518aa",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_phoneandroid.png": {
+      "bytes": 204712,
+      "sha256": "f4de67be4bc2dbb34388825ea7be0dc56a6f2a1f3ae339c0a6c9f3ca8cc78518",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_playarrow.png": {
+      "bytes": 46047,
+      "sha256": "5f1543b79ca131ecd05cc6f5a2e48e5400aa6a1a8a4ac52f8f2b6f0ec02609cc",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_playarrow.png": {
+      "bytes": 216755,
+      "sha256": "0612fdd3131d73d65494a24a293d7868166f0fbed4410a270b80e02199a12674",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_psychology.png": {
+      "bytes": 57839,
+      "sha256": "655df51fbaee2e2a11d23af54b0b988120d7e12a4bd5351aa7c9d6ddb91d7653",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_psychology.png": {
+      "bytes": 283145,
+      "sha256": "17d12c675f7893bf82d033a06e627fc26990650cd42059f4accc0d86f3506903",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_spin_psychology.png": {
+      "bytes": 275134,
+      "sha256": "e435f60281d315ca55f30c9692b8e87668c09078b6fdb682d1f790339195ff8e",
+      "dimensions": [
+        2560,
+        160
+      ]
+    },
+    "symbol_search.png": {
+      "bytes": 49532,
+      "sha256": "7f04bb74a9c34b100da5633a23f0b2b00fc6e25d009c465f5ffec62997352a9f",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_search.png": {
+      "bytes": 248847,
+      "sha256": "974cd4a83d97a9da721106b2a70bb730da1d16908c2c793c6629ccc7c8b8774f",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_send.png": {
+      "bytes": 33686,
+      "sha256": "c815ddc46234f3c1221eb72ba37a5f130ee188ca9f72ae1205bc9e4220294203",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_send.png": {
+      "bytes": 156734,
+      "sha256": "e81810ffb86fe42006a4334ac34aebb2257bec3e03b0102134f9d85da5c68be3",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_stop.png": {
+      "bytes": 57750,
+      "sha256": "3b61b82a7f7ccbedfc30163a088ef0ca9ff593295b4baeaa32637b144674a4e5",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_stop.png": {
+      "bytes": 265034,
+      "sha256": "b2f9bffe375e69970cb36b695e676add9c1810d84c5ebd95bb199a5ba3ff3cca",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_terminal.png": {
+      "bytes": 66738,
+      "sha256": "6bdbc8027670af6fdc4a597bdc9023162c14fd7a1f293cc2b664e8886e5b0aef",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_terminal.png": {
+      "bytes": 310859,
+      "sha256": "6f7e1a5ae07438fcb67018c16fbcb301ec765ca5360110484843219c923ef4f6",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_travelexplore.png": {
+      "bytes": 55720,
+      "sha256": "e23f644d44955f1e28f1bb144873c81f0823278d4bdea20bc7c051f597c981c6",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_travelexplore.png": {
+      "bytes": 286183,
+      "sha256": "6718f138473d0757f9f63ca93a357ceba7f6d005a8707c84beb4c462eb801e7a",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_tune.png": {
+      "bytes": 38483,
+      "sha256": "d682f1c995a6bb5424f34fd6a0241d43416b2cdd4ddd92a8db12e7ff97af1cac",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_tune.png": {
+      "bytes": 192462,
+      "sha256": "cf6f26980d65f29f290c44edc7e54c60f370423a84d070f5a90a24d83c01ee17",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_unarchive.png": {
+      "bytes": 46567,
+      "sha256": "c06b0c8e0d8c43c295dcdaf1729e4ca33eebfbbd0c6b9311c28012eee985df03",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_unarchive.png": {
+      "bytes": 228805,
+      "sha256": "3719252851c841dce6aa65631ae3fd1b1d354fabae91d5b26b965c2bfca0e75f",
+      "dimensions": [
+        1920,
+        160
+      ]
+    },
+    "symbol_volumeup.png": {
+      "bytes": 42850,
+      "sha256": "1d54f077f1f05d7a734be1128a3b30545a7cc2566874a2c36dac513c2dc34ec1",
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    "symbol_motion_volumeup.png": {
+      "bytes": 223318,
+      "sha256": "8cec55d6cdc6f17524f3e7e4802661d46863f5099dbb895029f19c834ea7b7b6",
+      "dimensions": [
+        1920,
+        160
+      ]
+    }
+  },
+  "compressedBytes": 10002905,
+  "largestDecodedSheetBytes": 1638400,
+  "eightEntryCacheWorstBytes": 13107200,
+  "androidBehaviorChanged": false,
+  "previousCompressedBytes": 6662367
+}

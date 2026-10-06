@@ -1,0 +1,21 @@
+{
+  "id": "nextcomp-modeled-v07-daylight",
+  "engine": "xpu",
+  "source_scene": "/aosp/houdini/nextcomp/modeled-v07/build/daylight.hiplc",
+  "scene_sha256": "200f9a384528184fbedf4b8254529ada3c3d56023eb8ae655b3e9476a9158ccd",
+  "asset_manifest": "/aosp/houdini/nextcomp/modeled-v07/build/daylight-manifest.json",
+  "asset_sha256": "384d4e84eb37da69e973244b8e1774667b1f4e87f286cbb3ea4896d3df95bb4d",
+  "frames": [
+    1,
+    1
+  ],
+  "fps": 60,
+  "width": 3840,
+  "height": 3840,
+  "samples": 32,
+  "rop": "/out/icons",
+  "exr_dir": "/aosp/houdini/nextcomp/modeled-v07/render/crisp-daylight",
+  "review_stage": "after_render",
+  "runtime_preflight": true,
+  "motion_blur": false
+}

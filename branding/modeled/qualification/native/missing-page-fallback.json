@@ -1,0 +1,10 @@
+{
+  "verified": true,
+  "scope": "interim optimized debug candidate, only148 regular pages present; full-turn and N pages intentionally absent",
+  "apkSha256": "bcc13a0ca9008d9d059958585c03d4b6d6e1f91b6a8444166b4b2753374adb5a",
+  "nativeEnvironment": "owned Android34 emulator5584",
+  "result": "activity stayed alive, list and conversation usable, static Codex busy and cubic N fallback visible, regular Mic/Search/Settings/controls animated",
+  "screenshot": "/8bar/nextcomp-modeled/v07/interim-native-missing-page-fallback.png",
+  "reducedMotionAndLifecycle": "live animator_scale=0 produced identical Mic/Search/Settings pixels two seconds apart; restoring scale resumed pixel changes; background gfxinfo reset interval reported0frames",
+  "finalCandidate": "qualified separately after all168 pages are integrated"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "nextcomp-modeled-v06-study",
+  "engine": "xpu",
+  "source_scene": "/aosp/houdini/nextcomp/modeled-v06/build/studies.hiplc",
+  "scene_sha256": "8c8d15740e6d9c582a9674a2c28d443ce730e072c2f2f509b956163e0fc01477",
+  "asset_manifest": "/aosp/houdini/nextcomp/modeled-v06/build/study-manifest.json",
+  "asset_sha256": "d71cd27aa9dd5d9ce8b95dd8941520d06666bd3d0c72660f73150eec82b757e3",
+  "frames": [
+    1,
+    9
+  ],
+  "fps": 60,
+  "width": 3840,
+  "height": 3840,
+  "samples": 32,
+  "rop": "/out/icons",
+  "exr_dir": "/aosp/houdini/nextcomp/modeled-v06/render/studies",
+  "review_stage": "after_render",
+  "runtime_preflight": true
+}

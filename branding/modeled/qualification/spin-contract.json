@@ -1,0 +1,20 @@
+{
+  "id": "nextcomp-modeled-v02-spin",
+  "engine": "xpu",
+  "source_scene": "/aosp/houdini/nextcomp/modeled-v02/build/spins.hiplc",
+  "scene_sha256": "079f49f3fe79cd4efbe12a0b021e2e3aa945f778c2cefce8dcea0532dfbc29a0",
+  "asset_manifest": "/aosp/houdini/nextcomp/modeled-v02/build/spin-manifest.json",
+  "asset_sha256": "913f5b9d7c93c79387054d1553e6d28f37737ea79e332ca8dcf9f717a622f7ee",
+  "frames": [
+    1,
+    16
+  ],
+  "fps": 6,
+  "width": 3840,
+  "height": 3840,
+  "samples": 32,
+  "rop": "/out/icons",
+  "exr_dir": "/aosp/houdini/nextcomp/modeled-v02/render/spins",
+  "review_stage": "after_render",
+  "runtime_preflight": true
+}

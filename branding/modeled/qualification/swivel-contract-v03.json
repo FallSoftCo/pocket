@@ -1,0 +1,20 @@
+{
+  "id": "nextcomp-modeled-v03-swivel",
+  "engine": "xpu",
+  "source_scene": "/aosp/houdini/nextcomp/modeled-v03/build/objects.hiplc",
+  "scene_sha256": "31c8b854fd74219711e761c7cd56709f3b0fd4c1ac86e4526dea2894825399dd",
+  "asset_manifest": "/aosp/houdini/nextcomp/modeled-v03/build/asset-manifest.json",
+  "asset_sha256": "975e331c17734e3050dd48ad1232d0c1c2d74ba9d0f842e24de3ee27b0be59f5",
+  "frames": [
+    1,
+    12
+  ],
+  "fps": 6,
+  "width": 3840,
+  "height": 3840,
+  "samples": 32,
+  "rop": "/out/icons",
+  "exr_dir": "/aosp/houdini/nextcomp/modeled-v03/render/icons",
+  "review_stage": "after_render",
+  "runtime_preflight": true
+}

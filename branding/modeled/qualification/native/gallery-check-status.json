@@ -1,0 +1,9 @@
+{
+  "indexBuild": "passed",
+  "cardCountAtBuild": 1786,
+  "refinedMediaHealth": "all referenced files exist; two HTTP200 checks; swivel MP4 verified120 frames60/1fps2.0s1920x1200",
+  "fullBrowserLayoutCheck": "blocked by existing computer-use broker quarantine; bounded acquisition attempted for required checker",
+  "quarantineId": "ce14f7c6-a6fc-4f4b-ab7a-cb4ee9568b88",
+  "recovery": "Independent operator/executor verification and separate admin recovery; no admin credentials passed into agent runtime",
+  "desktopInputOrTabsChanged": false
+}

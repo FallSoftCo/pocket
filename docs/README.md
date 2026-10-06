@@ -11,6 +11,8 @@ NextComp connects a person on Android to ongoing work in their own computing env
 - [Architecture decisions](DECISIONS.md), [privacy](../PRIVACY.md) and [security](../SECURITY.md): runtime ownership, delivery semantics and trust boundaries.
 - [Recorded UX requests](UX-REQUESTS.json): requirements and implementation status. Historical entries are not blanket current-release certification.
 
+- [Modeled 3D symbol workstream](../branding/modeled/README.md): original construction, design language, perspective/lighting studies and versioned motion qualification.
+
 ## Install and operate
 
 - [Codex and Losangelex backend selection](LOSANGELEX-BACKEND.md): interaction modes, private registration, team controls and origin-bound attention.

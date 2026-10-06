@@ -1,0 +1,7 @@
+{
+  "variant": "resource-shrunk debug",
+  "sha256": "27bef455939891d345b751a4387519bc15653f17b48fc630965e3e404cbfb5a6",
+  "bytes": 61313552,
+  "atlasPagesKeptWithExactBytes": 168,
+  "underExisting80MiBUpdateLimit": true
+}

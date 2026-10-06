@@ -1,0 +1,21 @@
+{
+  "id": "nextcomp-modeled-v07-midnight",
+  "engine": "xpu",
+  "source_scene": "/aosp/houdini/nextcomp/modeled-v07/build/midnight.hiplc",
+  "scene_sha256": "998776112d48a0385998888a335f5e132e6baec9a562ef0b5d119c523c3cbab4",
+  "asset_manifest": "/aosp/houdini/nextcomp/modeled-v07/build/midnight-manifest.json",
+  "asset_sha256": "b23abec271fdd9477ab5e290fed3b6bbb0aa20a3f51a8480212ea8073ab281bb",
+  "frames": [
+    1,
+    1
+  ],
+  "fps": 60,
+  "width": 3840,
+  "height": 3840,
+  "samples": 32,
+  "rop": "/out/icons",
+  "exr_dir": "/aosp/houdini/nextcomp/modeled-v07/render/crisp-midnight",
+  "review_stage": "after_render",
+  "runtime_preflight": true,
+  "motion_blur": false
+}

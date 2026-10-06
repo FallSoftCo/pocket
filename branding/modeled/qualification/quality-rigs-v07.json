@@ -1,0 +1,251 @@
+{
+  "views": {
+    "cameras": [
+      {
+        "camera": "/obj/atlas_camera",
+        "shutter": 0.0
+      }
+    ],
+    "metadata": {
+      "views": [
+        [
+          "front",
+          0,
+          -9,
+          "studio"
+        ],
+        [
+          "left-quarter",
+          -30,
+          -9,
+          "studio"
+        ],
+        [
+          "right-quarter",
+          30,
+          -9,
+          "studio"
+        ],
+        [
+          "low-quarter",
+          30,
+          -24,
+          "studio"
+        ],
+        [
+          "side-limit",
+          90,
+          -9,
+          "studio"
+        ],
+        [
+          "back",
+          180,
+          -9,
+          "studio"
+        ]
+      ],
+      "motionBlur": "camera shutter explicitly zero"
+    },
+    "sceneSha256": "22be771649139c3b84dcf5b4ca660419dae50fe77de4dd0580193521c5b037fa"
+  },
+  "daylight": {
+    "cameras": [
+      {
+        "camera": "/obj/atlas_camera",
+        "shutter": 0.0
+      }
+    ],
+    "metadata": {
+      "colors": {
+        "porcelain": [
+          0.12,
+          0.18,
+          0.21
+        ],
+        "teal": [
+          0.018,
+          0.24,
+          0.28
+        ],
+        "ink": [
+          0.018,
+          0.037,
+          0.054
+        ],
+        "silver": [
+          0.2,
+          0.29,
+          0.33
+        ],
+        "coral": [
+          0.7,
+          0.06,
+          0.03
+        ],
+        "gold": [
+          0.58,
+          0.28,
+          0.035
+        ]
+      },
+      "pose": [
+        -9,
+        16,
+        -2
+      ],
+      "keyIntensity": 1.2,
+      "fillIntensity": 0.24,
+      "keyColor": [
+        0.95,
+        0.98,
+        1.0
+      ]
+    },
+    "sceneSha256": "200f9a384528184fbedf4b8254529ada3c3d56023eb8ae655b3e9476a9158ccd"
+  },
+  "warm": {
+    "cameras": [
+      {
+        "camera": "/obj/atlas_camera",
+        "shutter": 0.0
+      }
+    ],
+    "metadata": {
+      "colors": {
+        "porcelain": [
+          0.75,
+          0.64,
+          0.45
+        ],
+        "teal": [
+          0.016,
+          0.28,
+          0.3
+        ],
+        "ink": [
+          0.018,
+          0.037,
+          0.054
+        ],
+        "silver": [
+          0.4,
+          0.35,
+          0.27
+        ],
+        "coral": [
+          0.94,
+          0.16,
+          0.1
+        ],
+        "gold": [
+          0.92,
+          0.52,
+          0.075
+        ]
+      },
+      "pose": [
+        -9,
+        16,
+        -2
+      ],
+      "keyIntensity": 1.2,
+      "fillIntensity": 0.24,
+      "keyColor": [
+        1.0,
+        0.75,
+        0.48
+      ]
+    },
+    "sceneSha256": "5f708597adb1d2c74023d23beee75cecbb5755da50e87fccb246597934f3f85a"
+  },
+  "midnight": {
+    "cameras": [
+      {
+        "camera": "/obj/atlas_camera",
+        "shutter": 0.0
+      }
+    ],
+    "metadata": {
+      "colors": {
+        "porcelain": [
+          0.22,
+          0.38,
+          0.49
+        ],
+        "teal": [
+          0.018,
+          0.27,
+          0.35
+        ],
+        "ink": [
+          0.018,
+          0.037,
+          0.054
+        ],
+        "silver": [
+          0.22,
+          0.34,
+          0.43
+        ],
+        "coral": [
+          0.94,
+          0.16,
+          0.1
+        ],
+        "gold": [
+          0.92,
+          0.52,
+          0.075
+        ]
+      },
+      "pose": [
+        -9,
+        16,
+        -2
+      ],
+      "keyIntensity": 1.0,
+      "fillIntensity": 0.18,
+      "keyColor": [
+        0.7,
+        0.86,
+        1.0
+      ]
+    },
+    "sceneSha256": "998776112d48a0385998888a335f5e132e6baec9a562ef0b5d119c523c3cbab4"
+  },
+  "spins": {
+    "cameras": [
+      {
+        "camera": "/obj/atlas_camera",
+        "shutter": 0.0
+      }
+    ],
+    "metadata": {
+      "frames": 160,
+      "fps": 60,
+      "motionBlur": "zero shutter for small full-rotation cues"
+    },
+    "sceneSha256": "fe578923a8a95de0b8b8f852b8555e320a677fcd5b98c0c56af2d60bf534bcaa"
+  },
+  "mark": {
+    "cameras": [
+      {
+        "camera": "/obj/atlas_camera",
+        "shutter": 0.0
+      },
+      {
+        "camera": "/obj/logo_camera",
+        "shutter": 0.0
+      }
+    ],
+    "metadata": {
+      "frames": 160,
+      "fps": 60,
+      "geometry": "existing equal-XYZ cube N, only rendered glyph retained",
+      "originalMarkSourceSha256": "a929abba6a9c4593a5a7bff398df73a62a7137be87b4f7368d4bdaac4a54aea6",
+      "motionBlur": "zero shutter"
+    },
+    "sceneSha256": "d89f32f5c4e2d8225ac2187f4425c0bb91a8a6d2f28d7297affb25e0de227c57"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "library": "cgi-knowledge via local read-only Python interface; library_status checked",
+  "projectMemory": "nextcomp revision0; inherited original-asset and OZZZ-only constraints",
+  "productionPacketRole": "modeling",
+  "sourceReview": "brave-complexity-budget",
+  "originalSource": {
+    "title": "Character Design: Visual Complexity in Brave",
+    "authors": [
+      "Lou Hamou-Lhadj",
+      "Jacob Speirs"
+    ],
+    "studio": "Pixar",
+    "url": "https://research.pixar.com/docs/2012.SiggraphTalks.HS.pdf",
+    "page": 1,
+    "sha256": "f2e111ed715419df3847dbfacba8d23f1a5de43962480ad22117272e229ed843"
+  },
+  "inspection": "Full one-page writeup and design-spectrum/horse/bear figures inspected during this workstream",
+  "transfer": "Maintain intended broad silhouettes, budget detail by delivery scale, bake native forms into inexpensive runtime images. Our icon modeling, lighting and UI-size results are original tests, not methods verified from the studio paper.",
+  "thirdPartyAssets": "Official OpenAI circle-terminal mark reference retains existing trademark provenance; no stock3D models or tutorial scenes",
+  "dependencies": [
+    "Houdini Indie22.0.429",
+    "Karma XPU",
+    "OpenImageIO",
+    "NumPy",
+    "Pillow",
+    "FFmpeg"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "candidate": "bcc13a0ca9008d9d059958585c03d4b6d6e1f91b6a8444166b4b2753374adb5a",
+  "renderingEnvironment": "owned Android34 headless emulator5584, SwiftShader software renderer,60Hz",
+  "scope": "37 regular atlas cohort, busy/N pages intentionally missing and fallback visible",
+  "sampleWallSeconds": 13.43344419496134,
+  "resumedAnimationPixelChange": true,
+  "targetPhoneQualification": false,
+  "frameCaptureRateIsNotDisplayRate": true,
+  "gfxSummary": "Applications Graphics Acceleration Info:\nUptime: 4679758 Realtime: 4679758\n\n** Graphics info for pid 6069 [co.fallsoft.pocket] **\n\nStats since: 4666424618337ns\nTotal frames rendered: 384\nJanky frames: 303 (78.91%)\nJanky frames (legacy): 384 (100.00%)\n50th percentile: 81ms\n90th percentile: 101ms\n95th percentile: 105ms\n99th percentile: 129ms\nNumber Missed Vsync: 249\nNumber High input latency: 162\nNumber Slow UI thread: 302\nNumber Slow bitmap uploads: 11\nNumber Slow issue draw commands: 303\nNumber Frame deadline missed: 303\nNumber Frame deadline missed (legacy): 303\n",
+  "memorySummary": "App Summary\n                       Pss(KB)                        Rss(KB)\n                        ------                         ------\n           Java Heap:    11644                          30360\n         Native Heap:    76024                          77348\n                Code:    13844                          96336\n               Stack:     4244                           4256\n            Graphics:        0                              0\n       Private Other:     3852\n              System:     9351\n             Unknown:                                    6632\n \n           TOTAL PSS:   118959            TOTAL RSS:   214932       TOTAL SWAP PSS:      348\n \n "
+}

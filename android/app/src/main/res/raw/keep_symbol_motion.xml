@@ -1,1 +1,1 @@
-<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/symbol_motion_*,@drawable/symbol_spin_*" />
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/symbol_motion_*,@drawable/symbol_spin_*,@drawable/nextcomp_motion_*" />

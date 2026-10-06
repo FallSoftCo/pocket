@@ -1,0 +1,20 @@
+{
+  "id": "nextcomp-modeled-v05-mark",
+  "engine": "xpu",
+  "source_scene": "/aosp/houdini/nextcomp/modeled-v05/build/mark.hiplc",
+  "scene_sha256": "c4ee0f99ef544195a8d685bc9e81229a703c9d8828daa278e3ebc96e1b31e047",
+  "asset_manifest": "/aosp/houdini/nextcomp/modeled-v05/build/mark-manifest.json",
+  "asset_sha256": "e00784e617b52462637bfbc53928f6c3bd7809c3538a5a6f39db98d751ff78c5",
+  "frames": [
+    1,
+    160
+  ],
+  "fps": 60,
+  "width": 3840,
+  "height": 3840,
+  "samples": 32,
+  "rop": "/out/logo",
+  "exr_dir": "/aosp/houdini/nextcomp/modeled-v05/render/mark",
+  "review_stage": "after_render",
+  "runtime_preflight": true
+}

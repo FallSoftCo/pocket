@@ -1,0 +1,190 @@
+{
+  "status": "complete modeled asset and Android candidate qualification; production integration and physical Fold pacing pending Pocket Dev",
+  "scope": {
+    "modeledSymbols": 37,
+    "launcherN": "existing cubic construction retained; retimed motion and density-selected atlases",
+    "geometry": "original assembled shells, lathed surfaces, round structural members, functional recesses/joints and distinct components; no mask-outline extrusion"
+  },
+  "baseCommit": "9da7474",
+  "branch": "nextcomp/modeled-symbols",
+  "androidChecks": {
+    "unitTestsPerVariant": 156,
+    "suitesPerVariant": 35,
+    "failures": 0,
+    "errors": 0,
+    "testDebugUnitTest": "passed",
+    "testReleaseUnitTest": "passed",
+    "lintDebug": "passed",
+    "lintRelease": "passed",
+    "assembleDebug": "passed",
+    "assembleRelease": "passed",
+    "debugApkBytes": 61313552,
+    "debugApkSha256": "27bef455939891d345b751a4387519bc15653f17b48fc630965e3e404cbfb5a6",
+    "optimizedReleaseTestSignedBytes": 51816178,
+    "optimizedReleaseTestSignedSha256": "b1c71484459d03c4c37fbe9c11554180ac4c444a5957c28fe33487595a6e768c",
+    "productionSigner": false,
+    "all168AtlasPayloadsByteExact": true,
+    "all168DynamicLookupNamesRetained": true,
+    "under80MiBUpdateLimit": true
+  },
+  "motion": {
+    "assetFps": 60,
+    "regularFrames": 120,
+    "regularSeconds": 2,
+    "fullTurnFrames": 160,
+    "fullTurnSeconds": 2.6666666666666665,
+    "clock": "Compose withFrameNanos elapsed timestamps; draw-phase updates; skips overdue samples",
+    "at120Hz": "two display refreshes per rendered sample; no120 unique-frame or physical-Fold smoothness claim",
+    "decodedLruBudgetBytes": 33554432,
+    "liveMemoryNote": "visible current/next page references and GPU resources are separate; cache budget is not total live memory"
+  },
+  "visualReview": "branding/modeled/qualification/visual-review-v07.json",
+  "gallery": {
+    "url": "/8bar/#nextcomp-modeled-controls",
+    "indexBuildCards": 1787,
+    "mediaFilesAndHttp": "passed",
+    "fullBrowserLayout": "required checker attempted under bounded broker ownership; WAIT_TIMEOUT before Chromium launch, existing profile quarantine requires independent operator recovery"
+  },
+  "deployment": {
+    "symbolsOnPhone": false,
+    "physicalFoldFrameDelivery": "unqualified; Pocket Dev owns release and handset integration",
+    "coordinationSession": "01a0f2bc-ff5a-70c2-b682-10f0987dab80"
+  },
+  "resources": {
+    "files": 206,
+    "staticSymbols": 37,
+    "atlasPages": 168,
+    "totalEncodedBytes": 45617085,
+    "atlasEncodedBytes": 44061750,
+    "archiveMatchesAll206IntegratedFiles": true,
+    "legacyLongStripsRemoved": 39
+  },
+  "nativeUi": {
+    "device": "owned emulator-5584 Android34 Pixel7 profile / software SwiftShader / 60Hz virtual display",
+    "screenshots": "branding/modeled/qualification/native/",
+    "normalText": "reviewed",
+    "fontScale2": "reviewed; existing usage placeholder clipping remains outside symbol scope",
+    "largeLoadingN": "294px native bounds uses256px-cell atlas",
+    "footerN": "53px native bounds uses128px-cell atlas",
+    "liveReducedMotion": "all3 observed animated regions static over2 seconds after live system setting change",
+    "foregroundAnimation": "Mic, busy Codex and N change pixels",
+    "background": "zero frames rendered over3seconds",
+    "missingPageFallback": "separate interim candidate intentionally omitted busy/N pages; static fallback verified"
+  },
+  "performance": {
+    "apkSha256": "b1c71484459d03c4c37fbe9c11554180ac4c444a5957c28fe33487595a6e768c",
+    "nativeEnvironment": "owned Android34 Pixel7 profile, emulator5584, Google SwiftShader software renderer,60Hz virtual display",
+    "scope": "complete168-page optimized release, test signed",
+    "sampleConditions": "warmed list; no simultaneous decode probe, Gradle job or input",
+    "warmedSampleWallSeconds": 12.152302247937769,
+    "targetPhoneQualification": false,
+    "captureRateIsNotDisplayRate": true,
+    "gfxSummary": "Applications Graphics Acceleration Info:\nUptime: 8182620 Realtime: 8182620\n\n** Graphics info for pid 7227 [co.fallsoft.pocket] **\n\nStats since: 8170557298044ns\nTotal frames rendered: 374\nJanky frames: 264 (70.59%)\nJanky frames (legacy): 374 (100.00%)\n50th percentile: 61ms\n90th percentile: 77ms\n95th percentile: 85ms\n99th percentile: 97ms\nNumber Missed Vsync: 219\nNumber High input latency: 219\nNumber Slow UI thread: 165\nNumber Slow bitmap uploads: 6\nNumber Slow issue draw commands: 264\nNumber Frame deadline missed: 264\nNumber Frame deadline missed (legacy): 265\n",
+    "memorySummary": "App Summary\n                       Pss(KB)                        Rss(KB)\n                        ------                         ------\n           Java Heap:     6672                          35184\n         Native Heap:    94148                          95488\n                Code:     4424                          91956\n               Stack:     2272                           2280\n            Graphics:        0                              0\n       Private Other:     7488\n              System:     8322\n             Unknown:                                    5380\n \n           TOTAL PSS:   123326            TOTAL RSS:   230288       TOTAL SWAP PSS:      195\n \n ",
+    "interpretation": "software emulator rendered374frames in12.1523s (~30.8fps),70.59%jank; does not qualify60fps delivery on physical Fold"
+  },
+  "cgi": {
+    "nativeFrames": 449,
+    "nativeFrameDimensions": [
+      3840,
+      3840
+    ],
+    "hdDeliveryDimensions": [
+      1920,
+      1920
+    ],
+    "engine": "Karma XPU Houdini Indie22.0.429",
+    "cpuFallback": false,
+    "observedGpuPeakUtilizationPercent": 100,
+    "rendersOnly": "OZZZ-GPU-RENDER; preparation and packaging OZZZ-OS",
+    "nativeArchiveBytes": 4802111824,
+    "nativeArchiveSha256": "6d0bc80decb42e7dd39a910367abb90125b35fc9f0d5b253c0a24c3f9509b72c",
+    "appArchiveSha256": "497b489341ca52eca429085c44aa1e1f96291957695d72901db5abf652c0f94f",
+    "archiveScope": "all native HDR frames, all HD PNGs, representative UHD PNGs per cohort, Indie scenes and original source; full UHD PNG sequences retained on farm",
+    "receipts": "branding/modeled/qualification/delivery-qualification-v07.json",
+    "theming": "three original independently rendered material/light studies; no live theme selector added"
+  },
+  "sourceHashes": {
+    "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt": "6e7e3964d9cba3f2989dd32882b9ad08aaa5bd5129aedf6262058d93f937a54e",
+    "android/app/src/main/java/co/fallsoft/pocket/AnimatedMark.kt": "c89ea0ebf139f513ee4794b2842db9a366eaf08a3caacf243c1882a58c9f498c",
+    "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt": "c89f2205110b9d7a1f678c08ce170ffe56345f2bb32803fa139a62fbd4f70789"
+  },
+  "integration": {
+    "candidateCommit": "5ebe69f5add801bf3fca4cc4db8566739f46285d",
+    "release": "0.5.0-alpha.29",
+    "versionCode": 47,
+    "publication": "Original private receipts preserved outside repository; public evidence relocated to branding/modeled/qualification and private deployment references removed. Sanitized images retain identical decoded pixels. Private candidate-history commit excluded from publication ancestry.",
+    "runtimeReview": "Display-clock integer timing; draw-phase frame reads; background decoding and next-page prefetch; bounded decoded LRU; lifecycle and live reduced-motion fallback; preserved public interactions.",
+    "galleryCheck": {
+      "separateHeadlessBrowser": true,
+      "sharedQuarantinedProfileUsed": false,
+      "desktop": true,
+      "mobile": true,
+      "reducedMotion": true,
+      "reload": true,
+      "cards": 1787
+    },
+    "phonePreflight": {
+      "installedVersionCode": 46,
+      "installedAlpha28Sha256": "c02839bb55eceb2556c881b841aad6ead2f7d70bba4eb7059b85e28180f6da0d",
+      "ssh": true,
+      "accessibilityResponds": true,
+      "adbAvailable": false,
+      "foldFramePacing": "Unqualified: no authorized ADB shell currently available."
+    },
+    "buildAndDelivery": "Root builds and synthetic qualification passed; phone transfer/install verification in progress.",
+    "android": {
+      "debugTests": 156,
+      "releaseTests": 156,
+      "suitesPerVariant": 35,
+      "debugLint": "passed",
+      "releaseLint": "passed",
+      "signedBuilds": "passed"
+    },
+    "backend": {
+      "tests": 205,
+      "failures": 0,
+      "productionAuditVulnerabilities": 0
+    },
+    "productionApk": {
+      "versionCode": 47,
+      "pages": 168,
+      "byteExact": true,
+      "dynamicResourceNamesRetained": true,
+      "apkBytes": 51790971,
+      "sha256": "635406191af76272583e84f5c291c5df869b653dde10a95b1b708f6358caf4e2",
+      "maintainedProductionSigner": true,
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf"
+    },
+    "compatiblePhoneApk": {
+      "versionCode": 47,
+      "pages": 168,
+      "byteExact": true,
+      "dynamicResourceNamesRetained": true,
+      "apkBytes": 61045980,
+      "sha256": "c38afb9bbb69465c3e7a2d5b4a7697975d5e9346f8431393ea8cc3df736f7262",
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"
+    },
+    "exactProductionNative": {
+      "synthetic": true,
+      "exactPublicApkSha256": "635406191af76272583e84f5c291c5df869b653dde10a95b1b708f6358caf4e2",
+      "freshInstallAndNormalPairing": true,
+      "conversationOpened": "immersion-unequal",
+      "nativeOriginalStills": 4,
+      "positivePixelChanges": [
+        "busyCodex",
+        "footerN",
+        "mic",
+        "keyboard"
+      ],
+      "liveReducedMotionStatic": {
+        "busyCodex": true,
+        "footerN": true,
+        "mic": true,
+        "keyboard": true
+      },
+      "framePacingMeasured": false,
+      "phonePerformanceQualified": false
+    }
+  }
+}

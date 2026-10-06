@@ -1,0 +1,1898 @@
+{
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowback_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9fae456f4987335912c6e30d0a615c1a0605a1e43baec3730d90cc55539a254d",
+    "bytes": 169162
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowback_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "965ac7ccf0d184ed16ccb56045c20625c8cf9d75904498a013fa34d9710d9225",
+    "bytes": 171356
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowback_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b823e08fcefc59332ae2cec83a30544d3748ca5da7bba27658ee5a35db2cf488",
+    "bytes": 171848
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowback_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "6d773b45bc9ec4f833953038aec4d017800669af8b92ab3da3c7dc31eb4cb546",
+    "bytes": 170928
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowdownward_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0f2b0c751baf44b7999fffcadec5cb056b9f9c66040d5c702847651f92cd4fb5",
+    "bytes": 186370
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowdownward_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b0b40c81f5b3d930ef8b75058c0cdab0862d1aa9301912462e08961283a22450",
+    "bytes": 185752
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowdownward_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ee72bf801fb8ba588b052ed97eca7c3c8f99c32a8c7ecbaa4d529a01d6d67be4",
+    "bytes": 174122
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowdownward_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "965d4fff3e0338189dab53336b642e1d8528112444b5ab5490897f5d0a40a7e0",
+    "bytes": 175624
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowforward_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "19833a985e8da33a4e81fa48eff1c2110b83483ba777dee89d278b04a6029ece",
+    "bytes": 173460
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowforward_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cb0a3dfc29901340503f53f6e0d6cb4d7ee21e9abd7df7e09dced3137f59e1e7",
+    "bytes": 175142
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowforward_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "121db5e6adcb1e1ec327132ac6c4b3a2c4ac6605a286160535583659c6948c09",
+    "bytes": 180832
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowforward_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "692b0195689b688ba6a1a74738c4fc32fc973cf7b5bc2e6a105f4d0aeb4c8fdc",
+    "bytes": 174264
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowupward_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "f6697de999978ffbbc5976e84bae0d52bb76dd0cb07a71bb1b9f7ddefe3e5181",
+    "bytes": 188530
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowupward_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1cb7c3ee53c816d7aafa1efe881f19b9aa95cbc1eff57a09b5b198a28994c670",
+    "bytes": 186464
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowupward_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4a8ce9c0ef756ca48cda853357c0bf87b34e844c37932dd27836dca4b6844467",
+    "bytes": 175930
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_arrowupward_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "236c8cbbb6868278f702bf640b26667572f2950f5bd3e632663258ac8745d3f6",
+    "bytes": 177058
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_attachfile_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1da2958494732bba3068faf621ba5f28ee0276a766d230e0b227bd4c370a7b0c",
+    "bytes": 255552
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_attachfile_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "72486dfcb17e3525acdbeadcbd862160a43d22a6bec0854600053f287da4f35c",
+    "bytes": 258166
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_attachfile_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "96d134462ace5a6e9dda0f3b582445d29c222bde1314f2a07cf15a5ca968988a",
+    "bytes": 251550
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_attachfile_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4741b6fcbd2dbd7d8b403e3804d6c92987c2cea57a8b3a1889ffed402427d35b",
+    "bytes": 249494
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_build_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "63e61920224e8eb541490390dad42354b622272eaa4f0c57ad3dcbeb0113418e",
+    "bytes": 205576
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_build_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d79f432a9d9ca59b872c1104180521fb4f2c60cabfd6560e9f4f368565a09324",
+    "bytes": 202222
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_build_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5d5d8795daf532f37938d61a5b2bd0bafccbe0621050f0849976c39a94b96f8a",
+    "bytes": 203594
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_build_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "627256407c41eb21496c60f82b41278aac03ae2a08dd7f64e62691f1c077781a",
+    "bytes": 203734
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_check_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "01d9cb9987a1e004dc794b24240d5e49349921f9ceac467765c029f96af28195",
+    "bytes": 148864
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_check_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b28ef4a30a2b340b5211a8885eeb4f09bcb36b5d3984c9ef5fff1ec124dd8379",
+    "bytes": 148120
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_check_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7e5b2ee3a53930668745be92e02432951bdc6973766ebc05745aba2f8bd11c2d",
+    "bytes": 142344
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_check_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "f73889792dfe8743bc9e566a71a6ca85ac3b14c2ae0b37c751c38e28a7047035",
+    "bytes": 143562
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_computer_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "29cd9185599c5a4bc318942f6e76bec1ed7812aa10e18a28827909b3c1059a02",
+    "bytes": 303430
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_computer_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1e008eb1bd18e4e52b0140391553e15a73936fba03c23f85e0d8be6f8a7eaed5",
+    "bytes": 316202
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_computer_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "db9066f5eed611fb3a25aaf8b1a9c5f324d6a42c0849c2dd15d75f19fbb32562",
+    "bytes": 301974
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_computer_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "715281f586f5925247ae1eeac0c47724748711eea61f664cb88c79a997dbb2f2",
+    "bytes": 292180
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_edit_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "014e9631ed2c0481a7e7d3819527d6b1ffb77c6ab5e7af364dfe8e58b77ebc42",
+    "bytes": 193132
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_edit_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1d5f207027af638f217c38be437cf72a080872e7d5cea4fb455ae943d9534a23",
+    "bytes": 187726
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_edit_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "eb2881174507d513bb210819701897e77ee4ef32b07d21ffa928a473674cfc71",
+    "bytes": 187778
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_edit_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "385cf643e67226b1458886bdb4bc78520b33113792cadac4e4e53d2816a4e90f",
+    "bytes": 186352
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_editnote_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1c536d6672ebfb05464e1ab56ce28cd4299ded95da11e7ecd4f3362c763513d9",
+    "bytes": 338920
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_editnote_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "8bcb24e9abc300360b3faf3ef78677e201587db51b54097145b343dd47586907",
+    "bytes": 340842
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_editnote_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "a074d8c248d7ebded22fb89ba359ab2a14d7a9233c8c2596a49ed4a761d84dad",
+    "bytes": 325806
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_editnote_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "73a082bb3681e0d7ae6f888900098e93154bcf46259478c078a00c960553dd65",
+    "bytes": 326838
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_erroroutline_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "042d9df81c5d8c0940d16fe58479d6feda0f8ed0092b47cbfbd05ee66acdc792",
+    "bytes": 344348
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_erroroutline_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7fd3a12c19423c287d232541c013970143196220b509f4d0845705d770e8d344",
+    "bytes": 343032
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_erroroutline_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cfc5c895b0a32d2a98475e8ff5c17399c1a19de91155806b75131a762637b530",
+    "bytes": 348910
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_erroroutline_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "be2edea2cde0cacbf1ce31ca8837e52ff684964edc4df70abc4eda667372ade4",
+    "bytes": 347548
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_expandless_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0354ee015d7e0a0bcf1eb92dba9bdf4a032144258f4230ebbbf73d7b369e1754",
+    "bytes": 127668
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_expandless_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7f23960be5f3f42a115b14dfa8985ebfb51dda23800a79cfe0cbb3327dddea5f",
+    "bytes": 126492
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_expandless_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "a9a8002226e1d0c8c10f5d8cc76c3e6386cec315da7f709cd6b1ba3a3f0d9dd6",
+    "bytes": 122880
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_expandless_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3d213d03d8486955243a7204404f5302232a13d53f325d0d9339fddcd4bf36c6",
+    "bytes": 124528
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_expandmore_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9c7f61038c5df296d7b984c8196ed008a871543319890ceedcb4d96b894e83a7",
+    "bytes": 124554
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_expandmore_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "de7e63a77a78b142290fdfc65d1cf4c075dfbcb44d14374b3fc6c97613811379",
+    "bytes": 124958
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_expandmore_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0f6f7ab7b6a63714ea320699030e8430c49575745b6dafc6197e17a8b74be800",
+    "bytes": 121386
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_expandmore_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "919de5b47e1c97978ab2f3b85917df42db3e70c37ee22144210233a9b65badb6",
+    "bytes": 121724
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_folderopen_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "6ffb8a7882b9ed020235e81bd433d9a9c5fdb3f92d7b444eaa7c9d74519ce661",
+    "bytes": 243106
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_folderopen_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "13262e40b50efc98b297bfc99f5bebd0711fc6049abf2651f864abb9cba12333",
+    "bytes": 239262
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_folderopen_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b30e9e05810d2914d1c543af238e9fa07bbb74bc2effbbd50d3e367e98653a88",
+    "bytes": 207266
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_folderopen_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "a54cb3bc2dc6e5762fbd41180f853f3826a2129bf853a408a2a8efcf7374beaa",
+    "bytes": 213220
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_inbox_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d091f9987c7fa2157a1ee7ea98315e20481c69c6071dd1b5c4bc77c9cc23f639",
+    "bytes": 253356
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_inbox_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "69432b85893f5d2bbf78e670c9a18882d6ba914553b7cf15cf2ee65621bf6713",
+    "bytes": 260266
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_inbox_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5a68f6fd499f055b87836f5fe79a425b652ca128f1b5ba59897b1c6ecefb0c2a",
+    "bytes": 244902
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_inbox_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ab310df9383ca8ab0a84ac20b1bfaa571ffb851109116d03380c4551e13cd873",
+    "bytes": 236160
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_keyboard_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4549fc124e973005b7b5d58f6439012909898805deb48695533986fbdc7f8ee7",
+    "bytes": 282598
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_keyboard_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7fcd7b1c10983dd8610a5e3104f296ff9c1cf15b91292f84ee952daf44e98e84",
+    "bytes": 293454
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_keyboard_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ad7390e24d30366752173def2b5031ba1c20eaa0ea273ab0a011f130f7b37e9b",
+    "bytes": 282730
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_keyboard_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3c5cdb2fa86444cde20ba75d6ba6acc239f54e729ae69e4e57fb23cd5c9307c7",
+    "bytes": 282424
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_layers_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "85a956c4d83953d28ce99b4eb786edc2ca8d0c29f079f011a0da630c7e89c5d4",
+    "bytes": 230264
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_layers_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "db0f421424f2037f5d21dc6df74f82c326684cae5a717b5483b4c3cea285e28b",
+    "bytes": 255476
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_layers_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "363aa0d719f637b0c2ee3d329558c01b3e4b343482c7b7f8468ccd9f0aa3dcaf",
+    "bytes": 245634
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_layers_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cc0c3506737c7141c14261d4b158584fe99828b77df7b03258fb458a30845598",
+    "bytes": 222694
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_mic_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b393f0207421d4b765332178c7c5761a63040aaba7866dbe0d90a494f97d43c5",
+    "bytes": 303538
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_mic_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "791f6747faab9e7a6e4b057b2b51d81b503e5c4c9592c50554ed74c3e523b4a2",
+    "bytes": 306614
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_mic_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5d26cbde21635747932bfd36385360c1712bb1b0f3401f6cb7fd5ba3ee0d13f0",
+    "bytes": 306998
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_mic_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "195e019a3d17c94ae4979a2d14179e897e0e7ddd2102288a9fbae660a0f9ac99",
+    "bytes": 300904
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_morehoriz_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ec47657ac7253e78c4e80e5e7e8c4621d9dcf0828536ff1d15a2840597aa61d5",
+    "bytes": 121844
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_morehoriz_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b16e3529ed9cc738c74b7b15c28a33c4d2d8747beb7f8d1818bf853da835ca3c",
+    "bytes": 121608
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_morehoriz_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "66e6b365e7ef27dfa3e64d8499e5b42c6d75290328c93e8bf3aa2c36d1ead61b",
+    "bytes": 119688
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_morehoriz_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5c327417f184bb087df384d92ea0b92d1dd5b12900b59270760a37f884194eb4",
+    "bytes": 119022
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_morevert_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ea82fc92e236d4d0b9a023e44a14a598a95ca59e57dc2a4f0f2d846ed3f60580",
+    "bytes": 120998
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_morevert_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "74fa50e7ad1c92dda2db0dbab86a68babaa80b69278d819c85df2f28878e819a",
+    "bytes": 119994
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_morevert_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "01c90c79504a5c5b22a62552d81e81556a0063226ee6c986d498775e8ec7977d",
+    "bytes": 120716
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_morevert_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "e91c8c79d5b62461b51650099799a8e34fa665599d5e9285178c14d8bc2f1792",
+    "bytes": 120644
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_notificationsactive_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fb7f1b921e3379ef8effd524d8088d5de417bfa5e23f45408c64e67bfcfb3cd5",
+    "bytes": 263188
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_notificationsactive_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d25cc77614f1e998a99762267db9afc05b034237dc183fb5d8b283d4e90d4743",
+    "bytes": 269080
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_notificationsactive_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ca97d6e918f452c60646d5fd5bfafb96757d11fb946ff4e05bdf57af3812c0a7",
+    "bytes": 268170
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_notificationsactive_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "783f09d2368619790103eee8ad5cc611c15c89ebda5d095f3a9275e7d75f8502",
+    "bytes": 259336
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_notificationsnone_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "618e3a470fd1232aaec8b8b1cb59ec9193a93a7a9d2c1600c84b6498b3022428",
+    "bytes": 227208
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_notificationsnone_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5472f22aee4442723e9bc89113b0edbaf3e66cdbf2090a932cf300b02e888d56",
+    "bytes": 236148
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_notificationsnone_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cf9c60273941d15d7b55bd2402be9bd2ab0dc07c016d67f6197940bc38d35128",
+    "bytes": 239408
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_notificationsnone_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "afa21819f7399db2e1f59ccd300ef903d75352438222835396cbe049140e5c39",
+    "bytes": 230028
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_openinnew_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "c5eae4fd996a90058ecf8fcdb209c9fbf4cb735b8d1904b9ed817800deb1f7e7",
+    "bytes": 284142
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_openinnew_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5b395991a8271eb3694bf2d9fa56f4f530037d9dc77ea8ce4c460ac5d7c7f739",
+    "bytes": 285730
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_openinnew_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fdaf24aff17926894eee4d19899e6f0326212baea73d594d238bf8f8f579a10b",
+    "bytes": 277290
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_openinnew_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9bd9f9007909ab788b0c44647768daf23601ab65d563eca652707fb5f09e0e9b",
+    "bytes": 277832
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_pause_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cd3696d1a00fb69b0a3344f39e34e0128aed9fbcd2a1707f907410fd601006d4",
+    "bytes": 238640
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_pause_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "c033dc0f7019116495dd983ba963040ece80281867f673fd57c9deea108674e4",
+    "bytes": 248366
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_pause_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3f44e35b88add98d30592f726805aea8fe81a4d4a2ecc66d6c1ce7748300c032",
+    "bytes": 197522
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_pause_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3f311f345ca0eeb52487efabdb3ae18ae4fec1921d38914dbc22e818f1d976a5",
+    "bytes": 191870
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_phoneandroid_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "753c409db0cf5fd8bf959eef9a104ae2c4a0c63994ff3b09e4ebc3cc1a20bc07",
+    "bytes": 222400
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_phoneandroid_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d6f0c07ed0408bcf1d961350ca1235a22ef04da2f3fbbc2242362e6ccd856549",
+    "bytes": 231132
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_phoneandroid_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0a758cc901aab3a32b1d2570081001c3b81e5c217c158e2da8fa8cb645264909",
+    "bytes": 204456
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_phoneandroid_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "e4b5648b5bb2cd1cfaf1033198c722022cbf33ad8b13e19bdf5c3066f9135cd4",
+    "bytes": 198838
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_playarrow_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "216b4ce43e9bdb02604475c3a35345d9a3fa5d19bedb00a85660858db2530522",
+    "bytes": 216722
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_playarrow_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3ef85456302be8adc99d6aa7dc59effdeb8d46224b7e6245f4cec3fdc1f61842",
+    "bytes": 221098
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_playarrow_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9f566f724bf6f19a31c97b3a5663a2c278be50a3bd8279df47c5677e2475b173",
+    "bytes": 224118
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_playarrow_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fb6fe7ab4d3201404ef4dd62719dbbd6388b423d2eed6feb015a8b737d046a87",
+    "bytes": 221684
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_psychology_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "f2b2212b9675fb486a96264f5a84ca53719288634100bbb89154945fc4163b62",
+    "bytes": 339430
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_psychology_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4abbc50a38113590148d314acb2362f73b4e7dcdd5c0e95646e30c3a4735cbdc",
+    "bytes": 339150
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_psychology_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3c7d3a0fd5ba80e40c9d3d50a210b04d9328c0c9407d852c80c28d4378b13983",
+    "bytes": 325540
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_psychology_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "34c71373eabed77477b8cac0edb66cdc0c14eaa5d9f968b347a8088ae2788a08",
+    "bytes": 322800
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_search_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "406777f1c73d1e601733ebafd524914719db50573ba28baebfa2960788a9b169",
+    "bytes": 270092
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_search_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "90c4c883ce79eb880d2c1cc12b577a8d7fbcf4112e0539df2f012c48df6f97c2",
+    "bytes": 267474
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_search_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d8afa19574e65ac7e989e783d593f8d45ae2b9d3220b192bb7c8af93adef64d0",
+    "bytes": 270082
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_search_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "79c058e491472ac10ffc962bd44e6c155e9dca569dcabab6433ffd514f5be168",
+    "bytes": 270470
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_send_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "584dd6849b482a95a1fde47ed8fe1534a87cfc6a9f945c74fdf80faf52ed2a34",
+    "bytes": 173618
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_send_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4e3c6a10936fc6f0fd3c432cac3ac5e02a5d2e7e0cf9c7e74c6071dc72fa917f",
+    "bytes": 176576
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_send_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "73e3420507edfe2ab8e20861eeadd6c3a11d98a43df4b502d38f2407ee944caf",
+    "bytes": 181978
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_send_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "f9363f6fc24c6c3d28f610a6f44e9adf72f999bf2e69f2f18a2385edb1afeeb1",
+    "bytes": 180356
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_stop_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b9f70e8c9e205ebbb60ecb9a0fc2f577122a87d006b30489d905850e100419aa",
+    "bytes": 264104
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_stop_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "32bb8e992d99a0943c25dcb64b2638fea96b2300ceb8afd7941468a1ae71f1e9",
+    "bytes": 269872
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_stop_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "eed254ea0808776a7fa38f2259e3dc26eda4d63f703b7c4e137b3ed30064ffda",
+    "bytes": 233372
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_stop_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "66ff9f27821f6cfb670d5a92e460c7f291e92ca0ff2093152c4bf0bb1bd3a770",
+    "bytes": 230322
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_terminal_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7b73017a4279fd6d8719e6be893dea1ed2b18d9f9de743fef6fbb7e836ccd3fa",
+    "bytes": 338862
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_terminal_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "944a38eec6014ee88886e78a97db0e1f00ea99507d787684df8ab61564e309d2",
+    "bytes": 350644
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_terminal_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fa5a6fa68e644915d8e26c34bd61a841f9c3f8ddaaff06d3a98b73904a4c4940",
+    "bytes": 333976
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_terminal_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fea4ada392a595142e9ca5abe50ad25bc79ee104026f4f8b87b384e46968aa7d",
+    "bytes": 326280
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_travelexplore_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "e9eb766858815119e951dec70e5e047562088a4e3900f22333ce650c17d3be94",
+    "bytes": 340726
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_travelexplore_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d37a9b33eced06516680773bc1de2d0132ac47f28368fa06d139d6bf1a14b7b9",
+    "bytes": 343874
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_travelexplore_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "70fb2c4edfd0d5bdb79fd48d4cca1cc7d68e928d0536d028f3d7be8f69d929fd",
+    "bytes": 326662
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_travelexplore_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "84965851113a7e59f4d45185989f83c4032fd9992732afc922239121736a22b5",
+    "bytes": 332174
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_tune_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "53bd616c85239217f25b3ff9f4de9a3a0648e2aa26915fa9be540d64bd5a5d19",
+    "bytes": 233476
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_tune_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0ef7e652aa41bfdca78d7a66f9893a38386bfae669a0b9a59c87fe55da5f5a62",
+    "bytes": 232710
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_tune_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "6d9233cf49c1b0013a752603848c75639c5f884b0831a92b1870bccda3532a5b",
+    "bytes": 231022
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_tune_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "e3d93e6edf8b7bbe0063ec33cb749215b6d11efae3c685757003b549c40f6385",
+    "bytes": 232386
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_unarchive_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "89ec54f70263b5507b2a7c3e7a81766eaf2ff05a2161cc699ff966f6706e8ed4",
+    "bytes": 272426
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_unarchive_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b23c49ed477a60d25d0b15d61af390aa25fbd20ac27c09c00b1a2c2dd00e9014",
+    "bytes": 278866
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_unarchive_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "acf4ec8a04e8c41b482d92ca4ebc1ae0e5a3431ad5f47028e6e298f9cba06f47",
+    "bytes": 257226
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_unarchive_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d15f4eea0af19fe85f4258718834d1bf17a4b55d795565e9366e26375edf6c8f",
+    "bytes": 252046
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_volumeup_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "71a51472ee899b3d3fa046afd9472e4b8451c9940f050672c319b583ca0d4a91",
+    "bytes": 265020
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_volumeup_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "2c1ec5e9c79e44dc07e0e4e689dcf8e914ac2b885e398311d556ee9f30b5b84d",
+    "bytes": 272060
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_volumeup_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fb8e1ecbb4c3536b8fe1a1cf06b1c7949368143d1e5d0c24fe5a877a388b8b5f",
+    "bytes": 243468
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_volumeup_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "6c9021a78bea40d9f60200bac9ec8e6961a2afa871c8ca75670b327b40885875",
+    "bytes": 239334
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_codex_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9fb0f75f62ec54a7c0feff4918d28d6658ed7d8f5e2f65002d6d14db7d407ac7",
+    "bytes": 327072
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_codex_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9734dacc041eb1811624941abf2e582bdcdd06e64578e21001f4c1d0ab3f03a3",
+    "bytes": 322486
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_codex_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "eded1ec1c0b3e26afe61577da8028556b04c4dcc5df8096ec0a85245c7dce779",
+    "bytes": 323212
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_codex_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b58d4c1f5379373235c3a89786a32c342607b001d5b52c6872238be2b6afd7ef",
+    "bytes": 326394
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_user_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "daa6ebbccba6d1301b6f97cacb4b819f567d1f49de407bbb94a07d85df7aa5d6",
+    "bytes": 256184
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_user_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "bbaa354f85f9175178a66635ab45c4c3b91151f81cd25b57b5395fa4e944d3e3",
+    "bytes": 254262
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_user_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "2a0fac98f09066c4129bb951047ab9fa92d8f36f825e370fd067a387c7083f4f",
+    "bytes": 255594
+  },
+  "/aosp/houdini/nextcomp/modeled-v06/delivery/drawable-nodpi/symbol_motion_user_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "44be3854abd84141a9befb2e5d2b33f8706ed3a5e8222de8ad28a606e1408870",
+    "bytes": 256356
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_user_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "44be3854abd84141a9befb2e5d2b33f8706ed3a5e8222de8ad28a606e1408870",
+    "bytes": 256356
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_user_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "2a0fac98f09066c4129bb951047ab9fa92d8f36f825e370fd067a387c7083f4f",
+    "bytes": 255594
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_user_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "bbaa354f85f9175178a66635ab45c4c3b91151f81cd25b57b5395fa4e944d3e3",
+    "bytes": 254262
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_user_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "daa6ebbccba6d1301b6f97cacb4b819f567d1f49de407bbb94a07d85df7aa5d6",
+    "bytes": 256184
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_codex_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b58d4c1f5379373235c3a89786a32c342607b001d5b52c6872238be2b6afd7ef",
+    "bytes": 326394
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_codex_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "eded1ec1c0b3e26afe61577da8028556b04c4dcc5df8096ec0a85245c7dce779",
+    "bytes": 323212
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_codex_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9734dacc041eb1811624941abf2e582bdcdd06e64578e21001f4c1d0ab3f03a3",
+    "bytes": 322486
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_codex_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9fb0f75f62ec54a7c0feff4918d28d6658ed7d8f5e2f65002d6d14db7d407ac7",
+    "bytes": 327072
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_volumeup_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "6c9021a78bea40d9f60200bac9ec8e6961a2afa871c8ca75670b327b40885875",
+    "bytes": 239334
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_volumeup_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fb8e1ecbb4c3536b8fe1a1cf06b1c7949368143d1e5d0c24fe5a877a388b8b5f",
+    "bytes": 243468
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_volumeup_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "2c1ec5e9c79e44dc07e0e4e689dcf8e914ac2b885e398311d556ee9f30b5b84d",
+    "bytes": 272060
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_volumeup_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "71a51472ee899b3d3fa046afd9472e4b8451c9940f050672c319b583ca0d4a91",
+    "bytes": 265020
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_unarchive_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d15f4eea0af19fe85f4258718834d1bf17a4b55d795565e9366e26375edf6c8f",
+    "bytes": 252046
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_unarchive_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "acf4ec8a04e8c41b482d92ca4ebc1ae0e5a3431ad5f47028e6e298f9cba06f47",
+    "bytes": 257226
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_unarchive_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b23c49ed477a60d25d0b15d61af390aa25fbd20ac27c09c00b1a2c2dd00e9014",
+    "bytes": 278866
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_unarchive_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "89ec54f70263b5507b2a7c3e7a81766eaf2ff05a2161cc699ff966f6706e8ed4",
+    "bytes": 272426
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_tune_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "e3d93e6edf8b7bbe0063ec33cb749215b6d11efae3c685757003b549c40f6385",
+    "bytes": 232386
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_tune_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "6d9233cf49c1b0013a752603848c75639c5f884b0831a92b1870bccda3532a5b",
+    "bytes": 231022
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_tune_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0ef7e652aa41bfdca78d7a66f9893a38386bfae669a0b9a59c87fe55da5f5a62",
+    "bytes": 232710
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_tune_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "53bd616c85239217f25b3ff9f4de9a3a0648e2aa26915fa9be540d64bd5a5d19",
+    "bytes": 233476
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_travelexplore_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "84965851113a7e59f4d45185989f83c4032fd9992732afc922239121736a22b5",
+    "bytes": 332174
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_travelexplore_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "70fb2c4edfd0d5bdb79fd48d4cca1cc7d68e928d0536d028f3d7be8f69d929fd",
+    "bytes": 326662
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_travelexplore_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d37a9b33eced06516680773bc1de2d0132ac47f28368fa06d139d6bf1a14b7b9",
+    "bytes": 343874
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_travelexplore_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "e9eb766858815119e951dec70e5e047562088a4e3900f22333ce650c17d3be94",
+    "bytes": 340726
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_terminal_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fea4ada392a595142e9ca5abe50ad25bc79ee104026f4f8b87b384e46968aa7d",
+    "bytes": 326280
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_terminal_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fa5a6fa68e644915d8e26c34bd61a841f9c3f8ddaaff06d3a98b73904a4c4940",
+    "bytes": 333976
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_terminal_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "944a38eec6014ee88886e78a97db0e1f00ea99507d787684df8ab61564e309d2",
+    "bytes": 350644
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_terminal_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7b73017a4279fd6d8719e6be893dea1ed2b18d9f9de743fef6fbb7e836ccd3fa",
+    "bytes": 338862
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_stop_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "66ff9f27821f6cfb670d5a92e460c7f291e92ca0ff2093152c4bf0bb1bd3a770",
+    "bytes": 230322
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_stop_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "eed254ea0808776a7fa38f2259e3dc26eda4d63f703b7c4e137b3ed30064ffda",
+    "bytes": 233372
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_stop_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "32bb8e992d99a0943c25dcb64b2638fea96b2300ceb8afd7941468a1ae71f1e9",
+    "bytes": 269872
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_stop_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b9f70e8c9e205ebbb60ecb9a0fc2f577122a87d006b30489d905850e100419aa",
+    "bytes": 264104
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_send_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "f9363f6fc24c6c3d28f610a6f44e9adf72f999bf2e69f2f18a2385edb1afeeb1",
+    "bytes": 180356
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_send_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "73e3420507edfe2ab8e20861eeadd6c3a11d98a43df4b502d38f2407ee944caf",
+    "bytes": 181978
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_send_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4e3c6a10936fc6f0fd3c432cac3ac5e02a5d2e7e0cf9c7e74c6071dc72fa917f",
+    "bytes": 176576
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_send_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "584dd6849b482a95a1fde47ed8fe1534a87cfc6a9f945c74fdf80faf52ed2a34",
+    "bytes": 173618
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_search_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "79c058e491472ac10ffc962bd44e6c155e9dca569dcabab6433ffd514f5be168",
+    "bytes": 270470
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_search_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d8afa19574e65ac7e989e783d593f8d45ae2b9d3220b192bb7c8af93adef64d0",
+    "bytes": 270082
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_search_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "90c4c883ce79eb880d2c1cc12b577a8d7fbcf4112e0539df2f012c48df6f97c2",
+    "bytes": 267474
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_search_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "406777f1c73d1e601733ebafd524914719db50573ba28baebfa2960788a9b169",
+    "bytes": 270092
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_psychology_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "34c71373eabed77477b8cac0edb66cdc0c14eaa5d9f968b347a8088ae2788a08",
+    "bytes": 322800
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_psychology_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3c7d3a0fd5ba80e40c9d3d50a210b04d9328c0c9407d852c80c28d4378b13983",
+    "bytes": 325540
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_psychology_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4abbc50a38113590148d314acb2362f73b4e7dcdd5c0e95646e30c3a4735cbdc",
+    "bytes": 339150
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_psychology_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "f2b2212b9675fb486a96264f5a84ca53719288634100bbb89154945fc4163b62",
+    "bytes": 339430
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_playarrow_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fb6fe7ab4d3201404ef4dd62719dbbd6388b423d2eed6feb015a8b737d046a87",
+    "bytes": 221684
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_playarrow_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9f566f724bf6f19a31c97b3a5663a2c278be50a3bd8279df47c5677e2475b173",
+    "bytes": 224118
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_playarrow_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3ef85456302be8adc99d6aa7dc59effdeb8d46224b7e6245f4cec3fdc1f61842",
+    "bytes": 221098
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_playarrow_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "216b4ce43e9bdb02604475c3a35345d9a3fa5d19bedb00a85660858db2530522",
+    "bytes": 216722
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_phoneandroid_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "e4b5648b5bb2cd1cfaf1033198c722022cbf33ad8b13e19bdf5c3066f9135cd4",
+    "bytes": 198838
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_phoneandroid_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0a758cc901aab3a32b1d2570081001c3b81e5c217c158e2da8fa8cb645264909",
+    "bytes": 204456
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_phoneandroid_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d6f0c07ed0408bcf1d961350ca1235a22ef04da2f3fbbc2242362e6ccd856549",
+    "bytes": 231132
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_phoneandroid_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "753c409db0cf5fd8bf959eef9a104ae2c4a0c63994ff3b09e4ebc3cc1a20bc07",
+    "bytes": 222400
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_pause_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3f311f345ca0eeb52487efabdb3ae18ae4fec1921d38914dbc22e818f1d976a5",
+    "bytes": 191870
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_pause_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3f44e35b88add98d30592f726805aea8fe81a4d4a2ecc66d6c1ce7748300c032",
+    "bytes": 197522
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_pause_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "c033dc0f7019116495dd983ba963040ece80281867f673fd57c9deea108674e4",
+    "bytes": 248366
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_pause_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cd3696d1a00fb69b0a3344f39e34e0128aed9fbcd2a1707f907410fd601006d4",
+    "bytes": 238640
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_openinnew_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9bd9f9007909ab788b0c44647768daf23601ab65d563eca652707fb5f09e0e9b",
+    "bytes": 277832
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_openinnew_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fdaf24aff17926894eee4d19899e6f0326212baea73d594d238bf8f8f579a10b",
+    "bytes": 277290
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_openinnew_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5b395991a8271eb3694bf2d9fa56f4f530037d9dc77ea8ce4c460ac5d7c7f739",
+    "bytes": 285730
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_openinnew_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "c5eae4fd996a90058ecf8fcdb209c9fbf4cb735b8d1904b9ed817800deb1f7e7",
+    "bytes": 284142
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_notificationsnone_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "afa21819f7399db2e1f59ccd300ef903d75352438222835396cbe049140e5c39",
+    "bytes": 230028
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_notificationsnone_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cf9c60273941d15d7b55bd2402be9bd2ab0dc07c016d67f6197940bc38d35128",
+    "bytes": 239408
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_notificationsnone_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5472f22aee4442723e9bc89113b0edbaf3e66cdbf2090a932cf300b02e888d56",
+    "bytes": 236148
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_notificationsnone_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "618e3a470fd1232aaec8b8b1cb59ec9193a93a7a9d2c1600c84b6498b3022428",
+    "bytes": 227208
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_notificationsactive_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "783f09d2368619790103eee8ad5cc611c15c89ebda5d095f3a9275e7d75f8502",
+    "bytes": 259336
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_notificationsactive_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ca97d6e918f452c60646d5fd5bfafb96757d11fb946ff4e05bdf57af3812c0a7",
+    "bytes": 268170
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_notificationsactive_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d25cc77614f1e998a99762267db9afc05b034237dc183fb5d8b283d4e90d4743",
+    "bytes": 269080
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_notificationsactive_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "fb7f1b921e3379ef8effd524d8088d5de417bfa5e23f45408c64e67bfcfb3cd5",
+    "bytes": 263188
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_morevert_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "e91c8c79d5b62461b51650099799a8e34fa665599d5e9285178c14d8bc2f1792",
+    "bytes": 120644
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_morevert_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "01c90c79504a5c5b22a62552d81e81556a0063226ee6c986d498775e8ec7977d",
+    "bytes": 120716
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_morevert_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "74fa50e7ad1c92dda2db0dbab86a68babaa80b69278d819c85df2f28878e819a",
+    "bytes": 119994
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_morevert_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ea82fc92e236d4d0b9a023e44a14a598a95ca59e57dc2a4f0f2d846ed3f60580",
+    "bytes": 120998
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_morehoriz_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5c327417f184bb087df384d92ea0b92d1dd5b12900b59270760a37f884194eb4",
+    "bytes": 119022
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_morehoriz_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "66e6b365e7ef27dfa3e64d8499e5b42c6d75290328c93e8bf3aa2c36d1ead61b",
+    "bytes": 119688
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_morehoriz_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b16e3529ed9cc738c74b7b15c28a33c4d2d8747beb7f8d1818bf853da835ca3c",
+    "bytes": 121608
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_morehoriz_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ec47657ac7253e78c4e80e5e7e8c4621d9dcf0828536ff1d15a2840597aa61d5",
+    "bytes": 121844
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_mic_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "195e019a3d17c94ae4979a2d14179e897e0e7ddd2102288a9fbae660a0f9ac99",
+    "bytes": 300904
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_mic_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5d26cbde21635747932bfd36385360c1712bb1b0f3401f6cb7fd5ba3ee0d13f0",
+    "bytes": 306998
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_mic_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "791f6747faab9e7a6e4b057b2b51d81b503e5c4c9592c50554ed74c3e523b4a2",
+    "bytes": 306614
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_mic_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b393f0207421d4b765332178c7c5761a63040aaba7866dbe0d90a494f97d43c5",
+    "bytes": 303538
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_layers_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cc0c3506737c7141c14261d4b158584fe99828b77df7b03258fb458a30845598",
+    "bytes": 222694
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_layers_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "363aa0d719f637b0c2ee3d329558c01b3e4b343482c7b7f8468ccd9f0aa3dcaf",
+    "bytes": 245634
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_layers_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "db0f421424f2037f5d21dc6df74f82c326684cae5a717b5483b4c3cea285e28b",
+    "bytes": 255476
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_layers_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "85a956c4d83953d28ce99b4eb786edc2ca8d0c29f079f011a0da630c7e89c5d4",
+    "bytes": 230264
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_keyboard_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3c5cdb2fa86444cde20ba75d6ba6acc239f54e729ae69e4e57fb23cd5c9307c7",
+    "bytes": 282424
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_keyboard_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ad7390e24d30366752173def2b5031ba1c20eaa0ea273ab0a011f130f7b37e9b",
+    "bytes": 282730
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_keyboard_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7fcd7b1c10983dd8610a5e3104f296ff9c1cf15b91292f84ee952daf44e98e84",
+    "bytes": 293454
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_keyboard_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4549fc124e973005b7b5d58f6439012909898805deb48695533986fbdc7f8ee7",
+    "bytes": 282598
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_inbox_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ab310df9383ca8ab0a84ac20b1bfaa571ffb851109116d03380c4551e13cd873",
+    "bytes": 236160
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_inbox_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5a68f6fd499f055b87836f5fe79a425b652ca128f1b5ba59897b1c6ecefb0c2a",
+    "bytes": 244902
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_inbox_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "69432b85893f5d2bbf78e670c9a18882d6ba914553b7cf15cf2ee65621bf6713",
+    "bytes": 260266
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_inbox_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d091f9987c7fa2157a1ee7ea98315e20481c69c6071dd1b5c4bc77c9cc23f639",
+    "bytes": 253356
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_folderopen_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "a54cb3bc2dc6e5762fbd41180f853f3826a2129bf853a408a2a8efcf7374beaa",
+    "bytes": 213220
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_folderopen_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b30e9e05810d2914d1c543af238e9fa07bbb74bc2effbbd50d3e367e98653a88",
+    "bytes": 207266
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_folderopen_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "13262e40b50efc98b297bfc99f5bebd0711fc6049abf2651f864abb9cba12333",
+    "bytes": 239262
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_folderopen_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "6ffb8a7882b9ed020235e81bd433d9a9c5fdb3f92d7b444eaa7c9d74519ce661",
+    "bytes": 243106
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_expandmore_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "919de5b47e1c97978ab2f3b85917df42db3e70c37ee22144210233a9b65badb6",
+    "bytes": 121724
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_expandmore_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0f6f7ab7b6a63714ea320699030e8430c49575745b6dafc6197e17a8b74be800",
+    "bytes": 121386
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_expandmore_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "de7e63a77a78b142290fdfc65d1cf4c075dfbcb44d14374b3fc6c97613811379",
+    "bytes": 124958
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_expandmore_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9c7f61038c5df296d7b984c8196ed008a871543319890ceedcb4d96b894e83a7",
+    "bytes": 124554
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_expandless_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "3d213d03d8486955243a7204404f5302232a13d53f325d0d9339fddcd4bf36c6",
+    "bytes": 124528
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_expandless_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "a9a8002226e1d0c8c10f5d8cc76c3e6386cec315da7f709cd6b1ba3a3f0d9dd6",
+    "bytes": 122880
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_expandless_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7f23960be5f3f42a115b14dfa8985ebfb51dda23800a79cfe0cbb3327dddea5f",
+    "bytes": 126492
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_expandless_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0354ee015d7e0a0bcf1eb92dba9bdf4a032144258f4230ebbbf73d7b369e1754",
+    "bytes": 127668
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_erroroutline_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "be2edea2cde0cacbf1ce31ca8837e52ff684964edc4df70abc4eda667372ade4",
+    "bytes": 347548
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_erroroutline_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cfc5c895b0a32d2a98475e8ff5c17399c1a19de91155806b75131a762637b530",
+    "bytes": 348910
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_erroroutline_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7fd3a12c19423c287d232541c013970143196220b509f4d0845705d770e8d344",
+    "bytes": 343032
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_erroroutline_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "042d9df81c5d8c0940d16fe58479d6feda0f8ed0092b47cbfbd05ee66acdc792",
+    "bytes": 344348
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_editnote_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "73a082bb3681e0d7ae6f888900098e93154bcf46259478c078a00c960553dd65",
+    "bytes": 326838
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_editnote_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "a074d8c248d7ebded22fb89ba359ab2a14d7a9233c8c2596a49ed4a761d84dad",
+    "bytes": 325806
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_editnote_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "8bcb24e9abc300360b3faf3ef78677e201587db51b54097145b343dd47586907",
+    "bytes": 340842
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_editnote_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1c536d6672ebfb05464e1ab56ce28cd4299ded95da11e7ecd4f3362c763513d9",
+    "bytes": 338920
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_edit_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "385cf643e67226b1458886bdb4bc78520b33113792cadac4e4e53d2816a4e90f",
+    "bytes": 186352
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_edit_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "eb2881174507d513bb210819701897e77ee4ef32b07d21ffa928a473674cfc71",
+    "bytes": 187778
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_edit_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1d5f207027af638f217c38be437cf72a080872e7d5cea4fb455ae943d9534a23",
+    "bytes": 187726
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_edit_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "014e9631ed2c0481a7e7d3819527d6b1ffb77c6ab5e7af364dfe8e58b77ebc42",
+    "bytes": 193132
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_computer_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "715281f586f5925247ae1eeac0c47724748711eea61f664cb88c79a997dbb2f2",
+    "bytes": 292180
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_computer_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "db9066f5eed611fb3a25aaf8b1a9c5f324d6a42c0849c2dd15d75f19fbb32562",
+    "bytes": 301974
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_computer_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1e008eb1bd18e4e52b0140391553e15a73936fba03c23f85e0d8be6f8a7eaed5",
+    "bytes": 316202
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_computer_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "29cd9185599c5a4bc318942f6e76bec1ed7812aa10e18a28827909b3c1059a02",
+    "bytes": 303430
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_check_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "f73889792dfe8743bc9e566a71a6ca85ac3b14c2ae0b37c751c38e28a7047035",
+    "bytes": 143562
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_check_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "7e5b2ee3a53930668745be92e02432951bdc6973766ebc05745aba2f8bd11c2d",
+    "bytes": 142344
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_check_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b28ef4a30a2b340b5211a8885eeb4f09bcb36b5d3984c9ef5fff1ec124dd8379",
+    "bytes": 148120
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_check_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "01d9cb9987a1e004dc794b24240d5e49349921f9ceac467765c029f96af28195",
+    "bytes": 148864
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_build_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "627256407c41eb21496c60f82b41278aac03ae2a08dd7f64e62691f1c077781a",
+    "bytes": 203734
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_build_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5d5d8795daf532f37938d61a5b2bd0bafccbe0621050f0849976c39a94b96f8a",
+    "bytes": 203594
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_build_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d79f432a9d9ca59b872c1104180521fb4f2c60cabfd6560e9f4f368565a09324",
+    "bytes": 202222
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_build_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "63e61920224e8eb541490390dad42354b622272eaa4f0c57ad3dcbeb0113418e",
+    "bytes": 205576
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_attachfile_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4741b6fcbd2dbd7d8b403e3804d6c92987c2cea57a8b3a1889ffed402427d35b",
+    "bytes": 249494
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_attachfile_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "96d134462ace5a6e9dda0f3b582445d29c222bde1314f2a07cf15a5ca968988a",
+    "bytes": 251550
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_attachfile_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "72486dfcb17e3525acdbeadcbd862160a43d22a6bec0854600053f287da4f35c",
+    "bytes": 258166
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_attachfile_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1da2958494732bba3068faf621ba5f28ee0276a766d230e0b227bd4c370a7b0c",
+    "bytes": 255552
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowupward_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "236c8cbbb6868278f702bf640b26667572f2950f5bd3e632663258ac8745d3f6",
+    "bytes": 177058
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowupward_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "4a8ce9c0ef756ca48cda853357c0bf87b34e844c37932dd27836dca4b6844467",
+    "bytes": 175930
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowupward_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1cb7c3ee53c816d7aafa1efe881f19b9aa95cbc1eff57a09b5b198a28994c670",
+    "bytes": 186464
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowupward_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "f6697de999978ffbbc5976e84bae0d52bb76dd0cb07a71bb1b9f7ddefe3e5181",
+    "bytes": 188530
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowforward_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "692b0195689b688ba6a1a74738c4fc32fc973cf7b5bc2e6a105f4d0aeb4c8fdc",
+    "bytes": 174264
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowforward_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "121db5e6adcb1e1ec327132ac6c4b3a2c4ac6605a286160535583659c6948c09",
+    "bytes": 180832
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowforward_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "cb0a3dfc29901340503f53f6e0d6cb4d7ee21e9abd7df7e09dced3137f59e1e7",
+    "bytes": 175142
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowforward_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "19833a985e8da33a4e81fa48eff1c2110b83483ba777dee89d278b04a6029ece",
+    "bytes": 173460
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowdownward_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "965d4fff3e0338189dab53336b642e1d8528112444b5ab5490897f5d0a40a7e0",
+    "bytes": 175624
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowdownward_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ee72bf801fb8ba588b052ed97eca7c3c8f99c32a8c7ecbaa4d529a01d6d67be4",
+    "bytes": 174122
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowdownward_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b0b40c81f5b3d930ef8b75058c0cdab0862d1aa9301912462e08961283a22450",
+    "bytes": 185752
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowdownward_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0f2b0c751baf44b7999fffcadec5cb056b9f9c66040d5c702847651f92cd4fb5",
+    "bytes": 186370
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowback_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "6d773b45bc9ec4f833953038aec4d017800669af8b92ab3da3c7dc31eb4cb546",
+    "bytes": 170928
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowback_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "b823e08fcefc59332ae2cec83a30544d3748ca5da7bba27658ee5a35db2cf488",
+    "bytes": 171848
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowback_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "965ac7ccf0d184ed16ccb56045c20625c8cf9d75904498a013fa34d9710d9225",
+    "bytes": 171356
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_motion_arrowback_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9fae456f4987335912c6e30d0a615c1a0605a1e43baec3730d90cc55539a254d",
+    "bytes": 169162
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "0160911b0c1b4871c5bdf12ac6fe9c1b555ce4c2d33dfdcae54d9f926c5c5a9c",
+    "bytes": 1095962
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_small_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "16d6d11560e90e50ebee6157d3b38b156c192f198df7e55960aa625793c7aefe",
+    "bytes": 330948
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "709aacf0105f9a5115e6f19529f8305a043afb0ac37c89149aba97d0dbe58380",
+    "bytes": 1051070
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_small_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "efd543c0266bcb54be1f60b4b6eb8d0ad2cc62553713d11d609222742b50dbec",
+    "bytes": 319242
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "2321ad00d7032cd3261488515d5323a6107325db90cb5158721bd8f4a4e3c9d9",
+    "bytes": 1137856
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_small_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "d23c38b6052fc89e141d197bd93a9bef1f66de8e13047a17ae1ebcda4b562116",
+    "bytes": 343396
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "a3d0ed1d52aa84c59230debf56388a5240b2e88518371954a3ca34f0b5ebf9ad",
+    "bytes": 1041460
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_small_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "c925763c5a8b1e7317742997a1050d38400f136bfcf9cb904a5cb60d345ae2be",
+    "bytes": 307952
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_p4.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "c896491a2eb57e235e4eb9d9b00973b1f6c0aeb38eab0c37eb950535363fb550",
+    "bytes": 1212430
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/nextcomp_motion_small_p4.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "088323517b406f75e8162a96b7c93b03b669351e25f15a63a4a7ac6216be7429",
+    "bytes": 367494
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_codex_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "9ff4542220a69fd0dcdbd61bddc60d57ec681396be4ec93af3dfba626aece4ae",
+    "bytes": 194206
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_codex_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "ecb91b86c08478c73966b813008df55aaeea53d26da7fc1dbef6f07b68dec088",
+    "bytes": 168410
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_codex_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "1723387744b84f80a8f73bde3fc44aeaf7692f9a9df2155019edc59a2dcf10b5",
+    "bytes": 224754
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_codex_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "620ab1f75843674821ab805d07b1772205e311db8a516d6a1a251e0ddbc19977",
+    "bytes": 151182
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_codex_p4.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "a6487c07bf2a9e8da2de12ca02fbe8b7959af67a4c6f7df066d1642a7b24909c",
+    "bytes": 219546
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_psychology_p0.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "261b1a99483855c41387394bc5650f98b072110d421391abe5c3ff4a145b192b",
+    "bytes": 204336
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_psychology_p1.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "acee065f0dd92d847782b6620ce6b9f4af14a2ca7262c4c1aa508d40145aeaed",
+    "bytes": 153496
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_psychology_p2.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "5c72d335c9f249d77e33d710b17739ad2cacbdad46188458729fc7f1e9c1d1c9",
+    "bytes": 163280
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_psychology_p3.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "12fba67530955436dacbddf92b1b7f2f08808fffe1d40c1732021460b1bc0baf",
+    "bytes": 186896
+  },
+  "/dev/shm/nextcomp-modeled/v07/delivery/drawable-nodpi/symbol_spin_psychology_p4.webp": {
+    "visiblePixelsAndAlphaUnchanged": true,
+    "alreadyClean": true,
+    "sha256": "87e344b190b1bde4e1466d8f23e144d204aa5212b79b1e132584d8d694f3daf0",
+    "bytes": 209186
+  }
+}

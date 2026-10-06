@@ -222,3 +222,26 @@ Device check for alpha.2: in-place debug upgrade to version code 11 succeeded on
 
 The recovery audit failed once delivery history exceeded its first 100-record page: GitHub supplied a `Link: rel="next"` URL under `/repositories/<numeric-id>/...`, while the adapter accepted only `/repos/<owner>/<name>/...`. The listener continued accepting new signed events, but the audit correctly marked health unhealthy. The adapter now resolves the configured repository's ID, verifies numeric links against it, and normalizes pagination back to the configured repository route. Pagination must stay on the same collection and HTTPS API origin; other repositories, endpoint changes, credentials, and fragments are rejected. Regression coverage exercises the actual HTTP adapter through a second page and exact 64-bit redelivery ID, plus hostile links and the existing bounded-history failure. All 63 backend tests passed. No phone update is required for this server-side correction.
 
+
+## Alpha29 modeled control integration
+
+The dedicated modeled-symbol candidate is integrated with the maintained release
+signer as alpha29/code47. Both Android variants pass156 tests in35 suites; both
+lints and full builds pass.205 backend tests and the production dependency audit
+pass. All168 dynamic motion resource names survive optimization and all packed
+WebP payloads match the authored resources byte-for-byte. The public APK is
+51,790,971 bytes, below the80MiB update limit.
+
+The exact public APK was fresh-installed and normally paired to a synthetic
+fixture in an owned Android emulator. Conversation navigation and original native
+stills demonstrate changing microphone, keyboard, busy Codex and cubic N frames;
+live reduced motion makes those regions static. These stills do not establish
+display refresh rate. The candidate's warmed software-emulator benchmark remains
+30.8fps with70.59%jank; it is not a physical Fold performance result. Current phone
+SSH and Accessibility work, but no authorized ADB shell is available for actual
+Fold frame-pacing measurement. Phone delivery is recorded separately below.
+
+See [the versioned qualification](qualification/nextcomp-modeled-symbols.json)
+and [portable evidence](../branding/modeled/qualification/). Original private
+receipts were retained outside the repository, while publication removes local
+deployment references without changing decoded review-image pixels.

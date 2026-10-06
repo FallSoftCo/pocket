@@ -1,0 +1,1468 @@
+{
+  "verified": true,
+  "kind": "study",
+  "fps": null,
+  "objects": {
+    "studies": [
+      [
+        "front",
+        0,
+        -9,
+        "studio"
+      ],
+      [
+        "left-quarter",
+        -30,
+        -9,
+        "studio"
+      ],
+      [
+        "right-quarter",
+        30,
+        -9,
+        "studio"
+      ],
+      [
+        "low-quarter",
+        30,
+        -24,
+        "studio"
+      ],
+      [
+        "side-limit",
+        90,
+        -9,
+        "studio"
+      ],
+      [
+        "back",
+        180,
+        -9,
+        "studio"
+      ],
+      [
+        "daylight",
+        16,
+        -9,
+        "daylight"
+      ],
+      [
+        "warm-studio",
+        16,
+        -9,
+        "warm"
+      ],
+      [
+        "midnight",
+        16,
+        -9,
+        "midnight"
+      ]
+    ],
+    "realSizeThemeSheet": "37 objects in each of three separate theme rigs at16/20/24/32/44pixels",
+    "interpretation": "side and rear are limits, not universal semantic recognition; UI range +/-30 yaw and moderate pitch"
+  },
+  "renderReceipt": {
+    "verified": true,
+    "verificationKind": "assembled verified source collection, not single native render sequence",
+    "frames": [
+      1,
+      9
+    ],
+    "files": {
+      "frame.000001.exr": {
+        "bytes": 8120235,
+        "sha256": "78e8247e6af42f919f4a51065243f449a3c8faab385564d6d183b1aa5a2e7f97"
+      },
+      "frame.000002.exr": {
+        "bytes": 8082310,
+        "sha256": "5f21519a1dab8fc481317ceb59bba6eb273bcad7b55690764d3900cb0f5f95ad"
+      },
+      "frame.000003.exr": {
+        "bytes": 8165898,
+        "sha256": "591c9af7bfb6a14e47c6f6e60e63a02b79eed46358be5bdfb22cdbc49425b58b"
+      },
+      "frame.000004.exr": {
+        "bytes": 8109847,
+        "sha256": "da8b06c7855378e6130acde3890917ace06a3ad859b9c062d6ab8872e52ab069"
+      },
+      "frame.000005.exr": {
+        "bytes": 4617061,
+        "sha256": "95ccb99412e3f25d08341b06077ca2680d86fba181a88bb5c7531486a0c59bf0"
+      },
+      "frame.000006.exr": {
+        "bytes": 7755214,
+        "sha256": "469359dfb6abf3ad38e8d8cb33c84baf7dc2e2c9a41a41ea195a25f54490b1cd"
+      },
+      "frame.000007.exr": {
+        "bytes": 8066724,
+        "sha256": "3d0de5ad9b8fb90abf16f0b44c30c7751787e3d4753698eea8cd6ad503a67e7b"
+      },
+      "frame.000008.exr": {
+        "bytes": 8182687,
+        "sha256": "e6fa8b9161560891cf964aaddd0a61bc5c55a5c972f9e9af580959f2377366de"
+      },
+      "frame.000009.exr": {
+        "bytes": 8216988,
+        "sha256": "fd509f2bf5c1644a2ef7355b4669e34e8c0b415061c2483a22fb1699898846f3"
+      }
+    },
+    "sourceMap": {
+      "frame.000001.exr": {
+        "scene": "views",
+        "originalFrame": 1,
+        "sourceSceneSha256": "22be771649139c3b84dcf5b4ca660419dae50fe77de4dd0580193521c5b037fa"
+      },
+      "frame.000002.exr": {
+        "scene": "views",
+        "originalFrame": 2,
+        "sourceSceneSha256": "22be771649139c3b84dcf5b4ca660419dae50fe77de4dd0580193521c5b037fa"
+      },
+      "frame.000003.exr": {
+        "scene": "views",
+        "originalFrame": 3,
+        "sourceSceneSha256": "22be771649139c3b84dcf5b4ca660419dae50fe77de4dd0580193521c5b037fa"
+      },
+      "frame.000004.exr": {
+        "scene": "views",
+        "originalFrame": 4,
+        "sourceSceneSha256": "22be771649139c3b84dcf5b4ca660419dae50fe77de4dd0580193521c5b037fa"
+      },
+      "frame.000005.exr": {
+        "scene": "views",
+        "originalFrame": 5,
+        "sourceSceneSha256": "22be771649139c3b84dcf5b4ca660419dae50fe77de4dd0580193521c5b037fa"
+      },
+      "frame.000006.exr": {
+        "scene": "views",
+        "originalFrame": 6,
+        "sourceSceneSha256": "22be771649139c3b84dcf5b4ca660419dae50fe77de4dd0580193521c5b037fa"
+      },
+      "frame.000007.exr": {
+        "scene": "daylight",
+        "originalFrame": 1,
+        "sourceSceneSha256": "200f9a384528184fbedf4b8254529ada3c3d56023eb8ae655b3e9476a9158ccd"
+      },
+      "frame.000008.exr": {
+        "scene": "warm",
+        "originalFrame": 1,
+        "sourceSceneSha256": "5f708597adb1d2c74023d23beee75cecbb5755da50e87fccb246597934f3f85a"
+      },
+      "frame.000009.exr": {
+        "scene": "midnight",
+        "originalFrame": 1,
+        "sourceSceneSha256": "998776112d48a0385998888a335f5e132e6baec9a562ef0b5d119c523c3cbab4"
+      }
+    },
+    "nativeSources": {
+      "views": {
+        "verified": true,
+        "native_geometry": [
+          {
+            "frame": 1,
+            "objects": [
+              {
+                "path": "/obj/symbol_ArrowBack",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowDownward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowForward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowUpward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_AttachFile",
+                "points": 912,
+                "primitives": 902
+              },
+              {
+                "path": "/obj/symbol_Build",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Check",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_Computer",
+                "points": 696,
+                "primitives": 662
+              },
+              {
+                "path": "/obj/symbol_Edit",
+                "points": 887,
+                "primitives": 805
+              },
+              {
+                "path": "/obj/symbol_EditNote",
+                "points": 1919,
+                "primitives": 1713
+              },
+              {
+                "path": "/obj/symbol_ErrorOutline",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_ExpandLess",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_ExpandMore",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_FolderOpen",
+                "points": 296,
+                "primitives": 300
+              },
+              {
+                "path": "/obj/symbol_Inbox",
+                "points": 672,
+                "primitives": 686
+              },
+              {
+                "path": "/obj/symbol_Keyboard",
+                "points": 1248,
+                "primitives": 1274
+              },
+              {
+                "path": "/obj/symbol_Layers",
+                "points": 288,
+                "primitives": 294
+              },
+              {
+                "path": "/obj/symbol_Mic",
+                "points": 3284,
+                "primitives": 2930
+              },
+              {
+                "path": "/obj/symbol_MoreHoriz",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_MoreVert",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_NotificationsActive",
+                "points": 2600,
+                "primitives": 2468
+              },
+              {
+                "path": "/obj/symbol_NotificationsNone",
+                "points": 1712,
+                "primitives": 1600
+              },
+              {
+                "path": "/obj/symbol_OpenInNew",
+                "points": 1872,
+                "primitives": 1620
+              },
+              {
+                "path": "/obj/symbol_Pause",
+                "points": 192,
+                "primitives": 196
+              },
+              {
+                "path": "/obj/symbol_PhoneAndroid",
+                "points": 1048,
+                "primitives": 978
+              },
+              {
+                "path": "/obj/symbol_PlayArrow",
+                "points": 504,
+                "primitives": 480
+              },
+              {
+                "path": "/obj/symbol_Psychology",
+                "points": 3916,
+                "primitives": 3722
+              },
+              {
+                "path": "/obj/symbol_Search",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Send",
+                "points": 320,
+                "primitives": 278
+              },
+              {
+                "path": "/obj/symbol_Stop",
+                "points": 96,
+                "primitives": 98
+              },
+              {
+                "path": "/obj/symbol_Terminal",
+                "points": 1536,
+                "primitives": 1374
+              },
+              {
+                "path": "/obj/symbol_TravelExplore",
+                "points": 4240,
+                "primitives": 4106
+              },
+              {
+                "path": "/obj/symbol_Tune",
+                "points": 1224,
+                "primitives": 1104
+              },
+              {
+                "path": "/obj/symbol_Unarchive",
+                "points": 1512,
+                "primitives": 1398
+              },
+              {
+                "path": "/obj/symbol_VolumeUp",
+                "points": 992,
+                "primitives": 972
+              },
+              {
+                "path": "/obj/symbol_Codex",
+                "points": 1380,
+                "primitives": 1244
+              },
+              {
+                "path": "/obj/symbol_User",
+                "points": 1184,
+                "primitives": 1072
+              }
+            ]
+          },
+          {
+            "frame": 6,
+            "objects": [
+              {
+                "path": "/obj/symbol_ArrowBack",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowDownward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowForward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowUpward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_AttachFile",
+                "points": 912,
+                "primitives": 902
+              },
+              {
+                "path": "/obj/symbol_Build",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Check",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_Computer",
+                "points": 696,
+                "primitives": 662
+              },
+              {
+                "path": "/obj/symbol_Edit",
+                "points": 887,
+                "primitives": 805
+              },
+              {
+                "path": "/obj/symbol_EditNote",
+                "points": 1919,
+                "primitives": 1713
+              },
+              {
+                "path": "/obj/symbol_ErrorOutline",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_ExpandLess",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_ExpandMore",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_FolderOpen",
+                "points": 296,
+                "primitives": 300
+              },
+              {
+                "path": "/obj/symbol_Inbox",
+                "points": 672,
+                "primitives": 686
+              },
+              {
+                "path": "/obj/symbol_Keyboard",
+                "points": 1248,
+                "primitives": 1274
+              },
+              {
+                "path": "/obj/symbol_Layers",
+                "points": 288,
+                "primitives": 294
+              },
+              {
+                "path": "/obj/symbol_Mic",
+                "points": 3284,
+                "primitives": 2930
+              },
+              {
+                "path": "/obj/symbol_MoreHoriz",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_MoreVert",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_NotificationsActive",
+                "points": 2600,
+                "primitives": 2468
+              },
+              {
+                "path": "/obj/symbol_NotificationsNone",
+                "points": 1712,
+                "primitives": 1600
+              },
+              {
+                "path": "/obj/symbol_OpenInNew",
+                "points": 1872,
+                "primitives": 1620
+              },
+              {
+                "path": "/obj/symbol_Pause",
+                "points": 192,
+                "primitives": 196
+              },
+              {
+                "path": "/obj/symbol_PhoneAndroid",
+                "points": 1048,
+                "primitives": 978
+              },
+              {
+                "path": "/obj/symbol_PlayArrow",
+                "points": 504,
+                "primitives": 480
+              },
+              {
+                "path": "/obj/symbol_Psychology",
+                "points": 3916,
+                "primitives": 3722
+              },
+              {
+                "path": "/obj/symbol_Search",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Send",
+                "points": 320,
+                "primitives": 278
+              },
+              {
+                "path": "/obj/symbol_Stop",
+                "points": 96,
+                "primitives": 98
+              },
+              {
+                "path": "/obj/symbol_Terminal",
+                "points": 1536,
+                "primitives": 1374
+              },
+              {
+                "path": "/obj/symbol_TravelExplore",
+                "points": 4240,
+                "primitives": 4106
+              },
+              {
+                "path": "/obj/symbol_Tune",
+                "points": 1224,
+                "primitives": 1104
+              },
+              {
+                "path": "/obj/symbol_Unarchive",
+                "points": 1512,
+                "primitives": 1398
+              },
+              {
+                "path": "/obj/symbol_VolumeUp",
+                "points": 992,
+                "primitives": 972
+              },
+              {
+                "path": "/obj/symbol_Codex",
+                "points": 1380,
+                "primitives": 1244
+              },
+              {
+                "path": "/obj/symbol_User",
+                "points": 1184,
+                "primitives": 1072
+              }
+            ]
+          }
+        ],
+        "source_scene": "/aosp/houdini/nextcomp/modeled-v07/build/views.hiplc",
+        "scene_sha256": "22be771649139c3b84dcf5b4ca660419dae50fe77de4dd0580193521c5b037fa",
+        "engine": "xpu",
+        "frames": [
+          1,
+          6
+        ],
+        "fps": 60,
+        "width": 3840,
+        "height": 3840,
+        "samples": 32,
+        "passes": [
+          {
+            "name": "beauty",
+            "rop": "/out/icons"
+          }
+        ],
+        "camera": null,
+        "render_contract_version": 2,
+        "motion_blur": false,
+        "license_category": "licenseCategoryType.Indie",
+        "host": "ozzz-gpu",
+        "files": {
+          "frame.000001.exr": {
+            "bytes": 8120235,
+            "sha256": "78e8247e6af42f919f4a51065243f449a3c8faab385564d6d183b1aa5a2e7f97"
+          },
+          "frame.000002.exr": {
+            "bytes": 8082310,
+            "sha256": "5f21519a1dab8fc481317ceb59bba6eb273bcad7b55690764d3900cb0f5f95ad"
+          },
+          "frame.000003.exr": {
+            "bytes": 8165898,
+            "sha256": "591c9af7bfb6a14e47c6f6e60e63a02b79eed46358be5bdfb22cdbc49425b58b"
+          },
+          "frame.000004.exr": {
+            "bytes": 8109847,
+            "sha256": "da8b06c7855378e6130acde3890917ace06a3ad859b9c062d6ab8872e52ab069"
+          },
+          "frame.000005.exr": {
+            "bytes": 4617061,
+            "sha256": "95ccb99412e3f25d08341b06077ca2680d86fba181a88bb5c7531486a0c59bf0"
+          },
+          "frame.000006.exr": {
+            "bytes": 7755214,
+            "sha256": "469359dfb6abf3ad38e8d8cb33c84baf7dc2e2c9a41a41ea195a25f54490b1cd"
+          }
+        },
+        "seconds": 38.9318786659278,
+        "gpu_telemetry": [
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 2,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 479,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 46,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 87,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 34,
+            "used_mib": 232,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 45,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 93,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 2,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 52,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 88,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 2,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 2,
+            "used_mib": 657,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 77,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 479,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 8,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 6,
+            "used_mib": 2,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 4,
+            "used_mib": 657,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 57,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 1623,
+            "total_mib": 24467
+          }
+        ]
+      },
+      "daylight": {
+        "verified": true,
+        "native_geometry": [
+          {
+            "frame": 1,
+            "objects": [
+              {
+                "path": "/obj/symbol_ArrowBack",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowDownward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowForward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowUpward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_AttachFile",
+                "points": 912,
+                "primitives": 902
+              },
+              {
+                "path": "/obj/symbol_Build",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Check",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_Computer",
+                "points": 696,
+                "primitives": 662
+              },
+              {
+                "path": "/obj/symbol_Edit",
+                "points": 887,
+                "primitives": 805
+              },
+              {
+                "path": "/obj/symbol_EditNote",
+                "points": 1919,
+                "primitives": 1713
+              },
+              {
+                "path": "/obj/symbol_ErrorOutline",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_ExpandLess",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_ExpandMore",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_FolderOpen",
+                "points": 296,
+                "primitives": 300
+              },
+              {
+                "path": "/obj/symbol_Inbox",
+                "points": 672,
+                "primitives": 686
+              },
+              {
+                "path": "/obj/symbol_Keyboard",
+                "points": 1248,
+                "primitives": 1274
+              },
+              {
+                "path": "/obj/symbol_Layers",
+                "points": 288,
+                "primitives": 294
+              },
+              {
+                "path": "/obj/symbol_Mic",
+                "points": 3284,
+                "primitives": 2930
+              },
+              {
+                "path": "/obj/symbol_MoreHoriz",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_MoreVert",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_NotificationsActive",
+                "points": 2600,
+                "primitives": 2468
+              },
+              {
+                "path": "/obj/symbol_NotificationsNone",
+                "points": 1712,
+                "primitives": 1600
+              },
+              {
+                "path": "/obj/symbol_OpenInNew",
+                "points": 1872,
+                "primitives": 1620
+              },
+              {
+                "path": "/obj/symbol_Pause",
+                "points": 192,
+                "primitives": 196
+              },
+              {
+                "path": "/obj/symbol_PhoneAndroid",
+                "points": 1048,
+                "primitives": 978
+              },
+              {
+                "path": "/obj/symbol_PlayArrow",
+                "points": 504,
+                "primitives": 480
+              },
+              {
+                "path": "/obj/symbol_Psychology",
+                "points": 3916,
+                "primitives": 3722
+              },
+              {
+                "path": "/obj/symbol_Search",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Send",
+                "points": 320,
+                "primitives": 278
+              },
+              {
+                "path": "/obj/symbol_Stop",
+                "points": 96,
+                "primitives": 98
+              },
+              {
+                "path": "/obj/symbol_Terminal",
+                "points": 1536,
+                "primitives": 1374
+              },
+              {
+                "path": "/obj/symbol_TravelExplore",
+                "points": 4240,
+                "primitives": 4106
+              },
+              {
+                "path": "/obj/symbol_Tune",
+                "points": 1224,
+                "primitives": 1104
+              },
+              {
+                "path": "/obj/symbol_Unarchive",
+                "points": 1512,
+                "primitives": 1398
+              },
+              {
+                "path": "/obj/symbol_VolumeUp",
+                "points": 992,
+                "primitives": 972
+              },
+              {
+                "path": "/obj/symbol_Codex",
+                "points": 1380,
+                "primitives": 1244
+              },
+              {
+                "path": "/obj/symbol_User",
+                "points": 1184,
+                "primitives": 1072
+              }
+            ]
+          }
+        ],
+        "source_scene": "/aosp/houdini/nextcomp/modeled-v07/build/daylight.hiplc",
+        "scene_sha256": "200f9a384528184fbedf4b8254529ada3c3d56023eb8ae655b3e9476a9158ccd",
+        "engine": "xpu",
+        "frames": [
+          1,
+          1
+        ],
+        "fps": 60,
+        "width": 3840,
+        "height": 3840,
+        "samples": 32,
+        "passes": [
+          {
+            "name": "beauty",
+            "rop": "/out/icons"
+          }
+        ],
+        "camera": null,
+        "render_contract_version": 2,
+        "motion_blur": false,
+        "license_category": "licenseCategoryType.Indie",
+        "host": "ozzz-gpu",
+        "files": {
+          "frame.000001.exr": {
+            "bytes": 8066724,
+            "sha256": "3d0de5ad9b8fb90abf16f0b44c30c7751787e3d4753698eea8cd6ad503a67e7b"
+          }
+        },
+        "seconds": 7.0131265399977565,
+        "gpu_telemetry": [
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 2,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 479,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 85,
+            "used_mib": 1623,
+            "total_mib": 24467
+          }
+        ]
+      },
+      "warm": {
+        "verified": true,
+        "native_geometry": [
+          {
+            "frame": 1,
+            "objects": [
+              {
+                "path": "/obj/symbol_ArrowBack",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowDownward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowForward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowUpward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_AttachFile",
+                "points": 912,
+                "primitives": 902
+              },
+              {
+                "path": "/obj/symbol_Build",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Check",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_Computer",
+                "points": 696,
+                "primitives": 662
+              },
+              {
+                "path": "/obj/symbol_Edit",
+                "points": 887,
+                "primitives": 805
+              },
+              {
+                "path": "/obj/symbol_EditNote",
+                "points": 1919,
+                "primitives": 1713
+              },
+              {
+                "path": "/obj/symbol_ErrorOutline",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_ExpandLess",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_ExpandMore",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_FolderOpen",
+                "points": 296,
+                "primitives": 300
+              },
+              {
+                "path": "/obj/symbol_Inbox",
+                "points": 672,
+                "primitives": 686
+              },
+              {
+                "path": "/obj/symbol_Keyboard",
+                "points": 1248,
+                "primitives": 1274
+              },
+              {
+                "path": "/obj/symbol_Layers",
+                "points": 288,
+                "primitives": 294
+              },
+              {
+                "path": "/obj/symbol_Mic",
+                "points": 3284,
+                "primitives": 2930
+              },
+              {
+                "path": "/obj/symbol_MoreHoriz",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_MoreVert",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_NotificationsActive",
+                "points": 2600,
+                "primitives": 2468
+              },
+              {
+                "path": "/obj/symbol_NotificationsNone",
+                "points": 1712,
+                "primitives": 1600
+              },
+              {
+                "path": "/obj/symbol_OpenInNew",
+                "points": 1872,
+                "primitives": 1620
+              },
+              {
+                "path": "/obj/symbol_Pause",
+                "points": 192,
+                "primitives": 196
+              },
+              {
+                "path": "/obj/symbol_PhoneAndroid",
+                "points": 1048,
+                "primitives": 978
+              },
+              {
+                "path": "/obj/symbol_PlayArrow",
+                "points": 504,
+                "primitives": 480
+              },
+              {
+                "path": "/obj/symbol_Psychology",
+                "points": 3916,
+                "primitives": 3722
+              },
+              {
+                "path": "/obj/symbol_Search",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Send",
+                "points": 320,
+                "primitives": 278
+              },
+              {
+                "path": "/obj/symbol_Stop",
+                "points": 96,
+                "primitives": 98
+              },
+              {
+                "path": "/obj/symbol_Terminal",
+                "points": 1536,
+                "primitives": 1374
+              },
+              {
+                "path": "/obj/symbol_TravelExplore",
+                "points": 4240,
+                "primitives": 4106
+              },
+              {
+                "path": "/obj/symbol_Tune",
+                "points": 1224,
+                "primitives": 1104
+              },
+              {
+                "path": "/obj/symbol_Unarchive",
+                "points": 1512,
+                "primitives": 1398
+              },
+              {
+                "path": "/obj/symbol_VolumeUp",
+                "points": 992,
+                "primitives": 972
+              },
+              {
+                "path": "/obj/symbol_Codex",
+                "points": 1380,
+                "primitives": 1244
+              },
+              {
+                "path": "/obj/symbol_User",
+                "points": 1184,
+                "primitives": 1072
+              }
+            ]
+          }
+        ],
+        "source_scene": "/aosp/houdini/nextcomp/modeled-v07/build/warm.hiplc",
+        "scene_sha256": "5f708597adb1d2c74023d23beee75cecbb5755da50e87fccb246597934f3f85a",
+        "engine": "xpu",
+        "frames": [
+          1,
+          1
+        ],
+        "fps": 60,
+        "width": 3840,
+        "height": 3840,
+        "samples": 32,
+        "passes": [
+          {
+            "name": "beauty",
+            "rop": "/out/icons"
+          }
+        ],
+        "camera": null,
+        "render_contract_version": 2,
+        "motion_blur": false,
+        "license_category": "licenseCategoryType.Indie",
+        "host": "ozzz-gpu",
+        "files": {
+          "frame.000001.exr": {
+            "bytes": 8182687,
+            "sha256": "e6fa8b9161560891cf964aaddd0a61bc5c55a5c972f9e9af580959f2377366de"
+          }
+        },
+        "seconds": 6.91862429282628,
+        "gpu_telemetry": [
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 2,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 479,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 92,
+            "used_mib": 1623,
+            "total_mib": 24467
+          }
+        ]
+      },
+      "midnight": {
+        "verified": true,
+        "native_geometry": [
+          {
+            "frame": 1,
+            "objects": [
+              {
+                "path": "/obj/symbol_ArrowBack",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowDownward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowForward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_ArrowUpward",
+                "points": 936,
+                "primitives": 810
+              },
+              {
+                "path": "/obj/symbol_AttachFile",
+                "points": 912,
+                "primitives": 902
+              },
+              {
+                "path": "/obj/symbol_Build",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Check",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_Computer",
+                "points": 696,
+                "primitives": 662
+              },
+              {
+                "path": "/obj/symbol_Edit",
+                "points": 887,
+                "primitives": 805
+              },
+              {
+                "path": "/obj/symbol_EditNote",
+                "points": 1919,
+                "primitives": 1713
+              },
+              {
+                "path": "/obj/symbol_ErrorOutline",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_ExpandLess",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_ExpandMore",
+                "points": 624,
+                "primitives": 540
+              },
+              {
+                "path": "/obj/symbol_FolderOpen",
+                "points": 296,
+                "primitives": 300
+              },
+              {
+                "path": "/obj/symbol_Inbox",
+                "points": 672,
+                "primitives": 686
+              },
+              {
+                "path": "/obj/symbol_Keyboard",
+                "points": 1248,
+                "primitives": 1274
+              },
+              {
+                "path": "/obj/symbol_Layers",
+                "points": 288,
+                "primitives": 294
+              },
+              {
+                "path": "/obj/symbol_Mic",
+                "points": 3284,
+                "primitives": 2930
+              },
+              {
+                "path": "/obj/symbol_MoreHoriz",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_MoreVert",
+                "points": 1632,
+                "primitives": 1536
+              },
+              {
+                "path": "/obj/symbol_NotificationsActive",
+                "points": 2600,
+                "primitives": 2468
+              },
+              {
+                "path": "/obj/symbol_NotificationsNone",
+                "points": 1712,
+                "primitives": 1600
+              },
+              {
+                "path": "/obj/symbol_OpenInNew",
+                "points": 1872,
+                "primitives": 1620
+              },
+              {
+                "path": "/obj/symbol_Pause",
+                "points": 192,
+                "primitives": 196
+              },
+              {
+                "path": "/obj/symbol_PhoneAndroid",
+                "points": 1048,
+                "primitives": 978
+              },
+              {
+                "path": "/obj/symbol_PlayArrow",
+                "points": 504,
+                "primitives": 480
+              },
+              {
+                "path": "/obj/symbol_Psychology",
+                "points": 3916,
+                "primitives": 3722
+              },
+              {
+                "path": "/obj/symbol_Search",
+                "points": 1300,
+                "primitives": 1216
+              },
+              {
+                "path": "/obj/symbol_Send",
+                "points": 320,
+                "primitives": 278
+              },
+              {
+                "path": "/obj/symbol_Stop",
+                "points": 96,
+                "primitives": 98
+              },
+              {
+                "path": "/obj/symbol_Terminal",
+                "points": 1536,
+                "primitives": 1374
+              },
+              {
+                "path": "/obj/symbol_TravelExplore",
+                "points": 4240,
+                "primitives": 4106
+              },
+              {
+                "path": "/obj/symbol_Tune",
+                "points": 1224,
+                "primitives": 1104
+              },
+              {
+                "path": "/obj/symbol_Unarchive",
+                "points": 1512,
+                "primitives": 1398
+              },
+              {
+                "path": "/obj/symbol_VolumeUp",
+                "points": 992,
+                "primitives": 972
+              },
+              {
+                "path": "/obj/symbol_Codex",
+                "points": 1380,
+                "primitives": 1244
+              },
+              {
+                "path": "/obj/symbol_User",
+                "points": 1184,
+                "primitives": 1072
+              }
+            ]
+          }
+        ],
+        "source_scene": "/aosp/houdini/nextcomp/modeled-v07/build/midnight.hiplc",
+        "scene_sha256": "998776112d48a0385998888a335f5e132e6baec9a562ef0b5d119c523c3cbab4",
+        "engine": "xpu",
+        "frames": [
+          1,
+          1
+        ],
+        "fps": 60,
+        "width": 3840,
+        "height": 3840,
+        "samples": 32,
+        "passes": [
+          {
+            "name": "beauty",
+            "rop": "/out/icons"
+          }
+        ],
+        "camera": null,
+        "render_contract_version": 2,
+        "motion_blur": false,
+        "license_category": "licenseCategoryType.Indie",
+        "host": "ozzz-gpu",
+        "files": {
+          "frame.000001.exr": {
+            "bytes": 8216988,
+            "sha256": "fd509f2bf5c1644a2ef7355b4669e34e8c0b415061c2483a22fb1699898846f3"
+          }
+        },
+        "seconds": 6.897254058159888,
+        "gpu_telemetry": [
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 2,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 0,
+            "used_mib": 479,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 64,
+            "used_mib": 1623,
+            "total_mib": 24467
+          },
+          {
+            "uuid": "GPU-3305a72e-6fe1-cb1c-b4e9-17c1efeac545",
+            "util": 93,
+            "used_mib": 1623,
+            "total_mib": 24467
+          }
+        ]
+      }
+    }
+  },
+  "resources": {},
+  "codecNormalization": "Exact lossless WebP; RGB cleared only where alpha is zero. Visible RGBA and all alpha byte-identical."
+}

@@ -1,0 +1,161 @@
+{
+  "scene": "objects.hiplc",
+  "files": {
+    "objects.json": {
+      "bytes": 54291,
+      "sha256": "53d2aa4794b92562a619d211d40da47b6b10ae23bb4243349d428b64c5520fea"
+    },
+    "objects.hiplc": {
+      "bytes": 1791366,
+      "sha256": "98889d41726562702273366da04f92df3f6568963618693f9c0424a5edeb0e06"
+    },
+    "User.bgeo.sc": {
+      "bytes": 11094,
+      "sha256": "4b583084d861dd62328d6b032a655913991b489d44ca7181f2ad701026ffc3ba"
+    },
+    "Codex.bgeo.sc": {
+      "bytes": 11569,
+      "sha256": "52bf230cf2a16b63dff0806fe990c2f5b3fc1d2b2ac5c02ffa896c87c9996544"
+    },
+    "VolumeUp.bgeo.sc": {
+      "bytes": 9422,
+      "sha256": "664849ded70cba6bd6e7ead50745931c0d6605ee3c9eb879a8d4395477362364"
+    },
+    "Unarchive.bgeo.sc": {
+      "bytes": 16078,
+      "sha256": "20ae155c9195640ff7e10f9f42bb1a0a4ac6f7b9d4150a2bf2c35ae54efeadf3"
+    },
+    "Tune.bgeo.sc": {
+      "bytes": 12044,
+      "sha256": "14119b9fae91f91c48bdcb1f8ac8ea696ee1e6a31a17ebeb79d16d490c683925"
+    },
+    "TravelExplore.bgeo.sc": {
+      "bytes": 37421,
+      "sha256": "b503631cadffff0ab794d8575d2f94cab0a9c2ed84aac8e59cfcfd92e4bcda76"
+    },
+    "Terminal.bgeo.sc": {
+      "bytes": 15771,
+      "sha256": "dca5bab8eb987fb12b294ffb10ec6ab34ba07979a902fcfdd76e6ff6dd50bcf9"
+    },
+    "Stop.bgeo.sc": {
+      "bytes": 2220,
+      "sha256": "4e1da8da6ae72659675918b357e2cc059d9a5a0509dedd1d781877a6a94e8e5e"
+    },
+    "Send.bgeo.sc": {
+      "bytes": 4289,
+      "sha256": "3ec49a9d4da7b53b880f972f3b646d17222e9ece8846d2124edd7f199a342007"
+    },
+    "Search.bgeo.sc": {
+      "bytes": 17464,
+      "sha256": "1be5df3ae22165c504544c826f4fc8def0e80a948a490fc6c76dc2c32ebbffa1"
+    },
+    "Psychology.bgeo.sc": {
+      "bytes": 38650,
+      "sha256": "69cb3f98f32ce5d2bf4a62e56797e7e311ce27b3c174211ab4aba94b5a5f12b3"
+    },
+    "PlayArrow.bgeo.sc": {
+      "bytes": 1374,
+      "sha256": "0f552455763726f1c3c9e85f485e0b3e7fa7a763fa4c743c0256d070a257d35a"
+    },
+    "PhoneAndroid.bgeo.sc": {
+      "bytes": 12798,
+      "sha256": "e404d93f7be7e2aaf08eb37697a268575734b25a2dca1f07a672179fa6476f16"
+    },
+    "Pause.bgeo.sc": {
+      "bytes": 3099,
+      "sha256": "3e4260ff7eef56b4748335f2cbaed50623539171f489001fc656852703989b9c"
+    },
+    "OpenInNew.bgeo.sc": {
+      "bytes": 15925,
+      "sha256": "29ba16a8582f7f14a8297d14e5beba1abb4986c8c77b50c7b2074f5dc146360c"
+    },
+    "NotificationsNone.bgeo.sc": {
+      "bytes": 13926,
+      "sha256": "f273802238b896b2947914feceb43b49ec0657a39ae72a1a10b944a8e80650cb"
+    },
+    "NotificationsActive.bgeo.sc": {
+      "bytes": 20494,
+      "sha256": "d26d49a7a06252af373f49b6f05ec606d2e1b68213a9d94e324b825305ce0ab6"
+    },
+    "MoreVert.bgeo.sc": {
+      "bytes": 9426,
+      "sha256": "6241c756d4226a67314769172be3a2fcd3cb6d8043ab05dd99951ba872ee6c2d"
+    },
+    "MoreHoriz.bgeo.sc": {
+      "bytes": 9016,
+      "sha256": "155d15e32df5cde0a7b89cf9884d55b5f8fb75e9b641b0489fd4f3836f0e5c36"
+    },
+    "Mic.bgeo.sc": {
+      "bytes": 22823,
+      "sha256": "17cd98e89c5305a3aa473b702f60db205fc17eeabd9492ece47ef0bea201821c"
+    },
+    "Layers.bgeo.sc": {
+      "bytes": 4694,
+      "sha256": "8945145321dc560995c2c469379e3737ae93fb4d91d825f6061ab402825164ee"
+    },
+    "Keyboard.bgeo.sc": {
+      "bytes": 13325,
+      "sha256": "fb3515a13ba6b77d0963020eeb81ee38996dc737ba9ba73627d9f281f3327c3e"
+    },
+    "Inbox.bgeo.sc": {
+      "bytes": 10210,
+      "sha256": "d1ce929ffc2d7cd6ae127cbfbb0aa8411b97cec4c6dcf9461fc3fbeeb09e9d2d"
+    },
+    "FolderOpen.bgeo.sc": {
+      "bytes": 5658,
+      "sha256": "95007713ce8f2e31bfec35a49bf3e351ea4861d01c8a11da3827516d06dfa654"
+    },
+    "ExpandMore.bgeo.sc": {
+      "bytes": 6082,
+      "sha256": "d2d59bd39774582606551124d69c324e019a9e619351e240d5c9aa5600073872"
+    },
+    "ExpandLess.bgeo.sc": {
+      "bytes": 6055,
+      "sha256": "ac6f57146321266cfb1d3419cb5751e362246a19e0305374ce8fd8e13a008f71"
+    },
+    "ErrorOutline.bgeo.sc": {
+      "bytes": 14694,
+      "sha256": "25764326e315d1864ad0905517df6d5fd63e14c3c8d19f55d6de4b15a9ca557a"
+    },
+    "EditNote.bgeo.sc": {
+      "bytes": 31233,
+      "sha256": "4fef8f4072a8ee618826dcb42e9f90f78d87a9fb727b493598c741b0bce57f22"
+    },
+    "Edit.bgeo.sc": {
+      "bytes": 22269,
+      "sha256": "2c3ad33415d137bb5eac14b72fbc4ff1ee3ad6eea035149ef235d73df940583c"
+    },
+    "Computer.bgeo.sc": {
+      "bytes": 10102,
+      "sha256": "8e5fb203a580edcce0988cadc82ff95fb0f3293c5a581c1586e4fd184f4fba52"
+    },
+    "Check.bgeo.sc": {
+      "bytes": 6798,
+      "sha256": "bd494977dda95bc8252abbd112cd273b6d7f98d7028499adf197e1d1cc587e99"
+    },
+    "Build.bgeo.sc": {
+      "bytes": 20270,
+      "sha256": "359a21c1b1fb3ded1f4326441cec96d6918921494a419f3c9078584121baf049"
+    },
+    "AttachFile.bgeo.sc": {
+      "bytes": 12067,
+      "sha256": "c2e462504091694f337b3e3ece8e4f77dadb6bc23cbc2479426b4d07b529b566"
+    },
+    "ArrowUpward.bgeo.sc": {
+      "bytes": 8751,
+      "sha256": "a8ed879117d348c259eae6a5b1723fcd2fbb87a74dcb0c4b626e36cba0074ba5"
+    },
+    "ArrowForward.bgeo.sc": {
+      "bytes": 7989,
+      "sha256": "4789210dc4d1eca265cdb3e3581c00f915bb0aa5587ee9ea17097c9aa00fdc93"
+    },
+    "ArrowDownward.bgeo.sc": {
+      "bytes": 8738,
+      "sha256": "c591a2c667804b957e799a2ae64f62bf04759039ad5f99cfa91d8c9e7e03a335"
+    },
+    "ArrowBack.bgeo.sc": {
+      "bytes": 8060,
+      "sha256": "992d5640222aa833b4c5edc0a482de68f2c24dee4658be3eb29f0367dd5285ab"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "nextcomp-modeled-v07-views",
+  "engine": "xpu",
+  "source_scene": "/aosp/houdini/nextcomp/modeled-v07/build/views.hiplc",
+  "scene_sha256": "22be771649139c3b84dcf5b4ca660419dae50fe77de4dd0580193521c5b037fa",
+  "asset_manifest": "/aosp/houdini/nextcomp/modeled-v07/build/views-manifest.json",
+  "asset_sha256": "bed39507af8fe2596eb6b444ea8affd5b263a5ad1cda169526e8abc280f4c305",
+  "frames": [
+    1,
+    6
+  ],
+  "fps": 60,
+  "width": 3840,
+  "height": 3840,
+  "samples": 32,
+  "rop": "/out/icons",
+  "exr_dir": "/aosp/houdini/nextcomp/modeled-v07/render/crisp-views",
+  "review_stage": "after_render",
+  "runtime_preflight": true,
+  "motion_blur": false
+}

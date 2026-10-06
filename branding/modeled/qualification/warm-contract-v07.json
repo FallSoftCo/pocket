@@ -1,0 +1,21 @@
+{
+  "id": "nextcomp-modeled-v07-warm",
+  "engine": "xpu",
+  "source_scene": "/aosp/houdini/nextcomp/modeled-v07/build/warm.hiplc",
+  "scene_sha256": "5f708597adb1d2c74023d23beee75cecbb5755da50e87fccb246597934f3f85a",
+  "asset_manifest": "/aosp/houdini/nextcomp/modeled-v07/build/warm-manifest.json",
+  "asset_sha256": "c5ca73862cf14701960d0c7d877daa8aac744223fae1787ada845e638bb28d1d",
+  "frames": [
+    1,
+    1
+  ],
+  "fps": 60,
+  "width": 3840,
+  "height": 3840,
+  "samples": 32,
+  "rop": "/out/icons",
+  "exr_dir": "/aosp/houdini/nextcomp/modeled-v07/render/crisp-warm",
+  "review_stage": "after_render",
+  "runtime_preflight": true,
+  "motion_blur": false
+}

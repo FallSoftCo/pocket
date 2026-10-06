@@ -1,0 +1,59 @@
+Applications Memory Usage (in Kilobytes):
+Uptime: 8436567 Realtime: 8436567
+
+** MEMINFO in pid 7227 [co.fallsoft.pocket] **
+                   Pss  Private  Private  SwapPss      Rss     Heap     Heap     Heap
+                 Total    Dirty    Clean    Dirty    Total     Size    Alloc     Free
+                ------   ------   ------   ------   ------   ------   ------   ------
+  Native Heap   146494   146452        0       47   147788   154724   147980     2643
+  Dalvik Heap     9993     5144     4812       43    11220    12969     6485     6484
+ Dalvik Other     5049     2136       40        8     8228
+        Stack     1716     1716        0        0     1724
+       Ashmem       17        0        0        0      552
+    Other dev       14        0       12        0      260
+     .so mmap     3585      264      100       15    37724
+    .jar mmap     1939        0       24        0    32488
+    .apk mmap     4206        0     4028        0     5684
+    .ttf mmap      149        0        0        0      732
+    .dex mmap       16        0        0        0      776
+    .oat mmap      629        0        4        0    13484
+    .art mmap     2459      564     1212       80    24112
+   Other mmap      120        8       68        0     1312
+      Unknown      517      512        0        0      880
+        TOTAL   177096   156796    10300      193   286964   167693   154465     9127
+
+ App Summary
+                       Pss(KB)                        Rss(KB)
+                        ------                         ------
+           Java Heap:     6920                          35332
+         Native Heap:   146452                         147788
+                Code:     4428                          96648
+               Stack:     1716                           1724
+            Graphics:        0                              0
+       Private Other:     7580
+              System:    10000
+             Unknown:                                    5472
+
+           TOTAL PSS:   177096            TOTAL RSS:   286964       TOTAL SWAP PSS:      193
+
+ Objects
+               Views:        9         ViewRootImpl:        1
+         AppContexts:        6           Activities:        1
+              Assets:       22        AssetManagers:        0
+       Local Binders:      236        Proxy Binders:       40
+       Parcel memory:        9         Parcel count:       37
+    Death Recipients:        0             WebViews:        0
+
+ SQL
+         MEMORY_USED:      410
+  PAGECACHE_OVERFLOW:      139          MALLOC_SIZE:       46
+
+ DATABASES
+      pgsz     dbsz   Lookaside(b) cache hits cache misses cache size  Dbname
+PER CONNECTION STATS
+         4      104            123    66   110    25  /data/user/0/co.fallsoft.pocket/no_backup/androidx.work.workdb
+         4        8                    0     0     0    (attached) temp
+         4      104             41     8    21     3  /data/user/0/co.fallsoft.pocket/no_backup/androidx.work.workdb (3)
+POOL STATS
+     cache hits  cache misses    cache size  Dbname
+             80           166           246  /data/user/0/co.fallsoft.pocket/no_backup/androidx.work.workdb

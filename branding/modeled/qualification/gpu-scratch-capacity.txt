@@ -1,0 +1,3 @@
+tmpfs /aosp/houdini/nextcomp-modeled-scratch tmpfs rw,relatime,size=41943040k,mode=755,uid=1000,gid=1000,inode64
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs            48G  2.8G   46G   6% /aosp/houdini/nextcomp-modeled-scratch

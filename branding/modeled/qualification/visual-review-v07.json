@@ -1,0 +1,39 @@
+{
+  "reviewed": true,
+  "geometryRevision": "v06",
+  "nativeViewsAndThemesRevision": "v07",
+  "reviewedFiles": [
+    "readability-16-20-24-32-44.png",
+    "perspective-lighting.png",
+    "themed-readability.png"
+  ],
+  "defaultSizes": [
+    16,
+    20,
+    24,
+    32,
+    44
+  ],
+  "allSymbols": 37,
+  "themedSymbols": 37,
+  "separateLightRigs": [
+    "daylight",
+    "warm",
+    "midnight"
+  ],
+  "selectedLargePerspectiveObjects": [
+    "Mic",
+    "Keyboard",
+    "Edit",
+    "NotificationsNone",
+    "Psychology",
+    "User",
+    "Build",
+    "PlayArrow",
+    "Send"
+  ],
+  "readableControlViewRange": "front and +/-30 degrees yaw; moderate pitch",
+  "sideAndRearRecognition": "limits documented; edge-on and rear views are not promised universal semantic recognition",
+  "rejectedStudy": "v06 perspective/light interpolation caused motion-blurred views and washed out white objects on cream. Replaced with zero-shutter, motion-cache-disabled views and separately authored constant theme scenes.",
+  "reviewConclusion": "Default real-size silhouettes and bounded perspectives accepted. Theme material/light studies accepted for review; no live theme selector or runtime tint added. Native UI and motion qualification recorded separately."
+}

@@ -1,0 +1,290 @@
+[
+  {
+    "brand": "NextComp",
+    "collection": "nextcomp-modeled",
+    "group": "NextComp modeled 3D objects",
+    "updatedAt": "2026-10-06T06:16:19.222402+00:00",
+    "ready": true,
+    "finalReady": true,
+    "featured": true,
+    "keywords": "NextComp original modeled 3D symbols skeuomorphic materials lighting 60fps readability",
+    "craft": "Original Houdini Indie22.0.429 objects \u00b7 Karma XPU \u00b7 measured GPU \u00b7 CPU fallback disabled",
+    "note": "37 symbol meanings preserved. Codex reference/trademark provenance retained. Cubic N construction preserved. Android integration qualification and physical Fold frame delivery are separate from these CGI reviews.",
+    "id": "nextcomp-modeled-native-ui",
+    "title": "NextComp \u00b7 modeled objects in native Android",
+    "theme": "Exact optimized test-signed candidate: normal and2\u00d7 text; synthetic fixture",
+    "motion": "Static native software-emulator captures; physical Fold frame delivery unqualified",
+    "poster": "nextcomp-modeled/v07/native-ui-normal-large.png",
+    "video": "nextcomp-modeled/v07/native-ui-normal-large.mp4",
+    "cardVideo": "nextcomp-modeled/v07/native-ui-normal-large.mp4",
+    "width": 2160,
+    "height": 2450,
+    "seconds": 3,
+    "aspect": "portrait",
+    "playbackLabel": "Native Android / normal and2\u00d7 text",
+    "downloads": [
+      {
+        "label": "Native list",
+        "path": "nextcomp-modeled/v07/native-list-normal.png"
+      },
+      {
+        "label": "Native large loading N",
+        "path": "nextcomp-modeled/v07/native-loading-n.png"
+      },
+      {
+        "label": "Normal text",
+        "path": "nextcomp-modeled/v07/native-conversation-normal.png"
+      },
+      {
+        "label": "Doubled text",
+        "path": "nextcomp-modeled/v07/native-conversation-font2.png"
+      },
+      {
+        "label": "Exact candidate qualification",
+        "path": "nextcomp-modeled/v07/app-native-qualification.json"
+      }
+    ]
+  },
+  {
+    "brand": "NextComp",
+    "collection": "nextcomp-modeled",
+    "group": "NextComp modeled 3D objects",
+    "updatedAt": "2026-10-06T06:16:19.222402+00:00",
+    "ready": true,
+    "finalReady": true,
+    "featured": true,
+    "keywords": "NextComp original modeled 3D symbols skeuomorphic materials lighting 60fps readability",
+    "craft": "Original Houdini Indie22.0.429 objects \u00b7 Karma XPU \u00b7 measured GPU \u00b7 CPU fallback disabled",
+    "note": "37 symbol meanings preserved. Codex reference/trademark provenance retained. Cubic N construction preserved. Android integration qualification and physical Fold frame delivery are separate from these CGI reviews.",
+    "id": "nextcomp-modeled-controls",
+    "title": "NextComp \u00b7 refined modeled objects / 60fps",
+    "theme": "Constructed microphone, recessed keyboard, hexagonal pencil, cerebral forms, hollow bells and folded plane",
+    "motion": "120 actual rendered swivel frames \u00b7 60fps \u00b7 two-second loop",
+    "poster": "nextcomp-modeled/v07/swivel-poster.png",
+    "video": "nextcomp-modeled/v07/swivel-60fps.mp4",
+    "cardVideo": "nextcomp-modeled/v07/swivel-60fps.mp4",
+    "width": 1920,
+    "height": 1200,
+    "seconds": 2,
+    "aspect": "wide",
+    "playbackLabel": "120 actual rendered swivel frames \u00b7 60fps \u00b7 two-second loop",
+    "downloads": [
+      {
+        "label": "Native Indie scenes and all449 HDR masters /4.8GB",
+        "path": "nextcomp-modeled/v07/native-modeled-masters.tar.zst"
+      },
+      {
+        "label": "206 integrated Android resources",
+        "path": "nextcomp-modeled/v07/app-resources.tar"
+      },
+      {
+        "label": "Native farm qualification",
+        "path": "nextcomp-modeled/v07/qualification.json"
+      },
+      {
+        "label": "Android candidate and performance qualification",
+        "path": "nextcomp-modeled/v07/app-native-qualification.json"
+      },
+      {
+        "label": "Full-turn Codex/thinking60fps",
+        "path": "nextcomp-modeled/v07/spin-60fps.mp4"
+      },
+      {
+        "label": "Cubic N60fps",
+        "path": "nextcomp-modeled/v07/mark-60fps.mp4"
+      },
+      {
+        "label": "UHD3840 atlas",
+        "path": "nextcomp-modeled/v07/atlas-3840.png"
+      },
+      {
+        "label": "HD1920 atlas",
+        "path": "nextcomp-modeled/v07/atlas-1920.png"
+      },
+      {
+        "label": "Design language",
+        "path": "nextcomp-modeled/v07/DESIGN-LANGUAGE.md"
+      }
+    ]
+  },
+  {
+    "brand": "NextComp",
+    "collection": "nextcomp-modeled",
+    "group": "NextComp modeled 3D objects",
+    "updatedAt": "2026-10-06T06:16:19.222402+00:00",
+    "ready": true,
+    "finalReady": true,
+    "featured": true,
+    "keywords": "NextComp original modeled 3D symbols skeuomorphic materials lighting 60fps readability",
+    "craft": "Original Houdini Indie22.0.429 objects \u00b7 Karma XPU \u00b7 measured GPU \u00b7 CPU fallback disabled",
+    "note": "37 symbol meanings preserved. Codex reference/trademark provenance retained. Cubic N construction preserved. Android integration qualification and physical Fold frame delivery are separate from these CGI reviews.",
+    "id": "nextcomp-modeled-lighting",
+    "title": "NextComp \u00b7 materials, lighting and perspectives",
+    "theme": "Charcoal enamel on cream daylight, warm studio and midnight; native front/quarter/side/rear studies",
+    "motion": "Static comparison of separately rendered material and light rigs",
+    "poster": "nextcomp-modeled/v07/themes-poster.png",
+    "video": "nextcomp-modeled/v07/themes-poster.mp4",
+    "cardVideo": "nextcomp-modeled/v07/themes-poster.mp4",
+    "width": 1620,
+    "height": 588,
+    "seconds": 3,
+    "aspect": "wide",
+    "playbackLabel": "Static comparison of separately rendered material and light rigs",
+    "downloads": [
+      {
+        "label": "Full perspective and lighting sheet",
+        "path": "nextcomp-modeled/v07/perspective-lighting.png"
+      },
+      {
+        "label": "All37 symbols at real sizes in three themes",
+        "path": "nextcomp-modeled/v07/themed-readability.png"
+      },
+      {
+        "label": "Visual review and recognition limits",
+        "path": "nextcomp-modeled/v07/visual-review.json"
+      },
+      {
+        "label": "Rejected v06 study / blurred views and washed-out cream",
+        "path": "nextcomp-modeled/v07/rejected-v06-motion-blurred-study.png"
+      }
+    ]
+  },
+  {
+    "brand": "NextComp",
+    "collection": "nextcomp-modeled",
+    "group": "NextComp modeled 3D objects",
+    "updatedAt": "2026-10-06T06:16:19.222402+00:00",
+    "ready": true,
+    "finalReady": true,
+    "featured": true,
+    "keywords": "NextComp original modeled 3D symbols skeuomorphic materials lighting 60fps readability",
+    "craft": "Original Houdini Indie22.0.429 objects \u00b7 Karma XPU \u00b7 measured GPU \u00b7 CPU fallback disabled",
+    "note": "37 symbol meanings preserved. Codex reference/trademark provenance retained. Cubic N construction preserved. Android integration qualification and physical Fold frame delivery are separate from these CGI reviews.",
+    "id": "nextcomp-modeled-readability",
+    "title": "NextComp \u00b7 all37 objects at real display sizes",
+    "theme": "16/20/24/32/44 physical pixels; broad form before microdetail",
+    "motion": "Static real-size review \u00b7 native UI evidence supplied separately",
+    "poster": "nextcomp-modeled/v07/readability-16-20-24-32-44.png",
+    "video": "nextcomp-modeled/v07/readability-16-20-24-32-44.mp4",
+    "cardVideo": "nextcomp-modeled/v07/readability-16-20-24-32-44.mp4",
+    "width": 1440,
+    "height": 710,
+    "seconds": 3,
+    "aspect": "wide",
+    "playbackLabel": "Static real-size review \u00b7 native UI evidence supplied separately",
+    "downloads": [
+      {
+        "label": "Exact-size PNG sheet",
+        "path": "nextcomp-modeled/v07/readability-16-20-24-32-44.png"
+      },
+      {
+        "label": "Daylight, warm and midnight real-size sheets",
+        "path": "nextcomp-modeled/v07/themed-readability.png"
+      }
+    ]
+  },
+  {
+    "brand": "NextComp",
+    "collection": "nextcomp-modeled",
+    "group": "NextComp modeled3D objects",
+    "updatedAt": "2026-10-06T03:22:49.426052+00:00",
+    "ready": true,
+    "finalReady": true,
+    "featured": false,
+    "keywords": "NextComp modeled skeuomorphic3D symbols microphone bell keyboard folded plane native Indie",
+    "craft": "Original Houdini Indie22.0.429 assembled objects \u00b7 Karma XPU \u00b7 measured GPU \u00b7 CPU fallback disabled",
+    "note": "37 symbol meanings preserved. Codex circle-terminal trademark/reference provenance retained. Original cubic N is separate. No vector-mask extrusion or stock3D models.",
+    "id": "nextcomp-modeled-v03-controls",
+    "title": "NextComp \u00b7 modeled3D control objects / v03 baseline",
+    "theme": "Constructed microphone, raised keyboard keys, hollow bells, forged wrench and folded plane; round volumetric navigation controls",
+    "motion": "Actual12-frame6fps native swivel; fixed sprite crops. Codex/thinking use separate16-frame full rotations.",
+    "width": 1920,
+    "height": 1200,
+    "aspect": "wide",
+    "seconds": 2,
+    "poster": "nextcomp-modeled/v03/poster.png",
+    "video": "nextcomp-modeled/v03/swivel-review.mp4",
+    "cardVideo": "nextcomp-modeled/v03/swivel-review.mp4",
+    "playbackLabel": "37 assembled objects \u00b7 actual rendered motion",
+    "deliveries": [
+      {
+        "kind": "image",
+        "quality": "4k",
+        "width": 3840,
+        "height": 3840,
+        "path": "nextcomp-modeled/v03/atlas-01-3840.png"
+      },
+      {
+        "kind": "image",
+        "quality": "hd",
+        "width": 1920,
+        "height": 1920,
+        "path": "nextcomp-modeled/v03/atlas-01-1920.png"
+      }
+    ],
+    "downloads": [
+      {
+        "label": "Native Indie scenes, geometry and HDR RGBA masters",
+        "path": "nextcomp-modeled/v03/native-modeled-masters.tar"
+      },
+      {
+        "label": "76 integrated Android PNG resources",
+        "path": "nextcomp-modeled/v03/app-resources.tar"
+      },
+      {
+        "label": "Native GPU and asset qualification",
+        "path": "nextcomp-modeled/v03/qualification.json"
+      },
+      {
+        "label": "Original modeled-object builder",
+        "path": "nextcomp-modeled/v03/build_objects.py"
+      },
+      {
+        "label": "Four actual primary-control phases",
+        "path": "nextcomp-modeled/v03/primary-keyframes.png"
+      },
+      {
+        "label": "Transparent actual swivel loop",
+        "path": "nextcomp-modeled/v03/swivel-review.webp"
+      },
+      {
+        "label": "Codex/thinking full3D rotations",
+        "path": "nextcomp-modeled/v03/spin-review.mp4"
+      }
+    ]
+  },
+  {
+    "brand": "NextComp",
+    "collection": "nextcomp-modeled",
+    "group": "NextComp modeled3D objects",
+    "updatedAt": "2026-10-06T03:22:49.426052+00:00",
+    "ready": true,
+    "finalReady": true,
+    "featured": false,
+    "keywords": "NextComp modeled skeuomorphic3D symbols microphone bell keyboard folded plane native Indie",
+    "craft": "Original Houdini Indie22.0.429 assembled objects \u00b7 Karma XPU \u00b7 measured GPU \u00b7 CPU fallback disabled",
+    "note": "37 symbol meanings preserved. Codex circle-terminal trademark/reference provenance retained. Original cubic N is separate. No vector-mask extrusion or stock3D models.",
+    "id": "nextcomp-modeled-v03-readability",
+    "title": "NextComp \u00b7 real-size modeled symbol review / v03 baseline",
+    "theme": "All37 final objects shown at16/20/24/32/44physical pixels on the app palette",
+    "motion": "Static size review; native Android context screenshots are provided separately.",
+    "width": 1440,
+    "height": 710,
+    "aspect": "wide",
+    "seconds": 3,
+    "poster": "nextcomp-modeled/v03/readability-16-20-24-32-44.png",
+    "video": "nextcomp-modeled/v03/readability-16-20-24-32-44.mp4",
+    "cardVideo": "nextcomp-modeled/v03/readability-16-20-24-32-44.mp4",
+    "playbackLabel": "Exact delivery-size sheet",
+    "downloads": [
+      {
+        "label": "Real-size PNG sheet",
+        "path": "nextcomp-modeled/v03/readability-16-20-24-32-44.png"
+      },
+      {
+        "label": "Synthetic raster UI composition \u00b7 not a native capture",
+        "path": "nextcomp-modeled/v03/synthetic-contexts.png"
+      }
+    ]
+  }
+]

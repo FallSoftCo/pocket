@@ -1,0 +1,249 @@
+{
+  "symbols": 37,
+  "displayDp": [
+    16,
+    18,
+    20,
+    24,
+    28,
+    30,
+    32,
+    36,
+    40,
+    44
+  ],
+  "contexts": [
+    "pairing",
+    "coordinator",
+    "session cards",
+    "conversation",
+    "context controls",
+    "voice",
+    "usage footer",
+    "settings",
+    "attachments",
+    "team controls"
+  ],
+  "calls": [
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+      "line": 64,
+      "source": "if(entry!=null)IconButton({expanded=!expanded}){SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)\"Collapse context\" else \"Read full context\",Modifier.size(24.dp))}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+      "line": 65,
+      "source": "onControls?.let{open->IconButton(open){SymbolIcon(Icons.Rounded.Tune,\"Conversation controls\",Modifier.size(24.dp))}}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+      "line": 75,
+      "source": "if(entry.note!=null&&onReply!=null)IconButton({onReply(entry.note)}){SymbolIcon(Icons.Rounded.ArrowUpward,\"Reply to this answer\",Modifier.size(28.dp))}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+      "line": 76,
+      "source": "if(onGoTo!=null&&(entry.sourceId.isNotBlank()||entry.thread!=null&&entry.thread!=Pocket.selected))IconButton({onGoTo(entry)}){SymbolIcon(Icons.Rounded.OpenInNew,\"Go to source\",Modifier.size(28.dp))}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+      "line": 79,
+      "source": "SymbolIcon(if(speaking)Icons.Rounded.Stop else Icons.Rounded.VolumeUp,if(speaking)\"Stop speaking context\" else \"Speak this context\",Modifier.size(30.dp),tint=if(speaking)Coral else Mint)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+      "line": 100,
+      "source": "SymbolIcon(status.icon,status.label+\"; conversation controls\",Modifier.size(32.dp),tint=if(status==ConversationRunState.NEEDS_YOU)Coral else Mint,spinning=status.spinning)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+      "line": 105,
+      "source": "SymbolIcon(if(speaking)Icons.Rounded.Stop else Icons.Rounded.VolumeUp,if(speaking)\"Stop speaking conversation\" else \"Speak visible conversation\",Modifier.size(30.dp),tint=if(speaking)Coral else Mint)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 131,
+      "source": "ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(6.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{BilingualLabel(\"Connect Codex\",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));SymbolIcon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 202,
+      "source": "FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={BilingualLabel(\"Workstation\")},leadingIcon={SymbolIcon(Icons.Rounded.Computer,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 203,
+      "source": "FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={BilingualLabel(\"This phone\")},leadingIcon={SymbolIcon(Icons.Rounded.PhoneAndroid,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 322,
+      "source": "Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind==\"thinking\")\"Psychology\" else \"Codex\",if(t.status==\"pending\")\"Starting\" else \"Working\",Modifier.fillMaxSize(),spinning=true)}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 325,
+      "source": "SymbolIcon(if(t.watched)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,null,modifier=Modifier.size(24.dp),tint=if(t.watched)Paper else Muted.copy(alpha=.65f))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 329,
+      "source": "if(t.archived)IconButton({Pocket.restoreTask(t.id)},modifier=Modifier.size(48.dp)){SymbolIcon(Icons.Rounded.Unarchive,\"Restore conversation\",tint=Mint,modifier=Modifier.size(18.dp))}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 334,
+      "source": "if(t.previewRole in listOf(\"user\",\"assistant\"))SymbolIcon(if(t.previewRole==\"user\")\"User\" else \"Codex\",null,Modifier.size(18.dp))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 335,
+      "source": "else if(t.previewRole==\"activity\")SymbolIcon(when(t.previewKind){\"command\"->Icons.Rounded.Terminal;\"edit\"->Icons.Rounded.EditNote;\"search\"->Icons.Rounded.TravelExplore;\"thinking\"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 344,
+      "source": "@Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){SymbolIcon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));WorkflowText(title,fontSize=19.sp);WorkflowText(body,color=Muted,fontSize=13.sp)}}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 406,
+      "source": "Button({Pocket.test()},modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(17.dp)){SymbolIcon(Icons.Rounded.NotificationsActive,null);Spacer(Modifier.width(10.dp));BilingualLabel(\"Send a test notification\")}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 460,
+      "source": "Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){SymbolIcon(Icons.Rounded.AttachFile,null,tint=Mint,modifier=Modifier.size(18.dp));Text(a.s(\"name\"),color=Mint,fontSize=12.sp,modifier=Modifier.padding(start=8.dp).weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis);SymbolIcon(Icons.AutoMirrored.Rounded.OpenInNew,null,tint=Muted,modifier=Modifier.size(16.dp))}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 494,
+      "source": "SymbolIcon(icon,label,Modifier.size(if(primary)44.dp else 36.dp),tint=color)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "line": 503,
+      "source": "SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)\"Resume\" else \"Pause\"),modifier=Modifier.size(28.dp),tint=Mint)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/CoordinatorScreen.kt",
+      "line": 44,
+      "source": "SymbolIcon(\"Codex\",PocketImmersion.label(\"Coordinator\"),Modifier.size(24.dp),spinning=PocketCoordinator.state in listOf(\"Sending\",\"Thinking\"))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/CoordinatorScreen.kt",
+      "line": 81,
+      "source": "SymbolIcon(\"Codex\",PocketImmersion.label(\"Coordinator\"),Modifier.size(28.dp),spinning=sending)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/CoordinatorScreen.kt",
+      "line": 110,
+      "source": "FilledTonalIconButton({send()},enabled=draft.isNotBlank()&&!sending,modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,PocketImmersion.label(\"Send coordinator message\"),Modifier.size(40.dp),tint=Paper)}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+      "line": 62,
+      "source": "SymbolIcon(if(Pocket.local)\"PhoneAndroid\" else \"Computer\",if(online)\"Connected\" else if(Pocket.connected)\"Codex offline\" else if(PocketLive.outageVisible)\"Live updates reconnecting\" else \"Connecting\",Modifier.size(20.dp))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+      "line": 64,
+      "source": "if(forecastLabel!=null){SymbolIcon(\"ArrowDownward\",\"Estimated usage run-out\",Modifier.size(12.dp));Text(forecastLabel,color=color,fontSize=12.sp,lineHeight=16.sp,maxLines=1)}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt",
+      "line": 38,
+      "source": "if(cardRegion)CardInteractionRegion(PocketImmersion.label(\"Mic\"),modifier,startVoice)else if(dock)DockButton(\"Talk\",Icons.Rounded.Mic,modifier,primary=true,onClick=startVoice)else if(bar)ChatActionButton(\"Talk\",Icons.Rounded.Mic,modifier,startVoice)else if(compact)IconButton(startVoice,modifier=modifier){SymbolIcon(Icons.Rounded.Mic,PocketImmersion.label(\"Start voice in this conversation\"),tint=Mint,modifier=Modifier.size(44.dp))}else ExtendedFloatingActionButton(onClick=startVoice,modifier=modifier.height(72.dp),containerColor=Panel,contentColor=Paper,icon={SymbolIcon(Icons.Rounded.Mic,PocketImmersion.label(\"Start voice\"),Modifier.size(44.dp))},text={BilingualLabel(\"Talk to Codex\",fontWeight=FontWeight.Bold,fontSize=17.sp)})"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt",
+      "line": 71,
+      "source": "FilledTonalIconButton(onClick={keyboardInput=false;keyboard?.hide();PocketVoice.record()},modifier=Modifier.size(64.dp)){SymbolIcon(if(recording)Icons.Rounded.Stop else Icons.Rounded.Mic,PocketImmersion.label(if(recording)\"Stop and send recording\" else \"Talk\"),Modifier.size(32.dp))}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt",
+      "line": 73,
+      "source": "IconButton({PocketVoice.sendText(draft);draft=\"\"},enabled=draft.isNotBlank(),modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,PocketImmersion.label(\"Send message\"))}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt",
+      "line": 88,
+      "source": "SymbolIcon(if(user)\"User\" else \"Codex\",PocketImmersion.label(if(user)\"Your message\" else \"Codex message\"),Modifier.size(20.dp))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt",
+      "line": 97,
+      "source": "SymbolIcon(Icons.Rounded.VolumeUp,PocketImmersion.label(\"Speech volume\"),tint=Muted)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt",
+      "line": 109,
+      "source": "SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt",
+      "line": 112,
+      "source": "SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 54,
+      "source": "Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){IconButton({Pocket.newTask=false}){SymbolIcon(Icons.AutoMirrored.Rounded.ArrowBack,\"Back\")};BilingualLabel(\"New task\",fontSize=23.sp,fontWeight=FontWeight.Medium)}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 62,
+      "source": "Pocket.projects.take(5).forEach{p->Row(Modifier.fillMaxWidth().clickable(enabled=!Pocket.starting){cwd=p.s(\"cwd\");Pocket.prefs.edit().putString(cwdKey,cwd).apply()}.padding(horizontal=14.dp,vertical=11.dp),verticalAlignment=Alignment.CenterVertically){SymbolIcon(Icons.Rounded.FolderOpen,null,tint=if(cwd==p.s(\"cwd\"))Mint else Muted,modifier=Modifier.size(18.dp));Column(Modifier.weight(1f).padding(start=10.dp)){Text(p.s(\"name\"),fontSize=14.sp,color=if(cwd==p.s(\"cwd\"))Mint else Paper);Text(p.s(\"cwd\"),fontSize=10.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)};if(cwd==p.s(\"cwd\"))SymbolIcon(Icons.Rounded.Check,null,tint=Mint,modifier=Modifier.size(16.dp))}}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 72,
+      "source": "if(Pocket.starting)CircularProgressIndicator(Modifier.size(20.dp),strokeWidth=2.dp,color=Ink)else SymbolIcon(Icons.Rounded.ArrowUpward,null)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 168,
+      "source": "if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel(\"Latest\",fontSize=12.sp)}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 204,
+      "source": "else SymbolIcon(Icons.Rounded.ArrowUpward,null,tint=Paper,modifier=Modifier.size(44.dp))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 229,
+      "source": "Box{IconButton({menu=true}){SymbolIcon(Icons.Rounded.MoreVert,\"Queued message actions\",tint=Muted)}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 261,
+      "source": "SymbolIcon(if(you)\"User\" else \"Codex\",if(you)\"Your message\" else \"Codex message\",Modifier.size(20.dp))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 279,
+      "source": "if(running)SymbolIcon(if(row.s(\"type\")==\"reasoning\")\"Psychology\" else \"Codex\",\"Working\",Modifier.size(24.dp),spinning=true)"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 280,
+      "source": "else SymbolIcon(if(failed)Icons.Rounded.ErrorOutline else Icons.Rounded.Check,null,tint=if(failed)Coral else Muted,modifier=Modifier.size(18.dp))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 284,
+      "source": "SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)\"Collapse activity\" else \"Expand activity\",tint=Muted,modifier=Modifier.size(16.dp))"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 318,
+      "source": "Box{OutlinedButton({modelMenu=true},enabled=models.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text(selected?.s(\"name\")?:model.ifBlank{\"Model\"});Spacer(Modifier.weight(1f));SymbolIcon(Icons.Rounded.ExpandMore,null)}"
+    },
+    {
+      "file": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "line": 320,
+      "source": "Box{OutlinedButton({effortMenu=true},enabled=efforts.isNotEmpty(),modifier=Modifier.fillMaxWidth()){BilingualLabel(\"Reasoning: ${effort.ifBlank{\"default\"}}\");Spacer(Modifier.weight(1f));SymbolIcon(Icons.Rounded.ExpandMore,null)}"
+    }
+  ]
+}
