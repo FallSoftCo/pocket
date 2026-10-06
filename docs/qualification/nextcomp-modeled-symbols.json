@@ -1,5 +1,5 @@
 {
-  "status": "complete modeled asset and Android candidate qualification; production integration and physical Fold pacing pending Pocket Dev",
+  "status": "Modeled candidate and root production integration qualified; alpha29 published and carried into installed alpha30/code48. Physical Fold pacing remains unqualified.",
   "scope": {
     "modeledSymbols": 37,
     "launcherN": "existing cubic construction retained; retimed motion and density-selected atlases",
@@ -46,8 +46,8 @@
     "fullBrowserLayout": "required checker attempted under bounded broker ownership; WAIT_TIMEOUT before Chromium launch, existing profile quarantine requires independent operator recovery"
   },
   "deployment": {
-    "symbolsOnPhone": false,
-    "physicalFoldFrameDelivery": "unqualified; Pocket Dev owns release and handset integration",
+    "symbolsOnPhone": true,
+    "physicalFoldFrameDelivery": "Installed assets independently verified; controlled Fold frame pacing remains unqualified.",
     "coordinationSession": "01a0f2bc-ff5a-70c2-b682-10f0987dab80"
   },
   "resources": {

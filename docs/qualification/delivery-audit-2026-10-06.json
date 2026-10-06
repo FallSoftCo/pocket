@@ -1,0 +1,2421 @@
+{
+  "date": "2026-10-06",
+  "scope": "Read-only source and artifact reconciliation; no builds, device interaction, runtime edits or asset regeneration. Relative public artifact references only.",
+  "head": "3ee75783364d19bc6efbb4004250265cf92ff69b",
+  "requestsAudited": 111,
+  "prioritizedNextWork": [
+    {
+      "priority": 1,
+      "ids": [
+        "stale-spoken-transcript-scroll",
+        "phone-codex-update-installation"
+      ],
+      "nextWork": "Fresh root/phone-subagent evidence verifies installed code48 exact qualified SHA. Current acceptance gap is real-device stale-speech/scroll behavior and notification receipt, not blindly reinstalling. Inspect authoritative updated receipt before any phone action."
+    },
+    {
+      "priority": 2,
+      "ids": [
+        "modeled-symbol-objects",
+        "animated-3d-motion"
+      ],
+      "nextWork": "Measure warmed real Fold frame cadence/jank/PSS at actual refresh with existing authorized access; investigate decode/upload/render bottlenecks if bad. Do not replace assets or claim 60fps from samples."
+    },
+    {
+      "priority": 3,
+      "ids": [
+        "immersion-change-localization",
+        "italian-immersion"
+      ],
+      "nextWork": "Observe uninterrupted current native transition with timestamped capture; obtain perceptibility/reading acceptance and qualify cancellation mid-cue. Keep single inline text, fully opaque glyphs, one cue and no subtitles/modal."
+    },
+    {
+      "priority": 4,
+      "ids": [
+        "voice",
+        "speech-live-subtitles",
+        "question-actions",
+        "tailscale-push-regression"
+      ],
+      "nextWork": "Qualify actual provider recorded turn, intelligible response, live captions and supported question/Skip notification routing with Tailscale connected; secure physical keyguard privacy separately."
+    },
+    {
+      "priority": 5,
+      "ids": [
+        "durable-shared-computer-use-task-adapter",
+        "selectable-losangelex-hollywood-backend"
+      ],
+      "nextWork": "Check owner registered live runtime/broker availability and native selected-team workflow; keep team voice exclusion explicit."
+    },
+    {
+      "priority": 6,
+      "ids": [
+        "tibo-dots-varied-brief-evaluation",
+        "launch"
+      ],
+      "nextWork": "Use public full briefing G plus capabilities; actual supported recipient/Dots channel and current demo required before outreach/launch."
+    }
+  ],
+  "ledgerCorrections": [
+    "Old delegated voxel/modeled, Italian worker, questions, bottom UX, images and briefs are implemented; do not repeat those implementations merely because their first ledger entry remains in progress.",
+    "nextcomp-modeled-symbols qualification top status says integration pending despite alpha29 rootDelivery evidence; distinguish inherited candidate header from later root receipt.",
+    "computer-use isolated candidate status is stale: adapter imports and route exist in current source; activation/actuator qualification is still separate.",
+    "Phone48 installation and current_state reconciled after fresh independent installed-APK hashing. Earlier status text remains historical provenance; delivery_audit records current assessment."
+  ],
+  "requests": [
+    {
+      "id": "select-codex-or-losangelex-backend",
+      "ledgerStatus": "implemented_candidate_qualified",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/losangelex.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/LOSANGELEX-BACKEND.md",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/losangelex-live-backend.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-cycling-team-alpha24.json",
+          "exists": true
+        }
+      ],
+      "finding": "Backend integrated in alpha24; Settings selector delivered in alpha26; stock sessions preserved and real independent-root peer exchange recorded. Original root-release-pending label is obsolete.",
+      "missingAcceptance": "Team voice and stock-thread adoption excluded; owner live private registration/physical team use must be checked separately."
+    },
+    {
+      "id": "connectivity",
+      "ledgerStatus": "implemented-alpha13-physical-upgrade-confirmed",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/app-updates.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/WorkstationDns.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/push-dns-phone-alpha19.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Trusted DNS fallback, historical real DNS/background push recovery and same-signer updater are implemented. Latest alpha30 package staged and update offered.",
+      "missingAcceptance": "Current ordinary SSH/installer result and handset push receipt are unresolved. Do not change Wi-Fi/Tailscale/security or repeat install blindly; inspect package/result first."
+    },
+    {
+      "id": "permissions",
+      "ledgerStatus": "implemented-alpha8",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "existing-permissions",
+      "ledgerStatus": "historical-request-check-prior-session",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "github",
+      "ledgerStatus": "ongoing-authorized",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "name",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "launch",
+      "ledgerStatus": "pending-separate-launch-decision",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "docs/BRIEF-EVALUATION.md",
+          "exists": true
+        },
+        {
+          "path": "docs/NEXTCOMP-BRIEF.md",
+          "exists": true
+        },
+        {
+          "path": "docs/CAPABILITIES.md",
+          "exists": true
+        }
+      ],
+      "finding": "Seven variants and nine documented generic evaluations exist; selected full brief and capability map are public. No actual Dots interaction or outreach occurred.",
+      "missingAcceptance": "Actual supported Dots/recipient channel and current demonstrable reliability remain unverified. Public launch/outreach decision is intentionally unresolved; do not claim drafts were sent."
+    },
+    {
+      "id": "notification-speech",
+      "ledgerStatus": "implemented-prior",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/native-voice.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketSpeechCaptions.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/native-audio-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Native capture/playback, coordinator/direct-session control, one-tap start/stop submit and captions are implemented. Synthetic transport/background/screen-off checks exist.",
+      "missingAcceptance": "Actual provider intelligible STT/TTS and secure physical keyguard captions/eyes-free exception flow are unqualified. Synthetic test signal cannot establish speech quality or complete vision."
+    },
+    {
+      "id": "webhook",
+      "ledgerStatus": "deployed-healthy-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "fundamental-controls",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "enter",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "voice-economy",
+      "ledgerStatus": "historical-research-completed-native-voice",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "voice",
+      "ledgerStatus": "implemented-alpha8-background-qualification-pending",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/native-voice.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketSpeechCaptions.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/native-audio-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Native capture/playback, coordinator/direct-session control, one-tap start/stop submit and captions are implemented. Synthetic transport/background/screen-off checks exist.",
+      "missingAcceptance": "Actual provider intelligible STT/TTS and secure physical keyguard captions/eyes-free exception flow are unqualified. Synthetic test signal cannot establish speech quality or complete vision."
+    },
+    {
+      "id": "recording",
+      "ledgerStatus": "implemented-alpha8",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/native-voice.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketSpeechCaptions.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/native-audio-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Native capture/playback, coordinator/direct-session control, one-tap start/stop submit and captions are implemented. Synthetic transport/background/screen-off checks exist.",
+      "missingAcceptance": "Actual provider intelligible STT/TTS and secure physical keyguard captions/eyes-free exception flow are unqualified. Synthetic test signal cannot establish speech quality or complete vision."
+    },
+    {
+      "id": "volume",
+      "ledgerStatus": "implemented-alpha8",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/native-voice.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketSpeechCaptions.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/native-audio-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Native capture/playback, coordinator/direct-session control, one-tap start/stop submit and captions are implemented. Synthetic transport/background/screen-off checks exist.",
+      "missingAcceptance": "Actual provider intelligible STT/TTS and secure physical keyguard captions/eyes-free exception flow are unqualified. Synthetic test signal cannot establish speech quality or complete vision."
+    },
+    {
+      "id": "coordinator",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/native-voice.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketSpeechCaptions.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/native-audio-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Native capture/playback, coordinator/direct-session control, one-tap start/stop submit and captions are implemented. Synthetic transport/background/screen-off checks exist.",
+      "missingAcceptance": "Actual provider intelligible STT/TTS and secure physical keyguard captions/eyes-free exception flow are unqualified. Synthetic test signal cannot establish speech quality or complete vision."
+    },
+    {
+      "id": "session-previews",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "session-shortcuts",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "conversation-voice",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/native-voice.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketSpeechCaptions.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/native-audio-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Native capture/playback, coordinator/direct-session control, one-tap start/stop submit and captions are implemented. Synthetic transport/background/screen-off checks exist.",
+      "missingAcceptance": "Actual provider intelligible STT/TTS and secure physical keyguard captions/eyes-free exception flow are unqualified. Synthetic test signal cannot establish speech quality or complete vision."
+    },
+    {
+      "id": "phone",
+      "ledgerStatus": "ongoing",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/app-updates.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/WorkstationDns.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/push-dns-phone-alpha19.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Trusted DNS fallback, historical real DNS/background push recovery and same-signer updater are implemented. Latest alpha30 package staged and update offered.",
+      "missingAcceptance": "Installed code48 now verified according to root relay. Specific current real-device interaction/push receipt remains separately qualified; no reinstall requested by this audit.",
+      "newerEvidence": "Root relay: phone subagent freshly confirms installed code48 exact qualified SHA; delivery bookkeeping being corrected by root."
+    },
+    {
+      "id": "thumb-ergonomics",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "keyboard",
+      "ledgerStatus": "verified-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "ui-copy",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "research",
+      "ledgerStatus": "completed",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "recency",
+      "ledgerStatus": "implemented-alpha9-refining-alpha10",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "theme",
+      "ledgerStatus": "implemented-alpha9-refining-alpha10",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "header",
+      "ledgerStatus": "implemented-alpha9-refining-conversation-row",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "forecast",
+      "ledgerStatus": "verified-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "bottom-order",
+      "ledgerStatus": "implemented-alpha9",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "live-cards",
+      "ledgerStatus": "in-progress-alpha10-server106-tests-pass",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "card-polish",
+      "ledgerStatus": "in-progress-alpha10",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "glow",
+      "ledgerStatus": "in-progress-alpha10",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "icon",
+      "ledgerStatus": "in-progress-alpha10",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "voxel-ui",
+      "ledgerStatus": "native-proof-rendered-needs-look-revision",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "mission-view",
+      "ledgerStatus": "superseded-by-retire-mission-view",
+      "assessment": "obsolete_user_superseded",
+      "concreteEvidence": [
+        "retire-mission-view",
+        "MainActivity bottom destinations exclude Mission"
+      ],
+      "missingAcceptance": null
+    },
+    {
+      "id": "conversation-header",
+      "ledgerStatus": "implemented-build-passed-ux-qualification-pending",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "durable-ledger",
+      "ledgerStatus": "implemented-this-file",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "device-footer",
+      "ledgerStatus": "installed-pushed-verified-emulator",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "stable-live-list",
+      "ledgerStatus": "in-progress-alpha10",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "live-thinking",
+      "ledgerStatus": "implemented-tests-pass-qualifying-live",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "tab-dock",
+      "ledgerStatus": "in-progress",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "icon-revision",
+      "ledgerStatus": "in-progress-v03",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "interim-notes",
+      "ledgerStatus": "in-progress",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Alpha30 exact physical installed version and stale speech behavior need fresh evidence after installer SSH interruption. Earlier native synthetic acceptance exists; do not confuse package staging with installation."
+    },
+    {
+      "id": "question-actions",
+      "ledgerStatus": "in-progress",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/question-actions.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketQuestionActions.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/questions-markdown-alpha11.json",
+          "exists": true
+        }
+      ],
+      "finding": "Eligible native questions have Skip, notification action routing and acknowledgement retention. In-progress label is obsolete.",
+      "missingAcceptance": "Current physical phone question generation, push action and actual reply/skip resolution not established by alpha11 synthetic receipt; unsupported request kinds intentionally remain terminal-only."
+    },
+    {
+      "id": "recency-ties",
+      "ledgerStatus": "in-progress",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "card-bell",
+      "ledgerStatus": "in-progress",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "footer-usage",
+      "ledgerStatus": "in-progress",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "italian-immersion",
+      "ledgerStatus": "delegated-italian_immersion",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/immersion-worker.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/immersion-localization-alpha28.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-replacement-runtime-alpha20.json",
+          "exists": true
+        }
+      ],
+      "finding": "Dedicated stock Codex teacher, persisted replacement cache, single-flow inline spans, direct help and coordinated opaque-text localization cue exist. Old delegated/full-line/mosis modal labels are superseded.",
+      "missingAcceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
+    },
+    {
+      "id": "animated-3d-motion",
+      "ledgerStatus": "delegated-voxel_motion",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "mission-fixed-board",
+      "ledgerStatus": "superseded-by-retire-mission-view",
+      "assessment": "obsolete_user_superseded",
+      "concreteEvidence": [
+        "retire-mission-view",
+        "MainActivity bottom destinations exclude Mission"
+      ],
+      "missingAcceptance": null
+    },
+    {
+      "id": "speech-live-subtitles",
+      "ledgerStatus": "implemented-tests-passed-integration-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/native-voice.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/PocketSpeechCaptions.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/native-audio-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Native capture/playback, coordinator/direct-session control, one-tap start/stop submit and captions are implemented. Synthetic transport/background/screen-off checks exist.",
+      "missingAcceptance": "Actual provider intelligible STT/TTS and secure physical keyguard captions/eyes-free exception flow are unqualified. Synthetic test signal cannot establish speech quality or complete vision."
+    },
+    {
+      "id": "mission-sentence-field",
+      "ledgerStatus": "superseded-by-retire-mission-view",
+      "assessment": "obsolete_user_superseded",
+      "concreteEvidence": [
+        "retire-mission-view",
+        "MainActivity bottom destinations exclude Mission"
+      ],
+      "missingAcceptance": null
+    },
+    {
+      "id": "dense-card-touch-regions",
+      "ledgerStatus": "implemented-and-emulator-verified-alpha10",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "taller-distinct-footer",
+      "ledgerStatus": "implemented-and-emulator-verified-alpha10",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "footer-visible-knowledge",
+      "ledgerStatus": "in-progress",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "inline-session-rename",
+      "ledgerStatus": "in-progress",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "conversation-notification-reads",
+      "ledgerStatus": "implemented-tests-passed-integration-under-verification",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "cubic-n-voxels",
+      "ledgerStatus": "delegated-voxel_motion",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "live-connection-truth",
+      "ledgerStatus": "implemented-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/app-updates.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/WorkstationDns.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/push-dns-phone-alpha19.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Trusted DNS fallback, historical real DNS/background push recovery and same-signer updater are implemented. Latest alpha30 package staged and update offered.",
+      "missingAcceptance": "Current ordinary SSH/installer result and handset push receipt are unresolved. Do not change Wi-Fi/Tailscale/security or repeat install blindly; inspect package/result first."
+    },
+    {
+      "id": "conversation-activity-header",
+      "ledgerStatus": "implemented-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "retained-answer-distinction",
+      "ledgerStatus": "implemented-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Alpha30 exact physical installed version and stale speech behavior need fresh evidence after installer SSH interruption. Earlier native synthetic acceptance exists; do not confuse package staging with installation."
+    },
+    {
+      "id": "large-animated-symbols",
+      "ledgerStatus": "implemented-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "icon-free-card-zones",
+      "ledgerStatus": "implemented-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "symbol-scale-readability",
+      "ledgerStatus": "rendered-native-qualified-assets-integrated",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "card-zones-and-follow-state",
+      "ledgerStatus": "implemented-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "title-edit-text-bounds",
+      "ledgerStatus": "implemented-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "speech-controls-bottom",
+      "ledgerStatus": "implemented-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Alpha30 exact physical installed version and stale speech behavior need fresh evidence after installer SSH interruption. Earlier native synthetic acceptance exists; do not confuse package staging with installation."
+    },
+    {
+      "id": "recent-first-conversation",
+      "ledgerStatus": "implemented-under-test",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/session-switching-alpha25.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/missing-history-lineage-recovery.json",
+          "exists": true
+        }
+      ],
+      "finding": "Explicit selected-thread reads/draft isolation, cached bounded recent-first opens and direct state/settings control implemented. Original empty idle thread recovery used supported reads/resume; no database fabrication.",
+      "missingAcceptance": "Current deployed source/backend/phone versions should be reconciled; older unit counts are stale metadata."
+    },
+    {
+      "id": "rendered-symbol-motion-review",
+      "ledgerStatus": "delegated-voxel_motion",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "activity-controls-drawer",
+      "ledgerStatus": "implemented-under-verification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "symbolic-footer-status",
+      "ledgerStatus": "implemented-qualified-alpha10",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "native-loading-indicators",
+      "ledgerStatus": "implemented-qualified-alpha10",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "quiet-recency-labels",
+      "ledgerStatus": "implemented-qualified-alpha10",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "retire-mission-view",
+      "ledgerStatus": "implemented-qualified-alpha11",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "markdown-rendering",
+      "ledgerStatus": "implemented-qualified-alpha11",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "adb-free-app-updates",
+      "ledgerStatus": "implemented-qualified-alpha12",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/app-updates.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/WorkstationDns.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/push-dns-phone-alpha19.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Trusted DNS fallback, historical real DNS/background push recovery and same-signer updater are implemented. Latest alpha30 package staged and update offered.",
+      "missingAcceptance": "Installed code48 now verified according to root relay. Specific current real-device interaction/push receipt remains separately qualified; no reinstall requested by this audit.",
+      "newerEvidence": "Root relay: phone subagent freshly confirms installed code48 exact qualified SHA; delivery bookkeeping being corrected by root."
+    },
+    {
+      "id": "coordinator-text-list-entry",
+      "ledgerStatus": "qualified-published-alpha14",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/session-discovery.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/coordinator-session-discovery-2026-10-05.md",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/coordinator-text-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Early creation metadata before response, selected context sync, pinned coordinator text access and lightweight read-only coordinator tool execution are present; old response-delay status superseded.",
+      "missingAcceptance": "Historical actual-thread/backend evidence is version bounded; no need recreate active tasks for audit."
+    },
+    {
+      "id": "strong-bilingual-immersion",
+      "ledgerStatus": "qualified-published-alpha14",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/immersion-worker.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/immersion-localization-alpha28.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-replacement-runtime-alpha20.json",
+          "exists": true
+        }
+      ],
+      "finding": "Dedicated stock Codex teacher, persisted replacement cache, single-flow inline spans, direct help and coordinated opaque-text localization cue exist. Old delegated/full-line/mosis modal labels are superseded.",
+      "missingAcceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
+    },
+    {
+      "id": "notification-renamed-conversation",
+      "ledgerStatus": "qualified-published-alpha14",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "anchored-activity-switch-reply",
+      "ledgerStatus": "qualified-alpha15-version32",
+      "assessment": "historical_implemented_or_request_specific",
+      "concreteEvidence": [
+        "Actual enlarged-text footer/header/speech popup switching and target-specific replies pass, including hardwareEnter/GboardSend, failure-retained drafts, callback race, stablepositions, IME avoidance/pinnedSend and buttoncontrast/wrapping. See qualification/activity-popup-runtime-alpha15.json."
+      ],
+      "missingAcceptance": "No new blocker established in focused audit; status alone is not current qualification."
+    },
+    {
+      "id": "virtual-immersion-working-language",
+      "ledgerStatus": "released-alpha16-contextual-inline",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/immersion-worker.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/immersion-localization-alpha28.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-replacement-runtime-alpha20.json",
+          "exists": true
+        }
+      ],
+      "finding": "Dedicated stock Codex teacher, persisted replacement cache, single-flow inline spans, direct help and coordinated opaque-text localization cue exist. Old delegated/full-line/mosis modal labels are superseded.",
+      "missingAcceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
+    },
+    {
+      "id": "footer-restored-navigation-readable-activity",
+      "ledgerStatus": "released-alpha16-runtime-qualified",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/footer-runtime-alpha16.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        }
+      ],
+      "finding": "Bottom navigation/usage dock, direct session state and settings backend selection are implemented. Footer and consolidated context native qualification supersede alpha10/16 pending labels.",
+      "missingAcceptance": "Fresh physical rounded-screen/large-text checks would improve evidence but no source blocker identified."
+    },
+    {
+      "id": "coordinator-session-discovery",
+      "ledgerStatus": "live-backend-and-phone-title-verified-refresh-audit-ongoing",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/session-discovery.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/coordinator-session-discovery-2026-10-05.md",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/coordinator-text-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Early creation metadata before response, selected context sync, pinned coordinator text access and lightweight read-only coordinator tool execution are present; old response-delay status superseded.",
+      "missingAcceptance": "Historical actual-thread/backend evidence is version bounded; no need recreate active tasks for audit."
+    },
+    {
+      "id": "reachable-app-update-control",
+      "ledgerStatus": "released-alpha17-physical-install-verified",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/app-updates.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/WorkstationDns.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/push-dns-phone-alpha19.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Trusted DNS fallback, historical real DNS/background push recovery and same-signer updater are implemented. Latest alpha30 package staged and update offered.",
+      "missingAcceptance": "Installed code48 now verified according to root relay. Specific current real-device interaction/push receipt remains separately qualified; no reinstall requested by this audit.",
+      "newerEvidence": "Root relay: phone subagent freshly confirms installed code48 exact qualified SHA; delivery bookkeeping being corrected by root."
+    },
+    {
+      "id": "phone-codex-update-installation",
+      "ledgerStatus": "authorized-preference-recorded",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/app-updates.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/WorkstationDns.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/push-dns-phone-alpha19.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Trusted DNS fallback, historical real DNS/background push recovery and same-signer updater are implemented. Latest alpha30 package staged and update offered.",
+      "missingAcceptance": "Installed code48 now verified according to root relay. Specific current real-device interaction/push receipt remains separately qualified; no reinstall requested by this audit.",
+      "newerEvidence": "Root relay: phone subagent freshly confirms installed code48 exact qualified SHA; delivery bookkeeping being corrected by root."
+    },
+    {
+      "id": "inline-immersion-help-without-modal",
+      "ledgerStatus": "alpha18-delivered-interaction-rejected-mosis-replacement-in-progress",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/immersion-worker.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/immersion-localization-alpha28.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-replacement-runtime-alpha20.json",
+          "exists": true
+        }
+      ],
+      "finding": "Dedicated stock Codex teacher, persisted replacement cache, single-flow inline spans, direct help and coordinated opaque-text localization cue exist. Old delegated/full-line/mosis modal labels are superseded.",
+      "missingAcceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
+    },
+    {
+      "id": "mosis-contextual-grammar-alignment",
+      "ledgerStatus": "released-alpha19-interaction-superseded-by-inline-replacement",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/immersion-worker.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/immersion-localization-alpha28.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-replacement-runtime-alpha20.json",
+          "exists": true
+        }
+      ],
+      "finding": "Dedicated stock Codex teacher, persisted replacement cache, single-flow inline spans, direct help and coordinated opaque-text localization cue exist. Old delegated/full-line/mosis modal labels are superseded.",
+      "missingAcceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
+    },
+    {
+      "id": "tailscale-push-regression",
+      "ledgerStatus": "real-device-dns-and-background-push-restored",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/app-updates.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/WorkstationDns.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/push-dns-phone-alpha19.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Trusted DNS fallback, historical real DNS/background push recovery and same-signer updater are implemented. Latest alpha30 package staged and update offered.",
+      "missingAcceptance": "Current ordinary SSH/installer result and handset push receipt are unresolved. Do not change Wi-Fi/Tailscale/security or repeat install blindly; inspect package/result first."
+    },
+    {
+      "id": "inline-replacement-single-flow",
+      "ledgerStatus": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/immersion-worker.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/immersion-localization-alpha28.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-replacement-runtime-alpha20.json",
+          "exists": true
+        }
+      ],
+      "finding": "Dedicated stock Codex teacher, persisted replacement cache, single-flow inline spans, direct help and coordinated opaque-text localization cue exist. Old delegated/full-line/mosis modal labels are superseded.",
+      "missingAcceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
+    },
+    {
+      "id": "notes-immediate-actions",
+      "ledgerStatus": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Alpha30 exact physical installed version and stale speech behavior need fresh evidence after installer SSH interruption. Earlier native synthetic acceptance exists; do not confuse package staging with installation."
+    },
+    {
+      "id": "title-exact-text-hit",
+      "ledgerStatus": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+          "exists": true
+        },
+        {
+          "path": "server/thread-previews.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/draining-session-stability-2026-10-05.json",
+          "exists": true
+        }
+      ],
+      "finding": "TaskCard has fixed two-line preview geometry, recency gradient, text-only rename touch region with minimum target disabled, 48dp explicit On/Off follow, full-height 22/56/22 card regions and animated authored state. Session order ignores token/reconnect updates and reconciles only explicit intent. Old in-progress labels are obsolete.",
+      "missingAcceptance": "Latest release interaction checks are not a complete current physical replay. Preserve stable ordering; do not regenerate list motion as unfinished merely from old status."
+    },
+    {
+      "id": "coordinator-immediate-session-discovery",
+      "ledgerStatus": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/session-discovery.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/coordinator-session-discovery-2026-10-05.md",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/coordinator-text-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Early creation metadata before response, selected context sync, pinned coordinator text access and lightweight read-only coordinator tool execution are present; old response-delay status superseded.",
+      "missingAcceptance": "Historical actual-thread/backend evidence is version bounded; no need recreate active tasks for audit."
+    },
+    {
+      "id": "coordinator-lightweight-execution",
+      "ledgerStatus": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/session-discovery.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/voice-controller.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/coordinator-session-discovery-2026-10-05.md",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/coordinator-text-runtime.json",
+          "exists": true
+        }
+      ],
+      "finding": "Early creation metadata before response, selected context sync, pinned coordinator text access and lightweight read-only coordinator tool execution are present; old response-delay status superseded.",
+      "missingAcceptance": "Historical actual-thread/backend evidence is version bounded; no need recreate active tasks for audit."
+    },
+    {
+      "id": "audio-bar-direct-controls",
+      "ledgerStatus": "released-alpha20-code38-runtime-qualified-phone-verification-blocked-by-access",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Alpha30 exact physical installed version and stale speech behavior need fresh evidence after installer SSH interruption. Earlier native synthetic acceptance exists; do not confuse package staging with installation."
+    },
+    {
+      "id": "conversation-bottom-context-consolidation",
+      "ledgerStatus": "released-alpha21-code39-qualified-phone-install-awaits-control-restore",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Alpha30 exact physical installed version and stale speech behavior need fresh evidence after installer SSH interruption. Earlier native synthetic acceptance exists; do not confuse package staging with installation."
+    },
+    {
+      "id": "tibo-dots-varied-brief-evaluation",
+      "ledgerStatus": "prepared-and-independently-evaluated-dots-access-unavailable",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "docs/BRIEF-EVALUATION.md",
+          "exists": true
+        },
+        {
+          "path": "docs/NEXTCOMP-BRIEF.md",
+          "exists": true
+        },
+        {
+          "path": "docs/CAPABILITIES.md",
+          "exists": true
+        }
+      ],
+      "finding": "Seven variants and nine documented generic evaluations exist; selected full brief and capability map are public. No actual Dots interaction or outreach occurred.",
+      "missingAcceptance": "Actual supported Dots/recipient channel and current demonstrable reliability remain unverified. Public launch/outreach decision is intentionally unresolved; do not claim drafts were sent."
+    },
+    {
+      "id": "public-agent-briefing",
+      "ledgerStatus": "published-github-6c14302",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "docs/BRIEF-EVALUATION.md",
+          "exists": true
+        },
+        {
+          "path": "docs/NEXTCOMP-BRIEF.md",
+          "exists": true
+        },
+        {
+          "path": "docs/CAPABILITIES.md",
+          "exists": true
+        }
+      ],
+      "finding": "Seven variants and nine documented generic evaluations exist; selected full brief and capability map are public. No actual Dots interaction or outreach occurred.",
+      "missingAcceptance": "Actual supported Dots/recipient channel and current demonstrable reliability remain unverified. Public launch/outreach decision is intentionally unresolved; do not claim drafts were sent."
+    },
+    {
+      "id": "native-linked-images",
+      "ledgerStatus": "released-alpha22-installed-phone",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/LinkedImage.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/MarkdownRenderer.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-images-alpha22.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/alpha22-release-delivery.json",
+          "exists": true
+        }
+      ],
+      "finding": "Native PNG/SVG/GIF, authenticated opaque image MIME preflight, narrative ordering and native viewer implemented; alpha22 release installed. Delegation is complete.",
+      "missingAcceptance": "Gallery pages/filesystem strings are not direct image URLs; broader delay/pinch/error checks used historical candidate, with affected final paths separately rechecked. No generic image feature remains outstanding."
+    },
+    {
+      "id": "conversation-single-context-speech",
+      "ledgerStatus": "released-alpha22-installed-phone",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Alpha30 exact physical installed version and stale speech behavior need fresh evidence after installer SSH interruption. Earlier native synthetic acceptance exists; do not confuse package staging with installation."
+    },
+    {
+      "id": "failed-outgoing-recovery",
+      "ledgerStatus": "qualified-installed-alpha24-handset-interaction-not-inspected",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Alpha30 exact physical installed version and stale speech behavior need fresh evidence after installer SSH interruption. Earlier native synthetic acceptance exists; do not confuse package staging with installation."
+    },
+    {
+      "id": "important-conversation-filter",
+      "ledgerStatus": "qualified-installed-alpha24-handset-interaction-not-inspected",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Alpha30 exact physical installed version and stale speech behavior need fresh evidence after installer SSH interruption. Earlier native synthetic acceptance exists; do not confuse package staging with installation."
+    },
+    {
+      "id": "selectable-losangelex-hollywood-backend",
+      "ledgerStatus": "integrated-alpha24-native-qualification",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/losangelex.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/LOSANGELEX-BACKEND.md",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/losangelex-live-backend.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-cycling-team-alpha24.json",
+          "exists": true
+        }
+      ],
+      "finding": "Backend integrated in alpha24; Settings selector delivered in alpha26; stock sessions preserved and real independent-root peer exchange recorded. Original root-release-pending label is obsolete.",
+      "missingAcceptance": "Team voice and stock-thread adoption excluded; owner live private registration/physical team use must be checked separately."
+    },
+    {
+      "id": "inline-immersion-auto-cycle",
+      "ledgerStatus": "qualified-alpha24-delivered",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/immersion-worker.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/immersion-localization-alpha28.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-replacement-runtime-alpha20.json",
+          "exists": true
+        }
+      ],
+      "finding": "Dedicated stock Codex teacher, persisted replacement cache, single-flow inline spans, direct help and coordinated opaque-text localization cue exist. Old delegated/full-line/mosis modal labels are superseded.",
+      "missingAcceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
+    },
+    {
+      "id": "durable-shared-computer-use-task-adapter",
+      "ledgerStatus": "isolated-candidate-pending-runtime-qualification-after-alpha24",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/computer-use.mjs",
+          "exists": true
+        },
+        {
+          "path": "server/index.mjs",
+          "exists": true
+        },
+        {
+          "path": "docs/COMPUTER-USE.md",
+          "exists": true
+        }
+      ],
+      "finding": "Adapter is already in current source: /api/computer-use authenticated status and propagated instructions use owner broker. Isolated-candidate-only status is stale.",
+      "missingAcceptance": "Production host broker availability and shared actuator/client qualification remain separate. Cooperative app instructions do not fence direct native tools."
+    },
+    {
+      "id": "session-switching-foreign-saved-speech",
+      "ledgerStatus": "qualified-alpha25-delivered",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/session-switching-alpha25.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/missing-history-lineage-recovery.json",
+          "exists": true
+        }
+      ],
+      "finding": "Explicit selected-thread reads/draft isolation, cached bounded recent-first opens and direct state/settings control implemented. Original empty idle thread recovery used supported reads/resume; no database fabrication.",
+      "missingAcceptance": "Current deployed source/backend/phone versions should be reconciled; older unit counts are stale metadata."
+    },
+    {
+      "id": "conversation-fast-open-status-settings-backend",
+      "ledgerStatus": "qualified-alpha26-delivered",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/session-switching-alpha25.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/missing-history-lineage-recovery.json",
+          "exists": true
+        }
+      ],
+      "finding": "Explicit selected-thread reads/draft isolation, cached bounded recent-first opens and direct state/settings control implemented. Original empty idle thread recovery used supported reads/resume; no database fabrication.",
+      "missingAcceptance": "Current deployed source/backend/phone versions should be reconciled; older unit counts are stale metadata."
+    },
+    {
+      "id": "immersion-perception-polish",
+      "ledgerStatus": "delivered-alpha27-perceptibility-rejected",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/immersion-worker.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/immersion-localization-alpha28.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-replacement-runtime-alpha20.json",
+          "exists": true
+        }
+      ],
+      "finding": "Dedicated stock Codex teacher, persisted replacement cache, single-flow inline spans, direct help and coordinated opaque-text localization cue exist. Old delegated/full-line/mosis modal labels are superseded.",
+      "missingAcceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
+    },
+    {
+      "id": "immersion-change-localization",
+      "ledgerStatus": "native-qualified-alpha28-phone-install-pending-accessibility",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "server/immersion-worker.mjs",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/immersion-localization-alpha28.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/inline-replacement-runtime-alpha20.json",
+          "exists": true
+        }
+      ],
+      "finding": "Dedicated stock Codex teacher, persisted replacement cache, single-flow inline spans, direct help and coordinated opaque-text localization cue exist. Old delegated/full-line/mosis modal labels are superseded.",
+      "missingAcceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
+    },
+    {
+      "id": "modeled-symbol-objects",
+      "ledgerStatus": "integrated-published-alpha29-carried-through-phone48; actual installed APK verified; Fold pacing unqualified",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-modeled-symbols.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/nextcomp-cubic-geometry.json",
+          "exists": true
+        }
+      ],
+      "finding": "Implemented and published assets/runtime; original delegated/look-revision labels are obsolete. 37 modeled objects, 168 pages, display-clock selection, bounded cache and reduced-motion fallback are present.",
+      "missingAcceptance": "Actual Fold animation pacing is unqualified; software emulator evidence is ~30.8fps with 70.59% jank. 60fps source assets do not prove physical delivery."
+    },
+    {
+      "id": "stale-spoken-transcript-scroll",
+      "ledgerStatus": "fixed-published-alpha30-installed-phone48; native normal/2x verified; physical scroll pacing unqualified",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/recovery-important-runtime-alpha23.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/stale-speech-alpha30.json",
+          "exists": true
+        }
+      ],
+      "finding": "Single context surface, Important/All transcript filter, direct contextual reply/source, acknowledged removal, Retry/Edit/Remove and unknown-delivery confirmation are present. Alpha30 removes playback-generated transcript rows; active same-thread speech preview is bounded. Old delegated/in-progress labels are obsolete.",
+      "missingAcceptance": "Installed code48 now verified according to root relay. Specific current real-device interaction/push receipt remains separately qualified; no reinstall requested by this audit.",
+      "newerEvidence": "Root relay: phone subagent freshly confirms installed code48 exact qualified SHA; delivery bookkeeping being corrected by root."
+    },
+    {
+      "id": "missing-history-lineage-recovery",
+      "ledgerStatus": "implemented",
+      "assessment": "implemented_with_acceptance_limits",
+      "concreteEvidence": [
+        {
+          "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/session-switching-alpha25.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/conversation-speed-status-alpha26.json",
+          "exists": true
+        },
+        {
+          "path": "docs/qualification/missing-history-lineage-recovery.json",
+          "exists": true
+        }
+      ],
+      "finding": "Explicit selected-thread reads/draft isolation, cached bounded recent-first opens and direct state/settings control implemented. Original empty idle thread recovery used supported reads/resume; no database fabrication.",
+      "missingAcceptance": "Current deployed source/backend/phone versions should be reconciled; older unit counts are stale metadata."
+    }
+  ],
+  "subsequentCoordinationEvidence": {
+    "source": "Root direct message; not an independent phone inspection by this auditor",
+    "installedPhone": "Code48 exact qualified SHA freshly independently verified by phone subagent; root updating authoritative delivery records",
+    "runtime": "Root observed shared Codex FD exhaustion and raised existing PID soft limit1024 to8192 within hard1048576; no duplicate research turn",
+    "publication": "Root reports commit3ee7578 pushed, MCP SDK1.32.1 audit0,206 backend tests/public724 scan pass"
+  }
+}
