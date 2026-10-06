@@ -95,15 +95,20 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
     val host="filter:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}:${Pocket.selected}"
     DisposableEffect(host){onDispose{PocketSpeech.displayedOwner?.takeIf{it==host}?.let{PocketSpeech.stopDisplayed(it)}}}
     val speaking=PocketSpeech.displayedRunning||PocketSpeech.count>0&&!PocketSpeech.paused
+    val queued=PocketSpeech.queue.current
+    val caption=conversationLiveSpeechCaption(Pocket.selected,queued?.let{PocketNotificationTitles.threadForId(it.id)},queued?.id,PocketSpeech.paused,PocketSpeech.displayedOwner,PocketSpeechCaptions.state)
+    Column(Modifier.fillMaxWidth()){
     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically){
         TextButton(onControls,modifier=Modifier.weight(1f).heightIn(min=48.dp),contentPadding=PaddingValues(horizontal=4.dp)){
             SymbolIcon(status.icon,status.label+"; conversation controls",Modifier.size(32.dp),tint=if(status==ConversationRunState.NEEDS_YOU)Coral else Mint,spinning=status.spinning)
             Spacer(Modifier.width(6.dp));BilingualLabel(status.label,centered=false,color=if(status==ConversationRunState.NEEDS_YOU)Coral else Mint,fontSize=13.sp,maxLines=1)
         }
         FilterChip(selected=important,onClick=onFilter,label={BilingualLabel("Important",fontSize=13.sp)},modifier=Modifier.heightIn(min=48.dp))
-        IconButton({if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}else if(speaking)PocketSpeech.control("pause")else PocketSpeech.speakDisplayed(host,speechText,"Conversation")},enabled=speaking||speechText.isNotBlank()){
+        if(PocketSpeech.displayedOwner==null&&PocketSpeech.count>0)SpeechPlaybackControls(iconOnly=true)else IconButton({if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}else if(speaking)PocketSpeech.control("pause")else PocketSpeech.speakDisplayed(host,speechText,"Conversation")},enabled=speaking||speechText.isNotBlank()){
             SymbolIcon(if(speaking)Icons.Rounded.Stop else Icons.Rounded.VolumeUp,if(speaking)"Stop speaking conversation" else "Speak visible conversation",Modifier.size(30.dp),tint=if(speaking)Coral else Mint)
         }
+    }
+    if(caption.isNotBlank())Text(caption,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=2.dp),color=Muted,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
     }
 }
 internal fun importantConversationKind(kind:String,type:String,status:String,retained:Boolean,phase:String="",latest:Boolean=false)=retained||kind=="request"||kind=="message"&&(phase=="final_answer"||phase.isBlank()&&latest)||kind=="turnEnd"&&status=="failed"||kind=="activity"&&type!="reasoning"&&status in listOf("failed","declined")
@@ -115,9 +120,10 @@ internal fun sameConversationContext(note:String,speech:String):Boolean{
 }
 internal fun canMergeConversationContext(selectedThread:String?,speechThread:String?):Boolean=selectedThread!=null&&selectedThread==speechThread
 
-internal fun conversationSpeechRows(rows:List<JSONObject>,selectedThread:String?,speechThread:String?,speechId:Long,speechText:String,speechTitle:String):List<JSONObject>{
-    if(!shouldAppendConversationSpeech(selectedThread,speechThread,speechText,rows.map{it.s("text")}))return rows
-    return rows+JSONObject().put("id","speech:$speechId").put("kind","message").put("text",speechText).put("speechThread",speechThread).put("speechTitle",speechTitle)
+/** Speech is playback state, never a synthetic newest transcript message. */
+internal fun conversationLiveSpeechCaption(selectedThread:String?,speechThread:String?,speechId:Long?,paused:Boolean,displayedOwner:String?,caption:SpeechCaptionState):String {
+    if(!canMergeConversationContext(selectedThread,speechThread)||speechId==null||paused||displayedOwner!=null||!caption.visible||caption.id!=speechId||caption.phase!="Speaking")return ""
+    val text=caption.text
+    val count=text.codePointCount(0,text.length)
+    return if(count<=320)text else text.substring(0,text.offsetByCodePoints(0,320))+"…"
 }
-
-internal fun shouldAppendConversationSpeech(selectedThread:String?,speechThread:String?,speechText:String,rowTexts:List<String>):Boolean=canMergeConversationContext(selectedThread,speechThread)&&speechText.isNotBlank()&&rowTexts.none{sameConversationContext(it,speechText)}

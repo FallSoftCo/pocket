@@ -617,6 +617,13 @@
       "scope": "37 static modeled symbols; 37 120-frame60fps paged swivels; Codex/Psychology and cubic N 160-frame60fps spins; 168 atlas pages and 206 resource files. Existing N construction retained.",
       "workstream": "nextcomp/modeled-symbols; branding/modeled; synchronized onto published alpha28 commit9da7474",
       "acceptance": "Native Indie build and depth/part receipts, OZZZ-only rendered masters, visual review at16/20/24/32/44px and in native UI, complete resource mapping, measured asset/decode budget, Android checks; deployment evidence reported separately."
+    },
+    {
+      "id": "stale-spoken-transcript-scroll",
+      "status": "implemented; qualification and alpha30 delivery pending",
+      "requirement": "Giant stale spoken messages must not remain pinned below newer replies or cause conversation scroll lag; reported in 8bar tiktok.",
+      "implementation": "Playback does not append synthetic transcript rows. Only current active same-session chunk appears in a bounded two-line preview; direct pause/resume and clear remain in monitor. Visible row keys use derived state to avoid per-scroll-pixel recomposition.",
+      "acceptance": "Active, paused, completed, dismissed, stale ID, foreign session and very large Unicode chunk policies; native giant saved-speech and ongoing transcript fixture, final build and install evidence."
     }
   ],
   "current_state": {

@@ -92,8 +92,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val latestAnswer=rows.lastOrNull{it.s("kind")=="message"}
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
-    val queuedSpeech=PocketSpeech.queue.current?.takeIf{PocketSpeech.displayedOwner==null&&it.text.isNotBlank()&&canMergeConversationContext(Pocket.selected,PocketNotificationTitles.threadForId(it.id))}
-    val shownRows=queuedSpeech?.let{conversationSpeechRows(filteredRows,Pocket.selected,PocketNotificationTitles.threadForId(it.id),it.id,it.text,it.title)}?:filteredRows
+    val shownRows=filteredRows
     var removingNotes by remember(Pocket.local,Pocket.selected){mutableStateOf(setOf<String>())}
     val spokenRows=remember(Pocket.local,Pocket.selected){mutableStateMapOf<String,String>()}
     var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
@@ -142,7 +141,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
                     if(row.optBoolean("retainedExcerpt"))BilingualLabel("Retained passage · source outside loaded history",color=Muted,fontSize=12.sp)
-                    if(row.s("speechTitle").isNotBlank())BilingualLabel("Spoken update · "+row.s("speechTitle"),color=Muted,fontSize=12.sp)
                     TranscriptRow(row){spokenRows[row.s("id")]=it}
                     if(row.s("speechThread").isNotBlank())TextButton({Pocket.open(row.s("speechThread"))}){BilingualLabel("Open source conversation")}
                     if(important)noteFor(row)?.let{note->FlowRow{
@@ -169,7 +167,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
 
         Box{
-        val visibleKeys=list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()
+        val visibleKeys by remember(list){derivedStateOf{list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()}}
         val speechText=shownRows.filter{it.s("id") in visibleKeys&&it.s("kind")=="message"}.map{row->spokenRows[row.s("id")]?:PocketImmersion.display("row:"+row.s("id"),row.s("text"))}.filter{it.isNotBlank()}.joinToString("\n\n")
         ConversationNotesCard(important=important,onFilter={follow=false;important=!important;scope.launch{list.scrollToItem(0)}},onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}

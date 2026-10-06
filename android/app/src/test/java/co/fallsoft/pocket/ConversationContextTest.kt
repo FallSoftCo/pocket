@@ -4,16 +4,24 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ConversationContextTest {
-    @Test fun switchingConversationsNeverImportsAnotherSessionsSavedSpeech(){
-        val l33="synthetic-speech-origin"
-        val rows=listOf("Selected session answer")
-        listOf("first-session","second-session",null).forEach{selected->
-            assertFalse(shouldAppendConversationSpeech(selected,l33,"l33 saved speech",rows))
-        }
-        assertFalse(shouldAppendConversationSpeech("first-session",null,"Unknown origin speech",rows))
-        assertTrue(shouldAppendConversationSpeech(l33,l33,"l33 saved speech",rows))
-        assertFalse(shouldAppendConversationSpeech(l33,l33,"l33 saved speech",rows+"l33 saved speech"))
-        assertFalse(shouldAppendConversationSpeech(l33,l33,"",rows))
+    @Test fun onlyCurrentActivelySpokenChunkAppearsInConversation(){
+        val current=SpeechCaptionState(42,"Saved speech","Current spoken chunk",0,2,"Speaking")
+        fun caption(thread:String?="session",id:Long?=42,paused:Boolean=false,state:SpeechCaptionState=current,owner:String?=null)=conversationLiveSpeechCaption("session",thread,id,paused,owner,state)
+        assertEquals("Current spoken chunk",caption())
+        assertEquals("",caption(paused=true))
+        assertEquals("",caption(state=current.complete()))
+        assertEquals("",caption(state=current.dismiss()))
+        assertEquals("",caption(id=43))
+        assertEquals("",caption(id=null))
+        assertEquals("",caption(thread="other"))
+        assertEquals("",caption(thread=null))
+        assertEquals("",caption(owner="manual-reader"))
+    }
+    @Test fun enormousSpokenChunkHasBoundedUnicodeSafePreview(){
+        val text="😀".repeat(20000)
+        val preview=conversationLiveSpeechCaption("session","session",42,false,null,SpeechCaptionState(42,"",text,0,1,"Speaking"))
+        assertEquals(321,preview.codePointCount(0,preview.length))
+        assertTrue(preview.endsWith("…"))
     }
     @Test fun onlyTheSameKnownSessionSharesContext(){
         assertTrue(canMergeConversationContext("current", "current"))
