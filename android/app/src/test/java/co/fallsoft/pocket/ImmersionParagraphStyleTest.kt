@@ -36,6 +36,9 @@ class ImmersionParagraphStyleTest {
         assertEquals(content.text,drawn.text)
         assertEquals(1,drawn.getLinkAnnotations(0,drawn.length).size)
         assertTrue(drawn.spanStyles.any{it.start==5&&it.end==14&&it.item.color==Color.Yellow&&it.item.textDecoration==TextDecoration.Underline})
+        assertNotEquals(content,drawn)
+        assertTrue(immersionNativeLayoutMatches(drawn,content))
+        assertFalse(immersionNativeLayoutMatches(AnnotatedString("A different message"),content))
     }
 
 }

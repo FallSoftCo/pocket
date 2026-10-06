@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.*
                 onTextLayout={layout=it;reportVisibility()},modifier=Modifier.fillMaxWidth().onGloballyPositioned{coordinates=it;reportVisibility()}.drawBehind{
                     val current=layout
                     val cue=immersionInkPhase(progress()).cue
-                    if(cue>0f&&current?.layoutInput?.text==visible){
+                    if(cue>0f&&current!=null&&immersionNativeLayoutMatches(current.layoutInput.text,visible)){
                         ranges.forEach{range->
                             if(range.start>=0&&range.end<=visible.length&&range.end>range.start){
                                 // Native selection geometry follows each wrapped fragment; it
@@ -82,6 +82,10 @@ internal fun immersionChangedTextRanges(from:AnnotatedString,to:AnnotatedString)
     return changed.mapNotNull{a[it]?.let{range->TextRange(range.start,range.end)}} to
         changed.mapNotNull{b[it]?.let{range->TextRange(range.start,range.end)}}
 }
+
+// Native Text resolves link styles into its own annotations. Those changes do
+// not make the lexical layout stale; full AnnotatedString equality hides cues.
+internal fun immersionNativeLayoutMatches(layout:AnnotatedString,visible:AnnotatedString)=layout.text==visible.text
 
 /** Native Text resolves link presentation internally; measurement needs it explicitly. */
 internal fun immersionDrawText(text:AnnotatedString):AnnotatedString = buildAnnotatedString{
