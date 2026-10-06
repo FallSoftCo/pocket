@@ -28,9 +28,80 @@
       "allMotionNamesAndPayloadsRetained": true
     }
   ],
-  "native": "Exact final debug candidate normal-text giant paused-speech, newer history, source navigation and directcontrols/draft/IME verified;2x and optimized candidate qualification underway.",
-  "phone": "Installed alpha30/code48 remains verified. No alpha31 installation claim yet.",
+  "native": {
+    "ownedEmulator": 5562,
+    "fixture": 19996,
+    "savedSpeechCharacters": 50000,
+    "coordinatorHistory": "Two actual synthetic user/response pairs visible; a third turn sent through native coordinator composer appears once and last.",
+    "savedSpeech": "No saved full passage or duplicate latest-reply preview in coordinator, normal and2x.",
+    "sourceNavigation": "Mapped speech origin lifecycle-01 opens correct Lifecycle session01, not literal coordinator.",
+    "savedControls": "Native Resume changes to Pause; Pause returns Resume; Clear removes saved controls.",
+    "normalDraft": "DraftKeep remains [210,1071][849,1218] across Resume/Pause/Clear; mInputShown=true.",
+    "largeDraft": "At fontScale2, DraftKeep remains [210,940][849,1128] across Clear; mInputShown=true.",
+    "manual": "Native Speak latest switches to directPause/Clear; Pause yieldsResume; Clear returnsSpeak without duplicating full passage.",
+    "public": "Fresh optimizedAPK installed on disposableemulator; actuallocal18880 synthetic pairing through target-owned ADBreverse tofixture19996. Three-turn history newestonce; manualSpeak/Pause/Clear work andPublicDraft stays[210,1071][849,1218], mInputShown=true."
+  },
+  "phone": {
+    "stagedVersionCode": 49,
+    "fullRemoteHashAndSizeVerified": true,
+    "stagedSha256": "ce1e43d7b3c84547620f23dba5c7c8168f2e679d6033c2006357697ce5f69a75",
+    "stagedBytes": 61013212,
+    "lastInstalledVersionCode": 48,
+    "lastInstalledSha256": "d5a9bb7bbf2842880e366e3cf6d49a92c56ada9eb6a8ed8a4aa245c2d8a41273",
+    "installAttempted": false,
+    "blocker": "Existing accessibility controller unavailable; no blind UI action taken. Compatible49 also offered through normal in-app updater.",
+    "networkOrSecurityChanges": false
+  },
   "limits": [
     "No actual provider audio quality or physical Fold frame-pacing claim."
-  ]
+  ],
+  "nativeLimitations": [
+    "No physicalphone, acousticquality or display/frame-pacing claim.",
+    "Installed offlineAndroidTTS only, emulator launched no-audio; no provider audio/Codex/FCM used.",
+    "PublicoptimizedAPK cannotseedprivate50kqueue via run-as;50kbranch qualified on exactdebugAPK plus sharedpolicytests.",
+    "Active manualcaption timed display not separately measured; matching/staleness/Unicode policy tested by root."
+  ],
+  "cleanup": {
+    "ownedEmulator5562Stopped": true,
+    "fixture19996Stopped": true,
+    "otherEmulator5556Preserved": true,
+    "restoredBaselineDebug48App": true,
+    "onlyBaselineAppUpdatesPreferenceRetained": true,
+    "fontScale": 1.0,
+    "animatorScale": 0,
+    "syntheticReversePortsRemoved": [
+      18880,
+      19996
+    ]
+  },
+  "gallery": {
+    "build": "pass after concurrent unrelated metadata settled; no other owner files edited",
+    "cards": 1854,
+    "desktop": true,
+    "mobile": true,
+    "reducedMotion": true,
+    "automaticReload": true,
+    "reviewIds": [
+      "nextcomp-alpha31-public-cleared",
+      "nextcomp-alpha31-paused-history",
+      "nextcomp-alpha31-large-after-clear"
+    ]
+  },
+  "rootVisualInspection": "Exact optimized public candidate public-cleared.png viewed singly at original resolution; actual newest history and preserved PublicDraft/IME visible.",
+  "ci": {
+    "run": 37511030357,
+    "head": "5406c24f1e5c09d852a15228179702897ebea1b5",
+    "backend": "pass",
+    "android": "pass"
+  },
+  "release": {
+    "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.31",
+    "target": "5406c24f1e5c09d852a15228179702897ebea1b5",
+    "anonymousDownloadSha256": "2eb8fa00a8eb403a137f04a423d8a5a95ece24f354cb7fb291c2425abab26b8d",
+    "matchesQualifiedPublic": true,
+    "updateVersionCode": 49,
+    "announcementId": 566,
+    "announcedOnce": true,
+    "handsetPushReceipt": "unverified"
+  }
 }
