@@ -4,6 +4,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ConversationContextTest {
+    @Test fun switchingConversationsNeverImportsAnotherSessionsSavedSpeech(){
+        val l33="01a10e56-77f9-7800-9347-d47ca9a4c8af"
+        val rows=listOf("Selected session answer")
+        listOf("first-session","second-session",null).forEach{selected->
+            assertFalse(shouldAppendConversationSpeech(selected,l33,"l33 saved speech",rows))
+        }
+        assertFalse(shouldAppendConversationSpeech("first-session",null,"Unknown origin speech",rows))
+        assertTrue(shouldAppendConversationSpeech(l33,l33,"l33 saved speech",rows))
+        assertFalse(shouldAppendConversationSpeech(l33,l33,"l33 saved speech",rows+"l33 saved speech"))
+        assertFalse(shouldAppendConversationSpeech(l33,l33,"",rows))
+    }
     @Test fun onlyTheSameKnownSessionSharesContext(){
         assertTrue(canMergeConversationContext("current", "current"))
         assertFalse(canMergeConversationContext("current", "other"))

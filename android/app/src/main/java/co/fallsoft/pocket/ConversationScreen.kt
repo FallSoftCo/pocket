@@ -89,8 +89,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val latestAnswer=rows.lastOrNull{it.s("kind")=="message"}
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
-    val queuedSpeech=PocketSpeech.queue.current?.takeIf{PocketSpeech.displayedOwner==null&&it.text.isNotBlank()}
-    val shownRows=if(queuedSpeech!=null&&filteredRows.none{canMergeConversationContext(Pocket.selected,PocketNotificationTitles.threadForId(queuedSpeech.id))&&sameConversationContext(it.s("text"),queuedSpeech.text)})filteredRows+JSONObject().put("id","speech:${queuedSpeech.id}").put("kind","message").put("text",queuedSpeech.text).put("speechThread",PocketNotificationTitles.threadForId(queuedSpeech.id)).put("speechTitle",queuedSpeech.title) else filteredRows
+    val queuedSpeech=PocketSpeech.queue.current?.takeIf{PocketSpeech.displayedOwner==null&&it.text.isNotBlank()&&canMergeConversationContext(Pocket.selected,PocketNotificationTitles.threadForId(it.id))}
+    val shownRows=queuedSpeech?.let{conversationSpeechRows(filteredRows,Pocket.selected,PocketNotificationTitles.threadForId(it.id),it.id,it.text,it.title)}?:filteredRows
     var removingNotes by remember(Pocket.local,Pocket.selected){mutableStateOf(setOf<String>())}
     val spokenRows=remember(Pocket.local,Pocket.selected){mutableStateMapOf<String,String>()}
     var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}

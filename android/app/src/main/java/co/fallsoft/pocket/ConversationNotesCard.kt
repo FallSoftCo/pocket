@@ -111,3 +111,10 @@ internal fun sameConversationContext(note:String,speech:String):Boolean{
     return a.isNotBlank()&&b.isNotBlank()&&a==b
 }
 internal fun canMergeConversationContext(selectedThread:String?,speechThread:String?):Boolean=selectedThread!=null&&selectedThread==speechThread
+
+internal fun conversationSpeechRows(rows:List<JSONObject>,selectedThread:String?,speechThread:String?,speechId:Long,speechText:String,speechTitle:String):List<JSONObject>{
+    if(!shouldAppendConversationSpeech(selectedThread,speechThread,speechText,rows.map{it.s("text")}))return rows
+    return rows+JSONObject().put("id","speech:$speechId").put("kind","message").put("text",speechText).put("speechThread",speechThread).put("speechTitle",speechTitle)
+}
+
+internal fun shouldAppendConversationSpeech(selectedThread:String?,speechThread:String?,speechText:String,rowTexts:List<String>):Boolean=canMergeConversationContext(selectedThread,speechThread)&&speechText.isNotBlank()&&rowTexts.none{sameConversationContext(it,speechText)}
