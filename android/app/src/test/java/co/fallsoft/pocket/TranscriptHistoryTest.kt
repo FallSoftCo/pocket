@@ -71,4 +71,12 @@ class TranscriptHistoryTest {
         assertEquals((0..23).map{"$it/header"},merged.map{it.id})
         assertEquals(24,merged.size)
     }
+    @Test fun restoredReadingAnchorFollowsMessageIdentityAfterSeveralPagesPrepend(){
+        val position=TranscriptReadPosition("read-message",73,false)
+        assertEquals(1,transcriptAnchorIndex(listOf("before","read-message","after"),position))
+        assertEquals(4,transcriptAnchorIndex(listOf("older-1","older-2","older-3","before","read-message","after"),position))
+        assertEquals(73,position.offset)
+        assertFalse(position.follow)
+        assertEquals(-1,transcriptAnchorIndex(listOf("unrelated-thread"),position))
+    }
 }

@@ -87,7 +87,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),latestTurn?.s("status").orEmpty(),task?.previewKind=="thinking",d!=null,PocketTranscript.loading)
     val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.THINKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
     val list=key(Pocket.local,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
-    var follow by remember(Pocket.local,Pocket.selected){mutableStateOf(true)}
+    val readPosition=remember(Pocket.local,Pocket.selected){PocketTranscript.readPosition}
+    var restoredPosition by remember(Pocket.local,Pocket.selected){mutableStateOf(readPosition==null||readPosition.follow)}
+    var follow by remember(Pocket.local,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
     var important by remember(Pocket.local,Pocket.selected){mutableStateOf(false)}
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
@@ -96,6 +98,23 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
     val shownRows=filteredRows
+    val latestFollow by key(Pocket.local,Pocket.selected){rememberUpdatedState(follow)}
+    val latestRowIds by key(Pocket.local,Pocket.selected){rememberUpdatedState(shownRows.map{it.s("id")})}
+    DisposableEffect(Pocket.local,Pocket.selected){
+        val source=Pocket.selected;val owner=backendOwner(Pocket.base,Pocket.token)
+        onDispose{
+            val visible=list.layoutInfo.visibleItemsInfo.firstOrNull{it.key.toString() in latestRowIds}
+            val id=visible?.key?.toString()?:latestRowIds.lastOrNull()
+            if(source!=null&&id!=null)PocketTranscript.rememberPosition(owner,source,TranscriptReadPosition(id,list.firstVisibleItemScrollOffset,latestFollow))
+        }
+    }
+    LaunchedEffect(Pocket.local,Pocket.selected,rows.size){
+        if(!restoredPosition&&readPosition!=null&&rows.isNotEmpty()){
+            val index=transcriptAnchorIndex(rows.map{it.s("id")},readPosition)
+            if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
+            restoredPosition=true
+        }
+    }
     var removingNotes by remember(Pocket.local,Pocket.selected){mutableStateOf(setOf<String>())}
     val spokenRows=remember(Pocket.local,Pocket.selected){mutableStateMapOf<String,String>()}
     var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
@@ -122,15 +141,15 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         // Keep the question heading and its one-tap Skip visible even when a
         // multi-question form is taller than the conversation viewport.
         val request=shownRows.indexOfLast{it.s("kind")=="request"}
-        if(count>0)list.scrollToItem(if(request>=0)(request+1).coerceAtMost(count-1) else count-1)
+        if(count>0)list.scrollToItem(if(request>=0)request.coerceAtMost(count-1) else count-1)
     }}
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
     LaunchedEffect(Pocket.local,Pocket.selected,important){
-        snapshotFlow{shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
+        snapshotFlow{restoredPosition&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
             .distinctUntilChanged().filter{it}.collect{
                 var retryMs=1000L
-                while(shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
+                while(restoredPosition&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
                     val cursor=PocketTranscript.before
                     PocketTranscript.load(true)
                     if(PocketTranscript.before==cursor&&PocketTranscript.earlier){
@@ -141,7 +160,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             }
     }
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
-            if(pending>0)TextButton({actionsOpen=false;important=false;follow=false;scope.launch{val index=rows.indexOfFirst{it.s("kind")=="request"};if(index>=0)list.scrollToItem((index+1).coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else Pocket.refreshDetail()}},modifier=Modifier.fillMaxWidth()){BilingualLabel("Answer pending question",color=Coral)}
+            if(pending>0)TextButton({actionsOpen=false;important=false;follow=false;scope.launch{val index=rows.indexOfFirst{it.s("kind")=="request"};if(index>=0)list.scrollToItem(index.coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else Pocket.refreshDetail()}},modifier=Modifier.fillMaxWidth()){BilingualLabel("Answer pending question",color=Coral)}
             UsageDetails()
             d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
@@ -155,11 +174,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-                item(key="history"){
-                    if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
-                        Box(Modifier.fillMaxWidth().height(40.dp),contentAlignment=Alignment.Center){AnimatedMark(28)}
-                    else Spacer(Modifier.height(1.dp))
-                }
                 if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
@@ -168,7 +182,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     if(row.s("speechThread").isNotBlank())TextButton({Pocket.open(row.s("speechThread"))}){BilingualLabel("Open source conversation")}
                     if(important)noteFor(row)?.let{note->FlowRow{
                         TextButton({val context="Regarding your answer:\n"+row.s("text")+"\n\n";val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context;editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply();keyboardInput=true}){BilingualLabel("Reply")}
-                        TextButton({val sourceThread=Pocket.selected;val sourceProfile=Pocket.local;val sourceEndpoint=Pocket.base;important=false;follow=false;scope.launch{var found=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")};var pages=0;while(found<0&&PocketTranscript.earlier&&pages++<12&&Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint){PocketTranscript.load(true);found=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}};delay(32);if(Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint&&found>=0)list.scrollToItem((found+1).coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else if(Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint)Pocket.error="The original message is not available in loaded history."}}){BilingualLabel("Surrounding conversation")}
+                        TextButton({val sourceThread=Pocket.selected;val sourceProfile=Pocket.local;val sourceEndpoint=Pocket.base;important=false;follow=false;scope.launch{var found=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")};var pages=0;while(found<0&&PocketTranscript.earlier&&pages++<12&&Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint){PocketTranscript.load(true);found=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}};delay(32);if(Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint&&found>=0)list.scrollToItem(found.coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else if(Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint)Pocket.error="The original message is not available in loaded history."}}){BilingualLabel("Surrounding conversation")}
                         TextButton({val thread=Pocket.selected;val profile=Pocket.local;val endpoint=Pocket.base;val credential=Pocket.token;val id=note.s("id");removingNotes=removingNotes+id;scope.launch{try{val response=Pocket.apiFor(profile,"/api/threads/$thread/notes/remove",JSONObject().put("id",id));require(response.optJSONArray("notes")!=null){"Removal was not acknowledged. Try again."};if(Pocket.selected==thread&&Pocket.local==profile&&Pocket.base==endpoint&&Pocket.token==credential)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}}catch(e:Exception){if(Pocket.selected==thread&&Pocket.local==profile)Pocket.error=PocketNetwork.error(e)}finally{removingNotes=removingNotes-id}}},enabled=note.s("id") !in removingNotes){BilingualLabel("Unsave",color=Muted)}
                     }}
                 }
@@ -186,6 +200,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 
                 item(key="errors"){ErrorBanner()}
             }
+            if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
+                Box(Modifier.align(Alignment.TopCenter).padding(top=10.dp).size(36.dp).background(Panel,CircleShape),contentAlignment=Alignment.Center){AnimatedMark(28)}
             if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
         }
 

@@ -37,3 +37,7 @@ internal data class TranscriptCursor(val before:String?,val hasEarlier:Boolean)
 /** Recent/bridge pages cannot overwrite the cursor preceding the oldest retained local row. */
 internal fun retainedTranscriptCursor(current:TranscriptCursor,hadRows:Boolean,older:Boolean,bridge:Boolean,page:TranscriptCursor)=
     if(older||(!bridge&&!hadRows))page else current
+
+/** A message identity and offset, never a transient pagination/loading item index. */
+internal data class TranscriptReadPosition(val rowId:String,val offset:Int,val follow:Boolean)
+internal fun transcriptAnchorIndex(rowIds:List<String>,position:TranscriptReadPosition)=rowIds.indexOf(position.rowId)

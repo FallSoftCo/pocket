@@ -15,7 +15,8 @@ object PocketTranscript {
     private var bridgeBefore:String?=null
     private var missedUpdates=false
     var browsingEarlier by mutableStateOf(false);private set
-    private data class Snapshot(val rows:List<JSONObject>,val detail:JSONObject,val before:String?,val earlier:Boolean,val bridgeBefore:String?)
+    internal var readPosition by mutableStateOf<TranscriptReadPosition?>(null);private set
+    private data class Snapshot(val rows:List<JSONObject>,val detail:JSONObject,val before:String?,val earlier:Boolean,val bridgeBefore:String?,val position:TranscriptReadPosition?)
     private val rowWeights=java.util.WeakHashMap<JSONObject,Long>()
     private val recent=RecentTranscriptCache<Snapshot>(4,Long.MAX_VALUE,12L*1024*1024){snapshot->
         snapshot.rows.sumOf{row->rowWeights.getOrPut(row){row.toString().length.toLong()*2}}+snapshot.detail.toString().length*2L
@@ -24,7 +25,12 @@ object PocketTranscript {
     private fun scopeKey()=backendOwner(Pocket.base,Pocket.token)
     private fun rememberRecent(){
         val id=owner?:return;val scope=ownerScope?:return
-        if(historyLoaded&&scope==scopeKey())Pocket.detail?.let{recent.put(scope,id,Snapshot(rows,it,before,earlier,bridgeBefore),android.os.SystemClock.elapsedRealtime())}
+        if(historyLoaded&&scope==scopeKey())Pocket.detail?.let{recent.put(scope,id,Snapshot(rows,it,before,earlier,bridgeBefore,readPosition),android.os.SystemClock.elapsedRealtime())}
+    }
+    internal fun rememberPosition(scope:String,id:String,position:TranscriptReadPosition){
+        val now=android.os.SystemClock.elapsedRealtime()
+        if(owner==id&&ownerScope==scope){readPosition=position;rememberRecent()}
+        recent.get(scope,id,now)?.let{recent.put(scope,id,it.copy(position=position),now)}
     }
     private var owner:String?=null
     private var historyLoaded=false
@@ -32,11 +38,11 @@ object PocketTranscript {
     fun reset(id:String){
         generation++;owner=id;ownerScope=scopeKey()
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
-        rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail
+        rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
         earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;historyLoaded=cached!=null
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){generation++;owner=null;ownerScope=null;rows=emptyList();buffered.clear();loading=false;historyLoaded=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;historyLoaded=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
     fun latest(){Pocket.refreshDetail()}
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}

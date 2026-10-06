@@ -10,7 +10,8 @@
     "A recent refresh after a long absence paints immediately, then fills a missing middle interval asynchronously rather than skipping it.",
     "Older and middle requests preserve current thread status, pending questions, outgoing replies and notification read policy.",
     "Latest/retry and ordinary Android backgrounding retain the loaded history. Real memory pressure evicts inactive cache snapshots, not the current visible conversation.",
-    "The inactive per-backend/per-thread cache is four whole windows within a 12MiB estimated serialized UTF-16 budget, with no arbitrary age expiry or partially hidden local pages."
+    "The inactive per-backend/per-thread cache is four whole windows within a 12MiB estimated serialized UTF-16 budget, with no arbitrary age expiry or partially hidden local pages.",
+    "Older loading is a viewport overlay, never a list sentinel: even the oldest edge anchors a real message ID. Cached read row ID, pixel offset and latest-follow mode restore on same-thread reopen."
   ],
   "tests_added": [
     "Older pages retain recently read rows and recent refresh cannot shrink the window.",
@@ -19,7 +20,8 @@
     "Missing middle pages insert in chronological position after immediate cached/recent paint.",
     "Oldest loaded cursor survives recent refresh, middle bridge and reopen; reaching actual beginning clears hasEarlier.",
     "Prefetch excludes latest-follow, Important filter, distant edge, exhausted history and in-flight requests.",
-    "Cache eviction is whole-snapshot and backend/thread isolated; normal elapsed minutes do not expire retained history."
+    "Cache eviction is whole-snapshot and backend/thread isolated; normal elapsed minutes do not expire retained history.",
+    "A restored read anchor follows message identity after prepended pages, with its unchanged pixel offset and follow mode."
   ],
   "qualification": {
     "unit_tests": "awaiting root's combined build; no competing Gradle launched while release R8 consumes memory",
