@@ -101,7 +101,6 @@
     "status": "qualified contract forwarded; OZZZ implementation not established"
   },
   "gallery": {
-    "url": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-alpha27-native-ink-motion",
     "items": [
       "nextcomp-alpha27-native-ink-motion",
       "nextcomp-alpha27-native-ink-styled",
@@ -116,6 +115,7 @@
       "failed": [],
       "reducedMotion": true,
       "automaticReload": true
-    }
+    },
+    "location": "Main 8bar gallery; item IDs identify the synthetic review media without publishing a private deployment hostname."
   }
 }
