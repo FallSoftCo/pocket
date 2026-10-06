@@ -75,7 +75,7 @@ import kotlin.math.max
 internal fun immersionDrawText(text:AnnotatedString):AnnotatedString = buildAnnotatedString{
     append(text)
     text.getLinkAnnotations(0,text.length).forEach{range->
-        val style=when(val link=range.item){is LinkAnnotation.Url->link.styles?.style;is LinkAnnotation.Clickable->link.styles?.style}
+        val style=when(val link=range.item){is LinkAnnotation.Url->link.styles?.style;is LinkAnnotation.Clickable->link.styles?.style;else->null}
         if(style!=null)addStyle(style,range.start,range.end)
     }
 }
