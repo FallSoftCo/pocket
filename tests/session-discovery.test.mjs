@@ -39,3 +39,21 @@ test('reconnect releases stale live status while retaining genuine activity time
  f.discovery.clearLiveStatus();const row=(await f.discovery.list()).data.find(t=>t.id==='old');
  assert.equal(row.activityAt,123456);assert.equal(row.status.type,'idle');f.db.close();
 });
+test('more than 200 live IDs prioritize genuine reactivation over insertion order and status noise',async()=>{
+ const f=setup((m,p)=>m==='thread/list'?{data:[]}:{thread:{id:p.threadId,updatedAt:1}});
+ for(let i=0;i<260;i++){
+  const id='work-'+i;f.discovery.remember({id,name:'Work '+i,updatedAt:1});
+  f.discovery.observe({method:'item/agentMessage/delta',params:{threadId:id,delta:'Progress'}},()=>1000+i);
+ }
+ f.discovery.observe({method:'turn/started',params:{threadId:'work-0'}},()=>50000);
+ for(let i=0;i<300;i++)f.discovery.observe({method:'thread/status/changed',params:{threadId:'noise-'+i,status:{type:'notLoaded'}}},()=>60000+i);
+ f.discovery.observe({method:'turn/started',params:{threadId:'hidden-controller'}},()=>99999);
+ f.discovery.markArchived('work-259',true);
+ const ids=f.discovery.knownIds();assert.equal(ids.length,200);assert.equal(ids[0],'work-0');assert.ok(!ids.includes('hidden-controller'));assert.ok(!ids.includes('work-259'));assert.ok(ids.every(id=>!id.startsWith('noise-')));
+ const row=(await f.discovery.list()).data.find(t=>t.id==='work-0');assert.equal(row.name,'Work 0');assert.equal(row.activityAt,50000);assert.equal(row.status.type,'active');assert.equal(row.updatedAt,1);f.db.close();
+});
+test('persisted genuine activity keeps discovery priority after reconnect and live-cache eviction',()=>{
+ const f=setup(()=>({data:[]}));f.discovery.remember({id:'reactivated',name:'Existing',activityAt:80000,updatedAt:1});
+ for(let i=0;i<240;i++)f.discovery.remember({id:'metadata-'+i,name:'Metadata only',updatedAt:999999});
+ f.discovery.live.clear();assert.ok(f.discovery.knownIds().includes('reactivated'));f.db.close();
+});

@@ -14,7 +14,7 @@ export class SessionDiscovery {
     const activity=/^item\/(?:started|completed|agentMessage\/delta|commandExecution\/outputDelta|reasoning\/summaryTextDelta|reasoning\/summaryPartAdded)$/.test(event.method)||['turn/started','turn/completed'].includes(event.method);
     if(!status&&!activity)return null;
     const old=this.live.get(id)||{},change={...(activity?{activityAt:clock()}:{}),...(status?{status,discoveryPending:false}:{})};
-    this.live.set(id,{...old,...change});while(this.live.size>512)this.live.delete(this.live.keys().next().value);
+    this.live.set(id,{...old,...change});while(this.live.size>512){const oldest=[...this.live].reduce((a,b)=>(a[1].activityAt||0)<=(b[1].activityAt||0)?a:b);this.live.delete(oldest[0]);}
     const saved=this.db.prepare('SELECT metadata,archived FROM pocket_discovered_threads WHERE thread_id=?').get(id);
     if(saved&&(status||clock()-(this.persistedAt.get(id)||0)>=500)){this.remember({...JSON.parse(saved.metadata),...change},{archived:!!saved.archived});this.persistedAt.set(id,clock());while(this.persistedAt.size>512)this.persistedAt.delete(this.persistedAt.keys().next().value);}
     return {threadId:id,...change};
@@ -27,11 +27,11 @@ export class SessionDiscovery {
     const work=this.codex.call('thread/read',{threadId:id,includeTurns:false}).then(({thread})=>thread&&!archived(thread)?this.remember(thread):null).catch(()=>null).finally(()=>this.liveReads.delete(id));
     this.liveReads.set(id,work);return work;
   }
-  knownIds(){const ids=new Set([...this.live.keys()].reverse());
+  knownIds(){const ids=new Set([...this.live].filter(([,value])=>value.activityAt>0).sort((a,b)=>b[1].activityAt-a[1].activityAt||a[0].localeCompare(b[0])).map(([id])=>id));
     for(const [table,column,where] of [['voice_sessions','selected','selected IS NOT NULL'],['session_starts','thread_id',"state='started'"],['watches','thread_id','enabled=1']]){
       if(!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table))continue;
       for(const row of this.db.prepare(`SELECT ${column} AS id FROM ${table} WHERE ${where} ORDER BY ${table==='session_starts'?'updated_at':'rowid'} DESC LIMIT 200`).all())if(row.id)ids.add(row.id);
-    }for(const row of this.db.prepare('SELECT thread_id FROM pocket_discovered_threads ORDER BY seen_at DESC LIMIT 200').all())ids.add(row.thread_id);return [...ids].filter(id=>!this.hidden(id)).slice(0,200);
+    }for(const row of this.db.prepare("SELECT thread_id FROM pocket_discovered_threads WHERE archived=0 ORDER BY COALESCE(json_extract(metadata,'$.activityAt'),0) DESC,seen_at DESC LIMIT 200").all())ids.add(row.thread_id);return [...ids].filter(id=>!this.hidden(id)&&!this.db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived).slice(0,200);
   }
   updateStatus(id,status){const saved=this.db.prepare('SELECT metadata,archived FROM pocket_discovered_threads WHERE thread_id=?').get(id);if(!saved)return;this.remember({...JSON.parse(saved.metadata),status,discoveryPending:false},{archived:!!saved.archived});this.readCache.delete(id);}
   markArchived(id,flag){this.db.prepare('UPDATE pocket_discovered_threads SET archived=? WHERE thread_id=?').run(flag?1:0,id);this.readCache.delete(id);}
