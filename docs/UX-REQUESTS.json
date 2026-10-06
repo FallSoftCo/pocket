@@ -1757,6 +1757,25 @@
       "qualification": "First real probe rejected unsupported response.done assumption; second observed actual turn.done plus authored transcript and captured audio. Corrected production completion gate requires matching assistant turn/full expected transcript/timestamps and drained audio; final exact native renderer qualification still pending.",
       "limits": "No provider pronunciation or physical lockscreen claim; no API spending switch or changes to production renderer yet.",
       "evidence": "216 backend and162 Android tests per variant, both lint/builds pass; actual native account Android foreground and public cold screen-off capture/playback pass; no microphone or task. See qualification/native-saved-speech-alpha32.json."
+    },
+    {
+      "id": "automatic-live-session-priority",
+      "requirement": "Automatically put genuinely seconds-active/reactivated sessions at the thumb-nearest bottom. Minutes-old sessions must release space. Stable ties for simultaneous streams, safe finger/scroll holds, truthful ages and status; no Work-tab reselection required.",
+      "status": "implemented-alpha33-candidate; native qualification in progress",
+      "evidence": [
+        "qualification/live-session-priority-alpha33.json",
+        "../android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+        "../server/session-discovery.mjs"
+      ]
+    },
+    {
+      "id": "retain-local-history-and-auto-page",
+      "requirement": "Recent-first opening must not hide already-loaded/read messages behind Earlier messages. Keep loaded history locally visible, including while new responses arrive. Load older pages automatically through thumb scrolling, preserve place and backend/thread ownership, and never require a pagination tap.",
+      "status": "implementation delegated; integrate into alpha33 before publication",
+      "evidence": [
+        "../android/app/src/main/java/co/fallsoft/pocket/PocketTranscript.kt",
+        "../android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt"
+      ]
     }
   ],
   "current_state": {
