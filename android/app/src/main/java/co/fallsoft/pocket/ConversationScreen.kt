@@ -182,7 +182,21 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     if(row.s("speechThread").isNotBlank())TextButton({Pocket.open(row.s("speechThread"))}){BilingualLabel("Open source conversation")}
                     if(important)noteFor(row)?.let{note->FlowRow{
                         TextButton({val context="Regarding your answer:\n"+row.s("text")+"\n\n";val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context;editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply();keyboardInput=true}){BilingualLabel("Reply")}
-                        TextButton({val sourceThread=Pocket.selected;val sourceProfile=Pocket.local;val sourceEndpoint=Pocket.base;important=false;follow=false;scope.launch{var found=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")};var pages=0;while(found<0&&PocketTranscript.earlier&&pages++<12&&Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint){PocketTranscript.load(true);found=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}};delay(32);if(Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint&&found>=0)list.scrollToItem(found.coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else if(Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint)Pocket.error="The original message is not available in loaded history."}}){BilingualLabel("Surrounding conversation")}
+                        TextButton({
+                            val sourceThread=Pocket.selected;val sourceProfile=Pocket.local;val sourceEndpoint=Pocket.base;val sourceToken=Pocket.token
+                            val owns={Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint&&Pocket.token==sourceToken}
+                            important=false;follow=false
+                            scope.launch{
+                                val found=locateTranscriptSource(owns,{PocketTranscript.loading},{PocketTranscript.earlier},{PocketTranscript.before},
+                                    {PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}},
+                                    {PocketTranscript.load(true)})
+                                delay(32)
+                                if(owns()&&found>=0){
+                                    val target=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}
+                                    if(target>=0)list.scrollToItem(target.coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))
+                                }else if(owns())Pocket.error="The original message is not available in loaded history."
+                            }
+                        }){BilingualLabel("Surrounding conversation")}
                         TextButton({val thread=Pocket.selected;val profile=Pocket.local;val endpoint=Pocket.base;val credential=Pocket.token;val id=note.s("id");removingNotes=removingNotes+id;scope.launch{try{val response=Pocket.apiFor(profile,"/api/threads/$thread/notes/remove",JSONObject().put("id",id));require(response.optJSONArray("notes")!=null){"Removal was not acknowledged. Try again."};if(Pocket.selected==thread&&Pocket.local==profile&&Pocket.base==endpoint&&Pocket.token==credential)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}}catch(e:Exception){if(Pocket.selected==thread&&Pocket.local==profile)Pocket.error=PocketNetwork.error(e)}finally{removingNotes=removingNotes-id}}},enabled=note.s("id") !in removingNotes){BilingualLabel("Unsave",color=Muted)}
                     }}
                 }

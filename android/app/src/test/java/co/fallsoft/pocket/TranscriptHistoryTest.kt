@@ -2,6 +2,7 @@ package co.fallsoft.pocket
 
 import org.junit.Assert.*
 import org.junit.Test
+import kotlinx.coroutines.runBlocking
 
 class TranscriptHistoryTest {
     private data class Row(val id:String,val text:String="",val version:Long=0)
@@ -78,5 +79,22 @@ class TranscriptHistoryTest {
         assertEquals(73,position.offset)
         assertFalse(position.follow)
         assertEquals(-1,transcriptAnchorIndex(listOf("unrelated-thread"),position))
+    }
+    @Test fun sourceNavigationWaitsForInflightPageWithoutBurningPageBudget()=runBlocking{
+        var loading=true;var found=-1;var requests=0;var waits=0
+        val result=locateTranscriptSource({true},{loading},{true},{"before"},{found},{requests++},maxPages=1,wait={
+            waits++;loading=false;found=7
+        })
+        assertEquals(7,result);assertEquals(1,waits);assertEquals(0,requests)
+    }
+    @Test fun sourceNavigationStopsWhenOwnerChangesDuringInflightPage()=runBlocking{
+        var owns=true;var requests=0
+        val result=locateTranscriptSource({owns},{true},{true},{"before"},{-1},{requests++},wait={owns=false})
+        assertEquals(-1,result);assertEquals(0,requests)
+    }
+    @Test fun failedSourcePageDoesNotSpinThroughTwelveIgnoredRequests()=runBlocking{
+        var requests=0
+        val result=locateTranscriptSource({true},{false},{true},{"unchanged"},{-1},{requests++})
+        assertEquals(-1,result);assertEquals(1,requests)
     }
 }

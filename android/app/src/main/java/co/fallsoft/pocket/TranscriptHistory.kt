@@ -41,3 +41,24 @@ internal fun retainedTranscriptCursor(current:TranscriptCursor,hadRows:Boolean,o
 /** A message identity and offset, never a transient pagination/loading item index. */
 internal data class TranscriptReadPosition(val rowId:String,val offset:Int,val follow:Boolean)
 internal fun transcriptAnchorIndex(rowIds:List<String>,position:TranscriptReadPosition)=rowIds.indexOf(position.rowId)
+
+/** Source navigation waits for an existing page; only completed, advancing pages use its budget. */
+internal suspend fun locateTranscriptSource(
+    owns:()->Boolean,loading:()->Boolean,hasEarlier:()->Boolean,cursor:()->String?,find:()->Int,
+    page:suspend ()->Unit,maxPages:Int=12,wait:suspend ()->Unit={kotlinx.coroutines.delay(32)}
+):Int{
+    var pages=0
+    while(owns()){
+        val found=find();if(found>=0)return found
+        while(loading()&&owns())wait()
+        if(!owns())return -1
+        val afterWait=find();if(afterWait>=0)return afterWait
+        if(!hasEarlier()||pages>=maxPages)return -1
+        val before=cursor();page()
+        if(!owns())return -1
+        val afterPage=find();if(afterPage>=0)return afterPage
+        if(cursor()==before)return -1 // Failed/nonadvancing page is not twelve fake attempts.
+        pages++
+    }
+    return -1
+}
