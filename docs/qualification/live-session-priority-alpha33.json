@@ -1,0 +1,25 @@
+{
+  "version": "0.5.0-alpha.33",
+  "versionCode": 51,
+  "requirement": "Sessions with genuine activity in the last seconds must be reachable at the bottom automatically, including old reactivated sessions; minute-old work must not crowd them. Preserve stable simultaneous live ties, touch protection, direct chat routing and invariant card height.",
+  "cause": [
+    "Existing seats only reconciled on explicit Work-tab reselection.",
+    "Historical preview hydration emitted current-time activity; polling lost real stream recency and could revert status.",
+    "Bounded discovery prioritized first-seen live sessions rather than their latest actual work."
+  ],
+  "implementation": [
+    "Automatic priority: genuine last20-second work, last90-second work, quiet ongoing work, other sessions in coarse5-minute recency groups. Stable seats within live groups; no per-token reorder.",
+    "Order reconsidered every750\u20131200ms; finger/scroll/drawer holds movement and waits750ms after release. Live content updates in place even while scrolling.",
+    "Actual activityAt milliseconds distinct from metadata updatedAt; historical hydration cannot enter live groups. Reconnect status cannot renew work recency.",
+    "Poll merge preserves newer live status, preview, activity and newly arriving sessions. Old reactivated work is metadata-discovered before first response.",
+    "Existing card height and interaction regions preserved; ages after20seconds appear in existing title row, refreshed periodically."
+  ],
+  "tests": {
+    "backend": "Final run pending",
+    "android": "Both signed builds/unit/lints running",
+    "native": "Owned synthetic emulator qualification pending"
+  },
+  "release": {
+    "state": "Candidate; not yet published or installed"
+  }
+}

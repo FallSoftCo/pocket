@@ -10,7 +10,7 @@ class SessionListPacingTest {
         assertTrue(busy.contentInterval(16) > calm.contentInterval(0))
         assertTrue(busy.orderInterval(16) > calm.orderInterval(0))
         assertTrue(busy.contentInterval(16) <= 1_200)
-        assertTrue(busy.orderInterval(16) <= 12_000)
+        assertTrue(busy.orderInterval(16) <= 1_200)
     }
     @Test fun continuousTrafficCannotStarveUpdates() {
         val p = SessionListPacing()
@@ -22,7 +22,7 @@ class SessionListPacingTest {
             if (p.orderDue(now, 30, false)) { p.orderDelivered(now); order++ }
         }
         assertTrue(content >= 25)
-        assertTrue(order >= 2)
+        assertTrue(order >= 25)
     }
     @Test fun fingerAndScrollHoldOrderThenRelease() {
         val p = SessionListPacing()
@@ -36,23 +36,11 @@ class SessionListPacingTest {
         val busy = p.orderInterval(0)
         p.record(2_001, 0)
         assertTrue(p.orderInterval(0) < busy)
-        assertEquals(2_000, p.orderInterval(0))
+        assertEquals(750, p.orderInterval(0))
     }
 }
 
 class SessionListTiesTest {
-    @Test fun explicitWorkPromotesGenuineOldInteractionAndKeepsActiveTiesStable() {
-        val seats=listOf("recent","active-a","old","active-b","hydrated")
-        val entries=listOf(SessionRank("hydrated",999_999,false),SessionRank("recent",100,false),SessionRank("old",1,false),SessionRank("active-b",999_000,true),SessionRank("active-a",0,true))
-        assertEquals(seats,reconciledSessionOrder(seats,entries,setOf("old"),false))
-        val reconciled=listOf("active-a","active-b","old","recent","hydrated")
-        assertEquals(reconciled,reconciledSessionOrder(seats,entries,setOf("old"),true))
-        assertEquals(reconciled,reconciledSessionOrder(reconciled,entries.map{it.copy(updated=it.updated+1_000_000)},emptySet(),false))
-    }
-    @Test fun userBatchTiesUseExistingSeatsInsteadOfCallbackArrivalOrTokenTime() {
-        val entries=listOf(SessionRank("b",100,false),SessionRank("a",1,false),SessionRank("c",999_999,false))
-        assertEquals(listOf("a","b","c"),reconciledSessionOrder(listOf("c","a","b"),entries,setOf("b","a"),true))
-    }
     @Test fun reconnectReplayCannotRenewConsumedUserIntentAndMissingSessionsRemainPending() {
         var state=queueSessionPromotion(SessionPromotionState(),"old","item:user-1")
         state=queueSessionPromotion(state,"missing","reply:queued-2")
@@ -118,5 +106,56 @@ class SessionListTiesTest {
         assertEquals(previous,mergeSessionSnapshot(previous,emptyList(),true){it.id})
         assertEquals(fetched,mergeSessionSnapshot(previous,fetched,false){it.id})
         assertEquals(emptyList<Card>(),mergeSessionSnapshot(previous,emptyList(),false){it.id})
+    }
+}
+
+class LiveSessionPriorityTest {
+    private val now=1_800_000L
+    @Test fun reactivatedOldWorkAutomaticallyPassesMinuteOldSeats() {
+        val entries=listOf(SessionRank("stale",now-180_000,true,now-180_000),SessionRank("recent",now-60_000,false,now-60_000),SessionRank("old-reactivated",1,true,now))
+        assertEquals(listOf("old-reactivated","recent","stale"),liveSessionOrder(listOf("stale","recent","old-reactivated"),entries,now))
+    }
+    @Test fun concurrentLivePeersStayTiedAcrossTokenArrivalOrder() {
+        var order=listOf("a","b","quiet")
+        for(tick in 1..100){
+            val at=now+tick*1000
+            order=liveSessionOrder(order,listOf(SessionRank("a",1,true,at-700),SessionRank("b",1,true,at),SessionRank("quiet",1,true,now-180_000)),at)
+            assertEquals(listOf("a","b","quiet"),order)
+        }
+    }
+    @Test fun aFreshLeaseExpiresRatherThanOccupyingFrontForever() {
+        val seats=listOf("finished","running")
+        val entries=listOf(SessionRank("finished",1,false,now-100_000),SessionRank("running",1,true,now-1_000))
+        assertEquals(listOf("running","finished"),liveSessionOrder(seats,entries,now))
+    }
+    @Test fun hydrationTimestampCannotOutrankRealSecondsOldWork() {
+        val entries=listOf(SessionRank("hydrated",now,false),SessionRank("live",1,true,now-2_000))
+        assertEquals(listOf("live","hydrated"),liveSessionOrder(listOf("hydrated","live"),entries,now))
+    }
+    @Test fun acceptedIntentAndNewDiscoveryDoNotWaitForFirstResponse() {
+        val entries=listOf(SessionRank("quiet",1,true,now-180_000),SessionRank("new",now,true,now),SessionRank("reactivated",1,false,now))
+        assertEquals(listOf("new","reactivated","quiet"),liveSessionOrder(listOf("quiet","reactivated"),entries,now)))
+    }
+    @Test fun pollCannotUndoNewLiveStatusPreviewOrRecency() {
+        val old=Task("a","A","/project","idle",1,false,preview="old",activityAt=100)
+        val live=old.copy(status="active",preview="Running command",activityAt=200)
+        val poll=old.copy(title="Renamed",activityAt=150)
+        val merged=mergeLiveTask(live,poll,old)
+        assertEquals("active",merged.status);assertEquals("Running command",merged.preview);assertEquals(200L,merged.activityAt);assertEquals("Renamed",merged.title)
+        assertEquals("idle",mergeLiveTask(live,poll,live).status)
+        assertEquals(200L,mergeLiveTask(live,poll,live).activityAt)
+    }
+    @Test fun sessionArrivingDuringCompletePollCannotDisappear() {
+        val old=Task("old","Old","/project","idle",1,false)
+        val created=Task("new","New","/project","pending",2,false,activityAt=now)
+        assertEquals(listOf(old,created),mergeLiveTaskSnapshot(listOf(old,created),listOf(old),mapOf("old" to old),false))
+        assertEquals(listOf(old),mergeLiveTaskSnapshot(listOf(old,created),listOf(old),mapOf("old" to old,"new" to created),false))
+    }
+    @Test fun busyOrderingIsBoundedAndNeverMovesUnderFinger() {
+        val pacing=SessionListPacing().apply{record(0,1000);orderDelivered(0)}
+        assertTrue(pacing.orderDue(1_200,100,false))
+        assertFalse(pacing.orderDue(1_300,100,true))
+        assertFalse(pacing.orderDue(2_049,100,false))
+        assertTrue(pacing.orderDue(2_050,100,false))
     }
 }

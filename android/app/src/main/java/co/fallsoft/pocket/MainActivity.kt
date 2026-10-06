@@ -208,6 +208,7 @@ class MainActivity:ComponentActivity(){
     LaunchedEffect(Pocket.local,Pocket.token){while(true){delay(5000);if(Pocket.connected)Pocket.refresh()}}
     var filter by remember{mutableIntStateOf(if(Pocket.showArchived)3 else 0)};var query by remember{mutableStateOf("")}
     var touching by remember{mutableStateOf(false)}
+    var listClock by remember{mutableLongStateOf(System.currentTimeMillis())}
     var displayed by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf(Pocket.tasks)}
     val orderKey=Pocket.key(if(Pocket.showArchived)"archivedSessionOrder" else "sessionOrder")
     var order by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(orderKey,"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{if(it.updated<100000000000L)it.updated*1000 else it.updated}.map{it.id}})}
@@ -215,25 +216,28 @@ class MainActivity:ComponentActivity(){
         val pacing=SessionListPacing();var observed=Pocket.tasks.associateBy{it.id}
         while(true){
             val latest=Pocket.tasks;val now=android.os.SystemClock.elapsedRealtime()
+            if(System.currentTimeMillis()-listClock>=5_000)listClock=System.currentTimeMillis()
             val changed=latest.count{observed[it.id]!=it};observed=latest.associateBy{it.id}
             pacing.record(now,changed)
             val active=latest.count{it.status in listOf("active","pending")}
             val interacting=listState.isScrollInProgress||touching||toolsOpen
             val pacedOrderDue=pacing.orderDue(now,active,interacting)
             val explicitBoundary=sessionReconcileAllowed(Pocket.sessionOrderRequest!=Pocket.sessionOrderHandled,Pocket.sessionSnapshotComplete,Pocket.connected,Pocket.codexOnline,pacing.interactionSettled(now,interacting))
-            val orderDue=pacedOrderDue||explicitBoundary
-            if(pacing.contentDue(now,active)&&pacing.interactionSettled(now,interacting)){
+            val orderDue=pacedOrderDue&&Pocket.connected&&Pocket.codexOnline||explicitBoundary
+            if(pacing.contentDue(now,active)){
                 // Deliver live text/status in place; membership changes wait for a safe moment.
                 displayed=sessionContentInPlace(displayed,latest){it.id};pacing.contentDelivered(now)
             }
             if(orderDue){
-                // Existing keyed seats survive lifecycle changes; new work joins only when idle.
-                val next=reconciledSessionOrder(order,latest.map{SessionRank(it.id,if(it.updated<100000000000L)it.updated*1000 else it.updated,it.status in listOf("active","pending"))},if(Pocket.showArchived)emptySet() else Pocket.pendingSessionPromotions(),explicitBoundary&&!Pocket.showArchived)
+                // Automatic live tiers release stale seats; stream peers keep stable ties.
+                val entries=latest.map{SessionRank(it.id,if(it.updated<100000000000L)it.updated*1000 else it.updated,it.status in listOf("active","pending"),it.activityAt)}
+                val next=if(Pocket.showArchived)stableSessionOrder(order,entries,System.currentTimeMillis()) else liveSessionOrder(order,entries,System.currentTimeMillis())
                 if(next!=order)order=next
                 val encoded=org.json.JSONArray(next).toString()
                 if(Pocket.prefs.getString(orderKey,null)!=encoded)Pocket.prefs.edit().putString(orderKey,encoded).apply()
                 displayed=latest
-                if(explicitBoundary){Pocket.finishSessionOrderRequest(Pocket.sessionOrderRequest,latest.map{it.id}.toSet());listState.scrollToItem(0)}
+                Pocket.finishSessionOrderRequest(Pocket.sessionOrderRequest,latest.map{it.id}.toSet())
+                if(explicitBoundary)listState.scrollToItem(0)
                 pacing.orderDelivered(now)
             }
             delay(100)
@@ -253,7 +257,7 @@ class MainActivity:ComponentActivity(){
         val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
         if(attention.isNotEmpty()){item{Label("NEEDS YOU · ${attention.size}",Coral)};items(attention,key={"attention-${it.optLong("id")}"}){AttentionCard(it)}}
         if(shown.isEmpty()&&!showCoordinator)item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
-        items(shown,key={it.id}){TaskCard(it)}
+        items(shown,key={it.id}){TaskCard(it,listClock)}
     }
 
     }
@@ -283,13 +287,13 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     val p=if(days<=1)days*0.35 else 0.35+0.65*(kotlin.math.ln(days)/kotlin.math.ln(90.0)).coerceIn(0.0,1.0)
     return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
 }
-@Composable fun TaskCard(t:Task){
-    val active=t.status in listOf("active","pending");val ageColor=sessionAgeColor(t.updated)
+@Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis()){
+    val active=t.status in listOf("active","pending");val activityTime=maxOf(if(t.updated<100000000000L)t.updated*1000 else t.updated,t.activityAt);val ageColor=sessionAgeColor(activityTime,now)
     LaunchedEffect(t.preview,PocketImmersion.enabled){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
     var rename by remember(t.id){mutableStateOf(false)};var name by remember(t.id){mutableStateOf(t.title)}
     val highlight=remember(t.id){Animatable(0f)}
-    val revision=Triple(t.preview,t.status,t.updated)
+    val revision=Triple(t.preview,t.status,t.activityAt)
     var observed by remember(t.id){mutableStateOf(revision)}
     LaunchedEffect(revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
     val shape=RoundedCornerShape(8.dp)
@@ -317,8 +321,9 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                     Text(shownTitle,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.clickable(onClickLabel="Rename conversation"){name=t.title;rename=true})
                 }
             }
-            val updatedMillis=if(t.updated<100000000000L)t.updated*1000 else t.updated
-            if(System.currentTimeMillis()-updatedMillis>=3600000L)Text(lastActivity(t.updated),color=Muted,fontSize=10.sp,modifier=Modifier.semantics{contentDescription="Last active "+lastActivity(t.updated)}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
+            val age=now-activityTime
+            val ageLabel=if(age in 20_000..59_999)"${age/1000}s" else lastActivity(activityTime)
+            if(age>=20_000)Text(ageLabel,color=Muted,fontSize=11.sp,modifier=Modifier.semantics{contentDescription="Last active "+ageLabel}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
             Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true)}
             Surface(onClick={Pocket.watchTask(t.id,!t.watched)},modifier=Modifier.size(48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
                 Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){

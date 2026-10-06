@@ -15,7 +15,7 @@ class SessionListPacing {
     }
     private fun pressure(active: Int): Double = ln(1.0 + active + changes.sumOf { it.second } / 2.0)
     fun contentInterval(active: Int): Long = (200 + pressure(active) * 200).toLong().coerceAtMost(1_200)
-    fun orderInterval(active: Int): Long = (2_000 + pressure(active) * 2_200).toLong().coerceAtMost(12_000)
+    fun orderInterval(active: Int): Long = (750 + pressure(active) * 100).toLong().coerceAtMost(1_200)
     fun contentDue(now: Long, active: Int): Boolean = lastContent == Long.MIN_VALUE || now - lastContent >= contentInterval(active)
     fun contentDelivered(now: Long) { lastContent = now }
     fun orderDue(now: Long, active: Int, interacting: Boolean): Boolean {
@@ -26,7 +26,7 @@ class SessionListPacing {
     fun orderDelivered(now: Long) { lastOrder = now }
 }
 
-data class SessionRank(val id: String, val updated: Long, val active: Boolean)
+data class SessionRank(val id: String, val updated: Long, val active: Boolean, val activityAt: Long = 0)
 
 data class SessionPromotionState(val pending: List<String> = emptyList(), val seen: List<String> = emptyList())
 
@@ -39,18 +39,6 @@ fun queueSessionPromotion(state: SessionPromotionState, id: String, eventId: Str
 fun acknowledgeSessionPromotions(state: SessionPromotionState, available: Set<String>) = state.copy(pending=state.pending.filter { it !in available })
 
 fun sessionReconcileAllowed(requested: Boolean, complete: Boolean, connected: Boolean, codexOnline: Boolean, settled: Boolean) = requested&&complete&&connected&&codexOnline&&settled
-
-/** Explicit Work intent reconciles active work and genuine interactions as stable ties.
- * Merely returning, polling, reconnecting or receiving tokens never reconciles seats.
- */
-fun reconciledSessionOrder(previous: List<String>, entries: List<SessionRank>, promotions: Set<String>, explicitBoundary: Boolean): List<String> {
-    val stable=stableSessionOrder(previous,entries,0)
-    if(!explicitBoundary)return stable
-    val active=entries.filter { it.active }.map { it.id }.toSet()
-    val available=entries.map { it.id }.toSet()
-    val recent=promotions.intersect(available)-active
-    return stable.filter { it in active }+stable.filter { it in recent }+stable.filter { it !in active && it !in recent }
-}
 
 /** Refresh visible card content without adding/removing cards before order delivery. */
 fun <T> sessionContentInPlace(displayed: List<T>, latest: List<T>, id: (T) -> String): List<T> {
@@ -75,4 +63,24 @@ fun stableSessionOrder(previous: List<String>, entries: List<SessionRank>, now: 
     val added = entries.distinctBy { it.id }.filter { it.id !in known }
         .sortedWith(compareByDescending<SessionRank> { it.updated }.thenBy { it.id }).map { it.id }
     return added + seats
+}
+
+/** Fresh work has a bounded lease, not a permanent seat. Concurrent work is tied:
+ * token arrival order never sorts peers. Metadata/hydration cannot enter live tiers.
+ * Rank zero is the bottom (thumb-nearest) end of the reverse-layout list.
+ */
+fun liveSessionOrder(previous: List<String>, entries: List<SessionRank>, now: Long): List<String> {
+    val stable = stableSessionOrder(previous, entries, now)
+    val byId = entries.associateBy { it.id }
+    fun group(entry: SessionRank): Long {
+        val age = (now - entry.activityAt).coerceAtLeast(0)
+        return when {
+            entry.activityAt > 0 && age <= 20_000 -> 0
+            entry.activityAt > 0 && age <= 90_000 -> 1
+            entry.active -> 2
+            else -> 3
+        }
+    }
+    return stable.sortedWith(compareBy<String> { byId[it]?.let(::group) ?: Long.MAX_VALUE }
+        .thenByDescending { id -> byId[id]?.let { if (group(it) == 3L) maxOf(it.updated, it.activityAt) / 300_000 else 0 } ?: 0 })
 }

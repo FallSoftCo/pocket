@@ -21,7 +21,7 @@ class PocketApplication: Application(), coil.ImageLoaderFactory {
 }
 fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
 fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback else optString(key,fallback)
-data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message")
+data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0)
 data class Message(val id:String,val role:String,val text:String)
 class PocketApiException(val status:Int,message:String):Exception(message)
 
@@ -75,7 +75,7 @@ object Pocket {
         SessionPromotionState(ids("pending"),ids("seen"))
     }catch(_:Exception){SessionPromotionState()}
     private fun savePromotionState(state:SessionPromotionState,forLocal:Boolean=local){prefs.edit().putString(key("sessionPromotions",forLocal),JSONObject().put("pending",JSONArray(state.pending)).put("seen",JSONArray(state.seen)).toString()).apply()}
-    @Synchronized fun rememberSessionInteraction(id:String,eventId:String,forLocal:Boolean=local){val previous=promotionState(forLocal);val next=queueSessionPromotion(previous,id,eventId);if(next!=previous)savePromotionState(next,forLocal)}
+    @Synchronized fun rememberSessionInteraction(id:String,eventId:String,forLocal:Boolean=local){val previous=promotionState(forLocal);val next=queueSessionPromotion(previous,id,eventId);if(next!=previous){savePromotionState(next,forLocal);if(forLocal==local)tasks=tasks.map{if(it.id==id)it.copy(activityAt=maxOf(it.activityAt,System.currentTimeMillis()))else it}}}
     @Synchronized fun pendingSessionPromotions()=promotionState().pending.toSet()
     fun requestSessionOrder(){sessionOrderRequest++}
     @Synchronized fun finishSessionOrderRequest(request:Long,visible:Set<String>){
@@ -172,11 +172,12 @@ object Pocket {
             val deviceChanged=prefs.getString(key("deviceId"),"")!=r.s("deviceId")
             prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply();if(deviceChanged){PocketImmersion.restore();PocketSpeechCaptions.init()}
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
+            val taskBaseline=tasks.associateBy{it.id}
             val taskResult=api(if(profileArchived)"/api/threads?archived=true" else "/api/threads")
             if(local!=profileLocal||token!=profileToken||showArchived!=profileArchived)return@launch
             activities=try{api("/api/activity").optJSONArray("items")?.objects()?:emptyList()}catch(e:PocketApiException){if(e.status==404)emptyList() else throw e}
-            val fetched=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"),it.s("previewKind","message"))}?:emptyList()
-            tasks=mergeSessionSnapshot(tasks,fetched,taskResult.optBoolean("refreshPending")){it.id}
+            val fetched=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"),it.s("previewKind","message"),it.optLong("activityAt"))}?:emptyList()
+            tasks=mergeLiveTaskSnapshot(tasks,fetched,taskBaseline,taskResult.optBoolean("refreshPending"))
             sessionSnapshotComplete=!taskResult.optBoolean("refreshPending")
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
             if(local==profileLocal&&token==profileToken)notifications.forEach{PocketNotificationTitles.remember(it.put("_local",profileLocal))}
@@ -298,14 +299,19 @@ object Pocket {
             "immersion" -> PocketImmersion.accept(json)
             "contextNotes" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("notes",json.optJSONArray("notes"))}}
             "activity" -> {activities=json.optJSONArray("items")?.objects()?:emptyList()}
-            "sessionPreview" -> {discoverSession(json.s("threadId"));tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),updated=json.optLong("activityAt",if(it.updated<100000000000L)it.updated*1000 else it.updated))else it}}
+            "sessionPreview" -> {discoverSession(json.s("threadId"));tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}}
+            "sessionActivity" -> {
+                val id=json.s("threadId");discoverSession(id)
+                val status=json.optJSONObject("status")?.s("type")
+                tasks=tasks.map{if(it.id==id)it.copy(status=status?.takeIf{it.isNotBlank()}?:it.status,activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
+            }
             "sessionStarted" -> {
                 val thread=json.optJSONObject("thread")
                 if(thread!=null&&!showArchived){
                     val id=thread.s("id",json.s("threadId"))
                     if(id.isNotBlank()){
                         val previous=tasks.firstOrNull{it.id==id}
-                        val next=Task(id,thread.s("name",previous?.title?:"New task"),thread.s("cwd",previous?.cwd?:""),thread.optJSONObject("status")?.s("type")?:"pending",thread.optLong("updatedAt",System.currentTimeMillis()),previous?.watched?:false,false,thread.s("preview",previous?.preview?:"Starting…"),previous?.previewRole?:"context",previous?.previewKind?:"message")
+                        val next=Task(id,thread.s("name",previous?.title?:"New task"),thread.s("cwd",previous?.cwd?:""),thread.optJSONObject("status")?.s("type")?:"pending",thread.optLong("updatedAt",System.currentTimeMillis()),previous?.watched?:false,false,thread.s("preview",previous?.preview?:"Starting…"),previous?.previewRole?:"context",previous?.previewKind?:"message",maxOf(previous?.activityAt?:0,thread.optLong("activityAt",json.optLong("activityAt"))))
                         tasks=tasks.filterNot{it.id==id}+next
                     }
                 }
@@ -341,4 +347,25 @@ object Pocket {
         entries.maxOfOrNull{it.optLong("id")}?.let{lastNotification=maxOf(lastNotification,it)}
         prefs.edit().putLong(key("lastNotification"),lastNotification).putBoolean(key("needsHistorySync"),false).apply()
     }catch(_:Exception){}}}
+}
+
+/** A poll begun before a live event must not roll back status, preview or recency. */
+internal fun mergeLiveTask(current:Task?, fetched:Task, baseline:Task?):Task {
+    if(current==null)return fetched
+    val newerLive=current.activityAt>(baseline?.activityAt?:0) && current.activityAt>=fetched.activityAt
+    val changedPreview=current.preview!=baseline?.preview||current.previewRole!=baseline?.previewRole||current.previewKind!=baseline?.previewKind
+    return fetched.copy(
+        status=if(newerLive||current.status!=baseline?.status)current.status else fetched.status,
+        preview=if(changedPreview)current.preview else fetched.preview,
+        previewRole=if(changedPreview)current.previewRole else fetched.previewRole,
+        previewKind=if(changedPreview)current.previewKind else fetched.previewKind,
+        activityAt=maxOf(current.activityAt,fetched.activityAt))
+}
+
+internal fun mergeLiveTaskSnapshot(current:List<Task>, fetched:List<Task>, baseline:Map<String,Task>, partial:Boolean):List<Task> {
+    val byId=current.associateBy{it.id}
+    val fetchedIds=fetched.map{it.id}.toSet()
+    val arrivedDuringPoll=current.filter{it.id !in fetchedIds && (it.id !in baseline || it!=baseline[it.id])}
+    val merged=fetched.map{mergeLiveTask(byId[it.id],it,baseline[it.id])}+arrivedDuringPoll
+    return mergeSessionSnapshot(current,merged,partial){it.id}
 }
