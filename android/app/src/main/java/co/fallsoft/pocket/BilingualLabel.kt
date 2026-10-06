@@ -2,6 +2,7 @@ package co.fallsoft.pocket
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import androidx.compose.ui.text.AnnotatedString
@@ -33,27 +34,32 @@ import androidx.compose.ui.unit.*
     }
     val ready=immersionMotionReady()
     var original by remember(text,target){mutableStateOf(false)}
-    LaunchedEffect(text,target,supported,ready,expanded){
-        if(!supported||!ready||expanded)return@LaunchedEffect
-        while(isActive){
-            val phase=immersionControlPhase(System.currentTimeMillis())
-            original=phase.original
-            delay(phase.remainingMs)
-        }
-    }
-    val shown=if(expanded||supported&&original)text else target
-    var from by remember(text,target){mutableStateOf(AnnotatedString(shown))}
-    var to by remember(text,target){mutableStateOf(AnnotatedString(shown))}
+    val owner=remember(text,target){"control:"+java.util.UUID.randomUUID()}
+    var from by remember(text,target){mutableStateOf(AnnotatedString(target))}
+    var to by remember(text,target){mutableStateOf(AnnotatedString(target))}
+    var cueActive by remember(text,target){mutableStateOf(false)}
     val progress=remember(text,target){Animatable(1f)}
-    LaunchedEffect(shown,ready){
-        if(shown!=to.text){
-            from=to;to=AnnotatedString(shown)
-            if(ready){progress.snapTo(0f);progress.animateTo(1f,tween(360))}else progress.snapTo(1f)
-        }else if(!ready)progress.snapTo(1f)
+    val shown=if(expanded||original)text else target
+    LaunchedEffect(text,target,ready,expanded,PocketSpeech.displayedOwner){
+        if(!ready||expanded||PocketSpeech.displayedOwner!=null)return@LaunchedEffect
+        // Separate queues replace the old synchronous screen-wide label clock.
+        delay(18000L+Math.floorMod(text.hashCode(),6000))
+        while(isActive){
+            val next=!original
+            runImmersionCue(owner,false,onBegin={
+                from=AnnotatedString(if(original)text else target)
+                to=AnnotatedString(if(next)text else target)
+                progress.snapTo(0f)
+                cueActive=true
+            },onHandoff={original=next},onFinish={cueActive=false},animate={
+                progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
+            })
+            delay(if(original)6000L else 18000L)
+        }
     }
     val rescue=if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}else Modifier
     Box(modifier.then(rescue)){
-        BlendImmersionText(from,to,{progress.value},AnnotatedString(shown),reserve=listOf(AnnotatedString(text),AnnotatedString(target)),color=color,fontSize=fontSize,
+        BlendImmersionText(if(cueActive)from else AnnotatedString(shown),if(cueActive)to else AnnotatedString(shown),{if(cueActive)progress.value else 1f},AnnotatedString(shown),reserve=listOf(AnnotatedString(text),AnnotatedString(target)),color=color,fontSize=fontSize,
             lineHeight=LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
             fontWeight=fontWeight,maxLines=maxLines,overflow=TextOverflow.Ellipsis,
             textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)

@@ -1,88 +1,81 @@
 package co.fallsoft.pocket
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.*
-import androidx.compose.ui.text.font.*
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.*
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
-internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(ImmersionSpan)->Float)
+internal class ImmersionCycleRender(
+    val plan:ImmersionPresentation,val alpha:(ImmersionSpan)->Float={1f},
+    val incomingPlan:ImmersionPresentation?=null,val cueProgress:()->Float={1f},
+    val cueActive:Boolean=false,val cueId:Long=0L
+)
+internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.end}:${span.source}:${span.target}"
 
-/** Readable stationary holds; auto motion pauses for interaction, keyboard and accessibility. */
+/** Exact actual snapshots; late replacements are staged, with one screen-wide cue at a time. */
 @Composable internal fun rememberImmersionCycle(plan:ImmersionPresentation,readingKey:ImmersionReadingKey,selected:ImmersionSpan?,enabled:Boolean):ImmersionCycleRender {
     val ready=immersionMotionReady()
-    var original by remember(readingKey){mutableStateOf(false)}
+    val identity=readingKey.copy(targetHash="")
+    val owner=remember(identity){"body:"+java.util.UUID.randomUUID()}
+    val originals=remember(identity){mutableStateMapOf<String,Boolean>().apply{plan.spans.forEach{put(immersionPhraseIdentity(it),false)}}}
+    val hydration=remember(identity){mutableStateListOf<String>()}
+    var cursor by remember(identity){mutableIntStateOf(0)}
+    val keys=plan.spans.map(::immersionPhraseIdentity)
+    // A new cache plan defaults to the exact source already on screen before bookkeeping runs.
+    val actualOriginals=immersionKnownOriginals(plan.spans,originals)
+    SideEffect{
+        keys.forEach{key->if(key !in originals){originals[key]=true;hydration.add(key)}}
+        originals.keys.toList().filter{it !in keys}.forEach{originals.remove(it)}
+        hydration.removeAll{it !in keys}
+    }
     val selectedIndex=plan.spans.indexOf(selected)
-    val effective=(if(enabled&&original)plan.spans.indices.toSet()else emptySet())+listOf(selectedIndex).filter{it>=0}
+    val effective=actualOriginals+listOf(selectedIndex).filter{it>=0}
     val frozen=remember(readingKey,PocketSpeech.displayedOwner,PocketSpeech.displayedText){
         if(PocketSpeech.displayedOwner==null)null else immersionCapturedOriginals(plan,PocketSpeech.displayedText)
     }
     val rendered=immersionCyclePlan(plan,frozen?:effective)
-    LaunchedEffect(readingKey,enabled,ready,frozen!=null,selectedIndex){
-        if(!enabled){original=false;return@LaunchedEffect}
-        if(!ready||frozen!=null||selectedIndex>=0||plan.spans.isEmpty())return@LaunchedEffect
-        val timing=immersionCycleTiming(readingKey.toString(),plan.source,plan.text)
-        var first=true
-        while(isActive){delay((if(original)timing.sourceMs else timing.targetMs)+(if(first)timing.staggerMs%6000L else 0L));first=false;original=!original}
-    }
-    return ImmersionCycleRender(rendered){1f}
-}
-
-/** Native paragraphs keep natural whitespace and baselines; reserve height, never word padding. */
-@Composable internal fun ReservedImmersionText(content:AnnotatedString,plan:ImmersionPresentation,alpha:(ImmersionSpan)->Float,fontSize:TextUnit,lineHeight:TextUnit,color:Color,fontWeight:FontWeight?,maxLines:Int,overflow:TextOverflow){
-    val ready=immersionMotionReady()
-    var from by remember(plan.source){mutableStateOf(content)}
-    var to by remember(plan.source){mutableStateOf(content)}
-    val progress=remember(plan.source){Animatable(1f)}
-    LaunchedEffect(content.text,ready,PocketSpeech.displayedOwner){
-        if(content.text!=to.text){
-            from=to;to=content
-            if(ready&&PocketSpeech.displayedOwner==null){progress.snapTo(0f);progress.animateTo(1f,tween(360))}else progress.snapTo(1f)
-        }else if(!ready||PocketSpeech.displayedOwner!=null)progress.snapTo(1f)
-    }
-    Box(Modifier.fillMaxWidth()){
-        val marks=content.getStringAnnotations("immersion-reserve",0,content.length)
-        fun form(original:Boolean):AnnotatedString?=immersionAnnotatedParagraph(content,marks.mapNotNull{range->
-            val span=plan.spans.firstOrNull{range.item=="${it.start}:${it.end}"}?:return@mapNotNull null
-            val parsed=MarkdownContent.preview(if(original)span.source else span.target)
-            val replacement=buildAnnotatedString{
-                append(parsed.text)
-                parsed.spans.forEach{mark->when(mark.kind){
-                    "bold"->addStyle(SpanStyle(fontWeight=FontWeight.Bold),mark.start,mark.end)
-                    "italic"->addStyle(SpanStyle(fontStyle=FontStyle.Italic),mark.start,mark.end)
-                    "code"->addStyle(SpanStyle(fontFamily=FontFamily.Monospace),mark.start,mark.end)
-                }}
-            }
-            Triple(range.start,range.end,replacement)
-        })
-        val forms=listOf(content,form(true)?:content,form(false)?:content)
-        BlendImmersionText(from,to,{progress.value},content,modifier=Modifier,fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,fillWidth=true,reserve=forms)
-    }
-}
-
-/** Replacements retain surrounding rich styles; internal styles come from their own exact Markdown. */
-internal fun immersionAnnotatedParagraph(content:AnnotatedString,replacements:List<Triple<Int,Int,AnnotatedString>>):AnnotatedString? {
-    var cursor=0
-    return buildAnnotatedString{
-        replacements.sortedBy{it.first}.forEach{(start,end,replacement)->
-            if(start<cursor||end<start||end>content.length)return null
-            append(content.subSequence(cursor,start))
-            val at=length;append(replacement)
-            val inherited=content.subSequence(start,end)
-            inherited.spanStyles.filter{it.start==0&&it.end==inherited.length}.forEach{addStyle(it.item,at,length)}
-            inherited.getLinkAnnotations(0,inherited.length).filter{it.start==0&&it.end==inherited.length}.forEach{annotation->when(val link=annotation.item){is LinkAnnotation.Url->addLink(link,at,length);is LinkAnnotation.Clickable->addLink(link,at,length)}}
-            cursor=end
+    var incoming by remember(identity){mutableStateOf<ImmersionPresentation?>(null)}
+    var cueActive by remember(identity){mutableStateOf(false)}
+    var cueId by remember(identity){mutableLongStateOf(0L)}
+    val progress=remember(identity){Animatable(1f)}
+    LaunchedEffect(identity,readingKey.targetHash,enabled,ready,PocketSpeech.displayedOwner,selectedIndex){
+        if(!enabled||!ready||PocketSpeech.displayedOwner!=null||selectedIndex>=0||plan.spans.isEmpty())return@LaunchedEffect
+        suspend fun cue(index:Int,original:Boolean){
+            runImmersionCue(owner,true,onBegin={serial->
+                cueId=serial
+                val current=immersionKnownOriginals(plan.spans,originals)
+                incoming=immersionCyclePlan(plan,immersionCueOriginals(current,index,original))
+                progress.snapTo(0f)
+                cueActive=true
+            },onHandoff={originals[keys[index]]=original},onFinish={cueActive=false;incoming=null},animate={
+                progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
+            })
         }
-        append(content.subSequence(cursor,content.length))
+        // Every resume receives a fresh reading hold, never a backlog of overdue handoffs.
+        val timing=immersionCycleTiming(identity.toString(),plan.source,plan.text)
+        delay((if(hydration.isNotEmpty())timing.sourceMs else timing.targetMs)+timing.staggerMs%6000L)
+        while(isActive){
+            val pending=hydration.firstOrNull()
+            val index=if(pending!=null)keys.indexOf(pending)else Math.floorMod(cursor,plan.spans.size)
+            if(index<0){pending?.let{hydration.remove(it)};continue}
+            val span=plan.spans[index]
+            val local=immersionCycleTiming(identity.toString()+span.start,span.source,span.target)
+            if(pending!=null){cue(index,false);hydration.remove(pending);delay(local.targetMs)}
+            else {
+                if(originals[keys[index]]!=true)cue(index,true)
+                delay(local.sourceMs)
+                cue(index,false)
+                delay(local.targetMs)
+                cursor=(index+1)%plan.spans.size
+            }
+        }
     }
+    return ImmersionCycleRender(rendered,incomingPlan=incoming,cueProgress={progress.value},cueActive=cueActive,cueId=cueId)
 }
+
+internal fun immersionKnownOriginals(spans:List<ImmersionSpan>,known:Map<String,Boolean>):Set<Int> = spans.indices.filter{known[immersionPhraseIdentity(spans[it])]?:true}.toSet()
+internal fun immersionCueOriginals(current:Set<Int>,index:Int,original:Boolean):Set<Int> = if(original)current+index else current-index
