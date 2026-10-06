@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-06",
+  "initial": "Loaded idle session with zero turns and a source rollout path whose file was absent.",
+  "recovery": "Supported thread/read succeeded; rollout subsequently appeared. thread/turns/list and thread/resume succeeded. No manual rollout fabrication, database edits, replacement session or app-server restart.",
+  "cause_limit": "Observed missing source rollout explains the lineage error; why initial persistence was delayed is not established.",
+  "task": "Original Google referral matching session retained; research turn accepted inProgress and completed tool executions verified. No prior results existed in readable history. No applications or outreach authorized.",
+  "handling": "Missing lineage RPC becomes a task-specific HTTP 409 with retained RPC cause and instructions to check running work before replacement; global transport remains connected.",
+  "tests": "206 Node tests pass; targeted websocket regression also passes.",
+  "research_result": "Research resumed; ranking not yet complete."
+}

@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import { homedir } from 'node:os';
 import {spawn} from 'node:child_process';
 import {createInterface} from 'node:readline';
-import {codexConnectionError,isServerDraining} from './connection-errors.mjs';
+import {codexConnectionError,isServerDraining,isHistoryLineageError,historyLineageError} from './connection-errors.mjs';
 
 export class Codex extends EventEmitter {
   constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null}={}) {
@@ -25,7 +25,7 @@ export class Codex extends EventEmitter {
         if (p) {
           clearTimeout(p.timer); this.pending.delete(m.id);
           if(m.error){
-            const error=isServerDraining(m.error)?Object.assign(codexConnectionError('CODEX_DRAINING'),{rpc:m.error}):Object.assign(new Error(m.error.message),{rpc:m.error});
+            const error=isServerDraining(m.error)?Object.assign(codexConnectionError('CODEX_DRAINING'),{rpc:m.error}):Object.assign(isHistoryLineageError(m.error)?historyLineageError(m.error):new Error(m.error.message),{rpc:m.error});
             if(error.code==='CODEX_DRAINING'&&this.transport===transport){this.problem=error;this.emit('status',this.status());}
             p.reject(error);
           }else p.resolve(m.result);

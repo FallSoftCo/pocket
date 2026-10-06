@@ -10,3 +10,6 @@ export function codexConnectionError(code='CODEX_DISCONNECTED',cause){
 }
 export const isServerDraining=error=>/^server is draining(?:;|$)/i.test(String(error?.message||'').trim());
 export const ambiguousDelivery=e=>['CODEX_DISCONNECTED','CODEX_TIMEOUT','CODEX_HISTORY_TOO_LARGE'].includes(e.code)||/timed out|disconnected/.test(e.message);
+
+export const isHistoryLineageError=error=>/invalid paginated history lineage.*missing source rollout/i.test(String(error?.message||''));
+export function historyLineageError(cause){return Object.assign(new Error('Codex cannot read this conversation because its source history is missing. Other conversations remain connected. Check this task on the workstation before retrying or creating a replacement; it may still be running.',{cause}),{code:'CODEX_HISTORY_LINEAGE_UNAVAILABLE',status:409});}
