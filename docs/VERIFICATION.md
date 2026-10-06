@@ -1,3 +1,9 @@
+## Session switching and saved notification context: 0.5.0-alpha.25
+
+Prior alpha24 with a paused notification from synthetic session18 appended that notification to selected session02 and auto-follow scrolled to it. The fixed exact signed candidate shows the selected session’s own history and permits a saved caption only when its known origin matches. The queue remains intact. Native physical card and popup taps, keyboard entry, exact synthetic reply routing and 02→03→02 draft restoration pass. Matching18 saved speech remains visible in18. No real user messages were sent or modified.
+
+The release passed 204 backend tests, 122 Android tests, both lint variants and clean-checkout CI. It is published and offered by the compatible in-app updater without restarting the backend. Actual handset installation and one-tap switching between real sessions remain pending because the phone locked before reproduction. See [qualification and delivery](qualification/session-switching-alpha25.json).
+
 ## Automatic inline cycling and selectable backends: 0.5.0-alpha.24
 
 The exact final signed candidate passed 204 backend tests, 121 Android tests, debug/release lint and clean-checkout CI. Native qualification covers normal and 2× font sizes, reduced motion, fixed paragraph bounds across phases, unequal-length long phrase wrapping, punctuation, URL behavior, hold/resume, and captured mixed-language speech across view recreation. Direct team replies retain the peer recipient, delayed history cannot cross the selected conversation, and Shift+Enter inserts a newline at the actual caret while Enter/IME sends once.

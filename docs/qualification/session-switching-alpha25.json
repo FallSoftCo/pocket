@@ -1,0 +1,67 @@
+{
+  "version": "0.5.0-alpha.25",
+  "versionCode": 43,
+  "sourceCommit": "bc6e8e6ed7f6f535c52e93bebad8dbc5ffc0f3dd",
+  "cause": "The conversation viewport appended current saved notification speech regardless of selected thread or paused state, then auto-follow scrolled to it. This could make distinct chats show the same unrelated last notification.",
+  "fix": "Only an exact known matching origin may contribute speech text to the selected conversation. Foreign or unknown origins are excluded without clearing or altering the saved queue.",
+  "backendReadVerification": {
+    "actualDistinctThreads": 3,
+    "requestedReturnedIdsMatched": true,
+    "connected": true,
+    "problem": null,
+    "runningVersion": "0.5.0-alpha.24",
+    "restarted": false
+  },
+  "checks": {
+    "nodeTests": 204,
+    "androidTests": 122,
+    "lintDebug": "passed",
+    "lintRelease": "passed",
+    "cleanCheckoutCi": {
+      "run": 37393341171,
+      "status": "success"
+    },
+    "nativeSwitching": {
+      "status": "passed exact signed candidate on owned emulator5562",
+      "cardCenter": "Coordinate taps opened distinct sessions01 and03 with their own visible histories.",
+      "cardKeyboard": "Keyboard region selected02 and native Enter submitted exactly one synthetic request to02.",
+      "popup": "One coordinate tap on02 in Work activity popup opened own02 history.",
+      "draft": "02\u219203\u219202 restored exact synthetic RootDraftTwo without displaying it in03.",
+      "speech": "Foreign paused18 caption absent in01/02/03. Matching18 caption retained. Saved queue not cleared.",
+      "baseline": "Prior exactalpha24 candidate with same seeded prefs reproduced foreign18 caption in selected02; auto-follow displayed only the foreign update. Reinstall final43 restored own02 without foreign caption.",
+      "providers": "Synthetic-only fixture; no Codex, push or audio-provider calls."
+    }
+  },
+  "artifacts": {
+    "debugSha256": "6243272cf475605cfc502bfa4a1cfe021af1ed0f19c45abfd85f4885ba78a34d",
+    "releaseSha256": "d8c9f494cf3bb0b1eb6b9f5499377fd057940d31ced5beac8975a8289e63d515"
+  },
+  "physicalPhone": {
+    "beforeVersionCode": 42,
+    "switchingVerification": "Blocked by lock screen before two-card test; unlock requested.",
+    "draft": "Existing draft observed; no edits or text typing.",
+    "installation": "not yet performed",
+    "candidateTransferred": true,
+    "candidateSha256OnDevice": "6243272cf475605cfc502bfa4a1cfe021af1ed0f19c45abfd85f4885ba78a34d"
+  },
+  "limitations": [
+    "Real handset remained locked before two-card reproduction; actual installation and real-session one-tap verification are pending unlock.",
+    "Native geometry, switching and reply-routing checks use synthetic sessions. Three actual backend reads separately returned their requested IDs."
+  ],
+  "deployment": {
+    "publicRelease": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.25",
+    "publicAssetDigestVerified": true,
+    "inAppUpdate": {
+      "available": true,
+      "versionCode": 43,
+      "sameSignerDebugSha256": "6243272cf475605cfc502bfa4a1cfe021af1ed0f19c45abfd85f4885ba78a34d"
+    },
+    "announcement": {
+      "announced": 1,
+      "notificationId": 508,
+      "pushEnabled": true,
+      "handsetAcknowledgment": "not independently established"
+    },
+    "backendRestarted": false
+  }
+}

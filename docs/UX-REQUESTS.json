@@ -579,18 +579,19 @@
     },
     {
       "id": "session-switching-foreign-saved-speech",
-      "status": "fixed-alpha25-qualification-in-progress",
+      "status": "qualified-alpha25-published-pending-phone-unlock",
       "requirement": "Each tapped session must show its own conversation and route replies to it. A previously selected session or saved speech must never replace another session visually. Preserve per-thread drafts and the saved speech queue.",
       "cause": "ConversationScreen appended the current saved speech entry to every chat, even when paused and from another or unknown session. Auto-follow could scroll to that foreign content. Actual backend reads return the requested distinct thread IDs; navigation handlers retain the explicit tapped ID.",
       "candidate": "1e005ea",
-      "fix": "Require exact known matching speech origin before adding a caption to the transcript; preserve matching-context deduplication. Regression test covers foreign and unknown origins, null selection, matching origin, duplicate and empty speech."
+      "fix": "Require exact known matching speech origin before adding a caption to the transcript; preserve matching-context deduplication. Regression test covers foreign and unknown origins, null selection, matching origin, duplicate and empty speech.",
+      "evidence": "Prior alpha24 same-pref native reproduction confirmed foreign saved speech/autofollow; exact final43 candidate passes card and popup switching, correct synthetic02 reply route, per-thread draft restoration and matching18 saved-caption retention. 204 backend/122 Android tests, both lint variants and clean-checkout CI pass. Compatible update offered and public release published; phone installation/real taps pending unlock. See docs/qualification/session-switching-alpha25.json."
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "a060935",
-    "published_release": "v0.5.0-alpha.24",
+    "latest_pushed_commit": "bc6e8e6",
+    "published_release": "v0.5.0-alpha.25",
     "server_tests": 204,
-    "android_tests": 121,
+    "android_tests": 122,
     "phone_endpoint": "Termux SSH over Tailscale and authenticated automation listener reachable",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
@@ -608,17 +609,17 @@
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Alpha24 reviewed native cycling motion, normal/2× text, unequal long variants and speech snapshot published. Full gallery desktop/mobile/reduced-motion/reload check passed (1748 cards).",
     "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
-    "update_delivery": "Alpha24/code42 compatible variants prepared; deduplicated announcement505 accepted. Handset push acknowledgment not separately established.",
+    "update_delivery": "Alpha25/code43 compatible variants offered; announcement508 accepted. Handset receipt not independently established.",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
     "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21–39ms. No active-session reset.",
     "immersion_next": "Automatic single-flow cycling delivered in alpha24 with native geometry/motion/snapshot evidence. Teacher quality and real-provider spoken language remain separate qualifications.",
     "phone_access": "SSH and authenticated automation work; no networking or security settings changed.",
-    "backend_runtime": "Alpha24 live, connected, no problem; Codex and Losangelex configured and available.",
+    "backend_runtime": "Backend alpha24 connected/no problem; Android-only alpha25 hotfix requires no restart.",
     "native_validation": "Alpha24 final signed debug/release, 121 Android tests, both lint variants and successful clean-checkout CI. Native inline cycling and team controls qualified.",
-    "pending_phone_update": "None. Installed alpha24/code42 independently verified; recovery/Important exact-thread handset interaction remains uninspected.",
+    "pending_phone_update": "Code43 compatible APK transferred/hashverified, in-app update offered. Phone locked; installation and actual two-real-chat switching require unlock.",
     "conversation_context": "Installed alpha24 includes qualified Important/All transcript filtering and direct Retry/Edit/Remove. Native recovery/filter proof is synthetic; exact requested handset thread was not opened.",
-    "qualified_build": "0.5.0-alpha.24 / code42"
+    "qualified_build": "0.5.0-alpha.25 / code43"
   },
   "remaining": [
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",
