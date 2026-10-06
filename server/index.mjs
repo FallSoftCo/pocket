@@ -144,15 +144,15 @@ async function attach(threadId,{before=null,recent=false}={}){
   if(!attached.has(threadId)){
     const started=db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(threadId)||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(threadId);
     metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true,...(started?.permissions?permissionOptions(started.permissions):codex.executionOptions())})).thread;attached.add(threadId);
-    if(metadata.historyMode!=='paginated'){initial=await history.read(metadata);completions.observe(initial);}
-    else if(db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId)){
+    if(metadata.historyMode!=='paginated'&&!recent){initial=await history.read(metadata);completions.observe(initial);}
+    else if(metadata.historyMode==='paginated'&&db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId)){
       if(recent)void recoverHistory(metadata).catch(e=>console.error('History recovery',e.message));
       else await recoverHistory(metadata);
     }
   }
   const latestTurn=initial?.turns?.at(-1);if(latestTurn)rememberSpeechContext(threadId,latestTurn);
   const snapshotRevision=timeline.version;
-  const thread=initial||await history.read(metadata,{before,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});if(!before){timeline.seed(thread,{throughVersion:snapshotRevision});rememberSpeechContext(threadId,thread.turns?.at(-1));}return {...thread,_pocketSnapshotRevision:snapshotRevision};
+  const thread=initial||await history.read(metadata,{before,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1,preferPaging:true}:{})});if(!before){timeline.seed(thread,{throughVersion:snapshotRevision});rememberSpeechContext(threadId,thread.turns?.at(-1));}return {...thread,_pocketSnapshotRevision:snapshotRevision};
 }
 const isActive=t=>t.status?.type==='active';
 const savedTurnSettings=id=>{const row=db.prepare('SELECT settings FROM turn_settings WHERE thread_id=?').get(id);return row?JSON.parse(row.settings):null;};

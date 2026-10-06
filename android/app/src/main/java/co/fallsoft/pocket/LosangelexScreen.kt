@@ -19,7 +19,7 @@ import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.util.UUID
 
-@Composable fun LosangelexScreen(owner:String){
+@Composable fun LosangelexScreen(owner:String,onSettings:()->Unit={}){
     val client=remember(owner){LosangelexClient(owner)}
     val jobs=rememberCoroutineScope()
     var teams by remember{mutableStateOf(emptyList<JSONObject>())}
@@ -118,7 +118,7 @@ import java.util.UUID
     fun send(){if(canSend&&!busy)submit(pending?:JSONObject().put("path","teams/$team/messages").put("body",target.message(UUID.randomUUID().toString(),text)))}
     Column(Modifier.fillMaxSize().imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         WeeklyLimitBar()
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){TextButton({newTask=true},enabled=team.isNotBlank()&&!busy){BilingualLabel("New task")}}
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){TextButton(onSettings){BilingualLabel("Settings")};TextButton({newTask=true},enabled=team.isNotBlank()&&!busy){BilingualLabel("New task")}}
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
             TeamChoice("Team",teams.map{it.s("id") to it.s("name")},team,Modifier.weight(1f)){team=it;task="";recipient="";direct=false;replyTo=null}
             TeamChoice("Task",overview.optJSONArray("tasks")?.objects().orEmpty().map{it.s("id") to it.s("title")},task,Modifier.weight(1f)){task=it;replyTo=null}

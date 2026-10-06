@@ -91,16 +91,19 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
 }
 
 /** Filters the existing transcript; never displays another copy of its content. */
-@Composable internal fun ConversationNotesCard(important:Boolean,onFilter:()->Unit,onControls:()->Unit,speechText:String){
+@Composable internal fun ConversationNotesCard(important:Boolean,onFilter:()->Unit,onControls:()->Unit,speechText:String,status:ConversationRunState){
     val host="filter:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}:${Pocket.selected}"
     DisposableEffect(host){onDispose{PocketSpeech.displayedOwner?.takeIf{it==host}?.let{PocketSpeech.stopDisplayed(it)}}}
     val speaking=PocketSpeech.displayedRunning||PocketSpeech.count>0&&!PocketSpeech.paused
     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically){
-        FilterChip(selected=important,onClick=onFilter,label={BilingualLabel(if(important)"Important · Back to all" else "Important")},modifier=Modifier.weight(1f).heightIn(min=48.dp))
+        TextButton(onControls,modifier=Modifier.weight(1f).heightIn(min=48.dp),contentPadding=PaddingValues(horizontal=4.dp)){
+            SymbolIcon(status.icon,status.label+"; conversation controls",Modifier.size(32.dp),tint=if(status==ConversationRunState.NEEDS_YOU)Coral else Mint,spinning=status.spinning)
+            Spacer(Modifier.width(6.dp));BilingualLabel(status.label,centered=false,color=if(status==ConversationRunState.NEEDS_YOU)Coral else Mint,fontSize=13.sp,maxLines=1)
+        }
+        FilterChip(selected=important,onClick=onFilter,label={BilingualLabel("Important",fontSize=13.sp)},modifier=Modifier.heightIn(min=48.dp))
         IconButton({if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}else if(speaking)PocketSpeech.control("pause")else PocketSpeech.speakDisplayed(host,speechText,"Conversation")},enabled=speaking||speechText.isNotBlank()){
             SymbolIcon(if(speaking)Icons.Rounded.Stop else Icons.Rounded.VolumeUp,if(speaking)"Stop speaking conversation" else "Speak visible conversation",Modifier.size(30.dp),tint=if(speaking)Coral else Mint)
         }
-        IconButton(onControls){SymbolIcon(Icons.Rounded.Tune,"Conversation controls",Modifier.size(24.dp))}
     }
 }
 internal fun importantConversationKind(kind:String,type:String,status:String,retained:Boolean,phase:String="",latest:Boolean=false)=retained||kind=="request"||kind=="message"&&(phase=="final_answer"||phase.isBlank()&&latest)||kind=="turnEnd"&&status=="failed"||kind=="activity"&&type!="reasoning"&&status in listOf("failed","declined")

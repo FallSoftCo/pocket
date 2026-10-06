@@ -375,6 +375,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 }
 @Composable fun SettingsScreen(){val c=LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(23.dp)){
+        BackendSettingsControl()
         PocketUpdateControl()
         TaskPermissionsControl()
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Italian immersion",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.enabled,{PocketImmersion.setEnabled(it)})}

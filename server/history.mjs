@@ -12,9 +12,9 @@ export class ThreadHistory {
     const page=await this.codex.call('thread/items/list',{threadId:metadata.id,turnId:latest.id,limit:6,sortDirection:'desc'});
     return {...thread,turns:[{...latest,items:[...page.data].reverse().map(entry=>displayItem(entry.item,latest.id)).filter(Boolean)}]};
   }
-  async read(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8}={}){
+  async read(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8,preferPaging=false}={}){
     const threadId=metadata.id;
-    if(metadata.historyMode!=='paginated')return (await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;
+    if(metadata.historyMode!=='paginated'&&!preferPaging)return (await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;
     if(this.paginationSupported!==true){
       if(this.paginationSupported===false)return this.legacyPage(threadId,metadata,before);
       try{await this.codex.call('thread/turns/list',{threadId,limit:1,sortDirection:'desc',itemsView:'notLoaded'});this.paginationSupported=true;}

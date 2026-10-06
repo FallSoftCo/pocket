@@ -78,8 +78,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 @OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
 @Composable fun ConversationScreen(){
     val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
-    val active=Pocket.tasks.firstOrNull{it.id==Pocket.selected}?.status?.let{it=="active"}
-        ?:(t?.optJSONObject("status")?.s("type")=="active"||rows.lastOrNull{it.s("kind")=="turn"}?.s("status")=="inProgress")
+    val task=Pocket.tasks.firstOrNull{it.id==Pocket.selected}
+    val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
+    val latestTurn=rows.lastOrNull{it.s("kind")=="turn"}
+    val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),latestTurn?.s("status").orEmpty(),task?.previewKind=="thinking",d!=null,PocketTranscript.loading)
+    val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.THINKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
     val list=rememberLazyListState();val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
     var follow by remember{mutableStateOf(true)}
     var important by remember(Pocket.local,Pocket.selected){mutableStateOf(false)}
@@ -120,6 +123,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         if(count>0)list.scrollToItem(if(request>=0)(request+1).coerceAtMost(count-1) else count-1)
     }}
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
+            if(pending>0)TextButton({actionsOpen=false;important=false;follow=false;scope.launch{val index=rows.indexOfFirst{it.s("kind")=="request"};if(index>=0)list.scrollToItem((index+1).coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else Pocket.refreshDetail()}},modifier=Modifier.fillMaxWidth()){BilingualLabel("Answer pending question",color=Coral)}
             UsageDetails()
             d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
@@ -167,7 +171,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         Box{
         val visibleKeys=list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()
         val speechText=shownRows.filter{it.s("id") in visibleKeys&&it.s("kind")=="message"}.map{row->spokenRows[row.s("id")]?:PocketImmersion.display("row:"+row.s("id"),row.s("text"))}.filter{it.isNotBlank()}.joinToString("\n\n")
-        ConversationNotesCard(important=important,onFilter={follow=false;important=!important;scope.launch{list.scrollToItem(0)}},onControls={actionsOpen=true},speechText=speechText)
+        ConversationNotesCard(important=important,onFilter={follow=false;important=!important;scope.launch{list.scrollToItem(0)}},onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
         }
         if(keyboardInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){

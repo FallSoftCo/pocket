@@ -585,6 +585,12 @@
       "candidate": "1e005ea",
       "fix": "Require exact known matching speech origin before adding a caption to the transcript; preserve matching-context deduplication. Regression test covers foreign and unknown origins, null selection, matching origin, duplicate and empty speech.",
       "evidence": "Prior alpha24 same-pref native reproduction confirmed foreign saved speech/autofollow. Final43 passes card/popup switching, synthetic reply route, per-thread drafts and matching saved-caption retention. 204 backend/122 Android tests, both lints and clean-checkout CI pass. Installed exact qualified43 hash independently verified on actual phone; two distinct real chats opened by card-center taps, confirmed by canonical title and own live history. No real messages sent or drafts edited. Public release and compatible updater available. See docs/qualification/session-switching-alpha25.json."
+    },
+    {
+      "id": "conversation-fast-open-status-settings-backend",
+      "status": "implemented-alpha26-qualification-underway",
+      "requirement": "Conversation opening must be fast, show whether work continues or needs user input, and put Codex/Losangelex selection in Settings rather than an extra permanent row.",
+      "implementation": "Recent cold-open history bounded, four owner-isolated recent pages cached for two minutes with background refresh; no TTL renewal merely by reopening. Persistent authored working/thinking icon or Needs you/Your turn label in existing context-control row; pending questions take priority. Backend selector lives in Settings, accessible from either backend while retaining team conversation state."
     }
   ],
   "current_state": {

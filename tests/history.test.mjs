@@ -93,3 +93,11 @@ test('list preview reads latest public thinking items instead of message-only tu
  assert.equal(calls.at(-1).p.limit,6);
  assert.ok(calls.every(c=>!['thread/read','thread/resume'].includes(c.method)));
 });
+
+
+test('recent history probes bounded paging even when cold metadata omits pagination hint',async()=>{
+ const calls=[];const history=new ThreadHistory({async call(method,p){calls.push({method,p});if(method==='thread/turns/list')return {data:[{id:'latest',status:'completed'}],backwardsCursor:'anchor'};assert.equal(method,'thread/items/list');return {data:[{item:{id:'recent',type:'agentMessage',text:'Newest'}}],nextCursor:'older'};}});
+ const page=await history.read({id:'cold'},{preferPaging:true,maxItems:1,maxTurns:1});
+ assert.equal(page.turns[0].items[0].id,'recent');assert.equal(page._pocketPage.hasEarlier,true);
+ assert.ok(calls.every(c=>c.method!=='thread/read'));assert.equal(calls.filter(c=>c.method==='thread/items/list').length,1);
+});

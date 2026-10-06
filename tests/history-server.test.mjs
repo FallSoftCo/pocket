@@ -21,7 +21,7 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
    if(disconnect&&m.method==='thread/read'){disconnect=false;ws.terminate();return;}
    if(m.method==='thread/read'&&m.params.includeTurns||m.method==='thread/resume'&&!m.params.excludeTurns){ws.close(1009,'Full history is too large');return;}
    let result={};
-   if(['thread/read','thread/resume'].includes(m.method))result={thread:metadata};
+   if(['thread/read','thread/resume'].includes(m.method))result={thread:m.params.threadId==='cold-thread'?{...metadata,id:'cold-thread',historyMode:undefined}:metadata};
    if(m.method==='thread/list')result={data:m.params.archived?[{...metadata,id:'archived-thread',name:'Archived conversation'}]:[metadata]};
    if(m.method==='thread/turns/list'){
      const end=m.params.cursor?Number(m.params.cursor):16;const limit=m.params.limit;result={data:Array.from({length:Math.min(limit,end)},(_,i)=>({id:'turn-'+(end-i-1),status:'completed',items:[]})),nextCursor:end>limit?String(end-limit):null,backwardsCursor:String(end)};
@@ -33,7 +33,7 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
  t.after(async()=>{if(child.exitCode===null){const done=once(child,'exit');child.kill();await done;}for(const ws of wss.clients)ws.terminate();wss.close();await new Promise(r=>upstream.close(r));await rm(dir,{recursive:true,force:true});});
  for(let i=0;i<100;i++){try{if((await fetch(`http://127.0.0.1:${port}/health`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,30));}
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json')));
- const watchDb=new DatabaseSync(join(dir,'pocket.sqlite'));watchDb.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1)').run(metadata.id,'Synthetic watched conversation');watchDb.close();
+ const watchDb=new DatabaseSync(join(dir,'pocket.sqlite'));watchDb.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1)').run(metadata.id,'Synthetic watched conversation');watchDb.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1)').run('cold-thread','Synthetic watched cold conversation');watchDb.close();
  const api=async path=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{headers:{Authorization:`Bearer ${adminToken}`}});return {status:r.status,data:await r.json()};};
  const recent=await api('/api/threads/large-thread?view=timeline');assert.equal(recent.status,200);assert.equal(recent.data.timeline.rows[0].turnId,'turn-15');assert.ok(recent.data.timeline.hasEarlier);
  assert.equal(blockedRecovery.length,1,'recent HTTP response must finish while missed-history recovery is still blocked');
@@ -46,9 +46,11 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
  assert.deepEqual(seen,Array.from({length:16},(_,i)=>'turn-'+(15-i)),'older pages must remain complete and ordered');
  assert.ok(calls.filter(c=>c.method==='thread/resume').every(c=>c.params.excludeTurns));
  assert.ok(calls.filter(c=>c.method==='thread/read').every(c=>!c.params.includeTurns));
+ const beforeCold=calls.length;const cold=await api('/api/threads/cold-thread?view=timeline');assert.equal(cold.status,200);assert.equal(cold.data.timeline.rows[0].turnId,'turn-15');assert.ok(calls.slice(beforeCold).every(c=>c.method!=='thread/read'||!c.params.includeTurns),'cold recent attach must not fetch full history when pagination hint is absent');
+ const afterColdDb=new DatabaseSync(join(dir,'pocket.sqlite'));afterColdDb.prepare('DELETE FROM watches WHERE thread_id=?').run('cold-thread');afterColdDb.close();
  disconnect=true;const failed=await api('/api/threads/large-thread?view=timeline');assert.equal(failed.status,503);assert.equal(failed.data.code,'CODEX_DISCONNECTED');assert.match(failed.data.error,/phone can reach the workstation/);
  assert.equal((await api('/api/status')).data.connected,false);
- const listing=await api('/api/threads');assert.equal(listing.status,200);assert.equal(listing.data.threads[0].id,metadata.id);assert.equal(listing.data.threads[0].archived,false);
+ const listing=await api('/api/threads');assert.equal(listing.status,200);assert.ok(listing.data.threads.some(t=>t.id===metadata.id&&t.archived===false));
  const archived=await api('/api/threads?archived=true');assert.equal(archived.status,200);assert.equal(archived.data.threads[0].id,'archived-thread');assert.equal(archived.data.threads[0].archived,true);
  assert.equal((await api('/api/projects')).status,200);
  const listCalls=calls.filter(c=>c.method==='thread/list');assert.ok(listCalls.length>=3);assert.ok(listCalls.every(c=>c.params.useStateDbOnly===true),'interactive lists must bypass expensive JSONL repair scans');

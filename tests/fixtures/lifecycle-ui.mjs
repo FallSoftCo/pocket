@@ -12,7 +12,7 @@ export function lifecycleFixture(){
   const app=express();app.use(express.json());
   const server=http.createServer(app),sockets=new WebSocketServer({noServer:true});
   const token='synthetic-lifecycle-only',control='synthetic-lifecycle-control';
-  let phase='ready',partial=false,revision=1,ticks=0,acceptReplies=false;
+  let phase='ready',partial=false,revision=1,ticks=0,acceptReplies=false,readDelayMs=0,pendingThread=null;
   const requests=[];
   const epoch=Math.floor(Date.now()/1000);
   let threads=Array.from({length:18},(_,i)=>({id:`lifecycle-${String(i+1).padStart(2,'0')}`,name:`Lifecycle session ${String(i+1).padStart(2,'0')}`,cwd:'/synthetic/project',preview:`Synthetic progress for session ${i+1}.`,previewRole:'assistant',previewKind:'message',status:{type:i<4?'active':'idle'},updatedAt:epoch-i*3600,watched:i%2===0,archived:false}));
@@ -20,11 +20,13 @@ export function lifecycleFixture(){
   const emit=event=>{for(const ws of sockets.clients)if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(event));};
   app.get('/health',(_req,res)=>res.json({ok:true,synthetic:true}));
   app.use('/fixture',(req,res,next)=>req.headers['x-fixture-key']===control?next():res.sendStatus(403));
-  app.get('/fixture/state',(_req,res)=>res.json({phase,partial,revision,ticks,ids:threads.map(t=>t.id),requests}));
+  app.get('/fixture/state',(_req,res)=>res.json({phase,partial,revision,ticks,readDelayMs,pendingThread,ids:threads.map(t=>t.id),requests}));
   app.post('/fixture/action',(req,res)=>{
     const action=req.body.action;
-    if(!['reset','drain','recover','reconnect','partial','complete','background','preview','discover','remove','user','accept'].includes(action))return res.status(400).json({error:'Unknown synthetic action'});
+    if(!['reset','drain','recover','reconnect','partial','complete','background','preview','discover','remove','user','accept','read-delay','needs-you'].includes(action))return res.status(400).json({error:'Unknown synthetic action'});
     if(action==='accept')acceptReplies=true;
+    if(action==='read-delay')readDelayMs=Math.min(15000,Math.max(0,Number(req.body.ms)||0));
+    if(action==='needs-you')pendingThread=req.body.id||null;
     if(action==='drain'){phase='draining';emit({type:'status',...status()});}
     if(action==='recover'){phase='ready';partial=false;emit({type:'status',...status()});}
     if(action==='reconnect'){phase='ready';for(const ws of sockets.clients)ws.close(1012,'Synthetic reconnect');}
@@ -56,10 +58,11 @@ export function lifecycleFixture(){
   app.use('/api',(req,res,next)=>req.headers.authorization===`Bearer ${token}`?next():res.sendStatus(401));
   app.get('/api/status',(_req,res)=>res.json(status()));
   app.get('/api/threads',(_req,res)=>res.json({threads:partial?threads.slice(8):threads,refreshPending:partial}));
-  app.get('/api/threads/:id',(req,res)=>{
+  app.get('/api/threads/:id',async(req,res)=>{
     const thread=threads.find(t=>t.id===req.params.id);if(!thread)return res.status(404).json({error:'Synthetic session not found'});
-    requests.push({method:'read',id:thread.id});
-    res.json({thread:{...thread,turns:[]},timeline:{rows:[{id:`${thread.id}-user`,turnId:'synthetic-turn',kind:'user',role:'user',text:'Check synthetic ongoing work.'},{id:`${thread.id}-answer`,turnId:'synthetic-turn',kind:'message',role:'assistant',text:`Ongoing synthetic work in ${thread.name} remains available.`}],hasEarlier:false},revision,notes:[],pending:[],notifications:[],outgoing:[],watched:thread.watched});
+    requests.push({method:'read',id:thread.id,at:Date.now(),delayMs:readDelayMs});
+    if(readDelayMs)await new Promise(resolve=>setTimeout(resolve,readDelayMs));
+    res.json({thread:{...thread,turns:[]},timeline:{rows:[{id:`${thread.id}-user`,turnId:'synthetic-turn',kind:'user',role:'user',text:'Check synthetic ongoing work.'},{id:`${thread.id}-answer`,turnId:'synthetic-turn',kind:'message',role:'assistant',text:`Ongoing synthetic work in ${thread.name} remains available.`}],hasEarlier:false},revision,notes:[],pending:thread.id===pendingThread?[{id:'synthetic-question',method:'item/tool/requestUserInput',params:{threadId:thread.id,questions:[{id:'synthetic',header:'Synthetic',question:'Which synthetic review?',options:[{label:'One',description:'Synthetic only'},{label:'Two',description:'Synthetic only'}]}]}}]:[],notifications:[],outgoing:[],watched:thread.watched});
   });
   app.get('/api/activity',(_req,res)=>res.json({items:[]}));
   for(const path of ['notifications','attention'])app.get(`/api/${path}`,(_req,res)=>res.json({notifications:[]}));
