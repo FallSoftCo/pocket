@@ -1,0 +1,79 @@
+{
+  "version": "0.5.0-alpha.24",
+  "versionCode": 42,
+  "apkSha256": "d7ffed45e537fa3d63617f9cd3b332413ab3e114bf51908c198dc3c7d6a8a3cc",
+  "installedBaseApkSha256": "d7ffed45e537fa3d63617f9cd3b332413ab3e114bf51908c198dc3c7d6a8a3cc",
+  "scope": "Synthetic native emulator 5562 only. No handset changes, teacher inference, push or audio API calls.",
+  "status": "Final native qualification and gallery build/check passed.",
+  "rejectedCandidates": [
+    {
+      "sha256": "9e15bd4ea5646ca896e7fffd561672746af62fa66313b5b45bf04c913db82048",
+      "reasons": [
+        "Sparse word-column spacing, especially at 2\u00d7 text.",
+        "Shift+Enter did not insert a newline."
+      ]
+    },
+    {
+      "sha256": "b9dafd89109f608a1d263a4d4576f69155af4ceb06f54f1e3d499f5d6e20fddd",
+      "reasons": [
+        "Comma and period could begin a following line outside the atomic phrase reservation."
+      ]
+    }
+  ],
+  "finalChecks": {
+    "punctuation2x": "PASS. Root visually reviewed coherent phrases with attached comma/period and no clipping.",
+    "cycles1x": "PASS. Eight native samples over 33.6 seconds showed three mixed-language phases. Paragraph bounds remained [47,518][1033,725]; Important and backend controls also stayed fixed.",
+    "cycles2xReducedMotion": "PASS. Eight samples over 36.5 seconds showed three mixed phases. Paragraph bounds remained [47,285][1033,987]; controls stayed fixed.",
+    "longUnequalWrap": "PASS. Synthetic six-word source and seven-word target exercised contiguous chunks at 2\u00d7 text. Four mixed variants retained [47,168][1033,987]. The source-safe plan was accepted by the pure validator. This is geometry evidence, not generated teacher quality evidence.",
+    "holdLinkResume": "PASS. Warm-light source stayed held beyond a full cycle. Native local guide opened with its actual heading. Back retained the source; retap resumed target/original/target phases.",
+    "capturedSpeechRecreation": "PASS. Native Speak followed by app-owned Pause retained displayedParked=true. Mixed source/target text stayed exact across Important filter recreation and more than a full cycle. Resume and Stop were exercised.",
+    "shiftEnterMiddleCaret": "PASS. Native shifted Enter inserted a newline in the middle of FinalCaret. Subsequent Enter made exactly one direct submission with exact body F\\ninalCaret and target Violet.",
+    "nativeMotion": "PASS. Host-console recording lasted 19.861 seconds with animator scale 1. All five sampled frames were personally reviewed: static UI remained complete while source/target phases repeated.",
+    "settingsRestored": "PASS. Original animator scale 0 restored; font scale returned to 1."
+  },
+  "unchangedBackendChecksFromPriorCandidates": {
+    "bottomSelector": "Actual native backend switching placed Codex/Losangelex selector at the bottom without an extra backend selector header.",
+    "ownMessageReplyRecipient": "Replying to an own direct message kept Violet, not you; exact replyTo=201 and one submission were observed.",
+    "softImeSend": "Actual soft-keyboard Send made exactly one direct submission.",
+    "staleHistoryScope": "Violet history was deliberately delayed 20 seconds. Amber was selected 4.77 seconds later; after the old response completed the view contained Amber history and no Violet history.",
+    "offlineRendering": "Prior b9 Resume persisted the captured hybrid language choices in currentRendering. The unchanged SpeechText.clean policy omits inline code from speech; it remains intact in the visible transcript."
+  },
+  "captureLimitations": {
+    "androidVirtualDisplay": "Two Android MediaCodec screenrecord attempts dropped cached static layers. Rejected as capture artifacts, not approved motion evidence. Settled host-console recording preserved those layers.",
+    "audio": "The emulator runs without audio. No acoustic quality or pronunciation claim.",
+    "layout": "Fixed reservations may leave some phase-tail whitespace. Natural phrase grouping and long chunks preserve the viewport; no sparse per-word columns remain."
+  },
+  "evidence": {
+    "final1x": "/tmp/nextcomp-alpha23-alpha24-delivery-first.png",
+    "final2x": "/tmp/nextcomp-alpha23-alpha24-delivery-large.png",
+    "longWrap2x": "/tmp/nextcomp-alpha23-alpha24-delivery-long-wrap.png",
+    "speechSnapshot": "/tmp/nextcomp-alpha23-alpha24-delivery-speech-freeze.png",
+    "observations1x": "/tmp/alpha24-delivery-1x-observations.json",
+    "observations2x": "/tmp/alpha24-delivery-2x-observations.json",
+    "longObservations": "/tmp/alpha24-delivery-long-observations.json",
+    "approvedMotion": "/tmp/nextcomp-alpha24-host-cycles.webm"
+  },
+  "gallery": {
+    "category": "nextcomp-inline-cycling",
+    "entries": 8,
+    "approvedEntries": 5,
+    "rejectedComparisons": 3,
+    "build": "PASS: 1748 cards; concurrent gallery additions preserved.",
+    "check": "PASS. Desktop 1440\u00d71050, mobile 390\u00d7844, reduced-motion inline playback and automatic reload. No JavaScript errors or failed requests.",
+    "urls": [
+      "/8bar/#nextcomp-alpha24-motion",
+      "/8bar/#nextcomp-alpha24-large-type",
+      "/8bar/#nextcomp-alpha24-long-wrap",
+      "/8bar/#nextcomp-alpha24-rejected-punctuation",
+      "/8bar/#nextcomp-alpha24-rejected-word-columns",
+      "/8bar/#nextcomp-alpha24-rejected-android-recording"
+    ]
+  },
+  "resources": {
+    "ownedEmulator": "nextcomp-alpha23-emulator.service, port 5562; stopped after final qualification.",
+    "ownedFixture": "nextcomp-alpha24-fixture.service, port 19992, and nextcomp-alpha23-fixture.service, port 19988; stopped.",
+    "originalAnimatorScale": 0,
+    "restoredAnimatorScale": 0,
+    "cleanup": "Completed under root authorization: stopped only owned emulator 5562 and synthetic fixture services on 19988/19992. Unrelated emulators and services preserved."
+  }
+}

@@ -1,3 +1,9 @@
+## Automatic inline cycling and selectable backends: 0.5.0-alpha.24
+
+The exact final signed candidate passed 204 backend tests, 121 Android tests, debug/release lint and clean-checkout CI. Native qualification covers normal and 2× font sizes, reduced motion, fixed paragraph bounds across phases, unequal-length long phrase wrapping, punctuation, URL behavior, hold/resume, and captured mixed-language speech across view recreation. Direct team replies retain the peer recipient, delayed history cannot cross the selected conversation, and Shift+Enter inserts a newline at the actual caret while Enter/IME sends once.
+
+See [native runtime evidence](qualification/inline-cycling-team-alpha24.json) and [delivery verification](qualification/alpha24-release-delivery.json). The production bridge exposes both configured backends without restarting Hollywood or migrating stock sessions. Acoustic quality, secure-keyguard behavior and generic device compatibility are not established by these synthetic checks.
+
 # Verification
 
 ## Reply recovery and Important conversation filter: 0.5.0-alpha.23

@@ -1,0 +1,54 @@
+{
+  "release": "0.5.0-alpha.24",
+  "versionCode": 42,
+  "sourceCommit": "990d448691594a3b918b6940c64cbc60027551d1",
+  "nodeTests": 204,
+  "androidTests": 121,
+  "lintDebug": "passed",
+  "lintRelease": "passed",
+  "releaseSha256": "33f632477f5f13fa72cbad52896dc6826f5e59c3af95b47db2ce554f8caa26ad",
+  "debugSha256": "d7ffed45e537fa3d63617f9cd3b332413ab3e114bf51908c198dc3c7d6a8a3cc",
+  "releaseSignerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+  "debugSignerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+  "ci": {
+    "run": 37390551723,
+    "status": "success",
+    "cleanCheckout": true
+  },
+  "nativeQualification": "inline-cycling-team-alpha24.json",
+  "backendDeployment": {
+    "version": "0.5.0-alpha.24",
+    "connected": true,
+    "problem": null,
+    "availableBackends": [
+      "codex",
+      "losangelex"
+    ]
+  },
+  "phoneInstallation": {
+    "status": "installed_hash_independently_verified_post_install_ui_check_in_progress",
+    "candidateHashVerified": true,
+    "termuxSsh": "reachable",
+    "automationListener": "authenticated snapshot successful",
+    "previousInstalledVersion": "0.5.0-alpha.23",
+    "previousInstalledVersionCode": 41,
+    "installedVersion": "0.5.0-alpha.24",
+    "installedVersionCode": 42,
+    "installedBaseApkSha256": "d7ffed45e537fa3d63617f9cd3b332413ab3e114bf51908c198dc3c7d6a8a3cc",
+    "method": "On-device Codex with existing authorized accessibility automation and Android compatible in-place installer; no ADB.",
+    "settingsChanged": false,
+    "messagesSentRetriedOrRemoved": false
+  },
+  "limitations": [
+    "Native speech snapshot continuity is verified; real-provider pronunciation and acoustic quality are separate qualifications.",
+    "Losangelex voice and existing stock-session migration are unavailable.",
+    "Phrase reservations deliberately retain space when the shorter form is displayed.",
+    "Durable shared computer-use adapter remains an isolated candidate pending owner runtime qualification."
+  ],
+  "gallery": {
+    "build": "passed",
+    "cards": 1748,
+    "check": "passed desktop/mobile/reduced-motion/reload",
+    "approvedNativeMotion": "/8bar/#nextcomp-alpha24-motion"
+  }
+}

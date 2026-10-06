@@ -1,0 +1,193 @@
+{
+  "text": "Use la luce calda, then review due nuove sessioni. Read [the guide](http://127.0.0.1:19992/guide) and run `git status`.",
+  "spans": [
+    {
+      "start": 4,
+      "end": 18,
+      "targetSegments": [
+        {
+          "start": 0,
+          "end": 2,
+          "target": "la",
+          "meaning": "the",
+          "role": "determiner",
+          "features": [
+            {
+              "name": "gender",
+              "value": "feminine"
+            },
+            {
+              "name": "number",
+              "value": "singular"
+            }
+          ],
+          "relations": [
+            {
+              "kind": "agreesWith",
+              "toSegment": 2,
+              "note": ""
+            }
+          ]
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "target": " ",
+          "meaning": "",
+          "role": "separator",
+          "features": [],
+          "relations": []
+        },
+        {
+          "start": 3,
+          "end": 7,
+          "target": "luce",
+          "meaning": "light",
+          "role": "noun",
+          "features": [
+            {
+              "name": "gender",
+              "value": "feminine"
+            },
+            {
+              "name": "number",
+              "value": "singular"
+            }
+          ],
+          "relations": []
+        },
+        {
+          "start": 7,
+          "end": 8,
+          "target": " ",
+          "meaning": "",
+          "role": "separator",
+          "features": [],
+          "relations": []
+        },
+        {
+          "start": 8,
+          "end": 13,
+          "target": "calda",
+          "meaning": "warm",
+          "role": "adjective",
+          "features": [
+            {
+              "name": "gender",
+              "value": "feminine"
+            },
+            {
+              "name": "number",
+              "value": "singular"
+            }
+          ],
+          "relations": [
+            {
+              "kind": "agreesWith",
+              "toSegment": 2,
+              "note": ""
+            }
+          ]
+        }
+      ],
+      "source": "the warm light",
+      "target": "la luce calda",
+      "note": "The article and adjective agree with feminine singular luce.",
+      "unit": "phrase"
+    },
+    {
+      "start": 32,
+      "end": 48,
+      "targetSegments": [
+        {
+          "start": 0,
+          "end": 3,
+          "target": "due",
+          "meaning": "two",
+          "role": "numeral",
+          "features": [
+            {
+              "name": "gender",
+              "value": "feminine"
+            },
+            {
+              "name": "number",
+              "value": "plural"
+            }
+          ],
+          "relations": []
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "target": " ",
+          "meaning": "",
+          "role": "separator",
+          "features": [],
+          "relations": []
+        },
+        {
+          "start": 4,
+          "end": 9,
+          "target": "nuove",
+          "meaning": "new",
+          "role": "adjective",
+          "features": [
+            {
+              "name": "gender",
+              "value": "feminine"
+            },
+            {
+              "name": "number",
+              "value": "plural"
+            }
+          ],
+          "relations": [
+            {
+              "kind": "agreesWith",
+              "toSegment": 4,
+              "note": ""
+            }
+          ]
+        },
+        {
+          "start": 9,
+          "end": 10,
+          "target": " ",
+          "meaning": "",
+          "role": "separator",
+          "features": [],
+          "relations": []
+        },
+        {
+          "start": 10,
+          "end": 18,
+          "target": "sessioni",
+          "meaning": "sessions",
+          "role": "noun",
+          "features": [
+            {
+              "name": "gender",
+              "value": "feminine"
+            },
+            {
+              "name": "number",
+              "value": "plural"
+            }
+          ],
+          "relations": []
+        }
+      ],
+      "source": "two new sessions",
+      "target": "due nuove sessioni",
+      "note": "Nuove agrees with the feminine plural sessioni.",
+      "unit": "phrase"
+    }
+  ],
+  "planVersion": "inline-replacement-v3",
+  "version": "b23ef8be96e1eff3c9024b050bd496c09ccd86c4b0ca530ad95d8f58f8968668",
+  "original": "Use the warm light, then review two new sessions. Read [the guide](http://127.0.0.1:19992/guide) and run `git status`.",
+  "id": "row:synthetic/source-answer",
+  "density": "strong",
+  "language": "it"
+}

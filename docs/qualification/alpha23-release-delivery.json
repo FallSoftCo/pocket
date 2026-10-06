@@ -47,5 +47,12 @@
   "knownLimitations": [
     "At 2x font the Important/Back to all chip label ellipsizes; its full accessibility label and action remain available.",
     "Physical phone installation and provider speech quality are not established by synthetic qualification."
-  ]
+  ],
+  "laterPhoneObservation": {
+    "installedVersion": "0.5.0-alpha.23",
+    "installedVersionCode": 41,
+    "installedBaseApkSha256": "b082131efe5a09094644fcbfa7426bfe400fb223e1ee3494f01d22808f4b6e9c",
+    "automationListener": "authenticated snapshot successful",
+    "installationAttribution": "The earlier Codex attempt stopped before installation. A later independent inspection found alpha23 installed; installer attribution is not established."
+  }
 }

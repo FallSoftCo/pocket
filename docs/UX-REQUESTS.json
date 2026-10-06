@@ -564,10 +564,11 @@
     },
     {
       "id": "inline-immersion-auto-cycle",
-      "status": "implementing-alpha24",
+      "status": "qualified-alpha24-installing-phone",
       "requirement": "Single-flow inline replacements automatically fade between target and source with reserved longer-form geometry and length-based timing. No parallel lines, subtitles or modal. Tap holds the phrase; speech holds its displayed snapshot.",
-      "candidate": "e5f8b47",
-      "coordination": "OZZZ direction shared in authorized message35553; no Stack mode added to NextComp."
+      "candidate": "990d448",
+      "coordination": "OZZZ direction shared in authorized message35553; no Stack mode added to NextComp.",
+      "evidence": "Exact final signed APK qualified on native Android at normal and 2× text, reduced motion, stable paragraph/control bounds, long unequal variants, attached punctuation, hold/link/resume and captured speech recreation. See docs/qualification/inline-cycling-team-alpha24.json. Automatic cycles use cached plans without inference calls."
     },
     {
       "id": "durable-shared-computer-use-task-adapter",
@@ -578,17 +579,17 @@
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "330d1fa",
+    "latest_pushed_commit": "990d448",
     "published_release": "v0.5.0-alpha.23",
-    "server_tests": 199,
-    "android_tests": 106,
-    "phone_endpoint": "Termux SSH over Tailscale works; automation listener offline and both previously authorized ADB endpoints unavailable",
+    "server_tests": 204,
+    "android_tests": 121,
+    "phone_endpoint": "Termux SSH over Tailscale and authenticated automation listener reachable",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
     "owned_emulator": "Owned5562 retained for next candidate; unrelated emulators preserved.",
     "owned_fixture_port": "Owned19988 synthetic recovery fixture retained for next candidate; shared ADB servers preserved.",
-    "installed_development_version": "0.5.0-alpha.22 (versionCode40 independently verified)",
+    "installed_development_version": "0.5.0-alpha.24 / code42; installed APK independently matches qualified d7ffed45 candidate",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
@@ -597,19 +598,19 @@
     "phone_install": "Phonecode36/basehash independentlyverified before on-deviceCodex update38 attempt; SSHconnectiondroppedbefore finalresult. Code38installation notclaimed.",
     "qualification": "Alpha15 version32:146 backend tests,66 Android tests,debug/release lint and signing pass. Actual anchoredpopup, directswitch/inline targetreply, keyboardavoidance, contrast andfont2 labels qualified.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
-    "gallery_review": "Five alpha23 synthetic recovery/filter captures published to main gallery. Full desktop/mobile/reduced-motion/reload checks pass.",
+    "gallery_review": "Alpha24 reviewed native cycling motion, normal/2× text, unequal long variants and speech snapshot published. Full gallery desktop/mobile/reduced-motion/reload check passed (1748 cards).",
     "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
     "update_delivery": "Alpha20/code38 privatecompatiblevariants published; one deduplicated updateannouncement421 acceptedbyFCM; actualhandsetacknotclaimed.",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
     "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21–39ms. No active-session reset.",
     "immersion_next": "Strong working-language Italian with normal-size contextual English rescue and all workflow/speech/public-thought coverage is in progress; docs/ITALIAN-VIRTUAL-IMMERSION.md records exactrequest andaudit.",
-    "phone_access": "Termux SSH works. Automation listener currently refuses connections; phone-side Accessibility restoration requested. No Wi-Fi/Tailscale or security settings changed.",
-    "backend_runtime": "Alpha23 live, connected, no problem. 199 backend tests pass.",
-    "native_validation": "Alpha23 signed debug/release; 106 Android tests, both lint variants and clean-checkout CI pass. Exact debug candidate qualified in 13 native synthetic recovery/filter cases.",
-    "pending_phone_update": "Verified alpha23/code41 same-signer APK transferred. Phone Codex verified hash/certificate but stopped before installation because Accessibility access is unavailable.",
+    "phone_access": "SSH and authenticated automation work; no networking or security settings changed.",
+    "backend_runtime": "Alpha24 live, connected, no problem; Codex and Losangelex configured and available.",
+    "native_validation": "Alpha24 final signed debug/release, 121 Android tests, both lint variants and successful clean-checkout CI. Native inline cycling and team controls qualified.",
+    "pending_phone_update": "Installation completed and exact installed hash verified; post-install pairing/session inspection in progress.",
     "conversation_context": "Alpha23 Important/All filters the same transcript; direct Retry/Edit/Remove, immediate acknowledgements despite failed history, one speech control, preserved drafts/IME and source navigation qualified on native emulator.",
-    "qualified_build": "0.5.0-alpha.23 / code41"
+    "qualified_build": "0.5.0-alpha.24 / code42"
   },
   "remaining": [
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",

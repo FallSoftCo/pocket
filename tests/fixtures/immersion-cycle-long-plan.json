@@ -1,0 +1,108 @@
+{
+  "text": "Please rivedi la cronologia pi\u00f9 recente del coordinatore, then review due nuove sessioni. Read [the guide](http://127.0.0.1:19992/guide) and run `git status`.",
+  "spans": [
+    {
+      "start": 7,
+      "end": 57,
+      "targetSegments": [],
+      "source": "review the latest coordinator conversation history",
+      "target": "rivedi la cronologia pi\u00f9 recente del coordinatore",
+      "note": "",
+      "unit": "phrase"
+    },
+    {
+      "start": 71,
+      "end": 87,
+      "targetSegments": [
+        {
+          "start": 0,
+          "end": 3,
+          "target": "due",
+          "meaning": "two",
+          "role": "numeral",
+          "features": [
+            {
+              "name": "gender",
+              "value": "feminine"
+            },
+            {
+              "name": "number",
+              "value": "plural"
+            }
+          ],
+          "relations": []
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "target": " ",
+          "meaning": "",
+          "role": "separator",
+          "features": [],
+          "relations": []
+        },
+        {
+          "start": 4,
+          "end": 9,
+          "target": "nuove",
+          "meaning": "new",
+          "role": "adjective",
+          "features": [
+            {
+              "name": "gender",
+              "value": "feminine"
+            },
+            {
+              "name": "number",
+              "value": "plural"
+            }
+          ],
+          "relations": [
+            {
+              "kind": "agreesWith",
+              "toSegment": 4,
+              "note": ""
+            }
+          ]
+        },
+        {
+          "start": 9,
+          "end": 10,
+          "target": " ",
+          "meaning": "",
+          "role": "separator",
+          "features": [],
+          "relations": []
+        },
+        {
+          "start": 10,
+          "end": 18,
+          "target": "sessioni",
+          "meaning": "sessions",
+          "role": "noun",
+          "features": [
+            {
+              "name": "gender",
+              "value": "feminine"
+            },
+            {
+              "name": "number",
+              "value": "plural"
+            }
+          ],
+          "relations": []
+        }
+      ],
+      "source": "two new sessions",
+      "target": "due nuove sessioni",
+      "note": "Nuove agrees with the feminine plural sessioni.",
+      "unit": "phrase"
+    }
+  ],
+  "planVersion": "inline-replacement-v3",
+  "version": "89140ecb186109ef5e0730cd69170f05f16f7893c8e6b1320fe2c5c295d3b0bb",
+  "original": "Please review the latest coordinator conversation history, then review two new sessions. Read [the guide](http://127.0.0.1:19992/guide) and run `git status`.",
+  "id": "row:synthetic/source-answer",
+  "density": "strong",
+  "language": "it"
+}
