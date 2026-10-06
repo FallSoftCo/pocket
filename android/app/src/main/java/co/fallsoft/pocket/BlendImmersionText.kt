@@ -30,6 +30,8 @@ import kotlin.math.max
     val inherited=LocalTextStyle.current
     val style=inherited.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,textAlign=textAlign))
     val normalPaint=remember{Paint()}
+    val sourcePaint=remember{Paint()}
+    val targetPaint=remember{Paint().apply{blendMode=BlendMode.Plus}}
     val invisible=remember(snapshot){buildAnnotatedString {
         append(snapshot.text)
         snapshot.spanStyles.forEach{addStyle(it.item.copy(color=Color.Transparent,background=Color.Transparent,shadow=null,textDecoration=TextDecoration.None),it.start,it.end)}
@@ -58,9 +60,15 @@ import kotlin.math.max
                 else {
                     // Isolate additive composition from the opaque application background.
                     // Complementary weights keep coincident unchanged glyphs at full contrast.
-                    drawContext.canvas.saveLayer(Rect(Offset.Zero,size),normalPaint)
-                    drawText(a,alpha=1f-p)
-                    drawText(b,alpha=p,blendMode=BlendMode.Plus)
+                    val bounds=Rect(Offset.Zero,size)
+                    sourcePaint.alpha=1f-p;targetPaint.alpha=p
+                    drawContext.canvas.saveLayer(bounds,normalPaint)
+                    drawContext.canvas.saveLayer(bounds,sourcePaint)
+                    drawText(a)
+                    drawContext.canvas.restore()
+                    drawContext.canvas.saveLayer(bounds,targetPaint)
+                    drawText(b)
+                    drawContext.canvas.restore()
                     drawContext.canvas.restore()
                 }
             }
