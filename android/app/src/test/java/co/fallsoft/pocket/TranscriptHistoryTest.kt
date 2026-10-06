@@ -54,4 +54,21 @@ class TranscriptHistoryTest {
         assertEquals(TranscriptCursor("turn-0",false),retainedTranscriptCursor(oldest,true,true,false,TranscriptCursor("turn-0",false)))
         assertEquals(fresh,retainedTranscriptCursor(TranscriptCursor(null,false),false,false,false,fresh))
     }
+    @Test fun freshlyDiscoveredInteriorRowsStayBeforeTheExistingTurnEnd(){
+        val cached=listOf(Row("header"),Row("user"),Row("end"))
+        val fresh=listOf(Row("header"),Row("user"),Row("answer"),Row("tool"),Row("end"))
+        assertEquals(fresh.map{it.id},merge(cached,fresh).map{it.id})
+    }
+    @Test fun multipleNewTailRowsRemainOrderedBeforeTheNextRetainedTurn(){
+        val cached=listOf(Row("header"),Row("user"),Row("later-header"),Row("later-user"))
+        val fresh=listOf(Row("header"),Row("user"),Row("answer"),Row("tool"),Row("end"))
+        assertEquals(listOf("header","user","answer","tool","end","later-header","later-user"),merge(cached,fresh).map{it.id})
+    }
+    @Test fun overlappingMiddleBridgeFillsOnlyTheMissingInterval(){
+        val retained=(0..7).map{Row("$it/header")}+(16..23).map{Row("$it/header")}
+        val bridge=(4..15).map{Row("$it/header")}
+        val merged=mergeTranscriptPage(retained,bridge,false,{it.id},{it.version},"16/header")
+        assertEquals((0..23).map{"$it/header"},merged.map{it.id})
+        assertEquals(24,merged.size)
+    }
 }
