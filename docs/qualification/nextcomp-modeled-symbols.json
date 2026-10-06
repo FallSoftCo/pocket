@@ -122,7 +122,7 @@
       "mobile": true,
       "reducedMotion": true,
       "reload": true,
-      "cards": 1787
+      "cards": 1788
     },
     "phonePreflight": {
       "installedVersionCode": 46,
@@ -132,7 +132,7 @@
       "adbAvailable": false,
       "foldFramePacing": "Unqualified: no authorized ADB shell currently available."
     },
-    "buildAndDelivery": "Root builds and synthetic qualification passed; phone transfer/install verification in progress.",
+    "buildAndDelivery": "Root-signed alpha29 published and compatible update47 offered; phone installer stopped at locked device without opening installer.",
     "android": {
       "debugTests": 156,
       "releaseTests": 156,
@@ -185,6 +185,33 @@
       },
       "framePacingMeasured": false,
       "phonePerformanceQualified": false
-    }
+    },
+    "sourceCommit": "90dafda24cb7ace5a404d92798f78505af1c5d98",
+    "releaseUrl": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.29",
+    "anonymousDownload": {
+      "sha256": "635406191af76272583e84f5c291c5df869b653dde10a95b1b708f6358caf4e2",
+      "matchesQualifiedApk": true
+    },
+    "updateAnnouncement": {
+      "versionCode": 47,
+      "notificationId": 528,
+      "announced": 1,
+      "pushEnabled": true,
+      "handsetFcmReceipt": "unverified"
+    },
+    "galleryReview": "/8bar/#nextcomp-alpha29-production-native",
+    "phoneDelivery": {
+      "candidateVersionCode": 47,
+      "candidateSha256": "c38afb9bbb69465c3e7a2d5b4a7697975d5e9346f8431393ea8cc3df736f7262",
+      "fullRemoteHashAndSizeVerified": true,
+      "apk": "Download/NextComp-alpha29-47.apk",
+      "status": "device_locked",
+      "installerAttempts": 0,
+      "installedVersionCode": 46,
+      "installedAlpha28Sha256": "c02839bb55eceb2556c881b841aad6ead2f7d70bba4eb7059b85e28180f6da0d",
+      "pairingDraftsSecurityNetworkChanged": false,
+      "foldFramePacing": "unqualified; no authorized ADB shell"
+    },
+    "cleanup": "Owned synthetic emulator stopped after restoring baseline preferences and animator0/font1; owned fixture stopped; unrelated emulator and shared ADB preserved."
   }
 }

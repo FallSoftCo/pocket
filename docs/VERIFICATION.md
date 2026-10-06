@@ -245,3 +245,15 @@ See [the versioned qualification](qualification/nextcomp-modeled-symbols.json)
 and [portable evidence](../branding/modeled/qualification/). Original private
 receipts were retained outside the repository, while publication removes local
 deployment references without changing decoded review-image pixels.
+
+Alpha29 was published from90dafda with the maintained public signer. An anonymous
+release download matches SHA256
+`635406191af76272583e84f5c291c5df869b653dde10a95b1b708f6358caf4e2`.
+Both maintained update variants are offered as code47; announcement528 was sent
+once. Sender acceptance is not handset FCM receipt. The compatible phone APK
+`c38afb9bbb69465c3e7a2d5b4a7697975d5e9346f8431393ea8cc3df736f7262`
+passed full remote hash/size checks in Downloads. Phone-local Codex stopped at
+`device_locked` without opening the installer; the installed app remains the
+verified alpha28/code46. No pairing, draft, security or network changes occurred.
+The synthetic gallery passes desktop/mobile/reduced-motion/reload checks with
+1788 cards. Owned emulator/fixture cleanup preserves shared ADB and unrelated work.
