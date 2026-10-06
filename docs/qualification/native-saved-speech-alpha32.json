@@ -40,10 +40,22 @@
     "No physical Fold cadence, secure keyguard, Bluetooth or overnight Doze qualification.",
     "Fresh generation buffers each chunk and requires available native account transport; unavailable rendering pauses for direct retry/clear without offline fallback.",
     "Cancellation before negotiated id arrives can retain an orphan until90-second lease.",
-    "Actual handset installed48; update50 delivery separately verified."
+    "Cold screen-off test began with manual Speak, not an actual push event; end-to-end real-device push receipt remains separate.",
+    "Public optimized provider protocol/blob not independently inspected; direct native protocol inspection used the exact debug production gate."
   ],
   "release": {
-    "state": "Qualified candidate; clean-checkout CI and production publication pending"
+    "source": "ad68f6d2b72698f8ea99a2cb60861c9aa696b6ff",
+    "cleanCheckoutCi": 37515525400,
+    "backendAndAndroid": "success",
+    "inAppVersionCode": 50,
+    "maintainedSigningVariants": 2,
+    "announcementId": 569,
+    "pushEnabled": true,
+    "handsetReceipt": "unverified",
+    "publicState": "Published prerelease v0.5.0-alpha.32",
+    "scopedBridgeRestart": "Healthy, connected true; stock Codex worker runtime not restarted.",
+    "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.32",
+    "anonymousDownloadSha256": "aba178fa74305ec031a86b0285f9dce40204c91108c238380ac4def857c47b7e"
   },
   "gallery": {
     "cards": [
@@ -52,5 +64,14 @@
     ],
     "checks": "1850 cards; desktop/mobile, assets, reduced motion and reload pass"
   },
-  "cleanup": "Owned emulator/fixture stopped, initial app absence and settings restored; unrelated devices preserved."
+  "cleanup": "Owned emulator/fixture stopped, initial app absence and settings restored; unrelated devices preserved.",
+  "phone": {
+    "stagedVersionCode": 50,
+    "stagedChecksumAndSizeVerified": true,
+    "installedVersionCode": 49,
+    "installedBaseSha256": "ce1e43d7b3c84547620f23dba5c7c8168f2e679d6033c2006357697ce5f69a75",
+    "installationActor": "unknown; independently observed",
+    "automationListener": "Connection refused before authentication; no settings changed",
+    "installerAttempts": 0
+  }
 }
