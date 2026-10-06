@@ -15,6 +15,9 @@ import androidx.compose.ui.unit.*
     fontSize:TextUnit,lineHeight:TextUnit,color:Color,fontWeight:FontWeight?,maxLines:Int,
     overflow:TextOverflow,cycle:ImmersionCycleRender
 ){
+    val partId=remember {java.util.UUID.randomUUID().toString()}
+    val visibilityReport by rememberUpdatedState(cycle.reportVisible)
+    DisposableEffect(partId){onDispose{visibilityReport(partId,emptySet())}}
     fun alternate(base:AnnotatedString,next:ImmersionPresentation):AnnotatedString {
         val marks=base.getStringAnnotations("immersion-reserve",0,base.length)
         val replacements=marks.mapNotNull{range->
@@ -47,7 +50,8 @@ import androidx.compose.ui.unit.*
     val progress:()->Float=if(cycle.cueActive)cycle.cueProgress else ({1f})
     BlendImmersionText(from,to,progress,content,
         fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
-        maxLines=maxLines,overflow=overflow,fillWidth=true,reserve=forms)
+        maxLines=maxLines,overflow=overflow,fillWidth=true,reserve=forms,
+        onVisibleRanges={ids,_->visibilityReport(partId,ids)})
 }
 
 /** Replacements retain surrounding rich styles; internal styles come from their own exact Markdown. */

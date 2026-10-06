@@ -7,6 +7,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -18,7 +20,8 @@ import androidx.compose.ui.unit.*
     modifier:Modifier=Modifier,fontSize:TextUnit=17.sp,lineHeight:TextUnit=26.sp,
     color:Color=Paper,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,
     overflow:TextOverflow=TextOverflow.Clip,textAlign:TextAlign=TextAlign.Start,
-    fillWidth:Boolean=false,reserve:List<AnnotatedString> = emptyList()
+    fillWidth:Boolean=false,reserve:List<AnnotatedString> = emptyList(),
+    onVisibleRanges:((Set<String>,Boolean)->Unit)?=null
 ){
     val measurer=rememberTextMeasurer()
     val density=androidx.compose.ui.platform.LocalDensity.current
@@ -30,6 +33,16 @@ import androidx.compose.ui.unit.*
     val changed=remember(from,to){immersionChangedTextRanges(from,to)}
     val ranges=if(incoming)changed.second else changed.first
     var layout by remember {mutableStateOf<TextLayoutResult?>(null)}
+    var coordinates by remember {mutableStateOf<LayoutCoordinates?>(null)}
+    val visibilityCallback by rememberUpdatedState(onVisibleRanges)
+    var lastVisibility by remember {mutableStateOf<Pair<Set<String>,Boolean>?>(null)}
+    fun reportVisibility(){
+        val value=immersionVisibleText(layout,coordinates)
+        if(value!=lastVisibility){lastVisibility=value;visibilityCallback?.invoke(value.first,value.second)}
+    }
+    // The callback owner can change while geometry stays unchanged (navigation).
+    SideEffect{visibilityCallback?.invoke(lastVisibility?.first?:emptySet(),lastVisibility?.second?:false)}
+    DisposableEffect(Unit){onDispose{visibilityCallback?.invoke(emptySet(),false)}}
     BoxWithConstraints(modifier){
         val available=constraints.maxWidth.coerceAtLeast(1)
         fun measure(text:AnnotatedString,width:Int,fixed:Boolean=false)=measurer.measure(immersionDrawText(text),style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(minWidth=if(fixed)width else 0,maxWidth=width))
@@ -39,7 +52,7 @@ import androidx.compose.ui.unit.*
         val height=forms.maxOf{measure(it,width,true).size.height}.coerceAtLeast(1)
         Box(Modifier.size(with(density){width.toDp()},with(density){height.toDp()})){
             Text(visible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
-                onTextLayout={layout=it},modifier=Modifier.fillMaxWidth().drawBehind{
+                onTextLayout={layout=it;reportVisibility()},modifier=Modifier.fillMaxWidth().onGloballyPositioned{coordinates=it;reportVisibility()}.drawBehind{
                     val current=layout
                     val cue=immersionInkPhase(progress()).cue
                     if(cue>0f&&current?.layoutInput?.text==visible){
