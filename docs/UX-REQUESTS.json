@@ -612,8 +612,8 @@
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "c80301b",
-    "published_release": "v0.5.0-alpha.27",
+    "latest_pushed_commit": "29900f1",
+    "published_release": "v0.5.0-alpha.28",
     "server_tests": 206,
     "android_tests": 137,
     "phone_endpoint": "Termux SSH over Tailscale and authenticated automation listener reachable",
@@ -628,7 +628,7 @@
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 native readable swivels and full 360 Codex/thinking spins integrated; shared bounded cache and reduced-motion fallback",
-    "phone_install": "Bounded phone Codex attempts preserved settings/content; follow-up found code45 already installed. Root independently verified exact base.apk hash. Installer confirmation actor unknown. Phone Codex observed existing Connesso/Connected workstation; later root UI read found ChatGPT foreground and left it alone.",
+    "phone_install": "Bounded phone-local Codex verified downloaded code46 APK, then stopped because Accessibility service disconnected. No installer or settings/data changes. Root independently verified phone still matches exact alpha27/code45 base hash after the attempt.",
     "qualification": "Alpha27:206 backend tests,137 Android tests, both lints and clean-checkout CI pass. Exact native1x/2x ink handoff and touch/IME/reduced-motion/support-off/source-hold/link checks pass. Public optimized fresh-install/native pairing/handoff pass. See versioned qualification.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Three current synthetic alpha27 native ink motion/normal/large-text reviews published; full desktop/mobile/reduced-motion/reload check passes,1766 cards.",
@@ -644,7 +644,7 @@
     "pending_phone_update": null,
     "conversation_context": "Installed alpha26 retains Important/All transcript filtering and recovery; persistent state and faster cached reopening qualified. No real messages sent during release QA.",
     "qualified_build": "0.5.0-alpha.26 / code44",
-    "candidate_release": "v0.5.0-alpha.28 / code46; qualified and update46 offered, phone remains45 because existing Accessibility control disconnected",
+    "candidate_release": "v0.5.0-alpha.28 / code46 published and compatible update46 offered; phone remains45 because existing Accessibility control disconnected",
     "candidate_android_tests": 153
   },
   "remaining": [

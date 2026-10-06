@@ -381,5 +381,17 @@
     "notificationId": 522,
     "pushEnabled": true,
     "phonePushReceiptVerified": false
+  },
+  "publication": {
+    "release": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.28",
+    "releaseTargetCommit": "29900f1c7ded0805de027199c6a3f9c4591a4d80",
+    "publicSha256": "96796cc8303594c318c248abc295421da8fcce9505a8ae05d4d2a34551cddcea",
+    "unauthenticatedDownloadHashVerified": true,
+    "sourceCodeCI": {
+      "commit": "4e00850b3d71cb8b6a5da1217c101061c8b67fdf",
+      "run": 37408282557,
+      "conclusion": "success"
+    },
+    "qualificationDocsCI": "Runs37411735998 and37411821422 on29900f1 pending at publication; changes after the qualified source are documentation only."
   }
 }
