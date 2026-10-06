@@ -260,3 +260,43 @@ The synthetic gallery passes desktop/mobile/reduced-motion/reload checks with
 
 Clean-checkout GitHub Actions run37424257956 passed both backend and Android
 jobs on exact alpha29 source90dafda. Subsequent delivery/evidence edits are docs only.
+
+## Alpha30 stale speech and conversation scrolling
+
+Saved notification speech had been appended as a synthetic newest transcript row,
+including paused older responses. The native alpha29 baseline reproduced this
+with50,000 characters: stale speech dominated the viewport and displaced actual
+new replies. Alpha30 removes playback text from the transcript entirely. Current
+actively spoken same-session chunks have a bounded two-line preview with direct
+Pause/Resume and Clear in the existing monitor. Paused, completed, dismissed,
+stale-ID and other-session captions do not appear there. Visible transcript keys
+use derived state so scroll offsets do not trigger that whole computation.
+
+The exact compatible code48 APK passed normal and2x native regression checks:
+the stale passage is absent, actual replies remain last, twelve injected timeline
+updates are followed, and scrolling reaches earlier real replies. Clear preserves
+the exact typed draft, composer bounds and open keyboard. The active-audio branch
+has policy/unit coverage; this native run did not use provider audio or measure
+physical-phone frame pacing.157 tests pass per Android variant, both signed
+builds/lints pass, and clean-checkout CI37481080466 passes backend and Android on
+source1acfd6b. All168 modeled animation pages and dynamic resource names remain
+unchanged and retained. Four synthetic reviews are published in the main gallery;
+its desktop/mobile/reduced-motion/reload checks pass1824 cards. Owned emulator
+and fixtures stopped; original font/animation settings and unrelated work preserved.
+
+Alpha30 is published with the maintained public certificate. The anonymous
+download matches `87fb6eaea4494f95d28ecbf885e18feaeae2012af268b49a7a516e7604528a27`.
+Compatible update48 is offered; announcement546 was sent once. Sender acceptance
+is not handset receipt. Phone deployment is reported in the
+[versioned qualification](qualification/stale-speech-alpha30.json).
+
+The compatible code48 APK passed full remote hash/size checks in Downloads.
+An initial phone-local task stopped at a notification shade, which was a model
+interpretation rather than an explicit authorization restriction. The corrected
+ordinary-installer task lost its SSH connection before returning a result; bounded
+independent reconnects refused TCP8022. The required phone-adb fallback found
+no verified TCP or authorized USB route. Installation is therefore **unverified**,
+not reported as failed or successful. Last independent package read was exact
+alpha29/code47. No installer was repeated after access loss, and the workstation
+did not change network/security settings. Read the actual native task result and
+fresh installed package before deciding whether another installation is needed.

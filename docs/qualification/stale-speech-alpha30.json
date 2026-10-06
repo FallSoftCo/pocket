@@ -1,0 +1,145 @@
+{
+  "version": "0.5.0-alpha.30",
+  "versionCode": 48,
+  "sourceCommit": "1acfd6b8f655502b2ab51c85c295d717278240c9",
+  "problem": "Saved same-session speech was unconditionally appended as the newest transcript row, including paused stale text; live replies followed that synthetic row.",
+  "fix": [
+    "Speech playback never appends a transcript row.",
+    "Only actively speaking, current-ID, known same-session captions appear as a bounded2-line Unicode-safe preview.",
+    "Direct pause/resume and Clear share existing monitor.",
+    "Visible row keys use derived state rather than observing every scroll offset in composition."
+  ],
+  "tests": {
+    "debug": 157,
+    "release": 157,
+    "debugLint": "pass",
+    "releaseLint": "pass",
+    "signedBuilds": "pass",
+    "cleanCheckoutCi": {
+      "run": 37481080466,
+      "backend": "success",
+      "android": "success"
+    }
+  },
+  "artifacts": [
+    {
+      "kind": "public",
+      "sha256": "87fb6eaea4494f95d28ecbf885e18feaeae2012af268b49a7a516e7604528a27",
+      "size": 51790971,
+      "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "motionPages": 168,
+      "allMotionNamesAndPayloadsRetained": true
+    },
+    {
+      "kind": "phone",
+      "sha256": "d5a9bb7bbf2842880e366e3cf6d49a92c56ada9eb6a8ed8a4aa245c2d8a41273",
+      "size": 61045980,
+      "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "motionPages": 168,
+      "allMotionNamesAndPayloadsRetained": true
+    }
+  ],
+  "native": {
+    "version": "0.5.0-alpha.30",
+    "versionCode": 48,
+    "source": "1acfd6b8f655502b2ab51c85c295d717278240c9",
+    "apkSha256": "d5a9bb7bbf2842880e366e3cf6d49a92c56ada9eb6a8ed8a4aa245c2d8a41273",
+    "apkBytes": 61045980,
+    "baselineApkSha256": "c38afb9bbb69465c3e7a2d5b4a7697975d5e9346f8431393ea8cc3df736f7262",
+    "synthetic": true,
+    "emulator": 5562,
+    "fixturePort": 19996,
+    "pausedSpeechCharacters": 50000,
+    "normal": {
+      "oldStaleNodeBounds": "[47,136][1033,1508]",
+      "newStaleTextAbsent": true,
+      "originalReplyBounds": "[47,512][1033,638]",
+      "newestReplyBounds": "[47,761][1033,950]",
+      "resumeAndClearVisible": true
+    },
+    "clear": {
+      "draft": "DraftKeep",
+      "beforeAndAfterComposerBounds": "[257,1078][836,1204]",
+      "inputShownAfter": true,
+      "queueControlsRemoved": true
+    },
+    "largeText": {
+      "fontScale": 2.0,
+      "newStaleTextAbsent": true,
+      "injectedReplies": 12,
+      "latestVisibleReply": 12,
+      "afterSwipeVisibleReplies": [
+        8,
+        9,
+        10
+      ],
+      "latestControlVisible": true
+    },
+    "limitations": [
+      "No actual provider audio or active Speaking-caption native exercise; policy unit tests own that branch.",
+      "No physical phone/scroll frame pacing measurement.",
+      "Software emulator layout and navigation evidence, not display performance qualification."
+    ],
+    "captures": {
+      "new-large-scroll.png": "87f41cc5239efc6c800300473ac616a244956cc2101aaf115f18ea53cef2e034",
+      "composer-after-clear.png": "ca4eca43d79f2c1fdc872ab52e37b65b044dd93328a233cf7f7ad37a63f92232",
+      "new-live.png": "4ab08baf1a8828cf3306fbda43edd4017f53f6532d89ffb7715393f47a7efd86",
+      "new-large.png": "2f1ab21eb384a5585a09e4bc91115cdff71e924797afd2f3150c2de962f6582b",
+      "old.png": "ec7f15c9cce0678f337726df428d1b3ec24ddbd8c55790aa852a603f77e37b06",
+      "composer-before-clear.png": "e96ac0d8f17ea2905f29da759adf3ffc6685598b045bc23835a973d20f94142e",
+      "new-paused.png": "1a66b4d31a973e20be543e7776d3840a9549abe198db0005c39f44f091fb8355",
+      "new-large-latest.png": "af3c712483a74506d11e2a374df2295f6ea11d39babe0f997a52916040cae275"
+    },
+    "gallery": {
+      "cards": 1824,
+      "desktop": true,
+      "mobile": true,
+      "reducedMotion": true,
+      "automaticReload": true,
+      "reviewIds": [
+        "nextcomp-alpha30-new-live",
+        "nextcomp-alpha30-composer-after-clear",
+        "nextcomp-alpha30-new-large-latest",
+        "nextcomp-alpha30-old"
+      ]
+    },
+    "cleanup": {
+      "ownedEmulator5562Stopped": true,
+      "fixture19996AndControl19998Stopped": true,
+      "otherEmulator5556Preserved": true,
+      "fontScaleRestored": 1.0,
+      "animatorScaleRestored": 0,
+      "syntheticCreatedPreferencesRemoved": true
+    }
+  },
+  "phone": {
+    "candidateVersionCode": 48,
+    "candidateSha256": "d5a9bb7bbf2842880e366e3cf6d49a92c56ada9eb6a8ed8a4aa245c2d8a41273",
+    "fullRemoteHashAndSizeVerified": true,
+    "stagedFile": "Download/NextComp-alpha30-48.apk",
+    "initialNativeTask": "Stopped in notification shade without actions; shade alone was a model interpretation, not an explicit policy requirement.",
+    "followup": "Ordinary unlocked shade navigation authorized; SSH connection closed during corrected installer task before result. Bounded independent reconnects refused TCP8022.",
+    "currentInstalledIdentity": "Unknown after access interruption.",
+    "lastIndependentlyVerifiedVersionCode": 47,
+    "lastIndependentlyVerifiedSha256": "c38afb9bbb69465c3e7a2d5b4a7697975d5e9346f8431393ea8cc3df736f7262",
+    "adbFallback": "Required phone-adb helper found neither verified TCP5555 nor authorized Pixel USB on available servers.",
+    "installerRepeatedAfterAccessLoss": false,
+    "networkSecuritySettingsChangedByWorkstation": false,
+    "nativeAttemptResultPendingIndependentRead": true
+  },
+  "limitations": [
+    "Native software emulator observations are not phone frame-pacing measurements.",
+    "Physical deployment and notification receipt need independent evidence."
+  ],
+  "release": {
+    "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.30",
+    "target": "1acfd6b8f655502b2ab51c85c295d717278240c9",
+    "anonymousDownloadHash": "87fb6eaea4494f95d28ecbf885e18feaeae2012af268b49a7a516e7604528a27",
+    "matchesQualifiedPublicApk": true,
+    "updateVersionCode": 48,
+    "announcementId": 546,
+    "announced": 1,
+    "pushEnabled": true,
+    "handsetFcmReceipt": "unverified"
+  }
+}
