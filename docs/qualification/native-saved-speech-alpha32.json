@@ -1,0 +1,56 @@
+{
+  "version": "0.5.0-alpha.32",
+  "versionCode": 50,
+  "implementation": "Native account speech rendering for notifications/manual Speak, separate purpose lane, cached playback with direct controls, no microphone and no task submission. Correct observed native turn protocol and full supplied passage gate.",
+  "tests": {
+    "backend": 216,
+    "androidPerVariant": 162,
+    "suitesPerVariant": 36,
+    "bothLintAndSignedBuilds": "pass",
+    "publicSourceScan": "pass",
+    "motionAtlasNamesAndPayloads": "168 retained byte exact in both APKs"
+  },
+  "apks": [
+    {
+      "kind": "public",
+      "size": 51791515,
+      "sha256": "aba178fa74305ec031a86b0285f9dce40204c91108c238380ac4def857c47b7e",
+      "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf"
+    },
+    {
+      "kind": "phone",
+      "size": 61013832,
+      "sha256": "db93804c8e840204994b789dd115edc961b19752de700d64727791efd718463b",
+      "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"
+    }
+  ],
+  "actualNativeProvider": {
+    "authorizedAndroidStarts": 2,
+    "taskSubmissions": 0,
+    "microphonePermission": "denied",
+    "foreground": "Matching assistant native turn done and full authored transcript;111596B WebM/Opus mono48k;7.719436sec. MediaSession playing, Pause/Resume/Clear and unchanged draft/IME. Cached background resume without additional provider start.",
+    "coldBackground": "Exact public optimized APK: Home and screen off before gated provider release; actual media playback foreground service and MediaSession playing while device asleep. Audio completed; draft/IME restored on return.",
+    "paidApiKey": "No paid API environment in owned fixture; existing ChatGPT account native transport.",
+    "visualReview": "Root inspected original-resolution foreground frame; synthetic screenshots published in main8bar by qualifying agent.",
+    "coldRenderLatencySeconds": 15.425,
+    "coldPlaybackSeconds": 13.425
+  },
+  "limitations": [
+    "No independent listening, ASR, pronunciation or billing/grant-debit claim.",
+    "No physical Fold cadence, secure keyguard, Bluetooth or overnight Doze qualification.",
+    "Fresh generation buffers each chunk and requires available native account transport; unavailable rendering pauses for direct retry/clear without offline fallback.",
+    "Cancellation before negotiated id arrives can retain an orphan until90-second lease.",
+    "Actual handset installed48; update50 delivery separately verified."
+  ],
+  "release": {
+    "state": "Qualified candidate; clean-checkout CI and production publication pending"
+  },
+  "gallery": {
+    "cards": [
+      "nextcomp-alpha32-native-foreground",
+      "nextcomp-alpha32-native-cold-public"
+    ],
+    "checks": "1850 cards; desktop/mobile, assets, reduced motion and reload pass"
+  },
+  "cleanup": "Owned emulator/fixture stopped, initial app absence and settings restored; unrelated devices preserved."
+}

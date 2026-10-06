@@ -1,5 +1,5 @@
 {
-  "status": "Corrected native-turn protocol candidate; final production gate/audio and Android service qualification pending, do not ship yet",
+  "status": "Integrated alpha32 production gate qualified through actual Android native account provider; physical phone delivery separate",
   "base": "a00616c",
   "purpose": "Replace ordinary notification and manual Speak offline TTS primary rendering with existing ChatGPT-authenticated native Codex speech, independent of full voice mode.",
   "implementation": [
@@ -25,16 +25,15 @@
     "tests/native-speech-capture.test.mjs"
   ],
   "checks": {
-    "node": "33 focused tests pass, including7 saved capture boundary regressions",
-    "android": "FINAL frozen corrected native-turn/cached-error recovery source: both variants compile, each160 tests/36 suites with0failures/errors; lintDebug and lintRelease pass2m07s. No APK assembly or provider execution of exact gate yet.",
-    "provider": "First authorized probe failed closed on assumed response events; second diagnostic probe observed native turn.created/done and captured123466-byte Opus mono48k audio8.277256sec. Exact authored provider final transcript ends silver lantern. Diagnostic stop was not the final production gate; no independent listening/ASR claim.",
-    "production": "no restart, release, version or signing changes"
+    "node": "216 full backend tests pass",
+    "android": "Both maintained signed builds and lint variants pass; each162 tests/36 suites with zero failures.",
+    "provider": "Exact corrected production gate passed through Android foreground and cold background/screen-off on public optimized APK; full authored assistant transcript and matching native turn required. No microphone permission or controller task.",
+    "production": "Root owns release and scoped bridge restart; no stock session restart."
   },
   "limitations": [
     "Native Codex audio remains experimental and depends on account/CLI compatibility; exact grant/account debit not measured.",
-    "Observed native turn.done carries id, role, start_ms, end_ms and final transcript, no status field. Saved gate checks exact known turn identity and normalized full requested passage; numerator digits versus spoken word expansion may fail visibly rather than silently accept omissions. Actual exact production-gate/headless and Android renderer background qualification remain required.",
+    "Native assistant turn id, role, complete normalized transcript and tail timestamps verified. Spoken number expansion may fail visibly rather than accepting incomplete content.",
     "Buffered full chunk delays first speech by provider generation plus silence tail and negotiation each chunk.",
-    "Hidden WebView/AudioContext/MediaRecorder/background/screen-off behavior must be independently qualified for this playback-only service, not assumed from full voice mode.",
     "No physical lockscreen/Bluetooth/readability or pronunciation quality claim."
   ],
   "acceptancePlan": [
