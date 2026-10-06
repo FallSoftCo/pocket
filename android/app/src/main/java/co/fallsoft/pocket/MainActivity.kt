@@ -288,7 +288,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
 }
 @Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis()){
-    val active=t.status in listOf("active","pending");val activityTime=maxOf(if(t.updated<100000000000L)t.updated*1000 else t.updated,t.activityAt);val ageColor=sessionAgeColor(activityTime,now)
+    val active=t.status in listOf("active","pending");val activityTime=sessionActivityTime(t.updated,t.activityAt);val ageColor=sessionAgeColor(activityTime,now)
     LaunchedEffect(t.preview,PocketImmersion.enabled){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
     var rename by remember(t.id){mutableStateOf(false)};var name by remember(t.id){mutableStateOf(t.title)}

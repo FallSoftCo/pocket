@@ -151,6 +151,12 @@ class LiveSessionPriorityTest {
         assertEquals(listOf(old,created),mergeLiveTaskSnapshot(listOf(old,created),listOf(old),mapOf("old" to old),false))
         assertEquals(listOf(old),mergeLiveTaskSnapshot(listOf(old,created),listOf(old),mapOf("old" to old,"new" to created),false))
     }
+    @Test fun ageAndColdRankUseWorkTimeInsteadOfLaterMetadata() {
+        assertEquals(1_000L,sessionActivityTime(999_000,1_000))
+        assertEquals(999_000L,sessionActivityTime(999,0))
+        val entries=listOf(SessionRank("metadata-only",now,false,now-900_000),SessionRank("work",1,false,now-300_000))
+        assertEquals(listOf("work","metadata-only"),liveSessionOrder(listOf("metadata-only","work"),entries,now))
+    }
     @Test fun busyOrderingIsBoundedAndNeverMovesUnderFinger() {
         val pacing=SessionListPacing().apply{record(0,1000);orderDelivered(0)}
         assertTrue(pacing.orderDue(1_200,100,false))

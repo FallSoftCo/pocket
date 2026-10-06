@@ -82,5 +82,8 @@ fun liveSessionOrder(previous: List<String>, entries: List<SessionRank>, now: Lo
         }
     }
     return stable.sortedWith(compareBy<String> { byId[it]?.let(::group) ?: Long.MAX_VALUE }
-        .thenByDescending { id -> byId[id]?.let { if (group(it) == 3L) maxOf(it.updated, it.activityAt) / 300_000 else 0 } ?: 0 })
+        .thenByDescending { id -> byId[id]?.let { if (group(it) == 3L) sessionActivityTime(it.updated,it.activityAt) / 300_000 else 0 } ?: 0 })
 }
+
+/** Known real activity takes precedence over later metadata/index timestamps. */
+fun sessionActivityTime(updated:Long,activityAt:Long):Long = if(activityAt>0)activityAt else if(updated<100_000_000_000L)updated*1000 else updated
