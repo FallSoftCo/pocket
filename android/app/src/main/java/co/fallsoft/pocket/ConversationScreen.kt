@@ -105,8 +105,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         onDispose{
             // visibleItemsInfo also includes a preceding row inside content padding.
             // Its key must not be paired with the next viewport row's scroll offset.
-            val visible=list.layoutInfo.visibleItemsInfo.firstOrNull{it.index==list.firstVisibleItemIndex&&it.key.toString() in latestRowIds}
-            val position=transcriptReadPosition(visible?.key?.toString(),list.firstVisibleItemScrollOffset,latestFollow)
+            val visible=list.layoutInfo.visibleItemsInfo.filter{it.key.toString() in latestRowIds}.map{TranscriptVisibleRow(it.index,it.key.toString())}
+            val position=transcriptReadPosition(visible,list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,latestFollow)
             if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position)
         }
     }

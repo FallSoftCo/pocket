@@ -100,10 +100,11 @@ class TranscriptHistoryTest {
     @Test fun paddingVisiblePreviousRowCannotBorrowTheNextViewportRowsOffset(){
         // End16 remains visible in content padding, while firstVisibleItemIndex
         // belongs to Header17. Capture/restore must use Header17 with its offset.
-        val position=transcriptReadPosition("header17",23,false)!!
+        val visible=listOf(TranscriptVisibleRow(0,"end16"),TranscriptVisibleRow(1,"header17"),TranscriptVisibleRow(2,"user17"))
+        val position=transcriptReadPosition(visible,1,23,false)!!
         assertEquals(1,transcriptAnchorIndex(listOf("end16","header17","user17"),position))
         assertEquals("header17",position.rowId)
         assertEquals(23,position.offset)
-        assertNull(transcriptReadPosition(null,23,false))
+        assertNull(transcriptReadPosition(visible,3,23,false))
     }
 }
