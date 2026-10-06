@@ -23,13 +23,14 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
     val ready=immersionMotionReady()
     var original by remember(readingKey){mutableStateOf(false)}
     val selectedIndex=plan.spans.indexOf(selected)
-    val effective=(if(original)plan.spans.indices.toSet()else emptySet())+listOf(selectedIndex).filter{it>=0}
+    val effective=(if(enabled&&original)plan.spans.indices.toSet()else emptySet())+listOf(selectedIndex).filter{it>=0}
     val frozen=remember(readingKey,PocketSpeech.displayedOwner,PocketSpeech.displayedText){
         if(PocketSpeech.displayedOwner==null)null else immersionCapturedOriginals(plan,PocketSpeech.displayedText)
     }
     val rendered=immersionCyclePlan(plan,frozen?:effective)
     LaunchedEffect(readingKey,enabled,ready,frozen!=null,selectedIndex){
-        if(!enabled||!ready||frozen!=null||selectedIndex>=0||plan.spans.isEmpty())return@LaunchedEffect
+        if(!enabled){original=false;return@LaunchedEffect}
+        if(!ready||frozen!=null||selectedIndex>=0||plan.spans.isEmpty())return@LaunchedEffect
         val timing=immersionCycleTiming(readingKey.toString(),plan.source,plan.text)
         var first=true
         while(isActive){delay((if(original)timing.sourceMs else timing.targetMs)+(if(first)timing.staggerMs%6000L else 0L));first=false;original=!original}
