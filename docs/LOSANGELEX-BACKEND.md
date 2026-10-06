@@ -1,6 +1,6 @@
 # Select Codex or Losangelex
 
-NextComp can connect to two execution backends in each paired environment. Choose **Codex** or **Losangelex** in the bottom backend selector. Switching changes the available interaction modes; it does not migrate or combine conversations.
+NextComp can connect to two execution backends in each paired environment. Choose **Codex** or **Losangelex** under **Settings → Backend**. Losangelex also exposes Settings beside its task controls; Settings preserves the team conversation underneath. Switching changes the available interaction modes; it does not migrate or combine conversations.
 
 | Backend | Available experience |
 | --- | --- |

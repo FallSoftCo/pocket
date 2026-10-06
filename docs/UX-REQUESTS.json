@@ -588,16 +588,17 @@
     },
     {
       "id": "conversation-fast-open-status-settings-backend",
-      "status": "implemented-alpha26-qualification-underway",
+      "status": "qualified-alpha26-published-phone-install-underway",
       "requirement": "Conversation opening must be fast, show whether work continues or needs user input, and put Codex/Losangelex selection in Settings rather than an extra permanent row.",
-      "implementation": "Recent cold-open history bounded, four owner-isolated recent pages cached for two minutes with background refresh; no TTL renewal merely by reopening. Persistent authored working/thinking icon or Needs you/Your turn label in existing context-control row; pending questions take priority. Backend selector lives in Settings, accessible from either backend while retaining team conversation state."
+      "implementation": "Recent cold-open history bounded, four owner-isolated recent pages cached for two minutes with background refresh; no TTL renewal merely by reopening. Persistent authored working/thinking icon or Needs you/Your turn label in existing context-control row; pending questions take priority. Backend selector lives in Settings, accessible from either backend while retaining team conversation state.",
+      "evidence": "205 backend/130 Android tests, both lint variants and clean-checkout CI pass. Exact signed44 native checks cover cached own page before12s response, cold page isolation and late-response ownership, Working/Needs you/Your turn, Settings paths for both backends. Four synthetic reviews published; full1759-card gallery check passes. Backend26 healthy after one scoped bridge restart; actual distinct reads matched IDs in109/88ms. Compatible update44 announced512 and public release digest verified; on-device Codex installation underway. See docs/qualification/conversation-speed-status-alpha26.json."
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "bc5f4aa",
-    "published_release": "v0.5.0-alpha.25",
-    "server_tests": 204,
-    "android_tests": 122,
+    "latest_pushed_commit": "933eae9",
+    "published_release": "v0.5.0-alpha.26",
+    "server_tests": 205,
+    "android_tests": 130,
     "phone_endpoint": "Termux SSH over Tailscale and authenticated automation listener reachable",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
@@ -613,19 +614,19 @@
     "phone_install": "Compatible in-place installation during on-device Codex attempt; independently verified installed43 hash and switching between two real chats. Codex attempt timed out before completion receipt. No real messages sent or drafts edited.",
     "qualification": "Alpha15 version32:146 backend tests,66 Android tests,debug/release lint and signing pass. Actual anchoredpopup, directswitch/inline targetreply, keyboardavoidance, contrast andfont2 labels qualified.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
-    "gallery_review": "Synthetic alpha25 fixed distinct chats, rejected alpha24 regression and matching-source positive control published. Full gallery desktop/mobile/reduced-motion/reload checks pass, 1755 cards.",
+    "gallery_review": "Four reviewed synthetic alpha26 status/cache/settings stills published. Full desktop/mobile/reduced-motion/reload check passes,1759 cards.",
     "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
-    "update_delivery": "Alpha25/code43 compatible variants offered; announcement508 accepted. Handset receipt not independently established.",
+    "update_delivery": "Alpha26/code44 compatible variants offered; notification512 announced once; handset notification receipt not established.",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
     "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21–39ms. No active-session reset.",
     "immersion_next": "Automatic single-flow cycling delivered in alpha24 with native geometry/motion/snapshot evidence. Teacher quality and real-provider spoken language remain separate qualifications.",
     "phone_access": "SSH and authenticated automation work; no networking or security settings changed.",
-    "backend_runtime": "Backend alpha24 connected/no problem; Android-only alpha25 hotfix requires no restart.",
-    "native_validation": "Alpha25 signed debug/release, 122 Android tests, 204 backend tests, both lints and successful clean-checkout CI; real-phone two-chat switching verified.",
-    "pending_phone_update": null,
+    "backend_runtime": "Backend alpha26 healthy, Codex connected; one scoped bridge restart, stock runtime untouched.",
+    "native_validation": "Alpha26 exact signed debug/release,205 backend/130 Android tests,both lint variants and successful clean-checkout CI; native delayed-response/cache/state/settings qualified.",
+    "pending_phone_update": "Exact44 candidate transferred/hash verified; bounded on-device Codex installation underway.",
     "conversation_context": "Installed alpha24 includes qualified Important/All transcript filtering and direct Retry/Edit/Remove. Native recovery/filter proof is synthetic; exact requested handset thread was not opened.",
-    "qualified_build": "0.5.0-alpha.25 / code43"
+    "qualified_build": "0.5.0-alpha.26 / code44"
   },
   "remaining": [
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",

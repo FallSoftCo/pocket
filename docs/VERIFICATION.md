@@ -1,3 +1,9 @@
+## Fast conversation opening and visible state: 0.5.0-alpha.26
+
+Cold recent-history reads avoid the unbounded attach detour and use native bounded paging where supported. A four-entry, two-minute backend/thread cache restores recent content while refreshing. Native checks on the exact signed candidate show cached own content during a twelve-second delayed response, no cached content in a different cold chat, and no late-response cross-chat replacement. Working/Thinking, Needs you and Your turn stay in the existing control bar. Backend selection lives in Settings, reachable from both backends; team Settings preserves its conversation and closes for routed notifications.
+
+205 backend tests, 130 Android tests, both lints and clean-checkout CI pass. The production bridge is healthy on alpha26; two actual thread reads return their requested IDs in 109/88 ms. Physical phone delivery is recorded separately in [qualification](qualification/conversation-speed-status-alpha26.json). Older runtimes without paging retain the full-history fallback. Synthetic native checks do not establish phone-network latency or provider voice quality.
+
 ## Session switching and saved notification context: 0.5.0-alpha.25
 
 Prior alpha24 with a paused notification from synthetic session18 appended that notification to selected session02 and auto-follow scrolled to it. The fixed exact signed candidate shows the selected session’s own history and permits a saved caption only when its known origin matches. The queue remains intact. Native physical card and popup taps, keyboard entry, exact synthetic reply routing and 02→03→02 draft restoration pass. Matching18 saved speech remains visible in18. No real user messages were sent or modified.
@@ -11,6 +17,12 @@ The exact final signed candidate passed 204 backend tests, 121 Android tests, de
 See [native runtime evidence](qualification/inline-cycling-team-alpha24.json) and [delivery verification](qualification/alpha24-release-delivery.json). The production bridge exposes both configured backends without restarting Hollywood or migrating stock sessions. Acoustic quality, secure-keyguard behavior and generic device compatibility are not established by these synthetic checks.
 
 # Verification
+
+## Fast conversation opening and visible state: 0.5.0-alpha.26
+
+Cold recent-history reads avoid the unbounded attach detour and use native bounded paging where supported. A four-entry, two-minute backend/thread cache restores recent content while refreshing. Native checks on the exact signed candidate show cached own content during a twelve-second delayed response, no cached content in a different cold chat, and no late-response cross-chat replacement. Working/Thinking, Needs you and Your turn stay in the existing control bar. Backend selection lives in Settings, reachable from both backends; team Settings preserves its conversation and closes for routed notifications.
+
+205 backend tests, 130 Android tests, both lints and clean-checkout CI pass. The production bridge is healthy on alpha26; two actual thread reads return their requested IDs in 109/88 ms. Physical phone delivery is recorded separately in [qualification](qualification/conversation-speed-status-alpha26.json). Older runtimes without paging retain the full-history fallback. Synthetic native checks do not establish phone-network latency or provider voice quality.
 
 ## Reply recovery and Important conversation filter: 0.5.0-alpha.23
 

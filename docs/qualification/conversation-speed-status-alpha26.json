@@ -1,0 +1,86 @@
+{
+  "version": "0.5.0-alpha.26",
+  "versionCode": 44,
+  "sourceCommit": "933eae902a063758d1de48665726aa1316584a8d",
+  "changes": {
+    "history": "Cold recent requests avoid unbounded attach history and prefer native bounded paging even when metadata lacks paging hint; watched nonpaged metadata cannot start concurrent full recovery. Older runtimes without paging retain explicit fallback.",
+    "reopen": "Four two-minute recent-page entries, keyed by hashed backend owner and exact thread. Restore before refreshing. Navigation never renews stale TTL; memory release clears cache. Late responses/deltas cannot cross ownership.",
+    "state": "Persistent authored working/thinking icon and Needs you/Your turn labels in existing conversation control bar. Pending questions override active runtime status; streamed activity visible before task list catches up.",
+    "backend": "Selector in Settings; reachable from both backends without permanent extra footer. Team Settings retains underlying conversation, and notification routing closes overlay."
+  },
+  "checks": {
+    "backendTests": 205,
+    "androidTests": 130,
+    "lintRelease": "passed",
+    "lintDebug": "passed",
+    "cleanCheckoutCi": {
+      "run": 37397852834,
+      "status": "success"
+    },
+    "native": {
+      "firstOwn01": true,
+      "working": true,
+      "cacheScreenshotSeconds": 1.3880585059523582,
+      "cachedOwn01": true,
+      "cacheVerifiedSeconds": 5.735443307086825,
+      "cold02NeverShows01": true,
+      "new03": true,
+      "lateResponseStill03": true,
+      "needsYou": true,
+      "yourTurn": true,
+      "codexSettings": true,
+      "teamSettings": true,
+      "codexReturn": true,
+      "noProviderOrRealPhone": true
+    }
+  },
+  "artifacts": {
+    "developmentSha256": "a2666b370160b9740e4333afaeda4e3d9c4185f2e30f5a67a67e45518ce4e719",
+    "publicSha256": "bab29cfc4406711428af71adc25ddd1c1fb3e8fdf83750f92ee550577e069a66"
+  },
+  "backend": {
+    "version": "0.5.0-alpha.26",
+    "healthy": true,
+    "codexConnected": true,
+    "restarts": 1,
+    "stockCodexRestarted": false,
+    "privateDatabaseConfigBackedUp": true,
+    "actualReadMs": [
+      109,
+      88
+    ],
+    "actualRequestedIdsMatched": true
+  },
+  "phone": {
+    "transfer": "in progress",
+    "installedVersionCode": 43,
+    "realMessagesSent": false
+  },
+  "limitations": [
+    "Synthetic native latency checks are deliberately delayed fixtures, not an acoustic/provider test or a phone-network benchmark.",
+    "Older Codex runtimes without native paging still require the compatibility full-history read."
+  ],
+  "gallery": {
+    "cardsChecked": 1759,
+    "fullCheck": "passed",
+    "syntheticOnly": true,
+    "reviews": [
+      "/8bar/#nextcomp-alpha26-cached",
+      "/8bar/#nextcomp-alpha26-needs-you",
+      "/8bar/#nextcomp-alpha26-your-turn",
+      "/8bar/#nextcomp-alpha26-settings"
+    ]
+  },
+  "deployment": {
+    "publicRelease": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.26",
+    "publicDigestVerified": true,
+    "announcement": {
+      "notificationId": 512,
+      "announced": 1,
+      "versionCode": 44,
+      "pushEnabled": true,
+      "handsetReceipt": "not independently established"
+    }
+  },
+  "ownedResources": "Original emulator preferences restored and hash verified. Owned26 emulator/fixture stopped; unrelated resources and shared ADB preserved."
+}
