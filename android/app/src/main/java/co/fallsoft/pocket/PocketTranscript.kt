@@ -52,7 +52,8 @@ object PocketTranscript {
             val page=d.optJSONObject("timeline")?:JSONObject();val incoming=page.optJSONArray("rows")?.objects()?:emptyList()
             incoming.filter{it.s("kind") in listOf("turn","turnEnd","request")}.forEach{it.put("version",d.optLong("revision"))}
             val wasLoaded=historyLoaded&&rows.isNotEmpty()
-            val overlaps=incoming.any{new->rows.any{it.s("id")==new.s("id")}}
+            val loadedIds=rows.mapTo(hashSetOf()){it.s("id")}
+            val overlaps=incoming.any{it.s("id") in loadedIds}
             val nextBefore=page.s("before").takeIf{it.isNotBlank()}
             if(bridgeCursor!=null){
                 rows=mergeTranscriptPage(rows,incoming,false,{it.s("id")},{it.optLong("version")},"$bridgeCursor/header")
