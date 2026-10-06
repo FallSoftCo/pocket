@@ -18,7 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import kotlin.math.max
 
-/** Natural native typography; complementary spatial masks never blank the entire flow. */
+/** Natural native typography; complementary layer weights never blank the entire flow. */
 @Composable internal fun BlendImmersionText(
     from:AnnotatedString,to:AnnotatedString,progress:()->Float,snapshot:AnnotatedString,
     modifier:Modifier=Modifier,fontSize:TextUnit=17.sp,lineHeight:TextUnit=26.sp,
@@ -30,7 +30,6 @@ import kotlin.math.max
     val inherited=LocalTextStyle.current
     val style=inherited.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,textAlign=textAlign))
     val normalPaint=remember{Paint()}
-    val additivePaint=remember{Paint().apply{blendMode=BlendMode.Plus}}
     val invisible=remember(snapshot){buildAnnotatedString {
         append(snapshot.text)
         snapshot.spanStyles.forEach{addStyle(it.item.copy(color=Color.Transparent,background=Color.Transparent,shadow=null,textDecoration=TextDecoration.None),it.start,it.end)}
@@ -43,11 +42,11 @@ import kotlin.math.max
     }}
     BoxWithConstraints(modifier){
         val available=constraints.maxWidth.coerceAtLeast(1)
-        fun measure(text:AnnotatedString,width:Int)=measurer.measure(text,style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(maxWidth=width))
+        fun measure(text:AnnotatedString,width:Int)=measurer.measure(immersionDrawText(text),style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(maxWidth=width))
         val naturalA=measure(from,available);val naturalB=measure(to,available)
         val reserved=reserve.map{measure(it,available)}
         val width=if(fillWidth&&available!=Constraints.Infinity)available else (listOf(naturalA.size.width,naturalB.size.width)+reserved.map{it.size.width}).max().coerceAtLeast(1)
-        fun fitted(text:AnnotatedString)=measurer.measure(text,style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(minWidth=width,maxWidth=width))
+        fun fitted(text:AnnotatedString)=measurer.measure(immersionDrawText(text),style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(minWidth=width,maxWidth=width))
         val a=fitted(from);val b=fitted(to)
         val height=(listOf(a.size.height,b.size.height)+reserve.map{fitted(it).size.height}).max().coerceAtLeast(1)
         val widthDp=with(density){width.toDp()};val heightDp=with(density){height.toDp()}
@@ -57,20 +56,11 @@ import kotlin.math.max
                 if(p<=0f)drawText(a)
                 else if(p>=1f)drawText(b)
                 else {
-                    val feather=(fontSize.toPx()*.65f).coerceAtLeast(10.dp.toPx())
-                    val center=-feather+p*(size.width+2*feather)
-                    val bounds=Rect(Offset.Zero,size)
-                    // Compose both masked glyph layers offscreen. Plus preserves luminance
-                    // where unchanged letters coincide instead of a source-over contrast dip.
-                    drawContext.canvas.saveLayer(bounds,normalPaint)
-                    drawContext.canvas.saveLayer(bounds,normalPaint)
-                    drawText(a)
-                    drawRect(Brush.horizontalGradient(listOf(Color.Transparent,Color.Black),startX=center-feather,endX=center+feather),blendMode=BlendMode.DstIn)
-                    drawContext.canvas.restore()
-                    drawContext.canvas.saveLayer(bounds,additivePaint)
-                    drawText(b)
-                    drawRect(Brush.horizontalGradient(listOf(Color.Black,Color.Transparent),startX=center-feather,endX=center+feather),blendMode=BlendMode.DstIn)
-                    drawContext.canvas.restore()
+                    // Isolate additive composition from the opaque application background.
+                    // Complementary weights keep coincident unchanged glyphs at full contrast.
+                    drawContext.canvas.saveLayer(Rect(Offset.Zero,size),normalPaint)
+                    drawText(a,alpha=1f-p)
+                    drawText(b,alpha=p,blendMode=BlendMode.Plus)
                     drawContext.canvas.restore()
                 }
             }
@@ -78,5 +68,14 @@ import kotlin.math.max
             // URL/phrase actions and one semantic text. Canvas has no duplicate text.
             Text(invisible,color=Color.Transparent,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,modifier=Modifier.fillMaxWidth())
         }
+    }
+}
+
+/** Native Text resolves link presentation internally; the Canvas measurer needs it explicitly. */
+internal fun immersionDrawText(text:AnnotatedString):AnnotatedString = buildAnnotatedString{
+    append(text)
+    text.getLinkAnnotations(0,text.length).forEach{range->
+        val style=when(val link=range.item){is LinkAnnotation.Url->link.styles?.style;is LinkAnnotation.Clickable->link.styles?.style}
+        if(style!=null)addStyle(style,range.start,range.end)
     }
 }

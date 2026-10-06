@@ -12,7 +12,8 @@ export function immersionReviewPlans(port=19993){
   ['styled',`Use **the warm light**, then *review the latest coordinator conversation history*. Read [the guide](http://127.0.0.1:${port}/guide), and run \`git status\`.`,['the warm light','la luce calda'],['review the latest coordinator conversation history','rivedi la cronologia più recente del coordinatore']],
   ['controls','Working',['Working','Al lavoro']],
  ];
- return examples.map(([key,original,...pairs])=>{
+ return examples.map(([key,input,...pairs])=>{
+  const original=key==='controls'?input:input+'\n\nThis follow-up paragraph stays below the changing text.';
   const spans=pairs.map(([source,target])=>({start:original.indexOf(source),end:original.indexOf(source)+source.length,source,target,unit:'phrase',note:'Synthetic authored fixture; not teacher output.',targetSegments:[]}));
   let text=original;for(const span of [...spans].reverse())text=text.slice(0,span.start)+span.target+text.slice(span.end);
   return {id:key==='controls'?'label:'+hash(original):'row:immersion-'+key,original,text,spans,version:hash(original),planVersion:'inline-replacement-v3',density:'strong',language:'it'};

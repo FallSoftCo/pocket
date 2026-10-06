@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.*
     LaunchedEffect(shown,ready){
         if(shown!=to.text){
             from=to;to=AnnotatedString(shown)
-            if(ready){progress.snapTo(0f);progress.animateTo(1f,tween(600))}else progress.snapTo(1f)
+            if(ready){progress.snapTo(0f);progress.animateTo(1f,tween(360))}else progress.snapTo(1f)
         }else if(!ready)progress.snapTo(1f)
     }
     val rescue=if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}else Modifier

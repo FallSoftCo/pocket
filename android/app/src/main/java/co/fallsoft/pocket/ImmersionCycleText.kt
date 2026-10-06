@@ -46,7 +46,7 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
     LaunchedEffect(content.text,ready,PocketSpeech.displayedOwner){
         if(content.text!=to.text){
             from=to;to=content
-            if(ready&&PocketSpeech.displayedOwner==null){progress.snapTo(0f);progress.animateTo(1f,tween(600))}else progress.snapTo(1f)
+            if(ready&&PocketSpeech.displayedOwner==null){progress.snapTo(0f);progress.animateTo(1f,tween(360))}else progress.snapTo(1f)
         }else if(!ready||PocketSpeech.displayedOwner!=null)progress.snapTo(1f)
     }
     Box(Modifier.fillMaxWidth()){
