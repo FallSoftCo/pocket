@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 
 class PocketApplication: Application(), coil.ImageLoaderFactory {
     override fun onCreate(){super.onCreate();Pocket.init(this)}
-    override fun onTrimMemory(level:Int){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN)PocketTranscript.release()}
+    override fun onTrimMemory(level:Int){super.onTrimMemory(level);if(level==android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL||level>=android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)PocketTranscript.release()}
     override fun newImageLoader()=coil.ImageLoader.Builder(this).okHttpClient(Pocket.http).build()
 }
 fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }

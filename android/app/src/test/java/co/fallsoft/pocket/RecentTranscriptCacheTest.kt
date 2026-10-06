@@ -27,4 +27,15 @@ class RecentTranscriptCacheTest {
         assertNull(cache.get("a","one",1));assertEquals("other",cache.get("b","one",1))
         cache.clear();assertNull(cache.get("b","one",2))
     }
+    @Test fun cacheBudgetEvictsWholeInactiveSnapshotsNeverPartialMessages(){
+        val cache=RecentTranscriptCache<String>(4,Long.MAX_VALUE,10){it.length.toLong()}
+        cache.put("a","one","12345",0);cache.put("a","two","67890",10)
+        assertEquals("12345",cache.get("a","one",200000))
+        cache.put("a","three","abcd",30)
+        assertNull(cache.get("a","two",40))
+        assertEquals("12345",cache.get("a","one",300000))
+        cache.put("a","huge","12345678901",50)
+        assertNull(cache.get("a","huge",60))
+        assertEquals("abcd",cache.get("a","three",60))
+    }
 }

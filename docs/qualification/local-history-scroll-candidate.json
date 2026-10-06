@@ -1,0 +1,35 @@
+{
+  "feature": "Retain already-read local conversation history and page through thumb scrolling",
+  "status": "source candidate; combined Android and actual native qualification required before release",
+  "changes": [
+    "Recent pages still paint first, but refreshes merge into the loaded window instead of replacing it.",
+    "Older pages prepend by stable row identity; latest text wins by version, and LazyColumn keeps the visible keyed message and pixel offset.",
+    "Live rows remain enabled while reading older history; neither the former 500-row nor 1MiB cap hides previously loaded rows.",
+    "Within four list items of the older edge, upward reading automatically fetches the next eight-turn page without a pagination button.",
+    "Failed edge requests retry with one-second to fifteen-second backoff only while the same owner remains at that edge; switching conversation cancels the reading coroutine and generation/scope checks discard obsolete responses.",
+    "A recent refresh after a long absence paints immediately, then fills a missing middle interval asynchronously rather than skipping it.",
+    "Older and middle requests preserve current thread status, pending questions, outgoing replies and notification read policy.",
+    "Latest/retry and ordinary Android backgrounding retain the loaded history. Real memory pressure evicts inactive cache snapshots, not the current visible conversation.",
+    "The inactive per-backend/per-thread cache is four whole windows within a 12MiB estimated serialized UTF-16 budget, with no arbitrary age expiry or partially hidden local pages."
+  ],
+  "tests_added": [
+    "Older pages retain recently read rows and recent refresh cannot shrink the window.",
+    "More than the former 500-row limit remains readable.",
+    "Stale older output cannot roll back live text; overlapping pages deduplicate by identity.",
+    "Missing middle pages insert in chronological position after immediate cached/recent paint.",
+    "Oldest loaded cursor survives recent refresh, middle bridge and reopen; reaching actual beginning clears hasEarlier.",
+    "Prefetch excludes latest-follow, Important filter, distant edge, exhausted history and in-flight requests.",
+    "Cache eviction is whole-snapshot and backend/thread isolated; normal elapsed minutes do not expire retained history."
+  ],
+  "qualification": {
+    "unit_tests": "awaiting root's combined build; no competing Gradle launched while release R8 consumes memory",
+    "native_scroll_anchor": "awaiting owned synthetic emulator fixture qualification",
+    "phone": "not changed by this workstream"
+  },
+  "limits": [
+    "This first fix retains local history for the living app process and background/resume; it does not add persistent transcript segments across process death.",
+    "Inactive oversized or LRU-evicted windows honestly need refetching through automatic scrolling when reopened.",
+    "Active loaded history is not arbitrarily cut. Its memory use scales with actual read history; the inactive serialization budget is an estimate, not a physical-device PSS guarantee.",
+    "No private reasoning is requested or exposed; the existing public timeline endpoint and authentication remain unchanged."
+  ]
+}

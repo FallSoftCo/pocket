@@ -12,16 +12,19 @@ object PocketTranscript {
     var revision by mutableIntStateOf(0);private set
     private val buffered=linkedMapOf<String,JSONObject>()
     private var generation=0
+    private var bridgeBefore:String?=null
     private var missedUpdates=false
-    private var pageCursor:String?=null
     var browsingEarlier by mutableStateOf(false);private set
-    private data class Snapshot(val rows:List<JSONObject>,val detail:JSONObject,val before:String?,val earlier:Boolean)
-    private val recent=RecentTranscriptCache<Snapshot>(4,120000)
+    private data class Snapshot(val rows:List<JSONObject>,val detail:JSONObject,val before:String?,val earlier:Boolean,val bridgeBefore:String?)
+    private val rowWeights=java.util.WeakHashMap<JSONObject,Long>()
+    private val recent=RecentTranscriptCache<Snapshot>(4,Long.MAX_VALUE,12L*1024*1024){snapshot->
+        snapshot.rows.sumOf{row->rowWeights.getOrPut(row){row.toString().length.toLong()*2}}+snapshot.detail.toString().length*2L
+    }
     private var ownerScope:String?=null
     private fun scopeKey()=backendOwner(Pocket.base,Pocket.token)
     private fun rememberRecent(){
         val id=owner?:return;val scope=ownerScope?:return
-        if(historyLoaded&&!browsingEarlier&&scope==scopeKey())Pocket.detail?.let{recent.put(scope,id,Snapshot(rows,it,before,earlier),android.os.SystemClock.elapsedRealtime())}
+        if(historyLoaded&&scope==scopeKey())Pocket.detail?.let{recent.put(scope,id,Snapshot(rows,it,before,earlier,bridgeBefore),android.os.SystemClock.elapsedRealtime())}
     }
     private var owner:String?=null
     private var historyLoaded=false
@@ -30,36 +33,54 @@ object PocketTranscript {
         generation++;owner=id;ownerScope=scopeKey()
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail
-        earlier=cached?.earlier?:false;before=cached?.before;loading=false;historyLoaded=cached!=null
-        buffered.clear();pageCursor=null;browsingEarlier=false;missedUpdates=false;revision++;trace()
+        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;historyLoaded=cached!=null
+        buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){generation++;owner=null;ownerScope=null;rows=emptyList();buffered.clear();loading=false;historyLoaded=false;before=null;earlier=false;pageCursor=null;browsingEarlier=false;revision++;trace()}
-    fun latest(){owner?.let{recent.remove(ownerScope.orEmpty(),it)};historyLoaded=false;Pocket.selected?.let{reset(it)};Pocket.detail=null;Pocket.refreshDetail()}
-    fun release(){generation++;recent.clear();rows=emptyList();buffered.clear();loading=false;historyLoaded=false;Pocket.detail=null;revision++;trace()}
-    suspend fun load(older:Boolean=false){
-        val id=Pocket.selected?:return;if(loading||owner!=id||(!older&&browsingEarlier&&rows.isNotEmpty()))return
+    fun clear(){generation++;owner=null;ownerScope=null;rows=emptyList();buffered.clear();loading=false;historyLoaded=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun latest(){Pocket.refreshDetail()}
+    // Android memory pressure evicts inactive snapshots, never the conversation being read.
+    fun release(){recent.clear();trace()}
+    suspend fun load(older:Boolean=false,bridgeCursor:String?=null){
+        val id=Pocket.selected?:return;if(loading||owner!=id||(older&&(!earlier||before==null)))return
         val ticket=generation;val scope=scopeKey();val profileLocal=Pocket.local
         fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
-        val cursor=if(older)before else pageCursor
-        loading=true;buffered.clear()
+        val cursor=bridgeCursor?:if(older)before else null
+        loading=true;buffered.clear();var succeeded=false
         try{
             val d=Pocket.apiFor(profileLocal,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
             if(!current())return
             val page=d.optJSONObject("timeline")?:JSONObject();val incoming=page.optJSONArray("rows")?.objects()?:emptyList()
-            rows=incoming
-            pageCursor=cursor;browsingEarlier=cursor!=null
-            before=page.s("before").takeIf{it.isNotBlank()};earlier=page.optBoolean("hasEarlier")
+            incoming.filter{it.s("kind") in listOf("turn","turnEnd","request")}.forEach{it.put("version",d.optLong("revision"))}
+            val wasLoaded=historyLoaded&&rows.isNotEmpty()
+            val overlaps=incoming.any{new->rows.any{it.s("id")==new.s("id")}}
+            val nextBefore=page.s("before").takeIf{it.isNotBlank()}
+            if(bridgeCursor!=null){
+                rows=mergeTranscriptPage(rows,incoming,false,{it.s("id")},{it.optLong("version")},"$bridgeCursor/header")
+                bridgeBefore=if(!overlaps&&page.optBoolean("hasEarlier")&&nextBefore!=cursor)nextBefore else null
+            }else{
+                if(!older&&wasLoaded&&!overlaps&&incoming.isNotEmpty()&&page.optBoolean("hasEarlier"))bridgeBefore=nextBefore
+                rows=mergeTranscriptPage(rows,incoming,older,{it.s("id")},{it.optLong("version")})
+            }
+            // A recent refresh must not move the oldest loaded cursor forward.
+            retainedTranscriptCursor(TranscriptCursor(before,earlier),wasLoaded,older,bridgeCursor!=null,TranscriptCursor(nextBefore,page.optBoolean("hasEarlier"))).let{
+                before=it.before;earlier=it.hasEarlier
+            }
+            browsingEarlier=browsingEarlier||older
             historyLoaded=true
-            d.remove("timeline");Pocket.detail=d
-            if(PocketVoice.foreground&&!PocketVoice.active&&!Pocket.newTask&&!older)PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList())
+            d.remove("timeline");if((!older&&bridgeCursor==null)||Pocket.detail==null){
+                Pocket.detail=d
+                val pendingIds=d.optJSONArray("pending")?.objects()?.map{it.s("id")}.orEmpty().toSet()
+                rows=rows.filter{it.s("kind")!="request"||it.optJSONObject("request")?.s("id") in pendingIds}
+            }
+            if(PocketVoice.foreground&&!PocketVoice.active&&!Pocket.newTask&&!older&&bridgeCursor==null)PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList())
             val updates=buffered.values.toList();buffered.clear()
-            updates.filter{it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
-            rememberRecent();revision++;Pocket.error="";trace()
-        }catch(e:Exception){if(current())Pocket.error=PocketNetwork.error(e)}
-        finally{if(current()){loading=false;if(missedUpdates){missedUpdates=false;Pocket.scope.launch{delay(450);Pocket.scheduleRefresh()}}}}
+            updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
+            rememberRecent();revision++;Pocket.error="";succeeded=true;trace()
+        }catch(e:CancellationException){throw e}catch(e:Exception){if(current())Pocket.error=PocketNetwork.error(e)}
+        finally{if(current()){if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true};loading=false;if(succeeded)bridgeBefore?.let{next->Pocket.scope.launch{load(bridgeCursor=next)}};if(missedUpdates){missedUpdates=false;Pocket.scope.launch{delay(450);Pocket.scheduleRefresh()}}}}
     }
     fun apply(update:JSONObject,buffer:Boolean=true){
-        if(update.s("threadId")!=Pocket.selected||owner!=Pocket.selected||ownerScope!=scopeKey()||browsingEarlier)return
+        if(update.s("threadId")!=Pocket.selected||owner!=Pocket.selected||ownerScope!=scopeKey())return
         if(update.optBoolean("reload")){if(loading)missedUpdates=true else Pocket.scheduleRefresh();return}
         if(loading&&buffer){
             val key=update.optJSONObject("row")?.s("id")?:update.s("turnId")
@@ -86,18 +107,22 @@ object PocketTranscript {
             Pocket.detail?.optJSONObject("thread")?.put("status",JSONObject().put("type",if(active)"active" else "idle"))
             if(!active)put(JSONObject().put("id","$turnId/end").put("turnId",turnId).put("kind","turnEnd").put("status",turn.s("status")).put("durationMs",turn.optLong("durationMs")).put("text",turn.optJSONObject("error")?.s("message")?:""))
         }
-        var size=next.sumOf{it.toString().length}
-        while(next.size>500||size>1024*1024){size-=next.removeAt(0).toString().length;missedUpdates=true}
         rows=next;rememberRecent();revision++
         if(missedUpdates&&!loading){missedUpdates=false;Pocket.scheduleRefresh()}
     }
 }
 
-/** A short-lived bounded cache; backend identity and thread identity are both mandatory. */
-internal class RecentTranscriptCache<T>(private val capacity:Int,private val lifetimeMs:Long){
-    private data class Entry<T>(val value:T,val savedAt:Long)
+/** Inactive conversations use whole-snapshot LRU eviction, never hidden local pages. */
+internal class RecentTranscriptCache<T>(private val capacity:Int,private val lifetimeMs:Long,private val maxWeight:Long=Long.MAX_VALUE,private val weight:(T)->Long={1}){
+    private data class Entry<T>(val value:T,val savedAt:Long,val weight:Long)
     private val entries=linkedMapOf<Pair<String,String>,Entry<T>>()
-    fun put(scope:String,id:String,value:T,now:Long){val key=scope to id;entries.remove(key);entries[key]=Entry(value,now);while(entries.size>capacity)entries.remove(entries.keys.first())}
+    fun put(scope:String,id:String,value:T,now:Long){
+        val key=scope to id;entries.remove(key)
+        val size=weight(value).coerceAtLeast(0)
+        if(size>maxWeight)return // Oversized inactive history is honestly evicted as a whole.
+        entries[key]=Entry(value,now,size)
+        while(entries.size>capacity||entries.values.sumOf{it.weight}>maxWeight)entries.remove(entries.keys.first())
+    }
     fun get(scope:String,id:String,now:Long):T?{val key=scope to id;val entry=entries.remove(key)?:return null;if(now-entry.savedAt>lifetimeMs)return null;entries[key]=entry;return entry.value}
     fun remove(scope:String,id:String){entries.remove(scope to id)}
     fun clear(){entries.clear()}

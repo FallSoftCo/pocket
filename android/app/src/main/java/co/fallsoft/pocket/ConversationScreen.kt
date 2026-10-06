@@ -35,6 +35,9 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.collect
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -83,8 +86,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val latestTurn=rows.lastOrNull{it.s("kind")=="turn"}
     val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),latestTurn?.s("status").orEmpty(),task?.previewKind=="thinking",d!=null,PocketTranscript.loading)
     val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.THINKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
-    val list=rememberLazyListState();val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
-    var follow by remember{mutableStateOf(true)}
+    val list=key(Pocket.local,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
+    var follow by remember(Pocket.local,Pocket.selected){mutableStateOf(true)}
     var important by remember(Pocket.local,Pocket.selected){mutableStateOf(false)}
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
@@ -121,6 +124,22 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         val request=shownRows.indexOfLast{it.s("kind")=="request"}
         if(count>0)list.scrollToItem(if(request>=0)(request+1).coerceAtMost(count-1) else count-1)
     }}
+    // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
+    // the visible message and pixel offset when an older page is prepended.
+    LaunchedEffect(Pocket.local,Pocket.selected,important){
+        snapshotFlow{shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
+            .distinctUntilChanged().filter{it}.collect{
+                var retryMs=1000L
+                while(shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
+                    val cursor=PocketTranscript.before
+                    PocketTranscript.load(true)
+                    if(PocketTranscript.before==cursor&&PocketTranscript.earlier){
+                        // Remain anchored; retry only while the reader is still near this edge.
+                        delay(retryMs);retryMs=(retryMs*2).coerceAtMost(15000)
+                    }else{retryMs=1000L;delay(32)}
+                }
+            }
+    }
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
             if(pending>0)TextButton({actionsOpen=false;important=false;follow=false;scope.launch{val index=rows.indexOfFirst{it.s("kind")=="request"};if(index>=0)list.scrollToItem((index+1).coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else Pocket.refreshDetail()}},modifier=Modifier.fillMaxWidth()){BilingualLabel("Answer pending question",color=Coral)}
             UsageDetails()
@@ -136,7 +155,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-                item(key="history"){if(PocketTranscript.earlier)TextButton({follow=false;scope.launch{PocketTranscript.load(true);list.scrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},enabled=!PocketTranscript.loading,modifier=Modifier.fillMaxWidth()){BilingualLabel(if(PocketTranscript.loading)"Loading…" else "Load earlier activity",color=Mint)}}
+                item(key="history"){
+                    if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
+                        Box(Modifier.fillMaxWidth().height(40.dp),contentAlignment=Alignment.Center){AnimatedMark(28)}
+                    else Spacer(Modifier.height(1.dp))
+                }
                 if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
