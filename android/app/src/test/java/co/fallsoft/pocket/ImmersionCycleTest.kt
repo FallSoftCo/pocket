@@ -18,6 +18,18 @@ class ImmersionCycleTest {
         assertTrue(phases.distinct().size>=9)
         assertTrue(phases.maxOrNull()!!-phases.minOrNull()!!>2000)
     }
+    @Test fun longProseReceivesUncappedReadingHoldsAndTargetStaysLonger(){
+        val fiveHundred=List(500){"session"}.joinToString(" ")
+        val a=immersionCycleTiming("long",fiveHundred,fiveHundred)
+        assertEquals(150000L,a.sourceMs)
+        assertEquals(231000L,a.targetMs)
+        val thousand=List(1000){"sessione"}.joinToString(" ")
+        val b=immersionCycleTiming("longer",thousand,thousand)
+        assertTrue(b.sourceMs>a.sourceMs);assertTrue(b.targetMs>a.targetMs)
+        val shortTarget=immersionCycleTiming("unequal",fiveHundred,"pronto")
+        assertTrue(shortTarget.targetMs>=shortTarget.sourceMs+6000L)
+        assertEquals(6000L,immersionCycleTiming("unicode","l'azione è pronta","l’azione è pronta").sourceMs)
+    }
     @Test fun phaseBoundariesAreDeterministicWithoutFrameTicking(){
         val timing=ImmersionCycleTiming(2500,4000,0)
         assertEquals(ImmersionCyclePhase(false,4000),immersionCyclePhase(0,timing))

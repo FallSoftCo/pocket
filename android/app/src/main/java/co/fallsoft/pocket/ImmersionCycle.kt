@@ -6,9 +6,9 @@ data class ImmersionCycleTiming(val sourceMs:Long,val targetMs:Long,val staggerM
 data class ImmersionCyclePhase(val original:Boolean,val untilChangeMs:Long)
 data class ImmersionReserveWord(val source:String,val target:String)
 fun immersionCycleTiming(identity:String,source:String,target:String):ImmersionCycleTiming {
-    fun reading(text:String)=((Regex("\\S+").findAll(text).count()*320L)+text.codePointCount(0,text.length)*28L).coerceIn(2400L,8500L)
-    val sourceMs=(reading(source)+3600L).coerceIn(6000L,12000L)
-    val targetMs=max(18000L,reading(target)*3L)
+    fun words(text:String)=Regex("[\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*(?:['’][\\p{L}\\p{M}\\p{N}]+)*").findAll(text).count().toLong()
+    val sourceMs=max(6000L,words(source)*300L)
+    val targetMs=maxOf(18000L,words(target)*450L+6000L,sourceMs+6000L)
     val period=sourceMs+targetMs
     var seed=identity.hashCode()
     seed=seed xor (seed ushr 16);seed*= -2048144789
