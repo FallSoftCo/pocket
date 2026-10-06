@@ -5,7 +5,7 @@ import org.junit.Test
 
 class ConversationContextTest {
     @Test fun switchingConversationsNeverImportsAnotherSessionsSavedSpeech(){
-        val l33="01a10e56-77f9-7800-9347-d47ca9a4c8af"
+        val l33="synthetic-speech-origin"
         val rows=listOf("Selected session answer")
         listOf("first-session","second-session",null).forEach{selected->
             assertFalse(shouldAppendConversationSpeech(selected,l33,"l33 saved speech",rows))

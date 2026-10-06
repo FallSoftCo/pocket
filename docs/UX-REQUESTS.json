@@ -576,6 +576,14 @@
       "requirement": "Preserve separately authorized durable shared computer-use request service work and integrate its authenticated NextComp adapters after owner runtime qualification.",
       "candidate": "f510b204981ae1be2c358183994c8fc1358c510b",
       "checks": "26 affected tests and public-source validation passed in isolated candidate, owner reported. Production activation and shared client/runtime qualification are separate; no restart or rollout in alpha24."
+    },
+    {
+      "id": "session-switching-foreign-saved-speech",
+      "status": "fixed-alpha25-qualification-in-progress",
+      "requirement": "Each tapped session must show its own conversation and route replies to it. A previously selected session or saved speech must never replace another session visually. Preserve per-thread drafts and the saved speech queue.",
+      "cause": "ConversationScreen appended the current saved speech entry to every chat, even when paused and from another or unknown session. Auto-follow could scroll to that foreign content. Actual backend reads return the requested distinct thread IDs; navigation handlers retain the explicit tapped ID.",
+      "candidate": "1e005ea",
+      "fix": "Require exact known matching speech origin before adding a caption to the transcript; preserve matching-context deduplication. Regression test covers foreign and unknown origins, null selection, matching origin, duplicate and empty speech."
     }
   ],
   "current_state": {
