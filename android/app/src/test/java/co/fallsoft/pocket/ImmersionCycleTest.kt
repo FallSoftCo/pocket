@@ -57,6 +57,14 @@ class ImmersionCycleTest {
         assertTrue(long.size<source.split(" ").size)
         assertTrue(long.all{it.source.length*5<=100&&it.target.length*5<=100})
     }
+    @Test fun paragraphFormsPreserveNaturalSpacingAndRejectOverlappingRanges(){
+        val text="Read nuove sessioni, then check `git status`."
+        val at=text.indexOf("nuove sessioni")
+        assertEquals("Read new sessions, then check `git status`.",immersionParagraphForm(text,listOf(Triple(at,at+14,"new sessions"))))
+        assertNull(immersionParagraphForm(text,listOf(Triple(0,5,"a"),Triple(3,6,"b"))))
+        assertTrue(immersionCycleTiming("message","one word","una parola").sourceMs>=6000)
+        assertTrue(immersionCycleTiming("message","one word","una parola").targetMs>=18000)
+    }
     @Test fun recreatedCompositionRecoversCapturedMixedSnapshot(){
         val source="Read new sessions and important questions now."
         val a=source.indexOf("new sessions");val b=source.indexOf("important questions")

@@ -7,8 +7,8 @@ data class ImmersionCyclePhase(val original:Boolean,val untilChangeMs:Long)
 data class ImmersionReserveWord(val source:String,val target:String)
 fun immersionCycleTiming(identity:String,source:String,target:String):ImmersionCycleTiming {
     fun reading(text:String)=((Regex("\\S+").findAll(text).count()*320L)+text.codePointCount(0,text.length)*28L).coerceIn(2400L,8500L)
-    val sourceMs=reading(source)
-    val targetMs=max(sourceMs+1400L,reading(target)+1600L)
+    val sourceMs=(reading(source)+3600L).coerceIn(6000L,12000L)
+    val targetMs=max(18000L,reading(target)*3L)
     val period=sourceMs+targetMs
     var seed=identity.hashCode()
     seed=seed xor (seed ushr 16);seed*= -2048144789
@@ -76,7 +76,16 @@ fun immersionReserveChunks(source:String,target:String,maxWidth:Int,width:(Strin
     return List(max(a.size,b.size)){ImmersionReserveWord(a.getOrElse(it){""},b.getOrElse(it){""})}
 }
 
-/** Keep trailing punctuation in the same native reservation as its phrase. */
+/** Assemble alternate native paragraph forms from exact display ranges, without word padding. */
+fun immersionParagraphForm(text:String,ranges:List<Triple<Int,Int,String>>):String?{
+    var cursor=0
+    return buildString{ranges.sortedBy{it.first}.forEach{(start,end,replacement)->
+        if(start<cursor||end<start||end>text.length)return null
+        append(text,cursor,start);append(replacement);cursor=end
+    };append(text,cursor,text.length)}
+}
+
+/** Retained for historical reservation tests. */
 fun immersionPhraseEnd(text:String,end:Int):Int {
     var at=end.coerceIn(0,text.length)
     while(at<text.length&&text[at] in ",.;:!?…)]}»”")at++

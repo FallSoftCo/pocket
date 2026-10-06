@@ -36,11 +36,6 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
         val rescued=span==selected&&at>=0&&end<=content.text.length&&content.text.substring(at,end)==span.source
         if(at>=0&&end>at&&end<=content.text.length&&span.target!=span.source){
             val visible=content.text.substring(at,end)
-            val agreement=agreementSegments(span)
-            if(!rescued&&visible==span.target&&alignedTargetValid(span))span.targetSegments.forEachIndexed { segmentIndex,segment ->
-                if(segment.role !in listOf("separator","punctuation"))addStyle(SpanStyle(color=grammarColor(segment),fontWeight=FontWeight.Medium,textDecoration=if(segmentIndex in agreement)TextDecoration.Underline else null),at+segment.start,at+segment.end)
-            }
-            if(rescued)addStyle(SpanStyle(color=Paper,background=Color(0xff292a30)),at,end)
             addStringAnnotation("immersion-reserve","${span.start}:${span.end}",at,end)
             if(help&&content.spans.none{it.kind=="link"&&it.start<end&&it.end>at})addLink(LinkAnnotation.Clickable("immersion:${span.start}:${span.end}",TextLinkStyles(style=SpanStyle()),linkInteractionListener={onHelp(span)}),at,end)
         }
