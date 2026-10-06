@@ -35,7 +35,7 @@ class NativeVoiceAudio(context:Context,private val explicitCompletion:Boolean=fa
     private fun js(code:String){view.evaluateJavascript(code,null)}
     fun answer(sdp:String)=js("answer(${JSONObject.quote(sdp)}).catch(e=>report('error',e.message))")
     suspend fun send(wav:ByteArray){val done=CompletableDeferred<Unit>();sent=done;try{js("send(${JSONObject.quote(Base64.encodeToString(wav,Base64.NO_WRAP))}).catch(e=>report('error',e.message))");withTimeout(135000){done.await()}}finally{sent=null}}
-    fun speak(token:Long)=js("speak($token)")
+    fun speak(token:Long,expectedText:String="")=js("speak($token,${JSONObject.quote(expectedText)})")
 
     fun silence()=js("silence()")
     fun close(){if(closed)return;closed=true;sent?.cancel();js("closeVoice()");view.removeJavascriptInterface("PocketAudio");view.destroy()}

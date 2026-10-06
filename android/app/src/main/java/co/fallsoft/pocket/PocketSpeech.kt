@@ -321,7 +321,7 @@ class PocketSpeechService:Service(){
         try{
             val media=MediaPlayer();player=media
             media.setAudioAttributes(attributes);media.setWakeMode(this,PowerManager.PARTIAL_WAKE_LOCK);media.setDataSource(file.path)
-            media.setOnErrorListener{_,_,_->pause("Playback interrupted · Tap Resume to retry");true}
+            media.setOnErrorListener{_,_,_->file.delete();pause("Playback interrupted · Tap Resume to retry");true}
             media.setOnPreparedListener{
                 if(player!==media||finished)return@setOnPreparedListener
                 prepared=true
@@ -338,7 +338,7 @@ class PocketSpeechService:Service(){
                 next()
             }
             armTimeout();media.prepareAsync()
-        }catch(_:Exception){pause("Playback interrupted · Tap Resume to retry")}
+        }catch(_:Exception){file.delete();pause("Playback interrupted · Tap Resume to retry")}
     }
     private fun startPlayer(media:MediaPlayer,id:Long,index:Int){
         handler.removeCallbacks(timeout);media.start();started=true

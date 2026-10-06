@@ -1,7 +1,7 @@
 <!doctype html><meta charset="utf-8"><script>
 'use strict';
 const explicitCompletion=false;
-let providerResponse=null,providerComplete=false;
+let providerResponse=null,providerComplete=false,expectedSpeech="",providerDoneAt=0,recordingStarted=0,providerDuration=0,latestTranscriptEnd=0;
 let pc,dc,ctx,dest,remote,analyser,source,recorder,lastBlob,allowOutput=false,speaking=false,lastEnergy=0,ended=false,renderToken=0,recordToken=0;
 const report=(kind,data='')=>PocketAudio.event(kind,String(data));
 window.onerror=(message)=>report('error',message);
@@ -24,13 +24,22 @@ async function connect(){
  setInterval(sampleOutput,100);
 }
 
+function speechWords(text){return String(text||'').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();}
 function providerEvent(m){
  if(m.type==='error'){report('error',m.error?.message||'Voice provider error.');return;}
  if(!explicitCompletion||!allowOutput)return;
- if(m.type==='response.created'&&providerResponse===null){providerResponse=m.response?.id||null;return;}
- if(m.type==='response.done'&&providerResponse!==null&&m.response?.id===providerResponse){
-  if(m.response.status!=='completed'){allowOutput=false;report('error','Native speech did not complete. Retry the saved passage.');return;}
-  providerComplete=true;
+ if(m.type==='output_transcript.added'&&Number.isFinite(m.end_ms))latestTranscriptEnd=Math.max(latestTranscriptEnd,m.end_ms);
+ if(m.type==='turn.created'&&providerResponse===null&&m.turn?.role==='assistant'){
+  providerResponse=m.turn.id||null;return;
+ }
+ if(m.type==='turn.done'&&providerResponse!==null&&m.turn?.id===providerResponse){
+  const turn=m.turn;
+  if(turn.role!=='assistant'||turn.error||(turn.status&&turn.status!=='completed')||
+     !Number.isFinite(turn.end_ms)||!Number.isFinite(turn.start_ms)||turn.end_ms<latestTranscriptEnd||turn.end_ms<turn.start_ms||
+     !expectedSpeech||speechWords(turn.transcript)!==speechWords(expectedSpeech)){
+   allowOutput=false;report('error','Native speech did not completely read the saved passage. Tap Resume to retry.');return;
+  }
+  providerDuration=turn.end_ms-turn.start_ms;providerDoneAt=Date.now();providerComplete=true;
  }
 }
 function sampleOutput(){
@@ -38,7 +47,7 @@ function sampleOutput(){
  const data=new Float32Array(1024);analyser.getFloatTimeDomainData(data);
  const energy=data.reduce((sum,v)=>sum+v*v,0)/data.length;
  if(energy>.000005){lastEnergy=Date.now();if(!speaking){speaking=true;report('preparing')}}
- else if(speaking&&Date.now()-lastEnergy>2500&&(!explicitCompletion||providerComplete)){
+ else if(speaking&&Date.now()-lastEnergy>2500&&(!explicitCompletion||(providerComplete&&Date.now()-providerDoneAt>=500&&Date.now()-recordingStarted>=providerDuration))){
   speaking=false;remote.muted=true;if(recorder?.state==='recording')recorder.stop();
  }
 }
@@ -51,8 +60,8 @@ async function send(wav){
  const raw=atob(wav),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));const buffer=await ctx.decodeAudioData(bytes.buffer);
  source=ctx.createBufferSource();source.buffer=buffer;source.connect(dest);source.onended=()=>{source=null;report('sent')};source.start();
 }
-function speak(token){
- renderToken=token;recordToken=token;providerResponse=null;providerComplete=false;
+function speak(token,expectedText=""){
+ renderToken=token;recordToken=token;providerResponse=null;providerComplete=false;expectedSpeech=expectedText;providerDoneAt=0;recordingStarted=Date.now();providerDuration=0;latestTranscriptEnd=0;
  allowOutput=true;speaking=false;lastEnergy=Date.now();if(remote){remote.muted=true;remote.play().catch(e=>report('error',e.message));if(recorder?.state==='inactive')recorder.start();}
  setTimeout(()=>{if(allowOutput&&!speaking&&Date.now()-lastEnergy>20000){allowOutput=false;report('error','No spoken response arrived. Retry to read the saved result.');}},21000);
 }

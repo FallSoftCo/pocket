@@ -1,5 +1,5 @@
 {
-  "status": "DO NOT SHIP: isolated compile/test candidate; real native completion protocol mismatch observed",
+  "status": "Corrected native-turn protocol candidate; final production gate/audio and Android service qualification pending, do not ship yet",
   "base": "a00616c",
   "purpose": "Replace ordinary notification and manual Speak offline TTS primary rendering with existing ChatGPT-authenticated native Codex speech, independent of full voice mode.",
   "implementation": [
@@ -9,7 +9,8 @@
     "Cancellable HTTP negotiation/speak/stop; cancellation destroys owned WebView and stops known exact connection. A negotiation cancelled before its id arrives can leave an orphan until the existing90-second server lease expires.",
     "Provider-versioned render/cache identities prevent silent reuse of old offline audio. Existing offline cursor resets on first rerender because timings differ; native-rendered chunk files retain exact pause/seek cursor.",
     "Italian rendering no longer requires an installed offline Italian voice. No offline fallback exposed; unavailable native provider leaves item paused and directly resumable/clearable. No paid API switch.",
-    "Playback-only capture opts into explicit response.created identity plus matching response.done completed gate; quiet tail alone cannot complete/copy audio. Legacy full-voice defaults unchanged."
+    "Playback-only capture binds observed native turn.created/done id, requires assistant role and complete expected transcript normalized for punctuation/case/NFKC, verifies tail timestamps, then drains RTP before recorder completion. Quiet alone cannot complete audio. Legacy full-voice defaults unchanged.",
+    "MediaPlayer rejects a cached container by deleting that current chunk file before saving Retry state, so retry renders fresh native audio instead of reusing an invalid blob forever."
   ],
   "files": [
     "server/native-voice.mjs",
@@ -24,14 +25,14 @@
     "tests/native-speech-capture.test.mjs"
   ],
   "checks": {
-    "node": "26 existing focused tests plus4 explicit completion capture tests pass (30 total)",
-    "android": "Both variants compile; each160 tests/36 suites pass (0 failures/errors); lintDebug and lintRelease pass. Final frozen source check1m56s. No APK assembly/provider run.",
-    "provider": "One authorized existing-account native WebRTC output probe connected and generated assistant transcript, but failed closed after65s: actual turn.created/delta/done events differ from assumed response.created/done. No accepted audio cache.",
+    "node": "33 focused tests pass, including7 saved capture boundary regressions",
+    "android": "FINAL frozen corrected native-turn/cached-error recovery source: both variants compile, each160 tests/36 suites with0failures/errors; lintDebug and lintRelease pass2m07s. No APK assembly or provider execution of exact gate yet.",
+    "provider": "First authorized probe failed closed on assumed response events; second diagnostic probe observed native turn.created/done and captured123466-byte Opus mono48k audio8.277256sec. Exact authored provider final transcript ends silver lantern. Diagnostic stop was not the final production gate; no independent listening/ASR claim.",
     "production": "no restart, release, version or signing changes"
   },
   "limitations": [
     "Native Codex audio remains experimental and depends on account/CLI compatibility; exact grant/account debit not measured.",
-    "Saved speech capture requires matching explicit provider response completion plus2.5-second quiet tail; source tests verify long internal silence/stale/cancelled completion cannot cache truncated audio. Actual native WebRTC provider event availability and final sentinel completeness still require observed provider smoke; absent completion intentionally fails closed.",
+    "Observed native turn.done carries id, role, start_ms, end_ms and final transcript, no status field. Saved gate checks exact known turn identity and normalized full requested passage; numerator digits versus spoken word expansion may fail visibly rather than silently accept omissions. Actual exact production-gate/headless and Android renderer background qualification remain required.",
     "Buffered full chunk delays first speech by provider generation plus silence tail and negotiation each chunk.",
     "Hidden WebView/AudioContext/MediaRecorder/background/screen-off behavior must be independently qualified for this playback-only service, not assumed from full voice mode.",
     "No physical lockscreen/Bluetooth/readability or pronunciation quality claim."
@@ -58,7 +59,7 @@
       ]
     }
   ],
-  "protocolEvidence": "Current local generated schema leaves raw realtime items untyped. Real native provider emits turn.created/done; structural turn identity/status must be observed before adapting success gate. Source candidate must remain blocked until this and final-sentinel audio are qualified.",
+  "protocolEvidence": "Observed native WebRTC turn.created/done structure replaces initial incorrect response.done assumption. Local raw realtime schema is untyped; actual role value and production gate must be asserted by final candidate smoke. No arbitrary sentinels appended to real content.",
   "observedNativeProtocol": {
     "eventTypes": [
       "session.started",
@@ -74,6 +75,20 @@
     "success": false,
     "paidKeyEnvironmentRemoved": true,
     "authoredText": "This is a short NextComp speech check. The final words are silver lantern.",
-    "cleanup": "Owned ephemeral realtime session, browser and loopback fixture stopped; no user work/controller input."
+    "cleanup": "Owned ephemeral realtime session, browser and loopback fixture stopped; no user work/controller input.",
+    "diagnosticSecondProbe": {
+      "success": true,
+      "audioBytes": 123466,
+      "durationSeconds": 8.277256,
+      "codec": "opus",
+      "sampleRate": 48000,
+      "channels": 1,
+      "nativeTurnDoneAtMs": 8801,
+      "providerEndMs": 6600,
+      "finalSentinelTranscriptEndMs": 4400,
+      "authoredFinalTranscriptMatches": true,
+      "roleValue": "redacted in initial diagnostic, must observe/assert assistant on final gate",
+      "notProductionGate": true
+    }
   }
 }

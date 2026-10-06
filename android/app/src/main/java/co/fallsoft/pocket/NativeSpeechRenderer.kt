@@ -40,7 +40,7 @@ internal class NativeSpeechRenderer(private val context:Context,private val endp
                 }
             }
             withTimeout(35000){connected.await()}
-            requireNotNull(transport).speak(1L)
+            requireNotNull(transport).speak(1L,text)
             api("/api/voice/native/speak",JSONObject().put("connectionId",connection).put("text",text))
             withTimeout(90000){audio.await()}
         }finally{
