@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearEasing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -53,7 +54,7 @@ import androidx.compose.ui.unit.*
                 cueActive=true
             },onHandoff={original=next},onFinish={cueActive=false},animate={
                 progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
-            })
+            },awaitHandoff={snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}})
             delay(if(original)6000L else 18000L)
         }
     }

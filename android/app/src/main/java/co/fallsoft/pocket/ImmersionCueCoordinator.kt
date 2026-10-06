@@ -26,13 +26,13 @@ internal object ImmersionCueCoordinator {
 }
 
 /** Cancellation releases the lease; it never runs a missed semantic handoff from finally. */
-internal suspend fun runImmersionCue(owner:String,body:Boolean,onBegin:suspend (Long)->Unit,onHandoff:()->Unit,onFinish:()->Unit,animate:suspend ()->Unit,handoffMs:Long=IMMERSION_HANDOFF_AT_MS){
+internal suspend fun runImmersionCue(owner:String,body:Boolean,onBegin:suspend (Long)->Unit,onHandoff:()->Unit,onFinish:()->Unit,animate:suspend ()->Unit,handoffMs:Long=IMMERSION_HANDOFF_AT_MS,awaitHandoff:suspend ()->Unit={kotlinx.coroutines.delay(handoffMs)}){
     try{
         val serial=ImmersionCueCoordinator.acquire(owner,body)
         onBegin(serial)
         kotlinx.coroutines.coroutineScope{
             launch { animate() }
-            kotlinx.coroutines.delay(handoffMs)
+            awaitHandoff()
             onHandoff()
         }
     }finally{onFinish();ImmersionCueCoordinator.release(owner)}

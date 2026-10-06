@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 internal class ImmersionCycleRender(
@@ -53,7 +54,7 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
                 cueActive=true
             },onHandoff={originals[keys[index]]=original},onFinish={cueActive=false;incoming=null},animate={
                 progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
-            })
+            },awaitHandoff={snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}})
         }
         // Every resume receives a fresh reading hold, never a backlog of overdue handoffs.
         val timing=immersionCycleTiming(identity.toString(),plan.source,plan.text)
