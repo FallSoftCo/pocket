@@ -28,7 +28,10 @@ internal object ImmersionInteraction {
     }
 }
 
-@Composable internal fun immersionMotionReady():Boolean {
+internal val LocalImmersionMotionState=staticCompositionLocalOf<Boolean?>{null}
+@Composable internal fun immersionMotionReady():Boolean = LocalImmersionMotionState.current?:rememberImmersionMotionEnvironment()
+
+@Composable internal fun rememberImmersionMotionEnvironment():Boolean {
     val context=LocalContext.current
     val lifecycle=remember(context){var c=context;while(c is ContextWrapper&&c !is Activity)c=c.baseContext;(c as? LifecycleOwner)?.lifecycle}
     var resumed by remember(lifecycle){mutableStateOf(lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED)==true)}

@@ -73,9 +73,10 @@ class MainActivity:ComponentActivity(){
         if(Build.VERSION.SDK_INT>=33)permissions.launch(Manifest.permission.POST_NOTIFICATIONS)
         if(Pocket.token.isNotBlank()){Pocket.refresh()}
         setContent{MaterialTheme(shapes=Shapes(extraSmall=RoundedCornerShape(2.dp),small=RoundedCornerShape(4.dp),medium=RoundedCornerShape(6.dp),large=RoundedCornerShape(8.dp),extraLarge=RoundedCornerShape(10.dp)),typography=Typography(titleLarge=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=20.sp,fontWeight=FontWeight.Medium),titleMedium=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=16.sp,fontWeight=FontWeight.Medium),bodyLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,lineHeight=22.sp,fontFamily=AppFont),bodyMedium=androidx.compose.ui.text.TextStyle(fontSize=14.sp,lineHeight=20.sp,fontFamily=AppFont),labelLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont)),colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,background=Ink,surface=Panel,onSurface=Paper,onBackground=Paper,outline=Muted,secondary=Coral,onSecondary=Ink,surfaceVariant=Panel,onSurfaceVariant=Paper,surfaceContainer=Panel,surfaceContainerHigh=Panel,surfaceContainerHighest=Panel,surfaceContainerLow=Panel,surfaceContainerLowest=Ink,secondaryContainer=Panel,onSecondaryContainer=Paper,primaryContainer=Panel,onPrimaryContainer=Paper,tertiary=NextCerise,onTertiary=Ink,tertiaryContainer=Panel,onTertiaryContainer=Paper)){
+            CompositionLocalProvider(LocalImmersionMotionState provides rememberImmersionMotionEnvironment()){
             Surface(Modifier.fillMaxSize(),color=Ink){Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
                 Box(Modifier.weight(1f)){if(Pocket.token.isBlank()||Pocket.pairingMode)PairScreen(initialServer.ifBlank{if(Pocket.pairingMode)"http://127.0.0.1:18880" else ""},initialCode)else BackendApp()}
-            }}
+            }}}
         }}
     }
     override fun dispatchTouchEvent(event:android.view.MotionEvent):Boolean {ImmersionInteraction.touch(event.actionMasked);return super.dispatchTouchEvent(event)}

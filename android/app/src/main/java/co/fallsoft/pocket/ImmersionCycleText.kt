@@ -49,7 +49,7 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
             if(ready&&PocketSpeech.displayedOwner==null){progress.snapTo(0f);progress.animateTo(1f,tween(600))}else progress.snapTo(1f)
         }else if(!ready||PocketSpeech.displayedOwner!=null)progress.snapTo(1f)
     }
-    BoxWithConstraints(Modifier.fillMaxWidth()){
+    Box(Modifier.fillMaxWidth()){
         val marks=content.getStringAnnotations("immersion-reserve",0,content.length)
         fun form(original:Boolean):AnnotatedString?=immersionAnnotatedParagraph(content,marks.mapNotNull{range->
             val span=plan.spans.firstOrNull{range.item=="${it.start}:${it.end}"}?:return@mapNotNull null
