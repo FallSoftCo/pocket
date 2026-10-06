@@ -13,7 +13,11 @@
     "lintDebug": "pass",
     "lintRelease": "pass",
     "auditVulnerabilities": 0,
-    "cleanCheckoutCI": "https://github.com/FallSoftCo/pocket/actions/runs/37403691737"
+    "cleanCheckoutCI": "https://github.com/FallSoftCo/pocket/actions/runs/37403691737",
+    "publicSourceScan": {
+      "trackedFiles": 451,
+      "passed": true
+    }
   },
   "native": {
     "artifact": "personalDebugSha256",
@@ -117,5 +121,6 @@
       "automaticReload": true
     },
     "location": "Main 8bar gallery; item IDs identify the synthetic review media without publishing a private deployment hostname."
-  }
+  },
+  "ownedResources": "Owned emulator5562 and fixture19993 stopped; five original preferences hash-restored, font1/animator0 restored, owned reverse mappings/runtime leases removed. Independent owned sockets absent; unrelated emulator5556 preserved. No physical-phone interaction by QA agent."
 }
