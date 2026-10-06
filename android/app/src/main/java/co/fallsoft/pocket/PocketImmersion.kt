@@ -13,6 +13,9 @@ object PocketImmersion {
     private var supportState by mutableStateOf(true)
     val supportEnabled get()=supportState
     fun setSupportEnabled(value:Boolean){supportState=value;Pocket.prefs.edit().putBoolean(profileKey()+":englishSupport",value).apply()}
+    private var motionState by mutableStateOf(true)
+    val motionEnabled get()=motionState
+    fun setMotionEnabled(value:Boolean){motionState=value;Pocket.prefs.edit().putBoolean(profileKey()+":motion",value).apply()}
     private var densityState by mutableStateOf("strong")
     val density get()=densityState
     fun setDensity(value:String){densityState=if(value in listOf("starter","balanced","strong"))value else "strong";Pocket.prefs.edit().putString(profileKey()+":density",densityState).apply();translations=emptyMap();byContent=emptyMap();originals=emptySet();clearReadingChoices();pending.clear();job?.cancel();sync()}
@@ -45,6 +48,7 @@ object PocketImmersion {
         }
     }
     fun restore(){
+        motionState=Pocket.prefs.getBoolean(profileKey()+":motion",true)
         val oldDensity=densityState
         val ownerChanged=readingChoices.restore(readingOwner())
         job?.cancel();cacheSave?.cancel();pending.clear();enabledState=Pocket.prefs.getBoolean(profileKey(),false);supportState=Pocket.prefs.getBoolean(profileKey()+":englishSupport",true);densityState=Pocket.prefs.getString(profileKey()+":density","strong")?:"strong"

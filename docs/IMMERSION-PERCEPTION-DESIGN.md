@@ -1,0 +1,24 @@
+# Inline immersion: reading before animation
+
+The alpha26 display still has alpha24's 75 ms fade-out through zero followed by a 75 ms fade-in. Many independent phrase clocks can create repeated attention demands. Inline reservations measure an imposed Medium weight but can render a different inherited weight; `TextTop` placeholders containing full line-height text also risk different baseline and leading from adjacent native text. Default semantic colors, weight and agreement underlines compound those differences. Interface labels use another renderer, so they do not participate in the same language transition.
+
+## Evidence and limits
+
+- [Kevin Larson, The Science of Word Recognition](https://learn.microsoft.com/en-us/typography/develop/word-recognition) reviews letter recognition, eye movements and contextual/parafoveal preview. English reading involves discrete fixations and regressions; stable upcoming letters and spacing matter. Its reported fixation durations are not an animation specification or measurements of this bilingual UI.
+- [Yantis and Jonides, 1984](https://pubmed.ncbi.nlm.nih.gov/6238122/) experimentally studied attentional capture by abrupt visual onsets. Applying that result to recurring UI phrase changes is a design inference, not a direct study of language learning.
+- [Designing and Evaluating Livefonts](https://www.microsoft.com/en-us/research/uploads/prod/2018/11/livefonts.pdf) evaluates animated typography for different readers. It does not establish that arbitrary continuous bilingual changes improve comprehension, or that its results transfer to this app.
+- [W3C Pause, Stop, Hide](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html) explains why motion and automatically updating content need user control. [Text Spacing](https://www.w3.org/WAI/WCAG21/Understanding/text-spacing) is a resilience requirement for changed spacing, not permission to impose irregular spacing or a universal prescription for one font.
+
+No phone gaze is measured. We must not pretend to change phrases between actual saccades. Touch, scrolling, keyboard visibility, lifecycle and accessibility settings are observable interaction signals; they are useful conservative pauses, not gaze detection.
+
+## Implementation direction
+
+Keep one inline semantic flow and unchanged execution/copy/URL behavior. A replacement changes language, not the control's action or hit region. Body text retains native weight, color and baseline; validated grammar annotations remain available as semantic data rather than a default rainbow competing with reading. Parent icons/backgrounds stay stable while their labels transition.
+
+Use a spatial transition with a narrow soft boundary, or another reviewed simultaneous handover, without blanking the whole phrase. A plain full-paragraph crossfade can produce ghosted doubled letters and is not automatically better than the old blink. Review intermediate frames, not only endpoints. Reserve actual maximum source/target geometry at the current font scale; avoid synthetic word columns. Arbitrarily unequal language lengths cannot simultaneously retain natural spacing, identical word positions and identical line breaks. Prefer legible native typography and a stable paragraph envelope; document any remaining geometry tradeoff instead of calling it solved.
+
+Controls form a calm target-dominant layer (initial tuning: 18 seconds target, 6 seconds source). This is a design starting point, not a validated human-perception threshold. Controls and content use the same transition treatment but need not all change at once. Pause text motion during direct interaction, keyboard entry, backgrounding and touch exploration. Android reduced-motion preference holds a readable language instead of replacing fades with instantaneous automatic swaps. In-place source hold remains available; explicit speech retains its captured flow.
+
+## Qualification gates
+
+Inspect normal and 2× font scale, unequal word counts and long forms, baseline continuity, natural spaces, inherited bold/italic, punctuation, URLs/images and truncation. Capture complete native motion and intermediate frames. Check that no whole phrase vanishes, source/target are not exposed as duplicate lines or semantic children, and phase changes do not change action hit regions. Verify touch/scroll and keyboard pauses, manual source hold, reduced motion, lifecycle resume and captured speech. Publish only synthetic reviewed UI media. Timing and visual quality need user feedback; fixture checks are not a comprehension or language-acquisition study.

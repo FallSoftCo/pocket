@@ -592,6 +592,12 @@
       "requirement": "Conversation opening must be fast, show whether work continues or needs user input, and put Codex/Losangelex selection in Settings rather than an extra permanent row.",
       "implementation": "Recent cold-open history bounded, four owner-isolated recent pages cached for two minutes with background refresh; no TTL renewal merely by reopening. Persistent authored working/thinking icon or Needs you/Your turn label in existing context-control row; pending questions take priority. Backend selector lives in Settings, accessible from either backend while retaining team conversation state.",
       "evidence": "205 backend/130 Android tests, both lint variants and clean-checkout CI pass. Exact signed44 native checks cover cached own page before12s response, cold page isolation and late-response ownership, Working/Needs you/Your turn, Settings paths for both backends. Four synthetic reviews published; full1759-card gallery check passes. Backend26 healthy after one scoped bridge restart; actual distinct reads matched IDs in109/88ms. Compatible update44 announced512 and public release digest verified; bounded on-device Codex-assisted in-place update completed; root independently verified installed44 hash, actual persistent state control and no standalone backend footer labels. No real conversation content modified. See docs/qualification/conversation-speed-status-alpha26.json."
+    },
+    {
+      "id": "immersion-perception-polish",
+      "status": "research-and-implementation-underway",
+      "requirement": "Replace immature blink-to-black immersion with smooth readable 2D language transitions; correct jagged spacing/baselines and weird coloring; integrate controls into the same layered language experience. Research human reading and visual motion rather than copying generic app patterns. Preserve single inline replacements, contextual help in place, original action semantics and optional mode.",
+      "design": "No whole-phrase fade through zero. Natural inherited typography and stable baselines; default grammar rainbow/forced weight removed. Calm target-dominant control layer uses shared language timing and reserved genuine label bounds. Text motion yields to touch/scroll, keyboard, backgrounding and reduced motion. Final transition and spacing require native frame and interaction review before release."
     }
   ],
   "current_state": {

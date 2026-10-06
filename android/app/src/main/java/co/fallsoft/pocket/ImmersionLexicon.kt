@@ -38,7 +38,7 @@ object ImmersionLexicon {
         "Questions" to "Domande", "Attention" to "Attenzione", "Answers & notes" to "Risposte e note",
         "Steer running turn" to "Orienta il turno", "Project folder" to "Cartella del progetto",
         "What would you like Codex to do?" to "Che cosa vuoi far fare a Codex?",
-        "Italian immersion" to "Immersione in italiano", "Original / Italiano" to "Originale / Italiano"
+        "Language motion" to "Transizioni di lingua", "Italian immersion" to "Immersione in italiano", "Original / Italiano" to "Originale / Italiano"
     )
     private val normalized=common.mapKeys{it.key.lowercase(Locale.ROOT)}
     fun italian(text:String):String?=normalized[text.trim().lowercase(Locale.ROOT)]

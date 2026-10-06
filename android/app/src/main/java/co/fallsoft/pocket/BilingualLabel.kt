@@ -1,5 +1,10 @@
 package co.fallsoft.pocket
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,10 +26,37 @@ import androidx.compose.ui.unit.*
     val key="label-rescue:$text"
     val supported=PocketImmersion.enabled&&PocketImmersion.supportEnabled&&target!=text
     val expanded=supported&&PocketImmersion.originalShown(key)
-    val size=if(PocketImmersion.enabled)fontSize.value.coerceAtLeast(14f).sp else fontSize
+    if(!supported){
+        Text(target,modifier=modifier,color=color,fontSize=fontSize,fontWeight=fontWeight,maxLines=maxLines,
+            overflow=TextOverflow.Ellipsis,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
+        return
+    }
+    val ready=immersionMotionReady()
+    var original by remember(text,target){mutableStateOf(false)}
+    LaunchedEffect(text,target,supported,ready,expanded){
+        if(!supported||!ready||expanded)return@LaunchedEffect
+        while(isActive){
+            val phase=immersionControlPhase(System.currentTimeMillis())
+            original=phase.original
+            delay(phase.remainingMs)
+        }
+    }
+    val shown=if(expanded||supported&&original)text else target
+    var from by remember(text,target){mutableStateOf(AnnotatedString(shown))}
+    var to by remember(text,target){mutableStateOf(AnnotatedString(shown))}
+    val progress=remember(text,target){Animatable(1f)}
+    LaunchedEffect(shown,ready){
+        if(shown!=to.text){
+            from=to;to=AnnotatedString(shown)
+            if(ready){progress.snapTo(0f);progress.animateTo(1f,tween(600))}else progress.snapTo(1f)
+        }else if(!ready)progress.snapTo(1f)
+    }
     val rescue=if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}else Modifier
     Box(modifier.then(rescue)){
-        Text(if(expanded)text else target,color=color,fontSize=size,fontWeight=fontWeight,maxLines=if(expanded)Int.MAX_VALUE else maxLines,overflow=TextOverflow.Ellipsis,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
+        BlendImmersionText(from,to,{progress.value},AnnotatedString(shown),reserve=listOf(AnnotatedString(text),AnnotatedString(target)),color=color,fontSize=fontSize,
+            lineHeight=LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
+            fontWeight=fontWeight,maxLines=maxLines,overflow=TextOverflow.Ellipsis,
+            textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
     }
 }
 
