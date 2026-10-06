@@ -119,17 +119,18 @@
     "stagedFile": "Download/NextComp-alpha30-48.apk",
     "initialNativeTask": "Stopped in notification shade without actions; shade alone was a model interpretation, not an explicit policy requirement.",
     "followup": "Ordinary unlocked shade navigation authorized; SSH connection closed during corrected installer task before result. Bounded independent reconnects refused TCP8022.",
-    "currentInstalledIdentity": "Unknown after access interruption.",
-    "lastIndependentlyVerifiedVersionCode": 47,
-    "lastIndependentlyVerifiedSha256": "c38afb9bbb69465c3e7a2d5b4a7697975d5e9346f8431393ea8cc3df736f7262",
+    "currentInstalledIdentity": "Independently verified via fresh package path and installed base APK hashing over recovered SSH on2026-10-06.",
+    "lastIndependentlyVerifiedVersionCode": 48,
+    "lastIndependentlyVerifiedSha256": "d5a9bb7bbf2842880e366e3cf6d49a92c56ada9eb6a8ed8a4aa245c2d8a41273",
     "adbFallback": "Required phone-adb helper found neither verified TCP5555 nor authorized Pixel USB on available servers.",
     "installerRepeatedAfterAccessLoss": false,
     "networkSecuritySettingsChangedByWorkstation": false,
-    "nativeAttemptResultPendingIndependentRead": true
+    "nativeAttemptResultPendingIndependentRead": false,
+    "installerActor": "Prior retry result absent; installation actor unknown. No duplicate installer needed."
   },
   "limitations": [
     "Native software emulator observations are not phone frame-pacing measurements.",
-    "Physical deployment and notification receipt need independent evidence."
+    "Phone package installation is verified; physical scrolling performance and handset push receipt remain unqualified."
   ],
   "release": {
     "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.30",

@@ -300,3 +300,7 @@ not reported as failed or successful. Last independent package read was exact
 alpha29/code47. No installer was repeated after access loss, and the workstation
 did not change network/security settings. Read the actual native task result and
 fresh installed package before deciding whether another installation is needed.
+
+### Alpha30 deployment follow-up —2026-10-06
+
+After SSH recovered, a fresh package path and installed base APK hash independently confirmed code48 with SHA256 `d5a9bb7bbf2842880e366e3cf6d49a92c56ada9eb6a8ed8a4aa245c2d8a41273`. No duplicate installation or UI actions were necessary. This supersedes the prior unknown installation outcome; physical scrolling frame pacing and handset notification receipt remain unverified.

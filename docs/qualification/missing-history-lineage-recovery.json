@@ -6,5 +6,7 @@
   "task": "Original Google referral matching session retained; research turn accepted inProgress and completed tool executions verified. No prior results existed in readable history. No applications or outreach authorized.",
   "handling": "Missing lineage RPC becomes a task-specific HTTP 409 with retained RPC cause and instructions to check running work before replacement; global transport remains connected.",
   "tests": "206 Node tests pass; targeted websocket regression also passes.",
-  "research_result": "Research resumed; ranking not yet complete."
+  "research_result": "Research resumed; ranking not yet complete.",
+  "followup": "Research worker reported shell failures due to file descriptor exhaustion. Shared Codex runtime had soft open-file limit1024, hard1048576, and hundreds of live pipes/pidfds. Soft limit raised in place to8192 within the unchanged hard limit, preserving workers. Existing active research turn steered to retry, with repository instructions provided; no duplicate turn started.",
+  "runtime_limit": "In-place process recovery only; persistence and underlying descriptor retention are not yet qualified."
 }

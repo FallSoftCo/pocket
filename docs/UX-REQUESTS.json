@@ -612,7 +612,7 @@
     },
     {
       "id": "modeled-symbol-objects",
-      "status": "integrated-and-published-alpha29; phone47 verified in Downloads, normal installer stopped at lockscreen; Fold pacing unqualified",
+      "status": "integrated-published-alpha29-carried-through-phone48; actual installed APK verified; Fold pacing unqualified",
       "requirement": "Replace the full extruded-outline symbol alphabet with original modeled 3D objects with meaningful volume, construction and depth; preserve intended silhouette, meanings, interaction, readable real display sizes and reduced motion. Coordinate asset integration with Pocket Dev session 01a0f2bc-ff5a-70c2-b682-10f0987dab80. Elevate the approved look into a coherent design language: recognizable at small scales and intended perspectives, constructed materials, theme and lighting studies. Replace 6fps playback with real rendered high-frame-rate motion on Pixel 9 Pro Fold, targeting 60fps synchronized to the 60–120Hz display; qualify actual device smoothness separately.",
       "scope": "37 static modeled symbols; 37 120-frame60fps paged swivels; Codex/Psychology and cubic N 160-frame60fps spins; 168 atlas pages and 206 resource files. Existing N construction retained.",
       "workstream": "nextcomp/modeled-symbols; branding/modeled; synchronized onto published alpha28 commit9da7474",
@@ -620,7 +620,7 @@
     },
     {
       "id": "stale-spoken-transcript-scroll",
-      "status": "fixed-and-published-alpha30; native normal/2x checks pass; phone48 staged, installation unverified after SSH interruption",
+      "status": "fixed-published-alpha30-installed-phone48; native normal/2x verified; physical scroll pacing unqualified",
       "requirement": "Giant stale spoken messages must not remain pinned below newer replies or cause conversation scroll lag; reported in 8bar tiktok.",
       "implementation": "Playback does not append synthetic transcript rows. Only current active same-session chunk appears in a bounded two-line preview; direct pause/resume and clear remain in monitor. Visible row keys use derived state to avoid per-scroll-pixel recomposition.",
       "acceptance": "Active, paused, completed, dismissed, stale ID, foreign session and very large Unicode chunk policies; native giant saved-speech and ongoing transcript fixture, final build and install evidence.",
