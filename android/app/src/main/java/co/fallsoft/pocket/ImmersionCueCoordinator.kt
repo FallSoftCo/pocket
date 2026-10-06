@@ -40,7 +40,7 @@ internal class ImmersionCueBroker {
             synchronized(queue){
                 val before=queue.serial;queue.refresh();if(queue.serial!=before)changes.value++
                 if(queue.active==owner)granted=queue.serial
-                waitMs=if(queue.active==null)queue.quietRemainingMs()else 0L
+                waitMs=if(queue.active==null)queue.quietRemainingMs().coerceAtLeast(1L)else 0L
                 observed=changes.value
             }
             granted?.let{return it}
@@ -68,5 +68,5 @@ internal suspend fun runImmersionCue(owner:String,body:Boolean,onBegin:suspend (
             onHandoff()
         }
         completed=true
-    }finally{onFinish();broker.release(owner,completed,cooldownMs)}
+    }finally{try{onFinish()}finally{broker.release(owner,completed,cooldownMs)}}
 }
