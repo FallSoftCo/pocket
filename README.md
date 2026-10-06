@@ -19,7 +19,7 @@ The Codex backend connects to your existing stock runtime and can also target Co
 - Choose Codex sessions/coordinator or a Losangelex team room with task, recipient and direct-message controls. Team voice is not supported in this first integration.
 - Use a persistent coordinator by text or manually controlled voice turns, or address a work session directly.
 - Read useful intermediate answers and notes, reply with their context, or navigate to their source before the final response.
-- Optionally replace phrases inline for language immersion, with in-place text taps to reveal the source.
+- Optionally cycle phrase replacements inline for language immersion, with length-aware reading holds, matching control labels and in-place source help. [Reading and motion design](docs/IMMERSION-PERCEPTION-DESIGN.md) documents the evidence and limits.
 
 - See your weekly Codex allowance, remaining percentage and reset time in the bottom usage dock. Cached usage is marked as last known when disconnected; depletion estimates need enough recent history.
 - Start a task in a workstation project, or continue an existing conversation.

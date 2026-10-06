@@ -1,0 +1,121 @@
+{
+  "version": "0.5.0-alpha.27",
+  "versionCode": 45,
+  "sourceCommit": "0590e4fc7ca2aa99ad987233989d79205ba6b71e",
+  "candidate": {
+    "personalDebugSha256": "e2f4869091f9365762a8f6d2d2545ac479b12bc02671e35c8c52ec47e35700bf",
+    "publicReleaseSha256": "dd9e7c78618aa661bda1531075ad1ef0ac1f33959dc1a4437db13b7da0864011",
+    "publicSignerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf"
+  },
+  "checks": {
+    "nodeTests": 206,
+    "androidTests": 137,
+    "lintDebug": "pass",
+    "lintRelease": "pass",
+    "auditVulnerabilities": 0,
+    "cleanCheckoutCI": "https://github.com/FallSoftCo/pocket/actions/runs/37403691737"
+  },
+  "native": {
+    "artifact": "personalDebugSha256",
+    "fontScales": [
+      1,
+      2
+    ],
+    "intermediateFrames": "Root inspected current 1x and 2x frame03: one native text layout, no overlap or blank interval; natural rich typography.",
+    "paragraphEnvelope": "same bounds across source/target at each tested font scale",
+    "continuousTouch25s": "pass",
+    "keyboard25s": "pass",
+    "reducedMotion25s": "pass",
+    "englishSupportOff30s": "pass",
+    "publicOptimizedSmoke": {
+      "passed": true,
+      "sha256": "dd9e7c78618aa661bda1531075ad1ef0ac1f33959dc1a4437db13b7da0864011",
+      "freshInstallAndNativeSyntheticPairing": true,
+      "settingsImmersionSwitch": true,
+      "actualHandoff": "Italian hybrid to English; complete native frame08 inspected by agent and root, rich styles/URL preserved, no overlapping layout or blank interval",
+      "scope": "owned emulator only"
+    },
+    "manualSourceHoldAndLink": "pass:25-second source hold, retap resumes Italian; actual URL tap opens guide and Back returns",
+    "paragraphBounds": {
+      "normal": "[47,278][1033,485]",
+      "double": "[47,278][1033,746]",
+      "stable": true
+    }
+  },
+  "transition": {
+    "durationMs": 360,
+    "minimumOpacity": 0.85,
+    "semanticHandoff": "one discrete text change at midpoint; not continuous glyph morph",
+    "body": "one native visible Text, no overlaid layout or surrogate interaction",
+    "spacing": "natural native shaping; maximum source/target paragraph height reservation",
+    "controls": "shared target-dominant clock, reserved label bounds, same ink treatment;79 additional authored offline Italian labels"
+  },
+  "rejectedPrototypes": [
+    {
+      "design": "spatial wipe",
+      "sha256": "0a7ad5344a1b8443b75e994c2b1bdda50624e338600df7d2343376aa7afc75bc",
+      "reason": "joined unrelated word fragments"
+    },
+    {
+      "design": "full-layout crossfade",
+      "sha256": "6730b6d301bff0dd9814d65864ebe9bcc03f279d1c1ae49cc72ca165aa33d2ce",
+      "reason": "ghosted overlapping sentences at midpoint, particularly2x"
+    }
+  ],
+  "limits": [
+    "No gaze tracking or language-acquisition/comprehension trial. Timing and contrast are conservative design hypotheses.",
+    "Unequal translations can change horizontal word positions and line breaks.",
+    "Maximum source/target envelope is not proof for every combinatorial manual mixed-language layout.",
+    "New provider speech was unavailable in synthetic fixture; captured-speech pure regression is separate from older native voice evidence.",
+    "Emulator static-layer capture loss affects some unrelated footer/follow-up frames; published handoff excerpt uses complete reviewed frames.",
+    "TalkBack interaction was not invoked natively in this qualification.",
+    "Existing Back button truncates at doubled font scale; paragraph geometry and ink motion remain separately qualified."
+  ],
+  "delivery": {
+    "compatibleUpdatePrepared": true,
+    "announcementNotificationId": 516,
+    "phoneInstalled": {
+      "versionCode": 45,
+      "sha256": "e2f4869091f9365762a8f6d2d2545ac479b12bc02671e35c8c52ec47e35700bf",
+      "independentRootHashVerification": true,
+      "phoneCodexObservedConnection": "Connesso / Connected, system76-pc",
+      "installerConfirmationActor": "unknown: initial bounded attempt observed44; follow-up found45 already installed",
+      "preservation": "No uninstall/reset/re-pair/network/security/immersion changes, messages, draft edits or task stops. Root final UI read found ChatGPT foreground and left it untouched."
+    },
+    "publicRelease": {
+      "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.27",
+      "prerelease": true,
+      "unauthenticatedAssetDigestVerified": true
+    },
+    "announcement": {
+      "announced": 1,
+      "versionCode": 45,
+      "notificationId": 516,
+      "pushEnabled": true,
+      "handsetReceipt": "not independently established"
+    }
+  },
+  "coordination": {
+    "OZZZThread": "01a0ee76-8023-7991-a9d3-5448f614c6e2",
+    "HollywoodMessage": 35599,
+    "status": "qualified contract forwarded; OZZZ implementation not established"
+  },
+  "gallery": {
+    "url": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-alpha27-native-ink-motion",
+    "items": [
+      "nextcomp-alpha27-native-ink-motion",
+      "nextcomp-alpha27-native-ink-styled",
+      "nextcomp-alpha27-native-ink-large"
+    ],
+    "privacy": "synthetic-only media; no phone conversations/credentials",
+    "fullCheck": {
+      "passed": true,
+      "cards": 1766,
+      "desktopAndMobile": true,
+      "errors": [],
+      "failed": [],
+      "reducedMotion": true,
+      "automaticReload": true
+    }
+  }
+}

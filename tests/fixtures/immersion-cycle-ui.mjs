@@ -30,6 +30,7 @@ export function immersionCycleFixture({port=19993}={}){
  app.get('/fixture/state',(_,r)=>r.json({synthetic:true,selected,plans,requests}));
  app.post('/fixture/case',(q,r)=>{if(!['unequal','styled'].includes(q.body.case))return r.sendStatus(400);selected=q.body.case;emit({type:'immersion',...translations()});r.json({ok:true,thread:thread()});});
  app.get('/guide',(_,r)=>r.type('html').send('<title>Synthetic local guide</title><h1>Synthetic local guide</h1><p>No external provider.</p>'));
+ app.post('/api/pair',(q,r)=>q.body.code==='SYNTHETIC-ONLY'?r.json({token,host:'Synthetic immersion review',id:'synthetic-immersion-device',local:true}):r.sendStatus(403));
  app.use('/api',(q,r,next)=>q.get('authorization')===`Bearer ${token}`?next():r.sendStatus(401));
  app.get('/api/status',(_,r)=>r.json({connected:true,host:'Synthetic immersion review',deviceId:'synthetic-immersion-device',local:true}));
  app.get('/api/threads',(_,r)=>r.json({threads:['unequal','styled'].map(key=>({...thread(),id:'immersion-'+key,name:'Synthetic '+key+' immersion'}))}));

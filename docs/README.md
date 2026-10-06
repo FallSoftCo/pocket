@@ -19,7 +19,7 @@ NextComp connects a person on Android to ongoing work in their own computing env
 - [Voice architecture](VOICE.md) and [native voice investigation](NATIVE-VOICE-INVESTIGATION.md).
 - [Notification read handling](NOTIFICATION-READS.md) and [spoken captions](SPEECH-CAPTIONS.md).
 - [Native linked images](LINKED-IMAGES.md): previews and a zoomable viewer in the conversation, including authenticated shared images.
-- [Inline language immersion](ITALIAN-VIRTUAL-IMMERSION.md).
+- [Inline language immersion](ITALIAN-VIRTUAL-IMMERSION.md), [reading and motion design](IMMERSION-PERCEPTION-DESIGN.md), and [versioned qualification](qualification/automatic-inline-cycling.md).
 - [Maintaining the backend](MAINTAINER.md) and [release process](RELEASING.md).
 - [Shared computer-use ownership](COMPUTER-USE.md): optional, separately installed broker and cooperative worker instructions; direct tools are not automatically fenced by NextComp.
 
