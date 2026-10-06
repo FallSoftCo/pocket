@@ -1,6 +1,6 @@
 {
   "feature": "Retain already-read local conversation history and page through thumb scrolling",
-  "status": "source candidate; combined Android and actual native qualification required before release",
+  "status": "released-alpha33; exact final debug and optimized native interaction qualified",
   "changes": [
     "Recent pages still paint first, but refreshes merge into the loaded window instead of replacing it.",
     "Older pages prepend by stable row identity; latest text wins by version, and LazyColumn keeps the visible keyed message and pixel offset.",
@@ -11,7 +11,8 @@
     "Older and middle requests preserve current thread status, pending questions, outgoing replies and notification read policy.",
     "Latest/retry and ordinary Android backgrounding retain the loaded history. Real memory pressure evicts inactive cache snapshots, not the current visible conversation.",
     "The inactive per-backend/per-thread cache is four whole windows within a 12MiB estimated serialized UTF-16 budget, with no arbitrary age expiry or partially hidden local pages.",
-    "Older loading is a viewport overlay, never a list sentinel: even the oldest edge anchors a real message ID. Cached read row ID, pixel offset and latest-follow mode restore on same-thread reopen."
+    "Older loading is a viewport overlay, never a list sentinel: even the oldest edge anchors a real message ID. Cached read row ID, pixel offset and latest-follow mode restore on same-thread reopen.",
+    "A partly visible padding row cannot supply the cached ID for another viewport row\u2019s offset; native95px reopen shift diagnosed, fixed and regression-tested."
   ],
   "tests_added": [
     "Older pages retain recently read rows and recent refresh cannot shrink the window.",
@@ -24,14 +25,40 @@
     "A restored read anchor follows message identity after prepended pages, with its unchanged pixel offset and follow mode."
   ],
   "qualification": {
-    "unit_tests": "awaiting root's combined build; no competing Gradle launched while release R8 consumes memory",
-    "native_scroll_anchor": "awaiting owned synthetic emulator fixture qualification",
-    "phone": "not changed by this workstream"
+    "unit_tests": "185 tests/39 suites pass per variant; both signed builds and lints pass; clean-checkout CI37534297993 success.",
+    "native_scroll_anchor": "Actual answer17 bounds [47,428,1033,617] unchanged after delayed prepend, live25, close/reopen and background/resume; source3 resolves after pending older page. See live-history-native-alpha33.json.",
+    "phone": "Installed alpha32/code50 independently verified by base APK SHA db93804c8e840204994b789dd115edc961b19752de700d64727791efd718463b. Compatible51 staged;51 installation not verified. SSH works; Accessibility listener unavailable; no blind installer/reset or network change."
   },
   "limits": [
     "This first fix retains local history for the living app process and background/resume; it does not add persistent transcript segments across process death.",
     "Inactive oversized or LRU-evicted windows honestly need refetching through automatic scrolling when reopened.",
     "Active loaded history is not arbitrarily cut. Its memory use scales with actual read history; the inactive serialization budget is an estimate, not a physical-device PSS guarantee.",
     "No private reasoning is requested or exposed; the existing public timeline endpoint and authentication remain unchanged."
-  ]
+  ],
+  "release": {
+    "version": "0.5.0-alpha.33",
+    "versionCode": 51,
+    "source": "2817bedc3983729d868e8bb451e3900dabf9284e",
+    "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.33",
+    "public": {
+      "sha256": "86bf7f2d39999d15a18d093977a0bed67fe0f21443c5a701c31f68acda809913",
+      "bytes": 51807899,
+      "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "anonymous_download_hash_verified": true
+    },
+    "compatible_phone": {
+      "sha256": "a2fe7a25b3bf998efadc37d7919ec34ef809fec8c29a5953b626cc61161947b1",
+      "bytes": 74348344,
+      "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "staged_remote_digest_and_size_verified": true
+    },
+    "private_update": {
+      "versionCode": 51,
+      "signing_variants": 2,
+      "notificationId": 598,
+      "pushEnabled": true,
+      "handset_notification_receipt": "unverified"
+    },
+    "phone_install": "Installed alpha32/code50 independently verified by base APK SHA db93804c8e840204994b789dd115edc961b19752de700d64727791efd718463b. Compatible51 staged;51 installation not verified. SSH works; Accessibility listener unavailable; no blind installer/reset or network change."
+  }
 }

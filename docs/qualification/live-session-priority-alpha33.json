@@ -15,11 +15,49 @@
     "Existing card height and interaction regions preserved; ages after20seconds appear in existing title row, refreshed periodically."
   ],
   "tests": {
-    "backend": "Final run pending",
-    "android": "Both signed builds/unit/lints running",
-    "native": "Owned synthetic emulator qualification pending"
+    "backend": {
+      "passed": 222,
+      "log": "Final backend tests passed; backend unchanged by subsequent Android history fixes."
+    },
+    "android": {
+      "debug": 185,
+      "release": 185,
+      "suites_each": 39,
+      "signed_builds": "both pass",
+      "lint": "both pass"
+    },
+    "clean_checkout_ci": {
+      "id": 37534297993,
+      "result": "success",
+      "source": "2817bedc3983729d868e8bb451e3900dabf9284e"
+    },
+    "native": "See live-history-native-alpha33.json for baseline exhaustive list checks and exact final candidate checks.",
+    "motion_resources": "All168 WebP payloads byte exact and dynamic lookup names retained in optimized APK."
   },
   "release": {
-    "state": "Candidate; not yet published or installed"
+    "version": "0.5.0-alpha.33",
+    "versionCode": 51,
+    "source": "2817bedc3983729d868e8bb451e3900dabf9284e",
+    "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.33",
+    "public": {
+      "sha256": "86bf7f2d39999d15a18d093977a0bed67fe0f21443c5a701c31f68acda809913",
+      "bytes": 51807899,
+      "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "anonymous_download_hash_verified": true
+    },
+    "compatible_phone": {
+      "sha256": "a2fe7a25b3bf998efadc37d7919ec34ef809fec8c29a5953b626cc61161947b1",
+      "bytes": 74348344,
+      "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "staged_remote_digest_and_size_verified": true
+    },
+    "private_update": {
+      "versionCode": 51,
+      "signing_variants": 2,
+      "notificationId": 598,
+      "pushEnabled": true,
+      "handset_notification_receipt": "unverified"
+    },
+    "phone_install": "Installed alpha32/code50 independently verified by base APK SHA db93804c8e840204994b789dd115edc961b19752de700d64727791efd718463b. Compatible51 staged;51 installation not verified. SSH works; Accessibility listener unavailable; no blind installer/reset or network change."
   }
 }

@@ -1,0 +1,614 @@
+{
+  "date": "2026-10-06",
+  "version": "0.5.0-alpha.33",
+  "source": "2817bedc3983729d868e8bb451e3900dabf9284e",
+  "environment": {
+    "owned_emulator": "5562",
+    "screen": "1080x2400",
+    "fontScale": 1,
+    "reduced_motion": true,
+    "temporary_navigation": "three-button; baseline gestural restored",
+    "synthetic_fixture_only": true,
+    "providers_and_private_conversations": false
+  },
+  "list_baseline": {
+    "candidate": {
+      "kind": "list-only qualification; not final released combined alpha33",
+      "source": "540e33ff68f55201e3219853894e26fd9418a82d",
+      "versionCode": 51,
+      "version": "0.5.0-alpha.33",
+      "sha256": "833bdea2325617a6f18c00e12dfade92462633d2ff9f3079785fa64fc2b6c901",
+      "bytes": 61030216,
+      "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"
+    },
+    "environment": {
+      "emulator": "owned5562",
+      "display": "1080x2400",
+      "fontScale": 1,
+      "reducedMotion": true,
+      "navigation": "temporary3button; baselinegestural",
+      "fixture": "ownedloopback19996; no providers"
+    },
+    "promotion": {
+      "eventAtMs": 1791321057819,
+      "earlyCaptureElapsed": 1.8124949932098389,
+      "serverReceipt": {
+        "ok": true,
+        "at": 1791321057846
+      },
+      "bounds": {
+        "Synthetic work 7": [
+          42,
+          1369,
+          1038,
+          1653
+        ],
+        "Synthetic work 8": [
+          42,
+          1064,
+          1038,
+          1348
+        ],
+        "Synthetic work 1": [
+          42,
+          759,
+          1038,
+          1043
+        ],
+        "Synthetic work 2": [
+          42,
+          454,
+          1038,
+          738
+        ],
+        "Synthetic work 3": [
+          42,
+          149,
+          1038,
+          433
+        ]
+      }
+    },
+    "cases": [
+      {
+        "case": "simultaneous-stream-ties",
+        "pass": true,
+        "order": [
+          "Synthetic work 7",
+          "Synthetic work 8",
+          "Synthetic work 6",
+          "Synthetic work 1",
+          "Synthetic work 2"
+        ]
+      },
+      {
+        "case": "finger-hold-stable-and-release",
+        "pass": true,
+        "before": {
+          "Synthetic work 7": [
+            42,
+            1369,
+            1038,
+            1653
+          ],
+          "Synthetic work 8": [
+            42,
+            1064,
+            1038,
+            1348
+          ],
+          "Synthetic work 6": [
+            42,
+            759,
+            1038,
+            1043
+          ],
+          "Synthetic work 1": [
+            42,
+            454,
+            1038,
+            738
+          ],
+          "Synthetic work 2": [
+            42,
+            149,
+            1038,
+            433
+          ]
+        },
+        "after": {
+          "Synthetic work 7": [
+            42,
+            1369,
+            1038,
+            1653
+          ],
+          "Synthetic work 8": [
+            42,
+            1064,
+            1038,
+            1348
+          ],
+          "Synthetic work 6": [
+            42,
+            759,
+            1038,
+            1043
+          ],
+          "Synthetic work 1": [
+            42,
+            454,
+            1038,
+            738
+          ],
+          "Synthetic work 2": [
+            42,
+            149,
+            1038,
+            433
+          ]
+        },
+        "released": {
+          "Synthetic work 7": [
+            42,
+            1369,
+            1038,
+            1653
+          ],
+          "Synthetic work 8": [
+            42,
+            1064,
+            1038,
+            1348
+          ],
+          "Synthetic work 6": [
+            42,
+            759,
+            1038,
+            1043
+          ],
+          "Synthetic work 1": [
+            42,
+            454,
+            1038,
+            738
+          ],
+          "Synthetic work 2": [
+            42,
+            149,
+            1038,
+            433
+          ]
+        }
+      },
+      {
+        "case": "poll-retains-event-recency",
+        "pass": true,
+        "before": [
+          "Synthetic work 7",
+          "Synthetic work 8",
+          "Synthetic work 6",
+          "Synthetic work 1",
+          "Synthetic work 2"
+        ],
+        "after": [
+          "Synthetic work 7",
+          "Synthetic work 8",
+          "Synthetic work 6",
+          "Synthetic work 1",
+          "Synthetic work 2"
+        ]
+      },
+      {
+        "case": "hydration-no-activity-no-promotion",
+        "pass": true
+      },
+      {
+        "case": "drain-alone-static-fresh-work-promotes",
+        "pass": true,
+        "before": [
+          "Synthetic work 7",
+          "Synthetic work 8",
+          "Synthetic work 6",
+          "Synthetic work 1",
+          "Synthetic work 2"
+        ],
+        "fresh": [
+          "Synthetic work 4",
+          "Synthetic work 7",
+          "Synthetic work 8",
+          "Synthetic work 6",
+          "Synthetic work 1"
+        ]
+      },
+      {
+        "case": "fixed-card-height",
+        "pass": true,
+        "height": 284
+      }
+    ],
+    "meaningfulTouchHold": {
+      "before": {
+        "Synthetic work 4": [
+          42,
+          1369,
+          1038,
+          1653
+        ],
+        "Synthetic work 7": [
+          42,
+          1064,
+          1038,
+          1348
+        ],
+        "Synthetic work 8": [
+          42,
+          759,
+          1038,
+          1043
+        ],
+        "Synthetic work 6": [
+          42,
+          454,
+          1038,
+          738
+        ],
+        "Synthetic work 1": [
+          42,
+          149,
+          1038,
+          433
+        ]
+      },
+      "during": {
+        "Synthetic work 4": [
+          42,
+          1369,
+          1038,
+          1653
+        ],
+        "Synthetic work 7": [
+          42,
+          1064,
+          1038,
+          1348
+        ],
+        "Synthetic work 8": [
+          42,
+          759,
+          1038,
+          1043
+        ],
+        "Synthetic work 6": [
+          42,
+          454,
+          1038,
+          738
+        ],
+        "Synthetic work 1": [
+          42,
+          149,
+          1038,
+          433
+        ]
+      },
+      "released": {
+        "Synthetic work 5": [
+          42,
+          1369,
+          1038,
+          1653
+        ],
+        "Synthetic work 4": [
+          42,
+          1064,
+          1038,
+          1348
+        ],
+        "Synthetic work 7": [
+          42,
+          759,
+          1038,
+          1043
+        ],
+        "Synthetic work 8": [
+          42,
+          454,
+          1038,
+          738
+        ],
+        "Synthetic work 6": [
+          42,
+          149,
+          1038,
+          433
+        ]
+      },
+      "pass": true
+    },
+    "navigation": {
+      "pass": true,
+      "requests": [
+        {
+          "method": "read",
+          "id": "live-5",
+          "at": 1791321242295
+        },
+        {
+          "method": "read",
+          "id": "live-1",
+          "at": 1791321289823
+        },
+        {
+          "method": "read",
+          "id": "live-4",
+          "at": 1791321348724
+        },
+        {
+          "method": "reply",
+          "id": "live-4",
+          "at": 1791321359275
+        }
+      ],
+      "draftRestored": true
+    },
+    "limitations": [
+      "Physical Fold not inspected; observed1.812s synthetic screenshot is not handset SLA.",
+      "Initial emulator bootstrap SystemUI ANR and QEMU crash under host pressure; native tests only after recovery.",
+      "Poll recency tested with deliberately stale fixture snapshots. Poll-start-race protection is distinct from subsequent authoritative status change; no perpetual status lease.",
+      "Card height based actual semantic284pxbounds; partial software framebuffer long-output screenshot excluded from gallery.",
+      "Scrollhold covered pure policy tests by root; native fingerhold specifically verified.",
+      "Full final combined history/agecue build still pending."
+    ],
+    "gallery": [
+      "8bar/#nextcomp-live-priority-promotion7-early",
+      "8bar/#nextcomp-live-priority-drain-fresh"
+    ]
+  },
+  "final_history": {
+    "pass": true,
+    "source": "2817bedc3983729d868e8bb451e3900dabf9284e",
+    "apk": "a2fe7a25b3bf998efadc37d7919ec34ef809fec8c29a5953b626cc61161947b1",
+    "beforeRequests": [
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": null,
+        "at": 1791322334291
+      },
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": "history-turn-17",
+        "at": 1791322337515
+      }
+    ],
+    "duringBounds": {
+      "SYNTHETIC ANSWER 17: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        428,
+        1033,
+        617
+      ],
+      "SYNTHETIC ANSWER 18: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        1268,
+        1033,
+        1457
+      ]
+    },
+    "afterBounds": {
+      "SYNTHETIC ANSWER 17: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        428,
+        1033,
+        617
+      ],
+      "SYNTHETIC ANSWER 18: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        1268,
+        1033,
+        1457
+      ]
+    },
+    "stableText": [
+      "SYNTHETIC ANSWER 17: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.",
+      "SYNTHETIC ANSWER 18: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives."
+    ],
+    "liveBounds": {
+      "SYNTHETIC ANSWER 17: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        428,
+        1033,
+        617
+      ],
+      "SYNTHETIC ANSWER 18: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        1268,
+        1033,
+        1457
+      ]
+    },
+    "reopenBounds": {
+      "SYNTHETIC ANSWER 17: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        428,
+        1033,
+        617
+      ],
+      "SYNTHETIC ANSWER 18: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        1268,
+        1033,
+        1457
+      ]
+    },
+    "backgroundBounds": {
+      "SYNTHETIC ANSWER 17: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        428,
+        1033,
+        617
+      ],
+      "SYNTHETIC ANSWER 18: This exact recorded work remains readable in its original conversation. Earlier pages should stay here as new work arrives.": [
+        47,
+        1268,
+        1033,
+        1457
+      ]
+    },
+    "status": "Working",
+    "noEarlierButton": true
+  },
+  "final_source_navigation": {
+    "pass": true,
+    "source": "2817bedc3983729d868e8bb451e3900dabf9284e",
+    "apk": "a2fe7a25b3bf998efadc37d7919ec34ef809fec8c29a5953b626cc61161947b1",
+    "clickedWhileOlderPending": "Harnessassertionclicked-started<15000 passed; exactclickedvariable notpersisted beforeearlyassert",
+    "requests": [
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": null,
+        "at": 1791322395923
+      },
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": null,
+        "at": 1791322406628
+      },
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": "history-turn-9",
+        "at": 1791322411125
+      },
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": "history-turn-9",
+        "at": 1791322426142
+      }
+    ],
+    "source3Visible": true,
+    "historicalMetadataIdleIgnored": true,
+    "currentWorkingPreserved": true,
+    "initialHarnessFailure": "Driverwaited16s despitecancelledautopaging15srequest thenhelper15srequest. SettledUIcorrect; no codepatch warranted."
+  },
+  "final_optimized": {
+    "pass": true,
+    "source": "2817bedc3983729d868e8bb451e3900dabf9284e",
+    "apk": "86bf7f2d39999d15a18d093977a0bed67fe0f21443c5a701c31f68acda809913",
+    "securePairing": "actualnative18880existinglocalendpointreverse",
+    "freshLive8Bottom": true,
+    "directTapCorrectThread8": true,
+    "recent25Visible": true,
+    "automaticOlderPage": true,
+    "WorkingPreserved": true,
+    "requests": [
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": null,
+        "at": 1791322395923
+      },
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": null,
+        "at": 1791322406628
+      },
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": "history-turn-9",
+        "at": 1791322411125
+      },
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": "history-turn-9",
+        "at": 1791322426142
+      },
+      {
+        "method": "read",
+        "id": "live-8",
+        "before": null,
+        "at": 1791322590031
+      },
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": null,
+        "at": 1791322594433
+      },
+      {
+        "method": "read",
+        "id": "live-5",
+        "before": "history-turn-18",
+        "at": 1791322627015
+      }
+    ],
+    "automationCaveat": "Repeatedamstartafterfreshpairingreusedinitialpairingfields; Cancelkeptselected5. Directcardtap8wascorrect."
+  },
+  "cleanup": "Restored actual baseline app absence, font1, animator0, gestural navigation; removed owned reverse and stopped only owned5562/19996. Shared ADB and unrelated emulators preserved.",
+  "gallery": [
+    "8bar/#nextcomp-history-reach-public-history-earlier",
+    "8bar/#nextcomp-history-reach-source-inflight-settled",
+    "8bar/#nextcomp-history-reach-history-reopen"
+  ],
+  "limits": [
+    "Native evidence is synthetic emulator functionality, not physical Fold gesture/frame-pacing or notification delivery qualification.",
+    "List exhaustive regression was on the documented list-only baseline; final combined debug and optimized builds also qualified fresh promotion, direct routing and history/status.",
+    "Active loaded history is kept for the living app process; process-death persistence is not added. Inactive windows remain bounded."
+  ],
+  "gallery_check": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "cards": 1866,
+      "filters": [
+        5,
+        355,
+        748
+      ],
+      "initialMediaLimit": 4,
+      "errors": [],
+      "failed": [],
+      "passed": true
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "cards": 1866,
+      "filters": [
+        5,
+        355,
+        748
+      ],
+      "initialMediaLimit": 4,
+      "errors": [],
+      "failed": [],
+      "passed": true
+    },
+    {
+      "reducedMotion": true,
+      "initialMedia": 0,
+      "inlinePlayback": true,
+      "passed": true
+    },
+    {
+      "automaticGalleryReload": true,
+      "pollAsset": "showcase-revision.txt",
+      "passed": true
+    }
+  ],
+  "published_frame_hashes": {
+    "note": "Native image hashes retained in final workstream receipt."
+  }
+}
