@@ -38,15 +38,22 @@
   },
   "physicalPhone": {
     "beforeVersionCode": 42,
-    "switchingVerification": "Blocked by lock screen before two-card test; unlock requested.",
-    "draft": "Existing draft observed; no edits or text typing.",
-    "installation": "not yet performed",
-    "candidateTransferred": true,
-    "candidateSha256OnDevice": "6243272cf475605cfc502bfa4a1cfe021af1ed0f19c45abfd85f4885ba78a34d"
+    "installedVersionCode": 43,
+    "installedApkSha256": "6243272cf475605cfc502bfa4a1cfe021af1ed0f19c45abfd85f4885ba78a34d",
+    "installation": "Compatible in-place update during bounded on-device Codex installer attempt; root independently verified installed APK hash. Codex attempt timed out before producing its completion receipt.",
+    "switchingVerification": {
+      "status": "passed on actual phone",
+      "firstChat": "Card-center tap opened a distinct real chat; read-only Rename field confirmed its canonical title; canceled without editing.",
+      "secondChat": "Card-center tap opened Pocket Dev; its own current live conversation history independently confirmed. An initial empty Rename field was inconclusive; no rename saved.",
+      "realMessagesSent": false
+    },
+    "draft": "Existing draft was not typed into or edited. Per-thread draft restoration and reply routing separately verified in synthetic native fixture.",
+    "networkSettingsChanged": false,
+    "privateReceipt": "root-verification.json retained on phone; real transcripts and UI captures not published"
   },
   "limitations": [
-    "Real handset remained locked before two-card reproduction; actual installation and real-session one-tap verification are pending unlock.",
-    "Native geometry, switching and reply-routing checks use synthetic sessions. Three actual backend reads separately returned their requested IDs."
+    "No real reply was sent during handset verification. Exact reply routing and draft restoration were verified using synthetic native sessions.",
+    "On-device Codex timed out after installation; installed APK and real-chat switching were independently verified by root."
   ],
   "deployment": {
     "publicRelease": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.25",
@@ -63,5 +70,16 @@
       "handsetAcknowledgment": "not independently established"
     },
     "backendRestarted": false
-  }
+  },
+  "gallery": {
+    "checkedCards": 1755,
+    "desktopMobileReducedMotionReload": "passed",
+    "syntheticReviews": [
+      "/8bar/#nextcomp-alpha25-popup-session02",
+      "/8bar/#nextcomp-alpha25-card-session03",
+      "/8bar/#nextcomp-alpha24-foreign-speech-rejected",
+      "/8bar/#nextcomp-alpha25-matching-speech"
+    ]
+  },
+  "ownedResourceCleanup": "Owned emulator and synthetic fixture stopped; original preferences restored and originally absent speech preferences removed. Shared ADB and unrelated emulators preserved."
 }
