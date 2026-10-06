@@ -2417,5 +2417,10 @@
     "installedPhone": "Code48 exact qualified SHA freshly independently verified by phone subagent; root updating authoritative delivery records",
     "runtime": "Root observed shared Codex FD exhaustion and raised existing PID soft limit1024 to8192 within hard1048576; no duplicate research turn",
     "publication": "Root reports commit3ee7578 pushed, MCP SDK1.32.1 audit0,206 backend tests/public724 scan pass"
+  },
+  "focusedFollowup": {
+    "finding": "Coordinator still used legacy full-message context host despite regular conversation compact playback.",
+    "action": "Targeted coordinator compact controls implemented; alpha31 signed-build and native qualification underway.",
+    "scope": "Regular conversation qualified behavior retained."
   }
 }

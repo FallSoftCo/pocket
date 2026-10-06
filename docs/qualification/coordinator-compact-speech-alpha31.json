@@ -1,0 +1,36 @@
+{
+  "version": "0.5.0-alpha.31",
+  "versionCode": 49,
+  "implementation": "Coordinator no longer uses duplicate full-message context host. Saved speech gets direct Pause/Resume/Clear and mapped-source navigation. Latest reply remains only in history. Exact owned current speech caption capped320 Unicode codepoints/two lines.",
+  "tests": {
+    "androidPerVariant": 159,
+    "suitesPerVariant": 36,
+    "debugAndReleaseUnit": "pass",
+    "debugAndReleaseLint": "pass",
+    "signedDebugAndReleaseBuild": "pass",
+    "ownershipAndUnicodeRegression": "pass"
+  },
+  "apks": [
+    {
+      "kind": "public",
+      "sha256": "2eb8fa00a8eb403a137f04a423d8a5a95ece24f354cb7fb291c2425abab26b8d",
+      "size": 51790971,
+      "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "motionPages": 168,
+      "allMotionNamesAndPayloadsRetained": true
+    },
+    {
+      "kind": "phone",
+      "sha256": "ce1e43d7b3c84547620f23dba5c7c8168f2e679d6033c2006357697ce5f69a75",
+      "size": 61013212,
+      "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "motionPages": 168,
+      "allMotionNamesAndPayloadsRetained": true
+    }
+  ],
+  "native": "Exact final debug candidate normal-text giant paused-speech, newer history, source navigation and directcontrols/draft/IME verified;2x and optimized candidate qualification underway.",
+  "phone": "Installed alpha30/code48 remains verified. No alpha31 installation claim yet.",
+  "limits": [
+    "No actual provider audio quality or physical Fold frame-pacing claim."
+  ]
+}

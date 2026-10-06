@@ -1739,6 +1739,13 @@
         ],
         "remaining_acceptance": "Current deployed source/backend/phone versions should be reconciled; older unit counts are stale metadata."
       }
+    },
+    {
+      "id": "coordinator-compact-speech",
+      "requirement": "Consolidated coordinator playback must not repeat latest replies or retain giant stale saved speech; direct Pause/Resume/Clear above composer, preserving draft and keyboard.",
+      "status": "implemented-under-alpha31-qualification",
+      "implementation": "Replaced coordinator context-preview host with compact controls. No duplicate latest reply or full saved-speech passage; only exact owned active current chunk can appear, bounded to320 Unicode codepoints/two lines. Foreign automatic speech has direct source navigation.",
+      "acceptance": "Pure ownership/current-chunk stress regressions; native50k paused speech, actual newest coordinator history, direct Resume/Clear with draft/IME, normal and2x text; signed final builds and compatible handset delivery."
     }
   ],
   "current_state": {

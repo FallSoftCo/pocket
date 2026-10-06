@@ -91,13 +91,7 @@ import kotlinx.coroutines.flow.*
             if(PocketCoordinator.problem.isNotBlank())item{ImmersionText("coordinator:problem",PocketCoordinator.problem,color=Coral);TextButton({PocketCoordinator.retry()}){BilingualLabel("Retry saved turn")}}
             item(key="coordinator-end"){Spacer(Modifier.height(1.dp))}
         }
-        val contextHost="context-coordinator:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}"
-        val contextEntries=mutableListOf<ConversationContextEntry>()
-        PocketCoordinator.messages.lastOrNull()?.second?.let{contextEntries.add(ConversationContextEntry("coordinator-reply",it,"Coordinator reply","coordinator"))}
-        val displayedOwner=PocketSpeech.displayedOwner
-        if(displayedOwner?.startsWith("$contextHost:")==true&&PocketSpeech.displayedRunning)contextEntries.add(ConversationContextEntry("manual:$displayedOwner",PocketSpeech.displayedText,PocketSpeech.displayedTitle,"coordinator",owner=displayedOwner))
-        if(displayedOwner==null)PocketSpeech.queue.current?.let{speech->contextEntries.add(ConversationContextEntry("caption:${speech.id}",speech.text,speech.title,PocketNotificationTitles.threadForId(speech.id),captionId=speech.id))}
-        ConversationContextHost(contextEntries,contextHost,sourceVisible={entry->entry.id=="coordinator-reply"&&scroll.layoutInfo.visibleItemsInfo.any{it.key=="coordinator-turn-${PocketCoordinator.messages.lastIndex}"&&it.offset>=scroll.layoutInfo.viewportStartOffset&&it.offset+it.size<=scroll.layoutInfo.viewportEndOffset}},onGoTo={entry->entry.thread?.takeIf{it!="coordinator"}?.let{PocketCoordinator.close();Pocket.open(it)}})
+        CoordinatorSpeechControls()
         Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(typing)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 VoiceLaunchButton(modifier=Modifier.size(56.dp),compact=true)
@@ -118,4 +112,37 @@ import kotlinx.coroutines.flow.*
             }
         }
     }
+}
+
+/** Playback controls never repeat a coordinator reply or saved notification passage. */
+@Composable internal fun CoordinatorSpeechControls(){
+    val owner="speech-coordinator:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}"
+    DisposableEffect(owner){onDispose{if(PocketSpeech.displayedOwner==owner)PocketSpeech.stopDisplayed(owner)}}
+    val queued=PocketSpeech.queue.current
+    val speechThread=queued?.let{PocketNotificationTitles.threadForId(it.id)}
+    val caption=coordinatorLiveSpeechCaption(owner,PocketSpeech.displayedOwner,queued?.id,PocketSpeech.paused,PocketSpeechCaptions.state)
+    val readingHere=PocketSpeech.displayedOwner==owner
+    val lastReply=PocketCoordinator.messages.lastOrNull()?.second.orEmpty()
+    if(PocketSpeech.count>0||lastReply.isNotBlank())Column(Modifier.fillMaxWidth()){
+        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.End){
+            if(PocketSpeech.displayedOwner==null&&PocketSpeech.count>0){
+                speechThread?.takeIf{it!="coordinator"}?.let{thread->
+                    IconButton({PocketCoordinator.close();Pocket.open(thread)}){SymbolIcon(Icons.Rounded.OpenInNew,PocketImmersion.label("Open source conversation"),Modifier.size(28.dp))}
+                }
+                SpeechPlaybackControls(iconOnly=true)
+            }else if(readingHere){
+                SpeechPlaybackControls(iconOnly=true)
+            }else IconButton({PocketSpeech.speakDisplayed(owner,PocketImmersion.display("voice:"+lastReply.hashCode()+":false",lastReply),"Coordinator")},enabled=lastReply.isNotBlank()){
+                SymbolIcon(Icons.Rounded.VolumeUp,PocketImmersion.label("Speak latest coordinator reply"),Modifier.size(30.dp),tint=Mint)
+            }
+        }
+        if(caption.isNotBlank())Text(caption,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=2.dp),color=Muted,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+        if(readingHere&&PocketSpeech.displayedProblem.isNotBlank())Text(PocketSpeech.displayedProblem,modifier=Modifier.padding(horizontal=16.dp),color=Coral,fontSize=13.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+    }
+}
+
+/** Coordinator history has turn IDs, not a notification thread ID; manual reader ownership is explicit. */
+internal fun coordinatorLiveSpeechCaption(owner:String,displayedOwner:String?,speechId:Long?,paused:Boolean,caption:SpeechCaptionState):String {
+    if(owner.isBlank()||displayedOwner!=owner)return ""
+    return conversationLiveSpeechCaption(owner,owner,speechId,paused,null,caption)
 }
