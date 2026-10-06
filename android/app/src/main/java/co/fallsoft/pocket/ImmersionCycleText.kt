@@ -40,9 +40,6 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
 /** Native paragraphs keep natural whitespace and baselines; reserve height, never word padding. */
 @Composable internal fun ReservedImmersionText(content:AnnotatedString,plan:ImmersionPresentation,alpha:(ImmersionSpan)->Float,fontSize:TextUnit,lineHeight:TextUnit,color:Color,fontWeight:FontWeight?,maxLines:Int,overflow:TextOverflow){
     val ready=immersionMotionReady()
-    val measurer=rememberTextMeasurer()
-    val density=LocalDensity.current
-    val style=LocalTextStyle.current.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight))
     var from by remember(plan.source){mutableStateOf(content)}
     var to by remember(plan.source){mutableStateOf(content)}
     val progress=remember(plan.source){Animatable(1f)}
@@ -53,7 +50,6 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
         }else if(!ready||PocketSpeech.displayedOwner!=null)progress.snapTo(1f)
     }
     BoxWithConstraints(Modifier.fillMaxWidth()){
-        val width=with(density){maxWidth.roundToPx()}.coerceAtLeast(1)
         val marks=content.getStringAnnotations("immersion-reserve",0,content.length)
         fun form(original:Boolean):AnnotatedString?=immersionAnnotatedParagraph(content,marks.mapNotNull{range->
             val span=plan.spans.firstOrNull{range.item=="${it.start}:${it.end}"}?:return@mapNotNull null
@@ -69,8 +65,7 @@ internal class ImmersionCycleRender(val plan:ImmersionPresentation,val alpha:(Im
             Triple(range.start,range.end,replacement)
         })
         val forms=listOf(content,form(true)?:content,form(false)?:content)
-        val height=forms.maxOf{measurer.measure(it,style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(maxWidth=width)).size.height}
-        BlendImmersionText(from,to,{progress.value},content,modifier=Modifier.heightIn(min=with(density){height.toDp()}),fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,fillWidth=true)
+        BlendImmersionText(from,to,{progress.value},content,modifier=Modifier,fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,fillWidth=true,reserve=forms)
     }
 }
 

@@ -12,16 +12,6 @@ import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 
-// Function colors remain consistent across utterances, independently of lexical meaning.
-private fun grammarColor(segment:ImmersionTargetSegment):Color = when(grammarCue(segment)) {
-    "negation"->Color(0xffff8585)
-    "past"->Color(0xffffc06b)
-    "aspect"->Color(0xffffe079)
-    "modality"->Color(0xffd4b0ff)
-    "preposition","conjunction"->Color(0xff9de3ed)
-    "determiner","pronoun"->Color(0xffb5e5b7)
-    else->Paper
-}
 private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayRange>,offset:Int,selected:ImmersionSpan?,help:Boolean,onHelp:(ImmersionSpan)->Unit):AnnotatedString = buildAnnotatedString {
     append(content.text)
     content.spans.forEach { span -> when(span.kind){
@@ -33,9 +23,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
     ranges.forEach { range ->
         val span=range.span
         val at=range.start-offset;val end=range.end-offset
-        val rescued=span==selected&&at>=0&&end<=content.text.length&&content.text.substring(at,end)==span.source
         if(at>=0&&end>at&&end<=content.text.length&&span.target!=span.source){
-            val visible=content.text.substring(at,end)
             addStringAnnotation("immersion-reserve","${span.start}:${span.end}",at,end)
             if(help&&content.spans.none{it.kind=="link"&&it.start<end&&it.end>at})addLink(LinkAnnotation.Clickable("immersion:${span.start}:${span.end}",TextLinkStyles(style=SpanStyle()),linkInteractionListener={onHelp(span)}),at,end)
         }
