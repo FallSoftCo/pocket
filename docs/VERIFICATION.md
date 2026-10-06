@@ -257,3 +257,6 @@ passed full remote hash/size checks in Downloads. Phone-local Codex stopped at
 verified alpha28/code46. No pairing, draft, security or network changes occurred.
 The synthetic gallery passes desktop/mobile/reduced-motion/reload checks with
 1788 cards. Owned emulator/fixture cleanup preserves shared ADB and unrelated work.
+
+Clean-checkout GitHub Actions run37424257956 passed both backend and Android
+jobs on exact alpha29 source90dafda. Subsequent delivery/evidence edits are docs only.

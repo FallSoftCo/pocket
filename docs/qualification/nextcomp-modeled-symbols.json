@@ -212,6 +212,14 @@
       "pairingDraftsSecurityNetworkChanged": false,
       "foldFramePacing": "unqualified; no authorized ADB shell"
     },
-    "cleanup": "Owned synthetic emulator stopped after restoring baseline preferences and animator0/font1; owned fixture stopped; unrelated emulator and shared ADB preserved."
+    "cleanup": "Owned synthetic emulator stopped after restoring baseline preferences and animator0/font1; owned fixture stopped; unrelated emulator and shared ADB preserved.",
+    "cleanCheckoutCi": {
+      "run": 37424257956,
+      "sourceCommit": "90dafda24cb7ace5a404d92798f78505af1c5d98",
+      "backend": "success",
+      "android": "success",
+      "conclusion": "success",
+      "url": "https://github.com/FallSoftCo/pocket/actions/runs/37424257956"
+    }
   }
 }
