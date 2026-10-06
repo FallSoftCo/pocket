@@ -1747,6 +1747,15 @@
       "implementation": "Replaced coordinator context-preview host with compact controls. No duplicate latest reply or full saved-speech passage; only exact owned active current chunk can appear, bounded to320 Unicode codepoints/two lines. Foreign automatic speech has direct source navigation.",
       "acceptance": "Pure ownership/current-chunk stress regressions; native50k paused speech, actual newest coordinator history, direct Resume/Clear with draft/IME, normal and2x text; signed final builds and compatible handset delivery.",
       "evidence": "qualification/coordinator-compact-speech-alpha31.json; exact native debug/optimized checks, both159tests/bothlints/builds,1854-card gallery passes."
+    },
+    {
+      "id": "native-saved-speech-quality",
+      "requirement": "High-quality speech outside voice mode as well as inside it; avoid using rejected offline Android TTS as the primary notification/manual Speak renderer. Preserve direct controls, saved progress, captions, background behavior, and approved account-native transport without a silent paid API switch.",
+      "status": "isolated-candidate-under-real-protocol-qualification",
+      "finding": "Ordinary notifications and manual Speak still use offlineAndroidTTS; active voice responses use account-native speech. No authorized reversal of the audio-quality requirement found.",
+      "implementation_candidate": "Separate speech-only native lane with no task input/microphone; existing queue/caption/MediaPlayer retained, versioned cache prevents stale offline audio reuse; unsupported transport leaves resumable item.",
+      "qualification": "First real probe rejected unsupported response.done assumption; second observed actual turn.done plus authored transcript and captured audio. Corrected production completion gate requires matching assistant turn/full expected transcript/timestamps and drained audio; final exact native renderer qualification still pending.",
+      "limits": "No provider pronunciation or physical lockscreen claim; no API spending switch or changes to production renderer yet."
     }
   ],
   "current_state": {
