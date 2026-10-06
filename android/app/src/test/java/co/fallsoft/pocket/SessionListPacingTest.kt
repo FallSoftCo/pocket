@@ -134,7 +134,7 @@ class LiveSessionPriorityTest {
     }
     @Test fun acceptedIntentAndNewDiscoveryDoNotWaitForFirstResponse() {
         val entries=listOf(SessionRank("quiet",1,true,now-180_000),SessionRank("new",now,true,now),SessionRank("reactivated",1,false,now))
-        assertEquals(listOf("new","reactivated","quiet"),liveSessionOrder(listOf("quiet","reactivated"),entries,now)))
+        assertEquals(listOf("new","reactivated","quiet"),liveSessionOrder(listOf("quiet","reactivated"),entries,now))
     }
     @Test fun pollCannotUndoNewLiveStatusPreviewOrRecency() {
         val old=Task("a","A","/project","idle",1,false,preview="old",activityAt=100)
