@@ -546,12 +546,12 @@
     },
     {
       "id": "failed-outgoing-recovery",
-      "status": "qualified-alpha23-pending-phone-update",
+      "status": "qualified-installed-alpha24-handset-interaction-not-inspected",
       "requirement": "Failed or uncertain unsent messages need direct Retry, Edit and Remove. Preserve accepted history; uncertain retry requires explicit duplicate-risk confirmation; never automatically resend."
     },
     {
       "id": "important-conversation-filter",
-      "status": "qualified-alpha23-pending-phone-update",
+      "status": "qualified-installed-alpha24-handset-interaction-not-inspected",
       "requirement": "Answers and heads-up act as a filter on the existing conversation, not a nested list. Reveal surrounding source in place and reply using same composer; speech only from consolidated control."
     },
     {
@@ -564,7 +564,7 @@
     },
     {
       "id": "inline-immersion-auto-cycle",
-      "status": "qualified-alpha24-installing-phone",
+      "status": "qualified-alpha24-delivered",
       "requirement": "Single-flow inline replacements automatically fade between target and source with reserved longer-form geometry and length-based timing. No parallel lines, subtitles or modal. Tap holds the phrase; speech holds its displayed snapshot.",
       "candidate": "990d448",
       "coordination": "OZZZ direction shared in authorized message35553; no Stack mode added to NextComp.",
@@ -579,8 +579,8 @@
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "990d448",
-    "published_release": "v0.5.0-alpha.23",
+    "latest_pushed_commit": "a060935",
+    "published_release": "v0.5.0-alpha.24",
     "server_tests": 204,
     "android_tests": 121,
     "phone_endpoint": "Termux SSH over Tailscale and authenticated automation listener reachable",
@@ -595,21 +595,21 @@
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 native readable swivels and full 360 Codex/thinking spins integrated; shared bounded cache and reduced-motion fallback",
-    "phone_install": "Phonecode36/basehash independentlyverified before on-deviceCodex update38 attempt; SSHconnectiondroppedbefore finalresult. Code38installation notclaimed.",
+    "phone_install": "On-device Codex guided compatible in-place installation; root independently verified exact installed alpha24/code42 hash. Physical fingerprint prompt resolved without agent input; actor unestablished. Pairing and eight visible session controls retained.",
     "qualification": "Alpha15 version32:146 backend tests,66 Android tests,debug/release lint and signing pass. Actual anchoredpopup, directswitch/inline targetreply, keyboardavoidance, contrast andfont2 labels qualified.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Alpha24 reviewed native cycling motion, normal/2× text, unequal long variants and speech snapshot published. Full gallery desktop/mobile/reduced-motion/reload check passed (1748 cards).",
     "native_audio_qualification": "Actual synthetic local WebRTC capture, MediaPlayer playback, foreground/background and screen-off continuity, persistent captions verified; real-provider speech quality and physical secure-keyguard presentation remain unqualified",
-    "update_delivery": "Alpha20/code38 privatecompatiblevariants published; one deduplicated updateannouncement421 acceptedbyFCM; actualhandsetacknotclaimed.",
+    "update_delivery": "Alpha24/code42 compatible variants prepared; deduplicated announcement505 accepted. Handset push acknowledgment not separately established.",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
     "session_list": "Alpha15 indexed Codex listing live: authenticated70-limit request returned68 visible sessions in336ms; native metadata21–39ms. No active-session reset.",
-    "immersion_next": "Strong working-language Italian with normal-size contextual English rescue and all workflow/speech/public-thought coverage is in progress; docs/ITALIAN-VIRTUAL-IMMERSION.md records exactrequest andaudit.",
+    "immersion_next": "Automatic single-flow cycling delivered in alpha24 with native geometry/motion/snapshot evidence. Teacher quality and real-provider spoken language remain separate qualifications.",
     "phone_access": "SSH and authenticated automation work; no networking or security settings changed.",
     "backend_runtime": "Alpha24 live, connected, no problem; Codex and Losangelex configured and available.",
     "native_validation": "Alpha24 final signed debug/release, 121 Android tests, both lint variants and successful clean-checkout CI. Native inline cycling and team controls qualified.",
-    "pending_phone_update": "Installation completed and exact installed hash verified; post-install pairing/session inspection in progress.",
-    "conversation_context": "Alpha23 Important/All filters the same transcript; direct Retry/Edit/Remove, immediate acknowledgements despite failed history, one speech control, preserved drafts/IME and source navigation qualified on native emulator.",
+    "pending_phone_update": "None. Installed alpha24/code42 independently verified; recovery/Important exact-thread handset interaction remains uninspected.",
+    "conversation_context": "Installed alpha24 includes qualified Important/All transcript filtering and direct Retry/Edit/Remove. Native recovery/filter proof is synthetic; exact requested handset thread was not opened.",
     "qualified_build": "0.5.0-alpha.24 / code42"
   },
   "remaining": [

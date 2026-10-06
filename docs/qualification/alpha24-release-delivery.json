@@ -26,7 +26,7 @@
     ]
   },
   "phoneInstallation": {
-    "status": "installed_hash_independently_verified_post_install_ui_check_in_progress",
+    "status": "installed_verified",
     "candidateHashVerified": true,
     "termuxSsh": "reachable",
     "automationListener": "authenticated snapshot successful",
@@ -35,9 +35,21 @@
     "installedVersion": "0.5.0-alpha.24",
     "installedVersionCode": 42,
     "installedBaseApkSha256": "d7ffed45e537fa3d63617f9cd3b332413ab3e114bf51908c198dc3c7d6a8a3cc",
-    "method": "On-device Codex with existing authorized accessibility automation and Android compatible in-place installer; no ADB.",
+    "method": "On-device Codex verified the file, guided Android installer through existing authorized accessibility, and independently verified the installed APK; no ADB.",
     "settingsChanged": false,
-    "messagesSentRetriedOrRemoved": false
+    "messagesSentRetriedOrRemoved": false,
+    "installerConfirmation": "A physical fingerprint prompt resolved without agent input; actor not independently established.",
+    "pairingRetained": true,
+    "existingSessionsRetained": true,
+    "visibleSessionControlsBefore": 8,
+    "visibleSessionControlsAfter": 8,
+    "savedVoiceItemsRetained": 4,
+    "backendSelectorAvailable": true,
+    "drafts": "No composer editing or text typing; draft contents not independently compared.",
+    "recoveryAndImportantOnHandset": "Not verified: exact requested thread UUID was not exposed by accessibility. Native synthetic proof remains separately recorded.",
+    "limitations": [
+      "Settings showed a stale Confirm Install in Android hint despite verified installed version42."
+    ]
   },
   "limitations": [
     "Native speech snapshot continuity is verified; real-provider pronunciation and acoustic quality are separate qualifications.",
@@ -50,5 +62,16 @@
     "cards": 1748,
     "check": "passed desktop/mobile/reduced-motion/reload",
     "approvedNativeMotion": "/8bar/#nextcomp-alpha24-motion"
+  },
+  "publicRelease": {
+    "tag": "v0.5.0-alpha.24",
+    "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.24"
+  },
+  "updateAnnouncement": {
+    "versionCode": 42,
+    "notificationId": 505,
+    "announced": 1,
+    "pushEnabled": true,
+    "phoneReceipt": "Not separately established; announcement acceptance is not a handset delivery acknowledgment."
   }
 }
