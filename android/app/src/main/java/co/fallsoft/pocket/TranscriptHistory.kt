@@ -62,3 +62,7 @@ internal suspend fun locateTranscriptSource(
     }
     return -1
 }
+
+/** Capture a key only from the same viewport item that owns firstVisibleItemScrollOffset. */
+internal fun transcriptReadPosition(firstViewportRowId:String?,firstViewportOffset:Int,follow:Boolean)=
+    firstViewportRowId?.let{TranscriptReadPosition(it,firstViewportOffset,follow)}

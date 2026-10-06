@@ -103,9 +103,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     DisposableEffect(Pocket.local,Pocket.selected){
         val source=Pocket.selected;val owner=backendOwner(Pocket.base,Pocket.token)
         onDispose{
-            val visible=list.layoutInfo.visibleItemsInfo.firstOrNull{it.key.toString() in latestRowIds}
-            val id=visible?.key?.toString()?:latestRowIds.lastOrNull()
-            if(source!=null&&id!=null)PocketTranscript.rememberPosition(owner,source,TranscriptReadPosition(id,list.firstVisibleItemScrollOffset,latestFollow))
+            // visibleItemsInfo also includes a preceding row inside content padding.
+            // Its key must not be paired with the next viewport row's scroll offset.
+            val visible=list.layoutInfo.visibleItemsInfo.firstOrNull{it.index==list.firstVisibleItemIndex&&it.key.toString() in latestRowIds}
+            val position=transcriptReadPosition(visible?.key?.toString(),list.firstVisibleItemScrollOffset,latestFollow)
+            if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position)
         }
     }
     LaunchedEffect(Pocket.local,Pocket.selected,rows.size){
