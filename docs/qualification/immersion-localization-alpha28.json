@@ -1,0 +1,385 @@
+{
+  "artifact": {
+    "path": "nextcomp-alpha28-linked-cue-corrected-debug.apk",
+    "sha256": "c02839bb55eceb2556c881b841aad6ead2f7d70bba4eb7059b85e28180f6da0d",
+    "versionCode": 46,
+    "source": "4e00850"
+  },
+  "syntheticOnly": true,
+  "status": "Reviewed synthetic body cue, timing and scoped interaction qualification passed, with explicit coverage limits.",
+  "capture": {
+    "host": {
+      "method": "Original decoded-frame PTS with passthrough RGB decoding; fixed quarter-size body/footer warm-mask ROIs. Color threshold onset is not mathematical animation onset. Visual text review required. No refresh-rate inference.",
+      "originalDecodedFrames": 914,
+      "firstPTS": 0.0,
+      "lastPTS": 73.693,
+      "medianGapSeconds": 0.07600000000000051,
+      "maxGapSeconds": 0.24399999999999977,
+      "bodyThreshold": 100,
+      "footerThreshold": 80,
+      "bodyIntervals": [
+        {
+          "onsetBracket": [
+            2.739,
+            2.817
+          ],
+          "disappearanceBracket": [
+            6.267,
+            6.339
+          ],
+          "visibleSampleSpanSeconds": 3.45,
+          "maxPixels": 879
+        },
+        {
+          "onsetBracket": [
+            12.896,
+            12.996
+          ],
+          "disappearanceBracket": [
+            16.56,
+            16.638
+          ],
+          "visibleSampleSpanSeconds": 3.5639999999999983,
+          "maxPixels": 877
+        },
+        {
+          "onsetBracket": [
+            35.484,
+            35.608
+          ],
+          "disappearanceBracket": [
+            39.066,
+            39.142
+          ],
+          "visibleSampleSpanSeconds": 3.4580000000000055,
+          "maxPixels": 3854
+        },
+        {
+          "onsetBracket": [
+            52.364,
+            52.464
+          ],
+          "disappearanceBracket": [
+            56.13,
+            56.213
+          ],
+          "visibleSampleSpanSeconds": 3.666000000000004,
+          "maxPixels": 3854
+        }
+      ],
+      "footerIntervals": [
+        {
+          "onsetBracket": [
+            69.798,
+            69.868
+          ],
+          "disappearanceBracket": [
+            73.196,
+            73.287
+          ],
+          "visibleSampleSpanSeconds": 3.328000000000003,
+          "maxPixels": 391
+        }
+      ],
+      "maximumBody": 3854,
+      "maximumFooter": 391,
+      "simultaneousMaskSamples": []
+    },
+    "nativeCodec": {
+      "method": "Original decoded-frame PTS with passthrough RGB decoding; fixed quarter-size body/footer warm-mask ROIs. Color threshold onset is not mathematical animation onset. Visual text review required. No refresh-rate inference.",
+      "originalDecodedFrames": 326,
+      "firstPTS": 0.0,
+      "lastPTS": 67.482811,
+      "medianGapSeconds": 0.1774559999999994,
+      "maxGapSeconds": 0.8085439999999977,
+      "bodyThreshold": 100,
+      "footerThreshold": 80,
+      "bodyIntervals": [
+        {
+          "onsetBracket": [
+            0.351367,
+            0.3982
+          ],
+          "disappearanceBracket": [
+            3.830444,
+            3.977344
+          ],
+          "visibleSampleSpanSeconds": 3.432244,
+          "maxPixels": 864
+        },
+        {
+          "onsetBracket": [
+            10.382022,
+            10.596644
+          ],
+          "disappearanceBracket": [
+            14.007389,
+            14.189678
+          ],
+          "visibleSampleSpanSeconds": 3.4107450000000004,
+          "maxPixels": 867
+        },
+        {
+          "onsetBracket": [
+            32.8421,
+            33.650644
+          ],
+          "disappearanceBracket": [
+            36.542533,
+            36.897156
+          ],
+          "visibleSampleSpanSeconds": 2.891888999999999,
+          "maxPixels": 3827
+        },
+        {
+          "onsetBracket": [
+            49.838289,
+            50.124467
+          ],
+          "disappearanceBracket": [
+            53.628922,
+            53.981044
+          ],
+          "visibleSampleSpanSeconds": 3.504455,
+          "maxPixels": 3828
+        }
+      ],
+      "footerIntervals": [
+        {
+          "onsetBracket": [
+            67.134778,
+            67.366844
+          ],
+          "disappearanceBracket": null,
+          "visibleSampleSpanSeconds": 0.11596699999999771,
+          "maxPixels": 264
+        }
+      ],
+      "maximumBody": 3828,
+      "maximumFooter": 264,
+      "simultaneousMaskSamples": []
+    },
+    "large": {
+      "method": "Original decoded-frame PTS with passthrough RGB decoding; fixed quarter-size body/footer warm-mask ROIs. Color threshold onset is not mathematical animation onset. Visual text review required. No refresh-rate inference.",
+      "originalDecodedFrames": 761,
+      "firstPTS": 0.0,
+      "lastPTS": 74.843,
+      "medianGapSeconds": 0.09100000000000108,
+      "maxGapSeconds": 0.3460000000000001,
+      "bodyThreshold": 300,
+      "footerThreshold": 80,
+      "bodyIntervals": [
+        {
+          "onsetBracket": [
+            25.434,
+            25.543
+          ],
+          "disappearanceBracket": [
+            29.356,
+            29.487
+          ],
+          "visibleSampleSpanSeconds": 3.8130000000000024
+        },
+        {
+          "onsetBracket": [
+            35.907,
+            35.991
+          ],
+          "disappearanceBracket": [
+            39.611,
+            39.758
+          ],
+          "visibleSampleSpanSeconds": 3.6199999999999974
+        },
+        {
+          "onsetBracket": [
+            58.311,
+            58.413
+          ],
+          "disappearanceBracket": [
+            61.976,
+            62.063
+          ],
+          "visibleSampleSpanSeconds": 3.5630000000000024
+        }
+      ],
+      "footerIntervals": [
+        {
+          "onsetBracket": [
+            0.0,
+            0.0
+          ],
+          "disappearanceBracket": [
+            2.14,
+            2.241
+          ],
+          "visibleSampleSpanSeconds": 2.14,
+          "maxPixels": 315
+        }
+      ],
+      "maximumBody": 13470,
+      "maximumFooter": 315,
+      "simultaneousMaskSamples": [],
+      "thresholdNote": "2x static yellow URL antialias mask baseline 140\u2013141 pixels; threshold raised to 300, not mistaken for continuous cue."
+    }
+  },
+  "handoff": {
+    "lastOutgoingPTS": 3.945,
+    "firstIncomingPTS": 4.039,
+    "bracketSeconds": 0.094,
+    "maskOnsetBracket": [
+      2.739,
+      2.817
+    ],
+    "maskDisappearBracket": [
+      6.267,
+      6.339
+    ],
+    "minimumVisibleLeadSeconds": 1.128,
+    "minimumVisibleLingerSeconds": 2.228,
+    "caveat": "Threshold misses weak ramp tails. Original decoded timestamps are capture updates, not phone refresh frames or human perceptibility proof."
+  },
+  "phaseProof": [
+    "frame-0053-pts-3.331.png",
+    "frame-0064-pts-4.090.png",
+    "frame-0087-pts-5.589.png"
+  ],
+  "rejectedPrototypeReceipt": "alpha28-prototype-review.json",
+  "checks": {
+    "linkedBodyCue": "Pass in original timestamped source/handoff/linger frames.",
+    "largeFont": "Pass: 2x naturally wrapped body, preserved bold/italic/URL/code, localized cue on source and target. Back label truncates in existing narrow footer.",
+    "localUrl": "Pass: coordinate tap opened signed-out Chrome URL 127.0.0.1:19993/guide. Returned with Back.",
+    "lateHydration": "Pass: unique uncached revision initially source; releasing plan stages outgoing source cue before the target.",
+    "preHandoffCancellation": "Inconclusive: input interception followed a peak cue screenshot and target had already committed before the held observation. No failure assertion.",
+    "postHandoffHeldTouch": "Captured target remains during continuous held touch.",
+    "capturePixelLoss": "Retraction: raw PNG pixel arrays and OCR retain full text; apparent black omissions occurred in tool image presentation. Root independently validated identical follow-up pixels and isolated original image views. No native glyph-loss finding.",
+    "plannedHandoffPause": "Pass: unique English-only late revision 2, keyboard focused before release, exact source retained for 15 seconds with IME visible. This is suppression before a planned handoff, not observed cancellation mid-lease.",
+    "sourceRescue": "Pass: OCR-located target phrase tap substituted source in place; source observation and retap completed without adding a second paragraph.",
+    "globalCueQuiet": "Observed four distinct body cues followed by one footer cue, with zero simultaneous body/footer mask samples. First warm-mask quiet interval 6.557 seconds; masks exclude weak ramp tails."
+  },
+  "independentCompositorCaptures": [
+    "alpha28-independent-adb-cue-1.png",
+    "alpha28-independent-adb-cue-2.png",
+    "alpha28-independent-adb-cue-3.png"
+  ],
+  "publicR8": {
+    "sha256": "96796cc8303594c318c248abc295421da8fcce9505a8ae05d4d2a34551cddcea",
+    "nativeFreshPairing": "Pass",
+    "enabledPersisted": "Native settings checked=true verified before restart.",
+    "handoff": "Pass: Italian outgoing at PTS25.206; English incoming at26.236 with phrase-local cue. Protected styles, URL/code, follow-up and controls retained in raw PNG/OCR.",
+    "capture": {
+      "method": "Original decoded-frame PTS with passthrough RGB decoding; fixed quarter-size body/footer warm-mask ROIs. Color threshold onset is not mathematical animation onset. Visual text review required. No refresh-rate inference.",
+      "originalDecodedFrames": 321,
+      "firstPTS": 0.0,
+      "lastPTS": 34.832,
+      "medianGapSeconds": 0.10050000000000026,
+      "maxGapSeconds": 0.34299999999999997,
+      "bodyThreshold": 100,
+      "footerThreshold": 80,
+      "bodyIntervals": [
+        {
+          "onsetBracket": [
+            24.519,
+            24.681
+          ],
+          "disappearanceBracket": [
+            28.191,
+            28.439
+          ],
+          "visibleSampleSpanSeconds": 3.509999999999998,
+          "maxPixels": 877
+        }
+      ],
+      "footerIntervals": [],
+      "maximumBody": 877,
+      "maximumFooter": 48,
+      "simultaneousMaskSamples": []
+    },
+    "proof": [
+      "alpha28-public-r8-frame-0245-pts-25.206.png",
+      "alpha28-public-r8-frame-0253-pts-26.236.png"
+    ],
+    "excludedTrial": "Initial smoke with immersion disabled excluded; setting state was verified before qualified trial."
+  },
+  "coverageLimits": [
+    "No human perceptibility study or uninterrupted human playback assessment claimed.",
+    "Decoded video frames are capture samples; no native phone refresh-rate or 60Hz validation claimed.",
+    "Pre-handoff interception after an already-active cue remains inconclusive. Planned handoff suppression under focused IME is qualified instead.",
+    "Offscreen/prefetch clipping and speech freeze were not independently repeated natively in this bounded final smoke; parent-owned unit coverage applies.",
+    "Back label truncation at 2x remains existing narrow-footer behavior."
+  ],
+  "gallery": {
+    "category": "nextcomp-immersion-cues",
+    "ids": [
+      "nextcomp-alpha28-local-cue-motion",
+      "nextcomp-alpha28-local-cue-large",
+      "nextcomp-alpha28-local-cue-linger",
+      "nextcomp-alpha28-rejected-body-cue"
+    ],
+    "build": {
+      "passed": true,
+      "cards": 1777
+    },
+    "fullCheck": {
+      "passed": true,
+      "desktop": true,
+      "mobile": true,
+      "reducedMotion": true,
+      "automaticReload": true,
+      "isolatedHeadless": true
+    },
+    "rejectedPrototypeDistinct": true
+  },
+  "cleanup": {
+    "originalPrefsHashVerified": [
+      "speech-captions-8d3f373224372d3bedc39cfe3de66cffab9f78a93b791a471163c4b3e793da1c.xml",
+      "app-updates.xml",
+      "WebViewChromiumPrefs.xml",
+      "pocket.xml",
+      "speech-playback.xml",
+      "pocket.xml.bak"
+    ],
+    "fontScaleRestored": "1",
+    "animatorScaleRestored": "0",
+    "ownedReversePortsRemoved": [
+      18880,
+      19993
+    ],
+    "debugSignerRestored": true,
+    "originalAppBinaryRestored": false,
+    "note": "Only owned disposable emulator used; read-only AVD changes do not persist after stop. Latest debug installed to restore debuggable ownership before original preference restoration.",
+    "ownedEmulatorMainPID": 0,
+    "ownedFixtureStopped": true,
+    "unrelatedEmulatorsPreserved": [
+      "emulator-5556",
+      "emulator-5584"
+    ]
+  },
+  "build": {
+    "sourceCodeCommit": "4e00850",
+    "nodeTests": 205,
+    "androidTests": 153,
+    "lintDebug": "pass",
+    "lintRelease": "pass",
+    "maintainedPublicSigner": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+    "debugSigner": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"
+  },
+  "physicalPhone": {
+    "status": "Install pending: phone-local Codex verified APK and stopped because existing Accessibility control service disconnected; installer was not reached.",
+    "installedVersionCode": 45,
+    "installedSha256": "e2f4869091f9365762a8f6d2d2545ac479b12bc02671e35c8c52ec47e35700bf",
+    "verifiedDownloadVersionCode": 46,
+    "verifiedDownloadSha256": "c02839bb55eceb2556c881b841aad6ead2f7d70bba4eb7059b85e28180f6da0d",
+    "adbUsed": false,
+    "settingsOrPairingChanged": false
+  },
+  "phoneTouchedDuringSyntheticQualification": false,
+  "privateUpdate": {
+    "versionCode": 46,
+    "compatibleVerifiedSigningIdentities": 2,
+    "announcementCount": 1,
+    "notificationId": 522,
+    "pushEnabled": true,
+    "phonePushReceiptVerified": false
+  }
+}

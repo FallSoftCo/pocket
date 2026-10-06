@@ -603,15 +603,16 @@
     },
     {
       "id": "immersion-change-localization",
-      "status": "implementation-and-native-review-underway",
+      "status": "native-qualified-alpha28-phone-install-pending-accessibility",
       "requirement": "Language replacements must be noticeable and locatable. Report actual motion/intermediary and measured frame timing, not an invented human frame threshold. Preserve natural single-flow inline content and normal controls.",
       "prototype": "One active phrase cue across the reading surface; actual native phrase geometry before/after; warm background ramp700ms, source hold800ms, one handoff at1500ms, target hold2200ms, fade500ms. Glyphs stay fully opaque. Phrase sequencing and late hydration staged; cancel without future semantic commit. These durations are hypotheses, not researched perceptibility thresholds. Completed cues enforce4200ms quiet; controls hold Italian120–180s. Native link-style resolution must not suppress lexical-range cues.",
       "acceptance": "Timestamped complete transition with separately measured cue lead, semantic switch and lingering trace, normal/double text, one global cue, links/help and cancellation. Continuous human perceptibility is not established by extracted frames.",
-      "capture_limit": "Rejected prototype:717 original captured frames across79.809s, median101ms/max428ms gap;2394 CFR export samples include duplicates and do not measure display refresh."
+      "capture_limit": "Rejected prototype:717 original captured frames across79.809s, median101ms/max428ms gap;2394 CFR export samples include duplicates and do not measure display refresh.",
+      "evidence": "qualification/immersion-localization-alpha28.json; original source/handoff/linger and 2x frames, optimized pairing/handoff, native links/help/IME planned suppression. Mid-lease interception remains inconclusive. No human perceptibility or 60Hz claim."
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "0590e4f",
+    "latest_pushed_commit": "c80301b",
     "published_release": "v0.5.0-alpha.27",
     "server_tests": 206,
     "android_tests": 137,
@@ -642,7 +643,9 @@
     "native_validation": "Alpha26 exact signed debug/release,205 backend/130 Android tests,both lint variants and successful clean-checkout CI; native delayed-response/cache/state/settings qualified.",
     "pending_phone_update": null,
     "conversation_context": "Installed alpha26 retains Important/All transcript filtering and recovery; persistent state and faster cached reopening qualified. No real messages sent during release QA.",
-    "qualified_build": "0.5.0-alpha.26 / code44"
+    "qualified_build": "0.5.0-alpha.26 / code44",
+    "candidate_release": "v0.5.0-alpha.28 / code46; qualified and update46 offered, phone remains45 because existing Accessibility control disconnected",
+    "candidate_android_tests": 153
   },
   "remaining": [
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",
