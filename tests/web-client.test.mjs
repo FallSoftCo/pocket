@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {once} from 'node:events';
-import {createWebClient} from '../server/web-client.mjs';
+import {createWebClient,runtimeMetadata} from '../server/web-client.mjs';
 import {sessionIdentity,workTime,compareWork,mergeRows} from '../web/model.mjs';
 import WebSocket,{WebSocketServer} from 'ws';
 
@@ -50,4 +50,21 @@ test('unsupported child history is read without acquiring writer ownership and s
  const origin='https://private.example.test',gateway=createWebClient({origin,metadata,backend:`http://127.0.0.1:${upstream.address().port}`});gateway.server.listen(0,'127.0.0.1');await once(gateway.server,'listening');t.after(()=>gateway.server.close());const base=`http://127.0.0.1:${gateway.server.address().port}`;
  assert.equal((await fetch(base+'/api/threads/child-123?view=timeline')).status,401);assert.deepEqual(calls,[]);
  const pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}),cookie=pair.headers.get('set-cookie').split(';')[0];const data=await (await fetch(base+'/api/threads/child-123?view=timeline',{headers:{Cookie:cookie}})).json();assert.equal(data.historyReadOnly,true);assert.equal(data.timeline.rows[0].text,'Delegated result');assert.deepEqual(calls,['metadata','read-history']);
+});
+
+
+test('revoked signed browser pairing cannot inspect runtime metadata or trigger child admission',async t=>{
+ const token='f'.repeat(64);let revoked=false;const metadataCalls=[],backendCalls=[];
+ const upstream=http.createServer((req,res)=>{backendCalls.push(req.url);res.setHeader('Content-Type','application/json');if(req.url==='/api/pair'){res.end(JSON.stringify({token,id:'revocation-fixture'}));return;}if(revoked){res.statusCode=401;res.end('{"error":"Unauthorized"}');return;}res.end('{}');});
+ upstream.listen(0,'127.0.0.1');await once(upstream,'listening');t.after(()=>upstream.close());
+ const metadata={async read(id){metadataCalls.push(['read',id]);return {id,isChild:true,canAcceptDirectInput:false};},async list(){metadataCalls.push(['list']);return {threads:[],partial:false};},async history(){metadataCalls.push(['history']);return {};}};
+ const origin='https://private.example.test',gateway=createWebClient({origin,metadata,backend:`http://127.0.0.1:${upstream.address().port}`});gateway.server.listen(0,'127.0.0.1');await once(gateway.server,'listening');t.after(()=>gateway.server.close());const base=`http://127.0.0.1:${gateway.server.address().port}`;
+ const pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}),cookie=pair.headers.get('set-cookie').split(';')[0];revoked=true;backendCalls.length=0;
+ for(const path of ['/api/threads','/api/threads/child-123?view=timeline','/api/threads/child-123/reply','/api/voice/start']){const post=path.endsWith('/reply')||path.endsWith('/start');const result=await fetch(base+path,{method:post?'POST':'GET',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},...(post?{body:JSON.stringify({threadId:'child-123',text:'Not authorized'})}:{})});assert.equal(result.status,401);assert.match(result.headers.get('set-cookie'),/Max-Age=0/);}
+ assert.deepEqual(metadataCalls,[]);assert.deepEqual(backendCalls,['/api/threads',...Array(3).fill('/api/status')]);
+});
+
+test('bounded metadata snapshot preserves partial inventory on cache hits',async()=>{
+ const calls=[];const metadata=runtimeMetadata({async connect(){},async call(method,args){calls.push([method,args]);return {data:[{id:'thread-'+calls.length,createdAt:100}],nextCursor:'more-'+calls.length};}});
+ const fresh=await metadata.list();assert.equal(fresh.partial,true);assert.equal(calls.length,6);const cached=await metadata.list();assert.equal(cached.partial,true);assert.equal(calls.length,6);assert.deepEqual(cached.threads,fresh.threads);
 });

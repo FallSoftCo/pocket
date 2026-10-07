@@ -66,5 +66,22 @@
     "Runtime catalog enrichment is bounded and temporary until shared session-catalog backend is activated; unknown recency disclosed",
     "Optional inline immersion, alternate Losangelex team surface and phone-local profile selection are not exposed by this initial web client"
   ],
-  "privacy": "No user transcripts, credential values, device IDs, deployment hostnames or private captures in this record."
+  "privacy": "No user transcripts, credential values, device IDs, deployment hostnames or private captures in this record.",
+  "integrationReview": {
+    "date": "2026-10-07",
+    "sourceCommit": "065e35d7124a02266c042244310351d2b5a29374",
+    "fixes": [
+      "Backend device authentication completes before runtime child-admission or detail-metadata access; revoked signed cookies are cleared without metadata RPCs or submission.",
+      "Bounded runtime inventory preserves partial=true on snapshot cache hits."
+    ],
+    "checks": {
+      "backendAndGatewayTests": 329,
+      "gatewayFocusedTests": 7,
+      "virtualDom": "passed again on final review source; synthetic only",
+      "publicSourceScan": "806 files passed"
+    },
+    "liveTests": "Prior live HTTP qualification retained; original stock task creation/continuation not repeated.",
+    "deployment": "Private gateway activation pending; production phone backend/native daemon untouched.",
+    "catalog": "Final shared helper integration remains pending final catalog receipt."
+  }
 }

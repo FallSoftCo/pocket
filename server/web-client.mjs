@@ -33,10 +33,15 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
   if(/^\/api\/(?:pair(?:ing)?|devices|notify)(?:\/|$)/.test(req.originalUrl.split('?')[0]))return res.sendStatus(403);
   try{
    const guarded=/^\/api\/threads\/([^/]+)\/(reply|queue\/resume|replies\/[^/]+)$/.exec(req.originalUrl.split('?')[0]);
+   const detail=req.method==='GET'&&/^\/threads\/[^/]+$/.test(req.path);
+   const voiceTarget=req.originalUrl==='/api/voice/start'&&req.body.threadId;
+   if(metadata&&(guarded||detail||voiceTarget)){
+    const auth=await forward({...req,method:'GET'},'/api/status',undefined,token);
+    if(!auth.ok){if(auth.status===401)setCookie(res,null);res.status(auth.status).json({error:'Pair this browser to continue.'});return;}
+   }
    if((guarded||(req.originalUrl==='/api/voice/start'&&req.body.threadId))&&metadata){const thread=await metadata.read(guarded?.[1]||req.body.threadId);if(!sessionIdentity(thread).canAcceptDirectInput)return res.status(409).json({error:'Open the parent task to guide this delegated agent.'});}
-   const detail=req.method==='GET'&&/^\/threads\/[^/]+$/.test(req.path);let runtimeThread;
+   let runtimeThread;
    if(detail&&metadata){runtimeThread=await metadata.read(req.path.split('/').at(-1));if(sessionIdentity(runtimeThread).isChild&&!sessionIdentity(runtimeThread).canAcceptDirectInput&&metadata.history){
-    const auth=await forward({...req,method:'GET'},'/api/status',undefined,token);if(!auth.ok){res.status(auth.status).json({error:'Pair this browser to continue.'});return;}
     res.json(await metadata.history(runtimeThread,req.query.before||null));return;
    }}
    const r=await forward(req,req.originalUrl,req.method==='GET'?undefined:req.body,token);
@@ -64,12 +69,12 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
  return {app,server,sockets};
 }
 export function runtimeMetadata(codex=new Codex()){
- let snapshot=new Map(),cacheAt=0,loading;const history=new ThreadHistory(codex);
- return {async history(thread,before){const raw=await history.read(thread,{before,preferPaging:true});const page=timelinePage(raw,[],{before:raw._pocketPage?null:before});if(raw._pocketPage)Object.assign(page,raw._pocketPage);return {thread:{...thread,turns:[]},timeline:page,pending:[],outgoing:[],notifications:[],notes:[],revision:0,watched:false,historyReadOnly:true};},async list(archived=false){if(!archived&&Date.now()-cacheAt<10000)return {threads:[...snapshot.values()],partial:false};if(loading&&!archived)return loading;
+ let snapshot=new Map(),snapshotPartial=false,cacheAt=0,loading;const history=new ThreadHistory(codex);
+ return {async history(thread,before){const raw=await history.read(thread,{before,preferPaging:true});const page=timelinePage(raw,[],{before:raw._pocketPage?null:before});if(raw._pocketPage)Object.assign(page,raw._pocketPage);return {thread:{...thread,turns:[]},timeline:page,pending:[],outgoing:[],notifications:[],notes:[],revision:0,watched:false,historyReadOnly:true};},async list(archived=false){if(!archived&&Date.now()-cacheAt<10000)return {threads:[...snapshot.values()],partial:snapshotPartial};if(loading&&!archived)return loading;
   const work=(async()=>{await codex.connect();const found=new Map();let cursor=null,partial=false;
    for(let i=0;i<6;i++){let result;const args={limit:100,sortKey:'recency_at',sortDirection:'desc',archived,useStateDbOnly:true,...(cursor?{cursor}:{})};try{result=await codex.call('thread/list',args);}catch(e){if(e.rpc?.code!==-32602)throw e;result=await codex.call('thread/list',{...args,sortKey:'created_at'});}
     for(const t of result.data||[])found.set(t.id,{...t,...sessionIdentity(t),recencyAt:workTime(t)});cursor=result.nextCursor;if(!cursor)break;partial=true;
-   }if(!archived){snapshot=found;cacheAt=Date.now();}return {threads:[...found.values()],partial:!!cursor};})();if(!archived){loading=work;void work.finally(()=>{loading=null;}).catch(()=>{});}return work;
+   }if(!archived){snapshot=found;snapshotPartial=!!cursor;cacheAt=Date.now();}return {threads:[...found.values()],partial:!!cursor};})();if(!archived){loading=work;void work.finally(()=>{loading=null;}).catch(()=>{});}return work;
  },async read(id){await codex.connect();const {thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});if(thread?.id!==id)throw Error('Session identity changed.');return {...thread,...sessionIdentity(thread),recencyAt:workTime(thread)};}};
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
