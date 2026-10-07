@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-07",
+  "version": "0.5.0-alpha.38",
+  "versionCode": 56,
+  "permissions": {
+    "cause": "A loaded independent thread retained workspaceWrite/networkAccess:false after resume permission overrides. Supported thread settings update followed by inherited resume applied and verified dangerFullAccess/:danger-full-access/never.",
+    "live_restored": {
+      "loaded_independent": 58,
+      "loaded_children_already_full": 12,
+      "dormant_verified": 247,
+      "dormant_checked": 251,
+      "inactive_historical_children_unverified": 4
+    },
+    "actual_worker_verification": "Affected worker executed local service health and SSH hostname successfully, then continued existing work in its original thread. No duplicate worker or original request replay.",
+    "default": "New empty no-turn thread verified dangerFullAccess/:danger-full-access/never after explicit owner default configuration.",
+    "runtime_restart": "Not required; native daemon was not restarted. Existing loaded work and pairing retained.",
+    "durability": "Interactive launcher now raises a lower descriptor soft limit toward65536 within its hard limit, preserving higher limits. Current runtime already65536. This does not qualify every launcher or reboot.",
+    "exhaustion": "Earlier descriptor exhaustion preceded separate failures; current descriptor usage is well below65536. No claim that descriptor exhaustion explains every policy regression.",
+    "product_control": "Explicit permission operation uses thread/settings/update then independently audits runtime profile, sandbox and approval. Partial all-loaded grants return verified and blocked results; blocked grants do not alter recorded intent. Ordinary reads and automatic recovery inherit existing permissions; actual user revocations remain respected.",
+    "limitation": "Four old inactive child histories reject native parent-linked resumption and remain unverified. Ephemeral loaded IDs with no rollout are not counted as verified."
+  },
+  "work_updates": {
+    "surface": "Compact Work updates entry and durable report inbox; scheduled reports excluded from normal coordinator history for upgraded clients.",
+    "cadence": "Existing enabled state, cadence, stale thresholds and device-scoped choices preserved.",
+    "unseen": "Fetching and scheduling do not mark read. Exact exposed report IDs are acknowledged only in foreground with blackout visibility gating; source catch-up events recorded separately.",
+    "history": "Automatic earlier pagination, overlap deduplication and cached-page retention.",
+    "notifications": "One quiet report slot per execution profile; tap opens inbox. No automatic report speech backlog; Listen uses the currently displayed inline text.",
+    "native_candidate": "Five reports caused zero scheduled coordinator bubbles, zero fetch acknowledgements, exact exposed acknowledgements, one silent notification; native direct session navigation and per-session draft preservation passed. Fresh report fetched during Settings blackout remained unseen until visible inbox presentation. Inbox viewport beneath blackout is not separately qualified."
+  },
+  "validation": {
+    "node_tests": 322,
+    "android_debug_tests": 231,
+    "android_release_tests": 231,
+    "android_test_suites": 48,
+    "npm_audit": "zero vulnerabilities",
+    "final_build": "Both debug/release231 tests48 suites, both lints and both APK builds passed on final source in7m17s.",
+    "signed_release": {
+      "versionCode": 56,
+      "sha256": "386efafb768dcecdd1a078020d883eb582a714e8ea6f5250bb2d666d88bab84f",
+      "bytes": 51873435,
+      "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf"
+    },
+    "native_final_smoke": "Exact maintained-signer optimized alpha38/code56 APK installed on owned synthetic emulator; pairing, compact entry, readable dedicated report inbox and controls passed. Inline Listen snapshot passed on final same-source debug variant; provider blocked, no audio success claim.",
+    "gallery_ids": [
+      "nextcomp-work-updates-inbox-entry",
+      "nextcomp-work-updates-inbox-coordinator",
+      "nextcomp-work-updates-inbox-latest",
+      "nextcomp-work-updates-inbox-pagination",
+      "nextcomp-work-updates-inbox-draft",
+      "nextcomp-work-updates-inbox-notification",
+      "nextcomp-work-updates-final-production-inbox",
+      "nextcomp-work-updates-final-debug-inline-inbox"
+    ],
+    "gallery_check": "1972 cards; desktop/mobile, reduced motion, reload and media checks passed with no errors or failed items. Synthetic native reviews only.",
+    "public_source_scan": "782 tracked publication files passed; private concurrent work excluded.",
+    "phone": "Last verified in-place install is alpha37/code55. Current authorized ADB helper found no verified TCP or USB connection; alpha38 handset installation not claimed. No physical microphone/provider verification.",
+    "backend_activation": "Bridge service running alpha38 connected to unchanged native daemon. Enabled/cadence/stale reporting settings and recovery turn identities/attempts preserved. Submission continuation completed; other existing continuation remained running. Device-scoped inbox route rejects an unpaired owner identity.",
+    "listen_snapshot": "Final alpha38 debug native: visible inline mixed-language report exactly matched explicit Listen captured text. Synthetic provider503 blocked audio generation; this qualifies payload capture, not provider/audio success.",
+    "private_update": "Verified maintained and existing development-signer variants prepared with296 identical non-signature payload entries. Server announced code56 once with push enabled; handset receipt/installation not claimed."
+  }
+}

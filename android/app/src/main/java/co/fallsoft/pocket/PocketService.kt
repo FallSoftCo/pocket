@@ -45,7 +45,13 @@ object PocketNotifications {
         PocketNotificationTitles.remember(n)
         if(PocketNotificationReads.isRead(n))return
         channels(c)
-        val local=n.optBoolean("_local",Pocket.local);val id=n.optLong("id").toInt()+(if(local)500000 else 1000); val thread=n.s("thread_id").takeIf{it.isNotBlank()}
+        val local=n.optBoolean("_local",Pocket.local);val id=(if(n.s("kind")=="coordinator_report")499998 else n.optLong("id").toInt())+(if(local)500000 else 1000); val thread=n.s("thread_id").takeIf{it.isNotBlank()}
+        if(n.s("kind")=="coordinator_report"){
+            val manager=c.getSystemService(NotificationManager::class.java);val profile=PocketNotificationTitles.extras(n).getString("nextcompProfile")
+            val previous=manager.activeNotifications.firstOrNull{it.id==id}
+            if((previous?.notification?.extras?.getLong("nextcompReportAt")?:0)>n.optLong("created_at"))return
+            manager.activeNotifications.filter{it.id!=id&&it.notification.extras.getString("nextcompProfile")==profile&&it.notification.extras.getString("nextcompThread").orEmpty().isBlank()&&(it.notification.extras.getString("nextcompKind")=="coordinator_report"||it.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()=="NextComp check-in")}.forEach{manager.cancel(it.id)}
+        }
         val attention=PocketAttention.needs(n)&&!PocketAttention.dismissed(n.optLong("id"),local)
         val sameProfile=local==Pocket.local
         if(sameProfile){synchronized(immersedNotices){immersedNotices[id]=ImmersedNotice(n.toString(),immersionProfile(),reminder);while(immersedNotices.size>30)immersedNotices.remove(immersedNotices.keys.first())}}
@@ -55,11 +61,11 @@ object PocketNotifications {
 
         val b=NotificationCompat.Builder(c,PocketAudio.channel(c,n.s("kind"))).setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title).setContentText(body)
-            .addExtras(PocketNotificationTitles.extras(n))
+            .addExtras(PocketNotificationTitles.extras(n).apply{putString("nextcompKind",n.s("kind"));if(n.s("kind")=="coordinator_report")putLong("nextcompReportAt",n.optLong("created_at"))})
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setColor(0xffffc600.toInt()).setAutoCancel(!attention&&n.s("kind")!="coordinator_report").setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(open(c,thread,id,local,n.s("kind")=="coordinator_report"))
-        if(translationRefresh||PocketSpeech.count>0&&!PocketSpeech.paused)b.setSilent(true)
+        if(n.s("kind")=="coordinator_report"||translationRefresh||PocketSpeech.count>0&&!PocketSpeech.paused)b.setSilent(true)
         b.setOnlyAlertOnce(true)
         if(reminder)b.setSubText(PocketImmersion.label("Still needs your attention"))
         if(attention){PocketAttention.remember(n);b.setDeleteIntent(PocketAttention.action(c,n.optLong("id"),"dismiss",local))}

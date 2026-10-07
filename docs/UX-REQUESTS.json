@@ -14,9 +14,28 @@
   },
   "requests": [
     {
+      "id": "verified-runtime-full-permissions",
+      "date": "2026-10-07",
+      "status": "runtime-restored; release-alpha38-qualified",
+      "request": "Explicitly grant all sessions full access, verify runtime rather than preference, restore failed networking and make resource-limit repair durable. Restart daemon only if needed and reconcile existing work before continuation.",
+      "implementation": "Dedicated thread/settings/update followed by exact inherited sandbox/profile/approval audit; coordinator permission controls use same verified change. Durable named default full profile and launcher descriptor floor. No task/model replay.",
+      "verification": "58 loaded independent sessions verified full/never;12 loaded children already verified full/never. 247 of251 dormant restricted sessions verified;4 old unloaded children remain unverified due native parent-link resume rejection. Existing affected worker verified its own local agent service and remote SSH and resumed same thread; recovery turn identities retained, one continuation completed and one remained active. Fresh empty native thread verified full default. No daemon restart needed; future Zsh launcher descriptor floor independently tested."
+    },
+    {
+      "id": "quiet-work-updates-inbox",
+      "requirement": "Scheduled check-ins must not pollute coordinator conversation. Keep one compact persistent Work updates entry with latest/unread, a dedicated archive inbox, coalesced quiet report notifications, preserved history/device cadence/audio choices, and exact actually presented acknowledgments. Explicit catch-up and material actionable questions remain distinct.",
+      "status": "released-alpha38; private-update-offered-code56; phone-install-unverified",
+      "files": [
+        "server/coordinator-reports.mjs",
+        "server/voice-controller.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketWorkUpdates.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/WorkUpdatesScreen.kt"
+      ]
+    },
+    {
       "id": "screen-on-blackout",
       "requirement": "Explicit screen-on blackout using a black foreground overlay and per-window minimum brightness with native keep-screen-on. Tap or Back exits; lifecycle restores prior brightness, awake flag, system-bar behavior and accessibility. Preserve underlying chats, voice, notifications and pairing; Home/Lock remain available.",
-      "status": "verified-release-delivery",
+      "status": "released-alpha37-installed-code55",
       "evidence": [
         "../android/app/src/main/java/co/fallsoft/pocket/ScreenBlackout.kt",
         "../android/app/src/test/java/co/fallsoft/pocket/BlackoutWindowSessionTest.kt"
@@ -28,7 +47,7 @@
     {
       "id": "coordinator-recording-visible-state",
       "requirement": "One tap starts actual coordinator audio capture with visible state beside the mic; one tap stops and sends. Show actual start/capture errors instead of sound-only feedback; preserve pending-turn delivery identity.",
-      "status": "verified-release-delivery",
+      "status": "released-alpha37-installed-code55",
       "evidence": [
         "qualification/transient-recovery-alpha37.json"
       ],
@@ -37,7 +56,7 @@
     {
       "id": "bounded-transient-turn-recovery",
       "requirement": "Automatically continue definitively failed capacity, transient runtime/network and compaction turns with persisted bounded backoff/jitter. Preserve existing context/models; audit intended permissions before permission-revoked recovery; never override actual revocation, replay original submissions or retry uncertain delivery. Cancel when user stops or supersedes work.",
-      "status": "verified-release-delivery",
+      "status": "released-alpha37-installed-code55",
       "evidence": [
         "qualification/transient-recovery-alpha37.json"
       ],

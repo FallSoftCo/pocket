@@ -128,7 +128,7 @@ class PocketVoiceService:Service(){
         PocketVoice.historyLoading=true;PocketVoice.historyProblem=""
         if(!older){PocketVoice.messages.clear();PocketVoice.routes.clear();PocketVoice.presentationTurns.clear();PocketVoice.historyEarlier=false;historyBefore=null}
         scope.launch{try{
-            val result=api("/api/voice/history"+if(older&&historyBefore!=null)"?before=$historyBefore" else "")
+            val result=api("/api/voice/history?conversationOnly=1"+if(older&&historyBefore!=null)"&before=$historyBefore" else "")
             val turns=result.optJSONArray("turns")?.objects().orEmpty().mapNotNull{row->val heard=row.s("transcript");val response=row.s("response").ifBlank{row.s("error")};if(heard.isBlank()&&response.isBlank())null else CoordinatorMessage(row.s("id").ifBlank{"history:${row.optLong("cursor")}:${heard.hashCode()}:${response.hashCode()}"},heard,response).also{val actions=row.optJSONArray("actions")?.objects().orEmpty();PocketVoice.routes[it.id]=routeReceipts(actions,it.id);rememberPresentation(it.id,actions)}}
             val fresh=turns.filter{turn->PocketVoice.messages.none{it.id==turn.id}};PocketVoice.messages.addAll(0,fresh)
             historyBefore=result.optLong("before").takeIf{it>0};PocketVoice.historyEarlier=result.optBoolean("hasEarlier")

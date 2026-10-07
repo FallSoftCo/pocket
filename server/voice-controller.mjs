@@ -1,9 +1,10 @@
 import {CoordinatorDiscovery} from './coordinator-discovery.mjs';
+import {changeThreadPermissions} from './permissions.mjs';
 import {createHash} from 'node:crypto';
 import {newThreadComputerUseOptions} from './computer-use.mjs';
 const fail=(message,status=400)=>Object.assign(Error(message),{status});
 export const VOICE_OPERATIONS=['discover','catchup','presentCatchup','sessions','projects','models','updates','attention','read','select','create','reply','interrupt','rename','archive','restore','watch','settings','queueResume','queueEdit','answer','profile','exit','permissions','coordinatorSettings','reportSettings'];
-export const VOICE_TOOL={type:'function',name:'pocket_control',description:'Naturally route ordinary requests to existing work using discover({query?,threadIds?,limit?,cursor?}), which returns live metadata and recent public conversation evidence. catchup({threadIds?,limit?}) returns material unseen progress and pending attention, not a read acknowledgment; presentCatchup({items:[{threadId,id,seq}]}) stages only the exact findings included in your final answer, marked presented only when delivered. sessions({archived?}), projects({}), models({}), updates({}), attention({}), read({threadId?}), select({threadId}) or select({coordinator:true}) to return to global coordination, create({cwd,prompt,permissions?,reason?,select?}) only after checking existing work; select:true only if the user explicitly wants to switch focus, reply({threadId?,text,mode:auto|steer|queue}), interrupt({threadId?}), rename({threadId?,name}), archive/restore({threadId?}), watch({threadId?,enabled}), settings({threadId?,model?,effort?,mode?}), queueResume({threadId?}), queueEdit({threadId?,replyId,action:edit|remove|send|retry,text?,confirmUnknown?}), answer({requestId,decision?:accept|decline|cancel,answers?:object}), profile({local:boolean}), exit({}), permissions({full:boolean}), coordinatorSettings({proactiveCatchup?:boolean}) to opt into or out of brief unseen-outcome heads-ups; reportSettings({enabled?,intervalMinutes?,staleAfterMinutes?}) reads or changes this device’s periodic report preferences only on explicit request. Read before referring to results or answering requests. Failed replies can be retried or removed. Unknown delivery may have succeeded: inspect the conversation and obtain explicit user confirmation of duplicate risk before confirmUnknown:true. Never automatically retry unknown replies. Accepted/queued is not completed.',inputSchema:{type:'object',properties:{operation:{type:'string',enum:VOICE_OPERATIONS},arguments:{type:'object',additionalProperties:true}},required:['operation','arguments'],additionalProperties:false}};
+export const VOICE_TOOL={type:'function',name:'pocket_control',description:'Naturally route ordinary requests to existing work using discover({query?,threadIds?,limit?,cursor?}), which returns live metadata and recent public conversation evidence. catchup({threadIds?,limit?}) returns material unseen progress and pending attention, not a read acknowledgment; presentCatchup({items:[{threadId,id,seq}]}) stages only the exact findings included in your final answer, marked presented only when delivered. sessions({archived?}), projects({}), models({}), updates({}), attention({}), read({threadId?}), select({threadId}) or select({coordinator:true}) to return to global coordination, create({cwd,prompt,permissions?,reason?,select?}) only after checking existing work; select:true only if the user explicitly wants to switch focus, reply({threadId?,text,mode:auto|steer|queue}), interrupt({threadId?}), rename({threadId?,name}), archive/restore({threadId?}), watch({threadId?,enabled}), settings({threadId?,model?,effort?,mode?}), queueResume({threadId?}), queueEdit({threadId?,replyId,action:edit|remove|send|retry,text?,confirmUnknown?}), answer({requestId,decision?:accept|decline|cancel,answers?:object}), profile({local:boolean}), exit({}), permissions({full:boolean,threadId?:string,all?:boolean}) explicitly updates and verifies runtime settings for subsequent turns; omit target to change coordinator and new-work preference, all:true changes loaded sessions only and returns any blocked identities; never claim active turns were restarted, coordinatorSettings({proactiveCatchup?:boolean}) to opt into or out of brief unseen-outcome heads-ups; reportSettings({enabled?,intervalMinutes?,staleAfterMinutes?}) reads or changes this device’s periodic report preferences only on explicit request. Read before referring to results or answering requests. Failed replies can be retried or removed. Unknown delivery may have succeeded: inspect the conversation and obtain explicit user confirmation of duplicate risk before confirmUnknown:true. Never automatically retry unknown replies. Accepted/queued is not completed.',inputSchema:{type:'object',properties:{operation:{type:'string',enum:VOICE_OPERATIONS},arguments:{type:'object',additionalProperties:true}},required:['operation','arguments'],additionalProperties:false}};
 // Increment when the persisted dynamic-tool contract changes. Resume restores
 // the old contract and cannot update it on the qualified stock runtime.
 export const VOICE_TOOL_REVISION=1;
@@ -66,7 +67,8 @@ export class VoiceController {
           let after=0,batch=[],bytes=0;
           const flush=async()=>{if(!batch.length)return;await this.codex.call('thread/inject_items',{threadId:candidate,items:batch});batch=[];bytes=0;};
           while(after<through){
-            const rows=this.db.prepare("SELECT rowid AS cursor,transcript,response,error,state FROM voice_turns WHERE device=? AND rowid>? AND rowid<=? ORDER BY rowid LIMIT 50").all(device,after,through);
+            const reportFilter=this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='coordinator_report_runs'").get()?" AND NOT EXISTS(SELECT 1 FROM coordinator_report_runs r WHERE r.device_id=voice_turns.device AND r.report_id=voice_turns.id)":"";
+            const rows=this.db.prepare("SELECT rowid AS cursor,transcript,response,error,state FROM voice_turns WHERE device=? AND rowid>? AND rowid<=?"+reportFilter+" ORDER BY rowid LIMIT 50").all(device,after,through);
             if(!rows.length)break;
             for(const row of rows){after=row.cursor;if(!['completed','failed','unknown'].includes(row.state))continue;for(const item of coordinatorHistoryItems(row)){const size=Buffer.byteLength(JSON.stringify(item));if(batch.length&&(batch.length>=32||bytes+size>256*1024))await flush();batch.push(item);bytes+=size;}}
           }
@@ -88,8 +90,9 @@ export class VoiceController {
       this.resumed.add(s.thread_id);return s;
     })();this.starting.set(device,work);try{return await work;}finally{this.starting.delete(device);}
   }
-  history(device,before=Number.MAX_SAFE_INTEGER){
-    const rows=this.db.prepare('SELECT rowid AS cursor,id,state,transcript,response,error,actions,created_at FROM voice_turns WHERE device=? AND rowid<? ORDER BY rowid DESC LIMIT 101').all(device,before);
+  history(device,before=Number.MAX_SAFE_INTEGER,{conversationOnly=false}={}){
+    const filter=conversationOnly&&this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='coordinator_report_runs'").get()?" AND NOT EXISTS(SELECT 1 FROM coordinator_report_runs r WHERE r.device_id=voice_turns.device AND r.report_id=voice_turns.id)":"";
+    const rows=this.db.prepare('SELECT rowid AS cursor,id,state,transcript,response,error,actions,created_at FROM voice_turns WHERE device=? AND rowid<?'+filter+' ORDER BY rowid DESC LIMIT 101').all(device,before);
     const hasEarlier=rows.length>100;const turns=rows.slice(0,100).reverse();return {turns:turns.map(t=>({...t,actions:JSON.parse(t.actions||'[]')})),hasEarlier,before:turns[0]?.cursor??null};
   }
   get(device,id){const row=this.db.prepare('SELECT id,state,transcript,response,error,actions,created_at FROM voice_turns WHERE device=? AND id=?').get(device,id);return row?{...row,actions:JSON.parse(row.actions)}:null;}
@@ -122,7 +125,7 @@ export class VoiceController {
       active.discovery=await this.discovery.discover({query:transcript,threadIds:[...(s.focus!=='coordinator'&&s.selected?[s.selected]:[]),...references.slice(-3).map(r=>r.threadId)]});
       const correction=JSON.parse(this.db.prepare('SELECT correction FROM voice_turns WHERE device=? AND id=?').get(device,id)?.correction||'null');
       const recentReports=this.reports?.context?.(device,{limit:3})||[];
-      const context=JSON.stringify({host:this.host,focus:s.focus,recentReports,selectedSession:s.focus==='coordinator'?null:s.selected,references,correctionOf:correction,proactiveCatchup:!!s.proactive,defaultPermissions:s.full?'full':'review',discovery:active.discovery});
+      const context=JSON.stringify({host:this.host,focus:s.focus,recentReports,selectedSession:s.focus==='coordinator'?null:s.selected,references,correctionOf:correction,proactiveCatchup:!!s.proactive,defaultPermissions:s.full?'full':'review',permissionControls:{threadId:'Explicit runtime change for one session',all:'Explicit runtime change for loaded sessions only; report verified and blocked identities truthfully',effect:'Subsequent turns; existing active work is not automatically restarted'},discovery:active.discovery});
       const {turn}=await this.codex.call('turn/start',{threadId:s.thread_id,sandboxPolicy:s.full?{type:'dangerFullAccess'}:{type:'readOnly',networkAccess:false},approvalPolicy:'never',input:[{type:'text',text:`Current NextComp context: ${context}\nUser turn: ${transcript}`}],clientUserMessageId:`voice-${id}`});active.nativeTurn=turn.id;
     }catch(e){if(active){this.active.delete(active.thread);this.finish(active,e.rpc?'failed':'unknown',e.message);}else this.db.prepare("UPDATE voice_turns SET state='failed',error=? WHERE device=? AND id=?").run(e.message,device,id);}
   }
@@ -146,7 +149,7 @@ export class VoiceController {
   async targetResponse(id,{mutable=false}={}){if(this.owns(id)||this.hidden(id))throw fail('Choose a work session.');const r=await this.api(`/api/threads/${encodeURIComponent(id)}?view=timeline`);if(r?.thread?.id!==id)throw fail('Session identity changed. Discover the intended work again.',409);if(mutable&&(r.thread.archived||r.thread.parentThreadId||r.thread.managedChild))throw fail('This session cannot currently receive direct guidance.');return r;}
   async freshTarget(id){return (await this.targetResponse(id,{mutable:true})).thread;}
   recordRoute(active,target,operation,detail={}){if(['reply','create'].includes(operation))this.catchup?.interact?.(active.device,target.id);const route={type:'route',turnId:active.id,threadId:target.id,name:target.name||target.preview?.slice(0,90)||'Work session',operation,at:Date.now(),...detail};this.action(active,route);const s=this.session(active.device),refs=JSON.parse(s.refs||'[]');refs.push({...route,request:this.get(active.device,active.id)?.transcript?.slice(0,300)});this.db.prepare('UPDATE voice_sessions SET refs=? WHERE device=?').run(JSON.stringify(refs.slice(-12)),active.device);return route;}
-  presented(device,id){const turn=this.get(device,id);if(!turn)throw fail('Coordinator turn not found.',404);if(turn.state!=='completed')throw fail('This coordinator response is not complete.',409);const items=turn.actions.filter(a=>a.type==='catchup').flatMap(a=>a.items||[]);if(this.catchup&&items.length)this.catchup.presented(device,items);return {ok:true};}
+  presented(device,id){const turn=this.get(device,id);if(!turn)throw fail('Coordinator turn not found.',404);if(turn.state!=='completed')throw fail('This coordinator response is not complete.',409);const items=turn.actions.filter(a=>a.type==='catchup').flatMap(a=>a.items||[]);if(this.catchup&&items.length)this.catchup.presented(device,items);this.reports?.markPresented(device,id);return {ok:true};}
   async control(active,{operation,arguments:a={}}={}){
     if(!VOICE_OPERATIONS.includes(operation)||!a||typeof a!=='object'||Array.isArray(a))throw fail('Invalid NextComp control.');
     const s=this.session(active.device),id=a.threadId||((active.focus??s.focus)!=='coordinator'?(Object.hasOwn(active,'selected')?active.selected:s.selected):null);
@@ -202,7 +205,21 @@ export class VoiceController {
         return keys.length?this.reports.configure(active.device,a):this.reports.settings(active.device);
       }
       case 'coordinatorSettings':{if(a.proactiveCatchup!==undefined&&typeof a.proactiveCatchup!=='boolean')throw fail('Choose whether to enable heads-ups.');if(a.proactiveCatchup!==undefined)this.db.prepare('UPDATE voice_sessions SET proactive=? WHERE device=?').run(a.proactiveCatchup?1:0,active.device);return {proactiveCatchup:!!this.session(active.device).proactive};}
-      case 'permissions':if(typeof a.full!=='boolean')throw fail('Choose full or review permissions.');this.db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(a.full?1:0,active.device);return this.action(active,{type:'permissions',full:a.full});
+      case 'permissions':{
+        if(typeof a.full!=='boolean')throw fail('Choose full or review permissions.');
+        if(a.all!==undefined&&typeof a.all!=='boolean')throw fail('Choose whether to change all loaded sessions.');
+        if(a.all&&a.threadId)throw fail('Choose one session or all loaded sessions.');
+        const targets=a.all?(await this.codex.call('thread/loaded/list')).data:a.threadId?[a.threadId]:[s.thread_id];
+        const verified=[],blocked=[];
+        for(const threadId of targets){try{verified.push(await changeThreadPermissions(this.codex,threadId,{full:a.full,coordinator:threadId===s.thread_id}));}catch(e){blocked.push({threadId,error:e.message});}}
+        if(!verified.length)throw fail(blocked[0]?.error||'No session permissions were changed.',409);
+        if(this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='thread_permissions'").get()){
+          const save=this.db.prepare('INSERT INTO thread_permissions(thread_id,permissions) VALUES(?,?) ON CONFLICT(thread_id) DO UPDATE SET permissions=excluded.permissions');
+          for(const grant of verified)save.run(grant.threadId,a.full?'full':'review');
+        }
+        if(!a.threadId&&verified.some(x=>x.threadId===s.thread_id))this.db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(a.full?1:0,active.device);
+        return this.action(active,{type:'permissions',full:a.full,verified,blocked,scope:a.all?'loaded-sessions':a.threadId?'session':'coordinator-and-new-work',appliesTo:'subsequent-turns'});
+      }
     }
   }
 }

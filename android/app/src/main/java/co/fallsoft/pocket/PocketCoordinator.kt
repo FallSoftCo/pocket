@@ -49,7 +49,7 @@ object PocketCoordinator {
         if(owner!=id){
             generation++;work?.cancel();historyJob?.cancel();work=null;historyJob=null
             owner=id;ready=false;before=null;historyEarlier=false;historyLoading=false;historyProblem="";problem="";state="Ready";pendingText="";turns.clear();routes.clear();actionsByTurn.clear();presentationTickets.clear();correctionOf=null
-            runCatching{JSONArray(Pocket.prefs.getString("coordinator-history:$id","[]")!!).objects().forEach{row->val turnId=row.s("id");turns[turnId]=Pair(row.s("user"),row.s("response"));val actions=row.optJSONArray("actions")?.objects().orEmpty();actionsByTurn[turnId]=actions;routes[turnId]=routeReceipts(actions,turnId)}}
+            runCatching{JSONArray(Pocket.prefs.getString("coordinator-history:$id","[]")!!).objects().forEach{row->val turnId=row.s("id");if(scheduledCoordinatorReport(turnId,row.s("user")))return@forEach;turns[turnId]=Pair(row.s("user"),row.s("response"));val actions=row.optJSONArray("actions")?.objects().orEmpty();actionsByTurn[turnId]=actions;routes[turnId]=routeReceipts(actions,turnId)}}
             messages=turns.map{(id,text)->CoordinatorMessage(id,text.first,text.second)};turnIds=turns.keys.toList();messageIds=turns.keys.toSet()
         }
         return Ticket(local,id,generation,Pocket.savedBase(local).trimEnd('/'),Pocket.savedToken(local))
@@ -85,7 +85,7 @@ object PocketCoordinator {
         val initialTurns=turns.toMap()
         historyJob=Pocket.scope.launch{
             try{
-                val result=api(t,"/api/voice/history"+if(cursor!=null)"?before=$cursor" else "")
+                val result=api(t,"/api/voice/history?conversationOnly=1"+if(cursor!=null)"&before=$cursor" else "")
                 val page=linkedMapOf<String,Pair<String,String>>()
                 val ownPendingId=savedPending(t)?.s("id")
                 result.optJSONArray("turns")?.objects().orEmpty().forEachIndexed{index,row->

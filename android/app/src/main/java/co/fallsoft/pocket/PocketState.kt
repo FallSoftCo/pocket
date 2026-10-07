@@ -128,7 +128,7 @@ object Pocket {
                 http.newCall(request).execute().use{response->val result=JSONObject(response.body?.string()?:"{}");if(!response.isSuccessful)throw PocketApiException(response.code,ConnectionMessages.server(result.s("error","Pairing failed")));result}
             }
             val pairedToken=r.getString("token")
-            PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketLive.stop();PocketTranscript.clear()
+            PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close();PocketLive.stop();PocketTranscript.clear()
             base=url;token=pairedToken;host=r.s("host")
             selected=null;detail=null;newTask=false;tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList()
             local=pairingLocal||r.optBoolean("local");prefs.edit().putBoolean("activeLocal",local).putString(key("server"),base).putString(key("token"),token).putString(key("deviceId"),r.s("id")).apply()
@@ -142,7 +142,7 @@ object Pocket {
         val nextBase=savedBase(forLocal);val nextToken=savedToken(forLocal);if(nextBase.isBlank()||nextToken.isBlank())return
         backgroundRefreshJob?.cancel();backgroundRefreshJob=null;discoveryRefreshJob?.cancel();discoveryRefreshJob=null;lastDiscoveryRefreshAt=0L;refreshError="";statusRevision++
         sessionSnapshotComplete=false;sessionOrderRequest=0;sessionOrderHandled=0
-        PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close()
+        PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
         PocketLive.stop();PocketTranscript.clear();local=forLocal;base=nextBase;token=nextToken;host=if(local)"This phone" else "Your workstation"
         connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
         lastNotification=prefs.getLong(key("lastNotification"),0);prefs.edit().putBoolean("activeLocal",local).apply()
@@ -158,7 +158,7 @@ object Pocket {
         }catch(_:Exception){}}
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention")
-        PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close()
+        PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
         val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal)).remove(key("usageSamples",wasLocal))
         if(wasLocal)edit.remove(key("automationSecret",true)).putBoolean("automationAllowed",false)
         edit.apply();weeklyUsage=WeeklyUsage();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
@@ -300,7 +300,7 @@ object Pocket {
                 codexOnline=json.optBoolean("connected");codexConnectionMessage=ConnectionMessages.server(json.optJSONObject("problem")?.s("message")?:"")
                 if(recovered){refresh();scheduleRefresh()}
             }
-            "coordinatorReport" -> {acceptNotification(json.getJSONObject("notification"),"report")}
+            "coordinatorReport" -> {acceptNotification(json.getJSONObject("notification"),"report");PocketWorkUpdates.refresh()}
             "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");if(PocketVoice.foreground&&!PocketVoice.active&&selected==n.s("thread_id"))refreshDetail();refresh()}
             "reply" -> {if(json.s("state")=="accepted")rememberSessionInteraction(json.s("threadId"),"reply:"+json.s("id"));if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}

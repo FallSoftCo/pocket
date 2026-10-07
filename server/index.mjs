@@ -101,7 +101,7 @@ const coordinatorReports=new CoordinatorReports({db,catchup:sessionCatchup,hidde
   publish:async report=>{
     let saved=db.prepare('SELECT notification_id FROM coordinator_report_notifications WHERE report_id=? AND device_id=?').get(report.id,report.device);
     if(!saved){db.exec('BEGIN IMMEDIATE');try{
-      const row=db.prepare("INSERT INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,spoken_text) VALUES(NULL,?,?,'coordinator_report','[]',?,'','')").run('NextComp check-in',report.response,report.createdAt);
+      const row=db.prepare("INSERT INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,spoken_text) VALUES(NULL,?,?,'coordinator_report','[]',?,'','')").run('Work updates',report.response,report.createdAt);
       saved={notification_id:Number(row.lastInsertRowid)};db.prepare('INSERT INTO coordinator_report_notifications(report_id,device_id,notification_id) VALUES(?,?,?)').run(report.id,report.device,saved.notification_id);
       if(push.enabled)db.prepare("INSERT OR IGNORE INTO push_deliveries(notification_id,device_id,state,updated_at) SELECT ?,device_id,'queued',? FROM push_tokens WHERE device_id=? AND project_id=?").run(saved.notification_id,Date.now(),report.device,push.config.projectId);
       db.exec('COMMIT');
@@ -373,7 +373,8 @@ app.get('/api/coordinator/reporting',(req,res)=>res.json(coordinatorReports.sett
 app.post('/api/coordinator/reporting',route(async(req,res)=>res.json(coordinatorReports.configure(req.device.id,req.body))));
 app.get('/api/coordinator/reporting/:deviceId',owner,(req,res)=>res.json(coordinatorReports.settings(req.params.deviceId)));
 app.post('/api/coordinator/reporting/:deviceId',owner,route(async(req,res)=>res.json(coordinatorReports.configure(req.params.deviceId,req.body))));
-app.get('/api/voice/history',(req,res)=>{const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before));});
+app.get('/api/coordinator/reports',(req,res)=>{try{res.json(coordinatorReports.inbox(req.device.id,{before:Number(req.query.before||Number.MAX_SAFE_INTEGER),limit:Number(req.query.limit||40)}));}catch(e){res.status(e.status||500).json({error:e.message});}});
+app.get('/api/voice/history',(req,res)=>{const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before,{conversationOnly:req.query.conversationOnly==='1'}));});
 app.post('/api/voice/start',route(async(req,res)=>{
   await voiceController.ensure(req.device.id);
   let threadId=null;

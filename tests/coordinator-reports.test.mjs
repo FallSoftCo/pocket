@@ -87,3 +87,26 @@ test('actual isolated scheduler stages reports and targeted HTTP transport enfor
  const revokeDeadline=Date.now()+500;while(db.prepare('SELECT enabled FROM coordinator_reporting WHERE device_id=?').get('phone_a').enabled&&Date.now()<revokeDeadline)await new Promise(r=>setTimeout(r,20));
  assert.equal(db.prepare('SELECT enabled FROM coordinator_reporting WHERE device_id=?').get('phone_a').enabled,0);
 });
+
+test('work updates inbox retains history beyond24h, pages and never marks fetching as read',async()=>{
+ const f=setup();f.reports.configure('a',{enabled:true});
+ for(let i=0;i<6;i++){message(f.catchup,'work','result-'+i,'Distinct result '+i);await f.reports.tick();f.advance(30*minute);}
+ assert.equal(f.published.length,6);f.advance(3*24*hour);
+ const recent=f.reports.inbox('a',{limit:2});assert.equal(recent.reports.length,2);assert.equal(recent.unreadCount,6);assert.equal(recent.hasEarlier,true);
+ const older=f.reports.inbox('a',{before:recent.before,limit:2});assert.equal(older.reports.length,2);assert.equal(new Set([...older.reports,...recent.reports].map(r=>r.id)).size,4);
+ assert.equal(f.reports.inbox('b').unreadCount,0);assert.equal(f.reports.markPresented('b',recent.latest.id),false);
+ assert.equal(f.reports.markPresented('a',recent.latest.id),true);assert.equal(f.reports.inbox('a').unreadCount,5);
+ assert.equal(f.reports.markPresented('a',recent.latest.id),true);assert.equal(f.reports.inbox('a').unreadCount,5);
+ assert.equal((await f.catchup.snapshot('a')).sessions[0].items.length,6,'report read receipt alone does not acknowledge unseen session material');
+});
+test('ordinary coordinator history excludes scheduled reports by membership, while exact report presentation acknowledges only its covered source',async()=>{
+ const {VoiceController}=await import('../server/voice-controller.mjs');const f=setup();f.reports.configure('a',{enabled:true});
+ message(f.catchup,'work','old','First result');await f.reports.tick();f.advance(30*minute);message(f.catchup,'work','new','Second result');await f.reports.tick();
+ f.db.prepare("INSERT INTO voice_turns(device,id,hash,state,transcript,response,actions,created_at) VALUES('a','manual-report-name','x','completed','Please summarize','Deliberate catch-up','[]',?)").run(f.now());
+ const c=new VoiceController({db:f.db,codex:{on(){}},api:async()=>({}),catchup:f.catchup,reports:f.reports});
+ assert.deepEqual(c.history('a',Number.MAX_SAFE_INTEGER,{conversationOnly:true}).turns.map(t=>t.id),['manual-report-name']);
+ assert.equal(c.history('a').turns.length,3,'legacy clients can still retrieve report history');
+ const id=f.reports.inbox('a').latest.id;c.presented('a',id);assert.equal(f.reports.inbox('a').unreadCount,1);
+ const unseen=(await f.catchup.snapshot('a')).sessions[0].items;assert.equal(unseen.length,1);assert.equal(unseen[0].text,'First result');
+ assert.throws(()=>c.presented('b',id),/not found/);
+});

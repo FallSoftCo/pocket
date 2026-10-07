@@ -10,6 +10,7 @@ export class CoordinatorReports {
  constructor({db,catchup,clock=Date.now,readThread=async()=>{throw Error('Status verification is unavailable.');},publish=async()=>{},hidden=()=>false,refreshRoster=async()=>({complete:false,reason:'Only previously observed work is available.'})}){
   Object.assign(this,{db,catchup,clock,readThread,publish,hidden,refreshRoster});this.busy=false;this.lastScope=null;
   db.exec(`CREATE TABLE IF NOT EXISTS coordinator_reporting(device_id TEXT PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 0,interval_minutes INTEGER NOT NULL DEFAULT 30,stale_after_minutes INTEGER NOT NULL DEFAULT 120,next_due_at INTEGER,last_report_at INTEGER);
+   CREATE TABLE IF NOT EXISTS coordinator_report_seen(device_id TEXT NOT NULL,report_id TEXT NOT NULL,at INTEGER NOT NULL,PRIMARY KEY(device_id,report_id));
    CREATE TABLE IF NOT EXISTS coordinator_reporting_inventory(id INTEGER PRIMARY KEY CHECK(id=1),payload TEXT NOT NULL);
    CREATE TABLE IF NOT EXISTS coordinator_report_runs(device_id TEXT NOT NULL,window_key TEXT NOT NULL,report_id TEXT NOT NULL UNIQUE,state TEXT NOT NULL,payload TEXT,at INTEGER NOT NULL,PRIMARY KEY(device_id,window_key));
    CREATE TABLE IF NOT EXISTS coordinator_report_offered(device_id TEXT NOT NULL,event_seq INTEGER NOT NULL,report_id TEXT NOT NULL,at INTEGER NOT NULL,PRIMARY KEY(device_id,event_seq));
@@ -33,6 +34,20 @@ export class CoordinatorReports {
   const due=enabled?(!before.enabled?this.clock():interval!==before.intervalMinutes?this.clock()+interval*minute:before.nextDueAt??this.clock()):null;
   this.db.prepare('INSERT INTO coordinator_reporting(device_id,enabled,interval_minutes,stale_after_minutes,next_due_at) VALUES(?,?,?,?,?) ON CONFLICT(device_id) DO UPDATE SET enabled=excluded.enabled,interval_minutes=excluded.interval_minutes,stale_after_minutes=excluded.stale_after_minutes,next_due_at=excluded.next_due_at').run(id,enabled?1:0,interval,stale,due);
   return this.settings(id);
+ }
+ inbox(device,{before=Number.MAX_SAFE_INTEGER,limit=40}={}){
+  const id=idOf(device);if(!this.validDevice(id))throw Object.assign(Error('Pair a device to read work updates.'),{status:403});
+  if(!Number.isSafeInteger(before)||before<=0||!Number.isInteger(limit)||limit<1||limit>100)throw fail('Invalid work updates cursor.');
+  const select=`SELECT r.rowid AS cursor,r.report_id,r.payload,r.at,s.at AS seen_at FROM coordinator_report_runs r LEFT JOIN coordinator_report_seen s ON s.device_id=r.device_id AND s.report_id=r.report_id WHERE r.device_id=? AND r.state IN ('prepared','published')`;
+  const decode=row=>{if(!row)return null;const p=JSON.parse(row.payload);return {id:row.report_id,cursor:row.cursor,response:p.response,actions:p.actions||[],createdAt:row.at,unread:row.seen_at==null};};
+  const rows=this.db.prepare(select+' AND r.rowid<? ORDER BY r.rowid DESC LIMIT ?').all(id,before,limit+1);
+  const latest=decode(this.db.prepare(select+' ORDER BY r.rowid DESC LIMIT 1').get(id));
+  const unreadCount=this.db.prepare("SELECT COUNT(*) AS n FROM coordinator_report_runs r LEFT JOIN coordinator_report_seen s ON s.device_id=r.device_id AND s.report_id=r.report_id WHERE r.device_id=? AND r.state IN ('prepared','published') AND s.report_id IS NULL").get(id).n;
+  return {reports:rows.slice(0,limit).map(decode).reverse(),latest,unreadCount,hasEarlier:rows.length>limit,before:rows[Math.min(rows.length,limit)-1]?.cursor??null};
+ }
+ markPresented(device,reportId){
+  const id=idOf(device);if(!this.db.prepare("SELECT 1 FROM coordinator_report_runs WHERE device_id=? AND report_id=? AND state IN ('prepared','published')").get(id,reportId))return false;
+  this.db.prepare('INSERT OR IGNORE INTO coordinator_report_seen(device_id,report_id,at) VALUES(?,?,?)').run(id,reportId,this.clock());return true;
  }
  context(device,{limit=3}={}){
   const id=idOf(device);if(!id||!this.validDevice(id))return [];

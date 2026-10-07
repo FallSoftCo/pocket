@@ -89,9 +89,9 @@ class MainActivity:ComponentActivity(){
         i.data?.takeIf{it.scheme=="pocket"&&it.host=="pair"}?.let{initialServer=it.getQueryParameter("server")?:initialServer;initialCode=it.getQueryParameter("code")?:initialCode;Pocket.pairingMode=true}
         if(i.getBooleanExtra("coordinatorReport",false)){
             val origin=i.getBooleanExtra("local",Pocket.local)
-            if(origin!=Pocket.local&&PocketVoice.active&&PocketVoice.state in setOf("Listening","Starting microphone","Finishing recording")){Pocket.error="Finish this recording before opening the report";return}
+            if(PocketVoice.active&&PocketVoice.state in setOf("Listening","Starting microphone","Finishing recording")){Pocket.error="Finish this recording before opening work updates";PocketVoice.problem=Pocket.error;return}
             if(origin!=Pocket.local)Pocket.activate(origin)
-            if(Pocket.token.isNotBlank()){if(PocketVoice.active)PocketVoice.service?.loadHistory()else PocketCoordinator.open(false);getSystemService(android.app.NotificationManager::class.java).cancel(i.getIntExtra("reportNotificationId",0))}
+            if(Pocket.token.isNotBlank()){PocketWorkUpdates.open();getSystemService(android.app.NotificationManager::class.java).cancel(i.getIntExtra("reportNotificationId",0))}
             i.removeExtra("coordinatorReport");return
         }
         if(i.hasExtra("local"))Pocket.activate(i.getBooleanExtra("local",false))
@@ -146,6 +146,7 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun PocketApp(){
+    if(PocketWorkUpdates.visible){WorkUpdatesScreen();return}
     if(PocketVoice.active){VoiceScreen();return}
     if(PocketCoordinator.visible){CoordinatorScreen();return}
 
@@ -279,6 +280,7 @@ class MainActivity:ComponentActivity(){
         if(shown.isEmpty()&&!showCoordinator)item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
         items(shown,key={it.id}){TaskCard(it,listClock)}
     }
+    WorkUpdatesEntry()
 
     }
     if(toolsOpen)ModalBottomSheet(onDismissRequest={onToolsOpen(false)},containerColor=Panel){
