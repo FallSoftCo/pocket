@@ -338,7 +338,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            MarkdownPreview(PocketImmersion.target("card:"+t.id,t.preview),color=Paper,fontSize=14.sp,lineHeight=20.sp,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            ImmersionText("card:"+t.id,t.preview,color=Paper,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
         }
 
     }
@@ -346,6 +346,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 
 }
 @Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){SymbolIcon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));WorkflowText(title,fontSize=19.sp);WorkflowText(body,color=Muted,fontSize=13.sp)}}
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun AttentionCard(n:JSONObject){
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
         Column(Modifier.fillMaxWidth().clickable{Pocket.open(n.s("thread_id"))}){
@@ -353,7 +354,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         ImmersionText("notification-title:"+n.optLong("id"),n.s("title"),rescue=false,fontSize=17.sp,fontWeight=FontWeight.Medium)
         ImmersionText("notification-body:"+n.optLong("id"),n.s("body"),rescue=false,color=Muted,fontSize=13.sp,lineHeight=19.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+        FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
             TextButton({Pocket.open(n.s("thread_id"))}){BilingualLabel("Review",color=Mint)}
             TextButton({Pocket.open(n.s("thread_id"),keyboard=true)}){BilingualLabel("Reply",color=Mint)}
             if(n.s("kind")=="question")TextButton({PocketQuestionActions.skipNotification(n.optLong("id"),Pocket.local)}){BilingualLabel("Skip",color=Mint)}

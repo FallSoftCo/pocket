@@ -12,13 +12,13 @@ import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 
-private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayRange>,offset:Int,selected:ImmersionSpan?,help:Boolean,onHelp:(ImmersionSpan)->Unit):AnnotatedString = buildAnnotatedString {
+private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayRange>,offset:Int,selected:ImmersionSpan?,help:Boolean,links:Boolean=true,onHelp:(ImmersionSpan)->Unit):AnnotatedString = buildAnnotatedString {
     append(content.text)
     content.spans.forEach { span -> when(span.kind){
         "bold"->addStyle(SpanStyle(fontWeight=FontWeight.Bold),span.start,span.end)
         "italic"->addStyle(SpanStyle(fontStyle=FontStyle.Italic),span.start,span.end)
         "code"->addStyle(SpanStyle(fontFamily=FontFamily.Monospace,background=Color(0xff292a30)),span.start,span.end)
-        "link"->{val scheme=android.net.Uri.parse(span.destination).scheme?.lowercase();if(scheme in listOf("https","http","mailto"))addLink(LinkAnnotation.Url(span.destination,TextLinkStyles(style=SpanStyle(color=Mint,textDecoration=TextDecoration.Underline))),span.start,span.end)}
+        "link"->{val scheme=android.net.Uri.parse(span.destination).scheme?.lowercase();if(links&&scheme in listOf("https","http","mailto"))addLink(LinkAnnotation.Url(span.destination,TextLinkStyles(style=SpanStyle(color=Mint,textDecoration=TextDecoration.Underline))),span.start,span.end)}
     } }
     ranges.forEach { range ->
         val span=range.span
@@ -63,7 +63,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 }
 
 /** Dense/tappable cards leave phraseRescue=false, so their native actions retain every tap. */
-@Composable fun ImmersionText(id:String,original:String,modifier:Modifier=Modifier,color:Color=Paper,fontSize:TextUnit=16.sp,lineHeight:TextUnit=24.sp,maxLines:Int=Int.MAX_VALUE,fontWeight:FontWeight?=null,kind:String="public display",rescue:Boolean=true,overflow:TextOverflow=TextOverflow.Ellipsis,phraseRescue:Boolean=rescue,onDisplayedText:((String)->Unit)?=null){
+@Composable fun ImmersionText(id:String,original:String,modifier:Modifier=Modifier,color:Color=Paper,fontSize:TextUnit=16.sp,lineHeight:TextUnit=24.sp,maxLines:Int=Int.MAX_VALUE,fontWeight:FontWeight?=null,kind:String="public display",rescue:Boolean=true,overflow:TextOverflow=TextOverflow.Ellipsis,phraseRescue:Boolean=rescue,links:Boolean=true,onDisplayedText:((String)->Unit)?=null){
     LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offer(id,original,kind)}
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
     val readingKey=PocketImmersion.readingKey(id,plan)
@@ -73,7 +73,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
     ReportDisplayedImmersion(id,shownText,onDisplayedText)
     val inline=remember(shownText){MarkdownContent.preview(shownText)}
     val ranges=remember(plan,shownText,cycle.plan){MarkdownContent.replacementRanges(cycle.plan,shownText,null).map{range->range.copy(span=plan.spans.first{it.start==range.span.start&&it.end==range.span.end})}}
-    val content=if(PocketImmersion.enabled)hybridAnnotated(inline,ranges,0,selected,phraseRescue&&PocketImmersion.supportEnabled){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)}else buildAnnotatedString{append(inline.text)}
+    val content=hybridAnnotated(inline,if(PocketImmersion.enabled)ranges else emptyList(),0,selected,phraseRescue&&PocketImmersion.supportEnabled,links){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)}
     Column(modifier){
         ImmersionReading(content,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},color=color,fontSize=fontSize,lineHeight=lineHeight,maxLines=maxLines,fontWeight=fontWeight,overflow=overflow,cycle=cycle.takeIf{PocketImmersion.enabled&&PocketImmersion.supportEnabled},plan=plan,onClose={PocketImmersion.selectReading(readingKey,null)})
     }
