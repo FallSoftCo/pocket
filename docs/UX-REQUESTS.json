@@ -17,9 +17,9 @@
       "id": "pixelbook-go-web-client",
       "date": "2026-10-07",
       "requirement": "Build and privately deploy a NextComp browser client for Pixelbook Go, reusing existing backend, with keyboard/mouse, responsive touch, useful PWA installation, coordinator/direct input, intermediate updates, attention, work recency, actual child parent/input capability, drafts/reconnect/authenticated pairing and supported browser voice. Coordinate concurrent Android and session-list work.",
-      "status": "implemented; separate private gateway deployed; HTTP and virtual-DOM qualified; rendered-browser and physical Pixelbook qualification blocked by configured browser-resource quarantine",
+      "status": "integrated-main; reviewed private gateway active; HTTP/virtual-DOM qualified; rendered browser and physical Pixelbook remain unqualified",
       "implementation": "web/ client and server/web-client.mjs separate loopback gateway use existing paired device endpoints, native audio transport and durable outboxes. Runtime metadata-only adapter bridges additive catalog fields without touching production backend. Unsupported child history uses existing bounded reader without resume. Private cookie key and device bearer stay outside source.",
-      "verification": "Five gateway security/contract tests plus existing322 backend tests; synthetic virtual-DOM flows and live HTTPS actual stock task creation/continuation pass. Exact rendered-browser, browser provider audio and physical Pixelbook use not claimed. See docs/qualification/web-client-2026-10-07.json."
+      "verification": "Original live HTTP receipt retained without repeating stock tasks. Review adds revoked-device metadata admission and partial-cache assertions:329 backend/gateway tests, final7 focused gateway tests and synthetic virtual-DOM flows pass;806 public-source files pass. Idle private gateway activated with pairing key unchanged; phone backend/native daemon not restarted. Rendered browser/provider voice/physical Pixelbook remain unqualified."
     },
     {
       "id": "discoverable-settings-and-app-updates",

@@ -81,7 +81,8 @@
       "publicSourceScan": "806 files passed"
     },
     "liveTests": "Prior live HTTP qualification retained; original stock task creation/continuation not repeated.",
-    "deployment": "Private gateway activation pending; production phone backend/native daemon untouched.",
-    "catalog": "Final shared helper integration remains pending final catalog receipt."
+    "deployment": "Reviewed source integrated and pushed; private web gateway activated at an idle boundary, existing pairing key retained, HTTPS root200 after listener readiness. Phone backend PID unchanged and native daemon not restarted. One immediate startup probe returned502 before readiness.",
+    "catalog": "Final shared helper integration remains pending final catalog receipt.",
+    "implementationCommit": "db28d150abdfa3d4916b2b870de4c243a98df7dd"
   }
 }
