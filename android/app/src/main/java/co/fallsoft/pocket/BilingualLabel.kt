@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.*
     }
     var nativeVisible by remember(text,target){mutableStateOf(false)}
     val ready=immersionMotionReady()&&nativeVisible
+    val transitionAnimated=immersionTransitionAnimated()
     var original by remember(text,target){mutableStateOf(false)}
     val deadline=remember(text,target){ImmersionCueDeadline()}
     val owner=remember(text,target){"control:"+java.util.UUID.randomUUID()}
@@ -43,7 +44,7 @@ import androidx.compose.ui.unit.*
     var cueActive by remember(text,target){mutableStateOf(false)}
     val progress=remember(text,target){Animatable(1f)}
     val shown=if(expanded||original)text else target
-    LaunchedEffect(text,target,ready,expanded,PocketSpeech.displayedOwner){
+    LaunchedEffect(text,target,ready,transitionAnimated,expanded,PocketSpeech.displayedOwner){
         if(!ready||expanded||PocketSpeech.displayedOwner!=null)return@LaunchedEffect
         // Separate queues replace the old synchronous screen-wide label clock.
         val cadence=immersionLabelCadence(text)
@@ -53,11 +54,12 @@ import androidx.compose.ui.unit.*
             runImmersionCue(owner,false,onBegin={
                 from=AnnotatedString(if(original)text else target)
                 to=AnnotatedString(if(next)text else target)
-                progress.snapTo(0f)
-                cueActive=true
+                progress.snapTo(if(transitionAnimated)0f else 1f)
+                cueActive=transitionAnimated
             },onHandoff={original=next},onFinish={cueActive=false},animate={
-                progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
-            },awaitHandoff={snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}},returningToTarget=!next)
+                if(transitionAnimated)progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
+                else progress.snapTo(1f)
+            },awaitHandoff={if(transitionAnimated)snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}},returningToTarget=!next)
             val hold=if(original)4000L else cadence.targetMs
             deadline.hold(hold)
             delay(hold)

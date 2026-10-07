@@ -25,6 +25,7 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
 /** Exact actual snapshots; late replacements are staged, with one screen-wide cue at a time. */
 @Composable internal fun rememberImmersionCycle(plan:ImmersionPresentation,readingKey:ImmersionReadingKey,selected:ImmersionSpan?,enabled:Boolean):ImmersionCycleRender {
     val ready=immersionMotionReady()
+    val transitionAnimated=immersionTransitionAnimated()
     val identity=readingKey.copy(targetHash="")
     val deadline=remember(identity){ImmersionCueDeadline()}
     val owner=remember(identity){"body:"+java.util.UUID.randomUUID()}
@@ -53,7 +54,7 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
     var cueActive by remember(identity){mutableStateOf(false)}
     var cueId by remember(identity){mutableLongStateOf(0L)}
     val progress=remember(identity){Animatable(1f)}
-    LaunchedEffect(identity,readingKey.targetHash,enabled,ready,hasVisible,PocketSpeech.displayedOwner,selectedIndex){
+    LaunchedEffect(identity,readingKey.targetHash,enabled,ready,transitionAnimated,hasVisible,PocketSpeech.displayedOwner,selectedIndex){
         if(!enabled||!ready||!hasVisible||PocketSpeech.displayedOwner!=null||selectedIndex>=0||plan.spans.isEmpty())return@LaunchedEffect
         suspend fun cue(index:Int,original:Boolean):Boolean=immersionWhileVisible(
             eligible={spanId(plan.spans[index]) in visible},
@@ -64,15 +65,16 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
                 cueId=serial
                 val current=immersionKnownOriginals(plan.spans,originals)
                 incoming=immersionCyclePlan(plan,immersionCueOriginals(current,index,original))
-                progress.snapTo(0f)
-                cueActive=true
+                progress.snapTo(if(transitionAnimated)0f else 1f)
+                cueActive=transitionAnimated
             },onHandoff={
                 originals[keys[index]]=original
                 val phase=immersionCycleTiming(identity.toString()+plan.spans[index].start,plan.spans[index].source,plan.spans[index].target)
                 deadline.hold(if(original)phase.sourceMs else phase.targetMs)
             },onFinish={cueActive=false;incoming=null},animate={
-                progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
-            },awaitHandoff={snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}})
+                if(transitionAnimated)progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
+                else progress.snapTo(1f)
+            },awaitHandoff={if(transitionAnimated)snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}})
         }
         // Preserve the due time through touch/keyboard pauses. A resumed overdue owner
         // gets a brief breath, and only one cue: no catch-up loop or frame ticker.
