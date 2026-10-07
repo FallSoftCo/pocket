@@ -30,12 +30,13 @@
     "androidFailures": 0,
     "assembleDebug": "passed",
     "lintDebug": "passed",
-    "serverTests": 329,
+    "serverTests": 336,
     "http": "unsupported child replies rejected before durable queue; child timeline read without resume; only thread/list/read metadata RPCs",
     "foregroundCapture": "Activity and Accessibility share inbox/coordinator/child eligibility and frozen existing capture target;4 unit tests",
     "serverFailures": 0,
     "voiceChildAdmission": "HTTP409 before controller initialization; no thread/start call",
-    "canonicalApi": "Canonical recency/parent/input fields applied after raw metadata in list/search/coordinator/detail; source-only child identity and null capability HTTP assertions pass"
+    "canonicalApi": "Canonical recency/parent/input fields applied after raw metadata in list/search/coordinator/detail; source-only child identity and null capability HTTP assertions pass",
+    "integration": "Clean rebase onto reviewed web main713e14e;336 backend/gateway tests pass; Android source unchanged from246-test debug/lint qualified APK"
   },
   "native": {
     "device": "owned synthetic emulator5574 API34",
@@ -76,5 +77,6 @@
     "desktopMobilePassed": true,
     "reducedMotionPassed": true,
     "reloadPassed": true
-  }
+  },
+  "integrationBaseCommit": "713e14e"
 }
