@@ -1,0 +1,96 @@
+{
+  "status": "qualified-native-and-signed-release",
+  "version": "0.5.0-alpha.34",
+  "versionCode": 52,
+  "source": "caa0fb3ead89463b3355af14b361f403571a2a94",
+  "changes": [
+    "Visible phrases set dwell, not whole messages",
+    "Monotonic deadlines survive interaction",
+    "FIFO fairness with at most two priority returns to Italian before the oldest ordinary waiter",
+    "System reduced motion disables animation, not language content changes",
+    "Keyboard visibility does not globally disable passive reading",
+    "Explicit cycling disabled leaves static target language",
+    "Session titles and common controls share inline presentation",
+    "Offscreen line bands rejected before glyph scanning; bodies skip full paragraph scan",
+    "Session previews share cycling with markdown preserved and card navigation retaining taps",
+    "Alert action buttons wrap when bilingual reserved widths need space",
+    "Ordinary body/control classes alternate with FIFO ordering within each class"
+  ],
+  "limits": [
+    "No physical-phone installation or frame-pacing claim",
+    "Identifiers, numerical values and untranslated phrases remain literal",
+    "Touch exploration remains static with manual contextual help",
+    "Short single-device software-emulator on/off samples; frame pacing poor in both modes; no claim of zero overhead or physical-phone smoothness",
+    "Existing retained pairing credentials may reopen pairing after a new navigation intent; normal persisted pairing qualified, fix tracked separately",
+    "English support disabled intentionally keeps a target-language-only presentation"
+  ],
+  "verification": {
+    "android_unit": {
+      "debug": {
+        "tests": 194,
+        "suites": 39,
+        "failures": 0
+      },
+      "release": {
+        "tests": 194,
+        "suites": 39,
+        "failures": 0
+      }
+    },
+    "ci": {
+      "run": 37559593224,
+      "source": "caa0fb3ead89463b3355af14b361f403571a2a94",
+      "conclusion": "success"
+    },
+    "compatible_apk": {
+      "sha256": "c74c2690970db8ce0ffd3675090ae37d348f751ec90358cbbaf4fd59d3aafea9",
+      "bytes": 74408712,
+      "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"
+    },
+    "both_lints": "pass",
+    "signed_builds": "pass",
+    "public_apk": {
+      "sha256": "412d6d99e6983a424995a2dbd03b6a719bc17f3d26e30a834b0e8bc024a541e9",
+      "bytes": 51807899,
+      "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf"
+    },
+    "motion_assets": {
+      "packedPages": 168,
+      "retainedDynamicNames": 168,
+      "previousReleasePayloads": "byte exact"
+    },
+    "emulator_performance": {
+      "on": {
+        "sampleSeconds": 30.238399821333587,
+        "cpuTicks": 3581,
+        "frames": 1063,
+        "p95Ms": 97
+      },
+      "off": {
+        "sampleSeconds": 30.268843544647098,
+        "cpuTicks": 3634,
+        "frames": 998,
+        "p95Ms": 89
+      },
+      "background_off": {
+        "sampleSeconds": 30.133691811934114,
+        "cpuTicks": 52,
+        "frames": 0
+      },
+      "background_enabled_public": {
+        "sampleSeconds": 10.082219114992768,
+        "cpuTicks": 12,
+        "frames": 0,
+        "settleSecondsBeforeCounterReset": 2
+      }
+    },
+    "native": "qualification/immersion-cycle-native-alpha34.json",
+    "gallery": {
+      "cards": 1890,
+      "desktop": true,
+      "mobile": true,
+      "reducedMotion": true,
+      "automaticReload": true
+    }
+  }
+}

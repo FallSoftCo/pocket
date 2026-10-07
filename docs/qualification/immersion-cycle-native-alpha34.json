@@ -1,0 +1,197 @@
+{
+  "schema": 1,
+  "date": "2026-10-07",
+  "sourceCommit": "caa0fb3ead89463b3355af14b361f403571a2a94",
+  "version": "0.5.0-alpha.34",
+  "versionCode": 52,
+  "result": "native functional checks passed; performance sample bounded",
+  "artifacts": {
+    "maintainedDebug": {
+      "sha256": "c74c2690970db8ce0ffd3675090ae37d348f751ec90358cbbaf4fd59d3aafea9",
+      "bytes": 74408712,
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"
+    },
+    "optimizedPublic": {
+      "sha256": "412d6d99e6983a424995a2dbd03b6a719bc17f3d26e30a834b0e8bc024a541e9",
+      "bytes": 51807899,
+      "signerIdentity": "maintained public b28 certificate; independently verified by release owner"
+    }
+  },
+  "environment": {
+    "device": "owned pocket_verify_api35 emulator-5562, Android35",
+    "display": "1080x2400,420dpi",
+    "renderer": "SwiftShader software",
+    "fixture": "owned synthetic lifecycle fixture, port19997, secure18880 ADB reverse",
+    "providers": "none; synthetic translation spans and replies only",
+    "phone": "not accessed or installed"
+  },
+  "observed": {
+    "cachedBodyReducedMotion": {
+      "passed": true,
+      "debugOriginalObservedSeconds": [
+        13.6,
+        16.97
+      ],
+      "debugTargetAgainObservedSeconds": [
+        18.0,
+        21.21
+      ],
+      "publicOriginalObservedSeconds": [
+        14.6,
+        18.1
+      ],
+      "publicTargetAgainObservedSeconds": 24.1,
+      "messageBoundsBothLanguages": [
+        47,
+        697,
+        1033,
+        973
+      ],
+      "origin": "times relative to sampling begun after app launch, not startup latency SLA"
+    },
+    "cachedBodyAnimated": {
+      "passed": true,
+      "phrase": "risultato utile / useful result",
+      "originalCapturedAtSeconds": [
+        12,
+        20
+      ],
+      "targetAgainCapturedAtSeconds": 22,
+      "singleCueAtATime": "native highlight observation and global coordinator policy; no duplicated translated line/modal"
+    },
+    "firstPublicPlanHydration": {
+      "passed": true,
+      "firstInlineTargetObservedSeconds": [
+        10.8,
+        14.1
+      ],
+      "canonicalSourceVisibleBeforePlan": true
+    },
+    "workPreview": {
+      "passed": true,
+      "debugOriginalObservedSeconds": 33.5,
+      "debugTargetAgainObservedSeconds": 37.5,
+      "publicInlineHydrationObserved": true,
+      "publicPreviewExamples": [
+        "Latest meaningful work 1",
+        "Ultimo meaningful work 1",
+        "Ultimo lavoro significativo 1"
+      ],
+      "fixedCardBoundsObserved": true
+    },
+    "settingsAndCoordinator": {
+      "passed": true,
+      "ordinaryControlsAndCoordinatorHistoryCycle": true,
+      "appCyclingOffShowsStaticTarget": true,
+      "singleFlowNoModal": true
+    },
+    "titleInteraction": {
+      "passed": true,
+      "debugAndOptimizedPublic": true,
+      "visibleTextTap": "inline editor",
+      "blankAfterTitleTap": "correct live-1 conversation",
+      "renameOrReplySubmitted": false
+    },
+    "alertActions": {
+      "passed": true,
+      "allFourActionsVisible": true,
+      "fontScales": [
+        1,
+        2
+      ],
+      "optimizedPublic2xScreenshot": true
+    },
+    "interaction": {
+      "appFingerHold": "15 seconds, prior d425 environment unchanged in final; body pixel region identical at 4 and12seconds",
+      "passiveKeyboard": "draft stays source and unsent; ordinary content continues cycling while IME is open",
+      "shortResumeDeadline": "not independently timing-qualified",
+      "gboardTypingQuietPause": "not qualified; Gboard touch events are outside the Activity dispatch"
+    },
+    "background": {
+      "passed": true,
+      "optimizedPublicSteadyEnabledBackgroundFrames": 0,
+      "durationSeconds": 10.082,
+      "settlingBeforeResetSeconds": 2
+    }
+  },
+  "performance": {
+    "artifact": "final maintained debug for on/off; optimized public for steady background",
+    "comparison": "same all-idle Work fixture, icons, font1, viewport; sequential30second warm samples after release builds exited",
+    "samples": {
+      "final-on": {
+        "durationSeconds": 30.238,
+        "processCpuTicks": 3581,
+        "renderedFrames": 1063,
+        "p50ms": 61,
+        "p90ms": 85,
+        "jankyFrames": 586
+      },
+      "final-off": {
+        "durationSeconds": 30.269,
+        "processCpuTicks": 3634,
+        "renderedFrames": 998,
+        "p50ms": 61,
+        "p90ms": 81,
+        "jankyFrames": 652
+      },
+      "public-steady-background": {
+        "durationSeconds": 10.082,
+        "processCpuTicks": 12,
+        "renderedFrames": 0,
+        "p50ms": null,
+        "p90ms": null,
+        "jankyFrames": 0
+      }
+    },
+    "interpretation": "No material CPU increase observed in this one sample; p50 equal. Single software-emulator sample cannot prove zero overhead or handset frame pacing. Both foreground samples had substantial software-emulator jank.",
+    "rawData": "retained in owned qualification evidence"
+  },
+  "gallery": {
+    "cards": [
+      "/8bar/#nextcomp-immersion-cycle-native-motion",
+      "/8bar/#nextcomp-immersion-cycle-body-source",
+      "/8bar/#nextcomp-immersion-cycle-body-target",
+      "/8bar/#nextcomp-immersion-cycle-actions-font2"
+    ],
+    "recording": {
+      "actualNativeScreenrecord": true,
+      "width": 720,
+      "height": 1600,
+      "durationSeconds": 43.5283,
+      "averageCapturedFramesPerSecond": 7.79,
+      "qualification": "functional recording, not smoothness benchmark"
+    },
+    "fullChecker": {
+      "passed": true,
+      "cards": 1890,
+      "desktop": [
+        1440,
+        1050
+      ],
+      "mobile": [
+        390,
+        844
+      ],
+      "reducedMotion": true,
+      "automaticGalleryReload": true,
+      "failed": [],
+      "errors": []
+    }
+  },
+  "limits": [
+    "No physical Fold installation or frame-rate qualification.",
+    "Intermittent SwiftShader partial screen captures retained and excluded from published review.",
+    "Pre-existing retained pair-intent server/code reopens pairing on a later navigation intent; ordinary persisted pairing passed after cold start. Release owner tracks separately.",
+    "Human perceptual preference and universal latency/performance guarantees are not established."
+  ],
+  "cleanup": {
+    "ownedApp": "uninstalled to original absent baseline",
+    "fontScale": 1,
+    "animatorScale": 0,
+    "navigation": "original gestural unchanged",
+    "ownedAdbReverse": "removed18880 only",
+    "ownedEmulator": "shutdown5562 only",
+    "ownedFixture": "stopped19997 only",
+    "sharedAdbAndOtherEmulators": "untouched"
+  }
+}
