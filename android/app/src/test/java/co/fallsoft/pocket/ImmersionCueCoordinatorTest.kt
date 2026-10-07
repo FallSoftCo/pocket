@@ -14,10 +14,10 @@ class ImmersionCueCoordinatorTest {
         queue.request("body",true)
         assertEquals("first-control",queue.active)
         queue.cancel("first-control")
-        assertEquals("second-control",queue.active)
-        queue.cancel("second-control")
         assertEquals("body",queue.active)
         queue.cancel("body")
+        assertEquals("second-control",queue.active)
+        queue.cancel("second-control")
         assertNull(queue.active)
     }
     @Test fun continuouslyArrivingBodyUpdatesCannotDisplaceAnAlreadyWaitingControl(){
@@ -57,6 +57,27 @@ class ImmersionCueCoordinatorTest {
         queue.cancel("hidden-return");queue.cancel("active")
         assertEquals("ordinary",queue.active)
     }
+    @Test fun manyEarlierControlsCannotHideTheFirstVisibleBody(){
+        val queue=ImmersionCueQueue()
+        queue.request("active-control",false)
+        repeat(100){queue.request("control-$it",false)}
+        queue.request("body",true)
+        queue.cancel("active-control")
+        assertEquals("body",queue.active)
+        queue.cancel("body")
+        assertEquals("control-0",queue.active)
+    }
+    @Test fun continuousBodyArrivalsStillGrantControlsEveryOtherOrdinaryTurn(){
+        val queue=ImmersionCueQueue()
+        queue.request("active-control",false)
+        queue.request("control-first",false);queue.request("control-second",false)
+        repeat(100){queue.request("body-$it",true)}
+        queue.cancel("active-control");assertEquals("body-0",queue.active)
+        queue.request("late-body",true)
+        queue.cancel("body-0");assertEquals("control-first",queue.active)
+        queue.cancel("control-first");assertEquals("body-1",queue.active)
+        queue.cancel("body-1");assertEquals("control-second",queue.active)
+    }
     @Test fun cancelledQueuedRequestNeverBecomesActive(){
         val queue=ImmersionCueQueue()
         queue.request("active",true);queue.request("old-content",true)
@@ -87,9 +108,9 @@ class ImmersionCueCoordinatorTest {
         now+=41;queue.refresh();assertNull(queue.active)
         now++;queue.refresh();assertEquals("return",queue.active)
         queue.cancel("return")
-        assertEquals("source",queue.active)
-        queue.cancel("source")
         assertEquals("body",queue.active)
+        queue.cancel("body")
+        assertEquals("source",queue.active)
     }
     @Test fun waitingDuringQuietIntervalIsCancellableWithoutStartingCue()=runBlocking {
         val broker=ImmersionCueBroker()

@@ -13,6 +13,7 @@ internal class ImmersionCueQueue(private val clock:()->Long=::immersionMonotonic
     private val waiting=linkedMapOf<String,ImmersionCueRequest>()
     private var quietUntil=clock()
     private var consecutiveReturns=0
+    private var lastOrdinaryBody=false
     var active:String?=null;private set
     var serial:Long=0;private set
     fun request(owner:String,body:Boolean,returningToTarget:Boolean=false){if(active!=owner)waiting[owner]=ImmersionCueRequest(body,returningToTarget);refresh()}
@@ -26,9 +27,14 @@ internal class ImmersionCueQueue(private val clock:()->Long=::immersionMonotonic
     fun refresh(){
         if(active!=null||quietRemainingMs()>0)return
         val returning=waiting.entries.firstOrNull{it.value.returningToTarget}
-        val ordinary=waiting.entries.firstOrNull{!it.value.returningToTarget}
+        val body=waiting.entries.firstOrNull{!it.value.returningToTarget&&it.value.body}
+        val control=waiting.entries.firstOrNull{!it.value.returningToTarget&&!it.value.body}
+        // Alternate ordinary classes, preserving FIFO within each: neither a wall
+        // of footer controls nor many conversation blocks can hide the other class.
+        val ordinary=if(lastOrdinaryBody)control?:body else body?:control
         val next=if(returning!=null&&(consecutiveReturns<2||ordinary==null))returning else ordinary?:return
         consecutiveReturns=if(next.value.returningToTarget)consecutiveReturns+1 else 0
+        if(!next.value.returningToTarget)lastOrdinaryBody=next.value.body
         active=next.key;waiting.remove(next.key);serial++
     }
 }
