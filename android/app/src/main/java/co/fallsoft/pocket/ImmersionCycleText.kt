@@ -66,7 +66,11 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
                 incoming=immersionCyclePlan(plan,immersionCueOriginals(current,index,original))
                 progress.snapTo(0f)
                 cueActive=true
-            },onHandoff={originals[keys[index]]=original},onFinish={cueActive=false;incoming=null},animate={
+            },onHandoff={
+                originals[keys[index]]=original
+                val phase=immersionCycleTiming(identity.toString()+plan.spans[index].start,plan.spans[index].source,plan.spans[index].target)
+                deadline.hold(if(original)phase.sourceMs else phase.targetMs)
+            },onFinish={cueActive=false;incoming=null},animate={
                 progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
             },awaitHandoff={snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}})
         }
@@ -82,8 +86,12 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
             val local=immersionCycleTiming(identity.toString()+span.start,span.source,span.target)
             if(pending!=null){if(cue(index,false))hydration.remove(pending);deadline.hold(local.targetMs);delay(local.targetMs)}
             else {
-                if(originals[keys[index]]!=true&&!cue(index,true)){deadline.hold(timing.targetMs);delay(timing.targetMs);continue}
-                deadline.hold(local.sourceMs);delay(local.sourceMs)
+                if(immersionNeedsSourceHandoff(originals[keys[index]]==true)){
+                    if(!cue(index,true)){deadline.hold(timing.targetMs);delay(timing.targetMs);continue}
+                    deadline.hold(local.sourceMs);delay(local.sourceMs)
+                }
+                // A resumed source phase already consumed its remaining deadline above.
+                // It returns directly to target instead of scheduling a second source hold.
                 if(!cue(index,false)){deadline.hold(timing.targetMs);delay(timing.targetMs);continue}
                 deadline.hold(local.targetMs);delay(local.targetMs)
                 cursor=(index+1)%plan.spans.size
@@ -108,3 +116,6 @@ internal suspend fun immersionWhileVisible(eligible:()->Boolean,awaitHidden:susp
         try{block()}finally{watcher.cancel()}
     };true}catch(hidden:CancellationException){currentCoroutineContext().ensureActive();false}
 }
+
+/** After the preserved reading deadline, an already-source phrase returns directly. */
+internal fun immersionNeedsSourceHandoff(alreadyOriginal:Boolean)=!alreadyOriginal

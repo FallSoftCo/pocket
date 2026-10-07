@@ -116,4 +116,19 @@ class ImmersionCycleTest {
         assertNull(immersionVisibleTiming("message",spans,0,emptySet()))
     }
 
+    @Test fun pausedSourceHoldReturnsToTargetAfterOnlyItsRemainingDeadline(){
+        var now=0L
+        val deadline=ImmersionCueDeadline{now}
+        var original=false
+        assertTrue(immersionNeedsSourceHandoff(original))
+        original=true // Semantic handoff occurred; cancelled animation cannot undo it.
+        deadline.hold(4000)
+        now=2500 // Touch interrupted the source reading hold.
+        assertEquals(1500L,deadline.waitMs(8000))
+        now+=1500
+        assertFalse(immersionNeedsSourceHandoff(original))
+        // Cancellation before handoff retains target, which still needs a source cue.
+        assertTrue(immersionNeedsSourceHandoff(false))
+    }
+
 }
