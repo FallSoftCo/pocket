@@ -92,5 +92,16 @@
       "reducedMotion": true,
       "automaticReload": true
     }
+  },
+  "delivery": {
+    "publicRelease": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.34",
+    "anonymousDownloadSha256": "412d6d99e6983a424995a2dbd03b6a719bc17f3d26e30a834b0e8bc024a541e9",
+    "anonymousDownloadBytes": 51807899,
+    "privateUpdateVersionCode": 52,
+    "announced": true,
+    "pushTransportEnabled": true,
+    "deviceReceiptVerified": false,
+    "phoneInstallationVerified": false,
+    "phoneSsh": "unavailable; no settings changed"
   }
 }
