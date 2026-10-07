@@ -29,6 +29,34 @@ class ImmersionCueCoordinatorTest {
         assertEquals("visible-control",queue.active)
         assertEquals(100,queue.pending().size)
     }
+    @Test fun sourceReturnsDoNotWaitBehindEveryTargetControl(){
+        val queue=ImmersionCueQueue()
+        queue.request("active",false)
+        repeat(100){queue.request("ordinary-$it",false)}
+        queue.request("return",true,true)
+        queue.cancel("active")
+        assertEquals("return",queue.active)
+        queue.cancel("return")
+        assertEquals("ordinary-0",queue.active)
+    }
+    @Test fun continuousReturnsCannotStarveOldestOrdinaryWaiterAndReturnsKeepFifo(){
+        val queue=ImmersionCueQueue()
+        queue.request("active",false)
+        queue.request("ordinary",false)
+        repeat(5){queue.request("return-$it",true,true)}
+        queue.cancel("active");assertEquals("return-0",queue.active)
+        queue.cancel("return-0");assertEquals("return-1",queue.active)
+        queue.request("late-return",true,true)
+        queue.cancel("return-1");assertEquals("ordinary",queue.active)
+        queue.cancel("ordinary");assertEquals("return-2",queue.active)
+    }
+    @Test fun cancelledReturnCannotTakePriorityOverVisibleWork(){
+        val queue=ImmersionCueQueue()
+        queue.request("active",false);queue.request("ordinary",false)
+        queue.request("hidden-return",true,true)
+        queue.cancel("hidden-return");queue.cancel("active")
+        assertEquals("ordinary",queue.active)
+    }
     @Test fun cancelledQueuedRequestNeverBecomesActive(){
         val queue=ImmersionCueQueue()
         queue.request("active",true);queue.request("old-content",true)
@@ -50,17 +78,17 @@ class ImmersionCueCoordinatorTest {
         val reverse=immersionCueOriginals(incoming,0,true)
         assertEquals(setOf(0),reverse)
     }
-    @Test fun completedCueEnforcesMonotonicQuietGapAndFifoFairness(){
+    @Test fun completedCueEnforcesMonotonicQuietGapAndPromptReturn(){
         var now=100L
         val queue=ImmersionCueQueue(clock={now},quietGapMs=42)
         queue.request("active",false);queue.request("source",false);queue.request("return",false,true);queue.request("body",true)
         queue.cancel("active",completed=true)
         assertNull(queue.active);assertEquals(42L,queue.quietRemainingMs())
         now+=41;queue.refresh();assertNull(queue.active)
-        now++;queue.refresh();assertEquals("source",queue.active)
-        queue.cancel("source")
-        assertEquals("return",queue.active)
+        now++;queue.refresh();assertEquals("return",queue.active)
         queue.cancel("return")
+        assertEquals("source",queue.active)
+        queue.cancel("source")
         assertEquals("body",queue.active)
     }
     @Test fun waitingDuringQuietIntervalIsCancellableWithoutStartingCue()=runBlocking {

@@ -8,10 +8,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 private fun immersionMonotonicMs()=System.nanoTime()/1000000L
 private data class ImmersionCueRequest(val body:Boolean,val returningToTarget:Boolean)
 
-/** One lease, then a quiet interval. FIFO prevents controls starving behind live bodies. */
+/** Return to immersion promptly, but serve an ordinary FIFO waiter after two returns. */
 internal class ImmersionCueQueue(private val clock:()->Long=::immersionMonotonicMs,private val quietGapMs:Long=4200L) {
     private val waiting=linkedMapOf<String,ImmersionCueRequest>()
     private var quietUntil=clock()
+    private var consecutiveReturns=0
     var active:String?=null;private set
     var serial:Long=0;private set
     fun request(owner:String,body:Boolean,returningToTarget:Boolean=false){if(active!=owner)waiting[owner]=ImmersionCueRequest(body,returningToTarget);refresh()}
@@ -24,7 +25,10 @@ internal class ImmersionCueQueue(private val clock:()->Long=::immersionMonotonic
     fun quietRemainingMs()=(quietUntil-clock()).coerceAtLeast(0)
     fun refresh(){
         if(active!=null||quietRemainingMs()>0)return
-        val next=waiting.entries.firstOrNull()?:return
+        val returning=waiting.entries.firstOrNull{it.value.returningToTarget}
+        val ordinary=waiting.entries.firstOrNull{!it.value.returningToTarget}
+        val next=if(returning!=null&&(consecutiveReturns<2||ordinary==null))returning else ordinary?:return
+        consecutiveReturns=if(next.value.returningToTarget)consecutiveReturns+1 else 0
         active=next.key;waiting.remove(next.key);serial++
     }
 }

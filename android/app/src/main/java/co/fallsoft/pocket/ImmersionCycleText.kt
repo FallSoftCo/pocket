@@ -74,7 +74,7 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
             },onFinish={cueActive=false;incoming=null},animate={
                 if(transitionAnimated)progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
                 else progress.snapTo(1f)
-            },awaitHandoff={if(transitionAnimated)snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}})
+            },awaitHandoff={if(transitionAnimated)snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}},returningToTarget=!original)
         }
         // Preserve the due time through touch/keyboard pauses. A resumed overdue owner
         // gets a brief breath, and only one cue: no catch-up loop or frame ticker.
