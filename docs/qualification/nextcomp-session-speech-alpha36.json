@@ -24,8 +24,21 @@
       "report settings default-off GET and enable/cadence/stale POST",
       "report settings normal and 2x text legible",
       "special report websocket notification delivered without automatic speech",
-      "actual report notification tap opens typed coordinator and reloads history"
-    ]
+      "actual report notification tap opens typed coordinator and reloads history",
+      "question attention network failure retains question and unrelated intermediate without render or delivery acknowledgment"
+    ],
+    "resolvedQuestionEvidence": {
+      "removedId": 904,
+      "retainedIntermediateId": 906
+    },
+    "offlineQuestionEvidence": {
+      "retainedIds": [
+        905,
+        906
+      ],
+      "nativeAudioRequests": 0,
+      "presentedRequests": 0
+    }
   },
   "evidenceDirectory": "/tmp/nextcomp-session-speech-qa",
   "limits": [
@@ -33,7 +46,8 @@
     "No provider/account audio calls; playback uses cached synthetic audio",
     "Core native evidence precedes reporting and preview follow-up",
     "Cross-profile switch and active-voice physical overlap not native-qualified",
-    "Final empty-active-source disabled controls change awaits root optimized APK smoke"
+    "Final empty-active-source disabled controls change awaits root optimized APK smoke",
+    "Final asynchronous MediaPlayer prepared/seek/audio-focus resume guards await root incremental build; active-voice native case remains explicitly unqualified"
   ],
   "release": "Root owns version signing release and phone; no release by this workstream"
 }

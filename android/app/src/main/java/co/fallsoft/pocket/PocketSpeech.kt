@@ -473,6 +473,7 @@ class PocketSpeechService:Service(){
         }catch(_:Exception){file.delete();pause("Playback interrupted · Tap Resume to retry")}
     }
     private fun startPlayer(media:MediaPlayer,id:Long,index:Int){
+        notificationSpeechHoldReason(PocketVoice.active)?.let{pause(it);return}
         handler.removeCallbacks(timeout);media.start();started=true;playbackMeter.start(SystemClock.elapsedRealtime())
         queue.current?.let{PocketSpeechCaptions.update(it.id,it.title,spokenChunk,queue.chunkIndex,renderedChunks.size,speakingProfile)}
         handler.postDelayed(timeout,(media.duration-media.currentPosition).toLong().coerceAtLeast(0)+15000)
@@ -487,6 +488,7 @@ class PocketSpeechService:Service(){
     }
     private fun resumeTransient(){
         if(!transientPaused)return
+        notificationSpeechHoldReason(PocketVoice.active)?.let{pause(it);return}
         val media=player?:return
         try{
             media.start();transientPaused=false;playbackMeter.start(SystemClock.elapsedRealtime())
