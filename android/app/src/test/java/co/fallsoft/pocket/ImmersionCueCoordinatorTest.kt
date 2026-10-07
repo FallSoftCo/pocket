@@ -7,18 +7,27 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ImmersionCueCoordinatorTest {
-    @Test fun bodiesLeadQueuedControlsAndOnlyOneLeaseIsActive(){
+    @Test fun queuedControlsCannotStarveBehindBodiesAndOnlyOneLeaseIsActive(){
         val queue=ImmersionCueQueue()
         queue.request("first-control",false)
         queue.request("second-control",false)
         queue.request("body",true)
         assertEquals("first-control",queue.active)
         queue.cancel("first-control")
-        assertEquals("body",queue.active)
-        queue.cancel("body")
         assertEquals("second-control",queue.active)
         queue.cancel("second-control")
+        assertEquals("body",queue.active)
+        queue.cancel("body")
         assertNull(queue.active)
+    }
+    @Test fun continuouslyArrivingBodyUpdatesCannotDisplaceAnAlreadyWaitingControl(){
+        val queue=ImmersionCueQueue()
+        queue.request("first-body",true)
+        queue.request("visible-control",false)
+        repeat(100){queue.request("live-body-$it",true)}
+        queue.cancel("first-body")
+        assertEquals("visible-control",queue.active)
+        assertEquals(100,queue.pending().size)
     }
     @Test fun cancelledQueuedRequestNeverBecomesActive(){
         val queue=ImmersionCueQueue()
@@ -41,18 +50,18 @@ class ImmersionCueCoordinatorTest {
         val reverse=immersionCueOriginals(incoming,0,true)
         assertEquals(setOf(0),reverse)
     }
-    @Test fun completedCueEnforcesMonotonicQuietGapAndPrioritizedReturns(){
+    @Test fun completedCueEnforcesMonotonicQuietGapAndFifoFairness(){
         var now=100L
         val queue=ImmersionCueQueue(clock={now},quietGapMs=42)
         queue.request("active",false);queue.request("source",false);queue.request("return",false,true);queue.request("body",true)
         queue.cancel("active",completed=true)
         assertNull(queue.active);assertEquals(42L,queue.quietRemainingMs())
         now+=41;queue.refresh();assertNull(queue.active)
-        now++;queue.refresh();assertEquals("body",queue.active)
-        queue.cancel("body")
+        now++;queue.refresh();assertEquals("source",queue.active)
+        queue.cancel("source")
         assertEquals("return",queue.active)
         queue.cancel("return")
-        assertEquals("source",queue.active)
+        assertEquals("body",queue.active)
     }
     @Test fun waitingDuringQuietIntervalIsCancellableWithoutStartingCue()=runBlocking {
         val broker=ImmersionCueBroker()
@@ -62,13 +71,13 @@ class ImmersionCueCoordinatorTest {
         job.cancelAndJoin()
         assertFalse(began)
     }
-    @Test fun labelsHaveDeterministicLongTargetHoldsAndDispersedStartup(){
+    @Test fun labelsBecomeEligibleWithinSecondsAndKeepDispersedStartup(){
         val labels=(0..40).map{"Control $it"}
         val cadences=labels.map(::immersionLabelCadence)
         assertEquals(immersionLabelCadence("Important"),immersionLabelCadence("Important"))
-        assertTrue(cadences.all{it.initialMs in 24000L..120000L&&it.targetMs in 120000L..180000L})
+        assertTrue(cadences.all{it.initialMs in 6000L..9000L&&it.targetMs in 10000L..15000L})
         assertTrue(cadences.map{it.initialMs}.distinct().size>35)
-        assertTrue(cadences.maxOf{it.initialMs}-cadences.minOf{it.initialMs}>60000)
+        assertTrue(cadences.maxOf{it.initialMs}-cadences.minOf{it.initialMs}>2000)
     }
     @Test fun cancellationBeforeHandoffPreservesVisibleSnapshot()=runBlocking {
         var actual="source";var finished=false

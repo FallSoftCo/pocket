@@ -22,13 +22,13 @@ class ImmersionCycleTest {
         val fiveHundred=List(500){"session"}.joinToString(" ")
         val a=immersionCycleTiming("long",fiveHundred,fiveHundred)
         assertEquals(150000L,a.sourceMs)
-        assertEquals(231000L,a.targetMs)
+        assertEquals(229000L,a.targetMs)
         val thousand=List(1000){"sessione"}.joinToString(" ")
         val b=immersionCycleTiming("longer",thousand,thousand)
         assertTrue(b.sourceMs>a.sourceMs);assertTrue(b.targetMs>a.targetMs)
         val shortTarget=immersionCycleTiming("unequal",fiveHundred,"pronto")
-        assertTrue(shortTarget.targetMs>=shortTarget.sourceMs+6000L)
-        assertEquals(6000L,immersionCycleTiming("unicode","l'azione è pronta","l’azione è pronta").sourceMs)
+        assertTrue(shortTarget.targetMs>=shortTarget.sourceMs+4000L)
+        assertEquals(4000L,immersionCycleTiming("unicode","l'azione è pronta","l’azione è pronta").sourceMs)
     }
     @Test fun phaseBoundariesAreDeterministicWithoutFrameTicking(){
         val timing=ImmersionCycleTiming(2500,4000,0)
@@ -74,8 +74,8 @@ class ImmersionCycleTest {
         val at=text.indexOf("nuove sessioni")
         assertEquals("Read new sessions, then check `git status`.",immersionParagraphForm(text,listOf(Triple(at,at+14,"new sessions"))))
         assertNull(immersionParagraphForm(text,listOf(Triple(0,5,"a"),Triple(3,6,"b"))))
-        assertTrue(immersionCycleTiming("message","one word","una parola").sourceMs>=6000)
-        assertTrue(immersionCycleTiming("message","one word","una parola").targetMs>=18000)
+        assertTrue(immersionCycleTiming("message","one word","una parola").sourceMs>=4000)
+        assertTrue(immersionCycleTiming("message","one word","una parola").targetMs>=8000)
     }
     @Test fun recreatedCompositionRecoversCapturedMixedSnapshot(){
         val source="Read new sessions and important questions now."
@@ -93,4 +93,27 @@ class ImmersionCycleTest {
         assertEquals("original",immersionCyclePlan(plan,emptySet()).text)
         assertTrue(immersionCyclePlan(plan,emptySet()).spans.isEmpty())
     }
+    @Test fun ordinaryInteractionDoesNotRestartTheFullReadingHold(){
+        var now=0L
+        val deadline=ImmersionCueDeadline{now}
+        assertEquals(8000L,deadline.waitMs(8000))
+        now=6000
+        assertEquals(2000L,deadline.waitMs(8000))
+        now=60000 // Background, keyboard, or speech cannot produce a catch-up storm.
+        assertEquals(1000L,deadline.waitMs(8000))
+        deadline.hold(4000)
+        assertEquals(4000L,deadline.waitMs(8000))
+        now+=2500
+        assertEquals(1500L,deadline.waitMs(8000))
+    }
+    @Test fun firstCueDependsOnVisiblePhraseRatherThanThousandsOfOffscreenWords(){
+        val long=List(1000){"session"}.joinToString(" ")
+        val spans=listOf(ImmersionSpan(0,long.length,long,long),ImmersionSpan(long.length+1,long.length+13,"new sessions","nuove sessioni"))
+        val visible=setOf("${spans[1].start}:${spans[1].end}")
+        val timing=immersionVisibleTiming("message",spans,0,visible)!!
+        assertEquals(4000L,timing.sourceMs)
+        assertEquals(8000L,timing.targetMs)
+        assertNull(immersionVisibleTiming("message",spans,0,emptySet()))
+    }
+
 }

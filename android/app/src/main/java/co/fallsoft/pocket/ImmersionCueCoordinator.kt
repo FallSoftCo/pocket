@@ -8,7 +8,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 private fun immersionMonotonicMs()=System.nanoTime()/1000000L
 private data class ImmersionCueRequest(val body:Boolean,val returningToTarget:Boolean)
 
-/** One lease, then a quiet interval. Bodies precede target returns, then source controls. */
+/** One lease, then a quiet interval. FIFO prevents controls starving behind live bodies. */
 internal class ImmersionCueQueue(private val clock:()->Long=::immersionMonotonicMs,private val quietGapMs:Long=4200L) {
     private val waiting=linkedMapOf<String,ImmersionCueRequest>()
     private var quietUntil=clock()
@@ -24,9 +24,7 @@ internal class ImmersionCueQueue(private val clock:()->Long=::immersionMonotonic
     fun quietRemainingMs()=(quietUntil-clock()).coerceAtLeast(0)
     fun refresh(){
         if(active!=null||quietRemainingMs()>0)return
-        val next=waiting.entries.firstOrNull{it.value.body}
-            ?:waiting.entries.firstOrNull{it.value.returningToTarget}
-            ?:waiting.entries.firstOrNull()?:return
+        val next=waiting.entries.firstOrNull()?:return
         active=next.key;waiting.remove(next.key);serial++
     }
 }

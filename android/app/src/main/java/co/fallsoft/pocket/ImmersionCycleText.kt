@@ -26,6 +26,7 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
 @Composable internal fun rememberImmersionCycle(plan:ImmersionPresentation,readingKey:ImmersionReadingKey,selected:ImmersionSpan?,enabled:Boolean):ImmersionCycleRender {
     val ready=immersionMotionReady()
     val identity=readingKey.copy(targetHash="")
+    val deadline=remember(identity){ImmersionCueDeadline()}
     val owner=remember(identity){"body:"+java.util.UUID.randomUUID()}
     val parts=remember(identity){mutableStateMapOf<String,Set<String>>()}
     val visible by remember(identity){derivedStateOf{immersionVisibleUnion(parts)}}
@@ -69,21 +70,22 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
                 progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
             },awaitHandoff={snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}})
         }
-        // Every resume receives a fresh reading hold, never a backlog of overdue handoffs.
-        val timing=immersionCycleTiming(identity.toString(),plan.source,plan.text)
-        delay((if(hydration.isNotEmpty())timing.sourceMs else timing.targetMs)+timing.staggerMs%6000L)
+        // Preserve the due time through touch/keyboard pauses. A resumed overdue owner
+        // gets a brief breath, and only one cue: no catch-up loop or frame ticker.
+        val timing=immersionVisibleTiming(identity.toString(),plan.spans,cursor,visible)?:return@LaunchedEffect
+        delay(deadline.waitMs((if(hydration.isNotEmpty())timing.sourceMs else timing.targetMs)+timing.staggerMs%1500L))
         while(isActive){
             val pending=hydration.firstOrNull{key->val index=keys.indexOf(key);index>=0&&spanId(plan.spans[index]) in visible}
             val index=if(pending!=null)keys.indexOf(pending)else immersionNextVisible(plan.spans,cursor,visible)
-            if(index<0){snapshotFlow{visible}.first{it.isNotEmpty()};delay(timing.targetMs);continue}
+            if(index<0){snapshotFlow{visible}.first{it.isNotEmpty()};deadline.hold(timing.targetMs);delay(timing.targetMs);continue}
             val span=plan.spans[index]
             val local=immersionCycleTiming(identity.toString()+span.start,span.source,span.target)
-            if(pending!=null){if(cue(index,false))hydration.remove(pending);delay(local.targetMs)}
+            if(pending!=null){if(cue(index,false))hydration.remove(pending);deadline.hold(local.targetMs);delay(local.targetMs)}
             else {
-                if(originals[keys[index]]!=true&&!cue(index,true)){delay(timing.targetMs);continue}
-                delay(local.sourceMs)
-                if(!cue(index,false)){delay(timing.targetMs);continue}
-                delay(local.targetMs)
+                if(originals[keys[index]]!=true&&!cue(index,true)){deadline.hold(timing.targetMs);delay(timing.targetMs);continue}
+                deadline.hold(local.sourceMs);delay(local.sourceMs)
+                if(!cue(index,false)){deadline.hold(timing.targetMs);delay(timing.targetMs);continue}
+                deadline.hold(local.targetMs);delay(local.targetMs)
                 cursor=(index+1)%plan.spans.size
             }
         }

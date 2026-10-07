@@ -7,8 +7,8 @@ data class ImmersionCyclePhase(val original:Boolean,val untilChangeMs:Long)
 data class ImmersionReserveWord(val source:String,val target:String)
 fun immersionCycleTiming(identity:String,source:String,target:String):ImmersionCycleTiming {
     fun words(text:String)=Regex("[\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*(?:['’][\\p{L}\\p{M}\\p{N}]+)*").findAll(text).count().toLong()
-    val sourceMs=max(6000L,words(source)*300L)
-    val targetMs=maxOf(18000L,words(target)*450L+6000L,sourceMs+6000L)
+    val sourceMs=max(4000L,words(source)*300L)
+    val targetMs=maxOf(8000L,words(target)*450L+4000L,sourceMs+4000L)
     val period=sourceMs+targetMs
     var seed=identity.hashCode()
     seed=seed xor (seed ushr 16);seed*= -2048144789
@@ -90,4 +90,24 @@ fun immersionPhraseEnd(text:String,end:Int):Int {
     var at=end.coerceIn(0,text.length)
     while(at<text.length&&text[at] in ",.;:!?…)]}»”")at++
     return at
+}
+
+/** One deadline per visible owner, not a ticking composition clock. Interruptions do not
+ * restart an entire reading hold; an overdue cue still receives a safe resume breath. */
+internal class ImmersionCueDeadline(private val clock:()->Long={System.nanoTime()/1000000L}) {
+    private var due:Long?=null
+    fun waitMs(initialMs:Long,resumeFloorMs:Long=1000L):Long {
+        val now=clock()
+        if(due==null)due=now+initialMs
+        return (due!!-now).coerceAtLeast(resumeFloorMs)
+    }
+    fun hold(durationMs:Long){due=clock()+durationMs}
+}
+
+/** The reader consumes the visible phrase, not the size of the containing transcript. */
+internal fun immersionVisibleTiming(identity:String,spans:List<ImmersionSpan>,cursor:Int,visible:Set<String>):ImmersionCycleTiming? {
+    val index=immersionNextVisible(spans,cursor,visible)
+    if(index<0)return null
+    val span=spans[index]
+    return immersionCycleTiming(identity+span.start,span.source,span.target)
 }

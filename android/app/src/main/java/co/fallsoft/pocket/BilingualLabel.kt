@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.*
     var nativeVisible by remember(text,target){mutableStateOf(false)}
     val ready=immersionMotionReady()&&nativeVisible
     var original by remember(text,target){mutableStateOf(false)}
+    val deadline=remember(text,target){ImmersionCueDeadline()}
     val owner=remember(text,target){"control:"+java.util.UUID.randomUUID()}
     var from by remember(text,target){mutableStateOf(AnnotatedString(target))}
     var to by remember(text,target){mutableStateOf(AnnotatedString(target))}
@@ -46,7 +47,7 @@ import androidx.compose.ui.unit.*
         if(!ready||expanded||PocketSpeech.displayedOwner!=null)return@LaunchedEffect
         // Separate queues replace the old synchronous screen-wide label clock.
         val cadence=immersionLabelCadence(text)
-        delay(cadence.initialMs)
+        delay(deadline.waitMs(cadence.initialMs))
         while(isActive){
             val next=!original
             runImmersionCue(owner,false,onBegin={
@@ -57,7 +58,9 @@ import androidx.compose.ui.unit.*
             },onHandoff={original=next},onFinish={cueActive=false},animate={
                 progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
             },awaitHandoff={snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}},returningToTarget=!next)
-            delay(if(original)6000L else cadence.targetMs)
+            val hold=if(original)4000L else cadence.targetMs
+            deadline.hold(hold)
+            delay(hold)
         }
     }
     val rescue=if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}else Modifier
@@ -90,5 +93,5 @@ import androidx.compose.ui.unit.*
 internal data class ImmersionLabelCadence(val initialMs:Long,val targetMs:Long)
 internal fun immersionLabelCadence(label:String):ImmersionLabelCadence{
     fun mix(value:Int):Int{var seed=value;seed=seed xor(seed ushr 16);seed*= -2048144789;seed=seed xor(seed ushr 13);seed*= -1028477387;return seed xor(seed ushr 16)}
-    return ImmersionLabelCadence(24000L+Math.floorMod(mix(label.hashCode()),96001),120000L+Math.floorMod(mix(label.hashCode() xor 0x517cc1b7),60001))
+    return ImmersionLabelCadence(6000L+Math.floorMod(mix(label.hashCode()),3001),10000L+Math.floorMod(mix(label.hashCode() xor 0x517cc1b7),5001))
 }
