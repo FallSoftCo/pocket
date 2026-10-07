@@ -8,7 +8,7 @@
     "androidPerVariant": 195,
     "suitesPerVariant": 40,
     "bothLintAndSignedBuilds": "pass",
-    "publicSourceScanFiles": 743,
+    "publicSourceScanFiles": 744,
     "auditVulnerabilities": 0,
     "buildSeconds": 347
   },
@@ -27,9 +27,11 @@
     "gallery": [
       "nextcomp-speech-usage-muted",
       "nextcomp-speech-usage-tracking",
-      "nextcomp-speech-usage-failure"
+      "nextcomp-speech-usage-failure",
+      "nextcomp-speech-usage-public"
     ],
-    "galleryChecks": "1907 cards desktop/mobile/reduced-motion/reload pass; public screenshot publication follow-up running"
+    "galleryChecks": "1908 cards desktop/mobile/reduced-motion/reload pass",
+    "cleanup": "Owned emulator/fixture/reverse/app/tmpfs clone removed; shared devices and original AVD preserved."
   },
   "limitations": [
     "No historical data recovery or attributable provider billing/plan-percentage conversion.",
@@ -40,11 +42,22 @@
     "Phone SSH banner timeout; physical installation and measurement unverified."
   ],
   "release": {
-    "status": "verified candidate awaiting release announcement",
+    "status": "published prerelease and offered in app",
     "sourceCi": 37566312875,
     "sourceCiResult": "success",
     "privatePreparedVersionCode": 53,
-    "maintainedSigningVariants": 2
+    "maintainedSigningVariants": 2,
+    "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.35",
+    "inAppAnnouncementId": 660,
+    "announced": 1,
+    "pushEnabled": true,
+    "physicalInstall": "unverified",
+    "backendRestart": false,
+    "anonymousPublicDownload": {
+      "sha256": "7ccf51b4fd06f94c1296a96f9695528f47be9255d80c52ef592965c472557317",
+      "size": 51807899,
+      "matchesQualifiedPublicApk": true
+    }
   },
   "publicApk": {
     "sha256": "7ccf51b4fd06f94c1296a96f9695528f47be9255d80c52ef592965c472557317",

@@ -1803,13 +1803,14 @@
     {
       "id": "native-speech-usage-and-unheard-audio",
       "requirement": "Track native voice generation versus playback and avoid generating automatic notification audio when playback is blocked. User suspects unnoticed usage.",
-      "status": "alpha35-candidate-build-native-checks-running",
+      "status": "alpha35-released-and-offered-phone-install-unverified",
       "evidence": [
-        "docs/SPEECH-USAGE.md"
+        "docs/SPEECH-USAGE.md",
+        "docs/qualification/speech-usage-alpha35.json"
       ],
       "limitations": [
         "No historical consumption or exact provider debit",
-        "Native runtime and phone delivery pending"
+        "Completed positive audio-duration/playback and physical phone measurements unqualified"
       ]
     }
   ],
