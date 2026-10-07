@@ -1,5 +1,5 @@
 {
-  "status": "candidate-qualified-core-follow-up-native-pending",
+  "status": "native-qualified-candidate-awaiting-root-release-smoke",
   "candidate": {
     "version": "alpha35 code53 source for alpha36",
     "apk": "/tmp/nextcomp-session-speech-qa/report-preview-candidate.apk",
@@ -19,7 +19,12 @@
       "full visible scrolling coverage acknowledges oversized catchup once",
       "full cached playback acknowledges exact source",
       "completed notification retry does not reenqueue",
-      "finished active source does not drain unrelated source"
+      "finished active source does not drain unrelated source",
+      "resolved question skipped after captured attention check; other meaningful intermediate retained",
+      "report settings default-off GET and enable/cadence/stale POST",
+      "report settings normal and 2x text legible",
+      "special report websocket notification delivered without automatic speech",
+      "actual report notification tap opens typed coordinator and reloads history"
     ]
   },
   "evidenceDirectory": "/tmp/nextcomp-session-speech-qa",
@@ -28,7 +33,7 @@
     "No provider/account audio calls; playback uses cached synthetic audio",
     "Core native evidence precedes reporting and preview follow-up",
     "Cross-profile switch and active-voice physical overlap not native-qualified",
-    "Resolved question native rerun pending; pure policy and captured endpoint code checked"
+    "Final empty-active-source disabled controls change awaits root optimized APK smoke"
   ],
   "release": "Root owns version signing release and phone; no release by this workstream"
 }

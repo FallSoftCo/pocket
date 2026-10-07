@@ -202,7 +202,7 @@ class MainActivity:ComponentActivity(){
     var sourceOpen by remember{mutableStateOf(false)}
     Box{
         TextButton({sourceOpen=true},contentPadding=PaddingValues(horizontal=0.dp),modifier=Modifier.heightIn(min=48.dp)){
-            WorkflowText(PocketSpeech.title.ifBlank{"Choose speech session"}+" · "+PocketSpeech.queue.messages.size+" ▾",color=if(PocketSpeech.paused)Muted else Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            WorkflowText(PocketSpeech.title.ifBlank{"Choose speech session"}+" · "+(if(PocketSpeech.queue.current==null)PocketSpeech.count else PocketSpeech.queue.messages.size)+" ▾",color=if(PocketSpeech.paused)Muted else Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
         DropdownMenu(expanded=sourceOpen,onDismissRequest={sourceOpen=false},properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
             PocketSpeech.sources.forEach{(source,details)->DropdownMenuItem(text={Text("${if(source==PocketSpeech.activeSource)"• " else ""}${details.first} · ${details.second}")},onClick={sourceOpen=false;PocketSpeech.selectSource(source)})}
@@ -524,13 +524,14 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 
 /** Direct, non-focus-stealing controls shared by speech and its live caption surface. */
 @Composable fun SpeechPlaybackControls(iconOnly:Boolean=false){
-    IconButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")},modifier=Modifier.size(48.dp)){
-        SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)"Resume" else "Pause"),modifier=Modifier.size(28.dp),tint=Mint)
+    val available=PocketSpeech.queue.current!=null
+    IconButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")},enabled=available,modifier=Modifier.size(48.dp)){
+        SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)"Resume" else "Pause"),modifier=Modifier.size(28.dp),tint=if(available)Mint else Muted)
     }
-    if(iconOnly)IconButton({PocketSpeech.clear()},modifier=Modifier.size(48.dp)){
-        Icon(Icons.Rounded.Close,PocketImmersion.label("Clear speech from active session"),Modifier.size(28.dp),tint=Coral)
-    }else TextButton({PocketSpeech.clear()},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp).semantics{contentDescription=PocketImmersion.label("Clear speech from active session")},contentPadding=PaddingValues(horizontal=8.dp)){
-        BilingualLabel("Clear session",color=Coral,fontSize=14.sp)
+    if(iconOnly)IconButton({PocketSpeech.clear()},enabled=available,modifier=Modifier.size(48.dp)){
+        Icon(Icons.Rounded.Close,PocketImmersion.label("Clear speech from active session"),Modifier.size(28.dp),tint=if(available)Coral else Muted)
+    }else TextButton({PocketSpeech.clear()},enabled=available,modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp).semantics{contentDescription=PocketImmersion.label("Clear speech from active session")},contentPadding=PaddingValues(horizontal=8.dp)){
+        BilingualLabel("Clear session",color=if(available)Coral else Muted,fontSize=14.sp)
     }
 }
 
