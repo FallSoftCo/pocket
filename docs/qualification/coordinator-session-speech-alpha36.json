@@ -1,7 +1,7 @@
 {
   "version": "0.5.0-alpha.36",
   "date": "2026-10-07",
-  "state": "integration-qualification-pending",
+  "state": "released-update-offered-handset-install-unverified",
   "changes": [
     "Live bounded contextual coordinator discovery with relevant public history and explicit focus",
     "Correctable named routing receipts and actual queued/submitted outcomes",
@@ -514,25 +514,65 @@
     ]
   },
   "verification": {
-    "initial_node_tests": {
-      "passed": 262,
-      "failed": 0
-    },
-    "android_debug_compile_and_unit_tests": "passed before final migration/stale-question changes",
     "node_tests": {
-      "passed": 272,
+      "passed": 293,
       "failed": 0
     },
+    "clean_dependency_install": "passed",
     "dependency_audit": "0 vulnerabilities",
-    "node_suite": {
-      "tests": 293,
-      "pass": 293,
-      "fail": 0,
-      "scope": "Frozen integrated backend source; report scheduling, revocation and actual isolated HTTP dispatch included."
+    "public_source_scan": "passed on clean selected publication set",
+    "github_ci": {
+      "run": 37577022387,
+      "conclusion": "success",
+      "sourceCommit": "54df34f30c0c02b585ef6131a578e75bba8f7a6c"
+    },
+    "android": {
+      "debug": {
+        "tests": 214,
+        "failures": 0,
+        "suites": 43,
+        "lint": "passed",
+        "build": "passed"
+      },
+      "release": {
+        "tests": 214,
+        "failures": 0,
+        "suites": 43,
+        "lint": "passed",
+        "build": "passed"
+      }
+    },
+    "compiled_voice_guards": {
+      "debug": {
+        "compiledAfterGuardEdit": true,
+        "guardedMethods": {
+          "startPlayer": true,
+          "resumeTransient": true
+        }
+      },
+      "release": {
+        "compiledAfterGuardEdit": true,
+        "guardedMethods": {
+          "startPlayer": true,
+          "resumeTransient": true
+        }
+      }
+    },
+    "compiled_speech_state": {
+      "debug": {
+        "observableCurrentItem": true,
+        "observableActiveCount": true,
+        "compiledAfterFinalEdit": true
+      },
+      "release": {
+        "observableCurrentItem": true,
+        "observableActiveCount": true,
+        "compiledAfterFinalEdit": true
+      }
     }
   },
   "limits": [
-    "Not yet shipped or installed.",
+    "Released and compatible update offered; handset installation remains unverified.",
     "No claim that speech duration measures exact Codex plan debit.",
     "Archived and managed-child sessions are not direct input targets.",
     "Discovery is bounded and supplies explicit continuation/scope metadata.",
@@ -592,7 +632,8 @@
   "phone_access": {
     "ssh": "banner exchange timed out",
     "adb": "phone-adb found no verified TCP or authorized USB connection",
-    "installed": false
+    "installed": false,
+    "latest_ssh": "banner exchange timed out again after artifact preparation"
   },
   "migration_followup_inference": {
     "runtime": "0.160.1",
@@ -664,6 +705,40 @@
     "automatic_worker_activation": false,
     "inventory_limit": 600,
     "partial_inventory_disclosed": true,
-    "production_activation": "pending deployment"
+    "production_activation": "Enabled on the actual paired Pixel: 30-minute cadence, 120-minute stale threshold. First report published; FCM accepted, handset reception not established."
+  },
+  "artifact": {
+    "version": "0.5.0-alpha.36",
+    "versionCode": 54,
+    "sourceCommit": "54df34f30c0c02b585ef6131a578e75bba8f7a6c",
+    "sha256": "943aa711a5d606ecb72cc530de6c5c9aeabeb17be1423a7fa5056c8673309e4b",
+    "bytes": 51840667,
+    "debuggable": false,
+    "maintainedSigner": true,
+    "webpPages": 168,
+    "byteExact": true,
+    "dynamicLookupNamesRetained": true
+  },
+  "native_receipt": "nextcomp-session-speech-alpha36.json",
+  "gallery": {
+    "cards": 1940,
+    "newSyntheticCards": 12,
+    "desktopMobileReducedMotionReloadChecks": "passed"
+  },
+  "release": {
+    "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.36",
+    "sourceCommit": "54df34f30c0c02b585ef6131a578e75bba8f7a6c",
+    "anonymousDownload": {
+      "sha256": "943aa711a5d606ecb72cc530de6c5c9aeabeb17be1423a7fa5056c8673309e4b",
+      "maintainedSignerVerified": true
+    },
+    "inAppAnnouncement": {
+      "announced": 1,
+      "versionCode": 54,
+      "notificationId": 698,
+      "pushEnabled": true
+    },
+    "pushAccepted": true,
+    "installedOnPhysicalPhone": false
   }
 }

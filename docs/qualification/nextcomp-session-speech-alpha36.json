@@ -1,5 +1,5 @@
 {
-  "status": "native-qualified-candidate-awaiting-root-release-smoke",
+  "status": "final-optimized-native-smoke-passed",
   "candidate": {
     "version": "alpha35 code53 source for alpha36",
     "apk": "/tmp/nextcomp-session-speech-qa/report-preview-candidate.apk",
@@ -42,12 +42,46 @@
   },
   "evidenceDirectory": "/tmp/nextcomp-session-speech-qa",
   "limits": [
-    "Synthetic emulator only; no physical handset claim",
-    "No provider/account audio calls; playback uses cached synthetic audio",
-    "Core native evidence precedes reporting and preview follow-up",
-    "Cross-profile switch and active-voice physical overlap not native-qualified",
-    "Final empty-active-source disabled controls change awaits root optimized APK smoke",
-    "Final asynchronous MediaPlayer prepared/seek/audio-focus resume guards await root incremental build; active-voice native case remains explicitly unqualified"
+    "No physical phone installation or performance claim",
+    "No real provider/account audio; fixture rejects native start503",
+    "Cross-profile switch and active-voice native case not qualified",
+    "Socket auto speech enqueue not qualified; conservative policy gate prevented synthetic enqueue"
   ],
-  "release": "Root owns version signing release and phone; no release by this workstream"
+  "release": "Root owns version signing release and phone; no release by this workstream",
+  "finalNative": {
+    "source": "54df34f",
+    "debugApkSha256": "9b29208d5f6db622ef5d72d4b5350e0d0635021563c68f94f7edf12f6fe5fbac",
+    "publicApkSha256": "943aa711a5d606ecb72cc530de6c5c9aeabeb17be1423a7fa5056c8673309e4b",
+    "version": "alpha36 code54",
+    "device": "owned emulator5564",
+    "debug": [
+      "empty active source total pending1 and disabled clickable Resume/Clear ancestors",
+      "select held A then synthetic503 makes both controls enabled immediately"
+    ],
+    "public": [
+      "fresh maintained-signer optimized APK installed",
+      "actual UI paired synthetic fixture",
+      "report settings GET default-off then enable POST30/120",
+      "same-source explicit previews live count1 then2, playback controls enabled after synthetic503",
+      "Clear session removes previews",
+      "special report notification appears with no auto speech",
+      "actual notification tap opens coordinator and read/send receipts",
+      "read receipt directly opens Lifecycle session01"
+    ],
+    "limits": [
+      "No physical phone installation or performance claim",
+      "No real provider/account audio; fixture rejects native start503",
+      "Cross-profile switch and active-voice native case not qualified",
+      "Socket auto speech enqueue not qualified; conservative policy gate prevented synthetic enqueue"
+    ],
+    "evidenceDirectory": "/tmp/nextcomp-session-speech-qa"
+  },
+  "finalBuildEvidence": {
+    "source": "54df34f",
+    "bothVariantAsyncMediaStartGuards": "root verified compiled classes",
+    "bothVariantObservableQueueFields": "root verified compiled classes",
+    "ciRun": "37577022387",
+    "ciStatus": "passed as reported by release owner",
+    "physicalVoiceOverlap": "unqualified"
+  }
 }

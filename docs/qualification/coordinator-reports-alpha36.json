@@ -87,10 +87,74 @@
     "Native speech requested separately may consume account audio usage. Reports do not automatically synthesize speech."
   ],
   "deployment": {
-    "productionRestart": false,
-    "productionDeployment": false,
-    "phoneEnabled": false,
-    "phoneVerified": false
+    "backendVersion": "0.5.0-alpha.36",
+    "backendHealthy": true,
+    "codexConnected": true,
+    "pairedDevice": "Pixel 9 Pro Fold",
+    "enabled": true,
+    "intervalMinutes": 30,
+    "staleAfterMinutes": 120,
+    "schedulerTimerMilliseconds": 60000,
+    "firstReport": {
+      "publishedAt": 1791350144513,
+      "notificationId": 691,
+      "state": "published",
+      "sources": 3,
+      "representedFindings": 1,
+      "inventory": {
+        "complete": false,
+        "unverified": false,
+        "truncated": true,
+        "threadCount": 598,
+        "nextCursor": "2026-07-23T14:06:21.353Z",
+        "reason": "More sessions remain beyond the 600-session inventory limit."
+      },
+      "delivery": [
+        {
+          "state": "accepted_by_fcm",
+          "attempts": 1
+        }
+      ],
+      "workerMessagesSent": 0
+    },
+    "reportingInferenceTurns": 0,
+    "automaticWorkerMessages": 0,
+    "handsetReceptionVerified": false,
+    "handsetInstallationVerified": false,
+    "observedRuns": [
+      {
+        "state": "published",
+        "at": 1791351944699
+      },
+      {
+        "state": "published",
+        "at": 1791350144513
+      }
+    ],
+    "latestPreferences": {
+      "enabled": true,
+      "intervalMinutes": 30,
+      "staleAfterMinutes": 120,
+      "nextDueAt": 1791353744699,
+      "lastReportAt": 1791351945112,
+      "mode": "observed-material",
+      "automaticTaskMutation": false,
+      "inventory": {
+        "complete": false,
+        "unverified": false,
+        "truncated": true,
+        "threadCount": 598,
+        "nextCursor": "2026-07-23T14:06:21.353Z",
+        "checkedAt": 1791351945034,
+        "reason": "More sessions remain beyond the 600-session inventory limit."
+      }
+    },
+    "updateAnnouncementDelivery": [
+      {
+        "state": "accepted_by_fcm",
+        "attempts": 1
+      }
+    ]
   },
   "sources": {
     "server/coordinator-reports.mjs": "0b160f5ce31615969b943097203a676b311ba7b4f2e1ac0b25686180e86db1ed",

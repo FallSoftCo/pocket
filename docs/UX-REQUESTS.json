@@ -16,36 +16,50 @@
     {
       "id": "coordinator-periodic-reports-checkins",
       "requirement": "Configurable periodic reports across ongoing work, with observed outcomes/progress/blockers and evidence-based stale-assignment check-ins. Integrate unseen-work catch-up, avoid repeated model polling or duplicate worker activation, and report actual scheduling status.",
-      "status": "implemented-qualified-source-release-pending",
+      "status": "released-alpha36-update-offered-handset-install-unverified",
       "design": "Default thirty-minute device-scoped reports when there is useful new material; deterministic observed text, no reporting inference. Default two-hour stale threshold with bounded read-only status checks and four-hour cooldown. Sending a report does not mark it read; automatic report speech is disabled.",
       "evidence": [
         "qualification/coordinator-session-speech-alpha36.json",
         "qualification/coordinator-reports-alpha36.json"
-      ]
+      ],
+      "release": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.36",
+      "activation": {
+        "pairedDevice": "Pixel 9 Pro Fold",
+        "enabled": true,
+        "intervalMinutes": 30,
+        "staleAfterMinutes": 120,
+        "publishedReports": 2,
+        "automaticWorkerActivation": false,
+        "reportingInference": false,
+        "coverage": "Bounded fresh native inventory; reports disclose incomplete scope."
+      }
     },
     {
       "id": "session-aware-speech",
       "requirement": "Separate logical speech queues and saved playback positions by session with one physical player. Identify sources, select/resume/clear a session, hold unrelated backlogs, preserve questions and useful intermediate updates, and acknowledge only fully delivered speech.",
-      "status": "implemented-qualified-source-release-pending",
+      "status": "released-alpha36-update-offered-handset-install-unverified",
       "evidence": [
         "qualification/coordinator-session-speech-alpha36.json"
-      ]
+      ],
+      "release": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.36"
     },
     {
       "id": "coordinator-unseen-work-catchup",
       "requirement": "Summarize material progress, intermediate answers, completed results, blockers and pending questions since foreground checking or actual catch-up delivery. Background reads and speech queuing must not mark seen.",
-      "status": "implemented-qualified-source-release-pending",
+      "status": "released-alpha36-update-offered-handset-install-unverified",
       "evidence": [
         "qualification/coordinator-session-speech-alpha36.json"
-      ]
+      ],
+      "release": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.36"
     },
     {
       "id": "coordinator-contextual-routing",
       "requirement": "Naturally route spoken/text requests to any existing work using live discovery and relevant history, preserve explicit focus/steer/queue, cross-turn references, genuine ambiguity clarification and correctable delivery receipts.",
-      "status": "implemented-qualified-source-release-pending",
+      "status": "released-alpha36-update-offered-handset-install-unverified",
       "evidence": [
         "qualification/coordinator-session-speech-alpha36.json"
-      ]
+      ],
+      "release": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.36"
     },
     {
       "id": "retained-pairing-intent-navigation",
