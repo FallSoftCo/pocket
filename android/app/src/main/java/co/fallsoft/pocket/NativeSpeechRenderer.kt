@@ -29,6 +29,7 @@ internal class NativeSpeechRenderer(private val context:Context,private val endp
     suspend fun render(text:String):ByteArray=withContext(Dispatchers.Main.immediate){
         val connected=CompletableDeferred<Unit>();val audio=CompletableDeferred<ByteArray>()
         var connection:String?=null;var transport:NativeVoiceAudio?=null
+        val began=android.os.SystemClock.elapsedRealtime();SpeechUsage.add("attempts")
         val jobs=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
         try{
             transport=NativeVoiceAudio(context,explicitCompletion=true){kind,data->
@@ -42,8 +43,20 @@ internal class NativeSpeechRenderer(private val context:Context,private val endp
             withTimeout(35000){connected.await()}
             requireNotNull(transport).speak(1L,text)
             api("/api/voice/native/speak",JSONObject().put("connectionId",connection).put("text",text))
-            withTimeout(90000){audio.await()}
-        }finally{
+            val bytes=withTimeout(90000){audio.await()}
+            SpeechUsage.add("generated");SpeechUsage.add("bytes",bytes.size.toLong())
+            withContext(Dispatchers.IO){
+                val file=java.io.File.createTempFile("speech-duration-",".webm",context.cacheDir)
+                val metadata=android.media.MediaMetadataRetriever()
+                try{file.writeBytes(bytes);metadata.setDataSource(file.path);val duration=metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull();if(duration!=null&&duration>0)SpeechUsage.add("generatedMs",duration) else SpeechUsage.add("unknownDuration")}
+                catch(_:Exception){SpeechUsage.add("unknownDuration")}
+                finally{metadata.release();file.delete()}
+            }
+            bytes
+        }catch(e:CancellationException){SpeechUsage.add("cancelled");throw e}
+        catch(e:Exception){SpeechUsage.add("failed");throw e}
+        finally{
+            SpeechUsage.add("renderMs",android.os.SystemClock.elapsedRealtime()-began)
             transport?.close();jobs.cancel()
             withContext(NonCancellable){connection?.let{id->withTimeoutOrNull(5000){try{api("/api/voice/native/stop",JSONObject().put("connectionId",id))}catch(_:Exception){}}}}
         }

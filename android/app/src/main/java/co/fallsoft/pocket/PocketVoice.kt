@@ -70,6 +70,8 @@ class PocketVoiceService:Service(){
     private var playing=false
     private var starting=false
     private var nativeAudio:NativeVoiceAudio?=null
+    private val nativeUsage=SpeechPlaybackMeter()
+    private fun checkpointNativeUsage(stop:Boolean=false){SpeechUsage.add("voiceConnectionMs",if(stop)nativeUsage.stop(SystemClock.elapsedRealtime()) else nativeUsage.sample(SystemClock.elapsedRealtime()))}
     private var nativeId:String?=null
     private var nativeReady:CompletableDeferred<Unit>?=null
     private var nativeHeartbeat:Job?=null
@@ -145,11 +147,12 @@ class PocketVoiceService:Service(){
         }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}finally{starting=false}
     }}
     private suspend fun connectNative(){
+        checkpointNativeUsage(stop=true)
         nativeHeartbeat?.cancel();nativeAudio?.close();nativeId=null
         val ready=CompletableDeferred<Unit>();nativeReady=ready;val ticket=++transportGeneration
         nativeAudio=NativeVoiceAudio(this) audio@{kind,data->if(!PocketVoice.active||ticket!=transportGeneration)return@audio;when(kind){
             "offer"->scope.launch{try{val result=api("/api/voice/native/start",JSONObject().put("sdp",data));nativeId=result.s("id");nativeAudio?.answer(result.s("sdp"))}catch(e:Exception){ready.completeExceptionally(e)}}
-            "connected"->ready.complete(Unit)
+            "connected"->{SpeechUsage.add("voiceConnections");nativeUsage.start(SystemClock.elapsedRealtime());ready.complete(Unit)}
             "audio"->scope.launch{try{val payload=JSONObject(data);val ticket=payload.optLong("token");if(ticket!=speechGeneration)return@launch;val bytes=android.util.Base64.decode(payload.s("data"),android.util.Base64.DEFAULT);withContext(Dispatchers.IO){spokenFile.writeBytes(bytes)};if(ticket!=speechGeneration)return@launch;play(spokenFile,true);clearPending()}catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}
             "preparing"->{state("Preparing speech")}
             "speaking"->{nativeSpeaking=true;clearPending();state("Speaking");captionStarted()}
@@ -158,7 +161,7 @@ class PocketVoiceService:Service(){
             "error"->{if(!ready.isCompleted)ready.completeExceptionally(IllegalStateException(data))else{PocketVoice.problem=data;recording?.cancel();fail(IllegalStateException(data))}}
         }}
         withTimeout(35000){ready.await()};nativeReady=null
-        nativeHeartbeat=scope.launch{while(isActive){delay(30000);try{api("/api/voice/native/heartbeat",JSONObject().put("connectionId",nativeId))}catch(e:Exception){if(e is CancellationException)throw e;PocketVoice.problem=PocketNetwork.error(e);state("Retry needed");break}}}
+        nativeHeartbeat=scope.launch{while(isActive){delay(30000);checkpointNativeUsage();try{api("/api/voice/native/heartbeat",JSONObject().put("connectionId",nativeId))}catch(e:Exception){if(e is CancellationException)throw e;PocketVoice.problem=PocketNetwork.error(e);state("Retry needed");break}}}
     }
     fun toggleRecord(){
         if(!PocketVoice.active)return
@@ -226,7 +229,7 @@ class PocketVoiceService:Service(){
     private fun applyActions(actions:List<JSONObject>){for(a in actions)when(a.s("type")){
         "select"->{PocketVoice.targetThread=a.s("threadId").takeIf{it.isNotBlank()};if(Pocket.local==local){if(PocketVoice.targetThread==null)Pocket.closeTask()else Pocket.open(PocketVoice.targetThread!!) }}
         "permissions"->{Pocket.updateFullPermissions(a.optBoolean("full"))}
-        "profile"->{stopNativeRemote();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeHeartbeat?.cancel();val next=a.optBoolean("local");if(Pocket.savedToken(next).isBlank()){PocketVoice.problem="That device is not paired. Pair it in NextComp first.";beep(false)}else{Pocket.activate(next);local=next;coordinatorReady=false;captureProfile();loadHistory();boot()}}
+        "profile"->{checkpointNativeUsage(stop=true);stopNativeRemote();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeHeartbeat?.cancel();val next=a.optBoolean("local");if(Pocket.savedToken(next).isBlank()){PocketVoice.problem="That device is not paired. Pair it in NextComp first.";beep(false)}else{Pocket.activate(next);local=next;coordinatorReady=false;captureProfile();loadHistory();boot()}}
         "exit"->leave()
     }}
     fun retry(){if(starting||recorder!=null)return;PocketVoice.problem="";work?.cancel();if(turnId!=null){nativeId=null;deliver()}else boot()}
@@ -261,7 +264,7 @@ class PocketVoiceService:Service(){
     fun enqueueUpdate(n:JSONObject){if(updates.none{it.optLong("id")==n.optLong("id")})updates.addLast(n);while(updates.size>20)updates.removeFirst();nextUpdate()}
     private fun nextUpdate(){if(!PocketVoice.active||recorder!=null||playing||nativeSpeaking||work?.isActive==true||turnId!=null||updates.isEmpty())return;val n=updates.removeFirst();work=scope.launch{try{val full=if(n.s("speech_pending")=="1")api("/api/notifications/${n.optLong("id")}").optJSONObject("notification")?:n else n;speak(full.s("spoken_text",full.s("body")),full){scope.launch{delay(50);nextUpdate()}}}catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}}
     private fun stopNativeRemote(){if(nativeId!=null){val request=Request.Builder().url("$endpoint/api/voice/native/stop").header("Authorization","Bearer $credential").post(JSONObject().put("connectionId",nativeId).toString().toRequestBody("application/json".toMediaType())).build();http.newCall(request).enqueue(object:Callback{override fun onFailure(call:Call,e:java.io.IOException){};override fun onResponse(call:Call,response:Response){response.close()}})}}
-    private fun disconnectNative(){transportGeneration++;stopNativeRemote();nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeReady?.cancel();nativeReady=null}
+    private fun disconnectNative(){checkpointNativeUsage(stop=true);transportGeneration++;stopNativeRemote();nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeReady?.cancel();nativeReady=null}
     fun leave(){PocketVoice.active=false;disconnectNative();recording?.cancel();work?.cancel();stopPlayer();state("Ready");stopSelf()}
-    override fun onDestroy(){transportGeneration++;nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;PocketVoice.active=false;PocketVoice.service=null;recording?.cancel();scope.cancel();stopPlayer();tones.release();if(lock?.isHeld==true)lock?.release();if(!PocketVoice.foreground&&!Pocket.local)PocketLive.stop();stopForeground(STOP_FOREGROUND_REMOVE);if(caption!=null&&PocketSpeechCaptions.state.phase=="Speaking")PocketSpeechCaptions.pause(captionProfile);PocketSpeechCaptions.retain();super.onDestroy()}
+    override fun onDestroy(){checkpointNativeUsage(stop=true);transportGeneration++;nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;PocketVoice.active=false;PocketVoice.service=null;recording?.cancel();scope.cancel();stopPlayer();tones.release();if(lock?.isHeld==true)lock?.release();if(!PocketVoice.foreground&&!Pocket.local)PocketLive.stop();stopForeground(STOP_FOREGROUND_REMOVE);if(caption!=null&&PocketSpeechCaptions.state.phase=="Speaking")PocketSpeechCaptions.pause(captionProfile);PocketSpeechCaptions.retain();super.onDestroy()}
 }

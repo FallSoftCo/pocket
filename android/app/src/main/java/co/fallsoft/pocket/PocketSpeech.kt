@@ -200,9 +200,11 @@ class PocketSpeechService:Service(){
         return accepted
     }
     private var synthesizing:String?=null
+    private var freshlyGeneratedFile:String?=null
     private var player:MediaPlayer?=null
     private var prepared=false
     private var started=false
+    private val playbackMeter=SpeechPlaybackMeter()
     private var transientPaused=false
     private var focus:AudioFocusRequest?=null
     private lateinit var session:MediaSession
@@ -211,6 +213,7 @@ class PocketSpeechService:Service(){
     private val timeout=Runnable{pause("Speech stalled · Tap Resume to retry")}
     private val checkpoint=object:Runnable{override fun run(){
         if(closed||queue.paused)return
+        SpeechUsage.playback(playbackMeter)
         if(prepared)player?.let{queue.positionMs=it.currentPosition;PocketSpeech.save();queue.current?.let{m->PocketSpeechCaptions.update(m.id,m.title,spokenChunk,queue.chunkIndex,renderedChunks.size,speakingProfile)}}
         handler.postDelayed(this,2000)
     }}
@@ -291,9 +294,10 @@ class PocketSpeechService:Service(){
         val text=spokenChunk
         if(text==null){completeSpokenChunk(message.id,queue.chunkIndex);PocketSpeech.save(true);next();return}
         val file=audioFile()!!
-        if(file.length()>44){play(file,message.id,queue.chunkIndex);return}
+        if(file.length()>44){if(freshlyGeneratedFile!=file.path)SpeechUsage.add("cacheHits");freshlyGeneratedFile=null;play(file,message.id,queue.chunkIndex);return}
         // Only the current chunk is retained. Text for the rest stays in the private queue.
         PocketSpeech.directory.listFiles()?.forEach{it.delete()}
+        if(!acquireSpeechFocus())return
         val identity="${message.id}/${queue.chunkIndex}";synthesizing=identity;armTimeout()
         scope.launch {
             try {
@@ -301,23 +305,29 @@ class PocketSpeechService:Service(){
                 if(closed||finished||queue.paused||synthesizing!=identity||speechProfile()!=speakingProfile)return@launch
                 val target=audioFile()?:return@launch
                 withContext(Dispatchers.IO){val temp=File(PocketSpeech.directory,"pending-native");temp.writeBytes(bytes);check(temp.renameTo(target)){"Could not save native speech"}}
+                freshlyGeneratedFile=target.path
                 synthesizing=null;handler.removeCallbacks(timeout);next()
             }catch(e:CancellationException){throw e}catch(_:Exception){if(!closed&&!finished)pause("Native speech unavailable · Tap Resume to retry")}
         }
     }
-    private fun play(file:File,id:Long,index:Int){
+    private fun acquireSpeechFocus():Boolean {
+        if(!explicitPlayback&&getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)==0){pause("Waiting for media volume");return false}
         if(focus==null){
-            if(!explicitPlayback&&getSystemService(AudioManager::class.java).isMusicActive){pause("Waiting while other audio plays");return}
+            if(!explicitPlayback&&getSystemService(AudioManager::class.java).isMusicActive){pause("Waiting while other audio plays");return false}
             val request=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attributes).setWillPauseWhenDucked(false)
                 .setOnAudioFocusChangeListener({change->when(change){
                     AudioManager.AUDIOFOCUS_GAIN->{player?.setVolume(1f,1f);resumeTransient()}
                     AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK->player?.setVolume(.25f,.25f)
-                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT->pauseTransient()
+                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT->if(started)pauseTransient() else pause("Waiting for other audio")
                     AudioManager.AUDIOFOCUS_LOSS->pause("Paused for other audio")
                 }},handler).build()
-            if(getSystemService(AudioManager::class.java).requestAudioFocus(request)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED){pause("Waiting for other audio to finish");return}
+            if(getSystemService(AudioManager::class.java).requestAudioFocus(request)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED){pause("Waiting for other audio to finish");return false}
             focus=request
         }
+        return true
+    }
+    private fun play(file:File,id:Long,index:Int){
+        if(!acquireSpeechFocus())return
         try{
             val media=MediaPlayer();player=media
             media.setAudioAttributes(attributes);media.setWakeMode(this,PowerManager.PARTIAL_WAKE_LOCK);media.setDataSource(file.path)
@@ -332,6 +342,7 @@ class PocketSpeechService:Service(){
             }
             media.setOnCompletionListener{
                 if(player!==media||finished)return@setOnCompletionListener
+                SpeechUsage.playback(playbackMeter,stop=true)
                 Log.i("PocketSpeech","Completed audio $id/$index")
                 handler.removeCallbacks(checkpoint);handler.removeCallbacks(timeout);media.release();player=null;prepared=false;started=false
                 if(completeSpokenChunk(id,index)){PocketSpeech.save(true);file.delete()}
@@ -341,7 +352,7 @@ class PocketSpeechService:Service(){
         }catch(_:Exception){file.delete();pause("Playback interrupted · Tap Resume to retry")}
     }
     private fun startPlayer(media:MediaPlayer,id:Long,index:Int){
-        handler.removeCallbacks(timeout);media.start();started=true
+        handler.removeCallbacks(timeout);media.start();started=true;playbackMeter.start(SystemClock.elapsedRealtime())
         queue.current?.let{PocketSpeechCaptions.update(it.id,it.title,spokenChunk,queue.chunkIndex,renderedChunks.size,speakingProfile)}
         handler.postDelayed(timeout,(media.duration-media.currentPosition).toLong().coerceAtLeast(0)+15000)
         Log.i("PocketSpeech","Playing audio $id/$index from ${media.currentPosition} ms")
@@ -350,13 +361,14 @@ class PocketSpeechService:Service(){
     private fun pauseTransient(){
         if(!started||transientPaused)return
         player?.let{try{it.pause();queue.positionMs=it.currentPosition}catch(_:IllegalStateException){return}}
+        SpeechUsage.playback(playbackMeter,stop=true)
         transientPaused=true;handler.removeCallbacks(timeout);handler.removeCallbacks(checkpoint);PocketSpeech.save(true);updateControls(PlaybackState.STATE_PAUSED)
     }
     private fun resumeTransient(){
         if(!transientPaused)return
         val media=player?:return
         try{
-            media.start();transientPaused=false
+            media.start();transientPaused=false;playbackMeter.start(SystemClock.elapsedRealtime())
             handler.postDelayed(timeout,(media.duration-media.currentPosition).toLong().coerceAtLeast(0)+15000)
             updateControls(PlaybackState.STATE_PLAYING);handler.removeCallbacks(checkpoint);handler.post(checkpoint)
         }catch(_:IllegalStateException){pause("Playback interrupted · Tap Resume to retry")}
@@ -378,6 +390,7 @@ class PocketSpeechService:Service(){
     internal fun discard(){finished=true;releasePlayback();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}
     private fun finish(){if(PocketSpeech.displayedOwner!=null){PocketSpeech.displayedCompleted();return};finished=true;releasePlayback();queue.positionMs=0;PocketSpeech.save(true);PocketSpeech.directory.deleteRecursively();stopForeground(STOP_FOREGROUND_REMOVE);PocketSpeechCaptions.complete(speakingProfile);stopSelf()}
     private fun releasePlayback(){
+        SpeechUsage.playback(playbackMeter,stop=true)
         handler.removeCallbacksAndMessages(null);scope.cancel();player?.release();player=null;prepared=false;started=false;transientPaused=false;
         focus?.let{getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it)};focus=null
         session.isActive=false;session.release()
