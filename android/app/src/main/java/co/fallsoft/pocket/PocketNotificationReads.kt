@@ -23,6 +23,7 @@ object PocketNotificationReads {
         return n.optBoolean("_read")||NotificationReadPolicy.read(n.optLong("id"),Pocket.prefs.getLong(key(n.s("thread_id"),local),0),n.s("kind"),attention)
     }
     fun readVisible(threadId:String,notifications:List<JSONObject>,local:Boolean=Pocket.local,catchup:JSONObject?=null){
+        if(BlackoutVisibility.active)return
         catchup?.s("token")?.takeIf{it.isNotBlank()}?.let{acknowledgeCatchup(threadId,it,local)}
         val fetched=notifications.filter{it.s("thread_id")==threadId};val through=fetched.maxOfOrNull{it.optLong("id") }?:return
         if(through<=0)return

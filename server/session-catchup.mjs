@@ -47,7 +47,7 @@ export class SessionCatchup {
    for(const item of p.turn?.items||[])record(item);
    const status=p.turn?.status,turnId=p.turn?.id||p.turnId;
    if(status==='completed')this.put(threadId,{key:'turn:'+turnId,kind:'completed',text:'Work completed.',turnId});
-   else if(status==='failed'||status==='interrupted')this.put(threadId,{key:'turn:'+turnId,kind:status==='failed'?'failure':'blocked',text:clean(p.turn?.error?.message)|| (status==='failed'?'Work failed.':'Work stopped before completion.'),turnId});
+   else if((status==='failed'&&!this.recoverableFailure?.(threadId,turnId))||status==='interrupted')this.put(threadId,{key:'turn:'+turnId,kind:status==='failed'?'failure':'blocked',text:clean(p.turn?.error?.message)|| (status==='failed'?'Work failed.':'Work stopped before completion.'),turnId});
   }
   if(/requestUserInput|requestApproval/.test(method)){
    const requestId=String(event.id??p.requestId??'');
@@ -180,6 +180,7 @@ export class SessionCatchup {
    const seq=this.put(threadId,{key:(item.requestId?'request:':'assistant:')+(item.requestId||item.id),kind:item.kind,text:item.text,turnId:item.turnId,requestId:item.requestId||null,pending:item.pending||false});if(seq)imported++;
   }
   for(const [index,turn] of current.turns.entries()){const old=priorTurns.get(turn.id);if(!old&&index<lastKnownTurn)continue;if(old?.status===turn.status||turn.status==='inProgress')continue;
+   if(turn.status==='failed'&&this.recoverableFailure?.(threadId,turn.id))continue;
    if(['completed','failed','interrupted'].includes(turn.status))this.put(threadId,{key:'turn:'+turn.id,kind:turn.status==='failed'?'failure':turn.status==='interrupted'?'blocked':'completed',text:turn.error||(turn.status==='failed'?'Work failed.':turn.status==='interrupted'?'Work stopped before completion.':'Work completed.'),turnId:turn.id});
   }
   this.db.prepare('INSERT INTO session_catchup_state(thread_id,working,at) VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET working=excluded.working,at=excluded.at').run(threadId,current.working?1:0,this.clock());

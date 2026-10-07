@@ -67,6 +67,8 @@ val AppFont=FontFamily(androidx.compose.ui.text.font.Font(R.font.inter_regular,F
 val NextGreen=Color(0xff00a85d);val NextCerise=Color(0xffeb4d97)
 
 class MainActivity:ComponentActivity(){
+    private val blackout by lazy { ScreenBlackout(this) }
+    fun enterBlackout(){blackout.enter()}
     private var initialServer by mutableStateOf("");private var initialCode by mutableStateOf("")
     private val permissions=registerForActivityResult(ActivityResultContracts.RequestPermission()){}
     override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);enableEdgeToEdge(statusBarStyle=SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),navigationBarStyle=SystemBarStyle.dark(android.graphics.Color.TRANSPARENT));readIntent(intent)
@@ -101,9 +103,11 @@ class MainActivity:ComponentActivity(){
         }
     }
     override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
-    override fun onStop(){PocketVoice.foreground=false;if(!Pocket.local&&!PocketVoice.active)PocketLive.stop();super.onStop()}
+    override fun onStop(){blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!Pocket.local&&!PocketVoice.active)PocketLive.stop();super.onStop()}
     override fun onKeyDown(keyCode:Int,event:android.view.KeyEvent):Boolean=(!BackendNavigation.teamSelected()&&PocketVoice.key(event))||super.onKeyDown(keyCode,event)
     override fun onKeyUp(keyCode:Int,event:android.view.KeyEvent):Boolean=(!BackendNavigation.teamSelected()&&PocketVoice.key(event))||super.onKeyUp(keyCode,event)
+    override fun onPause(){blackout.exit(restoreInput=false);super.onPause()}
+    override fun onDestroy(){blackout.exit(restoreInput=false);super.onDestroy()}
     override fun onResume(){super.onResume();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail()}}
 }
 
@@ -400,6 +404,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(23.dp)){
         BackendSettingsControl()
         PocketUpdateControl()
+        OutlinedButton({c.nextCompActivity()?.enterBlackout()},modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)){BilingualLabel("Blackout · keep screen awake")}
+        WorkflowText("Tap the black screen to return. Voice keeps working; Home and Lock remain available.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
         TaskPermissionsControl()
         CoordinatorReportingControl()
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Italian immersion",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.enabled,{PocketImmersion.setEnabled(it)})}

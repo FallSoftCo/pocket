@@ -43,6 +43,7 @@ import androidx.lifecycle.repeatOnLifecycle
 @Composable fun VoiceScreen(){
     val c=LocalContext.current
     var draft by remember{mutableStateOf("")}
+    fun sendDraft(value:String=draft){draft=voiceDraftAfterSubmit(value,PocketVoice.sendText(value.replace('\n',' ').trim()))}
     var keyboardInput by remember{mutableStateOf(false)}
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
@@ -51,7 +52,7 @@ import androidx.lifecycle.repeatOnLifecycle
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     val coverage=remember(Pocket.local,Pocket.token){CoordinatorReadingCoverage()}
     LaunchedEffect(scroll,lifecycle,coverage){lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
-        snapshotFlow{scroll.layoutInfo.let{layout->layout.visibleItemsInfo.filter{item->item.key.toString().startsWith("assistant:")}.map{item->CoordinatorItemExposure(item.key.toString().substringAfter(":"),item.offset,item.size,layout.viewportStartOffset,layout.viewportEndOffset)}}}
+        snapshotFlow{if(BlackoutVisibility.active)emptyList()else scroll.layoutInfo.let{layout->layout.visibleItemsInfo.filter{item->item.key.toString().startsWith("assistant:")}.map{item->CoordinatorItemExposure(item.key.toString().substringAfter(":"),item.offset,item.size,layout.viewportStartOffset,layout.viewportEndOffset)}}}
             .collect{items->if(PocketVoice.foreground)items.forEach{item->if(coverage.expose(item.id,item.offset,item.size,item.start,item.end))PocketVoice.presented(item.id)}}
     }}
     ConversationBack{PocketVoice.stop();Pocket.closeTask()}
@@ -67,21 +68,29 @@ import androidx.lifecycle.repeatOnLifecycle
                 item(key="assistant:${turn.id}"){VoiceChatMessage("Codex",turn.second,false);PocketVoice.routes[turn.id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketVoice.stop();Pocket.open(route.threadId)},{PocketVoice.correctionOf=route;draft=route.correction+draft;keyboardInput=true})}}
             }
             if(PocketVoice.heard.isNotBlank()&&PocketVoice.messages.lastOrNull()?.first!=PocketVoice.heard)item{VoiceChatMessage("You",PocketVoice.heard,true)}
-            if(PocketVoice.problem.isNotBlank())item{ImmersionText("voice:problem",PocketVoice.problem,color=Coral);TextButton({PocketVoice.retry()}){BilingualLabel("Retry saved turn")}}
         }
         SpeechCaptionBanner()
         SpeechPlayer()
         VoiceVolumeControls(Modifier.fillMaxWidth().padding(horizontal=16.dp))
         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             val recording=PocketVoice.state in listOf("Listening","Starting microphone","Finishing recording")
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                SymbolIcon(Icons.Rounded.Mic,null,Modifier.size(24.dp),tint=if(recording)Coral else Mint)
+                BilingualLabel(PocketVoice.state,Modifier.weight(1f),centered=false,color=if(recording)Coral else Mint,fontSize=14.sp)
+                TextButton({c.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout",fontSize=12.sp)}
+            }
+            if(PocketVoice.problem.isNotBlank())Column(Modifier.fillMaxWidth()){
+                ImmersionText("voice:problem",PocketVoice.problem,color=Coral,fontSize=13.sp)
+                if(Pocket.prefs.getString("voicePendingId",null)!=null)TextButton({PocketVoice.retry()}){BilingualLabel("Check saved turn")}
+            }
             if(!keyboardInput)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 ChatActionButton(if(recording)"Stop & send" else "Talk",if(recording)Icons.Rounded.Stop else Icons.Rounded.Mic,Modifier.weight(1f),{PocketVoice.record()},recording)
                 ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
             }
             if(keyboardInput)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                 FilledTonalIconButton(onClick={keyboardInput=false;keyboard?.hide();PocketVoice.record()},modifier=Modifier.size(64.dp)){SymbolIcon(if(recording)Icons.Rounded.Stop else Icons.Rounded.Mic,PocketImmersion.label(if(recording)"Stop and send recording" else "Talk"),Modifier.size(32.dp))}
-                OutlinedTextField(value=draft,onValueChange={value->if(value.contains('\n')){PocketVoice.sendText(value.replace("\n","").trim());draft=""}else draft=value},placeholder={Text(PocketImmersion.label("Message coordinator"))},modifier=Modifier.weight(1f).focusRequester(inputFocus).onPreviewKeyEvent{event->if(event.key==Key.Enter||event.key==Key.NumPadEnter){if(event.type==KeyEventType.KeyDown){PocketVoice.sendText(draft);draft=""};true}else false},singleLine=true,keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Send),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSend={PocketVoice.sendText(draft);draft=""}))
-                IconButton({PocketVoice.sendText(draft);draft=""},enabled=draft.isNotBlank(),modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,PocketImmersion.label("Send message"))}
+                OutlinedTextField(value=draft,onValueChange={value->if(value.contains('\n'))sendDraft(value)else draft=value},placeholder={Text(PocketImmersion.label("Message coordinator"))},modifier=Modifier.weight(1f).focusRequester(inputFocus).onPreviewKeyEvent{event->if(event.key==Key.Enter||event.key==Key.NumPadEnter){if(event.type==KeyEventType.KeyDown)sendDraft();true}else false},singleLine=true,keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Send),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSend={sendDraft()}))
+                IconButton({sendDraft()},enabled=draft.isNotBlank(),modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,PocketImmersion.label("Send message"))}
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 ChatActionButton("Back",Icons.Rounded.ArrowBack,Modifier.weight(1f),{keyboard?.hide();PocketVoice.stop();Pocket.closeTask()})

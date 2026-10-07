@@ -14,6 +14,37 @@
   },
   "requests": [
     {
+      "id": "screen-on-blackout",
+      "requirement": "Explicit screen-on blackout using a black foreground overlay and per-window minimum brightness with native keep-screen-on. Tap or Back exits; lifecycle restores prior brightness, awake flag, system-bar behavior and accessibility. Preserve underlying chats, voice, notifications and pairing; Home/Lock remain available.",
+      "status": "verified-release-delivery",
+      "evidence": [
+        "../android/app/src/main/java/co/fallsoft/pocket/ScreenBlackout.kt",
+        "../android/app/src/test/java/co/fallsoft/pocket/BlackoutWindowSessionTest.kt"
+      ],
+      "entry": "Settings and the existing voice status row; active voice does not need to end to enter.",
+      "release": "0.5.0-alpha.37",
+      "unseen_work": "Visual presentation/read acknowledgements pause while content is hidden; actual speech acknowledgements remain independent."
+    },
+    {
+      "id": "coordinator-recording-visible-state",
+      "requirement": "One tap starts actual coordinator audio capture with visible state beside the mic; one tap stops and sends. Show actual start/capture errors instead of sound-only feedback; preserve pending-turn delivery identity.",
+      "status": "verified-release-delivery",
+      "evidence": [
+        "qualification/transient-recovery-alpha37.json"
+      ],
+      "release": "0.5.0-alpha.37"
+    },
+    {
+      "id": "bounded-transient-turn-recovery",
+      "requirement": "Automatically continue definitively failed capacity, transient runtime/network and compaction turns with persisted bounded backoff/jitter. Preserve existing context/models; audit intended permissions before permission-revoked recovery; never override actual revocation, replay original submissions or retry uncertain delivery. Cancel when user stops or supersedes work.",
+      "status": "verified-release-delivery",
+      "evidence": [
+        "qualification/transient-recovery-alpha37.json"
+      ],
+      "unattended_recovery": "Four quick retries then durable sparse waiting across hours, capped4h jitter. No transient attempt cutoff or phone review required. Runtime/usage checks only when due; unknown delivery, cancellation, actual permissions and task stop policies respected.",
+      "release": "0.5.0-alpha.37"
+    },
+    {
       "id": "coordinator-periodic-reports-checkins",
       "requirement": "Configurable periodic reports across ongoing work, with observed outcomes/progress/blockers and evidence-based stale-assignment check-ins. Integrate unseen-work catch-up, avoid repeated model polling or duplicate worker activation, and report actual scheduling status.",
       "status": "released-alpha36-update-offered-handset-install-unverified",
@@ -918,7 +949,7 @@
       "id": "live-connection-truth",
       "requirement": "Do not report disconnects while live delivery is working; distinguish failed background refresh from transport loss and debounce short reconnects",
       "status": "implemented-under-verification",
-      "evidence": "Alpha15 fixed stock Codex thread/list rollout scan timeout with native useStateDbOnly metadata index; preserves70/archive contract, active statuses and latest metadata. Native70 result21–39ms; authenticated liveHTTP336ms68visible(native2filtered). 146 backend tests pass, no active-session restart. See qualification/session-list-state-db-alpha15.json.",
+      "evidence": "Alpha15 fixed stock Codex thread/list rollout scan timeout with native useStateDbOnly metadata index; preserves70/archive contract, active statuses and latest metadata. Native70 result21\u201339ms; authenticated liveHTTP336ms68visible(native2filtered). 146 backend tests pass, no active-session restart. See qualification/session-list-state-db-alpha15.json.",
       "delivery_audit": {
         "date": "2026-10-06",
         "assessment": "implemented_with_acceptance_limits",
@@ -1511,7 +1542,7 @@
     },
     {
       "id": "tibo-dots-varied-brief-evaluation",
-      "requirement": "Prepare varied capability/workflow/evidence briefs for interacting with Tibo’s Dots rather than reducing NextComp to a sole concise remote coding pitch. Actually test how independent agents/ChatGPT interpret them; do not pretend actual Dots interaction occurred.",
+      "requirement": "Prepare varied capability/workflow/evidence briefs for interacting with Tibo\u2019s Dots rather than reducing NextComp to a sole concise remote coding pitch. Actually test how independent agents/ChatGPT interpret them; do not pretend actual Dots interaction occurred.",
       "status": "prepared-and-independently-evaluated-dots-access-unavailable",
       "evidence": [
         "docs/BRIEF-EVALUATION.md",
@@ -1638,7 +1669,7 @@
       "requirement": "Single-flow inline replacements automatically fade between target and source with reserved longer-form geometry and length-based timing. No parallel lines, subtitles or modal. Tap holds the phrase; speech holds its displayed snapshot.",
       "candidate": "990d448",
       "coordination": "OZZZ direction shared in authorized message35553; no Stack mode added to NextComp.",
-      "evidence": "Exact final signed APK qualified on native Android at normal and 2× text, reduced motion, stable paragraph/control bounds, long unequal variants, attached punctuation, hold/link/resume and captured speech recreation. See docs/qualification/inline-cycling-team-alpha24.json. Automatic cycles use cached plans without inference calls.",
+      "evidence": "Exact final signed APK qualified on native Android at normal and 2\u00d7 text, reduced motion, stable paragraph/control bounds, long unequal variants, attached punctuation, hold/link/resume and captured speech recreation. See docs/qualification/inline-cycling-team-alpha24.json. Automatic cycles use cached plans without inference calls.",
       "delivery_audit": {
         "date": "2026-10-06",
         "assessment": "implemented_with_acceptance_limits",
@@ -1738,7 +1769,7 @@
       "id": "immersion-change-localization",
       "status": "native-qualified-alpha28-phone-install-pending-accessibility",
       "requirement": "Language replacements must be noticeable and locatable. Report actual motion/intermediary and measured frame timing, not an invented human frame threshold. Preserve natural single-flow inline content and normal controls.",
-      "prototype": "One active phrase cue across the reading surface; actual native phrase geometry before/after; warm background ramp700ms, source hold800ms, one handoff at1500ms, target hold2200ms, fade500ms. Glyphs stay fully opaque. Phrase sequencing and late hydration staged; cancel without future semantic commit. These durations are hypotheses, not researched perceptibility thresholds. Completed cues enforce4200ms quiet; controls hold Italian120–180s. Native link-style resolution must not suppress lexical-range cues.",
+      "prototype": "One active phrase cue across the reading surface; actual native phrase geometry before/after; warm background ramp700ms, source hold800ms, one handoff at1500ms, target hold2200ms, fade500ms. Glyphs stay fully opaque. Phrase sequencing and late hydration staged; cancel without future semantic commit. These durations are hypotheses, not researched perceptibility thresholds. Completed cues enforce4200ms quiet; controls hold Italian120\u2013180s. Native link-style resolution must not suppress lexical-range cues.",
       "acceptance": "Timestamped complete transition with separately measured cue lead, semantic switch and lingering trace, normal/double text, one global cue, links/help and cancellation. Continuous human perceptibility is not established by extracted frames.",
       "capture_limit": "Rejected prototype:717 original captured frames across79.809s, median101ms/max428ms gap;2394 CFR export samples include duplicates and do not measure display refresh.",
       "evidence": "qualification/immersion-localization-alpha28.json; original source/handoff/linger and 2x frames, optimized pairing/handoff, native links/help/IME planned suppression. Mid-lease interception remains inconclusive. No human perceptibility or 60Hz claim.",
@@ -1758,7 +1789,7 @@
     {
       "id": "modeled-symbol-objects",
       "status": "integrated-published-alpha29-carried-through-phone48; actual installed APK verified; Fold pacing unqualified",
-      "requirement": "Replace the full extruded-outline symbol alphabet with original modeled 3D objects with meaningful volume, construction and depth; preserve intended silhouette, meanings, interaction, readable real display sizes and reduced motion. Coordinate asset integration with Pocket Dev session 01a0f2bc-ff5a-70c2-b682-10f0987dab80. Elevate the approved look into a coherent design language: recognizable at small scales and intended perspectives, constructed materials, theme and lighting studies. Replace 6fps playback with real rendered high-frame-rate motion on Pixel 9 Pro Fold, targeting 60fps synchronized to the 60–120Hz display; qualify actual device smoothness separately.",
+      "requirement": "Replace the full extruded-outline symbol alphabet with original modeled 3D objects with meaningful volume, construction and depth; preserve intended silhouette, meanings, interaction, readable real display sizes and reduced motion. Coordinate asset integration with Pocket Dev session 01a0f2bc-ff5a-70c2-b682-10f0987dab80. Elevate the approved look into a coherent design language: recognizable at small scales and intended perspectives, constructed materials, theme and lighting studies. Replace 6fps playback with real rendered high-frame-rate motion on Pixel 9 Pro Fold, targeting 60fps synchronized to the 60\u2013120Hz display; qualify actual device smoothness separately.",
       "scope": "37 static modeled symbols; 37 120-frame60fps paged swivels; Codex/Psychology and cubic N 160-frame60fps spins; 168 atlas pages and 206 resource files. Existing N construction retained.",
       "workstream": "nextcomp/modeled-symbols; branding/modeled; synchronized onto published alpha28 commit9da7474",
       "acceptance": "Native Indie build and depth/part receipts, OZZZ-only rendered masters, visual review at16/20/24/32/44px and in native UI, complete resource mapping, measured asset/decode budget, Android checks; deployment evidence reported separately.",

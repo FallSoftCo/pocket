@@ -80,7 +80,7 @@ object PocketTranscript {
                 val pendingIds=d.optJSONArray("pending")?.objects()?.map{it.s("id")}.orEmpty().toSet()
                 rows=rows.filter{it.s("kind")!="request"||it.optJSONObject("request")?.s("id") in pendingIds}
             }
-            if(PocketVoice.foreground&&!PocketVoice.active&&!Pocket.newTask&&!older&&bridgeCursor==null){
+            if(PocketVoice.foreground&&!BlackoutVisibility.active&&!PocketVoice.active&&!Pocket.newTask&&!older&&bridgeCursor==null){
                 PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=profileLocal,catchup=if(!checkedThisOpen)d.optJSONObject("catchup") else null)
                 checkedThisOpen=true
             }
@@ -116,7 +116,7 @@ object PocketTranscript {
             put(JSONObject(turn.toString()).put("id","$turnId/header").put("turnId",turnId).put("kind","turn").put("version",update.optLong("version")))
             val active=turn.s("status")=="inProgress"
             Pocket.detail?.optJSONObject("thread")?.put("status",JSONObject().put("type",if(active)"active" else "idle"))
-            if(!active)put(JSONObject().put("id","$turnId/end").put("turnId",turnId).put("kind","turnEnd").put("status",turn.s("status")).put("durationMs",turn.optLong("durationMs")).put("text",turn.optJSONObject("error")?.s("message")?:""))
+            if(!active)put(JSONObject().put("id","$turnId/end").put("turnId",turnId).put("kind","turnEnd").put("status",turn.s("status")).put("durationMs",turn.optLong("durationMs")).put("error",turn.optJSONObject("error")).put("text",turn.optJSONObject("error")?.s("message")?:""))
         }
         rows=next;rememberRecent();revision++
         if(missedUpdates&&!loading){missedUpdates=false;Pocket.scheduleRefresh()}

@@ -1,3 +1,7 @@
+export function displayTurnError(error){
+  if(!error)return undefined;
+  return {message:String(error.message||'').slice(0,16000),additionalDetails:typeof error.additionalDetails==='string'?error.additionalDetails.slice(0,16000):null,codexErrorInfo:typeof error.codexErrorInfo==='string'?error.codexErrorInfo:undefined};
+}
 const clip=(v,n=12000)=>String(v??'').slice(-n);
 const textContent=v=>typeof v==='string'?v:Array.isArray(v)?v.map(x=>typeof x==='string'?x:x.text||'').filter(Boolean).join('\n'):'';
 export function itemRow(item,turnId,version=0){
@@ -75,7 +79,7 @@ export class LiveTimeline {
     if(!threadId||!turnId)return null;
     const turn=this.turn(threadId,turnId);const version=++this.version;
     if(m.method==='turn/started'||m.method==='turn/completed'){
-      Object.assign(turn,{status:p.turn.status,startedAt:p.turn.startedAt,completedAt:p.turn.completedAt,durationMs:p.turn.durationMs,error:p.turn.error?{message:clip(p.turn.error.message,16000)}:undefined,version});
+      Object.assign(turn,{status:p.turn.status,startedAt:p.turn.startedAt,completedAt:p.turn.completedAt,durationMs:p.turn.durationMs,error:displayTurnError(p.turn.error),version});
       for(const item of p.turn?.items||[])this.store(turn,item,version);
       return {threadId,turnId,version,turn:{id:turnId,status:turn.status,startedAt:turn.startedAt,completedAt:turn.completedAt,durationMs:turn.durationMs,error:turn.error}};
     }
@@ -128,7 +132,7 @@ export function timelinePage(thread,pending=[],{before=null,limit=8,notification
     }
     for(const m of requests)if(!added.has(m.id))rows.push(requestRow(m));
     for(const n of notifications.filter(n=>n.attachments?.length&&turns.findLast(t=>t.startedAt&&t.startedAt*1000<=n.created_at)?.id===turn.id).sort((a,b)=>a.created_at-b.created_at))rows.push({id:`attachment/${n.id}`,turnId:turn.id,kind:'attachments',title:n.title,attachments:n.attachments,createdAt:n.created_at});
-    if(turn.status!=='inProgress'&&!turn._pocketHideEnd)rows.push({id:`${turn.id}/end`,turnId:turn.id,kind:'turnEnd',status:turn.status,durationMs:turn.durationMs,text:turn.error?.message||''});
+    if(turn.status!=='inProgress'&&!turn._pocketHideEnd)rows.push({id:`${turn.id}/end`,turnId:turn.id,kind:'turnEnd',status:turn.status,durationMs:turn.durationMs,text:turn.error?.message||'',error:displayTurnError(turn.error)});
   }
   return {rows,hasEarlier:start>0,before:selected[0]?.id||null};
 }

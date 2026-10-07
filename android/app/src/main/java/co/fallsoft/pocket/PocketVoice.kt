@@ -50,7 +50,7 @@ object PocketVoice {
     fun stop(){service?.leave()}
     fun record(){service?.toggleRecord()}
     fun playback(){service?.togglePlayback()}
-    fun sendText(text:String){service?.sendText(text)}
+    fun sendText(text:String):Boolean=service?.sendText(text)?:false.also{problem="Voice is not ready to send text. Your draft is kept."}
     fun retry(){service?.retry()}
     fun key(event:KeyEvent):Boolean{
         if(!active||event.keyCode !in listOf(KeyEvent.KEYCODE_VOLUME_DOWN,KeyEvent.KEYCODE_VOLUME_UP))return false
@@ -66,6 +66,7 @@ class PocketVoiceService:Service(){
     private val audio get()=getSystemService(AudioManager::class.java)
     private var recorder:AudioRecord?=null
     private var recording:Job?=null
+    private var recordingProblem:String?=null
     @Volatile private var stopRecording=false
     private var coordinatorReady=false
     private var historyBefore:Long?=null
@@ -184,28 +185,33 @@ class PocketVoiceService:Service(){
     fun toggleRecord(){
         if(!PocketVoice.active)return
         if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){PocketVoice.problem="Microphone access was revoked. Enable it in Android app settings.";beep(false);leave();return}
-        if(recorder!=null){stopRecording=true;state("Finishing recording");return}
-        if(starting||work?.isActive==true&&PocketVoice.state !in listOf("Speaking","Paused","Ready")){beep(false);return}
-        if(turnId!=null||PocketVoice.problem.isNotBlank()){retry();return}
-        work?.cancel();disconnectNative();speechGeneration++;nativeSpeaking=false;stopPlayer();PocketVoice.problem="";PocketVoice.heard="";PocketVoice.response="";wake()
+        when(voiceRecordIntent(recorder!=null,starting,work?.isActive==true,PocketVoice.state,turnId!=null)){
+            VoiceRecordIntent.STOP_AND_SEND->{stopRecording=true;state("Finishing recording");return}
+            VoiceRecordIntent.BUSY->{PocketVoice.problem="${PocketVoice.state}. Your current turn is still being processed; recording has not started.";beep(false);return}
+            VoiceRecordIntent.RECOVER_PENDING->{retry();return}
+            VoiceRecordIntent.START->Unit
+        }
+        work?.cancel();disconnectNative();speechGeneration++;nativeSpeaking=false;stopPlayer();recordingProblem=null;PocketVoice.problem="";PocketVoice.heard="";PocketVoice.response="";wake()
         if(!requestFocus()){state("Paused");PocketVoice.problem="Another app is using audio. Try again when it finishes.";beep(false);return}
         try{
             val size=AudioRecord.getMinBufferSize(16000,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT);require(size>0)
             val r=AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION,16000,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT,size.coerceAtLeast(8192));check(r.state==AudioRecord.STATE_INITIALIZED){"Microphone is unavailable."}
             stopRecording=false;recorder=r;beep();state("Starting microphone")
             recording=scope.launch{val bytes=ByteArrayOutputStream();try{
-                delay(140);r.startRecording();state("Listening")
+                delay(140);r.startRecording();check(r.recordingState==AudioRecord.RECORDSTATE_RECORDING){"Android could not start the microphone. Check microphone privacy and app permissions."};state("Listening")
                 withContext(Dispatchers.IO){val buf=ByteArray(4096);while(isActive&&!stopRecording&&bytes.size()<3840000){val n=r.read(buf,0,buf.size,AudioRecord.READ_NON_BLOCKING);if(n<0)throw IllegalStateException("Microphone stopped.");if(n>0)bytes.write(buf,0,n.coerceAtMost(3840000-bytes.size()))else delay(10)}}
-            }catch(e:CancellationException){/* Manual stop commits this recording. */}catch(e:Exception){PocketVoice.problem=e.message?:"Microphone stopped."}
+            }catch(e:CancellationException){/* Leaving mode or an audio interruption is handled below. */}catch(e:Exception){recordingProblem=e.message?:"Microphone stopped.";PocketVoice.problem=recordingProblem.orEmpty()}
             finally{try{r.stop()}catch(_:Exception){};r.release();recorder=null;abandonFocus()}
             if(!PocketVoice.active)return@launch
-            val pcm=bytes.toByteArray();if(!VoiceRecording.hasSpeech(pcm)||PocketVoice.problem.isNotBlank()){beep(false);state("Ready");nextUpdate();return@launch}
+            val pcm=bytes.toByteArray();voiceRecordingProblem(VoiceRecording.hasSpeech(pcm),recordingProblem)?.let{PocketVoice.problem=it;beep(false);state("Ready");nextUpdate();return@launch}
+            PocketVoice.problem=""
             val id=UUID.randomUUID().toString();withContext(NonCancellable+Dispatchers.IO){pendingFile.writeBytes(VoiceRecording.wav(pcm));Pocket.prefs.edit().putString("voicePendingId",id).putBoolean("voicePendingLocal",local).commit()}
             beep();deliver()
         }}catch(e:Exception){recorder?.release();recorder=null;abandonFocus();fail(e)}
     }
-    fun sendText(text:String){
-        if(text.isBlank()||recorder!=null||starting||work?.isActive==true||turnId!=null)return
+    fun sendText(text:String):Boolean{
+        if(text.isBlank())return false
+        voiceTextBlock(recorder!=null,starting,work?.isActive==true,turnId!=null)?.let{PocketVoice.problem=it;return false}
         stopPlayer();work=scope.launch{try{
             state("Sending")
             if(!coordinatorReady){api("/api/voice/start",JSONObject().put("fullPermissions",Pocket.fullPermissions).put("threadId",PocketVoice.targetThread));coordinatorReady=true}
@@ -218,6 +224,7 @@ class PocketVoiceService:Service(){
             Pocket.prefs.edit().putString("voicePendingId",id).putBoolean("voicePendingLocal",local).commit()
             PocketVoice.heard=text;PocketVoice.response="";deliver()
         }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}
+        return true
     }
     private fun deliver(){work=scope.launch{
         wake();val id=turnId?:return@launch
@@ -276,7 +283,7 @@ class PocketVoiceService:Service(){
     }
 
     private fun requestFocus():Boolean{
-        abandonFocus();focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()).setOnAudioFocusChangeListener{change->if(change<0){if(recorder!=null){PocketVoice.problem="Recording interrupted by another app. Please repeat your turn.";recording?.cancel()}else if(playing){player?.pause();playing=false;state("Paused")}}}.build()
+        abandonFocus();focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()).setOnAudioFocusChangeListener{change->if(change<0){if(recorder!=null){recordingProblem="Recording interrupted by another app. Please repeat your turn.";PocketVoice.problem=recordingProblem.orEmpty();recording?.cancel()}else if(playing){player?.pause();playing=false;state("Paused")}}}.build()
         return audio.requestAudioFocus(focus!!)==AudioManager.AUDIOFOCUS_REQUEST_GRANTED
     }
     private fun abandonFocus(){focus?.let{audio.abandonAudioFocusRequest(it)};focus=null}

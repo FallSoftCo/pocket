@@ -80,3 +80,14 @@ test('upgrading legacy task records preserves inherited permissions',async()=>{
  const starts=new SessionStarts(db,codex,()=>{});await starts.flush();
  assert.deepEqual(calls,[{cwd:dir,approvalPolicy:'on-request',developerInstructions:COMPUTER_USE_INSTRUCTIONS}]);db.close();
 });
+
+test('failed turn preserves bounded structured cause in live and fetched timeline without losing progress',()=>{
+ const error={message:'Fatal error: application network permission was revoked',codexErrorInfo:'other',additionalDetails:'diagnostic',privateField:'omit'};
+ const turn={id:'failed',status:'failed',items:[{id:'progress',type:'agentMessage',text:'Useful progress'}],error};
+ const live=new LiveTimeline();const event=live.ingest({method:'turn/completed',params:{threadId:'thread',turn}});
+ assert.equal(event.turn.error.message,error.message);assert.equal(event.turn.error.codexErrorInfo,'other');assert.equal(event.turn.error.privateField,undefined);
+ const page=timelinePage({id:'thread',turns:[turn]});
+ assert.equal(page.rows.find(r=>r.kind==='message').text,'Useful progress');assert.deepEqual(page.rows.at(-1).error,event.turn.error);
+ const capacity=live.ingest({method:'turn/completed',params:{threadId:'thread',turn:{...turn,id:'capacity',error:{message:'Selected model is at capacity.',codexErrorInfo:'serverOverloaded'}}}});
+ assert.equal(capacity.turn.error.codexErrorInfo,'serverOverloaded');
+});

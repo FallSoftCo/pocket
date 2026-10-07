@@ -61,7 +61,7 @@ import kotlinx.coroutines.flow.*
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     val coverage=remember(Pocket.local,Pocket.token){CoordinatorReadingCoverage()}
     LaunchedEffect(scroll,lifecycle,coverage){lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
-        snapshotFlow{scroll.layoutInfo.let{layout->layout.visibleItemsInfo.filter{item->item.key.toString().startsWith("coordinator-assistant:")}.map{item->CoordinatorItemExposure(item.key.toString().substringAfter(":"),item.offset,item.size,layout.viewportStartOffset,layout.viewportEndOffset)}}}.collect{items->if(PocketVoice.foreground)items.forEach{item->if(coverage.expose(item.id,item.offset,item.size,item.start,item.end))PocketCoordinator.presented(item.id)}}
+        snapshotFlow{if(BlackoutVisibility.active)emptyList()else scroll.layoutInfo.let{layout->layout.visibleItemsInfo.filter{item->item.key.toString().startsWith("coordinator-assistant:")}.map{item->CoordinatorItemExposure(item.key.toString().substringAfter(":"),item.offset,item.size,layout.viewportStartOffset,layout.viewportEndOffset)}}}.collect{items->if(PocketVoice.foreground)items.forEach{item->if(coverage.expose(item.id,item.offset,item.size,item.start,item.end))PocketCoordinator.presented(item.id)}}
     }}
     val dragged by scroll.interactionSource.collectIsDraggedAsState()
     var followLatest by remember{mutableStateOf(true)}

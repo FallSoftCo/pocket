@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-07",
+  "version": "0.5.0-alpha.37",
+  "diagnosis": {
+    "reported_capacity": "Not the cause of the two original failed turns; later submission continuation separately returned capacity.",
+    "original_errors": [
+      "Error running remote compact task: Fatal error: application network permission was revoked",
+      "Fatal error: application network permission was revoked"
+    ],
+    "runtime_evidence": "Daemon descriptor exhaustion at its 1024 soft limit immediately preceded policy-revoked failures. Live descriptor limit and parent inherited limit raised to65536 without a daemon restart. Causal mechanism not proven beyond temporal/runtime evidence.",
+    "permissions": "Both sessions audited dangerFullAccess/:danger-full-access/never through resume with no overrides; original different models retained.",
+    "persistence_limit": "Live daemon/parent limit increase does not establish persistence across a new launcher or reboot."
+  },
+  "recovery": {
+    "activated": true,
+    "backoff": "30s exponential quick phase; then30min/1h/2h/4h capped jitter; durable due times, no terminal transient cutoff",
+    "resume": "Existing thread only; reconciliation instruction, no original prompt replay or model/permission overrides",
+    "unknown_delivery": "Exact accepted-message identity check; otherwise pause for reconciliation, never resubmit",
+    "cancellation": "Interrupt/archive/new phone reply/new external turn cancel pending recovery; paired device can pause recovery",
+    "permission_gate": "Incomplete permission evidence waits quietly; explicit nonfull runtime profile blocks without restoring access. Native inherited audit and intended permission check required.",
+    "live_observation": "Both existing sessions are active and emitting new tool activity. Submission recovered after one capacity recurrence; no duplicate worker starts beyond each sequential definitively failed continuation. Neither original request replayed.",
+    "quick_attempts": 4,
+    "quiet": "No ordinary retry notices; confirmed transient failure identities excluded from catch-up failures. Actual blockers remain actionable.",
+    "offline_failure": "Reconnection examines only the newest failure inside an existing watch checkpoint; it does not resurrect baseline, seen, superseded or unwatched failed work.",
+    "queued_followups": "Only queued follow-ups held by this exact automatic recovery are released on successful completion. Transactional durable ownership survives restart; user-held, accepted, cancelled and unknown-delivery rows remain protected."
+  },
+  "validation": {
+    "node_tests": 315,
+    "recovery_cases": 18,
+    "android_debug_tests_agent": 228,
+    "native_recording": "Final maintained-signer optimized APK: one tap starts actual AudioRecord/Listening with Stop & send visible; one tap stops to Ready with visible silence error and no crash. Repeated start and rejected busy text draft retained. Nonzero input/transcription/provider success not newly qualified; emulator audio injection segfaulted.",
+    "signed_release": {
+      "versionCode": 55,
+      "sha256": "797c166a9065ffdfbcd711e7b15db0dcac9abc0d2d575dbbde55962167daef1b",
+      "bytes": 51857051,
+      "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "native_smoke": "passed"
+    },
+    "phone": "Compatible-signer in-place background install succeeded; Android package verified versionCode55/version0.5.0-alpha.37. App data was not cleared; physical capture/UI was not exercised under shared control.",
+    "prolonged_outage": "Virtual-clock24h:3h runtime outage,8h capacity outage, hourly restarts, eventual recovery, sparse reads and zero ordinary notifications; not a24h real outage test",
+    "blackout": "Final native: Settings and active voice entry; fully black surface and minimum window brightness; stayed awake22s beyond15s timeout with charging override disabled. Tap/Back/Home restores prior window settings. Voice service stayed alive; Volume Down stopped capture while black. Explicit return restores keyboard focus/draft; lifecycle exit does not reshow keyboard.",
+    "restart_live": "Backend restarted after gentle implementation; both previously accepted continuation IDs still active, attempts1/2 retained, no new worker launched.",
+    "android_release_tests": 228,
+    "android_test_suites": 47,
+    "integrated_android": "Both final debug/release228 tests47 suites pass; both lints and both APK builds pass.",
+    "recovery_queue_cases": 2,
+    "hidden_updates": "Final native fixture: fresh history released under blackout produced zero presentation acknowledgements; after tap return and visible text exactly one acknowledgement. Pairing, draft and IME preserved.",
+    "gallery_ids": [
+      "nextcomp-turn-recovery-alpha37-mic-listening",
+      "nextcomp-turn-recovery-alpha37-mic-silence",
+      "nextcomp-turn-recovery-alpha37-busy-draft",
+      "nextcomp-turn-recovery-alpha37-runtime-error",
+      "nextcomp-turn-recovery-alpha37-continuation",
+      "nextcomp-turn-recovery-alpha37-blackout-settings",
+      "nextcomp-turn-recovery-alpha37-voice-blackout",
+      "nextcomp-turn-recovery-alpha37-production-smoke",
+      "nextcomp-turn-recovery-alpha37-hidden-read-guard"
+    ],
+    "gallery_cards": 1962,
+    "gallery_check": "Desktop1440/mobile390, mediaHTTP, reduced motion and reload passed; synthetic captures only.",
+    "public_source_scan": "774 tracked publication files passed; private concurrent ledger entries and local state excluded.",
+    "npm_audit": "zero vulnerabilities"
+  }
+}

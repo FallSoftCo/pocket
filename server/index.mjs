@@ -1,3 +1,5 @@
+import {RecoveryQueue} from './recovery-queue.mjs';
+import {TurnRecovery,permissionRecoveryAudit} from './turn-recovery.mjs';
 import {SessionDiscovery,INTERACTIVE_SOURCES} from './session-discovery.mjs';
 import {SessionCatchup} from './session-catchup.mjs';
 import {CoordinatorReports} from './coordinator-reports.mjs';
@@ -137,6 +139,44 @@ function rememberSpeechContext(threadId,turn){
   const prompt=turnPrompt(turn);if(!threadId||!prompt)return;
   db.prepare('INSERT INTO speech_contexts(thread_id,turn_id,context) VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET turn_id=excluded.turn_id,context=excluded.context').run(threadId,turn.id||null,promptContext(prompt));
 }
+const recoveryQueue=new RecoveryQueue(db);
+const turnRecovery=new TurnRecovery({db,
+  read:async threadId=>{await codex.connect();const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});return history.read(thread,{summary:true});},
+  health:async(threadId,kind,thread)=>{
+    if(!codex.ready||syncing.has(threadId))return false;
+    if(thread?.goal&&['paused','budgetLimited','usageLimited','tokenLimited'].includes(thread.goal.status))return {ok:false,blocked:true,reason:'The task’s usage-stop policy is paused. Recovery will not override it.'};
+    if([...pending.values()].some(m=>m.params?.threadId===threadId))return {ok:false,blocked:true,reason:'This task has an unresolved request that needs your answer before continuing.'};
+    if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state='unknown'").get(threadId))return {ok:false,blocked:true,reason:'Earlier message delivery is uncertain. Reconcile that message before continuing; it has not been sent again.'};
+    if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('sending','queued')").get(threadId))return false;
+    await rateLimits.refresh();if(rateLimits.failed)return false;
+    const quota=rateLimits.buckets.codex||rateLimits.defaultBucket;
+    const stops=[quota?.primary,quota?.secondary].filter(window=>window&&window.usedPercent>=100);
+    if(stops.length)return {ok:false,nextAt:Math.max(...stops.map(window=>window.resetsAt>0?window.resetsAt*1000:Date.now()+4*3600000))};
+    if(db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(threadId)?.archived)return false;
+    if(kind==='permission'){
+      const intended=db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(threadId)||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(threadId);
+      if(intended?.permissions&&intended.permissions!=='full')return {ok:false,blocked:true,reason:'The task’s intended permissions have changed. Recovery will not restore full access.'};
+      // Audit inherited permissions, never reapply a saved/full profile over a revocation.
+      const inherited=await codex.call('thread/resume',{threadId,excludeTurns:true});
+      const audit=permissionRecoveryAudit(inherited);
+      if(audit==='waiting')return false; // An incomplete audit is not proof of revocation.
+      if(audit==='blocked')return {ok:false,blocked:true,reason:'The runtime no longer grants the task’s intended full permissions. Recovery will not override that change.'};
+      const probe=await fetch('https://chatgpt.com/backend-api/codex/responses',{method:'HEAD',signal:AbortSignal.timeout(8000)});
+      if(probe.status>=500)return false;
+    }
+    return true;
+  },
+  stop:async(threadId,turnId)=>codex.call('turn/interrupt',{threadId,turnId}),
+  start:async(threadId,requestId,text)=>{
+    // Inherit the runtime's exact model and permission settings. No original task replay.
+    await codex.call('thread/resume',{threadId,excludeTurns:true});attached.add(threadId);
+    const recovery=turnRecovery.get(threadId);if(recovery?.state!=='dispatching'||recovery.request_id!==requestId)throw Error('Recovery was cancelled before delivery.');
+    return codex.call('turn/start',{threadId,clientUserMessageId:requestId,input:[{type:'text',text}]});
+  },
+  publish:(threadId,recovery)=>{if(recovery.state==='completed'&&recoveryQueue.release(threadId,recovery.source_turn)){emit('reply',{threadId,state:'queued'});void flush();}if(recovery.state==='cancelled')recoveryQueue.forget(threadId,recovery.source_turn);emit('turnRecovery',{threadId,recovery});if(recovery.message){sessionCatchup.put(threadId,{key:'recovery:'+recovery.source_turn,kind:'blocked',text:recovery.message,turnId:recovery.current_turn});notify(threadId,'Task recovery',recovery.message,'update');}}
+});
+sessionCatchup.recoverableFailure=(threadId,turnId)=>turnRecovery.recoverableFailure(threadId,turnId);
+setInterval(()=>void turnRecovery.tick().catch(error=>console.error('Turn recovery',error.message)),10000).unref();
 const completions=new CompletionRecovery(db,(threadId,title,body,kind,turnId,prompt)=>notify(threadId,title,body,kind,[],null,null,turnId,prompt?promptContext(prompt):null));
 function notify(threadId,title,body,kind='update',attachments=[],requestId=null,speech=null,turnId=null,context=null,onPersist=null) {
   title=notificationTitles.title(threadId,title);
@@ -165,12 +205,23 @@ function resolveAttention(where,...args){
 resolveAttention('request_id IS NOT NULL');
 const questionActions=new QuestionActions({pending,codex,db,resolve:resolveAttention});
 const historyRecovery=new Map();
+function observeCompletionSnapshot(thread,{latest=false}={}){
+  const turn=thread.turns?.at(-1);
+  if(latest&&turn?.id&&db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(thread.id)){
+    const checkpoint=db.prepare('SELECT * FROM completion_watches WHERE thread_id=?').get(thread.id);
+    const recovered=turnRecovery.observeMissed(thread,checkpoint,!!completions.seen(thread.id,turn.id));
+    const recovery=turnRecovery.get(thread.id);
+    if(recovered||(recovery?.state==='waiting'&&recovery.current_turn===turn.id&&turn.status==='failed'))recoveryQueue.hold(thread.id,recovery.source_turn);
+    if(recovered)completions.mark(thread.id,turn.id);
+  }
+  completions.observe(thread);
+}
 function recoverHistory(metadata){
   if(historyRecovery.has(metadata.id))return historyRecovery.get(metadata.id);
   const work=(async()=>{
     const positions=[],seen=new Set();let cursor=null;
     while(true){
-      const page=await history.read(metadata,{before:cursor,summary:true});positions.push(cursor);
+      const page=await history.read(metadata,{before:cursor,summary:true});if(cursor===null)observeCompletionSnapshot(page,{latest:true});positions.push(cursor);
       if(!completions.needsEarlier(page)||!page._pocketPage?.before)break;
       cursor=page._pocketPage.before;if(seen.has(cursor))throw Error('Codex returned a repeated history cursor.');seen.add(cursor);
     }
@@ -183,9 +234,9 @@ async function attach(threadId,{before=null,recent=false}={}){
   requireId(threadId); await codex.connect();
   let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);
   if(!attached.has(threadId)){
-    const started=db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(threadId)||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(threadId);
-    metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true,...(started?.permissions?permissionOptions(started.permissions):codex.executionOptions())})).thread;attached.add(threadId);
-    if(metadata.historyMode!=='paginated'&&!recent){initial=await history.read(metadata);completions.observe(initial);}
+    // Opening history inherits the runtime profile; it must not undo an external permission change.
+    metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true})).thread;attached.add(threadId);
+    if(metadata.historyMode!=='paginated'&&!recent){initial=await history.read(metadata);observeCompletionSnapshot(initial,{latest:true});}
     else if(metadata.historyMode==='paginated'&&db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId)){
       if(recent)void recoverHistory(metadata).catch(e=>console.error('History recovery',e.message));
       else await recoverHistory(metadata);
@@ -268,11 +319,14 @@ codex.on('event',m=>{
     const question=/requestUserInput/.test(m.method);
     if(!duplicate)notify(threadId,question?'Codex has a question':'Codex needs your attention',p.questions?.map(q=>q.question).join('\n')||p.reason||p.command||p.message||'Open the task to review the request.',question?'question':'approval',[],String(m.id),null,p.turnId);
   }
+  const recovering=m.method==='turn/completed'?turnRecovery.observe(threadId,p.turn):false;
   sessionCatchup.observe(m);
   if(m.method==='item/completed' && p.item?.type==='agentMessage')emit('message',{threadId,item:p.item});
+  if(m.method==='turn/started'){const recovery=turnRecovery.get(threadId);if(recovery&&['waiting','running'].includes(recovery.state)&&recovery.current_turn!==p.turn?.id)turnRecovery.cancel(threadId);}
   if(m.method==='turn/completed'){
-    completions.complete(threadId,p.turn);
+    if(recovering)completions.mark(threadId,p.turn.id);else completions.complete(threadId,p.turn);
     if(['interrupted','failed'].includes(p.turn?.status)){
+      if(recovering)recoveryQueue.hold(threadId,turnRecovery.get(threadId).source_turn);
       db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND mode='queue' AND state='queued'").run(now(),threadId);
       emit('reply',{threadId,state:'held'});
     }else if(p.turn?.status==='completed')void flush();
@@ -404,6 +458,15 @@ app.get('/api/threads',route(async(req,res)=>{
     return {id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed};
   }),refreshPending:!!r.refreshPending});
 }));
+app.post('/api/threads/:id/recovery',route(async(req,res)=>{
+ const threadId=requireId(req.params.id);
+ if(req.body.cancel){turnRecovery.cancel(threadId);return res.json({recovery:turnRecovery.get(threadId)});}
+ if(req.device.id!=='owner')return res.status(403).json({error:'Only the local owner can schedule recovery of an older failed turn.'});
+ const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});
+ const snapshot=await history.read(thread,{summary:true});const latest=snapshot.turns?.at(-1);
+ if(!latest||latest.id!==req.body.turnId)return res.status(409).json({error:'The failed turn is no longer the latest turn.'});
+ const scheduled=turnRecovery.observe(threadId,latest);res.json({scheduled,recovery:turnRecovery.get(threadId)});
+}));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null,recent:req.query.view==='timeline'});
   const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});
@@ -413,7 +476,7 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
   conversationNotes.remember(t);
-  const response={notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
+  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
   if(!req.query.before)response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
   res.json(response);
 }));
@@ -444,11 +507,13 @@ app.post('/api/threads/:id/unarchive',route(async(req,res)=>{
 app.post('/api/threads/:id/archive',route(async(req,res)=>{
   const t=await attach(req.params.id);
   if(isActive(t)||t.turns?.some(x=>x.status==='inProgress'))return res.status(409).json({error:'Stop the running turn before archiving.'});
+  turnRecovery.cancel(t.id);
   await codex.call('thread/archive',{threadId:t.id});sessionDiscovery.markArchived(t.id,true);
   db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND state='queued'").run(now(),t.id);
   db.prepare('UPDATE watches SET enabled=0 WHERE thread_id=?').run(t.id);attached.delete(t.id);res.json({ok:true});
 }));
 app.post('/api/threads/:id/interrupt',route(async(req,res)=>{
+  turnRecovery.cancel(requireId(req.params.id));
   const t=await attach(req.params.id);const active=t.turns?.findLast(x=>x.status==='inProgress');
   if(!active)return res.status(409).json({error:'This task has already stopped.'});
   // Hold the queue before stopping so an idle snapshot cannot restart the task.
@@ -469,6 +534,7 @@ app.post('/api/threads/:id/reply',route(async(req,res)=>{
   if(!['auto','steer','queue'].includes(mode))return res.status(400).json({error:'Choose steer or queue.'});
   const existing=db.prepare('SELECT * FROM outgoing WHERE id=?').get(id);
   if(existing){if(existing.thread_id!==threadId||existing.text!==text||existing.mode!==mode)return res.status(409).json({error:'Reply id already belongs to a different message.'});return res.json({id,state:existing.state});}
+  turnRecovery.cancel(threadId);
   db.prepare('INSERT INTO outgoing(id,thread_id,text,mode,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run(id,threadId,text,mode,'queued',now(),now());
   const wasFollowing=!!db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId);
   // A phone reply explicitly opts this task into a completion notification.
