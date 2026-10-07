@@ -1,0 +1,56 @@
+{
+  "version": "0.5.0-alpha.35",
+  "versionCode": 53,
+  "source": "f3d25e43583d463bda100a26a3e6ca99eb5e061c",
+  "scope": "Device-local audio activity tracking and pre-generation automatic playback gates. No billing estimator.",
+  "tests": {
+    "backend": 223,
+    "androidPerVariant": 195,
+    "suitesPerVariant": 40,
+    "bothLintAndSignedBuilds": "pass",
+    "publicSourceScanFiles": 743,
+    "auditVulnerabilities": 0,
+    "buildSeconds": 347
+  },
+  "compatibleApk": {
+    "sha256": "1ad8e5ac68fab83b848f5a562fc6732a4c05cc002b867f5aa4ef4cf9e5868336",
+    "size": 61079368,
+    "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+    "versionCode": 53,
+    "webpPayloads": "168 byte exact against alpha34"
+  },
+  "nativeVerification": {
+    "debugExact": "Fresh unread synthetic socket notification, media volume0: saved text and Waiting for media volume, zero native starts. Synthetic native start503 with audible volume: attempts1/failed1/generated0/played0; Settings updates; Clear tested for both queues.",
+    "publicExact": "Clean install/pair/Settings render; Speak messages Finished preview at media volume0 saves text and makes zero new native starts. Public socket-to-speech path separately unqualified.",
+    "rootVisualInspection": "Original-resolution debug failed counters and optimized public Settings inspected; readable complete rows.",
+    "accountCalls": 0,
+    "gallery": [
+      "nextcomp-speech-usage-muted",
+      "nextcomp-speech-usage-tracking",
+      "nextcomp-speech-usage-failure"
+    ],
+    "galleryChecks": "1907 cards desktop/mobile/reduced-motion/reload pass; public screenshot publication follow-up running"
+  },
+  "limitations": [
+    "No historical data recovery or attributable provider billing/plan-percentage conversion.",
+    "Generated duration counts completed received audio; cancelled/failed partial audio is not quantifiable.",
+    "Playback-running time is not proof of audibility; replay can exceed generated duration.",
+    "Voice-mode connection time includes idle time and does not measure actual generated speech.",
+    "No new real provider inference; native positive audio duration extraction/playback not qualified in this workstream.",
+    "Phone SSH banner timeout; physical installation and measurement unverified."
+  ],
+  "release": {
+    "status": "verified candidate awaiting release announcement",
+    "sourceCi": 37566312875,
+    "sourceCiResult": "success",
+    "privatePreparedVersionCode": 53,
+    "maintainedSigningVariants": 2
+  },
+  "publicApk": {
+    "sha256": "7ccf51b4fd06f94c1296a96f9695528f47be9255d80c52ef592965c472557317",
+    "size": 51807899,
+    "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+    "versionCode": 53,
+    "webpPayloads": "168 byte exact against alpha34"
+  }
+}
