@@ -83,7 +83,10 @@
       "passed": true,
       "ordinaryControlsAndCoordinatorHistoryCycle": true,
       "appCyclingOffShowsStaticTarget": true,
-      "singleFlowNoModal": true
+      "singleFlowNoModal": true,
+      "directlySampledSource": "99201025be9429cbd43588e700562b29e769e28d",
+      "finalRoutesResampled": false,
+      "scope": "Earlier candidate observations; unchanged screen call sites share the final scheduler qualified separately on body and Work."
     },
     "titleInteraction": {
       "passed": true,
@@ -105,7 +108,9 @@
       "appFingerHold": "15 seconds, prior d425 environment unchanged in final; body pixel region identical at 4 and12seconds",
       "passiveKeyboard": "draft stays source and unsent; ordinary content continues cycling while IME is open",
       "shortResumeDeadline": "not independently timing-qualified",
-      "gboardTypingQuietPause": "not qualified; Gboard touch events are outside the Activity dispatch"
+      "gboardTypingQuietPause": "not qualified; Gboard touch events are outside the Activity dispatch",
+      "keyboardSampleSource": "99201025be9429cbd43588e700562b29e769e28d",
+      "fingerHoldSampleSource": "d4252076c59ff83bb61729487b63eb04f46e2af2"
     },
     "background": {
       "passed": true,
