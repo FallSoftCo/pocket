@@ -22,7 +22,8 @@ object PocketNotificationReads {
         if(NotificationReadPolicy.preserve(n.s("kind"),attention))return false
         return n.optBoolean("_read")||NotificationReadPolicy.read(n.optLong("id"),Pocket.prefs.getLong(key(n.s("thread_id"),local),0),n.s("kind"),attention)
     }
-    fun readVisible(threadId:String,notifications:List<JSONObject>,local:Boolean=Pocket.local){
+    fun readVisible(threadId:String,notifications:List<JSONObject>,local:Boolean=Pocket.local,catchup:JSONObject?=null){
+        catchup?.s("token")?.takeIf{it.isNotBlank()}?.let{acknowledgeCatchup(threadId,it,local)}
         val fetched=notifications.filter{it.s("thread_id")==threadId};val through=fetched.maxOfOrNull{it.optLong("id") }?:return
         if(through<=0)return
         val readKey=key(threadId,local);if(through<=Pocket.prefs.getLong(readKey,0))return
@@ -42,4 +43,17 @@ object PocketNotificationReads {
             }catch(_:Exception){/* Keep existing notifications on a failed acknowledgement. */}
         }
     }
+    // Only the first successful foreground check after an explicit open supplies
+    // this token. Subsequent live refreshes do not imply the user read new work.
+    private fun acknowledgeCatchup(threadId:String,capture:String,local:Boolean){
+        val token=Pocket.savedToken(local);val base=Pocket.savedBase(local)
+        Pocket.scope.launch {
+            try{withContext(Dispatchers.IO){
+                val request=Request.Builder().url(base.trimEnd('/')+"/api/threads/$threadId/catchup/read").header("Authorization","Bearer $token")
+                    .post(JSONObject().put("token",capture).toString().toRequestBody("application/json".toMediaType())).build()
+                Pocket.http.newCall(request).execute().use{r->if(!r.isSuccessful)throw IllegalStateException("Check was not acknowledged")}
+            }}catch(_:Exception){/* Unacknowledged progress stays unseen. */}
+        }
+    }
+
 }

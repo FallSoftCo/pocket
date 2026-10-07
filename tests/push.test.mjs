@@ -32,3 +32,11 @@ test('FCM queues persist, retry transient errors, invalidate tokens, and honor d
  assert.equal(db.prepare('SELECT state FROM push_deliveries WHERE notification_id=?').get(next).state,'failed');
  assert.equal(db.prepare('SELECT count(*) AS count FROM push_tokens').get().count,0);
 });
+
+
+test('scheduled report envelope cannot be mistaken for ordinary automatic speech by older clients',()=>{
+ const data=pushData({id:42,thread_id:null,title:'Work report',body:'Useful outcome '.repeat(600),spoken_text:'Do not automatically speak this report',kind:'coordinator_report',created_at:123456});
+ assert.equal(data.id,undefined);assert.equal(data.report_id,'42');assert.equal(data.coordinator_report,'1');assert.equal(data.kind,'coordinator_report');
+ assert.equal(data.spoken_text,undefined);assert.equal(data.spoken_summary,undefined);assert.equal(data.speech_pending,undefined);
+ assert.equal(data.created_at,'123456');assert.ok(Buffer.byteLength(JSON.stringify(data))<4096);
+});

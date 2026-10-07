@@ -1,5 +1,7 @@
 package co.fallsoft.pocket
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.border
@@ -56,6 +58,11 @@ import kotlinx.coroutines.flow.*
     val keyboard=LocalSoftwareKeyboardController.current
     val focus=remember{FocusRequester()}
     val scroll=rememberLazyListState()
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val coverage=remember(Pocket.local,Pocket.token){CoordinatorReadingCoverage()}
+    LaunchedEffect(scroll,lifecycle,coverage){lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
+        snapshotFlow{scroll.layoutInfo.let{layout->layout.visibleItemsInfo.filter{item->item.key.toString().startsWith("coordinator-assistant:")}.map{item->CoordinatorItemExposure(item.key.toString().substringAfter(":"),item.offset,item.size,layout.viewportStartOffset,layout.viewportEndOffset)}}}.collect{items->if(PocketVoice.foreground)items.forEach{item->if(coverage.expose(item.id,item.offset,item.size,item.start,item.end))PocketCoordinator.presented(item.id)}}
+    }}
     val dragged by scroll.interactionSource.collectIsDraggedAsState()
     var followLatest by remember{mutableStateOf(true)}
     val typing=PocketCoordinator.keyboardRequested
@@ -86,7 +93,16 @@ import kotlinx.coroutines.flow.*
             if(PocketCoordinator.historyEarlier)item{TextButton({followLatest=false;PocketCoordinator.olderHistory()},enabled=!PocketCoordinator.historyLoading){BilingualLabel("Load earlier messages")}}
             if(PocketCoordinator.historyLoading)item{BilingualLabel("Loading history…",color=Muted)}
             if(PocketCoordinator.historyProblem.isNotBlank())item{ImmersionText("coordinator:history-problem",PocketCoordinator.historyProblem,color=Coral);TextButton({PocketCoordinator.loadHistory()}){BilingualLabel("Retry history")}}
-            itemsIndexed(PocketCoordinator.messages,key={index,_->"coordinator-turn-$index"}){_,turn->Column{VoiceChatMessage("You",turn.first,true);Spacer(Modifier.height(12.dp));VoiceChatMessage("Codex",turn.second,false)}}
+            PocketCoordinator.messages.forEachIndexed{index,turn->
+                val id=turn.id
+                item(key="coordinator-user:$id"){VoiceChatMessage("You",turn.first,true)}
+                item(key="coordinator-assistant:$id"){
+                    Column{
+                        VoiceChatMessage("Codex",turn.second,false)
+                        PocketCoordinator.routes[id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketCoordinator.close();Pocket.open(route.threadId)},{PocketCoordinator.correctionOf=route;updateDraft(route.correction+draft);PocketCoordinator.keyboard(true)})}
+                    }
+                }
+            }
             if(PocketCoordinator.pendingText.isNotBlank()&&!PocketCoordinator.pendingInHistory)item{VoiceChatMessage("You",PocketCoordinator.pendingText,true)}
             if(PocketCoordinator.problem.isNotBlank())item{ImmersionText("coordinator:problem",PocketCoordinator.problem,color=Coral);TextButton({PocketCoordinator.retry()}){BilingualLabel("Retry saved turn")}}
             item(key="coordinator-end"){Spacer(Modifier.height(1.dp))}
@@ -119,12 +135,13 @@ import kotlinx.coroutines.flow.*
     val owner="speech-coordinator:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}"
     DisposableEffect(owner){onDispose{if(PocketSpeech.displayedOwner==owner)PocketSpeech.stopDisplayed(owner)}}
     val queued=PocketSpeech.queue.current
-    val speechThread=queued?.let{PocketNotificationTitles.threadForId(it.id)}
+    val speechThread=queued?.threadId
     val caption=coordinatorLiveSpeechCaption(owner,PocketSpeech.displayedOwner,queued?.id,PocketSpeech.paused,PocketSpeechCaptions.state)
     val readingHere=PocketSpeech.displayedOwner==owner
     val lastReply=PocketCoordinator.messages.lastOrNull()?.second.orEmpty()
     if(PocketSpeech.count>0||lastReply.isNotBlank())Column(Modifier.fillMaxWidth()){
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.End){
+            if(PocketSpeech.count>0)Box(Modifier.weight(1f)){SpeechSourceLabel()}
             if(PocketSpeech.displayedOwner==null&&PocketSpeech.count>0){
                 speechThread?.takeIf{it!="coordinator"}?.let{thread->
                     IconButton({PocketCoordinator.close();Pocket.open(thread)}){SymbolIcon(Icons.Rounded.OpenInNew,PocketImmersion.label("Open source conversation"),Modifier.size(28.dp))}

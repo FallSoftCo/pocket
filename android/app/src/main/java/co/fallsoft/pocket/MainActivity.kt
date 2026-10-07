@@ -85,6 +85,13 @@ class MainActivity:ComponentActivity(){
         if(i.getBooleanExtra("appUpdate",false)){i.removeExtra("appUpdate");if(!PocketVoice.active){Pocket.closeTask();Pocket.newTask=false;Pocket.tab=1};PocketUpdates.installOrCheck(this)}
         initialServer=i.getStringExtra("server")?:initialServer;initialCode=i.getStringExtra("code")?:initialCode
         i.data?.takeIf{it.scheme=="pocket"&&it.host=="pair"}?.let{initialServer=it.getQueryParameter("server")?:initialServer;initialCode=it.getQueryParameter("code")?:initialCode;Pocket.pairingMode=true}
+        if(i.getBooleanExtra("coordinatorReport",false)){
+            val origin=i.getBooleanExtra("local",Pocket.local)
+            if(origin!=Pocket.local&&PocketVoice.active&&PocketVoice.state in setOf("Listening","Starting microphone","Finishing recording")){Pocket.error="Finish this recording before opening the report";return}
+            if(origin!=Pocket.local)Pocket.activate(origin)
+            if(Pocket.token.isNotBlank()){if(PocketVoice.active)PocketVoice.service?.loadHistory()else PocketCoordinator.open(false);getSystemService(android.app.NotificationManager::class.java).cancel(i.getIntExtra("reportNotificationId",0))}
+            i.removeExtra("coordinatorReport");return
+        }
         if(i.hasExtra("local"))Pocket.activate(i.getBooleanExtra("local",false))
         if(initialServer.isNotBlank()&&initialCode.isNotBlank())Pocket.pairingMode=true
         i.getStringExtra("thread")?.let{if(Pocket.token.isNotBlank())Pocket.open(it)}
@@ -150,8 +157,7 @@ class MainActivity:ComponentActivity(){
             AnimatedContent(targetState=Pocket.tab,modifier=Modifier.weight(1f).fillMaxWidth(),label="tab",transitionSpec={
                 (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
             }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it},workListState);else->SettingsScreen()}}
-            SpeechCaptionBanner()
-            SpeechPlayer()
+            ConversationSpeechDock()
             PocketDock(onFind={Pocket.tab=0;workToolsOpen=true},onTab={workToolsOpen=false})
         }
     }
@@ -186,11 +192,21 @@ class MainActivity:ComponentActivity(){
     if(PocketSpeech.count==0)return
     Surface(color=containerColor,modifier=Modifier.fillMaxWidth()){
         Row(Modifier.padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-            Column(Modifier.weight(1f)){
-                WorkflowText(if(PocketSpeech.paused)"Speech paused · ${PocketSpeech.count} saved" else "Listening · ${PocketSpeech.count} queued",color=Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-                WorkflowText(if(PocketSpeech.paused)PocketSpeech.status else PocketSpeech.title,color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-            }
+            Box(Modifier.weight(1f)){SpeechSourceLabel()}
             SpeechPlaybackControls()
+        }
+    }
+}
+
+@Composable fun SpeechSourceLabel(){
+    var sourceOpen by remember{mutableStateOf(false)}
+    Box{
+        TextButton({sourceOpen=true},contentPadding=PaddingValues(horizontal=0.dp),modifier=Modifier.heightIn(min=48.dp)){
+            WorkflowText(PocketSpeech.title.ifBlank{"Choose speech session"}+" · "+PocketSpeech.queue.messages.size+" ▾",color=if(PocketSpeech.paused)Muted else Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        }
+        DropdownMenu(expanded=sourceOpen,onDismissRequest={sourceOpen=false},properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
+            PocketSpeech.sources.forEach{(source,details)->DropdownMenuItem(text={Text("${if(source==PocketSpeech.activeSource)"• " else ""}${details.first} · ${details.second}")},onClick={sourceOpen=false;PocketSpeech.selectSource(source)})}
+            DropdownMenuItem(text={Text("Clear all saved speech")},onClick={sourceOpen=false;PocketSpeech.clearAll()})
         }
     }
 }
@@ -385,6 +401,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         BackendSettingsControl()
         PocketUpdateControl()
         TaskPermissionsControl()
+        CoordinatorReportingControl()
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Italian immersion",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.enabled,{PocketImmersion.setEnabled(it)})}
         if(PocketImmersion.enabled)ImmersionDensityControl()
         if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Automatic language cycling",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.motionEnabled,{PocketImmersion.setMotionEnabled(it)})}
@@ -511,9 +528,9 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)"Resume" else "Pause"),modifier=Modifier.size(28.dp),tint=Mint)
     }
     if(iconOnly)IconButton({PocketSpeech.clear()},modifier=Modifier.size(48.dp)){
-        Icon(Icons.Rounded.Close,PocketImmersion.label("Clear saved speech"),Modifier.size(28.dp),tint=Coral)
-    }else TextButton({PocketSpeech.clear()},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp).semantics{contentDescription=PocketImmersion.label("Clear saved speech")},contentPadding=PaddingValues(horizontal=8.dp)){
-        BilingualLabel("Clear",color=Coral,fontSize=14.sp)
+        Icon(Icons.Rounded.Close,PocketImmersion.label("Clear speech from active session"),Modifier.size(28.dp),tint=Coral)
+    }else TextButton({PocketSpeech.clear()},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp).semantics{contentDescription=PocketImmersion.label("Clear speech from active session")},contentPadding=PaddingValues(horizontal=8.dp)){
+        BilingualLabel("Clear session",color=Coral,fontSize=14.sp)
     }
 }
 

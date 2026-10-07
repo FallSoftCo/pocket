@@ -85,6 +85,7 @@ class PocketFirebaseService:FirebaseMessagingService(){
             return
         }
         val n=JSONObject(message.data).put("_local",false)
+        if(message.data["coordinator_report"]=="1")n.put("id",message.data["report_id"]?.toLongOrNull()?:0).put("kind","coordinator_report")
         if(n.optLong("id")<=0)return
         // Render immediately within FCM's execution window. No network request is needed.
         Pocket.acceptNotification(n,if(message.priority==RemoteMessage.PRIORITY_HIGH)"fcm" else "fcm-normal")

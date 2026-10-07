@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "feature": "Meaningful per-session coordinator catch-up",
+  "targetRelease": "0.5.0-alpha.36",
+  "qualifiedAt": "2026-10-07T05:10:47.992Z",
+  "scope": "Source and deterministic isolated HTTP integration verification",
+  "status": "passed",
+  "validation": {
+    "command": "node --test --test-reporter=dot tests/session-catchup.test.mjs",
+    "passed": 25,
+    "failed": 0,
+    "tests": [
+      "mid-turn read keeps useful interim and completed result unseen, even at identical timestamps",
+      "partial coordinator presentation acknowledges only exact supplied items, durable per-device",
+      "snapshot background fetch never marks read; captured cursor cannot hide later completion",
+      "failed work, pending questions, public answers are material; raw reasoning and intentions are excluded",
+      "replayed item, turn item and matching notification dedupe; revised question is a new version",
+      "hidden sessions never leak; bounded retention discloses unread gaps",
+      "presented unresolved questions stay actionable without being repeated as unseen catch-up",
+      "notification before live completion dedupes and foreign-thread cursor is rejected",
+      "actual pending-state callback resolves obsolete questions, ordinary updates are excluded",
+      "unwatched history completion after a foreground in-progress checkpoint produces catch-up",
+      "background captures do not replace baseline, late/foreign/expired captures cannot promote",
+      "cross-device history imports do not mark already viewed content unseen for the other device",
+      "first check gives uncertain context without falsely labeling old history new; no overlap discloses gap",
+      "legacy import preserves actual timestamps, exact notification read watermarks and resolved attention",
+      "presenting the final result never resurfaces its generic completion as a repetitive catch-up",
+      "timeline normalization excludes reasoning and plans, and older page additions are not new activity",
+      "notification presentations are exact and thread validated; checked-session candidates follow foreground baselines only",
+      "played completion links exact native final result and preserves unseen intermediate answer",
+      "bounded recent history can recover new useful notes without labeling pre-check notes fresh",
+      "actual isolated HTTP endpoints capture without reading, validate targets and acknowledge exact delivery",
+      "restart or unattached bridge state is unknown, not evidence that a pending question resolved",
+      "short spoken summary cannot hide the unspoken notification blocker",
+      "stored full speech with contextual prefix acknowledges exact body while pending attention stays actionable",
+      "speech-cleaned code or links cannot falsely prove that all material body content was heard",
+      "accepted interaction preserves unseen answers and distinguishes subsequent progress without changing checked baseline"
+    ],
+    "syntaxCheck": "node --check server/index.mjs",
+    "isolatedHttp": {
+      "actualServer": "server/index.mjs",
+      "storage": "Temporary disposable SQLite database",
+      "codex": "Deterministic task-owned stdio fixture; no provider calls or actual user sessions",
+      "verified": [
+        "Fresh coordinator metadata discovery and page cursor",
+        "Interactive source whitelist",
+        "Conversation fetch creates provisional capture without marking read",
+        "Wrong-thread capture rejection",
+        "Foreground checkpoint remembers in-progress work",
+        "Later history result stays unseen after background fetch",
+        "Wrong identity rejected by voice start",
+        "Direct-session and global coordinator focus",
+        "Wrong-thread notification acknowledgment rejected",
+        "Exact played notification acknowledgment",
+        "Completed coordinator response acknowledgment",
+        "Invalid routing correction rejected"
+      ],
+      "cleanup": "Task-owned process group terminated; temporary fixture files and storage removed"
+    }
+  },
+  "behavior": {
+    "unseen": "Per-device monotonic event cursor and exact presented-item identities; background discovery, history reads and provisional captures do not mark seen",
+    "history": "Foreground-acknowledged bounded baseline supports subsequent unwatched-history comparisons; first checks without a baseline expose uncertain context rather than asserting old history is new",
+    "material": "Public final results, useful interim answers, completion, failure/blocker and pending questions only; no reasoning/token deltas or command noise",
+    "speechCoverage": "Trusted stored spoken_text or spoken_summary must cover the entire normalized body with at most a bounded contextual prefix. Short or alternate summaries preserve unseen body findings. Code, links and paths omitted by speech cleaning conservatively prevent full-body acknowledgment",
+    "pending": "Presented unresolved questions remain actionable with unseen:false; unknown bridge state is not treated as resolution",
+    "crossDevice": "Previously foreground-viewed matching content is suppressed for that device when another device imports it",
+    "retention": "Bounded public material ledger and hashed foreground/provisional snapshots; unavailable intervening history is disclosed",
+    "lastInteraction": "Accepted user guidance records per-device interaction time, working state and exact event boundary without advancing read or presentation state; subsequent findings are tagged afterLastInteraction while older unseen answers remain available. Foreground watchedAt remains the authoritative last-checked baseline."
+  },
+  "limitations": [
+    "Existing startup policy expires stale RPC request IDs; expiration is not evidence of an answered question or completed task. This release preserves that policy, and expired requests are not offered as actionable pending questions. Original session history remains available for review.",
+    "Coverage acknowledgment is conservative: bodies with speech-omitted code, links or paths remain unseen until read or specifically summarized by the coordinator.",
+    "First-check history lacks a reliable prior foreground baseline and is explicitly uncertain.",
+    "Recent bounded history may not overlap the last checked view; those gaps are disclosed."
+  ],
+  "deployment": {
+    "productionRestart": false,
+    "productionDeployment": false,
+    "phoneVerified": false,
+    "emulatorVerified": false
+  },
+  "sources": {
+    "server/session-catchup.mjs": "410e82de94ba72bcc53bdb9274ad9cb53a827c555e860973f49dabfdb363f2ab",
+    "server/index.mjs": "40485f8baca69b217e8215594f92157ae53fe5015532846abd5e85cb96a4d709",
+    "tests/session-catchup.test.mjs": "d7242aa4455a242549f6a88249ff4290ddf7142bcd026edabdeaf07919dd025d"
+  }
+}

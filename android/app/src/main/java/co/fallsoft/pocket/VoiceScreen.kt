@@ -26,6 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 
 @Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false,cardRegion:Boolean=false){
     val c=LocalContext.current
@@ -46,6 +48,12 @@ import androidx.core.content.ContextCompat
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
     LaunchedEffect(keyboardInput){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
     val scroll=androidx.compose.foundation.lazy.rememberLazyListState()
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val coverage=remember(Pocket.local,Pocket.token){CoordinatorReadingCoverage()}
+    LaunchedEffect(scroll,lifecycle,coverage){lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
+        snapshotFlow{scroll.layoutInfo.let{layout->layout.visibleItemsInfo.filter{item->item.key.toString().startsWith("assistant:")}.map{item->CoordinatorItemExposure(item.key.toString().substringAfter(":"),item.offset,item.size,layout.viewportStartOffset,layout.viewportEndOffset)}}}
+            .collect{items->if(PocketVoice.foreground)items.forEach{item->if(coverage.expose(item.id,item.offset,item.size,item.start,item.end))PocketVoice.presented(item.id)}}
+    }}
     ConversationBack{PocketVoice.stop();Pocket.closeTask()}
     LaunchedEffect(PocketVoice.messages.size,PocketVoice.heard,PocketVoice.response){if(scroll.layoutInfo.totalItemsCount>0)scroll.animateScrollToItem(scroll.layoutInfo.totalItemsCount-1)}
     Column(Modifier.fillMaxSize().imePadding()){
@@ -54,7 +62,10 @@ import androidx.core.content.ContextCompat
             if(PocketVoice.historyEarlier)item{TextButton({PocketVoice.olderHistory()},enabled=!PocketVoice.historyLoading){BilingualLabel("Load earlier messages")}}
             if(PocketVoice.historyLoading)item{BilingualLabel("Loading history…",color=Muted)}
             if(PocketVoice.historyProblem.isNotBlank())item{ImmersionText("voice:history-problem",PocketVoice.historyProblem,color=Coral);TextButton({PocketVoice.service?.loadHistory()}){BilingualLabel("Retry history")}}
-            items(PocketVoice.messages.size){i->val turn=PocketVoice.messages[i];VoiceChatMessage("You",turn.first,true);Spacer(Modifier.height(12.dp));VoiceChatMessage("Codex",turn.second,false)}
+            PocketVoice.messages.forEach{turn->
+                item(key="user:${turn.id}"){VoiceChatMessage("You",turn.first,true)}
+                item(key="assistant:${turn.id}"){VoiceChatMessage("Codex",turn.second,false);PocketVoice.routes[turn.id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketVoice.stop();Pocket.open(route.threadId)},{PocketVoice.correctionOf=route;draft=route.correction+draft;keyboardInput=true})}}
+            }
             if(PocketVoice.heard.isNotBlank()&&PocketVoice.messages.lastOrNull()?.first!=PocketVoice.heard)item{VoiceChatMessage("You",PocketVoice.heard,true)}
             if(PocketVoice.problem.isNotBlank())item{ImmersionText("voice:problem",PocketVoice.problem,color=Coral);TextButton({PocketVoice.retry()}){BilingualLabel("Retry saved turn")}}
         }
@@ -115,3 +126,14 @@ import androidx.core.content.ContextCompat
         }
     }
 }
+
+@Composable internal fun CoordinatorRouteReceipt(route:CoordinatorRoute,onOpen:()->Unit,onCorrect:()->Unit){
+    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+        TextButton(onOpen,modifier=Modifier.weight(1f).heightIn(min=48.dp),contentPadding=PaddingValues(horizontal=0.dp,vertical=4.dp)){
+            Text("${route.label} · ${route.name.ifBlank{"Conversation"}}${if(route.mode in listOf("steer","queue"))" · ${route.mode}" else ""}",color=Mint,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+        if(route.operation!="read")TextButton(onCorrect,modifier=Modifier.heightIn(min=48.dp)){BilingualLabel("Change target")}
+    }
+}
+
+internal fun coordinatorItemFullyVisible(offset:Int,size:Int,start:Int,end:Int)=size>0&&offset>=start&&offset+size<=end

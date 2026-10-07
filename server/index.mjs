@@ -1,4 +1,6 @@
-import {SessionDiscovery} from './session-discovery.mjs';
+import {SessionDiscovery,INTERACTIVE_SOURCES} from './session-discovery.mjs';
+import {SessionCatchup} from './session-catchup.mjs';
+import {CoordinatorReports} from './coordinator-reports.mjs';
 import {recoverReply} from './reply-recovery.mjs';
 import {mountLosangelex} from './losangelex.mjs';
 import {computerUseStatus} from './computer-use.mjs';
@@ -72,6 +74,44 @@ const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,ho
 const nativeVoiceCodex=new Codex();
 const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:voiceController,cwd:defaultCwd});
 const sessionDiscovery=new SessionDiscovery({db,codex,hidden:id=>voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)});
+const catchupHidden=id=>voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)||!!db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived;
+const sessionCatchup=new SessionCatchup({db,hidden:catchupHidden,resolvePending:(requestId,threadId)=>{
+  if(!requestId)return undefined;const live=pending.get(String(requestId));if(live?.params?.threadId===threadId)return true;
+  const attention=db.prepare('SELECT a.resolved_at FROM notification_attention a JOIN notifications n ON n.id=a.notification_id WHERE a.request_id=? AND n.thread_id=? ORDER BY n.id DESC LIMIT 1').get(String(requestId),threadId);
+  return attention?.resolved_at!=null?false:undefined;
+}});
+sessionCatchup.bootstrap();
+voiceController.catchup=sessionCatchup;
+voiceController.hidden=catchupHidden;
+db.exec('CREATE TABLE IF NOT EXISTS coordinator_report_notifications(report_id TEXT PRIMARY KEY,device_id TEXT NOT NULL,notification_id INTEGER UNIQUE NOT NULL)');
+const coordinatorReports=new CoordinatorReports({db,catchup:sessionCatchup,hidden:catchupHidden,
+  readThread:async threadId=>{await codex.connect();return codex.call('thread/read',{threadId,includeTurns:false});},
+  refreshRoster:async()=>{
+    await codex.connect();const threads=[],visited=new Set();let cursor=null;
+    for(let page=0;page<6;page++){
+      const result=await codex.call('thread/list',{limit:100,sortKey:'updated_at',sortDirection:'desc',archived:false,useStateDbOnly:true,sourceKinds:[...INTERACTIVE_SOURCES,'subAgent'],...(cursor?{cursor}:{})});
+      for(const thread of result.data||[]){if(catchupHidden(thread.id))continue;sessionDiscovery.remember(thread,{archived:false});threads.push(thread);}
+      const next=result.nextCursor||null;if(!next)return {threads,threadCount:threads.length,complete:true,truncated:false};
+      if(visited.has(next))return {threads,threadCount:threads.length,complete:false,truncated:true,reason:'The inventory returned a repeated cursor; coverage is incomplete.'};visited.add(next);cursor=next;
+    }
+    return {threads,threadCount:threads.length,complete:false,truncated:true,nextCursor:cursor,reason:'More sessions remain beyond the 600-session inventory limit.'};
+  },
+  publish:async report=>{
+    let saved=db.prepare('SELECT notification_id FROM coordinator_report_notifications WHERE report_id=? AND device_id=?').get(report.id,report.device);
+    if(!saved){db.exec('BEGIN IMMEDIATE');try{
+      const row=db.prepare("INSERT INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,spoken_text) VALUES(NULL,?,?,'coordinator_report','[]',?,'','')").run('NextComp check-in',report.response,report.createdAt);
+      saved={notification_id:Number(row.lastInsertRowid)};db.prepare('INSERT INTO coordinator_report_notifications(report_id,device_id,notification_id) VALUES(?,?,?)').run(report.id,report.device,saved.notification_id);
+      if(push.enabled)db.prepare("INSERT OR IGNORE INTO push_deliveries(notification_id,device_id,state,updated_at) SELECT ?,device_id,'queued',? FROM push_tokens WHERE device_id=? AND project_id=?").run(saved.notification_id,Date.now(),report.device,push.config.projectId);
+      db.exec('COMMIT');
+    }catch(error){db.exec('ROLLBACK');throw error;}}
+    const notification=notificationRow(db.prepare('SELECT * FROM notifications WHERE id=?').get(saved.notification_id));
+    const message=JSON.stringify({type:'coordinatorReport',reportId:report.id,notification});
+    for(const ws of sockets.clients)if(ws.deviceId===report.device&&ws.readyState===WebSocket.OPEN)ws.send(message);
+    void push.flush().catch(error=>console.error('Report push retry',error.message));
+  }});
+voiceController.reports=coordinatorReports;
+setInterval(()=>void coordinatorReports.tick().catch(error=>console.error('Coordinator report',error.message)),60000).unref();
+
 const timeline=new LiveTimeline();
 setInterval(()=>timeline.prune(),60000).unref();
 const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
@@ -110,12 +150,13 @@ function notify(threadId,title,body,kind='update',attachments=[],requestId=null,
     if(!r.changes){db.exec('COMMIT');return null;}
     n={id:Number(r.lastInsertRowid),thread_id:threadId,title_revision:notificationTitles.revision(threadId),title,body,kind,attachments,created_at:at,spoken_summary:spokenSummary(title,body,speech,speechContext),spoken_text:spokenText(title,body,speech,speechContext)};
     if(threadId&&['question','approval','error'].includes(kind))db.prepare('INSERT INTO notification_attention(notification_id,request_id) VALUES(?,?)').run(n.id,requestId);
-    onPersist?.(n);push.enqueue(n.id,{flush:false});db.exec('COMMIT');
+    sessionCatchup.recordNotification({...n,turnId,requestId});onPersist?.(n);push.enqueue(n.id,{flush:false});db.exec('COMMIT');
   }catch(e){db.exec('ROLLBACK');throw e;}
   emit('notification',{notification:n});void push.flush().catch(e=>console.error('Push retry',e.message));return n;
 }
 function resolveAttention(where,...args){
-  const ids=db.prepare(`SELECT notification_id FROM notification_attention WHERE resolved_at IS NULL AND (${where})`).all(...args).map(x=>x.notification_id);
+  const resolved=db.prepare(`SELECT notification_id,request_id FROM notification_attention WHERE resolved_at IS NULL AND (${where})`).all(...args);
+  const ids=resolved.map(x=>x.notification_id);for(const row of resolved)if(row.request_id)sessionCatchup.resolve(row.request_id);
   if(!ids.length)return;
   db.prepare(`UPDATE notification_attention SET resolved_at=? WHERE notification_id IN (${ids.map(()=>'?').join(',')})`).run(now(),...ids);
   emit('attentionResolved',{ids});
@@ -225,8 +266,9 @@ codex.on('event',m=>{
     const duplicate=pending.has(String(m.id));
     pending.set(String(m.id),m);
     const question=/requestUserInput/.test(m.method);
-    if(!duplicate)notify(threadId,question?'Codex has a question':'Codex needs your attention',p.questions?.map(q=>q.question).join('\n')||p.reason||p.command||p.message||'Open the task to review the request.',question?'question':'approval',[],String(m.id));
+    if(!duplicate)notify(threadId,question?'Codex has a question':'Codex needs your attention',p.questions?.map(q=>q.question).join('\n')||p.reason||p.command||p.message||'Open the task to review the request.',question?'question':'approval',[],String(m.id),null,p.turnId);
   }
+  sessionCatchup.observe(m);
   if(m.method==='item/completed' && p.item?.type==='agentMessage')emit('message',{threadId,item:p.item});
   if(m.method==='turn/completed'){
     completions.complete(threadId,p.turn);
@@ -273,9 +315,18 @@ app.use('/api',requireAuth);
 mountLosangelex(app,{dir,codex,db,publish:(thread,onPersist)=>notify(thread,'Losangelex needs you','Open the team conversation to review its request.','question',[],null,null,null,null,onPersist),resolve:resolveAttention});
 app.get('/api/computer-use',route(async(_req,res)=>res.json(await computerUseStatus())));
 mountAppUpdates(app,{updates:new AppUpdates({dir,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
+app.get('/api/coordinator/reporting',(req,res)=>res.json(coordinatorReports.settings(req.device.id)));
+app.post('/api/coordinator/reporting',route(async(req,res)=>res.json(coordinatorReports.configure(req.device.id,req.body))));
+app.get('/api/coordinator/reporting/:deviceId',owner,(req,res)=>res.json(coordinatorReports.settings(req.params.deviceId)));
+app.post('/api/coordinator/reporting/:deviceId',owner,route(async(req,res)=>res.json(coordinatorReports.configure(req.params.deviceId,req.body))));
 app.get('/api/voice/history',(req,res)=>{const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before));});
 app.post('/api/voice/start',route(async(req,res)=>{
-  const s=await voiceController.ensure(req.device.id);if(req.body.threadId){const threadId=requireId(req.body.threadId);if(voiceController.owns(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();await codex.call('thread/read',{threadId,includeTurns:false});db.prepare('UPDATE voice_sessions SET selected=? WHERE device=?').run(threadId,req.device.id);s.selected=threadId;}else{db.prepare('UPDATE voice_sessions SET selected=NULL WHERE device=?').run(req.device.id);s.selected=null;}if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);res.json({threadId:s.thread_id,selected:s.selected,host:hostName,speech:voiceSpeech.status(),native:true});
+  await voiceController.ensure(req.device.id);
+  let threadId=null;
+  if(req.body.threadId){threadId=requireId(req.body.threadId);if(catchupHidden(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();const result=await codex.call('thread/read',{threadId,includeTurns:false});if(result.thread?.id!==threadId)return res.status(409).json({error:'Session identity changed. Choose the intended session again.'});}
+  const s=voiceController.setFocus(req.device.id,threadId,{mode:threadId?'direct':'coordinator'});
+  if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);
+  res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),native:true});
 }));
 app.post('/api/voice/native/start',route(async(req,res)=>res.json(await nativeVoice.start(req.device.id,req.body.sdp,req.body.purpose))));
 app.post('/api/voice/native/stop',route(async(req,res)=>{await nativeVoice.stop(req.device.id,req.body.connectionId);res.json({ok:true});}));
@@ -284,8 +335,9 @@ app.post('/api/voice/native/commit',route(async(req,res)=>res.json(await nativeV
 app.post('/api/voice/native/speak',route(async(req,res)=>res.json(await nativeVoice.speak(req.device.id,req.body.connectionId,req.body.text))));
 app.post('/api/voice/native/heartbeat',route(async(req,res)=>{nativeVoice.session(req.device.id,req.body.connectionId);res.json({ok:true});}));
 app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:'4mb'}),(req,res,next)=>{try{if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
-app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(voiceController.submitText(req.device.id,req.body.turnId,req.body.text));}));
+app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(voiceController.submitText(req.device.id,req.body.turnId,req.body.text,req.body.correctionOf));}));
 app.get('/api/voice/turns/:id',(req,res)=>{const row=voiceController.get(req.device.id,req.params.id);if(!row)return res.status(404).json({error:'Voice turn not found.'});res.json(row);});
+app.post('/api/voice/turns/:id/presented',route(async(req,res)=>res.json(voiceController.presented(req.device.id,req.params.id))));
 app.get('/api/voice/speech',(_req,res)=>res.json(voiceSpeech.status()));
 app.post('/api/voice/speech',route(async(req,res)=>{
   if(speechRequests>=2)return res.status(429).json({error:'Speech is busy. Retry shortly.'});
@@ -330,6 +382,16 @@ app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.pa
 app.get('/api/activity',(_req,res)=>res.json({items:activityBoard.snapshot()}));
 app.get('/api/threads',route(async(req,res)=>{
   await codex.connect();
+  if(req.query.view==='coordinator'){
+    const cursor=typeof req.query.cursor==='string'?req.query.cursor:null;
+    if(cursor&&cursor.length>4096)return res.status(400).json({error:'Invalid discovery cursor.'});
+    const result=await codex.call('thread/list',{limit:100,sortKey:'updated_at',sortDirection:'desc',archived:false,useStateDbOnly:true,sourceKinds:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
+    const found=new Map();for(const thread of result.data||[]){if(catchupHidden(thread.id))continue;sessionDiscovery.remember(thread,{archived:false});found.set(thread.id,thread);}
+    if(!cursor)for(const row of db.prepare("SELECT d.metadata FROM session_starts s JOIN pocket_discovered_threads d ON d.thread_id=s.thread_id WHERE s.state='started' AND d.archived=0 ORDER BY s.updated_at DESC LIMIT 100").all()){
+      const thread=JSON.parse(row.metadata);if(!found.has(thread.id)&&!catchupHidden(thread.id))found.set(thread.id,{...thread,...sessionDiscovery.live.get(thread.id)});
+    }
+    return res.json({threads:[...found.values()].map(thread=>({id:thread.id,name:thread.name||thread.preview?.slice(0,90)||'Untitled task',preview:thread.preview||'',cwd:thread.cwd,status:thread.status,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,parentThreadId:thread.parentThreadId,discoveryPending:!!thread.discoveryPending})),nextCursor:result.nextCursor||null,refreshPending:false});
+  }
   const r=await sessionDiscovery.list({archived:req.query.archived==='true'});
   const watches=db.prepare('SELECT * FROM watches').all();
   for(const renamed of notificationTitles.reconcile(r.data||[])){emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));}
@@ -351,8 +413,11 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
   conversationNotes.remember(t);
-  res.json({notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)});
+  const response={notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
+  if(!req.query.before)response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
+  res.json(response);
 }));
+app.post('/api/threads/:id/catchup/read',route(async(req,res)=>res.json(sessionCatchup.acknowledgeCapture(req.device.id,requireId(req.params.id),req.body.token))));
 app.get('/api/models',route(async(_req,res)=>{
   await codex.connect();res.json({models:(await modelCatalogue(codex)).map(m=>({model:m.model,name:m.displayName,defaultEffort:m.defaultReasoningEffort,efforts:m.supportedReasoningEfforts}))});
 }));
@@ -409,6 +474,8 @@ app.post('/api/threads/:id/reply',route(async(req,res)=>{
   // A phone reply explicitly opts this task into a completion notification.
   db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1) ON CONFLICT(thread_id) DO UPDATE SET enabled=1').run(threadId,'Codex replied');
   if(!wasFollowing)completions.follow(threadId);
+  // Record accepted user guidance without claiming older results were read.
+  sessionCatchup.interact(req.device.id,threadId);
   res.status(202).json({id,state:'queued'}); if(codex.ready)void sendOutgoing({id,thread_id:threadId,text,mode,created_at:now()});
 }));
 app.post('/api/threads/:id/queue/resume',route(async(req,res)=>{
@@ -428,6 +495,7 @@ app.get('/api/replies/:id',(req,res)=>{
   res.json(row);
 });
 app.post('/api/requests/:id/answer',route(async(req,res)=>res.json(questionActions.answer(req.params.id,req.body))));
+app.post('/api/notifications/:id/presented',route(async(req,res)=>res.json(sessionCatchup.presentedNotification(req.device.id,req.params.id,requireId(req.body.threadId)))));
 app.post('/api/notifications/:id/skip',route(async(req,res)=>res.json(questionActions.skipNotification(req.params.id))));
 app.get('/api/immersion',(req,res)=>res.json(immersion.snapshot(req.device.id)));
 app.post('/api/immersion',route(async(req,res)=>res.json(immersion.setEnabled(req.device.id,req.body.enabled,req.body.density))));
@@ -438,8 +506,8 @@ app.get('/api/notifications/:id/attention',(req,res)=>{
   const row=db.prepare('SELECT * FROM notification_attention WHERE notification_id=?').get(req.params.id);
   res.json({needsAttention:!!row&&row.resolved_at===null});
 });
-app.get('/api/notifications/:id',(req,res)=>{const n=db.prepare('SELECT * FROM notifications WHERE id=?').get(req.params.id);if(!n)return res.status(404).json({error:'Notification not found.'});res.json({notification:notificationReads.decorate([notificationRow(n)],req.device.id)[0]});});
-app.get('/api/notifications',(req,res)=>{const after=Math.max(0,Number(req.query.after)||0);res.json({notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE id>? ORDER BY id DESC LIMIT 100').all(after).reverse().map(notificationRow),req.device.id)});});
+app.get('/api/notifications/:id',(req,res)=>{const n=db.prepare('SELECT * FROM notifications WHERE id=?').get(req.params.id);if(!n||n.kind==='coordinator_report'&&!db.prepare('SELECT 1 FROM coordinator_report_notifications WHERE notification_id=? AND device_id=?').get(n.id,req.device.id))return res.status(404).json({error:'Notification not found.'});res.json({notification:notificationReads.decorate([notificationRow(n)],req.device.id)[0]});});
+app.get('/api/notifications',(req,res)=>{const after=Math.max(0,Number(req.query.after)||0);res.json({notifications:notificationReads.decorate(db.prepare("SELECT * FROM notifications WHERE id>? AND kind!='coordinator_report' ORDER BY id DESC LIMIT 100").all(after).reverse().map(notificationRow),req.device.id)});});
 app.post('/api/test-notification',(req,res)=>res.json(notify(null,'Your work, within reach.','NextComp is connected. Updates from Codex will arrive here, with a direct route back to your task.','test')));
 const mimeFor=n=>({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.pdf':'application/pdf','.mp4':'video/mp4','.txt':'text/plain','.md':'text/plain'})[extname(n).toLowerCase()]||'application/octet-stream';
 function saveAttachment(file,threadId){

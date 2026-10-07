@@ -1,0 +1,34 @@
+{
+  "status": "candidate-qualified-core-follow-up-native-pending",
+  "candidate": {
+    "version": "alpha35 code53 source for alpha36",
+    "apk": "/tmp/nextcomp-session-speech-qa/report-preview-candidate.apk",
+    "sha256": "4b8f556e4c2b726a5a10a54590beb57b5ca3c85a18751ab4badfeefb50c72990"
+  },
+  "checks": {
+    "debugBuild": "passed",
+    "debugUnitTests": "passed",
+    "sessionSpeechTests": 11,
+    "coreNative": [
+      "independent source cursor preservation",
+      "scoped clear retains other source",
+      "source selection and pause preserve keyboard and draft",
+      "typed read receipt opens intended thread",
+      "natural target correction does not resend",
+      "no history fetch-only acknowledgment",
+      "full visible scrolling coverage acknowledges oversized catchup once",
+      "full cached playback acknowledges exact source",
+      "completed notification retry does not reenqueue",
+      "finished active source does not drain unrelated source"
+    ]
+  },
+  "evidenceDirectory": "/tmp/nextcomp-session-speech-qa",
+  "limits": [
+    "Synthetic emulator only; no physical handset claim",
+    "No provider/account audio calls; playback uses cached synthetic audio",
+    "Core native evidence precedes reporting and preview follow-up",
+    "Cross-profile switch and active-voice physical overlap not native-qualified",
+    "Resolved question native rerun pending; pure policy and captured endpoint code checked"
+  ],
+  "release": "Root owns version signing release and phone; no release by this workstream"
+}

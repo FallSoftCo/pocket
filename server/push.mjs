@@ -7,9 +7,13 @@ import {getMessaging} from 'firebase-admin/messaging';
 export function pushData(n) {
   // FCM data has a 4096-byte limit. Full content and files stay on the host.
   const clip=(text,bytes)=>{let out='';for(const char of String(text||'')){if(Buffer.byteLength(out+char)>bytes)break;out+=char;}return out;};
-  const full=n.spoken_text||spokenText(n.title,n.body,n.spoken_summary);
-  const spoken=Buffer.byteLength(full)<=600?{spoken_text:full}:{speech_pending:'1'};
-  const data={...spoken,id:String(n.id),thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2000),spoken_summary:speechText(n.spoken_summary),kind:n.kind||'update',created_at:String(n.created_at),title_revision:String(n.title_revision||0)};
+  const report=n.kind==='coordinator_report';
+  const full=report?'':n.spoken_text||spokenText(n.title,n.body,n.spoken_summary);
+  const spoken=report?{}:Buffer.byteLength(full)<=600?{spoken_text:full}:{speech_pending:'1'};
+  // Reports are a versioned, visual-only envelope. Older clients ignore the
+  // missing ordinary id rather than enqueueing a paid spoken work update.
+  const identity=report?{coordinator_report:'1',report_id:String(n.id)}:{id:String(n.id)};
+  const data={...spoken,...identity,thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2000),...(report?{}:{spoken_summary:speechText(n.spoken_summary)}),kind:n.kind||'update',created_at:String(n.created_at),title_revision:String(n.title_revision||0)};
   // Leave room for the device ID and envelope, including JSON-escaped characters.
   while(Buffer.byteLength(JSON.stringify(data))>3700&&data.body)data.body=clip(data.body,Math.floor(Buffer.byteLength(data.body)/2));
   return data;

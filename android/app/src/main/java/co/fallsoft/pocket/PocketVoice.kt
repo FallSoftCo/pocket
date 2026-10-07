@@ -31,7 +31,11 @@ object PocketVoice {
     var keysEnabled by mutableStateOf(false); internal set
     private var lastKeyTime=-1L
     private var lastKeyCode=-1
-    val messages=mutableStateListOf<Pair<String,String>>()
+    val messages=mutableStateListOf<CoordinatorMessage>()
+    internal val presentationTurns=mutableStateMapOf<String,CoordinatorPresentation>()
+    fun presented(id:String){if(foreground)presentationTurns[id]?.let{service?.presented(it)}}
+    internal var correctionOf:CoordinatorRoute?=null
+    internal val routes=mutableStateMapOf<String,List<CoordinatorRoute>>()
     var historyEarlier by mutableStateOf(false);internal set
     var historyLoading by mutableStateOf(false);internal set
     var historyProblem by mutableStateOf("");internal set
@@ -121,13 +125,27 @@ class PocketVoiceService:Service(){
     fun loadHistory(older:Boolean=false){
         if(PocketVoice.historyLoading)return
         PocketVoice.historyLoading=true;PocketVoice.historyProblem=""
-        if(!older){PocketVoice.messages.clear();PocketVoice.historyEarlier=false;historyBefore=null}
+        if(!older){PocketVoice.messages.clear();PocketVoice.routes.clear();PocketVoice.presentationTurns.clear();PocketVoice.historyEarlier=false;historyBefore=null}
         scope.launch{try{
             val result=api("/api/voice/history"+if(older&&historyBefore!=null)"?before=$historyBefore" else "")
-            val turns=result.optJSONArray("turns")?.objects().orEmpty().mapNotNull{row->val heard=row.s("transcript");val response=row.s("response").ifBlank{row.s("error")};if(heard.isBlank()&&response.isBlank())null else Pair(heard,response)}
-            val fresh=if(older)turns else turns.filter{it !in PocketVoice.messages};PocketVoice.messages.addAll(0,fresh)
+            val turns=result.optJSONArray("turns")?.objects().orEmpty().mapNotNull{row->val heard=row.s("transcript");val response=row.s("response").ifBlank{row.s("error")};if(heard.isBlank()&&response.isBlank())null else CoordinatorMessage(row.s("id").ifBlank{"history:${row.optLong("cursor")}:${heard.hashCode()}:${response.hashCode()}"},heard,response).also{val actions=row.optJSONArray("actions")?.objects().orEmpty();PocketVoice.routes[it.id]=routeReceipts(actions,it.id);rememberPresentation(it.id,actions)}}
+            val fresh=turns.filter{turn->PocketVoice.messages.none{it.id==turn.id}};PocketVoice.messages.addAll(0,fresh)
             historyBefore=result.optLong("before").takeIf{it>0};PocketVoice.historyEarlier=result.optBoolean("hasEarlier")
         }catch(e:Exception){if(e is CancellationException)throw e;PocketVoice.historyProblem=PocketNetwork.error(e)}finally{PocketVoice.historyLoading=false}}
+    }
+    private val presentedTurns=mutableSetOf<String>()
+    private val presentingTurns=mutableSetOf<String>()
+    private fun rememberPresentation(id:String,actions:List<JSONObject>){
+        if(id.isNotBlank()&&actions.any{it.s("type")=="catchup"})PocketVoice.presentationTurns[id]=CoordinatorPresentation(id,endpoint,credential)
+    }
+    internal fun presented(turn:CoordinatorPresentation){
+        val key=turn.endpoint+":"+turn.credential+":"+turn.id
+        if(key in presentedTurns||!presentingTurns.add(key))return
+        scope.launch{try{
+            val request=Request.Builder().url(turn.endpoint+"/api/voice/turns/${turn.id}/presented").header("Authorization","Bearer ${turn.credential}").post(JSONObject().toString().toRequestBody("application/json".toMediaType())).build()
+            val ok=withContext(Dispatchers.IO){http.newCall(request).execute().use{response->response.isSuccessful&&JSONObject(response.body?.string().orEmpty()).optBoolean("ok")}}
+            if(ok)presentedTurns.add(key)
+        }catch(e:Exception){if(e is CancellationException)throw e}finally{presentingTurns.remove(key)}}
     }
     private fun captureProfile(){endpoint=Pocket.savedBase(local).trimEnd('/');credential=Pocket.savedToken(local);captionProfile="${local}:${Pocket.savedBase(local)}:${Pocket.prefs.getString(Pocket.key("deviceId",local),"")}";caption=null}
     private fun wake(){lock?.acquire(10*60*1000L)}
@@ -192,7 +210,11 @@ class PocketVoiceService:Service(){
             state("Sending")
             if(!coordinatorReady){api("/api/voice/start",JSONObject().put("fullPermissions",Pocket.fullPermissions).put("threadId",PocketVoice.targetThread));coordinatorReady=true}
             val id=UUID.randomUUID().toString()
-            api("/api/voice/text",JSONObject().put("turnId",id).put("text",text))
+            val correction=PocketVoice.correctionOf
+            val request=JSONObject().put("turnId",id).put("text",text)
+            correction?.let{request.put("correctionOf",JSONObject().put("turnId",it.turnId).put("threadId",it.threadId))}
+            api("/api/voice/text",request)
+            if(PocketVoice.correctionOf===correction)PocketVoice.correctionOf=null
             Pocket.prefs.edit().putString("voicePendingId",id).putBoolean("voicePendingLocal",local).commit()
             PocketVoice.heard=text;PocketVoice.response="";deliver()
         }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}
@@ -219,9 +241,13 @@ class PocketVoiceService:Service(){
             if(result!!.s("state")!="completed"){
                 val message=result.s("error","The voice turn stopped.");clearPending();PocketVoice.problem=message;speak(message);return@launch
             }
-            PocketVoice.response=result.s("response");if(PocketVoice.messages.lastOrNull()!=Pair(PocketVoice.heard,PocketVoice.response))PocketVoice.messages.add(Pair(PocketVoice.heard,PocketVoice.response));val actions=result.optJSONArray("actions")?.objects()?:emptyList()
+            PocketVoice.response=result.s("response")
+            val message=CoordinatorMessage(id,PocketVoice.heard,PocketVoice.response)
+            val existing=PocketVoice.messages.indexOfFirst{it.id==id};if(existing<0)PocketVoice.messages.add(message)else PocketVoice.messages[existing]=message
+            val actions=result.optJSONArray("actions")?.objects().orEmpty();PocketVoice.routes[id]=routeReceipts(actions,id);rememberPresentation(id,actions)
             // Keep the completed ID until audio is fetched, so a lost speech request never reruns Codex.
-            speak(PocketVoice.response){applyActions(actions.filter{it.s("type") in listOf("profile","exit")});nextUpdate()}
+            val deliveredPresentation=PocketVoice.presentationTurns[id]
+            speak(PocketVoice.response){deliveredPresentation?.let{presented(it)};applyActions(actions.filter{it.s("type") in listOf("profile","exit")});nextUpdate()}
             applyActions(actions.filter{it.s("type") !in listOf("profile","exit")})
         }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}
     }}
@@ -268,3 +294,7 @@ class PocketVoiceService:Service(){
     fun leave(){PocketVoice.active=false;disconnectNative();recording?.cancel();work?.cancel();stopPlayer();state("Ready");stopSelf()}
     override fun onDestroy(){checkpointNativeUsage(stop=true);transportGeneration++;nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;PocketVoice.active=false;PocketVoice.service=null;recording?.cancel();scope.cancel();stopPlayer();tones.release();if(lock?.isHeld==true)lock?.release();if(!PocketVoice.foreground&&!Pocket.local)PocketLive.stop();stopForeground(STOP_FOREGROUND_REMOVE);if(caption!=null&&PocketSpeechCaptions.state.phase=="Speaking")PocketSpeechCaptions.pause(captionProfile);PocketSpeechCaptions.retain();super.onDestroy()}
 }
+
+internal fun routeReceipts(actions:List<JSONObject>,turnId:String=""):List<CoordinatorRoute> = actions.filter{it.s("type")=="route"&&it.s("threadId").isNotBlank()}.map{CoordinatorRoute(it.s("threadId"),it.s("name"),it.s("operation"),it.s("mode"),it.s("state"),it.s("turnId").ifBlank{turnId},it.s("reason"))}.distinct()
+
+internal data class CoordinatorPresentation(val id:String,val endpoint:String,val credential:String)

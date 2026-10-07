@@ -76,12 +76,12 @@ object PocketSpeechCaptions {
     Surface(modifier=modifier.fillMaxWidth(),color=containerColor,tonalElevation=0.dp){
         Row(Modifier.padding(start=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
             Column(Modifier.weight(1f).heightIn(min=48.dp).clickable(role=Role.Button,onClickLabel=PocketImmersion.label("Read full spoken passage")){expanded=true}.padding(vertical=8.dp)){
-                if(playbackControls)Text(s.title,color=Muted,style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                if(playbackControls)SpeechSourceLabel()
                 else Text(PocketSpeechCaptions.label(s)+" · "+PocketImmersion.label("Read"),color=Muted,style=MaterialTheme.typography.labelSmall)
                 Text(s.text,color=Paper,style=MaterialTheme.typography.bodyMedium,maxLines=3,overflow=TextOverflow.Ellipsis)
             }
             if(playbackControls)SpeechPlaybackControls()
-            IconButton(onClick={PocketSpeechCaptions.dismiss()},modifier=Modifier.size(48.dp)){
+            if(!playbackControls)IconButton(onClick={PocketSpeechCaptions.dismiss()},modifier=Modifier.size(48.dp)){
                 Icon(Icons.Rounded.Close,PocketImmersion.label("Dismiss captions"),Modifier.size(24.dp))
             }
         }

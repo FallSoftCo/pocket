@@ -121,13 +121,20 @@ object Pocket {
         try {
             val url=server.trim().trimEnd('/');val pairingLocal=url in listOf("http://127.0.0.1:18880","http://localhost:18880")
             require(url.startsWith("https://")||pairingLocal){"Use your server’s HTTPS address, or NextComp’s local phone address."}
-            base=url
-            val r=api("/api/pair",JSONObject().put("code",code).put("name",Build.MODEL),false)
-            token=r.getString("token");host=r.s("host")
+            // Pair against the candidate without changing the active profile.
+            // A failed attempt must not redirect saved speech or authenticated work.
+            val r=withContext(Dispatchers.IO){
+                val request=Request.Builder().url(url+"/api/pair").post(JSONObject().put("code",code).put("name",Build.MODEL).toString().toRequestBody("application/json".toMediaType())).build()
+                http.newCall(request).execute().use{response->val result=JSONObject(response.body?.string()?:"{}");if(!response.isSuccessful)throw PocketApiException(response.code,ConnectionMessages.server(result.s("error","Pairing failed")));result}
+            }
+            val pairedToken=r.getString("token")
+            PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketLive.stop();PocketTranscript.clear()
+            base=url;token=pairedToken;host=r.s("host")
+            selected=null;detail=null;newTask=false;tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList()
             local=pairingLocal||r.optBoolean("local");prefs.edit().putBoolean("activeLocal",local).putString(key("server"),base).putString(key("token"),token).putString(key("deviceId"),r.s("id")).apply()
             if(local&&r.s("automationSecret").isNotBlank())prefs.edit().putString(key("automationSecret",true),r.s("automationSecret")).apply()
             weeklyUsage=WeeklyUsage();prefs.edit().remove(key("weeklyUsage")).apply()
-            PocketPush.configure(r.optJSONObject("firebase"));if(local)LocalMonitorService.start(context);pairingMode=false;PocketImmersion.restore();PocketSpeechCaptions.init();PocketLive.start();refresh()
+            PocketPush.configure(r.optJSONObject("firebase"));if(local)LocalMonitorService.start(context);pairingMode=false;PocketImmersion.restore();PocketSpeech.init();PocketLive.start();refresh()
         }catch(e:Exception){error=PocketNetwork.error(e)}finally{busy=false}
     }}
     fun activate(forLocal:Boolean){
@@ -135,12 +142,13 @@ object Pocket {
         val nextBase=savedBase(forLocal);val nextToken=savedToken(forLocal);if(nextBase.isBlank()||nextToken.isBlank())return
         backgroundRefreshJob?.cancel();backgroundRefreshJob=null;discoveryRefreshJob?.cancel();discoveryRefreshJob=null;lastDiscoveryRefreshAt=0L;refreshError="";statusRevision++
         sessionSnapshotComplete=false;sessionOrderRequest=0;sessionOrderHandled=0
+        PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close()
         PocketLive.stop();PocketTranscript.clear();local=forLocal;base=nextBase;token=nextToken;host=if(local)"This phone" else "Your workstation"
         connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
         lastNotification=prefs.getLong(key("lastNotification"),0);prefs.edit().putBoolean("activeLocal",local).apply()
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean("pushReady",false))"Firebase push is ready" else "Setting up notifications…"
         if(local)LocalMonitorService.start(context) else LocalMonitorService.stop(context)
-        restoreUsage();PocketImmersion.restore();PocketSpeechCaptions.init();PocketLive.start();refresh()
+        restoreUsage();PocketImmersion.restore();PocketSpeech.init();PocketLive.start();refresh()
     }
     fun disconnect(){
         val wasLocal=local;val oldBase=base;val oldToken=token
@@ -150,12 +158,12 @@ object Pocket {
         }catch(_:Exception){}}
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention")
-        PocketSpeech.clear()
+        PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close()
         val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal)).remove(key("usageSamples",wasLocal))
         if(wasLocal)edit.remove(key("automationSecret",true)).putBoolean("automationAllowed",false)
         edit.apply();weeklyUsage=WeeklyUsage();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
         val fallback=if(wasLocal)false else true
-        if(savedToken(fallback).isNotBlank()){local=wasLocal;activate(fallback)}else{token="";base="";pushStatus="Not paired";local=false;prefs.edit().putBoolean("activeLocal",false).apply();LocalMonitorService.stop(context)}
+        if(savedToken(fallback).isNotBlank()){local=wasLocal;activate(fallback)}else{token="";base="";pushStatus="Not paired";local=false;prefs.edit().putBoolean("activeLocal",false).apply();LocalMonitorService.stop(context);PocketSpeech.init()}
     }
     private fun restoreUsage(){usageSamples=try{JSONArray(prefs.getString(key("usageSamples"),"[]")).objects().map{UsageSample(it.optLong("at"),it.optDouble("remaining"),it.optLong("reset"))}.filter{it.at>0&&it.reset>0&&it.remaining.isFinite()&&it.remaining in 0.0..100.0}}catch(_:Exception){emptyList()};weeklyUsage=try{prefs.getString(key("weeklyUsage"),null)?.let{WeeklyUsage.fromJson(JSONObject(it)).copy(stale=true)}?:WeeklyUsage()}catch(_:Exception){WeeklyUsage()}}
     private fun acceptUsage(json:JSONObject?){
@@ -292,6 +300,7 @@ object Pocket {
                 codexOnline=json.optBoolean("connected");codexConnectionMessage=ConnectionMessages.server(json.optJSONObject("problem")?.s("message")?:"")
                 if(recovered){refresh();scheduleRefresh()}
             }
+            "coordinatorReport" -> {acceptNotification(json.getJSONObject("notification"),"report")}
             "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");if(PocketVoice.foreground&&!PocketVoice.active&&selected==n.s("thread_id"))refreshDetail();refresh()}
             "reply" -> {if(json.s("state")=="accepted")rememberSessionInteraction(json.s("threadId"),"reply:"+json.s("id"));if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}

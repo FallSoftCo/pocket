@@ -40,7 +40,7 @@ object PocketNotifications {
         val m=c.getSystemService(NotificationManager::class.java)
         m.createNotificationChannel(NotificationChannel("work",PocketImmersion.label("Codex updates & replies"),NotificationManager.IMPORTANCE_HIGH).apply{description=PocketImmersion.label("Updates you request from Codex, questions, and replies to your phone messages.")})
     }
-    fun open(c:Context,thread:String?,code:Int,local:Boolean=Pocket.local):PendingIntent=PendingIntent.getActivity(c,code,Intent(c,MainActivity::class.java).apply{flags=Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP;putExtra("thread",thread);putExtra("local",local)},PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    fun open(c:Context,thread:String?,code:Int,local:Boolean=Pocket.local,coordinator:Boolean=false):PendingIntent=PendingIntent.getActivity(c,code,Intent(c,MainActivity::class.java).apply{flags=Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP;putExtra("thread",thread);putExtra("local",local);if(coordinator){putExtra("coordinatorReport",true);putExtra("reportNotificationId",code)}},PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     fun show(c:Context,n:JSONObject,reminder:Boolean=false,translationRefresh:Boolean=false){
         PocketNotificationTitles.remember(n)
         if(PocketNotificationReads.isRead(n))return
@@ -57,14 +57,14 @@ object PocketNotifications {
             .setContentTitle(title).setContentText(body)
             .addExtras(PocketNotificationTitles.extras(n))
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setColor(0xffffc600.toInt()).setAutoCancel(!attention).setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(open(c,thread,id,local))
+            .setColor(0xffffc600.toInt()).setAutoCancel(!attention&&n.s("kind")!="coordinator_report").setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(open(c,thread,id,local,n.s("kind")=="coordinator_report"))
         if(translationRefresh||PocketSpeech.count>0&&!PocketSpeech.paused)b.setSilent(true)
         b.setOnlyAlertOnce(true)
         if(reminder)b.setSubText(PocketImmersion.label("Still needs your attention"))
         if(attention){PocketAttention.remember(n);b.setDeleteIntent(PocketAttention.action(c,n.optLong("id"),"dismiss",local))}
         if(thread!=null&&n.s("kind")=="question"){
-            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Answer"),open(c,thread,id,local))
+            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Answer"),open(c,thread,id,local,n.s("kind")=="coordinator_report"))
             if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Skip"),PocketAttention.action(c,n.optLong("id"),"skip",local))
             if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local))
         }else if(thread!=null){
@@ -72,7 +72,7 @@ object PocketNotifications {
             val pi=PendingIntent.getBroadcast(c,id,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
             b.addAction(NotificationCompat.Action.Builder(R.drawable.ic_notification,PocketImmersion.label("Reply"),pi)
                 .addRemoteInput(RemoteInput.Builder("reply").setLabel(PocketImmersion.label("Your reply…")).build()).setAllowGeneratedReplies(false).build())
-            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Open task"),open(c,thread,id,local))
+            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Open task"),open(c,thread,id,local,n.s("kind")=="coordinator_report"))
             if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local))
         }
         try{NotificationManagerCompat.from(c).notify(id,b.build())}catch(_:SecurityException){}

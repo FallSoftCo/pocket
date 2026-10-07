@@ -1,0 +1,669 @@
+{
+  "version": "0.5.0-alpha.36",
+  "date": "2026-10-07",
+  "state": "integration-qualification-pending",
+  "changes": [
+    "Live bounded contextual coordinator discovery with relevant public history and explicit focus",
+    "Correctable named routing receipts and actual queued/submitted outcomes",
+    "Per-device foreground catch-up checkpoints and exact-delivery acknowledgments",
+    "Per-session speech queues/cursors with one physical audio player",
+    "Useful-only periodic coordinator reports with bounded fresh inventory and read-only stale checks"
+  ],
+  "semantic_evaluation": {
+    "model": "gpt-6.1-sol",
+    "effort": "low",
+    "runtime": "0.160.1",
+    "scope": "Five synthetic text turns in isolated ephemeral read-only STDIO runtime; all task mutations intercepted by fake API; no native audio.",
+    "cases": [
+      {
+        "id": "semantic_1",
+        "input": "The phone stops alerting me whenever the private network is enabled. Fix that regression while keeping the network connected.",
+        "state": "completed",
+        "response": "Sent to the existing Pixel/Tailscale investigation (\u201cUntitled task\u201d): fix notification alerts and verify they work while Tailscale stays connected. The instruction was accepted; the fix is still pending.",
+        "error": null,
+        "durationMs": 11437,
+        "expected": [
+          {
+            "threadId": "fixture_dns",
+            "mode": "auto"
+          }
+        ],
+        "actual": [
+          {
+            "threadId": "fixture_dns",
+            "mode": "auto"
+          }
+        ],
+        "writes": [
+          {
+            "path": "/api/threads/fixture_dns/reply",
+            "threadId": "fixture_dns",
+            "mode": "auto"
+          }
+        ],
+        "correct": true,
+        "clarification": null,
+        "actions": [
+          {
+            "type": "route",
+            "turnId": "semantic_1",
+            "threadId": "fixture_dns",
+            "name": "Untitled task",
+            "operation": "reply",
+            "at": 1791347314217,
+            "mode": "auto",
+            "state": "submitted",
+            "replyId": "voice-semantic_1-1"
+          }
+        ]
+      },
+      {
+        "id": "semantic_2",
+        "input": "Please fix the website navigation problem.",
+        "state": "completed",
+        "response": "Which website should I send this to: Website A, where navigation links redirect to localhost, or Website B, where login links redirect to localhost?",
+        "error": null,
+        "durationMs": 2106,
+        "expected": [],
+        "actual": [],
+        "writes": [],
+        "correct": true,
+        "clarification": true,
+        "actions": []
+      },
+      {
+        "id": "semantic_3",
+        "input": "I meant the phone notifications. Have that one also check delivery when the app is in the background.",
+        "state": "completed",
+        "response": "The Pixel/Tailscale investigation accepted the follow-up to verify notification delivery while the app is in the background and the network stays connected. The check is pending.",
+        "error": null,
+        "durationMs": 6771,
+        "expected": [
+          {
+            "threadId": "fixture_dns",
+            "mode": "auto"
+          }
+        ],
+        "actual": [
+          {
+            "threadId": "fixture_dns",
+            "mode": "auto"
+          }
+        ],
+        "writes": [
+          {
+            "path": "/api/threads/fixture_dns/reply",
+            "threadId": "fixture_dns",
+            "mode": "auto"
+          }
+        ],
+        "correct": true,
+        "clarification": null,
+        "actions": [
+          {
+            "type": "route",
+            "turnId": "semantic_3",
+            "threadId": "fixture_dns",
+            "name": "Untitled task",
+            "operation": "reply",
+            "at": 1791347323694,
+            "mode": "auto",
+            "state": "submitted",
+            "replyId": "voice-semantic_3-1"
+          }
+        ]
+      },
+      {
+        "id": "semantic_4",
+        "input": "Queue a tighter ranking that compares salary fit.",
+        "state": "completed",
+        "response": "Queued in the Google Careers ranking session: a tighter ranking with explicit salary-fit comparisons, preserving your instruction against applications or messages. It hasn\u2019t run yet.",
+        "error": null,
+        "durationMs": 9632,
+        "expected": [
+          {
+            "threadId": "fixture_career",
+            "mode": "queue"
+          }
+        ],
+        "actual": [
+          {
+            "threadId": "fixture_career",
+            "mode": "queue"
+          }
+        ],
+        "writes": [
+          {
+            "path": "/api/threads/fixture_career/reply",
+            "threadId": "fixture_career",
+            "mode": "queue"
+          }
+        ],
+        "correct": true,
+        "clarification": null,
+        "actions": [
+          {
+            "type": "route",
+            "turnId": "semantic_4",
+            "threadId": "fixture_career",
+            "name": "Untitled task",
+            "operation": "reply",
+            "at": 1791347330741,
+            "mode": "queue",
+            "state": "queued",
+            "replyId": "voice-semantic_4-1"
+          }
+        ]
+      },
+      {
+        "id": "semantic_5",
+        "input": "Queue a follow-up on the phone VPN resolver and steer the Italian immersion work to keep translations in the same text flow.",
+        "state": "completed",
+        "response": "Queued the VPN resolver follow-up in the Pixel/Tailscale session, keeping the network connected and checking background notification delivery.\n\nThe Italian immersion session accepted the steering to keep translations inline in the same text flow, with contextual grammar and no second line or modal help. Both changes are pending execution.",
+        "error": null,
+        "durationMs": 10384,
+        "expected": [
+          {
+            "threadId": "fixture_dns",
+            "mode": "queue"
+          },
+          {
+            "threadId": "fixture_italian",
+            "mode": "steer"
+          }
+        ],
+        "actual": [
+          {
+            "threadId": "fixture_dns",
+            "mode": "queue"
+          },
+          {
+            "threadId": "fixture_italian",
+            "mode": "steer"
+          }
+        ],
+        "writes": [
+          {
+            "path": "/api/threads/fixture_dns/reply",
+            "threadId": "fixture_dns",
+            "mode": "queue"
+          },
+          {
+            "path": "/api/threads/fixture_italian/reply",
+            "threadId": "fixture_italian",
+            "mode": "steer"
+          }
+        ],
+        "correct": true,
+        "clarification": null,
+        "actions": [
+          {
+            "type": "route",
+            "turnId": "semantic_5",
+            "threadId": "fixture_dns",
+            "name": "Untitled task",
+            "operation": "reply",
+            "at": 1791347342542,
+            "mode": "queue",
+            "state": "queued",
+            "replyId": "voice-semantic_5-1"
+          },
+          {
+            "type": "route",
+            "turnId": "semantic_5",
+            "threadId": "fixture_italian",
+            "name": "Renamed project",
+            "operation": "reply",
+            "at": 1791347342543,
+            "mode": "steer",
+            "state": "submitted",
+            "replyId": "voice-semantic_5-2"
+          }
+        ]
+      }
+    ],
+    "unexpectedTools": [],
+    "errors": [],
+    "tokenUsage": [
+      {
+        "case": "semantic_1",
+        "usage": {
+          "total": {
+            "totalTokens": 13761,
+            "inputTokens": 13706,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 55,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 13761,
+            "inputTokens": 13706,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 55,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_1",
+        "usage": {
+          "total": {
+            "totalTokens": 27770,
+            "inputTokens": 27623,
+            "cachedInputTokens": 13568,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 147,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 14009,
+            "inputTokens": 13917,
+            "cachedInputTokens": 13568,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 92,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_1",
+        "usage": {
+          "total": {
+            "totalTokens": 41886,
+            "inputTokens": 41695,
+            "cachedInputTokens": 27264,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 191,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 14116,
+            "inputTokens": 14072,
+            "cachedInputTokens": 13696,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 44,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_2",
+        "usage": {
+          "total": {
+            "totalTokens": 58995,
+            "inputTokens": 58771,
+            "cachedInputTokens": 41216,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 224,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 17109,
+            "inputTokens": 17076,
+            "cachedInputTokens": 13952,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 33,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_3",
+        "usage": {
+          "total": {
+            "totalTokens": 77630,
+            "inputTokens": 77354,
+            "cachedInputTokens": 58112,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 276,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 18635,
+            "inputTokens": 18583,
+            "cachedInputTokens": 16896,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 52,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_3",
+        "usage": {
+          "total": {
+            "totalTokens": 96508,
+            "inputTokens": 96160,
+            "cachedInputTokens": 76544,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 348,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 18878,
+            "inputTokens": 18806,
+            "cachedInputTokens": 18432,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 72,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_3",
+        "usage": {
+          "total": {
+            "totalTokens": 115485,
+            "inputTokens": 115101,
+            "cachedInputTokens": 95232,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 384,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 18977,
+            "inputTokens": 18941,
+            "cachedInputTokens": 18688,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 36,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_4",
+        "usage": {
+          "total": {
+            "totalTokens": 136061,
+            "inputTokens": 135627,
+            "cachedInputTokens": 114048,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 434,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 20576,
+            "inputTokens": 20526,
+            "cachedInputTokens": 18816,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 50,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_4",
+        "usage": {
+          "total": {
+            "totalTokens": 156861,
+            "inputTokens": 156355,
+            "cachedInputTokens": 134400,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 506,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 20800,
+            "inputTokens": 20728,
+            "cachedInputTokens": 20352,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 72,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_4",
+        "usage": {
+          "total": {
+            "totalTokens": 177761,
+            "inputTokens": 177220,
+            "cachedInputTokens": 155008,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 541,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 20900,
+            "inputTokens": 20865,
+            "cachedInputTokens": 20608,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 35,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_5",
+        "usage": {
+          "total": {
+            "totalTokens": 200406,
+            "inputTokens": 199759,
+            "cachedInputTokens": 175744,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 647,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 22645,
+            "inputTokens": 22539,
+            "cachedInputTokens": 20736,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 106,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_5",
+        "usage": {
+          "total": {
+            "totalTokens": 223565,
+            "inputTokens": 222775,
+            "cachedInputTokens": 198144,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 790,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 23159,
+            "inputTokens": 23016,
+            "cachedInputTokens": 22400,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 143,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      {
+        "case": "semantic_5",
+        "usage": {
+          "total": {
+            "totalTokens": 246893,
+            "inputTokens": 246041,
+            "cachedInputTokens": 220928,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 852,
+            "reasoningOutputTokens": 0
+          },
+          "last": {
+            "totalTokens": 23328,
+            "inputTokens": 23266,
+            "cachedInputTokens": 22784,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 62,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      }
+    ]
+  },
+  "verification": {
+    "initial_node_tests": {
+      "passed": 262,
+      "failed": 0
+    },
+    "android_debug_compile_and_unit_tests": "passed before final migration/stale-question changes",
+    "node_tests": {
+      "passed": 272,
+      "failed": 0
+    },
+    "dependency_audit": "0 vulnerabilities",
+    "node_suite": {
+      "tests": 293,
+      "pass": 293,
+      "fail": 0,
+      "scope": "Frozen integrated backend source; report scheduling, revocation and actual isolated HTTP dispatch included."
+    }
+  },
+  "limits": [
+    "Not yet shipped or installed.",
+    "No claim that speech duration measures exact Codex plan debit.",
+    "Archived and managed-child sessions are not direct input targets.",
+    "Discovery is bounded and supplies explicit continuation/scope metadata.",
+    "No age-only dropping of useful intermediate answers.",
+    "Actual phone SSH banner timed out; physical verification pending."
+  ],
+  "migration": {
+    "runtime": "0.160.1",
+    "inferenceTurns": 0,
+    "errors": [],
+    "pass": true,
+    "historyRows": 106,
+    "injectedCompletedUsers": 105,
+    "injectBatches": 7,
+    "oldHidden": true,
+    "newTools": [
+      "discover",
+      "catchup",
+      "presentCatchup",
+      "sessions",
+      "projects",
+      "models",
+      "updates",
+      "attention",
+      "read",
+      "select",
+      "create",
+      "reply",
+      "interrupt",
+      "rename",
+      "archive",
+      "restore",
+      "watch",
+      "settings",
+      "queueResume",
+      "queueEdit",
+      "answer",
+      "profile",
+      "exit",
+      "permissions",
+      "coordinatorSettings"
+    ],
+    "focusPreserved": true,
+    "historyUnchanged": true,
+    "unknownAnnotated": true,
+    "idempotent": true,
+    "resumedCurrent": true,
+    "rpcCallCounts": {
+      "initialize": 1,
+      "thread/name/set": 1,
+      "thread/inject_items": 7,
+      "thread/start": 2,
+      "thread/read": 2,
+      "thread/resume": 1
+    }
+  },
+  "phone_access": {
+    "ssh": "banner exchange timed out",
+    "adb": "phone-adb found no verified TCP or authorized USB connection",
+    "installed": false
+  },
+  "migration_followup_inference": {
+    "runtime": "0.160.1",
+    "inferenceTurns": 1,
+    "errors": [],
+    "migrationPass": true,
+    "historyRows": 106,
+    "injectedCompletedUsers": 104,
+    "injectBatches": 7,
+    "oldHidden": true,
+    "newTools": [
+      "discover",
+      "catchup",
+      "presentCatchup",
+      "sessions",
+      "projects",
+      "models",
+      "updates",
+      "attention",
+      "read",
+      "select",
+      "create",
+      "reply",
+      "interrupt",
+      "rename",
+      "archive",
+      "restore",
+      "watch",
+      "settings",
+      "queueResume",
+      "queueEdit",
+      "answer",
+      "profile",
+      "exit",
+      "permissions",
+      "coordinatorSettings"
+    ],
+    "focusPreserved": true,
+    "historyUnchanged": true,
+    "unknownAnnotated": true,
+    "idempotent": true,
+    "resumedCurrent": true,
+    "model": "gpt-6.1-sol",
+    "effort": "low",
+    "followup": {
+      "state": "completed",
+      "response": "Queued the follow-up in the phone DNS session: IPv6 only, no Wi-Fi toggling, and no changes to its existing connection. The follow-up has not completed.",
+      "error": null,
+      "posts": [
+        {
+          "path": "/api/threads/fixture_dns/reply",
+          "body": {
+            "id": "voice-migrated_followup-1",
+            "text": "Continue the phone DNS/private-network resolver investigation using IPv6 only. Do not toggle Wi-Fi or change the phone's existing connection. Preserve these restrictions throughout the follow-up.",
+            "mode": "queue"
+          }
+        }
+      ]
+    },
+    "pass": true
+  },
+  "periodic_reporting": {
+    "receipt": "coordinator-reports-alpha36.json",
+    "default_interval_minutes": 30,
+    "default_stale_after_minutes": 120,
+    "stale_status_check_budget": 3,
+    "stale_status_cooldown_hours": 4,
+    "inference_for_reporting": false,
+    "automatic_worker_activation": false,
+    "inventory_limit": 600,
+    "partial_inventory_disclosed": true,
+    "production_activation": "pending deployment"
+  }
+}

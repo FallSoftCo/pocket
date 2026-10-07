@@ -1,7 +1,7 @@
 package co.fallsoft.pocket
 
 /** Playback state contains text and a cursor, never credentials or cloud audio. */
-data class SpokenMessage(val id:Long,val title:String,val kind:String,var text:String,val needsFetch:Boolean=false)
+data class SpokenMessage(val id:Long,val title:String,val kind:String,var text:String,val needsFetch:Boolean=false,val threadId:String?=null){val sourceKey:String? get()=if(kind=="preview")"@audio-preview" else threadId}
 class SpeechQueue(
     val messages:MutableList<SpokenMessage> = mutableListOf(),
     var chunkIndex:Int=0,
@@ -39,3 +39,31 @@ class DisplayedSpeechSession {
         return restored
     }
 }
+
+/** Independent cursors, with one deliberately selected playback source. */
+class SessionSpeechQueues {
+    val queues=linkedMapOf<String?,SpeechQueue>()
+    var activeSource:String?=null
+    var explicitFocus=false
+    val current:SpeechQueue get()=queues.getOrPut(activeSource){SpeechQueue()}
+    val count get()=queues.values.sumOf{it.messages.size}
+    fun enqueue(message:SpokenMessage):SpeechQueue=queues.getOrPut(message.sourceKey){SpeechQueue()}.also{it.enqueue(message)}
+    fun select(source:String?,explicit:Boolean=true):SpeechQueue {
+        current.pause(current.positionMs,"Saved for later")
+        activeSource=source;explicitFocus=explicit
+        return current
+    }
+    fun clearActive(){queues.remove(activeSource)}
+}
+
+/** Only confirmed full playback enters this ledger; fetching and clearing do not. */
+class CompletedSpeechLedger(initial:List<Long> = emptyList(),private val limit:Int=2000){
+    private val ids=linkedSetOf<Long>().apply{addAll(initial.filter{it>0}.takeLast(limit))}
+    fun contains(id:Long)=id in ids
+    fun completed(id:Long){if(id<=0)return;ids.remove(id);ids.add(id);while(ids.size>limit)ids.remove(ids.first())}
+    fun snapshot()=ids.toList()
+}
+
+internal fun speechOriginMatches(notificationLocal:Boolean?,activeLocal:Boolean)=notificationLocal==null||notificationLocal==activeLocal
+
+internal fun notificationSpeechHoldReason(voiceActive:Boolean):String?=if(voiceActive)"Voice mode is active · Stop voice to listen" else null

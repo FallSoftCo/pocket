@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-06",
+  "updated": "2026-10-07",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,40 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "coordinator-periodic-reports-checkins",
+      "requirement": "Configurable periodic reports across ongoing work, with observed outcomes/progress/blockers and evidence-based stale-assignment check-ins. Integrate unseen-work catch-up, avoid repeated model polling or duplicate worker activation, and report actual scheduling status.",
+      "status": "implemented-qualified-source-release-pending",
+      "design": "Default thirty-minute device-scoped reports when there is useful new material; deterministic observed text, no reporting inference. Default two-hour stale threshold with bounded read-only status checks and four-hour cooldown. Sending a report does not mark it read; automatic report speech is disabled.",
+      "evidence": [
+        "qualification/coordinator-session-speech-alpha36.json",
+        "qualification/coordinator-reports-alpha36.json"
+      ]
+    },
+    {
+      "id": "session-aware-speech",
+      "requirement": "Separate logical speech queues and saved playback positions by session with one physical player. Identify sources, select/resume/clear a session, hold unrelated backlogs, preserve questions and useful intermediate updates, and acknowledge only fully delivered speech.",
+      "status": "implemented-qualified-source-release-pending",
+      "evidence": [
+        "qualification/coordinator-session-speech-alpha36.json"
+      ]
+    },
+    {
+      "id": "coordinator-unseen-work-catchup",
+      "requirement": "Summarize material progress, intermediate answers, completed results, blockers and pending questions since foreground checking or actual catch-up delivery. Background reads and speech queuing must not mark seen.",
+      "status": "implemented-qualified-source-release-pending",
+      "evidence": [
+        "qualification/coordinator-session-speech-alpha36.json"
+      ]
+    },
+    {
+      "id": "coordinator-contextual-routing",
+      "requirement": "Naturally route spoken/text requests to any existing work using live discovery and relevant history, preserve explicit focus/steer/queue, cross-turn references, genuine ambiguity clarification and correctable delivery receipts.",
+      "status": "implemented-qualified-source-release-pending",
+      "evidence": [
+        "qualification/coordinator-session-speech-alpha36.json"
+      ]
+    },
     {
       "id": "retained-pairing-intent-navigation",
       "origin": "native release qualification discovery",

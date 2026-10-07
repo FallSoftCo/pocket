@@ -34,15 +34,16 @@ object PocketTranscript {
     }
     private var owner:String?=null
     private var historyLoaded=false
+    private var checkedThisOpen=false
     private fun trace(){if(BuildConfig.DEBUG)android.util.Log.d("PocketCache","rows=${rows.size} buffered=${buffered.size} earlier=$browsingEarlier")}
     fun reset(id:String){
         generation++;owner=id;ownerScope=scopeKey()
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
-        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;historyLoaded=cached!=null
+        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;historyLoaded=cached!=null;checkedThisOpen=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;historyLoaded=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;historyLoaded=false;checkedThisOpen=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
     fun latest(){Pocket.refreshDetail()}
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
@@ -79,7 +80,10 @@ object PocketTranscript {
                 val pendingIds=d.optJSONArray("pending")?.objects()?.map{it.s("id")}.orEmpty().toSet()
                 rows=rows.filter{it.s("kind")!="request"||it.optJSONObject("request")?.s("id") in pendingIds}
             }
-            if(PocketVoice.foreground&&!PocketVoice.active&&!Pocket.newTask&&!older&&bridgeCursor==null)PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList())
+            if(PocketVoice.foreground&&!PocketVoice.active&&!Pocket.newTask&&!older&&bridgeCursor==null){
+                PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=profileLocal,catchup=if(!checkedThisOpen)d.optJSONObject("catchup") else null)
+                checkedThisOpen=true
+            }
             val updates=buffered.values.toList();buffered.clear()
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             rememberRecent();revision++;Pocket.error="";succeeded=true;trace()

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "feature": "Periodic observed-material coordinator check-ins",
+  "targetRelease": "0.5.0-alpha.36",
+  "qualifiedAt": "2026-10-07T05:10:47.986Z",
+  "status": "passed",
+  "validation": {
+    "command": "node --test --test-reporter=dot tests/session-catchup.test.mjs tests/coordinator-reports.test.mjs",
+    "passedReports": 12,
+    "passedCatchup": 25,
+    "passedCombined": 37,
+    "failed": 0,
+    "reportTests": [
+      "report preferences default disabled and validate explicit per-device cadence",
+      "reports public progress, completed results and questions without marking them read or inferring completion",
+      "cadence, restart and publication retry keep same report identity without duplicate voice turns",
+      "long excerpts offered once are not falsely acknowledged as fully presented",
+      "known untouched live CLI and managed child work gets bounded read-only status checks",
+      "fresh roster is shared across configured devices; checks limited to three and cached per-device results reused",
+      "inventory truncation and failures expose incomplete scope instead of claiming all work",
+      "unknown status and interrupted collecting restart remain explicitly unverified without mutations",
+      "overlap guard prevents concurrent scheduling and reporting context expires after one day",
+      "revoked devices cannot keep scheduling stale checks or publish prepared report retries",
+      "revocation while a status read is in flight prevents persistence and publication",
+      "actual isolated scheduler stages reports and targeted HTTP transport enforces device ownership"
+    ],
+    "syntaxCheck": "node --check server/index.mjs",
+    "actualHttp": {
+      "server": "server/index.mjs",
+      "storage": "Disposable temporary SQLite database with synthetic paired devices",
+      "runtime": "Deterministic owned stdio Codex fixture; no provider requests or user work",
+      "dispatcher": "The test process accelerates only the reporting dispatcher from 60 seconds to 20 milliseconds. Configured reporting intervals and production scheduling timestamps remain unchanged.",
+      "verified": [
+        "Reports disabled for every unconfigured device",
+        "Owner-only explicit device activation; invalid device rejected",
+        "Actual scheduled dispatcher creates a completed assistant-only coordinator history turn",
+        "Only the configured device receives the versioned coordinatorReport WebSocket envelope",
+        "No ordinary notification WebSocket event for reports",
+        "Legacy generic notification polling excludes report rows",
+        "Report notification direct fetch permits configured device and rejects other paired devices",
+        "Report generation and send do not mark material seen",
+        "Revoked devices are disabled by the next scheduler tick"
+      ],
+      "cleanup": "Owned backend process group and fixture sockets stopped; temporary files/database removed"
+    }
+  },
+  "defaults": {
+    "enabled": false,
+    "intervalMinutes": 30,
+    "staleAfterMinutes": 120
+  },
+  "bounds": {
+    "intervalMinutes": [
+      5,
+      1440
+    ],
+    "staleAfterMinutes": [
+      30,
+      10080
+    ],
+    "inventoryPagesPerDueTick": 6,
+    "inventoryPageSize": 100,
+    "maxFreshInventoryThreads": 600,
+    "inventorySharedAcrossDevices": true,
+    "statusReadsPerTick": 3,
+    "statusReadCooldownHours": 4,
+    "maxReportSessions": 5,
+    "maxPublicExcerptCharacters": 420,
+    "maxRecentContextReports": 3,
+    "recentContextHours": 24
+  },
+  "behavior": {
+    "cost": "The report scheduler performs zero model inference and starts no new agent workers. It uses public observed material and metadata-only status reads. This is not a claim that separately requested native speech is free.",
+    "inventory": "Fresh metadata thread/list includes interactive roots and subAgent sources. Hidden owned controllers and archived work are excluded. Bounded or unavailable inventory is explicitly identified as partial/unverified with continuation information.",
+    "material": "Reports unseen material progress, final results, failures/blockers and pending questions. Previously offered identities are tracked separately from read/presented state to avoid repeated check-ins.",
+    "coverage": "Truncated excerpts are not staged as fully presented catch-up items. Exact full excerpts are acknowledged only after actual coordinator delivery/read acknowledgment; report creation and notification send do not acknowledge them.",
+    "staleWork": "Quiet assigned or known active work receives bounded metadata-only status verification. Working, idle or unverified states are reported as observed. Quiet alone is not treated as failure. No automatic steer, resume, turn/start or duplicate worker activation occurs.",
+    "referents": "Recent reports are supplied as explicitly identified report-origin context; periodic reports do not overwrite user-command references.",
+    "transport": "Notification kind coordinator_report, targeted versioned WebSocket coordinatorReport transport, and assistant-only coordinator history. Generic polling excludes these rows; explicit report fetch is device scoped.",
+    "revocation": "Only existing paired devices may be enabled. Tick, publication and post-read persistence recheck validity; revoked preferences and pending publication runs are disabled/cancelled."
+  },
+  "limitations": [
+    "No physical phone verification or production activation was performed by this qualification.",
+    "Six metadata pages cover at most 600 newly listed sessions per due tick. A remaining cursor or fetch failure is surfaced; no exhaustive inventory claim is made.",
+    "Managed child work is observed when listed/discovered; direct control remains subject to stock runtime restrictions.",
+    "Status checks are metadata observations, not progress requests; manual follow-up remains a user decision.",
+    "Native speech requested separately may consume account audio usage. Reports do not automatically synthesize speech."
+  ],
+  "deployment": {
+    "productionRestart": false,
+    "productionDeployment": false,
+    "phoneEnabled": false,
+    "phoneVerified": false
+  },
+  "sources": {
+    "server/coordinator-reports.mjs": "0b160f5ce31615969b943097203a676b311ba7b4f2e1ac0b25686180e86db1ed",
+    "server/index.mjs": "40485f8baca69b217e8215594f92157ae53fe5015532846abd5e85cb96a4d709",
+    "tests/coordinator-reports.test.mjs": "971a81dc0441b266013a54bad6fbd53bb75dabb36d5c85067c08d046344db96f"
+  }
+}

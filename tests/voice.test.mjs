@@ -9,11 +9,11 @@ function setup(){const db=new DatabaseSync(':memory:'),codex=new FakeCodex(),cal
 test('new voice threads append shared ownership policy without changing existing resume policy',async()=>{
  const {controller,codex,db}=setup();await controller.ensure('phone');
  const created=codex.calls.find(c=>c.method==='thread/start');
- assert.match(created.params.developerInstructions,/persistent eyes-free Codex controller/);
+ assert.match(created.params.developerInstructions,/persistent eyes-free coordinator/);
  assert.ok(created.params.developerInstructions.endsWith(COMPUTER_USE_INSTRUCTIONS));
  controller.resumed.clear();await controller.ensure('phone');
  const resumed=codex.calls.find(c=>c.method==='thread/resume');
- assert.match(resumed.params.developerInstructions,/persistent eyes-free Codex controller/);
+ assert.match(resumed.params.developerInstructions,/persistent eyes-free coordinator/);
  assert.equal(resumed.params.developerInstructions.includes(COMPUTER_USE_INSTRUCTIONS),false);
  db.close();
 });
@@ -65,6 +65,6 @@ test('voice read retrieves only the bounded recent timeline and exposes missing 
 test('coordinator light inspection uses its own stock session and review preference overrides prior full execution',async()=>{
  const {controller,codex,db,calls}=setup();await controller.ensure('phone');db.prepare('UPDATE voice_sessions SET full=0 WHERE device=?').run('phone');
  controller.submitText('phone','light-inspection-123','What are the workstation temperatures?');await tick();await tick();
- const start=codex.calls.find(c=>c.method==='turn/start');assert.equal(start.params.threadId,'controller-123');assert.deepEqual(start.params.sandboxPolicy,{type:'readOnly',networkAccess:false});assert.equal(start.params.approvalPolicy,'never');assert.equal(calls.length,0);
+ const start=codex.calls.find(c=>c.method==='turn/start');assert.equal(start.params.threadId,'controller-123');assert.deepEqual(start.params.sandboxPolicy,{type:'readOnly',networkAccess:false});assert.equal(start.params.approvalPolicy,'never');assert.equal(calls.filter(c=>c.body).length,0);
  codex.emit('event',{method:'item/completed',params:{threadId:'controller-123',item:{type:'agentMessage',phase:'final_answer',text:'CPU temperature is 48 degrees Celsius.'}}});codex.emit('event',{method:'turn/completed',params:{threadId:'controller-123',turn:{status:'completed'}}});assert.equal(controller.get('phone','light-inspection-123').response,'CPU temperature is 48 degrees Celsius.');assert.equal(controller.history('phone').turns.at(-1).response,'CPU temperature is 48 degrees Celsius.');db.close();
 });
