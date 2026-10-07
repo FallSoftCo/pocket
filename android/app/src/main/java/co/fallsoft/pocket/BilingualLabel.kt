@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.*
     var to by remember(text,target){mutableStateOf(AnnotatedString(target))}
     var cueActive by remember(text,target){mutableStateOf(false)}
     val progress=remember(text,target){Animatable(1f)}
-    val shown=if(expanded||original)text else target
+    val shown=if(expanded||(original&&PocketImmersion.motionEnabled))text else target
     LaunchedEffect(text,target,ready,transitionAnimated,expanded,PocketSpeech.displayedOwner){
         if(!ready||expanded||PocketSpeech.displayedOwner!=null)return@LaunchedEffect
         // Separate queues replace the old synchronous screen-wide label clock.
