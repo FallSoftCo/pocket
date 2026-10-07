@@ -274,8 +274,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton({keyboard?.hide();Pocket.closeTask()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
-            InlineSpeechVolume(Modifier.weight(1f).widthIn(min=100.dp))
-            UsageDock(Modifier.width(usageDockWidth().coerceAtMost(96.dp)),conversationOnly=true)
+            InlineSpeechVolume(Modifier.weight(1f).widthIn(min=64.dp))
+            UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)
             if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
         }
     }

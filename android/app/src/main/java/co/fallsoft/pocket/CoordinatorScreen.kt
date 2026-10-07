@@ -126,7 +126,7 @@ import kotlinx.coroutines.flow.*
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 IconButton({back()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
                 InlineSpeechVolume(Modifier.weight(1f).widthIn(min=112.dp))
-                UsageDock(Modifier.width(usageDockWidth().coerceAtMost(96.dp)),conversationOnly=true)
+                UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)
             }
         }
     }

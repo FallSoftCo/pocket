@@ -34,10 +34,11 @@ import androidx.compose.ui.unit.dp
 }
 @Composable fun AgentResultCard(task:Task){
     Column(Modifier.fillMaxWidth().background(Panel).clickable{Pocket.open(task.id)}.padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-        Text(listOf(task.agentNickname.ifBlank{task.title},task.agentRole,if(task.status=="notLoaded")"Status not yet checked" else task.status,if(task.unreadCount>0)"${task.unreadCount} unread" else "").filter{it.isNotBlank()}.joinToString(" · "),color=Mint)
-        task.parentThreadId?.let{parent->Pocket.tasks.firstOrNull{it.id==parent}?.let{Text("Parent: "+it.agentNickname.ifBlank{it.title},color=Muted,maxLines=1)}}
-        Text(task.preview.ifBlank{"Open to review this agent’s available work."},color=Paper,maxLines=3)
-        Text(if(task.canAcceptDirectInput)"Open agent · direct guidance available" else "Review results · guide through parent task",color=Muted)
+        Text(listOf(task.agentNickname.ifBlank{task.title},task.agentRole,if(task.status=="notLoaded")"Status not yet checked" else task.status,if(task.unreadCount>0)"${task.unreadCount} unread" else "").filter{it.isNotBlank()}.joinToString(" · "),color=Mint,minLines=2,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        val parent=Pocket.tasks.firstOrNull{it.id==task.parentThreadId}
+        Text(parent?.let{"Parent: "+it.agentNickname.ifBlank{it.title}}?:if(task.parentThreadId!=null)"Parent task outside this page" else "Parent identity unavailable",color=Muted,minLines=1,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(task.preview.ifBlank{"Open to review this agent’s available work."},color=Paper,minLines=3,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(if(task.canAcceptDirectInput)"Open agent · direct guidance available" else "Review results · guide through parent task",color=Muted,minLines=2,maxLines=2)
     }
 }
 internal fun conversationIdentityPending()=Pocket.selected!=null&&Pocket.tasks.none{it.id==Pocket.selected}&&Pocket.detail?.optJSONObject("thread")==null

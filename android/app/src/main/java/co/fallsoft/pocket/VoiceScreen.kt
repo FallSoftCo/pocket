@@ -106,8 +106,8 @@ import androidx.lifecycle.repeatOnLifecycle
             }
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 IconButton({PocketVoice.stop();Pocket.closeTask()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
-                InlineSpeechVolume(Modifier.weight(1f).widthIn(min=112.dp))
-                UsageDock(Modifier.width(usageDockWidth().coerceAtMost(96.dp)))
+                InlineSpeechVolume(Modifier.weight(1f).widthIn(min=64.dp))
+                UsageDock(Modifier.width(usageDockWidth()))
                 IconButton({PocketVoice.playback()},modifier=Modifier.size(48.dp)){SymbolIcon(if(PocketVoice.state=="Speaking")"Pause" else "PlayArrow",if(PocketVoice.state=="Speaking")"Pause" else "Replay",Modifier.size(32.dp))}
             }
         }

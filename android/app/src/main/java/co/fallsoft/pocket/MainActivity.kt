@@ -175,6 +175,7 @@ class MainActivity:ComponentActivity(){
     BackHandler(Pocket.tab==1&&Pocket.selected==null&&!Pocket.newTask){Pocket.tab=0}
     var workToolsOpen by remember{mutableStateOf(false)}
     val workListState=key(Pocket.local,Pocket.token,Pocket.showArchived){rememberLazyListState()}
+    val workCatalogView=remember(Pocket.local,Pocket.token){SessionCatalogViewState(Pocket.showArchived)}
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
     Column(Modifier.fillMaxSize()){
         ConnectionNotice()
@@ -184,7 +185,7 @@ class MainActivity:ComponentActivity(){
         else{
             AnimatedContent(targetState=Pocket.tab,modifier=Modifier.weight(1f).fillMaxWidth(),label="tab",transitionSpec={
                 (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
-            }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it},workListState);else->SettingsScreen()}}
+            }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it},workListState,workCatalogView);else->SettingsScreen()}}
             ConversationSpeechDock()
             InlineCaptureStatus()
             PocketDock(onFind={Pocket.tab=0;workToolsOpen=true},onTab={workToolsOpen=false})
@@ -195,8 +196,8 @@ class MainActivity:ComponentActivity(){
     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)).padding(4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
         IconButton({Pocket.tab=0;onFind()},modifier=Modifier.size(48.dp)){SymbolIcon("Search","Find",Modifier.size(32.dp),tint=Mint)}
         VoiceLaunchButton(modifier=Modifier.width(64.dp),dock=true)
-        InlineSpeechVolume(Modifier.weight(1f).widthIn(min=100.dp))
-        UsageDock(Modifier.width(usageDockWidth().coerceAtMost(96.dp)))
+        InlineSpeechVolume(Modifier.weight(1f).widthIn(min=64.dp))
+        UsageDock(Modifier.width(usageDockWidth()))
     }
 }
 @Composable fun PhoneControlNotice(){
@@ -242,10 +243,11 @@ class MainActivity:ComponentActivity(){
         FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={BilingualLabel("This phone")},leadingIcon={SymbolIcon(Icons.Rounded.PhoneAndroid,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
     }
 }
+class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntStateOf(if(archived)3 else 0);val query=mutableStateOf("")}
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={},listState:androidx.compose.foundation.lazy.LazyListState=rememberLazyListState()){
+@Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={},listState:androidx.compose.foundation.lazy.LazyListState=rememberLazyListState(),view:SessionCatalogViewState=remember{SessionCatalogViewState(Pocket.showArchived)}){
     LaunchedEffect(Pocket.local,Pocket.token){while(true){delay(5000);if(Pocket.connected)Pocket.refresh()}}
-    var filter by remember{mutableIntStateOf(if(Pocket.showArchived)3 else 0)};var query by remember{mutableStateOf("")}
+    var filter by view.filter;var query by view.query
     var touching by remember{mutableStateOf(false)}
     var listClock by remember{mutableLongStateOf(System.currentTimeMillis())}
     var displayed by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf(Pocket.tasks)}
@@ -311,12 +313,12 @@ class MainActivity:ComponentActivity(){
     if(toolsOpen)ModalBottomSheet(onDismissRequest={onToolsOpen(false)},containerColor=Panel){
         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=16.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             OutlinedTextField(query,{query=it},placeholder={BilingualLabel("Find sessions",centered=false)},singleLine=true,modifier=Modifier.fillMaxWidth())
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived","History").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={BilingualLabel(title)})}}
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived","History").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(i==0)Pocket.requestSessionOrder();if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={BilingualLabel(title)})}}
             if(Pocket.sessionCursor!=null)TextButton({Pocket.moreSessions()},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}
             ProfileSwitcher()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
                 Button({onToolsOpen(false);Pocket.composeTask()},modifier=Modifier.weight(1f).heightIn(min=56.dp)){BilingualLabel("New task",maxLines=2)}
-                FilledTonalButton({onToolsOpen(false)},modifier=Modifier.weight(1f).heightIn(min=56.dp)){BilingualLabel("Show sessions",maxLines=2)}
+                FilledTonalButton({if(query.isBlank()&&filter==0)Pocket.requestSessionOrder();onToolsOpen(false)},modifier=Modifier.weight(1f).heightIn(min=56.dp)){BilingualLabel("Show sessions",maxLines=2)}
             }
         }
     }

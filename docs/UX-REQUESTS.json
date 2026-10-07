@@ -1937,9 +1937,9 @@
       "id": "recent-work-and-parent-agent-catalog",
       "date": "2026-10-07",
       "request": "Restore last-week user work after dormant metadata resurfacing; genuine work recency, stable seats, parent-primary agent groups, supported guidance, searchable paginated history; preserve ongoing tasks, selection, scroll and unread updates; no archive/delete/interruption for decluttering. Coordinate separately from mic alpha39.",
-      "status": "implemented-isolated-candidate; automated-and-initial-native-qualified; final-native-and-deployment-pending",
+      "status": "implemented-isolated-candidate; automated-and-final-native-qualified; integration-and-phone-deployment-pending",
       "implementation": "Recency-index pages, retained runtime parent/input capabilities, grouped child results and parent guidance, read-only unsupported child history, direct-input admission guard, stable background seats and explicit Work reconciliation, older-history pagination/search.",
-      "verification": "Read-only production and mixed inventory replay confirms dormant metadata promotion without recovery replay. Android246 tests/build/lint pass; native metadata/reconnect measured seats stable and distinct one-tap histories correct. Dedicated emulator checkpointed for urgent Pocket Dev alpha40 memory boundary; child route/draft/pagination handset deployment remain distinct checks.",
+      "verification": "Read-only production and1808-entry mixed inventory replay confirm dormant metadata promotion without recovery replay.329 Node and246 Android tests, debug build/lint pass. Final APK native distinct drafts/replies, nested parent guidance, supported child reply, pagination32\u219264, partial/reconnect/metadata stable bounds and explicit genuine activity promotion pass. Search Back and long/short child geometry plus translated Settings1x/2x verified on earlier source-equivalent candidates. Silent capture frozen coordinator target verified; live audio and physical phone deployment remain separate.",
       "evidence": [
         "docs/SESSION-CATALOG.md",
         "docs/qualification/session-catalog-candidate.json"

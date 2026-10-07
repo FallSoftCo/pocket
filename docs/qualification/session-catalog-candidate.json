@@ -1,9 +1,9 @@
 {
   "date": "2026-10-07",
   "status": "isolated-candidate; production-and-phone-not-deployed",
-  "baseCommit": "94ad22961fa81ba7da21fab45eae7e90ce33cc28",
-  "implementationCommit": "9477522",
-  "apkSha256": "5ebf507d3eee2a56fff14800a4cb243c8772a898d17489d77bcf5bc25b374610",
+  "baseCommit": "5b9bbb22999f7f2acbdb2c320bb6adfb13eed635",
+  "implementationCommit": "fix/session-catalog final source; see git history",
+  "apkSha256": "f738bc13ba8d36b750f42e47d695c485e9eda49329c871f95cfcceb7df5dc4b8",
   "cause": {
     "dormantMetadataTouchedToday": 262,
     "cachedChildren": 493,
@@ -34,28 +34,34 @@
     "http": "unsupported child replies rejected before durable queue; child timeline read without resume; only thread/list/read metadata RPCs",
     "foregroundCapture": "Activity and Accessibility share inbox/coordinator/child eligibility and frozen existing capture target;4 unit tests",
     "serverFailures": 0,
-    "voiceChildAdmission": "HTTP409 before controller initialization; no thread/start call"
+    "voiceChildAdmission": "HTTP409 before controller initialization; no thread/start call",
+    "canonicalApi": "Canonical recency/parent/input fields applied after raw metadata in list/search/coordinator/detail; source-only child identity and null capability HTTP assertions pass"
   },
   "native": {
     "device": "owned synthetic emulator5574 API34",
     "fixture": "274 primary user tasks,262 dormant,6 children with nested parent and confirmed supported child",
-    "metadataAndReconnect": "3 visible primary title bounds exactly unchanged for metadata reversal and WS1012 reconnect",
+    "metadataAndReconnect": "Final APK visible child title/guidance bounds exactly unchanged across partial inventory, WS1012 reconnect, complete inventory and reversed metadata; initial APK also preserves3 primary title bounds.",
     "distinctSwitching": "one coordinate tap each recent01 then02 showed own distinct native history and matching fixture read IDs",
-    "agents": "primary cards show4 and2 child groups; no child as independent recent card",
-    "draft": "synthetic draft text captured; return/restoration not yet qualified",
+    "agents": "Unsupported nested child06 has results without composer; Parent opens immediate child01 then user01 with original draft intact. Explicitly capable child05 has working composer.",
+    "draft": "Recent01/02 distinct drafts survive navigation; selected02 reply routes once to02; child05 direct guidance routes once to05",
     "remaining": [
-      "native unsupported child parent route",
-      "native draft restoration and reply routing",
-      "native pagination/search/partial inventory/scroll checks",
-      "final release build and physical phone deployment verification"
+      "Pocket Dev integration/release signing",
+      "Physical phone deployment and real-session one-tap switching qualification"
     ],
-    "resourceBoundary": "Owned emulator stopped for Pocket Dev urgent alpha40 memory priority. Synthetic inputs, exact draft, config and receipts retained; owned disposable AVD and poorly compressing archive removed to recover1.1GiB tmpfs and984MB disk. Fresh native continuation can replay only synthetic fixture."
+    "resourceBoundary": "Only owned disposable emulator5574 and synthetic loopback fixture used; paused for alpha40 urgent release and resumed after explicit owner authorization.",
+    "pagination": "Native Load older requests32 then64 across background first-page refresh; loaded inventory retained",
+    "ordering": "Genuine user activity preserves seats during browsing; explicit Recent/Show sessions promotes genuine old001 work, metadata-only dormant tasks do not promote",
+    "capture": "Inbox hardware capture labels Coordinator despite selected child05; navigation retains frozen Coordinator target. Silent emulator stops with actionable no-speech feedback and no voice API call. Live audio delivery not claimed.",
+    "searchAndScroll": "Search old042 -> own history -> Back restores query and exact card bounds on f94c312b APK; final source retains same lifted view state. Partial/reconnect/pagination preserve viewport.",
+    "childResultGeometry": "Reserved header/parent/preview/guidance lines preserve adjacent positions for long-to-short result updates on f94c312b; unchanged final source.",
+    "footer": "Full Italian Settings label visually verified1x and2x on7946f8d7 candidate; English visible on final APK. Existing2x Talk-circle caption clipping reported to release owner; mic action retained.",
+    "evidenceDirectory": "Private ignored review/catalog; synthetic selected captures in gallery"
   },
   "gallery": "8bar/?collection=nextcomp-session-catalog",
   "releaseOwnership": "Pocket Dev owns release and physical phone; isolated workstream does not edit main version/package or restart services",
   "productionObservation": {
     "backend": "alpha38 connected healthy",
-    "phone": "Pocket Dev independently reported alpha39 code57 installed and hash verified",
+    "phone": "Pocket Dev reported alpha40/code58 installed and hash verified",
     "catalogCandidateDeployed": false
   },
   "safety": {
