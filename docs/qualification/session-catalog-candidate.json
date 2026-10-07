@@ -33,7 +33,8 @@
     "serverTests": 329,
     "http": "unsupported child replies rejected before durable queue; child timeline read without resume; only thread/list/read metadata RPCs",
     "foregroundCapture": "Activity and Accessibility share inbox/coordinator/child eligibility and frozen existing capture target;4 unit tests",
-    "serverFailures": 0
+    "serverFailures": 0,
+    "voiceChildAdmission": "HTTP409 before controller initialization; no thread/start call"
   },
   "native": {
     "device": "owned synthetic emulator5574 API34",
@@ -48,7 +49,7 @@
       "native pagination/search/partial inventory/scroll checks",
       "final release build and physical phone deployment verification"
     ],
-    "resourceBoundary": "Owned emulator stopped/checkpointed on Pocket Dev request to free memory for urgent alpha40 native QA. No shared devices/services stopped."
+    "resourceBoundary": "Owned emulator stopped for Pocket Dev urgent alpha40 memory priority. Synthetic inputs, exact draft, config and receipts retained; owned disposable AVD and poorly compressing archive removed to recover1.1GiB tmpfs and984MB disk. Fresh native continuation can replay only synthetic fixture."
   },
   "gallery": "8bar/?collection=nextcomp-session-catalog",
   "releaseOwnership": "Pocket Dev owns release and physical phone; isolated workstream does not edit main version/package or restart services",
@@ -62,5 +63,12 @@
     "realSessionsResumedByQA": false,
     "archivedDeletedInterrupted": false,
     "servicesRestarted": false
+  },
+  "galleryChecks": {
+    "desktopCards": 1984,
+    "mobileCards": 1984,
+    "desktopMobilePassed": true,
+    "reducedMotionPassed": true,
+    "reloadPassed": true
   }
 }

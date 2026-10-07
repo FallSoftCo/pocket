@@ -381,9 +381,9 @@ app.post('/api/coordinator/reporting/:deviceId',owner,route(async(req,res)=>res.
 app.get('/api/coordinator/reports',(req,res)=>{try{res.json(coordinatorReports.inbox(req.device.id,{before:Number(req.query.before||Number.MAX_SAFE_INTEGER),limit:Number(req.query.limit||40)}));}catch(e){res.status(e.status||500).json({error:e.message});}});
 app.get('/api/voice/history',(req,res)=>{const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before,{conversationOnly:req.query.conversationOnly==='1'}));});
 app.post('/api/voice/start',route(async(req,res)=>{
-  await voiceController.ensure(req.device.id);
   let threadId=null;
   if(req.body.threadId){threadId=requireId(req.body.threadId);if(catchupHidden(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();const result=await codex.call('thread/read',{threadId,includeTurns:false});if(result.thread?.id!==threadId)return res.status(409).json({error:'Session identity changed. Choose the intended session again.'});requireDirectSessionInput(result.thread);}
+  await voiceController.ensure(req.device.id);
   const s=voiceController.setFocus(req.device.id,threadId,{mode:threadId?'direct':'coordinator'});
   if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);
   res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),native:true});
