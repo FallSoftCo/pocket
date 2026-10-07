@@ -14,6 +14,14 @@
   },
   "requests": [
     {
+      "id": "pixelbook-go-web-client",
+      "date": "2026-10-07",
+      "requirement": "Build and privately deploy a NextComp browser client for Pixelbook Go, reusing existing backend, with keyboard/mouse, responsive touch, useful PWA installation, coordinator/direct input, intermediate updates, attention, work recency, actual child parent/input capability, drafts/reconnect/authenticated pairing and supported browser voice. Coordinate concurrent Android and session-list work.",
+      "status": "implemented; separate private gateway deployed; HTTP and virtual-DOM qualified; rendered-browser and physical Pixelbook qualification blocked by configured browser-resource quarantine",
+      "implementation": "web/ client and server/web-client.mjs separate loopback gateway use existing paired device endpoints, native audio transport and durable outboxes. Runtime metadata-only adapter bridges additive catalog fields without touching production backend. Unsupported child history uses existing bounded reader without resume. Private cookie key and device bearer stay outside source.",
+      "verification": "Five gateway security/contract tests plus existing322 backend tests; synthetic virtual-DOM flows and live HTTPS actual stock task creation/continuation pass. Exact rendered-browser, browser provider audio and physical Pixelbook use not claimed. See docs/qualification/web-client-2026-10-07.json."
+    },
+    {
       "id": "discoverable-settings-and-app-updates",
       "requirement": "Settings and in-app updating must remain obvious and immediately reachable from the footer; do not hide them behind activity rows or a Controls & usage expansion. Preserve thumb-sized existing footer and usage information.",
       "status": "released-alpha40; actual phone code58 APK-hash-verified",

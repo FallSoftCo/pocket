@@ -1,0 +1,32 @@
+import http from 'node:http';
+import {once} from 'node:events';
+import {WebSocketServer} from 'ws';
+import {createWebClient} from '../server/web-client.mjs';
+export async function fixture(){
+ const token='d'.repeat(64),writes=[],outgoing=new Map(),turns=[],starts=new Map(),connections=new Set();
+ const parent={id:'parent-123',name:'Prepare the field guide',cwd:'/synthetic/project',status:{type:'active'},createdAt:1700000000,recencyAt:1700000200000,canAcceptDirectInput:true};const other={id:'other-123',name:'Compare lighting studies',cwd:'/synthetic/art',status:{type:'idle'},createdAt:1700000100,recencyAt:1700000100000};const child={id:'child-123',name:'Research agent',cwd:parent.cwd,status:{type:'idle'},source:{subAgent:{thread_spawn:{parent_thread_id:parent.id}}},isChild:true,parentThreadId:parent.id,canAcceptDirectInput:false,createdAt:1700000050};
+ const rows=new Map([[parent.id,[{id:'t1/header',turnId:'t1',kind:'turn',status:'inProgress'},{id:'t1/input',turnId:'t1',kind:'user',title:'You',text:'Prepare a field guide.'},{id:'t1/update',turnId:'t1',kind:'message',title:'Codex',phase:'commentary',text:'I found two useful options. Which material should we use?',version:1},{id:'t1/tool',turnId:'t1',kind:'activity',title:'Read file',text:'materials.md',detail:'Synthetic tool output'}]],[other.id,[{id:'other/answer',kind:'message',title:'Codex · response',text:'The warm light study is ready.'}]],[child.id,[{id:'child/answer',kind:'message',title:'Codex · response',text:'Delegated findings are ready for the parent.'}]]]);
+ let pending=[{id:'question-123',method:'item/tool/requestUserInput',params:{threadId:parent.id,questions:[{id:'material',header:'Material',question:'Which material?',options:[{label:'Wood',description:'Warm surface'},{label:'Metal',description:'Cool surface'}]}]}}];let rev=1;
+ const backend=http.createServer(async(req,res)=>{try{const url=new URL(req.url,'http://fixture'),path=url.pathname;let body={};if(req.method==='POST'){let text='';for await(const data of req)text+=data;body=JSON.parse(text||'{}');writes.push({path,body});}res.setHeader('Content-Type','application/json');const json=data=>res.end(JSON.stringify(data));if(path==='/api/pair')return json({token,id:'browser-fixture',host:'Synthetic workstation'});if(req.headers.authorization!==`Bearer ${token}`){res.statusCode=401;return json({error:'Pair this browser.'});}
+ if(path==='/api/status')return json({deviceId:'browser-fixture',device:'Pixelbook Go fixture',host:'Synthetic workstation',version:'fixture',defaultCwd:'/synthetic/project'});
+ if(path==='/api/threads'&&req.method==='GET')return json({threads:[parent,other,child]});
+ if(path==='/api/voice/history')return json({turns,hasEarlier:false});
+ if(path==='/api/voice/start')return json({ok:true});
+ if(path==='/api/voice/text'){if(!turns.some(t=>t.id===body.turnId))turns.push({id:body.turnId,transcript:body.text,response:'I can help. Your request is in context.',state:'completed',actions:[{threadId:parent.id,name:parent.name,type:'route'}]});return json(turns.at(-1));}
+ if(/^\/api\/voice\/turns\//.test(path)){const t=turns.find(t=>path.includes(t.id));if(!t){res.statusCode=404;return json({error:'Not found'});}return json(t);}
+ if(path==='/api/attention')return json({notifications:pending.length?[{id:1,thread_id:parent.id,title:'Choose a material',body:'This work needs your answer.'}]:[]});
+ if(path==='/api/coordinator/reporting')return json({enabled:false,intervalMinutes:30,staleAfterMinutes:120});
+ if(path==='/api/coordinator/reports')return json({reports:[{id:'report-123',response:'Field guide: two options found.',actions:[{threadId:parent.id}]}]});
+ if(path==='/api/projects')return json({projects:[{cwd:'/synthetic/project'}]});
+ if(path==='/api/models')return json({models:[{model:'fixture-model',name:'Fixture model',defaultEffort:'medium',efforts:[{reasoningEffort:'medium'}]}]});
+ if(path==='/api/threads'&&req.method==='POST'){const row={...body,state:'started',thread_id:other.id};starts.set(body.id,row);return json(row);}
+ if(path.startsWith('/api/session-starts/')){const row=starts.get(path.split('/').at(-1));if(!row){res.statusCode=404;return json({error:'Not found'});}return json(row);}
+ if(path.startsWith('/api/requests/')){pending=[];return json({ok:true});}
+ if(path.startsWith('/api/replies/')){const row=outgoing.get(path.split('/').at(-1));if(!row){res.statusCode=404;return json({error:'Not found'});}return json(row);}
+ const match=/^\/api\/threads\/([^/]+)(?:\/(.*))?$/.exec(path);if(match){const id=match[1],action=match[2],thread=[parent,other,child].find(t=>t.id===id);if(action==='reply'){if(!outgoing.has(body.id)){outgoing.set(body.id,{...body,state:'accepted',thread_id:id});rows.get(id).push({id:body.id,kind:'user',title:'You',text:body.text});}return json({id:body.id,state:'accepted'});}if(action)return json({ok:true});const earlier=url.searchParams.has('before');return json({thread,timeline:{rows:earlier?[{id:'old/answer',kind:'message',title:'Codex',text:'Earlier useful result'}]:rows.get(id),hasEarlier:id===parent.id&&!earlier,before:earlier?'old':'t1'},pending:id===parent.id?pending:[],outgoing:[...outgoing.values()].filter(o=>o.thread_id===id),revision:rev,watched:true});}
+ if(path==='/api/voice/native/start'){res.statusCode=503;return json({error:'Synthetic native provider unavailable. Recording is saved.'});}
+ res.statusCode=404;json({error:'Unknown fixture route'});
+ }catch(e){res.statusCode=500;res.end(JSON.stringify({error:e.message}));}});
+ const wss=new WebSocketServer({server:backend});wss.on('connection',ws=>{connections.add(ws);ws.send(JSON.stringify({type:'status',connected:true}));ws.on('close',()=>connections.delete(ws));});backend.listen(0,'127.0.0.1');await once(backend,'listening');const gateway=createWebClient({backend:`http://127.0.0.1:${backend.address().port}`,origin:'http://127.0.0.1:18982',secure:false});gateway.server.listen(18982,'127.0.0.1');await once(gateway.server,'listening');
+ return {url:'http://127.0.0.1:18982',writes,rows,connections,emit(row){rows.get(parent.id).push(row);for(const ws of connections)ws.send(JSON.stringify({type:'timeline',threadId:parent.id,row,version:++rev}));},closeSockets(){for(const ws of connections)ws.close();},async close(){for(const ws of connections)ws.terminate();for(const ws of gateway.sockets.clients)ws.terminate();wss.close();await Promise.all([new Promise(r=>backend.close(r)),new Promise(r=>gateway.server.close(r))]);}};
+}

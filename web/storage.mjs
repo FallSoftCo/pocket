@@ -1,0 +1,5 @@
+const prefix='nextcomp.web.v1.';
+export const read=(key,fallback=null)=>{try{return JSON.parse(localStorage.getItem(prefix+key))??fallback;}catch{return fallback;}};
+export const write=(key,value)=>localStorage.setItem(prefix+key,JSON.stringify(value));
+export function clear(){for(const key of Object.keys(localStorage))if(key.startsWith(prefix))localStorage.removeItem(key);indexedDB.deleteDatabase('nextcomp-recording');}
+export async function recordingStore(value){const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('nextcomp-recording',1);r.onupgradeneeded=()=>r.result.createObjectStore('recording');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});try{return await new Promise((resolve,reject)=>{const tx=db.transaction('recording',value===undefined?'readonly':'readwrite'),store=tx.objectStore('recording');const r=value===undefined?store.get('pending'):value===null?store.delete('pending'):store.put(value,'pending');let result;r.onsuccess=()=>{result=r.result;};tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error);});}finally{db.close();}}

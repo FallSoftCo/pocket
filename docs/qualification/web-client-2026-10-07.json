@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-07",
+  "candidate": "nextcomp/web-client based on alpha40",
+  "scope": "Private standalone web gateway and browser client, no Android build or production backend restart",
+  "implementation": {
+    "client": "web/",
+    "gateway": "server/web-client.mjs",
+    "deployment": "loopback user service behind tailnet-only HTTPS, separate existing backend device pairing",
+    "coordinator": "existing device-scoped controller endpoints",
+    "direct": "existing durable session outbox and runtime-advertised capability",
+    "voice": "manually captured buffered browser audio to existing native WebRTC start/input/commit routes; explicit account speech",
+    "pwa": "manifest, 192/512 icons, standalone display, no authenticated response caching"
+  },
+  "verification": {
+    "backendTests": {
+      "total": 327,
+      "passed": 327,
+      "newGatewayTests": 5,
+      "command": "npm test"
+    },
+    "virtualDom": {
+      "evidenceLevel": "virtual DOM, synthetic backend",
+      "passed": true,
+      "findings": [
+        "pairing and authenticated WebSocket boot",
+        "coordinator text and route result",
+        "per-conversation drafts",
+        "exact native request ID answer",
+        "Enter sends direct input through durable ID",
+        "explicit queued input",
+        "lost HTTP response reconciles exact receipt without resend",
+        "streamed intermediate message",
+        "retained earlier timeline",
+        "actual child capability and explicit parent navigation",
+        "Important filters same conversation",
+        "live work does not reorder list seats"
+      ],
+      "errors": []
+    },
+    "liveHttp": {
+      "passed": true,
+      "environment": "actual private HTTPS gateway and owner stock Codex runtime; ordinary temporary paired device",
+      "checks": [
+        "independent device authentication and real inventory with additive runtime metadata",
+        "isolated real task creation, response and completion",
+        "idle direct continuation with one accepted durable outbox identity after duplicate HTTP request",
+        "paired cookie remains valid across own gateway restart",
+        "test session unfollowed/archived, temporary devices revoked"
+      ],
+      "boundary": "HTTP client evidence; no browser rendered UI or physical Pixelbook evidence"
+    },
+    "renderedBrowser": {
+      "executed": false,
+      "reason": "Deployment-configured shared browser profile remains quarantined by an earlier unrelated uncertain action. No lease acquired, no profile/desktop action performed and no quarantine cleared. Own detached QA request cancelled.",
+      "preparedChecks": "scripts/web-browser-check.mjs desktop|touch",
+      "claimed": false
+    },
+    "phoneBackend": "existing service and native daemon not restarted; pairing/signing/runtime state preserved"
+  },
+  "remainingLimits": [
+    "Actual Pixelbook Go keyboard, trackpad and touch review not performed",
+    "Rendered desktop/touch browser flows and PWA install prompt not executed due configured resource quarantine",
+    "Microphone capture, native WebRTC provider transcription and actual browser speech playback not live qualified",
+    "Web push and closed-app browser notifications not implemented; suspension can stop live delivery",
+    "Browser voice uncertain delivery stays held; no exactly-once claim",
+    "Runtime catalog enrichment is bounded and temporary until shared session-catalog backend is activated; unknown recency disclosed",
+    "Optional inline immersion, alternate Losangelex team surface and phone-local profile selection are not exposed by this initial web client"
+  ],
+  "privacy": "No user transcripts, credential values, device IDs, deployment hostnames or private captures in this record."
+}

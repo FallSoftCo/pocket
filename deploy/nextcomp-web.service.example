@@ -1,0 +1,18 @@
+[Unit]
+Description=NextComp private browser client
+After=network-online.target codex-pocket.service
+
+[Service]
+Type=simple
+WorkingDirectory=REPLACE_REPOSITORY_PATH
+ExecStart=REPLACE_NODE_PATH server/web-client.mjs
+Environment=WEB_ORIGIN=https://REPLACE_PRIVATE_HOST:8448
+Environment=WEB_PORT=18882
+Environment=POCKET_URL=http://127.0.0.1:18880
+Environment=WEB_DATA=REPLACE_PRIVATE_DATA_PATH
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=default.target
