@@ -202,7 +202,7 @@ class MainActivity:ComponentActivity(){
     var sourceOpen by remember{mutableStateOf(false)}
     Box{
         TextButton({sourceOpen=true},contentPadding=PaddingValues(horizontal=0.dp),modifier=Modifier.heightIn(min=48.dp)){
-            WorkflowText(PocketSpeech.title.ifBlank{"Choose speech session"}+" · "+(if(PocketSpeech.queue.current==null)PocketSpeech.count else PocketSpeech.queue.messages.size)+" ▾",color=if(PocketSpeech.paused)Muted else Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            WorkflowText(PocketSpeech.title.ifBlank{"Choose speech session"}+" · "+(if(PocketSpeech.activeCount>0)PocketSpeech.activeCount else PocketSpeech.count)+" ▾",color=if(PocketSpeech.paused)Muted else Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
         DropdownMenu(expanded=sourceOpen,onDismissRequest={sourceOpen=false},properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
             PocketSpeech.sources.forEach{(source,details)->DropdownMenuItem(text={Text("${if(source==PocketSpeech.activeSource)"• " else ""}${details.first} · ${details.second}")},onClick={sourceOpen=false;PocketSpeech.selectSource(source)})}
