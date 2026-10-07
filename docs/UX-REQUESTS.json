@@ -14,6 +14,13 @@
   },
   "requests": [
     {
+      "id": "in-place-floating-capture-toolbar",
+      "requirement": "One integrated microphone starts actual recording directly and stops/sends with one more tap. Either foreground volume key uses the same capture interaction, including with IME open, without destroying the current chat or draft. Visible inline media volume stays in the existing footer; idle/listening/processing/error states are clear near the mic, with actual recording timer/level. Preserve pending-turn identity, explicit saved-turn recovery, selected/direct intent, blackout and background system volume.",
+      "status": "released-alpha39; actual phone code57 independently APK-hash-verified",
+      "implementation": "Stateful round64/72dp microphone replaces existing Talk control. In-place voice service keeps current chat/IME; dispatchKeyEvent handles balanced volume gestures before IME and ignores background/unpaired/team. Actual AudioRecord start sets elapsed timestamp; bounded10Hz PCMlevel feedback and readable errors occupy a conditional status region only. Foreground source routing is guarded while work pending and stopping capture preserves its original target. Media slider remains visible in consolidated footer; Settings/Work/Blackout use existing usage popup. Pending target is saved with durable turn; hardware does not silently retry it. User mute is preserved.",
+      "verification": "238 Android tests in49 suites pass in debug and release; both lints/builds pass. Optimized native coordinator/IME key start-stop, repeat/hold, accessibility filter, draft retention, direct touch capture, media volume/mute and blackout capture pass. Exact handset compatible APK installed in place and independently hash-verified. Physical handset button presses and successful provider transcription not newly qualified."
+    },
+    {
       "id": "verified-runtime-full-permissions",
       "date": "2026-10-07",
       "status": "runtime-restored; release-alpha38-qualified",
@@ -24,7 +31,7 @@
     {
       "id": "quiet-work-updates-inbox",
       "requirement": "Scheduled check-ins must not pollute coordinator conversation. Keep one compact persistent Work updates entry with latest/unread, a dedicated archive inbox, coalesced quiet report notifications, preserved history/device cadence/audio choices, and exact actually presented acknowledgments. Explicit catch-up and material actionable questions remain distinct.",
-      "status": "released-alpha38; private-update-offered-code56; phone-install-unverified",
+      "status": "released-alpha38; actual phone code56 independently APK-hash-verified",
       "files": [
         "server/coordinator-reports.mjs",
         "server/voice-controller.mjs",

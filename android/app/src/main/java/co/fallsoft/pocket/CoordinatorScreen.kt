@@ -108,6 +108,7 @@ import kotlinx.coroutines.flow.*
             item(key="coordinator-end"){Spacer(Modifier.height(1.dp))}
         }
         CoordinatorSpeechControls()
+        InlineCaptureStatus()
         Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(typing)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 VoiceLaunchButton(modifier=Modifier.size(56.dp),compact=true)
@@ -123,8 +124,9 @@ import kotlinx.coroutines.flow.*
                 ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{PocketCoordinator.keyboard(true)})
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                ChatActionButton("Back",Icons.Rounded.ArrowBack,Modifier.weight(1f),{back()})
-                UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)
+                IconButton({back()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
+                InlineSpeechVolume(Modifier.weight(1f).widthIn(min=112.dp))
+                UsageDock(Modifier.width(usageDockWidth().coerceAtMost(96.dp)),conversationOnly=true)
             }
         }
     }
@@ -132,6 +134,7 @@ import kotlinx.coroutines.flow.*
 
 /** Playback controls never repeat a coordinator reply or saved notification passage. */
 @Composable internal fun CoordinatorSpeechControls(){
+    if(PocketVoice.captureFeedbackVisible)return
     val owner="speech-coordinator:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}"
     DisposableEffect(owner){onDispose{if(PocketSpeech.displayedOwner==owner)PocketSpeech.stopDisplayed(owner)}}
     val queued=PocketSpeech.queue.current

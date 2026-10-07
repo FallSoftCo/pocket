@@ -36,3 +36,5 @@ An implemented route is not a verified end-to-end workflow. A passing fixture is
 - [Alpha22 release and real-phone delivery](qualification/alpha22-release-delivery.json) — signatures, tests, installed hash and post-update UI observations.
 
 - [Alpha23 reply recovery and Important filter](qualification/recovery-important-runtime-alpha23.json) — thirteen exact-APK native tap scenarios, including outbox acknowledgement while history is unavailable.
+
+- [Foreground voice interaction](VOICE-INTERACTION.md) — capture, keyboard preservation and playback controls.

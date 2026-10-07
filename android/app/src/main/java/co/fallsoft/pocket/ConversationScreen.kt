@@ -236,6 +236,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         ConversationNotesCard(important=important,onFilter={follow=false;important=!important;scope.launch{list.scrollToItem(0)}},onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
         }
+        InlineCaptureStatus()
         if(keyboardInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically){
                 VoiceLaunchButton(modifier=Modifier.size(64.dp),threadId=Pocket.selected,compact=true)
@@ -271,10 +272,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=Pocket.selected,bar=true)
             ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
-            ChatActionButton("Back",Icons.AutoMirrored.Rounded.ArrowBack,Modifier.weight(1f),{keyboard?.hide();Pocket.closeTask()})
-            UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)
-            if(active)ChatActionButton("Stop",Icons.Rounded.Stop,Modifier.weight(1f),{Pocket.interrupt()},recording=true)
+        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
+            IconButton({keyboard?.hide();Pocket.closeTask()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
+            InlineSpeechVolume(Modifier.weight(1f).widthIn(min=100.dp))
+            UsageDock(Modifier.width(usageDockWidth().coerceAtMost(96.dp)),conversationOnly=true)
+            if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
         }
     }
     if(queueOpen)ModalBottomSheet(onDismissRequest={queueOpen=false},containerColor=Panel){

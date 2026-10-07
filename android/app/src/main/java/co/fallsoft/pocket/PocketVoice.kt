@@ -24,13 +24,19 @@ import java.util.concurrent.TimeUnit
 /** A manual turn has one durable ID from recording through delivery and speech. */
 object PocketVoice {
     var active by mutableStateOf(false); internal set
+    var inPlace by mutableStateOf(false);private set
+    var launching by mutableStateOf(false);internal set
+    var recordingStartedAt by mutableLongStateOf(0);internal set
+    var captureLevel by mutableFloatStateOf(0f);internal set
+    val captureFeedbackVisible get()=captureFeedbackVisible(active,launching,state,problem)
+    fun showInPlace(){inPlace=true}
+    fun captureFailure(message:String,inPlace:Boolean=true){this.inPlace=inPlace;problem=message}
     var state by mutableStateOf("Ready"); internal set
     var heard by mutableStateOf(""); internal set
     var response by mutableStateOf(""); internal set
     var problem by mutableStateOf(""); internal set
     var keysEnabled by mutableStateOf(false); internal set
-    private var lastKeyTime=-1L
-    private var lastKeyCode=-1
+    internal val captureKeys=CaptureKeyGesture()
     val messages=mutableStateListOf<CoordinatorMessage>()
     internal val presentationTurns=mutableStateMapOf<String,CoordinatorPresentation>()
     fun presented(id:String){if(foreground)presentationTurns[id]?.let{service?.presented(it)}}
@@ -43,18 +49,24 @@ object PocketVoice {
     var foreground=false
     var service:PocketVoiceService?=null
     var targetThread by mutableStateOf<String?>(null);internal set
-    fun start(c:Context,threadId:String?=null,recordImmediately:Boolean=true){
+    fun start(c:Context,threadId:String?=null,recordImmediately:Boolean=true,inPlace:Boolean=false,checkSaved:Boolean=false){
         if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){problem="Allow microphone access to use voice.";return}
-        targetThread=threadId;problem="";try{ContextCompat.startForegroundService(c,Intent(c,PocketVoiceService::class.java).setAction("start").putExtra("recordImmediately",recordImmediately))}catch(e:RuntimeException){problem="Open NextComp to start voice mode."}
+        if(active&&captureControl(true,state,Pocket.prefs.getString("voicePendingId",null)!=null)==CaptureControl.PROCESSING)return
+        if(Pocket.prefs.getString("voicePendingId",null)!=null&&!checkSaved&&!(active&&state in setOf("Listening","Starting microphone"))){captureFailure("A saved voice turn needs checking. Tap Check saved turn; it has not been resent.",inPlace);return}
+        if(active){service?.beginCapture(threadId);return}
+        if(launching)return
+        this.inPlace=inPlace;launching=true;state="Starting voice";targetThread=if(checkSaved)Pocket.prefs.getString("voicePendingTarget",null)?.takeUnless{it=="coordinator"} else threadId;problem="";try{ContextCompat.startForegroundService(c,Intent(c,PocketVoiceService::class.java).setAction("start").putExtra("recordImmediately",recordImmediately))}catch(e:RuntimeException){launching=false;state="Ready";val reason=(e.message?:e.javaClass.simpleName).replace('\n',' ').let{if(Pocket.token.isNotBlank())it.replace(Pocket.token,"[credential]")else it}.take(180);captureFailure("Android could not start recording: $reason",inPlace)}
     }
-    fun stop(){service?.leave()}
+    fun stop(){service?.leave();launching=false;problem=""}
     fun record(){service?.toggleRecord()}
     fun playback(){service?.togglePlayback()}
     fun sendText(text:String):Boolean=service?.sendText(text)?:false.also{problem="Voice is not ready to send text. Your draft is kept."}
     fun retry(){service?.retry()}
     fun key(event:KeyEvent):Boolean{
-        if(!active||event.keyCode !in listOf(KeyEvent.KEYCODE_VOLUME_DOWN,KeyEvent.KEYCODE_VOLUME_UP))return false
-        if(event.action==KeyEvent.ACTION_DOWN&&event.repeatCount==0){if(lastKeyTime==event.downTime&&lastKeyCode==event.keyCode)return true;lastKeyTime=event.downTime;lastKeyCode=event.keyCode;Pocket.scope.launch{if(event.keyCode==KeyEvent.KEYCODE_VOLUME_DOWN)record() else playback()}}
+        if(event.keyCode !in listOf(KeyEvent.KEYCODE_VOLUME_DOWN,KeyEvent.KEYCODE_VOLUME_UP))return false
+        if(event.action==KeyEvent.ACTION_UP)captureKeys.up(event.keyCode)
+        if(!foreground||!active||BackendNavigation.teamSelected())return false
+        if(event.action==KeyEvent.ACTION_DOWN&&captureKeys.down(event.keyCode,event.repeatCount))Pocket.scope.launch{start(Pocket.context,if(PocketCoordinator.visible)null else if(inPlace)Pocket.selected else targetThread,inPlace=inPlace)}
         return true
     }
     fun notification(n:JSONObject){service?.enqueueUpdate(n)}
@@ -98,7 +110,7 @@ class PocketVoiceService:Service(){
     private fun voiceNotification():Notification {
         val open=PendingIntent.getActivity(this,1120,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val stop=PendingIntent.getService(this,1121,Intent(this,PocketVoiceService::class.java).setAction("stop"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val b=NotificationCompat.Builder(this,"voice-mode").setSmallIcon(R.drawable.ic_notification).setContentTitle(PocketImmersion.label("NextComp voice is on")).setContentText(PocketImmersion.label("Volume down: talk · Volume up: pause or replay")).setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setCategory(NotificationCompat.CATEGORY_SERVICE).addAction(0,PocketImmersion.label("End voice"),stop)
+        val b=NotificationCompat.Builder(this,"voice-mode").setSmallIcon(R.drawable.ic_notification).setContentTitle(PocketImmersion.label("NextComp voice is on")).setContentText(PocketImmersion.label("In NextComp: either volume button starts or stops recording")).setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setCategory(NotificationCompat.CATEGORY_SERVICE).addAction(0,PocketImmersion.label("End voice"),stop)
         return PocketSpeechCaptions.decorate(b).build()
     }
     internal fun refreshCaptionNotification(){try{getSystemService(NotificationManager::class.java).notify(1120,voiceNotification())}catch(_:SecurityException){}}
@@ -119,7 +131,7 @@ class PocketVoiceService:Service(){
     }
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{
         if(intent?.action=="stop"){leave();return START_NOT_STICKY}
-        if(!PocketVoice.active){PocketVoice.active=true;if(audio.getStreamVolume(AudioManager.STREAM_MUSIC)==0)audio.setStreamVolume(AudioManager.STREAM_MUSIC,(audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)/3).coerceAtLeast(1),0);local=Pocket.prefs.getBoolean("voicePendingLocal",Pocket.local).takeIf{turnId!=null}?:Pocket.local;captureProfile();loadHistory();PocketSpeech.control("pause");PocketLive.start();if(turnId!=null)boot()else if(intent?.getBooleanExtra("recordImmediately",true)!=false)toggleRecord()else state("Ready")}
+        if(!PocketVoice.active){PocketVoice.launching=false;PocketVoice.active=true;local=Pocket.prefs.getBoolean("voicePendingLocal",Pocket.local).takeIf{turnId!=null}?:Pocket.local;captureProfile();loadHistory();PocketSpeech.control("pause");PocketLive.start();if(turnId!=null)boot()else if(intent?.getBooleanExtra("recordImmediately",true)!=false)toggleRecord()else state("Ready")}
         else if(intent?.action=="start"&&intent.getBooleanExtra("recordImmediately",true))toggleRecord()
         return START_NOT_STICKY
     }
@@ -151,7 +163,7 @@ class PocketVoiceService:Service(){
     private fun captureProfile(){endpoint=Pocket.savedBase(local).trimEnd('/');credential=Pocket.savedToken(local);captionProfile="${local}:${Pocket.savedBase(local)}:${Pocket.prefs.getString(Pocket.key("deviceId",local),"")}";caption=null}
     private fun wake(){lock?.acquire(10*60*1000L)}
     private fun beep(ok:Boolean=true){if(!PocketVoice.active)return;tones.startTone(if(ok)ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_PROP_NACK,110)}
-    private fun state(s:String){PocketVoice.state=s;if(s=="Paused")caption?.let{PocketSpeechCaptions.pause(it.profile);refreshCaptionNotification()};android.util.Log.i("PocketVoice","State: $s");idleDisconnect?.cancel();if(s=="Ready")idleDisconnect=scope.launch{delay(30000);if(PocketVoice.state=="Ready"&&turnId==null&&recorder==null)disconnectNative()}}
+    private fun state(s:String){PocketVoice.state=s;if(s=="Listening")PocketVoice.recordingStartedAt=SystemClock.elapsedRealtime();if(s!="Listening")PocketVoice.captureLevel=0f;if(s=="Paused")caption?.let{PocketSpeechCaptions.pause(it.profile);refreshCaptionNotification()};android.util.Log.i("PocketVoice","State: $s");idleDisconnect?.cancel();if(s=="Ready")idleDisconnect=scope.launch{delay(30000);if(PocketVoice.state=="Ready"&&turnId==null&&recorder==null)disconnectNative()}}
     private suspend fun api(path:String,body:JSONObject?=null):JSONObject=withContext(Dispatchers.IO){
         val b=Request.Builder().url(endpoint+path).header("Authorization","Bearer $credential")
         if(body!=null)b.post(body.toString().toRequestBody("application/json".toMediaType()))
@@ -182,13 +194,21 @@ class PocketVoiceService:Service(){
         withTimeout(35000){ready.await()};nativeReady=null
         nativeHeartbeat=scope.launch{while(isActive){delay(30000);checkpointNativeUsage();try{api("/api/voice/native/heartbeat",JSONObject().put("connectionId",nativeId))}catch(e:Exception){if(e is CancellationException)throw e;PocketVoice.problem=PocketNetwork.error(e);state("Retry needed");break}}}
     }
+    fun beginCapture(threadId:String?){
+        if(recorder!=null){toggleRecord();return}
+        if(PocketVoice.targetThread!=threadId){
+            if(recorder!=null||starting||work?.isActive==true||turnId!=null){PocketVoice.problem="Finish or check the current voice turn before changing its conversation.";return}
+            PocketVoice.targetThread=threadId;coordinatorReady=false
+        }
+        toggleRecord()
+    }
     fun toggleRecord(){
         if(!PocketVoice.active)return
         if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){PocketVoice.problem="Microphone access was revoked. Enable it in Android app settings.";beep(false);leave();return}
         when(voiceRecordIntent(recorder!=null,starting,work?.isActive==true,PocketVoice.state,turnId!=null)){
             VoiceRecordIntent.STOP_AND_SEND->{stopRecording=true;state("Finishing recording");return}
             VoiceRecordIntent.BUSY->{PocketVoice.problem="${PocketVoice.state}. Your current turn is still being processed; recording has not started.";beep(false);return}
-            VoiceRecordIntent.RECOVER_PENDING->{retry();return}
+            VoiceRecordIntent.RECOVER_PENDING->{PocketVoice.problem="A saved turn needs checking. Use Check saved turn before recording again.";beep(false);return}
             VoiceRecordIntent.START->Unit
         }
         work?.cancel();disconnectNative();speechGeneration++;nativeSpeaking=false;stopPlayer();recordingProblem=null;PocketVoice.problem="";PocketVoice.heard="";PocketVoice.response="";wake()
@@ -199,13 +219,13 @@ class PocketVoiceService:Service(){
             stopRecording=false;recorder=r;beep();state("Starting microphone")
             recording=scope.launch{val bytes=ByteArrayOutputStream();try{
                 delay(140);r.startRecording();check(r.recordingState==AudioRecord.RECORDSTATE_RECORDING){"Android could not start the microphone. Check microphone privacy and app permissions."};state("Listening")
-                withContext(Dispatchers.IO){val buf=ByteArray(4096);while(isActive&&!stopRecording&&bytes.size()<3840000){val n=r.read(buf,0,buf.size,AudioRecord.READ_NON_BLOCKING);if(n<0)throw IllegalStateException("Microphone stopped.");if(n>0)bytes.write(buf,0,n.coerceAtMost(3840000-bytes.size()))else delay(10)}}
+                withContext(Dispatchers.IO){val buf=ByteArray(4096);var lastLevel=0L;while(isActive&&!stopRecording&&bytes.size()<3840000){val n=r.read(buf,0,buf.size,AudioRecord.READ_NON_BLOCKING);if(n<0)throw IllegalStateException("Microphone stopped.");if(n>0){bytes.write(buf,0,n.coerceAtMost(3840000-bytes.size()));val now=SystemClock.elapsedRealtime();if(now-lastLevel>=100){lastLevel=now;val level=capturePcmLevel(buf,n);withContext(Dispatchers.Main){PocketVoice.captureLevel=level}}}else delay(10)}}
             }catch(e:CancellationException){/* Leaving mode or an audio interruption is handled below. */}catch(e:Exception){recordingProblem=e.message?:"Microphone stopped.";PocketVoice.problem=recordingProblem.orEmpty()}
             finally{try{r.stop()}catch(_:Exception){};r.release();recorder=null;abandonFocus()}
             if(!PocketVoice.active)return@launch
             val pcm=bytes.toByteArray();voiceRecordingProblem(VoiceRecording.hasSpeech(pcm),recordingProblem)?.let{PocketVoice.problem=it;beep(false);state("Ready");nextUpdate();return@launch}
             PocketVoice.problem=""
-            val id=UUID.randomUUID().toString();withContext(NonCancellable+Dispatchers.IO){pendingFile.writeBytes(VoiceRecording.wav(pcm));Pocket.prefs.edit().putString("voicePendingId",id).putBoolean("voicePendingLocal",local).commit()}
+            val id=UUID.randomUUID().toString();withContext(NonCancellable+Dispatchers.IO){pendingFile.writeBytes(VoiceRecording.wav(pcm));Pocket.prefs.edit().putString("voicePendingId",id).putBoolean("voicePendingLocal",local).putString("voicePendingTarget",PocketVoice.targetThread?:"coordinator").commit()}
             beep();deliver()
         }}catch(e:Exception){recorder?.release();recorder=null;abandonFocus();fail(e)}
     }
@@ -221,7 +241,7 @@ class PocketVoiceService:Service(){
             correction?.let{request.put("correctionOf",JSONObject().put("turnId",it.turnId).put("threadId",it.threadId))}
             api("/api/voice/text",request)
             if(PocketVoice.correctionOf===correction)PocketVoice.correctionOf=null
-            Pocket.prefs.edit().putString("voicePendingId",id).putBoolean("voicePendingLocal",local).commit()
+            Pocket.prefs.edit().putString("voicePendingId",id).putBoolean("voicePendingLocal",local).putString("voicePendingTarget",PocketVoice.targetThread?:"coordinator").commit()
             PocketVoice.heard=text;PocketVoice.response="";deliver()
         }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}
         return true
@@ -242,13 +262,14 @@ class PocketVoiceService:Service(){
             val deadline=SystemClock.elapsedRealtime()+240000
             while(true){result=api("/api/voice/turns/$id");PocketVoice.heard=result.s("transcript");state(if(result.s("state")=="transcribing")"Transcribing" else "Thinking")
                 if(result.s("state") in listOf("completed","failed","unknown"))break
-                if(SystemClock.elapsedRealtime()>deadline)throw IllegalStateException("Your turn is still running. Press volume down to check it again.")
+                if(SystemClock.elapsedRealtime()>deadline)throw IllegalStateException("Your turn is still running. Use Check saved turn to check it again.")
                 delay(1000)
             }
             if(result!!.s("state")!="completed"){
                 val message=result.s("error","The voice turn stopped.");clearPending();PocketVoice.problem=message;speak(message);return@launch
             }
             PocketVoice.response=result.s("response")
+            if(PocketVoice.inPlace&&PocketCoordinator.visible)PocketCoordinator.loadHistory()
             val message=CoordinatorMessage(id,PocketVoice.heard,PocketVoice.response)
             val existing=PocketVoice.messages.indexOfFirst{it.id==id};if(existing<0)PocketVoice.messages.add(message)else PocketVoice.messages[existing]=message
             val actions=result.optJSONArray("actions")?.objects().orEmpty();PocketVoice.routes[id]=routeReceipts(actions,id);rememberPresentation(id,actions)
@@ -258,7 +279,7 @@ class PocketVoiceService:Service(){
             applyActions(actions.filter{it.s("type") !in listOf("profile","exit")})
         }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}
     }}
-    private fun clearPending(){Pocket.prefs.edit().remove("voicePendingId").remove("voicePendingLocal").commit();pendingFile.delete()}
+    private fun clearPending(){Pocket.prefs.edit().remove("voicePendingId").remove("voicePendingLocal").remove("voicePendingTarget").commit();pendingFile.delete()}
     private fun applyActions(actions:List<JSONObject>){for(a in actions)when(a.s("type")){
         "select"->{PocketVoice.targetThread=a.s("threadId").takeIf{it.isNotBlank()};if(Pocket.local==local){if(PocketVoice.targetThread==null)Pocket.closeTask()else Pocket.open(PocketVoice.targetThread!!) }}
         "permissions"->{Pocket.updateFullPermissions(a.optBoolean("full"))}
@@ -287,7 +308,7 @@ class PocketVoiceService:Service(){
         return audio.requestAudioFocus(focus!!)==AudioManager.AUDIOFOCUS_REQUEST_GRANTED
     }
     private fun abandonFocus(){focus?.let{audio.abandonAudioFocusRequest(it)};focus=null}
-    private fun play(file:File,part:Boolean=false){player?.release();player=null;playing=false;abandonFocus();if(!part){speechFiles=listOf(file);speechIndex=0;afterSpeech=null};if(!requestFocus()){state("Paused");return};player=MediaPlayer().apply{setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());setDataSource(file.absolutePath);setOnCompletionListener{playing=false;abandonFocus();if(speechIndex+1<speechFiles.size){speechIndex++;play(speechFiles[speechIndex],true)}else{state("Ready");captionFinished();val done=afterSpeech;afterSpeech=null;done?.invoke()}};setOnErrorListener{_,_,_->playing=false;state("Retry needed");PocketVoice.problem="Unable to play speech. Press volume up to replay.";abandonFocus();true};prepare();start()};playing=true;state("Speaking");captionStarted()}
+    private fun play(file:File,part:Boolean=false){player?.release();player=null;playing=false;abandonFocus();if(!part){speechFiles=listOf(file);speechIndex=0;afterSpeech=null};if(!requestFocus()){state("Paused");return};player=MediaPlayer().apply{setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());setDataSource(file.absolutePath);setOnCompletionListener{playing=false;abandonFocus();if(speechIndex+1<speechFiles.size){speechIndex++;play(speechFiles[speechIndex],true)}else{state("Ready");captionFinished();val done=afterSpeech;afterSpeech=null;done?.invoke()}};setOnErrorListener{_,_,_->playing=false;state("Retry needed");PocketVoice.problem="Unable to play speech. Use Replay to try the audio again.";abandonFocus();true};prepare();start()};playing=true;state("Speaking");captionStarted()}
     fun togglePlayback(){
         if(recorder!=null){beep(false);return}
         player?.let{if(playing){it.pause();playing=false;state("Paused");abandonFocus()}else if(requestFocus()){if(it.currentPosition>=it.duration){speechIndex=0;play(speechFiles.firstOrNull()?:spokenFile,true)}else{it.start();playing=true;state("Speaking");captionStarted()}};return}
@@ -298,7 +319,7 @@ class PocketVoiceService:Service(){
     private fun nextUpdate(){if(!PocketVoice.active||recorder!=null||playing||nativeSpeaking||work?.isActive==true||turnId!=null||updates.isEmpty())return;val n=updates.removeFirst();work=scope.launch{try{val full=if(n.s("speech_pending")=="1")api("/api/notifications/${n.optLong("id")}").optJSONObject("notification")?:n else n;speak(full.s("spoken_text",full.s("body")),full){scope.launch{delay(50);nextUpdate()}}}catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}}
     private fun stopNativeRemote(){if(nativeId!=null){val request=Request.Builder().url("$endpoint/api/voice/native/stop").header("Authorization","Bearer $credential").post(JSONObject().put("connectionId",nativeId).toString().toRequestBody("application/json".toMediaType())).build();http.newCall(request).enqueue(object:Callback{override fun onFailure(call:Call,e:java.io.IOException){};override fun onResponse(call:Call,response:Response){response.close()}})}}
     private fun disconnectNative(){checkpointNativeUsage(stop=true);transportGeneration++;stopNativeRemote();nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeReady?.cancel();nativeReady=null}
-    fun leave(){PocketVoice.active=false;disconnectNative();recording?.cancel();work?.cancel();stopPlayer();state("Ready");stopSelf()}
+    fun leave(){PocketVoice.launching=false;PocketVoice.active=false;disconnectNative();recording?.cancel();work?.cancel();stopPlayer();state("Ready");stopSelf()}
     override fun onDestroy(){checkpointNativeUsage(stop=true);transportGeneration++;nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;PocketVoice.active=false;PocketVoice.service=null;recording?.cancel();scope.cancel();stopPlayer();tones.release();if(lock?.isHeld==true)lock?.release();if(!PocketVoice.foreground&&!Pocket.local)PocketLive.stop();stopForeground(STOP_FOREGROUND_REMOVE);if(caption!=null&&PocketSpeechCaptions.state.phase=="Speaking")PocketSpeechCaptions.pause(captionProfile);PocketSpeechCaptions.retain();super.onDestroy()}
 }
 

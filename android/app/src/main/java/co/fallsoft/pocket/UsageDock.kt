@@ -26,6 +26,9 @@ import java.util.Locale
 @Composable fun usageDockWidth()=(72*LocalDensity.current.fontScale.coerceAtLeast(1f)).dp
 
 @Composable fun UsageDetails(){
+    val context=androidx.compose.ui.platform.LocalContext.current
+    TextButton({PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask();Pocket.tab=if(Pocket.tab==1)0 else 1}){BilingualLabel(if(Pocket.tab==1)"Work" else "Settings")}
+    TextButton({context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}
     val usage=Pocket.weeklyUsage
     val now=System.currentTimeMillis()
     Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)

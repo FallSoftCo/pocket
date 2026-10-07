@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-07",
+  "version": "0.5.0-alpha.39",
+  "versionCode": 57,
+  "implementation": {
+    "capture": "One round mic starts capture directly; second press stops and sends. Native AudioRecord state drives elapsed time and input level. Processing and actual errors are visible. No mic-to-volume popup.",
+    "hardware": "Foreground activity dispatches Volume Up/Down before IME and consumes balanced key gestures without repeat toggles. Capture remains in the current UI; drafts/keyboard are retained. No system-global interception claim.",
+    "routing": "Stopping an existing recording preserves the originating target before considering a new target. In-flight/unknown saved turns cannot be retargeted or silently replayed.",
+    "volume": "Media-volume slider always inline in the existing footer; intentional mute retained. Work/Settings/Blackout remain reachable from activity controls. No extra volume row.",
+    "blackout": "Existing screen-on blackout retains foreground audio and keeps awake; prior window/input settings restore on explicit exit."
+  },
+  "validation": {
+    "android_debug_tests": 238,
+    "android_release_tests": 238,
+    "android_test_suites": 49,
+    "build": "Corrected final signed debug/release builds, both238-test/49-suite unit variants and both lints passed in7m46s.",
+    "signed_release": {
+      "sha256": "cd5264b4331596d0e8d9af63583025417ab74b4ad0918ab34cbab642f50315aa",
+      "bytes": 51873435,
+      "signer": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf"
+    },
+    "native": "Corrected final optimized signed release passed actual AudioRecord start/stop with stock IME and draft retained; synthetic native debug exercised held keys/accessibility, direct touch capture, media-volume/mute and blackout. No product crash on corrected candidate.",
+    "phone": "Actual Pixel in-place same-signer installation succeeded on2026-10-07T19:47Z. Package alpha39/code57 and installed APK SHA independently verified. App data preserved; no foreground launch or input injection. Physical handset button presses and provider transcription not newly qualified.",
+    "public_source_scan": "786 tracked publication files passed in an isolated index tree; private concurrent briefing/experience requirements excluded.",
+    "gallery": "Four reviewed native synthetic screenshots published; gallery1982 cards passed desktop/mobile, reduced-motion, reload/media checks with zero errors or failed items. Supervised isolated-browser receipt completed successfully.",
+    "provider": "No new speech/provider quality or usage-price qualification; synthetic fixture testing is distinguished from actual provider output.",
+    "native_blocker": "Resolved before delivery: native recording exposed unsupported authored Close/Refresh symbols. End voice is now an explicit text action and Check saved turn uses existing Inbox. Corrected optimized APK passed recording/stop smoke without crash.",
+    "runtime_resource_recovery": "Externally replaced native runtime0.161 inherited a pre-existing upgrade helper\u2019s1024 soft descriptor limit and reached about1000 descriptors. Daemon, helper and existing launcher shell raised to65536; CLI parent already65536. Existing fresh-Zsh limit floor retained. No daemon restart, task replay or model/permission-profile change.",
+    "phone_previous": "Actual handset alpha38/code56 APK hash independently matched the qualified compatible variant. Current phone foreground belongs to another app; native voice tests will not steal its input.",
+    "native_measurements": {
+      "volume_up_to_listening_ms": 314,
+      "accessibility_volume_down_to_listening_ms": 275,
+      "blackout_volume_key_to_listening_ms": 162,
+      "media_stream": "STREAM_MUSIC; 2 to10 to0; explicit mute retained",
+      "held_keys": "Explicit EV_KEY down/repeat/up: one start per held gesture; opposite short press stops",
+      "audio": "Real AudioRecord VOICE_RECOGNITION mono16kHz, not silenced; emulator PCM zero and successful provider send not qualified",
+      "navigation": "Optimized release recording retained Lifecycle session01 after native Back to list; second-thread stop interrupted by host QEMU failure, cross-thread final send not newly qualified."
+    },
+    "phone_compatible": {
+      "sha256": "1501d0710fa6abc4fdb98377495460d7b3738db2fa4d5e71e70a8c11d459655e",
+      "bytes": 51898098,
+      "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "identical_unsigned_payload_entries": 296
+    },
+    "private_update": "Both verified signing identities offered as code57; update announced once, notification755, push enabled.",
+    "native_passes": [
+      "Corrected optimized signed build: VolumeUp starts actual AudioRecord while stock IME focused, draft Release_draft_39 retained; VolumeDown stops with visible no-speech error and same draft/IME.",
+      "Debug actual AudioRecord VOICE_RECOGNITION mono16k active and not silenced; Starting->Listening314ms, optimized209ms. Recording timer and level indicator visible.",
+      "Debug longpress VolumeUp down/repeat/up produces one start; shortDown one stop. Accessibility service enabled: longpressDown one start, shortUp one stop; no duplicate toggles.",
+      "Touch Talk in session01 starts recording with direct_draft_39 retained.",
+      "Optimized native Back from session01 to foreground list retains Recording Lifecycle session01 target; XML00:12/screenshot00:19.",
+      "Inline speech-volume control visible on idle list, direct/coordinator, IME, Recording, error and Settings. IME drag real STREAM_MUSIC2->10->0, Muted true; subsequent capture toggles retain0.",
+      "Blackout actual black overlay, KEEP_SCREEN_ON and activity topResumed; tap returns Settings. Volume under blackout starts actual microphone; foreground stop after return.",
+      "Background volume press does not toggle capture; return to foreground volume stops.",
+      "All direct SymbolIcon string/vector callsites audited against37 authored resources; corrected names mapped."
+    ],
+    "native_limits": [
+      "No physical Pixel buttons, firmware, fold/lock-screen or phone UI qualification.",
+      "Host PA backend failed to initialize; emulator records zeroPCM. Nonzero mic level response, native WebRTC transcription/mocksend and end-to-end original-conversation delivery are not qualified.",
+      "Second-thread stop attempt was interrupted by QEMU exit139 after hanging main/CPU threads; no product AndroidRuntime crash indicated. Foreground list target retention is proven, cross-thread finalsend is not.",
+      "Active-playback/caption-state slider and CHECK_SAVED native branch not exercised.",
+      "Blackout start and stop after exit proven; stop while remaining black not separately proven.",
+      "Existing screenshots are synthetic native UI, not CGI renders.",
+      "Work-updates inbox volume policy unqualified: Activity excludes inbox from capture keys; active Accessibility path has no matching inbox guard. No throughout-all-foreground claim."
+    ],
+    "gallery_ids": [
+      "nextcomp-volume-capture-alpha39-r39-recording-list",
+      "nextcomp-volume-capture-alpha39-c39-direct-touch-record",
+      "nextcomp-volume-capture-alpha39-c39-ime-muted",
+      "nextcomp-volume-capture-alpha39-c39-blackout-return"
+    ]
+  }
+}

@@ -103,10 +103,32 @@ class MainActivity:ComponentActivity(){
         }
     }
     override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
-    override fun onStop(){blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!Pocket.local&&!PocketVoice.active)PocketLive.stop();super.onStop()}
-    override fun onKeyDown(keyCode:Int,event:android.view.KeyEvent):Boolean=(!BackendNavigation.teamSelected()&&PocketVoice.key(event))||super.onKeyDown(keyCode,event)
-    override fun onKeyUp(keyCode:Int,event:android.view.KeyEvent):Boolean=(!BackendNavigation.teamSelected()&&PocketVoice.key(event))||super.onKeyUp(keyCode,event)
-    override fun onPause(){blackout.exit(restoreInput=false);super.onPause()}
+    override fun onStop(){captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!Pocket.local&&!PocketVoice.active)PocketLive.stop();super.onStop()}
+    private val captureKeys get()=PocketVoice.captureKeys
+    private var permissionCaptureThread:String?=null
+    private var permissionCaptureInPlace=false
+    private var permissionCaptureProfile=""
+    private val capturePermission=registerForActivityResult(ActivityResultContracts.RequestPermission()){allowed->
+        if(allowed&&PocketVoice.foreground&&permissionCaptureProfile=="${Pocket.local}:${Pocket.base}:${Pocket.token}")PocketVoice.start(this,permissionCaptureThread,inPlace=permissionCaptureInPlace)
+        else if(!allowed)PocketVoice.captureFailure("Allow microphone access to record. Your draft is kept.")
+    }
+    // Public platform Activity hook; AndroidX core redeclares it with a library restriction.
+    @android.annotation.SuppressLint("RestrictedApi")
+    override fun dispatchKeyEvent(event:android.view.KeyEvent):Boolean{
+        val volume=event.keyCode in setOf(android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_UP)
+        val eligible=!PocketWorkUpdates.visible
+        if(volume&&foregroundCaptureKeys(PocketVoice.foreground,Pocket.token.isNotBlank()&&!Pocket.pairingMode,BackendNavigation.teamSelected(),eligible)){
+            if(event.action==android.view.KeyEvent.ACTION_DOWN&&captureKeys.down(event.keyCode,event.repeatCount)){
+                val target=if(PocketCoordinator.visible)null else Pocket.selected
+                val here=true
+                if(androidx.core.content.ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)==android.content.pm.PackageManager.PERMISSION_GRANTED)PocketVoice.start(this,target,inPlace=here)
+                else{permissionCaptureThread=target;permissionCaptureInPlace=here;permissionCaptureProfile="${Pocket.local}:${Pocket.base}:${Pocket.token}";capturePermission.launch(Manifest.permission.RECORD_AUDIO)}
+            }else if(event.action==android.view.KeyEvent.ACTION_UP)captureKeys.up(event.keyCode)
+            return true
+        }
+        if(event.action==android.view.KeyEvent.ACTION_UP)captureKeys.up(event.keyCode)
+        return super.dispatchKeyEvent(event)
+    }
     override fun onDestroy(){blackout.exit(restoreInput=false);super.onDestroy()}
     override fun onResume(){super.onResume();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail()}}
 }
@@ -147,9 +169,10 @@ class MainActivity:ComponentActivity(){
 
 @Composable fun PocketApp(){
     if(PocketWorkUpdates.visible){WorkUpdatesScreen();return}
-    if(PocketVoice.active){VoiceScreen();return}
+    if(PocketVoice.active&&!PocketVoice.inPlace){VoiceScreen();return}
     if(PocketCoordinator.visible){CoordinatorScreen();return}
 
+    BackHandler(Pocket.tab==1&&Pocket.selected==null&&!Pocket.newTask){Pocket.tab=0}
     var workToolsOpen by remember{mutableStateOf(false)}
     val workListState=key(Pocket.local,Pocket.token,Pocket.showArchived){rememberLazyListState()}
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
@@ -163,22 +186,17 @@ class MainActivity:ComponentActivity(){
                 (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
             }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it},workListState);else->SettingsScreen()}}
             ConversationSpeechDock()
+            InlineCaptureStatus()
             PocketDock(onFind={Pocket.tab=0;workToolsOpen=true},onTab={workToolsOpen=false})
         }
     }
 }
 @Composable fun PocketDock(onFind:()->Unit,onTab:()->Unit){
-    val rows=if(LocalDensity.current.fontScale>1.4f)listOf(0..2,3..4)else listOf(0..4)
-    Column(Modifier.fillMaxWidth().padding(horizontal=deviceCornerInset(),vertical=8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)).padding(4.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
-        rows.forEach{range->Row(Modifier.fillMaxWidth().height(usageDockHeight()),horizontalArrangement=Arrangement.spacedBy(2.dp)){
-            range.forEach{index->when(index){
-                0,1->{val (title,icon)=listOf("Work" to Icons.Rounded.Layers,"Settings" to Icons.Rounded.Tune)[index]
-                    DockButton(title,icon,Modifier.weight(1f),selected=Pocket.tab==index){if(index==0)Pocket.requestSessionOrder();onTab();Pocket.tab=index;Pocket.refresh()}}
-                2->DockButton("Find",Icons.Rounded.Search,Modifier.weight(1f),primary=true,onClick=onFind)
-                3->VoiceLaunchButton(modifier=Modifier.weight(1f),dock=true)
-                else->UsageDock(Modifier.weight(1f))
-            }}
-        }}
+    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)).padding(4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+        IconButton({Pocket.tab=0;onFind()},modifier=Modifier.size(48.dp)){SymbolIcon("Search","Find",Modifier.size(32.dp),tint=Mint)}
+        VoiceLaunchButton(modifier=Modifier.width(64.dp),dock=true)
+        InlineSpeechVolume(Modifier.weight(1f).widthIn(min=100.dp))
+        UsageDock(Modifier.width(usageDockWidth().coerceAtMost(96.dp)))
     }
 }
 @Composable fun PhoneControlNotice(){
@@ -545,6 +563,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 
 /** Captions supply the playback context, so conversations need only one speech surface. */
 @Composable fun ConversationSpeechDock(containerColor:androidx.compose.ui.graphics.Color=Panel){
+    if(PocketVoice.captureFeedbackVisible)return
     if(PocketSpeechCaptions.state.visible)SpeechCaptionBanner(playbackControls=PocketSpeech.count>0,containerColor=containerColor)
     else SpeechPlayer(containerColor)
 }
