@@ -85,6 +85,7 @@ object PocketSpeech {
     internal fun displayedCompleted(){displayedOwner?.let{stopDisplayed(it)}}
     internal var service:PocketSpeechService?=null
     var count by mutableIntStateOf(0); private set
+    var currentMessageId by mutableStateOf<Long?>(null);private set
     var paused by mutableStateOf(false); private set
     var title by mutableStateOf(""); private set
     var status by mutableStateOf(""); private set
@@ -128,7 +129,7 @@ object PocketSpeech {
         if(sessions.count>0&&PocketSpeechCaptions.state.id!=queue.current?.id)PocketSpeechCaptions.dismiss()
         if(Pocket.token.isBlank())clearAll() else {if(legacyProfile==null)save(true);publish();if(count>0)showPaused()}
     }
-    internal fun publish(){if(displayedOwner!=null){displayedRunning=!queue.paused&&queue.current!=null;displayedProblem=if(queue.paused)queue.reason else ""};sources=sessions.queues.filterValues{it.messages.isNotEmpty()}.map{(source,q)->source to ((if(source=="@audio-preview")"Audio preview" else if(source==null)"Unknown session" else PocketNotificationTitles.title(source,q.current?.title.orEmpty().ifBlank{"Session"})) to q.messages.size)};activeSource=sessions.activeSource;count=if(displayedOwner!=null)queue.messages.size else sessions.count;paused=queue.paused;title=if(displayedOwner!=null)displayedTitle else queue.current?.let{m->if(m.kind=="preview")"Audio preview" else m.threadId?.let{PocketNotificationTitles.title(it,m.title)}?:"Unknown session"}?:"Choose a speech session";status=queue.reason}
+    internal fun publish(){currentMessageId=queue.current?.id;if(displayedOwner!=null){displayedRunning=!queue.paused&&queue.current!=null;displayedProblem=if(queue.paused)queue.reason else ""};sources=sessions.queues.filterValues{it.messages.isNotEmpty()}.map{(source,q)->source to ((if(source=="@audio-preview")"Audio preview" else if(source==null)"Unknown session" else PocketNotificationTitles.title(source,q.current?.title.orEmpty().ifBlank{"Session"})) to q.messages.size)};activeSource=sessions.activeSource;count=if(displayedOwner!=null)queue.messages.size else sessions.count;paused=queue.paused;title=if(displayedOwner!=null)displayedTitle else queue.current?.let{m->if(m.kind=="preview")"Audio preview" else m.threadId?.let{PocketNotificationTitles.title(it,m.title)}?:"Unknown session"}?:"Choose a speech session";status=queue.reason}
     internal fun save(durable:Boolean=false){
         val savedQueue=displayed.parked?:queue
         val messages=JSONArray();savedQueue.messages.forEach{messages.put(JSONObject().put("id",it.id).put("title",it.title).put("kind",it.kind).put("text",it.text).put("needsFetch",it.needsFetch).put("threadId",it.threadId))}

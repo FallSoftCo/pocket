@@ -524,7 +524,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 
 /** Direct, non-focus-stealing controls shared by speech and its live caption surface. */
 @Composable fun SpeechPlaybackControls(iconOnly:Boolean=false){
-    val available=PocketSpeech.queue.current!=null
+    val available=PocketSpeech.currentMessageId!=null
     IconButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")},enabled=available,modifier=Modifier.size(48.dp)){
         SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)"Resume" else "Pause"),modifier=Modifier.size(28.dp),tint=if(available)Mint else Muted)
     }
