@@ -12,22 +12,29 @@ import androidx.compose.ui.unit.dp
 
 @Composable fun SessionGroupCard(group:SessionGroup,now:Long){
     var expanded by remember(group.task.id,Pocket.local){mutableStateOf(Pocket.prefs.getBoolean(Pocket.key("agentsExpanded:${group.task.id}"),false))}
-    var visibleChildren by remember(group.task.id){mutableIntStateOf(8)}
+    var childStart by remember(group.task.id,Pocket.local){mutableIntStateOf(Pocket.prefs.getInt(Pocket.key("agentsPage:${group.task.id}"),0))}
+    val start=childStart.coerceAtMost(((group.children.size-1).coerceAtLeast(0)/8)*8)
     val childIds=group.children.map{it.id}.toSet()
-    val unread=Pocket.notifications.count{it.s("thread_id") in childIds&&!it.optBoolean("_read")&&!PocketAttention.dismissed(it.optLong("id"))}
+    val unread=maxOf(group.children.sumOf{it.unreadCount},Pocket.notifications.count{it.s("thread_id") in childIds&&!it.optBoolean("_read")&&!PocketAttention.dismissed(it.optLong("id"))})
     Column{
         TaskCard(group.task,now)
         if(group.children.isNotEmpty()){
             TextButton({expanded=!expanded;Pocket.prefs.edit().putBoolean(Pocket.key("agentsExpanded:${group.task.id}"),expanded).apply()},modifier=Modifier.fillMaxWidth()){
                 BilingualLabel("${group.children.size} agents · ${group.children.count{it.status=="active"}} working"+(if(unread>0)" · $unread unread" else "")+" · "+if(expanded)"Hide" else "Show results")
             }
-            if(expanded){group.children.take(visibleChildren).forEach{AgentResultCard(it)};if(group.children.size>visibleChildren)TextButton({visibleChildren+=8}){BilingualLabel("Show more agents · ${group.children.size-visibleChildren} remaining")}}
+            if(expanded){group.children.drop(start).take(8).forEach{AgentResultCard(it)}
+                if(group.children.size>8)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                    TextButton({childStart=(start-8).coerceAtLeast(0);Pocket.prefs.edit().putInt(Pocket.key("agentsPage:${group.task.id}"),childStart).apply()},enabled=start>0){BilingualLabel("Previous agents")}
+                    Text("${start+1}–${minOf(start+8,group.children.size)} / ${group.children.size}",color=Muted,modifier=Modifier.padding(top=14.dp))
+                    TextButton({childStart=start+8;Pocket.prefs.edit().putInt(Pocket.key("agentsPage:${group.task.id}"),childStart).apply()},enabled=start+8<group.children.size){BilingualLabel("Next agents")}
+                }
+            }
         }
     }
 }
 @Composable fun AgentResultCard(task:Task){
     Column(Modifier.fillMaxWidth().background(Panel).clickable{Pocket.open(task.id)}.padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-        Text(listOf(task.agentNickname.ifBlank{task.title},task.agentRole,task.status).filter{it.isNotBlank()}.joinToString(" · "),color=Mint)
+        Text(listOf(task.agentNickname.ifBlank{task.title},task.agentRole,if(task.status=="notLoaded")"Status not yet checked" else task.status,if(task.unreadCount>0)"${task.unreadCount} unread" else "").filter{it.isNotBlank()}.joinToString(" · "),color=Mint)
         task.parentThreadId?.let{parent->Pocket.tasks.firstOrNull{it.id==parent}?.let{Text("Parent: "+it.agentNickname.ifBlank{it.title},color=Muted,maxLines=1)}}
         Text(task.preview.ifBlank{"Open to review this agent’s available work."},color=Paper,maxLines=3)
         Text(if(task.canAcceptDirectInput)"Open agent · direct guidance available" else "Review results · guide through parent task",color=Muted)
@@ -50,6 +57,8 @@ internal fun conversationInputUnavailable()=conversationIdentityPending()||readO
     Column(Modifier.fillMaxSize()){
         Text(task?.agentNickname?.ifBlank{task.title}?:t?.s("name","Delegated agent")?:"Delegated agent",modifier=Modifier.padding(16.dp),color=Paper,style=MaterialTheme.typography.titleLarge)
         Text("This agent reports to its parent task. Review its results here and open the parent to send guidance. Direct replies to this agent are unavailable.",modifier=Modifier.padding(horizontal=16.dp),color=Muted)
+        InlineCaptureStatus()
+        if(captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND)VoiceLaunchButton(threadId=PocketVoice.targetThread,bar=true,modifier=Modifier.padding(horizontal=16.dp))
         ErrorBanner()
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(PocketTranscript.loading)item{CircularProgressIndicator()}

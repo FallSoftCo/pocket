@@ -116,10 +116,10 @@ class MainActivity:ComponentActivity(){
     @android.annotation.SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event:android.view.KeyEvent):Boolean{
         val volume=event.keyCode in setOf(android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_UP)
-        val eligible=!PocketWorkUpdates.visible
-        if(volume&&foregroundCaptureKeys(PocketVoice.foreground,Pocket.token.isNotBlank()&&!Pocket.pairingMode,BackendNavigation.teamSelected(),eligible)){
+        val destination=currentForegroundCaptureTarget()
+        if(volume&&foregroundCaptureKeys(PocketVoice.foreground,Pocket.token.isNotBlank()&&!Pocket.pairingMode,BackendNavigation.teamSelected(),destination.eligible)){
             if(event.action==android.view.KeyEvent.ACTION_DOWN&&captureKeys.down(event.keyCode,event.repeatCount)){
-                val target=if(PocketCoordinator.visible)null else Pocket.selected
+                val target=destination.threadId
                 val here=true
                 if(androidx.core.content.ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)==android.content.pm.PackageManager.PERMISSION_GRANTED)PocketVoice.start(this,target,inPlace=here)
                 else{permissionCaptureThread=target;permissionCaptureInPlace=here;permissionCaptureProfile="${Pocket.local}:${Pocket.base}:${Pocket.token}";capturePermission.launch(Manifest.permission.RECORD_AUDIO)}
@@ -269,7 +269,8 @@ class MainActivity:ComponentActivity(){
             }
             if(orderDue){
                 // Only explicit navigation reconciles existing seats by genuine work recency.
-                val entries=latest.map{SessionRank(it.id,taskWorkTime(it),it.status in listOf("active","pending"),it.activityAt)}
+                val families=sessionGroups(latest).associateBy{it.task.id}
+                val entries=latest.map{task->val children=families[task.id]?.children.orEmpty();SessionRank(task.id,maxOf(taskWorkTime(task),children.maxOfOrNull{taskWorkTime(it)}?:0),task.status in listOf("active","pending")||children.any{it.status=="active"})}
                 val next=if(Pocket.showArchived)stableSessionOrder(order,entries,System.currentTimeMillis()) else liveSessionOrder(order,entries,System.currentTimeMillis(),explicitBoundary)
                 if(next!=order)order=next
                 val encoded=org.json.JSONArray(next).toString()

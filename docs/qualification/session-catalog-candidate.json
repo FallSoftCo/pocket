@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-07",
+  "status": "isolated-candidate; production-and-phone-not-deployed",
+  "baseCommit": "94ad22961fa81ba7da21fab45eae7e90ce33cc28",
+  "implementationCommit": "9477522",
+  "apkSha256": "5ebf507d3eee2a56fff14800a4cb243c8772a898d17489d77bcf5bc25b374610",
+  "cause": {
+    "dormantMetadataTouchedToday": 262,
+    "cachedChildren": 493,
+    "dormantMatchingRecoveryRecords": 0,
+    "catalog": "updated_at/seen_at ordering and first-page limits promoted configuration/inventory metadata",
+    "ui": "raw update fallback, automatic lifecycle order reconciliation and prepending discoveries displaced recent work",
+    "children": "normal list response omitted runtime parent/direct-input identity"
+  },
+  "mixedActualInventoryReplay": {
+    "inventory": 1808,
+    "primary": 1315,
+    "children": 493,
+    "dormantMetadataTouchedToday": 267,
+    "recentUserTasks": 141,
+    "returnedPrimary": 300,
+    "returnedChildren": 492,
+    "recentPrefixPreserved": true,
+    "nextCursorAvailable": true,
+    "onlyMetadataRpcs": true,
+    "recencySortRequested": true
+  },
+  "checks": {
+    "androidTests": 246,
+    "androidFailures": 0,
+    "assembleDebug": "passed",
+    "lintDebug": "passed",
+    "serverTests": 329,
+    "http": "unsupported child replies rejected before durable queue; child timeline read without resume; only thread/list/read metadata RPCs",
+    "foregroundCapture": "Activity and Accessibility share inbox/coordinator/child eligibility and frozen existing capture target;4 unit tests",
+    "serverFailures": 0
+  },
+  "native": {
+    "device": "owned synthetic emulator5574 API34",
+    "fixture": "274 primary user tasks,262 dormant,6 children with nested parent and confirmed supported child",
+    "metadataAndReconnect": "3 visible primary title bounds exactly unchanged for metadata reversal and WS1012 reconnect",
+    "distinctSwitching": "one coordinate tap each recent01 then02 showed own distinct native history and matching fixture read IDs",
+    "agents": "primary cards show4 and2 child groups; no child as independent recent card",
+    "draft": "synthetic draft text captured; return/restoration not yet qualified",
+    "remaining": [
+      "native unsupported child parent route",
+      "native draft restoration and reply routing",
+      "native pagination/search/partial inventory/scroll checks",
+      "final release build and physical phone deployment verification"
+    ],
+    "resourceBoundary": "Owned emulator stopped/checkpointed on Pocket Dev request to free memory for urgent alpha40 native QA. No shared devices/services stopped."
+  },
+  "gallery": "8bar/?collection=nextcomp-session-catalog",
+  "releaseOwnership": "Pocket Dev owns release and physical phone; isolated workstream does not edit main version/package or restart services",
+  "productionObservation": {
+    "backend": "alpha38 connected healthy",
+    "phone": "Pocket Dev independently reported alpha39 code57 installed and hash verified",
+    "catalogCandidateDeployed": false
+  },
+  "safety": {
+    "realUserMessagesSent": false,
+    "realSessionsResumedByQA": false,
+    "archivedDeletedInterrupted": false,
+    "servicesRestarted": false
+  }
+}

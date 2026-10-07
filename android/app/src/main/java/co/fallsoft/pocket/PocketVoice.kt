@@ -65,8 +65,9 @@ object PocketVoice {
     fun key(event:KeyEvent):Boolean{
         if(event.keyCode !in listOf(KeyEvent.KEYCODE_VOLUME_DOWN,KeyEvent.KEYCODE_VOLUME_UP))return false
         if(event.action==KeyEvent.ACTION_UP)captureKeys.up(event.keyCode)
-        if(!foreground||!active||BackendNavigation.teamSelected())return false
-        if(event.action==KeyEvent.ACTION_DOWN&&captureKeys.down(event.keyCode,event.repeatCount))Pocket.scope.launch{start(Pocket.context,if(PocketCoordinator.visible)null else if(inPlace)Pocket.selected else targetThread,inPlace=inPlace)}
+        val destination=currentForegroundCaptureTarget()
+        if(!foregroundCaptureKeys(foreground,Pocket.token.isNotBlank()&&!Pocket.pairingMode,BackendNavigation.teamSelected(),destination.eligible)||!active)return false
+        if(event.action==KeyEvent.ACTION_DOWN&&captureKeys.down(event.keyCode,event.repeatCount))Pocket.scope.launch{start(Pocket.context,destination.threadId,inPlace=inPlace)}
         return true
     }
     fun notification(n:JSONObject){service?.enqueueUpdate(n)}

@@ -236,7 +236,7 @@ async function attach(threadId,{before=null,recent=false}={}){
   requireId(threadId); await codex.connect();
   let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);
   if(sessionIdentity(metadata).isChild&&!sessionIdentity(metadata).canAcceptDirectInput){
-    const snapshotRevision=timeline.version;const thread=await history.read(metadata,{before,preferPaging:true,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});return {...thread,_pocketSnapshotRevision:snapshotRevision};
+    attached.add(threadId);const snapshotRevision=timeline.version;const thread=await history.read(metadata,{before,preferPaging:true,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});if(!before)timeline.seed(thread,{throughVersion:snapshotRevision});return {...thread,_pocketSnapshotRevision:snapshotRevision};
   }
   if(!attached.has(threadId)){
     // Opening history inherits the runtime profile; it must not undo an external permission change.
@@ -383,7 +383,7 @@ app.get('/api/voice/history',(req,res)=>{const before=Number(req.query.before||N
 app.post('/api/voice/start',route(async(req,res)=>{
   await voiceController.ensure(req.device.id);
   let threadId=null;
-  if(req.body.threadId){threadId=requireId(req.body.threadId);if(catchupHidden(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();const result=await codex.call('thread/read',{threadId,includeTurns:false});if(result.thread?.id!==threadId)return res.status(409).json({error:'Session identity changed. Choose the intended session again.'});}
+  if(req.body.threadId){threadId=requireId(req.body.threadId);if(catchupHidden(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();const result=await codex.call('thread/read',{threadId,includeTurns:false});if(result.thread?.id!==threadId)return res.status(409).json({error:'Session identity changed. Choose the intended session again.'});requireDirectSessionInput(result.thread);}
   const s=voiceController.setFocus(req.device.id,threadId,{mode:threadId?'direct':'coordinator'});
   if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);
   res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),native:true});
@@ -445,15 +445,16 @@ app.get('/api/threads',route(async(req,res)=>{
   if(req.query.view==='coordinator'){
     const cursor=typeof req.query.cursor==='string'?req.query.cursor:null;
     if(cursor&&cursor.length>4096)return res.status(400).json({error:'Invalid discovery cursor.'});
-    const result=await codex.call('thread/list',{limit:100,sortKey:'recency_at',sortDirection:'desc',archived:false,useStateDbOnly:true,sourceKinds:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
+    const result=await sessionDiscovery.page({limit:100,sortKey:'recency_at',sortDirection:'desc',archived:false,useStateDbOnly:true,sourceKinds:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
     const found=new Map();for(const thread of result.data||[]){if(catchupHidden(thread.id))continue;sessionDiscovery.remember(thread,{archived:false});found.set(thread.id,thread);}
     if(!cursor)for(const row of db.prepare("SELECT d.metadata FROM session_starts s JOIN pocket_discovered_threads d ON d.thread_id=s.thread_id WHERE s.state='started' AND d.archived=0 ORDER BY s.updated_at DESC LIMIT 100").all()){
       const thread=JSON.parse(row.metadata);if(!found.has(thread.id)&&!catchupHidden(thread.id))found.set(thread.id,{...thread,...sessionDiscovery.live.get(thread.id)});
     }
-    return res.json({threads:[...found.values()].map(thread=>({id:thread.id,name:thread.name||thread.preview?.slice(0,90)||'Untitled task',preview:thread.preview||'',cwd:thread.cwd,status:thread.status,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,parentThreadId:thread.parentThreadId,discoveryPending:!!thread.discoveryPending})),nextCursor:result.nextCursor||null,refreshPending:false});
+    return res.json({threads:[...found.values()].map(thread=>({...catalogFields(thread),id:thread.id,name:thread.name||thread.preview?.slice(0,90)||'Untitled task',preview:thread.preview||'',cwd:thread.cwd,status:thread.status,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,parentThreadId:thread.parentThreadId,discoveryPending:!!thread.discoveryPending})),nextCursor:result.nextCursor||null,refreshPending:false});
   }
   const r=await sessionDiscovery.list({archived:req.query.archived==='true',cursor:typeof req.query.cursor==='string'?req.query.cursor:null,searchTerm:typeof req.query.search==='string'?req.query.search.slice(0,200):null});
   const watches=db.prepare('SELECT * FROM watches').all();
+  const unread=new Map(db.prepare("SELECT n.thread_id,COUNT(*) AS total FROM notifications n LEFT JOIN notification_reads r ON r.device_id=? AND r.thread_id=n.thread_id WHERE n.kind!='coordinator_report' AND (n.id>COALESCE(r.through_id,0) OR EXISTS(SELECT 1 FROM notification_attention a WHERE a.notification_id=n.id AND a.resolved_at IS NULL)) GROUP BY n.thread_id").all(req.device.id).map(row=>[row.thread_id,row.total]));
   for(const renamed of notificationTitles.reconcile(r.data||[])){emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));}
   res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>{
     const followed=!!watches.find(w=>w.thread_id===t.id&&w.enabled);
@@ -461,7 +462,7 @@ app.get('/api/threads',route(async(req,res)=>{
     const preview=threadPreviews.get(t,{hydrate:followed||t.status?.type==='active'||Date.now()-updatedMs<15*60000});
     const start=db.prepare("SELECT state FROM outgoing WHERE thread_id=? AND id LIKE 'start-%' ORDER BY created_at DESC LIMIT 1").get(t.id);
     const awaitingStart=start&&['queued','sending'].includes(start.state)&&['idle','notLoaded','pending',undefined].includes(t.status?.type);
-    return {...catalogFields(t),id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed};
+    return {...catalogFields(t),unreadCount:unread.get(t.id)||0,id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed};
   }),nextCursor:r.nextCursor||null,refreshPending:!!r.refreshPending});
 }));
 app.post('/api/threads/:id/recovery',route(async(req,res)=>{

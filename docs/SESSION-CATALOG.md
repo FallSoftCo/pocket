@@ -1,0 +1,11 @@
+# Recent work and delegated agents
+
+Runtime metadata inspection, resume/configuration changes and permissions can update `updatedAt` without new work. The catalog requests `recency_at`; older runtimes rejecting that key fall back to `created_at`, never metadata modification order. Cached inventories are ranked by canonical recency, deliberate accepted user activity and creation time. Reading history does not resume delegated agents.
+
+Existing list seats remain stable through background inventory, reconnect, previews and status changes. Text and status update in place. Newly discovered records enter by genuine work age without reversing existing pairs. An explicit return to Work reconciles confirmed running work and meaningful recency after interaction settles. Returning from a conversation keeps list position and child expansion/page. Pagination retains already loaded history and its cursor across first-page refreshes; search can discover older work.
+
+Primary cards are user tasks. Actual runtime parent IDs/source identities group nested agents under the owning root while displaying each child's immediate parent. Agent results are expanded in bounded pages with status and unread counts. Missing-parent children remain discoverable in History/search. A fork alone is not a child identity.
+
+A delegated agent accepts direct replies only when the runtime explicitly confirms that capability. Otherwise its conversation is a results view with an Open parent action and parent guidance. Notification actions follow the same identity. History reads and unsupported replies never resume/start/steer a child. Foreground hardware capture uses one Activity/Accessibility policy: inbox capture routes to the coordinator; unknown or unsupported child targets cannot start capture; an already recording capture retains its original stop/send target even after navigation.
+
+This change does not archive, delete, interrupt or restart sessions. Stable seats do not suppress live results, unread badges or ongoing work. Physical phone release and deployment are tracked separately from the isolated candidate tests.

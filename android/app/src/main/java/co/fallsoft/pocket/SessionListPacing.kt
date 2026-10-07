@@ -69,8 +69,8 @@ fun stableSessionOrder(previous: List<String>, entries: List<SessionRank>, now: 
     return result
 }
 
-/** Fresh work has a bounded lease, not a permanent seat. Concurrent work is tied:
- * token arrival order never sorts peers. Metadata/hydration cannot enter live tiers.
+/** Existing seats stay fixed during browsing. First load and explicit navigation
+ * reconcile by confirmed ongoing work and genuine work recency.
  * Rank zero is the bottom (thumb-nearest) end of the reverse-layout list.
  */
 fun liveSessionOrder(previous: List<String>, entries: List<SessionRank>, now: Long, reconcile:Boolean=false): List<String> {

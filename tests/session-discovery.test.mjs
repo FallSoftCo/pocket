@@ -57,3 +57,22 @@ test('persisted genuine activity keeps discovery priority after reconnect and li
  for(let i=0;i<240;i++)f.discovery.remember({id:'metadata-'+i,name:'Metadata only',updatedAt:999999});
  f.discovery.live.clear();assert.ok(f.discovery.knownIds().includes('reactivated'));f.db.close();
 });
+
+test('cached child activation cannot resurrect a parent across reconnect; live work remains confirmed',async()=>{
+ const db=new DatabaseSync(':memory:');const calls=[];const discovery=new SessionDiscovery({db,codex:{call:async(m,p)=>{calls.push(m);return m==='thread/list'?{data:[{id:'parent',createdAt:1,recencyAt:1,status:{type:'idle'}}]}:{thread:{id:p.threadId,source:'cli',createdAt:1,recencyAt:1,status:{type:'notLoaded'}}};}}});
+ discovery.remember({id:'child',parentThreadId:'parent',createdAt:1,recencyAt:1,status:{type:'active'}});
+ let result=await discovery.list();assert.equal(result.data.find(t=>t.id==='child').status.type,'notLoaded');
+ discovery.observe({method:'turn/started',params:{threadId:'child'}},()=>50000);result=await discovery.list();assert.equal(result.data.find(t=>t.id==='child').status.type,'active');
+ discovery.clearLiveStatus();result=await discovery.list();assert.equal(result.data.find(t=>t.id==='child').status.type,'notLoaded');assert.ok(calls.every(m=>m!=='thread/resume'));db.close();
+});
+
+test('older runtime recency rejection degrades to creation order, never metadata-update order',async()=>{
+ const f=setup((m,p)=>{if(m==='thread/list'&&p.sortKey==='recency_at'){const e=Error('unknown variant recency_at');e.rpc={code:-32602};throw e;}return m==='thread/list'?{data:[{id:'older',createdAt:1,updatedAt:99999},{id:'recent',createdAt:10,updatedAt:10}]}:{thread:{id:p.threadId,createdAt:2}};});
+ const r=await f.discovery.list();assert.equal(r.data[0].id,'recent');assert.ok(f.calls.filter(c=>c.m==='thread/list').every(c=>['recency_at','created_at'].includes(c.p.sortKey)));f.db.close();
+});
+
+test('malformed cached parent cycles terminate without resuming or dropping history',async()=>{
+ const f=setup((m,p)=>m==='thread/list'?{data:[{id:'a',parentThreadId:'b',recencyAt:10}]}:{thread:{id:p.threadId,parentThreadId:p.threadId==='a'?'b':'a',recencyAt:10}});
+ f.discovery.remember({id:'b',parentThreadId:'a',recencyAt:1});
+ const result=await f.discovery.list();assert.ok(result.data.some(t=>t.id==='a'));assert.ok(result.data.some(t=>t.id==='b'));assert.ok(f.calls.every(c=>['thread/list','thread/read'].includes(c.m)));f.db.close();
+});

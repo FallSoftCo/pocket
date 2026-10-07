@@ -1,3 +1,4 @@
+import {sessionIdentity,sessionWorkTime} from './session-catalog.mjs';
 // Retrieval evidence only: lexical scores select bounded reads, never an action
 // target. The coordinator must evaluate the public conversation evidence.
 const validId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{5,100}$/.test(value);
@@ -12,18 +13,16 @@ const status = value => text(typeof value === 'string' ? value : value?.type, 60
 const words = value => [...new Set(text(value, 4000).toLowerCase().normalize('NFKD')
   .replace(/\p{M}/gu, '').match(/[\p{L}\p{N}]{3,}/gu) || [])]
   .filter(word => !new Set(['the','and','this','that','with','from','have','session','conversation','please','continue','work','task']).has(word));
-const recency = session => {
-  const value = session.activityAt ?? session.updatedAt ?? 0;
-  return value < 1e11 ? value * 1000 : value;
-};
+const recency = session => sessionWorkTime(session);
 function metadata(raw) {
   const result = {id: raw.id, name: text(raw.name, 120), cwd: text(raw.cwd, 120),
     preview: text(raw.preview, 220), previewRole: text(raw.previewRole, 30),
-    status: status(raw.status), activityAt: finite(raw.activityAt), updatedAt: finite(raw.updatedAt),
+    status: status(raw.status), activityAt: finite(raw.activityAt), recencyAt:finite(raw.recencyAt), createdAt:finite(raw.createdAt), updatedAt: finite(raw.updatedAt),
     archived: raw.archived === true, discoveryPending: raw.discoveryPending === true};
-  const parentId = raw.parentThreadId ?? raw.parentId ?? raw.source?.subAgent?.threadSpawn?.parentThreadId;
+  const identity=sessionIdentity(raw);const parentId=identity.parentThreadId??raw.parentId;
+  result.canAcceptDirectInput=identity.canAcceptDirectInput;
   if (validId(parentId)) result.parentThreadId = parentId;
-  if (raw.managedChild === true || validId(parentId) || raw.source?.type === 'subAgent') result.managedChild = true;
+  if (raw.managedChild === true || identity.isChild || validId(parentId) || raw.source?.type === 'subAgent') result.managedChild = true;
   return result;
 }
 const activityNames = {commandExecution:'Run command', fileChange:'File changes', mcpToolCall:'Tool activity',

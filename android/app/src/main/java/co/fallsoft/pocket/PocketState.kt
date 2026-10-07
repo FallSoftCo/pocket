@@ -21,7 +21,7 @@ class PocketApplication: Application(), coil.ImageLoaderFactory {
 }
 fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
 fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback else optString(key,fallback)
-data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0,val recencyAt:Long=0,val parentThreadId:String?=null,val isChild:Boolean=false,val agentNickname:String="",val agentRole:String="",val canAcceptDirectInput:Boolean=true)
+data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0,val recencyAt:Long=0,val parentThreadId:String?=null,val isChild:Boolean=false,val agentNickname:String="",val agentRole:String="",val canAcceptDirectInput:Boolean=true,val unreadCount:Int=0)
 data class Message(val id:String,val role:String,val text:String)
 class PocketApiException(val status:Int,message:String):Exception(message)
 
@@ -330,7 +330,7 @@ object Pocket {
                     val id=thread.s("id",json.s("threadId"))
                     if(id.isNotBlank()){
                         val previous=tasks.firstOrNull{it.id==id}
-                        val next=Task(id,thread.s("name",previous?.title?:"New task"),thread.s("cwd",previous?.cwd?:""),thread.optJSONObject("status")?.s("type")?:"pending",thread.optLong("updatedAt",System.currentTimeMillis()),previous?.watched?:false,false,thread.s("preview",previous?.preview?:"Starting…"),previous?.previewRole?:"context",previous?.previewKind?:"message",maxOf(previous?.activityAt?:0,thread.optLong("activityAt",json.optLong("activityAt"))),thread.optLong("recencyAt",previous?.recencyAt?:thread.optLong("createdAt")),thread.s("parentThreadId").takeIf{it.isNotBlank()}?:previous?.parentThreadId,thread.optBoolean("isChild",previous?.isChild?:false),thread.s("agentNickname",previous?.agentNickname?:""),thread.s("agentRole",previous?.agentRole?:""),thread.optBoolean("canAcceptDirectInput",previous?.canAcceptDirectInput?:true))
+                        val next=Task(id,thread.s("name",previous?.title?:"New task"),thread.s("cwd",previous?.cwd?:""),thread.optJSONObject("status")?.s("type")?:"pending",thread.optLong("updatedAt",System.currentTimeMillis()),previous?.watched?:false,false,thread.s("preview",previous?.preview?:"Starting…"),previous?.previewRole?:"context",previous?.previewKind?:"message",maxOf(previous?.activityAt?:0,thread.optLong("activityAt",json.optLong("activityAt"))),thread.optLong("recencyAt",previous?.recencyAt?:thread.optLong("createdAt")),thread.s("parentThreadId").takeIf{it.isNotBlank()}?:previous?.parentThreadId,thread.optBoolean("isChild",previous?.isChild?:thread.s("parentThreadId").isNotBlank()),thread.s("agentNickname",previous?.agentNickname?:""),thread.s("agentRole",previous?.agentRole?:""),thread.optBoolean("canAcceptDirectInput",previous?.canAcceptDirectInput?:!(thread.optBoolean("isChild")||thread.s("parentThreadId").isNotBlank())))
                         tasks=tasks.filterNot{it.id==id}+next
                     }
                 }
