@@ -73,6 +73,11 @@ object PocketNotifications {
             b.addAction(R.drawable.ic_notification,PocketImmersion.label("Answer"),open(c,thread,id,local,n.s("kind")=="coordinator_report"))
             if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Skip"),PocketAttention.action(c,n.optLong("id"),"skip",local))
             if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local))
+        }else if(thread!=null&&!n.optBoolean("canAcceptDirectInput",true)){
+            val parent=n.s("parentThreadId").takeIf{it.isNotBlank()}
+            if(parent!=null)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Guide parent"),open(c,parent,id+100000,local))
+            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Review agent"),open(c,thread,id,local))
+            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local))
         }else if(thread!=null){
             val intent=Intent(c,ReplyReceiver::class.java).putExtra("thread",thread).putExtra("notificationId",id).putExtra("notificationDbId",n.optLong("id")).putExtra("local",local)
             val pi=PendingIntent.getBroadcast(c,id,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)

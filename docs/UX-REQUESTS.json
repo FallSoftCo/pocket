@@ -1932,6 +1932,14 @@
         "No historical consumption or exact provider debit",
         "Completed positive audio-duration/playback and physical phone measurements unqualified"
       ]
+    },
+    {
+      "id": "recent-work-and-parent-agent-catalog",
+      "date": "2026-10-07",
+      "request": "Restore last-week user work after dormant metadata resurfacing; genuine work recency, stable seats, parent-primary agent groups, supported guidance, searchable paginated history; preserve ongoing tasks, selection, scroll and unread updates; no archive/delete/interruption for decluttering. Coordinate separately from mic alpha39.",
+      "status": "implemented-candidate; qualification-and-deployment-pending",
+      "implementation": "Recency-index pages, retained runtime parent/input capabilities, grouped child results and parent guidance, read-only unsupported child history, direct-input admission guard, stable background seats and explicit Work reconciliation, older-history pagination/search.",
+      "verification": "Read-only alpha38 catalog:262 dormant tasks had current metadata timestamps, unchanged old recency and no recovery records;493 cached children had runtime source parent links. No service restart or old-task mutation by this workstream. Native/deployment pending."
     }
   ],
   "current_state": {

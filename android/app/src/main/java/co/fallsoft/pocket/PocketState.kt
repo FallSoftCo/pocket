@@ -21,7 +21,7 @@ class PocketApplication: Application(), coil.ImageLoaderFactory {
 }
 fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
 fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback else optString(key,fallback)
-data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0)
+data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0,val recencyAt:Long=0,val parentThreadId:String?=null,val isChild:Boolean=false,val agentNickname:String="",val agentRole:String="",val canAcceptDirectInput:Boolean=true)
 data class Message(val id:String,val role:String,val text:String)
 class PocketApiException(val status:Int,message:String):Exception(message)
 
@@ -141,7 +141,7 @@ object Pocket {
         if(local==forLocal)return
         val nextBase=savedBase(forLocal);val nextToken=savedToken(forLocal);if(nextBase.isBlank()||nextToken.isBlank())return
         backgroundRefreshJob?.cancel();backgroundRefreshJob=null;discoveryRefreshJob?.cancel();discoveryRefreshJob=null;lastDiscoveryRefreshAt=0L;refreshError="";statusRevision++
-        sessionSnapshotComplete=false;sessionOrderRequest=0;sessionOrderHandled=0
+        sessionSnapshotComplete=false;sessionOrderRequest=0;sessionOrderHandled=0;sessionCursor=null;sessionCursorScope=null
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
         PocketLive.stop();PocketTranscript.clear();local=forLocal;base=nextBase;token=nextToken;host=if(local)"This phone" else "Your workstation"
         connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
@@ -184,9 +184,9 @@ object Pocket {
             val taskResult=api(if(profileArchived)"/api/threads?archived=true" else "/api/threads")
             if(local!=profileLocal||token!=profileToken||showArchived!=profileArchived)return@launch
             activities=try{api("/api/activity").optJSONArray("items")?.objects()?:emptyList()}catch(e:PocketApiException){if(e.status==404)emptyList() else throw e}
-            val fetched=taskResult.optJSONArray("threads")?.objects()?.map{Task(it.s("id"),it.s("name"),it.s("cwd"),it.optJSONObject("status")?.s("type")?:"idle",it.optLong("updatedAt"),it.optBoolean("watched"),it.optBoolean("archived"),it.s("preview"),it.s("previewRole","context"),it.s("previewKind","message"),it.optLong("activityAt"))}?:emptyList()
-            tasks=mergeLiveTaskSnapshot(tasks,fetched,taskBaseline,taskResult.optBoolean("refreshPending"))
-            sessionSnapshotComplete=!taskResult.optBoolean("refreshPending")
+            val fetched=taskResult.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList()
+            tasks=mergeLiveTaskSnapshot(tasks,fetched,taskBaseline,taskResult.optBoolean("refreshPending")||taskResult.s("nextCursor").isNotBlank())
+            sessionSnapshotComplete=!taskResult.optBoolean("refreshPending");val cursorScope="${local}:${base}:${token}:$showArchived";if(sessionCursorScope!=cursorScope&&!taskResult.optBoolean("refreshPending")){sessionCursorScope=cursorScope;sessionCursor=taskResult.s("nextCursor").takeIf{it.isNotBlank()}}
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
             if(local==profileLocal&&token==profileToken)notifications.forEach{PocketNotificationTitles.remember(it.put("_local",profileLocal))}
             val latestAttention=api("/api/attention").optJSONArray("notifications")?.objects()?:emptyList()
@@ -196,6 +196,15 @@ object Pocket {
             refreshError=""
         }catch(e:CancellationException){throw e}catch(e:Exception){if(local==profileLocal&&token==profileToken)refreshError=PocketNetwork.error(e)}
     }}
+    private var sessionCursorScope:String?=null
+    var sessionCursor by mutableStateOf<String?>(null);private set
+    var loadingSessions by mutableStateOf(false);private set
+    fun moreSessions(search:String=""){if(loadingSessions)return;val cursor=if(search.isBlank())sessionCursor else null;if(search.isBlank()&&cursor==null)return
+        val profile=local;val endpoint=base;val credential=token;val archived=showArchived;loadingSessions=true
+        scope.launch{try{val result=api("/api/threads?archived=$archived"+(cursor?.let{"&cursor="+android.net.Uri.encode(it)}?:"")+(if(search.isNotBlank())"&search="+android.net.Uri.encode(search) else ""))
+            if(local==profile&&base==endpoint&&token==credential&&showArchived==archived){val incoming=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList();tasks=mergeSessionSnapshot(tasks,incoming,true){it.id};if(search.isBlank())sessionCursor=result.s("nextCursor").takeIf{it.isNotBlank()}}
+        }catch(e:Exception){if(local==profile&&base==endpoint)refreshError=PocketNetwork.error(e)}finally{loadingSessions=false}}
+    }
     fun open(id:String,keyboard:Boolean=false){if(BackendNavigation.open(id))return;openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
     fun refreshDetail(){scope.launch{PocketTranscript.load()}}
     fun closeTask(){selected=null;detail=null;PocketTranscript.clear()}
@@ -260,7 +269,7 @@ object Pocket {
             }
         }?:emptyList() }?.filter{it.text.isNotBlank()}?.takeLast(50)?:emptyList()
     }
-    fun reply(text:String,threadId:String?=selected,mode:String="auto",onDone:()->Unit={}){if(threadId==null||text.isBlank())return;scope.launch{
+    fun reply(text:String,threadId:String?=selected,mode:String="auto",onDone:()->Unit={}){if(threadId==null||text.isBlank())return;if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";return};scope.launch{
         sending=true;error=""
         try{api("/api/threads/$threadId/reply",JSONObject().put("text",text).put("mode",mode).put("id",UUID.randomUUID().toString()));onDone();scheduleRefresh()}
         catch(e:Exception){error=e.message?:"Reply not sent"}finally{sending=false}
@@ -321,7 +330,7 @@ object Pocket {
                     val id=thread.s("id",json.s("threadId"))
                     if(id.isNotBlank()){
                         val previous=tasks.firstOrNull{it.id==id}
-                        val next=Task(id,thread.s("name",previous?.title?:"New task"),thread.s("cwd",previous?.cwd?:""),thread.optJSONObject("status")?.s("type")?:"pending",thread.optLong("updatedAt",System.currentTimeMillis()),previous?.watched?:false,false,thread.s("preview",previous?.preview?:"Starting…"),previous?.previewRole?:"context",previous?.previewKind?:"message",maxOf(previous?.activityAt?:0,thread.optLong("activityAt",json.optLong("activityAt"))))
+                        val next=Task(id,thread.s("name",previous?.title?:"New task"),thread.s("cwd",previous?.cwd?:""),thread.optJSONObject("status")?.s("type")?:"pending",thread.optLong("updatedAt",System.currentTimeMillis()),previous?.watched?:false,false,thread.s("preview",previous?.preview?:"Starting…"),previous?.previewRole?:"context",previous?.previewKind?:"message",maxOf(previous?.activityAt?:0,thread.optLong("activityAt",json.optLong("activityAt"))),thread.optLong("recencyAt",previous?.recencyAt?:thread.optLong("createdAt")),thread.s("parentThreadId").takeIf{it.isNotBlank()}?:previous?.parentThreadId,thread.optBoolean("isChild",previous?.isChild?:false),thread.s("agentNickname",previous?.agentNickname?:""),thread.s("agentRole",previous?.agentRole?:""),thread.optBoolean("canAcceptDirectInput",previous?.canAcceptDirectInput?:true))
                         tasks=tasks.filterNot{it.id==id}+next
                     }
                 }

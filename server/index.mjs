@@ -1,6 +1,7 @@
 import {RecoveryQueue} from './recovery-queue.mjs';
 import {TurnRecovery,permissionRecoveryAudit} from './turn-recovery.mjs';
 import {SessionDiscovery,INTERACTIVE_SOURCES} from './session-discovery.mjs';
+import {catalogFields,sessionIdentity,sessionWorkTime,requireDirectSessionInput} from './session-catalog.mjs';
 import {SessionCatchup} from './session-catchup.mjs';
 import {CoordinatorReports} from './coordinator-reports.mjs';
 import {recoverReply} from './reply-recovery.mjs';
@@ -134,7 +135,8 @@ const requireAuth=(req,res,next)=>{req.device=identity(req); if(!req.device)retu
 const owner=(req,res,next)=>{if(req.device.id!=='owner')return res.status(403).json({error:'Local owner access required'});next();};
 const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 const requireId=id=>{if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(id))throw new Error('Invalid thread identifier');return id;};
-const notificationRow=r=>({...r,title_revision:notificationTitles.revision(r.thread_id),spoken_text:r.spoken_text||spokenText(r.title,r.body),attachments:JSON.parse(r.attachments||'[]')});
+const notificationSessionFields=id=>{const row=db.prepare("SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?").get(id);return row?sessionIdentity(JSON.parse(row.metadata)):{};};
+const notificationRow=r=>({...notificationSessionFields(r.thread_id),...r,title_revision:notificationTitles.revision(r.thread_id),spoken_text:r.spoken_text||spokenText(r.title,r.body),attachments:JSON.parse(r.attachments||'[]')});
 function rememberSpeechContext(threadId,turn){
   const prompt=turnPrompt(turn);if(!threadId||!prompt)return;
   db.prepare('INSERT INTO speech_contexts(thread_id,turn_id,context) VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET turn_id=excluded.turn_id,context=excluded.context').run(threadId,turn.id||null,promptContext(prompt));
@@ -188,7 +190,7 @@ function notify(threadId,title,body,kind='update',attachments=[],requestId=null,
   try{
     const r=db.prepare('INSERT OR IGNORE INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,source_turn_id,spoken_text) VALUES(?,?,?,?,?,?,?,?,?)').run(threadId,title,body,kind,JSON.stringify(attachments),at,spokenSummary(title,body,speech,speechContext),turnId,spokenText(title,body,speech,speechContext));
     if(!r.changes){db.exec('COMMIT');return null;}
-    n={id:Number(r.lastInsertRowid),thread_id:threadId,title_revision:notificationTitles.revision(threadId),title,body,kind,attachments,created_at:at,spoken_summary:spokenSummary(title,body,speech,speechContext),spoken_text:spokenText(title,body,speech,speechContext)};
+    n={...notificationSessionFields(threadId),id:Number(r.lastInsertRowid),thread_id:threadId,title_revision:notificationTitles.revision(threadId),title,body,kind,attachments,created_at:at,spoken_summary:spokenSummary(title,body,speech,speechContext),spoken_text:spokenText(title,body,speech,speechContext)};
     if(threadId&&['question','approval','error'].includes(kind))db.prepare('INSERT INTO notification_attention(notification_id,request_id) VALUES(?,?)').run(n.id,requestId);
     sessionCatchup.recordNotification({...n,turnId,requestId});onPersist?.(n);push.enqueue(n.id,{flush:false});db.exec('COMMIT');
   }catch(e){db.exec('ROLLBACK');throw e;}
@@ -233,6 +235,9 @@ function recoverHistory(metadata){
 async function attach(threadId,{before=null,recent=false}={}){
   requireId(threadId); await codex.connect();
   let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);
+  if(sessionIdentity(metadata).isChild&&!sessionIdentity(metadata).canAcceptDirectInput){
+    const snapshotRevision=timeline.version;const thread=await history.read(metadata,{before,preferPaging:true,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});return {...thread,_pocketSnapshotRevision:snapshotRevision};
+  }
   if(!attached.has(threadId)){
     // Opening history inherits the runtime profile; it must not undo an external permission change.
     metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true})).thread;attached.add(threadId);
@@ -253,7 +258,7 @@ async function sendOutgoing(row,initialThread=null){
   if(syncing.has(threadId))return;
   syncing.add(threadId);
   try{
-    const t=initialThread||await attach(row.thread_id);
+    const t=initialThread||await attach(row.thread_id);requireDirectSessionInput(t);
     // Re-read after attachment: the user may have edited or removed the waiting message.
     row=db.prepare('SELECT * FROM outgoing WHERE id=?').get(row.id);
     if(!row||row.state!=='queued')return;
@@ -295,9 +300,9 @@ codex.on('event',m=>{
   const activity=sessionDiscovery.observe(m);
   if(activity){
     if(activity.status||m.method==='item/started'&&p.item?.type==='userMessage')emit('sessionActivity',activity);
-    if(!db.prepare('SELECT 1 FROM pocket_discovered_threads WHERE thread_id=?').get(threadId))void sessionDiscovery.discoverLive(threadId).then(thread=>{if(thread)emit('sessionStarted',{threadId,thread});});
+    if(!db.prepare('SELECT 1 FROM pocket_discovered_threads WHERE thread_id=?').get(threadId))void sessionDiscovery.discoverLive(threadId).then(thread=>{if(thread)emit('sessionStarted',{threadId,thread:{...thread,...catalogFields(thread)}});});
   }
-  if(m.method==='thread/started'&&p.thread)emit('sessionStarted',{threadId,thread:p.thread});
+  if(m.method==='thread/started'&&p.thread)emit('sessionStarted',{threadId,thread:{...p.thread,...catalogFields(p.thread)}});
   const interaction=sessionInteraction(m);if(interaction)emit('sessionInteraction',{...interaction,activityAt:activity?.activityAt});
   threadPreviews.observe(m);activityBoard.observe(m);
   if(m.method==="item/completed"||p.item?.type==="userMessage")conversationNotes.observe(threadId,p.turnId,p.item);
@@ -440,24 +445,24 @@ app.get('/api/threads',route(async(req,res)=>{
   if(req.query.view==='coordinator'){
     const cursor=typeof req.query.cursor==='string'?req.query.cursor:null;
     if(cursor&&cursor.length>4096)return res.status(400).json({error:'Invalid discovery cursor.'});
-    const result=await codex.call('thread/list',{limit:100,sortKey:'updated_at',sortDirection:'desc',archived:false,useStateDbOnly:true,sourceKinds:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
+    const result=await codex.call('thread/list',{limit:100,sortKey:'recency_at',sortDirection:'desc',archived:false,useStateDbOnly:true,sourceKinds:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
     const found=new Map();for(const thread of result.data||[]){if(catchupHidden(thread.id))continue;sessionDiscovery.remember(thread,{archived:false});found.set(thread.id,thread);}
     if(!cursor)for(const row of db.prepare("SELECT d.metadata FROM session_starts s JOIN pocket_discovered_threads d ON d.thread_id=s.thread_id WHERE s.state='started' AND d.archived=0 ORDER BY s.updated_at DESC LIMIT 100").all()){
       const thread=JSON.parse(row.metadata);if(!found.has(thread.id)&&!catchupHidden(thread.id))found.set(thread.id,{...thread,...sessionDiscovery.live.get(thread.id)});
     }
     return res.json({threads:[...found.values()].map(thread=>({id:thread.id,name:thread.name||thread.preview?.slice(0,90)||'Untitled task',preview:thread.preview||'',cwd:thread.cwd,status:thread.status,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,parentThreadId:thread.parentThreadId,discoveryPending:!!thread.discoveryPending})),nextCursor:result.nextCursor||null,refreshPending:false});
   }
-  const r=await sessionDiscovery.list({archived:req.query.archived==='true'});
+  const r=await sessionDiscovery.list({archived:req.query.archived==='true',cursor:typeof req.query.cursor==='string'?req.query.cursor:null,searchTerm:typeof req.query.search==='string'?req.query.search.slice(0,200):null});
   const watches=db.prepare('SELECT * FROM watches').all();
   for(const renamed of notificationTitles.reconcile(r.data||[])){emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));}
   res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>{
     const followed=!!watches.find(w=>w.thread_id===t.id&&w.enabled);
-    const updatedMs=t.updatedAt<1e11?t.updatedAt*1000:t.updatedAt;
+    const updatedMs=sessionWorkTime(t);
     const preview=threadPreviews.get(t,{hydrate:followed||t.status?.type==='active'||Date.now()-updatedMs<15*60000});
     const start=db.prepare("SELECT state FROM outgoing WHERE thread_id=? AND id LIKE 'start-%' ORDER BY created_at DESC LIMIT 1").get(t.id);
     const awaitingStart=start&&['queued','sending'].includes(start.state)&&['idle','notLoaded','pending',undefined].includes(t.status?.type);
-    return {id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed};
-  }),refreshPending:!!r.refreshPending});
+    return {...catalogFields(t),id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed};
+  }),nextCursor:r.nextCursor||null,refreshPending:!!r.refreshPending});
 }));
 app.post('/api/threads/:id/recovery',route(async(req,res)=>{
  const threadId=requireId(req.params.id);
@@ -477,7 +482,7 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
   conversationNotes.remember(t);
-  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
+  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...catalogFields(t),...t,turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
   if(!req.query.before)response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
   res.json(response);
 }));
@@ -535,12 +540,15 @@ app.post('/api/threads/:id/reply',route(async(req,res)=>{
   if(!['auto','steer','queue'].includes(mode))return res.status(400).json({error:'Choose steer or queue.'});
   const existing=db.prepare('SELECT * FROM outgoing WHERE id=?').get(id);
   if(existing){if(existing.thread_id!==threadId||existing.text!==text||existing.mode!==mode)return res.status(409).json({error:'Reply id already belongs to a different message.'});return res.json({id,state:existing.state});}
+  const cachedDestination=db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(threadId);
+  if(cachedDestination){const known=JSON.parse(cachedDestination.metadata);if(sessionIdentity(known).isChild){const destination=codex.ready?(await codex.call('thread/read',{threadId,includeTurns:false})).thread:known;requireDirectSessionInput(destination);}else requireDirectSessionInput(known);}
   turnRecovery.cancel(threadId);
   db.prepare('INSERT INTO outgoing(id,thread_id,text,mode,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run(id,threadId,text,mode,'queued',now(),now());
   const wasFollowing=!!db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId);
   // A phone reply explicitly opts this task into a completion notification.
   db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1) ON CONFLICT(thread_id) DO UPDATE SET enabled=1').run(threadId,'Codex replied');
   if(!wasFollowing)completions.follow(threadId);
+  const admitted=sessionDiscovery.recordIntent(threadId);emit('sessionActivity',admitted);
   // Record accepted user guidance without claiming older results were read.
   sessionCatchup.interact(req.device.id,threadId);
   res.status(202).json({id,state:'queued'}); if(codex.ready)void sendOutgoing({id,thread_id:threadId,text,mode,created_at:now()});

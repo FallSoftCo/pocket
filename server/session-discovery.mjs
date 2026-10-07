@@ -1,5 +1,5 @@
+import {compareSessionWork,sessionIdentity} from './session-catalog.mjs';
 export const INTERACTIVE_SOURCES=['cli','vscode','exec','appServer','unknown'];
-const timestamp=t=>Number(t.updatedAt||t.createdAt||0);
 const archived=t=>t.archived===true||/(?:^|[\\/])archived_sessions(?:[\\/]|$)/.test(t.path||'');
 /** Lists metadata only: never resumes a session, reads histories, or runs work. */
 export class SessionDiscovery {
@@ -19,6 +19,7 @@ export class SessionDiscovery {
     if(saved&&(status||clock()-(this.persistedAt.get(id)||0)>=500)){this.remember({...JSON.parse(saved.metadata),...change},{archived:!!saved.archived});this.persistedAt.set(id,clock());while(this.persistedAt.size>512)this.persistedAt.delete(this.persistedAt.keys().next().value);}
     return {threadId:id,...change};
   }
+  recordIntent(id,clock=Date.now){const change={activityAt:clock()};this.live.set(id,{...this.live.get(id),...change});const saved=this.db.prepare('SELECT metadata,archived FROM pocket_discovered_threads WHERE thread_id=?').get(id);if(saved)this.remember({...JSON.parse(saved.metadata),...change},{archived:!!saved.archived});return {threadId:id,...change};}
   clearLiveStatus(){for(const [id,value] of this.live){const {status,discoveryPending,...activity}=value;this.live.set(id,activity);}}
   discoverLive(id){
     if(this.hidden(id))return Promise.resolve(null);
@@ -31,12 +32,13 @@ export class SessionDiscovery {
     for(const [table,column,where] of [['voice_sessions','selected','selected IS NOT NULL'],['session_starts','thread_id',"state='started'"],['watches','thread_id','enabled=1']]){
       if(!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table))continue;
       for(const row of this.db.prepare(`SELECT ${column} AS id FROM ${table} WHERE ${where} ORDER BY ${table==='session_starts'?'updated_at':'rowid'} DESC LIMIT 200`).all())if(row.id)ids.add(row.id);
-    }for(const row of this.db.prepare("SELECT thread_id FROM pocket_discovered_threads WHERE archived=0 ORDER BY COALESCE(json_extract(metadata,'$.activityAt'),0) DESC,seen_at DESC LIMIT 200").all())ids.add(row.thread_id);return [...ids].filter(id=>!this.hidden(id)&&!this.db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived).slice(0,200);
+    }for(const row of this.db.prepare("SELECT thread_id FROM pocket_discovered_threads WHERE archived=0 ORDER BY MAX(COALESCE(json_extract(metadata,'$.activityAt'),0),COALESCE(json_extract(metadata,'$.recencyAt'),json_extract(metadata,'$.createdAt'),0)*1000) DESC LIMIT 200").all())ids.add(row.thread_id);return [...ids].filter(id=>!this.hidden(id)&&!this.db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived).slice(0,200);
   }
   updateStatus(id,status){const saved=this.db.prepare('SELECT metadata,archived FROM pocket_discovered_threads WHERE thread_id=?').get(id);if(!saved)return;this.remember({...JSON.parse(saved.metadata),status,discoveryPending:false},{archived:!!saved.archived});this.readCache.delete(id);}
   markArchived(id,flag){this.db.prepare('UPDATE pocket_discovered_threads SET archived=? WHERE thread_id=?').run(flag?1:0,id);this.readCache.delete(id);}
-  snapshot(flag){return {data:this.db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE archived=? ORDER BY seen_at DESC LIMIT 400').all(flag?1:0).map(row=>JSON.parse(row.metadata)).filter(t=>!this.hidden(t.id)).sort((a,b)=>timestamp(b)-timestamp(a)||a.id.localeCompare(b.id)),nextCursor:null,refreshPending:true};}
-  async list({archived:flag=false}={}){
+  snapshot(flag){return {data:this.db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE archived=?').all(flag?1:0).map(row=>JSON.parse(row.metadata)).filter(t=>!this.hidden(t.id)).sort(compareSessionWork).slice(0,400),nextCursor:null,refreshPending:true};}
+  async list({archived:flag=false,cursor=null,searchTerm=null}={}){
+    if(cursor||searchTerm){const page=await this.codex.call('thread/list',{limit:100,sortKey:'recency_at',sortDirection:'desc',archived:flag,useStateDbOnly:true,sourceKinds:searchTerm?[...INTERACTIVE_SOURCES,'subAgentThreadSpawn']:INTERACTIVE_SOURCES,...(cursor?{cursor}:{}),...(searchTerm?{searchTerm}:{})});return {data:(page.data||[]).filter(t=>!this.hidden(t.id)).map(t=>this.remember(t,{archived:flag})||t).sort(compareSessionWork),nextCursor:page.nextCursor||null};}
     let work=this.refreshing.get(flag);
     if(!work){work=this.refreshList(flag);this.refreshing.set(flag,work);void work.finally(()=>{if(this.refreshing.get(flag)===work)this.refreshing.delete(flag);}).catch(()=>{});}
     let timer;const timeout=Symbol('discovery deadline');
@@ -46,7 +48,7 @@ export class SessionDiscovery {
   async refreshList(flag){
     const found=new Map();let cursor=null;
     for(let page=0;page<this.maxPages;page++){
-      const r=await this.codex.call('thread/list',{limit:100,sortKey:'updated_at',sortDirection:'desc',archived:flag,useStateDbOnly:true,sourceKinds:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
+      const r=await this.codex.call('thread/list',{limit:100,sortKey:'recency_at',sortDirection:'desc',archived:flag,useStateDbOnly:true,sourceKinds:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
       this.db.exec('BEGIN IMMEDIATE');try{for(const t of r.data||[]){if(this.hidden(t.id))continue;found.set(t.id,this.remember(t,{archived:flag})||t);}this.db.exec('COMMIT');}catch(error){this.db.exec('ROLLBACK');throw error;}
       const next=r.nextCursor||null;if(!next||next===cursor){cursor=null;break;}cursor=next;
     }
@@ -70,6 +72,11 @@ export class SessionDiscovery {
       }
       if(fresh.length){let timer;await Promise.race([Promise.all(fresh),new Promise(resolve=>{timer=setTimeout(resolve,750);})]);clearTimeout(timer);}
     }
-    return {data:[...found.values()].map(t=>({...t,...this.live.get(t.id)})).sort((a,b)=>timestamp(b)-timestamp(a)||a.id.localeCompare(b.id)),nextCursor:cursor};
+    // Keep delegated results with loaded primary tasks, even when their own pages
+    // fall outside the primary recency window. This reads cached metadata only.
+    const cached=new Map(this.db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE archived=?').all(flag?1:0).map(row=>{const t=JSON.parse(row.metadata);return [t.id,t];}));
+    for(const t of [...found.values()]){let parent=sessionIdentity(t).parentThreadId;const seen=new Set([t.id]);while(parent&&seen.add(parent)){const entry=cached.get(parent);if(!entry||this.hidden(parent))break;if(!found.has(parent))found.set(parent,entry);parent=sessionIdentity(entry).parentThreadId;}}
+    for(const t of cached.values()){if(this.hidden(t.id)||!sessionIdentity(t).isChild)continue;let parent=sessionIdentity(t).parentThreadId;const seen=new Set([t.id]);while(parent&&seen.add(parent)){if(found.has(parent)){found.set(t.id,{...t,...this.live.get(t.id)});break;}parent=sessionIdentity(cached.get(parent)||{}).parentThreadId;}}
+    return {data:[...found.values()].map(t=>({...t,...this.live.get(t.id)})).sort(compareSessionWork),nextCursor:cursor};
   }
 }

@@ -62,27 +62,29 @@ fun stableSessionOrder(previous: List<String>, entries: List<SessionRank>, now: 
     val known = seats.toSet()
     val added = entries.distinctBy { it.id }.filter { it.id !in known }
         .sortedWith(compareByDescending<SessionRank> { it.updated }.thenBy { it.id }).map { it.id }
-    return added + seats
+    // Insert discoveries by work recency without changing any existing pair's order.
+    val times=entries.associate{it.id to sessionActivityTime(it.updated,it.activityAt)}
+    val result=seats.toMutableList()
+    for(id in added){val at=result.indexOfFirst{(times[it]?:Long.MIN_VALUE)<(times[id]?:0)};result.add(if(at<0)result.size else at,id)}
+    return result
 }
 
 /** Fresh work has a bounded lease, not a permanent seat. Concurrent work is tied:
  * token arrival order never sorts peers. Metadata/hydration cannot enter live tiers.
  * Rank zero is the bottom (thumb-nearest) end of the reverse-layout list.
  */
-fun liveSessionOrder(previous: List<String>, entries: List<SessionRank>, now: Long): List<String> {
+fun liveSessionOrder(previous: List<String>, entries: List<SessionRank>, now: Long, reconcile:Boolean=false): List<String> {
     val stable = stableSessionOrder(previous, entries, now)
+    if(previous.isNotEmpty()&&!reconcile)return stable
     val byId = entries.associateBy { it.id }
     fun group(entry: SessionRank): Long {
-        val age = (now - entry.activityAt).coerceAtLeast(0)
         return when {
-            entry.activityAt > 0 && age <= 20_000 -> 0
-            entry.activityAt > 0 && age <= 90_000 -> 1
-            entry.active -> 2
-            else -> 3
+            entry.active -> 0
+            else -> 1
         }
     }
     return stable.sortedWith(compareBy<String> { byId[it]?.let(::group) ?: Long.MAX_VALUE }
-        .thenByDescending { id -> byId[id]?.let { if (group(it) == 3L) sessionActivityTime(it.updated,it.activityAt) / 300_000 else 0 } ?: 0 })
+        .thenByDescending { id -> byId[id]?.let { sessionActivityTime(it.updated,it.activityAt) } ?: 0 })
 }
 
 /** Known real activity takes precedence over later metadata/index timestamps. */

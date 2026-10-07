@@ -180,7 +180,7 @@ class MainActivity:ComponentActivity(){
         ConnectionNotice()
         PhoneControlNotice()
         if(Pocket.newTask)NewTaskScreen()
-        else if(Pocket.selected!=null)key(Pocket.selected){ConversationScreen()}
+        else if(Pocket.selected!=null)key(Pocket.selected){if(conversationIdentityPending())LoadingSessionIdentity()else if(readOnlyChildSelected())ChildConversationScreen()else ConversationScreen()}
         else{
             AnimatedContent(targetState=Pocket.tab,modifier=Modifier.weight(1f).fillMaxWidth(),label="tab",transitionSpec={
                 (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
@@ -249,8 +249,8 @@ class MainActivity:ComponentActivity(){
     var touching by remember{mutableStateOf(false)}
     var listClock by remember{mutableLongStateOf(System.currentTimeMillis())}
     var displayed by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf(Pocket.tasks)}
-    val orderKey=Pocket.key(if(Pocket.showArchived)"archivedSessionOrder" else "sessionOrder")
-    var order by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(orderKey,"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{if(it.updated<100000000000L)it.updated*1000 else it.updated}.map{it.id}})}
+    val orderKey=Pocket.key(if(Pocket.showArchived)"archivedWorkActivityOrderV2" else "workActivityOrderV2")
+    var order by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(orderKey,"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{taskWorkTime(it)}.map{it.id}})}
     LaunchedEffect(Pocket.local,Pocket.token,Pocket.showArchived){
         val pacing=SessionListPacing();var observed=Pocket.tasks.associateBy{it.id}
         while(true){
@@ -268,9 +268,9 @@ class MainActivity:ComponentActivity(){
                 displayed=sessionContentInPlace(displayed,latest){it.id};pacing.contentDelivered(now)
             }
             if(orderDue){
-                // Automatic live tiers release stale seats; stream peers keep stable ties.
-                val entries=latest.map{SessionRank(it.id,if(it.updated<100000000000L)it.updated*1000 else it.updated,it.status in listOf("active","pending"),it.activityAt)}
-                val next=if(Pocket.showArchived)stableSessionOrder(order,entries,System.currentTimeMillis()) else liveSessionOrder(order,entries,System.currentTimeMillis())
+                // Only explicit navigation reconciles existing seats by genuine work recency.
+                val entries=latest.map{SessionRank(it.id,taskWorkTime(it),it.status in listOf("active","pending"),it.activityAt)}
+                val next=if(Pocket.showArchived)stableSessionOrder(order,entries,System.currentTimeMillis()) else liveSessionOrder(order,entries,System.currentTimeMillis(),explicitBoundary)
                 if(next!=order)order=next
                 val encoded=org.json.JSONArray(next).toString()
                 if(Pocket.prefs.getString(orderKey,null)!=encoded)Pocket.prefs.edit().putString(orderKey,encoded).apply()
@@ -284,7 +284,11 @@ class MainActivity:ComponentActivity(){
     }
     val rank=order.withIndex().associate{it.value to it.index}
     val showCoordinator=filter!=3&&(filter!=1||PocketCoordinator.busy)&&(query.isBlank()||"Coordinator".contains(query,true)||PocketCoordinator.preview.contains(query,true))
-    val shown=displayed.sortedBy{rank[it.id]?:Int.MAX_VALUE}.filter{(filter!=1||it.status in listOf("active","pending"))&&(filter!=2||it.watched)&&(query.isBlank()||it.title.contains(query,true)||it.cwd.contains(query,true)||it.preview.contains(query,true))}
+    LaunchedEffect(query,Pocket.local,Pocket.showArchived){if(query.isNotBlank()){delay(400);Pocket.moreSessions(query)}}
+    val groups=sessionGroups(displayed.sortedBy{rank[it.id]?:Int.MAX_VALUE})
+    fun matches(t:Task)=query.isBlank()||t.title.contains(query,true)||t.cwd.contains(query,true)||t.preview.contains(query,true)||t.agentNickname.contains(query,true)
+    val shown=groups.sortedBy{rank[it.task.id]?:Int.MAX_VALUE}.filter{group->val t=group.task;(filter!=1||t.status in listOf("active","pending")||group.children.any{it.status=="active"})&&(filter!=2||t.watched||group.children.any{it.watched})&&(matches(t)||group.children.any(::matches))}
+    val orphans=if(filter==4||query.isNotBlank())ungroupedChildren(displayed).filter(::matches).sortedByDescending{taskWorkTime(it)} else emptyList()
     Column(Modifier.fillMaxSize()){
     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp).pointerInput(Unit){
         awaitPointerEventScope{try{while(true){touching=awaitPointerEvent(PointerEventPass.Initial).changes.any{it.pressed}}}finally{touching=false}}
@@ -296,7 +300,9 @@ class MainActivity:ComponentActivity(){
         val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
         if(attention.isNotEmpty()){item{Label("NEEDS YOU · ${attention.size}",Coral)};items(attention,key={"attention-${it.optLong("id")}"}){AttentionCard(it)}}
         if(shown.isEmpty()&&!showCoordinator)item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
-        items(shown,key={it.id}){TaskCard(it,listClock)}
+        items(shown,key={it.task.id}){group->SessionGroupCard(if(query.isNotBlank()&&!matches(group.task))group.copy(children=group.children.filter(::matches))else group,listClock)}
+        if(orphans.isNotEmpty()){item(key="unloaded-parent-agents"){Label("AGENT HISTORY · PARENT OUTSIDE THIS LIST",Muted)};items(orphans,key={it.id}){AgentResultCard(it)}}
+        if(Pocket.sessionCursor!=null)item(key="older-session-page"){TextButton({Pocket.moreSessions()},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}}
     }
     WorkUpdatesEntry()
 
@@ -304,7 +310,8 @@ class MainActivity:ComponentActivity(){
     if(toolsOpen)ModalBottomSheet(onDismissRequest={onToolsOpen(false)},containerColor=Panel){
         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=16.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             OutlinedTextField(query,{query=it},placeholder={BilingualLabel("Find sessions",centered=false)},singleLine=true,modifier=Modifier.fillMaxWidth())
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={BilingualLabel(title)})}}
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived","History").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={BilingualLabel(title)})}}
+            if(Pocket.sessionCursor!=null)TextButton({Pocket.moreSessions()},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}
             ProfileSwitcher()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
                 Button({onToolsOpen(false);Pocket.composeTask()},modifier=Modifier.weight(1f).heightIn(min=56.dp)){BilingualLabel("New task",maxLines=2)}
@@ -328,7 +335,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
 }
 @Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis()){
-    val active=t.status in listOf("active","pending");val activityTime=sessionActivityTime(t.updated,t.activityAt);val ageColor=sessionAgeColor(activityTime,now)
+    val active=t.status in listOf("active","pending");val activityTime=taskWorkTime(t);val ageColor=sessionAgeColor(activityTime,now)
     LaunchedEffect(t.preview,PocketImmersion.enabled){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
     var rename by remember(t.id){mutableStateOf(false)};var name by remember(t.id){mutableStateOf(t.title)}
@@ -396,7 +403,9 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         }
         FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
             TextButton({Pocket.open(n.s("thread_id"))}){BilingualLabel("Review",color=Mint)}
-            TextButton({Pocket.open(n.s("thread_id"),keyboard=true)}){BilingualLabel("Reply",color=Mint)}
+            val task=Pocket.tasks.firstOrNull{it.id==n.s("thread_id")};val direct=n.optBoolean("canAcceptDirectInput",task?.canAcceptDirectInput?:true)
+            val target=if(direct)n.s("thread_id")else n.s("parentThreadId",task?.parentThreadId?:"")
+            if(target.isNotBlank())TextButton({Pocket.open(target,keyboard=true)}){BilingualLabel(if(direct)"Reply" else "Guide parent",color=Mint)}
             if(n.s("kind")=="question")TextButton({PocketQuestionActions.skipNotification(n.optLong("id"),Pocket.local)}){BilingualLabel("Skip",color=Mint)}
             TextButton({PocketAttention.snooze(n.optLong("id"))}){BilingualLabel("Later · 30m",color=Muted)}
             TextButton({PocketAttention.dismiss(n.optLong("id"))}){BilingualLabel("Dismiss",color=Muted)}

@@ -1,4 +1,5 @@
 import {speechText,spokenText} from './speech.mjs';
+import {sessionIdentity} from './session-catalog.mjs';
 import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {initializeApp,cert,applicationDefault} from 'firebase-admin/app';
@@ -13,13 +14,13 @@ export function pushData(n) {
   // Reports are a versioned, visual-only envelope. Older clients ignore the
   // missing ordinary id rather than enqueueing a paid spoken work update.
   const identity=report?{coordinator_report:'1',report_id:String(n.id)}:{id:String(n.id)};
-  const data={...spoken,...identity,thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2000),...(report?{}:{spoken_summary:speechText(n.spoken_summary)}),kind:n.kind||'update',created_at:String(n.created_at),title_revision:String(n.title_revision||0)};
+  const data={...spoken,...identity,...(typeof n.canAcceptDirectInput==='boolean'?{canAcceptDirectInput:String(n.canAcceptDirectInput)}:{}),...(n.parentThreadId?{parentThreadId:n.parentThreadId}:{}),thread_id:n.thread_id||'',title:clip(n.title,500),body:clip(n.body,2000),...(report?{}:{spoken_summary:speechText(n.spoken_summary)}),kind:n.kind||'update',created_at:String(n.created_at),title_revision:String(n.title_revision||0)};
   // Leave room for the device ID and envelope, including JSON-escaped characters.
   while(Buffer.byteLength(JSON.stringify(data))>3700&&data.body)data.body=clip(data.body,Math.floor(Buffer.byteLength(data.body)/2));
   return data;
 }
 export class PushDelivery {
-  constructor(db,{config=null,send=null,clock=()=>Date.now()}={}){this.db=db;this.config=config;this.send=send;this.clock=clock;this.busy=false;this.hasTitles=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='notification_thread_titles'").get();}
+  constructor(db,{config=null,send=null,clock=()=>Date.now()}={}){this.hasCatalog=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='pocket_discovered_threads'").get();this.db=db;this.config=config;this.send=send;this.clock=clock;this.busy=false;this.hasTitles=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='notification_thread_titles'").get();}
   get enabled(){return !!this.config&&!!this.send;}
   enqueue(notificationId,{flush=true}={}){
     if(!this.enabled)return;
@@ -46,7 +47,9 @@ export class PushDelivery {
         if(at-row.created_at>86400000){this.db.prepare("UPDATE push_deliveries SET state='expired',updated_at=? WHERE notification_id=? AND device_id=?").run(at,row.notification_id,row.device_id);continue;}
         try{
           const canonical=this.hasTitles?this.db.prepare('SELECT title,revision FROM notification_thread_titles WHERE thread_id=?').get(row.thread_id):null;
-          const messageId=await this.send({token:row.token,data:{...pushData({...row,title:canonical?.title||row.title,title_revision:canonical?.revision||0,id:row.notification_id}),device_id:row.device_id},android:{priority:'high',ttl:86400000,restrictedPackageName:'co.fallsoft.pocket'}});
+          const metadata=this.hasCatalog?this.db.prepare("SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?").get(row.thread_id):null;
+          const identity=metadata?sessionIdentity(JSON.parse(metadata.metadata)):{};
+          const messageId=await this.send({token:row.token,data:{...pushData({...identity,...row,title:canonical?.title||row.title,title_revision:canonical?.revision||0,id:row.notification_id}),device_id:row.device_id},android:{priority:'high',ttl:86400000,restrictedPackageName:'co.fallsoft.pocket'}});
           this.db.prepare("UPDATE push_deliveries SET state='accepted_by_fcm',attempts=?,message_id=?,error=NULL,updated_at=? WHERE notification_id=? AND device_id=?").run(attempts,messageId,this.clock(),row.notification_id,row.device_id);
         }catch(e){
           const code=e.code||'push/send-failed';

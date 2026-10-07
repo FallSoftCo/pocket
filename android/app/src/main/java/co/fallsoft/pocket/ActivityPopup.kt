@@ -43,7 +43,9 @@ import androidx.compose.ui.window.*
     val profile=remember{Pocket.local to Pocket.token}
     LaunchedEffect(Pocket.local,Pocket.token){if(profile!=(Pocket.local to Pocket.token))onDismiss()}
     val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}.map{it.s("thread_id")}.filter{it.isNotBlank()}
-    val ids=remember { (listOfNotNull(sourceThread)+attention+Pocket.tasks.filter{it.status=="active"}.map{it.id}+Pocket.tasks.sortedByDescending{it.updated}.map{it.id}).distinct().take(8) }
+    val ids=remember { (listOfNotNull(sourceThread)+attention+Pocket.tasks.filter{it.status=="active"}.map{it.id}+Pocket.tasks.filter{!it.isChild}.sortedByDescending{taskWorkTime(it)}.map{it.id}).distinct().take(8) }
+    fun chooseReply(id:String){val task=Pocket.tasks.firstOrNull{it.id==id};if(task?.canAcceptDirectInput==false){onDismiss();task.parentThreadId?.let{Pocket.open(it,keyboard=true)}?:Pocket.open(id)}else replyTarget=id}
+    fun replyLabel(id:String)=if(Pocket.tasks.firstOrNull{it.id==id}?.canAcceptDirectInput==false)"Guide parent" else "Reply"
     val inputFocus=remember{FocusRequester()}
     LaunchedEffect(replyTarget){if(replyTarget!=null){scroll.scrollTo(0);inputFocus.requestFocus()}}
     fun send(){val target=replyTarget;if(target!=null&&text.isNotBlank()&&!Pocket.sending){val submitted=text;Pocket.reply(submitted,threadId=target,mode="steer"){if(drafts[target]==submitted)drafts.remove(target);if(replyTarget==target&&text==submitted)text=""}}}
@@ -57,7 +59,7 @@ import androidx.compose.ui.window.*
                 if(replyTarget!=null&&Pocket.error.isNotBlank())WorkflowText(Pocket.error,color=Coral,modifier=Modifier.padding(8.dp))
                 if(passage!=null&&sourceThread!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
                     ImmersionText("popup-title:"+sourceThread,Pocket.tasks.firstOrNull{it.id==sourceThread}?.title?:"Conversation",rescue=false,modifier=Modifier.weight(1f).heightIn(min=56.dp).clickable{onDismiss();Pocket.open(sourceThread)}.padding(12.dp),maxLines=2,overflow=TextOverflow.Ellipsis,color=Paper)
-                    TextButton({replyTarget=sourceThread}){BilingualLabel("Reply")}
+                    TextButton({chooseReply(sourceThread)}){BilingualLabel(replyLabel(sourceThread))}
                 }
                 passage?.let{Text(it,color=Paper,modifier=Modifier.padding(12.dp))}
                 ids.filterNot{passage!=null&&it==sourceThread}.forEach{id->val task=Pocket.tasks.firstOrNull{it.id==id};val alert=Pocket.attention.firstOrNull{it.s("thread_id")==id}
@@ -66,7 +68,7 @@ import androidx.compose.ui.window.*
                             ImmersionText("popup-title:"+id,task?.title?:alert?.s("title")?:"Conversation",rescue=false,maxLines=1,overflow=TextOverflow.Ellipsis,color=if(id in attention)Coral else Paper)
                             ImmersionText("popup-preview:"+id,task?.preview?.takeIf{it.isNotBlank()}?:alert?.s("body").orEmpty(),rescue=false,maxLines=2,overflow=TextOverflow.Ellipsis,color=Muted,fontSize=12.sp)
                         }
-                        TextButton({replyTarget=id}){BilingualLabel("Reply")}
+                        TextButton({chooseReply(id)}){BilingualLabel(replyLabel(id))}
                     }
                 }
 
