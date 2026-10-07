@@ -131,8 +131,8 @@ import java.util.UUID
         }
         Text("${if(direct)"Direct · $recipient" else "Room"} · ${if(task.isBlank())"Loading…" else taskTitle}",style=MaterialTheme.typography.labelMedium,color=Mint)
         BilingualLabel("Full access",fontSize=12.sp,color=Muted)
-        if(error.isNotBlank())Text(error,color=Coral,style=MaterialTheme.typography.bodySmall)
-        if(attention.isNotEmpty())TextButton({inbox=true}){Text("Needs you · ${attention.size}")}
+        if(error.isNotBlank())ImmersionText("team-error:$owner:$team",error,color=Coral,fontSize=13.sp)
+        if(attention.isNotEmpty())TextButton({inbox=true}){BilingualLabel("Needs you");Text(" · ${attention.size}")}
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(older!=null)item{TextButton({val destination=target;val cursor=older;jobs.launch{try{val visibility=if(destination.direct)"direct:${destination.recipient}" else "room";val page=client.call("teams/${destination.team}/history?task=${destination.task}&visibility=$visibility&limit=50&before=$cursor");if(sameTeamHistoryScope(currentTarget,destination)){messages=(page.optJSONArray("data")?.objects().orEmpty()+messages).distinctBy{it.optLong("id")}.sortedBy{it.optLong("id")};older=page.takeUnless{it.isNull("olderCursor")}?.optLong("olderCursor")}}catch(e:Exception){if(e is CancellationException)throw e;if(sameTeamHistoryScope(currentTarget,destination))error=e.message.orEmpty()}}}){BilingualLabel("Earlier messages")}}
             items(messages,key={it.optLong("id")}){event->
@@ -143,7 +143,7 @@ import java.util.UUID
                         val sourceId="team-message:$owner:$team:${event.optLong("id")}"
                         LaunchedEffect(sourceId,event.s("body"),PocketImmersion.enabled){PocketImmersion.offer(sourceId,event.s("body"),"team conversation")}
                         BilingualMessage(sourceId,event.s("body"))
-                        if(event.s("kind") in listOf("attention","approval")&&event.s("attentionState")=="open")TextButton({inspected=JSONObject(event.toString()).put("team_id",team)}){Text("Open request")}
+                        if(event.s("kind") in listOf("attention","approval")&&event.s("attentionState")=="open")TextButton({inspected=JSONObject(event.toString()).put("team_id",team)}){BilingualLabel("Open request")}
                         else if(event.s("kind")=="message")TextButton({replyTo=event.optLong("id");recipient=teamReplyRecipient(target,event.s("author"))}){BilingualLabel("Reply")}
                     }
                 }
@@ -151,7 +151,7 @@ import java.util.UUID
         }
         TeamAgentControls(client,team,task,overview,jobs,{receipt=it},{error=it})
         if(replyTo!=null)TextButton({replyTo=null}){Text("Reply to #$replyTo · clear")}
-        if(receipt.isNotBlank())Text(receipt,style=MaterialTheme.typography.labelSmall,color=Muted)
+        if(receipt.isNotBlank())ImmersionText("team-receipt:$owner:$team",receipt,fontSize=12.sp,color=Muted)
         OutlinedTextField(input,{input=it;client.saveDraft(target,it.text)},enabled=pending==null&&!busy,label={BilingualLabel(if(direct)"Message $recipient" else "Message the team")},modifier=Modifier.fillMaxWidth().onPreviewKeyEvent{event->
             val enter=event.key==Key.Enter||event.key==Key.NumPadEnter
             if(enter){

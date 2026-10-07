@@ -7,6 +7,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,14 +25,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 
 /** Ordinary action taps stay actions; English rescue replaces the same label in place. */
-@Composable fun BilingualLabel(text:String,modifier:Modifier=Modifier,color:Color=LocalContentColor.current,fontSize:TextUnit=14.sp,fontWeight:FontWeight?=null,maxLines:Int=1,centered:Boolean=true){
+@Composable fun BilingualLabel(text:String,modifier:Modifier=Modifier,color:Color=LocalContentColor.current,fontSize:TextUnit=14.sp,fontWeight:FontWeight?=null,maxLines:Int=1,centered:Boolean=true,lineHeight:TextUnit=TextUnit.Unspecified,onActivate:(()->Unit)?=null){
+    fun actionText(value:AnnotatedString):AnnotatedString=if(onActivate==null||value.isEmpty())value else buildAnnotatedString{
+        append(value)
+        // Native link hit testing covers the visible text, not reserved blank width.
+        addLink(LinkAnnotation.Clickable("label-action",TextLinkStyles(),linkInteractionListener={onActivate()}),0,length)
+    }
     LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offerLabel(text)}
     val target=PocketImmersion.label(text)
     val key="label-rescue:$text"
     val supported=PocketImmersion.enabled&&PocketImmersion.supportEnabled&&target!=text
     val expanded=supported&&PocketImmersion.originalShown(key)
     if(!supported){
-        Text(target,modifier=modifier,color=color,fontSize=fontSize,fontWeight=fontWeight,maxLines=maxLines,
+        Text(actionText(AnnotatedString(target)),modifier=modifier,color=color,fontSize=fontSize,fontWeight=fontWeight,maxLines=maxLines,lineHeight=lineHeight,
             overflow=TextOverflow.Ellipsis,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
         return
     }
@@ -67,11 +75,11 @@ import androidx.compose.ui.unit.*
     }
     val rescue=if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}else Modifier
     Box(modifier.then(rescue)){
-        BlendImmersionText(if(cueActive)from else AnnotatedString(shown),if(cueActive)to else AnnotatedString(shown),{if(cueActive)progress.value else 1f},AnnotatedString(shown),reserve=listOf(AnnotatedString(text),AnnotatedString(target)),color=color,fontSize=fontSize,
-            lineHeight=LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
+        BlendImmersionText(actionText(if(cueActive)from else AnnotatedString(shown)),actionText(if(cueActive)to else AnnotatedString(shown)),{if(cueActive)progress.value else 1f},actionText(AnnotatedString(shown)),reserve=listOf(AnnotatedString(text),AnnotatedString(target)),color=color,fontSize=fontSize,
+            lineHeight=lineHeight.takeIf{it!=TextUnit.Unspecified}?:LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
             fontWeight=fontWeight,maxLines=maxLines,overflow=TextOverflow.Ellipsis,
             textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
-            onVisibleRanges={_,readable->nativeVisible=readable})
+            onVisibleRanges={_,readable->nativeVisible=readable},trackWholeTextVisibility=true)
     }
 }
 
@@ -85,9 +93,9 @@ import androidx.compose.ui.unit.*
 
 @Composable fun ImmersionDensityControl(){
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-        Text("Quanto italiano?",fontSize=17.sp)
+        BilingualLabel("How much Italian?",fontSize=17.sp,centered=false)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-            listOf("starter" to "Graduale","balanced" to "Bilanciato","strong" to "Intenso").forEach{(value,label)->FilterChip(selected=PocketImmersion.density==value,onClick={PocketImmersion.setDensity(value)},label={Text(label,fontSize=14.sp)},modifier=Modifier.weight(1f))}
+            listOf("starter" to "Gradual","balanced" to "Balanced","strong" to "Intense").forEach{(value,label)->FilterChip(selected=PocketImmersion.density==value,onClick={PocketImmersion.setDensity(value)},label={BilingualLabel(label,fontSize=14.sp)},modifier=Modifier.weight(1f))}
         }
     }
 }

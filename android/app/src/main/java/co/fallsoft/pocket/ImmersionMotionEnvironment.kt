@@ -6,11 +6,8 @@ import android.content.ContextWrapper
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityManager
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
@@ -29,6 +26,8 @@ internal object ImmersionInteraction {
 }
 
 internal val LocalImmersionMotionState=staticCompositionLocalOf<Boolean?>{null}
+internal val LocalImmersionTransitionAnimated=staticCompositionLocalOf<Boolean?>{null}
+@Composable internal fun immersionTransitionAnimated():Boolean=LocalImmersionTransitionAnimated.current?:motionAllowed()
 @Composable internal fun immersionMotionReady():Boolean = LocalImmersionMotionState.current?:rememberImmersionMotionEnvironment()
 
 @Composable internal fun rememberImmersionMotionEnvironment():Boolean {
@@ -43,8 +42,8 @@ internal val LocalImmersionMotionState=staticCompositionLocalOf<Boolean?>{null}
     val until=ImmersionInteraction.quietUntil
     var quiet by remember{mutableStateOf(false)}
     LaunchedEffect(touching,until){quiet=false;if(!touching){delay((until-SystemClock.elapsedRealtime()).coerceAtLeast(0));quiet=true}}
-    val keyboard=WindowInsets.ime.getBottom(LocalDensity.current)>0
-    return PocketImmersion.motionEnabled&&resumed&&motionAllowed()&&!exploration&&!keyboard&&!touching&&quiet
+    // Editable input remains source text. An open IME must not freeze the rest of the screen.
+    return PocketImmersion.motionEnabled&&resumed&&!exploration&&!touching&&quiet
 }
 
 internal data class ImmersionControlPhase(val original:Boolean,val remainingMs:Long)

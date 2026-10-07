@@ -45,7 +45,7 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
         hydration.removeAll{it !in keys}
     }
     val selectedIndex=plan.spans.indexOf(selected)
-    val effective=(if(enabled)actualOriginals else emptySet())+listOf(selectedIndex).filter{it>=0}
+    val effective=(if(enabled&&PocketImmersion.motionEnabled)actualOriginals else emptySet())+listOf(selectedIndex).filter{it>=0}
     val frozen=remember(readingKey,PocketSpeech.displayedOwner,PocketSpeech.displayedText){
         if(PocketSpeech.displayedOwner==null)null else immersionCapturedOriginals(plan,PocketSpeech.displayedText)
     }

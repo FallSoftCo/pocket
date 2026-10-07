@@ -67,8 +67,8 @@ import java.util.Locale
     }
     val details:@Composable ()->Unit={
         UsageDetails()
-        if(stale)Text("Waiting for fresh usage",color=Muted)
-        TextButton({Pocket.retryConnection()}){Text("Refresh")}
+        if(stale)BilingualLabel("Waiting for fresh usage",color=Muted,centered=false)
+        TextButton({Pocket.retryConnection()}){BilingualLabel("Refresh")}
     }
     if(conversationOnly)DropdownMenu(open,{open=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){details()}
     else ActivityPopup(open,{open=false},Pocket.selected){details()}

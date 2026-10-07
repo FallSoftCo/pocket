@@ -21,7 +21,8 @@ import androidx.compose.ui.unit.*
     color:Color=Paper,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,
     overflow:TextOverflow=TextOverflow.Clip,textAlign:TextAlign=TextAlign.Start,
     fillWidth:Boolean=false,reserve:List<AnnotatedString> = emptyList(),
-    onVisibleRanges:((Set<String>,Boolean)->Unit)?=null
+    onVisibleRanges:((Set<String>,Boolean)->Unit)?=null,
+    trackWholeTextVisibility:Boolean=false
 ){
     val measurer=rememberTextMeasurer()
     val density=androidx.compose.ui.platform.LocalDensity.current
@@ -37,7 +38,7 @@ import androidx.compose.ui.unit.*
     val visibilityCallback by rememberUpdatedState(onVisibleRanges)
     var lastVisibility by remember {mutableStateOf<Pair<Set<String>,Boolean>?>(null)}
     fun reportVisibility(){
-        val value=immersionVisibleText(layout,coordinates)
+        val value=immersionVisibleText(layout,coordinates,trackWholeTextVisibility)
         if(value!=lastVisibility){lastVisibility=value;visibilityCallback?.invoke(value.first,value.second)}
     }
     // The callback owner can change while geometry stays unchanged (navigation).

@@ -5,6 +5,14 @@ import java.util.Locale
 /** Authored, offline learning vocabulary. Match whole labels; never rewrite executable syntax. */
 object ImmersionLexicon {
     val common=mapOf(
+        "Automatic language cycling" to "Alternanza automatica delle lingue",
+        "Reduced motion · cycling without animation" to "Movimento ridotto · alternanza senza animazione",
+        "How much Italian?" to "Quanto italiano?",
+        "Gradual" to "Graduale",
+        "Balanced" to "Bilanciato",
+        "Intense" to "Intenso",
+        "Open request" to "Apri la richiesta",
+        "Waiting for fresh usage" to "In attesa dei dati di utilizzo aggiornati",
         "Important" to "In evidenza",
         "All" to "Tutti",
         "Clear" to "Svuota",
