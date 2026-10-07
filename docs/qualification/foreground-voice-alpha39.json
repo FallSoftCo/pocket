@@ -66,8 +66,8 @@
     "gallery_ids": [
       "nextcomp-volume-capture-alpha39-r39-recording-list",
       "nextcomp-volume-capture-alpha39-c39-direct-touch-record",
-      "nextcomp-volume-capture-alpha39-c39-ime-muted",
-      "nextcomp-volume-capture-alpha39-c39-blackout-return"
+      "nextcomp-volume-capture-alpha39-c39-ime-no-speech-muted",
+      "nextcomp-volume-capture-alpha39-c39-blackout-exit"
     ]
   }
 }
