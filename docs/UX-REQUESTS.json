@@ -14,6 +14,21 @@
   },
   "requests": [
     {
+      "id": "retained-pairing-intent-navigation",
+      "origin": "native release qualification discovery",
+      "requirement": "A later conversation navigation intent must not reactivate pairing from retained server/code fields.",
+      "status": "verified-existing-issue-followup",
+      "evidence": "qualification/immersion-cycle-native-alpha34.json",
+      "limits": "Normal persisted pairing passed after cold start; no implementation claimed."
+    },
+    {
+      "id": "child-thread-independent-continuation",
+      "requirement": "Continue a child as an independently controllable conversation through native history fork, instead of routing input through its parent.",
+      "status": "native-fork-probed-ui-pending",
+      "findings": "Installed runtime resume retains managed ownership and rejects direct child input. A task-owned ephemeral history fork returned a normal root with no parent; no inference was started and the original worker was preserved.",
+      "limits": "NextComp action and final UI delivery remain pending."
+    },
+    {
       "id": "select-codex-or-losangelex-backend",
       "requirement": "Treat Losangelex and Hollywood as a separate backend; choose plain Codex or Losangelex and change the possible interaction modes. Work on it and deliver successfully.",
       "status": "implemented_candidate_qualified",
@@ -1571,7 +1586,7 @@
     },
     {
       "id": "inline-immersion-auto-cycle",
-      "status": "qualified-alpha24-delivered",
+      "status": "qualified-alpha34-published-phone-install-unverified",
       "requirement": "Single-flow inline replacements automatically fade between target and source with reserved longer-form geometry and length-based timing. No parallel lines, subtitles or modal. Tap holds the phrase; speech holds its displayed snapshot.",
       "candidate": "990d448",
       "coordination": "OZZZ direction shared in authorized message35553; no Stack mode added to NextComp.",
@@ -1587,7 +1602,14 @@
           "docs/qualification/inline-replacement-runtime-alpha20.json"
         ],
         "remaining_acceptance": "User perceptibility/comprehension acceptance remains open. Alpha28 native timestamped frames establish cue timing, not uninterrupted human reading acceptance; mid-lease interception inconclusive. Real-provider Italian spoken quality is separate."
-      }
+      },
+      "latest_requirement": "Automatic cycling must visibly work across screens, without restarting long waits after interaction or imposing a whole-screen animation loop.",
+      "latest_implementation": "Shared visible-only cue scheduler; bounded priority returns to Italian; fair alternation between body and control queues; monotonic waits, visible-phrase dwell, reduced-motion semantic changes, static target when cycling off; session previews and titles participate; offscreen line-band rejection avoids full paragraph scans.",
+      "latest_evidence": [
+        "qualification/immersion-visible-alpha34.json",
+        "qualification/immersion-cycle-native-alpha34.json"
+      ],
+      "latest_limits": "Native synthetic debug and optimized checks pass; physical phone installation and frame pacing unverified. English support disabled remains target-only. Existing pairing-intent issue recorded separately."
     },
     {
       "id": "durable-shared-computer-use-task-adapter",
@@ -1780,40 +1802,40 @@
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "2817bedc3983729d868e8bb451e3900dabf9284e",
-    "published_release": "v0.5.0-alpha.33",
+    "latest_pushed_commit": "caa0fb3ead89463b3355af14b361f403571a2a94",
+    "published_release": "v0.5.0-alpha.34",
     "server_tests": 222,
-    "android_tests": 185,
-    "phone_endpoint": "Termux SSH reachable; Android accessibility automation listener unavailable",
+    "android_tests": 194,
+    "phone_endpoint": "Termux SSH banner exchange currently times out; no verified ADB connection",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
-    "owned_emulator": "Owned5562 restored baseline preferences and app absence, then stopped; unrelated emulators preserved.",
-    "owned_fixture_port": "Owned19996 stopped and reverse removed; shared ADB preserved.",
+    "owned_emulator": "Owned5562 restored app absence/font1/animator0/gestural and stopped; unrelated TV emulator preserved.",
+    "owned_fixture_port": "Owned19997 stopped and18880 reverse removed; shared ADB preserved.",
     "installed_development_version": "Fresh installed base SHA verifies alpha32/code50 db93804c8e840204994b789dd115edc961b19752de700d64727791efd718463b",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 original modeled controls, 120-frame60fps swivel assets and160-frame Codex/Psychology/N turns; display-clock playback, live reduced motion and background fallback. Real Fold cadence unqualified.",
-    "phone_install": "Alpha32/code50 independently observed;51 not yet verified. No blind installer repeated.",
-    "qualification": "Alpha33:222 backend/185 Android tests per variant, both lint/signed builds, clean-checkout CI37534297993 pass; actual synthetic native list/history/source/routing qualified.",
+    "phone_install": "Last independent installed observation alpha32/code50;52 installation not verified",
+    "qualification": "Alpha34:194 Android tests per variant/39 suites, both lints/signed builds, exact-source CI37559593224 pass; native synthetic body roundtrips, previews, titles, controls and steady background qualified.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
-    "gallery_review": "Final alpha33 synthetic native list/history/source reviews published;1866-card desktop/mobile/assets/reduced-motion/reload checker pass.",
+    "gallery_review": "Alpha34 native cycling review;1890-card desktop/mobile/reduced-motion/reload checks pass.",
     "native_audio_qualification": "Actual native account foreground and optimized cold screen-off rendering/playback verified, no mic/task calls. Fresh cold rendering15.425sec; physical secure-keyguard, push receipt and perceptual quality separate.",
     "update_delivery": "Update51 offered for both maintained signing identities; announcement598 once, handset receipt unverified.",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
     "session_list": "Genuine recent/reactivated work automatically promotes to bottom; concurrent ties stable; touching/scrolling holds movement. Backend deployed without restarting stock workers.",
-    "immersion_next": "Automatic single-flow cycling delivered in alpha24 with native geometry/motion/snapshot evidence. Teacher quality and real-provider spoken language remain separate qualifications.",
-    "phone_access": "SSH healthy; Accessibility binding undetermined without Android access. No settings changed.",
+    "immersion_next": "Alpha34 visible cycling qualified in native debug and optimized public builds. Physical frame pacing and real-provider language quality remain separate qualifications.",
+    "phone_access": "SSH unavailable; no phone settings changed",
     "backend_runtime": "Bridge healthy; recovered original Google research task returned ranking. SDK1.32.1 patched.",
     "native_validation": "Alpha26 exact signed debug/release,205 backend/130 Android tests,both lint variants and successful clean-checkout CI; native delayed-response/cache/state/settings qualified.",
-    "pending_phone_update": "Compatible51 staged atomically with full remote digest/size verified; installation not yet verified.",
+    "pending_phone_update": "Compatible52 privately prepared and announced; not staged by SSH. Earlier compatible51 staging remains the last verified transfer.",
     "conversation_context": "Recent paint stays fast, already-read history retained and thumb-scrolled pagination automatic; exact message/offset restored after cache reopen and background. Process-death persistence excluded.",
-    "qualified_build": "0.5.0-alpha.33 / code51",
-    "candidate_release": "Alpha33 published and offered; compatible51 staged with independent remote digest/size. Installed50 independently verified;51 not verified.",
-    "candidate_android_tests": 185,
+    "qualified_build": "0.5.0-alpha.34 / code52",
+    "candidate_release": "Alpha34 published and52 offered; handset receipt and installation unverified",
+    "candidate_android_tests": 194,
     "delivery_audit": "All111 requests reconciled against actual source and versioned evidence; see qualification/delivery-audit-2026-10-06.json."
   },
   "remaining": [
