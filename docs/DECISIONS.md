@@ -37,3 +37,5 @@ The optional Settings and voice-status-row action borrows Landlock's black decor
 - **Scheduled reports:** Work updates retains periodic check-ins outside ordinary coordinator history, with device-scoped presentation receipts and automatic older-page loading. Scheduling, fetching and notification delivery are not read acknowledgments. Cadence is unchanged; report notifications coalesce quietly and speech remains an explicit user choice.
 
 - **Foreground capture:** microphone and volume-key input use the same recording control; capture state stays visible in the current chat while keyboard drafts survive. Playback media volume remains inline with speech controls and preserves mute. Hardware handling is scoped to the foreground activity; saved uncertain turns are reconciled instead of creating a new request.
+
+Settings and app updates must be visible at the start of the footer menu. Activity entries must not push essential maintenance controls below a collapsed section. Opening Settings dismisses the originating popup.

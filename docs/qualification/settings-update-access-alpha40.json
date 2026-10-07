@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-07",
+  "version": "0.5.0-alpha.40",
+  "versionCode": 58,
+  "cause": "Footer Settings was relocated behind an activity popup Controls & usage expansion below up to eight sessions, making the updater difficult to discover.",
+  "change": "Visible Settings/Tune label in existing footer; Settings and App updates first in usage popup, no expansion and no scrolling past activity. Navigation dismisses the popup.",
+  "validation": {
+    "build": "Both238-test/49-suite debug/release unit variants, both lints and both APK builds passed in13m10s.",
+    "native": "Exact maintainer-signed optimized code58: first footer tap shows Settings, App updates and Check for updates above sessions, without expansion/scrolling. Check generated fresh synthetic update request with actual code58/certificate. Settings navigates and popup dismisses. Same direct-conversation path passes. Narrow900x2000 at2xfont keeps menu and Settings/update actions readable.",
+    "phone": "Actual Pixel alpha40/code58 installed in place with existing signer, independently verified APK SHAf2bf41499ea41cddc2e5fd217413434d5a99f5a020ba7c384902c54aea94496d. Pairing/data retained; no foreground/input injection. Phone UI not newly driven.",
+    "public_source_scan": "787 publication files passed; private concurrent requirements and briefings excluded.",
+    "gallery": "Four reviewed synthetic native captures published;1989-card gallery passed desktop/mobile, reduced-motion and reload checks with zero errors/failed items under isolated supervised checker.",
+    "signed_release": {
+      "sha256": "342071fd874ee78bf4dc53d9be5c7adfdb3630b0e43b643c35adb8888a22718f",
+      "bytes": 51873435,
+      "package": "package: name='co.fallsoft.pocket' versionCode='58' versionName='0.5.0-alpha.40' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'"
+    },
+    "compatible_update": {
+      "identical_payload_entries": 382,
+      "sha256": "f2bf41499ea41cddc2e5fd217413434d5a99f5a020ba7c384902c54aea94496d",
+      "bytes": 51898098,
+      "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"
+    },
+    "previous_ci": "Alpha39 clean-checkout Check completed successfully; alpha40 CI pending publication.",
+    "limits": [
+      "Native update metadata is synthetic available:false; this qualifies navigation and check request, not a fresh Android installer/provider transaction.",
+      "Footer label is ellipsized at narrow72dp despite visible Tune/settings entry; follow-up layout polish tracked separately.",
+      "User phone foreground was not driven; actual installation is independently checked rather than claimed from emulator results."
+    ],
+    "private_update": "Both verified signing identities offered; code58 announced once, notification760, push enabled.",
+    "gallery_ids": [
+      "nextcomp-settings-update-alpha40-alpha40-normal-controls",
+      "nextcomp-settings-update-alpha40-alpha40-direct-controls",
+      "nextcomp-settings-update-alpha40-alpha40-settings-open",
+      "nextcomp-settings-update-alpha40-alpha40-2x-narrow-controls"
+    ]
+  }
+}

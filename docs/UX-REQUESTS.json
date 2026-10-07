@@ -14,6 +14,13 @@
   },
   "requests": [
     {
+      "id": "discoverable-settings-and-app-updates",
+      "requirement": "Settings and in-app updating must remain obvious and immediately reachable from the footer; do not hide them behind activity rows or a Controls & usage expansion. Preserve thumb-sized existing footer and usage information.",
+      "status": "released-alpha40; actual phone code58 APK-hash-verified",
+      "implementation": "Existing footer has authored Tune and Settings label. Usage activity popup puts Settings and App updates first without expansion; navigation dismisses the popup. Conversation dropdown uses the same first controls.",
+      "verification": "Both238-test/49-suite variants, both lints/builds pass. Exact optimized native list/direct menu and update check, popup dismissal, narrow2xfont pass. Actual same-signer handset install verified by version/hash. Footer caption truncation tracked for next polish; no in-app installer transaction claim from synthetic checks."
+    },
+    {
       "id": "in-place-floating-capture-toolbar",
       "requirement": "One integrated microphone starts actual recording directly and stops/sends with one more tap. Either foreground volume key uses the same capture interaction, including with IME open, without destroying the current chat or draft. Visible inline media volume stays in the existing footer; idle/listening/processing/error states are clear near the mic, with actual recording timer/level. Preserve pending-turn identity, explicit saved-turn recovery, selected/direct intent, blackout and background system volume.",
       "status": "released-alpha39; actual phone code57 independently APK-hash-verified",

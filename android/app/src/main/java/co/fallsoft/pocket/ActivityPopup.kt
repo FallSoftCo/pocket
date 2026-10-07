@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.*
 
 /** Opens at the tapped control, without a travelling sheet or entrance animation. */
-@Composable fun ActivityPopup(expanded:Boolean,onDismiss:()->Unit,sourceThread:String?=null,passage:String?=null,details:@Composable ColumnScope.()->Unit={}){
+@Composable fun ActivityPopup(expanded:Boolean,onDismiss:()->Unit,sourceThread:String?=null,passage:String?=null,controlsFirst:Boolean=false,details:@Composable ColumnScope.()->Unit={}){
     if(!expanded)return
     val density=androidx.compose.ui.platform.LocalDensity.current
     val gap=with(density){8.dp.roundToPx()}
@@ -52,6 +52,7 @@ import androidx.compose.ui.window.*
             Column(Modifier.heightIn(max=popupHeight).padding(12.dp)){
             Column(Modifier.weight(1f,fill=false).verticalScroll(scroll)){
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Box(Modifier.padding(12.dp)){BilingualLabel("Activity")};TextButton(onDismiss){BilingualLabel("Close")}}
+                if(controlsFirst){details();HorizontalDivider(color=Line,modifier=Modifier.padding(vertical=8.dp))}
                 replyTarget?.let{id->ImmersionText("popup-title:"+id,Pocket.tasks.firstOrNull{it.id==id}?.title?:"Reply",rescue=false,color=Mint,fontSize=12.sp,modifier=Modifier.padding(8.dp));OutlinedTextField(text,{text=it;drafts[id]=it},modifier=Modifier.fillMaxWidth().focusRequester(inputFocus).onPreviewKeyEvent{event->if((event.key==Key.Enter||event.key==Key.NumPadEnter)&&!event.isShiftPressed){if(event.type==KeyEventType.KeyDown)send();true}else false},placeholder={BilingualLabel("Message Codex…",centered=false)},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}),maxLines=4)}
                 if(replyTarget!=null&&Pocket.error.isNotBlank())WorkflowText(Pocket.error,color=Coral,modifier=Modifier.padding(8.dp))
                 if(passage!=null&&sourceThread!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
@@ -69,8 +70,10 @@ import androidx.compose.ui.window.*
                     }
                 }
 
-                TextButton({controls=!controls},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(controls)"Hide controls" else "Controls & usage")}
-                if(controls)details()
+                if(!controlsFirst){
+                    TextButton({controls=!controls},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(controls)"Hide controls" else "Controls & usage")}
+                    if(controls)details()
+                }
             }
             if(replyTarget!=null)Button({send()},enabled=text.isNotBlank()&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){BilingualLabel(if(Pocket.sending)"Sending…" else "Send",color=Ink)}
             }
