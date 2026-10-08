@@ -1,6 +1,6 @@
 {
   "scope": "Explicitly audited unfinished terminal work and durable runtime interruption recovery",
-  "status": "backend-activated",
+  "status": "backend-active-release-published-phone-installed",
   "ownedFiles": [
     "server/turn-recovery.mjs",
     "tests/turn-recovery.test.mjs",
@@ -103,6 +103,13 @@
       "independentOnDeviceHash": "matches",
       "pairingDatabase": "Existing device registration retained; no revocation or re-pairing",
       "physicalKeysAndProvider": "Not newly qualified; no live user input injected"
+    },
+    "release": {
+      "url": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.41",
+      "publicApkSha256": "8c87402cda788960a7baebad457d316743a6706b15a15492cd0ee343f7101078",
+      "githubUploadedDigest": "matches",
+      "privateCompatibleSigner": "Offered only through owner-operated update service; no private APK published",
+      "updateAnnouncement": "One code59 announcement; accepted by FCM, handset receipt not separately verified"
     }
   }
 }
