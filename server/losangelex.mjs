@@ -70,7 +70,7 @@ function checkedQuery(resource,query){
   return query;
 }
 
-export function mountLosangelex(app,{dir,codex,client=new Losangelex(loadLosangelex(dir)),db,publish,resolve:resolveAttention}){
+export function mountLosangelex(app,{dir,codex,client=new Losangelex(loadLosangelex(dir)),db,publish,resolve:resolveAttention,workRecord}){
   app.get('/api/backends',async(req,res,next)=>{
     try{res.json({backends:[{id:'codex',name:'Codex',configured:true,available:codex.ready,modes:['session','coordinator'],voice:true},await client.status()]});}catch(e){next(e);}
   });
@@ -83,6 +83,8 @@ export function mountLosangelex(app,{dir,codex,client=new Losangelex(loadLosange
     try{
       const command=teamRequest(req.method,req.path,req.query,req.body);
       const value=await client.call(command.path,command);
+      try{workRecord?.team(req.device.id,client.config?.environmentId,command,value);}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}
+      // Collection must never turn an accepted command into an uncertain delivery.
       res.status(req.method==='POST'?202:200).json(value);
     }catch(e){next(e);}
   });

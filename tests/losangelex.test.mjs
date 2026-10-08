@@ -69,3 +69,12 @@ test('incomplete paginated attention scans never clear already-visible questions
   const observer=new TeamAttention({client,db,publish:(_,commit)=>commit({id:5}),resolve:(...x)=>resolved.push(x)});
   await assert.rejects(observer.poll());assert.deepEqual(resolved,[]);assert.equal(db.prepare('SELECT count(*) AS n FROM losangelex_notifications').get().n,1);db.close();
 });
+
+test('work-record storage failure cannot change an accepted provider response',async t=>{
+ const app=express();app.use(express.json());app.use((req,res,next)=>{req.device={id:'fixture'};next();});
+ const client={config:{environmentId:'test'},call:async()=>({commandId:'accepted',state:'accepted'})};
+ mountLosangelex(app,{client,codex:{ready:true},workRecord:{team(){throw Object.assign(Error('Full store'),{code:'SQLITE_FULL'});}}});
+ const server=app.listen(0,'127.0.0.1');t.after(()=>server.close());await new Promise(r=>server.once('listening',r));
+ const response=await fetch(`http://127.0.0.1:${server.address().port}/api/losangelex/teams/team/messages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({commandId:'accepted',task:'task',body:'Do work',targets:[],visibility:'room'})});
+ assert.equal(response.status,202);assert.equal((await response.json()).state,'accepted');
+});

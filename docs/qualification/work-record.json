@@ -1,0 +1,19 @@
+{
+  "fixture": true,
+  "authentication": {
+    "unauthenticated": 401,
+    "paired": 200
+  },
+  "entries": 3,
+  "followups": 1,
+  "limits": "Observed requests, responses and tool results. A completed turn is not independently verified delivery. Follow-ups are linked by conversation, not classified as satisfaction or success.",
+  "androidBuild": "assembleDebug + testDebugUnitTest passed",
+  "nativeReview": "Owned isolated API35 phone emulator; synthetic records through actual authenticated server endpoint; inspected request/output/follow-up and file-change views",
+  "apkSha256": "3a4acf5b29ce071e247f37feab463080903f7a3323ebe26704d531dd6f967407",
+  "physicalPhoneInstalled": false,
+  "largeFontReview": "Not qualified: owned emulator stopped responding during font-scale change; no large-text screenshot published",
+  "contextForkProbe": "Claude Agent SDK 0.3.291 selected-message offline fork passed; zero inference calls; compacted transcripts not tested",
+  "sourceNotes": "docs/WORK-RECORD.md and docs/CONTEXT-CONTROL.md",
+  "serverTests": "229/229 server tests passed, serial full suite after storage-failure guard; focused history/journal/auth/provider tests also passed",
+  "androidLatestSource": "Final source Kotlin compilation and Android unit tests passed; reviewed APK precedes only the voice-active overlay dismissal and expanded translation cache source key"
+}

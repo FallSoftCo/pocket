@@ -37,6 +37,7 @@ import { CompletionRecovery } from './completions.mjs';
 import { spokenSummary,spokenText,promptContext,turnPrompt } from './speech.mjs';
 import { LiveTimeline,timelinePage } from './timeline.mjs';
 import { ThreadHistory } from './history.mjs';
+import { WorkRecord } from './work-record.mjs';
 import { ambiguousDelivery } from './connection-errors.mjs';
 import { AccountRateLimits } from './rate-limits.mjs';
 import { modelCatalogue,validateTurnSettings,turnOverrides } from './turn-settings.mjs';
@@ -121,10 +122,21 @@ setInterval(()=>timeline.prune(),60000).unref();
 const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
 // Notes hydrate when their conversation opens, not while hundreds of list cards load.
 const history=new ThreadHistory(codex);
+const workRecord=new WorkRecord(db,{version:appVersion});
+const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}};
+for(const row of db.prepare("SELECT thread_id FROM watches WHERE enabled=1 UNION SELECT thread_id FROM outgoing UNION SELECT thread_id FROM session_starts WHERE thread_id IS NOT NULL").all())workRecord.enroll({id:row.thread_id});
+let scanningWork=false;
+setInterval(async()=>{
+  if(scanningWork||!codex.ready)return;
+  scanningWork=true;
+  try{await workRecord.scan(history,id=>JSON.parse(db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.metadata||'{}'));}
+  catch(e){console.error('Work record history unavailable:',e.code||e.name);}
+  finally{scanningWork=false;}
+},15000).unref();
 const activityBoard=new ActivityBoard();
 const liveDelivery=new LiveActivityDelivery((type,payload)=>emit(type,payload));
 const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery.preview(threadId,preview));
-const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);});
+const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);recordWork(()=>workRecord.enroll(known));attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);});
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...payload}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
 const rateLimits=new AccountRateLimits(codex,usage=>emit('rateLimits',{usage}));
@@ -236,7 +248,7 @@ function recoverHistory(metadata){
 }
 async function attach(threadId,{before=null,recent=false}={}){
   requireId(threadId); await codex.connect();
-  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);
+  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);recordWork(()=>workRecord.enroll(metadata));
   if(sessionIdentity(metadata).isChild&&!sessionIdentity(metadata).canAcceptDirectInput){
     attached.add(threadId);const snapshotRevision=timeline.version;const thread=await history.read(metadata,{before,preferPaging:true,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});if(!before)timeline.seed(thread,{throughVersion:snapshotRevision});return {...thread,_pocketSnapshotRevision:snapshotRevision};
   }
@@ -306,7 +318,7 @@ codex.on('event',m=>{
   }
   if(m.method==='thread/started'&&p.thread)emit('sessionStarted',{threadId,thread:{...p.thread,...catalogFields(p.thread)}});
   const interaction=sessionInteraction(m);if(interaction)emit('sessionInteraction',{...interaction,activityAt:activity?.activityAt});
-  threadPreviews.observe(m);activityBoard.observe(m);
+  threadPreviews.observe(m);activityBoard.observe(m);recordWork(()=>workRecord.observe(m));
   if(m.method==="item/completed"||p.item?.type==="userMessage")conversationNotes.observe(threadId,p.turnId,p.item);
   if(m.method==="turn/completed")for(const item of p.turn?.items||[])conversationNotes.observe(threadId,p.turn.id,item);
   if(threadId&&/^(item\/|turn\/completed)/.test(m.method))liveDelivery.activity(()=>activityBoard.snapshot());
@@ -373,7 +385,7 @@ app.post('/api/pair',(req,res)=>{
   res.json({token,id,host:hostName,firebase:push.config,local:localMode,...(automation?{automationSecret:automation.secret}:{})});
 });
 app.use('/api',requireAuth);
-mountLosangelex(app,{dir,codex,db,publish:(thread,onPersist)=>notify(thread,'Losangelex needs you','Open the team conversation to review its request.','question',[],null,null,null,null,onPersist),resolve:resolveAttention});
+mountLosangelex(app,{dir,codex,db,workRecord,publish:(thread,onPersist)=>notify(thread,'Losangelex needs you','Open the team conversation to review its request.','question',[],null,null,null,null,onPersist),resolve:resolveAttention});
 app.get('/api/computer-use',route(async(_req,res)=>res.json(await computerUseStatus())));
 mountAppUpdates(app,{updates:new AppUpdates({dir,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
 app.get('/api/coordinator/reporting',(req,res)=>res.json(coordinatorReports.settings(req.device.id)));
@@ -441,6 +453,7 @@ app.post('/api/threads',(req,res)=>{
   catch(e){res.status(e.status||500).json({error:e.message});}
 });
 app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.params.id);if(!row)return res.status(404).json({error:'Task request not found.'});res.json(row);});
+app.get('/api/work-record',(req,res)=>res.json({...workRecord.list({before:req.query.before,limit:req.query.limit}),team:workRecord.teamList(req.device.id),voice:voiceController.history(req.device.id).turns.slice(-30).reverse().map(turn=>({id:turn.id,status:turn.state,request:turn.transcript,output:turn.response,createdAt:turn.created_at,evidence:'agent-reported',source:{backend:'voice',turnId:turn.id}}))}));
 app.get('/api/activity',(_req,res)=>res.json({items:activityBoard.snapshot()}));
 app.get('/api/threads',route(async(req,res)=>{
   await codex.connect();
@@ -509,7 +522,7 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   if(raw._pocketPage)Object.assign(page,raw._pocketPage);
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
-  conversationNotes.remember(t);
+  conversationNotes.remember(t);recordWork(()=>workRecord.remember(t));
   const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
   if(!req.query.before)response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
   res.json(response);
