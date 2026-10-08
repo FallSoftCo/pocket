@@ -1,0 +1,102 @@
+{
+  "status": "implementation-and-qualification",
+  "release": "alpha42 candidate; not yet installed",
+  "baseline": {
+    "hello": {
+      "transcriptToNativeStartMs": 1030,
+      "nativeTurnMs": 2850,
+      "stopAndFirstAudio": "Historical boundary logs evicted; no minute attribution from model timing alone"
+    },
+    "latencyQuestion": {
+      "transcriptToNativeStartMs": 3506,
+      "nativeTurnMs": 17455,
+      "nativeCompleteToSpeechPreparingMs": 18053,
+      "speechPreparingToNoAudioTimeoutMs": 21009,
+      "transcriptReceiptToErrorClipMs": 60055,
+      "result": "Bundled error clip, not successful spoken reply"
+    },
+    "input": "Phone13.3s capture replayed after stop; record-to-transcript transport repeats duration"
+  },
+  "confirmedFixes": [
+    "Foreground first audio playback while privately caching",
+    "Nonblocking available immersion rendition; planning remains asynchronous",
+    "Explicitly partial small startup context, on-demand routing discovery and target read",
+    "In-progress live PCM feed during capture, same-turn stop commit and recorded fallback"
+  ],
+  "infrastructure": {
+    "historicalCpuIdlePercentRange": [
+      83.81,
+      88.67
+    ],
+    "historicalSsdAwaitMsRange": [
+      0.2,
+      0.93
+    ],
+    "scope": "Ten-minute sampled windows; cannot exclude short spikes",
+    "currentTailscaleRttMs": 29,
+    "scopeRtt": "Current phone-to-workstation only; not historical provider path",
+    "nativeHeartbeat": "Expired connection observed after failed speech; lifecycle separately traced"
+  },
+  "realProviderChecks": {
+    "speechOnlyFirstAudioMs": 1133,
+    "speechOnlyFullCacheMs": 8649,
+    "sameConnectionRecordedInput": {
+      "pcmReplayMs": 3612,
+      "commitSettleMs": 1966,
+      "controllerMs": 3116,
+      "ttsFirstAudioMs": 1023,
+      "replayStartToFirstAudioMs": 9717
+    },
+    "scope": "Actual account provider through isolated unsigned headless transport; not handset audibility",
+    "sameConnectionLiveInput": {
+      "captureMs": 3693,
+      "stopToDrainedMs": 4,
+      "commitSettleMs": 2046,
+      "controllerMs": 2534,
+      "ttsFirstAudioMs": 912,
+      "stopToFirstAudioMs": 5496,
+      "contextBytes": 9239,
+      "contextPrepareMs": 31,
+      "modelStartAcknowledgementMs": 14,
+      "firstTextMs": 1833
+    },
+    "pause": {
+      "firstAudioMs": 1193,
+      "completeCacheMs": 17018,
+      "seekedResumeMs": 1524,
+      "remainingAudioMs": 15441,
+      "scope": "Isolated provider and cache seek, no skipped tail; handset playback separately qualified"
+    }
+  },
+  "routing": {
+    "readOnlyIdentification": "Existing requested CGI session identified from actual history through discover/read; no changes or sends",
+    "elapsedMs": 14211,
+    "contextBytes": 9243
+  },
+  "remainingLimits": [
+    "Original stop/transcription/hello first-audio timestamps unavailable",
+    "Post-fix installed-phone spoken roundtrip not yet verified",
+    "Fresh provider success does not exclude historical provider delay",
+    "Live input and native Android final candidate still qualifying"
+  ],
+  "checks": {
+    "backendTests": 368,
+    "targetedAudioContractTests": 20,
+    "nativeKotlinCompile": "pass",
+    "finalAndroidBuild": "pass: optimized release, debug/release unit tests and both lints",
+    "handset": "alpha41 until final candidate qualified and installed",
+    "debugUnitTests": {
+      "tests": 246,
+      "failures": 0
+    },
+    "releaseUnitTests": {
+      "tests": 246,
+      "failures": 0
+    }
+  },
+  "artifacts": {
+    "maintainedSha256": "21b7dce5273406b210c0be92dca6b28872afd9c634a0b5aa171f4be63f683cd6",
+    "compatibleSha256": "c0e79631e5eca14d07dca517c83cd49b33f74f1106deff5c9e9ab68256146b83",
+    "nonSigningEntries": "byte identical"
+  }
+}

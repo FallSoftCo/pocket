@@ -1,14 +1,29 @@
 <!doctype html><meta charset="utf-8"><script>
 'use strict';
 const explicitCompletion=false;
+const livePlayback=false;
 let providerResponse=null,providerComplete=false,expectedSpeech="",providerDoneAt=0,recordingStarted=0,providerDuration=0,latestTranscriptEnd=0;
+let outputPaused=false,liveStarted=false,stoppedToken=null;
+let inputToken=0,inputNextAt=0,inputFinished=false,inputSent=false,inputSources=new Set(),inputSamples=0;
 let pc,dc,ctx,dest,remote,analyser,source,recorder,lastBlob,allowOutput=false,speaking=false,lastEnergy=0,ended=false,renderToken=0,recordToken=0;
 const report=(kind,data='')=>PocketAudio.event(kind,String(data));
+async function networkBoundary(stage){
+ if(!pc||ended||typeof pc.getStats!=='function')return;
+ try{const stats=await pc.getStats(),samples=[];
+  stats.forEach(row=>{if(samples.length>=12)return;const values={};
+   if(['inbound-rtp','outbound-rtp','remote-inbound-rtp'].includes(row.type)&&(row.kind==='audio'||row.mediaType==='audio')){
+    for(const key of ['packetsLost','packetsReceived','packetsSent','jitter','roundTripTime'])if(Number.isFinite(row[key]))values[key]=row[key];
+   }else if(row.type==='candidate-pair'&&row.state==='succeeded'&&row.nominated&&Number.isFinite(row.currentRoundTripTime))values.roundTripTime=row.currentRoundTripTime;
+   if(Object.keys(values).length)samples.push({type:row.type,...values});
+  });if(!ended)report('network',JSON.stringify({stage,token:renderToken,samples}));
+ }catch{}
+}
+
 window.onerror=(message)=>report('error',message);
 async function connect(){
  ctx=new AudioContext();await ctx.resume();dest=ctx.createMediaStreamDestination();const quiet=ctx.createConstantSource();quiet.offset.value=0;quiet.connect(dest);quiet.start();
  pc=new RTCPeerConnection();pc.addTrack(dest.stream.getAudioTracks()[0]);dc=pc.createDataChannel('oai-events');
- dc.onopen=()=>report('connected');dc.onerror=()=>report('error','Voice data channel failed.');
+ dc.onopen=()=>{report('connected');void networkBoundary('connected')};dc.onerror=()=>report('error','Voice data channel failed.');
  dc.onmessage=e=>{try{providerEvent(JSON.parse(e.data))}catch{}};
  pc.onconnectionstatechange=()=>{if(['failed','disconnected'].includes(pc.connectionState))report('error','Voice audio disconnected. Reconnect to continue.');};
  pc.ontrack=e=>{
@@ -17,7 +32,7 @@ async function connect(){
   analyser=ctx.createAnalyser();analyser.fftSize=1024;ctx.createMediaStreamSource(stream).connect(analyser);
   recorder=new MediaRecorder(stream);let chunks=[];
   recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-  recorder.onstop=()=>{if(chunks.length&&recordToken===renderToken&&allowOutput){const token=recordToken;lastBlob=new Blob(chunks,{type:recorder.mimeType});const reader=new FileReader();reader.onload=()=>{if(token===renderToken&&allowOutput){allowOutput=false;report('audio',JSON.stringify({token,data:String(reader.result).split(',')[1]}))}};reader.readAsDataURL(lastBlob);}chunks=[]};
+  recorder.onstop=()=>{const token=stoppedToken??recordToken;stoppedToken=null;if(chunks.length&&token===renderToken&&allowOutput){lastBlob=new Blob(chunks,{type:recorder.mimeType});const reader=new FileReader();reader.onload=()=>{if(token===renderToken&&allowOutput){allowOutput=false;report('audio',JSON.stringify({token,live:livePlayback&&liveStarted,paused:outputPaused,data:String(reader.result).split(',')[1]}));if(livePlayback&&liveStarted){report('finished',String(token));void networkBoundary('finished')}}};reader.readAsDataURL(lastBlob);}chunks=[]};
  };
  await pc.setLocalDescription(await pc.createOffer());await new Promise(resolve=>{if(pc.iceGatheringState==='complete')return resolve();pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete')resolve()});setTimeout(resolve,3000)});
  report('offer',pc.localDescription.sdp);
@@ -46,12 +61,28 @@ function sampleOutput(){
  if(!analyser||!allowOutput)return;
  const data=new Float32Array(1024);analyser.getFloatTimeDomainData(data);
  const energy=data.reduce((sum,v)=>sum+v*v,0)/data.length;
- if(energy>.000005){lastEnergy=Date.now();if(!speaking){speaking=true;report('preparing')}}
+ if(energy>.000005){lastEnergy=Date.now();if(!speaking){speaking=true;if(livePlayback){liveStarted=true;remote.muted=outputPaused;if(!outputPaused)report('speaking',String(renderToken));report('timing',JSON.stringify({token:renderToken,stage:'firstAudio',elapsedMs:Date.now()-recordingStarted}));void networkBoundary('firstAudio');}else report('preparing')}}
  else if(speaking&&Date.now()-lastEnergy>2500&&(!explicitCompletion||(providerComplete&&Date.now()-providerDoneAt>=500&&Date.now()-recordingStarted>=providerDuration))){
-  speaking=false;remote.muted=true;if(recorder?.state==='recording')recorder.stop();
+  speaking=false;remote.muted=true;if(recorder?.state==='recording'){stoppedToken=recordToken;recorder.stop();}
  }
 }
 
+function cancelInput(){inputToken++;for(const source of inputSources){source.onended=null;try{source.stop()}catch{}}inputSources.clear();inputFinished=false;inputSent=false;inputSamples=0;inputNextAt=0;}
+function beginInput(token){
+ if(!pc||pc.connectionState!=='connected'||dc.readyState!=='open')throw Error('Voice connection is not ready.');
+ cancelInput();inputToken=token;allowOutput=false;if(remote)remote.muted=true;inputNextAt=ctx.currentTime+.03;
+}
+function appendInput(token,pcm){
+ if(token!==inputToken||inputFinished)return;
+ const raw=atob(pcm);if(raw.length%2)throw Error('Invalid PCM input.');
+ inputSamples+=raw.length/2;if(inputSamples>1920000)throw Error('Voice recording exceeds 120 seconds.');
+ const audio=ctx.createBuffer(1,raw.length/2,16000),samples=audio.getChannelData(0);
+ for(let i=0;i<samples.length;i++){let n=raw.charCodeAt(i*2)|(raw.charCodeAt(i*2+1)<<8);if(n>=32768)n-=65536;samples[i]=n/32768;}
+ const source=ctx.createBufferSource();source.buffer=audio;source.connect(dest);inputSources.add(source);
+ const at=Math.max(inputNextAt,ctx.currentTime+.015);inputNextAt=at+audio.duration;
+ source.onended=()=>{inputSources.delete(source);if(token===inputToken&&inputFinished&&!inputSent&&inputSources.size===0){inputSent=true;report('sent');void networkBoundary('inputDrained')}};source.start(at);
+}
+function finishInput(token){if(token!==inputToken)throw Error('Recorded input was replaced.');inputFinished=true;if(!inputSent&&inputSources.size===0){inputSent=true;report('sent');void networkBoundary('inputDrained')}}
 async function answer(sdp){await pc.setRemoteDescription({type:'answer',sdp})}
 async function send(wav){
  if(!pc||pc.connectionState!=='connected'||dc.readyState!=='open')throw Error('Voice connection is not ready.');
@@ -62,11 +93,13 @@ async function send(wav){
 }
 function speak(token,expectedText=""){
  renderToken=token;recordToken=token;providerResponse=null;providerComplete=false;expectedSpeech=expectedText;providerDoneAt=0;recordingStarted=Date.now();providerDuration=0;latestTranscriptEnd=0;
- allowOutput=true;speaking=false;lastEnergy=Date.now();if(remote){remote.muted=true;remote.play().catch(e=>report('error',e.message));if(recorder?.state==='inactive')recorder.start();}
- setTimeout(()=>{if(allowOutput&&!speaking&&Date.now()-lastEnergy>20000){allowOutput=false;report('error','No spoken response arrived. Retry to read the saved result.');}},21000);
+ allowOutput=true;speaking=false;liveStarted=false;outputPaused=false;lastEnergy=Date.now();if(remote){remote.muted=!livePlayback;remote.play().catch(e=>report('error',e.message));if(recorder?.state==='inactive')recorder.start();}
+ const timeoutToken=token;setTimeout(()=>{if(renderToken===timeoutToken&&allowOutput&&!speaking&&Date.now()-lastEnergy>20000){allowOutput=false;report('error','No spoken response arrived. Retry to read the saved result.');}},21000);
 }
 
-function silence(){renderToken++;allowOutput=false;if(remote)remote.muted=true;speaking=false;if(recorder?.state==='recording')recorder.stop();}
-function closeVoice(){ended=true;silence();source?.stop();pc?.close();ctx?.close();}
+function pauseOutput(){outputPaused=true;if(remote)remote.muted=true;report('paused',String(renderToken));}
+function resumeOutput(){if(!allowOutput)return;outputPaused=false;if(remote)remote.muted=!livePlayback;if(liveStarted)report('speaking',String(renderToken));}
+function silence(){renderToken++;allowOutput=false;if(remote)remote.muted=true;speaking=false;if(recorder?.state==='recording'){stoppedToken=recordToken;recorder.stop();}}
+function closeVoice(){ended=true;cancelInput();silence();source?.stop();pc?.close();ctx?.close();}
 connect().catch(e=>report('error',e.message));
 </script>

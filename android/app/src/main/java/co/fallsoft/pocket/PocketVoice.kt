@@ -96,6 +96,20 @@ class PocketVoiceService:Service(){
     private var idleDisconnect:Job?=null
     private var transportGeneration=0L
     private var nativeSpeaking=false
+    private var nativeRendering=false
+    private var nativePaused=false
+    private var nativeCacheReady=false
+    private var nativeResumeRequested=false
+    private var nativeAudioBeganAt=0L
+    private var nativeAudioCacheStartedAt=0L
+    private var captureGeneration=0L
+    private var captureTurnId:String?=null
+    private var captureConnection:String?=null
+    private var captureStreaming=false
+    private var captureStreamFailed=false
+    private var captureStreamJob:Job?=null
+    private val capturePrefix=mutableListOf<ByteArray>()
+    private var nativePausedPositionMs=0
     private var speechGeneration=0L
     private var local=false
     private var endpoint=""
@@ -182,15 +196,27 @@ class PocketVoiceService:Service(){
         checkpointNativeUsage(stop=true)
         nativeHeartbeat?.cancel();nativeAudio?.close();nativeId=null
         val ready=CompletableDeferred<Unit>();nativeReady=ready;val ticket=++transportGeneration
-        nativeAudio=NativeVoiceAudio(this) audio@{kind,data->if(!PocketVoice.active||ticket!=transportGeneration)return@audio;when(kind){
+        nativeAudio=NativeVoiceAudio(this,livePlayback=true) audio@{kind,data->if(!PocketVoice.active||ticket!=transportGeneration)return@audio;when(kind){
             "offer"->scope.launch{try{val result=api("/api/voice/native/start",JSONObject().put("sdp",data));nativeId=result.s("id");nativeAudio?.answer(result.s("sdp"))}catch(e:Exception){ready.completeExceptionally(e)}}
             "connected"->{SpeechUsage.add("voiceConnections");nativeUsage.start(SystemClock.elapsedRealtime());ready.complete(Unit)}
-            "audio"->scope.launch{try{val payload=JSONObject(data);val ticket=payload.optLong("token");if(ticket!=speechGeneration)return@launch;val bytes=android.util.Base64.decode(payload.s("data"),android.util.Base64.DEFAULT);withContext(Dispatchers.IO){spokenFile.writeBytes(bytes)};if(ticket!=speechGeneration)return@launch;play(spokenFile,true);clearPending()}catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}
+            "audio"->scope.launch{try{
+                val payload=JSONObject(data);val generation=payload.optLong("token");if(generation!=speechGeneration)return@launch
+                val bytes=android.util.Base64.decode(payload.s("data"),android.util.Base64.DEFAULT)
+                val cached=withContext(Dispatchers.IO){File.createTempFile("voice-spoken-",".tmp",filesDir).apply{writeBytes(bytes)}}
+                if(generation!=speechGeneration||ticket!=transportGeneration){cached.delete();return@launch}
+                check(cached.renameTo(spokenFile)){"Unable to save spoken response."};clearPending()
+                if(payload.optBoolean("live")){
+                    nativeRendering=false;nativeSpeaking=false;nativeCacheReady=true
+                    if(nativePaused){if(nativeResumeRequested){nativePaused=false;play(spokenFile,true,nativePausedPositionMs)}else state("Paused")}
+                    else finishNativePlayback()
+                }else play(spokenFile,true)
+            }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}
+            "timing","network"->{android.util.Log.i("PocketVoiceTiming","Native $kind $data")}
             "preparing"->{state("Preparing speech")}
-            "speaking"->{nativeSpeaking=true;clearPending();state("Speaking");captionStarted()}
-            "paused"->{nativeSpeaking=false;state("Paused");caption?.let{PocketSpeechCaptions.pause(it.profile);refreshCaptionNotification()}}
-            "finished"->{nativeSpeaking=false;abandonFocus();state("Ready");captionFinished();val done=afterSpeech;afterSpeech=null;done?.invoke()}
-            "error"->{if(!ready.isCompleted)ready.completeExceptionally(IllegalStateException(data))else{PocketVoice.problem=data;recording?.cancel();fail(IllegalStateException(data))}}
+            "speaking"->{nativePaused=false;nativeSpeaking=true;nativeAudioBeganAt=SystemClock.elapsedRealtime();clearPending();state("Speaking");captionStarted()}
+            "paused"->{nativePausedPositionMs=if(nativeAudioCacheStartedAt>0)(SystemClock.elapsedRealtime()-nativeAudioCacheStartedAt).toInt().coerceAtLeast(0) else 0;nativePaused=true;nativeSpeaking=false;state("Paused");caption?.let{PocketSpeechCaptions.pause(it.profile);refreshCaptionNotification()}}
+            "finished"->{/* Cache callback completes this generation after its atomic file commit. */}
+            "error"->{if((recorder!=null||(turnId==captureTurnId&&captureStreaming&&!nativeRendering))&&ready.isCompleted){captureStreamFailed=true;captureStreaming=false;capturePrefix.clear();disconnectNative();return@audio};nativeRendering=false;nativeSpeaking=false;if(!ready.isCompleted)ready.completeExceptionally(IllegalStateException(data))else{PocketVoice.problem=data;recording?.cancel();fail(IllegalStateException(data))}}
         }}
         withTimeout(35000){ready.await()};nativeReady=null
         nativeHeartbeat=scope.launch{while(isActive){delay(30000);checkpointNativeUsage();try{api("/api/voice/native/heartbeat",JSONObject().put("connectionId",nativeId))}catch(e:Exception){if(e is CancellationException)throw e;PocketVoice.problem=PocketNetwork.error(e);state("Retry needed");break}}}
@@ -212,21 +238,36 @@ class PocketVoiceService:Service(){
             VoiceRecordIntent.RECOVER_PENDING->{PocketVoice.problem="A saved turn needs checking. Use Check saved turn before recording again.";beep(false);return}
             VoiceRecordIntent.START->Unit
         }
-        work?.cancel();disconnectNative();speechGeneration++;nativeSpeaking=false;stopPlayer();recordingProblem=null;PocketVoice.problem="";PocketVoice.heard="";PocketVoice.response="";wake()
+        val interruptedProviderSpeech=nativeRendering||nativeSpeaking
+        work?.cancel();idleDisconnect?.cancel();if(interruptedProviderSpeech)disconnectNative()else nativeAudio?.cancelInput();captureStreamJob?.cancel();capturePrefix.clear();speechGeneration++;nativeSpeaking=false;stopPlayer();recordingProblem=null;PocketVoice.problem="";PocketVoice.heard="";PocketVoice.response="";wake()
         if(!requestFocus()){state("Paused");PocketVoice.problem="Another app is using audio. Try again when it finishes.";beep(false);return}
         try{
             val size=AudioRecord.getMinBufferSize(16000,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT);require(size>0)
             val r=AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION,16000,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT,size.coerceAtLeast(8192));check(r.state==AudioRecord.STATE_INITIALIZED){"Microphone is unavailable."}
             stopRecording=false;recorder=r;beep();state("Starting microphone")
+            val id=UUID.randomUUID().toString();val origin=PocketVoice.targetThread?:"coordinator";val generation=++captureGeneration
+            captureTurnId=id;captureConnection=null;captureStreaming=false;captureStreamFailed=false
+            captureStreamJob=scope.launch{try{
+                if(!coordinatorReady){api("/api/voice/start",JSONObject().put("fullPermissions",Pocket.fullPermissions).put("threadId",origin.takeIf{it!="coordinator"}));coordinatorReady=true}
+                if(nativeId==null)connectNative()
+                if(generation!=captureGeneration)return@launch
+                api("/api/voice/native/input",JSONObject().put("connectionId",nativeId).put("turnId",id))
+                if(generation!=captureGeneration)return@launch
+                nativeAudio!!.beginInput(generation);captureConnection=nativeId;captureStreaming=true
+                for(chunk in capturePrefix)nativeAudio!!.appendInput(generation,chunk);capturePrefix.clear()
+                android.util.Log.i("PocketVoiceTiming","Turn $id live input armed")
+            }catch(e:Exception){if(e is CancellationException)throw e;captureStreamFailed=true;captureStreaming=false;capturePrefix.clear();android.util.Log.i("PocketVoiceTiming","Turn $id using saved capture fallback")}}
+            fun feed(chunk:ByteArray){if(generation!=captureGeneration||captureStreamFailed)return;if(captureStreaming)nativeAudio?.appendInput(generation,chunk)else capturePrefix.add(chunk)}
             recording=scope.launch{val bytes=ByteArrayOutputStream();try{
                 delay(140);r.startRecording();check(r.recordingState==AudioRecord.RECORDSTATE_RECORDING){"Android could not start the microphone. Check microphone privacy and app permissions."};state("Listening")
-                withContext(Dispatchers.IO){val buf=ByteArray(4096);var lastLevel=0L;while(isActive&&!stopRecording&&bytes.size()<3840000){val n=r.read(buf,0,buf.size,AudioRecord.READ_NON_BLOCKING);if(n<0)throw IllegalStateException("Microphone stopped.");if(n>0){bytes.write(buf,0,n.coerceAtMost(3840000-bytes.size()));val now=SystemClock.elapsedRealtime();if(now-lastLevel>=100){lastLevel=now;val level=capturePcmLevel(buf,n);withContext(Dispatchers.Main){PocketVoice.captureLevel=level}}}else delay(10)}}
+                withContext(Dispatchers.IO){val buf=ByteArray(4096);val chunk=ByteArrayOutputStream();var lastLevel=0L;while(isActive&&!stopRecording&&bytes.size()<3840000){val n=r.read(buf,0,buf.size,AudioRecord.READ_NON_BLOCKING);if(n<0)throw IllegalStateException("Microphone stopped.");if(n>0){val accepted=n.coerceAtMost(3840000-bytes.size());bytes.write(buf,0,accepted);chunk.write(buf,0,accepted);if(chunk.size()>=3200){val data=chunk.toByteArray();chunk.reset();withContext(Dispatchers.Main){feed(data)}};val now=SystemClock.elapsedRealtime();if(now-lastLevel>=100){lastLevel=now;val level=capturePcmLevel(buf,n);withContext(Dispatchers.Main){PocketVoice.captureLevel=level}}}else delay(10)};if(chunk.size()>0){val data=chunk.toByteArray();withContext(Dispatchers.Main){feed(data)}}}
             }catch(e:CancellationException){/* Leaving mode or an audio interruption is handled below. */}catch(e:Exception){recordingProblem=e.message?:"Microphone stopped.";PocketVoice.problem=recordingProblem.orEmpty()}
             finally{try{r.stop()}catch(_:Exception){};r.release();recorder=null;abandonFocus()}
             if(!PocketVoice.active)return@launch
-            val pcm=bytes.toByteArray();voiceRecordingProblem(VoiceRecording.hasSpeech(pcm),recordingProblem)?.let{PocketVoice.problem=it;beep(false);state("Ready");nextUpdate();return@launch}
+            android.util.Log.i("PocketVoiceTiming","Capture complete")
+            val pcm=bytes.toByteArray();voiceRecordingProblem(VoiceRecording.hasSpeech(pcm),recordingProblem)?.let{captureGeneration++;disconnectNative();captureTurnId=null;PocketVoice.problem=it;beep(false);state("Ready");nextUpdate();return@launch}
             PocketVoice.problem=""
-            val id=UUID.randomUUID().toString();withContext(NonCancellable+Dispatchers.IO){pendingFile.writeBytes(VoiceRecording.wav(pcm));Pocket.prefs.edit().putString("voicePendingId",id).putBoolean("voicePendingLocal",local).putString("voicePendingTarget",PocketVoice.targetThread?:"coordinator").commit()}
+            withContext(NonCancellable+Dispatchers.IO){pendingFile.writeBytes(VoiceRecording.wav(pcm));Pocket.prefs.edit().putString("voicePendingId",id).putBoolean("voicePendingLocal",local).putString("voicePendingTarget",origin).commit()}
             beep();deliver()
         }}catch(e:Exception){recorder?.release();recorder=null;abandonFocus();fail(e)}
     }
@@ -251,13 +292,25 @@ class PocketVoiceService:Service(){
         wake();val id=turnId?:return@launch
         try{
             state("Sending")
-            if(!coordinatorReady){api("/api/voice/start",JSONObject().put("fullPermissions",Pocket.fullPermissions).put("threadId",PocketVoice.targetThread));coordinatorReady=true}
+            val recordedOrigin=Pocket.prefs.getString("voicePendingTarget",null)?.takeIf{it!="coordinator"}
+            if(!coordinatorReady||recordedOrigin!=PocketVoice.targetThread){api("/api/voice/start",JSONObject().put("fullPermissions",Pocket.fullPermissions).put("threadId",recordedOrigin));coordinatorReady=true}
             var result:JSONObject?=try{api("/api/voice/turns/$id")}catch(e:PocketApiException){if(e.status!=404)throw e;null}
             if(result==null){
-                if(nativeId==null)connectNative()
-                api("/api/voice/native/input",JSONObject().put("connectionId",nativeId).put("turnId",id))
-                nativeAudio!!.send(withContext(Dispatchers.IO){pendingFile.readBytes()})
+                captureStreamJob?.join()
+                var streamed=false
+                if(captureTurnId==id&&captureStreaming&&!captureStreamFailed&&captureConnection==nativeId){
+                    try{android.util.Log.i("PocketVoiceTiming","Turn $id live input finish");nativeAudio!!.finishInput(captureGeneration);streamed=true}
+                    catch(e:Exception){if(!isActive)throw e;disconnectNative();android.util.Log.i("PocketVoiceTiming","Turn $id pre-commit saved capture fallback")}
+                }
+                if(!streamed){
+                    if(nativeId==null)connectNative()
+                    api("/api/voice/native/input",JSONObject().put("connectionId",nativeId).put("turnId",id))
+                    android.util.Log.i("PocketVoiceTiming","Turn $id saved upload begin")
+                    nativeAudio!!.send(withContext(Dispatchers.IO){pendingFile.readBytes()})
+                    android.util.Log.i("PocketVoiceTiming","Turn $id saved upload complete")
+                }
                 result=api("/api/voice/native/commit",JSONObject().put("connectionId",nativeId).put("turnId",id))
+                captureStreaming=false;captureTurnId=null;capturePrefix.clear()
             }
 
             val deadline=SystemClock.elapsedRealtime()+240000
@@ -269,6 +322,7 @@ class PocketVoiceService:Service(){
             if(result!!.s("state")!="completed"){
                 val message=result.s("error","The voice turn stopped.");clearPending();PocketVoice.problem=message;speak(message);return@launch
             }
+            android.util.Log.i("PocketVoiceTiming","Turn $id response received")
             PocketVoice.response=result.s("response")
             if(PocketVoice.inPlace&&PocketCoordinator.visible)PocketCoordinator.loadHistory()
             val message=CoordinatorMessage(id,PocketVoice.heard,PocketVoice.response)
@@ -289,37 +343,43 @@ class PocketVoiceService:Service(){
     }}
     fun retry(){if(starting||recorder!=null)return;PocketVoice.problem="";work?.cancel();if(turnId!=null){nativeId=null;deliver()}else boot()}
     private fun fail(e:Exception){if(!PocketVoice.active)return;caption?.let{PocketSpeechCaptions.pause(it.profile)};caption=null;PocketVoice.problem=PocketNetwork.error(e);state("Retry needed");beep(false)
-        val name=if(turnId!=null)"voice-turn-error" else "voice-setup-error";val cached=File(filesDir,"$name.wav");try{if(!cached.exists())assets.open("$name.wav").use{input->cached.outputStream().use{input.copyTo(it)}};play(cached)}catch(_:Exception){state("Retry needed")}
+        val name=if(turnId!=null)"voice-turn-error" else "voice-setup-error";val cached=File(filesDir,"$name.wav");try{if(!cached.exists())assets.open("$name.wav").use{input->cached.outputStream().use{input.copyTo(it)}};play(cached,isError=true)}catch(_:Exception){state("Retry needed")}
     }
     private suspend fun speak(text:String,notification:JSONObject?=null,done:(()->Unit)?=null){
+        val voiceTurnId=turnId
         val speechId="speech:"+text.hashCode()
         PocketImmersion.offer(speechId,text,"speech urgent")
-        val spoken=PocketImmersion.spoken(speechId,text,waitMs=12000)
+        // Use the rendition already available; translation planning continues asynchronously.
+        val spoken=PocketImmersion.target(speechId,text)
         caption=notification?.let{NativeCaption(it.optLong("id"),it.s("title"),spoken,captionProfile)}
         if(text.isBlank()){done?.invoke();state("Ready");return}
         state("Preparing speech")
         if(nativeId==null)connectNative()
         stopPlayer();if(!requestFocus())throw IllegalStateException("Another app is using audio. Retry when it finishes.")
-        afterSpeech=done;speechGeneration++;nativeAudio?.speak(speechGeneration)
-        api("/api/voice/native/speak",JSONObject().put("connectionId",nativeId).put("text",spoken))
+        afterSpeech=done;speechGeneration++;nativeRendering=true;nativePaused=false;nativeCacheReady=false;nativeResumeRequested=false;nativeAudioBeganAt=0L;nativeAudioCacheStartedAt=SystemClock.elapsedRealtime();nativePausedPositionMs=0;nativeAudio?.speak(speechGeneration)
+        android.util.Log.i("PocketVoiceTiming","Speech $speechGeneration requested")
+        api("/api/voice/native/speak",JSONObject().put("connectionId",nativeId).put("text",spoken).put("voiceTurnId",voiceTurnId))
     }
 
     private fun requestFocus():Boolean{
-        abandonFocus();focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()).setOnAudioFocusChangeListener{change->if(change<0){if(recorder!=null){recordingProblem="Recording interrupted by another app. Please repeat your turn.";PocketVoice.problem=recordingProblem.orEmpty();recording?.cancel()}else if(playing){player?.pause();playing=false;state("Paused")}}}.build()
+        abandonFocus();focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()).setOnAudioFocusChangeListener{change->if(change<0){if(recorder!=null){recordingProblem="Recording interrupted by another app. Please repeat your turn.";PocketVoice.problem=recordingProblem.orEmpty();recording?.cancel()}else if(nativeSpeaking){nativeAudio?.pause();state("Paused")}else if(playing){player?.pause();playing=false;state("Paused")}}}.build()
         return audio.requestAudioFocus(focus!!)==AudioManager.AUDIOFOCUS_REQUEST_GRANTED
     }
     private fun abandonFocus(){focus?.let{audio.abandonAudioFocusRequest(it)};focus=null}
-    private fun play(file:File,part:Boolean=false){player?.release();player=null;playing=false;abandonFocus();if(!part){speechFiles=listOf(file);speechIndex=0;afterSpeech=null};if(!requestFocus()){state("Paused");return};player=MediaPlayer().apply{setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());setDataSource(file.absolutePath);setOnCompletionListener{playing=false;abandonFocus();if(speechIndex+1<speechFiles.size){speechIndex++;play(speechFiles[speechIndex],true)}else{state("Ready");captionFinished();val done=afterSpeech;afterSpeech=null;done?.invoke()}};setOnErrorListener{_,_,_->playing=false;state("Retry needed");PocketVoice.problem="Unable to play speech. Use Replay to try the audio again.";abandonFocus();true};prepare();start()};playing=true;state("Speaking");captionStarted()}
+    private fun finishNativePlayback(){abandonFocus();state("Ready");captionFinished();val done=afterSpeech;afterSpeech=null;done?.invoke()}
+    private fun play(file:File,part:Boolean=false,startAt:Int=0,isError:Boolean=false){nativeAudio?.silence();nativeRendering=false;nativeSpeaking=false;player?.release();player=null;playing=false;abandonFocus();if(!part){speechFiles=listOf(file);speechIndex=0;afterSpeech=null};if(!requestFocus()){state("Paused");return};player=MediaPlayer().apply{setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());setDataSource(file.absolutePath);setOnCompletionListener{playing=false;abandonFocus();if(speechIndex+1<speechFiles.size){speechIndex++;play(speechFiles[speechIndex],true)}else{state(if(isError)"Retry needed" else "Ready");if(!isError)captionFinished();val done=afterSpeech;afterSpeech=null;done?.invoke()}};setOnErrorListener{_,_,_->playing=false;state("Retry needed");PocketVoice.problem="Unable to play speech. Use Replay to try the audio again.";abandonFocus();true};prepare();if(startAt>0)seekTo(startAt.coerceAtMost((duration-1).coerceAtLeast(0)));start()};playing=true;state(if(isError)"Retry needed" else "Speaking");if(!isError)captionStarted()}
     fun togglePlayback(){
         if(recorder!=null){beep(false);return}
+        if(nativeRendering){if(nativePaused){nativeResumeRequested=true;state("Preparing speech")}else{nativeAudio?.pause();abandonFocus()};return}
+        if(nativePaused&&nativeCacheReady){nativePaused=false;play(spokenFile,true,nativePausedPositionMs);return}
         player?.let{if(playing){it.pause();playing=false;state("Paused");abandonFocus()}else if(requestFocus()){if(it.currentPosition>=it.duration){speechIndex=0;play(speechFiles.firstOrNull()?:spokenFile,true)}else{it.start();playing=true;state("Speaking");captionStarted()}};return}
         if(spokenFile.exists())play(spokenFile)else beep(false)
     }
-    private fun stopPlayer(){player?.release();player=null;playing=false;afterSpeech=null;speechFiles=emptyList();speechIndex=0;abandonFocus()}
+    private fun stopPlayer(){nativeAudio?.silence();nativeRendering=false;nativeSpeaking=false;nativePaused=false;nativeCacheReady=false;nativeResumeRequested=false;player?.release();player=null;playing=false;afterSpeech=null;speechFiles=emptyList();speechIndex=0;abandonFocus()}
     fun enqueueUpdate(n:JSONObject){if(updates.none{it.optLong("id")==n.optLong("id")})updates.addLast(n);while(updates.size>20)updates.removeFirst();nextUpdate()}
-    private fun nextUpdate(){if(!PocketVoice.active||recorder!=null||playing||nativeSpeaking||work?.isActive==true||turnId!=null||updates.isEmpty())return;val n=updates.removeFirst();work=scope.launch{try{val full=if(n.s("speech_pending")=="1")api("/api/notifications/${n.optLong("id")}").optJSONObject("notification")?:n else n;speak(full.s("spoken_text",full.s("body")),full){scope.launch{delay(50);nextUpdate()}}}catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}}
+    private fun nextUpdate(){if(!PocketVoice.active||recorder!=null||playing||nativeRendering||nativePaused||nativeSpeaking||work?.isActive==true||turnId!=null||updates.isEmpty())return;val n=updates.removeFirst();work=scope.launch{try{val full=if(n.s("speech_pending")=="1")api("/api/notifications/${n.optLong("id")}").optJSONObject("notification")?:n else n;speak(full.s("spoken_text",full.s("body")),full){scope.launch{delay(50);nextUpdate()}}}catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}}
     private fun stopNativeRemote(){if(nativeId!=null){val request=Request.Builder().url("$endpoint/api/voice/native/stop").header("Authorization","Bearer $credential").post(JSONObject().put("connectionId",nativeId).toString().toRequestBody("application/json".toMediaType())).build();http.newCall(request).enqueue(object:Callback{override fun onFailure(call:Call,e:java.io.IOException){};override fun onResponse(call:Call,response:Response){response.close()}})}}
-    private fun disconnectNative(){checkpointNativeUsage(stop=true);transportGeneration++;stopNativeRemote();nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeReady?.cancel();nativeReady=null}
+    private fun disconnectNative(){captureStreamFailed=true;captureStreaming=false;captureStreamJob?.cancel();capturePrefix.clear();nativeAudio?.cancelInput();checkpointNativeUsage(stop=true);transportGeneration++;stopNativeRemote();nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeReady?.cancel();nativeReady=null}
     fun leave(){PocketVoice.launching=false;PocketVoice.active=false;disconnectNative();recording?.cancel();work?.cancel();stopPlayer();state("Ready");stopSelf()}
     override fun onDestroy(){checkpointNativeUsage(stop=true);transportGeneration++;nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;PocketVoice.active=false;PocketVoice.service=null;recording?.cancel();scope.cancel();stopPlayer();tones.release();if(lock?.isHeld==true)lock?.release();if(!PocketVoice.foreground&&!Pocket.local)PocketLive.stop();stopForeground(STOP_FOREGROUND_REMOVE);if(caption!=null&&PocketSpeechCaptions.state.phase=="Speaking")PocketSpeechCaptions.pause(captionProfile);PocketSpeechCaptions.retain();super.onDestroy()}
 }

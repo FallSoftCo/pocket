@@ -1969,6 +1969,28 @@
         "Ambiguous external delivery, actual user stops and missing checkpoint assessments remain held rather than guessed.",
         "Android alpha41 signed qualification and physical installation are recorded separately."
       ]
+    },
+    {
+      "id": "voice-roundtrip-latency",
+      "requirement": "Measure and fix voice latency end to end across phone capture, transcription, transport, coordinator context, Codex startup/generation, immersion and speech playback. A trivial spoken test must not wait a minute silently. Preserve routing, source, drafts and intermediate answers.",
+      "status": "real_provider_latency_qualified_native_build_in_progress",
+      "implementation": [
+        "Persistent per-turn stage timings separate context preparation, model startup, first response and completion from audio.",
+        "Small explicitly partial startup metadata; relevant public histories loaded on demand before routing/mutation.",
+        "Foreground speech starts at first audio while caching; urgent speech uses available immersion rendition without a synchronous translation wait.",
+        "Feed captured audio during recording; stop commits the same captured turn rather than replaying its full duration."
+      ],
+      "evidence": [
+        "server/coordinator-discovery.mjs",
+        "server/voice-controller.mjs",
+        "server/native-voice.mjs",
+        "android/app/src/main/assets/native-voice.html",
+        "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt"
+      ],
+      "limits": [
+        "Historical phone hello capture/first-audio logs were evicted; current RTT and averaged load do not certify past transport latency.",
+        "Installed-phone post-fix roundtrip is qualified separately from isolated real-provider tests."
+      ]
     }
   ],
   "current_state": {

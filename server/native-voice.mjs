@@ -8,7 +8,7 @@ export class NativeVoice {
   if(m.method==='thread/realtime/sdp'){s.answer=p.sdp||p.answerSdp;s.resolve?.(s.answer);}
   if(m.method==='thread/realtime/error'){s.error=p.message||'Native voice failed.';s.reject?.(failure(s.error,503));}
   if(m.method==='thread/realtime/closed')s.error='Voice connection ended. Reconnect to continue.';
-  if(m.method==='thread/realtime/transcript/delta'&&p.role==='user'&&s.input){s.input.text+=p.delta||'';s.input.changed=Date.now();}
+  if(m.method==='thread/realtime/transcript/delta'&&p.role==='user'&&s.input){s.input.text+=p.delta||'';s.input.firstTextAt??=Date.now();s.input.changed=Date.now();}
   // Audio transport is never allowed to turn partial transcripts into coding work.
   if(m.method==='turn/started')void this.codex.call('turn/interrupt',{threadId:s.thread,turnId:p.turn.id}).catch(()=>{});
   if(m.id!==undefined){try{this.codex.answer(m.id,{decision:'decline',success:false,contentItems:[{type:'inputText',text:'Audio interface has no task tools.'}]});}catch{}}
@@ -25,12 +25,12 @@ export class NativeVoice {
   }finally{this.starting.delete(key);}
  }
  session(device,id){const s=[...this.sessions.values()].find(s=>s.device===device&&s.id===id);if(!s)throw failure('Voice connection expired. Reconnect before speaking.',409);if(s.error)throw failure(s.error,503);s.touched=Date.now();return s;}
- begin(device,id,turnId){const s=this.session(device,id);if(s.purpose!=='voice')throw failure('Speech-only audio cannot receive task input.',409);if(!/^[a-zA-Z0-9_-]{8,100}$/.test(turnId))throw failure('Invalid voice turn.');if(s.input&&s.input.id!==turnId)throw failure('A recorded turn is still being delivered.',409);s.input={id:turnId,text:'',changed:Date.now()};return {ok:true};}
+ begin(device,id,turnId){const s=this.session(device,id);if(s.purpose!=='voice')throw failure('Speech-only audio cannot receive task input.',409);if(!/^[a-zA-Z0-9_-]{8,100}$/.test(turnId))throw failure('Invalid voice turn.');if(s.input&&s.input.id!==turnId)throw failure('A recorded turn is still being delivered.',409);s.input={id:turnId,text:'',changed:Date.now(),startedAt:Date.now()};return {ok:true};}
  async commit(device,id,turnId){const s=this.session(device,id);if(s.purpose!=='voice')throw failure('Speech-only audio cannot commit task input.',409);const existing=this.controller.get(device,turnId);if(existing)return existing;if(s.input?.id!==turnId)throw failure('Reconnect and retry your saved recording.',409);
-  const input=s.input,deadline=Date.now()+7000;await new Promise(r=>setTimeout(r,1600));while(Date.now()<deadline&&Date.now()-input.changed<1200)await new Promise(r=>setTimeout(r,200));
+  const input=s.input,commitAt=Date.now(),deadline=Date.now()+7000;await new Promise(r=>setTimeout(r,1600));while(Date.now()<deadline&&Date.now()-input.changed<1200)await new Promise(r=>setTimeout(r,200));
   if(s.input!==input)throw failure('This recording was replaced.',409);const text=input.text.trim();if(!text)throw failure('No speech transcript arrived. Retry the saved recording.',503);
-  const result=this.controller.submitText(device,turnId,text);s.input=null;return result;
+  const result=this.controller.submitText(device,turnId,text);this.controller.mark?.(device,turnId,'native_input_started',input.startedAt);this.controller.mark?.(device,turnId,'native_commit_requested',commitAt);if(input.firstTextAt)this.controller.mark?.(device,turnId,'first_transcript',input.firstTextAt);this.controller.mark?.(device,turnId,'last_transcript',input.changed);s.input=null;return result;
  }
- async speak(device,id,text){const s=this.session(device,id);if(typeof text!=='string'||!text.trim()||text.length>16000)throw failure('Invalid spoken response.');await this.codex.call('thread/realtime/appendText',{threadId:s.thread,role:'developer',text:`POCKET_SPEAK: Read the following response aloud now, exactly and completely. Do not delegate or execute tools.\n${text}`});return {ok:true};}
+ async speak(device,id,text,voiceTurnId=null){const s=this.session(device,id);if(typeof text!=='string'||!text.trim()||text.length>16000)throw failure('Invalid spoken response.');if(voiceTurnId)this.controller.mark?.(device,voiceTurnId,'tts_requested');await this.codex.call('thread/realtime/appendText',{threadId:s.thread,role:'developer',text:`POCKET_SPEAK: Read the following response aloud now, exactly and completely. Do not delegate or execute tools.\n${text}`});if(voiceTurnId)this.controller.mark?.(device,voiceTurnId,'tts_submitted');return {ok:true};}
  async stop(device,id=null){const s=id?[...this.sessions.values()].find(s=>s.device===device&&s.id===id):this.sessions.get(JSON.stringify([device,'voice']));if(!s)return;this.sessions.delete(JSON.stringify([device,s.purpose]));try{await this.codex.call('thread/realtime/stop',{threadId:s.thread});}catch{} }
 }

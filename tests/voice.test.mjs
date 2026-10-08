@@ -68,3 +68,19 @@ test('coordinator light inspection uses its own stock session and review prefere
  const start=codex.calls.find(c=>c.method==='turn/start');assert.equal(start.params.threadId,'controller-123');assert.deepEqual(start.params.sandboxPolicy,{type:'readOnly',networkAccess:false});assert.equal(start.params.approvalPolicy,'never');assert.equal(calls.filter(c=>c.body).length,0);
  codex.emit('event',{method:'item/completed',params:{threadId:'controller-123',item:{type:'agentMessage',phase:'final_answer',text:'CPU temperature is 48 degrees Celsius.'}}});codex.emit('event',{method:'turn/completed',params:{threadId:'controller-123',turn:{status:'completed'}}});assert.equal(controller.get('phone','light-inspection-123').response,'CPU temperature is 48 degrees Celsius.');assert.equal(controller.history('phone').turns.at(-1).response,'CPU temperature is 48 degrees Celsius.');db.close();
 });
+
+test('greeting starts without unrelated history; routing still explicitly discovers and reads',async()=>{
+ const {controller,codex,db,calls}=setup();controller.submitText('phone','hello-test-001','Hello, voice test');await tick();await tick();
+ const started=codex.calls.find(c=>c.method==='turn/start');assert.ok(started);
+ assert.equal(calls.some(c=>c.path.includes('view=timeline')),false);
+ const active=controller.active.get('controller-123');
+ await assert.rejects(controller.control(active,{operation:'create',arguments:{reason:'New work',prompt:'Task'}}),/Refresh existing sessions/);
+ await controller.control(active,{operation:'discover',arguments:{query:'fix'}});
+ assert.ok(calls.some(c=>c.path==='/api/threads/task-123?view=timeline'));
+ const turn=controller.get('phone','hello-test-001');assert.ok(turn.timings.context_ready>=turn.timings.transcript_ready);assert.ok(turn.timings.context_bytes<16000);
+ controller.event({method:'item/agentMessage/delta',params:{threadId:'controller-123',turnId:'turn-123',delta:'Hello'}});
+ controller.event({method:'item/completed',params:{threadId:'controller-123',turnId:'turn-123',item:{type:'agentMessage',text:'Hello'}}});
+ controller.event({method:'turn/completed',params:{threadId:'controller-123',turn:{status:'completed'}}});
+ assert.equal(controller.get('phone','hello-test-001').state,'completed');assert.ok(controller.get('phone','hello-test-001').timings.first_response);
+ db.close();
+});

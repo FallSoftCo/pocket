@@ -155,8 +155,11 @@ test('automatic routes retain independent references without silently selecting 
   const context=JSON.parse(input.split('\n')[0].replace('Current NextComp context: ',''));
   assert.equal(context.selectedSession,null);
   assert.deepEqual(context.references.map(ref=>ref.threadId),['dns_work','italian_work']);
-  assert.ok(context.discovery.sessions.some(session=>session.id==='dns_work'));
-  assert.ok(context.discovery.sessions.some(session=>session.id==='italian_work'));
+  assert.ok(context.discovery.catalog.some(session=>session.id==='dns_work'));
+  assert.ok(context.discovery.catalog.some(session=>session.id==='italian_work'));
+  const routedEvidence=await controller.control(controller.active.get(controller.session('phone').thread_id),{operation:'discover',arguments:{threadIds:context.references.map(ref=>ref.threadId)}});
+  assert.ok(routedEvidence.sessions.some(session=>session.id==='dns_work'&&session.availability==='available'));
+  assert.ok(routedEvidence.sessions.some(session=>session.id==='italian_work'&&session.availability==='available'));
   assert.match(input,/Continue both/);
 });
 

@@ -185,3 +185,12 @@ test('total deadline prevents further reads and missing timeline does not claim 
   assert.ok(reads <= 4);
   assert.equal(result.sessions.filter(s=>s.readError==='timeout').length,5);
 });
+
+test('initial context is small metadata only and never waits for unrelated histories', async () => {
+ const calls=[];const threads=Array.from({length:160},(_,i)=>session(`thread_${i}`,'Work', 'Current preview',i));
+ const discovery=new CoordinatorDiscovery({api:async path=>{calls.push(path);if(path.includes('?'))return {threads,nextCursor:'next-page'};throw Error('Unrelated history must not run');}});
+ const result=await discovery.initialSnapshot({threadIds:['thread_90']});
+ assert.equal(calls.length,1);assert.equal(result.catalog.length,16);assert.equal(result.catalog[0].id,'thread_90');
+ assert.deepEqual(result.sessions,[]);assert.equal(result.deferred,true);assert.equal(result.scope.complete,false);
+ assert.ok(JSON.stringify(result).length<16000);
+});

@@ -43,3 +43,5 @@ An implemented route is not a verified end-to-end workflow. A passing fixture is
 - [Foreground voice interaction](VOICE-INTERACTION.md) — capture, keyboard preservation and playback controls.
 
 - [Settings and update access](qualification/settings-update-access-alpha40.json) — visible footer entry and immediately reachable app updates.
+
+- [Voice latency and measurement boundaries](VOICE-LATENCY.md)

@@ -75,6 +75,19 @@ export class CoordinatorDiscovery {
   constructor({api, owns = () => false, clock = Date.now, readTimeoutMs = 3000, totalTimeoutMs = 6000}) {
     Object.assign(this, {api, owns, clock, readTimeoutMs, totalTimeoutMs});
   }
+  async initialSnapshot({threadIds = []} = {}) {
+    // Greetings and direct follow-ups must not wait for unrelated history reads.
+    // This is explicitly partial metadata; semantic routing still uses discover/read.
+    const errors = []; let result;
+    try { result = await bounded(() => this.api('/api/threads?view=coordinator'), 1200); }
+    catch (error) { errors.push({operation:'list', code:errorCode(error)}); }
+    const all = (result?.threads || []).filter(raw => validId(raw?.id) && !this.owns(raw.id)).map(metadata);
+    const explicit = new Set(threadIds.filter(validId));
+    const catalog = [...all.filter(row => explicit.has(row.id)), ...all.filter(row => !explicit.has(row.id))].slice(0, 16);
+    return {deferred:true, sessions:[], catalog, catalogCount:catalog.length, listedCount:all.length,
+      checkedAt:this.clock(), truncated:true, scope:{complete:false,refreshPending:result?.refreshPending===true,nextCursor:result?.nextCursor||null},
+      instruction:'Partial metadata only. Use discover for relevant public history before routing work; read the intended target before changing it. Greetings do not require work discovery.', errors};
+  }
   async discover({query = '', threadIds = [], limit = 6, cursor: startCursor = null} = {}) {
     const checkedAt = this.clock(), deadline = Date.now() + this.totalTimeoutMs;
     const catalogById = new Map(), errors = [];

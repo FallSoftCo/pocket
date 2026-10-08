@@ -42,6 +42,7 @@ export class VoiceController {
     const sessionColumns=db.prepare('PRAGMA table_info(voice_sessions)').all().map(c=>c.name);
     for(const [name,definition] of [['focus',"TEXT NOT NULL DEFAULT 'coordinator'"],['refs',"TEXT NOT NULL DEFAULT '[]'"],['proactive',"INTEGER NOT NULL DEFAULT 0"],['tool_revision','INTEGER NOT NULL DEFAULT 0']])if(!sessionColumns.includes(name))db.exec(`ALTER TABLE voice_sessions ADD COLUMN ${name} ${definition}`);
     if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='correction'))db.exec('ALTER TABLE voice_turns ADD COLUMN correction TEXT');
+    if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='timings'))db.exec("ALTER TABLE voice_turns ADD COLUMN timings TEXT NOT NULL DEFAULT '{}'");
     this.discovery=new CoordinatorDiscovery({api:path=>this.api(path),owns:id=>this.owns(id)||this.hidden(id)});
     db.prepare("UPDATE voice_turns SET state='unknown',error='The server restarted during this turn. Ask to check what happened before repeating the command.' WHERE state IN ('transcribing','thinking')").run();
     codex.on('event',m=>this.event(m));codex.on('disconnected',()=>{this.resumed.clear();for(const [thread,active] of this.active){this.finish(active,'unknown','Connection lost during this turn. Check the session before repeating the command.');this.active.delete(thread);}});
@@ -95,7 +96,12 @@ export class VoiceController {
     const rows=this.db.prepare('SELECT rowid AS cursor,id,state,transcript,response,error,actions,created_at FROM voice_turns WHERE device=? AND rowid<?'+filter+' ORDER BY rowid DESC LIMIT 101').all(device,before);
     const hasEarlier=rows.length>100;const turns=rows.slice(0,100).reverse();return {turns:turns.map(t=>({...t,actions:JSON.parse(t.actions||'[]')})),hasEarlier,before:turns[0]?.cursor??null};
   }
-  get(device,id){const row=this.db.prepare('SELECT id,state,transcript,response,error,actions,created_at FROM voice_turns WHERE device=? AND id=?').get(device,id);return row?{...row,actions:JSON.parse(row.actions)}:null;}
+  get(device,id){const row=this.db.prepare('SELECT id,state,transcript,response,error,actions,created_at,timings FROM voice_turns WHERE device=? AND id=?').get(device,id);return row?{...row,actions:JSON.parse(row.actions),timings:JSON.parse(row.timings||'{}')}:null;}
+  mark(device,id,stage,at=Date.now()){
+    const row=this.db.prepare('SELECT timings FROM voice_turns WHERE device=? AND id=?').get(device,id);if(!row)return;
+    const timings=JSON.parse(row.timings||'{}');if(timings[stage]!==undefined)return;
+    timings[stage]=at;this.db.prepare('UPDATE voice_turns SET timings=? WHERE device=? AND id=?').run(JSON.stringify(timings),device,id);
+  }
   submit(device,id,audio){
     if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id))throw fail('Invalid voice turn ID.');validateVoiceAudio(audio);
     const hash=createHash('sha256').update(audio).digest('hex');const old=this.db.prepare('SELECT hash FROM voice_turns WHERE device=? AND id=?').get(device,id);
@@ -114,23 +120,26 @@ export class VoiceController {
     if(correction)this.db.prepare('UPDATE voice_turns SET correction=? WHERE device=? AND id=?').run(JSON.stringify(correction),device,id);
     void this.run(device,id,null,text);return this.get(device,id);
   }
-  finish(active,state,error=null){clearTimeout(active.timer);this.db.prepare('UPDATE voice_turns SET state=?,error=?,response=? WHERE device=? AND id=?').run(state,error,active.text?.trim()||null,active.device,active.id);}
+  finish(active,state,error=null){this.mark(active.device,active.id,'response_completed');clearTimeout(active.timer);this.db.prepare('UPDATE voice_turns SET state=?,error=?,response=? WHERE device=? AND id=?').run(state,error,active.text?.trim()||null,active.device,active.id);}
   async run(device,id,audio,suppliedText=null){
     let active;try{
       const transcript=(suppliedText??await this.transcribe(audio)).trim();if(!transcript)throw fail('No speech was detected. Press volume down and try again.');
+      this.mark(device,id,'transcript_ready');
       this.db.prepare("UPDATE voice_turns SET transcript=?,state='thinking' WHERE device=? AND id=?").run(transcript,device,id);
-      const s=await this.ensure(device);active={device,id,text:'',thread:s.thread_id,focus:s.focus,selected:s.selected};this.active.set(s.thread_id,active);
+      const s=await this.ensure(device);this.mark(device,id,'coordinator_ready');active={device,id,text:'',thread:s.thread_id,focus:s.focus,selected:s.selected};this.active.set(s.thread_id,active);
       active.timer=setTimeout(()=>{if(this.active.get(s.thread_id)!==active)return;this.finish(active,'unknown','Codex is taking longer than expected. The command may still finish. Check before repeating it.');this.active.delete(s.thread_id);if(active.nativeTurn)void this.codex.call('turn/interrupt',{threadId:s.thread_id,turnId:active.nativeTurn}).catch(()=>{});},180000);active.timer.unref?.();
       const references=JSON.parse(s.refs||'[]');
-      active.discovery=await this.discovery.discover({query:transcript,threadIds:[...(s.focus!=='coordinator'&&s.selected?[s.selected]:[]),...references.slice(-3).map(r=>r.threadId)]});
+      active.discovery=await this.discovery.initialSnapshot({threadIds:[...(s.focus!=='coordinator'&&s.selected?[s.selected]:[]),...references.slice(-3).map(r=>r.threadId)]});
       const correction=JSON.parse(this.db.prepare('SELECT correction FROM voice_turns WHERE device=? AND id=?').get(device,id)?.correction||'null');
-      const recentReports=this.reports?.context?.(device,{limit:3})||[];
+      const recentReports=(this.reports?.context?.(device,{limit:3})||[]).map(report=>({...report,response:typeof report.response==='string'?report.response.slice(0,500):report.response,text:typeof report.text==='string'?report.text.slice(0,500):report.text}));
       const context=JSON.stringify({host:this.host,focus:s.focus,recentReports,selectedSession:s.focus==='coordinator'?null:s.selected,references,correctionOf:correction,proactiveCatchup:!!s.proactive,defaultPermissions:s.full?'full':'review',permissionControls:{threadId:'Explicit runtime change for one session',all:'Explicit runtime change for loaded sessions only; report verified and blocked identities truthfully',effect:'Subsequent turns; existing active work is not automatically restarted'},discovery:active.discovery});
-      const {turn}=await this.codex.call('turn/start',{threadId:s.thread_id,sandboxPolicy:s.full?{type:'dangerFullAccess'}:{type:'readOnly',networkAccess:false},approvalPolicy:'never',input:[{type:'text',text:`Current NextComp context: ${context}\nUser turn: ${transcript}`}],clientUserMessageId:`voice-${id}`});active.nativeTurn=turn.id;
+      this.mark(device,id,'context_ready');this.mark(device,id,'context_bytes',Buffer.byteLength(context));this.mark(device,id,'native_start_requested');
+      const {turn}=await this.codex.call('turn/start',{threadId:s.thread_id,sandboxPolicy:s.full?{type:'dangerFullAccess'}:{type:'readOnly',networkAccess:false},approvalPolicy:'never',input:[{type:'text',text:`Current NextComp context: ${context}\nUser turn: ${transcript}`}],clientUserMessageId:`voice-${id}`});active.nativeTurn=turn.id;this.mark(device,id,'native_started');
     }catch(e){if(active){this.active.delete(active.thread);this.finish(active,e.rpc?'failed':'unknown',e.message);}else this.db.prepare("UPDATE voice_turns SET state='failed',error=? WHERE device=? AND id=?").run(e.message,device,id);}
   }
   event(m){const p=m.params||{},active=this.active.get(p.threadId);if(!active)return;
     if(active.nativeTurn&&p.turnId&&p.turnId!==active.nativeTurn)return;
+    if(m.method==='item/agentMessage/delta')this.mark(active.device,active.id,'first_response');
     if(m.method==='item/tool/call'&&m.id!==undefined){void this.tool(active,p).then(result=>this.codex.answer(m.id,result)).catch(()=>{});return;}
     if(m.id!==undefined){try{this.codex.answer(m.id,{answers:{}});}catch{}return;}
     if(m.method==='item/completed'&&p.item?.type==='agentMessage'&&p.item.phase!=='commentary'){active.text+=`${p.item.text||''}\n`;}
@@ -183,7 +192,7 @@ export class VoiceController {
         return {thread:{id:r.thread.id,name:r.thread.name,cwd:r.thread.cwd,status:r.thread.status,turns:[...turns.values()]},history:{scope:'recent',hasEarlier:!!r.timeline?.hasEarlier},notes:(r.notes||[]).slice(0,10),pending:r.pending,outgoing:(r.outgoing||[]).slice(-10),turnSettings:r.turnSettings};
       }
       case 'select':{if(a.coordinator===true){this.setFocus(active.device,null);active.focus='coordinator';active.selected=null;this.action(active,{type:'select',threadId:null});return {selected:null,name:'NextComp coordinator'};}thread();const r=await this.targetResponse(id);this.setFocus(active.device,id,{mode:'selected'});active.focus='selected';active.selected=id;this.action(active,{type:'select',threadId:id});return {selected:id,name:r.thread.name||r.thread.preview,status:r.thread.status};}
-      case 'create':{if(!active.discovery||active.discovery.errors?.some(e=>e.operation==='list'))throw fail('Refresh existing sessions before creating new work.');if(typeof a.reason!=='string'||!a.reason.trim())throw fail('Explain why this is genuinely new work rather than an existing session.');const r=await post('/api/threads',{id:`voice-${active.id}-${active.counter=(active.counter||0)+1}`,cwd:a.cwd,prompt:a.prompt,permissions:a.permissions||(s.full?'full':'review')});let result=r;
+      case 'create':{if(!active.discovery||active.discovery.deferred||active.discovery.errors?.some(e=>e.operation==='list'))throw fail('Refresh existing sessions before creating new work.');if(typeof a.reason!=='string'||!a.reason.trim())throw fail('Explain why this is genuinely new work rather than an existing session.');const r=await post('/api/threads',{id:`voice-${active.id}-${active.counter=(active.counter||0)+1}`,cwd:a.cwd,prompt:a.prompt,permissions:a.permissions||(s.full?'full':'review')});let result=r;
         for(let n=0;result.state==='queued'||result.state==='creating';n++){if(n>=60)return {...result,note:'Creation is still pending. Check sessions before creating another.'};await new Promise(resolve=>setTimeout(resolve,250));result=await get(`/api/session-starts/${r.id}`);}
         if(result.state==='started'){this.recordRoute(active,{id:result.thread_id,name:result.name||a.prompt?.slice(0,90)||'New task'},'create',{mode:'auto',state:'submitted',replyId:result.id,reason:a.reason});if(a.select===true){this.setFocus(active.device,result.thread_id,{mode:'selected'});active.focus='selected';active.selected=result.thread_id;this.action(active,{type:'select',threadId:result.thread_id});}}
         return result;}
