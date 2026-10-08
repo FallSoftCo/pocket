@@ -48,7 +48,9 @@ object PocketTranscript {
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
     suspend fun load(older:Boolean=false,bridgeCursor:String?=null){
-        val id=Pocket.selected?:return;if(loading||owner!=id||(older&&(!earlier||before==null)))return
+        val id=Pocket.selected?:return
+        if(owner!=id||(older&&(!earlier||before==null)))return
+        if(loading){if(!older&&bridgeCursor==null)missedUpdates=true;return}
         val ticket=generation;val scope=scopeKey();val profileLocal=Pocket.local
         fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
         val cursor=bridgeCursor?:if(older)before else null
@@ -88,7 +90,18 @@ object PocketTranscript {
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             rememberRecent();revision++;Pocket.error="";succeeded=true;trace()
         }catch(e:CancellationException){throw e}catch(e:Exception){if(current())Pocket.error=PocketNetwork.error(e)}
-        finally{if(current()){if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true};loading=false;if(succeeded)bridgeBefore?.let{next->Pocket.scope.launch{load(bridgeCursor=next)}};if(missedUpdates){missedUpdates=false;Pocket.scope.launch{delay(450);Pocket.scheduleRefresh()}}}}
+        finally {
+            if(current()) {
+                if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
+                loading=false
+                if(missedUpdates) {
+                    missedUpdates=false
+                    Pocket.scope.launch{if(!succeeded)delay(450);if(current())PocketTranscript.load()}
+                } else if(succeeded) {
+                    bridgeBefore?.let{next->Pocket.scope.launch{load(bridgeCursor=next)}}
+                }
+            }
+        }
     }
     fun apply(update:JSONObject,buffer:Boolean=true){
         if(update.s("threadId")!=Pocket.selected||owner!=Pocket.selected||ownerScope!=scopeKey())return
@@ -96,10 +109,13 @@ object PocketTranscript {
         if(loading&&buffer){
             val key=update.optJSONObject("row")?.s("id")?:update.s("turnId")
             buffered[key]=update
+            // Live progress is readable immediately; replay still protects snapshot reconciliation.
+            apply(update,false)
             if(buffered.size>100||buffered.values.sumOf{it.toString().length}>512000){buffered.clear();missedUpdates=true}
             return
         }
-        val turnId=update.s("turnId");if(turnId.isBlank())return
+        val turnId=update.s("turnId")
+        if(turnId.isBlank()){return}
         val next=rows.toMutableList()
         fun put(row:JSONObject){
             val at=next.indexOfFirst{it.s("id")==row.s("id")}

@@ -27,6 +27,14 @@ class TranscriptHistoryTest {
         assertEquals(listOf("past","a","b"),result.map{it.id})
         assertEquals("fresh",result[1].text)
     }
+    @Test fun delayedRecentSnapshotCannotEraseImmediatelyDisplayedFinalAnswer(){
+        val displayed=listOf(Row("answer","Final result received live",42),Row("end","Completed",43))
+        val slowPage=listOf(Row("question","Original request",1),Row("answer","Still working",39))
+        val merged=merge(displayed,slowPage)
+        assertEquals("Final result received live",merged.single{it.id=="answer"}.text)
+        assertEquals("Completed",merged.single{it.id=="end"}.text)
+        assertEquals(1,merged.count{it.id=="answer"})
+    }
     @Test fun overlappingPagesDeduplicateByMessageIdentityAndAcceptUpdatedText(){
         val result=merge(listOf(Row("a","draft",1),Row("b")),listOf(Row("a","complete",2),Row("b"),Row("c")))
         assertEquals(listOf("a","b","c"),result.map{it.id})

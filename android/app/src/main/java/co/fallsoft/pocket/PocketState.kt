@@ -310,7 +310,7 @@ object Pocket {
                 if(recovered){refresh();scheduleRefresh()}
             }
             "coordinatorReport" -> {acceptNotification(json.getJSONObject("notification"),"report");PocketWorkUpdates.refresh()}
-            "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");if(PocketVoice.foreground&&!PocketVoice.active&&selected==n.s("thread_id"))refreshDetail();refresh()}
+            "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");refresh()}
             "reply" -> {if(json.s("state")=="accepted")rememberSessionInteraction(json.s("threadId"),"reply:"+json.s("id"));if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}
             "turnRecovery" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("recovery",json.optJSONObject("recovery"))}}
@@ -349,6 +349,11 @@ object Pocket {
         if(n.s("kind")=="app_update"){if(transport!="history")PocketUpdates.offer(n.optBoolean("_local",local));return}
         val id=n.optLong("id");if(id<=0)return
         val notificationLocal=n.optBoolean("_local",local)
+        // Invalidate history before notification-display deduplication, on the UI scope.
+        if(transport in listOf("fcm","fcm-normal","socket")){
+            val thread=n.s("thread_id")
+            scope.launch{if(notificationLocal==local&&thread.isNotBlank()&&thread==selected)refreshDetail()}
+        }
         val seen=prefs.getStringSet(key("seenIds",notificationLocal),emptySet())!!.toMutableSet()
         if(!seen.add(id.toString()))return
         val bounded=seen.sortedByDescending{it.toLongOrNull()?:0}.take(512).toSet()
