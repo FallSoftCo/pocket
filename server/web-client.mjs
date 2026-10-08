@@ -12,9 +12,11 @@ import {Codex} from './codex.mjs';
 import {sessionIdentity,workTime} from '../web/model.mjs';
 
 // Separate loopback gateway: no owner credentials, database writes or backend restart.
-export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=true,metadata=null,key=randomBytes(32)}={}) {
+export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=true,metadata=null,key=randomBytes(32),basePath='/',migrationSourceOrigin=null,migrationTargetOrigin=null}={}) {
  const target=new URL(backend);if(!['127.0.0.1','localhost','[::1]'].includes(target.hostname))throw Error('Web backend must be loopback.');
  if(!origin||new URL(origin).origin!==origin||(secure&&!origin.startsWith('https://')))throw Error('Set WEB_ORIGIN to the private HTTPS origin.');
+ if(!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(basePath))throw Error('WEB_BASE_PATH must be a rooted directory path ending in /.');
+ for(const value of [migrationSourceOrigin,migrationTargetOrigin])if(value&&(new URL(value).origin!==value||!value.startsWith('https://')||new URL(value).hostname!==new URL(origin).hostname))throw Error('Migration origins must be HTTPS origins on the same private host.');
  const app=express(),server=http.createServer(app),sockets=new WebSocketServer({noServer:true,maxPayload:16384});
  const cookieName=secure?'__Host-nextcomp':'nextcomp-test';
  const sign=token=>createHmac('sha256',key).update(token).digest('base64url');
@@ -25,6 +27,7 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
  const csrf=(req,res,next)=>req.headers.origin===origin?next():res.status(403).json({error:'Open NextComp at its configured private address.'});
  const forward=async(req,path,body,token)=>fetch(new URL(path,target),{method:req.method,redirect:'error',headers:{...(token?{Authorization:`Bearer ${token}`}:{ }),'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(45000)});
  app.post('/web/pair',csrf,async(req,res,next)=>{try{const r=await forward(req,'/api/pair',{code:req.body.code,name:String(req.body.name||'NextComp browser').slice(0,100)});const data=await r.json();if(r.ok){setCookie(res,data.token);res.json({id:data.id,host:data.host});}else res.status(r.status).json({error:data.error});}catch(e){next(e);}});
+ app.get('/web/config',(_req,res)=>res.json({basePath,migrationSourceOrigin,migrationTargetOrigin}));
  app.post('/web/logout',csrf,(req,res)=>{setCookie(res,null);res.json({ok:true});});
  app.use('/api',async(req,res,next)=>{
   const token=cookie(req);if(!token)return res.status(401).json({error:'Pair this browser to continue.'});
@@ -58,7 +61,11 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
    res.status(r.status).json(data);
   }catch(e){next(e);}
  });
- const assets=resolve(dirname(fileURLToPath(import.meta.url)),'../web');app.use(express.static(assets,{etag:true}));
+ const assets=resolve(dirname(fileURLToPath(import.meta.url)),'../web');
+ app.get('/migration.html',(_req,res)=>{if(!migrationTargetOrigin)return res.sendStatus(404);res.set('Content-Security-Policy',`default-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors ${migrationTargetOrigin}; base-uri 'none'`);res.type('html').send('<!doctype html><meta charset="utf-8"><title>NextComp local profile transfer</title><script type="module" src="/migration-frame.mjs"></script>');});
+ app.get('/',(_req,res)=>{let html=readFileSync(resolve(assets,'index.html'),'utf8').replace(/(src|href)="\/([^"]+)"/g,(_match,attribute,path)=>`${attribute}="${basePath}${path}"`);if(migrationSourceOrigin)res.set('Content-Security-Policy',res.get('Content-Security-Policy')+`; frame-src ${migrationSourceOrigin}`);if(migrationTargetOrigin)html=html.replace('</body>',`<p class="access-link"><a href="${migrationTargetOrigin}/nextcomp/">Open NextComp at its cleaner address ↗</a></p></body>`);res.type('html').send(html);});
+ app.get('/manifest.webmanifest',(_req,res)=>{const manifest=JSON.parse(readFileSync(resolve(assets,'manifest.webmanifest'),'utf8'));Object.assign(manifest,{id:basePath,start_url:basePath,scope:basePath});manifest.icons=manifest.icons.map(icon=>({...icon,src:basePath+icon.src.replace(/^\//,'')}));res.type('application/manifest+json').json(manifest);});
+ app.use(express.static(assets,{etag:true,index:false}));
  server.on('upgrade',(req,socket,head)=>{
   const token=cookie(req);if(req.url!=='/events'||req.headers.origin!==origin||!token){socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');return;}
   const upstream=new WebSocket(new URL('/events',backend.replace(/^http/,'ws')),{headers:{Authorization:`Bearer ${token}`}});socket.on('close',()=>upstream.terminate());upstream.on('error',()=>socket.destroy());upstream.on('unexpected-response',(_req,r)=>{r.resume();socket.destroy();upstream.terminate();});
@@ -79,5 +86,5 @@ export function runtimeMetadata(codex=new Codex()){
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const folder=process.env.WEB_DATA||resolve(homedir(),'.local/share/nextcomp-web');mkdirSync(folder,{recursive:true,mode:0o700});const keyPath=resolve(folder,'cookie-key');if(!existsSync(keyPath))writeFileSync(keyPath,randomBytes(32),{mode:0o600,flag:'wx'});chmodSync(keyPath,0o600);
- const {server}=createWebClient({origin:process.env.WEB_ORIGIN,backend:process.env.POCKET_URL,metadata:process.env.WEB_LEGACY_METADATA==='1'?runtimeMetadata():null,key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
+ const {server}=createWebClient({origin:process.env.WEB_ORIGIN,basePath:process.env.WEB_BASE_PATH||'/',migrationSourceOrigin:process.env.WEB_MIGRATION_SOURCE_ORIGIN||null,migrationTargetOrigin:process.env.WEB_MIGRATION_TARGET_ORIGIN||null,backend:process.env.POCKET_URL,metadata:process.env.WEB_LEGACY_METADATA==='1'?runtimeMetadata():null,key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
 }
