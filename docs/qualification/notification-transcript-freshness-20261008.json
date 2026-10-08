@@ -25,7 +25,14 @@
   },
   "nativeQualification": {
     "emulator": "Candidate installed; held-history fixture observed subsequent final snapshots fetched after notification. Visual timing unqualified because launcher ANR obscured content. Owned emulator and fixture stopped.",
-    "physical": "pending installation"
+    "physical": {
+      "installed": true,
+      "versionCode": 64,
+      "versionName": "0.5.0-alpha.46",
+      "method": "Same-signature in-place update; no pairing/data reset",
+      "installationVerifiedAt": "2026-10-08T18:26:25",
+      "notificationToVisibleTranscriptTiming": "not yet measured on handset"
+    }
   },
   "physicalPushRoundtrip": "not yet qualified",
   "signedReleaseBuild": "passed",
