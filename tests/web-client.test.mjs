@@ -68,3 +68,24 @@ test('bounded metadata snapshot preserves partial inventory on cache hits',async
  const calls=[];const metadata=runtimeMetadata({async connect(){},async call(method,args){calls.push([method,args]);return {data:[{id:'thread-'+calls.length,createdAt:100}],nextCursor:'more-'+calls.length};}});
  const fresh=await metadata.list();assert.equal(fresh.partial,true);assert.equal(calls.length,6);const cached=await metadata.list();assert.equal(cached.partial,true);assert.equal(calls.length,6);assert.deepEqual(cached.threads,fresh.threads);
 });
+
+test('canonical catalog passes through live identity, recency and pagination; backend owns child admission',async t=>{
+ const token='9'.repeat(64),origin='https://private.example.test',calls=[];
+ const child={id:'child-123',name:'Live child',parentThreadId:'parent-123',isChild:true,canAcceptDirectInput:false,agentNickname:'Review',recencyAt:1700000000123,activityAt:1700000000456,status:{type:'active'},unreadCount:3};
+ const page={threads:[child],nextCursor:'next+page/2',refreshPending:true};
+ const detail={thread:{...child,turns:[]},timeline:{rows:[{id:'answer',kind:'message',text:'Useful live result'}]},pending:[],outgoing:[],notifications:[],notes:[],revision:42};
+ const upstream=http.createServer((req,res)=>{calls.push({url:req.url,method:req.method,authorization:req.headers.authorization});res.setHeader('Content-Type','application/json');if(req.url==='/api/pair'){res.end(JSON.stringify({token,id:'canonical-fixture'}));return;}
+  if(req.headers.authorization!==`Bearer ${token}`){res.statusCode=401;res.end('{"error":"Unauthorized"}');return;}
+  if(req.url.startsWith('/api/threads?'))res.end(JSON.stringify(page));
+  else if(req.url==='/api/threads/child-123?view=timeline')res.end(JSON.stringify(detail));
+  else if(req.url==='/api/threads/child-123/reply'||req.url==='/api/voice/start'){res.statusCode=409;res.end(JSON.stringify({error:'Open parent task',parentThreadId:'parent-123'}));}
+  else{res.statusCode=404;res.end('{}');}});
+ upstream.listen(0,'127.0.0.1');await once(upstream,'listening');t.after(()=>upstream.close());
+ const gateway=createWebClient({origin,backend:`http://127.0.0.1:${upstream.address().port}`});gateway.server.listen(0,'127.0.0.1');await once(gateway.server,'listening');t.after(()=>gateway.server.close());
+ const base=`http://127.0.0.1:${gateway.server.address().port}`,pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}),cookie=pair.headers.get('set-cookie').split(';')[0];calls.length=0;
+ const cursorPath='/api/threads?cursor=next%2Bpage%2F2&search=Review';
+ assert.deepEqual(await (await fetch(base+cursorPath,{headers:{Cookie:cookie}})).json(),page);
+ assert.deepEqual(await (await fetch(base+'/api/threads/child-123?view=timeline',{headers:{Cookie:cookie}})).json(),detail);
+ for(const path of ['/api/threads/child-123/reply','/api/voice/start']){const response=await fetch(base+path,{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({threadId:'child-123',text:'Guidance'})});assert.equal(response.status,409);assert.deepEqual(await response.json(),{error:'Open parent task',parentThreadId:'parent-123'});}
+ assert.deepEqual(calls.map(x=>x.url),[cursorPath,'/api/threads/child-123?view=timeline','/api/threads/child-123/reply','/api/voice/start']);assert.ok(calls.every(x=>x.authorization===`Bearer ${token}`));
+});

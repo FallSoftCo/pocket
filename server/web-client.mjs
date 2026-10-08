@@ -79,5 +79,5 @@ export function runtimeMetadata(codex=new Codex()){
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const folder=process.env.WEB_DATA||resolve(homedir(),'.local/share/nextcomp-web');mkdirSync(folder,{recursive:true,mode:0o700});const keyPath=resolve(folder,'cookie-key');if(!existsSync(keyPath))writeFileSync(keyPath,randomBytes(32),{mode:0o600,flag:'wx'});chmodSync(keyPath,0o600);
- const {server}=createWebClient({origin:process.env.WEB_ORIGIN,backend:process.env.POCKET_URL,metadata:runtimeMetadata(),key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
+ const {server}=createWebClient({origin:process.env.WEB_ORIGIN,backend:process.env.POCKET_URL,metadata:process.env.WEB_LEGACY_METADATA==='1'?runtimeMetadata():null,key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
 }

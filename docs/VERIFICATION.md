@@ -1,3 +1,11 @@
+## Alpha41 catalog and durable continuation
+
+The integrated canonical catalog preserves parent/root identity, input capability, pagination and work-recency metadata across Android and the browser gateway. Unsupported children remain inspectable without a writer. Optimized native synthetic checks verify distinct session routing, isolated drafts, immediate Settings/update access, IME-open volume-key recording state and no-speech feedback, parent navigation, stable seats across reconnect and explicit Recent reconciliation. Automatic rapid promotion of reactivated work remains separate from the qualified explicit reconciliation.
+
+Durable continuation requires evidence-backed owner admission rather than an idle-session heuristic. Exact accepted-turn checkpoints preserve original scope through partial progress. SQLite restart, unknown-acknowledgement reconciliation, sparse multi-hour backoff, cancellation, native goal stops and local storage health are covered by353 backend tests. Both Android variants pass246 tests across51 suites, both lints and optimized signed builds. Physical hardware-key and provider speech quality were not newly qualified. Gallery captures are synthetic; the registered isolated gallery checker remains queued.
+
+See [continuation qualification](qualification/durable-continuation-2026-10-07.json), [catalog qualification](qualification/session-catalog-candidate.json) and [continuation contract](CONTINUATION.md). Handset installation is recorded separately from emulator evidence.
+
 ## Contextual coordinator, catch-up, scheduled reports and session speech (alpha36)
 
 The coordinator uses bounded live discovery and relevant public history to match existing work, retains explicit direct-session intent and queue/steer, and returns named correctable delivery receipts. Per-device catch-up distinguishes foreground checking and actual represented findings from background reads or queued audio. Unresolved questions remain actionable.

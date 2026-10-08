@@ -39,3 +39,7 @@ The optional Settings and voice-status-row action borrows Landlock's black decor
 - **Foreground capture:** microphone and volume-key input use the same recording control; capture state stays visible in the current chat while keyboard drafts survive. Playback media volume remains inline with speech controls and preserves mute. Hardware handling is scoped to the foreground activity; saved uncertain turns are reconciled instead of creating a new request.
 
 Settings and app updates must be visible at the start of the footer menu. Activity entries must not push essential maintenance controls below a collapsed section. Opening Settings dismisses the originating popup.
+
+## Evidence-backed continuous work
+
+A completed turn does not certify a finished task. Owner-reviewed unfinished work can enter a persistent continuation chain bound to its exact latest turn. Workers keep working within a turn and checkpoint continue, completed or a genuine input dependency before ending. Original scope remains separate from later progress. Native task goals, cancellation, input, permissions, runtime/storage health and uncertain delivery gate dispatch. Successful progress resets sparse-backoff budget; failed progress does not. Missing assessment is retained without guessing or model polling.

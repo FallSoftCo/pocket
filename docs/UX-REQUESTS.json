@@ -1944,6 +1944,31 @@
         "docs/SESSION-CATALOG.md",
         "docs/qualification/session-catalog-candidate.json"
       ]
+    },
+    {
+      "id": "audited-durable-task-continuation",
+      "requirement": "Audit the full paginated session inventory and resume independently actionable unfinished authorized work. Durable continuation must survive interruptions and outages until completion or a genuine user dependency, without replaying uncertain external actions or blindly restarting historical tasks.",
+      "status": "backend_activated_optimized_native_qualified",
+      "implementation": [
+        "Full inventory includes explicit sub-agent source pagination; separate managed children, explicit stops, input and external dependencies, uncertain delivery and active workers.",
+        "Owner-only evidence-backed continuation admission reads exact latest turn; authenticated worker checkpoints distinguish continue, completed and needsInput.",
+        "Persist original task context, request identity and retry due times; preserve models, permissions, cancellation and usage policies. Keep prompt progress within the current turn and use continuation only as a safety net.",
+        "Canonical session catalog integrated; browser gateway proxies canonical identity, capability, recency and pagination without a duplicate metadata overlay."
+      ],
+      "evidence": [
+        "server/turn-recovery.mjs",
+        "scripts/task-checkpoint.mjs",
+        "tests/turn-recovery.test.mjs",
+        "docs/qualification/durable-continuation-2026-10-07.json",
+        "docs/SESSION-CATALOG.md",
+        "server/recovery-health.mjs",
+        "tests/recovery-health.test.mjs"
+      ],
+      "limits": [
+        "Historical bounded-tail inventory review is not proof that every historical goal completed.",
+        "Ambiguous external delivery, actual user stops and missing checkpoint assessments remain held rather than guessed.",
+        "Android alpha41 signed qualification and physical installation are recorded separately."
+      ]
     }
   ],
   "current_state": {

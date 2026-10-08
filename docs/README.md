@@ -23,6 +23,8 @@ NextComp connects a person on Android to ongoing work in their own computing env
 - [Notification read handling](NOTIFICATION-READS.md) and [spoken captions](SPEECH-CAPTIONS.md).
 - [Speech activity tracking](SPEECH-USAGE.md): local generation/playback counters, blocked-audio safeguards and billing limits.
 - [Work updates](WORK-UPDATES.md): scheduled reports outside coordinator chat, retained history, exact unread state and direct session links.
+- [Audited task continuation](CONTINUATION.md): evidence-backed resumption, durable checkpoints, sparse recovery and protected stops.
+- [Session catalog](SESSION-CATALOG.md): canonical identity, work recency, child capabilities and stable native discovery.
 - [Native linked images](LINKED-IMAGES.md): previews and a zoomable viewer in the conversation, including authenticated shared images.
 - [Inline language immersion](ITALIAN-VIRTUAL-IMMERSION.md), [reading and motion design](IMMERSION-PERCEPTION-DESIGN.md), and [versioned qualification](qualification/automatic-inline-cycling.md).
 - [Maintaining the backend](MAINTAINER.md) and [release process](RELEASING.md).

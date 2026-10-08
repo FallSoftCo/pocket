@@ -1,5 +1,6 @@
 import {RecoveryQueue} from './recovery-queue.mjs';
 import {TurnRecovery,permissionRecoveryAudit} from './turn-recovery.mjs';
+import {recoveryStorageReady,recoveryUsagePolicy} from './recovery-health.mjs';
 import {SessionDiscovery,INTERACTIVE_SOURCES} from './session-discovery.mjs';
 import {catalogFields,sessionIdentity,sessionWorkTime,requireDirectSessionInput} from './session-catalog.mjs';
 import {SessionCatchup} from './session-catchup.mjs';
@@ -146,6 +147,8 @@ const turnRecovery=new TurnRecovery({db,
   read:async threadId=>{await codex.connect();const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});return history.read(thread,{summary:true});},
   health:async(threadId,kind,thread)=>{
     if(!codex.ready||syncing.has(threadId))return false;
+    if(!recoveryStorageReady(dir))return false;
+    const policy=await recoveryUsagePolicy(codex,threadId);if(!policy.ok)return policy;
     if(thread?.goal&&['paused','budgetLimited','usageLimited','tokenLimited'].includes(thread.goal.status))return {ok:false,blocked:true,reason:'The task’s usage-stop policy is paused. Recovery will not override it.'};
     if([...pending.values()].some(m=>m.params?.threadId===threadId))return {ok:false,blocked:true,reason:'This task has an unresolved request that needs your answer before continuing.'};
     if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state='unknown'").get(threadId))return {ok:false,blocked:true,reason:'Earlier message delivery is uncertain. Reconcile that message before continuing; it has not been sent again.'};
@@ -473,6 +476,30 @@ app.post('/api/threads/:id/recovery',route(async(req,res)=>{
  const snapshot=await history.read(thread,{summary:true});const latest=snapshot.turns?.at(-1);
  if(!latest||latest.id!==req.body.turnId)return res.status(409).json({error:'The failed turn is no longer the latest turn.'});
  const scheduled=turnRecovery.observe(threadId,latest);res.json({scheduled,recovery:turnRecovery.get(threadId)});
+}));
+app.post('/api/threads/:id/continuation',owner,route(async(req,res)=>{
+ if(typeof req.body.evidence!=='string'||!req.body.evidence.trim()||req.body.evidence.length>8000)return res.status(400).json({error:'Provide a bounded evidence-backed continuation assessment.'});
+ const threadId=requireId(req.params.id);await codex.connect();
+ const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});
+ const snapshot=await history.read(thread,{summary:true});const latest=snapshot.turns?.at(-1);
+ if(!latest||latest.id!==req.body.turnId)return res.status(409).json({error:'Read the current task before authorizing continuation.'});
+ const managedChild=sessionIdentity(thread).isChild;
+ const needsInput=[...pending.values()].some(m=>m.params?.threadId===threadId);
+ const uncertainDelivery=!!db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('unknown','sending','queued')").get(threadId);
+ const policy=await recoveryUsagePolicy(codex,threadId);
+ const usageStopped=!policy.ok||['paused','budgetLimited','usageLimited','tokenLimited'].includes(thread.goal?.status);
+ const scheduled=turnRecovery.authorizeContinuation(snapshot,{...req.body,managedChild,needsInput,uncertainDelivery,usageStopped});
+ if(!scheduled)return res.status(409).json({error:'Continuation was not admitted; inspect stop, input and delivery state.',recovery:turnRecovery.get(threadId)||null});
+ res.json({scheduled,recovery:turnRecovery.get(threadId)});
+}));
+app.post('/api/threads/:id/continuation/checkpoint',owner,route(async(req,res)=>{
+ if(!['continue','completed','needsInput'].includes(req.body.state)||typeof req.body.evidence!=='string'||!req.body.evidence.trim()||req.body.evidence.length>8000)return res.status(400).json({error:'Provide a task checkpoint and concrete evidence.'});
+ const threadId=requireId(req.params.id);await codex.connect();
+ const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});
+ const snapshot=await history.read(thread,{summary:true});const latest=snapshot.turns?.at(-1);
+ const accepted=turnRecovery.recordCheckpoint(snapshot,{...req.body,turnId:req.body.turnId||latest?.id});
+ if(!accepted)return res.status(409).json({error:'This checkpoint does not match active authorized work.'});
+ res.json({accepted:true,recovery:turnRecovery.get(threadId)});
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null,recent:req.query.view==='timeline'});

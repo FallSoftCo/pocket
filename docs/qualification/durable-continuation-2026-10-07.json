@@ -1,0 +1,99 @@
+{
+  "scope": "Explicitly audited unfinished terminal work and durable runtime interruption recovery",
+  "status": "backend-activated",
+  "ownedFiles": [
+    "server/turn-recovery.mjs",
+    "tests/turn-recovery.test.mjs",
+    "server/recovery-health.mjs",
+    "tests/recovery-health.test.mjs",
+    "scripts/task-checkpoint.mjs"
+  ],
+  "checks": {
+    "nodeSyntax": "pass",
+    "recoveryTests": 31,
+    "failures": 0,
+    "healthTests": 3
+  },
+  "contract": {
+    "admission": "authorizeContinuation(thread, assessment) requires latest terminal turn, matching turnId, authorized and unfinished true, and nonempty evidence. Interrupted admission additionally requires runtimeInterrupted true.",
+    "exclusions": [
+      "explicitStop",
+      "cancelled",
+      "needsInput",
+      "usageStopped",
+      "managedChild",
+      "uncertainDelivery",
+      "completed"
+    ],
+    "observation": "observe(threadId, turn, assessment) may admit an explicitly assessed runtime interruption; an unassessed interruption remains conservative and cancels recovery.",
+    "durability": "Admission evidence, exact source turn, request identity, retry count and due time persist in SQLite. Runtime interruption within the chain preserves original source and accumulated retry budget.",
+    "completion": "Registered workers receive CONTINUATION_INPUT requiring scripts/task-checkpoint.mjs before terminal response. Continue checkpoints schedule the same durable chain; completed checkpoints finish; needsInput blocks. Missing checkpoint retains awaitingAssessment and never infers completion or starts a model polling loop.",
+    "health": "Existing runtime health, pending input, outgoing delivery, permissions, usage stops and quota reset checks remain required before dispatch. Start inherits existing model and permissions and sends the existing preserved-context recovery input. Native goal status is read through thread/goal/get; unavailable policy evidence delays recovery. Local data storage requires 64MiB available headroom.",
+    "checkpoint": "recordCheckpoint(thread,{turnId,state:continue|completed|needsInput,evidence}) requires exact latest accepted recovery turn. Durable per-turn receipts are immutable and duplicate-idempotent. Exact client request receipts may reconcile lost start acknowledgement without a second start.",
+    "backoff": "Total attempts remain diagnostic; independent durable backoff_attempts resets only on successful completed continuation progress. Failed/interrupted/health outages retain their sparse budget. Five successful chunks remain quick across restarts.",
+    "context": "Original audited authorization scope persists separately from subsequent worker progress checkpoints; prompt includes original scope plus latest evidence bounded to 8000 characters.",
+    "failureIdentity": "One-time legacy backfill excludes registered continuation chains. Only actual failed-turn observations add new failure IDs; completed partial/progress finals remain useful catch-up content."
+  },
+  "verifiedCases": [
+    "no historical idle inference",
+    "exact turn admission",
+    "file-backed database close/reopen",
+    "concurrent tick deduplication",
+    "12-hour-away admission",
+    "runtime interruption across restarts",
+    "backoff budget retained through repeated interruption",
+    "explicit cancellation",
+    "pending input exclusion",
+    "usage-stop exclusion",
+    "unknown delivery no replay",
+    "new user work supersedes admitted continuation",
+    "long outage sparse health/history reads",
+    "worker continue checkpoint across partial finals",
+    "real input checkpoint",
+    "missing checkpoint retains unfinished state",
+    "stale/conflicting/duplicate checkpoint handling",
+    "checkpoint reconciles lost start acknowledgement",
+    "five quick successful progress chunks then sparse outage",
+    "original no-email/one-owner audit scope retained",
+    "completed partial finals never marked failed on restart"
+  ],
+  "limits": [
+    "Historical audit uses bounded rollout tails, not full semantic certification of every old goal.",
+    "Unassessed interruption may be an explicit stop; it is not blindly restarted.",
+    "Missing worker checkpoint remains awaitingAssessment rather than inferred complete or model-polled.",
+    "Physical recording/provider quality and final Android delivery are separate qualification.",
+    "No unrelated applications, external messages, charges or uncertain submissions were replayed."
+  ],
+  "integration": {
+    "ownerOnlyAdmission": "Reads exact latest native terminal turn; rejects managed children, outstanding input, uncertain outbox delivery and task usage stops.",
+    "checkpoint": "Owner-authenticated latest-turn checkpoint endpoint and local original-session helper integrated.",
+    "tests": {
+      "backend": 353,
+      "androidPerVariant": 246,
+      "androidSuitesPerVariant": 51,
+      "androidBothLints": "pass",
+      "signedBuild": "pass"
+    },
+    "liveAudit": "Full native inventory including explicit subAgent pagination; bounded local transcript evidence and exact native reads before changes. Seven existing independent owners resumed; children and historical ambiguous tasks were preserved.",
+    "restart": "Five running continuation turn IDs preserved through controlled bridge-only restart; one due waiting continuation accepted once. Native daemon, pairing, outboxes and transcript ownership retained.",
+    "realCheckpoints": "Existing workers reported continue and automatically advanced. Jobsearcher reconciliation reported completed before a newer explicit user instruction superseded its chain.",
+    "modelsAndPermissions": "Continuation starts inherit existing native settings; no model or permission override.",
+    "uncertainDelivery": "Older coordinator outcomes inspected against native receipts; none blindly resent.",
+    "nativeSmoke": {
+      "release": "0.5.0-alpha.41 / code59",
+      "optimizedApkSha256": "8c87402cda788960a7baebad457d316743a6706b15a15492cd0ee343f7101078",
+      "checks": [
+        "immediate settings/update access",
+        "distinct thread navigation",
+        "isolated retained drafts",
+        "IME-open volume-key capture and visible timer/error",
+        "read-only child and parent chain",
+        "explicit Recent promotion",
+        "stable seats across reconnect"
+      ],
+      "environment": "Owned API34 emulator and synthetic fixture; physical provider and hardware keys not requalified",
+      "gallery": "8bar/?collection=nextcomp-alpha41-native-smoke",
+      "galleryChecker": "Registered isolated checker queued; no layout-success claim"
+    }
+  }
+}
