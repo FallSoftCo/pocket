@@ -61,8 +61,8 @@
     "Historical audit uses bounded rollout tails, not full semantic certification of every old goal.",
     "Unassessed interruption may be an explicit stop; it is not blindly restarted.",
     "Missing worker checkpoint remains awaitingAssessment rather than inferred complete or model-polled.",
-    "Physical recording/provider quality and final Android delivery are separate qualification.",
-    "No unrelated applications, external messages, charges or uncertain submissions were replayed."
+    "No unrelated applications, external messages, charges or uncertain submissions were replayed.",
+    "Physical recording/provider quality remains separate from confirmed handset APK installation."
   ],
   "integration": {
     "ownerOnlyAdmission": "Reads exact latest native terminal turn; rejects managed children, outstanding input, uncertain outbox delivery and task usage stops.",
@@ -94,6 +94,15 @@
       "environment": "Owned API34 emulator and synthetic fixture; physical provider and hardware keys not requalified",
       "gallery": "8bar/?collection=nextcomp-alpha41-native-smoke",
       "galleryChecker": "Registered isolated checker queued; no layout-success claim"
+    },
+    "phone": {
+      "versionCode": 59,
+      "versionName": "0.5.0-alpha.41",
+      "method": "Same-signer in-place ADB install with data retained; SSH unavailable",
+      "installedApkSha256": "660b945057e672aced6a6b7423dc06ba1ef77fbc28b77161561d41f9c7d0790e",
+      "independentOnDeviceHash": "matches",
+      "pairingDatabase": "Existing device registration retained; no revocation or re-pairing",
+      "physicalKeysAndProvider": "Not newly qualified; no live user input injected"
     }
   }
 }

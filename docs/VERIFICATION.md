@@ -4,7 +4,7 @@ The integrated canonical catalog preserves parent/root identity, input capabilit
 
 Durable continuation requires evidence-backed owner admission rather than an idle-session heuristic. Exact accepted-turn checkpoints preserve original scope through partial progress. SQLite restart, unknown-acknowledgement reconciliation, sparse multi-hour backoff, cancellation, native goal stops and local storage health are covered by353 backend tests. Both Android variants pass246 tests across51 suites, both lints and optimized signed builds. Physical hardware-key and provider speech quality were not newly qualified. Gallery captures are synthetic; the registered isolated gallery checker remains queued.
 
-See [continuation qualification](qualification/durable-continuation-2026-10-07.json), [catalog qualification](qualification/session-catalog-candidate.json) and [continuation contract](CONTINUATION.md). Handset installation is recorded separately from emulator evidence.
+See [continuation qualification](qualification/durable-continuation-2026-10-07.json), [catalog qualification](qualification/session-catalog-candidate.json) and [continuation contract](CONTINUATION.md). The same-signer code59 handset installation succeeded and its installed base APK independently matches SHA-256 `660b945057e672aced6a6b7423dc06ba1ef77fbc28b77161561d41f9c7d0790e`. App data and device registration were retained. This installation evidence does not qualify physical key interaction or provider speech.
 
 ## Contextual coordinator, catch-up, scheduled reports and session speech (alpha36)
 
