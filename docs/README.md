@@ -17,7 +17,7 @@ NextComp connects a person on Android to ongoing work in their own computing env
 
 - [Codex and Losangelex backend selection](LOSANGELEX-BACKEND.md): interaction modes, private registration, team controls and origin-bound attention.
 - [Browser client for Pixelbook Go](WEB-CLIENT.md): private gateway, keyboard/touch flows, pairing, PWA and browser limitations.
-- [Setup](../README.md#setup), [deployment](DEPLOYMENT.md) and [Firebase configuration](FIREBASE.md).
+- [Setup and everyday use](GETTING-STARTED.md), [deployment](DEPLOYMENT.md) and [Firebase configuration](FIREBASE.md).
 - [Android local execution and phone control](ANDROID_LOCAL.md).
 - [Voice architecture](VOICE.md) and [native voice investigation](NATIVE-VOICE-INVESTIGATION.md).
 - [Notification read handling](NOTIFICATION-READS.md) and [spoken captions](SPEECH-CAPTIONS.md).
