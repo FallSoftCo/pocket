@@ -179,8 +179,8 @@ class PocketVoiceService:Service(){
     private fun wake(){lock?.acquire(10*60*1000L)}
     private fun beep(ok:Boolean=true){if(!PocketVoice.active)return;tones.startTone(if(ok)ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_PROP_NACK,110)}
     private fun state(s:String){PocketVoice.state=s;if(s=="Listening")PocketVoice.recordingStartedAt=SystemClock.elapsedRealtime();if(s!="Listening")PocketVoice.captureLevel=0f;if(s=="Paused")caption?.let{PocketSpeechCaptions.pause(it.profile);refreshCaptionNotification()};android.util.Log.i("PocketVoice","State: $s");idleDisconnect?.cancel();if(s=="Ready")idleDisconnect=scope.launch{delay(30000);if(PocketVoice.state=="Ready"&&turnId==null&&recorder==null)disconnectNative()}}
-    private suspend fun api(path:String,body:JSONObject?=null):JSONObject=withContext(Dispatchers.IO){
-        val b=Request.Builder().url(endpoint+path).header("Authorization","Bearer $credential")
+    private suspend fun api(path:String,body:JSONObject?=null,base:String=endpoint,token:String=credential):JSONObject=withContext(Dispatchers.IO){
+        val b=Request.Builder().url(base+path).header("Authorization","Bearer $token")
         if(body!=null)b.post(body.toString().toRequestBody("application/json".toMediaType()))
         http.newCall(b.build()).execute().use{r->val j=try{JSONObject(r.body?.string()?:"{}")}catch(_:Exception){JSONObject()};if(!r.isSuccessful)throw PocketApiException(r.code,j.s("error","Server returned ${r.code}"));j}
     }
@@ -195,9 +195,17 @@ class PocketVoiceService:Service(){
     private suspend fun connectNative(){
         checkpointNativeUsage(stop=true)
         nativeHeartbeat?.cancel();nativeAudio?.close();nativeId=null
-        val ready=CompletableDeferred<Unit>();nativeReady=ready;val ticket=++transportGeneration
+        val ready=CompletableDeferred<Unit>();nativeReady=ready;val ticket=++transportGeneration;val audioEndpoint=endpoint;val audioCredential=credential
         nativeAudio=NativeVoiceAudio(this,livePlayback=true) audio@{kind,data->if(!PocketVoice.active||ticket!=transportGeneration)return@audio;when(kind){
-            "offer"->scope.launch{try{val result=api("/api/voice/native/start",JSONObject().put("sdp",data));nativeId=result.s("id");nativeAudio?.answer(result.s("sdp"))}catch(e:Exception){ready.completeExceptionally(e)}}
+            "offer"->scope.launch{try{
+                val result=api("/api/voice/native/start",JSONObject().put("sdp",data),audioEndpoint,audioCredential)
+                if(!nativeNegotiationCurrent(ticket,transportGeneration,PocketVoice.active,nativeAudio!=null)){
+                    android.util.Log.i("PocketVoiceTiming","Discarded stale audio negotiation $ticket")
+                    api("/api/voice/native/stop",JSONObject().put("connectionId",result.s("id")),audioEndpoint,audioCredential)
+                    return@launch
+                }
+                nativeId=result.s("id");requireNotNull(nativeAudio).answer(result.s("sdp"))
+            }catch(e:Exception){if(e is CancellationException)throw e;ready.completeExceptionally(e)}}
             "connected"->{SpeechUsage.add("voiceConnections");nativeUsage.start(SystemClock.elapsedRealtime());ready.complete(Unit)}
             "audio"->scope.launch{try{
                 val payload=JSONObject(data);val generation=payload.optLong("token");if(generation!=speechGeneration)return@launch
@@ -249,7 +257,7 @@ class PocketVoiceService:Service(){
             captureTurnId=id;captureConnection=null;captureStreaming=false;captureStreamFailed=false
             captureStreamJob=scope.launch{try{
                 if(!coordinatorReady){api("/api/voice/start",JSONObject().put("fullPermissions",Pocket.fullPermissions).put("threadId",origin.takeIf{it!="coordinator"}));coordinatorReady=true}
-                if(nativeId==null)connectNative()
+                if(nativeTransportNeedsConnection(nativeId,nativeAudio!=null))connectNative()
                 if(generation!=captureGeneration)return@launch
                 api("/api/voice/native/input",JSONObject().put("connectionId",nativeId).put("turnId",id))
                 if(generation!=captureGeneration)return@launch
@@ -303,7 +311,7 @@ class PocketVoiceService:Service(){
                     catch(e:Exception){if(!isActive)throw e;disconnectNative();android.util.Log.i("PocketVoiceTiming","Turn $id pre-commit saved capture fallback")}
                 }
                 if(!streamed){
-                    if(nativeId==null)connectNative()
+                    if(nativeTransportNeedsConnection(nativeId,nativeAudio!=null))connectNative()
                     api("/api/voice/native/input",JSONObject().put("connectionId",nativeId).put("turnId",id))
                     android.util.Log.i("PocketVoiceTiming","Turn $id saved upload begin")
                     nativeAudio!!.send(withContext(Dispatchers.IO){pendingFile.readBytes()})
@@ -354,9 +362,9 @@ class PocketVoiceService:Service(){
         caption=notification?.let{NativeCaption(it.optLong("id"),it.s("title"),spoken,captionProfile)}
         if(text.isBlank()){done?.invoke();state("Ready");return}
         state("Preparing speech")
-        if(nativeId==null)connectNative()
+        if(nativeTransportNeedsConnection(nativeId,nativeAudio!=null))connectNative()
         stopPlayer();if(!requestFocus())throw IllegalStateException("Another app is using audio. Retry when it finishes.")
-        afterSpeech=done;speechGeneration++;nativeRendering=true;nativePaused=false;nativeCacheReady=false;nativeResumeRequested=false;nativeAudioBeganAt=0L;nativeAudioCacheStartedAt=SystemClock.elapsedRealtime();nativePausedPositionMs=0;nativeAudio?.speak(speechGeneration)
+        afterSpeech=done;speechGeneration++;nativeRendering=true;nativePaused=false;nativeCacheReady=false;nativeResumeRequested=false;nativeAudioBeganAt=0L;nativeAudioCacheStartedAt=SystemClock.elapsedRealtime();nativePausedPositionMs=0;requireNotNull(nativeAudio){"Voice transport is unavailable."}.speak(speechGeneration)
         android.util.Log.i("PocketVoiceTiming","Speech $speechGeneration requested")
         api("/api/voice/native/speak",JSONObject().put("connectionId",nativeId).put("text",spoken).put("voiceTurnId",voiceTurnId))
     }
