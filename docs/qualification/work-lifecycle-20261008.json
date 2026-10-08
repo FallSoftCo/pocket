@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-08",
+  "scope": "Replacement work-lifecycle decision, non-running admission reference kernel, and checkpoint observation endpoint",
+  "activation": {
+    "successful_turn_chaining": "remains durably disabled",
+    "admission_kernel": "not imported by the live server; no tasks enrolled or dispatched",
+    "shared_workflow_adapter": "not installed or qualified by this change",
+    "checkpoint_reporting": "deployed backend-only; live original-thread checkpoint returned observationOnly=true, admission=none, existing recovery state cancelled"
+  },
+  "validation": {
+    "backend_tests": {
+      "passed": 398,
+      "failed": 0
+    },
+    "focused_tests": {
+      "passed": 20,
+      "failed": 0
+    },
+    "admission_cases": [
+      "Accepted unit and event identity deduplication",
+      "48 simulated waiting hours and restart without model dispatch",
+      "Independent concurrent OS processes sharing one SQLite capacity slot",
+      "One active owner per task and thread",
+      "Unmanaged runtime activity, incomplete inventory and stale snapshots consume or deny capacity",
+      "Lost acknowledgment and owner restart retain uncertainty rather than replaying",
+      "Model turn completion differs from acceptance of the requested result",
+      "Early producer events are retained; one dependency generation cannot wake work twice",
+      "Cancellation and late native acceptance remain fenced until exact settlement",
+      "Unreconciled external effects retain the admission fence after a native terminal event"
+    ],
+    "http_cases": [
+      "Current checkpoint accepted without continuation enrollment",
+      "Checkpoint does not revive a cancelled recovery record",
+      "Exact repeated receipt is idempotent",
+      "Stale or contradictory observations rejected",
+      "No turn/start or turn/steer caused by checkpoint submission"
+    ],
+    "live_reporting": "Existing original-thread checkpoint accepted without changing cancelled recovery state; no native daemon restart or model dispatch"
+  },
+  "limitations": [
+    "Fixtures prove admission and storage semantics, not end-to-end backup correctness",
+    "Trusted producer/result/source parameters require authenticated versioned adapters; they are not self-authenticating",
+    "Native parent delegation and child spawning outside a common gate remain outside enforcement",
+    "No new model, permissions, account spending, native goals or token budget configured",
+    "No new production worker, app task grant, phone installation or broad runtime restart",
+    "Shared Temporal service currently qualifies narrow operations; arbitrary Codex work is not claimed supported"
+  ]
+}

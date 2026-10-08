@@ -1,4 +1,5 @@
 import {CatalogContext} from './catalog-context.mjs';
+import {WorkObservations} from './work-observations.mjs';
 import {InternalSessions} from './internal-sessions.mjs';
 import {RecoveryQueue} from './recovery-queue.mjs';
 import {TurnRecovery,permissionRecoveryAudit} from './turn-recovery.mjs';
@@ -51,6 +52,7 @@ const hostName=process.env.POCKET_HOST_NAME||hostname();
 const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
 const {db,secrets}=openStore(dir);
+const workObservations=new WorkObservations(db);
 const catalogContext=new CatalogContext(db);
 const notificationReads=new NotificationReads(db);
 const notificationTitles=new NotificationTitles(db);
@@ -494,9 +496,10 @@ app.post('/api/threads/:id/continuation/checkpoint',owner,route(async(req,res)=>
  const threadId=requireId(req.params.id);await codex.connect();
  const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});
  const snapshot=await history.read(thread,{summary:true});const latest=snapshot.turns?.at(-1);
- const accepted=turnRecovery.recordCheckpoint(snapshot,{...req.body,turnId:req.body.turnId||latest?.id});
- if(!accepted)return res.status(409).json({error:'This checkpoint does not match active authorized work.'});
- res.json({accepted:true,recovery:turnRecovery.get(threadId)});
+ const turnId=req.body.turnId||latest?.id;
+ const accepted=workObservations.record(snapshot,{...req.body,turnId});
+ if(!accepted)return res.status(409).json({error:'Checkpoint is stale or conflicts with an already saved observation. Read the current turn before reporting.'});
+ res.json({accepted:true,observationOnly:true,admission:'none',observation:workObservations.latest(threadId),recovery:turnRecovery.get(threadId)||null});
 }));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null,recent:req.query.view==='timeline'});

@@ -14,6 +14,14 @@
   },
   "requests": [
     {
+      "id": "event-driven-work-lifecycle-20261008",
+      "date": "2026-10-08",
+      "requirement": "Replace wasteful self-authorized continuation with durable accepted work units, one accountable owner, versioned dependency signals, bounded global model admission, independently accepted results and safe external-effect reconciliation. Preserve useful work and genuine transient recovery; checkpoint observations must not authorize wakeups.",
+      "status": "design-and-admission-kernel-qualified; checkpoint-observation-fix-deployed; automatic-successful-turn-chaining-remains-disabled",
+      "implementation": "docs/WORK-LIFECYCLE.md; server/work-admission.mjs is a non-running reference kernel. server/work-observations.mjs separates progress storage from dispatch authority. Shared workflow/producer/native delegation integration must qualify before live activation.",
+      "verification": "Actual SQLite independent-process capacity, competing owners, early/repeated dependency generations, restart and 48 simulated waiting hours, late acceptance/cancellation, unresolved external effects, trusted result acceptance; HTTP checkpoints do not enroll or revive cancelled work."
+    },
+    {
       "id": "pixelbook-go-web-client",
       "date": "2026-10-07",
       "requirement": "Build and privately deploy a NextComp browser client for Pixelbook Go, reusing existing backend, with keyboard/mouse, responsive touch, useful PWA installation, coordinator/direct input, intermediate updates, attention, work recency, actual child parent/input capability, drafts/reconnect/authenticated pairing and supported browser voice. Coordinate concurrent Android and session-list work.",

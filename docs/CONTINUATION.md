@@ -1,5 +1,7 @@
 # Audited task continuation
 
+Historical mechanism: successful-turn checkpoint rearming is now suspended after it caused repeated no-progress model turns. The current failure-recovery protections remain enabled. Read [the replacement work lifecycle](WORK-LIFECYCLE.md) for the decision, tested admission contract and migration prerequisites; the prompt/checkpoint mechanism below is not the intended reliable scheduler.
+
 An idle session is not evidence that its task finished. A completed turn can also be a partial report, a handoff or a real request for input. The owner audits current intent and receipts before admitting unfinished work through the owner-only continuation route. Admission binds to the exact latest terminal turn and excludes children, uncertain message delivery, outstanding input, task usage stops and recorded cancellation. It does not replay the original task.
 
 Registered work receives preserved-context instructions and an authenticated checkpoint command. The worker should keep working within its current turn. Before ending, it reports concrete evidence with `scripts/task-checkpoint.mjs --state continue|completed|needsInput --evidence "..."`, from its original session with `CODEX_THREAD_ID`. The helper reads the existing local owner credentials without printing them. This is a privileged local interface, not a new project sandbox.

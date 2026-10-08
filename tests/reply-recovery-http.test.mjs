@@ -11,11 +11,11 @@ const waitFor=async fn=>{for(let i=0;i<180;i++){if(await fn())return;await new P
 async function fixture(t){
  const dir=await mkdtemp(join(tmpdir(),'pocket-reply-recovery-')),socket=join(dir,'codex.sock');
  const host=http.createServer(),wss=new WebSocketServer({server:host});await new Promise(r=>host.listen(socket,r));
- const calls=[];let rejectNext=false,holdNextAttach=false,heldAttach=null;
+ const calls=[];let rejectNext=false,holdNextAttach=false,heldAttach=null,snapshotTurns=[];
  wss.on('connection',ws=>ws.on('message',raw=>{
   const m=JSON.parse(raw);if(!m.id)return;calls.push(m);let result={};
   if(m.method==='thread/read'&&holdNextAttach){holdNextAttach=false;heldAttach={ws,id:m.id};return;}
-  if(m.method==='thread/read'||m.method==='thread/resume')result={thread:{id:'task-recovery',name:'Recovery fixture',cwd:dir,status:{type:'idle'},turns:[]}};
+  if(m.method==='thread/read'||m.method==='thread/resume')result={thread:{id:'task-recovery',name:'Recovery fixture',cwd:dir,status:{type:'idle'},turns:snapshotTurns}};
   if(m.method==='turn/start'){
    if(rejectNext){rejectNext=false;ws.send(JSON.stringify({id:m.id,error:{code:-32602,message:'Synthetic definite rejection'}}));return;}
    result={turn:{id:'accepted-turn',status:'inProgress'}};
@@ -31,8 +31,22 @@ async function fixture(t){
  await api('/api/threads/task-recovery');db=new DatabaseSync(join(dir,'pocket.sqlite'));
  const status=async id=>(await api('/api/replies/'+id)).data.state;
  const seed=(id,state)=>db.prepare('INSERT INTO outgoing(id,thread_id,text,state,result,created_at,updated_at,mode) VALUES(?,?,?,?,?,?,?,?)').run(id,'task-recovery','Preserved '+id,state,'Persisted delivery outcome',Date.now(),Date.now(),'steer');
- return {api,status,seed,calls,reject:()=>{rejectNext=true;},blockAttach:()=>{holdNextAttach=true;},attachBlocked:()=>heldAttach!==null,rejectAttach:()=>{heldAttach.ws.send(JSON.stringify({id:heldAttach.id,error:{code:-32602,message:'Synthetic attachment rejection'}}));},turns:()=>calls.filter(x=>x.method==='turn/start'||x.method==='turn/steer')};
+ return {api,status,seed,calls,db,snapshotTurn:turn=>{snapshotTurns=[turn];},reject:()=>{rejectNext=true;},blockAttach:()=>{holdNextAttach=true;},attachBlocked:()=>heldAttach!==null,rejectAttach:()=>{heldAttach.ws.send(JSON.stringify({id:heldAttach.id,error:{code:-32602,message:'Synthetic attachment rejection'}}));},turns:()=>calls.filter(x=>x.method==='turn/start'||x.method==='turn/steer')};
 }
+
+test('HTTP checkpoints save progress on unregistered/stopped work without rearming recovery or starting a model',async t=>{
+ const f=await fixture(t);f.snapshotTurn({id:'current-progress',status:'inProgress',items:[]});
+ const report={state:'waitingDependency',evidence:'Saved exact job reference; waiting on producer generation'};
+ const first=await f.api('/api/threads/task-recovery/continuation/checkpoint',report);
+ assert.equal(first.status,200);assert.equal(first.data.observationOnly,true);assert.equal(first.data.admission,'none');
+ assert.equal(f.db.prepare('SELECT count(*) n FROM turn_continuation_authorizations').get().n,0);
+ f.db.prepare("INSERT INTO turn_recovery(thread_id,source_turn,current_turn,state,next_at,kind,updated_at) VALUES('task-recovery','old','old','cancelled',0,'continuation',0)").run();
+ assert.equal((await f.api('/api/threads/task-recovery/continuation/checkpoint',report)).status,200);
+ assert.equal(f.db.prepare("SELECT state FROM turn_recovery WHERE thread_id='task-recovery'").get().state,'cancelled');
+ assert.equal((await f.api('/api/threads/task-recovery/continuation/checkpoint',{...report,state:'continue'})).status,409);
+ assert.equal((await f.api('/api/threads/task-recovery/continuation/checkpoint',{...report,turnId:'old'})).status,409);
+ assert.equal(f.turns().length,0);
+});
 
 test('HTTP definite-failure retry preserves id/input and repeated retry cannot duplicate upstream dispatch',async t=>{
  const f=await fixture(t);f.reject();
