@@ -28,6 +28,7 @@ export class TurnRecovery {
   db.exec('CREATE TABLE IF NOT EXISTS turn_continuation_authorizations(thread_id TEXT PRIMARY KEY,turn_id TEXT NOT NULL,evidence TEXT NOT NULL,authorized_at INTEGER NOT NULL)');
   if(!db.prepare('PRAGMA table_info(turn_continuation_authorizations)').all().some(column=>column.name==='audit_evidence')){db.exec('ALTER TABLE turn_continuation_authorizations ADD COLUMN audit_evidence TEXT');db.exec('UPDATE turn_continuation_authorizations SET audit_evidence=evidence');}
   db.exec('CREATE TABLE IF NOT EXISTS continuation_dependency_signals(thread_id TEXT NOT NULL,signal_id TEXT NOT NULL,PRIMARY KEY(thread_id,signal_id))');
+  db.exec('CREATE TABLE IF NOT EXISTS continuation_policy(id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL,reason TEXT NOT NULL,updated_at INTEGER NOT NULL)');
   db.exec('CREATE TABLE IF NOT EXISTS continuation_operator_holds(thread_id TEXT PRIMARY KEY,turn_id TEXT NOT NULL,evidence TEXT NOT NULL,at INTEGER NOT NULL)');
   db.exec('CREATE TABLE IF NOT EXISTS turn_recovery_failures(thread_id TEXT NOT NULL,turn_id TEXT NOT NULL,PRIMARY KEY(thread_id,turn_id))');
   db.exec('CREATE TABLE IF NOT EXISTS turn_recovery_migrations(name TEXT PRIMARY KEY)');
@@ -46,11 +47,14 @@ export class TurnRecovery {
  }
  recoverableFailure(id,turnId){if(!id||!turnId)return false;return !!this.db.prepare('SELECT 1 FROM turn_recovery_failures WHERE thread_id=? AND turn_id=?').get(id,turnId);}
  get(id){return this.db.prepare('SELECT * FROM turn_recovery WHERE thread_id=?').get(id);}
+ continuationEnabled(){return this.db.prepare('SELECT enabled FROM continuation_policy WHERE id=1').get()?.enabled!==0;}
+ setContinuationEnabled(enabled,reason){this.db.prepare('INSERT INTO continuation_policy VALUES(1,?,?,?) ON CONFLICT(id) DO UPDATE SET enabled=excluded.enabled,reason=excluded.reason,updated_at=excluded.updated_at').run(enabled?1:0,String(reason),this.clock());}
  delay(n){const base=n<this.quickAttempts?30000*2**n:30*60000*2**Math.min(n-this.quickAttempts,3);return Math.min(4*3600000,base*(.8+.4*this.random()));}
  // Admission is deliberately evidence based: callers must read the latest target and
  // reconcile intent, questions and delivery before authorizing unfinished terminal work.
  authorizeContinuation(thread,assessment={}){
   const turn=thread?.turns?.at(-1),id=thread?.id;
+  if(!this.continuationEnabled()&&turn?.status!=='failed')return false;
   const hold=this.db.prepare('SELECT * FROM continuation_operator_holds WHERE thread_id=?').get(id||'');
   const dependencySignal=typeof assessment.dependencySignal==='string'&&assessment.dependencySignal.trim().length>0;
   if(hold&&(!dependencySignal||this.db.prepare('SELECT 1 FROM continuation_dependency_signals WHERE thread_id=? AND signal_id=?').get(id,assessment.dependencySignal.trim())))return false;
@@ -115,6 +119,7 @@ export class TurnRecovery {
   if(row?.state==='waiting'&&row.kind==='continuation'&&authorization?.turn_id===turn.id&&['completed','interrupted'].includes(turn.status))return true;
   if(turn.status==='interrupted'&&assessment&&this.authorizeContinuation({id:threadId,turns:[turn]},{...assessment,turnId:turn.id}))return true;
   if(row&&row.current_turn===turn.id&&turn.status==='completed'){
+   if(authorization&&!this.continuationEnabled()){this.set(threadId,'awaitingAssessment');return false;}
    if(authorization){
     const checkpoint=this.db.prepare('SELECT * FROM turn_continuation_checkpoints WHERE thread_id=? AND turn_id=?').get(threadId,turn.id);
     if(checkpoint?.status==='continue')return this.authorizeContinuation({id:threadId,turns:[turn]},{turnId:turn.id,authorized:true,unfinished:true,evidence:checkpoint.evidence});
@@ -149,6 +154,7 @@ export class TurnRecovery {
   try{for(const row of this.db.prepare("SELECT * FROM turn_recovery WHERE state IN ('waiting','unknown','running') AND next_at<=? ORDER BY next_at LIMIT 3").all(this.clock())){
    try{
     if(this.db.prepare('SELECT 1 FROM continuation_operator_holds WHERE thread_id=?').get(row.thread_id))continue;
+    if(row.state==='waiting'&&row.kind==='continuation'&&!this.continuationEnabled()){this.set(row.thread_id,'awaitingAssessment');continue;}
     const thread=await this.read(row.thread_id),latest=thread.turns?.at(-1);
     if(!latest){this.db.prepare('UPDATE turn_recovery SET attempts=attempts+1,backoff_attempts=backoff_attempts+1,next_at=? WHERE thread_id=? AND state=? AND current_turn=? AND request_id IS ?').run(this.clock()+this.delay(row.backoff_attempts+1),row.thread_id,row.state,row.current_turn,row.request_id);continue;}
     if(row.state==='unknown'){
@@ -171,9 +177,10 @@ export class TurnRecovery {
      if(changed.changes&&health?.blocked)this.notice(row.thread_id,health.reason||'Recovery is paused because the intended permissions or a usage-stop policy requires user guidance.');continue;
     }
     const id=randomUUID();
+    if(row.kind==='continuation'&&!this.continuationEnabled()){this.set(row.thread_id,'awaitingAssessment');continue;}
     if(!this.db.prepare("UPDATE turn_recovery SET state='dispatching',request_id=?,attempts=attempts+1,backoff_attempts=backoff_attempts+1,updated_at=? WHERE thread_id=? AND state='waiting' AND current_turn=? AND source_turn=?").run(id,this.clock(),row.thread_id,row.current_turn,row.source_turn).changes)continue;
     try{
-     const continuation=this.db.prepare('SELECT evidence,audit_evidence FROM turn_continuation_authorizations WHERE thread_id=?').get(row.thread_id);
+     const continuation=this.continuationEnabled()?this.db.prepare('SELECT evidence,audit_evidence FROM turn_continuation_authorizations WHERE thread_id=?').get(row.thread_id):null;
      const context=continuation?continuation.audit_evidence+(continuation.evidence!==continuation.audit_evidence?' Latest progress checkpoint: '+continuation.evidence:''):'';
      const input=continuation?CONTINUATION_INPUT+' Audited continuation context: '+context.slice(0,8000):RECOVERY_INPUT;
      const result=await this.start(row.thread_id,id,input);

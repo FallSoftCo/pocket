@@ -1,6 +1,22 @@
 import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
 import test from 'node:test';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';
 import {TurnRecovery,transientFailure,RECOVERY_INPUT,permissionRecoveryAudit} from '../server/turn-recovery.mjs';
+test('successful-turn chaining suspension survives restart without disabling transient recovery',async()=>{
+ const f=fixture();let r=new TurnRecovery(f.args);f.latest={id:'done',status:'completed'};
+ assert.equal(r.authorizeContinuation({id:'thread',turns:[f.latest]},{turnId:'done',authorized:true,unfinished:true,evidence:'More work'}),true);
+ r.setContinuationEnabled(false,'User reports wasted continuations');r=new TurnRecovery(f.args);
+ for(let i=0;i<48;i++){f.advance(3600000);await r.tick();}
+ assert.equal(f.calls.length,0);assert.equal(r.get('thread').state,'awaitingAssessment');
+ assert.equal(r.authorizeContinuation({id:'thread',turns:[f.latest]},{turnId:'done',authorized:true,unfinished:true,evidence:'Continue again'}),false);
+ f.latest={id:'actual-failure',status:'failed',error:{message:'Selected model is at capacity'}};
+ assert.equal(r.observe('failure-thread',f.latest),true);f.advance();await r.tick();assert.equal(f.calls.length,1);assert.equal(f.calls[0].text,RECOVERY_INPUT);
+});
+test('suspension during health check prevents successful-turn dispatch',async()=>{
+ const f=fixture();const r=new TurnRecovery(f.args);f.latest={id:'done',status:'completed'};
+ r.authorizeContinuation({id:'thread',turns:[f.latest]},{turnId:'done',authorized:true,unfinished:true,evidence:'More work'});
+ f.args.health=async()=>true;r.health=async()=>{r.setContinuationEnabled(false,'Suspend while checking');return true;};
+ f.advance();await r.tick();assert.equal(f.calls.length,0);assert.equal(r.get('thread').state,'awaitingAssessment');
+});
 function fixture(){const db=new DatabaseSync(':memory:');let time=0,healthy=true,calls=[];let latest={id:'original',status:'failed',error:{message:'Selected model is at capacity.'},items:[{type:'agentMessage',text:'Saved useful progress'}]};const args={db,clock:()=>time,random:()=>.5,read:async()=>({turns:[latest]}),health:async()=>healthy,start:async(id,request,text)=>{calls.push({id,request,text});latest={id:'retry-'+calls.length,status:'inProgress',items:[{type:'userMessage',clientId:request}]};return {turn:latest};}};return {db,args,get latest(){return latest;},set latest(v){latest=v;},calls,advance:(delta=1e6)=>time+=delta,unhealthy:()=>healthy=false};}
 test('definitive runtime resource failures can recover without reclassifying user stops',()=>{
  for(const message of ['No file descriptors available (os error 24)','No space left on device','ENOSPC','Too many open files'])assert.equal(transientFailure({message}),'transient');

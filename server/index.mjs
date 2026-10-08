@@ -172,6 +172,7 @@ const turnRecovery=new TurnRecovery({db,
     // Inherit the runtime's exact model and permission settings. No original task replay.
     await codex.call('thread/resume',{threadId,excludeTurns:true});attached.add(threadId);
     const recovery=turnRecovery.get(threadId);if(recovery?.state!=='dispatching'||recovery.request_id!==requestId)throw Error('Recovery was cancelled before delivery.');
+    if(recovery.kind==='continuation'&&!turnRecovery.continuationEnabled()){turnRecovery.set(threadId,'awaitingAssessment');throw Error('Automatic successful-turn chaining is suspended.');}
     return codex.call('turn/start',{threadId,clientUserMessageId:requestId,input:[{type:'text',text}]});
   },
   publish:(threadId,recovery)=>{if(recovery.state==='completed'&&recoveryQueue.release(threadId,recovery.source_turn)){emit('reply',{threadId,state:'queued'});void flush();}if(recovery.state==='cancelled')recoveryQueue.forget(threadId,recovery.source_turn);emit('turnRecovery',{threadId,recovery});if(recovery.message){sessionCatchup.put(threadId,{key:'recovery:'+recovery.source_turn,kind:'blocked',text:recovery.message,turnId:recovery.current_turn});notify(threadId,'Task recovery',recovery.message,'update');}}
