@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-08",
+  "scope": "Web appearance and private path access",
+  "evidence": {
+    "implemented": [
+      "System/Light/Dark selection, persisted explicit preference, live system updates, before-paint colors",
+      "Semantic dark surfaces, controls, attention, recording and errors",
+      "Path-aware API/assets/WebSockets/attachments/PWA",
+      "Bounded exact-origin same-device profile migration retaining old state"
+    ],
+    "synthetic": {
+      "backend_gateway_tests": 418,
+      "failures": 0,
+      "focused_theme_access_tests": 5,
+      "virtual_dom_flows": "existing web interaction checks pass",
+      "contrast": "light and dark text/control/attention token pairs >=4.5:1"
+    },
+    "private_live": {
+      "old_pair_new_status": true,
+      "authenticated_mounted_websocket": true,
+      "foreign_origin_rejected": true,
+      "owner_routes_excluded": true,
+      "manifest_scope": "/nextcomp/",
+      "existing_routes_preserved": true,
+      "funnel_enabled": false,
+      "temporary_device_revoked": true,
+      "backend_restart": false,
+      "existing_gateway_connections_preserved": true
+    },
+    "limits": [
+      "No rendered-browser or physical Pixelbook qualification",
+      "Actual browser origin storage/recording transfer not observed; matching-device migration logic is synthetic-tested",
+      "Provider microphone/speech and closed-app notifications retain prior browser limits"
+    ]
+  }
+}

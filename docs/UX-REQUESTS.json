@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-07",
+  "updated": "2026-10-08",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,14 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "web-theme-clean-private-access-20261008",
+      "date": "2026-10-08",
+      "requirement": "Polished web dark theme with system preference and persisted Light/Dark/System choice; clean private HTTPS access without explicit port, retaining pairing, authenticated origins/WebSockets and existing services.",
+      "status": "implemented-and-privately-deployed",
+      "implementation": "Semantic light/dark tokens and before-paint theme script; path-aware assets/API/WebSocket/PWA at /nextcomp/ on existing private HTTPS443. Old URL compatibility shares the unchanged signing key; bounded same-device browser profile transfer preserves old storage.",
+      "verification": "418 backend/gateway tests and synthetic DOM flows pass. Actual private HTTPS old-pair/new-status and authenticated WebSocket pass; foreign origin and owner routes rejected. Existing routes preserved, Funnel absent. Rendered browser, physical Pixelbook and actual cross-origin browser profile transfer remain unqualified."
+    },
     {
       "id": "event-driven-work-lifecycle-20261008",
       "date": "2026-10-08",
