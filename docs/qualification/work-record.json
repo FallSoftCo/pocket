@@ -24,6 +24,7 @@
     "android": "compileDebugKotlin + testDebugUnitTest passed",
     "runtime": "No running service restarted; no phone release duplicated",
     "galleryTask": "1ab89c11f58de27f18189197c4f164a5",
-    "galleryState": "running; durable same-ticket validation"
+    "galleryState": "completed; verified operation completed and input drained",
+    "galleryReceipt": "showcase/review/task-1ab89c11f58de27f18189197c4f164a5.json"
   }
 }
