@@ -128,7 +128,7 @@ private object LinkedImageLoading {
         memoryCacheKey("$url:$digest");diskCacheKey("$url:$digest")
     }}.build()}
     Surface(color=Ink,modifier=Modifier.fillMaxWidth().height(240.dp).clickable{expanded=true}){
-        SubcomposeAsyncImage(model=request,imageLoader=loader,contentDescription=image.description.ifBlank{"Image"},contentScale=ContentScale.Fit,modifier=Modifier.fillMaxSize(),loading={Box(Modifier.padding(16.dp)){Text("Loading image…",color=Muted,fontSize=14.sp)}},error={Column(Modifier.padding(16.dp)){Text("Image unavailable",color=Muted,fontSize=14.sp);TextButton(onClick={attempt++}){Text("Retry",color=Mint)}}})
+        SubcomposeAsyncImage(model=request,imageLoader=loader,contentDescription=image.description.ifBlank{"Image"},contentScale=ContentScale.Fit,modifier=Modifier.fillMaxSize(),loading={Box(Modifier.padding(16.dp)){Text("Loading image…",color=Muted,fontSize=14.sp)}},error={Column(Modifier.padding(16.dp)){Text("Image unavailable",color=Muted,fontSize=14.sp);TextButton(onClick={attempt++}){BilingualLabel("Retry",color=Mint)}}})
     }
     if(expanded)LinkedImageViewer(image,request,loader){expanded=false}
 }
@@ -147,7 +147,7 @@ private object LinkedImageLoading {
                 Box(Modifier.fillMaxWidth().weight(1f).clipToBounds().transformable(transform)){
                     SubcomposeAsyncImage(model=fullRequest,imageLoader=loader,contentDescription=image.description.ifBlank{"Image"},contentScale=ContentScale.Fit,modifier=Modifier.fillMaxSize().graphicsLayer{scaleX=scale;scaleY=scale;translationX=offset.x;translationY=offset.y},loading={Text("Loading image…",color=Muted,modifier=Modifier.padding(20.dp))},error={Text("Image unavailable",color=Muted,modifier=Modifier.padding(20.dp))})
                 }
-                TextButton(onClick=onClose,modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).navigationBarsPadding()){Text("Close image",color=Mint)}
+                TextButton(onClick=onClose,modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).navigationBarsPadding()){BilingualLabel("Close image",color=Mint)}
             }
         }
     }

@@ -230,7 +230,7 @@ class MainActivity:ComponentActivity(){
         }
         DropdownMenu(expanded=sourceOpen,onDismissRequest={sourceOpen=false},properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
             PocketSpeech.sources.forEach{(source,details)->DropdownMenuItem(text={Text("${if(source==PocketSpeech.activeSource)"• " else ""}${details.first} · ${details.second}")},onClick={sourceOpen=false;PocketSpeech.selectSource(source)})}
-            DropdownMenuItem(text={Text("Clear all saved speech")},onClick={sourceOpen=false;PocketSpeech.clearAll()})
+            DropdownMenuItem(text={BilingualLabel("Clear all saved speech",centered=false)},onClick={sourceOpen=false;PocketSpeech.clearAll()})
         }
     }
 }

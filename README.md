@@ -6,6 +6,10 @@
 
 <p align="center"><strong>Your computers. Your agents. With you on Android.</strong></p>
 
+> “The next stage is going to be computers as ‘agents.’”
+>
+> — **Steve Jobs, 1984**, interviewed by Tom Zito for *Access*. [Read the original interview, republished by its author](https://www.thedailybeast.com/steve-jobs-1984-access-magazine-interview).
+
 <p align="center">
   <a href="https://github.com/fallsoftco/pocket/releases">Download Android alpha</a> ·
   <a href="#setup">Get started</a> ·
@@ -17,22 +21,19 @@ NextComp is a self-hosted Android interface for working with agents on your own 
 
 **Codex + Linux + Android + Tailscale.** Use stock Codex on your Linux workstation, or run it directly on Android through Termux. A persistent coordinator connects your requests to real work sessions, so you can keep directing work as it develops.
 
-> “The next stage is going to be computers as ‘agents.’”
->
-> — **Steve Jobs, 1984**, interviewed by Tom Zito for *Access*. [Read the original interview, republished by its author](https://www.thedailybeast.com/steve-jobs-1984-access-magazine-interview). The source establishes the year, not the exact interview date.
+
 
 **Experimental alpha.** NextComp is an independent [FallSoft](https://github.com/fallsoftco) project. It uses Codex's experimental app-server; compatibility and native voice depend on the CLI and account. See the [tested environments and limitations](docs/CAPABILITIES.md) before installing.
 
-## See it in action
+## Current interface
 
-<p align="center">
-  <img src="docs/images/conversation-context-consolidated-alpha22.png" width="280" alt="NextComp Android conversation with a saved intermediate answer and large Talk, Keyboard and playback controls">
-  <img src="docs/images/linked-image-preview.png" width="280" alt="NextComp Android conversation displaying an inline image of the NextComp symbol">
-</p>
+The Android app is now at **alpha45**. This frame comes from the current version on a Pixel 9 Pro Fold: a control label transitions from English to Italian in the reading direction, in place.
 
-*Native Android UI screenshots with synthetic example conversations, captured during alpha.22 qualification. Left: act on an intermediate answer. Right: inspect an image within the conversation. These illustrate the interface; they are not a live task recording or a guarantee of the latest release's appearance.*
+<p align="center"><img src="docs/images/reading-wipe-alpha45.png" width="240" alt="Current alpha45 control midway through its English-to-Italian reading-direction transition"></p>
 
-## What you can do
+[Watch the actual phone capture](docs/images/reading-wipe-alpha45.mp4). This narrow capture demonstrates the transition, rather than the complete interface. Full-screen screenshots are being refreshed; the older alpha22 examples have been removed.
+
+## Direct your work from your phone
 
 | Experience | How it helps |
 | --- | --- |

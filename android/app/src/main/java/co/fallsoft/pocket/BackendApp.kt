@@ -89,8 +89,8 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
                 Text("Connect Losangelex",style=MaterialTheme.typography.titleLarge)
                 TextButton({teamSettings=true}){BilingualLabel("Settings")}
                 Text("Your NextComp host needs a Losangelex backend connection. Register its private endpoint and token file on the host, then reload.")
-                Button({scope.launch{discover()}}){Text("Reload backends")}
-                TextButton({BackendNavigation.select("codex");backend="codex"}){Text("Use Codex")}
+                Button({scope.launch{discover()}}){BilingualLabel("Reload backends")}
+                TextButton({BackendNavigation.select("codex");backend="codex"}){BilingualLabel("Use Codex")}
             }
             else key(owner,losangelex.s("environmentId")){LosangelexScreen(owner+losangelex.s("environmentId"),onSettings={teamSettings=true})}
         }

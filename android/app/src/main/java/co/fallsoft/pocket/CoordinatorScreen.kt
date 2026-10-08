@@ -115,7 +115,7 @@ import kotlinx.coroutines.flow.*
                 OutlinedTextField(draft,{value->
                     val enter=value.length==draft.length+1&&value.contains('\n')&&value.replace("\n","")==draft
                     updateDraft(value.replace('\n',' '));if(enter)send()
-                },placeholder={Text(PocketImmersion.label("Message coordinator"))},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->
+                },placeholder={BilingualLabel("Message coordinator",centered=false)},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->
                     if(event.key==Key.Enter||event.key==Key.NumPadEnter){if(event.type==KeyEventType.KeyDown)send();true}else false
                 },keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}))
                 FilledTonalIconButton({send()},enabled=draft.isNotBlank()&&!sending,modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,PocketImmersion.label("Send coordinator message"),Modifier.size(40.dp),tint=Paper)}

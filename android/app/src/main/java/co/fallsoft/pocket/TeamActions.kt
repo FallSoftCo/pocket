@@ -27,7 +27,7 @@ import java.util.UUID
                 val command=Pocket.prefs.getString(key,null)?.let{JSONObject(it)}?:JSONObject().put("commandId",UUID.randomUUID().toString()).put("task",task).put("agent",selected).put("action",action)
                 Pocket.prefs.edit().putString(key,command.toString()).apply();running=true
                 jobs.launch{try{client.call("teams/$team/control",command);Pocket.prefs.edit().remove(key).apply();onReceipt("$label confirmed for ${destination.recipient} · ${destination.task}")}catch(e:Exception){if(e is CancellationException)throw e;onError("$label unconfirmed; retry the same action. ${e.message.orEmpty()}")}finally{running=false}}
-            },enabled=selected.isNotBlank()&&!running){Text(label)}
+            },enabled=selected.isNotBlank()&&!running){BilingualLabel(label)}
         }
     }
 }
@@ -41,16 +41,16 @@ import java.util.UUID
     var busy by remember{mutableStateOf(false)}
     var error by remember{mutableStateOf("")}
     val jobs=rememberCoroutineScope()
-    AlertDialog(onDismissRequest={if(!busy)dismiss()},title={Text("New team task")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+    AlertDialog(onDismissRequest={if(!busy)dismiss()},title={BilingualLabel("New team task")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
         Text("Losangelex · $team · Coordinator")
-        OutlinedTextField(title,{title=it;Pocket.prefs.edit().putString("$key:title",it).apply()},enabled=command==null&&!busy,label={Text("Task name")})
-        OutlinedTextField(body,{body=it;Pocket.prefs.edit().putString("$key:body",it).apply()},enabled=command==null&&!busy,label={Text("What should the team do?")},maxLines=6)
+        OutlinedTextField(title,{title=it;Pocket.prefs.edit().putString("$key:title",it).apply()},enabled=command==null&&!busy,label={BilingualLabel("Task name",centered=false)})
+        OutlinedTextField(body,{body=it;Pocket.prefs.edit().putString("$key:body",it).apply()},enabled=command==null&&!busy,label={BilingualLabel("What should the team do?",centered=false)},maxLines=6)
         if(error.isNotBlank())Text(error,color=Coral)
     }},confirmButton={TextButton({
         val submission=command?:JSONObject().put("commandId",UUID.randomUUID().toString()).put("id","nc-"+UUID.randomUUID().toString()).put("title",title.trim()).put("body",body.trim())
         command=submission;Pocket.prefs.edit().putString(key,submission.toString()).apply();busy=true
         jobs.launch{try{client.call("teams/$team/tasks",submission);Pocket.prefs.edit().remove(key).remove("$key:title").remove("$key:body").apply();created(submission.getString("id"))}catch(e:Exception){if(e is CancellationException)throw e;if(e is PocketApiException&&e.status in listOf(400,404,422)){command=null;Pocket.prefs.edit().remove(key).apply();error=e.message.orEmpty()}else error="Unconfirmed. Retry this saved task. ${e.message.orEmpty()}"}finally{busy=false}}
-    },enabled=!busy&&(command!=null||title.isNotBlank()&&title.length<=100&&body.isNotBlank()&&body.length<=3500)){Text(if(command==null)"Start task" else "Retry saved task")}},dismissButton={TextButton(dismiss,enabled=!busy){Text("Close")}})
+    },enabled=!busy&&(command!=null||title.isNotBlank()&&title.length<=100&&body.isNotBlank()&&body.length<=3500)){BilingualLabel(if(command==null)"Start task" else "Retry saved task")}},dismissButton={TextButton(dismiss,enabled=!busy){BilingualLabel("Close",centered=false)}})
 }
 
 @Composable fun TeamAttentionDialog(client:LosangelexClient,selectedTeam:String,source:JSONObject,dismiss:()->Unit,changed:()->Unit){
@@ -90,11 +90,11 @@ import java.util.UUID
     AlertDialog(onDismissRequest={if(!busy)dismiss()},title={Text(if(approval)"Review request" else "Answer ${event.s("author")}")},text={Column(Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
         Text("Losangelex · $team · ${event.s("task")}",style=MaterialTheme.typography.labelSmall)
         Text(event.s("body"));Text(state,color=Muted)
-        if(!approval)OutlinedTextField(text,{text=it;Pocket.prefs.edit().putString("$key:draft",it).apply()},enabled=open&&pending==null&&!busy,label={Text("Your answer")},maxLines=5)
+        if(!approval)OutlinedTextField(text,{text=it;Pocket.prefs.edit().putString("$key:draft",it).apply()},enabled=open&&pending==null&&!busy,label={BilingualLabel("Your answer",centered=false)},maxLines=5)
         if(error.isNotBlank())Text(error,color=Coral)
         if(uncertainApproval)Text("Approval outcome is unconfirmed. Refresh its state before any further action.")
-    }},confirmButton={if(approval)Row{TextButton({answer("decline")},enabled=open&&!busy&&!uncertainApproval){Text("Decline")};TextButton({answer("accept")},enabled=open&&!busy&&!uncertainApproval&&event.optJSONObject("data")?.optBoolean("canAccept")==true){Text("Approve once")}}
-        else TextButton({answer()},enabled=open&&!busy&&(pending!=null||text.isNotBlank()&&text.length<=3500)){Text(if(pending==null)"Send answer" else "Retry saved answer")}},dismissButton={Row{TextButton({jobs.launch{try{check();if(state!="open"){uncertainApproval=false;Pocket.prefs.edit().remove("approval-unconfirmed:${client.owner}:$team:$id").apply()}}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}},enabled=!busy){Text("Refresh")};TextButton(dismiss,enabled=!busy){Text("Close")}}})
+    }},confirmButton={if(approval)Row{TextButton({answer("decline")},enabled=open&&!busy&&!uncertainApproval){BilingualLabel("Decline",centered=false)};TextButton({answer("accept")},enabled=open&&!busy&&!uncertainApproval&&event.optJSONObject("data")?.optBoolean("canAccept")==true){BilingualLabel("Approve once",centered=false)}}
+        else TextButton({answer()},enabled=open&&!busy&&(pending!=null||text.isNotBlank()&&text.length<=3500)){BilingualLabel(if(pending==null)"Send answer" else "Retry saved answer")}},dismissButton={Row{TextButton({jobs.launch{try{check();if(state!="open"){uncertainApproval=false;Pocket.prefs.edit().remove("approval-unconfirmed:${client.owner}:$team:$id").apply()}}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}},enabled=!busy){BilingualLabel("Refresh",centered=false)};TextButton(dismiss,enabled=!busy){BilingualLabel("Close",centered=false)}}})
 }
 
 @Composable fun TeamInbox(client:LosangelexClient,selectedTeam:String,dismiss:()->Unit,inspect:(JSONObject)->Unit){
@@ -113,8 +113,8 @@ import java.util.UUID
     LaunchedEffect(team){load()}
     AlertDialog(onDismissRequest=dismiss,title={Text("Needs you · $team")},text={Column{
         LazyColumn(Modifier.heightIn(max=350.dp)){items(events,key={it.optLong("id")}){event->TextButton({inspect(JSONObject(event.toString()).put("team_id",team))}){Text("${event.s("author")} · ${event.s("task")}\n${event.s("body")}")}}}
-        if(loaded&&events.isEmpty())Text("No pending requests")
+        if(loaded&&events.isEmpty())BilingualLabel("No pending requests",centered=false)
         if(error.isNotBlank())Text(error,color=Coral)
-        if(cursor.isNotBlank()||!loaded)TextButton({jobs.launch{load()}},enabled=!busy){Text(if(loaded)"Load more" else "Retry")}
-    }},confirmButton={TextButton(dismiss){Text("Close")}})
+        if(cursor.isNotBlank()||!loaded)TextButton({jobs.launch{load()}},enabled=!busy){BilingualLabel(if(loaded)"Load more" else "Retry")}
+    }},confirmButton={TextButton(dismiss){BilingualLabel("Close",centered=false)}})
 }

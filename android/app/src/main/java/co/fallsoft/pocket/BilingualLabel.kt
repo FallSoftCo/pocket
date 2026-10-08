@@ -34,8 +34,8 @@ import androidx.compose.ui.unit.*
     LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offerLabel(text)}
     val target=PocketImmersion.label(text)
     val key="label-rescue:$text"
-    val supported=PocketImmersion.enabled&&PocketImmersion.supportEnabled&&target!=text
-    val expanded=supported&&PocketImmersion.originalShown(key)
+    val supported=PocketImmersion.enabled&&target!=text
+    val expanded=supported&&PocketImmersion.supportEnabled&&PocketImmersion.originalShown(key)
     if(!supported){
         Text(actionText(AnnotatedString(target)),modifier=modifier,color=color,fontSize=fontSize,fontWeight=fontWeight,maxLines=maxLines,lineHeight=lineHeight,
             overflow=TextOverflow.Ellipsis,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.*
     val progress=remember(text,target){Animatable(1f)}
     val shown=if(expanded||(original&&PocketImmersion.motionEnabled))text else target
     LaunchedEffect(text,target,ready,transitionAnimated,expanded,PocketSpeech.displayedOwner){
-        if(!ready||expanded||PocketSpeech.displayedOwner!=null)return@LaunchedEffect
+        if(!ready||expanded)return@LaunchedEffect
         // Separate queues replace the old synchronous screen-wide label clock.
         val cadence=immersionLabelCadence(text)
         delay(deadline.waitMs(cadence.initialMs))
