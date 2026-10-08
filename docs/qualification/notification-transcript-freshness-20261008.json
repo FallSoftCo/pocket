@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-08",
+  "version": "0.5.0-alpha.46",
+  "findings": [
+    "Firebase notification acceptance did not invalidate open transcript.",
+    "Socket notification invalidation was disabled during voice mode.",
+    "Latest refresh requests were dropped while history loaded.",
+    "Live patches were buffered until history completed."
+  ],
+  "changes": [
+    "Selected same-profile notification invalidates history before display deduplication.",
+    "Deferred latest refresh precedes automatic history bridging.",
+    "Live patches render immediately with versioned replay protecting newer output."
+  ],
+  "measuredBackendReadMs": [
+    50,
+    22
+  ],
+  "latestNotificationSourceTurnsPresent": true,
+  "tests": {
+    "android": 254,
+    "androidFailures": 0,
+    "backendHistory": 8,
+    "backendHistoryFailures": 0
+  },
+  "nativeQualification": {
+    "emulator": "Candidate installed; held-history fixture observed subsequent final snapshots fetched after notification. Visual timing unqualified because launcher ANR obscured content. Owned emulator and fixture stopped.",
+    "physical": "pending installation"
+  },
+  "physicalPushRoundtrip": "not yet qualified",
+  "signedReleaseBuild": "passed",
+  "releaseLint": "passed",
+  "privateUpdate": {
+    "versionCode": 64,
+    "preparedSigningIdentities": 2,
+    "announcementDeduplicated": true
+  }
+}
