@@ -13,7 +13,9 @@
       "failures": 0,
       "focused_theme_access_tests": 5,
       "virtual_dom_flows": "existing web interaction checks pass",
-      "contrast": "light and dark text/control/attention token pairs >=4.5:1"
+      "contrast": "light and dark text/control/attention token pairs >=4.5:1",
+      "final_remote_gateway_theme_tests": 13,
+      "final_remote_virtual_dom_flows": 12
     },
     "private_live": {
       "old_pair_new_status": true,
@@ -31,6 +33,15 @@
       "No rendered-browser or physical Pixelbook qualification",
       "Actual browser origin storage/recording transfer not observed; matching-device migration logic is synthetic-tested",
       "Provider microphone/speech and closed-app notifications retain prior browser limits"
-    ]
+    ],
+    "publication": {
+      "changed_files_checked": 15,
+      "changed_files_private_markers": false,
+      "repository_wide_check": "Workstream checkout check failed on pre-existing absolute local paths in docs/CONTEXT-CONTROL.md; no credentials or deployment hostname added by this change.",
+      "sanitized_main_integration_check": {
+        "passed": true,
+        "trackedFiles": 859
+      }
+    }
   }
 }
