@@ -1973,7 +1973,7 @@
     {
       "id": "voice-roundtrip-latency",
       "requirement": "Measure and fix voice latency end to end across phone capture, transcription, transport, coordinator context, Codex startup/generation, immersion and speech playback. A trivial spoken test must not wait a minute silently. Preserve routing, source, drafts and intermediate answers.",
-      "status": "real_provider_latency_qualified_native_build_in_progress",
+      "status": "alpha42-installed-physical-spoken-roundtrip-followup-pending",
       "implementation": [
         "Persistent per-turn stage timings separate context preparation, model startup, first response and completion from audio.",
         "Small explicitly partial startup metadata; relevant public histories loaded on demand before routing/mutation.",

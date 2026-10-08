@@ -1,6 +1,6 @@
 {
-  "status": "implementation-and-qualification",
-  "release": "alpha42 candidate; not yet installed",
+  "status": "released-and-installed-phone-voice-followup-pending",
+  "release": "0.5.0-alpha.42 / versionCode60 installed in place on paired Pixel",
   "baseline": {
     "hello": {
       "transcriptToNativeStartMs": 1030,
@@ -21,7 +21,8 @@
     "Foreground first audio playback while privately caching",
     "Nonblocking available immersion rendition; planning remains asynchronous",
     "Explicitly partial small startup context, on-demand routing discovery and target read",
-    "In-progress live PCM feed during capture, same-turn stop commit and recorded fallback"
+    "In-progress live PCM feed during capture, same-turn stop commit and recorded fallback",
+    "Canceled negotiation results cannot revive orphaned IDs; speech reconnects when local transport is absent"
   ],
   "infrastructure": {
     "historicalCpuIdlePercentRange": [
@@ -75,28 +76,68 @@
   },
   "remainingLimits": [
     "Original stop/transcription/hello first-audio timestamps unavailable",
-    "Post-fix installed-phone spoken roundtrip not yet verified",
-    "Fresh provider success does not exclude historical provider delay",
-    "Live input and native Android final candidate still qualifying"
+    "Post-fix installed-phone human spoken roundtrip not yet measured",
+    "Fresh provider success does not exclude historical provider delay or brief host/transport spikes",
+    "Native second turn required cold reconnection after idle; hot reuse timing qualified only by isolated provider input test"
   ],
   "checks": {
     "backendTests": 368,
     "targetedAudioContractTests": 20,
     "nativeKotlinCompile": "pass",
-    "finalAndroidBuild": "pass: optimized release, debug/release unit tests and both lints",
-    "handset": "alpha41 until final candidate qualified and installed",
+    "finalAndroidBuild": "pass: optimized maintained release, both unit variants and both lints",
+    "handset": "pass: in-place install, independent package/version/baseAPK checksum, paired registration retained",
     "debugUnitTests": {
-      "tests": 246,
+      "tests": 249,
       "failures": 0
     },
     "releaseUnitTests": {
-      "tests": 246,
+      "tests": 249,
       "failures": 0
-    }
+    },
+    "nativeQa": "pass: immediate capture state, repeated silent recovery, decoded first audio on two completed replies and full cached completion",
+    "negotiationRegressionTests": 3,
+    "sourceCi": "GitHub37709915459 success",
+    "gallery": "pass: 2012 cards, registered browser checker and owned cleanup"
   },
   "artifacts": {
-    "maintainedSha256": "21b7dce5273406b210c0be92dca6b28872afd9c634a0b5aa171f4be63f683cd6",
-    "compatibleSha256": "c0e79631e5eca14d07dca517c83cd49b33f74f1106deff5c9e9ab68256146b83",
+    "maintainedSha256": "8a493da8c9f178d3550d2a62678c7020843bb995d0c278e44a99a898926e956b",
+    "compatibleSha256": "90c8e23bfe37975814e5aa2f6251456b47563422c44de187d7c099036320d489",
     "nonSigningEntries": "byte identical"
+  },
+  "source": "84b3dca22a4d6342ea84e61629d51bbad8d4f959",
+  "nativeAndroid": {
+    "optimizedArtifactSha256": "8a493da8c9f178d3550d2a62678c7020843bb995d0c278e44a99a898926e956b",
+    "api": 34,
+    "captureStateMs": 147,
+    "silentCaptures": 2,
+    "silentRetry": "Explicit error each; no sticky409",
+    "completedTurnRecovery": "Fetched same completed reply; no resend",
+    "textToFirstAudioMs": 3426,
+    "coldNegotiationMs": 1986,
+    "ttsToFirstAudioMs": 1440,
+    "providerRttMs": 61,
+    "jitterMs": 10,
+    "inboundPacketsLost": 0,
+    "scope": "Actual optimized Android WebView decoded audio and UI Speaking, synthetic emulator. Host input driver provides zeros; not real captured speech or physical handset audibility.",
+    "freshTurn": {
+      "ttsToFirstAudioMs": 1278,
+      "textToFirstAudioMs": 3007,
+      "scope": "Actual optimized Android, idle teardown made this cold reconnection; no claim of native hot reuse."
+    }
+  },
+  "delivery": {
+    "publicRelease": "https://github.com/FallSoftCo/pocket/releases/tag/v0.5.0-alpha.42",
+    "uploadedMaintainedDigestMatches": true,
+    "pairedUpdateAnnouncement": {
+      "notificationId": 808,
+      "announced": 1,
+      "scope": "One backend announcement, not proof of phone notification receipt"
+    },
+    "phone": {
+      "installedVersionCode": 60,
+      "installedBaseApkSha256": "90c8e23bfe37975814e5aa2f6251456b47563422c44de187d7c099036320d489",
+      "pairing": "retained",
+      "humanVoiceRoundtrip": "Not yet measured; short user test requested after install"
+    }
   }
 }
