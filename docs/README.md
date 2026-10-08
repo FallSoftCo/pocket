@@ -22,6 +22,8 @@ NextComp connects a person on Android to ongoing work in their own computing env
 - [Voice architecture](VOICE.md) and [native voice investigation](NATIVE-VOICE-INVESTIGATION.md).
 - [Notification read handling](NOTIFICATION-READS.md) and [spoken captions](SPEECH-CAPTIONS.md).
 - [Speech activity tracking](SPEECH-USAGE.md): local generation/playback counters, blocked-audio safeguards and billing limits.
+- [Automatic work record](WORK-RECORD.md): requests, observed outputs, file evidence and linked follow-ups; implementation candidate, with private retention and qualification limits.
+- [Context snapshots and independent workers](CONTEXT-CONTROL.md): verified provider branching, portable manifests, compaction provenance and Hollywood coordination design; not a deployed context editor.
 - [Work updates](WORK-UPDATES.md): scheduled reports outside coordinator chat, retained history, exact unread state and direct session links.
 - [Audited task continuation](CONTINUATION.md): evidence-backed resumption, durable checkpoints, sparse recovery and protected stops.
 - [Work lifecycle replacement](WORK-LIFECYCLE.md): event-driven work, one owner, bounded model admission, acceptance receipts and the qualified rollout boundary.
