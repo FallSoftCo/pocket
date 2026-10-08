@@ -16,6 +16,7 @@ export class AccountRateLimits {
     this.codex=codex;this.onChange=onChange;this.clock=clock;this.ttl=ttl;
     this.buckets={};this.defaultBucket=null;this.updatedAt=null;this.lastAttempt=null;
     this.failed=false;this.loading=true;this.generation=0;this.inflight=null;this.pendingUpdates=null;
+    this.accountId=null;
   }
   snapshot(){
     const weekly=weeklyWindow(this.buckets.codex||this.defaultBucket);
@@ -24,7 +25,7 @@ export class AccountRateLimits {
     return {weekly,updatedAt:this.updatedAt,stale,state:weekly?'available':this.loading?'loading':'unavailable'};
   }
   update(payload,{replace=false}={}){
-    if(replace){this.buckets={};this.defaultBucket=null;}
+    if(replace){this.buckets={};this.defaultBucket=null;this.accountId=payload?.accountId||null;}
     if(own(payload,'rateLimitsByLimitId')){
       for(const [id,bucket] of Object.entries(payload.rateLimitsByLimitId||{})){
         this.buckets[id]=bucket===null?null:replace?bucket:{...this.buckets[id],...bucket};
@@ -42,6 +43,7 @@ export class AccountRateLimits {
   clear(){
     this.generation++;this.buckets={};this.defaultBucket=null;this.updatedAt=null;
     this.lastAttempt=null;this.inflight=null;this.pendingUpdates=null;this.failed=false;this.loading=true;
+    this.accountId=null;
     this.onChange(this.snapshot());
   }
   disconnected(){this.failed=true;this.loading=false;this.onChange(this.snapshot());}

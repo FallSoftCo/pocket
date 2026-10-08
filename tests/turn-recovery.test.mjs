@@ -117,3 +117,12 @@ test('restart never labels authorized partial finals as failures; actual failure
  const completedTurn=f.latest.id;f.latest={...f.latest,status:'completed'};r.recordCheckpoint({id:'thread',turns:[f.latest]},{turnId:completedTurn,state:'continue',evidence:'Useful completed step; deliverable remains'});r=new TurnRecovery(f.args);assert.equal(r.recoverableFailure('thread',completedTurn),false);f.advance(30000);await r.tick();
  const failed=f.latest.id;f.latest={...f.latest,status:'failed',error:{message:'Selected model is at capacity'}};r.observe('thread',f.latest);r=new TurnRecovery(f.args);assert.equal(r.recoverableFailure('thread',failed),true);assert.equal(r.recoverableFailure('thread','partial-final'),false);assert.equal(r.recoverableFailure('thread',completedTurn),false);
 });
+
+test('definitive personal quota failure waits durably without resending original requests',async()=>{
+ assert.equal(transientFailure({codexErrorInfo:'usageLimitExceeded',message:'You have hit your usage limit.'}),'quota');
+ assert.equal(transientFailure({codexErrorInfo:'usageLimitExceeded',message:'You hit your spend cap set in your workspace.'}),null);
+ assert.equal(transientFailure({codexErrorInfo:'usageLimitExceeded',message:'Your workspace is out of credits.'}),null);
+ const f=fixture();f.latest={...f.latest,error:{codexErrorInfo:'usageLimitExceeded',message:'Usage limit reached'}};let allowed=false;
+ f.args.health=async()=>allowed;let r=new TurnRecovery(f.args);r.observe('thread',f.latest);f.advance();await r.tick();assert.equal(f.calls.length,0);assert.equal(r.get('thread').state,'waiting');
+ r=new TurnRecovery(f.args);allowed=true;f.advance();await r.tick();assert.equal(f.calls.length,1);assert.equal(r.get('thread').state,'running');
+});

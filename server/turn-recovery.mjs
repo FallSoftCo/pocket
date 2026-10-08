@@ -5,6 +5,9 @@ export const CONTINUATION_INPUT=RECOVERY_INPUT+' This task has durable continuat
 export function transientFailure(error){
  const text=[error?.message,error?.additionalDetails].filter(Boolean).join('\n');
  if(/application network permission was revoked|application network policy is unavailable/i.test(text))return 'permission';
+ // Definitive quota failures preserve the existing task and wait for account
+ // health; this does not authorize purchases or override spending/task stops.
+ if(error?.codexErrorInfo==='usageLimitExceeded'&&!/spend cap|spending limit|workspace.*credits|not included/i.test(text))return 'quota';
  if(error?.codexErrorInfo==='serverOverloaded'||/selected model is at capacity|server overloaded|temporarily unavailable|connection reset|stream disconnected|request timed out|network policy is unavailable/i.test(text))return 'transient';
  if(/no space left on device|no file descriptors available|too many open files|resource temporarily unavailable|\bENOSPC\b/i.test(text))return 'transient';
  if(/compact/i.test(text)&&/network|timeout|capacity|temporar|server error/i.test(text))return 'transient';

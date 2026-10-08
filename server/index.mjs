@@ -1,6 +1,6 @@
 import {RecoveryQueue} from './recovery-queue.mjs';
 import {TurnRecovery,permissionRecoveryAudit} from './turn-recovery.mjs';
-import {recoveryStorageReady,recoveryUsagePolicy} from './recovery-health.mjs';
+import {recoveryStorageReady,recoveryUsagePolicy,recoveryAccountUsage} from './recovery-health.mjs';
 import {SessionDiscovery,INTERACTIVE_SOURCES} from './session-discovery.mjs';
 import {catalogFields,sessionIdentity,sessionWorkTime,requireDirectSessionInput} from './session-catalog.mjs';
 import {SessionCatchup} from './session-catchup.mjs';
@@ -42,6 +42,8 @@ import { VoiceController } from './voice-controller.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const dir=process.env.POCKET_DATA || resolve(root,'data');
+const creditContinuationPath=resolve(dir,'existing-credit-continuation.json');
+const creditContinuation=existsSync(creditContinuationPath)?JSON.parse(readFileSync(creditContinuationPath,'utf8')):null;
 const appVersion=JSON.parse(readFileSync(resolve(root,'package.json'),'utf8')).version;
 const hostName=process.env.POCKET_HOST_NAME||hostname();
 const localMode=process.env.POCKET_LOCAL==='1';
@@ -154,9 +156,7 @@ const turnRecovery=new TurnRecovery({db,
     if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state='unknown'").get(threadId))return {ok:false,blocked:true,reason:'Earlier message delivery is uncertain. Reconcile that message before continuing; it has not been sent again.'};
     if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('sending','queued')").get(threadId))return false;
     await rateLimits.refresh();if(rateLimits.failed)return false;
-    const quota=rateLimits.buckets.codex||rateLimits.defaultBucket;
-    const stops=[quota?.primary,quota?.secondary].filter(window=>window&&window.usedPercent>=100);
-    if(stops.length)return {ok:false,nextAt:Math.max(...stops.map(window=>window.resetsAt>0?window.resetsAt*1000:Date.now()+4*3600000))};
+    const accountUsage=recoveryAccountUsage(rateLimits,creditContinuation);if(!accountUsage.ok)return accountUsage;
     if(db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(threadId)?.archived)return false;
     if(kind==='permission'){
       const intended=db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(threadId)||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(threadId);
