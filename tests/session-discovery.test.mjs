@@ -76,3 +76,13 @@ test('malformed cached parent cycles terminate without resuming or dropping hist
  f.discovery.remember({id:'b',parentThreadId:'a',recencyAt:1});
  const result=await f.discovery.list();assert.ok(result.data.some(t=>t.id==='a'));assert.ok(result.data.some(t=>t.id==='b'));assert.ok(f.calls.every(c=>['thread/list','thread/read'].includes(c.m)));f.db.close();
 });
+test('renamed cached owners remain discoverable when native search is empty without faking active status',async()=>{
+ const f=setup(()=>({data:[],nextCursor:null}));
+ f.discovery.remember({id:'conference',name:'AcceleratorCON application and presentation',status:{type:'active'},recencyAt:100});
+ f.discovery.remember({id:'hidden-controller',name:'AcceleratorCon worker'});
+ const result=await f.discovery.list({searchTerm:'acceleratorcon'});
+ assert.deepEqual(result.data.map(t=>t.id),['conference']);assert.equal(result.data[0].status.type,'notLoaded');
+ f.discovery.observe({method:'turn/started',params:{threadId:'conference'}});
+ assert.equal((await f.discovery.list({searchTerm:'AcceleratorCon'})).data[0].status.type,'active');
+ assert.ok(f.calls.every(c=>c.m==='thread/list'));f.db.close();
+});

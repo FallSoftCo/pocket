@@ -1995,12 +1995,12 @@
     {
       "id": "catalog-real-work-20261008",
       "request": "Hide durable product-owned workers and empty shells from Recent without deleting history; actual runtime parent ownership; discoverable Foresight/AcceleratorCon owners; bounded relevant-activity ordering with live ties and touch holds; idle/input blockers explicit.",
-      "status": "implementing-alpha43"
+      "status": "shipped-alpha43"
     },
     {
       "id": "quiet-dependency-continuation-20261008",
       "request": "Stop unchanged-dependency model polling. Reports use stored updates with no runtime/model calls or worker starts. External-dependency checkpoints park durably until a material signal; preserve useful work, transient recovery, explicit recurring tasks and user commands.",
-      "status": "qualified-alpha43"
+      "status": "shipped-alpha43"
     }
   ],
   "current_state": {

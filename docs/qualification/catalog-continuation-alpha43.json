@@ -2,7 +2,8 @@
   "version": "0.5.0-alpha.43",
   "catalog": {
     "cause": "Immersion ownership was memory-only; historical workers leaked after restart. Existing seats never reordered during browsing.",
-    "fix": "Durable exact worker ownership, bounded real-work age cohorts, visible idle/blocker context, retained searchable empty history."
+    "fix": "Durable exact worker ownership, bounded real-work age cohorts, visible idle/blocker context, retained searchable empty history.",
+    "search": "Actual renamed owner initially absent from native search; cached case-insensitive title/topic supplement restored discovery without assuming cached active status."
   },
   "continuation": {
     "cause": "An external-dependency worker repeatedly reported continue after unchanged inbox waits, resetting prompt continuation backoff.",
@@ -31,7 +32,7 @@
     "Existing voice spoken benchmark and separate running-work enrollment remain outside this release."
   ],
   "backendTests": {
-    "passed": 379,
+    "passed": 380,
     "failed": 0
   }
 }

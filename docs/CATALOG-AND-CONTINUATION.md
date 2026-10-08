@@ -4,7 +4,7 @@ Recent work uses actual observed item/turn activity and native work recency, nev
 
 Product-owned immersion workers have durable identities, including legacy entries from the exact configured private worker directory. They never become public work cards after restart. Delegated agents retain runtime parent ownership. Empty idle shells are omitted from Recent, retained in searchable History, and immediately reappear if they receive meaningful work, are watched, have unread updates or start running. No histories are deleted.
 
-Owner-supplied catalog context supplies a concise evidence-backed blocker or reading aid. It appears only while idle, is invalidated by subsequent real work, does not alter runtime status or activity timestamps, and opens the actual conversation through its card. Titles remain editable.
+Owner-supplied catalog context supplies a concise evidence-backed blocker or reading aid. It appears only while idle, is invalidated by subsequent real work, does not alter runtime status or activity timestamps, and opens the actual conversation through its card. Titles remain editable. Cached title/topic matches supplement native search, so renamed owners remain discoverable even if the native search index is stale; stale fallback status remains explicitly unverified.
 
 Scheduled reports assemble stored public observations only. They do not call the runtime, invoke a model, start or resume workers. Reporting settings and unread/presented semantics remain unchanged. Stored scope is explicitly incomplete rather than represented as a fresh inventory audit.
 

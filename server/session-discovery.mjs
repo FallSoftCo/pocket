@@ -39,7 +39,12 @@ export class SessionDiscovery {
   markArchived(id,flag){this.db.prepare('UPDATE pocket_discovered_threads SET archived=? WHERE thread_id=?').run(flag?1:0,id);this.readCache.delete(id);}
   snapshot(flag){return {data:this.db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE archived=?').all(flag?1:0).map(row=>JSON.parse(row.metadata)).filter(t=>!this.hidden(t.id,t)).sort(compareSessionWork).slice(0,400),nextCursor:null,refreshPending:true};}
   async list({archived:flag=false,cursor=null,searchTerm=null}={}){
-    if(cursor||searchTerm){const page=await this.page({limit:100,sortKey:'recency_at',sortDirection:'desc',archived:flag,useStateDbOnly:true,sourceKinds:searchTerm?[...INTERACTIVE_SOURCES,'subAgentThreadSpawn']:INTERACTIVE_SOURCES,...(cursor?{cursor}:{}),...(searchTerm?{searchTerm}:{})});return {data:(page.data||[]).filter(t=>!this.hidden(t.id,t)).map(t=>this.remember(t,{archived:flag})||t).sort(compareSessionWork),nextCursor:page.nextCursor||null};}
+    if(cursor||searchTerm){const page=await this.page({limit:100,sortKey:'recency_at',sortDirection:'desc',archived:flag,useStateDbOnly:true,sourceKinds:searchTerm?[...INTERACTIVE_SOURCES,'subAgentThreadSpawn']:INTERACTIVE_SOURCES,...(cursor?{cursor}:{}),...(searchTerm?{searchTerm}:{})});const found=new Map((page.data||[]).filter(t=>!this.hidden(t.id,t)).map(t=>[t.id,this.remember(t,{archived:flag})||t]));
+      if(searchTerm){const query=searchTerm.toLocaleLowerCase();for(const row of this.db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE archived=?').all(flag?1:0)){
+        const t=JSON.parse(row.metadata);if(found.has(t.id)||this.hidden(t.id,t))continue;
+        if([t.name,t.preview,t.agentNickname,t.agentRole].some(text=>typeof text==='string'&&text.toLocaleLowerCase().includes(query)))found.set(t.id,{...t,status:{type:'notLoaded'},discoveryPending:true,...this.live.get(t.id)});
+      }}
+      return {data:[...found.values()].sort(compareSessionWork),nextCursor:page.nextCursor||null};}
     let work=this.refreshing.get(flag);
     if(!work){work=this.refreshList(flag);this.refreshing.set(flag,work);void work.finally(()=>{if(this.refreshing.get(flag)===work)this.refreshing.delete(flag);}).catch(()=>{});}
     let timer;const timeout=Symbol('discovery deadline');
