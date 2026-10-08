@@ -16,6 +16,18 @@ export function saveRefreshedAuth(authFile,original,updated){
  const temporary=authFile+`.refresh-${process.pid}`;
  writeFileSync(temporary,updated,{mode:0o600});renameSync(temporary,authFile);
 }
+// Only fixed classifications may escape the private subprocess. Never log its raw
+// stderr/events: they can contain credentials, task text or account information.
+export function reviewerFailure(output,errors,{timedOut=false,toolAttempt=false,overflow=false}={}){
+ if(timedOut)return 'timeout';
+ if(toolAttempt)return 'tool attempt';
+ if(overflow)return 'output limit';
+ const text=String(output)+'\n'+String(errors);
+ for(const code of ['refresh_token_reused','refresh_token_expired','refresh_token_invalidated','token_revoked']){
+  if(new RegExp(`\\b${code}\\b`,'i').test(text))return `authentication: ${code}; sign in again with the dedicated reviewer account`;
+ }
+ return 'runtime error';
+}
 export function executionArgs(binary,dir,{model='gpt-6-astra',provider=null}={}){
  const args=['--unshare-user','--unshare-pid','--unshare-ipc','--unshare-uts','--die-with-parent','--new-session','--clearenv','--dir','/bin','--dir','/etc','--dir','/etc/ssl','--ro-bind','/etc/ssl/certs','/etc/ssl/certs','--ro-bind','/etc/resolv.conf','/etc/resolv.conf','--ro-bind','/etc/hosts','/etc/hosts','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--dir','/home','--dir','/home/reviewer','--dir','/codex','--ro-bind',binary,'/bin/codex','--bind',join(dir,'auth'),'/codex','--bind',join(dir,'job'),'/job','--setenv','HOME','/home/reviewer','--setenv','CODEX_HOME','/codex','--setenv','PATH','/bin','--setenv','LANG','C.UTF-8','--chdir','/job','/bin/codex','exec','--ignore-user-config','--ignore-rules','--ephemeral','--strict-config','--skip-git-repo-check','-C','/job','-s','read-only','--json','--output-schema','/job/schema.json','--output-last-message','/job/result.json','-c',`model=${JSON.stringify(model)}`,'-c','web_search="disabled"','-c','model_instructions_file="/job/instructions.md"'];
  for(const f of disabledFeatures)args.push('--disable',f);
@@ -44,7 +56,7 @@ export async function review(snapshot,{binary=process.env.MAINTAINER_CODEX_BIN||
   child.stdin.on('error',()=>{});child.stdin.end(prompt);
   const code=await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',resolve);}).finally(()=>clearTimeout(timer));
   if(persistAuth&&!provider)saveRefreshedAuth(authFile,originalAuth,readFileSync(join(dir,'auth/auth.json'),'utf8'));
-  if(code!==0||timedOut||toolAttempt||overflow)throw Error(`Reviewer failed closed (${timedOut?'timeout':toolAttempt?'tool attempt':overflow?'output limit':'runtime error'}).`);
+  if(code!==0||timedOut||toolAttempt||overflow)throw Error(`Reviewer failed closed (${reviewerFailure(output,errors,{timedOut,toolAttempt,overflow})}).`);
   for(const line of output.split('\n').filter(Boolean)){
    let event;try{event=JSON.parse(line);}catch{throw Error('Malformed reviewer event');}
    const type=event.item?.type;
