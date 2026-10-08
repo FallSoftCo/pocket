@@ -61,14 +61,18 @@ private val symbolResources = mapOf(
     SymbolIcon(imageVector.name.substringAfterLast('.'), contentDescription, modifier, tint,spinning)
 }
 
+internal fun resolveAuthoredSymbol(name: String): String =
+    if (symbolResources.containsKey(name)) name else "ErrorOutline"
+
 @Composable fun SymbolIcon(name: String, contentDescription: String?, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current,spinning:Boolean=false) {
-    val resource = requireNotNull(symbolResources[name]) { "Missing authored symbol: $name" }
+    val resolvedName = resolveAuthoredSymbol(name)
+    val resource = symbolResources.getValue(resolvedName)
     val context=LocalContext.current
     val animated=motionAllowed()
-    val stem = (if (spinning) "symbol_spin_" else "symbol_motion_") + name.lowercase(java.util.Locale.ROOT)
-    val hasSpin = spinning && name in setOf("Codex", "Psychology")
-    val atlas = remember(name, hasSpin) {
-        RenderedAtlas(if (hasSpin) stem else "symbol_motion_" + name.lowercase(java.util.Locale.ROOT),
+    val stem = (if (spinning) "symbol_spin_" else "symbol_motion_") + resolvedName.lowercase(java.util.Locale.ROOT)
+    val hasSpin = spinning && resolvedName in setOf("Codex", "Psychology")
+    val atlas = remember(resolvedName, hasSpin) {
+        RenderedAtlas(if (hasSpin) stem else "symbol_motion_" + resolvedName.lowercase(java.util.Locale.ROOT),
             if (hasSpin) 160 else 120, if (hasSpin) 96 else 128,
             if (hasSpin) 8 else 5, if (hasSpin) 32 else 30)
     }

@@ -1,0 +1,30 @@
+{
+  "cause": "alpha43 needs-input card referenced unregistered HelpOutline; SymbolIcon threw IllegalArgumentException on UI thread",
+  "deviceEvidence": {
+    "installedVersion": "0.5.0-alpha.43",
+    "versionCode": 61,
+    "matchingCrashes": 6,
+    "exitReason": "APP CRASH (EXCEPTION)"
+  },
+  "fix": [
+    "Use authored ErrorOutline for needs-input cards",
+    "Resolve unknown symbols to consistent static and animated authored attention fallback",
+    "Validate authored references across all UI sources"
+  ],
+  "validation": {
+    "candidateVersion": "0.5.0-alpha.44",
+    "build": "testDebugUnitTest assembleDebug lintDebug passed",
+    "phoneInstalled": true,
+    "tests": 251,
+    "failures": 0,
+    "signingCertificate": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+    "phoneVersionCode": 62,
+    "phoneInstall": "adb install -r succeeded",
+    "phoneUi": "Actual Pixel session list rendered; pairing/live catalog retained",
+    "phoneCrashCheck": "No crash-buffer entries since install 2026-10-08 13:29:50 device local time",
+    "limits": [
+      "Short post-install observation; no claim of long-duration stability",
+      "UIAutomator could not reach idle state; actual screenshot inspected instead"
+    ]
+  }
+}
