@@ -150,7 +150,7 @@ import java.util.UUID
             }
         }
         TeamAgentControls(client,team,task,overview,jobs,{receipt=it},{error=it})
-        if(replyTo!=null)TextButton({replyTo=null}){Text("Reply to #$replyTo · clear")}
+        if(replyTo!=null)TextButton({replyTo=null}){BilingualLabel("Reply to #$replyTo · clear")}
         if(receipt.isNotBlank())ImmersionText("team-receipt:$owner:$team",receipt,fontSize=12.sp,color=Muted)
         OutlinedTextField(input,{input=it;client.saveDraft(target,it.text)},enabled=pending==null&&!busy,label={BilingualLabel(if(direct)"Message $recipient" else "Message the team")},modifier=Modifier.fillMaxWidth().onPreviewKeyEvent{event->
             val enter=event.key==Key.Enter||event.key==Key.NumPadEnter
@@ -171,5 +171,5 @@ import java.util.UUID
 
 @Composable fun TeamChoice(label:String,choices:List<Pair<String,String>>,selected:String,modifier:Modifier=Modifier,onSelect:(String)->Unit){
     var open by remember{mutableStateOf(false)}
-    Box(modifier){TextButton({open=true},modifier=Modifier.fillMaxWidth(),contentPadding=PaddingValues(horizontal=4.dp)){Text("$label: "+(choices.firstOrNull{it.first==selected}?.second?:selected),maxLines=1,overflow=TextOverflow.Ellipsis)};DropdownMenu(open,{open=false}){choices.forEach{(id,name)->DropdownMenuItem(text={Text(name)},onClick={open=false;onSelect(id)})}}}
+    Box(modifier){TextButton({open=true},modifier=Modifier.fillMaxWidth(),contentPadding=PaddingValues(horizontal=4.dp)){BilingualLabel("$label: "+(choices.firstOrNull{it.first==selected}?.second?:selected),maxLines=1,centered=false)};DropdownMenu(open,{open=false}){choices.forEach{(id,name)->DropdownMenuItem(text={BilingualLabel(name,centered=false)},onClick={open=false;onSelect(id)})}}}
 }

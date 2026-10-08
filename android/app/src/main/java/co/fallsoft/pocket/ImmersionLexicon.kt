@@ -5,6 +5,18 @@ import java.util.Locale
 /** Authored, offline learning vocabulary. Match whole labels; never rewrite executable syntax. */
 object ImmersionLexicon {
     val common=mapOf(
+        "Approve once" to "Approva una volta",
+        "Clear all saved speech" to "Svuota tutte le letture salvate",
+        "Reload backends" to "Ricarica i motori",
+        "Use Codex" to "Usa Codex",
+        "Close image" to "Chiudi l’immagine",
+        "New team task" to "Nuovo incarico al gruppo",
+        "Task name" to "Nome dell’incarico",
+        "What should the team do?" to "Che cosa deve fare il gruppo?",
+        "Retry saved task" to "Riprova l’incarico salvato",
+        "Send answer" to "Invia la risposta",
+        "Retry saved answer" to "Riprova la risposta salvata",
+        "No pending requests" to "Nessuna richiesta in attesa",
         "Automatic language cycling" to "Alternanza automatica delle lingue",
         "Reduced motion · cycling without animation" to "Movimento ridotto · alternanza senza animazione",
         "How much Italian?" to "Quanto italiano?",

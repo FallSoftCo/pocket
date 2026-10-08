@@ -233,7 +233,16 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         Box{
         val visibleKeys by remember(list){derivedStateOf{list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()}}
         val speechText=shownRows.filter{it.s("id") in visibleKeys&&it.s("kind")=="message"}.map{row->spokenRows[row.s("id")]?:PocketImmersion.display("row:"+row.s("id"),row.s("text"))}.filter{it.isNotBlank()}.joinToString("\n\n")
-        ConversationNotesCard(important=important,onFilter={follow=false;important=!important;scope.launch{list.scrollToItem(0)}},onControls={actionsOpen=true},speechText=speechText,status=status)
+        ConversationNotesCard(important=important,onFilter={
+            val before=shownRows.map{it.s("id")}
+            val visible=list.firstVisibleItemIndex.coerceAtMost((before.size-1).coerceAtLeast(0))
+            val offset=list.firstVisibleItemScrollOffset
+            val nextImportant=!important
+            val after=if(nextImportant)orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}else rows
+            val anchor=conversationFilterAnchor(before,after.map{it.s("id")},visible)
+            follow=false;important=nextImportant
+            scope.launch{androidx.compose.runtime.withFrameNanos{};if(anchor>=0)list.scrollToItem(anchor,if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0)}
+        },onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
         }
         InlineCaptureStatus()
@@ -395,4 +404,16 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             DropdownMenu(effortMenu,{effortMenu=false}){efforts.forEach{e->DropdownMenuItem(text={BilingualLabel(e.s("reasoningEffort"))},onClick={effort=e.s("reasoningEffort");effortMenu=false})}}}
         Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){BilingualLabel(if(plan)"Plan mode" else "Build mode");WorkflowText(if(plan)"Propose a plan before implementation" else "Carry out the requested work",fontSize=11.sp,color=Muted)};Switch(plan,{plan=it})}
     }},confirmButton={TextButton({Pocket.updateTurnSettings(JSONObject().put("model",model).put("effort",effort).put("mode",if(plan)"plan" else "default"),onDismiss)},enabled=selected!=null&&effort.isNotBlank()&&!loading){BilingualLabel("Save")}},dismissButton={TextButton(onDismiss){BilingualLabel("Cancel")}})
+}
+
+internal fun conversationFilterAnchor(before:List<String>,after:List<String>,visible:Int):Int {
+    if(after.isEmpty())return -1
+    if(before.isEmpty())return after.lastIndex
+    val position=visible.coerceIn(0,before.lastIndex)
+    val direct=after.indexOf(before[position]);if(direct>=0)return direct
+    for(distance in 1..before.size){
+        val next=position+distance;if(next<before.size){val found=after.indexOf(before[next]);if(found>=0)return found}
+        val previous=position-distance;if(previous>=0){val found=after.indexOf(before[previous]);if(found>=0)return found}
+    }
+    return after.lastIndex
 }

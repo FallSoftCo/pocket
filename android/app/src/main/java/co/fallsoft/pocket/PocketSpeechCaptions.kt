@@ -87,7 +87,7 @@ object PocketSpeechCaptions {
         }
     }
     ActivityPopup(expanded,{expanded=false},PocketNotificationTitles.threadForId(s.id),passage=s.text){
-        TextButton({PocketSpeechCaptions.dismiss();expanded=false}){Text(PocketImmersion.label("Dismiss captions"))}
+        TextButton({PocketSpeechCaptions.dismiss();expanded=false}){BilingualLabel("Dismiss captions")}
     }
     }
 }

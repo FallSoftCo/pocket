@@ -6,7 +6,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.*
@@ -14,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
-/** One fully readable native layout; a local background identifies the changing phrase. */
+/** Native hit testing with a draw-only complementary reading-direction wipe. */
 @Composable internal fun BlendImmersionText(
     from:AnnotatedString,to:AnnotatedString,progress:()->Float,snapshot:AnnotatedString,
     modifier:Modifier=Modifier,fontSize:TextUnit=17.sp,lineHeight:TextUnit=26.sp,
@@ -26,6 +33,7 @@ import androidx.compose.ui.unit.*
 ){
     val measurer=rememberTextMeasurer()
     val density=androidx.compose.ui.platform.LocalDensity.current
+    val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
     val style=LocalTextStyle.current.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,textAlign=textAlign))
     val incoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
     // Fresh callbacks/styles when wording is unchanged; keep the previous visible
@@ -52,19 +60,31 @@ import androidx.compose.ui.unit.*
         val width=if(fillWidth&&available!=Constraints.Infinity)available else natural.maxOf{it.size.width}.coerceAtLeast(1)
         val height=forms.maxOf{measure(it,width,true).size.height}.coerceAtLeast(1)
         Box(Modifier.size(with(density){width.toDp()},with(density){height.toDp()})){
+            val outgoingLayout=measure(from,width,true)
+            val incomingLayout=measure(to,width,true)
             Text(visible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
-                onTextLayout={layout=it;reportVisibility()},modifier=Modifier.fillMaxWidth().onGloballyPositioned{coordinates=it;reportVisibility()}.drawBehind{
-                    val current=layout
-                    val cue=immersionInkPhase(progress()).cue
-                    if(cue>0f&&current!=null&&immersionNativeLayoutMatches(current.layoutInput.text,visible)){
-                        ranges.forEach{range->
-                            if(range.start>=0&&range.end<=visible.length&&range.end>range.start){
-                                // Native selection geometry follows each wrapped fragment; it
-                                // never unions a phrase into a box covering unrelated words.
-                                drawPath(current.getPathForRange(range.start,range.end),Color(0xffffc43a).copy(alpha=.22f*cue))
-                            }
+                onTextLayout={layout=it;reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithContent{
+                    val p=progress().coerceIn(0f,1f)
+                    if(from.text==to.text||p<=0f||p>=1f){drawContent();return@drawWithContent}
+                    val firstChangedLine=(changed.first.map{outgoingLayout.getLineForOffset(it.start.coerceIn(0,(from.length-1).coerceAtLeast(0)))}+changed.second.map{incomingLayout.getLineForOffset(it.start.coerceIn(0,(to.length-1).coerceAtLeast(0)))}).minOrNull()?:0
+                    val lines=(maxOf(outgoingLayout.lineCount,incomingLayout.lineCount)-firstChangedLine).coerceAtLeast(1)
+                    fun layer(result:TextLayoutResult,incomingLayer:Boolean){
+                        val canvas=drawContext.canvas
+                        canvas.saveLayer(Rect(0f,0f,size.width,size.height),Paint())
+                        drawText(result)
+                        for(line in 0 until result.lineCount){
+                            val phase=if(line<firstChangedLine)0f else immersionWipeLineProgress(p,line-firstChangedLine,lines)
+                            val feather=(size.width*.12f).coerceIn(12f,48f)
+                            val frontier=-feather+(size.width+2f*feather)*phase
+                            val left=if(incomingLayer)1f else 0f
+                            val right=1f-left
+                            val colors=if(rtl)listOf(Color.Black.copy(alpha=right),Color.Black.copy(alpha=left))else listOf(Color.Black.copy(alpha=left),Color.Black.copy(alpha=right))
+                            val center=if(rtl)size.width-frontier else frontier
+                            drawRect(Brush.horizontalGradient(colors,center-feather,center+feather),topLeft=Offset(0f,result.getLineTop(line)),size=Size(size.width,result.getLineBottom(line)-result.getLineTop(line)),blendMode=BlendMode.DstIn)
                         }
+                        canvas.restore()
                     }
+                    layer(outgoingLayout,false);layer(incomingLayout,true)
                 })
         }
     }
@@ -95,4 +115,11 @@ internal fun immersionDrawText(text:AnnotatedString):AnnotatedString = buildAnno
         val style=when(val link=range.item){is LinkAnnotation.Url->link.styles?.style;is LinkAnnotation.Clickable->link.styles?.style;else->null}
         if(style!=null)addStyle(style,range.start,range.end)
     }
+}
+
+internal fun immersionWipeLineProgress(progress:Float,line:Int,lines:Int):Float {
+    if(progress<=0f)return 0f
+    if(progress>=1f)return 1f
+    val overlap=1.6f
+    return ((progress.coerceIn(0f,1f)*(lines.coerceAtLeast(1)-1+overlap)-line)/overlap).coerceIn(0f,1f)
 }
