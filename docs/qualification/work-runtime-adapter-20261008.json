@@ -1,0 +1,32 @@
+{
+  "scope": "Candidate dispatch boundary only; not production scheduling",
+  "tests": {
+    "adapter": 8,
+    "kernel": 13,
+    "fullBackend": 406,
+    "failures": 0
+  },
+  "liveReadOnlyEvidence": {
+    "nativePagedTurns": 2,
+    "itemsViews": [
+      "full",
+      "full"
+    ],
+    "persistedUserClientIds": 2,
+    "workersStarted": 0
+  },
+  "activated": false,
+  "invariants": [
+    "Durable send fence precedes native transport",
+    "No timeout or restart resend",
+    "Exact native user client ID reconciliation",
+    "Cancellation retains slot until settled",
+    "No automatic result acceptance or successor generation"
+  ],
+  "remaining": [
+    "Versioned durable shared-service model-work lane",
+    "Authenticated task and result-producer adapters",
+    "Complete runtime inventory and managed-dispatch integration",
+    "Native live disposable qualification before activation"
+  ]
+}
