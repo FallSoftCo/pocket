@@ -67,7 +67,7 @@ Claude itself now documents conversation-fork subagents and ordinary fresh-conte
 - NextComp `server/history.mjs` and `timeline.mjs`: original/paged history and display projection. **Display rows are bounded and lossy**; do not export them as lossless provider context.
 - NextComp `server/index.mjs`: authenticated pairing boundary, provider routing, persistent outgoing IDs, ambiguous-delivery handling, steer/queue/interrupt and approval/question handling. Reuse these semantics for worker commands.
 - NextComp `server/losangelex.mjs`, Android `BackendApp.kt`/`LosangelexScreen.kt`: separate backend selection and team/direct modes. Context controls belong to the selected backend, rather than silently converting Codex sessions into Losangelex sessions.
-- The separate shared computer-use scheduler investigation owns resource reservation design. Context forks must not inherit the parent's live browser lease or desktop ownership.
+- Recovery update 2026-10-08: `/home/ai/Development/computer-use-broker` now supplies the canonical shared-input broker, durable task service and an isolated gallery executor. Workers must persist stable admission request IDs and queued tickets, resume the same operation after disconnection, and respect quarantine and revision CAS. `browser-script-run.mjs` manages ad-hoc scripts; `BrowserReadClient` manages fixed owned DOM snapshots. Context forks must not inherit a parent's live browser lease or desktop ownership. Unknown writes remain fenced until independent reconciliation; no worker receives administrator credentials.
 
 ## Recommended NextComp architecture (proposal)
 
