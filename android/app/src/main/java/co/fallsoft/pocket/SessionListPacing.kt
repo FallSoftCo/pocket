@@ -69,22 +69,18 @@ fun stableSessionOrder(previous: List<String>, entries: List<SessionRank>, now: 
     return result
 }
 
-/** Existing seats stay fixed during browsing. First load and explicit navigation
- * reconcile by confirmed ongoing work and genuine work recency.
- * Rank zero is the bottom (thumb-nearest) end of the reverse-layout list.
- */
+/** Real work moves toward the thumb; peers active within 30 seconds stay tied.
+ * The caller holds delivery while touching/scrolling or reconnecting. */
+@Suppress("UNUSED_PARAMETER")
 fun liveSessionOrder(previous: List<String>, entries: List<SessionRank>, now: Long, reconcile:Boolean=false): List<String> {
     val stable = stableSessionOrder(previous, entries, now)
-    if(previous.isNotEmpty()&&!reconcile)return stable
     val byId = entries.associateBy { it.id }
-    fun group(entry: SessionRank): Long {
-        return when {
-            entry.active -> 0
-            else -> 1
-        }
+    fun ageGroup(id:String):Long {
+        val entry=byId[id] ?: return Long.MAX_VALUE
+        val age=(now-sessionActivityTime(entry.updated,entry.activityAt)).coerceAtLeast(0)
+        return if(age<30_000) 0 else 1+age/30_000
     }
-    return stable.sortedWith(compareBy<String> { byId[it]?.let(::group) ?: Long.MAX_VALUE }
-        .thenByDescending { id -> byId[id]?.let { sessionActivityTime(it.updated,it.activityAt) } ?: 0 })
+    return stable.sortedWith(compareBy<String>(::ageGroup))
 }
 
 /** Known real activity takes precedence over later metadata/index timestamps. */

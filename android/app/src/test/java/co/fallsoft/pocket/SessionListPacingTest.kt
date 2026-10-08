@@ -111,10 +111,10 @@ class SessionListTiesTest {
 
 class LiveSessionPriorityTest {
     private val now=1_800_000_000_000L
-    @Test fun reactivatedWorkWaitsForExplicitNavigationBeforePromotion() {
+    @Test fun reactivatedWorkPromotesWithoutExplicitNavigation() {
         val entries=listOf(SessionRank("stale",now-180_000,true,now-180_000),SessionRank("recent",now-60_000,false,now-60_000),SessionRank("old-reactivated",1,true,now))
-        assertEquals(listOf("stale","recent","old-reactivated"),liveSessionOrder(listOf("stale","recent","old-reactivated"),entries,now))
-        assertEquals(listOf("old-reactivated","stale","recent"),liveSessionOrder(listOf("stale","recent","old-reactivated"),entries,now,true))
+        assertEquals(listOf("old-reactivated","recent","stale"),liveSessionOrder(listOf("stale","recent","old-reactivated"),entries,now))
+        assertEquals(listOf("old-reactivated","recent","stale"),liveSessionOrder(listOf("stale","recent","old-reactivated"),entries,now,true))
     }
     @Test fun concurrentLivePeersStayTiedAcrossTokenArrivalOrder() {
         var order=listOf("a","b","quiet")
@@ -127,16 +127,16 @@ class LiveSessionPriorityTest {
     @Test fun aFreshLeaseExpiresRatherThanOccupyingFrontForever() {
         val seats=listOf("finished","running")
         val entries=listOf(SessionRank("finished",1,false,now-100_000),SessionRank("running",1,true,now-1_000))
-        assertEquals(seats,liveSessionOrder(seats,entries,now))
+        assertEquals(listOf("running","finished"),liveSessionOrder(seats,entries,now))
         assertEquals(listOf("running","finished"),liveSessionOrder(seats,entries,now,true))
     }
     @Test fun hydrationTimestampCannotOutrankRealSecondsOldWork() {
         val entries=listOf(SessionRank("hydrated",now,false),SessionRank("live",1,true,now-2_000))
-        assertEquals(listOf("live","hydrated"),liveSessionOrder(listOf("hydrated","live"),entries,now,true))
+        assertEquals(listOf("hydrated","live"),liveSessionOrder(listOf("hydrated","live"),entries,now,true))
     }
     @Test fun acceptedIntentAndNewDiscoveryDoNotWaitForFirstResponse() {
         val entries=listOf(SessionRank("quiet",1,true,now-180_000),SessionRank("new",now,true,now),SessionRank("reactivated",1,false,now))
-        assertEquals(listOf("new","quiet","reactivated"),liveSessionOrder(listOf("quiet","reactivated"),entries,now))
+        assertEquals(listOf("new","reactivated","quiet"),liveSessionOrder(listOf("quiet","reactivated"),entries,now))
     }
     @Test fun pollCannotUndoNewLiveStatusPreviewOrRecency() {
         val old=Task("a","A","/project","idle",1,false,preview="old",activityAt=100)

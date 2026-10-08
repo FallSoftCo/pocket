@@ -264,13 +264,13 @@ class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntState
             val interacting=listState.isScrollInProgress||touching||toolsOpen
             val pacedOrderDue=pacing.orderDue(now,active,interacting)
             val explicitBoundary=sessionReconcileAllowed(Pocket.sessionOrderRequest!=Pocket.sessionOrderHandled,Pocket.sessionSnapshotComplete,Pocket.connected,Pocket.codexOnline,pacing.interactionSettled(now,interacting))
-            val orderDue=pacedOrderDue||explicitBoundary
+            val orderDue=(pacedOrderDue&&Pocket.sessionSnapshotComplete&&Pocket.connected&&Pocket.codexOnline)||explicitBoundary
             if(pacing.contentDue(now,active)){
                 // Deliver live text/status in place; membership changes wait for a safe moment.
                 displayed=sessionContentInPlace(displayed,latest){it.id};pacing.contentDelivered(now)
             }
             if(orderDue){
-                // Only explicit navigation reconciles existing seats by genuine work recency.
+                // Safe bounded delivery promotes genuine activity; live peers remain tied.
                 val families=sessionGroups(latest).associateBy{it.task.id}
                 val entries=latest.map{task->val children=families[task.id]?.children.orEmpty();SessionRank(task.id,maxOf(taskWorkTime(task),children.maxOfOrNull{taskWorkTime(it)}?:0),task.status in listOf("active","pending")||children.any{it.status=="active"})}
                 val next=if(Pocket.showArchived)stableSessionOrder(order,entries,System.currentTimeMillis()) else liveSessionOrder(order,entries,System.currentTimeMillis(),explicitBoundary)
@@ -289,8 +289,8 @@ class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntState
     val showCoordinator=filter!=3&&(filter!=1||PocketCoordinator.busy)&&(query.isBlank()||"Coordinator".contains(query,true)||PocketCoordinator.preview.contains(query,true))
     LaunchedEffect(query,Pocket.local,Pocket.showArchived){if(query.isNotBlank()){delay(400);Pocket.moreSessions(query)}}
     val groups=sessionGroups(displayed.sortedBy{rank[it.id]?:Int.MAX_VALUE})
-    fun matches(t:Task)=query.isBlank()||t.title.contains(query,true)||t.cwd.contains(query,true)||t.preview.contains(query,true)||t.agentNickname.contains(query,true)
-    val shown=groups.sortedBy{rank[it.task.id]?:Int.MAX_VALUE}.filter{group->val t=group.task;(filter!=1||t.status in listOf("active","pending")||group.children.any{it.status=="active"})&&(filter!=2||t.watched||group.children.any{it.watched})&&(matches(t)||group.children.any(::matches))}
+    fun matches(t:Task)=query.isBlank()||t.title.contains(query,true)||t.cwd.contains(query,true)||t.preview.contains(query,true)||t.catalogContext.contains(query,true)||t.agentNickname.contains(query,true)
+    val shown=groups.filter{filter==4||query.isNotBlank()||meaningfulCatalogTask(it.task)||it.children.any(::meaningfulCatalogTask)}.sortedBy{rank[it.task.id]?:Int.MAX_VALUE}.filter{group->val t=group.task;(filter!=1||t.status in listOf("active","pending")||group.children.any{it.status=="active"})&&(filter!=2||t.watched||group.children.any{it.watched})&&(matches(t)||group.children.any(::matches))}
     val orphans=if(filter==4||query.isNotBlank())ungroupedChildren(displayed).filter(::matches).sortedByDescending{taskWorkTime(it)} else emptyList()
     Column(Modifier.fillMaxSize()){
     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp).pointerInput(Unit){
@@ -373,7 +373,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             val age=now-activityTime
             val ageLabel=if(age in 20_000..59_999)"${age/1000}s" else lastActivity(activityTime)
             if(age>=20_000)Text(ageLabel,color=Muted,fontSize=11.sp,modifier=Modifier.semantics{contentDescription="Last active "+ageLabel}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
-            Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true)}
+            Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true) else SymbolIcon(if(t.needsInput)Icons.Rounded.HelpOutline else Icons.Rounded.Pause,if(t.needsInput)"Needs your input" else "Idle",tint=if(t.needsInput)Coral else Muted,modifier=Modifier.size(18.dp))}
             Surface(onClick={Pocket.watchTask(t.id,!t.watched)},modifier=Modifier.size(48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
                 Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
                     SymbolIcon(if(t.watched)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,null,modifier=Modifier.size(24.dp),tint=if(t.watched)Paper else Muted.copy(alpha=.65f))
@@ -388,7 +388,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            ImmersionText("card:"+t.id,t.preview,color=Paper,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
+            ImmersionText("card:"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)"Idle · "+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else Paper,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
         }
 
     }

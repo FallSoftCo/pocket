@@ -1,7 +1,13 @@
 import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 export const RECOVERY_INPUT='Continue the existing task from its preserved progress. First reconcile the conversation, files, tool results and any external actions already taken. Do not replay the original request or repeat submissions, applications, messages, purchases or charges. If an external action has an uncertain outcome, inspect its status without repeating it; report the uncertainty and stop for user guidance if it cannot be established. Keep the existing model, permissions and task constraints.';
-export const CONTINUATION_INPUT=RECOVERY_INPUT+' This task has durable continuation enabled. Keep working within this turn while authorized independent work remains; do not stop merely to give a progress report. Checkpoint continuation is a safety net when a turn must end, not a reason to end it. Before ending your turn, run node '+JSON.stringify(fileURLToPath(new URL('../scripts/task-checkpoint.mjs',import.meta.url)))+' --state continue --evidence "concrete remaining work" (use --state completed or --state needsInput as appropriate) to report continue if authorized work remains and can proceed independently, completed only when the requested outcome is achieved, or needsInput only for a genuine dependency on the user. Include concrete evidence and preserve external-action reconciliation. A partial progress report is not completion.';
+export const CONTINUATION_INPUT=RECOVERY_INPUT+' This task has durable continuation enabled. Keep working within this turn while authorized independent work remains; do not stop merely to give a progress report. Checkpoint continuation is a safety net when a turn must end, not a reason to end it. Before ending your turn, run node '+JSON.stringify(fileURLToPath(new URL('../scripts/task-checkpoint.mjs',import.meta.url)))+' --state continue --evidence "concrete remaining work" (use --state completed, --state needsInput, or --state waitingDependency as appropriate) to report continue if authorized work remains and can proceed independently, completed only when the requested outcome is achieved, needsInput for a genuine dependency on the user, or waitingDependency when progress requires another agent, owner clearance or an external state change. Do not use continue merely to recheck an unchanged inbox, service, hold or dependency; do not spend a model turn waiting for replies. Resume from a material external signal or cheap deterministic checks, not repeated model polling. Include concrete evidence and preserve external-action reconciliation. A partial progress report is not completion.';
+export function dependencyOnlyCheckpoint(evidence){
+ const text=String(evidence||'');
+ return /no (?:new )?(?:owner )?(?:replies|clearance)|no replies after|unchanged (?:external )?dependency/i.test(text)
+   && /wait|dependenc|coordination|clearance|expired.{0,30}unarmed/i.test(text)
+   && !/(?:implemented|fixed|compiled|rendered|deployed|installed|submitted|new (?:result|artifact|owner reply|clearance)|independent work remains)/i.test(text);
+}
 export function transientFailure(error){
  const text=[error?.message,error?.additionalDetails].filter(Boolean).join('\n');
  if(/application network permission was revoked|application network policy is unavailable/i.test(text))return 'permission';
@@ -21,6 +27,8 @@ export class TurnRecovery {
   db.exec('CREATE TABLE IF NOT EXISTS turn_continuation_checkpoints(thread_id TEXT NOT NULL,turn_id TEXT NOT NULL,status TEXT NOT NULL,evidence TEXT NOT NULL,reported_at INTEGER NOT NULL,PRIMARY KEY(thread_id,turn_id))');
   db.exec('CREATE TABLE IF NOT EXISTS turn_continuation_authorizations(thread_id TEXT PRIMARY KEY,turn_id TEXT NOT NULL,evidence TEXT NOT NULL,authorized_at INTEGER NOT NULL)');
   if(!db.prepare('PRAGMA table_info(turn_continuation_authorizations)').all().some(column=>column.name==='audit_evidence')){db.exec('ALTER TABLE turn_continuation_authorizations ADD COLUMN audit_evidence TEXT');db.exec('UPDATE turn_continuation_authorizations SET audit_evidence=evidence');}
+  db.exec('CREATE TABLE IF NOT EXISTS continuation_dependency_signals(thread_id TEXT NOT NULL,signal_id TEXT NOT NULL,PRIMARY KEY(thread_id,signal_id))');
+  db.exec('CREATE TABLE IF NOT EXISTS continuation_operator_holds(thread_id TEXT PRIMARY KEY,turn_id TEXT NOT NULL,evidence TEXT NOT NULL,at INTEGER NOT NULL)');
   db.exec('CREATE TABLE IF NOT EXISTS turn_recovery_failures(thread_id TEXT NOT NULL,turn_id TEXT NOT NULL,PRIMARY KEY(thread_id,turn_id))');
   db.exec('CREATE TABLE IF NOT EXISTS turn_recovery_migrations(name TEXT PRIMARY KEY)');
   if(!db.prepare("SELECT 1 FROM turn_recovery_migrations WHERE name='actual-failure-backfill'").get()){
@@ -43,6 +51,9 @@ export class TurnRecovery {
  // reconcile intent, questions and delivery before authorizing unfinished terminal work.
  authorizeContinuation(thread,assessment={}){
   const turn=thread?.turns?.at(-1),id=thread?.id;
+  const hold=this.db.prepare('SELECT * FROM continuation_operator_holds WHERE thread_id=?').get(id||'');
+  const dependencySignal=typeof assessment.dependencySignal==='string'&&assessment.dependencySignal.trim().length>0;
+  if(hold&&(!dependencySignal||this.db.prepare('SELECT 1 FROM continuation_dependency_signals WHERE thread_id=? AND signal_id=?').get(id,assessment.dependencySignal.trim())))return false;
   if(!id||!turn?.id||assessment.turnId!==turn.id||assessment.unfinished!==true||assessment.authorized!==true||!assessment.evidence?.trim())return false;
   if(['explicitStop','cancelled','needsInput','usageStopped','managedChild','uncertainDelivery','completed'].some(key=>assessment[key]===true))return false;
   if(!['interrupted','completed','failed'].includes(turn.status))return false;
@@ -50,8 +61,9 @@ export class TurnRecovery {
   if(turn.status==='failed'&&!transientFailure(turn.error))return false;
   const row=this.get(id);
   // An existing receipt, blocker or cancellation is not permission to send again.
-  if(row&&(['unknown','dispatching','reconcile','blocked'].includes(row.state)||(row.state==='cancelled'&&[row.source_turn,row.current_turn].includes(turn.id))||(row.state==='running'&&row.current_turn!==turn.id)))return false;
+  if(row&&((['unknown','dispatching','reconcile'].includes(row.state)||(row.state==='blocked'&&!(hold&&dependencySignal)))||(row.state==='cancelled'&&[row.source_turn,row.current_turn].includes(turn.id))||(row.state==='running'&&row.current_turn!==turn.id)))return false;
   if(row?.source_turn===turn.id&&row.state==='waiting')return true;
+  if(hold&&dependencySignal){this.db.prepare('INSERT INTO continuation_dependency_signals VALUES(?,?)').run(id,assessment.dependencySignal.trim());this.db.prepare('DELETE FROM continuation_operator_holds WHERE thread_id=? AND turn_id=?').run(id,hold.turn_id);}
   const priorAudit=['running','awaitingAssessment'].includes(row?.state)?this.db.prepare('SELECT audit_evidence FROM turn_continuation_authorizations WHERE thread_id=?').get(id)?.audit_evidence:null;
   this.db.prepare('INSERT INTO turn_continuation_authorizations(thread_id,turn_id,evidence,audit_evidence,authorized_at) VALUES(?,?,?,?,?) ON CONFLICT(thread_id) DO UPDATE SET turn_id=excluded.turn_id,evidence=excluded.evidence,audit_evidence=excluded.audit_evidence,authorized_at=excluded.authorized_at').run(id,turn.id,assessment.evidence.trim(),priorAudit||assessment.evidence.trim(),this.clock());
   if(turn.status==='failed')return this.observe(id,turn);
@@ -79,12 +91,14 @@ export class TurnRecovery {
  }
  reportContinuation(threadId,turnId,{status,evidence}={}){
   const row=this.get(threadId);
-  if(!row||row.current_turn!==turnId||row.state==='cancelled'||!['continue','completed','needsInput'].includes(status)||!evidence?.trim())return false;
+  if(!row||row.current_turn!==turnId||row.state==='cancelled'||!['continue','completed','needsInput','waitingDependency'].includes(status)||!evidence?.trim())return false;
   if(!this.db.prepare('SELECT 1 FROM turn_continuation_authorizations WHERE thread_id=?').get(threadId))return false;
   const previous=this.db.prepare('SELECT status,evidence FROM turn_continuation_checkpoints WHERE thread_id=? AND turn_id=?').get(threadId,turnId);
   if(previous)return previous.status===status&&previous.evidence===evidence.trim();
   if(!['running','awaitingAssessment'].includes(row.state))return false;
+  if(status==='continue'&&dependencyOnlyCheckpoint(evidence))status='waitingDependency';
   this.db.prepare('INSERT INTO turn_continuation_checkpoints(thread_id,turn_id,status,evidence,reported_at) VALUES(?,?,?,?,?)').run(threadId,turnId,status,evidence.trim(),this.clock());
+  if(status==='waitingDependency'){this.holdDependency(threadId,turnId,evidence.trim());return true;}
   if(row.state==='awaitingAssessment')this.observe(threadId,{id:turnId,status:'completed'});
   return true;
  }
@@ -95,6 +109,7 @@ export class TurnRecovery {
  }
  observe(threadId,turn,assessment){
   if(!threadId||!turn?.id)return false;const row=this.get(threadId);
+  if(this.db.prepare('SELECT 1 FROM continuation_operator_holds WHERE thread_id=?').get(threadId))return false;
   if(row?.state==='cancelled'&&[row.current_turn,row.source_turn].includes(turn.id))return false;
   const authorization=this.db.prepare('SELECT turn_id FROM turn_continuation_authorizations WHERE thread_id=?').get(threadId);
   if(row?.state==='waiting'&&row.kind==='continuation'&&authorization?.turn_id===turn.id&&['completed','interrupted'].includes(turn.status))return true;
@@ -121,13 +136,19 @@ export class TurnRecovery {
   this.db.prepare('INSERT OR IGNORE INTO turn_recovery_failures(thread_id,turn_id) VALUES(?,?)').run(threadId,turn.id);
   return true;
  }
+ holdDependency(id,turnId,evidence){
+  const row=this.get(id);if(!row||row.current_turn!==turnId||row.kind!=='continuation')return false;
+  this.db.prepare('INSERT INTO continuation_operator_holds VALUES(?,?,?,?) ON CONFLICT(thread_id) DO UPDATE SET turn_id=excluded.turn_id,evidence=excluded.evidence,at=excluded.at').run(id,turnId,evidence,this.clock());
+  this.db.prepare("UPDATE turn_recovery SET state='blocked',error=?,updated_at=? WHERE thread_id=? AND current_turn=?").run(evidence,this.clock(),id,turnId);return true;
+ }
  set(id,state){this.db.prepare('UPDATE turn_recovery SET state=?,updated_at=? WHERE thread_id=?').run(state,this.clock(),id);this.publish(id,this.get(id));}
- cancel(id){this.db.prepare('DELETE FROM turn_continuation_authorizations WHERE thread_id=?').run(id);if(this.get(id))this.set(id,'cancelled');}
+ cancel(id){this.db.prepare('DELETE FROM continuation_operator_holds WHERE thread_id=?').run(id);this.db.prepare('DELETE FROM turn_continuation_authorizations WHERE thread_id=?').run(id);if(this.get(id))this.set(id,'cancelled');}
  notice(id,text){if(this.db.prepare('UPDATE turn_recovery SET notice=notice+1,last_notice=? WHERE thread_id=? AND (last_notice IS NULL OR last_notice!=?)').run(text,id,text).changes)this.publish(id,{...this.get(id),message:text});}
  async tick(){
   if(this.busy)return;this.busy=true;
   try{for(const row of this.db.prepare("SELECT * FROM turn_recovery WHERE state IN ('waiting','unknown','running') AND next_at<=? ORDER BY next_at LIMIT 3").all(this.clock())){
    try{
+    if(this.db.prepare('SELECT 1 FROM continuation_operator_holds WHERE thread_id=?').get(row.thread_id))continue;
     const thread=await this.read(row.thread_id),latest=thread.turns?.at(-1);
     if(!latest){this.db.prepare('UPDATE turn_recovery SET attempts=attempts+1,backoff_attempts=backoff_attempts+1,next_at=? WHERE thread_id=? AND state=? AND current_turn=? AND request_id IS ?').run(this.clock()+this.delay(row.backoff_attempts+1),row.thread_id,row.state,row.current_turn,row.request_id);continue;}
     if(row.state==='unknown'){

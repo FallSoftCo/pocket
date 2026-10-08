@@ -126,3 +126,26 @@ test('definitive personal quota failure waits durably without resending original
  f.args.health=async()=>allowed;let r=new TurnRecovery(f.args);r.observe('thread',f.latest);f.advance();await r.tick();assert.equal(f.calls.length,0);assert.equal(r.get('thread').state,'waiting');
  r=new TurnRecovery(f.args);allowed=true;f.advance();await r.tick();assert.equal(f.calls.length,1);assert.equal(r.get('thread').state,'running');
 });
+
+test('dependency checkpoint parks continuation across restart and hours without reads or model calls',async()=>{
+ const db=new DatabaseSync(':memory:');let now=100000,reads=0,starts=0;
+ const make=()=>new TurnRecovery({db,clock:()=>now,random:()=>.5,read:async()=>{reads++;throw Error('must not poll');},start:async()=>{starts++;},health:async()=>true});
+ let recovery=make();const thread={id:'dependency',turns:[{id:'first',status:'completed'}]};
+ assert.equal(recovery.authorizeContinuation(thread,{turnId:'first',authorized:true,unfinished:true,evidence:'Original independent repair authorized'}),true);
+ db.prepare("UPDATE turn_recovery SET state='running',current_turn='current' WHERE thread_id='dependency'").run();
+ assert.equal(recovery.reportContinuation('dependency','current',{status:'waitingDependency',evidence:'Waiting for owner clearance; no independent work remains'}),true);
+ recovery=make();for(let i=0;i<48;i++){now+=3600000;await recovery.tick();}
+ assert.equal(reads,0);assert.equal(starts,0);assert.equal(recovery.get('dependency').state,'blocked');
+ recovery.observe('dependency',{id:'current',status:'completed'});assert.equal(recovery.get('dependency').state,'blocked');
+ assert.equal(recovery.authorizeContinuation({id:'dependency',turns:[{id:'current',status:'completed'}]},{turnId:'current',authorized:true,unfinished:true,evidence:'Same waiting observation'}),false);
+ assert.equal(recovery.authorizeContinuation({id:'dependency',turns:[{id:'current',status:'completed'}]},{turnId:'current',authorized:true,unfinished:true,dependencySignal:'owner-reply-123',evidence:'Owner clearance arrived; independent repair can proceed'}),true);
+ recovery.holdDependency('dependency','current','Another external dependency');
+ assert.equal(recovery.authorizeContinuation({id:'dependency',turns:[{id:'current',status:'completed'}]},{turnId:'current',authorized:true,unfinished:true,dependencySignal:'owner-reply-123',evidence:'Repeated old signal'}),false);
+});
+test('legacy no-reply continue checkpoint becomes a dependency wait, useful progress stays eligible',()=>{
+ const db=new DatabaseSync(':memory:');const r=new TurnRecovery({db,read:async()=>{},start:async()=>{},health:async()=>true});
+ r.authorizeContinuation({id:'legacy',turns:[{id:'first',status:'completed'}]},{turnId:'first',authorized:true,unfinished:true,evidence:'Work authorized'});
+ db.prepare("UPDATE turn_recovery SET state='running' WHERE thread_id='legacy'").run();
+ assert.equal(r.reportContinuation('legacy','first',{status:'continue',evidence:'Fresh archive reconciliation; no owner replies after55s wait. Usage expired/unarmed; coordination pending.'}),true);
+ assert.equal(r.get('legacy').state,'blocked');
+});

@@ -21,3 +21,11 @@ export function requireDirectSessionInput(thread){
   const identity=sessionIdentity(thread);
   if(!identity.canAcceptDirectInput){const error=Error(identity.parentThreadId?'This is a delegated agent. Open its parent task to send guidance; direct replies are not supported by this runtime.':'Direct replies are unavailable for this agent. Review its results from the owning task.');error.status=409;throw error;}
 }
+
+export function catalogName(thread){
+  const name=String(thread.name||'').trim();
+  if(name&&!['Untitled task','Untitled','New task'].includes(name))return name;
+  const identity=sessionIdentity(thread);
+  if(identity.isChild)return [identity.agentNickname||'Delegated agent',identity.agentRole].filter(Boolean).join(' · ');
+  return String(thread.preview||'').replace(/\s+/g,' ').trim().slice(0,90)||'Untitled task';
+}

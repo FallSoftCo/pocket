@@ -1,8 +1,10 @@
+import {CatalogContext} from './catalog-context.mjs';
+import {InternalSessions} from './internal-sessions.mjs';
 import {RecoveryQueue} from './recovery-queue.mjs';
 import {TurnRecovery,permissionRecoveryAudit} from './turn-recovery.mjs';
 import {recoveryStorageReady,recoveryUsagePolicy,recoveryAccountUsage} from './recovery-health.mjs';
 import {SessionDiscovery,INTERACTIVE_SOURCES} from './session-discovery.mjs';
-import {catalogFields,sessionIdentity,sessionWorkTime,requireDirectSessionInput} from './session-catalog.mjs';
+import {catalogFields,catalogName,sessionIdentity,sessionWorkTime,requireDirectSessionInput} from './session-catalog.mjs';
 import {SessionCatchup} from './session-catchup.mjs';
 import {CoordinatorReports} from './coordinator-reports.mjs';
 import {recoverReply} from './reply-recovery.mjs';
@@ -49,6 +51,7 @@ const hostName=process.env.POCKET_HOST_NAME||hostname();
 const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
 const {db,secrets}=openStore(dir);
+const catalogContext=new CatalogContext(db);
 const notificationReads=new NotificationReads(db);
 const notificationTitles=new NotificationTitles(db);
 const voiceKeyPath=resolve(dir,'voice-key');
@@ -66,7 +69,8 @@ const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,
 const attached=new Set(), pending=new Map(), syncing=new Set();
 db.exec('CREATE TABLE IF NOT EXISTS immersion_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
 const immersionCwd=resolve(dir,'immersion');mkdirSync(immersionCwd,{recursive:true,mode:0o700});
-const immersion=new ImmersionWorker({codex:new Codex(),cwd:immersionCwd,load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
+const internalSessions=new InternalSessions(db,[{cwd:immersionCwd,kind:'immersion'}]);
+const immersion=new ImmersionWorker({codex:new Codex(),cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
 const voiceCodex=new Codex();
 const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,host:hostName,
   api:async(path,body)=>{const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`,'Content-Type':'application/json'},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:AbortSignal.timeout(35000)});const data=await r.json();if(!r.ok)throw Error(data.error||'Pocket control failed.');return data;},
@@ -79,8 +83,8 @@ const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,ho
 
 const nativeVoiceCodex=new Codex();
 const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:voiceController,cwd:defaultCwd});
-const sessionDiscovery=new SessionDiscovery({db,codex,hidden:id=>voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)});
-const catchupHidden=id=>voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)||!!db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived;
+const sessionDiscovery=new SessionDiscovery({db,codex,hidden:(id,thread)=>internalSessions.owns(id,thread)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)});
+const catchupHidden=id=>internalSessions.owns(id)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)||!!db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived;
 const sessionCatchup=new SessionCatchup({db,hidden:catchupHidden,resolvePending:(requestId,threadId)=>{
   if(!requestId)return undefined;const live=pending.get(String(requestId));if(live?.params?.threadId===threadId)return true;
   const attention=db.prepare('SELECT a.resolved_at FROM notification_attention a JOIN notifications n ON n.id=a.notification_id WHERE a.request_id=? AND n.thread_id=? ORDER BY n.id DESC LIMIT 1').get(String(requestId),threadId);
@@ -91,17 +95,9 @@ voiceController.catchup=sessionCatchup;
 voiceController.hidden=catchupHidden;
 db.exec('CREATE TABLE IF NOT EXISTS coordinator_report_notifications(report_id TEXT PRIMARY KEY,device_id TEXT NOT NULL,notification_id INTEGER UNIQUE NOT NULL)');
 const coordinatorReports=new CoordinatorReports({db,catchup:sessionCatchup,hidden:catchupHidden,
-  readThread:async threadId=>{await codex.connect();return codex.call('thread/read',{threadId,includeTurns:false});},
-  refreshRoster:async()=>{
-    await codex.connect();const threads=[],visited=new Set();let cursor=null;
-    for(let page=0;page<6;page++){
-      const result=await codex.call('thread/list',{limit:100,sortKey:'updated_at',sortDirection:'desc',archived:false,useStateDbOnly:true,sourceKinds:[...INTERACTIVE_SOURCES,'subAgent'],...(cursor?{cursor}:{})});
-      for(const thread of result.data||[]){if(catchupHidden(thread.id))continue;sessionDiscovery.remember(thread,{archived:false});threads.push(thread);}
-      const next=result.nextCursor||null;if(!next)return {threads,threadCount:threads.length,complete:true,truncated:false};
-      if(visited.has(next))return {threads,threadCount:threads.length,complete:false,truncated:true,reason:'The inventory returned a repeated cursor; coverage is incomplete.'};visited.add(next);cursor=next;
-    }
-    return {threads,threadCount:threads.length,complete:false,truncated:true,nextCursor:cursor,reason:'More sessions remain beyond the 600-session inventory limit.'};
-  },
+  // Scheduled reports consume stored observations only: no runtime/model RPCs.
+  readThread:async threadId=>{const row=db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(threadId);if(!row)throw Error('No stored session observation.');const thread=JSON.parse(row.metadata);return {thread:{...thread,status:{type:'unverified'}}};},
+  refreshRoster:async()=>{const threads=db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE archived=0').all().map(row=>JSON.parse(row.metadata)).filter(thread=>!catchupHidden(thread.id));return {threads,threadCount:threads.length,complete:false,reason:'Stored public observations only; this scheduled report does not poll or wake workers.'};},
   publish:async report=>{
     let saved=db.prepare('SELECT notification_id FROM coordinator_report_notifications WHERE report_id=? AND device_id=?').get(report.id,report.device);
     if(!saved){db.exec('BEGIN IMMEDIATE');try{
@@ -299,7 +295,7 @@ db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during 
 
 codex.on('event',m=>{
   const p=m.params||{}, threadId=p.threadId || p.thread?.id;
-  if(threadId&&(voiceController.owns(threadId)||nativeVoice.owns(threadId)||immersion.ownsThread(threadId)))return;
+  if(threadId&&(internalSessions.owns(threadId,p.thread)||voiceController.owns(threadId)||nativeVoice.owns(threadId)||immersion.ownsThread(threadId)))return;
   const activity=sessionDiscovery.observe(m);
   if(activity){
     if(activity.status||m.method==='item/started'&&p.item?.type==='userMessage')emit('sessionActivity',activity);
@@ -453,19 +449,19 @@ app.get('/api/threads',route(async(req,res)=>{
     if(!cursor)for(const row of db.prepare("SELECT d.metadata FROM session_starts s JOIN pocket_discovered_threads d ON d.thread_id=s.thread_id WHERE s.state='started' AND d.archived=0 ORDER BY s.updated_at DESC LIMIT 100").all()){
       const thread=JSON.parse(row.metadata);if(!found.has(thread.id)&&!catchupHidden(thread.id))found.set(thread.id,{...thread,...sessionDiscovery.live.get(thread.id)});
     }
-    return res.json({threads:[...found.values()].map(thread=>({id:thread.id,name:thread.name||thread.preview?.slice(0,90)||'Untitled task',preview:thread.preview||'',cwd:thread.cwd,status:thread.status,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,discoveryPending:!!thread.discoveryPending,...catalogFields(thread)})),nextCursor:result.nextCursor||null,refreshPending:false});
+    return res.json({threads:[...found.values()].map(thread=>({id:thread.id,name:catalogName(thread),preview:thread.preview||'',cwd:thread.cwd,status:thread.status,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,discoveryPending:!!thread.discoveryPending,...catalogFields(thread)})),nextCursor:result.nextCursor||null,refreshPending:false});
   }
   const r=await sessionDiscovery.list({archived:req.query.archived==='true',cursor:typeof req.query.cursor==='string'?req.query.cursor:null,searchTerm:typeof req.query.search==='string'?req.query.search.slice(0,200):null});
   const watches=db.prepare('SELECT * FROM watches').all();
   const unread=new Map(db.prepare("SELECT n.thread_id,COUNT(*) AS total FROM notifications n LEFT JOIN notification_reads r ON r.device_id=? AND r.thread_id=n.thread_id WHERE n.kind!='coordinator_report' AND (n.id>COALESCE(r.through_id,0) OR EXISTS(SELECT 1 FROM notification_attention a WHERE a.notification_id=n.id AND a.resolved_at IS NULL)) GROUP BY n.thread_id").all(req.device.id).map(row=>[row.thread_id,row.total]));
   for(const renamed of notificationTitles.reconcile(r.data||[])){emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));}
-  res.json({threads:(r.data||[]).filter(t=>!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>{
+  res.json({threads:(r.data||[]).filter(t=>!internalSessions.owns(t.id,t)&&!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>{
     const followed=!!watches.find(w=>w.thread_id===t.id&&w.enabled);
     const updatedMs=sessionWorkTime(t);
     const preview=threadPreviews.get(t,{hydrate:followed||t.status?.type==='active'||Date.now()-updatedMs<15*60000});
     const start=db.prepare("SELECT state FROM outgoing WHERE thread_id=? AND id LIKE 'start-%' ORDER BY created_at DESC LIMIT 1").get(t.id);
     const awaitingStart=start&&['queued','sending'].includes(start.state)&&['idle','notLoaded','pending',undefined].includes(t.status?.type);
-    return {unreadCount:unread.get(t.id)||0,id:t.id,name:t.name||t.preview?.slice(0,90)||'Untitled task',...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed,...catalogFields(t)};
+    return {...catalogContext.get(t),unreadCount:unread.get(t.id)||0,id:t.id,name:catalogName(t),...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed,...catalogFields(t)};
   }),nextCursor:r.nextCursor||null,refreshPending:!!r.refreshPending});
 }));
 app.post('/api/threads/:id/recovery',route(async(req,res)=>{
@@ -493,7 +489,7 @@ app.post('/api/threads/:id/continuation',owner,route(async(req,res)=>{
  res.json({scheduled,recovery:turnRecovery.get(threadId)});
 }));
 app.post('/api/threads/:id/continuation/checkpoint',owner,route(async(req,res)=>{
- if(!['continue','completed','needsInput'].includes(req.body.state)||typeof req.body.evidence!=='string'||!req.body.evidence.trim()||req.body.evidence.length>8000)return res.status(400).json({error:'Provide a task checkpoint and concrete evidence.'});
+ if(!['continue','completed','needsInput','waitingDependency'].includes(req.body.state)||typeof req.body.evidence!=='string'||!req.body.evidence.trim()||req.body.evidence.length>8000)return res.status(400).json({error:'Provide a task checkpoint and concrete evidence.'});
  const threadId=requireId(req.params.id);await codex.connect();
  const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});
  const snapshot=await history.read(thread,{summary:true});const latest=snapshot.turns?.at(-1);
@@ -525,6 +521,13 @@ app.post('/api/threads/:id/settings',route(async(req,res)=>{
   const settings=validateTurnSettings(req.body,await modelCatalogue(codex));
   db.prepare('INSERT INTO turn_settings(thread_id,settings) VALUES(?,?) ON CONFLICT(thread_id) DO UPDATE SET settings=excluded.settings').run(threadId,JSON.stringify(settings));
   res.json({settings});
+}));
+app.post('/api/threads/:id/catalog-context',owner,route(async(req,res)=>{
+  const id=requireId(req.params.id),summary=String(req.body.summary||'').trim();
+  if(!summary||summary.length>500)return res.status(400).json({error:'Provide a concise evidence-backed context, up to 500 characters.'});
+  await codex.connect();const {thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});
+  if(thread?.id!==id)return res.status(409).json({error:'Session identity changed.'});
+  catalogContext.put(id,summary,req.body.needsInput===true);res.json({ok:true});
 }));
 app.post('/api/threads/:id/rename',route(async(req,res)=>{
   const threadId=requireId(req.params.id),name=String(req.body.name||'').trim();

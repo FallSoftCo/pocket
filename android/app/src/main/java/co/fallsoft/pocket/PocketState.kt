@@ -21,7 +21,7 @@ class PocketApplication: Application(), coil.ImageLoaderFactory {
 }
 fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
 fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback else optString(key,fallback)
-data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0,val recencyAt:Long=0,val parentThreadId:String?=null,val isChild:Boolean=false,val agentNickname:String="",val agentRole:String="",val canAcceptDirectInput:Boolean=true,val unreadCount:Int=0)
+data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0,val recencyAt:Long=0,val parentThreadId:String?=null,val isChild:Boolean=false,val agentNickname:String="",val agentRole:String="",val canAcceptDirectInput:Boolean=true,val unreadCount:Int=0,val catalogContext:String="",val needsInput:Boolean=false)
 data class Message(val id:String,val role:String,val text:String)
 class PocketApiException(val status:Int,message:String):Exception(message)
 

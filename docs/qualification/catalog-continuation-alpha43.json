@@ -1,0 +1,37 @@
+{
+  "version": "0.5.0-alpha.43",
+  "catalog": {
+    "cause": "Immersion ownership was memory-only; historical workers leaked after restart. Existing seats never reordered during browsing.",
+    "fix": "Durable exact worker ownership, bounded real-work age cohorts, visible idle/blocker context, retained searchable empty history."
+  },
+  "continuation": {
+    "cause": "An external-dependency worker repeatedly reported continue after unchanged inbox waits, resetting prompt continuation backoff.",
+    "fix": "Durable dependency hold, explicit waitingDependency checkpoint, single-use material release signals and stored-only scheduled reports.",
+    "qualification": "48 simulated hours and restart produced zero polling reads and zero model starts for parked work; known transient recovery suite retained.",
+    "liveAudit": {
+      "automaticStorageContinuationAttemptsBeforeHold": 129,
+      "additionalAttemptsAfterHold": 0,
+      "recentRepeatedDependencyCheckpoints": 39,
+      "window": "13:00\u201314:29 UTC",
+      "observedTokenDelta": {
+        "input": 27736780,
+        "cachedInput": 27556096,
+        "output": 40828
+      },
+      "tokenLimit": "Whole observed window includes some useful coordination; counters do not establish charged allowance or exact wasted cost."
+    }
+  },
+  "android": {
+    "unitBuildLint": "Passed signed debug/release build, debug unit tests and release lint.",
+    "physical": "Pixel in-place matching-signer upgrade verified versionCode61/alpha43. Actual list inspected with real roots/parent agent groups. Phone locked before individual owner search checks; owner labels/status/blocker independently verified in live API.",
+    "unitTests": 250
+  },
+  "limits": [
+    "Cached token counters are model transport statistics, not a subscription billing conversion.",
+    "Existing voice spoken benchmark and separate running-work enrollment remain outside this release."
+  ],
+  "backendTests": {
+    "passed": 379,
+    "failed": 0
+  }
+}

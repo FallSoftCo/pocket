@@ -34,4 +34,13 @@ class SessionCatalogTest {
         assertEquals(listOf("recent","last-week","dormant"),liveSessionOrder(seats,entries,now))
         assertEquals(listOf("recent","last-week","dormant"),liveSessionOrder(listOf("recent","last-week","dormant"),entries.map{it.copy(active=!it.active)},now+180000))
     }
+    @Test fun emptyShellsStayInHistoryWhileRealNewAndBlockedWorkIsVisible(){
+        val empty=task("empty").copy(title="Untitled task",preview="")
+        assertFalse(meaningfulCatalogTask(empty))
+        assertTrue(meaningfulCatalogTask(empty.copy(status="pending")))
+        assertTrue(meaningfulCatalogTask(empty.copy(status="active")))
+        assertTrue(meaningfulCatalogTask(empty.copy(watched=true)))
+        assertTrue(meaningfulCatalogTask(empty.copy(preview="Saved result")))
+        assertTrue(meaningfulCatalogTask(empty.copy(unreadCount=1)))
+    }
 }

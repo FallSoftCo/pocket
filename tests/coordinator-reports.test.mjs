@@ -79,7 +79,8 @@ test('actual isolated scheduler stages reports and targeted HTTP transport enfor
  assert.equal((await request('/api/coordinator/reporting/phone_a',{enabled:true,intervalMinutes:30,staleAfterMinutes:120},admin)).status,200);
  const deadline=Date.now()+5000;while(!a.messages.some(m=>m.type==='coordinatorReport')&&Date.now()<deadline)await new Promise(r=>setTimeout(r,20));
  const envelope=a.messages.find(m=>m.type==='coordinatorReport');assert.ok(envelope,'actual dispatcher did not publish a report');assert.equal(b.messages.some(m=>m.type==='coordinatorReport'),false);assert.equal(a.messages.some(m=>m.type==='notification'&&m.notification?.kind==='coordinator_report'),false);
- assert.equal((await request('/api/voice/history')).data.turns.at(-1).transcript,'');assert.equal((await request('/api/coordinator/reporting')).data.intervalMinutes,30);assert.equal((await request('/api/coordinator/reporting')).data.inventory.complete,true);
+ assert.equal((await request('/api/voice/history')).data.turns.at(-1).transcript,'');assert.equal((await request('/api/coordinator/reporting')).data.intervalMinutes,30);assert.equal((await request('/api/coordinator/reporting')).data.inventory.complete,false);
+ assert.match((await request('/api/coordinator/reporting')).data.inventory.reason,/Stored public observations only/);
  assert.equal((await request('/api/notifications')).data.notifications.some(n=>n.kind==='coordinator_report'),false);
  assert.equal((await request('/api/notifications/'+envelope.notification.id)).status,200);assert.equal((await request('/api/notifications/'+envelope.notification.id,undefined,'token-b')).status,404);
  const db=new DatabaseSync(join(dir,'pocket.sqlite'));t.after(()=>db.close());assert.equal(db.prepare("SELECT COUNT(*) AS n FROM coordinator_reporting WHERE enabled=1").get().n,1);assert.equal(db.prepare('SELECT COUNT(*) AS n FROM session_catchup_presented').get().n,0);
