@@ -7,6 +7,10 @@ import org.json.JSONObject
 object PocketTranscript {
     var rows by mutableStateOf(listOf<JSONObject>());private set
     var loading by mutableStateOf(false);private set
+    var refreshPending by mutableStateOf(false);private set
+    private var loadingEarlier by mutableStateOf(false)
+    val updating get()=refreshPending||(loading&&!loadingEarlier)
+    fun markRefreshPending(){if(owner==Pocket.selected&&ownerScope==scopeKey())refreshPending=true}
     var earlier by mutableStateOf(false);private set
     var before:String?=null;private set
     var revision by mutableIntStateOf(0);private set
@@ -40,26 +44,30 @@ object PocketTranscript {
         generation++;owner=id;ownerScope=scopeKey()
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
-        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;historyLoaded=cached!=null;checkedThisOpen=false
+        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;historyLoaded=false;checkedThisOpen=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
     fun latest(){Pocket.refreshDetail()}
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
     suspend fun load(older:Boolean=false,bridgeCursor:String?=null){
         val id=Pocket.selected?:return
         if(owner!=id||(older&&(!earlier||before==null)))return
-        if(loading){if(!older&&bridgeCursor==null)missedUpdates=true;return}
+        if(loading){if(!older&&bridgeCursor==null){missedUpdates=true;refreshPending=true};return}
+        if((older||bridgeCursor!=null)&&refreshPending)return
         val ticket=generation;val scope=scopeKey();val profileLocal=Pocket.local;val destination=Pocket.captureEnvironment()?:return
         fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
         val cursor=bridgeCursor?:if(older)before else null
-        loading=true;buffered.clear();var succeeded=false
+        loadingEarlier=older||bridgeCursor!=null
+        if(!loadingEarlier)refreshPending=false
+        loading=true;buffered.clear();val baselineRows=rows.associateBy{it.s("id")};var succeeded=false
         try{
             val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
             if(!current())return
             val page=d.optJSONObject("timeline")?:JSONObject();val incoming=page.optJSONArray("rows")?.objects()?:emptyList()
-            incoming.filter{it.s("kind") in listOf("turn","turnEnd","request")}.forEach{it.put("version",d.optLong("revision"))}
+            incoming.forEach{it.put("version",maxOf(it.optLong("version"),d.optLong("revision")))}
+            if(!older&&bridgeCursor==null)rows=authoritativeSnapshotBase(rows,baselineRows,incoming.mapTo(hashSetOf()){it.s("id")},{it.s("id")}){JSONObject(it.toString()).put("version",0)}
             val wasLoaded=historyLoaded&&rows.isNotEmpty()
             val loadedIds=rows.mapTo(hashSetOf()){it.s("id")}
             val overlaps=incoming.any{it.s("id") in loadedIds}
@@ -93,7 +101,7 @@ object PocketTranscript {
         finally {
             if(current()) {
                 if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
-                loading=false
+                loading=false;loadingEarlier=false
                 if(missedUpdates) {
                     missedUpdates=false
                     Pocket.scope.launch{if(!succeeded)delay(450);if(current())PocketTranscript.load()}

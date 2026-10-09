@@ -1,0 +1,35 @@
+{
+  "version": "0.5.0-alpha.49",
+  "versionCode": 67,
+  "sourceBase": "e95f53d",
+  "buildHost": "OZZZ-OS",
+  "cause": [
+    "Selected sessionPreview updates changed only the session list",
+    "Loading feedback was absent for warm cached transcripts",
+    "Version0 persisted rows could not replace higher-version streamed rows"
+  ],
+  "native": {
+    "variant": "nonshrunk qualification",
+    "device": "owned emulator",
+    "result": "pass",
+    "durationSeconds": 16.311,
+    "checks": [
+      "Version80 cached row replaced by fresh persisted version0 response",
+      "Updating messages visible while cached text remains",
+      "Unchanged repeated preview produces zero extra reads",
+      "New preview arriving during older page loads is fetched next",
+      "Older loaded rows preserved",
+      "Silent list snapshot changes refresh selected transcript",
+      "Cached reopen retains messages and shows refresh state",
+      "Typed draft preserved"
+    ]
+  },
+  "phone": {
+    "installation": "pending"
+  },
+  "limitations": [
+    "Real phone installation and interaction qualified separately",
+    "No backend or Codex service change",
+    "Native provider and real push transport not exercised by synthetic fixture"
+  ]
+}

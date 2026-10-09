@@ -2044,6 +2044,19 @@
         "Disposable native same-ID history, drafts and frozen reply routing",
         "Real authenticated HTTPS disposable pairing on migration backend"
       ]
+    },
+    {
+      "id": "conversation-stale-transcript-20261009",
+      "request": "Conversations must catch up with session previews and notifications, with visible loading feedback for cached messages.",
+      "status": "native regression passed; alpha49 phone delivery pending",
+      "implementation": [
+        "Meaningful selected preview/status changes refresh the transcript",
+        "Fresh authoritative snapshots replace unchanged cached streamed rows despite persisted version0 or reset counters",
+        "Live output received during a read retains precedence",
+        "Latest messages take priority over older-history paging",
+        "Cached content remains visible with an Updating messages indicator",
+        "Repeated identical previews do not schedule more reads"
+      ]
     }
   ],
   "current_state": {
