@@ -43,6 +43,20 @@ import java.util.Locale
     UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)?.let{
         Text("Estimated run-out "+SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it)),color=Muted,fontSize=13.sp)
     }
+    val credits=usage.credits
+    BilingualLabel("Codex credits",centered=false,color=Muted,fontSize=13.sp)
+    Text(credits.label(),color=Paper,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+    BilingualLabel(usage.continuationLabel,centered=false,maxLines=3,color=if(usage.continuationState=="spending-blocked")Coral else Muted,fontSize=13.sp)
+    if(credits.updatedAt>0){
+        val checked=SimpleDateFormat("MMM d · HH:mm:ss",Locale.getDefault()).format(Date(credits.updatedAt))
+        Text((if(credits.isStale(now,Pocket.connected&&Pocket.codexOnline))"Last known · " else "Checked · ")+checked,color=Muted,fontSize=12.sp)
+    }else BilingualLabel("Credit data unavailable",centered=false,color=Muted,fontSize=12.sp)
+    if(credits.decrease!=null&&credits.fromAt>0&&credits.toAt>credits.fromAt){
+        val format=SimpleDateFormat("MMM d HH:mm",Locale.getDefault())
+        BilingualLabel("Observed balance decrease",centered=false,color=Muted,fontSize=12.sp)
+        Text("${credits.decrease} credits · ${format.format(Date(credits.fromAt))} – ${format.format(Date(credits.toAt))}",color=Paper,fontSize=13.sp)
+        BilingualLabel("Across this account; not lifetime or per-session spending",centered=false,maxLines=3,color=Muted,fontSize=12.sp)
+    }else BilingualLabel(if(credits.comparisonState=="balance-increased")"Balance increased · comparison restarted" else "Waiting for comparable balance observations",centered=false,maxLines=2,color=Muted,fontSize=12.sp)
     ConnectionPill()
 }
 
@@ -54,13 +68,14 @@ import java.util.Locale
     val usage=Pocket.weeklyUsage
     val stale=usage.isStale(now,Pocket.connected&&Pocket.codexOnline)
     val remaining=usage.remainingPercent
-    val color=when{remaining==null||stale->Muted;remaining<=20->Coral;remaining<=50->Mint;else->NextGreen}
+    val creditPrimary=remaining==0.0&&usage.credits.compact()!=null
+    val color=when{creditPrimary&&!usage.credits.isStale(now,Pocket.connected&&Pocket.codexOnline)&&usage.continuationState=="existing-credits-available"->NextGreen;remaining==null||stale->Muted;remaining<=20->Coral;remaining<=50->Mint;else->NextGreen}
     val day=usage.resetsAt?.let{SimpleDateFormat("EEE",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     val time=usage.resetsAt?.let{SimpleDateFormat("HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     Box(modifier.height(usageDockHeight())) {
     Surface(onClick={open=true},modifier=Modifier.fillMaxSize().semantics{contentDescription="Settings, app updates, usage and activity"},color=Ink,shape=RoundedCornerShape(20.dp)){
         Column(Modifier.fillMaxSize().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){AnimatedMark(20);Text(usage.remainingLabel().replace(" left",""),color=color,fontSize=18.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1)}
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){if(!creditPrimary)AnimatedMark(20);Text(if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=18.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1)}
             Text(if(day.isBlank())"↻ —" else "$day $time",color=Muted,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
             Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally){
                 val online=Pocket.connected&&Pocket.codexOnline

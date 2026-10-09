@@ -5,6 +5,18 @@ import java.util.Locale
 /** Authored, offline learning vocabulary. Match whole labels; never rewrite executable syntax. */
 object ImmersionLexicon {
     val common=mapOf(
+        "Codex credits" to "Crediti Codex",
+        "Credit data unavailable" to "Dati sui crediti non disponibili",
+        "Observed balance decrease" to "Riduzione del saldo osservata",
+        "Across this account; not lifetime or per-session spending" to "Per questo account; non è la spesa totale né per conversazione",
+        "Balance increased · comparison restarted" to "Saldo aumentato · confronto ricominciato",
+        "Waiting for comparable balance observations" to "In attesa di rilevazioni confrontabili del saldo",
+        "Provider reports a spending or account limit" to "Il servizio segnala un limite di spesa o dell’account",
+        "Continuation status unavailable" to "Stato della continuazione non disponibile",
+        "Included allowance exhausted · existing-credit continuation available" to "Quota inclusa esaurita · continuazione con i crediti disponibili",
+        "Included allowance exhausted · credits present; continuation unverified" to "Quota inclusa esaurita · crediti presenti; continuazione non verificata",
+        "Included allowance exhausted · no available credits reported" to "Quota inclusa esaurita · nessun credito disponibile segnalato",
+        "Included allowance remains" to "Quota inclusa ancora disponibile",
         "Approve once" to "Approva una volta",
         "Clear all saved speech" to "Svuota tutte le letture salvate",
         "Reload backends" to "Ricarica i motori",

@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-08",
+  "version": "0.5.0-alpha.47",
+  "implementation": [
+    "Authenticated weekly allowance/reset and sanitized credit balance/status on existing quota path.",
+    "Private account-bound exact-decimal observation periods, isolated across identity/data/increase boundaries.",
+    "Separate balance freshness; no model polling, purchases, resets, account edits, dollars or per-session attribution.",
+    "Android exact details and compact remaining-credit footer after included exhaustion."
+  ],
+  "qualification": {
+    "backendTests": 418,
+    "backendFailures": 0,
+    "shortWriterContentionTest": "passed independently with real worker-held SQLite lock",
+    "androidTests": 255,
+    "androidFailures": 0,
+    "liveAnonymousStatus": 401,
+    "liveAuthenticatedStatus": 200,
+    "privateIdentifiersInUsage": false,
+    "accountCreditContinuationAvailableObserved": true,
+    "periodicReportsEnabled": 0,
+    "legacyBlanketContinuationEnabled": 0,
+    "emulator": "Visual qualification blocked by system/launcher/application ANRs; owned fixture/emulator stopped.",
+    "physical": "pending final APK installation",
+    "browser": "Contract sent through existing web ownership; implementation receipt pending."
+  },
+  "limits": [
+    "Provider availability is not a per-request billing receipt.",
+    "An observed balance decrease may include all account activity and adjustments; not lifetime spending.",
+    "Fresh partial provider data can leave continuation unverified rather than invent eligibility."
+  ]
+}

@@ -1,3 +1,4 @@
+import {CreditObservations} from './credit-observations.mjs';
 import {CatalogContext} from './catalog-context.mjs';
 import {WorkObservations} from './work-observations.mjs';
 import {InternalSessions} from './internal-sessions.mjs';
@@ -127,7 +128,7 @@ const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery
 const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);});
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...payload}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
-const rateLimits=new AccountRateLimits(codex,usage=>emit('rateLimits',{usage}));
+const rateLimits=new AccountRateLimits(codex,usage=>emit('rateLimits',{usage}),{observations:new CreditObservations(db,secrets.adminToken),creditAuthorization:creditContinuation});
 setInterval(()=>{if(sockets.clients.size)void rateLimits.refresh();},60000).unref();
 const safeEqual=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const getToken=req=>(req.headers.authorization||'').replace(/^Bearer /,'');
