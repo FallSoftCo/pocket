@@ -217,7 +217,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 
                 item(key="errors"){ErrorBanner()}
             }
-            if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
+            if(PocketTranscript.updating&&(d!=null||rows.isNotEmpty()))
+                Surface(color=Panel,shape=RoundedCornerShape(16.dp),modifier=Modifier.align(Alignment.TopCenter).padding(top=8.dp).semantics{liveRegion=LiveRegionMode.Polite}){
+                    Row(Modifier.padding(horizontal=12.dp,vertical=5.dp),verticalAlignment=Alignment.CenterVertically){AnimatedMark(24);Spacer(Modifier.width(6.dp));BilingualLabel("Updating messages",fontSize=12.sp,color=Mint)}
+                }
+            else if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
                 Box(Modifier.align(Alignment.TopCenter).padding(top=10.dp).size(36.dp).background(Panel,CircleShape),contentAlignment=Alignment.Center){AnimatedMark(28)}
             if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
         }
