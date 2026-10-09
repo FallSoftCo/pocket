@@ -47,7 +47,8 @@
       "footerEnvironmentName": "visible",
       "footerSettings": "opens",
       "environmentSelector": "accessible from existing footer; no extra header row",
-      "visualReview": "hierarchy/tap checks only; no published screenshot or physical frame-pacing claim"
+      "visualReview": "hierarchy/tap checks only; no published screenshot or physical frame-pacing claim",
+      "profileSwitch": "one tap changes visible footer to selected OZZZ profile"
     }
   },
   "artifacts": {
@@ -70,7 +71,14 @@
     ]
   },
   "phone": {
-    "installation": "pending; active keyboard observed, update not forced"
+    "installation": "verified in-place on Pixel",
+    "versionCode": 66,
+    "versionName": "0.5.0-alpha.48",
+    "installedApkSha256": "93f85b54857f2c9d978178ef52b879b2f21ea5a08caa7086dc4df6380bc34977",
+    "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+    "protectedPreferenceHashes": "10 of 10 unchanged",
+    "phonePairingToOzzz": "not attempted",
+    "physicalEnvironmentSwitching": "not observed"
   },
   "browser": {
     "parity": "coordinated with existing owner; not qualified by this change"
@@ -79,5 +87,11 @@
     "Native instrumentation uses a nonshrunk qualification variant; production signed artifacts are separately verified",
     "No claim of cross-project FCM delivery or physical-phone environment switching",
     "No migration of stock Codex sessions or backend device databases"
-  ]
+  ],
+  "sourceEvidence": {
+    "privatePhoneBuild": "d611a9a; reconciled existing private alpha47 baseline",
+    "sanitizedPublicMain": "4f51fda; public exact-source release qualification follows",
+    "publicNodeTests": 418,
+    "publicSourceGuard": "874 tracked files pass"
+  }
 }

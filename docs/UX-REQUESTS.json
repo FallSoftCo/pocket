@@ -2031,7 +2031,7 @@
     {
       "id": "named-multi-environment-20261009",
       "request": "Retain named remote development environments alongside Phone, with an accessible selector and isolated pairing, session identity, drafts, outgoing receipts, notifications, actions and settings.",
-      "status": "implemented; release and physical delivery qualification in progress",
+      "status": "implemented and installed alpha48 in place; OS/GPU HTTPS native qualification passed; browser parity separately pending",
       "implementation": [
         "Legacy workstation and phone keys remain intact",
         "Captured originating credentials for requests and background actions",
