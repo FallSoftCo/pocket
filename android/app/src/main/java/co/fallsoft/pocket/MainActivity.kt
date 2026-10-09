@@ -33,6 +33,8 @@ import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.focus.focusRequester
@@ -77,24 +79,34 @@ class MainActivity:ComponentActivity(){
         setContent{MaterialTheme(shapes=Shapes(extraSmall=RoundedCornerShape(2.dp),small=RoundedCornerShape(4.dp),medium=RoundedCornerShape(6.dp),large=RoundedCornerShape(8.dp),extraLarge=RoundedCornerShape(10.dp)),typography=Typography(titleLarge=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=20.sp,fontWeight=FontWeight.Medium),titleMedium=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=16.sp,fontWeight=FontWeight.Medium),bodyLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,lineHeight=22.sp,fontFamily=AppFont),bodyMedium=androidx.compose.ui.text.TextStyle(fontSize=14.sp,lineHeight=20.sp,fontFamily=AppFont),labelLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont)),colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,background=Ink,surface=Panel,onSurface=Paper,onBackground=Paper,outline=Muted,secondary=Coral,onSecondary=Ink,surfaceVariant=Panel,onSurfaceVariant=Paper,surfaceContainer=Panel,surfaceContainerHigh=Panel,surfaceContainerHighest=Panel,surfaceContainerLow=Panel,surfaceContainerLowest=Ink,secondaryContainer=Panel,onSecondaryContainer=Paper,primaryContainer=Panel,onPrimaryContainer=Paper,tertiary=NextCerise,onTertiary=Ink,tertiaryContainer=Panel,onTertiaryContainer=Paper)){
             CompositionLocalProvider(LocalImmersionMotionState provides rememberImmersionMotionEnvironment(),LocalImmersionTransitionAnimated provides motionAllowed()){
             Surface(Modifier.fillMaxSize(),color=Ink){Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
-                Box(Modifier.weight(1f)){if(Pocket.token.isBlank()||Pocket.pairingMode)PairScreen(initialServer.ifBlank{if(Pocket.pairingMode)"http://127.0.0.1:18880" else ""},initialCode)else BackendApp()}
+                Box(Modifier.weight(1f)){if(Pocket.token.isBlank()||Pocket.pairingMode)PairScreen(initialServer,initialCode)else BackendApp()}
             }}}
         }}
     }
     override fun dispatchTouchEvent(event:android.view.MotionEvent):Boolean {ImmersionInteraction.touch(event.actionMasked);return super.dispatchTouchEvent(event)}
+    fun beginPairing(server:String=""){initialServer=server;initialCode="";Pocket.pairingMode=true}
     override fun onNewIntent(intent:Intent){super.onNewIntent(intent);readIntent(intent)}
     private fun readIntent(i:Intent){
+        val requestedEnvironment=i.getStringExtra("environment")
+        if(requestedEnvironment!=null&&Pocket.captureEnvironment(requestedEnvironment)==null){Pocket.error="That environment is no longer paired";return}
         if(i.getBooleanExtra("appUpdate",false)){i.removeExtra("appUpdate");if(!PocketVoice.active){Pocket.closeTask();Pocket.newTask=false;Pocket.tab=1};PocketUpdates.installOrCheck(this)}
         initialServer=i.getStringExtra("server")?:initialServer;initialCode=i.getStringExtra("code")?:initialCode
         i.data?.takeIf{it.scheme=="pocket"&&it.host=="pair"}?.let{initialServer=it.getQueryParameter("server")?:initialServer;initialCode=it.getQueryParameter("code")?:initialCode;Pocket.pairingMode=true}
         if(i.getBooleanExtra("coordinatorReport",false)){
             val origin=i.getBooleanExtra("local",Pocket.local)
             if(PocketVoice.active&&PocketVoice.state in setOf("Listening","Starting microphone","Finishing recording")){Pocket.error="Finish this recording before opening work updates";PocketVoice.problem=Pocket.error;return}
-            if(origin!=Pocket.local)Pocket.activate(origin)
-            if(Pocket.token.isNotBlank()){PocketWorkUpdates.open();getSystemService(android.app.NotificationManager::class.java).cancel(i.getIntExtra("reportNotificationId",0))}
+            val environment=i.getStringExtra("environment")?:if(origin)"phone" else "workstation"
+            Pocket.activateEnvironment(environment)
+            if(Pocket.token.isNotBlank()){PocketWorkUpdates.open();getSystemService(android.app.NotificationManager::class.java).cancel(Pocket.notificationTag(environment),i.getIntExtra("reportNotificationId",0))}
             i.removeExtra("coordinatorReport");return
         }
-        if(i.hasExtra("local"))Pocket.activate(i.getBooleanExtra("local",false))
+        if(i.hasExtra("environment")){
+            val destination=i.getStringExtra("environment")!!;Pocket.activateEnvironment(destination)
+            if(Pocket.environmentId!=destination)return
+        }else if(i.hasExtra("local")){
+            val destination=if(i.getBooleanExtra("local",false))"phone" else "workstation";Pocket.activateEnvironment(destination)
+            if(Pocket.environmentId!=destination)return
+        }
         if(initialServer.isNotBlank()&&initialCode.isNotBlank())Pocket.pairingMode=true
         i.getStringExtra("thread")?.let{if(Pocket.token.isNotBlank())Pocket.open(it)}
         if(Pocket.token.isNotBlank()&&i.getStringExtra("operations_url")=="https://github.com/FallSoftCo/pocket/actions"){
@@ -103,7 +115,7 @@ class MainActivity:ComponentActivity(){
         }
     }
     override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
-    override fun onStop(){captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!Pocket.local&&!PocketVoice.active)PocketLive.stop();super.onStop()}
+    override fun onStop(){captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!PocketVoice.active)PocketLive.stop();super.onStop()}
     private val captureKeys get()=PocketVoice.captureKeys
     private var permissionCaptureThread:String?=null
     private var permissionCaptureInPlace=false
@@ -154,14 +166,15 @@ class MainActivity:ComponentActivity(){
     }
 }
 @Composable fun PairScreen(server:String,code:String){
-    var address by remember(server){mutableStateOf(server)};var pin by remember(code){mutableStateOf(code)}
+    var address by remember(server){mutableStateOf(server)};var pin by remember(code){mutableStateOf(code)};var environmentName by remember{mutableStateOf("")}
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(28.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
         Spacer(Modifier.height(34.dp));Mark(70);Spacer(Modifier.height(18.dp));Label("CODEX, WITH YOU",Mint)
         WorkflowText("Good work.\nWithin reach.",fontSize=46.sp,lineHeight=49.sp,fontWeight=FontWeight.Medium,letterSpacing=(-1.8).sp)
         WorkflowText("Your tasks, updates and next ideas.\nConnected to Codex here or on your workstation.",color=Muted,fontSize=17.sp,lineHeight=25.sp)
         Spacer(Modifier.height(14.dp));OutlinedTextField(address,{address=it},label={WorkflowText("NextComp server address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
+        OutlinedTextField(environmentName,{environmentName=it},label={WorkflowText("Environment name")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
         OutlinedTextField(pin,{pin=it},label={WorkflowText("One-time pairing code")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
-        ErrorBanner();Button({Pocket.pair(address,pin)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(6.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{BilingualLabel("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));SymbolIcon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
+        ErrorBanner();Button({Pocket.pair(address,pin,environmentName)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(6.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{BilingualLabel("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));SymbolIcon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
         if(Pocket.token.isNotBlank())TextButton({Pocket.pairingMode=false},modifier=Modifier.fillMaxWidth()){BilingualLabel("Cancel",color=Muted)}
 
     }
@@ -175,7 +188,7 @@ class MainActivity:ComponentActivity(){
     BackHandler(Pocket.tab==1&&Pocket.selected==null&&!Pocket.newTask){Pocket.tab=0}
     var workToolsOpen by remember{mutableStateOf(false)}
     val workListState=key(Pocket.local,Pocket.token,Pocket.showArchived){rememberLazyListState()}
-    val workCatalogView=remember(Pocket.local,Pocket.token){SessionCatalogViewState(Pocket.showArchived)}
+    val workCatalogView=remember(Pocket.environmentId,Pocket.token){SessionCatalogViewState(Pocket.showArchived)}
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
     Column(Modifier.fillMaxSize()){
         ConnectionNotice()
@@ -236,24 +249,33 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun ConnectionPill(){val ok=Pocket.connected&&Pocket.codexOnline;Row(Modifier.clip(CircleShape).background(Panel).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){Box(Modifier.size(6.dp).background(if(ok)Mint else Coral,CircleShape));BilingualLabel(if(ok)"Connected" else if(Pocket.connected)"Codex offline" else "Reconnecting",fontSize=11.sp,color=if(ok)Mint else Coral)}}
-@Composable fun ProfileSwitcher(){
-    if(Pocket.savedToken(false).isBlank()||Pocket.savedToken(true).isBlank())return
-    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-        FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={BilingualLabel("Workstation")},leadingIcon={SymbolIcon(Icons.Rounded.Computer,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
-        FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={BilingualLabel("This phone")},leadingIcon={SymbolIcon(Icons.Rounded.PhoneAndroid,null,Modifier.size(16.dp))},modifier=Modifier.weight(1f))
+@Composable fun ProfileSwitcher(onSelected:()->Unit={}){
+    val c=LocalContext.current
+    val profiles=Pocket.environmentProfiles.all();if(profiles.isEmpty())return
+    var expanded by remember{mutableStateOf(false)}
+    Box(Modifier.fillMaxWidth()){
+        OutlinedButton({expanded=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).semantics{contentDescription="Development environment: "+(profiles.firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host)}){
+            SymbolIcon(if(Pocket.local)Icons.Rounded.PhoneAndroid else Icons.Rounded.Computer,null,Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp));Text(profiles.firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,modifier=Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
+            SymbolIcon(Icons.Rounded.ExpandMore,null,Modifier.size(20.dp))
+        }
+        DropdownMenu(expanded=expanded,onDismissRequest={expanded=false}){
+            profiles.forEach{profile->DropdownMenuItem(text={Text((if(profile.id==Pocket.environmentId)"• " else "")+profile.name)},onClick={expanded=false;Pocket.activateEnvironment(profile.id);if(Pocket.environmentId==profile.id)onSelected()})}
+            DropdownMenuItem(text={BilingualLabel("Add environment")},onClick={expanded=false;c.nextCompActivity()?.beginPairing();onSelected()})
+        }
     }
 }
 class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntStateOf(if(archived)3 else 0);val query=mutableStateOf("")}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={},listState:androidx.compose.foundation.lazy.LazyListState=rememberLazyListState(),view:SessionCatalogViewState=remember{SessionCatalogViewState(Pocket.showArchived)}){
-    LaunchedEffect(Pocket.local,Pocket.token){while(true){delay(5000);if(Pocket.connected)Pocket.refresh()}}
+    LaunchedEffect(Pocket.environmentId,Pocket.token){while(true){delay(5000);if(Pocket.connected)Pocket.refresh()}}
     var filter by view.filter;var query by view.query
     var touching by remember{mutableStateOf(false)}
     var listClock by remember{mutableLongStateOf(System.currentTimeMillis())}
-    var displayed by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf(Pocket.tasks)}
+    var displayed by remember(Pocket.environmentId,Pocket.token,Pocket.showArchived){mutableStateOf(Pocket.tasks)}
     val orderKey=Pocket.key(if(Pocket.showArchived)"archivedWorkActivityOrderV2" else "workActivityOrderV2")
-    var order by remember(Pocket.local,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(orderKey,"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{taskWorkTime(it)}.map{it.id}})}
-    LaunchedEffect(Pocket.local,Pocket.token,Pocket.showArchived){
+    var order by remember(Pocket.environmentId,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(orderKey,"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{taskWorkTime(it)}.map{it.id}})}
+    LaunchedEffect(Pocket.environmentId,Pocket.token,Pocket.showArchived){
         val pacing=SessionListPacing();var observed=Pocket.tasks.associateBy{it.id}
         while(true){
             val latest=Pocket.tasks;val now=android.os.SystemClock.elapsedRealtime()
@@ -429,7 +451,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){WorkflowText("Full permissions for new tasks",modifier=Modifier.weight(1f));Switch(checked=Pocket.fullPermissions,onCheckedChange={Pocket.updateFullPermissions(it)},enabled=!Pocket.starting)}
         WorkflowText(if(Pocket.fullPermissions)"Full device access. Commands run without approval prompts." else if(Pocket.local)"Commands can ask for approval. Phone tasks retain full filesystem access." else "Workspace access. Commands can ask for approval.",color=Muted,fontSize=12.sp,lineHeight=18.sp)
-        WorkflowText("Applies to future tasks on the workstation and this phone.",color=Muted,fontSize=12.sp)
+        WorkflowText("Applies to future tasks in this environment.",color=Muted,fontSize=12.sp)
     }
 }
 @Composable fun SettingsScreen(){val c=LocalContext.current
@@ -449,11 +471,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         Label("MADE TO BE YOURS",Mint);WorkflowText("Your connection.",fontSize=34.sp,letterSpacing=(-1).sp)
         Surface(color=Panel,shape=RoundedCornerShape(24.dp)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             ConnectionPill();Text(Pocket.host,fontSize=23.sp);Text(Pocket.base,color=Muted,fontSize=12.sp)
-            if(Pocket.savedToken(false).isNotBlank()&&Pocket.savedToken(true).isNotBlank())Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                FilterChip(selected=!Pocket.local,onClick={Pocket.activate(false)},label={BilingualLabel("Workstation")})
-                FilterChip(selected=Pocket.local,onClick={Pocket.activate(true)},label={BilingualLabel("This phone")})
-            }
-            if(Pocket.savedToken(true).isBlank())OutlinedButton({Pocket.pairingMode=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Connect Codex on this phone")}
+            ProfileSwitcher()
+            if(Pocket.savedToken(true).isBlank())OutlinedButton({c.nextCompActivity()?.beginPairing("http://127.0.0.1:18880")},modifier=Modifier.fillMaxWidth()){BilingualLabel("Connect Codex on this phone")}
             HorizontalDivider(color=Line);WorkflowText(Pocket.pushStatus,fontSize=16.sp,color=Mint)
             WorkflowText(if(Pocket.local)"NextComp connects over this phone’s loopback interface. A visible monitor keeps local task results and requests flowing while the app is closed." else "Notifications arrive through Firebase, even when NextComp is closed. Conversations and files load from your workstation.",color=Muted,fontSize=14.sp,lineHeight=21.sp)
         }}

@@ -5,6 +5,8 @@ import java.util.Locale
 /** Authored, offline learning vocabulary. Match whole labels; never rewrite executable syntax. */
 object ImmersionLexicon {
     val common=mapOf(
+        "Add environment" to "Aggiungi ambiente",
+        "Environment name" to "Nome dell’ambiente",
         "Codex credits" to "Crediti Codex",
         "Credit data unavailable" to "Dati sui crediti non disponibili",
         "Observed balance decrease" to "Riduzione del saldo osservata",

@@ -13,8 +13,8 @@ class UpdateDownloadWorker(c:Context,p:WorkerParameters):CoroutineWorker(c,p){
     override suspend fun doWork():Result=withContext(Dispatchers.IO){
         val key=inputData.getString("key")?:return@withContext Result.success()
         val job=PocketUpdates.job(key)?:return@withContext Result.success()
-        val local=job.optBoolean("local");val base=job.s("base").trimEnd('/');val token=job.s("token")
-        fun current()=Pocket.savedBase(local).trimEnd('/')==base&&Pocket.savedToken(local)==token
+        val local=job.optBoolean("local");val environment=job.s("environment",if(local)"phone" else "workstation");val base=job.s("base").trimEnd('/');val token=job.s("token")
+        fun current()=Pocket.savedBase(local,environment).trimEnd('/')==base&&Pocket.savedToken(local,environment)==token
         if(!current()){PocketUpdates.finishJob(key);return@withContext Result.success()}
         val http=Pocket.http.newBuilder().followRedirects(false).followSslRedirects(false).build()
         val signer=PocketUpdates.installedSigner(applicationContext)

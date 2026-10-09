@@ -1,0 +1,83 @@
+{
+  "version": "0.5.0-alpha.48",
+  "versionCode": 66,
+  "date": "2026-10-09",
+  "buildHost": "OZZZ-OS",
+  "sourceBase": "4f11e2c4ab6e4e12ed54949b266856889205b86b",
+  "androidUnit": {
+    "Debug": {
+      "tests": 265,
+      "failures": 0
+    },
+    "Release": {
+      "tests": 265,
+      "failures": 0
+    }
+  },
+  "lint": {
+    "debug": "pass",
+    "release": "pass"
+  },
+  "node": {
+    "tests": 419,
+    "failures": 0
+  },
+  "dependencyAudit": {
+    "vulnerabilities": 0
+  },
+  "native": {
+    "device": "owned API35 emulator",
+    "variant": "unshrunk qualification",
+    "isolationTest": "pass, 8.89 seconds",
+    "checks": [
+      "same thread IDs on distinct origins",
+      "draft preservation",
+      "captured background reply destination",
+      "unknown receipt held without sending",
+      "phone notification monitor while remote selected"
+    ],
+    "realHttpsPairing": {
+      "OZZZ-OS": "pass, 2.245 seconds",
+      "OZZZ-GPU-RENDER": "pass, 2.388 seconds",
+      "otherProfiles": "preserved",
+      "disposablePairings": "revoked; no task created"
+    },
+    "optimizedArtifact": {
+      "sameSignedDebugInstall": "pass",
+      "footerEnvironmentName": "visible",
+      "footerSettings": "opens",
+      "environmentSelector": "accessible from existing footer; no extra header row",
+      "visualReview": "hierarchy/tap checks only; no published screenshot or physical frame-pacing claim"
+    }
+  },
+  "artifacts": {
+    "packageName": "co.fallsoft.pocket",
+    "versionCode": 66,
+    "versionName": "0.5.0-alpha.48",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "path": "nextcomp-66-b28f55b44c93.apk",
+        "sha256": "2e5a39539e93290a8894f54fa204d03244622eb72f9cb9319608305f02021cfe",
+        "size": 51956391
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "path": "nextcomp-66-22ecabe28e15.apk",
+        "sha256": "93f85b54857f2c9d978178ef52b879b2f21ea5a08caa7086dc4df6380bc34977",
+        "size": 75280692
+      }
+    ]
+  },
+  "phone": {
+    "installation": "pending; active keyboard observed, update not forced"
+  },
+  "browser": {
+    "parity": "coordinated with existing owner; not qualified by this change"
+  },
+  "limitations": [
+    "Native instrumentation uses a nonshrunk qualification variant; production signed artifacts are separately verified",
+    "No claim of cross-project FCM delivery or physical-phone environment switching",
+    "No migration of stock Codex sessions or backend device databases"
+  ]
+}

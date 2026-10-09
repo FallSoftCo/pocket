@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.*
 @Composable fun CoordinatorCard(){
     val shape=RoundedCornerShape(8.dp)
     val height=with(androidx.compose.ui.platform.LocalDensity.current){(if(PocketImmersion.enabled&&PocketImmersion.supportEnabled)84.sp else 64.sp).toDp()+32.dp}.coerceAtLeast(96.dp)
-    LaunchedEffect(Pocket.local,Pocket.token){PocketCoordinator.loadHistory()}
+    LaunchedEffect(Pocket.environmentId,Pocket.token){PocketCoordinator.loadHistory()}
     LaunchedEffect(PocketCoordinator.preview,PocketImmersion.enabled){PocketImmersion.offer("coordinator:preview",PocketCoordinator.preview,"coordinator message")}
     Box(Modifier.fillMaxWidth().height(height).clip(shape).background(Panel).border(1.dp,Mint.copy(alpha=.55f),shape)){
         Row(Modifier.matchParentSize()){
@@ -53,13 +53,13 @@ import kotlinx.coroutines.flow.*
 
 @Composable fun CoordinatorScreen(){
     val draftKey=Pocket.key("coordinatorDraft")
-    var draft by remember(Pocket.local,Pocket.token){mutableStateOf(Pocket.prefs.getString(draftKey,"").orEmpty())}
+    var draft by remember(Pocket.environmentId,Pocket.token){mutableStateOf(Pocket.prefs.getString(draftKey,"").orEmpty())}
     fun updateDraft(value:String){draft=value;Pocket.prefs.edit().putString(draftKey,value).apply()}
     val keyboard=LocalSoftwareKeyboardController.current
     val focus=remember{FocusRequester()}
     val scroll=rememberLazyListState()
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-    val coverage=remember(Pocket.local,Pocket.token){CoordinatorReadingCoverage()}
+    val coverage=remember(Pocket.environmentId,Pocket.token){CoordinatorReadingCoverage()}
     LaunchedEffect(scroll,lifecycle,coverage){lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
         snapshotFlow{if(BlackoutVisibility.active)emptyList()else scroll.layoutInfo.let{layout->layout.visibleItemsInfo.filter{item->item.key.toString().startsWith("coordinator-assistant:")}.map{item->CoordinatorItemExposure(item.key.toString().substringAfter(":"),item.offset,item.size,layout.viewportStartOffset,layout.viewportEndOffset)}}}.collect{items->if(PocketVoice.foreground)items.forEach{item->if(coverage.expose(item.id,item.offset,item.size,item.start,item.end))PocketCoordinator.presented(item.id)}}
     }}

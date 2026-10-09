@@ -88,10 +88,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.THINKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
     val latestFailure=rows.lastOrNull{it.s("kind")=="turnEnd"}?.takeIf{it.s("status")=="failed"&&(latestTurn==null||it.s("turnId")==latestTurn.s("turnId"))}
     val list=key(Pocket.local,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
-    val readPosition=remember(Pocket.local,Pocket.selected){PocketTranscript.readPosition}
-    var restoredPosition by remember(Pocket.local,Pocket.selected){mutableStateOf(readPosition==null||readPosition.follow)}
-    var follow by remember(Pocket.local,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
-    var important by remember(Pocket.local,Pocket.selected){mutableStateOf(false)}
+    val readPosition=remember(Pocket.environmentId,Pocket.selected){PocketTranscript.readPosition}
+    var restoredPosition by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition==null||readPosition.follow)}
+    var follow by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
+    var important by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
     fun noteFor(row:JSONObject)=notes.firstOrNull{it.s("id")==row.s("itemId",row.s("id"))||it.s("id")==row.s("id")}
@@ -118,8 +118,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             restoredPosition=true
         }
     }
-    var removingNotes by remember(Pocket.local,Pocket.selected){mutableStateOf(setOf<String>())}
-    val spokenRows=remember(Pocket.local,Pocket.selected){mutableStateMapOf<String,String>()}
+    var removingNotes by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(setOf<String>())}
+    val spokenRows=remember(Pocket.environmentId,Pocket.selected){mutableStateMapOf<String,String>()}
     var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
     var settingsOpen by remember(Pocket.selected){mutableStateOf(false)}
     var renameOpen by remember(Pocket.selected){mutableStateOf(false)}
@@ -128,7 +128,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var editingQueue by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     var queuedText by remember(Pocket.selected){mutableStateOf("")}
     var queueOpen by remember(Pocket.selected){mutableStateOf(false)}
-    val draftKey=Pocket.key("draft:${Pocket.selected}");var editor by remember(Pocket.local,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})}
+    val draftKey=Pocket.key("draft:${Pocket.selected}");var editor by remember(Pocket.environmentId,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})}
     var keyboardInput by remember(Pocket.selected){mutableStateOf(Pocket.openWithKeyboard)}
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
@@ -200,7 +200,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                                 }else if(owns())Pocket.error="The original message is not available in loaded history."
                             }
                         }){BilingualLabel("Surrounding conversation")}
-                        TextButton({val thread=Pocket.selected;val profile=Pocket.local;val endpoint=Pocket.base;val credential=Pocket.token;val id=note.s("id");removingNotes=removingNotes+id;scope.launch{try{val response=Pocket.apiFor(profile,"/api/threads/$thread/notes/remove",JSONObject().put("id",id));require(response.optJSONArray("notes")!=null){"Removal was not acknowledged. Try again."};if(Pocket.selected==thread&&Pocket.local==profile&&Pocket.base==endpoint&&Pocket.token==credential)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}}catch(e:Exception){if(Pocket.selected==thread&&Pocket.local==profile)Pocket.error=PocketNetwork.error(e)}finally{removingNotes=removingNotes-id}}},enabled=note.s("id") !in removingNotes){BilingualLabel("Unsave",color=Muted)}
+                        TextButton({val thread=Pocket.selected;val profile=Pocket.local;val destination=Pocket.captureEnvironment();val endpoint=Pocket.base;val credential=Pocket.token;val id=note.s("id");removingNotes=removingNotes+id;scope.launch{try{val response=Pocket.apiEnvironment(requireNotNull(destination),"/api/threads/$thread/notes/remove",JSONObject().put("id",id));require(response.optJSONArray("notes")!=null){"Removal was not acknowledged. Try again."};if(Pocket.selected==thread&&Pocket.local==profile&&Pocket.base==endpoint&&Pocket.token==credential)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}}catch(e:Exception){if(Pocket.selected==thread&&Pocket.local==profile)Pocket.error=PocketNetwork.error(e)}finally{removingNotes=removingNotes-id}}},enabled=note.s("id") !in removingNotes){BilingualLabel("Unsave",color=Muted)}
                     }}
                 }
                 if(important&&shownRows.isEmpty())item{BilingualLabel("No important updates yet",color=Muted)}
@@ -227,7 +227,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val failure=turnFailureKind(latestFailure.s("text",failureError?.s("message").orEmpty()),failureError?.s("additionalDetails").orEmpty())
             val automaticRecovery=d?.optJSONObject("recovery")?.s("state") in listOf("waiting","dispatching","running")
             BilingualLabel(if(automaticRecovery)"Waiting to resume automatically" else failure.title,color=if(automaticRecovery)Muted else Coral,fontSize=12.sp,maxLines=2,centered=false,modifier=Modifier.weight(1f))
-            if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","dispatching"))TextButton({val source=Pocket.selected;val profile=Pocket.local;scope.launch{try{Pocket.apiFor(profile,"/api/threads/$source/recovery",JSONObject().put("cancel",true));if(Pocket.selected==source&&Pocket.local==profile)Pocket.refreshDetail()}catch(e:Exception){if(Pocket.selected==source&&Pocket.local==profile)Pocket.error=e.message?:"Could not pause recovery"}}}){BilingualLabel("Pause recovery",fontSize=12.sp)}
+            if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","dispatching"))TextButton({val source=Pocket.selected;val profile=Pocket.local;val destination=Pocket.captureEnvironment();scope.launch{try{Pocket.apiEnvironment(requireNotNull(destination),"/api/threads/$source/recovery",JSONObject().put("cancel",true));if(Pocket.selected==source&&Pocket.local==profile)Pocket.refreshDetail()}catch(e:Exception){if(Pocket.selected==source&&Pocket.local==profile)Pocket.error=e.message?:"Could not pause recovery"}}}){BilingualLabel("Pause recovery",fontSize=12.sp)}
             else TextButton({val next=continuationDraft(editor.text);editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply();keyboardInput=true;scope.launch{delay(32);inputFocus.requestFocus();keyboard?.show()}},enabled=!Pocket.sending){BilingualLabel(if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","running","dispatching"))"Recovery active · review" else "Review continuation",fontSize=12.sp)}
         }
         Box{

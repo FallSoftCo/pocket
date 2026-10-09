@@ -40,20 +40,20 @@ object PocketNotifications {
         val m=c.getSystemService(NotificationManager::class.java)
         m.createNotificationChannel(NotificationChannel("work",PocketImmersion.label("Codex updates & replies"),NotificationManager.IMPORTANCE_HIGH).apply{description=PocketImmersion.label("Updates you request from Codex, questions, and replies to your phone messages.")})
     }
-    fun open(c:Context,thread:String?,code:Int,local:Boolean=Pocket.local,coordinator:Boolean=false):PendingIntent=PendingIntent.getActivity(c,code,Intent(c,MainActivity::class.java).apply{flags=Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP;putExtra("thread",thread);putExtra("local",local);if(coordinator){putExtra("coordinatorReport",true);putExtra("reportNotificationId",code)}},PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    fun open(c:Context,thread:String?,code:Int,local:Boolean=Pocket.local,coordinator:Boolean=false,environment:String=Pocket.environment(local)):PendingIntent=PendingIntent.getActivity(c,code,Intent(c,MainActivity::class.java).apply{flags=Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP;data=Pocket.notificationIntent(environment,"open",code);putExtra("thread",thread);putExtra("local",local);putExtra("environment",environment);if(coordinator){putExtra("coordinatorReport",true);putExtra("reportNotificationId",code)}},PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     fun show(c:Context,n:JSONObject,reminder:Boolean=false,translationRefresh:Boolean=false){
         PocketNotificationTitles.remember(n)
         if(PocketNotificationReads.isRead(n))return
         channels(c)
-        val local=n.optBoolean("_local",Pocket.local);val id=(if(n.s("kind")=="coordinator_report")499998 else n.optLong("id").toInt())+(if(local)500000 else 1000); val thread=n.s("thread_id").takeIf{it.isNotBlank()}
+        val local=n.optBoolean("_local",Pocket.local);val environment=n.s("_environment",Pocket.environment(local));val id=(if(n.s("kind")=="coordinator_report")499998 else n.optLong("id").toInt())+(if(local)500000 else 1000); val thread=n.s("thread_id").takeIf{it.isNotBlank()}
         if(n.s("kind")=="coordinator_report"){
             val manager=c.getSystemService(NotificationManager::class.java);val profile=PocketNotificationTitles.extras(n).getString("nextcompProfile")
-            val previous=manager.activeNotifications.firstOrNull{it.id==id}
+            val previous=manager.activeNotifications.firstOrNull{it.id==id&&it.notification.extras.getString("nextcompProfile")==profile}
             if((previous?.notification?.extras?.getLong("nextcompReportAt")?:0)>n.optLong("created_at"))return
-            manager.activeNotifications.filter{it.id!=id&&it.notification.extras.getString("nextcompProfile")==profile&&it.notification.extras.getString("nextcompThread").orEmpty().isBlank()&&(it.notification.extras.getString("nextcompKind")=="coordinator_report"||it.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()=="NextComp check-in")}.forEach{manager.cancel(it.id)}
+            manager.activeNotifications.filter{it.id!=id&&it.notification.extras.getString("nextcompProfile")==profile&&it.notification.extras.getString("nextcompThread").orEmpty().isBlank()&&(it.notification.extras.getString("nextcompKind")=="coordinator_report"||it.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()=="NextComp check-in")}.forEach{manager.cancel(Pocket.notificationTag(environment),it.id)}
         }
-        val attention=PocketAttention.needs(n)&&!PocketAttention.dismissed(n.optLong("id"),local)
-        val sameProfile=local==Pocket.local
+        val attention=PocketAttention.needs(n)&&!PocketAttention.dismissed(n.optLong("id"),local,environment)
+        val sameProfile=environment==Pocket.environmentId
         if(sameProfile){synchronized(immersedNotices){immersedNotices[id]=ImmersedNotice(n.toString(),immersionProfile(),reminder);while(immersedNotices.size>30)immersedNotices.remove(immersedNotices.keys.first())}}
         val title=if(sameProfile)immersed("notification-title:${n.optLong("id")}",n.s("title"))else n.s("title")
         val body=if(sameProfile)immersed("notification-body:${n.optLong("id")}",n.s("body"))else n.s("body")
@@ -64,29 +64,29 @@ object PocketNotifications {
             .addExtras(PocketNotificationTitles.extras(n).apply{putString("nextcompKind",n.s("kind"));if(n.s("kind")=="coordinator_report")putLong("nextcompReportAt",n.optLong("created_at"))})
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setColor(0xffffc600.toInt()).setAutoCancel(!attention&&n.s("kind")!="coordinator_report").setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(open(c,thread,id,local,n.s("kind")=="coordinator_report"))
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(open(c,thread,id,local,n.s("kind")=="coordinator_report",environment))
         if(n.s("kind")=="coordinator_report"||translationRefresh||PocketSpeech.count>0&&!PocketSpeech.paused)b.setSilent(true)
         b.setOnlyAlertOnce(true)
         if(reminder)b.setSubText(PocketImmersion.label("Still needs your attention"))
-        if(attention){PocketAttention.remember(n);b.setDeleteIntent(PocketAttention.action(c,n.optLong("id"),"dismiss",local))}
+        if(attention){PocketAttention.remember(n);b.setDeleteIntent(PocketAttention.action(c,n.optLong("id"),"dismiss",local,environment))}
         if(thread!=null&&n.s("kind")=="question"){
-            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Answer"),open(c,thread,id,local,n.s("kind")=="coordinator_report"))
-            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Skip"),PocketAttention.action(c,n.optLong("id"),"skip",local))
-            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local))
+            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Answer"),open(c,thread,id,local,n.s("kind")=="coordinator_report",environment))
+            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Skip"),PocketAttention.action(c,n.optLong("id"),"skip",local,environment))
+            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local,environment))
         }else if(thread!=null&&!n.optBoolean("canAcceptDirectInput",true)){
             val parent=n.s("parentThreadId").takeIf{it.isNotBlank()}
-            if(parent!=null)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Guide parent"),open(c,parent,id+100000,local))
-            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Review agent"),open(c,thread,id,local))
-            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local))
+            if(parent!=null)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Guide parent"),open(c,parent,id+100000,local,environment=environment))
+            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Review agent"),open(c,thread,id,local,environment=environment))
+            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local,environment))
         }else if(thread!=null){
-            val intent=Intent(c,ReplyReceiver::class.java).putExtra("thread",thread).putExtra("notificationId",id).putExtra("notificationDbId",n.optLong("id")).putExtra("local",local)
+            val intent=Intent(c,ReplyReceiver::class.java).setData(Pocket.notificationIntent(environment,"reply",id)).putExtra("thread",thread).putExtra("notificationId",id).putExtra("notificationDbId",n.optLong("id")).putExtra("local",local).putExtra("environment",environment)
             val pi=PendingIntent.getBroadcast(c,id,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
             b.addAction(NotificationCompat.Action.Builder(R.drawable.ic_notification,PocketImmersion.label("Reply"),pi)
                 .addRemoteInput(RemoteInput.Builder("reply").setLabel(PocketImmersion.label("Your reply…")).build()).setAllowGeneratedReplies(false).build())
-            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Open task"),open(c,thread,id,local,n.s("kind")=="coordinator_report"))
-            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local))
+            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Open task"),open(c,thread,id,local,n.s("kind")=="coordinator_report",environment))
+            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local,environment))
         }
-        try{NotificationManagerCompat.from(c).notify(id,b.build())}catch(_:SecurityException){}
+        try{NotificationManagerCompat.from(c).notify(Pocket.notificationTag(environment),id,b.build())}catch(_:SecurityException){}
     }
 }
 
@@ -129,14 +129,15 @@ class ReplyReceiver:BroadcastReceiver(){
     override fun onReceive(c:Context,i:Intent){
         val text=RemoteInput.getResultsFromIntent(i)?.getCharSequence("reply")?.toString()?.trim()?:return
         val thread=i.getStringExtra("thread")?:return
-        val local=i.getBooleanExtra("local",false)
-        if(text.isEmpty()||Pocket.token.isBlank())return
+        val local=i.getBooleanExtra("local",false);val environment=i.getStringExtra("environment")?:if(local)"phone" else "workstation"
+        val destination=Pocket.captureEnvironment(environment)?:return
+        if(text.isEmpty())return
         val notificationId=i.getIntExtra("notificationId",0)
         val id=UUID.randomUUID().toString()
-        val payload=JSONObject().put("id",id).put("thread",thread).put("text",text).put("notificationId",notificationId).put("notificationDbId",i.getLongExtra("notificationDbId",0)).put("local",local)
+        val payload=JSONObject().put("id",id).put("thread",thread).put("text",text).put("notificationId",notificationId).put("notificationDbId",i.getLongExtra("notificationDbId",0)).put("local",local).put("environment",environment).put("endpoint",destination.endpoint).put("token",destination.token)
         Pocket.prefs.edit().putString("outbox:$id",payload.toString()).commit()
         ReplyDeliveryWorker.enqueue(c,id)
-        val b=NotificationCompat.Builder(c,"work").setSmallIcon(R.drawable.ic_notification).setContentTitle(PocketImmersion.label("Sending reply to Codex…")).setContentText(text).setContentIntent(PocketNotifications.open(c,thread,notificationId,local)).setAutoCancel(true).setSilent(true)
-        try{NotificationManagerCompat.from(c).notify(notificationId,b.build())}catch(_:SecurityException){}
+        val b=NotificationCompat.Builder(c,"work").setSmallIcon(R.drawable.ic_notification).setContentTitle(PocketImmersion.label("Sending reply to Codex…")).setContentText(text).setContentIntent(PocketNotifications.open(c,thread,notificationId,local,environment=environment)).setAutoCancel(true).setSilent(true)
+        try{NotificationManagerCompat.from(c).notify(Pocket.notificationTag(environment),notificationId,b.build())}catch(_:SecurityException){}
     }
 }
