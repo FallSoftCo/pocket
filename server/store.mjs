@@ -11,7 +11,7 @@ export function openStore(dir) {
   if(!existsSync(secretsPath))writeFileSync(secretsPath,JSON.stringify(secrets),{mode:0o600});
   chmodSync(secretsPath,0o600);
   const db=new DatabaseSync(path.join(dir,'pocket.sqlite'));
-  db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
+  db.exec(`PRAGMA busy_timeout=1000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS devices(id TEXT PRIMARY KEY, name TEXT, token_hash TEXT UNIQUE, created_at INTEGER, last_seen INTEGER DEFAULT 0);
     CREATE TABLE IF NOT EXISTS pairing(code_hash TEXT PRIMARY KEY, expires INTEGER);
     CREATE TABLE IF NOT EXISTS watches(thread_id TEXT PRIMARY KEY, name TEXT, enabled INTEGER DEFAULT 0);

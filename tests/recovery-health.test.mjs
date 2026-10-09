@@ -30,5 +30,5 @@ test('exhausted included usage continues only with account-bound existing-credit
  for(const change of [{spendControlReached:true},{spendControlReached:null},{individualLimit:{remainingPercent:0}},{planType:'business'},{credits:{hasCredits:true,balance:'0'}},{credits:{hasCredits:false,balance:'100'}},{credits:{hasCredits:true,balance:'garbage'}},{rateLimitReachedType:'workspace_owner_usage_limit_reached'}]){
  update({...bucket,...change});assert.equal(recoveryAccountUsage(c,permission,{now:1000}).ok,false,JSON.stringify(change));}
  update(bucket);assert.equal(recoveryAccountUsage(c,permission,{now:200000}).ok,false);c.failed=true;assert.equal(recoveryAccountUsage(c,permission,{now:1000}).ok,false);
- assert.equal(JSON.stringify(c.snapshot()).includes('signed-in-account'),false);assert.equal(JSON.stringify(c.snapshot()).includes('62028'),false);c.clear();assert.equal(c.accountId,null);
+ assert.equal(JSON.stringify(c.snapshot()).includes('signed-in-account'),false);assert.equal(c.snapshot().credits.balance,'62028.17');assert.equal(JSON.stringify(c.snapshot()).includes('signed-in-account'),false);c.clear();assert.equal(c.accountId,null);
 });

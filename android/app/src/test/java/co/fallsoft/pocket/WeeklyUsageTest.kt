@@ -12,6 +12,16 @@ class WeeklyUsageTest{
         assertEquals("Loading…",WeeklyUsage().remainingLabel(Locale.US))
         assertEquals("Unavailable",WeeklyUsage(state="unavailable").remainingLabel(Locale.US))
     }
+    @Test fun creditsUseTheirOwnFreshnessAndNeverBecomeDollars(){
+        val credits=CreditUsage(balance="61965.599352",updatedAt=1000,stale=false)
+        assertEquals("61,965.599352 credits",credits.label(Locale.US))
+        assertEquals("62k cr",credits.compact(Locale.US))
+        assertFalse(credits.isStale(2000,true))
+        assertTrue(credits.isStale(121001,true))
+        assertTrue(credits.isStale(2000,false))
+        assertEquals("Credits unavailable",CreditUsage().label(Locale.US))
+        assertEquals("Unlimited credits",CreditUsage(unlimited=true).label(Locale.US))
+    }
     @Test fun disconnectedOldAndExpiredAllowancesAreMarkedLastKnown(){
         val usage=WeeklyUsage(remainingPercent=18.0,updatedAt=1000,resetsAt=1000)
         assertFalse(usage.isStale(2000,true))
