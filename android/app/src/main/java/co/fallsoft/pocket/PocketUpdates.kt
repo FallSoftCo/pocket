@@ -81,12 +81,12 @@ object PocketUpdates {
         target.parentFile!!.listFiles()?.filter{it.extension=="apk"&&it!=target}?.sortedByDescending{it.lastModified()}?.drop(1)?.forEach{it.delete()}
     }
     fun check(download:Boolean=false,local:Boolean=if(Pocket.savedToken(false).isNotBlank())false else Pocket.local,force:Boolean=false){
-        val base=Pocket.savedBase(local);val token=Pocket.savedToken(local)
+        val environment=Pocket.environment(local);val base=Pocket.savedBase(local,environment);val token=Pocket.savedToken(local,environment)
         if(base.isBlank()||token.isBlank()){report("Connect a paired workstation to check for updates");return}
         val checkedKey="last-check:$local:$base"
         if(!force&&System.currentTimeMillis()-prefs.getLong(checkedKey,0)<3600000)return
         prefs.edit().putLong(checkedKey,System.currentTimeMillis()).apply()
-        enqueueCaptured(JSONObject().put("local",local).put("base",base).put("token",token).put("download",download))
+        enqueueCaptured(JSONObject().put("local",local).put("environment",environment).put("base",base).put("token",token).put("download",download))
     }
     @Synchronized private fun enqueueCaptured(payload:JSONObject){
         if(prefs.all.keys.count{it.startsWith("update-job:")}>=16){

@@ -28,10 +28,11 @@ import java.util.Locale
     val measure=androidx.compose.ui.text.rememberTextMeasurer()
     val style=LocalTextStyle.current.copy(fontSize=12.sp,lineHeight=14.sp)
     val width=maxOf(measure.measure(androidx.compose.ui.text.AnnotatedString("Settings"),style).size.width,measure.measure(androidx.compose.ui.text.AnnotatedString(PocketImmersion.label("Settings")),style).size.width)
-    return maxOf((72*density.fontScale.coerceAtLeast(1f)).dp,with(density){width.toDp()}+4.dp)
+    return maxOf((72*density.fontScale.coerceAtLeast(1f)).dp,with(density){width.toDp()}+24.dp)
 }
 
 @Composable fun UsageDetails(onNavigate:()->Unit={}){
+    ProfileSwitcher(onSelected=onNavigate)
     val context=androidx.compose.ui.platform.LocalContext.current
     TextButton({onNavigate();PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask();if(Pocket.tab==1){Pocket.requestSessionOrder();Pocket.tab=0}else Pocket.tab=1}){BilingualLabel(if(Pocket.tab==1)"Work" else "Settings")}
     PocketUpdateControl()
@@ -78,12 +79,15 @@ import java.util.Locale
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){if(!creditPrimary)AnimatedMark(20);Text(if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=18.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1)}
             Text(if(day.isBlank())"↻ —" else "$day $time",color=Muted,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
             Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally){
+                if(Pocket.environmentProfiles.all().size>1)Text(Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 val online=Pocket.connected&&Pocket.codexOnline
                 val stateColor=if(online)NextGreen else if(Pocket.connected||PocketLive.outageVisible)Coral else Muted
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
                 Box(Modifier.size(20.dp).background(stateColor.copy(alpha=.35f),RoundedCornerShape(6.dp)),contentAlignment=Alignment.Center){
                     SymbolIcon("Tune","Settings",Modifier.size(20.dp))
                 }
-                BilingualLabel("Settings",modifier=Modifier.fillMaxWidth(),color=Paper,fontSize=12.sp,lineHeight=14.sp)
+                BilingualLabel("Settings",color=Paper,fontSize=12.sp,lineHeight=14.sp)
+                }
             }
         }
     }

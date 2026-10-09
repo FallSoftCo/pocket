@@ -28,12 +28,16 @@ object PocketPush {
         return true
     }
     fun configure(config:JSONObject?,registered:Boolean=false){
+        val id=Pocket.environmentId
+        if(config!=null)Pocket.prefs.edit().putString(Pocket.environmentKey("firebase",id),config.toString()).apply()
+        val shared=Pocket.prefs.getString("firebase",null)?.let{runCatching{JSONObject(it)}.getOrNull()}
+        if(config!=null&&shared!=null&&shared.s("applicationId")!=config.s("applicationId")){Pocket.pushStatus="This environment uses a different push project; live updates remain available";return}
         if(config==null){Pocket.pushStatus=if(Pocket.local)"Notifications stay on this phone" else "Firebase is not configured on your server";return}
         val changed=Pocket.prefs.getString("firebase",null)!=config.toString()
         Pocket.prefs.edit().putString("firebase",config.toString()).apply()
         try{
             initialize()
-            if(changed||!registered||!Pocket.prefs.getBoolean("pushReady",false)){
+            if(changed||!registered||!Pocket.prefs.getBoolean(Pocket.environmentKey("pushReady",id),false)){
                 Pocket.pushStatus="Registering notifications…";PushRegistrationWorker.enqueue(Pocket.context)
             }else Pocket.pushStatus="Firebase push is ready"
         }catch(_:Exception){Pocket.pushStatus="Could not initialize Firebase"}
@@ -42,56 +46,61 @@ object PocketPush {
 
 class PushRegistrationWorker(c:Context,p:WorkerParameters):Worker(c,p){
     override fun doWork():Result {
-        if(Pocket.savedToken(false).isBlank()||!PocketPush.initialize())return Result.success()
+        val environment=inputData.getString("environment")?:"workstation"
+        val destination=Pocket.captureEnvironment(environment)?:return Result.success()
+        if(!PocketPush.initialize())return Result.success()
         return try{
             val token=Tasks.await(FirebaseMessaging.getInstance().token,20,TimeUnit.SECONDS)
             val config=JSONObject(Pocket.prefs.getString("firebase","{}")!!)
-            runBlocking {Pocket.apiFor(false,"/api/device/push",JSONObject().put("token",token).put("projectId",config.getString("projectId")))}
-            Pocket.prefs.edit().putBoolean("pushReady",true).apply()
-            Pocket.scope.launch{Pocket.pushStatus="Firebase push is ready"}
+            val own=Pocket.prefs.getString(Pocket.environmentKey("firebase",environment),null)?.let{JSONObject(it)}
+            if(own==null&&environment!="workstation"||own!=null&&own.s("applicationId")!=config.s("applicationId"))return Result.success()
+            runBlocking {Pocket.apiEnvironment(destination,"/api/device/push",JSONObject().put("token",token).put("projectId",config.getString("projectId")))}
+            Pocket.prefs.edit().putBoolean(Pocket.environmentKey("pushReady",environment),true).apply()
+            Pocket.scope.launch{if(Pocket.environmentId==environment)Pocket.pushStatus="Firebase push is ready"}
             Result.success()
-        }catch(_:Exception){
-            Pocket.prefs.edit().putBoolean("pushReady",false).apply()
-            Pocket.scope.launch{Pocket.pushStatus="Notification registration will retry when connected"}
+        }catch(e:Exception){
+            if(e is PocketApiException&&e.status in listOf(400,401,403,404))return Result.failure()
+            Pocket.prefs.edit().putBoolean(Pocket.environmentKey("pushReady",environment),false).apply()
+            Pocket.scope.launch{if(Pocket.environmentId==environment)Pocket.pushStatus="Notification registration will retry when connected"}
             Result.retry()
         }
     }
     companion object {
-        fun enqueue(context:Context){
-            val request=OneTimeWorkRequestBuilder<PushRegistrationWorker>()
+        fun enqueue(context:Context,environment:String=Pocket.environmentId){
+            val request=OneTimeWorkRequestBuilder<PushRegistrationWorker>().setInputData(workDataOf("environment" to environment))
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,30,TimeUnit.SECONDS).build()
-            WorkManager.getInstance(context).enqueueUniqueWork("pocket-push-registration",ExistingWorkPolicy.KEEP,request)
+            WorkManager.getInstance(context).enqueueUniqueWork("pocket-push-registration-$environment",ExistingWorkPolicy.KEEP,request)
         }
     }
 }
 
 class PocketFirebaseService:FirebaseMessagingService(){
     override fun onNewToken(token:String){
-        if(Pocket.savedToken(false).isNotBlank()){
-            Pocket.prefs.edit().putBoolean("pushReady",false).apply()
-            PushRegistrationWorker.enqueue(this)
+        Pocket.environmentProfiles.all().filter{!it.local}.forEach{profile->
+            Pocket.prefs.edit().putBoolean(Pocket.environmentKey("pushReady",profile.id),false).apply()
+            PushRegistrationWorker.enqueue(this,profile.id)
         }
     }
     override fun onMessageReceived(message:RemoteMessage){
-        if(Pocket.savedToken(false).isBlank()||message.data["device_id"]!=Pocket.prefs.getString(Pocket.key("deviceId",false),null))return
+        val environment=Pocket.environmentProfiles.all().filter{!it.local&&message.data["device_id"]==Pocket.prefs.getString(it.key("deviceId"),null)}.singleOrNull()?.id?:return
         if(message.data["thread_renamed"]=="1"){
             val ids=runCatching{org.json.JSONArray(message.data["notification_ids"]?:"[]")}.getOrNull()
-            PocketNotificationTitles.rename(message.data["thread_id"].orEmpty(),message.data["thread_title"].orEmpty(),ids?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),false,message.data["title_revision"]?.toLongOrNull()?:0);return
+            PocketNotificationTitles.rename(message.data["thread_id"].orEmpty(),message.data["thread_title"].orEmpty(),ids?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),false,message.data["title_revision"]?.toLongOrNull()?:0,environment);return
         }
-        if(message.data["kind"]=="app_update"){PocketUpdates.offer(false);return}
+        if(message.data["kind"]=="app_update"){if(environment==Pocket.environmentId)PocketUpdates.offer(false);return}
         if(message.data["operations"]=="failure"){
             PocketNotifications.operations(this,message.notification?.title?:"NextComp needs attention",message.notification?.body?:"Check GitHub Actions for details.")
             return
         }
-        val n=JSONObject(message.data).put("_local",false)
+        val n=JSONObject(message.data).put("_local",false).put("_environment",environment)
         if(message.data["coordinator_report"]=="1")n.put("id",message.data["report_id"]?.toLongOrNull()?:0).put("kind","coordinator_report")
         if(n.optLong("id")<=0)return
         // Render immediately within FCM's execution window. No network request is needed.
         Pocket.acceptNotification(n,if(message.priority==RemoteMessage.PRIORITY_HIGH)"fcm" else "fcm-normal")
         Log.i("PocketPush","Received FCM notification ${n.optLong("id")}")
     }
-    override fun onDeletedMessages(){Pocket.prefs.edit().putBoolean(Pocket.key("needsHistorySync",false),true).apply()}
+    override fun onDeletedMessages(){Pocket.environmentProfiles.all().filter{!it.local}.forEach{Pocket.prefs.edit().putBoolean(it.key("needsHistorySync"),true).apply()}}
 }
 
 /** Durable inline replies survive process death and use one stable server idempotency key. */
@@ -99,32 +108,36 @@ class ReplyDeliveryWorker(c:Context,p:WorkerParameters):Worker(c,p){
     override fun doWork():Result {
         val id=inputData.getString("id")?:return Result.success()
         val raw=Pocket.prefs.getString("outbox:$id",null)?:return Result.success()
-        val reply=JSONObject(raw);val thread=reply.getString("thread")
+        val reply=JSONObject(raw);if(!automaticReplyEligible(reply.s("state")))return Result.failure();val thread=reply.getString("thread")
         val local=reply.optBoolean("local",false)
-        if(Pocket.savedToken(local).isBlank())return Result.success()
+        val environment=reply.s("environment",if(local)"phone" else "workstation")
+        val destination=Pocket.captureEnvironment(environment)?:return Result.failure()
+        if(reply.has("endpoint")&&(reply.s("endpoint")!=destination.endpoint||reply.s("token")!=destination.token))return Result.failure()
+        val draftKey=Pocket.environmentKey("draft:$thread",environment)
         return try{
             val response=runBlocking{
-                var status=Pocket.apiFor(local,"/api/threads/$thread/reply",JSONObject().put("id",id).put("text",reply.getString("text")))
-                repeat(5){if(status.s("state") in listOf("queued","sending")){kotlinx.coroutines.delay(1000);status=Pocket.apiFor(local,"/api/replies/$id")}}
+                var status=Pocket.apiEnvironment(destination,"/api/threads/$thread/reply",JSONObject().put("id",id).put("text",reply.getString("text")))
+                repeat(5){if(status.s("state") in listOf("queued","sending")){kotlinx.coroutines.delay(1000);status=Pocket.apiEnvironment(destination,"/api/replies/$id")}}
                 status
             }
             when(response.s("state")){
                 "accepted"->{
                     update(reply,"Reply sent to Codex")
                     val edit=Pocket.prefs.edit().remove("outbox:$id")
-                    if(Pocket.prefs.getString("draft:$thread",null)==reply.getString("text"))edit.remove("draft:$thread")
-                    edit.apply();reply.optLong("notificationDbId").takeIf{it>0}?.let{PocketAttention.dismiss(it,local)}
+                    if(Pocket.prefs.getString(draftKey,null)==reply.getString("text"))edit.remove(draftKey)
+                    edit.apply();reply.optLong("notificationDbId").takeIf{it>0}?.let{PocketAttention.dismiss(it,local,environment)}
                     // Dismiss the old attention state, then retain this delivery confirmation.
                     update(reply,"Reply sent to Codex");Result.success()
                 }
                 "failed","unknown"->{
-                    Pocket.prefs.edit().putString("draft:$thread",reply.getString("text")).apply()
+                    reply.put("state",response.s("state"));Pocket.prefs.edit().putString("outbox:$id",reply.toString()).commit()
+                    Pocket.prefs.edit().putString(draftKey,reply.getString("text")).apply()
                     update(reply,"Reply needs attention · open NextComp");Result.failure()
                 }
                 else->{update(reply,"Reply queued · waiting for Codex");Result.retry()}
             }
         }catch(_:Exception){
-            Pocket.prefs.edit().putString("draft:$thread",reply.getString("text")).apply()
+            Pocket.prefs.edit().putString(draftKey,reply.getString("text")).apply()
             update(reply,if(runAttemptCount<8)"Reply saved · waiting for Codex" else "Reply needs attention · open NextComp")
             if(runAttemptCount<8)Result.retry()else Result.failure()
         }
@@ -133,8 +146,8 @@ class ReplyDeliveryWorker(c:Context,p:WorkerParameters):Worker(c,p){
         val id=reply.getInt("notificationId")
         val b=androidx.core.app.NotificationCompat.Builder(applicationContext,"work").setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title).setContentText(reply.getString("text")).setSilent(true).setAutoCancel(true)
-            .setContentIntent(PocketNotifications.open(applicationContext,reply.getString("thread"),id,reply.optBoolean("local",false)))
-        try{androidx.core.app.NotificationManagerCompat.from(applicationContext).notify(id,b.build())}catch(_:SecurityException){}
+            .setContentIntent(PocketNotifications.open(applicationContext,reply.getString("thread"),id,reply.optBoolean("local",false),environment=reply.s("environment",if(reply.optBoolean("local",false))"phone" else "workstation")))
+        try{androidx.core.app.NotificationManagerCompat.from(applicationContext).notify(Pocket.notificationTag(reply.s("environment",if(reply.optBoolean("local"))"phone" else "workstation")),id,b.build())}catch(_:SecurityException){}
     }
     companion object{
         fun enqueue(c:Context,id:String){

@@ -51,12 +51,12 @@ object PocketTranscript {
         val id=Pocket.selected?:return
         if(owner!=id||(older&&(!earlier||before==null)))return
         if(loading){if(!older&&bridgeCursor==null)missedUpdates=true;return}
-        val ticket=generation;val scope=scopeKey();val profileLocal=Pocket.local
+        val ticket=generation;val scope=scopeKey();val profileLocal=Pocket.local;val destination=Pocket.captureEnvironment()?:return
         fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
         val cursor=bridgeCursor?:if(older)before else null
         loading=true;buffered.clear();var succeeded=false
         try{
-            val d=Pocket.apiFor(profileLocal,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
+            val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
             if(!current())return
             val page=d.optJSONObject("timeline")?:JSONObject();val incoming=page.optJSONArray("rows")?.objects()?:emptyList()
             incoming.filter{it.s("kind") in listOf("turn","turnEnd","request")}.forEach{it.put("version",d.optLong("revision"))}
@@ -83,7 +83,7 @@ object PocketTranscript {
                 rows=rows.filter{it.s("kind")!="request"||it.optJSONObject("request")?.s("id") in pendingIds}
             }
             if(PocketVoice.foreground&&!BlackoutVisibility.active&&!PocketVoice.active&&!Pocket.newTask&&!older&&bridgeCursor==null){
-                PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=profileLocal,catchup=if(!checkedThisOpen)d.optJSONObject("catchup") else null)
+                PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=profileLocal,catchup=if(!checkedThisOpen)d.optJSONObject("catchup") else null,environment=destination.environment.id)
                 checkedThisOpen=true
             }
             val updates=buffered.values.toList();buffered.clear()

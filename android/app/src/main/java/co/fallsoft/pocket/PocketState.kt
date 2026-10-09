@@ -31,6 +31,13 @@ object Pocket {
     val http=PocketNetwork.client()
     var base by mutableStateOf(""); var token by mutableStateOf("")
     var local by mutableStateOf(false); private set
+    var environmentId by mutableStateOf("workstation"); private set
+    val environmentProfiles get()=EnvironmentProfiles(prefs)
+    fun environment(forLocal:Boolean=local)=if(forLocal) "phone" else if(!local)environmentId else environmentProfiles.lastRemote().id
+    fun environmentKey(name:String,id:String=environmentId)=EnvironmentIdentity(id,id,id=="phone").key(name)
+    fun captureEnvironment(id:String=environmentId)=environmentProfiles.capture(id)
+    fun notificationTag(id:String)=if(id in setOf("workstation","phone"))null else "environment:$id"
+    fun notificationIntent(environment:String,kind:String,id:Int)=android.net.Uri.Builder().scheme("nextcomp-action").authority(environment).appendPath(kind).appendPath(id.toString()).build()
     var connected by mutableStateOf(false); var codexOnline by mutableStateOf(false)
     var connectionError by mutableStateOf("")
     var refreshError by mutableStateOf("")
@@ -66,9 +73,9 @@ object Pocket {
     var refreshJob:Job?=null
     var lastNotification:Long=0
     val prefs get()=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
-    fun key(name:String,forLocal:Boolean=local)=if(forLocal)"local:$name" else name
-    fun savedBase(forLocal:Boolean)=prefs.getString(key("server",forLocal),"")!!
-    fun savedToken(forLocal:Boolean)=prefs.getString(key("token",forLocal),"")!!
+    fun key(name:String,forLocal:Boolean=local,environmentId:String=environment(forLocal))=environmentKey(name,environmentId)
+    fun savedBase(forLocal:Boolean,environmentId:String=environment(forLocal))=prefs.getString(key("server",forLocal,environmentId),"")!!
+    fun savedToken(forLocal:Boolean,environmentId:String=environment(forLocal))=prefs.getString(key("token",forLocal,environmentId),"")!!
     private fun promotionState(forLocal:Boolean=local):SessionPromotionState=try{
         val json=JSONObject(prefs.getString(key("sessionPromotions",forLocal),"{}")!!)
         fun ids(name:String)=json.optJSONArray(name)?.let{a->(0 until a.length()).map{a.optString(it)}.filter{it.isNotBlank()}}?:emptyList()
@@ -87,39 +94,41 @@ object Pocket {
         if(body!=null&&parts.size==5&&parts[1]=="api"&&parts[2]=="threads"&&parts[4]=="reply"&&response.s("state") in listOf("queued","sending","accepted"))rememberSessionInteraction(parts[3],"reply:"+body.s("id"),forLocal)
     }
     fun init(c:Context){
-        context=c.applicationContext;local=prefs.getBoolean("activeLocal",false);base=savedBase(local);token=savedToken(local);lastNotification=prefs.getLong(key("lastNotification"),0);restoreUsage()
+        context=c.applicationContext;val profile=environmentProfiles.selected();environmentId=profile.id;local=profile.local;base=savedBase(local);token=savedToken(local);lastNotification=prefs.getLong(key("lastNotification"),0);restoreUsage()
         if(!prefs.contains(key("seenIds")))prefs.edit().putStringSet(key("seenIds"),((lastNotification-511).coerceAtLeast(1)..lastNotification).map{it.toString()}.toSet()).apply()
         context.getSystemService(android.app.NotificationManager::class.java).apply{cancel(1);deleteNotificationChannel("connection")}
-        fullPermissions=prefs.getBoolean("fullPermissions",true)
+        fullPermissions=prefs.getBoolean(key("fullPermissions"),prefs.getBoolean("fullPermissions",true))
         PocketAudio.init()
         PocketSpeech.init()
         PocketAttention.init()
         PocketImmersion.restore()
         if(token.isNotBlank())try{PocketPush.initialize()}catch(_:Exception){}
-        if(local)pushStatus="Notifications stay on this phone" else if(prefs.getBoolean("pushReady",false))pushStatus="Firebase push is ready"
-        if(local&&token.isNotBlank())LocalMonitorService.start(context)
+        if(local)pushStatus="Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))pushStatus="Firebase push is ready"
+        if(savedToken(true).isNotBlank())LocalMonitorService.start(context)
     }
-    suspend fun apiFor(forLocal:Boolean,path:String,body:JSONObject?=null,authorized:Boolean=true):JSONObject=withContext(Dispatchers.IO){
-        val endpoint=savedBase(forLocal);val credential=savedToken(forLocal)
-        val request=Request.Builder().url(endpoint.trimEnd('/')+path)
-        if(authorized)request.header("Authorization","Bearer $credential")
+    suspend fun apiEnvironment(destination:EnvironmentRequest,path:String,body:JSONObject?=null,authorized:Boolean=true):JSONObject=withContext(Dispatchers.IO){
+        val request=Request.Builder().url(destination.endpoint.trimEnd('/')+path)
+        if(authorized)request.header("Authorization","Bearer ${destination.token}")
         if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
-        http.newCall(request.build()).execute().use{r->val raw=r.body?.string()?:"{}";val json=try{JSONObject(raw)}catch(_:Exception){JSONObject().put("error","Unexpected server response (${r.code})")};if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Request failed (${r.code})")));rememberReplyIntent(path,body,json,forLocal);json}
+        http.newCall(request.build()).execute().use{r->val raw=r.body?.string()?:"{}";val json=try{JSONObject(raw)}catch(_:Exception){JSONObject().put("error","Unexpected server response (${r.code})")};if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Request failed (${r.code})")));json}
     }
-    suspend fun api(path:String, body:JSONObject?=null, authorized:Boolean=true):JSONObject=withContext(Dispatchers.IO){
-        val profileLocal=local
-        val request=Request.Builder().url(base.trimEnd('/')+path)
-        if(authorized)request.header("Authorization","Bearer $token")
-        if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
-        http.newCall(request.build()).execute().use { r ->
-            val raw=r.body?.string()?:"{}"; val json=try{JSONObject(raw)}catch(e:Exception){JSONObject().put("error","Unexpected server response (${r.code})")}
-            if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Request failed (${r.code})")));rememberReplyIntent(path,body,json,profileLocal);json
-        }
+    suspend fun apiFor(forLocal:Boolean,path:String,body:JSONObject?=null,authorized:Boolean=true,environmentId:String=environment(forLocal)):JSONObject {
+        val destination=captureEnvironment(environmentId)?:throw IllegalStateException("Environment is not paired")
+        return apiEnvironment(destination,path,body,authorized)
     }
-    fun pair(server:String,code:String){scope.launch{
+    suspend fun api(path:String,body:JSONObject?=null,authorized:Boolean=true):JSONObject {
+        // Capture on the caller's thread before any dispatcher suspension.
+        val destination=currentCoroutineContext()[EnvironmentRequestContext]?.destination?:captureEnvironment()?:throw IllegalStateException("Environment is not paired")
+        if(captureEnvironment()?.matches(destination)!=true)throw CancellationException("Environment changed before dispatch")
+        val response=apiEnvironment(destination,path,body,authorized)
+        if(captureEnvironment()?.matches(destination)!=true)throw CancellationException("Environment changed")
+        rememberReplyIntent(path,body,response,destination.environment.local)
+        return response
+    }
+    fun pair(server:String,code:String,name:String=""){scope.launchEnvironment{
         busy=true;error=""
         try {
-            val url=server.trim().trimEnd('/');val pairingLocal=url in listOf("http://127.0.0.1:18880","http://localhost:18880")
+            val url=server.trim().trimEnd('/');val pairingLocal=isPhoneEnvironment(url)
             require(url.startsWith("https://")||pairingLocal){"Use your server’s HTTPS address, or NextComp’s local phone address."}
             // Pair against the candidate without changing the active profile.
             // A failed attempt must not redirect saved speech or authenticated work.
@@ -128,26 +137,29 @@ object Pocket {
                 http.newCall(request).execute().use{response->val result=JSONObject(response.body?.string()?:"{}");if(!response.isSuccessful)throw PocketApiException(response.code,ConnectionMessages.server(result.s("error","Pairing failed")));result}
             }
             val pairedToken=r.getString("token")
-            PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close();PocketLive.stop();PocketTranscript.clear()
-            base=url;token=pairedToken;host=r.s("host")
-            selected=null;detail=null;newTask=false;tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList()
-            local=pairingLocal||r.optBoolean("local");prefs.edit().putBoolean("activeLocal",local).putString(key("server"),base).putString(key("token"),token).putString(key("deviceId"),r.s("id")).apply()
-            if(local&&r.s("automationSecret").isNotBlank())prefs.edit().putString(key("automationSecret",true),r.s("automationSecret")).apply()
-            weeklyUsage=WeeklyUsage();prefs.edit().remove(key("weeklyUsage")).apply()
-            PocketPush.configure(r.optJSONObject("firebase"));if(local)LocalMonitorService.start(context);pairingMode=false;PocketImmersion.restore();PocketSpeech.init();PocketLive.start();refresh()
+            val pairedLocal=pairingLocal // Only the handset loopback address can own the phone namespace.
+            val profile=environmentProfiles.add(name.ifBlank{r.s("host").ifBlank{if(pairedLocal)"This phone" else java.net.URI(url).host?:"Development"}},url,pairedToken,r.s("id"),pairedLocal)
+            if(pairedLocal&&r.s("automationSecret").isNotBlank())prefs.edit().putString(profile.key("automationSecret"),r.s("automationSecret")).apply()
+            activateEnvironment(profile.id,force=true)
+            PocketPush.configure(r.optJSONObject("firebase"));pairingMode=false
         }catch(e:Exception){error=PocketNetwork.error(e)}finally{busy=false}
     }}
-    fun activate(forLocal:Boolean){
-        if(local==forLocal)return
-        val nextBase=savedBase(forLocal);val nextToken=savedToken(forLocal);if(nextBase.isBlank()||nextToken.isBlank())return
+    fun activate(forLocal:Boolean)=activateEnvironment(if(forLocal)"phone" else environmentProfiles.lastRemote().id)
+    fun activateEnvironment(id:String,force:Boolean=false){
+        if(environmentId==id&&!force)return
+        if(PocketVoice.state in setOf("Listening","Starting microphone","Finishing recording")){error="Finish this recording before switching environments";return}
+        val destination=captureEnvironment(id)?:return
+        val forLocal=destination.environment.local
+        val nextBase=destination.endpoint;val nextToken=destination.token
         backgroundRefreshJob?.cancel();backgroundRefreshJob=null;discoveryRefreshJob?.cancel();discoveryRefreshJob=null;lastDiscoveryRefreshAt=0L;refreshError="";statusRevision++
-        sessionSnapshotComplete=false;sessionOrderRequest=0;sessionOrderHandled=0;sessionCursor=null;sessionCursorScope=null
+        refreshJob?.cancel();refreshJob=null;sessionSnapshotComplete=false;sessionOrderRequest=0;sessionOrderHandled=0;sessionCursor=null;sessionCursorScope=null
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
-        PocketLive.stop();PocketTranscript.clear();local=forLocal;base=nextBase;token=nextToken;host=if(local)"This phone" else "Your workstation"
-        connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
-        lastNotification=prefs.getLong(key("lastNotification"),0);prefs.edit().putBoolean("activeLocal",local).apply()
-        pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean("pushReady",false))"Firebase push is ready" else "Setting up notifications…"
-        if(local)LocalMonitorService.start(context) else LocalMonitorService.stop(context)
+        PocketLive.stop();PocketTranscript.clear();environmentId=id;local=forLocal;base=nextBase;token=nextToken;host=destination.environment.name
+        loadingSessions=false;sending=false;starting=false;busy=false;error="";startStatus="";connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
+        lastNotification=prefs.getLong(key("lastNotification"),0);environmentProfiles.select(id)
+        fullPermissions=prefs.getBoolean(key("fullPermissions"),prefs.getBoolean("fullPermissions",true))
+        pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))"Firebase push is ready" else "Setting up notifications…"
+        if(savedToken(true).isNotBlank())LocalMonitorService.start(context) else LocalMonitorService.stop(context)
         restoreUsage();PocketImmersion.restore();PocketSpeech.init();PocketLive.start();refresh()
     }
     fun disconnect(){
@@ -156,14 +168,14 @@ object Pocket {
             val req=Request.Builder().url(oldBase+"/api/device/disconnect").header("Authorization","Bearer $oldToken").post("{}".toRequestBody("application/json".toMediaType())).build()
             http.newCall(req).execute().close()
         }catch(_:Exception){}}
-        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration")
-        androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention")
+        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration-$environmentId")
+        androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention-$environmentId")
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
         val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal)).remove(key("usageSamples",wasLocal))
         if(wasLocal)edit.remove(key("automationSecret",true)).putBoolean("automationAllowed",false)
         edit.apply();weeklyUsage=WeeklyUsage();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
-        val fallback=if(wasLocal)false else true
-        if(savedToken(fallback).isNotBlank()){local=wasLocal;activate(fallback)}else{token="";base="";pushStatus="Not paired";local=false;prefs.edit().putBoolean("activeLocal",false).apply();LocalMonitorService.stop(context);PocketSpeech.init()}
+        val fallback=environmentProfiles.all().firstOrNull{it.id!=environmentId&&captureEnvironment(it.id)!=null}
+        if(fallback!=null){activateEnvironment(fallback.id)}else{token="";base="";pushStatus="Not paired";local=false;prefs.edit().putBoolean("activeLocal",false).apply();LocalMonitorService.stop(context);PocketSpeech.init()}
     }
     private fun restoreUsage(){usageSamples=try{JSONArray(prefs.getString(key("usageSamples"),"[]")).objects().map{UsageSample(it.optLong("at"),it.optDouble("remaining"),it.optLong("reset"))}.filter{it.at>0&&it.reset>0&&it.remaining.isFinite()&&it.remaining in 0.0..100.0}}catch(_:Exception){emptyList()};weeklyUsage=try{prefs.getString(key("weeklyUsage"),null)?.let{WeeklyUsage.fromJson(JSONObject(it)).copy(stale=true)}?:WeeklyUsage()}catch(_:Exception){WeeklyUsage()}}
     private fun acceptUsage(json:JSONObject?){
@@ -172,17 +184,17 @@ object Pocket {
         prefs.edit().putString(key("usageSamples"),JSONArray().apply{usageSamples.forEach{put(JSONObject().put("at",it.at).put("remaining",it.remaining).put("reset",it.reset))}}.toString()).apply()
         val edit=prefs.edit();if(json==null)edit.remove(key("weeklyUsage"))else edit.putString(key("weeklyUsage"),json.toString());edit.apply()
     }
-    fun refresh(){if(backgroundRefreshJob?.isActive==true)return;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launch{
+    fun refresh(){if(backgroundRefreshJob?.isActive==true)return;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launchEnvironment{
         try{
             val revision=statusRevision
-            val r=api("/api/status");if(local!=profileLocal||token!=profileToken)return@launch
+            val r=api("/api/status");if(local!=profileLocal||token!=profileToken)return@launchEnvironment
             acceptUsage(r.optJSONObject("usage"));if(statusRevision==revision){codexOnline=r.optBoolean("connected");codexConnectionMessage=ConnectionMessages.server(r.optJSONObject("problem")?.s("message")?:"")};host=r.s("host");defaultCwd=r.s("defaultCwd")
             val deviceChanged=prefs.getString(key("deviceId"),"")!=r.s("deviceId")
             prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply();if(deviceChanged){PocketImmersion.restore();PocketSpeechCaptions.init()}
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
             val taskBaseline=tasks.associateBy{it.id}
             val taskResult=api(if(profileArchived)"/api/threads?archived=true" else "/api/threads")
-            if(local!=profileLocal||token!=profileToken||showArchived!=profileArchived)return@launch
+            if(local!=profileLocal||token!=profileToken||showArchived!=profileArchived)return@launchEnvironment
             activities=try{api("/api/activity").optJSONArray("items")?.objects()?:emptyList()}catch(e:PocketApiException){if(e.status==404)emptyList() else throw e}
             val fetched=taskResult.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList()
             tasks=mergeLiveTaskSnapshot(tasks,fetched,taskBaseline,taskResult.optBoolean("refreshPending")||taskResult.s("nextCursor").isNotBlank())
@@ -200,32 +212,33 @@ object Pocket {
     var sessionCursor by mutableStateOf<String?>(null);private set
     var loadingSessions by mutableStateOf(false);private set
     fun moreSessions(search:String=""){if(loadingSessions)return;val cursor=if(search.isBlank())sessionCursor else null;if(search.isBlank()&&cursor==null)return
-        val profile=local;val endpoint=base;val credential=token;val archived=showArchived;loadingSessions=true
-        scope.launch{try{val result=api("/api/threads?archived=$archived"+(cursor?.let{"&cursor="+android.net.Uri.encode(it)}?:"")+(if(search.isNotBlank())"&search="+android.net.Uri.encode(search) else ""))
+        val profile=local;val sourceEnvironment=environmentId;val endpoint=base;val credential=token;val archived=showArchived;loadingSessions=true
+        scope.launchEnvironment{try{val result=api("/api/threads?archived=$archived"+(cursor?.let{"&cursor="+android.net.Uri.encode(it)}?:"")+(if(search.isNotBlank())"&search="+android.net.Uri.encode(search) else ""))
             if(local==profile&&base==endpoint&&token==credential&&showArchived==archived){val incoming=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList();tasks=mergeSessionSnapshot(tasks,incoming,true){it.id};if(search.isBlank())sessionCursor=result.s("nextCursor").takeIf{it.isNotBlank()}}
-        }catch(e:Exception){if(local==profile&&base==endpoint)refreshError=PocketNetwork.error(e)}finally{loadingSessions=false}}
+        }catch(e:Exception){if(local==profile&&base==endpoint)refreshError=PocketNetwork.error(e)}finally{if(environmentId==sourceEnvironment)loadingSessions=false}}
     }
     fun open(id:String,keyboard:Boolean=false){if(BackendNavigation.open(id))return;openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
-    fun refreshDetail(){scope.launch{PocketTranscript.load()}}
+    fun refreshDetail(){scope.launchEnvironment{PocketTranscript.load()}}
     fun closeTask(){selected=null;detail=null;PocketTranscript.clear()}
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
     /** External stock sessions arrive through live previews; never refetch on every token. */
     private fun discoverSession(id:String){
         if(id.isBlank()||showArchived||tasks.any{it.id==id}||discoveryRefreshJob?.isActive==true)return
         val profileLocal=local;val profileToken=token
-        discoveryRefreshJob=scope.launch {
+        discoveryRefreshJob=scope.launchEnvironment {
             val now=android.os.SystemClock.elapsedRealtime()
             delay(maxOf(400L,3000L-(now-lastDiscoveryRefreshAt)))
-            if(local!=profileLocal||token!=profileToken||showArchived||tasks.any{it.id==id})return@launch
+            if(local!=profileLocal||token!=profileToken||showArchived||tasks.any{it.id==id})return@launchEnvironment
             lastDiscoveryRefreshAt=android.os.SystemClock.elapsedRealtime()
             refresh()
         }
     }
-    fun scheduleRefresh(){if(refreshJob?.isActive==true)return;refreshJob=scope.launch{delay(400);PocketTranscript.load()}}
-    fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains(key("newTaskRequest")))"A task request is saved. Check its status to continue." else "";scope.launch{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){error=e.message?:"Could not load projects"}}}
+    fun scheduleRefresh(){if(refreshJob?.isActive==true)return;refreshJob=scope.launchEnvironment{delay(400);PocketTranscript.load()}}
+    private suspend fun environmentRequestCurrent():Boolean {val destination=currentCoroutineContext()[EnvironmentRequestContext]?.destination?:return true;return captureEnvironment()?.matches(destination)==true}
+    fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains(key("newTaskRequest")))"A task request is saved. Check its status to continue." else "";scope.launchEnvironment{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not load projects"}}}
     var fullPermissions by mutableStateOf(true); private set
-    fun updateFullPermissions(value:Boolean){fullPermissions=value;prefs.edit().putBoolean("fullPermissions",value).apply()}
-    fun startTask(cwd:String,prompt:String){if(starting)return;scope.launch{
+    fun updateFullPermissions(value:Boolean){fullPermissions=value;prefs.edit().putBoolean(key("fullPermissions"),value).apply()}
+    fun startTask(cwd:String,prompt:String){if(starting)return;scope.launchEnvironment{
         starting=true;error="";startStatus=if(local)"Starting on this phone…" else "Starting on your workstation…"
         val requestKey=key("newTaskRequest");val promptKey=key("newTaskPrompt");val projectKey=key("lastProject")
         val previous=prefs.getString(requestKey,null)?.let{JSONObject(it)}
@@ -251,14 +264,14 @@ object Pocket {
                 "unknown"->{error=result.s("error","Could not confirm session creation. Check recent tasks.");startStatus="Check recent tasks before trying again. This request may already have started."}
                 else->startStatus="Still queued. Check status to continue without creating a duplicate."
             }
-        }catch(e:Exception){
+        }catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;
             error=e.message?:"Could not reach the workstation"
             if(!submitted&&e is PocketApiException&&e.status in listOf(400,401,403,413)){
                 prefs.edit().remove(requestKey).apply();startStatus=""
             }else startStatus="Your request is saved. Check status before starting again."
-        }finally{starting=false}
+        }finally{if(environmentRequestCurrent())starting=false}
     }}
-    fun interrupt(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/interrupt",JSONObject());scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not stop task"}}}
+    fun interrupt(){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/interrupt",JSONObject());scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not stop task"}}}
     fun messages():List<Message>{
         val thread=detail?.optJSONObject("thread")?:return emptyList()
         return thread.optJSONArray("turns")?.objects()?.flatMap { turn -> turn.optJSONArray("items")?.objects()?.mapNotNull {item->
@@ -269,36 +282,36 @@ object Pocket {
             }
         }?:emptyList() }?.filter{it.text.isNotBlank()}?.takeLast(50)?:emptyList()
     }
-    fun reply(text:String,threadId:String?=selected,mode:String="auto",onDone:()->Unit={}){if(threadId==null||text.isBlank())return;if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";return};scope.launch{
+    fun reply(text:String,threadId:String?=selected,mode:String="auto",onDone:()->Unit={}){if(threadId==null||text.isBlank())return;if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";return};scope.launchEnvironment{
         sending=true;error=""
         try{api("/api/threads/$threadId/reply",JSONObject().put("text",text).put("mode",mode).put("id",UUID.randomUUID().toString()));onDone();scheduleRefresh()}
-        catch(e:Exception){error=e.message?:"Reply not sent"}finally{sending=false}
+        catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Reply not sent"}finally{if(environmentRequestCurrent())sending=false}
     }}
     var replyActionBusy by mutableStateOf(setOf<String>())
     fun queuedReply(id:String,action:String,text:String="",confirmUnknown:Boolean=false,onDone:()->Unit={}){
-        val threadId=selected?:return;val profileLocal=local;val endpoint=base;val credential=token;val previousError=error;val busyKey="$profileLocal:$threadId:$id"
+        val threadId=selected?:return;val profileLocal=local;val endpoint=base;val credential=token;val previousError=error;val busyKey="$environmentId:$threadId:$id"
         if(busyKey in replyActionBusy)return;replyActionBusy=replyActionBusy+busyKey
         val body=JSONObject().put("action",action).put("text",text).put("confirmUnknown",confirmUnknown)
         val request=Request.Builder().url(endpoint.trimEnd('/')+"/api/threads/$threadId/replies/$id").header("Authorization","Bearer $credential").post(body.toString().toRequestBody("application/json".toMediaType())).build()
-        scope.launch{try{val acknowledged=withContext(Dispatchers.IO){http.newCall(request).execute().use{r->val json=JSONObject(r.body?.string()?:"{}");if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Could not update outgoing message")));require(json.s("id")==id&&json.s("state").isNotBlank()){"Message update was not acknowledged. Refresh before trying again."};json}}
+        scope.launchEnvironment{try{val acknowledged=withContext(Dispatchers.IO){http.newCall(request).execute().use{r->val json=JSONObject(r.body?.string()?:"{}");if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Could not update outgoing message")));require(json.s("id")==id&&json.s("state").isNotBlank()){"Message update was not acknowledged. Refresh before trying again."};json}}
             if(local==profileLocal&&base==endpoint&&token==credential){if(selected==threadId){detail=detail?.let{JSONObject(it.toString()).put("outgoing",acknowledgedOutgoing(it.optJSONArray("outgoing"),id,action,text,acknowledged.s("state")))};if(error==previousError)error="";onDone()};scheduleRefresh()}
-        }catch(e:Exception){if(local==profileLocal&&base==endpoint&&token==credential&&selected==threadId)error=e.message?:"Could not update outgoing message"}finally{replyActionBusy=replyActionBusy-busyKey}}
+        }catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;if(local==profileLocal&&base==endpoint&&token==credential&&selected==threadId)error=e.message?:"Could not update outgoing message"}finally{replyActionBusy=replyActionBusy-busyKey}}
     }
-    fun resumeQueue(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/queue/resume",JSONObject());scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not resume queue"}}}
-    fun updateTurnSettings(body:JSONObject,onDone:()->Unit){val id=selected?:return;scope.launch{try{api("/api/threads/$id/settings",body);onDone();scheduleRefresh()}catch(e:Exception){error=e.message?:"Could not save turn settings"}}}
+    fun resumeQueue(){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/queue/resume",JSONObject());scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not resume queue"}}}
+    fun updateTurnSettings(body:JSONObject,onDone:()->Unit){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/settings",body);onDone();scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not save turn settings"}}}
     fun renameTask(name:String,onDone:()->Unit){val id=selected?:return;renameTask(id,name,onDone)}
-    fun renameTask(id:String,name:String,onDone:()->Unit){scope.launch{try{val renamed=api("/api/threads/$id/rename",JSONObject().put("name",name));PocketNotificationTitles.rename(id,name,renamed.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=renamed.optLong("revision"));onDone();scheduleRefresh();refresh()}catch(e:Exception){error=e.message?:"Could not rename task"}}}
-    fun restoreTask(id:String){scope.launch{try{api("/api/threads/$id/unarchive",JSONObject());refresh()}catch(e:Exception){error=e.message?:"Could not restore task"}}}
-    fun archiveTask(){val id=selected?:return;scope.launch{try{api("/api/threads/$id/archive",JSONObject());if(selected==id)closeTask();refresh()}catch(e:Exception){error=e.message?:"Could not archive task"}}}
-    fun watchTask(id:String,enabled:Boolean){scope.launch{try{
+    fun renameTask(id:String,name:String,onDone:()->Unit){scope.launchEnvironment{try{val renamed=api("/api/threads/$id/rename",JSONObject().put("name",name));PocketNotificationTitles.rename(id,name,renamed.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=renamed.optLong("revision"));onDone();scheduleRefresh();refresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not rename task"}}}
+    fun restoreTask(id:String){scope.launchEnvironment{try{api("/api/threads/$id/unarchive",JSONObject());refresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not restore task"}}}
+    fun archiveTask(){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/archive",JSONObject());if(selected==id)closeTask();refresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not archive task"}}}
+    fun watchTask(id:String,enabled:Boolean){scope.launchEnvironment{try{
         api("/api/threads/$id/watch",JSONObject().put("enabled",enabled))
         tasks=tasks.map{if(it.id==id)it.copy(watched=enabled)else it}
         if(selected==id)refreshDetail()
-    }catch(e:Exception){error=PocketNetwork.error(e)}}}
-    fun watch(enabled:Boolean){val id=selected?:return;scope.launch{try{api("/api/threads/$id/watch",JSONObject().put("enabled",enabled));refreshDetail()}catch(e:Exception){error=e.message?:"Could not update notifications"}}}
-    fun answer(id:String,body:JSONObject){scope.launch{try{api("/api/requests/$id/answer",body);refreshDetail();refresh()}catch(e:Exception){error=e.message?:"Could not answer"}}}
-    fun test(){scope.launch{try{api("/api/test-notification",JSONObject())}catch(e:Exception){error=e.message?:"Test failed"}}}
-    fun event(json:JSONObject){scope.launch{
+    }catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=PocketNetwork.error(e)}}}
+    fun watch(enabled:Boolean){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/watch",JSONObject().put("enabled",enabled));refreshDetail()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not update notifications"}}}
+    fun answer(id:String,body:JSONObject){scope.launchEnvironment{try{api("/api/requests/$id/answer",body);refreshDetail();refresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not answer"}}}
+    fun test(){scope.launchEnvironment{try{api("/api/test-notification",JSONObject())}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Test failed"}}}
+    fun event(json:JSONObject){scope.launchEnvironment{
         when(json.s("type")){
             "threadRenamed" -> {val applied=PocketNotificationTitles.rename(json.s("threadId"),json.s("name"),json.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=json.optLong("revision"));if(applied)tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(title=json.s("name"))else it}}
             "rateLimits" -> acceptUsage(json.optJSONObject("usage"))
@@ -348,26 +361,26 @@ object Pocket {
     @Synchronized fun acceptNotification(n:JSONObject,transport:String="history"){
         if(n.s("kind")=="app_update"){if(transport!="history")PocketUpdates.offer(n.optBoolean("_local",local));return}
         val id=n.optLong("id");if(id<=0)return
-        val notificationLocal=n.optBoolean("_local",local)
+        val notificationLocal=n.optBoolean("_local",local);val notificationEnvironment=n.s("_environment",environment(notificationLocal));n.put("_environment",notificationEnvironment)
         // Invalidate history before notification-display deduplication, on the UI scope.
         if(transport in listOf("fcm","fcm-normal","socket")){
             val thread=n.s("thread_id")
-            scope.launch{if(notificationLocal==local&&thread.isNotBlank()&&thread==selected)refreshDetail()}
+            scope.launchEnvironment{if(notificationEnvironment==environmentId&&thread.isNotBlank()&&thread==selected)refreshDetail()}
         }
-        val seen=prefs.getStringSet(key("seenIds",notificationLocal),emptySet())!!.toMutableSet()
+        val seen=prefs.getStringSet(key("seenIds",notificationLocal,notificationEnvironment),emptySet())!!.toMutableSet()
         if(!seen.add(id.toString()))return
         val bounded=seen.sortedByDescending{it.toLongOrNull()?:0}.take(512).toSet()
         n.put("_local",notificationLocal)
-        prefs.edit().putStringSet(key("seenIds",notificationLocal),bounded).putString(key("lastDeliveryTransport",notificationLocal),transport).putLong(key("lastDeliveryId",notificationLocal),id).putLong(key("lastDeliveryAt",notificationLocal),System.currentTimeMillis()).apply()
+        prefs.edit().putStringSet(key("seenIds",notificationLocal,notificationEnvironment),bounded).putString(key("lastDeliveryTransport",notificationLocal,notificationEnvironment),transport).putLong(key("lastDeliveryId",notificationLocal,notificationEnvironment),id).putLong(key("lastDeliveryAt",notificationLocal,notificationEnvironment),System.currentTimeMillis()).apply()
         PocketNotifications.show(context,n)
         val age=System.currentTimeMillis()-n.optLong("created_at")
         if(!PocketNotificationReads.isRead(n)&&transport in listOf("fcm","socket")&&age in 0..120000)PocketSpeech.request(context,n)
     }
-    fun catchUp(){scope.launch{try{
+    fun catchUp(){scope.launchEnvironment{try{
         val after=if(prefs.getBoolean(key("needsHistorySync"),false))0 else lastNotification
         val r=api("/api/notifications?after=$after")
         val entries=r.optJSONArray("notifications")?.objects()?:emptyList()
-        entries.forEach{acceptNotification(it)}
+        entries.forEach{acceptNotification(it.put("_environment",environmentId))}
         entries.maxOfOrNull{it.optLong("id")}?.let{lastNotification=maxOf(lastNotification,it)}
         prefs.edit().putLong(key("lastNotification"),lastNotification).putBoolean(key("needsHistorySync"),false).apply()
     }catch(_:Exception){}}}

@@ -10,7 +10,7 @@ import android.os.Looper
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 
-/** Keeps the loopback WebSocket alive so local Codex events reach Pocket while its UI is closed. */
+/** Keeps local notifications alive independently of the selected development environment. */
 class LocalMonitorService:Service(){
     private val handler=Handler(Looper.getMainLooper())
     private val refresh=object:Runnable{override fun run(){updateNotification();handler.postDelayed(this,15000)}}
@@ -24,11 +24,11 @@ class LocalMonitorService:Service(){
         val notification=notification()
         if(Build.VERSION.SDK_INT>=34)startForeground(ID,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID,notification)
         handler.post(refresh)
-        PocketLive.start()
+        PhoneEventMonitor.start()
     }
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
-        if(!Pocket.local||Pocket.token.isBlank()){stopSelf();return START_NOT_STICKY}
-        PocketLive.start();return START_STICKY
+        if(Pocket.savedToken(true).isBlank()){stopSelf();return START_NOT_STICKY}
+        PhoneEventMonitor.start();return START_STICKY
     }
     private fun notification():Notification{
         val repair=PocketAutomation.allowed&&!PocketAutomation.systemEnabled(this)
@@ -36,11 +36,11 @@ class LocalMonitorService:Service(){
         val open=PendingIntent.getActivity(this,if(repair)992 else 991,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this,CHANNEL).setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(if(repair)"NextComp phone control needs attention" else "NextComp · Codex on this phone")
-            .setContentText(if(repair)"Tap to re-enable NextComp in Android Accessibility" else "Listening for local tasks, questions and results")
+            .setContentText(if(repair)"Tap to re-enable NextComp in Android Accessibility" else if(PhoneEventMonitor.connected)"Listening for local tasks, questions and results" else "Waiting for local Codex")
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).build()
     }
     private fun updateNotification(){getSystemService(NotificationManager::class.java).notify(ID,notification())}
-    override fun onDestroy(){handler.removeCallbacks(refresh);if(Pocket.local)PocketLive.stop();super.onDestroy()}
+    override fun onDestroy(){handler.removeCallbacks(refresh);PhoneEventMonitor.stop();super.onDestroy()}
     companion object{
         private const val CHANNEL="local-codex"
         private const val ID=991

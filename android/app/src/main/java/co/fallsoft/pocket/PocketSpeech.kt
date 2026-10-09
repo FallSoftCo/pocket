@@ -201,6 +201,7 @@ object PocketSpeech {
         return channel!=null&&channel.importance>=NotificationManager.IMPORTANCE_DEFAULT&&channel.sound!=null
     }
     fun request(c:Context,n:JSONObject){Pocket.scope.launch{
+        if(n.has("_environment")&&n.s("_environment")!=Pocket.environmentId)return@launch
         if(!speechOriginMatches(if(n.has("_local"))n.optBoolean("_local")else null,Pocket.local))return@launch
         if(n.s("kind")=="coordinator_report")return@launch
         if(!allowed(c,n.s("kind")))return@launch

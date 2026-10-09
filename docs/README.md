@@ -15,6 +15,8 @@ NextComp connects a person on Android to ongoing work in their own computing env
 
 ## Install and operate
 
+- [Named development environments](MULTI-ENVIRONMENT.md): retained remote pairings, source-bound actions and the phone profile.
+
 - [Codex and Losangelex backend selection](LOSANGELEX-BACKEND.md): interaction modes, private registration, team controls and origin-bound attention.
 - [Browser client for Pixelbook Go](WEB-CLIENT.md): private gateway, keyboard/touch flows, pairing, PWA and browser limitations.
 - [Setup and everyday use](GETTING-STARTED.md), [deployment](DEPLOYMENT.md) and [Firebase configuration](FIREBASE.md).
