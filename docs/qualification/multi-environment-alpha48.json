@@ -59,8 +59,8 @@
       {
         "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
         "path": "nextcomp-66-b28f55b44c93.apk",
-        "sha256": "2e5a39539e93290a8894f54fa204d03244622eb72f9cb9319608305f02021cfe",
-        "size": 51956391
+        "sha256": "4e8dd2a90d07a173f838c75b3b3615153a09f5d2a270242fed5c1520d59f1f3a",
+        "size": 51923623
       },
       {
         "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
@@ -93,5 +93,23 @@
     "sanitizedPublicMain": "4f51fda; public exact-source release qualification follows",
     "publicNodeTests": 418,
     "publicSourceGuard": "874 tracked files pass"
+  },
+  "publicRelease": {
+    "source": "4f51fdacbd14a65adffc3eca63f22dc8c6cc7a1a",
+    "buildHost": "OZZZ-OS",
+    "androidTests": 265,
+    "androidFailures": 0,
+    "nodeTests": 418,
+    "nodeFailures": 0,
+    "releaseLint": "pass",
+    "publicSourceGuard": "874 files pass",
+    "optimizedCleanEmulatorInstall": "pass",
+    "artifact": {
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "path": "nextcomp-66-b28f55b44c93.apk",
+      "sha256": "4e8dd2a90d07a173f838c75b3b3615153a09f5d2a270242fed5c1520d59f1f3a",
+      "size": 51923623
+    },
+    "phoneCompatibleBuild": "preserved private alpha47 baseline; separately qualified and installed"
   }
 }
