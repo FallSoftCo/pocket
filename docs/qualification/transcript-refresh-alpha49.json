@@ -22,14 +22,55 @@
       "Silent list snapshot changes refresh selected transcript",
       "Cached reopen retains messages and shows refresh state",
       "Typed draft preserved"
-    ]
+    ],
+    "optimizedApk": "Exact phone-compatible APK: visible indicator over cached messages, fresh response displayed, indicator cleared after requests settled"
   },
   "phone": {
-    "installation": "pending"
+    "installation": "verified in-place Pixel alpha49/code67",
+    "apkSha256": "cd61c06d3ae8c78bf07d8ec30c05217b73f43f5076ccae5444836a6457270d67",
+    "protectedPreferencesPreserved": 14,
+    "protectedPreferencesChanged": 0,
+    "physicalConversationInteraction": "not yet observed"
   },
   "limitations": [
     "Real phone installation and interaction qualified separately",
     "No backend or Codex service change",
     "Native provider and real push transport not exercised by synthetic fixture"
-  ]
+  ],
+  "androidUnit": {
+    "debug": 269,
+    "release": 269,
+    "failures": 0
+  },
+  "lint": {
+    "debug": "pass",
+    "release": "pass"
+  },
+  "publicBuild": {
+    "source": "dcf8a66878167659ed65267d234fb877de42113e",
+    "nodeTests": 418,
+    "failures": 0,
+    "dependencyAudit": 0,
+    "publicSourceGuard": "879 files pass",
+    "exactSignedRelease": "built and clean emulator installed"
+  },
+  "artifacts": {
+    "packageName": "co.fallsoft.pocket",
+    "versionCode": 67,
+    "versionName": "0.5.0-alpha.49",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "path": "nextcomp-67-b28f55b44c93.apk",
+        "sha256": "cb8db595b39b55762397b88dc3eb60ba5ab724cf5a25c8322d0d38ffb9625de7",
+        "size": 51923623
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "path": "nextcomp-67-22ecabe28e15.apk",
+        "sha256": "cd61c06d3ae8c78bf07d8ec30c05217b73f43f5076ccae5444836a6457270d67",
+        "size": 75321188
+      }
+    ]
+  }
 }
