@@ -22,7 +22,7 @@ test('exhausted included usage continues only with account-bound existing-credit
  const {recoveryAccountUsage}=await import('../server/recovery-health.mjs');
  const {AccountRateLimits}=await import('../server/rate-limits.mjs');
  const c=new AccountRateLimits({ready:true},()=>{},{clock:()=>1000});
- const bucket={limitId:'codex',planType:'promax',primary:{usedPercent:100},secondary:null,spendControlReached:false,credits:{hasCredits:true,balance:'62028.17'}};
+ const bucket={limitId:'codex',planType:'promax',primary:{usedPercent:100},secondary:null,spendControlReached:false,credits:{hasCredits:true,balance:'1234.56'}};
  const update=b=>c.update({accountId:'signed-in-account',rateLimits:b},{replace:true});const permission={enabled:true,accountId:'signed-in-account'};
  update(bucket);assert.equal(recoveryAccountUsage(c,permission,{now:1000}).existingCredits,true);
  assert.equal(recoveryAccountUsage(c,null,{now:1000}).ok,false);
@@ -30,5 +30,5 @@ test('exhausted included usage continues only with account-bound existing-credit
  for(const change of [{spendControlReached:true},{spendControlReached:null},{individualLimit:{remainingPercent:0}},{planType:'business'},{credits:{hasCredits:true,balance:'0'}},{credits:{hasCredits:false,balance:'100'}},{credits:{hasCredits:true,balance:'garbage'}},{rateLimitReachedType:'workspace_owner_usage_limit_reached'}]){
  update({...bucket,...change});assert.equal(recoveryAccountUsage(c,permission,{now:1000}).ok,false,JSON.stringify(change));}
  update(bucket);assert.equal(recoveryAccountUsage(c,permission,{now:200000}).ok,false);c.failed=true;assert.equal(recoveryAccountUsage(c,permission,{now:1000}).ok,false);
- assert.equal(JSON.stringify(c.snapshot()).includes('signed-in-account'),false);assert.equal(c.snapshot().credits.balance,'62028.17');assert.equal(JSON.stringify(c.snapshot()).includes('signed-in-account'),false);c.clear();assert.equal(c.accountId,null);
+ assert.equal(JSON.stringify(c.snapshot()).includes('signed-in-account'),false);assert.equal(c.snapshot().credits.balance,'1234.56');assert.equal(JSON.stringify(c.snapshot()).includes('signed-in-account'),false);c.clear();assert.equal(c.accountId,null);
 });
