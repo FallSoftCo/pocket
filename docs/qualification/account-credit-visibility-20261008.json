@@ -20,7 +20,14 @@
     "periodicReportsEnabled": 0,
     "legacyBlanketContinuationEnabled": 0,
     "emulator": "Visual qualification blocked by system/launcher/application ANRs; owned fixture/emulator stopped.",
-    "physical": "pending final APK installation",
+    "physical": {
+      "installed": true,
+      "versionCode": 65,
+      "versionName": "0.5.0-alpha.47",
+      "installedAtLocal": "2026-10-08 20:30:22",
+      "installResult": "Success; in-place compatible signature",
+      "visualQualification": "Not performed over foreground Google Maps; package delivery verified only."
+    },
     "browser": "Contract sent through existing web ownership; implementation receipt pending."
   },
   "limits": [
