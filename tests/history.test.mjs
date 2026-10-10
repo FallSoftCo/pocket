@@ -101,3 +101,19 @@ test('recent history probes bounded paging even when cold metadata omits paginat
  assert.equal(page.turns[0].items[0].id,'recent');assert.equal(page._pocketPage.hasEarlier,true);
  assert.ok(calls.every(c=>c.method!=='thread/read'));assert.equal(calls.filter(c=>c.method==='thread/items/list').length,1);
 });
+
+test('turn-only runtime loads recent items and pages the same turn without full transcript reads',async()=>{
+ const calls=[];const h=new ThreadHistory({async call(method,p){calls.push({method,p});if(method==='thread/items/list')throw Error('thread/items/list is not supported yet');assert.equal(method,'thread/turns/list');return {data:[{id:'t',items:p.itemsView==='full'?Array.from({length:5},(_,i)=>({id:'m'+i,type:'agentMessage',text:'Text '+i})):[]}],nextCursor:null};}});
+ const first=await h.read({id:'x'},{preferPaging:true,maxItems:2});assert.deepEqual(first.turns[0].items.map(i=>i.id),['m3','m4']);
+ const second=await h.read({id:'x'},{before:first._pocketPage.before,maxItems:2});assert.deepEqual(second.turns[0].items.map(i=>i.id),['m1','m2']);
+ const third=await h.read({id:'x'},{before:second._pocketPage.before,maxItems:2});assert.deepEqual(third.turns[0].items.map(i=>i.id),['m0']);assert.equal(third._pocketPage.hasEarlier,false);
+ assert.equal(calls.filter(c=>c.method==='thread/items/list').length,1);assert.ok(calls.every(c=>!['thread/read','thread/resume'].includes(c.method)));
+});
+test('item history transport failures remain failures rather than triggering compatibility reads',async()=>{
+ const h=new ThreadHistory({async call(method){if(method==='thread/items/list')throw Error('network timeout');return {data:[{id:'t'}]};}});await assert.rejects(h.read({id:'x'},{preferPaging:true}),/network timeout/);assert.equal(h.turnOnlyThreads.size,0);
+});
+
+test('turn-only compatibility is scoped to the affected thread',async()=>{
+ const calls=[];const h=new ThreadHistory({async call(method,p){calls.push({method,p});if(method==='thread/items/list'){if(p.threadId==='old')throw Error('thread/items/list is not supported yet');return {data:[{item:{id:'new-item',type:'agentMessage',text:'New'}}]};}return {data:[{id:'t',items:[]}],nextCursor:null};}});
+ await h.read({id:'old'},{preferPaging:true});const modern=await h.read({id:'new'},{preferPaging:true});assert.equal(modern.turns[0].items[0].id,'new-item');assert.equal(h.turnOnlyThreads.has('new'),false);
+});
