@@ -15,6 +15,7 @@ NextComp connects a person on Android to ongoing work in their own computing env
 
 ## Install and operate
 
+- [Self-service terminal forks](TERMINAL-FORK.md): native session succession, retained dependency scopes and qualification limits; disabled pending owning release.
 - [Named development environments](MULTI-ENVIRONMENT.md): retained remote pairings, source-bound actions and the phone profile.
 
 - [Codex and Losangelex backend selection](LOSANGELEX-BACKEND.md): interaction modes, private registration, team controls and origin-bound attention.

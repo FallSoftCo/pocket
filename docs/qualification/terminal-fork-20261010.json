@@ -1,0 +1,84 @@
+{
+  "id": "native-terminal-fork-20261010",
+  "observedAt": "2026-10-10T18:22:24.204195+00:00",
+  "status": "qualified candidate; production disabled pending owning release",
+  "buildHost": "authorized OZZZ build host",
+  "sourceBaseline": "7f95b1259a11690f66cf761acfcfb0958f0206d6",
+  "tests": {
+    "nodePass": 450,
+    "nodeFail": 0,
+    "dependencyAuditVulnerabilities": 0
+  },
+  "native": {
+    "runtime": "codex-cli 0.162.0",
+    "independentProfiles": true,
+    "samePhysicalHost": true,
+    "provider": "local synthetic SSE only",
+    "paidModelRequests": 0,
+    "sourceTurns": 1,
+    "destinationTurns": 1,
+    "preparationStartsInference": false,
+    "waitedForActiveSourceTurn": true,
+    "originalRequestInDestinationModelContext": true,
+    "originalAnswerInDestinationModelContext": true,
+    "originalRequestVisibleInHistory": true,
+    "originalAnswerVisibleInHistory": true,
+    "nativeOpaqueBytesPreserved": "separate exact-ancestor-prefix checksum test",
+    "workspaceAndMcpInventoryVerified": true,
+    "sourceRetainedDependencyRole": true,
+    "accountEvidence": "Independent stock account/read verified shared signed-in fixture auth cache. Synthetic custom-provider account/read adapted only in fixture; production guard unchanged. Fixture auth copies removed on exit."
+  },
+  "ssh": {
+    "actualCrossHostTransport": true,
+    "helper": "reviewed destination private helper",
+    "ownerApi": "isolated loopback synthetic owner API",
+    "manifestBytes": 480089,
+    "prepares": 1,
+    "activationsAfterDuplicate": 1,
+    "credentialsTransferred": false
+  },
+  "failureCoverage": [
+    "Immutable migration ID and checkpoint",
+    "Unknown dependencies reject",
+    "Source interrupted or cancelled preserves stop",
+    "Cancellation during asynchronous preflight cannot fork",
+    "Export outage cleans only temporary snapshot and reuses existing fork",
+    "Source work or settings changed during handover holds activation",
+    "Lost fork acknowledgement does not create another fork",
+    "Lost target activation acknowledgement reconciles original receipt",
+    "Unknown destination turn acceptance survives restart without resend",
+    "Account change after preparation blocks activation",
+    "Workspace hash or native lineage collision does not overwrite",
+    "Ancestor depth and frame sizes bounded",
+    "Imported historical receipts gain indexed identity without worker start",
+    "Private owner authentication and source reply admission verified over actual HTTP",
+    "Inherited public archive pages without full native transcript read",
+    "Transitive public archive preserves earlier hop without root-turn duplication",
+    "MCP tool absent without owner outbound registration; registered discovery exposes only target names"
+  ],
+  "notQualified": [
+    "Production runtime pair: installed workstation CLI is 0.162.1 and destination qualification used 0.162.0; actual running source/destination pair still needs owner verification",
+    "Real OpenAI provider cross-host continuation and opaque compaction compatibility",
+    "Arbitrary historical runtime formats",
+    "Native autonomous goal budget/admission handover",
+    "App-owned dynamic controller tools",
+    "Universal fencing of independent terminals",
+    "Logical-work Android identity/draft/catch-up/notification retargeting",
+    "Physical phone migrated-task UI"
+  ],
+  "production": {
+    "enabled": false,
+    "sessionsMoved": 0,
+    "serviceRestarts": 0,
+    "pairingOrDraftsChanged": false,
+    "modelsOrPermissionsChanged": false,
+    "newProductionListeners": false,
+    "ownerPrerequisite": "Migration owner must load matching backend/helper/MCP source and private profile registrations, preserve active transports, then qualify exact native runtime pair before enabling targets."
+  },
+  "fixtureCleanup": {
+    "allOwnedRuntimeAndHttpFixturesStopped": true,
+    "earlierOwnedAuthCopiesRemoved": 17,
+    "currentFixtureAuthRemovedOnExit": true,
+    "existingAccountProfileUntouched": true
+  }
+}

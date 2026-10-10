@@ -38,6 +38,8 @@ import { CompletionRecovery } from './completions.mjs';
 import { spokenSummary,spokenText,promptContext,turnPrompt } from './speech.mjs';
 import { LiveTimeline,timelinePage } from './timeline.mjs';
 import { ThreadHistory } from './history.mjs';
+import {TerminalForks,TerminalForkImports} from './terminal-forks.mjs';
+import {sshTerminalFork} from './terminal-fork-transport.mjs';
 import { WorkRecord } from './work-record.mjs';
 import { ambiguousDelivery } from './connection-errors.mjs';
 import { AccountRateLimits } from './rate-limits.mjs';
@@ -122,7 +124,8 @@ const timeline=new LiveTimeline();
 setInterval(()=>timeline.prune(),60000).unref();
 const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
 // Notes hydrate when their conversation opens, not while hundreds of list cards load.
-const history=new ThreadHistory(codex);
+const inheritedHistoryCache=new Map();let inheritedHistoryCacheBytes=0;
+const history=new ThreadHistory(codex,{inheritedHistory:id=>{const cached=inheritedHistoryCache.get(id);if(cached){inheritedHistoryCache.delete(id);inheritedHistoryCache.set(id,cached);return cached.turns;}if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='terminal_fork_imports'").get())return [];const row=db.prepare("SELECT json_extract(packet,'$.publicHistory') AS history FROM terminal_fork_imports WHERE fork_id=? AND state IN ('prepared','accepted','unknown')").get(id);if(!row?.history)return [];const turns=JSON.parse(row.history),bytes=Buffer.byteLength(row.history);if(bytes<=8*1024*1024){while(inheritedHistoryCache.size&&(inheritedHistoryCacheBytes+bytes>8*1024*1024||inheritedHistoryCache.size>=16)){const key=inheritedHistoryCache.keys().next().value;inheritedHistoryCacheBytes-=inheritedHistoryCache.get(key).bytes;inheritedHistoryCache.delete(key);}inheritedHistoryCache.set(id,{turns,bytes});inheritedHistoryCacheBytes+=bytes;}return turns;}});
 const workRecord=new WorkRecord(db,{version:appVersion});
 const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}};
 for(const row of db.prepare("SELECT thread_id FROM watches WHERE enabled=1 UNION SELECT thread_id FROM outgoing UNION SELECT thread_id FROM session_starts WHERE thread_id IS NOT NULL").all())workRecord.enroll({id:row.thread_id});
@@ -149,6 +152,29 @@ const requireAuth=(req,res,next)=>{req.device=identity(req); if(!req.device)retu
 const owner=(req,res,next)=>{if(req.device.id!=='owner')return res.status(403).json({error:'Local owner access required'});next();};
 const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 const requireId=id=>{if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(id))throw new Error('Invalid thread identifier');return id;};
+const terminalForkConfigPath=resolve(dir,'terminal-forks.json');
+const terminalForkConfig=existsSync(terminalForkConfigPath)?JSON.parse(readFileSync(terminalForkConfigPath,'utf8')):null;
+const terminalForkImports=terminalForkConfig?new TerminalForkImports({db,codex,codeHome:terminalForkConfig.codeHome,environmentId:terminalForkConfig.environmentId,directory:resolve(dir,'terminal-forks','imports'),onImportPlan:(result,packet)=>{for(const id of result.newIds)internalSessions.register(id,id===packet.bundle.forkId?'terminal-fork-pending':'terminal-fork-ancestor');},onPrepared:(nativeThread,packet)=>{
+  const thread={...nativeThread,name:packet.sourceName||nativeThread.name||'Transferred work',status:{type:'pending'},discoveryPending:true};
+  db.prepare("DELETE FROM pocket_internal_sessions WHERE thread_id=? AND kind='terminal-fork-pending'").run(thread.id);
+  history.fullSnapshotThreads.add(thread.id);sessionDiscovery.remember(thread);attached.add(thread.id);
+  db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1) ON CONFLICT(thread_id) DO UPDATE SET name=excluded.name,enabled=1').run(thread.id,thread.name||'Transferred work');
+  emit('sessionStarted',{threadId:thread.id,thread});
+}}):null;
+if(terminalForkImports)for(const row of db.prepare("SELECT fork_id FROM terminal_fork_imports WHERE state IN ('prepared','accepted','unknown')").all())history.fullSnapshotThreads.add(row.fork_id);
+const terminalForks=terminalForkConfig?new TerminalForks({db,codex,codeHome:terminalForkConfig.codeHome,directory:resolve(dir,'terminal-forks','exports'),environmentId:terminalForkConfig.environmentId,targets:terminalForkConfig.targets||{},transport:sshTerminalFork,publicHistory:thread=>[...history.inheritedHistory(thread.id),...(thread.turns||[])],onFork:id=>internalSessions.register(id,'terminal-fork-export'),publish:transfer=>emit('terminalFork',{transfer}),
+  readSource:async threadId=>{await codex.connect();let thread=(await codex.call('thread/read',{threadId,includeTurns:false})).thread;if(thread.status?.type==='active')return {thread,turn:null};let turns=(await codex.call('thread/turns/list',{threadId,limit:1,itemsView:'summary',sortDirection:'desc'})).data;
+    if(!turns.length){const full=(await codex.call('thread/read',{threadId,includeTurns:true})).thread;turns=full.turns||[];}
+    return {thread,turn:turns.at(-1)};},
+  checkSource:async threadId=>{
+    if([...pending.values()].some(p=>p.params?.threadId===threadId))throw Error('Resolve the source’s pending question or approval before transferring.');
+    if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('unknown','sending','queued','held')").get(threadId))throw Error('Reconcile or explicitly resolve the source’s pending outgoing messages before transferring.');
+    if(db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(threadId)?.archived)throw Error('Archived work is not eligible for self transfer.');
+    const policy=await recoveryUsagePolicy(codex,threadId);if(!policy.ok)throw Error(policy.reason||'Source usage policy prevents continuation.');
+    const {goal}=await codex.call('thread/goal/get',{threadId});if(goal?.status==='active')throw Error('This source has an automatic native goal. Its budget and autonomous admission need an explicit ownership handover before terminal transfer can run.');
+  }
+}):null;
+if(terminalForks)setInterval(()=>{if(codex.ready)void terminalForks.tick().catch(e=>console.error('Terminal fork check',e.code||e.name));},30000).unref();
 const notificationSessionFields=id=>{const row=db.prepare("SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?").get(id);return row?sessionIdentity(JSON.parse(row.metadata)):{};};
 const notificationRow=r=>({...notificationSessionFields(r.thread_id),...r,title_revision:notificationTitles.revision(r.thread_id),spoken_text:r.spoken_text||spokenText(r.title,r.body),attachments:JSON.parse(r.attachments||'[]')});
 function rememberSpeechContext(threadId,turn){
@@ -159,6 +185,8 @@ const recoveryQueue=new RecoveryQueue(db);
 const turnRecovery=new TurnRecovery({db,
   read:async threadId=>{await codex.connect();const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});return history.read(thread,{summary:true});},
   health:async(threadId,kind,thread)=>{
+    try{terminalForkImports?.inputAllowed(threadId);}catch{return {ok:false,blocked:true,reason:'This destination is waiting for terminal-fork ownership release.'};}
+    if(terminalForks&&!terminalForks.recoveryAllowed(threadId))return {ok:false,blocked:true,reason:'This source has a terminal transfer checkpoint. Recovery must not restart its primary task.'};
     if(!codex.ready||syncing.has(threadId))return false;
     if(!recoveryStorageReady(dir))return false;
     const policy=await recoveryUsagePolicy(codex,threadId);if(!policy.ok)return policy;
@@ -273,6 +301,7 @@ async function sendOutgoing(row,initialThread=null){
   if(syncing.has(threadId))return;
   syncing.add(threadId);
   try{
+    let sourceRole;try{terminalForkImports?.inputAllowed(threadId);sourceRole=terminalForks?.inputRole(threadId);}catch{return;}
     const t=initialThread||await attach(row.thread_id);requireDirectSessionInput(t);
     // Re-read after attachment: the user may have edited or removed the waiting message.
     row=db.prepare('SELECT * FROM outgoing WHERE id=?').get(row.id);
@@ -283,7 +312,7 @@ async function sendOutgoing(row,initialThread=null){
       if(earlier)return;
     }
     if(!db.prepare("UPDATE outgoing SET state='sending',updated_at=? WHERE id=? AND state='queued'").run(now(),row.id).changes)return;
-    const input=[{type:'text',text:row.text}],overrides=turnOverrides(savedTurnSettings(t.id));
+    const input=[{type:'text',text:(sourceRole?sourceRole+'\n\nUser input:\n':'')+row.text}],overrides=turnOverrides(savedTurnSettings(t.id));
     let result;
     const active=t.turns?.findLast(x=>x.status==='inProgress');
     if(row.mode!=='queue'&&isActive(t)&&active) {
@@ -386,6 +415,14 @@ app.post('/api/pair',(req,res)=>{
   res.json({token,id,host:hostName,firebase:push.config,local:localMode,...(automation?{automationSecret:automation.secret}:{})});
 });
 app.use('/api',requireAuth);
+app.get('/api/terminal-forks',owner,(_req,res)=>res.json({enabled:!!terminalForks,targets:Object.keys(terminalForkConfig?.targets||{}),transfers:terminalForks?db.prepare('SELECT id FROM terminal_forks ORDER BY created_at DESC LIMIT 100').all().map(r=>terminalForks.view(r.id)):[]}));
+app.post('/api/terminal-forks',owner,route(async(req,res)=>{if(!terminalForks)return res.status(503).json({error:'The environment owner has not registered terminal-fork destinations.'});res.status(202).json(terminalForks.request(req.body));}));
+app.get('/api/terminal-forks/imports/:id',owner,(req,res)=>res.json(terminalForkImports?.view(requireId(req.params.id))||{id:req.params.id,state:'disabled'}));
+app.post('/api/terminal-forks/imports/:id/prepare',owner,route(async(req,res)=>{if(!terminalForkImports)return res.status(503).json({error:'This destination has not registered native terminal imports.'});await codex.connect();res.json(await terminalForkImports.prepare(requireId(req.params.id)));}));
+app.post('/api/terminal-forks/imports/:id/activate',owner,route(async(req,res)=>{if(!terminalForkImports)return res.status(503).json({error:'This destination has not registered native terminal imports.'});await codex.connect();res.json(await terminalForkImports.activate(requireId(req.params.id)));}));
+app.get('/api/terminal-forks/:id',owner,(req,res)=>{const result=terminalForks?.view(requireId(req.params.id));if(!result)return res.status(404).json({error:'Transfer not found.'});res.json(result);});
+app.post('/api/terminal-forks/:id/release',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.release(requireId(req.params.id)));if(codex.ready)void terminalForks.tick().catch(()=>{});}catch(e){res.status(e.status||409).json({error:e.message});}});
+app.post('/api/terminal-forks/:id/cancel',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.cancel(requireId(req.params.id)));}catch(e){res.status(e.status||409).json({error:e.message});}});
 mountLosangelex(app,{dir,codex,db,workRecord,publish:(thread,onPersist)=>notify(thread,'Losangelex needs you','Open the team conversation to review its request.','question',[],null,null,null,null,onPersist),resolve:resolveAttention});
 app.get('/api/computer-use',route(async(_req,res)=>res.json(await computerUseStatus())));
 mountAppUpdates(app,{updates:new AppUpdates({dir,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
@@ -584,6 +621,7 @@ app.post('/api/threads/:id/watch',route(async(req,res)=>{
   res.json({ok:true});
 }));
 app.post('/api/threads/:id/reply',route(async(req,res)=>{
+  terminalForkImports?.inputAllowed(requireId(req.params.id));terminalForks?.inputRole(requireId(req.params.id));
   const threadId=requireId(req.params.id), text=String(req.body.text||'').trim(), id=String(req.body.id||randomUUID()), mode=req.body.mode||'auto';
   if(!text||text.length>32000||id.length>100)return res.status(400).json({error:'Reply must be 1–32000 characters.'});
   if(!['auto','steer','queue'].includes(mode))return res.status(400).json({error:'Choose steer or queue.'});

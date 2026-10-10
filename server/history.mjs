@@ -3,9 +3,10 @@ import {displayItem} from './timeline.mjs';
 const unsupportedItems=e=>/thread\/items\/list.*not supported|list_items.*not supported/i.test(e.message||'');
 const encode=(prefix,value)=>prefix+Buffer.from(JSON.stringify(value)).toString('base64url');
 export class ThreadHistory {
-  constructor(codex,{maxItems=400,maxBytes=1024*1024,onPreview=()=>{}}={}){this.onPreview=onPreview;this.turnOnlyThreads=new Set();Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
+  constructor(codex,{maxItems=400,maxBytes=1024*1024,onPreview=()=>{},inheritedHistory=()=>[]}={}){this.onPreview=onPreview;this.inheritedHistory=inheritedHistory;this.turnOnlyThreads=new Set();this.fullSnapshotThreads=new Set();Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
   async preview(metadata){
     const thread=await this.read(metadata,{summary:true});this.onPreview(thread);
+    if(this.fullSnapshotThreads.has(metadata.id))return thread;
     const latest=thread.turns?.at(-1);
     if(!latest||metadata.historyMode!=='paginated'||this.paginationSupported!==true)return thread;
     // Turn summaries omit action/reasoning items. Read only the newest bounded item page,
@@ -15,6 +16,7 @@ export class ThreadHistory {
     return {...thread,turns:[{...latest,items:[...page.data].reverse().map(entry=>displayItem(entry.item,latest.id)).filter(Boolean)}]};
   }
   async read(metadata,options={}){
+    if(this.fullSnapshotThreads.has(metadata.id))return this.fullSnapshotPage(metadata,options);
     if(this.turnOnlyThreads.has(metadata.id)&&!options.summary)return this.turnPage(metadata,options);
     try{return await this.readPaged(metadata,options);}
     catch(e){if(!unsupportedItems(e))throw e;this.turnOnlyThreads.add(metadata.id);return this.turnPage(metadata,options);}
@@ -104,5 +106,35 @@ export class ThreadHistory {
     if(before)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
     const thread=(await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;
     return {...thread,_pocketPage:{hasEarlier:false,before:null}};
+  }
+  async fullSnapshotPage(metadata,options={}){
+    const {before=null}=options,archive=this.inheritedHistory(metadata.id);
+    if(before?.startsWith('nativefull:'))return this.archivePage(metadata,archive,options);
+    let native;
+    if(this.turnOnlyThreads.has(metadata.id)&&!options.summary)native=await this.turnPage(metadata,options);
+    else try{native=await this.readPaged(metadata,{...options,preferPaging:true});}catch(e){if(!unsupportedItems(e))throw e;this.turnOnlyThreads.add(metadata.id);native=await this.turnPage(metadata,options);}
+    if(native._pocketPage?.hasEarlier||!archive.length)return native;
+    const current=new Set((native.turns||[]).map(t=>t.rootTurnId||t.id)),earlier=archive.filter(t=>!current.has(t.rootTurnId||t.id));
+    if(!earlier.length)return native;
+    if(!native.turns?.length)return this.archivePage(metadata,earlier,options);
+    const last=earlier.at(-1);return {...native,_pocketPage:{hasEarlier:true,before:encode('nativefull:',{turnId:last.id,itemId:null})}};
+  }
+  archivePage(metadata,turns,{before=null,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8}={}){
+    let index=turns.length-1,end=null;
+    if(before){if(typeof before!=='string'||before.length>16000||!before.startsWith('nativefull:'))throw Error('That history position changed with Codex. Reopen the task.');
+      let state;try{state=JSON.parse(Buffer.from(before.slice(11),'base64url').toString());}catch{throw Error('Invalid history position.');}
+      if(!state||typeof state.turnId!=='string'||state.itemId!=null&&typeof state.itemId!=='string')throw Error('Invalid history position.');
+      index=turns.findIndex(t=>t.id===state.turnId);if(index<0)throw Error('The native history boundary is no longer available.');
+      if(state.itemId!=null){end=(turns[index].items||[]).map(item=>displayItem(item,turns[index].id)).filter(Boolean).findIndex(item=>item.id===state.itemId);if(end<0)throw Error('The native history item boundary is no longer available.');}
+    }
+    const selected=[];let count=0,bytes=0,next=null;
+    for(let n=0;index>=0&&n<maxTurns;n++,index--){const t=turns[index],items=(t.items||[]).map(item=>displayItem(item,t.id)).filter(Boolean);let stop=end??items.length,start=stop;
+      while(start>0&&count<maxItems){const size=Buffer.byteLength(JSON.stringify(items[start-1]));if(count&&bytes+size>maxBytes)break;bytes+=size;count++;start--;}
+      selected.unshift({...t,items:items.slice(start,stop),_pocketHideEnd:end!=null});
+      if(start>0){if(!items[start]?.id)throw Error('Codex did not provide a stable item identity.');next={turnId:t.id,itemId:items[start].id};break;}
+      end=null;
+      if(index>0&&(count>=maxItems||bytes>=maxBytes||n+1>=maxTurns)){next={turnId:turns[index-1].id,itemId:null};break;}
+    }
+    return {...metadata,turns:selected,_pocketPage:{hasEarlier:!!next,before:next?encode('nativefull:',next):null}};
   }
 }

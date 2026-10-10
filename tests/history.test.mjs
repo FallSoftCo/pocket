@@ -117,3 +117,12 @@ test('turn-only compatibility is scoped to the affected thread',async()=>{
  const calls=[];const h=new ThreadHistory({async call(method,p){calls.push({method,p});if(method==='thread/items/list'){if(p.threadId==='old')throw Error('thread/items/list is not supported yet');return {data:[{item:{id:'new-item',type:'agentMessage',text:'New'}}]};}return {data:[{id:'t',items:[]}],nextCursor:null};}});
  await h.read({id:'old'},{preferPaging:true});const modern=await h.read({id:'new'},{preferPaging:true});assert.equal(modern.turns[0].items[0].id,'new-item');assert.equal(h.turnOnlyThreads.has('new'),false);
 });
+
+test('native inherited archive remains visible and pages stably after new destination items arrive',async()=>{
+ const inherited=[{id:'source-turn',status:'completed',items:[{id:'source-user',type:'userMessage',content:[{type:'text',text:'Original native request'}]},{id:'source-answer',type:'agentMessage',text:'Preserved useful answer'}]}];
+ const live={id:'destination-thread',turns:[{id:'destination-turn',status:'inProgress',items:[{id:'new-answer',type:'agentMessage',text:'Destination progress'}]}]};
+ const history=new ThreadHistory({async call(method){if(method==='thread/turns/list')return {data:live.turns};if(method==='thread/items/list')return {data:live.turns[0].items.slice().reverse().map(item=>({item}))};throw Error('Unbounded native read '+method);}},{inheritedHistory:()=>inherited});history.fullSnapshotThreads.add(live.id);
+ const page=await history.read(live,{maxItems:1,maxTurns:1});assert.equal(page.turns[0].items[0].id,'new-answer');const cursor=page._pocketPage.before;
+ live.turns[0].items.push({id:'later-answer',type:'agentMessage',text:'Later destination progress'});
+ const older=await history.read(live,{before:cursor,maxItems:1,maxTurns:1});assert.equal(older.turns[0].items[0].id,'source-answer');const earliest=await history.read(live,{before:older._pocketPage.before,maxItems:1,maxTurns:1});assert.equal(earliest.turns[0].items[0].id,'source-user');assert.equal(earliest._pocketPage.hasEarlier,false);
+});

@@ -1,6 +1,6 @@
 # Rolling migration of Codex work
 
-Status: investigated design, not an activated migration controller. No live task was moved by this investigation.
+Status: rolling-controller design; a narrower [self-service terminal fork candidate](TERMINAL-FORK.md) is implemented and isolated-qualified. No live task has been migrated. The candidate preserves native context with explicit split scopes, but does not claim global ownership fencing or logical-work UI unification.
 
 NextComp should move one logical work item at a time while other work continues. A user keeps the same conversation entry, drafts and catch-up state; the entry shows its current environment and migration status. Native thread IDs remain qualified by environment. A logical work ID maps to a source thread and, if needed, a destination successor. This is additional functionality beyond alpha48 named profiles.
 
