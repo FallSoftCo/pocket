@@ -43,5 +43,15 @@
     "Full session-by-session interrupted-work reconciliation not yet complete; no blanket resume.",
     "Remote endpoints currenthealthy; overnight transport history requires migration-owner receipt."
   ],
-  "source": "8b6cba2"
+  "source": "8b6cba2",
+  "targetedTurnAudit": {
+    "scope": "Six distinct threads with outgoing receipts since22:00 Eastern Oct9, metadata plus latest public turn status only",
+    "latestStates": {
+      "completed": 4,
+      "inProgress": 2
+    },
+    "failedLatestTurns": 0,
+    "noResumptionPerformed": true,
+    "coverageLimit": "Does not cover every terminal-only or historical session."
+  }
 }
