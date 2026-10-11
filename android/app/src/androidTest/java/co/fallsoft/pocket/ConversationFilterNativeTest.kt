@@ -18,6 +18,12 @@ class ConversationFilterNativeTest {
  private val device=UiDevice.getInstance(i)
  private fun main(block:()->Unit)=i.runOnMainSync(block)
  private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(condition())return;Thread.sleep(100)};assertTrue(condition())}
+ private fun visiblePassages(prefix:String):List<Pair<String,android.graphics.Rect>>{
+  val out=java.io.ByteArrayOutputStream();device.dumpWindowHierarchy(out)
+  val doc=javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(java.io.ByteArrayInputStream(out.toByteArray()))
+  val nodes=doc.getElementsByTagName("node")
+  return (0 until nodes.length).mapNotNull{n->val e=nodes.item(n) as org.w3c.dom.Element;val text=e.getAttribute("text");val b=Regex("[0-9]+").findAll(e.getAttribute("bounds")).map{it.value.toInt()}.toList();if(!text.startsWith(prefix)||b.size!=4)null else text to android.graphics.Rect(b[0],b[1],b[2],b[3])}.filter{!it.second.isEmpty}.sortedBy{it.second.top}
+ }
  @Test fun filterKeepsVisibleAnswerWhenLeadingCommentaryIsRemoved(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val context=i.targetContext
@@ -26,12 +32,7 @@ class ConversationFilterNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
   main{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","filter-reading").put("version",100+n).put("row",JSONObject().put("id","filter-passage-$n").put("turnId","filter-reading").put("kind","message").put("phase",if(n%2==0)"final_answer" else "commentary").put("text","Filter passage $n: a meaningful result that remains readable while commentary is filtered away. This extra sentence gives the passage enough height to expose position changes.")))}
   assertTrue(device.wait(Until.hasObject(By.textContains("Filter passage 39:")),5000));Thread.sleep(300)
-  fun passages():List<Pair<String,android.graphics.Rect>>{
-   val out=java.io.ByteArrayOutputStream();device.dumpWindowHierarchy(out)
-   val doc=javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(java.io.ByteArrayInputStream(out.toByteArray()))
-   val nodes=doc.getElementsByTagName("node")
-   return (0 until nodes.length).mapNotNull{n->val e=nodes.item(n) as org.w3c.dom.Element;val text=e.getAttribute("text");val b=Regex("[0-9]+").findAll(e.getAttribute("bounds")).map{it.value.toInt()}.toList();if(!text.startsWith("Filter passage ")||b.size!=4)null else text to android.graphics.Rect(b[0],b[1],b[2],b[3])}.filter{!it.second.isEmpty}.sortedBy{it.second.top}
-  }
+  fun passages()=visiblePassages("Filter passage ")
   var target:String?=null;var top=0
   for(attempt in 0 until 35){
    val visible=passages();val first=visible.firstOrNull();val number=first?.first?.substringAfter("Filter passage ")?.substringBefore(":")?.toIntOrNull()
@@ -67,9 +68,9 @@ class ConversationFilterNativeTest {
   assertTrue(device.wait(Until.hasObject(By.textContains("Passage 29:")),5000))
   // Read older work, using the same vertical gesture as one-handed scrolling.
   repeat(3){device.swipe(device.displayWidth/2,device.displayHeight/3,device.displayWidth/2,device.displayHeight*2/3,25);Thread.sleep(250)}
-  fun visibleFinal()=device.findObjects(By.textContains("Passage ")).filter{it.text.substringAfter("Passage ").substringBefore(":").toIntOrNull()?.rem(2)==0&&it.visibleBounds.top>50&&it.visibleBounds.bottom<device.displayHeight*3/4}.firstOrNull()
+  fun visibleFinal()=visiblePassages("Passage ").firstOrNull{it.first.substringAfter("Passage ").substringBefore(":").toIntOrNull()?.rem(2)==0&&it.second.top>50&&it.second.bottom<device.displayHeight*3/4}
   val passage=requireNotNull(visibleFinal()){"No complete final passage visible after scroll"}
-  val text=passage.text;val top=passage.visibleBounds.top
+  val text=passage.first;val top=passage.second.top
   device.findObject(By.text("Important")).click();Thread.sleep(400)
   val filtered=device.findObject(By.text(text));assertNotNull("Important filter lost reading passage",filtered)
   assertTrue("Important filter moved passage from $top to ${filtered.visibleBounds.top}",kotlin.math.abs(filtered.visibleBounds.top-top)<=24)
