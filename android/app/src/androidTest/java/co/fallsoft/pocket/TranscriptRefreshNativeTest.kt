@@ -128,13 +128,13 @@ class TranscriptRefreshNativeTest {
   assertEquals("Repeated work events polled history",reads,qa("state").getJSONArray("reads").length())
   assertEquals("Refresh submitted work",0,qa("state").getJSONArray("replies").length())
  }
- @Test fun historyRecoveryIsBoundedAndCannotFollowNavigation(){
+ @Test fun prolongedHistoryRecoveryCannotFreezeOrFollowNavigation(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   val baseline=qa("state").getJSONArray("reads").length()
   qa("silent");qa("fail-read-burst");main{Pocket.refreshDetail()}
-  await{qa("state").getJSONArray("reads").length()==baseline+4&&!PocketTranscript.updating}
-  Thread.sleep(2500);assertEquals("Retry budget exceeded",baseline+4,qa("state").getJSONArray("reads").length())
-  assertTrue("Exhaustion lost cached history",has(1));assertTrue("Exhaustion hid actionable error",Pocket.error.isNotBlank())
+  await{qa("state").getJSONArray("reads").length()==baseline+4&&PocketTranscript.updating}
+  assertTrue("Outage lost cached history",has(1));assertTrue("Outage hid actionable error",Pocket.error.isNotBlank())
+  await{qa("state").getJSONArray("reads").length()>=baseline+5&&has(2)&&!PocketTranscript.updating}
   qa("fail-read");main{Pocket.refreshDetail()};await{Pocket.error.contains("Synthetic history refresh unavailable")&&PocketTranscript.updating}
   main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}&&!PocketTranscript.updating}
   val afterNavigation=qa("state").getJSONArray("reads").objects().count{it.s("threadId")!="second-thread"}

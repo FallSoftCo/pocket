@@ -195,11 +195,15 @@ object PocketTranscript {
                 if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
                 loading=false;loadingEarlier=false
                 if(!succeeded&&!automaticRetryAllowed)refreshPending=false
-                if(!succeeded&&automaticRetryAllowed&&!older&&bridgeCursor==null&&retryAttempt<3){
+                if(!succeeded&&automaticRetryAllowed&&!older&&bridgeCursor==null){
                     missedUpdates=false;refreshPending=true
                     Pocket.scope.launch{
-                        delay(1000L shl retryAttempt)
-                        if(current()&&refreshPending&&!loading)PocketTranscript.load(retryAttempt=retryAttempt+1)
+                        // History reads do not start workers. A prolonged outage
+                        // must not leave the visible cached conversation frozen
+                        // after the initial quick retry budget.
+                        delay((1000L shl retryAttempt.coerceAtMost(5)).coerceAtMost(30_000L))
+                        if(current()&&PocketVoice.foreground&&refreshPending&&!loading)
+                            PocketTranscript.load(retryAttempt=(retryAttempt+1).coerceAtMost(5))
                     }
                 }else if(missedUpdates) {
                     missedUpdates=false
