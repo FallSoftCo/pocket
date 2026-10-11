@@ -2141,7 +2141,7 @@
     },
     {
       "id": "conversation-read-occlusion-audit",
-      "status": "qualified-awaiting-combined-release",
+      "status": "delivered-alpha62",
       "request": "A popup or dialog covering the current conversation must not let a fresh background snapshot count as presented latest content.",
       "evidence": "Source inspection: latest-viewport gate checks lifecycle/blackout/voice/filter/scroll/loading, but does not yet account for focusable popup or dialog occlusion. Not yet reproduced on native device.",
       "next": "Reproduce live updates while controls/popup are open; use actual window focus or owned-overlay presentation gates, preserve IME and recording behavior, verify resume without fetching-driven reads.",
@@ -2152,7 +2152,7 @@
     {
       "id": "stalled-conversation-read-recovery-20261011",
       "request": "Conversation remains in a past state while messages and notifications progress; recover history reads visibly without resubmitting work.",
-      "status": "native-qualified-release-in-progress",
+      "status": "delivered-alpha62",
       "implementation": "Validate matching thread and timeline rows before applying; preserve local rows; three read-only retries at 1/2/4 seconds with Updating messages; no permission polling; failed recent fetch cannot acknowledge stale viewport.",
       "evidence": "docs/qualification/stalled-conversation-20261011.json"
     }

@@ -1,7 +1,7 @@
 {
   "date": "2026-10-11",
   "source": "485df4e",
-  "status": "qualified source; pending combined release",
+  "status": "delivered-alpha62",
   "implementation": "Actual main-window focus gates latest presentation; owning activity identity prevents old focus/stop callbacks from invalidating a replacement window. IME, voice dispatch and ongoing work unchanged.",
   "native": {
     "host": "OZZZ-OS owned emulator5620 SwiftShader",
@@ -36,8 +36,8 @@
     }
   ],
   "qualificationBuild": "unit tests, lint, QA app and test APK pass",
-  "delivery": "not included in installed alpha61; batch with next compatible release",
-  "phone": "alpha61/code79 independently verified now; previous failed install had no dispatch",
+  "delivery": "Included in private updater and installed Pixel code80/alpha62; package independently verified",
+  "phone": "80/alpha62 verified; no physical focus/scroll interaction claimed",
   "resources": "owned emulator/fixture stopped; no backend/daemon/worker/model changes",
   "limits": [
     "Focusable overlays covered; nonfocusable occlusion and whole-session catch-up semantics still need audit.",
