@@ -75,5 +75,8 @@ class TranscriptRefreshNativeTest {
   assertFalse("Remove available during pending request",actionEnabled("Remove"))
   main{Pocket.replyActionBusy=emptySet()}
   await{actionEnabled("Retry")}
+  main{Pocket.reply("Synthetic rapid submission");Pocket.reply("Synthetic rapid submission")}
+  await{!Pocket.sending}
+  assertEquals("Rapid input created duplicate submissions",1,qa("state").getJSONArray("replies").length())
  }
 }

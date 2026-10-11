@@ -87,3 +87,13 @@ release lint pass. Pixel upgrade returned Success; installed alpha51/code69
 verified. Both checksummed signing variants are available through authenticated
 private update metadata from version68; no backend restart or provider action.
 Physical control interaction remains distinct from installed-version evidence.
+
+## Rapid submission admission
+
+The send flag was formerly set inside a scheduled coroutine, allowing two
+rapid calls in the same UI event cycle to create distinct outgoing IDs. Candidate
+now reserves sending synchronously. Native OZZZ emulator scenario passed in
+18.641s: two same-cycle calls yield one synthetic backend request. Existing
+chronology, freshness, retained history/draft and pending-action checks passed
+in that same run. Android tests and lint pass. No provider action performed;
+phone remains alpha51 and this additional change is not yet delivered.
