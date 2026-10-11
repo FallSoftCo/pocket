@@ -27,7 +27,7 @@ class ConversationFilterNativeTest {
  @Test fun filterKeepsVisibleAnswerWhenLeadingCommentaryIsRemoved(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val context=i.targetContext
-  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putBoolean("diagnostic:scroll",true).commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
   main{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","filter-reading").put("version",100+n).put("row",JSONObject().put("id","filter-passage-$n").put("turnId","filter-reading").put("kind","message").put("phase",if(n%2==0)"final_answer" else "commentary").put("text","Filter passage $n: a meaningful result that remains readable while commentary is filtered away. This extra sentence gives the passage enough height to expose position changes.")))}

@@ -300,13 +300,17 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val anchor=retained?.index?:conversationFilterAnchor(before,afterIds,visible)
             val targetOffset=retained?.scrollOffset?:if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0
             val environment=Pocket.environmentId;val source=Pocket.selected
+            if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))
+                android.util.Log.d("PocketFilter","next=$nextImportant retained=$retained passage=${afterIds.getOrNull(anchor)} visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
             filterPositionJob?.cancel()
             filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
             follow=false;important=nextImportant
             filterPositionJob=scope.launch{
                 androidx.compose.runtime.withFrameNanos{}
-                if(anchor>=0&&Pocket.environmentId==environment&&Pocket.selected==source)
+                if(anchor>=0&&Pocket.environmentId==environment&&Pocket.selected==source){
                     list.scrollToItem(anchor,targetOffset)
+                    if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))android.util.Log.d("PocketFilter","applied index=$anchor offset=$targetOffset visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
+                }
             }
         },onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
