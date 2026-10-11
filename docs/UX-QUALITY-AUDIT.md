@@ -299,3 +299,10 @@ during an existing read), retains bounded failed-read retries, and needs no tap
 to load. Same native check passes14.899seconds:1read after first gesture,2total
 after next. Control fails11.187seconds with3reads. Full native regression and
 build/lint are pending; this candidate is not installed. Alpha54 remainslive.
+
+Candidate0f5fb7f records scroll-in-progress demand rather than pointer dragging
+only, so native accessibility scroll actions can request another page. Touch
+then ACTION_SCROLL_BACKWARD test passes14.503seconds with1then2reads. Full
+regression earlier failed on screen-wide reading coordinates with IME open;
+a3858a6 targets the actual transcript bounds and is being re-run. No phone
+upgrade beyondalpha54 has occurred.

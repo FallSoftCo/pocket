@@ -22,5 +22,20 @@
     "candidate not shipped; installed alpha54 retains prior loader",
     "does not prove physical frame pacing",
     "full regression pending"
-  ]
+  ],
+  "accessibleAfter": {
+    "applicationSource": "0f5fb7f",
+    "result": "passed",
+    "seconds": 14.503,
+    "checks": [
+      "touch gesture loads one older page",
+      "quiet edge does not cascade",
+      "native ACTION_SCROLL_BACKWARD loads second page"
+    ],
+    "evidence": "/tmp/nextcomp-pacing-accessibility-results.txt"
+  },
+  "regression": {
+    "unitTestsAndLint": "passed at3cf2859",
+    "fullNative": "earlier whole-screen gesture failed at reading setup with keyboard open; bounded-viewport test rerun in progress"
+  }
 }
