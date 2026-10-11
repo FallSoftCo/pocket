@@ -1,5 +1,5 @@
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
-let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
+let visibility=false;const acknowledgements=[];let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
 const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+revision,previewKind:'message',previewRole:'codex',activityAt:revision*1000,updatedAt:revision*1000,recencyAt:revision*1000});
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
@@ -10,6 +10,8 @@ const server=http.createServer(async(req,res)=>{
  if(path==='/api/status')body={host:'Synthetic',connected:true,deviceId:'synthetic-device-a'};
  else if(path==='/api/voice/native/start'){res.statusCode=503;body={error:'Synthetic native transport unavailable'};}
  else if(path==='/api/threads')body={threads:[thread(),...(secondVisible?[secondThread()]:[])]};
+ else if(path==='/_qa/visibility'){visibility=true;body={ok:true};}
+ else if(/^\/api\/threads\/same-thread\/(notifications|catchup)\/read$/.test(path)){const input=JSON.parse(raw);acknowledgements.push({path,...input});body={ok:true,throughId:input.throughId,ids:input.throughId?[input.throughId]:[]};}
  else if(path==='/_qa/anchored'){anchored=true;holdPosition=true;body={ok:true};}
  else if(path==='/_qa/release-position'){holdPosition=false;body={ok:true};}
  else if(path==='/_qa/fail-position'){failPosition=true;body={ok:true};}
@@ -32,6 +34,7 @@ const server=http.createServer(async(req,res)=>{
   await new Promise(r=>setTimeout(r,older?2200:1700));
   while(!older&&rev===2&&holdRefresh)await new Promise(r=>setTimeout(r,50));
   body={thread:thread(),timeline:{rows:[{id:older?'older-message':'same-message',kind:'message',text:older?'Older synthetic history':'Fresh response '+rev,version:rev===1?80:0}],hasEarlier:!older,before:older?null:'older1'},revision:rev===1?80:0,notes:[],pending:[],outgoing:[],notifications:[]};
+  if(visibility&&!older){body.timeline={rows:Array.from({length:20},(_,n)=>({id:'visible-'+n,kind:'message',text:n===19?'Fresh response '+rev:('Visible passage '+n+' '+('Readable synthetic history. '.repeat(10)))})),hasEarlier:false,before:null};body.notifications=[{id:rev,thread_id:'same-thread',kind:'complete'}];body.catchup={token:'capture-'+rev};}
   if(boundary&&older)body.timeline={rows:[{id:'order/header',turnId:'order',kind:'turn',status:'inProgress'},{id:'order/user',turnId:'order',kind:'user',text:'Ordering request'}],hasEarlier:false,before:null,insertBefore:'order/answer'};
   if(pacing&&older){const n=Number(new URL(req.url,'http://localhost').searchParams.get('before')?.match(/\d+/)?.[0]||1);body.timeline={rows:[{id:'pacing-'+n,kind:'message',text:'Earlier pacing passage '+n}],hasEarlier:n<10,before:'older'+(n+1)};}
   if(anchored&&!older)body.timeline.rows=[{id:'order/header',turnId:'order',kind:'turn',status:'inProgress'},{id:'order/answer',itemId:'answer',turnId:'order',kind:'message',text:'Stale anchored answer'}];
@@ -42,7 +45,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/repeat'){for(const s of sockets)send(s,{type:'sessionPreview',threadId:'same-thread',preview:thread().preview,previewKind:'message',activityAt:revision*1000});body={revision};}
  else if(path==='/_qa/silent'){revision++;body={revision};}
  else if(/^\/api\/threads\/(same|second)-thread\/reply$/.test(path)){const sent=JSON.parse(raw);replies.push({...sent,threadId:path.split('/')[3]});await new Promise(r=>setTimeout(r,150));body={id:sent.id,state:'accepted'};}
- else if(path==='/_qa/state')body={revision,reads,replies,positions};
+ else if(path==='/_qa/state')body={revision,reads,replies,positions,acknowledgements};
  else if(path==='/api/notifications'||path==='/api/attention')body={notifications:[]};
  else if(path==='/api/activity')body={items:[]};
  res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));

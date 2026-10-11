@@ -27,6 +27,30 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun refreshedHistoryIsNotReadUntilLatestIsActuallyPresented(){
+  twoChats();qa("visibility");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  fun acknowledged(n:Int)=qa("state").getJSONArray("acknowledgements").objects().any{it.optInt("throughId")==n}
+  await{acknowledged(1)}
+  assertEquals("Initial catch-up not acknowledged once",1,qa("state").getJSONArray("acknowledgements").objects().count{it.s("token")=="capture-1"})
+  repeat(6){device.swipe(device.displayWidth/2,device.displayHeight/4,device.displayWidth/2,device.displayHeight*3/4,25)}
+  assertFalse("Did not leave latest viewport",device.hasObject(By.text("Fresh response 1")))
+  qa("silent");main{Pocket.refreshDetail()};await{has(2)&&!PocketTranscript.updating};Thread.sleep(1000)
+  assertFalse("Fetch consumed unseen latest update while reading history",acknowledged(2))
+  repeat(7){device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/4,25)}
+  await{acknowledged(2)}
+  val important=device.findObject(By.text("Important"));assertNotNull("Important filter unavailable",important);important.click()
+  qa("silent");main{Pocket.refreshDetail()};await{has(3)&&!PocketTranscript.updating};Thread.sleep(1000)
+  assertFalse("Filtered presentation consumed full-conversation catch-up",acknowledged(3))
+  device.findObject(By.text("Important")).click();await{acknowledged(3)}
+  main{BlackoutVisibility.active=true}
+  qa("silent");main{Pocket.refreshDetail()};await{has(4)&&!PocketTranscript.updating};Thread.sleep(1000)
+  assertFalse("Blackout consumed unseen work",acknowledged(4))
+  main{BlackoutVisibility.active=false};await{acknowledged(4)}
+  device.pressHome();qa("silent");main{Pocket.refreshDetail()};await{has(5)&&!PocketTranscript.updating};Thread.sleep(1000)
+  assertFalse("Background conversation consumed unseen work",acknowledged(5))
+  main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))};await{acknowledged(5)}
+  assertEquals("Live refresh repeatedly acknowledged catch-up",1,qa("state").getJSONArray("acknowledgements").objects().count{it.has("token")})
+ }
  @Test fun switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates(){
   twoChats()
   main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.loading}

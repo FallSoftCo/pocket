@@ -53,6 +53,7 @@ object PocketTranscript {
     private var owner:String?=null
     private var historyLoaded=false
     private var checkedThisOpen=false
+    private var freshForRead=false
     private fun trace(){if(BuildConfig.DEBUG)android.util.Log.d("PocketCache","rows=${rows.size} buffered=${buffered.size} earlier=$browsingEarlier")}
     /** Stop hidden-view reads without discarding its cache, selection or draft. */
     internal fun pauseReading(){
@@ -65,10 +66,18 @@ object PocketTranscript {
         generation++;owner=id;ownerScope=scopeKey();automaticRetryAllowed=true
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
-        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false
+        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    /** Called only by the resumed, unfiltered viewport after settling at latest. */
+    internal fun presentedLatest(){
+        val id=Pocket.selected?:return
+        if(owner!=id||ownerScope!=scopeKey()||!freshForRead||loading||updating||BackendNavigation.teamSelected()||!PocketVoice.foreground||BlackoutVisibility.active||PocketVoice.active||Pocket.newTask)return
+        val d=Pocket.detail?:return
+        PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=Pocket.local,catchup=if(!checkedThisOpen)d.optJSONObject("catchup")else null,environment=Pocket.environmentId)
+        checkedThisOpen=true
+    }
     fun reconcileInputPosition(row:JSONObject){
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return;val turn=row.s("turnId");val target=row.s("id")
@@ -168,10 +177,7 @@ object PocketTranscript {
                 val pendingIds=d.optJSONArray("pending")?.objects()?.map{it.s("id")}.orEmpty().toSet()
                 rows=rows.filter{it.s("kind")!="request"||it.optJSONObject("request")?.s("id") in pendingIds}
             }
-            if(PocketVoice.foreground&&!BlackoutVisibility.active&&!PocketVoice.active&&!Pocket.newTask&&!older&&bridgeCursor==null){
-                PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=profileLocal,catchup=if(!checkedThisOpen)d.optJSONObject("catchup") else null,environment=destination.environment.id)
-                checkedThisOpen=true
-            }
+            if(!older&&bridgeCursor==null)freshForRead=true
             val updates=buffered.values.toList();buffered.clear()
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             rememberRecent();revision++;Pocket.error=positionFailures.values.firstOrNull().orEmpty();succeeded=true;trace()

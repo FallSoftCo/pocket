@@ -10,7 +10,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.security.MessageDigest
 
-/** Only successful foreground conversation fetches supply a read watermark. */
+/** A fresh snapshot supplies the watermark; a settled latest viewport presents it. */
 object PocketNotificationReads {
     private fun key(thread:String,local:Boolean,environment:String=Pocket.environment(local)):String {
         val identity=Pocket.savedBase(local,environment)+"\u0000"+Pocket.savedToken(local,environment)
@@ -44,7 +44,7 @@ object PocketNotificationReads {
             }catch(_:Exception){/* Keep existing notifications on a failed acknowledgement. */}
         }
     }
-    // Only the first successful foreground check after an explicit open supplies
+    // Only the first latest-viewport presentation after an explicit open supplies
     // this token. Subsequent live refreshes do not imply the user read new work.
     private fun acknowledgeCatchup(threadId:String,capture:String,local:Boolean,environment:String){
         val token=Pocket.savedToken(local,environment);val base=Pocket.savedBase(local,environment)

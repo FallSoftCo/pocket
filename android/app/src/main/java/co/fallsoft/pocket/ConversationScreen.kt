@@ -38,6 +38,9 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import org.json.JSONObject
@@ -118,6 +121,19 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val index=transcriptAnchorIndex(rows.map{it.s("id")},readPosition)
             if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
             restoredPosition=true
+        }
+    }
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(list,lifecycle,Pocket.environmentId,Pocket.selected){
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
+            snapshotFlow{
+                val latest=PocketTranscript.rows.lastOrNull{it.s("kind") !in listOf("turn","turnEnd")&&it.s("text").isNotBlank()}?.s("id")
+                val visible=latest!=null&&list.layoutInfo.visibleItemsInfo.any{it.key==latest}
+                val eligible=!important&&!BlackoutVisibility.active&&!PocketVoice.active&&!PocketTranscript.loading&&!PocketTranscript.updating&&!list.isScrollInProgress&&!list.canScrollForward&&visible
+                eligible to PocketTranscript.revision
+            }.collectLatest{(eligible,_)->
+                if(eligible){delay(500);PocketTranscript.presentedLatest()}
+            }
         }
     }
     var removingNotes by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(setOf<String>())}
