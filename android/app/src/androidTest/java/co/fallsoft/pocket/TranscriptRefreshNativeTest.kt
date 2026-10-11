@@ -23,6 +23,10 @@ class TranscriptRefreshNativeTest {
  private fun has(n:Int)=PocketTranscript.rows.any{it.s("text")=="Fresh response "+n}
  private fun twoChats(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  // These transcript tests do not test Android's first-install permission UI.
+  // Seed permissions only on the asserted disposable emulator, before launch.
+  device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
+  device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
   context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","First saved draft").putString("draft:second-thread","Second saved draft").commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
