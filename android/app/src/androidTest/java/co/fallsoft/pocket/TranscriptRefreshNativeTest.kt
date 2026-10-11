@@ -54,7 +54,11 @@ class TranscriptRefreshNativeTest {
    device.executeShellCommand("settings put system font_scale 2.0")
    assertTrue("Dismiss missing at large text",device.wait(Until.hasObject(By.text("Dismiss")),5000))
    Thread.sleep(600)
-   val dismiss=device.findObject(By.text("Dismiss"));val bounds=dismiss.parent.visibleBounds
+   val dismiss=device.findObject(By.text("Dismiss"))
+   var control:androidx.test.uiautomator.UiObject2?=dismiss
+   while(control!=null&&!control.isClickable)control=control.parent
+   assertNotNull("Dismiss has no clickable target",control)
+   val bounds=control!!.visibleBounds
    val minimum=(48*context.resources.displayMetrics.density).toInt()
    assertTrue("Large-text dismiss target clipped: $bounds",bounds.width()>=minimum&&bounds.height()>=minimum)
    dismiss.click();await{Pocket.replyFailure("same-thread")==null}
