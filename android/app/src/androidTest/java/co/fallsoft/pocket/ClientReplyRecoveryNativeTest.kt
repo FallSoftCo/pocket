@@ -83,8 +83,8 @@ class ClientReplyRecoveryNativeTest {
   main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating&&device.hasObject(By.text("Retry"))}
   assertEquals("Prepared turn sent without consent",0,posts().length())
   device.findObject(By.text("Retry")).click();assertTrue(device.wait(Until.hasObject(By.text("Check and retry this message?")),3000))
-  device.findObject(By.text("Cancel")).click();assertEquals(0,posts().length())
-  device.findObject(By.text("Retry")).click();device.findObject(By.text("Check and retry")).click()
+  device.findObject(By.text("Cancel")).click();assertTrue("Retry did not return after cancellation",device.wait(Until.hasObject(By.text("Retry")),3000));assertEquals(0,posts().length())
+  device.findObject(By.text("Retry")).click();assertTrue("Retry confirmation did not open",device.wait(Until.hasObject(By.text("Check and retry")),3000));device.findObject(By.text("Check and retry")).click()
   await{posts().length()==1&&PocketReplies.entries("same-thread").isEmpty()&&!Pocket.sending}
   assertEquals("Retry invented a new identity",saved.id,posts().getJSONObject(0).s("id"))
   assertFalse(Pocket.prefs.contains("draft:same-thread"))

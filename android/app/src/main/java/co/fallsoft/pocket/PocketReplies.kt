@@ -36,7 +36,10 @@ internal object PocketReplies {
         }
         return next?.state?:state
     }
-    private fun checkMessage(original:String,message:String)=if(original.isBlank())message.take(1000)else if(original.contains(message))original else original.substringBefore("\nDelivery check:").take(500)+"\nDelivery check: "+message.take(500)
+    private fun checkMessage(original:String,message:String):String{
+        val origin=original.substringBefore("\nDelivery check:")
+        return if(origin.isBlank()||origin==message)message.take(1000)else origin.take(500)+"\nDelivery check: "+message.take(500)
+    }
     private fun problem(intent:ClientReplyIntent,message:String){
         val next=runCatching{journal.update(intent.id){old->if(old.phase=="observed")old.copy(message=checkMessage(old.message,message)) else old.copy(state="unconfirmed",message=checkMessage(old.message,message))}}.getOrElse{if(Pocket.captureEnvironment()?.let{current(intent)?.matches(it)}==true)Pocket.recordReplyFailure(intent.thread,intent.id,"Could not update saved delivery state. Your message remains saved.");return}
         if(next!=null){revision++;if(current(next)?.matches(Pocket.captureEnvironment()?:return)==true)Pocket.recordReplyFailure(next.thread,next.id,next.message)}
