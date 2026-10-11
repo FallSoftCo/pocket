@@ -40,15 +40,39 @@ object PocketTranscript {
         snapshot.rows.sumOf{row->rowWeights.getOrPut(row){row.toString().length.toLong()*2}}+snapshot.detail.toString().length*2L
     }
     private var ownerScope:String?=null
-    private fun scopeKey()=backendOwner(Pocket.base,Pocket.token)
-    private fun rememberRecent(){
+    internal fun scopeKey()=transcriptCacheOwner(Pocket.environmentId,Pocket.base,Pocket.token)
+    internal var cacheRestoreRevision by mutableIntStateOf(0);private set
+    private val disk by lazy{TranscriptDiskCache(java.io.File(Pocket.context.noBackupFilesDir,"transcript-cache-v1"))}
+    private val diskSequence=java.util.concurrent.atomic.AtomicLong()
+    private val diskRequests=java.util.concurrent.ConcurrentHashMap<String,Long>()
+    private fun persist(scope:String,id:String,snapshot:Snapshot){
+        val key="$scope/$id";val sequence=diskSequence.incrementAndGet();diskRequests[key]=sequence
+        Pocket.scope.launch(Dispatchers.IO){try{
+            if(diskRequests[key]!=sequence)return@launch
+            // Save presentation only. Pending commands, questions and read acknowledgements
+            // must come from the live backend rather than an old disk snapshot.
+            val detail=JSONObject().put("thread",snapshot.detail.optJSONObject("thread")).put("notes",snapshot.detail.optJSONArray("notes"))
+            val position=snapshot.position?.let{JSONObject().put("row",it.rowId).put("offset",it.offset).put("follow",it.follow)}
+            val body=JSONObject().put("schema",1).put("scope",scope).put("id",id).put("rows",org.json.JSONArray(snapshot.rows)).put("detail",detail).put("before",snapshot.before).put("earlier",snapshot.earlier).put("bridgeBefore",snapshot.bridgeBefore).put("position",position).toString()
+            disk.write(scope,id,body){diskRequests[key]==sequence}
+        }catch(_:Exception){/* A cache failure never changes delivery, draft or network state. */}}
+    }
+    private suspend fun diskSnapshot(scope:String,id:String):Snapshot?=withContext(Dispatchers.IO){try{
+        val value=disk.read(scope,id)?.let{JSONObject(it)}?:return@withContext null
+        if(value.optInt("schema")!=1||value.s("scope")!=scope||value.s("id")!=id)return@withContext null
+        val detail=value.getJSONObject("detail");if(detail.optJSONObject("thread")?.s("id")!=id)return@withContext null
+        val cachedRows=value.getJSONArray("rows").objects();if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
+        val position=value.optJSONObject("position")?.let{TranscriptReadPosition(it.s("row"),it.optInt("offset"),it.optBoolean("follow"))}
+        Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position)
+    }catch(_:Exception){null}}
+    private fun rememberRecent(persist:Boolean=false){
         val id=owner?:return;val scope=ownerScope?:return
-        if(historyLoaded&&scope==scopeKey())Pocket.detail?.let{recent.put(scope,id,Snapshot(rows,it,before,earlier,bridgeBefore,readPosition),android.os.SystemClock.elapsedRealtime())}
+        if(historyLoaded&&scope==scopeKey())Pocket.detail?.let{val snapshot=Snapshot(rows,it,before,earlier,bridgeBefore,readPosition);recent.put(scope,id,snapshot,android.os.SystemClock.elapsedRealtime());if(persist)persist(scope,id,snapshot)}
     }
     internal fun rememberPosition(scope:String,id:String,position:TranscriptReadPosition){
         val now=android.os.SystemClock.elapsedRealtime()
-        if(owner==id&&ownerScope==scope){readPosition=position;rememberRecent()}
-        recent.get(scope,id,now)?.let{recent.put(scope,id,it.copy(position=position),now)}
+        if(owner==id&&ownerScope==scope){if(readPosition!=position){readPosition=position;rememberRecent(persist=true)};return}
+        recent.get(scope,id,now)?.takeIf{it.position!=position}?.let{val snapshot=it.copy(position=position);recent.put(scope,id,snapshot,now);persist(scope,id,snapshot)}
     }
     private var owner:String?=null
     private var historyLoaded=false
@@ -57,7 +81,7 @@ object PocketTranscript {
     private fun trace(){if(BuildConfig.DEBUG)android.util.Log.d("PocketCache","rows=${rows.size} buffered=${buffered.size} earlier=$browsingEarlier")}
     /** Stop hidden-view reads without discarding its cache, selection or draft. */
     internal fun pauseReading(){
-        rememberRecent();generation++
+        rememberRecent(persist=true);generation++
         positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false
         loading=false;refreshPending=false;loadingEarlier=false;missedUpdates=false;buffered.clear()
     }
@@ -147,8 +171,14 @@ object PocketTranscript {
         val cursor=bridgeCursor?:if(older)before else null
         loadingEarlier=older||bridgeCursor!=null
         if(!loadingEarlier){refreshPending=false;freshForRead=false}
-        automaticRetryAllowed=true;loading=true;buffered.clear();val baselineRows=rows.associateBy{it.s("id")};var succeeded=false
+        automaticRetryAllowed=true;loading=true;buffered.clear();var baselineRows=rows.associateBy{it.s("id")};var succeeded=false
         try{
+            if(!historyLoaded&&!older&&bridgeCursor==null){
+                val cached=diskSnapshot(scope,id)
+                if(!current())return
+                if(cached!=null){rows=cached.rows;Pocket.detail=cached.detail;before=cached.before;earlier=cached.earlier;bridgeBefore=cached.bridgeBefore;readPosition=cached.position;historyLoaded=true;cacheRestoreRevision++;revision++;trace()}
+                baselineRows=rows.associateBy{it.s("id")}
+            }
             val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
             validateTranscriptSnapshot(d,id)
             if(older)beforeApply()
@@ -181,7 +211,7 @@ object PocketTranscript {
             if(!older&&bridgeCursor==null)freshForRead=true
             val updates=buffered.values.toList();buffered.clear()
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
-            rememberRecent();revision++;Pocket.error=positionFailures.values.firstOrNull().orEmpty();succeeded=true;trace()
+            rememberRecent(persist=true);revision++;Pocket.error=positionFailures.values.firstOrNull().orEmpty();succeeded=true;trace()
             if(!older&&bridgeCursor==null){
                 // A warm reopening must also repair delayed inputs that were outside
                 // its bounded recent page when the previous read was cancelled.

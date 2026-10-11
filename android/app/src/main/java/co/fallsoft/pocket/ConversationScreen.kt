@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import org.json.JSONObject
@@ -100,9 +101,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.THINKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
     val latestFailure=rows.lastOrNull{it.s("kind")=="turnEnd"}?.takeIf{it.s("status")=="failed"&&(latestTurn==null||it.s("turnId")==latestTurn.s("turnId"))}
     val list=key(Pocket.environmentId,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
-    val readPosition=remember(Pocket.environmentId,Pocket.selected){PocketTranscript.readPosition}
-    var restoredPosition by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition==null||readPosition.follow)}
-    var follow by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
+    val restoreRevision=PocketTranscript.cacheRestoreRevision
+    val readPosition=remember(Pocket.environmentId,Pocket.selected,restoreRevision){PocketTranscript.readPosition}
+    var restoredPosition by remember(Pocket.environmentId,Pocket.selected,restoreRevision){mutableStateOf(readPosition==null||readPosition.follow)}
+    var follow by remember(Pocket.environmentId,Pocket.selected,restoreRevision){mutableStateOf(readPosition?.follow?:true)}
     var important by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     var filterPassage by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<String?>(null)}
     var filterRequest by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<FilterReadingRequest?>(null)}
@@ -144,7 +146,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val latestFollow by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(follow)}
     val latestRowIds by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(shownRows.map{it.s("id")})}
     DisposableEffect(Pocket.environmentId,Pocket.selected){
-        val source=Pocket.selected;val owner=backendOwner(Pocket.base,Pocket.token)
+        val source=Pocket.selected;val owner=PocketTranscript.scopeKey()
         onDispose{
             // visibleItemsInfo also includes a preceding row inside content padding.
             // Its key must not be paired with the next viewport row's scroll offset.
@@ -153,7 +155,16 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position)
         }
     }
-    LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size){
+    LaunchedEffect(list,Pocket.environmentId,Pocket.selected){
+        val source=Pocket.selected;val owner=PocketTranscript.scopeKey()
+        snapshotFlow{
+            if(!restoredPosition||PocketTranscript.loading||list.isScrollInProgress||important)null else
+                transcriptReadPosition(list.layoutInfo.visibleItemsInfo.map{TranscriptVisibleRow(it.index,it.key.toString())},list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,follow)
+        }.debounce(350).filterNotNull().distinctUntilChanged().collect{position->
+            if(source!=null)PocketTranscript.rememberPosition(owner,source,position)
+        }
+    }
+    LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size,restoreRevision){
         if(!restoredPosition&&readPosition!=null&&rows.isNotEmpty()){
             val index=transcriptAnchorIndex(rows.map{it.s("id")},readPosition)
             if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
