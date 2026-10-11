@@ -2122,6 +2122,28 @@
       "implementation": "Acknowledgement moved from fetch completion to lifecycle-resumed settled unfiltered latest viewport, gated on fresh current-scope read. Catch-up acknowledged at most once per open; notifications keep monotonic device/environment scopes.",
       "qualification": "docs/qualification/conversation-read-viewport-20261011.json",
       "verification": "Candidate native31.49s passes older-history/Latest/filter/blackout/background-resume. Old fetch-side control fails11.386s on unseen update consumption. Four native regressions,277tests per signed variant, both lints/builds pass. Phone package independently confirms alpha60/code78. Physical viewport interaction not exercised."
+    },
+    {
+      "id": "source-scoped-reply-failure-20261011",
+      "status": "qualified-alpha61-awaiting-phone",
+      "request": "Late reply failures must remain with the originating environment/session, never contaminate a newly selected chat, retain unsent draft, resolve only the matching receipt and remain visible when returning to affected work. Popup replies need feedback at their own target.",
+      "implementation": "Credential-bound per-session delivery failure state; source-specific conversation/popup presentation; receipt-matching acceptance/removal; explicit local dismissal does not retry uncertain delivery.",
+      "qualification": "docs/qualification/source-reply-feedback-20261011.json",
+      "verification": "Final native33.549s: source/error receipt routing, popup actual input/error/draft reopen/erase, actual2x font and>=48dp dismiss. Old global-error control fails9.714s. Final source freshness/keyboard/voice regression41.527s, read-state31.639s, chat switch18.5s. Both signed variants277tests/lints/builds pass. Private update79 ready; device offline before install, last verified phone78."
+    },
+    {
+      "id": "frontend-reply-receipt-journal-audit",
+      "status": "audit-open",
+      "request": "Preserve outgoing identity across process death and unknown transport outcomes; never treat arbitrary HTTP200 JSON as acknowledged delivery or blindly replay unknown requests.",
+      "evidence": "Source inspection: Pocket.reply generates an in-memory UUID; api successful JSON reaches onDone without matching receipt validation. Backend receipts are durable and accepted receipts remain available via per-ID GET, but frontend pre-dispatch journal is absent. No real unknown request was replayed.",
+      "next": "Design source-bound durable intent/receipt journal and validate ID/state before clearing the editor; cheap read-only reconciliation on resume/open, explicit handling of truly unknown outcomes, with native interrupted-process/lost-ack qualification."
+    },
+    {
+      "id": "conversation-read-occlusion-audit",
+      "status": "audit-open",
+      "request": "A popup or dialog covering the current conversation must not let a fresh background snapshot count as presented latest content.",
+      "evidence": "Source inspection: latest-viewport gate checks lifecycle/blackout/voice/filter/scroll/loading, but does not yet account for focusable popup or dialog occlusion. Not yet reproduced on native device.",
+      "next": "Reproduce live updates while controls/popup are open; use actual window focus or owned-overlay presentation gates, preserve IME and recording behavior, verify resume without fetching-driven reads."
     }
   ],
   "current_state": {

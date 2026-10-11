@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-11",
+  "version": "0.5.0-alpha.61",
+  "versionCode": 79,
+  "source": "b7ce3b1",
+  "implementation": [
+    "Credential-bound per-session reply feedback, matching delivery-ID resolution.",
+    "Delayed transport failure and unrelated background events cannot write another selected chat error.",
+    "Popup target feedback stays beside its editor; popup draft stored per captured environment/session.",
+    "Popup close stays outside scrolling content; reply input precedes usage details.",
+    "Failure actions wrap at large text instead of shrinking touch regions."
+  ],
+  "native": {
+    "host": "OZZZ-OS owned nextcomp_env_qa emulator5620 SwiftShader",
+    "method": "delayedReplyFailureStaysWithItsSourceAndResolvesByReceipt",
+    "seconds": 33.549,
+    "result": "OK (1 test)",
+    "checks": [
+      "held failed POST completes after navigating to another chat",
+      "source draft and source receipt ID retained",
+      "background failure visible only in correct chat",
+      "different accepted receipt cannot erase newer failure",
+      "matching accepted receipt clears feedback",
+      "reload/navigation preserves source failure",
+      "app observes fontScale>=1.9 and Dismiss clickable target>=48dp",
+      "Dismiss does not resend",
+      "actual popup target reply routing",
+      "failed popup draft survives close/reopen",
+      "popup draft editable and erasable without resend"
+    ]
+  },
+  "counterfactual": {
+    "source": "fe9b558",
+    "delta": "reintroduced global error assignment while preserving candidate compatibility",
+    "seconds": 9.714,
+    "result": "fails Delayed failure contaminated selected chat"
+  },
+  "regression": [
+    {
+      "source": "5388cfb",
+      "method": "cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory",
+      "seconds": 41.527,
+      "passed": true
+    },
+    {
+      "source": "fe9b558",
+      "method": "refreshedHistoryIsNotReadUntilLatestIsActuallyPresented",
+      "seconds": 31.639,
+      "passed": true
+    },
+    {
+      "source": "fe9b558",
+      "method": "switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
+      "seconds": 18.5,
+      "passed": true
+    }
+  ],
+  "signedBuild": {
+    "host": "OZZZ-OS",
+    "debugTests": 277,
+    "releaseTests": 277,
+    "lint": "debug/release pass",
+    "apkBuilds": "debug/release pass",
+    "duration": "1m18s",
+    "source": "b7ce3b1",
+    "updater": "both signer metadata/hash verifications pass"
+  },
+  "phoneInstallation": {
+    "status": "not installed; delivery blocked by current phone connectivity",
+    "attempt": "adb exited1 device offline before dispatch; no transfer/installer was started",
+    "helper": "no verified TCP connection or authorized USB device",
+    "tailscale": "single peer ping timeout",
+    "lastVerifiedInstalled": "alpha60/code78",
+    "privateUpdater": "alpha61/code79 both signer variants published and hashes verified"
+  },
+  "limits": [
+    "Native optimized physical handset interaction and frame pacing unverified.",
+    "Reply feedback map is process-local; durable backend outbox remains unchanged. Frontend unknown-delivery journal/receipt validation is a separately recorded open audit issue.",
+    "Other asynchronous action errors need source-lifetime audit.",
+    "No backend restart, provider/model change or worker wakeup; no unknown action replay."
+  ],
+  "ownedResources": "Stopped owned emulator5620 and fixture only; backend and daemon not restarted."
+}

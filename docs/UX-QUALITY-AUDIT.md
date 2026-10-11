@@ -399,3 +399,18 @@ Alpha60/code78 installed in place, independent package verification passes. Both
 private signer variants validated; original transport/install observed to success.
 No backend restart, model changes, worker activation or pending-action replay.
 Physical read/scroll pacing and full goal completion remain unproven.
+
+Alpha61/code79 qualified and privately published: delayed reply errors remain
+source/receipt scoped, popup drafts persist per captured environment/session,
+close stays reachable, and failure actions wrap for large text. Final native
+case33.549s verifies actual2x app font and48dp target; old global-error control
+fails9.714s. Final freshness/keyboard/voice regression41.527s; earlier equivalent
+read31.639s/switch18.5s pass.277tests each signed variant, both lints/builds pass.
+Phone install did not begin: ADB offline, helper lacks TCP/USB and Tailscale peer
+ping times out. Last verified phone remains alpha60/code78. Owned emulator/fixture
+stopped; backend/daemon/model/worker state unchanged. See qualification/source-
+reply-feedback-20261011.json.
+
+New open source-audit gaps: frontend durable reply intent/receipt validation;
+latest-viewport acknowledgements behind focusable popup/dialog; other async action
+error lifetimes. No real unknown send was replayed. Quality goal remains active.
