@@ -36,6 +36,11 @@
   },
   "regression": {
     "unitTestsAndLint": "passed at3cf2859",
-    "fullNative": "earlier whole-screen gesture failed at reading setup with keyboard open; bounded-viewport test rerun in progress"
+    "fullNative": {
+      "result": "passed",
+      "seconds": 40.403,
+      "source": "a3858a6",
+      "evidence": "/tmp/nextcomp-pacing-bounded-full-native.txt"
+    }
   }
 }
