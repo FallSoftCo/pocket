@@ -136,3 +136,15 @@ erased. Switching back restored A history. First selector incorrectly omitted
 the Idle prefix; changed selector to include actual card text, not app behavior.
 No live credentials, provider, real FCM or physical handset navigation qualified
 by this synthetic nonshrunk emulator run.
+
+## Retained-note origin
+
+Keep-latest-reply previously captured thread ID but chose the environment only
+when its coroutine ran. A same-cycle environment switch could save on the wrong
+host sharing that ID. Candidate now captures destination and note body at tap;
+response/error updates require that original environment and thread still be
+selected. Extended three-host native test passed in10.064s: save then immediate
+switch writes only System76, and the OZZZ view remains clean. Existing card taps,
+drafts, notification selection and background-reply isolation also passed.
+Build/lint pass; alpha52 will include this candidate with rapid-send admission
+and microphone action semantics. Physical-device delivery remains pending.

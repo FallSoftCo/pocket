@@ -72,5 +72,14 @@ class EnvironmentIsolationNativeTest {
   assertEquals("System76",receipts.single().s("host"))
   assertEquals("same-thread",receipts.single().s("thread"))
   assertEquals("native-origin-a",receipts.single().s("id"))
+  main{
+   keepConversationReply(JSONObject().put("id","retained-origin-a").put("turnId","synthetic").put("text","Save on original host"))
+   Pocket.activateEnvironment("remote_qa");Pocket.open("same-thread")
+  }
+  await{runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment("workstation")),"/_qa/state")}.getJSONArray("notes").length()==1}
+  val saved=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment("workstation")),"/_qa/state")}.getJSONArray("notes").getJSONObject(0)
+  assertEquals("System76",saved.s("host"));assertEquals("same-thread",saved.s("thread"));assertEquals("retained-origin-a",saved.s("id"))
+  await{PocketTranscript.rows.any{it.s("text")=="OZZZ answer only"}}
+  assertFalse("Old host note polluted current conversation",Pocket.detail?.optJSONArray("notes")?.objects().orEmpty().any{it.s("id")=="retained-origin-a"})
  }
 }

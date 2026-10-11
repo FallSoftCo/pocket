@@ -20,10 +20,13 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-fun keepConversationReply(row:JSONObject){val thread=Pocket.selected?:return;Pocket.scope.launch{
-    try{val r=Pocket.api("/api/threads/$thread/notes",JSONObject().put("id",row.s("itemId",row.s("id"))).put("turnId",row.s("turnId")).put("text",row.s("text")))
-        if(Pocket.selected==thread)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",r.optJSONArray("notes"))}
-    }catch(e:Exception){Pocket.error=PocketNetwork.error(e)}
+fun keepConversationReply(row:JSONObject){val thread=Pocket.selected?:return;val destination=Pocket.captureEnvironment()?:return
+    val body=JSONObject().put("id",row.s("itemId",row.s("id"))).put("turnId",row.s("turnId")).put("text",row.s("text"))
+    fun current()=Pocket.selected==thread&&Pocket.captureEnvironment()?.matches(destination)==true
+    Pocket.scope.launch{
+    try{val r=Pocket.apiEnvironment(destination,"/api/threads/$thread/notes",body)
+        if(current())Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",r.optJSONArray("notes"))}
+    }catch(e:Exception){if(current())Pocket.error=PocketNetwork.error(e)}
 }}
 internal data class ConversationContextEntry(val id:String,val text:String,val label:String,val thread:String?,val sourceId:String="",val note:JSONObject?=null,val owner:String?=null,val captionId:Long?=null)
 internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):List<ConversationContextEntry>{

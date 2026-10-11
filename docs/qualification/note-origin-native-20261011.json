@@ -1,0 +1,17 @@
+{
+  "status": "native-qualified-candidate",
+  "cause": "Deferred note-save chose selected environment after scheduling",
+  "fix": "Capture environment and immutable body synchronously; gate UI response and error by original owner",
+  "nativeHost": "OZZZ-OS",
+  "durationSeconds": 10.064,
+  "nativeResult": "pass",
+  "checks": [
+    "Save and immediately switch environments with same thread ID",
+    "Synthetic original host alone receives saved note",
+    "New host conversation not contaminated",
+    "Existing environment navigation and reply isolation pass"
+  ],
+  "lintAndBuild": "pass",
+  "providerRequests": "none",
+  "physicalDelivery": "pending alpha52"
+}
