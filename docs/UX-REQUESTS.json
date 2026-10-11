@@ -2179,6 +2179,13 @@
       "implementation": "Keep retryable visible history reads beyond four failures with capped 30-second backoff; gate follow-up on foreground and original environment/thread/generation. Preserve cached rows and drafts. No worker submissions, model calls or automatic retries for permanent permission rejection.",
       "verification": "285 tests each signing variant, both lints/builds pass. Native prolonged outage/navigation28.206s, transient/malformed/permanent rejection17.591s, cached/live/older history43.797s pass. Physical code83/APK hash verified; 12 critical preferences unchanged. Exact affected user viewport remains unidentified.",
       "evidence": "docs/qualification/prolonged-transcript-recovery-20261011.json"
+    },
+    {
+      "id": "important-visible-passage-anchor-20261011",
+      "request": "Important filter must not reorder or jump the conversation. Preserve the actual visible answer when leading commentary disappears and when returning to the complete transcript.",
+      "status": "native-candidate-qualification-running",
+      "implementation": "Native surviving-item key and pixel offset anchor; return to the same visible passage until further touch reading; cancel competing positioning jobs and guard environment/thread. No history truncation, model polling or worker wakeups.",
+      "verification": "Unchanged alpha65 runtime reproduction fails in11.175s: answer y446 becomes y1015. First repair passes filter but fails return; candidate now retains filter passage identity. Stale test accessibility reference corrected to immutable native hierarchy snapshot."
     }
   ],
   "current_state": {
