@@ -142,6 +142,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
     LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){
         delay(32)
+        if(!follow||dragged||list.isScrollInProgress)return@LaunchedEffect
         val count=list.layoutInfo.totalItemsCount
         // Keep the question heading and its one-tap Skip visible even when a
         // multi-question form is taller than the conversation viewport.
