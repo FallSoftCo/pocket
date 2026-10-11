@@ -19,9 +19,8 @@
     "evidence": "/tmp/nextcomp-pacing-results.txt"
   },
   "limits": [
-    "candidate not shipped; installed alpha54 retains prior loader",
-    "does not prove physical frame pacing",
-    "full regression pending"
+    "native software-emulator checks do not prove physical frame pacing",
+    "specific user-reported chronology pair still uncaptured"
   ],
   "accessibleAfter": {
     "applicationSource": "0f5fb7f",
@@ -42,5 +41,6 @@
       "source": "a3858a6",
       "evidence": "/tmp/nextcomp-pacing-bounded-full-native.txt"
     }
-  }
+  },
+  "delivery": "alpha55/code73 installed on phone; see alpha55-delivery-20261011.json"
 }

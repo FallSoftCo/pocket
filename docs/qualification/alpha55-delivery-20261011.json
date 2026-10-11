@@ -1,0 +1,41 @@
+{
+  "version": "0.5.0-alpha.55",
+  "versionCode": 73,
+  "source": "ef7daddf240146f0d77baa190181778b1fcacaad",
+  "buildHost": "OZZZ-OS",
+  "candidateChanges": [
+    "one successful older page per reading interaction",
+    "includes native accessibility scroll actions",
+    "retains bounded retry for a failed read",
+    "retains anchor/settled page application from alpha54"
+  ],
+  "nativeEvidence": "history-pacing-native-20261011.json",
+  "phoneInstallation": "ADB Success; independent package-manager query confirms73/alpha55; same-compatible signer; no app data clear",
+  "privateUpdate": "hash-verified both variants published; authenticated metadata from72 confirms73 and expected hashes",
+  "limits": [
+    "phone frame pacing and exact user chronology pair unverified",
+    "goal remains incomplete"
+  ],
+  "tests": {
+    "debug": 273,
+    "release": 273,
+    "failures": 0,
+    "errors": 0
+  },
+  "buildsAndLints": "both signed variants and lints passed",
+  "artifacts": [
+    {
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "path": "nextcomp-73-22ecabe28e15.apk",
+      "sha256": "b3f80fad78d73825dfa426078379ccd07496f5941bd6f0a622ebc85d0a7f9e4e",
+      "size": 61588468
+    },
+    {
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "path": "nextcomp-73-b28f55b44c93.apk",
+      "sha256": "1cd27871622c5eb2e36405bca6d3d6d9b226f1757a5329819ae8dedd9d4c86d2",
+      "size": 51956391
+    }
+  ],
+  "ownedQaCleanup": "owned emulator5620 and fixture19998 stopped"
+}

@@ -10,7 +10,7 @@ commands and environment identity throughout.
 | --- | --- | --- |
 | Message chronology | Interleaved stream, delayed snapshot, overlapping older pages, reconnect and cached reopen retain canonical order and newer text | Alpha54 installed; overlap and late-input native/unit checks pass. Exact reported physical causal pair remains uncaptured |
 | Freshness and loading | Current list/notification update appears in open chat with visible loading/error state; no full-history startup block | Recheck installed behavior across reconnect and environments |
-| History and reading | Upward scrolling loads automatically, retained local pages remain visible, message and pixel anchor survive updates | Native retained-anchor and short-page pacing checks pass; alpha55 delivery pending, physical smoothness unmeasured |
+| History and reading | Upward scrolling loads automatically, retained local pages remain visible, message and pixel anchor survive updates | Native retained-anchor and short-page pacing checks pass; alpha55 installed, physical smoothness unmeasured |
 | Session navigation | One tap opens intended session and replies route there; relevant recency without refresh-driven reorder or scroll jumps | Synthetic cross-environment routing and Important-filter anchor checks pass; physical navigation/viewport restore pending |
 | Work state | Working, waiting for input, queued, interrupted and failed states distinguish actual runtime evidence | Native Failed/Stopped/Ready/Needs-you checks pass; physical status evidence pending |
 | One-handed voice/text | Direct mic capture, physical keys with IME, preserved drafts, source-bound stop/send, clear errors and reachable controls | Native IME, volume-key/touch capture and draft checks pass; physical hardware/IME regression pending |
@@ -306,3 +306,11 @@ then ACTION_SCROLL_BACKWARD test passes14.503seconds with1then2reads. Full
 regression earlier failed on screen-wide reading coordinates with IME open;
 a3858a6 targets the actual transcript bounds and is being re-run. No phone
 upgrade beyondalpha54 has occurred.
+
+Alpha55/code73 sourceef7dadd installed in place; package manager independently
+confirms73/alpha55. Both signed builds/lints and273unit tests per variant pass.
+Private72-to73 update metadata matches both APK hashes. Native before/after
+short-page reproduction and touch/accessibility checks pass; full bounded native
+freshness/keyboard/recording regression passes40.403seconds. No backend restart,
+data clear, model calls or worker wakeups. Exact physical chronology report and
+perceived scrolling/frame pacing remain open. Owned QA processes stopped.
