@@ -32,6 +32,30 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion(){
+  twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
+  try{
+   main{Pocket.closeTask();PocketImmersion.setEnabled(true);PocketCoordinator.open()}
+   await{PocketCoordinator.visible&&!PocketCoordinator.historyLoading}
+   device.executeShellCommand("settings put system font_scale 2.0");await{context.resources.configuration.fontScale>=1.9f}
+   for(label in listOf("Registra","Tastiera","Impostazioni"))assertTrue("Translated control missing: "+label,device.wait(Until.hasObject(By.text(label)),3000))
+   Thread.sleep(300);assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"bottom-coordinator-italian-large.png")))
+   device.findObject(By.desc(PocketImmersion.label("Start recording"))).click();await{PocketVoice.state=="Listening"&&PocketVoice.targetThread==null}
+   assertTrue("Capture left coordinator",PocketCoordinator.visible)
+   device.wait(Until.hasObject(By.desc(PocketImmersion.label("Stop and send recording"))),3000)
+   device.findObject(By.desc(PocketImmersion.label("Stop and send recording"))).click();await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
+   main{PocketVoice.stop();PocketCoordinator.keyboard(true)}
+   await{device.hasObject(By.clazz("android.widget.EditText"))&&device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")}
+   device.findObject(By.clazz("android.widget.EditText")).text="Coordinator typing stays separate"
+   device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_UP);await{PocketVoice.state=="Listening"&&PocketVoice.targetThread==null}
+   device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_DOWN);await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
+   assertEquals("Coordinator capture erased its draft","Coordinator typing stays separate",prefs.getString("coordinatorDraft",null))
+   assertTrue("Coordinator voice hid keyboard",device.executeShellCommand("dumpsys input_method").contains("mInputShown=true"))
+   assertTrue("Volume missing in coordinator",device.hasObject(By.desc("Speech volume")))
+   assertEquals("Coordinator UI test started work",0,qa("state").getJSONArray("replies").length())
+  }finally{main{PocketVoice.stop();PocketCoordinator.close();PocketImmersion.setEnabled(false)};device.executeShellCommand("settings put system font_scale "+font)}
+ }
  @Test fun bottomControlsRemainReachableAtLargeTextAndPreserveTyping(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
