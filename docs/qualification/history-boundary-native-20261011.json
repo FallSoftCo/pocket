@@ -21,10 +21,36 @@
     ]
   },
   "backendTargeted": "12 history tests passed including same-turn and cross-turn cursor anchors",
-  "fullBackend": "initial run had missing dependencies; clean npm ci on OZZZ; rerun pending",
+  "fullBackend": {
+    "tests": 453,
+    "failures": 0,
+    "evidence": "/tmp/nextcomp-boundary-all-node-tests-qualified.log"
+  },
   "limits": [
     "not deployed",
     "does not establish exact physical user case",
     "legacy compatibility pages lack new boundary hint"
-  ]
+  ],
+  "narrowOwningRelease": {
+    "source": "4a81b84",
+    "base": "6c7ba69",
+    "files": [
+      "server/history.mjs",
+      "tests/history.test.mjs"
+    ],
+    "tests": 425,
+    "failures": 0,
+    "evidence": "/tmp/nextcomp-boundary-release-tests.log",
+    "state": "staged; not deployed"
+  },
+  "android": {
+    "debugUnitTests": 275,
+    "failures": 0,
+    "lint": "passed",
+    "fullNative": {
+      "passed": true,
+      "seconds": 41.919,
+      "evidence": "/tmp/nextcomp-boundary-full-native.txt"
+    }
+  }
 }
