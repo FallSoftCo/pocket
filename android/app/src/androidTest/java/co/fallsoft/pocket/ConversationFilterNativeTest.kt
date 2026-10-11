@@ -26,12 +26,17 @@ class ConversationFilterNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
   main{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","filter-reading").put("version",100+n).put("row",JSONObject().put("id","filter-passage-$n").put("turnId","filter-reading").put("kind","message").put("phase",if(n%2==0)"final_answer" else "commentary").put("text","Filter passage $n: a meaningful result that remains readable while commentary is filtered away. This extra sentence gives the passage enough height to expose position changes.")))}
   assertTrue(device.wait(Until.hasObject(By.textContains("Filter passage 39:")),5000));Thread.sleep(300)
-  fun passages()=device.findObjects(By.textContains("Filter passage ")).filter{!it.visibleBounds.isEmpty}.sortedBy{it.visibleBounds.top}
+  fun passages():List<Pair<String,android.graphics.Rect>>{
+   val out=java.io.ByteArrayOutputStream();device.dumpWindowHierarchy(out)
+   val doc=javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(java.io.ByteArrayInputStream(out.toByteArray()))
+   val nodes=doc.getElementsByTagName("node")
+   return (0 until nodes.length).mapNotNull{n->val e=nodes.item(n) as org.w3c.dom.Element;val text=e.getAttribute("text");val b=Regex("[0-9]+").findAll(e.getAttribute("bounds")).map{it.value.toInt()}.toList();if(!text.startsWith("Filter passage ")||b.size!=4)null else text to android.graphics.Rect(b[0],b[1],b[2],b[3])}.filter{!it.second.isEmpty}.sortedBy{it.second.top}
+  }
   var target:String?=null;var top=0
   for(attempt in 0 until 35){
-   val visible=passages();val first=visible.firstOrNull();val number=first?.text?.substringAfter("Filter passage ")?.substringBefore(":")?.toIntOrNull()
-   val answer=visible.firstOrNull{it.text.substringAfter("Filter passage ").substringBefore(":").toIntOrNull()?.rem(2)==0&&it.visibleBounds.top>180&&it.visibleBounds.bottom<device.displayHeight*3/4}
-   if(number!=null&&number%2==1&&answer!=null){target=answer.text;top=answer.visibleBounds.top;break}
+   val visible=passages();val first=visible.firstOrNull();val number=first?.first?.substringAfter("Filter passage ")?.substringBefore(":")?.toIntOrNull()
+   val answer=visible.firstOrNull{it.first.substringAfter("Filter passage ").substringBefore(":").toIntOrNull()?.rem(2)==0&&it.second.top>180&&it.second.bottom<device.displayHeight*3/4}
+   if(number!=null&&number%2==1&&answer!=null){target=answer.first;top=answer.second.top;break}
    device.swipe(device.displayWidth/2,device.displayHeight/3,device.displayWidth/2,device.displayHeight/3+100,16);Thread.sleep(180)
   }
   val text=requireNotNull(target){"Could not position commentary before a visible answer"}
