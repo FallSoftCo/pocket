@@ -20,4 +20,3 @@ export function recoverReply(db,threadId,id,{action,text,confirmUnknown=false},u
 export function pendingOutgoing(db,threadId){
  return db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state NOT IN ('accepted','cancelled') ORDER BY created_at,rowid").all(threadId);
 }
-
