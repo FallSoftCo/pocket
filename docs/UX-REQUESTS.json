@@ -2190,9 +2190,9 @@
     {
       "id": "catalog-transcript-missed-event-catchup-20261011",
       "request": "Conversation remains in past state while newer activity exists. Recover missed live updates without draft loss or polling workers.",
-      "status": "native-qualified-signed-release-pending",
+      "status": "delivered-alpha66-code84",
       "implementation": "Selected catalog explicit activityAt advancement also invalidates transcript when preview/status are unchanged; inventory/fetch timestamps are excluded.",
-      "verification": "Native emulator missed-event test 12.952s; unchanged refresh no further history read, no submitted replies, saved draft preserved. Cached-history regression 40.215s. Phone remains alpha65 until signed delivery."
+      "verification": "Native emulator missed-event test 12.952s; unchanged refresh no further history read, no submitted replies, saved draft preserved. Cached-history regression 40.215s. Phone remains alpha65 until signed delivery. Final debug/release286 tests each and both lints passed; actual phone code84/base APK hash verified,13 critical preference hashes unchanged. Both authenticated signing variants offered code84."
     }
   ],
   "current_state": {
