@@ -289,3 +289,13 @@ package manager confirms72/alpha54. Private updater published both hash-verified
 variants, authenticated71-to72 metadata checked. No data clear/backend restart
 or worker wakeup. Physical scrolling/perceived smoothness remains unverified.
 Owned emulator5620 and fixture19998 stopped. Full UX goal remains open.
+
+## Automatic short-page pacing
+
+Native before/after reproduction found the alpha54 loader initiated3older
+reads after one upward gesture at a short-page edge. Candidate3cf2859 consumes
+one successful older page per reading gesture (including a fresh gesture made
+during an existing read), retains bounded failed-read retries, and needs no tap
+to load. Same native check passes14.899seconds:1read after first gesture,2total
+after next. Control fails11.187seconds with3reads. Full native regression and
+build/lint are pending; this candidate is not installed. Alpha54 remainslive.

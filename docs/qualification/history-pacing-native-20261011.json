@@ -1,0 +1,26 @@
+{
+  "source": "3cf2859957bf95fb4a56befb3e133b6447b1e340",
+  "buildHost": "OZZZ-OS",
+  "emulator": "nextcomp_env_qa /5620 /software SwiftShader",
+  "fixture": "synthetic loopback19998; ten single-row older pages",
+  "method": "HistoryReadingNativeTest#shortHistoryPagesRequireAnotherReadingGesture",
+  "before": {
+    "applicationSource": "dc4b8ee",
+    "result": "failed as expected",
+    "seconds": 11.187,
+    "olderReadCountAfterOneGesture": 3,
+    "evidence": "/tmp/nextcomp-pacing-control-results.txt"
+  },
+  "after": {
+    "result": "passed",
+    "seconds": 14.899,
+    "olderReadCountAfterOneGesture": 1,
+    "olderReadCountAfterSecondGesture": 2,
+    "evidence": "/tmp/nextcomp-pacing-results.txt"
+  },
+  "limits": [
+    "candidate not shipped; installed alpha54 retains prior loader",
+    "does not prove physical frame pacing",
+    "full regression pending"
+  ]
+}
