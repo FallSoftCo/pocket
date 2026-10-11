@@ -374,8 +374,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     }.border(1.dp,Line.copy(alpha=.7f),shape).border(2.dp,Mint.copy(alpha=highlight.value),shape)){
         if(!t.archived)Row(Modifier.matchParentSize()){
             VoiceLaunchButton(modifier=Modifier.weight(.22f).fillMaxHeight(),threadId=t.id,cardRegion=true)
-            CardInteractionRegion("Chat",Modifier.weight(.56f).fillMaxHeight()){Pocket.open(t.id)}
-            CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight()){Pocket.open(t.id,keyboard=true)}
+            CardInteractionRegion("Chat",Modifier.weight(.56f).fillMaxHeight(),t.title){Pocket.open(t.id)}
+            CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight(),t.title){Pocket.open(t.id,keyboard=true)}
         }
         Column(Modifier.padding(start=12.dp,end=12.dp,top=2.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){

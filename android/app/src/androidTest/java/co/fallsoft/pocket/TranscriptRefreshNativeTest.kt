@@ -47,6 +47,15 @@ class TranscriptRefreshNativeTest {
   assertEquals("Second draft lost","Second saved draft",prefs.getString("draft:second-thread",null))
   main{Pocket.closeTask();Pocket.open("same-thread")};await{has(2)&&!PocketTranscript.updating}
   assertTrue("New chat rows leaked on reopen",PocketTranscript.rows.none{it.s("id")=="other/message"})
+  main{Pocket.closeTask()}
+  assertTrue("Second chat touch region not identifiable",device.wait(Until.hasObject(By.desc("Open Chat for Other synthetic work")),3000))
+  device.findObject(By.desc("Open Chat for Other synthetic work")).click()
+  await{Pocket.selected=="second-thread"&&PocketTranscript.rows.any{it.s("text")=="Other response 2"}&&!PocketTranscript.updating}
+  device.pressBack();await{Pocket.selected==null}
+  assertTrue("First chat touch region not identifiable",device.wait(Until.hasObject(By.desc("Open Chat for Synthetic freshness work")),3000))
+  device.findObject(By.desc("Open Chat for Synthetic freshness work")).click()
+  await{Pocket.selected=="same-thread"&&has(2)&&!PocketTranscript.updating}
+  assertEquals("Card navigation lost saved draft","First saved draft",prefs.getString("draft:same-thread",null))
  }
  @Test fun backgroundSessionEventsDoNotReloadCurrentTranscript(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}

@@ -18,11 +18,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
 
-@Composable fun CardInteractionRegion(label:String,modifier:Modifier=Modifier,onClick:()->Unit){
+@Composable fun CardInteractionRegion(label:String,modifier:Modifier=Modifier,conversationTitle:String="",onClick:()->Unit){
     val interaction=remember{MutableInteractionSource()}
     val pressed by interaction.collectIsPressedAsState()
     val haptic=LocalHapticFeedback.current
-    Box(modifier.semantics{contentDescription="Open $label in this conversation"}
+    Box(modifier.semantics{contentDescription=if(conversationTitle.isBlank())"Open $label in this conversation" else "Open $label for $conversationTitle"}
         .background(if(pressed)Mint.copy(alpha=.25f)else Color.Transparent)
         .clickable(interactionSource=interaction,indication=null,role=Role.Button){haptic.performHapticFeedback(HapticFeedbackType.LongPress);onClick()},contentAlignment=Alignment.Center){
         if(pressed)Text(label,fontSize=9.sp,color=Paper,maxLines=1)
