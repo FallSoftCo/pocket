@@ -46,6 +46,15 @@ class ClientReplyRecoveryNativeTest {
   assertEquals("Edited after send",device.findObject(By.clazz("android.widget.EditText")).text)
   assertEquals("Receipt reconciliation submitted another turn",1,posts().length())
  }
+ @Test fun explicitStopCancelsPreparedMessageBeforeDispatch(){
+  start(draft="Cancelled prepared turn")
+  val destination=requireNotNull(Pocket.captureEnvironment())
+  val saved=ClientReplyIntent("synthetic-cancelled-id",Pocket.environmentId,backendOwner(destination.endpoint,destination.token),"same-thread","Cancelled prepared turn","auto","draft:same-thread")
+  ClientReplyJournal({Pocket.prefs.getString("client-replies:v1","[]")!!},{Pocket.prefs.edit().putString("client-replies:v1",it).commit()}).put(saved)
+  main{Pocket.open("same-thread");Pocket.interrupt()};await{!Pocket.sending&&!PocketTranscript.updating}
+  Thread.sleep(1200);assertEquals("Stop failed to cancel undispatched turn",0,posts().length());assertTrue(PocketReplies.entries("same-thread").isEmpty())
+  assertEquals("Stop erased editable text","Cancelled prepared turn",Pocket.prefs.getString("draft:same-thread",null))
+ }
  @Test fun preparedButUndispatchedMessageContinuesOnce(){
   start(draft="Prepared continuation")
   val destination=requireNotNull(Pocket.captureEnvironment())

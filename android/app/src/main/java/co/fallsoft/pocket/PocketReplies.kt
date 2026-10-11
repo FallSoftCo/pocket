@@ -52,16 +52,17 @@ internal object PocketReplies {
     private fun dispatch(intent:ClientReplyIntent,destination:EnvironmentRequest,onDone:()->Unit={}){
         Pocket.sending=true;busy=busy+intent.id;dispatching=dispatching+intent.id
         Pocket.scope.launch{
+            var marked=false
             try{
                 if(current(intent)?.matches(destination)!=true)return@launch
-                journal.update(intent.id){it.copy(phase="dispatched")};revision++
+                journal.update(intent.id){it.copy(phase="dispatched")}?:return@launch;marked=true;revision++
                 val receipt=Pocket.apiEnvironment(destination,"/api/threads/${intent.thread}/reply",JSONObject().put("id",intent.id).put("text",intent.text).put("mode",intent.mode))
                 val state=observed(intent,receipt)
                 if(state in admittedReplyStates){if(Pocket.captureEnvironment()?.matches(destination)==true){Pocket.rememberSessionInteraction(intent.thread,"reply:"+intent.id);onDone()}}
                 else if(state in listOf("failed","unknown")&&Pocket.captureEnvironment()?.matches(destination)==true)Pocket.recordReplyFailure(intent.thread,intent.id,receipt.s("error","Message delivery needs attention"))
                 if(Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==intent.thread)Pocket.scheduleRefresh()
             }catch(e:CancellationException){throw e}catch(e:Exception){problem(intent,e.message?:"Message delivery could not be confirmed")}
-            finally{busy=busy-intent.id;dispatching=dispatching-intent.id;if(Pocket.captureEnvironment()?.matches(destination)==true)Pocket.sending=false;val pending=runCatching{journal.get(intent.id)}.getOrNull();if(pending?.state=="unconfirmed")Pocket.scope.launch{delay(800);if(current(pending)!=null)check(pending)}}
+            finally{busy=busy-intent.id;dispatching=dispatching-intent.id;if(Pocket.captureEnvironment()?.matches(destination)==true)Pocket.sending=false;val pending=runCatching{journal.get(intent.id)}.getOrNull();if(pending?.state=="unconfirmed")Pocket.scope.launch{delay(800);if(current(pending)!=null)check(pending)};if(marked&&!Pocket.sending&&Pocket.selected==intent.thread&&Pocket.captureEnvironment()?.matches(destination)==true)entries(intent.thread).firstOrNull{it.phase=="prepared"&&it.id !in busy&&matchesCurrent(it)}?.let{next->current(next)?.let{dispatch(next,it)}}}
         }
     }
     fun reconcile(thread:String){
