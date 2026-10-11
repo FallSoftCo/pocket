@@ -386,3 +386,16 @@ Physical chronology/frame pacing and wider quality audit remain outstanding.
 Alpha59/code77 delivered in place; independent phone package confirmation.
 Both private updater variants validated. Physical transcript interaction remains
 unobserved; owned emulator/fixture stopped. No pairing/data clearing.
+
+Alpha60 candidate: notifications/catch-up now require a fresh, settled latest
+viewport rather than fetch completion. Native older-history/Latest/filter/blackout/
+background-resume case passes31.49s; old-behavior control fails11.386s precisely
+when an unseen update was consumed by fetching. Four refresh/navigation/provider/
+keyboard/voice regressions pass. Compatible signed build and phone delivery status
+are recorded in qualification/conversation-read-viewport-20261011.json.
+Presentation does not prove comprehension; first-check catch-up semantics retained.
+
+Alpha60/code78 installed in place, independent package verification passes. Both
+private signer variants validated; original transport/install observed to success.
+No backend restart, model changes, worker activation or pending-action replay.
+Physical read/scroll pacing and full goal completion remain unproven.

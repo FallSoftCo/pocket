@@ -2114,6 +2114,14 @@
       ],
       "verification": "Six native emulator cases pass; 277 unit tests each debug/release; both lints/builds pass; phone package confirms alpha59/code77. Exact physical transcript catch-up not observed.",
       "qualification": "docs/qualification/conversation-refresh-scope-20261011.json"
+    },
+    {
+      "id": "conversation-read-viewport-20261011",
+      "status": "delivered-alpha60",
+      "request": "Refreshing or preloading must not consume work the user has not presented. Reading older history, Important filtering, background and blackout must preserve unseen latest updates.",
+      "implementation": "Acknowledgement moved from fetch completion to lifecycle-resumed settled unfiltered latest viewport, gated on fresh current-scope read. Catch-up acknowledged at most once per open; notifications keep monotonic device/environment scopes.",
+      "qualification": "docs/qualification/conversation-read-viewport-20261011.json",
+      "verification": "Candidate native31.49s passes older-history/Latest/filter/blackout/background-resume. Old fetch-side control fails11.386s on unseen update consumption. Four native regressions,277tests per signed variant, both lints/builds pass. Phone package independently confirms alpha60/code78. Physical viewport interaction not exercised."
     }
   ],
   "current_state": {

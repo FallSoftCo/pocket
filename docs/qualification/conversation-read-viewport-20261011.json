@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-11",
+  "version": "0.5.0-alpha.60",
+  "versionCode": 78,
+  "source": "362b985",
+  "backendChanges": "none; existing alpha59 narrow backend retained",
+  "problem": "Foreground fetch completion consumed latest notification and catch-up state even while reading older history or filtering the conversation.",
+  "implementation": [
+    "Fresh successful snapshot supplies the read cursor without acknowledgement.",
+    "Resumed unfiltered viewport must show the latest material row, be at bottom and settle for500ms.",
+    "History/filter/blackout/background/hidden backend or active voice do not implicitly acknowledge.",
+    "Warm cached reopening waits for a fresh current-scope read.",
+    "Existing monotonic device/environment credential-bound notification semantics and first-check catch-up semantics retained."
+  ],
+  "native": {
+    "host": "OZZZ-OS",
+    "device": "owned emulator5620 nextcomp_env_qa SwiftShader",
+    "method": "refreshedHistoryIsNotReadUntilLatestIsActuallyPresented",
+    "seconds": 31.49,
+    "result": "OK (1 test)",
+    "coverage": [
+      "latest initial presentation",
+      "refresh while reading older history stays unread",
+      "Latest action presents new response",
+      "Important filter stays unread",
+      "unfiltering acknowledges",
+      "blackout stays unread until exit",
+      "background fetch stays unread until resume",
+      "catch-up first-check acknowledgement not repeated"
+    ]
+  },
+  "counterfactual": {
+    "behavior": "Only reintroduced old fetch-side acknowledgement in current compatible source",
+    "seconds": 11.386,
+    "result": "fails at Fetch consumed unseen latest update while reading history",
+    "candidateApkRestored": true
+  },
+  "regression": [
+    {
+      "method": "cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory",
+      "seconds": 41.749,
+      "passed": true
+    },
+    {
+      "method": "switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
+      "seconds": 18.51,
+      "passed": true
+    },
+    {
+      "method": "backendSwitchPausesHiddenReadsAndRestoresCodexSelection",
+      "seconds": 13.12,
+      "passed": true
+    },
+    {
+      "method": "backgroundSessionEventsDoNotReloadCurrentTranscript",
+      "seconds": 13.913,
+      "passed": true
+    }
+  ],
+  "signedRelease": {
+    "host": "OZZZ-OS",
+    "debugUnitTests": 277,
+    "releaseUnitTests": 277,
+    "lints": "both pass",
+    "builds": "debug/release pass",
+    "duration": "1m14s",
+    "source": "362b985",
+    "privateUpdater": "both signer versions/hashes verified"
+  },
+  "phoneInstallation": {
+    "receipt": "adb install -r Success",
+    "independentPackageCheck": "versionCode78/versionName0.5.0-alpha.60",
+    "method": "in-place phone-compatible signing, no data clear",
+    "physicalReadInteraction": "not exercised on user phone; native synthetic qualification only",
+    "transfer": "Observed original process advancing from48MB tocomplete; no duplicate install"
+  },
+  "limits": [
+    "Presentation watermark is not proof of comprehension of every earlier passage.",
+    "Synthetic native lifecycle/scroll evidence does not prove actual phone read interaction or physical frame pacing.",
+    "No environment/gateway restart or backend change in this release."
+  ],
+  "fixtureSyntax": "node --check pass on OZZZ-OS",
+  "ownedResources": "emulator5620 and fixture stopped after qualification; other devices/services untouched"
+}
