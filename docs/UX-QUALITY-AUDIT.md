@@ -431,3 +431,26 @@ Alpha62/code80 is independently verified installed. Current alpha63 candidate ad
 Alpha63/code81 delivered: one in-place install returned Success, independent package and installed base APK checksum match verified compatible build. Nine pairing/profile/draft preference hashes unchanged. Both authenticated updater signer variants verified. Signed285tests each/lints/builds pass; native history/keyboard/voice41.889s and source/failure/draft31.672s pass. Only owned emulator/fixture stopped; live backend and workers preserved. Exact physical stale viewport still unobserved; quality goal remains active.
 
 Alpha64 layout candidate: reviewed native captures at normal/1.3x/2x revealed clipped mic caption, unknown-quota text and compact Retry caption. Primary capture/keyboard now have whole tiles and vertical44dp icons with wrapping labels; compact capture uses a larger symbol without inner caption. Unknown quota uses dash plus full accessibility state; cached Italian update/capture labels use existing inline transitions. Native28.599s direct capture/IME/draft/volume/settings and15.683s coordinator Italian/IME/source checks pass. Long capture errors now expand inline on tap, final qualification pending. All app compilation continues on OZZZ-OS. Physical large-text/key presses remain unverified.
+
+Alpha65/code83 and alpha66/code84 delivered in place. Alpha65 extends retryable
+foreground history recovery beyond the quick retry budget; alpha66 repairs missed
+live events whose subsequent catalog activity advances without a different clipped
+preview. Final alpha66 signed286 tests per variant and both lints pass; native
+missed-event12.952s/cached-history40.215s pass. Actual phone84/APK hash independently
+verified;13 critical preference hashes unchanged. Exact user stale viewport still
+unidentified; fetching current root history44ms is not phone presentation evidence.
+
+Current native reading audit: Compose bounds prove older-page arrival and warm
+reopen retain the chosen reading passage within2px, with local earlier history
+and draft retained (9.481s). Short-page native thumb/accessibility case14.519s proves
+idle edge does not drain multiple history pages. Reproduced an additional exit bug:
+Important -> Surrounding conversation leaves normal history74px displaced (control
+5.472s). Padding now exists only in Important; saved-source row identity is applied
+after the item provider commits, without guessed32ms sleep. Corrected native case
+5.57s and filter geometry/pixels6.031s pass. Complete destination identity gates
+saved-source navigation/removal feedback. Alpha67 signing/delivery remains pending.
+Three reviewed original native paragraph crops are byte-identical across filtering;
+main gallery card nextcomp-reading-filter-pixel-20261011 records exact scope.
+The full quality goal remains open: physical chronology/scroll pacing, broader
+navigation/discovery/environment flows, unseen/audio/voice hardware semantics,
+immersion reading motion and accessibility still need scoped verification.
