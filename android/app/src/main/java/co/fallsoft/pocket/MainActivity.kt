@@ -143,7 +143,7 @@ class MainActivity:ComponentActivity(){
         return super.dispatchKeyEvent(event)
     }
     override fun onDestroy(){blackout.exit(restoreInput=false);super.onDestroy()}
-    override fun onResume(){super.onResume();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail();Pocket.selected?.let{PocketReplies.reconcile(it)}}}
+    override fun onResume(){super.onResume();PresentedReads.restore();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail();Pocket.selected?.let{PocketReplies.reconcile(it)}}}
 }
 
 @Composable fun Mark(size:Int=44){AnimatedMark(size)}
