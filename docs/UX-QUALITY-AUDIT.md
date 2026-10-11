@@ -14,7 +14,7 @@ commands and environment identity throughout.
 | Session navigation | One tap opens intended session and replies route there; relevant recency without refresh-driven reorder or scroll jumps | Synthetic cross-environment routing and Important-filter anchor checks pass; physical navigation/viewport restore pending |
 | Work state | Working, waiting for input, queued, interrupted and failed states distinguish actual runtime evidence | Native Failed/Stopped/Ready/Needs-you checks pass; physical status evidence pending |
 | One-handed voice/text | Direct mic capture, physical keys with IME, preserved drafts, source-bound stop/send, clear errors and reachable controls | Native IME, volume-key/touch capture and draft checks pass; physical hardware/IME regression pending |
-| Notifications and speech | Correct source, rename/read state, session-aware playback, actionable questions, no stale duplicate pinned output | Audit pending |
+| Notifications and speech | Correct source, rename/read state, session-aware playback, actionable questions, no stale duplicate pinned output | Retained speech source navigation reproduced and corrected natively; alpha70/code88 installed; physical tap remains unverified. Session queues, rename/attention and physical playback lifecycle breadth remain open |
 | Immersion/accessibility | Inline reading-direction transitions without duplicates, legible normal/large text, reduced-motion behavior | Audit pending |
 
 ## Verified progress
@@ -501,3 +501,29 @@ another phone reinstall. Both cases ran on owned OZZZ emulator5620 with syntheti
 fixture; physical user-selected conversation is still unverified. Previous goal
 turn was progress (verified alpha69 delivery); this turn is progress (expanded
 native evidence). Goal remains active; no worker/model wakeups or runtime restart.
+
+Spoken notification navigation: actual posted notification control fails17.664s
+(e9ae2ec). Source9214d08 uses the stored notification-thread association; real
+PendingIntent execution now shows source conversation content in6.605s, with
+preserved draft and zero replies/provider calls. 290 tests per variant, both
+lints and signed builds pass. R8 first exceeded its3GiB heap; bounded disposable
+6GiB build passes without touching shared daemon. Alpha70/code88 is published
+and transferring to the phone; install and physical interaction not yet claimed.
+Only owned emulator/fixture stopped. Previous turn was progress (overlap regression
+qualification), this turn is progress (source navigation reproduction/fix/native
+evidence). Broader notifications/read/audio matrix remains open.
+
+Source review also found local notification-read and speech queue ownership
+hashes omit named environment IDs. Their URL/credential scoping isolates current
+distinct endpoints; same-endpoint aliases would share state. The profile UI
+currently deduplicates identical URLs, so this is a source-level isolation gap,
+not a reproduced current-phone collision. Any migration must preserve existing
+queues/heard ledgers and avoid attributing old data to multiple environments.
+
+Alpha70/code88 installed in place, independently package/base-APK-hash verified.
+13 critical pairing/environment/draft preference hashes unchanged. Authenticated
+workstation updater offers88 for both signers with matching SHA. No phone UI was
+commandeered, speech generated, task submitted, model woken or backend restarted.
+Native control/correction evidence is in spoken-notification-navigation-alpha70.
+Physical banner/lock-screen, broader playback/read/attention and named-environment
+isolation verification still need work; the full goal remains active.
