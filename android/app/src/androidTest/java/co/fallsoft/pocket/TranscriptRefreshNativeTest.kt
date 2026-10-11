@@ -77,6 +77,7 @@ class TranscriptRefreshNativeTest {
    }
    reachable(By.text("Record")).click();await{PocketVoice.state=="Listening"}
    assertTrue("Capture feedback absent",device.wait(Until.hasObject(By.text(java.util.regex.Pattern.compile("Recording .*"))),2000))
+   assertTrue("Recording status incorrectly exposed as disabled",device.findObject(By.text(java.util.regex.Pattern.compile("Recording .*"))).isEnabled)
    reachable(By.desc("Stop and send recording")).click();await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
    assertFalse("Silent emulator recording submitted work",prefs.contains("voicePendingId"))
    main{PocketVoice.stop()}
