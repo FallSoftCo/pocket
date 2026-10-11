@@ -109,3 +109,16 @@ observed exactly the additional intended request. Earlier ordering, freshness,
 retained history, pending controls and rapid-admission checks also passed.
 This is Android Back dispatch, not an independently qualified physical swipe
 on the Fold. No live provider actions or handset input were performed.
+
+## Foreground recording with IME
+
+Owned OZZZ native scenario passed in30.115s. Volume-up dispatch starts actual
+Android AudioRecord while editing; Listening, initialized timer and visible
+Recording feedback confirmed; captured destination remains the current thread.
+Volume-down stops, silent emulator input yields visible capture error without
+a pending turn; draft remains. Touch retry starts immediately and one-tap stop
+works again. Changed mic accessibility to retain action labels while errors are
+state descriptions, rather than replacing the action with an error message.
+Updated fixture returns explicit503 without crashing; verified alive after run.
+Build/lint pass. Candidate only; physical handset volume keys, non-silent capture,
+transcription/send and native audio provider remain separate unverified evidence.

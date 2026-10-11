@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -54,9 +55,9 @@ import androidx.lifecycle.repeatOnLifecycle
     }
 }
 @Composable private fun CaptureMic(capture:()->Unit,control:CaptureControl,label:String,compact:Boolean){
-    FilledTonalIconButton(capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,modifier=Modifier.size(if(compact)64.dp else 72.dp),shape=CircleShape,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.22f) else Mint.copy(alpha=.16f),contentColor=Paper)){
+    FilledTonalIconButton(capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,modifier=Modifier.size(if(compact)64.dp else 72.dp).semantics{contentDescription=PocketImmersion.label(label);if(PocketVoice.problem.isNotBlank())stateDescription=PocketVoice.problem},shape=CircleShape,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.22f) else Mint.copy(alpha=.16f),contentColor=Paper)){
         Column(horizontalAlignment=Alignment.CenterHorizontally){
-            SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",PocketImmersion.label(if(PocketVoice.problem.isNotBlank())PocketVoice.problem else label),Modifier.size(if(compact)32.dp else 44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
+            SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",null,Modifier.size(if(compact)32.dp else 44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
             if(compact)BilingualLabel(when{PocketVoice.problem.isNotBlank()->"Retry";control==CaptureControl.STOP_SEND->"Send";control==CaptureControl.PROCESSING->"Wait";control==CaptureControl.CHECK_SAVED->"Check";else->"Talk"},fontSize=12.sp,color=if(PocketVoice.problem.isNotBlank())Coral else Paper)
         }
     }

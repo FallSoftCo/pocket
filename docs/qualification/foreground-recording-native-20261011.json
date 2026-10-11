@@ -1,0 +1,26 @@
+{
+  "status": "candidate-native-qualified-not-phone-delivered",
+  "host": "OZZZ-OS",
+  "avd": "nextcomp_env_qa",
+  "variant": "nonshrunk qualification",
+  "durationSeconds": 30.115,
+  "checks": [
+    "Volume-up starts Android AudioRecord with editor open",
+    "Listening state and recording timer visible",
+    "Capture destination remains current conversation",
+    "Volume-down stops capture",
+    "Silent input visibly rejected without pending turn",
+    "Typed draft retained",
+    "Touch retry starts recording",
+    "One-tap touch stop works",
+    "Microphone action label retained independently from error state"
+  ],
+  "fixture": "Synthetic HTTP backend; native audio negotiation intentionally503; fixture verified alive afterward",
+  "lint": "pass",
+  "limitations": [
+    "Emulator key injection is not physical Fold button evidence",
+    "Silent AudioRecord capture does not qualify human speech transcription or successful turn send",
+    "No provider/model audio request performed",
+    "Phone remains alpha51; accessibility and rapid-admission candidates need next release"
+  ]
+}

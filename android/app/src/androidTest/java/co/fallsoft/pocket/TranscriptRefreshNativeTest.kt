@@ -93,5 +93,25 @@ class TranscriptRefreshNativeTest {
   await{qa("state").getJSONArray("replies").length()==2&&!Pocket.sending}
   assertEquals("Enter changed the sent draft","One handed draft",qa("state").getJSONArray("replies").getJSONObject(1).s("text"))
   await{!prefs.contains("draft:same-thread")}
+  device.findObject(By.clazz("android.widget.EditText")).text="Voice must keep this draft"
+  await{prefs.getString("draft:same-thread",null)=="Voice must keep this draft"}
+  device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_UP)
+  await{PocketVoice.state=="Listening"}
+  assertEquals("Capture routed away from current chat","same-thread",PocketVoice.targetThread)
+  assertTrue("Recording timer not initialized",PocketVoice.recordingStartedAt>0)
+  assertTrue("Recording feedback not visible",device.wait(Until.hasObject(By.text(java.util.regex.Pattern.compile("Recording .*"))),2000))
+  device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_DOWN)
+  await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
+  assertEquals("Voice keys lost typed draft","Voice must keep this draft",prefs.getString("draft:same-thread",null))
+  assertFalse("Silent emulator capture submitted a voice turn",prefs.contains("voicePendingId"))
+  assertTrue("Capture error hidden",device.wait(Until.hasObject(By.text(PocketVoice.problem)),2000))
+  assertTrue("Touch microphone retry missing",device.wait(Until.hasObject(By.desc("Start recording")),2000))
+  device.findObject(By.desc("Start recording")).click()
+  await{PocketVoice.state=="Listening"}
+  assertTrue("One-tap stop control missing",device.wait(Until.hasObject(By.desc("Stop and send recording")),2000))
+  device.findObject(By.desc("Stop and send recording")).click()
+  await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
+  assertEquals("Repeated touch recording lost draft","Voice must keep this draft",prefs.getString("draft:same-thread",null))
+  main{PocketVoice.stop()}
  }
 }

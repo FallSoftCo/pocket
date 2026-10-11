@@ -1,12 +1,13 @@
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
 let revision=1,ordering=false,holdRefresh=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
-const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',status:{type:'idle'},preview:'Fresh response '+revision,previewKind:'message',previewRole:'codex',activityAt:revision*1000,updatedAt:revision*1000,recencyAt:revision*1000});
+const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+revision,previewKind:'message',previewRole:'codex',activityAt:revision*1000,updatedAt:revision*1000,recencyAt:revision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
 const server=http.createServer(async(req,res)=>{
  let raw='';for await(const b of req)raw+=b;
  if(req.headers.authorization!=='Bearer synthetic-system76'){res.writeHead(401);res.end('{}');return;}
  const path=new URL(req.url,'http://localhost').pathname;let body={};
  if(path==='/api/status')body={host:'Synthetic',connected:true,deviceId:'synthetic-device-a'};
+ else if(path==='/api/voice/native/start'){res.statusCode=503;body={error:'Synthetic native transport unavailable'};}
  else if(path==='/api/threads')body={threads:[thread()]};
  else if(path==='/api/threads/same-thread'){
   const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
