@@ -49,6 +49,10 @@ object PocketTranscript {
     private val diskSequence=java.util.concurrent.atomic.AtomicLong()
     private val diskRequests=java.util.concurrent.ConcurrentHashMap<String,Long>()
     private fun persist(scope:String,id:String,snapshot:Snapshot){
+        // Recent-cache insertion already measured these rows. Avoid constructing a
+        // second giant JSON string for an oversized active history.
+        var measured=0L
+        for(row in snapshot.rows){measured+=rowWeights[row]?:return;if(measured>32L*1024*1024)return}
         val key="$scope/$id";val sequence=diskSequence.incrementAndGet();diskRequests[key]=sequence
         Pocket.scope.launch(Dispatchers.IO){try{
             if(diskRequests[key]!=sequence)return@launch
