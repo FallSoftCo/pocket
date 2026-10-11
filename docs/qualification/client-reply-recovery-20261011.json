@@ -1,0 +1,22 @@
+{
+  "source": "41f35cc",
+  "candidate_not_delivered": true,
+  "native": {
+    "malformedAndWrongThread": 6.767,
+    "lateHttpIdenticalNewDraft": 7.477,
+    "unknown": 8.148,
+    "explicitRetry": 10.041,
+    "preparedOnce": 3.674,
+    "stopBeforeDispatch": 7.391,
+    "environmentIsolation": 12.846,
+    "processRestartRestore": 4.787,
+    "largeText2x48dp": 8.968
+  },
+  "method": "Owned OZZZ emulator5620 and synthetic fixture19998; no provider model or real worker submissions. Actual process death and same stored receipt identity.",
+  "limits": [
+    "Physical Fold interaction not qualified; phone remains alpha62/code80",
+    "Existing global footer labels truncate at2x outside recovery card",
+    "No voice/coordinator/team receipt claim",
+    "No exactly-once external actions claim"
+  ]
+}

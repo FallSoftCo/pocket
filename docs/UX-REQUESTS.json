@@ -30,6 +30,11 @@
         "fix": "Current-owner markRefreshPending retains missedUpdates during loading, coalescing to a follow-up read.",
         "qualification": "Old alpha56 code fails exact native in-flight preview case in19.691s; fix passes9.449s. Cached messages and draft retained; identical previews produce no extra reads.",
         "delivery": "alpha57/code75 installed, private updater metadata verified for both signers; native broad regression42.526s and final targeted9.491s passed."
+      },
+      "liveActivityFollowup20261011": {
+        "implementation": "Explicit live preview/activity events with advancing activityAt invalidate selected history even when preview/status are unchanged. Duplicate/older events do not poll; inventory timestamps remain excluded.",
+        "status": "native-qualification-pending",
+        "phoneObservation": "alpha62/code80; authenticated current history returned in0.049s; phone system UI foreground, exact stale viewport unobserved."
       }
     },
     {
@@ -2134,10 +2139,11 @@
     },
     {
       "id": "frontend-reply-receipt-journal-audit",
-      "status": "audit-open",
+      "status": "native-qualified-candidate",
       "request": "Preserve outgoing identity across process death and unknown transport outcomes; never treat arbitrary HTTP200 JSON as acknowledged delivery or blindly replay unknown requests.",
-      "evidence": "Source inspection: Pocket.reply generates an in-memory UUID; api successful JSON reaches onDone without matching receipt validation. Backend receipts are durable and accepted receipts remain available via per-ID GET, but frontend pre-dispatch journal is absent. No real unknown request was replayed.",
-      "next": "Design source-bound durable intent/receipt journal and validate ID/state before clearing the editor; cheap read-only reconciliation on resume/open, explicit handling of truly unknown outcomes, with native interrupted-process/lost-ack qualification."
+      "evidence": "docs/qualification/client-reply-recovery-20261011.json",
+      "next": "Complete combined signed alpha63 delivery; voice/coordinator/team paths require separate receipt audit.",
+      "implementation": "Persist captured environment/account/thread/message/UUID before dispatch; validate receipt ID/state and lookup thread; reconcile via read-only GET; explicit unknown retry consent; draft generation protects edited or identically retyped text."
     },
     {
       "id": "conversation-read-occlusion-audit",
