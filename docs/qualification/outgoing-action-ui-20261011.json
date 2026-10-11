@@ -1,0 +1,21 @@
+{
+  "status": "candidate-native-qualified-not-phone-installed",
+  "cause": "UI checked local/remote boolean busy keys while request owner used environment IDs",
+  "fix": "Single current-environment busy lookup for all outgoing action controls",
+  "nativeHost": "OZZZ-OS",
+  "nativeAvd": "nextcomp_env_qa",
+  "nativeVariant": "nonshrunk qualification",
+  "nativeDurationSeconds": 18.655,
+  "nativeResult": "pass",
+  "checks": [
+    "Other-environment action leaves Retry enabled",
+    "Current-environment action disables Retry/Edit/Remove",
+    "Clearing action restores Retry",
+    "Existing ordering and freshness native scenario passes"
+  ],
+  "androidTestsAndLint": "pass",
+  "limits": [
+    "No actual external message mutation performed",
+    "Phone still alpha50; compatible delivery pending"
+  ]
+}

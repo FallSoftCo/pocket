@@ -59,5 +59,21 @@ class TranscriptRefreshNativeTest {
   assertEquals("Newer answer during fetch",PocketTranscript.rows.single{it.s("id")=="order/answer"}.s("text"))
   assertTrue("Newer answer absent from native view",device.wait(Until.hasObject(By.text("Newer answer during fetch")),2000))
   assertEquals("Draft changed during ordering repair","Unsaved draft preserved",prefs.getString("draft:same-thread",null))
+  main{
+   Pocket.detail=JSONObject(requireNotNull(Pocket.detail).toString()).put("outgoing",org.json.JSONArray().put(JSONObject().put("id","failed-ui").put("state","failed").put("mode","auto").put("text","Synthetic failed draft").put("result","Synthetic transport failure")))
+  }
+  assertTrue("Retry control missing",device.wait(Until.hasObject(By.text("Retry")),3000))
+  fun actionEnabled(label:String):Boolean{
+   var node=device.findObject(By.text(label))?:return false
+   while(true){if(!node.isEnabled)return false;node=node.parent?:return true}
+  }
+  main{Pocket.replyActionBusy=setOf("other-environment:same-thread:failed-ui")}
+  assertTrue("Other environment disabled this action",actionEnabled("Retry"))
+  main{Pocket.replyActionBusy=setOf("${Pocket.environmentId}:same-thread:failed-ui")}
+  await{!actionEnabled("Retry")}
+  assertFalse("Edit available during pending request",actionEnabled("Edit"))
+  assertFalse("Remove available during pending request",actionEnabled("Remove"))
+  main{Pocket.replyActionBusy=emptySet()}
+  await{actionEnabled("Retry")}
  }
 }

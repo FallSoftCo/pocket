@@ -66,3 +66,15 @@ The fixture deliberately holds a refresh response until loading feedback is
 observed. Android permissions were pregranted only in the disposable emulator.
 This is the nonshrunk qualification variant, not proof of optimized-phone frame
 pacing, physical volume buttons, real provider transport or physical ordering.
+
+## Outgoing action controls
+
+Found and repaired a mismatch: request busy state used the environment ID,
+while Retry/Edit/Remove/Save checked only the local/remote boolean. All these
+controls now use the same current-environment lookup. Native OZZZ emulator
+qualification passes in18.655s: another environment does not disable Retry;
+matching pending request disables Retry/Edit/Remove; clearing it restores Retry.
+The existing chronology/freshness/cache/draft scenario also passed in this run.
+Android unit suite and lint pass. Candidate only: phone remains alpha50 and this
+change must be delivered in the next compatible update. This test checks logical
+busy state and button semantics, not real transport mutation success.

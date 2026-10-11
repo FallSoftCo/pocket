@@ -290,6 +290,7 @@ object Pocket {
         catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Reply not sent"}finally{if(environmentRequestCurrent())sending=false}
     }}
     var replyActionBusy by mutableStateOf(setOf<String>())
+    fun isReplyActionBusy(id:String)="$environmentId:$selected:$id" in replyActionBusy
     fun queuedReply(id:String,action:String,text:String="",confirmUnknown:Boolean=false,onDone:()->Unit={}){
         val threadId=selected?:return;val profileLocal=local;val endpoint=base;val credential=token;val previousError=error;val busyKey="$environmentId:$threadId:$id"
         if(busyKey in replyActionBusy)return;replyActionBusy=replyActionBusy+busyKey
