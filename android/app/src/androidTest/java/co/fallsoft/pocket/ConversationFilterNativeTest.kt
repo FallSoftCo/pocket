@@ -18,6 +18,30 @@ class ConversationFilterNativeTest {
  private val device=UiDevice.getInstance(i)
  private fun main(block:()->Unit)=i.runOnMainSync(block)
  private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(condition())return;Thread.sleep(100)};assertTrue(condition())}
+ @Test fun filterKeepsVisibleAnswerWhenLeadingCommentaryIsRemoved(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val context=i.targetContext
+  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
+  main{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","filter-reading").put("version",100+n).put("row",JSONObject().put("id","filter-passage-$n").put("turnId","filter-reading").put("kind","message").put("phase",if(n%2==0)"final_answer" else "commentary").put("text","Filter passage $n: a meaningful result that remains readable while commentary is filtered away. This extra sentence gives the passage enough height to expose position changes.")))}
+  assertTrue(device.wait(Until.hasObject(By.textContains("Filter passage 39:")),5000));Thread.sleep(300)
+  fun passages()=device.findObjects(By.textContains("Filter passage ")).filter{!it.visibleBounds.isEmpty}.sortedBy{it.visibleBounds.top}
+  var target:String?=null;var top=0
+  for(attempt in 0 until 35){
+   val visible=passages();val first=visible.firstOrNull();val number=first?.text?.substringAfter("Filter passage ")?.substringBefore(":")?.toIntOrNull()
+   val answer=visible.firstOrNull{it.text.substringAfter("Filter passage ").substringBefore(":").toIntOrNull()?.rem(2)==0&&it.visibleBounds.top>180&&it.visibleBounds.bottom<device.displayHeight*3/4}
+   if(number!=null&&number%2==1&&answer!=null){target=answer.text;top=answer.visibleBounds.top;break}
+   device.swipe(device.displayWidth/2,device.displayHeight/3,device.displayWidth/2,device.displayHeight/3+100,16);Thread.sleep(180)
+  }
+  val text=requireNotNull(target){"Could not position commentary before a visible answer"}
+  device.dumpWindowHierarchy(java.io.File(context.cacheDir,"filter-leading-commentary-before.xml"))
+  device.findObject(By.text("Important")).click();Thread.sleep(500)
+  val answer=device.findObject(By.text(text));assertNotNull("Filter hid visible answer",answer)
+  assertTrue("Removing leading commentary moved answer from $top to ${answer.visibleBounds.top}",kotlin.math.abs(answer.visibleBounds.top-top)<=24)
+  device.findObject(By.text("Important")).click();Thread.sleep(500)
+  assertTrue("Unfilter shifted visible answer",kotlin.math.abs(device.findObject(By.text(text)).visibleBounds.top-top)<=24)
+ }
  @Test fun filterPreservesVisiblePassageAndReturnsWithoutJumping(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val context=i.targetContext
