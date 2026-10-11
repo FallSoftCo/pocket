@@ -47,6 +47,19 @@ import androidx.lifecycle.repeatOnLifecycle
     else if(dock)Column(modifier.height(usageDockHeight()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
         CaptureMic(capture,control,label,compact=true)
     }
+    else if(bar){
+        val shortLabel=when(control){CaptureControl.START->"Record";CaptureControl.STOP_SEND->"Stop and send";CaptureControl.PROCESSING->"Processing";CaptureControl.CHECK_SAVED->"Check turn"}
+        Surface(onClick=capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,
+            modifier=modifier.heightIn(min=88.dp).semantics{contentDescription=PocketImmersion.label(label);if(PocketVoice.problem.isNotBlank())stateDescription=PocketVoice.problem},
+            shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            border=androidx.compose.foundation.BorderStroke(1.dp,if(control==CaptureControl.STOP_SEND)Coral else Mint.copy(alpha=.5f)),
+            color=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.18f) else Mint.copy(alpha=.12f),contentColor=Paper){
+            Column(Modifier.pressMotion().padding(horizontal=8.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
+                SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",null,Modifier.size(44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
+                BilingualLabel(shortLabel,fontSize=14.sp,lineHeight=18.sp,maxLines=2,color=Paper)
+            }
+        }
+    }
     else Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
         CaptureMic(capture,control,label,compact)
         if(!compact)Column(Modifier.weight(1f)){
@@ -146,17 +159,10 @@ import androidx.lifecycle.repeatOnLifecycle
 }
 
 @Composable fun ChatActionButton(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier=Modifier,onClick:()->Unit,recording:Boolean=false){
-    val density=androidx.compose.ui.platform.LocalDensity.current
-    val large=density.fontScale>1.4f
-    val height=if(large)with(density){24.sp.toDp()+52.dp}else 72.dp
-    Surface(onClick=onClick,modifier=modifier.height(height),shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),border=androidx.compose.foundation.BorderStroke(1.dp,if(recording)Coral else Line),color=if(recording)androidx.compose.ui.graphics.Color(0xff451e2a)else Panel,contentColor=Paper){
-        if(large)Column(Modifier.fillMaxSize().pressMotion().padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-            SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)
-            BilingualLabel(label,fontSize=15.sp,fontWeight=FontWeight.Medium)
-        }else Row(Modifier.pressMotion().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
-            SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)
-            Spacer(Modifier.width(10.dp))
-            BilingualLabel(label,fontSize=15.sp,fontWeight=FontWeight.Medium)
+    Surface(onClick=onClick,modifier=modifier.heightIn(min=88.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),border=androidx.compose.foundation.BorderStroke(1.dp,if(recording)Coral else Line),color=if(recording)androidx.compose.ui.graphics.Color(0xff451e2a)else Panel,contentColor=Paper){
+        Column(Modifier.pressMotion().padding(horizontal=8.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
+            SymbolIcon(icon,null,Modifier.size(44.dp),tint=Paper)
+            BilingualLabel(label,fontSize=15.sp,lineHeight=18.sp,maxLines=2,fontWeight=FontWeight.Medium)
         }
     }
 }

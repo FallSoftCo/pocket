@@ -32,6 +32,43 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun bottomControlsRemainReachableAtLargeTextAndPreserveTyping(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
+  fun reachable(selector:androidx.test.uiautomator.BySelector):androidx.test.uiautomator.UiObject2{
+   assertTrue("Bottom control missing: "+selector,device.wait(Until.hasObject(selector),3000))
+   var node=device.findObject(selector);repeat(6){if(!node.isClickable&&node.parent!=null)node=node.parent}
+   assertTrue("Control not tappable",node.isClickable)
+   assertTrue("Control clipped below48dp: "+node.visibleBounds,node.visibleBounds.height()>=48*context.resources.displayMetrics.density-2)
+   return node
+  }
+  try{
+   for(scale in listOf(1.0f,1.3f,2.0f)){
+    device.executeShellCommand("settings put system font_scale "+scale);await{kotlin.math.abs(context.resources.configuration.fontScale-scale)<.05f&&!PocketTranscript.updating}
+    reachable(By.text("Record"));reachable(By.text("Keyboard"));reachable(By.desc("Settings, app updates, usage and activity"))
+    assertTrue("Volume disappeared",device.hasObject(By.desc("Speech volume")))
+    assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"bottom-controls-"+scale+".png")))
+   }
+   reachable(By.text("Record")).click();await{PocketVoice.state=="Listening"}
+   assertTrue("Capture feedback absent",device.wait(Until.hasObject(By.text(java.util.regex.Pattern.compile("Recording .*"))),2000))
+   reachable(By.desc("Stop and send recording")).click();await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
+   assertFalse("Silent emulator recording submitted work",prefs.contains("voicePendingId"))
+   main{PocketVoice.stop()}
+   reachable(By.desc("Settings, app updates, usage and activity")).click()
+   assertTrue("Updates inaccessible from dock",device.wait(Until.hasObject(By.text("App updates")),3000))
+   device.pressBack();await{AppWindowVisibility.focused&&Pocket.selected=="same-thread"}
+   reachable(By.text("Keyboard")).click();await{device.hasObject(By.clazz("android.widget.EditText"))&&device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")}
+   device.findObject(By.clazz("android.widget.EditText")).text="Large text draft stays here"
+   device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_UP);await{PocketVoice.state=="Listening"}
+   device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_DOWN);await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
+   assertEquals("Hardware capture lost large-text draft","Large text draft stays here",prefs.getString("draft:same-thread",null))
+   assertTrue("Voice hid the IME",device.executeShellCommand("dumpsys input_method").contains("mInputShown=true"))
+   assertTrue("Volume inaccessible with IME",device.hasObject(By.desc("Speech volume")))
+   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"bottom-controls-ime-large.png")))
+   assertEquals("Layout/capture test submitted work",0,qa("state").getJSONArray("replies").length())
+  }finally{main{PocketVoice.stop()};device.executeShellCommand("settings put system font_scale "+font)}
+ }
  @Test fun liveActivityRefreshesUnchangedStatusWithoutPollingOrLosingDraft(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   qa("activity-only");await{has(2)&&!PocketTranscript.updating}
