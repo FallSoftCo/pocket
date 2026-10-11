@@ -1,0 +1,12 @@
+{
+ "sourceCommit":"9a37013",
+ "host":"OZZZ-OS",
+ "variant":"qualification nonshrunk",
+ "emulator":"nextcomp_env_qa:5620 SwiftShader",
+ "result":"passed",
+ "seconds":14.945,
+ "verified":["failed turn renders Failed", "interrupted turn renders Stopped", "completed idle turn renders Ready", "pending question renders Needs you", "Important on/off retains older visible final passage within24 pixels"],
+ "build":"unit tests, lint and qualification APKs successful in41s",
+ "limits":["synthetic runtime evidence only", "no real provider error or unattended recovery activated", "not phone installed", "stale conflicting catalog/runtime evidence remains to audit"],
+ "externalEffects":"No model calls, live session mutations or worker wakeups"
+}

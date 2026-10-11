@@ -187,3 +187,16 @@ correct card navigation/history, scoped drafts, phone notification isolation,
 captured reply and note origin, unknown delivery retained without replay.
 This remains a routing/history test, not direct proof of viewport restoration
 across hosts. Owned fixture and emulator stopped after terminal test receipts.
+
+## Conversation state distinction
+
+Candidate9a37013 separates Failed from deliberate Stopped and labels completed
+idle work Ready rather than implying required input. Failed state uses the
+attention color, while pending questions retain Needs you. Actual-commit OZZZ
+unit tests/lint/qualification builds pass in41s. Native test passes in14.945s:
+failed/interrupted/completed turn transitions and actual pending-question state
+render their distinct labels; older-passage filter retention also passes.
+This is synthetic runtime evidence, not real automatic recovery qualification.
+Stale conflicting catalog/runtime evidence and physical handset behavior remain
+open. Candidate is not installed; phone remainsalpha52. Owned emulator and
+fixture stopped after the terminal receipt.
