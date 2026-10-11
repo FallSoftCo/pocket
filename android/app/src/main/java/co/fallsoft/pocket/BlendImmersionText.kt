@@ -21,6 +21,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+
+// Native layout results are outputs, not reactive layout inputs. Snapshot state
+// here lets a layout callback invalidate the same text measure that produced it.
+private class ImmersionVisibleGeometry {
+    var layout:TextLayoutResult?=null
+    var coordinates:LayoutCoordinates?=null
+    var last:Pair<Set<String>,Boolean>?=null
+}
 /** Native hit testing with a draw-only complementary reading-direction wipe. */
 @Composable internal fun BlendImmersionText(
     from:AnnotatedString,to:AnnotatedString,progress:()->Float,snapshot:AnnotatedString,
@@ -41,16 +49,14 @@ import androidx.compose.ui.unit.*
     val visible=if(incoming){if(to.text==snapshot.text)snapshot else to}else from
     val changed=remember(from,to){immersionChangedTextRanges(from,to)}
     val ranges=if(incoming)changed.second else changed.first
-    var layout by remember {mutableStateOf<TextLayoutResult?>(null)}
-    var coordinates by remember {mutableStateOf<LayoutCoordinates?>(null)}
+    val geometry=remember {ImmersionVisibleGeometry()}
     val visibilityCallback by rememberUpdatedState(onVisibleRanges)
-    var lastVisibility by remember {mutableStateOf<Pair<Set<String>,Boolean>?>(null)}
     fun reportVisibility(){
-        val value=immersionVisibleText(layout,coordinates,trackWholeTextVisibility)
-        if(value!=lastVisibility){lastVisibility=value;visibilityCallback?.invoke(value.first,value.second)}
+        val value=immersionVisibleText(geometry.layout,geometry.coordinates,trackWholeTextVisibility)
+        if(value!=geometry.last){geometry.last=value;visibilityCallback?.invoke(value.first,value.second)}
     }
     // The callback owner can change while geometry stays unchanged (navigation).
-    SideEffect{visibilityCallback?.invoke(lastVisibility?.first?:emptySet(),lastVisibility?.second?:false)}
+    SideEffect{visibilityCallback?.invoke(geometry.last?.first?:emptySet(),geometry.last?.second?:false)}
     DisposableEffect(Unit){onDispose{visibilityCallback?.invoke(emptySet(),false)}}
     BoxWithConstraints(modifier){
         val available=constraints.maxWidth.coerceAtLeast(1)
@@ -63,7 +69,7 @@ import androidx.compose.ui.unit.*
             val outgoingLayout=measure(from,width,true)
             val incomingLayout=measure(to,width,true)
             Text(visible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
-                onTextLayout={layout=it;reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithContent{
+                onTextLayout={geometry.layout=it;reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{geometry.coordinates=it;reportVisibility()}.drawWithContent{
                     val p=progress().coerceIn(0f,1f)
                     if(from.text==to.text||p<=0f||p>=1f){drawContent();return@drawWithContent}
                     val firstChangedLine=(changed.first.map{outgoingLayout.getLineForOffset(it.start.coerceIn(0,(from.length-1).coerceAtLeast(0)))}+changed.second.map{incomingLayout.getLineForOffset(it.start.coerceIn(0,(to.length-1).coerceAtLeast(0)))}).minOrNull()?:0
