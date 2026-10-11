@@ -262,3 +262,17 @@ prove phone order. Exact affected-phone pair remains needed for root-cause
 confirmation. No phone delivery occurred: alpha53 installed. Alpha54 debug
 builddadf24f passed but delivery held when these new regressions arrived.
 Owned emulator/fixture stopped after collecting terminal receipts and hierarchy.
+
+## Viewport diagnosis and isolated history check
+
+At c868586, opt-in native viewport tracing showed endward gestures at the
+transcript end never moved the list. Corrected upward-history gestures moved
+index37 toward28 with follow disabled; no return-to-latest was observed. The
+isolated readingAnchorSurvivesDeferredOlderPage check passed13.732seconds,
+including deferred prepend and retained passage within24pixels. This qualifies
+that synthetic anchor flow, not physical smoothness or all automatic pagination.
+The earlier combined assertion expected pre-fetch streamed text to override an
+authoritative snapshot; concurrent updates are covered separately by the passing
+late-input test. Running both methods in one process still exposes shared fixture
+and singleton isolation; use fresh fixture/process for each pending qualification.
+Full keyboard/recording/freshness regression is being re-run. Phone remainsalpha53.
