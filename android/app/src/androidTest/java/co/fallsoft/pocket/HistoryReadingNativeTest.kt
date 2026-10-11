@@ -81,7 +81,12 @@ class HistoryReadingNativeTest {
   Thread.sleep(3000)
   fun olderReads()=qa("state").getJSONArray("reads").objects().count{it.optBoolean("older")}
   assertEquals("Idle edge drained multiple history pages",1,olderReads())
-  requireNotNull(device.findObject(By.scrollable(true))).scroll(androidx.test.uiautomator.Direction.UP,0.5f)
+  fun accessibleScroll(node:android.view.accessibility.AccessibilityNodeInfo):Boolean{
+   if(node.isScrollable)return node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+   for(index in 0 until node.childCount){val child=node.getChild(index)?:continue;if(accessibleScroll(child))return true}
+   return false
+  }
+  assertTrue("Accessible history scroll unavailable",accessibleScroll(i.uiAutomation.rootInActiveWindow))
   await{PocketTranscript.rows.any{it.s("id")=="pacing-2"}&&!PocketTranscript.loading}
   assertEquals("Second gesture did not load exactly one page",2,olderReads())
  }

@@ -146,7 +146,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     var historyGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
     var satisfiedHistoryGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(-1)}
-    LaunchedEffect(dragged){if(dragged){follow=false;historyGesture++}else if(!list.canScrollForward)follow=true}
+    LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
+    LaunchedEffect(list){
+        // Accessibility scroll actions do not emit pointer-drag interactions.
+        snapshotFlow{list.isScrollInProgress&&!follow}.distinctUntilChanged().filter{it}.collect{historyGesture++}
+    }
     LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){
         delay(32)
         if(!follow||dragged||list.isScrollInProgress)return@LaunchedEffect
