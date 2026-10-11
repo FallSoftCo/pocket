@@ -27,11 +27,11 @@ NextComp is a self-hosted Android interface for working with agents on your own 
 
 ## Current interface
 
-The Android app is now at **alpha45**. This frame comes from the current version on a Pixel 9 Pro Fold: a control label transitions from English to Italian in the reading direction, in place.
+These **alpha64 native captures** use synthetic conversation data in the Android qualification build. The controls were checked at normal, 1.3× and 2× text size, including recording while typing, preserved drafts, playback volume and update access. [See the verification and its limits](docs/qualification/bottom-controls-large-text-20261011.json).
 
-<p align="center"><img src="docs/images/reading-wipe-alpha45.png" width="240" alt="Current alpha45 control midway through its English-to-Italian reading-direction transition"></p>
+<p align="center"><img src="docs/images/bottom-controls-alpha64.png" width="240" alt="Alpha64 native emulator: normal-size Record and Keyboard controls, inline playback volume and Settings"><img src="docs/images/bottom-controls-large-alpha64.png" width="240" alt="The same native controls at twice the text size, with full labels and reachable Settings"></p>
 
-[Watch the actual phone capture](docs/images/reading-wipe-alpha45.mp4). This narrow capture demonstrates the transition, rather than the complete interface. Full-screen screenshots are being refreshed; the older alpha22 examples have been removed.
+[Open the full native review](https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-ux-normal-20261011). An [earlier physical-phone capture from alpha45](docs/images/reading-wipe-alpha45.mp4) demonstrates the in-place, reading-direction language transition; it is historical motion evidence rather than a capture of the current full interface.
 
 ## Direct your work from your phone
 

@@ -1,0 +1,56 @@
+{
+  "source": "b94e90e",
+  "delivery": "Installed on Pixel in alpha65/code83; APK checksum verified and 12 critical pairing/environment/draft hashes unchanged. Physical control interaction still distinct from install proof.",
+  "native": {
+    "ownedHost": "OZZZ-OS",
+    "largeTextScales": [
+      1.0,
+      1.3,
+      2.0
+    ],
+    "touchImeKeysDraftVolumeSettingsSeconds": 29.483,
+    "actualCapture": "AudioRecord start/stop; silent emulator reports no speech, no provider transcription/work submitted",
+    "coordinatorImmersion": {
+      "seconds": 16.183,
+      "fontScale": 2.0,
+      "target": "coordinator retained; targetThread=null",
+      "typing": "Draft and IME retained after capture keys",
+      "controls": "Italian Record/Keyboard/Settings reachable; volume present"
+    },
+    "inlineErrorHelp": "Actual tap expands error above editor, retains IME and draft; recording status is not exposed as disabled",
+    "playbackVolumeMuteImeSeconds": 13.152
+  },
+  "review": {
+    "largeText": "Original UI captures visually inspected; full Record/Keyboard/Settings labels and expanded modeled mic; initial pixel review found clipped compact Retry text despite passing tap-target test and prompted follow-up repair.",
+    "remaining": "Full quality matrix, actual physical buttons/frame pacing and comprehensive inline-immersion transition/label audit remain open."
+  },
+  "physical": "No physical handset button interaction newly verified.",
+  "testSource": "b94e90e",
+  "releaseVersion": {
+    "code": 82,
+    "name": "0.5.0-alpha.64"
+  },
+  "signedBuild": {
+    "testsPerVariant": 285,
+    "debugLint": "passed",
+    "releaseLint": "passed",
+    "builds": "passed on OZZZ-OS",
+    "source": "b94e90e"
+  },
+  "regressions": {
+    "historyKeyboardVoiceSeconds": 39.941,
+    "sourceReplyDraftLargeTextSeconds": 36.02,
+    "source": "b1d23e4"
+  },
+  "setupFailure": {
+    "problem": "Final QA APK inherited phone-compatible signer through build environment; install on existing test-key emulator rejected before instrumentation",
+    "correction": "Separate qualification build removes POCKET_DEBUG_STORE; production signing and disposable app data preserved",
+    "result": "Final normal-key native installs/tests pass"
+  },
+  "gallery": {
+    "url": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-ux-normal-20261011",
+    "cards": 2276,
+    "check": "Passed 1440x1050 and 390x844 layout/card health, reduced motion and live gallery reload",
+    "task": "2095e247059055192886120452ae3278"
+  }
+}
