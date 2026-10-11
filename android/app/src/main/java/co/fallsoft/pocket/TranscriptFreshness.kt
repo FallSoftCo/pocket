@@ -4,7 +4,8 @@ package co.fallsoft.pocket
 internal fun transcriptPresentationChanged(oldPreview:String?,oldKind:String?,oldStatus:String?,preview:String?,kind:String?,status:String?)=
     oldPreview!=preview||oldKind!=kind||oldStatus!=status
 
-/** Only explicit live work events use this signal; inventory refreshes do not. */
+/** Explicit work activity, including a recovered catalog snapshot, can invalidate history.
+ * Never pass inventory updatedAt or fetch timestamps here. */
 internal fun transcriptLiveActivityAdvanced(previous:Long?,incoming:Long)=incoming>0&&(previous==null||incoming>previous)
 
 /** A fresh authoritative read can replace a cached streamed row whose server counter reset.
