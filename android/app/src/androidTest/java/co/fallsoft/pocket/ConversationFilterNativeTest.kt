@@ -43,5 +43,12 @@ class ConversationFilterNativeTest {
   device.findObject(By.text("Important")).click();Thread.sleep(400)
   val restored=device.findObject(By.text(text));assertNotNull("Unfilter lost reading passage",restored)
   assertTrue("Unfilter moved reading passage",kotlin.math.abs(restored.visibleBounds.top-top)<=24)
+  fun end(status:String)=main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","states").put("version",500+listOf("failed","interrupted","completed").indexOf(status)).put("turn",JSONObject().put("id","states").put("status",status)))}
+  end("failed");assertTrue("Failed turn mislabeled",device.wait(Until.hasObject(By.text("Failed")),3000))
+  end("interrupted");assertTrue("Interrupted turn mislabeled",device.wait(Until.hasObject(By.text("Stopped")),3000))
+  end("completed");assertTrue("Completed turn implies input required",device.wait(Until.hasObject(By.text("Ready")),3000))
+  main{Pocket.detail=JSONObject(requireNotNull(Pocket.detail).toString()).put("pending",org.json.JSONArray().put(JSONObject().put("id","question")))}
+  assertTrue("Pending question not distinguished",device.wait(Until.hasObject(By.text("Needs you")),3000))
+
  }
 }

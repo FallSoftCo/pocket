@@ -103,8 +103,8 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
     Column(Modifier.fillMaxWidth()){
     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically){
         TextButton(onControls,modifier=Modifier.weight(1f).heightIn(min=48.dp),contentPadding=PaddingValues(horizontal=4.dp)){
-            SymbolIcon(status.icon,status.label+"; conversation controls",Modifier.size(32.dp),tint=if(status==ConversationRunState.NEEDS_YOU)Coral else Mint,spinning=status.spinning)
-            Spacer(Modifier.width(6.dp));BilingualLabel(status.label,centered=false,color=if(status==ConversationRunState.NEEDS_YOU)Coral else Mint,fontSize=13.sp,maxLines=1)
+            SymbolIcon(status.icon,status.label+"; conversation controls",Modifier.size(32.dp),tint=if(status in listOf(ConversationRunState.NEEDS_YOU,ConversationRunState.FAILED))Coral else Mint,spinning=status.spinning)
+            Spacer(Modifier.width(6.dp));BilingualLabel(status.label,centered=false,color=if(status in listOf(ConversationRunState.NEEDS_YOU,ConversationRunState.FAILED))Coral else Mint,fontSize=13.sp,maxLines=1)
         }
         FilterChip(selected=important,onClick=onFilter,label={BilingualLabel("Important",fontSize=13.sp)},modifier=Modifier.heightIn(min=48.dp))
         if(PocketSpeech.displayedOwner==null&&PocketSpeech.count>0)SpeechPlaybackControls(iconOnly=true)else IconButton({if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}else if(speaking)PocketSpeech.control("pause")else PocketSpeech.speakDisplayed(host,speechText,"Conversation")},enabled=speaking||speechText.isNotBlank()){
