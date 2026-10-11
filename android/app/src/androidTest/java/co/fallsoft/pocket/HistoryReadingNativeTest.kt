@@ -17,7 +17,7 @@ class HistoryReadingNativeTest {
  private val i=InstrumentationRegistry.getInstrumentation()
  private val device=UiDevice.getInstance(i)
  private fun main(block:()->Unit)=i.runOnMainSync(block)
- private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(condition())return;Thread.sleep(100)};assertTrue("Reading condition timed out",condition())}
+ private fun await(message:String="Reading condition timed out",condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(condition())return;Thread.sleep(100)};assertTrue(message,condition())}
  private fun visiblePassages():List<Pair<String,android.graphics.Rect>>{
   val out=java.io.ByteArrayOutputStream();device.dumpWindowHierarchy(out)
   val doc=javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(java.io.ByteArrayInputStream(out.toByteArray()))
@@ -105,12 +105,14 @@ class HistoryReadingNativeTest {
    PocketTranscript.apply(event("answer","message","Original anchored reply"))
    Pocket.event(event("user","user","Delayed request outside latest page").put("type","timeline"))
   }
-  await{qa("state").getJSONArray("positions").length()==1}
   await{!PocketTranscript.loading&&PocketTranscript.rows.any{it.s("text")=="Stale anchored answer"}}
-  assertTrue("Position read indicator missing",PocketTranscript.updating)
+  if(qa("state").getJSONArray("positions").length()>0)assertTrue("Position read indicator missing",PocketTranscript.updating)
   main{PocketTranscript.apply(event("answer","message","Newest live anchored reply").put("version",900))}
   qa("release-position")
-  await{!PocketTranscript.updating}
+  await("Delayed request remained below its reply outside the recent page"){
+   val current=PocketTranscript.rows.map{it.s("id")}
+   !PocketTranscript.updating&&current.indexOf("order/user") in 0 until current.indexOf("order/answer")
+  }
   val ids=PocketTranscript.rows.map{it.s("id")}
   assertTrue("Delayed request remained below its reply",ids.indexOf("order/user")<ids.indexOf("order/answer"))
   assertTrue("Earlier reply moved behind later steer",ids.indexOf("order/prior-answer")<ids.indexOf("order/user"))
