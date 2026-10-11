@@ -36,6 +36,7 @@ class HistoryReadingNativeTest {
   assertTrue(device.wait(Until.hasObject(By.textContains("Reading passage 39:")),5000));Thread.sleep(150)
   repeat(3){requireNotNull(device.findObject(By.scrollable(true))).scroll(androidx.test.uiautomator.Direction.DOWN,0.7f);Thread.sleep(200)}
   device.waitForIdle(2000)
+  device.dumpWindowHierarchy(java.io.File(c.cacheDir,"history-reading-hierarchy.xml"))
   val visible=visiblePassages()
   val last=visible.firstOrNull{it.first.startsWith("Reading passage 39:")}
   assertTrue("Reading gesture returned to latest: ${last?.second}",last==null||last.second.isEmpty)
