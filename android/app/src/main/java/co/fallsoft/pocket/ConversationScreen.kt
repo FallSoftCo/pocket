@@ -1,6 +1,7 @@
 package co.fallsoft.pocket
 
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -105,6 +106,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var important by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     var filterPassage by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<String?>(null)}
     var filterRequest by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<FilterReadingRequest?>(null)}
+    var filterPaddingRequest by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<FilterReadingRequest?>(null)}
+    var filterTailPixels by remember(Pocket.environmentId,Pocket.selected){mutableIntStateOf(0)}
+    val density=LocalDensity.current
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
     fun noteFor(row:JSONObject)=notes.firstOrNull{it.s("id")==row.s("itemId",row.s("id"))||it.s("id")==row.s("id")}
@@ -121,6 +125,20 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(index>=0)list.requestScrollToItem(index,pendingFilter.offset)
             filterRequest=null
         }
+    }
+    val shownIds=shownRows.map{it.s("id")}
+    LaunchedEffect(filterPaddingRequest,shownIds){
+        val request=filterPaddingRequest?:return@LaunchedEffect
+        val index=shownIds.indexOf(request.row);if(index<0)return@LaunchedEffect
+        val reserved=filterTailPixels;val ordinaryBottom=with(density){12.dp.roundToPx()}
+        val measured=snapshotFlow{list.layoutInfo}.first{info->
+            info.afterContentPadding>=reserved+ordinaryBottom&&info.visibleItemsInfo.any{it.key==request.row&&it.index==index}
+        }
+        // Filtering near the end otherwise clamps the retained passage downwards.
+        // Reserve only the measured missing tail, rather than moving that passage.
+        val last=measured.visibleItemsInfo.firstOrNull{it.index==measured.totalItemsCount-1}
+        filterTailPixels=if(last==null)0 else (measured.viewportEndOffset-last.offset-last.size-ordinaryBottom).coerceIn(0,reserved)
+        filterPaddingRequest=null
     }
     val latestFollow by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(follow)}
     val latestRowIds by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(shownRows.map{it.s("id")})}
@@ -237,7 +255,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
-            LazyColumn(Modifier.fillMaxSize().testTag("conversation-history"),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            LazyColumn(Modifier.fillMaxSize().testTag("conversation-history"),state=list,contentPadding=PaddingValues(start=18.dp,end=18.dp,top=12.dp,bottom=12.dp+with(density){filterTailPixels.toDp()}),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
@@ -313,8 +331,12 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))
                 android.util.Log.d("PocketFilter","next=$nextImportant retained=$retained passage=${afterIds.getOrNull(anchor)} visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
             filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
+            filterTailPixels=if(nextImportant)list.layoutInfo.viewportSize.height else 0
             follow=false;important=nextImportant
-            afterIds.getOrNull(anchor)?.let{filterRequest=FilterReadingRequest(Pocket.environmentId,Pocket.selected,it,targetOffset,nextImportant)}
+            afterIds.getOrNull(anchor)?.let{
+                val request=FilterReadingRequest(Pocket.environmentId,Pocket.selected,it,targetOffset,nextImportant)
+                filterRequest=request;filterPaddingRequest=if(nextImportant)request else null
+            }
         },onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
         }
