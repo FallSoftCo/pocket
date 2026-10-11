@@ -28,6 +28,24 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun transientHistoryFailureRecoversWithoutAnotherEvent(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("silent");qa("fail-read");main{Pocket.refreshDetail()}
+  await{Pocket.error.contains("Synthetic history refresh unavailable")&&PocketTranscript.updating}
+  assertTrue("Cached history discarded on failure",has(1))
+  assertTrue("Loading indicator missing",device.wait(Until.hasObject(By.text("Updating messages")),3000))
+  await{has(2)&&!PocketTranscript.updating&&Pocket.error.isBlank()}
+  qa("silent");qa("malformed-read");main{Pocket.refreshDetail()}
+  await{Pocket.error.contains("Messages were not returned")&&PocketTranscript.updating}
+  assertTrue("Malformed response erased cached history",has(2))
+  await{has(3)&&!PocketTranscript.updating&&Pocket.error.isBlank()}
+  qa("silent");qa("fail-read-permanent");main{Pocket.refreshDetail()}
+  await{Pocket.error.contains("Synthetic history permission rejected")&&!PocketTranscript.updating}
+  val reads=qa("state").getJSONArray("reads").length();Thread.sleep(2500)
+  assertEquals("Rejected permission was polled",reads,qa("state").getJSONArray("reads").length())
+  assertTrue("Permission failure hid local history",has(3))
+  assertEquals("Recovery submitted work",0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun controlsAndDialogDoNotConsumeUpdatesButImeStillPresentsLatest(){
   twoChats();qa("visibility");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&AppWindowVisibility.focused}
   fun acknowledged(n:Int)=qa("state").getJSONArray("acknowledgements").objects().any{it.optInt("throughId")==n}

@@ -136,7 +136,7 @@ object PocketTranscript {
     fun latest(){positionFailures.keys.forEach{attemptedPositions.remove(it)};positionFailures.clear();Pocket.refreshDetail()}
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
-    suspend fun load(older:Boolean=false,bridgeCursor:String?=null,beforeApply:suspend ()->Unit={}){
+    suspend fun load(older:Boolean=false,bridgeCursor:String?=null,retryAttempt:Int=0,beforeApply:suspend ()->Unit={}){
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return
         if(owner!=id||(older&&(!earlier||before==null)))return
@@ -150,6 +150,7 @@ object PocketTranscript {
         automaticRetryAllowed=true;loading=true;buffered.clear();val baselineRows=rows.associateBy{it.s("id")};var succeeded=false
         try{
             val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
+            validateTranscriptSnapshot(d,id)
             if(older)beforeApply()
             if(!current())return
             val page=d.optJSONObject("timeline")?:JSONObject();val incoming=page.optJSONArray("rows")?.objects()?:emptyList()
@@ -194,7 +195,13 @@ object PocketTranscript {
                 if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
                 loading=false;loadingEarlier=false
                 if(!succeeded&&!automaticRetryAllowed)refreshPending=false
-                if(missedUpdates) {
+                if(!succeeded&&automaticRetryAllowed&&!older&&bridgeCursor==null&&retryAttempt<3){
+                    missedUpdates=false;refreshPending=true
+                    Pocket.scope.launch{
+                        delay(1000L shl retryAttempt)
+                        if(current()&&refreshPending&&!loading)PocketTranscript.load(retryAttempt=retryAttempt+1)
+                    }
+                }else if(missedUpdates) {
                     missedUpdates=false
                     if(succeeded||automaticRetryAllowed)Pocket.scope.launch{if(!succeeded)delay(450);if(current())PocketTranscript.load()}
                 } else if(succeeded) {
@@ -237,6 +244,11 @@ object PocketTranscript {
         rows=next;rememberRecent();revision++
         if(missedUpdates&&!loading){missedUpdates=false;Pocket.scheduleRefresh()}
     }
+}
+
+internal fun validateTranscriptSnapshot(snapshot:JSONObject,id:String){
+    if(snapshot.optJSONObject("thread")?.s("id")!=id||snapshot.optJSONObject("timeline")?.optJSONArray("rows")==null)
+        throw java.io.IOException("Messages were not returned for this conversation. Retrying the history read.")
 }
 
 /** Inactive conversations use whole-snapshot LRU eviction, never hidden local pages. */
