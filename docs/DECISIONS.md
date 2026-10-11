@@ -43,3 +43,20 @@ Settings and app updates must be visible at the start of the footer menu. Activi
 ## Evidence-backed continuous work
 
 A completed turn does not certify a finished task. Owner-reviewed unfinished work can enter a persistent continuation chain bound to its exact latest turn. Workers keep working within a turn and checkpoint continue, completed or a genuine input dependency before ending. Original scope remains separate from later progress. Native task goals, cancellation, input, permissions, runtime/storage health and uncertain delivery gate dispatch. Successful progress resets sparse-backoff budget; failed progress does not. Missing assessment is retained without guessing or model polling.
+
+
+## Retained local conversation presentation
+
+A bounded private no-backup disk cache complements the recent in-memory cache.
+It stores loaded message rows, saved excerpts, pagination cursor and settled row
+identity/offset. Environment, endpoint/credential digest and installation identity
+bind the cache; a new pairing or cleared preferences cannot borrow an old cache.
+Atomic replacement preserves the last complete snapshot after an interrupted
+write. An advancing authoritative read still supersedes cached streamed versions;
+new output during the read wins reconciliation. Cached pending decisions,
+execution settings, command queues and read acknowledgements are excluded.
+Loading and freshness stay separate from readable cached text. Older local rows
+remain directly in the conversation instead of being hidden behind pagination.
+File serialization/parsing runs on IO workers; settled position checkpoints are
+coalesced and unchanged positions do not write again. This is a presentation cache,
+not proof of current worker state, an outgoing delivery journal or an archive.
