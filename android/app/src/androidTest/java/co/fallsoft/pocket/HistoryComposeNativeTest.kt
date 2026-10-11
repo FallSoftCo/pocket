@@ -48,5 +48,34 @@ class HistoryComposeNativeTest {
   assertEquals("Warm reopen shifted reading passage",top,passage.fetchSemanticsNode().boundsInRoot.top,2f)
   assertTrue("Warm reopen hid already local history",PocketTranscript.rows.any{it.s("id")=="older-message"})
   assertEquals("History navigation lost draft","Keep reading draft",prefs.getString("draft:same-thread",null))
+  compose.waitUntil(15000){c.noBackupFilesDir.resolve("transcript-cache-v1").listFiles()?.filter{it.extension=="json"}?.any{file->try{val value=JSONObject(file.readText());value.optJSONObject("position")?.s("row")?.startsWith("reading-native-")==true&&value.optJSONArray("rows")?.objects()?.any{it.s("id")=="older-message"}==true}catch(_:Exception){false}}==true}
+  prefs.edit().putFloat("qualification:reading-top",top).commit()
+
  }
+ @Test fun coldProcessRestoresHistoryAndPositionBeforeSlowRecentRead(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
+  val device=UiDevice.getInstance(i)
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val prefs=c.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  assertTrue("Preparation did not finish",prefs.contains("qualification:reading-top"))
+  fun main(b:()->Unit)=i.runOnMainSync(b)
+  main{Pocket.init(c)}
+  assertTrue("App was not a fresh process",PocketTranscript.rows.isEmpty())
+  fun qa(path:String)=kotlinx.coroutines.runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/$path",JSONObject())}
+  qa("advance") // revision2 intentionally holds recent history in the owned fixture.
+  main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  compose.waitUntil(15000){Pocket.connected&&Pocket.tasks.isNotEmpty()}
+  main{Pocket.open("same-thread")}
+  compose.waitUntil(15000){PocketTranscript.loading&&PocketTranscript.rows.any{it.s("id")=="reading-native-11"}}
+  val text="Native reading passage 11: retained conversation text stays in place as older messages load and this conversation is reopened."
+  assertEquals("Cold process lost reading position",prefs.getFloat("qualification:reading-top",-1f),compose.onNodeWithText(text,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.top,2f)
+  assertTrue("Cold process hid previously local earlier history",PocketTranscript.rows.any{it.s("id")=="older-message"})
+  assertTrue("Stale cache exposed pending action authority",Pocket.detail?.optJSONArray("pending")==null&&Pocket.detail?.optJSONArray("outgoing")==null&&Pocket.detail?.optJSONObject("catchup")==null)
+  qa("release")
+  compose.waitUntil(15000){!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Fresh response 2"}}
+  assertEquals("Fresh read moved cached reading position",prefs.getFloat("qualification:reading-top",-1f),compose.onNodeWithText(text,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.top,2f)
+  assertEquals("Cold restore lost draft","Keep reading draft",prefs.getString("draft:same-thread",null))
+  assertEquals("Restore submitted work",0,qa("state").getJSONArray("replies").length())
+ }
+
 }

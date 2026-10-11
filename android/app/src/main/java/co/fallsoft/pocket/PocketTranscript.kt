@@ -40,7 +40,10 @@ object PocketTranscript {
         snapshot.rows.sumOf{row->rowWeights.getOrPut(row){row.toString().length.toLong()*2}}+snapshot.detail.toString().length*2L
     }
     private var ownerScope:String?=null
-    internal fun scopeKey()=transcriptCacheOwner(Pocket.environmentId,Pocket.base,Pocket.token)
+    internal fun scopeKey():String{
+        val identity=Pocket.prefs.getString("transcriptCacheIdentity",null)?:java.util.UUID.randomUUID().toString().also{Pocket.prefs.edit().putString("transcriptCacheIdentity",it).apply()}
+        return backendOwner(transcriptCacheOwner(Pocket.environmentId,Pocket.base,Pocket.token),identity)
+    }
     internal var cacheRestoreRevision by mutableIntStateOf(0);private set
     private val disk by lazy{TranscriptDiskCache(java.io.File(Pocket.context.noBackupFilesDir,"transcript-cache-v1"))}
     private val diskSequence=java.util.concurrent.atomic.AtomicLong()
