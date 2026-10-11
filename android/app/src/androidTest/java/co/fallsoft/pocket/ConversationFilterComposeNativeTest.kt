@@ -52,4 +52,29 @@ class ConversationFilterComposeNativeTest {
   assertEquals("Filter erased draft","Keep filter draft",c.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   }finally{observer.dispose();changes.entries.sortedByDescending{it.value.get()}.take(20).forEach{println("Compose changes ${it.value.get()}: "+descriptions[it.key])}}
  }
+ @Test fun savedAnswerReturnsToUnfilteredConversationWithoutLeavingTailSpace(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
+  check(UiDevice.getInstance(i).executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  fun main(b:()->Unit)=i.runOnMainSync(b)
+  main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  compose.waitUntil(15000){Pocket.connected&&Pocket.tasks.isNotEmpty()}
+  main{Pocket.open("same-thread")};compose.waitUntil(15000){PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
+  fun text(n:Int)="Saved passage $n: useful context is readable in its original conversation and the latest reply has no leftover filter space."
+  main{
+   Pocket.detail=JSONObject(requireNotNull(Pocket.detail).toString()).put("notes",org.json.JSONArray().put(JSONObject().put("id","saved-passage-34").put("text",text(34))))
+   for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","saved-reading").put("version",100+n).put("row",JSONObject().put("id","saved-passage-$n").put("turnId","saved-reading").put("kind","message").put("phase",if(n%2==0)"final_answer" else "commentary").put("text",text(n))))
+  }
+  val history=compose.onNodeWithTag("conversation-history")
+  history.performScrollToKey("saved-passage-39")
+  val last=compose.onNodeWithText(text(39),useUnmergedTree=true)
+  val unfilteredEnd=last.fetchSemanticsNode().boundsInRoot.top
+  history.performScrollToKey("saved-passage-33")
+  compose.onNodeWithText("Important").performClick()
+  compose.onNodeWithText("Surrounding conversation").performClick()
+  compose.waitUntil(15000){!compose.onAllNodesWithText("Surrounding conversation").fetchSemanticsNodes().any()}
+  history.performScrollToKey("saved-passage-39")
+  assertEquals("Filter padding leaked into ordinary conversation",unfilteredEnd,last.fetchSemanticsNode().boundsInRoot.top,2f)
+ }
+
 }
