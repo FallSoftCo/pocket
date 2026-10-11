@@ -332,7 +332,13 @@ object Pocket {
             "reply" -> {if(json.s("state")=="accepted")rememberSessionInteraction(json.s("threadId"),"reply:"+json.s("id"));if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}
             "turnRecovery" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("recovery",json.optJSONObject("recovery"))}}
-            "timeline" -> {PocketTranscript.apply(json);if(json.has("turn"))scheduleRefresh()}
+            "timeline" -> {
+                val row=json.optJSONObject("row")
+                val newInput=json.s("threadId")==selected&&row?.s("kind")=="user"&&PocketTranscript.rows.none{it.s("id")==row.s("id")}
+                PocketTranscript.apply(json)
+                // A delayed input event needs canonical history, not inferred user-first sorting.
+                if(json.has("turn")||newInput)scheduleRefresh()
+            }
             "immersion" -> PocketImmersion.accept(json)
             "contextNotes" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("notes",json.optJSONArray("notes"))}}
             "activity" -> {activities=json.optJSONArray("items")?.objects()?:emptyList()}
