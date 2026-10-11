@@ -1,0 +1,40 @@
+{
+  "version": "0.5.0-alpha.54",
+  "versionCode": 72,
+  "source": "e50c8587ff143f3a1c47eb3b86cdf9b81f52535d",
+  "buildHost": "OZZZ-OS",
+  "tests": {
+    "debug": 273,
+    "release": 273,
+    "failures": 0,
+    "errors": 0
+  },
+  "buildsAndLints": "both variants passed",
+  "nativeEvidence": [
+    "history-reading-native-20261011.json",
+    "late-input-native-20261011.json"
+  ],
+  "phoneInstallation": "ADB Success; independent package manager confirms72/alpha54; same signer verified; no app data clear",
+  "privateUpdate": "both artifacts hash-verified and published; authenticated metadata from71 returns72 and expected hashes",
+  "limits": [
+    "physical scrolling smoothness not measured",
+    "specific user-reported causal pair not yet captured",
+    "native instrumentation uses synthetic transport and nonshrunk qualification build",
+    "goal remains incomplete"
+  ],
+  "artifacts": [
+    {
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "path": "nextcomp-72-22ecabe28e15.apk",
+      "sha256": "3ec98a8614e4dbed944cb8e21d572de907200fa522872ea33990a07b782656aa",
+      "size": 61572084
+    },
+    {
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "path": "nextcomp-72-b28f55b44c93.apk",
+      "sha256": "c429e5b844391faea38fd4068448e98dc5d074709b97630a10db6194b94d77d9",
+      "size": 51956391
+    }
+  ],
+  "ownedQaCleanup": "emulator5620 and synthetic fixture19998 stopped after checks"
+}

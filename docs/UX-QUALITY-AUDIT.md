@@ -282,3 +282,10 @@ candidate: capture status was visible with IME open, physical-key events and tou
 recording transitions preserved drafts, silent capture errors stayed visible, and
 read freshness/error/retry checks passed. This resolves the earlier synthetic
 recording-visibility regression for this run; physical handset remains unqualified.
+
+Alpha54/code72 sourcee50c858 built both signed variants on OZZZ-OS;273unit
+tests per variant and both lints pass. Same-signed phone installation succeeded;
+package manager confirms72/alpha54. Private updater published both hash-verified
+variants, authenticated71-to72 metadata checked. No data clear/backend restart
+or worker wakeup. Physical scrolling/perceived smoothness remains unverified.
+Owned emulator5620 and fixture19998 stopped. Full UX goal remains open.
