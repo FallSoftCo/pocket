@@ -52,6 +52,7 @@ class TranscriptRefreshNativeTest {
   val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
   try{
    device.executeShellCommand("settings put system font_scale 2.0")
+   await{context.resources.configuration.fontScale>=1.9f}
    assertTrue("Dismiss missing at large text",device.wait(Until.hasObject(By.text("Dismiss")),5000))
    Thread.sleep(600)
    val dismiss=device.findObject(By.text("Dismiss"))
