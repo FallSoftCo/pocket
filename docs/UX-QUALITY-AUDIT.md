@@ -467,3 +467,18 @@ Previous goal turn was progress (verified alpha66 delivery); this turn is progre
 Additional unqualified scope: current recent-history/reading-position cache is
 process memory; process-death restoration and retained-history behavior under
 cache eviction have not been proven by these warm-reopen tests.
+
+Alpha68/code86 installed in place with private environment-scoped, bounded local
+history and reading-position restoration. 290 unit tests in each build, both lints,
+and real two-process native paragraph/pixel qualification pass. Phone package and
+base APK digest verified; 13 critical preference hashes unchanged. The previous
+memory-only cache limitation is superseded for history saved by alpha68.
+
+New stale-conversation report: paired backend status 26ms and this thread recent
+read44ms from workstation; two phone cache entries lack8 and6 current server rows.
+These observations do not prove handset transport health or which open screen
+was stale. Native follow-up bb93712 prevents persisted counters suppressing fresh
+live rows and replay protects disk hydration. Native preparation9.909s and cold
+restore4.639s pass, including low-counter live output while history is held.
+Alpha69 signed qualification is underway; no new release is claimed yet. No
+worker wakeups, action replay, backend restart, pairing replacement or data clear.

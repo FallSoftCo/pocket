@@ -1,7 +1,7 @@
 {
   "runtimeSource": "f579a28",
   "nativeTestSource": "7eeecd7",
-  "state": "signed-qualified-private-update-published-install-pending",
+  "state": "installed-owner-phone",
   "implementation": {
     "cache": "Private Android no-backup presentation cache; environment/credential/installation/thread scoped",
     "bounds": "32MiB entry/128MiB total; measured oversize histories skip whole-snapshot serialization; whole inactive snapshots evicted",
@@ -33,12 +33,22 @@
     "releaseUnitTests": 290,
     "bothLints": "passed",
     "bothSignedBuilds": "passed",
-    "phoneInstall": "pending"
+    "phoneInstall": "verified installed",
+    "installedApkSha256": "56f3536698935fb94e33ed3944237c615ae20594f121c5f1f962e97ae0727729",
+    "preservedCriticalPreferenceHashes": 13
   },
   "limits": [
     "Synthetic software emulator paragraph/43-row fixture, not handset timing or every long history.",
     "Existing pre-alpha68 process-memory history has no disk snapshot to migrate.",
     "A cache is bounded presentation, not a complete archive; process startup still begins at normal navigation, and restoration occurs when the conversation is opened.",
     "No physical scrolling or frame-pacing qualification."
-  ]
+  ],
+  "liveFollowup": {
+    "runtimeSource": "bb93712",
+    "state": "alpha69 signed qualification running; not yet delivered",
+    "nativePreparationSeconds": 9.909,
+    "nativeColdRestoreSeconds": 4.639,
+    "verified": "Current low-counter live output visible while recent history is held; retained after authoritative read. Disk hydration replays buffered updates.",
+    "limit": "Exact arrival during disk IO not deterministically forced by the native fixture."
+  }
 }
