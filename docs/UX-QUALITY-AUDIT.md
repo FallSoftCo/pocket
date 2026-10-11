@@ -122,3 +122,17 @@ state descriptions, rather than replacing the action with an error message.
 Updated fixture returns explicit503 without crashing; verified alive after run.
 Build/lint pass. Candidate only; physical handset volume keys, non-silent capture,
 transcription/send and native audio provider remain separate unverified evidence.
+
+## Session taps and environment isolation
+
+Owned native EnvironmentIsolationNativeTest passed in9.523s against three
+synthetic loopback hosts. Card preview taps opened second-thread then same-thread
+with correct respective transcript. Settings environment selection switched to
+OZZZ; identical thread ID displayed only its destination history; separate drafts
+retained. Phone-local socket notification appeared without changing selected
+remote conversation. Queued A-origin reply while B selected reached only A, with
+exact captured request ID/thread; unknown-delivery outbox entry was not sent or
+erased. Switching back restored A history. First selector incorrectly omitted
+the Idle prefix; changed selector to include actual card text, not app behavior.
+No live credentials, provider, real FCM or physical handset navigation qualified
+by this synthetic nonshrunk emulator run.
