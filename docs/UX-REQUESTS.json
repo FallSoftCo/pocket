@@ -2197,9 +2197,9 @@
     {
       "id": "saved-context-filter-exit-reading-20261011",
       "request": "Keep Important and surrounding-conversation navigation ergonomic, with normal history spacing and no numeric-index/timed scroll guesses; retain local history and reading position.",
-      "status": "native-qualified-alpha67-signing",
+      "status": "delivered-alpha67-code85",
       "implementation": "Filter tail compensation is conditional on Important. Exiting clears pending compensation. Saved source is requested by row ID after committed list update, with full captured environment matching for navigation and removal feedback.",
-      "verification": "Old native exit fails5.472s,1453->1379px. Fixed5.57s; rendered older-history/warm-reopen9.481s within2px; filter rendered text6.031s; short-page gestures14.519s; late-input canonical ordering7.558s. Physical interaction remains unqualified."
+      "verification": "Old native exit fails5.472s,1453->1379px. Fixed5.57s; rendered older-history/warm-reopen9.481s within2px; filter rendered text6.031s; short-page gestures14.519s; late-input canonical ordering7.558s. Physical interaction remains unqualified. Final signed286 tests each and both lints pass; final native exit5.522s/warm-reopen9.457s pass; phone85/base APK SHA verified,13 critical preference hashes unchanged. Both authenticated updater signer variants verified."
     }
   ],
   "current_state": {

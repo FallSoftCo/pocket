@@ -454,3 +454,16 @@ main gallery card nextcomp-reading-filter-pixel-20261011 records exact scope.
 The full quality goal remains open: physical chronology/scroll pacing, broader
 navigation/discovery/environment flows, unseen/audio/voice hardware semantics,
 immersion reading motion and accessibility still need scoped verification.
+
+Alpha67/code85 delivered in place. Final signed286 unit tests each and both lints
+pass. Final saved-context5.522s/warm-reopen9.457s native checks pass; delayed input
+ordering7.558s also passes. Independent phone package/base APK hash verified;
+13 critical pairing/environment/draft preference hashes unchanged. Both private
+signer endpoints offer85. Gallery checker6a5b25540353b89d29092f4e52b19958 completed:
+2283cards, desktop/mobile no failures, reduced motion and reload pass. Only owned
+emulator/fixture stopped. No backend/runtime restarts or agent/model wakeups.
+Previous goal turn was progress (verified alpha66 delivery); this turn is progress
+(native failure reproduced, exit repair verified and delivered). Goal remains open.
+Additional unqualified scope: current recent-history/reading-position cache is
+process memory; process-death restoration and retained-history behavior under
+cache eviction have not been proven by these warm-reopen tests.

@@ -1,6 +1,6 @@
 {
   "source": "1a9ccfd",
-  "state": "signed-qualified-private-update-published-install-pending",
+  "state": "installed-phone-and-published-private-update",
   "problem": "Leaving Important through Surrounding conversation retained filter-only tail padding in ordinary history, moving the latest passage by74px. The source jump also used a guessed32ms delay before addressing a changed numeric list index.",
   "repair": "Restrict compensation padding to Important, clear pending padding when it closes, and send the source row identity through the post-composition reading request. Navigation and removal feedback validate the complete captured environment identity, endpoint and credential.",
   "evidence": {
@@ -29,7 +29,7 @@
   "limits": [
     "Native emulator evidence; physical reading gestures/frame pacing remain unqualified.",
     "Paragraph-level PixelCopy review does not qualify the full-screen UI.",
-    "Installed phone remains alpha66/code84 until a successful verified compatible install."
+    "Physical install is verified; physical reading gestures and frame pacing remain unobserved."
   ],
   "release": {
     "versionCode": 85,
@@ -40,6 +40,9 @@
     "bothSignedBuilds": "passed",
     "buildHost": "OZZZ-OS",
     "privateUpdater": 85,
-    "phoneInstall": "pending"
+    "phoneInstall": "Success; independent package and base APK SHA verified",
+    "phoneVersionCode": 85,
+    "phoneInstalledSha256": "3f5595fada98b5a9fc87b8d2bb8fc514f285bd4197560c55782fcbd66255f80b",
+    "criticalPreferencesUnchanged": 13
   }
 }
