@@ -1,0 +1,30 @@
+{
+  "source": "ae1eee7",
+  "buildHost": "OZZZ-OS",
+  "emulator": "nextcomp_env_qa5620 /software SwiftShader",
+  "method": "HistoryReadingNativeTest#partialOlderPageRepairsLateInputAgainstRetainedReply",
+  "control": {
+    "source": "dc4b8ee",
+    "result": "failed as expected: input remained after reply",
+    "seconds": 6.881,
+    "evidence": "/tmp/nextcomp-boundary-control-native.txt"
+  },
+  "candidate": {
+    "result": "passed",
+    "seconds": 6.952,
+    "evidence": "/tmp/nextcomp-boundary-fixed-native.txt",
+    "checks": [
+      "cursor boundary places older input before retained reply",
+      "streamed progress during older read preserved",
+      "one retained turn header",
+      "already-local prior message retained"
+    ]
+  },
+  "backendTargeted": "12 history tests passed including same-turn and cross-turn cursor anchors",
+  "fullBackend": "initial run had missing dependencies; clean npm ci on OZZZ; rerun pending",
+  "limits": [
+    "not deployed",
+    "does not establish exact physical user case",
+    "legacy compatibility pages lack new boundary hint"
+  ]
+}

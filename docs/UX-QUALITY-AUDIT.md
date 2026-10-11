@@ -314,3 +314,14 @@ short-page reproduction and touch/accessibility checks pass; full bounded native
 freshness/keyboard/recording regression passes40.403seconds. No backend restart,
 data clear, model calls or worker wakeups. Exact physical chronology report and
 perceived scrolling/frame pacing remain open. Owned QA processes stopped.
+
+## Partial-page chronology boundary
+
+Candidateae1eee7 carries older-page cursor boundary identity into the response.
+Client places older rows before that proven retained row, keeping existing turn
+headings at their earlier position and preserving newer text/local pages. No
+role-based user-first sorting. Native comparison reproduces the wrong order
+(control fails6.881seconds); candidate passes6.952seconds with live output
+during read preserved.12targeted backend tests pass. Broader Node run initially
+lacked dependencies; isolated OZZZ npm ci and rerun in progress. Not deployed;
+legacy compatibility boundary hints and physical reported pair remain open.
