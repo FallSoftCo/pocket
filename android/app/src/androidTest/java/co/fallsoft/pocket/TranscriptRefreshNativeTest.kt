@@ -28,6 +28,32 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun controlsAndDialogDoNotConsumeUpdatesButImeStillPresentsLatest(){
+  twoChats();qa("visibility");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&AppWindowVisibility.focused}
+  fun acknowledged(n:Int)=qa("state").getJSONArray("acknowledgements").objects().any{it.optInt("throughId")==n}
+  await{acknowledged(1)}
+  device.findObject(By.descContains("; conversation controls")).click();await{!AppWindowVisibility.focused}
+  qa("silent");main{Pocket.refreshDetail()};await{has(2)&&!PocketTranscript.updating};Thread.sleep(1000)
+  assertFalse("Controls popup consumed covered update",acknowledged(2))
+  device.pressBack();await{AppWindowVisibility.focused&&acknowledged(2)}
+  device.findObject(By.descContains("; conversation controls")).click()
+  repeat(10){if(!device.hasObject(By.text("Rename")))device.findObjects(By.scrollable(true)).lastOrNull()?.scroll(Direction.DOWN,.8f)}
+  assertTrue("Rename action unavailable",device.hasObject(By.text("Rename")))
+  device.findObject(By.text("Rename")).click();await{device.hasObject(By.text("Rename conversation"))&&!AppWindowVisibility.focused}
+  qa("silent");main{Pocket.refreshDetail()};await{has(3)&&!PocketTranscript.updating};Thread.sleep(1000)
+  assertFalse("Rename dialog consumed covered update",acknowledged(3))
+  device.findObject(By.text("Cancel")).click();await{AppWindowVisibility.focused&&acknowledged(3)}
+  device.pressBack();await{Pocket.selected==null}
+  assertTrue("Keyboard card region unavailable",device.wait(Until.hasObject(By.desc("Open Keyboard for Synthetic freshness work")),3000))
+  device.findObject(By.desc("Open Keyboard for Synthetic freshness work")).click()
+  await{has(3)&&AppWindowVisibility.focused&&device.hasObject(By.clazz("android.widget.EditText"))}
+  await{device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")}
+  device.findObject(By.clazz("android.widget.EditText")).text="Keep this IME draft"
+  qa("silent");main{Pocket.refreshDetail()};await{has(4)&&!PocketTranscript.updating&&acknowledged(4)}
+  assertTrue("IME incorrectly blocked main-window presentation",AppWindowVisibility.focused)
+  assertEquals("Focus transitions lost draft","Keep this IME draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString(Pocket.key("draft:same-thread"),null))
+  assertEquals("Read check mutated work",0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun delayedReplyFailureStaysWithItsSourceAndResolvesByReceipt(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   qa("fail-reply");var completed=false

@@ -131,7 +131,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             snapshotFlow{
                 val latest=PocketTranscript.rows.lastOrNull{it.s("kind") !in listOf("turn","turnEnd")&&it.s("text").isNotBlank()}?.s("id")
                 val visible=latest!=null&&list.layoutInfo.visibleItemsInfo.any{it.key==latest}
-                val eligible=!important&&!BlackoutVisibility.active&&!PocketVoice.active&&!PocketTranscript.loading&&!PocketTranscript.updating&&!list.isScrollInProgress&&!list.canScrollForward&&visible
+                val eligible=AppWindowVisibility.focused&&!important&&!BlackoutVisibility.active&&!PocketVoice.active&&!PocketTranscript.loading&&!PocketTranscript.updating&&!list.isScrollInProgress&&!list.canScrollForward&&visible
                 eligible to PocketTranscript.revision
             }.collectLatest{(eligible,_)->
                 if(eligible){delay(500);PocketTranscript.presentedLatest()}

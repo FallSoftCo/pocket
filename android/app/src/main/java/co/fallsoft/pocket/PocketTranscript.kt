@@ -73,7 +73,7 @@ object PocketTranscript {
     /** Called only by the resumed, unfiltered viewport after settling at latest. */
     internal fun presentedLatest(){
         val id=Pocket.selected?:return
-        if(owner!=id||ownerScope!=scopeKey()||!freshForRead||loading||updating||BackendNavigation.teamSelected()||!PocketVoice.foreground||BlackoutVisibility.active||PocketVoice.active||Pocket.newTask)return
+        if(owner!=id||ownerScope!=scopeKey()||!freshForRead||loading||updating||BackendNavigation.teamSelected()||!PocketVoice.foreground||!AppWindowVisibility.focused||BlackoutVisibility.active||PocketVoice.active||Pocket.newTask)return
         val d=Pocket.detail?:return
         PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=Pocket.local,catchup=if(!checkedThisOpen)d.optJSONObject("catchup")else null,environment=Pocket.environmentId)
         checkedThisOpen=true

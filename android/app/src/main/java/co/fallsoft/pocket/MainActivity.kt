@@ -114,8 +114,9 @@ class MainActivity:ComponentActivity(){
             startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/FallSoftCo/pocket/actions")))
         }
     }
+    override fun onWindowFocusChanged(hasFocus:Boolean){super.onWindowFocusChanged(hasFocus);AppWindowVisibility.focus(this,hasFocus)}
     override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
-    override fun onStop(){captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!PocketVoice.active)PocketLive.stop();super.onStop()}
+    override fun onStop(){AppWindowVisibility.focus(this,false);captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!PocketVoice.active)PocketLive.stop();super.onStop()}
     private val captureKeys get()=PocketVoice.captureKeys
     private var permissionCaptureThread:String?=null
     private var permissionCaptureInPlace=false
