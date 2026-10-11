@@ -211,3 +211,16 @@ Bundles environment-scoped viewport/effect ownership and distinct Failed,
 Stopped, Ready and Needs you labels. No backend restart, pairing reset or
 worker activation. Installation is not real-device interaction proof; direct
 cross-host viewport restoration and physical accessibility remain open.
+
+## Reachable refresh failure
+
+History-read failures formerly placed ErrorBanner at transcript end, invisible
+while reading older work. Candidate3144b2b removes that scrollable error item
+and anchors the same error/reload surface above bottom controls; Latest remains
+hidden during the error to avoid overlapping actions. No duplicate error area.
+Native extensionf62883b passes in36.107s with30 additional synthetic rows and
+reading gestures establishing the transcript end is offscreen: actual503 retains
+local rows, failure/reload are visible, retry succeeds and typing survives.
+Unit tests/lint/qualification build pass; provider and phone interactions are
+not qualified. Candidate uninstalled, phone remainsalpha53. Owned fixture and
+emulator stopped after the final receipt.
