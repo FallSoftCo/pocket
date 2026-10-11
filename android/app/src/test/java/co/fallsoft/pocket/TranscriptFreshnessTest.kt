@@ -2,6 +2,13 @@ package co.fallsoft.pocket
 import org.junit.Test
 import org.junit.Assert.*
 class TranscriptFreshnessTest {
+ @Test fun advancingLiveWorkInvalidatesEvenAnUnchangedClippedPreview(){
+  assertTrue(transcriptLiveActivityAdvanced(1000,2000))
+  assertTrue(transcriptLiveActivityAdvanced(null,2000))
+  assertFalse(transcriptLiveActivityAdvanced(2000,2000))
+  assertFalse(transcriptLiveActivityAdvanced(2000,1000))
+  assertFalse(transcriptLiveActivityAdvanced(null,0))
+ }
  @Test fun unseenPublicPreviewAndCompletionInvalidateCachedConversation(){
   assertTrue(transcriptPresentationChanged("old reply","message","active","new reply","message","active"))
   assertTrue(transcriptPresentationChanged("same","thinking","active","same","message","idle"))

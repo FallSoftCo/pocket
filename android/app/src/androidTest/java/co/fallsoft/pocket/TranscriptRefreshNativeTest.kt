@@ -32,6 +32,15 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun liveActivityRefreshesUnchangedStatusWithoutPollingOrLosingDraft(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("activity-only");await{has(2)&&!PocketTranscript.updating}
+  assertEquals("Refresh lost the saved draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  val reads=qa("state").getJSONArray("reads").length()
+  repeat(4){qa("repeat-activity")};Thread.sleep(1200)
+  assertEquals("Repeated work events polled history",reads,qa("state").getJSONArray("reads").length())
+  assertEquals("Refresh submitted work",0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun historyRecoveryIsBoundedAndCannotFollowNavigation(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   val baseline=qa("state").getJSONArray("reads").length()
