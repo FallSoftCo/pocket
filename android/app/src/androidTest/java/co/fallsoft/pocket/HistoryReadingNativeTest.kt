@@ -32,9 +32,9 @@ class HistoryReadingNativeTest {
   assertFalse("Reading gesture returned to latest",device.hasObject(By.textContains("Reading passage 39:")))
   val anchor=requireNotNull(device.findObjects(By.textContains("Reading passage ")).firstOrNull{it.visibleBounds.top>50&&it.visibleBounds.bottom<device.displayHeight*3/4})
   val text=anchor.text;val top=anchor.visibleBounds.top
-  val settled=CompletableDeferred<Unit>()
-  main{Pocket.scope.launchEnvironment{PocketTranscript.load(true,beforeApply={settled.await()})}}
-  await{PocketTranscript.loading};Thread.sleep(2400)
+  val settled=CompletableDeferred<Unit>();val arrived=CompletableDeferred<Unit>()
+  main{Pocket.scope.launchEnvironment{PocketTranscript.load(true,beforeApply={arrived.complete(Unit);settled.await()})}}
+  await{PocketTranscript.loading};await{arrived.isCompleted}
   assertFalse("Page applied during unsettled read",PocketTranscript.rows.any{it.s("id")=="older-message"})
   settled.complete(Unit);await{!PocketTranscript.loading&&PocketTranscript.rows.any{it.s("id")=="older-message"}}
   assertTrue("Prepend shifted reading passage",kotlin.math.abs(requireNotNull(device.findObject(By.text(text))).visibleBounds.top-top)<=24)
