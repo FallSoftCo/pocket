@@ -11,6 +11,8 @@ internal object PocketReplies {
     var busy by mutableStateOf(setOf<String>());private set
     var dispatching by mutableStateOf(setOf<String>());private set
     val clearedDrafts=mutableStateMapOf<String,String>()
+    private val sendingOwners=mutableMapOf<String,EnvironmentRequest>()
+    fun profileChanged(){Pocket.sending=Pocket.captureEnvironment()?.let{selected->sendingOwners.values.any{it.matches(selected)}}==true}
     private fun current(intent:ClientReplyIntent):EnvironmentRequest?=Pocket.captureEnvironment(intent.environment)?.takeIf{backendOwner(it.endpoint,it.token)==intent.owner}
     fun entries(thread:String):List<ClientReplyIntent>{revision;return runCatching{journal.all().filter{it.environment==Pocket.environmentId&&it.thread==thread}}.getOrDefault(emptyList())}
     fun matchesCurrent(intent:ClientReplyIntent)=intent.environment==Pocket.environmentId&&Pocket.captureEnvironment()?.let{current(intent)?.matches(it)}==true
@@ -50,7 +52,7 @@ internal object PocketReplies {
         }catch(e:Exception){Pocket.recordReplyFailure(thread,"storage",e.message?:"Could not save message")}
     }
     private fun dispatch(intent:ClientReplyIntent,destination:EnvironmentRequest,onDone:()->Unit={}){
-        Pocket.sending=true;busy=busy+intent.id;dispatching=dispatching+intent.id
+        sendingOwners[intent.id]=destination;profileChanged();busy=busy+intent.id;dispatching=dispatching+intent.id
         Pocket.scope.launch{
             var marked=false
             try{
@@ -62,7 +64,7 @@ internal object PocketReplies {
                 else if(state in listOf("failed","unknown")&&Pocket.captureEnvironment()?.matches(destination)==true)Pocket.recordReplyFailure(intent.thread,intent.id,receipt.s("error","Message delivery needs attention"))
                 if(Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==intent.thread)Pocket.scheduleRefresh()
             }catch(e:CancellationException){throw e}catch(e:Exception){problem(intent,e.message?:"Message delivery could not be confirmed")}
-            finally{busy=busy-intent.id;dispatching=dispatching-intent.id;if(Pocket.captureEnvironment()?.matches(destination)==true)Pocket.sending=false;val pending=runCatching{journal.get(intent.id)}.getOrNull();if(pending?.state=="unconfirmed")Pocket.scope.launch{delay(800);if(current(pending)!=null)check(pending)};if(marked&&!Pocket.sending&&Pocket.selected==intent.thread&&Pocket.captureEnvironment()?.matches(destination)==true)entries(intent.thread).firstOrNull{it.phase=="prepared"&&it.id !in busy&&matchesCurrent(it)}?.let{next->current(next)?.let{dispatch(next,it)}}}
+            finally{busy=busy-intent.id;dispatching=dispatching-intent.id;sendingOwners.remove(intent.id);profileChanged();val pending=runCatching{journal.get(intent.id)}.getOrNull();if(pending?.state=="unconfirmed")Pocket.scope.launch{delay(800);if(current(pending)!=null)check(pending)};if(marked&&!Pocket.sending&&Pocket.selected==intent.thread&&Pocket.captureEnvironment()?.matches(destination)==true)entries(intent.thread).firstOrNull{it.phase=="prepared"&&it.id !in busy&&matchesCurrent(it)}?.let{next->current(next)?.let{dispatch(next,it)}}}
         }
     }
     fun reconcile(thread:String){
@@ -80,7 +82,7 @@ internal object PocketReplies {
     fun check(intent:ClientReplyIntent){
         val destination=current(intent)?:return;if(intent.id in busy)return;busy=busy+intent.id
         Pocket.scope.launch{
-            try{val receipt=Pocket.apiEnvironment(destination,"/api/replies/${intent.id}");observed(intent,receipt,lookup=true)}
+            try{if(!matchesCurrent(intent))return@launch;val receipt=Pocket.apiEnvironment(destination,"/api/replies/${intent.id}");observed(intent,receipt,lookup=true)}
             catch(e:CancellationException){throw e}catch(e:Exception){problem(intent,if(e is PocketApiException&&e.status==404)"No receipt found yet. This does not prove the message wasn’t received." else e.message?:"Could not check delivery")}
             finally{busy=busy-intent.id}
         }

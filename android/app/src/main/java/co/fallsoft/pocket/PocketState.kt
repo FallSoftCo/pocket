@@ -167,7 +167,7 @@ object Pocket {
         fullPermissions=prefs.getBoolean(key("fullPermissions"),prefs.getBoolean("fullPermissions",true))
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))"Firebase push is ready" else "Setting up notifications…"
         if(savedToken(true).isNotBlank())LocalMonitorService.start(context) else LocalMonitorService.stop(context)
-        restoreUsage();PocketImmersion.restore();PocketSpeech.init();PocketLive.start();refresh()
+        restoreUsage();PocketImmersion.restore();PocketSpeech.init();PocketReplies.profileChanged();PocketLive.start();refresh()
     }
     fun disconnect(){
         val wasLocal=local;val oldBase=base;val oldToken=token
