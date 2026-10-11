@@ -27,8 +27,8 @@
     "evidence": "/tmp/nextcomp-boundary-all-node-tests-qualified.log"
   },
   "limits": [
-    "not deployed",
-    "does not establish exact physical user case",
+    "exact physical user case not captured",
+    "late input outside bounded recent page still needs targeted reconciliation",
     "legacy compatibility pages lack new boundary hint"
   ],
   "narrowOwningRelease": {
@@ -41,7 +41,7 @@
     "tests": 425,
     "failures": 0,
     "evidence": "/tmp/nextcomp-boundary-release-tests.log",
-    "state": "staged; not deployed"
+    "state": "deployed; backend1372872, external Codex daemon2213121 preserved"
   },
   "android": {
     "debugUnitTests": 275,
@@ -52,5 +52,10 @@
       "seconds": 41.919,
       "evidence": "/tmp/nextcomp-boundary-full-native.txt"
     }
-  }
+  },
+  "liveBoundary": {
+    "evidence": "/tmp/nextcomp-boundary-live-evidence.json",
+    "result": "new cursor olderThanRow equals next older page insertBefore, and boundary row exists in retained latest page"
+  },
+  "delivery": "system76 backend4a81b84 and alpha56/code74 installed; other environments unchanged"
 }

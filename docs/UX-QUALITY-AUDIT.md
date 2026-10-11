@@ -325,3 +325,21 @@ role-based user-first sorting. Native comparison reproduces the wrong order
 during read preserved.12targeted backend tests pass. Broader Node run initially
 lacked dependencies; isolated OZZZ npm ci and rerun in progress. Not deployed;
 legacy compatibility boundary hints and physical reported pair remain open.
+
+Narrow backend4a81b84 loaded from actual6c7ba69 base after zero sending replies
+and zero unfinished stored voice turns. Phone outsideNextComp; current recording
+monitor empty. BackendPID1372872; external Codex daemon2213121 preserved. Live
+root history read proves new cursor boundary equals next older-page insertBefore
+and names a retained row. Remaining chronology gap: when late input is absent
+from bounded recent page, repair currently waits for its older page. Investigate
+targeted bounded canonical reconciliation rather than user-first sorting or
+unbounded history. Alpha56 signed client delivery in progress.
+
+Alpha56/code74 source2fd538f installed in place; package-manager confirmation
+recorded. Both signed builds/lints and275unit tests per variant pass. Narrow
+system76 backend4a81b84 passes425tests; broader source453tests pass. Native
+partial older-page comparison reproduces and repairs chronology, preserving live
+text/local history; full native regression passes41.919seconds. Private update
+metadata matches both APK hashes. Other environment services unchanged. Further
+work: targeted canonical read when new input lies outside recent bounded page;
+legacy hints; actual physical case. No claim of complete chronology/world-classUX.

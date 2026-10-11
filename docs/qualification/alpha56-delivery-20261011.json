@@ -1,0 +1,48 @@
+{
+  "version": "0.5.0-alpha.56",
+  "versionCode": 74,
+  "source": "2fd538f9af857e027697efbe128a412a2cd13026",
+  "buildHost": "OZZZ-OS",
+  "tests": {
+    "debug": 275,
+    "release": 275,
+    "failures": 0,
+    "errors": 0
+  },
+  "buildsAndLints": "both signed variants passed",
+  "backend": {
+    "source": "4a81b84",
+    "base": "6c7ba69",
+    "tests": 425,
+    "failures": 0,
+    "pid": 1372872,
+    "externalDaemonPreserved": 2213121,
+    "liveCursorBoundary": "verified"
+  },
+  "fullSourceBackendTests": 453,
+  "nativeEvidence": "history-boundary-native-20261011.json",
+  "phoneInstallation": "ADB Success; independent package manager confirms74/alpha56; compatible signer; no data clear",
+  "privateUpdate": "both variants hash-verified; authenticated73-to74 metadata matches expected hashes",
+  "artifacts": [
+    {
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "path": "nextcomp-74-22ecabe28e15.apk",
+      "sha256": "6f91b92c3ac761a20f6999679c99d16788922bbce70dbda2e9f67462bef6c0c5",
+      "size": 61588464
+    },
+    {
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "path": "nextcomp-74-b28f55b44c93.apk",
+      "sha256": "39b4663867b9e1f8ebc9cbaf12cfc500522b2b979b5267dcfbbeeac6ea9bb4e5",
+      "size": 51972775
+    }
+  ],
+  "limits": [
+    "physical reported pair not captured",
+    "late input absent from bounded recent page still needs targeted reconciliation",
+    "legacy compatibility pages lack boundary hint",
+    "other environment backends not upgraded by this release",
+    "goal incomplete"
+  ],
+  "ownedQaCleanup": "emulator5620 and synthetic fixture19998 stopped"
+}
