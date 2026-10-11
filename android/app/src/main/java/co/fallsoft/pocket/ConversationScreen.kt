@@ -101,6 +101,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var restoredPosition by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition==null||readPosition.follow)}
     var follow by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
     var important by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
+    var filterPassage by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<String?>(null)}
     var filterPositionJob by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<Job?>(null)}
     DisposableEffect(Pocket.environmentId,Pocket.selected){onDispose{filterPositionJob?.cancel()}}
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
@@ -169,7 +170,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     var historyGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
     var satisfiedHistoryGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(-1)}
-    LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
+    LaunchedEffect(dragged){if(dragged){follow=false;filterPassage=null}else if(!list.canScrollForward)follow=true}
     LaunchedEffect(list){
         // Accessibility scroll actions do not emit pointer-drag interactions.
         snapshotFlow{list.isScrollInProgress&&!follow}.distinctUntilChanged().filter{it}.collect{historyGesture++}
@@ -295,11 +296,12 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val nextImportant=!important
             val after=if(nextImportant)orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}else rows
             val afterIds=after.map{it.s("id")}
-            val retained=conversationFilterViewportAnchor(afterIds,list.layoutInfo.visibleItemsInfo.map{FilterVisibleRow(it.key.toString(),it.offset)})
+            val retained=conversationFilterViewportAnchor(afterIds,list.layoutInfo.visibleItemsInfo.map{FilterVisibleRow(it.key.toString(),it.offset)},if(nextImportant)null else filterPassage)
             val anchor=retained?.index?:conversationFilterAnchor(before,afterIds,visible)
             val targetOffset=retained?.scrollOffset?:if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0
             val environment=Pocket.environmentId;val source=Pocket.selected
             filterPositionJob?.cancel()
+            filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
             follow=false;important=nextImportant
             filterPositionJob=scope.launch{
                 androidx.compose.runtime.withFrameNanos{}
@@ -473,9 +475,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 internal data class FilterVisibleRow(val id:String,val offset:Int)
 internal data class FilterViewportAnchor(val index:Int,val scrollOffset:Int)
 /** Keep a surviving native item at its pixel position, even if the leading row disappears. */
-internal fun conversationFilterViewportAnchor(after:List<String>,visible:List<FilterVisibleRow>):FilterViewportAnchor? {
+internal fun conversationFilterViewportAnchor(after:List<String>,visible:List<FilterVisibleRow>,preferred:String?=null):FilterViewportAnchor? {
     val positions=after.withIndex().associate{it.value to it.index}
-    return visible.firstNotNullOfOrNull{row->positions[row.id]?.let{FilterViewportAnchor(it,-row.offset)}}
+    val passage=visible.firstOrNull{it.id==preferred&&it.id in positions}?:visible.firstOrNull{it.id in positions}?:return null
+    return FilterViewportAnchor(positions.getValue(passage.id),-passage.offset)
 }
 
 internal fun conversationFilterAnchor(before:List<String>,after:List<String>,visible:Int):Int {
