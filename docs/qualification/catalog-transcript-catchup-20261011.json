@@ -1,6 +1,6 @@
 {
   "source": "0de9447",
-  "state": "native-qualified-release-pending",
+  "state": "signed-qualified-private-update-published-install-pending",
   "problem": "A catalog refresh did not refresh selected history when meaningful work advanced but the clipped preview and status stayed identical.",
   "fix": "Compare explicit activityAt as well as preview and status; never compare fetch time or inventory updatedAt.",
   "evidence": {
@@ -19,5 +19,13 @@
   "limits": [
     "User visible stuck session not yet identified; confirmed catch-up gap is not proof of every reported freeze.",
     "Emulator evidence; no physical interaction or final install yet."
-  ]
+  ],
+  "release": {
+    "versionCode": 84,
+    "versionName": "0.5.0-alpha.66",
+    "debugUnitTests": 286,
+    "releaseUnitTests": 286,
+    "debugAndReleaseLint": "passed",
+    "finalNativeFilterPixelGeometrySeconds": 6.069
+  }
 }
