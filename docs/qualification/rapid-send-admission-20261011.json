@@ -18,5 +18,6 @@
     "Phone remains alpha51",
     "No provider or external-action request performed",
     "Does not establish exactly-once external execution or recovery of unknown delivery"
-  ]
+  ],
+  "delivery": "Compatible alpha52/code70 installed in place; private update metadata verified for both signers"
 }

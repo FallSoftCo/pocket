@@ -22,5 +22,6 @@
     "Silent AudioRecord capture does not qualify human speech transcription or successful turn send",
     "No provider/model audio request performed",
     "Phone remains alpha51; accessibility and rapid-admission candidates need next release"
-  ]
+  ],
+  "delivery": "Compatible alpha52/code70 installed in place; private update metadata verified for both signers"
 }

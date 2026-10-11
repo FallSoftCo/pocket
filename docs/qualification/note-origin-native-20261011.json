@@ -13,5 +13,6 @@
   ],
   "lintAndBuild": "pass",
   "providerRequests": "none",
-  "physicalDelivery": "pending alpha52"
+  "physicalDelivery": "pending alpha52",
+  "delivery": "Compatible alpha52/code70 installed in place; private update metadata verified for both signers"
 }

@@ -148,3 +148,13 @@ switch writes only System76, and the OZZZ view remains clean. Existing card taps
 drafts, notification selection and background-reply isolation also passed.
 Build/lint pass; alpha52 will include this candidate with rapid-send admission
 and microphone action semantics. Physical-device delivery remains pending.
+
+## Alpha52 delivery
+
+Actual-commit isolated OZZZ build e9d8627 passed271 debug unit tests, both
+variant builds and lints. Pixel in-place install succeeded; code70/alpha52
+independently verified. Bundles rapid-send admission, mic action/error semantics
+and note-save origin isolation. Both private signing variants checksum-verified
+and authenticated update metadata qualified from code69. No backend/Codex
+restart. Physical interactions and Important-filter passage retention remain
+open; emulator checks do not establish real audio transcription or push transport.

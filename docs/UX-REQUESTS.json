@@ -14,6 +14,13 @@
   },
   "requests": [
     {
+      "id": "note-save-environment-origin-20261011",
+      "date": "2026-10-11",
+      "requirement": "Saving a retained reply must use the environment selected at the tap, even when navigating immediately to an identically identified thread elsewhere; completion/errors must not contaminate the new view.",
+      "status": "alpha52-delivery-in-progress",
+      "implementation": "Capture destination and body before scheduling; explicit environment request and owner-gated UI completion. Three-host native emulator regression passes."
+    },
+    {
       "id": "outgoing-action-busy-20261011",
       "date": "2026-10-11",
       "requirement": "Retry/Edit/Remove/Save must visibly disable during the matching outgoing request and re-enable afterward, isolated by environment identity.",
