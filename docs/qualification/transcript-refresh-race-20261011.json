@@ -1,0 +1,69 @@
+{
+  "source": "6a70a42",
+  "cause": "scheduleRefresh skipped while its read job was active; markRefreshPending did not retain missedUpdates, losing a preview received after the snapshot began.",
+  "control": {
+    "source": "2fd538f",
+    "result": "failed Freshness condition timed out at latest response assertion",
+    "seconds": 19.691,
+    "evidence": "/tmp/nextcomp-refresh-control-native.txt"
+  },
+  "candidate": {
+    "result": "passed",
+    "seconds": 9.449,
+    "evidence": "/tmp/nextcomp-refresh-fixed-native.txt",
+    "checks": [
+      "new preview during scheduled recent read triggers follow-up",
+      "cached transcript retained",
+      "draft retained",
+      "unchanged repeated preview produces no extra reads"
+    ]
+  },
+  "liveRead": {
+    "status": 200,
+    "connected": true,
+    "statusMs": 39,
+    "timelineMs": 36,
+    "rows": 6
+  },
+  "limits": [
+    "Exact handset stale instance not captured; code race reproduced on native emulator.",
+    "Installed phone version verified; fresh-message arrival after installation has not been directly observed."
+  ],
+  "android": {
+    "debugTests": 275,
+    "releaseTests": 275,
+    "failures": 0,
+    "builds": "both signed builds passed",
+    "lints": "both passed",
+    "source": "0dff55b5113ec0957c31dc02cbbab06c25de3186",
+    "fullNative": {
+      "passed": true,
+      "seconds": 42.526,
+      "evidence": "/tmp/nextcomp-alpha57-full-native.txt"
+    }
+  },
+  "privateUpdate": {
+    "versionCode": 75,
+    "bothSignerMetadataVerified": true,
+    "artifacts": [
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "path": "nextcomp-75-22ecabe28e15.apk",
+        "sha256": "55344a558f1130049542138fbd13a6a1d986d221694de839631ef7208f520b75",
+        "size": 61588468
+      },
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "path": "nextcomp-75-b28f55b44c93.apk",
+        "sha256": "d87ce71e82eca09de546d40e143fdff12d448414f30af44cad44542d138370bf",
+        "size": 51972775
+      }
+    ]
+  },
+  "delivery": {
+    "phone": "ADB install Success; independent package manager75/0.5.0-alpha.57; no data clear",
+    "targetNativeFinalSeconds": 9.491,
+    "ownedQaCleanup": "fixture19998 and emulator5620 stopped",
+    "backendRestart": false
+  }
+}
