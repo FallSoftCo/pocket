@@ -25,7 +25,8 @@ class HistoryReadingNativeTest {
   return (0 until nodes.length).mapNotNull{index->val n=nodes.item(index) as org.w3c.dom.Element;val text=n.getAttribute("text");if(!text.startsWith("Reading passage "))null else {val b=Regex("[0-9]+").findAll(n.getAttribute("bounds")).map{it.value.toInt()}.toList();if(b.size!=4)null else text to android.graphics.Rect(b[0],b[1],b[2],b[3])}}
  }
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/$path",JSONObject())}
- private fun event(id:String,kind:String,text:String)=JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",900).put("row",JSONObject().put("id","order/$id").put("turnId","order").put("kind",kind).put("text",text).put("version",900))
+ private var eventVersion=900
+ private fun event(id:String,kind:String,text:String):JSONObject{val version=++eventVersion;return JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",version).put("row",JSONObject().put("id","order/$id").put("turnId","order").put("kind",kind).put("text",text).put("version",version))}
  @Test fun readingAnchorAndLateInputAreReconciledWithoutVoice(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val c=i.targetContext
