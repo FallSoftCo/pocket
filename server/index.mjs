@@ -9,7 +9,7 @@ import {SessionDiscovery,INTERACTIVE_SOURCES} from './session-discovery.mjs';
 import {catalogFields,catalogName,sessionIdentity,sessionWorkTime,requireDirectSessionInput} from './session-catalog.mjs';
 import {SessionCatchup} from './session-catchup.mjs';
 import {CoordinatorReports} from './coordinator-reports.mjs';
-import {recoverReply} from './reply-recovery.mjs';
+import {recoverReply,pendingOutgoing} from './reply-recovery.mjs';
 import {mountLosangelex} from './losangelex.mjs';
 import {computerUseStatus} from './computer-use.mjs';
 import {NotificationTitles} from './notification-titles.mjs';
@@ -528,7 +528,7 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
   conversationNotes.remember(t);recordWork(()=>workRecord.remember(t));
-  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
+  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:pendingOutgoing(db,t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
   if(!req.query.before)response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
   res.json(response);
 }));
