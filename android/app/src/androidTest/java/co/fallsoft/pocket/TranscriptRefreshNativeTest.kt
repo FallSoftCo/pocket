@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import kotlinx.coroutines.runBlocking
@@ -50,6 +51,26 @@ class TranscriptRefreshNativeTest {
   assertEquals("Navigation lost unsent draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   device.findObject(By.text("Dismiss")).click();await{Pocket.replyFailure("same-thread")==null}
   assertEquals("Dismiss replayed the uncertain send",1,qa("state").getJSONArray("replies").length())
+  main{Pocket.closeTask()}
+  fun popupReply(){
+   device.findObject(By.desc("Settings, app updates, usage and activity")).click()
+   repeat(10){if(!device.hasObject(By.desc("Reply to Other synthetic work")))device.findObjects(By.scrollable(true)).lastOrNull()?.scroll(Direction.DOWN,.8f)}
+   assertTrue("Popup target reply action unavailable",device.hasObject(By.desc("Reply to Other synthetic work")))
+   device.findObject(By.desc("Reply to Other synthetic work")).click()
+   assertTrue("Popup text input unavailable",device.wait(Until.hasObject(By.clazz("android.widget.EditText")),3000))
+  }
+  popupReply();device.findObject(By.clazz("android.widget.EditText")).text="Preserve this popup draft"
+  qa("fail-reply");device.findObject(By.text("Send")).click();await{qa("state").getJSONArray("replies").length()==2}
+  qa("release-reply");await{!Pocket.sending&&device.hasObject(By.text("Synthetic delayed reply failure"))}
+  assertEquals("Popup reply routed incorrectly","second-thread",qa("state").getJSONArray("replies").getJSONObject(1).s("threadId"))
+  assertEquals("Popup failure contaminated global state","",Pocket.error)
+  assertEquals("Popup failure discarded editable draft","Preserve this popup draft",device.findObject(By.clazz("android.widget.EditText")).text)
+  device.findObject(By.text("Close")).click();popupReply()
+  assertEquals("Closing popup lost failed draft","Preserve this popup draft",device.findObject(By.clazz("android.widget.EditText")).text)
+  assertEquals("Reopening popup replayed send",2,qa("state").getJSONArray("replies").length())
+  device.findObject(By.clazz("android.widget.EditText")).text=""
+  assertEquals("Draft cannot be erased","",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString(Pocket.key("popupDraft:second-thread"),null))
+
  }
  @Test fun refreshedHistoryIsNotReadUntilLatestIsActuallyPresented(){
   twoChats();qa("visibility");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
