@@ -32,6 +32,26 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun inlinePlaybackVolumePreservesMuteAndTypingDuringCapture(){
+  twoChats();main{Pocket.open("same-thread",keyboard=true)}
+  await{has(1)&&device.hasObject(By.clazz("android.widget.EditText"))&&device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")}
+  val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  val audio=context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+  val previous=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
+  try{
+   audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,0,0);Thread.sleep(600)
+   device.findObject(By.clazz("android.widget.EditText")).text="Playback volume keeps my draft"
+   device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_UP);await{PocketVoice.state=="Listening"}
+   device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_DOWN);await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
+   assertEquals("Capture keys changed intentional playback mute",0,audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))
+   val slider=device.findObject(By.desc("Speech volume")).visibleBounds
+   device.click(slider.left+slider.width()*3/4,slider.centerY())
+   await{audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)>0}
+   assertTrue("Volume adjustment dismissed typing",device.executeShellCommand("dumpsys input_method").contains("mInputShown=true"))
+   assertEquals("Volume adjustment erased draft","Playback volume keeps my draft",prefs.getString("draft:same-thread",null))
+   assertEquals("Volume/capture controls submitted work",0,qa("state").getJSONArray("replies").length())
+  }finally{main{PocketVoice.stop()};audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,previous,0)}
+ }
  @Test fun coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion(){
   twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
