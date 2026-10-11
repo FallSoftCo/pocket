@@ -88,7 +88,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
     val task=Pocket.tasks.firstOrNull{it.id==Pocket.selected}
     val failureSource=Pocket.selected;val replyFailure=Pocket.replyFailure()
-    val conversationError=Pocket.error.ifBlank{replyFailure?.message.orEmpty()}
+    val clientReplies=PocketReplies.visible(Pocket.selected.orEmpty())
+    val recoveryAlreadyShown=clientReplies.any{it.id==replyFailure?.id}||d?.optJSONArray("outgoing")?.objects()?.any{it.s("id")==replyFailure?.id}==true
+    val conversationError=Pocket.error.ifBlank{if(recoveryAlreadyShown)"" else replyFailure?.message.orEmpty()}
     val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
     val latestTurn=rows.lastOrNull{it.s("kind")=="turn"}
     val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),latestTurn?.s("status").orEmpty(),task?.previewKind=="thinking",d!=null,PocketTranscript.loading)
@@ -149,6 +151,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var queuedText by remember(Pocket.selected){mutableStateOf("")}
     var queueOpen by remember(Pocket.selected){mutableStateOf(false)}
     val draftKey=Pocket.key("draft:${Pocket.selected}");var editor by remember(Pocket.environmentId,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})}
+    LaunchedEffect(PocketReplies.revision,draftKey){if(PocketReplies.clearedDrafts[draftKey]==editor.text&&!Pocket.prefs.contains(draftKey))editor=TextFieldValue("")}
     var keyboardInput by remember(Pocket.selected){mutableStateOf(Pocket.openWithKeyboard)}
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
@@ -260,6 +263,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 
 
 
+                clientReplies.forEach{intent->item(key="client-reply-"+intent.id){ClientReplyRecovery(intent){value->editor=TextFieldValue(value,TextRange(value.length));Pocket.prefs.edit().putString(draftKey,value).apply();keyboardInput=true}}}
             }
             if(PocketTranscript.updating&&(d!=null||rows.isNotEmpty()))
                 Surface(color=Panel,shape=RoundedCornerShape(16.dp),modifier=Modifier.align(Alignment.TopCenter).padding(top=8.dp).semantics{liveRegion=LiveRegionMode.Polite}){

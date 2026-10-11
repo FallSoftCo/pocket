@@ -54,7 +54,7 @@ object Pocket {
     private val replyFailures=mutableStateMapOf<String,ReplyFailure>()
     private fun replyFailureKey(thread:String)=backendOwner(base,token)+"\u0000"+thread
     fun replyFailure(thread:String?=selected)=thread?.let{replyFailures[replyFailureKey(it)]}
-    private fun recordReplyFailure(thread:String,id:String,message:String){if(thread.isNotBlank())replyFailures[replyFailureKey(thread)]=ReplyFailure(id,message.ifBlank{"Reply could not be confirmed"})}
+    internal fun recordReplyFailure(thread:String,id:String,message:String){if(thread.isNotBlank())replyFailures[replyFailureKey(thread)]=ReplyFailure(id,message.ifBlank{"Reply could not be confirmed"})}
     fun dismissReplyFailure(thread:String?,id:String){if(thread!=null){val key=replyFailureKey(thread);if(replyFailures[key]?.id==id)replyFailures.remove(key)}}
 
     var showArchived by mutableStateOf(false)
@@ -227,7 +227,7 @@ object Pocket {
         }catch(e:Exception){if(local==profile&&base==endpoint)refreshError=PocketNetwork.error(e)}finally{if(environmentId==sourceEnvironment)loadingSessions=false}}
     }
     internal fun pauseConversationReads(){refreshJob?.cancel();refreshJob=null;PocketTranscript.pauseReading()}
-    fun open(id:String,keyboard:Boolean=false){refreshJob?.cancel();refreshJob=null;if(BackendNavigation.open(id)){PocketTranscript.pauseReading();return};openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
+    fun open(id:String,keyboard:Boolean=false){refreshJob?.cancel();refreshJob=null;if(BackendNavigation.open(id)){PocketTranscript.pauseReading();return};openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail();PocketReplies.reconcile(id)}
     fun refreshDetail(){if(selected==null||BackendNavigation.teamSelected())return;PocketTranscript.markRefreshPending();scope.launchEnvironment{PocketTranscript.load()}}
     fun closeTask(){refreshJob?.cancel();refreshJob=null;selected=null;detail=null;PocketTranscript.clear()}
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
@@ -292,18 +292,13 @@ object Pocket {
             }
         }?:emptyList() }?.filter{it.text.isNotBlank()}?.takeLast(50)?:emptyList()
     }
-    fun reply(text:String,threadId:String?=selected,mode:String="auto",onDone:()->Unit={}){if(threadId==null||text.isBlank()||sending)return;if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";return}
-        // Reserve before scheduling: rapid taps/Enter events share this admission.
-        val deliveryId=UUID.randomUUID().toString()
-        sending=true;if(threadId==selected)error=""
+    fun reply(text:String,threadId:String?=selected,mode:String="auto",draftKey:String?=threadId?.let{key("draft:$it")},onDone:()->Unit={}){
+        if(threadId==null||text.isBlank()||sending)return
+        if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";return}
+        if(threadId==selected)error=""
         replyFailures.remove(replyFailureKey(threadId))
-        scope.launchEnvironment{
-        try{val receipt=api("/api/threads/$threadId/reply",JSONObject().put("text",text).put("mode",mode).put("id",deliveryId))
-            if(receipt.s("state") in listOf("failed","unknown"))recordReplyFailure(threadId,deliveryId,receipt.s("error","Reply could not be confirmed"))
-            else if(receipt.s("state")=="accepted")dismissReplyFailure(threadId,deliveryId)
-            onDone();if(selected==threadId)scheduleRefresh()}
-        catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;recordReplyFailure(threadId,deliveryId,e.message?:"Reply not sent")}finally{if(environmentRequestCurrent())sending=false}
-    }}
+        PocketReplies.submit(text,threadId,mode,draftKey,onDone)
+    }
     var replyActionBusy by mutableStateOf(setOf<String>())
     fun isReplyActionBusy(id:String)="$environmentId:$selected:$id" in replyActionBusy
     fun queuedReply(id:String,action:String,text:String="",confirmUnknown:Boolean=false,onDone:()->Unit={}){
@@ -342,7 +337,7 @@ object Pocket {
             }
             "coordinatorReport" -> {acceptNotification(json.getJSONObject("notification"),"report");PocketWorkUpdates.refresh()}
             "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");refresh()}
-            "reply" -> {val thread=json.s("threadId");val receipt=json.s("id");if(json.s("state")=="accepted"){rememberSessionInteraction(thread,"reply:"+receipt);dismissReplyFailure(thread,receipt)};if(json.s("state") in listOf("failed","unknown"))recordReplyFailure(thread,receipt,json.s("error","Reply could not be confirmed"));if(thread==selected)scheduleRefresh()}
+            "reply" -> {val thread=json.s("threadId");val receipt=json.s("id");PocketReplies.event(thread,receipt,json.s("state"),json.s("error"));if(json.s("state")=="accepted"){rememberSessionInteraction(thread,"reply:"+receipt);dismissReplyFailure(thread,receipt)};if(json.s("state") in listOf("failed","unknown"))recordReplyFailure(thread,receipt,json.s("error","Reply could not be confirmed"));if(thread==selected)scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}
             "turnRecovery" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("recovery",json.optJSONObject("recovery"))}}
             "timeline" -> {
