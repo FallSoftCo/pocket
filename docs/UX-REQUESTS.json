@@ -14,6 +14,39 @@
   },
   "requests": [
     {
+      "id": "conversation-stale-transcript-20261009",
+      "request": "Conversations must catch up with session previews and notifications, with visible loading feedback for cached messages.",
+      "status": "fixed and installed alpha49; native cached/delayed/counter-reset/older-page checks pass,269 Android tests,418 public Node tests",
+      "implementation": [
+        "Meaningful selected preview/status changes refresh the transcript",
+        "Fresh authoritative snapshots replace unchanged cached streamed rows despite persisted version0 or reset counters",
+        "Live output received during a read retains precedence",
+        "Latest messages take priority over older-history paging",
+        "Cached content remains visible with an Updating messages indicator",
+        "Repeated identical previews do not schedule more reads"
+      ],
+      "followup20261011": {
+        "cause": "A preview arriving during scheduleRefresh-owned recent read marked pending but was not retained for a follow-up read.",
+        "fix": "Current-owner markRefreshPending retains missedUpdates during loading, coalescing to a follow-up read.",
+        "qualification": "Old alpha56 code fails exact native in-flight preview case in19.691s; fix passes9.449s. Cached messages and draft retained; identical previews produce no extra reads.",
+        "delivery": "alpha57/code75 installed, private updater metadata verified for both signers; native broad regression42.526s and final targeted9.491s passed."
+      }
+    },
+    {
+      "id": "canonical-input-position-20261011",
+      "request": "Repair user messages appearing below their replies even when input lies outside bounded recent page; preserve live text/local history/drafts/selection and keep fast loading.",
+      "status": "alpha58/code76 installed; narrow backend6b7d307 active; native and actual runtime successor qualified",
+      "evidence": "qualification/anchored-history-20261011.json",
+      "implementation": [
+        "Read from exact stock item anchor, find proven loaded successor",
+        "One serial native read lane scoped to conversation/environment",
+        "Early/middle/latest known-anchor sampling for long local turns",
+        "No model polling or worker activation",
+        "Compatibility cursors carry stable item/turn boundary as transcript grows",
+        "Failures remain actionable; explicit retry without automatic read loop"
+      ]
+    },
+    {
       "id": "note-save-environment-origin-20261011",
       "date": "2026-10-11",
       "requirement": "Saving a retained reply must use the environment selected at the tap, even when navigating immediately to an identically identified thread elsewhere; completion/errors must not contaminate the new view.",

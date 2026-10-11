@@ -8,9 +8,9 @@ commands and environment identity throughout.
 
 | Flow | Acceptance evidence required | Current gap |
 | --- | --- | --- |
-| Message chronology | Interleaved stream, delayed snapshot, overlapping older pages, reconnect and cached reopen retain canonical order and newer text | Alpha54 installed; overlap and late-input native/unit checks pass. Exact reported physical causal pair remains uncaptured |
-| Freshness and loading | Current list/notification update appears in open chat with visible loading/error state; no full-history startup block | Recheck installed behavior across reconnect and environments |
-| History and reading | Upward scrolling loads automatically, retained local pages remain visible, message and pixel anchor survive updates | Native retained-anchor and short-page pacing checks pass; alpha55 installed, physical smoothness unmeasured |
+| Message chronology | Interleaved stream, delayed snapshot, overlapping older pages, reconnect and cached reopen retain canonical order and newer text | Alpha58 installed; partial-page and outside-recent-page delayed-input native checks pass; real stock successor read verified. Cross-turn/reconnect breadth and exact physical pair remain open |
+| Freshness and loading | Current list/notification update appears in open chat with visible loading/error state; no full-history startup block | Alpha57/58 in-flight-preview race reproduced/repaired natively. Physical arrival and cross-environment reconnect verification remain open |
+| History and reading | Upward scrolling loads automatically, retained local pages remain visible, message and pixel anchor survive updates | Alpha58 installed; native retained-anchor/short-page pacing pass; compatibility item/turn boundaries stay stable under new output. Physical smoothness unmeasured |
 | Session navigation | One tap opens intended session and replies route there; relevant recency without refresh-driven reorder or scroll jumps | Synthetic cross-environment routing and Important-filter anchor checks pass; physical navigation/viewport restore pending |
 | Work state | Working, waiting for input, queued, interrupted and failed states distinguish actual runtime evidence | Native Failed/Stopped/Ready/Needs-you checks pass; physical status evidence pending |
 | One-handed voice/text | Direct mic capture, physical keys with IME, preserved drafts, source-bound stop/send, clear errors and reachable controls | Native IME, volume-key/touch capture and draft checks pass; physical hardware/IME regression pending |
@@ -343,3 +343,34 @@ text/local history; full native regression passes41.919seconds. Private update
 metadata matches both APK hashes. Other environment services unchanged. Further
 work: targeted canonical read when new input lies outside recent bounded page;
 legacy hints; actual physical case. No claim of complete chronology/world-classUX.
+
+## In-flight freshness and targeted chronology — alpha57/58
+
+Alpha57/code75 installed after reproducing a lost preview during a scheduled
+recent read. Old control fails19.691s; candidate passes9.449s. It retains one
+follow-up read, cached messages and drafts without unchanged-preview polling.
+See qualification/transcript-refresh-race-20261011.json.
+
+Alpha58/code76 installed in place. An exact-item-anchor read places delayed
+input against its proven loaded successor even outside the recent page.
+Alpha57 control fails21.753s with input below reply; extended candidate passes
+15.205s, covering new live text, draft/local history, navigation, warm reopening,
+read failure and explicit recovery without polling. One serial lane stays scoped
+to conversation/environment. Early/recent local anchors share the bounded wire
+budget; no role-based sorting/model calls. Compatibility paging uses stable
+item/turn boundaries when new output arrives.
+
+277 unit tests per signed variant and both builds/lints pass on OZZZ-OS. Full
+native freshness/keyboard/voice regression43.571s; in-flight preview case9.469s.
+Narrow backend6b7d307 (base4a81b84) passes431tests; full source459tests. Backend
+PID1598556 and original daemon2213121 preserved; delivery/recovery grouped counts
+unchanged. Real user-anchor-to-loaded-reply lookup passes144ms across4bounded
+requests; unauthenticated401/invalid-body400. Other environments/web gateways
+unchanged. Private updater hashes match both APKs; phone package independently
+confirms76/alpha58. Owned fixture/emulator stopped. See
+qualification/anchored-history-20261011.json.
+
+Remaining: exact physical causal pair/scrolling/frame pacing; cross-turn ordering
+and reconnect breadth; pathological gaps beyond bounded position search; other
+environment owning releases/browser parity; notification/audio and full immersion/
+accessibility audit. The quality goal is not complete.

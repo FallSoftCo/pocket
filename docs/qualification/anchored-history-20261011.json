@@ -1,0 +1,119 @@
+{
+  "source": "90712519",
+  "buildHost": "OZZZ-OS",
+  "qualification": {
+    "oldClientControl": {
+      "source": "3585e59",
+      "result": "failed as expected: delayed request remained below its reply outside recent page",
+      "seconds": 21.753,
+      "receipt": "/tmp/nextcomp-anchored-control-final-native.txt"
+    },
+    "candidate": {
+      "seconds": 15.205,
+      "receipt": "/tmp/nextcomp-anchored-error-native.txt",
+      "passed": true,
+      "checks": [
+        "input outside bounded recent page repaired without backfill",
+        "earlier commentary/prior reply retained",
+        "new live response text retained",
+        "draft retained",
+        "duplicate input does not refetch",
+        "navigation rejects old position reply",
+        "warm reopen repairs cancelled input",
+        "read failure retained and actionable",
+        "explicit retry repairs failed read without polling"
+      ]
+    },
+    "fullNative": {
+      "passed": true,
+      "seconds": 43.571,
+      "receipt": "/tmp/nextcomp-anchored-full-native.txt"
+    },
+    "node": {
+      "rootTests": 459,
+      "narrowReleaseTests": 431,
+      "failures": 0,
+      "targetedHistoryTests": 18
+    }
+  },
+  "backend": {
+    "source": "6b7d307",
+    "base": "4a81b84",
+    "files": [
+      "server/history.mjs",
+      "server/index.mjs",
+      "tests/history.test.mjs"
+    ],
+    "pid": 1598556,
+    "externalDaemonPreserved": 2213121,
+    "unauthenticatedPositionHTTP": 401,
+    "invalidPositionHTTP": 400,
+    "liveRead": {
+      "realUserAnchor": true,
+      "loadedReplyFound": true,
+      "requests": 4,
+      "elapsedMs": 144
+    },
+    "deliveryCountsUnchanged": true,
+    "otherEnvironmentServices": "unchanged"
+  },
+  "contract": {
+    "endpoint": "POST /api/threads/:id/timeline/position",
+    "purpose": "authenticated read-only exact input/successor position",
+    "providerCalls": "thread/items/list only, at most4pages of8items per request",
+    "fields": [
+      "turnId",
+      "itemId",
+      "knownItemIds",
+      "optional cursor"
+    ],
+    "result": [
+      "available",
+      "insertBefore",
+      "cursor"
+    ],
+    "effects": "no model calls, resume/turn start, unknown-send replay or permission changes",
+    "compatibility": "missing endpoint/item anchors uses normal recent/older-page reconciliation"
+  },
+  "limits": [
+    "Physical reported ordering pair not captured; native reproduction and actual runtime read path verified.",
+    "Client bounds each input search to64chunks; pathological gaps over2048raw items may need older-page reconciliation.",
+    "Other environments use legacy fallback until their owners release the additive endpoint.",
+    "Physical scrolling and frame pacing remain unqualified.",
+    "Full UX goal remains open."
+  ],
+  "android": {
+    "debugTests": 277,
+    "releaseTests": 277,
+    "failures": 0,
+    "bothLints": "passed",
+    "bothSignedBuilds": "passed",
+    "priorRefreshRaceNative": {
+      "passed": true,
+      "seconds": 9.469,
+      "receipt": "/tmp/nextcomp-alpha58-refresh-race-native.txt"
+    },
+    "artifacts": [
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "path": "nextcomp-76-22ecabe28e15.apk",
+        "sha256": "2cd21a638102192e5730153298592d882bb69816002213e1245ea6fd31f8b461",
+        "size": 61604848
+      },
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "path": "nextcomp-76-b28f55b44c93.apk",
+        "sha256": "5f2faa4b4aff86675a4515fa63e197cbe76f7ba7a01c5e25190cc2ec4fb19b17",
+        "size": 51972775
+      }
+    ]
+  },
+  "delivery": {
+    "version": "0.5.0-alpha.58",
+    "versionCode": 76,
+    "phone": "ADB Success; independent package manager confirms76/alpha58, compatible signer; no data clear",
+    "privateUpdate": "Both75-to76 authenticated signer metadata responses200 and hashes match signed APKs",
+    "ownedQaCleanup": "emulator5620 and fixture19998 stopped",
+    "realDeviceInteraction": "Exact reported pair and physical scroll smoothness not directly observed"
+  }
+}
