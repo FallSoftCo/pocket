@@ -200,3 +200,14 @@ This is synthetic runtime evidence, not real automatic recovery qualification.
 Stale conflicting catalog/runtime evidence and physical handset behavior remain
 open. Candidate is not installed; phone remainsalpha52. Owned emulator and
 fixture stopped after the terminal receipt.
+
+## Alpha53 delivery
+
+Source99896dd built in fresh OZZZ worktree nextcomp-alpha53. All271 unit tests
+pass; debug and release builds/lints pass. Both retained-signature APKs are
+hash-verified and authenticated private update metadata fromcode70 matches71.
+Pixel in-place install returned Success and package manager confirmsalpha53/71.
+Bundles environment-scoped viewport/effect ownership and distinct Failed,
+Stopped, Ready and Needs you labels. No backend restart, pairing reset or
+worker activation. Installation is not real-device interaction proof; direct
+cross-host viewport restoration and physical accessibility remain open.
