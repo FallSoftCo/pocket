@@ -18,7 +18,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
 
-@Composable fun CardInteractionRegion(label:String,modifier:Modifier=Modifier,conversationTitle:String="",onClick:()->Unit){
+@Composable fun CardInteractionRegion(label:String,modifier:Modifier=Modifier,onClick:()->Unit){
+    CardInteractionRegion(label,modifier,"",onClick)
+}
+
+@Composable fun CardInteractionRegion(label:String,modifier:Modifier,conversationTitle:String,onClick:()->Unit){
     val interaction=remember{MutableInteractionSource()}
     val pressed by interaction.collectIsPressedAsState()
     val haptic=LocalHapticFeedback.current
