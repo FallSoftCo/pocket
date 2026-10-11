@@ -9,6 +9,21 @@ import {COMPUTER_USE_INSTRUCTIONS} from '../server/computer-use.mjs';
 import {LiveTimeline,timelinePage} from '../server/timeline.mjs';
 const wait=async f=>{for(let i=0;i<50;i++){if(f())return;await new Promise(r=>setTimeout(r,10));}assert.fail('Condition not reached');};
 
+test('live-only rows retain creation order when earlier messages and tools receive later updates',()=>{
+ const live=new LiveTimeline();
+ const event=(method,params)=>live.ingest({method,params:{threadId:'thread',turnId:'turn',...params}});
+ event('item/started',{item:{id:'user',type:'userMessage',content:[{type:'text',text:'Synthetic request'}]}});
+ event('item/started',{item:{id:'message',type:'agentMessage',text:'Working'}});
+ event('item/started',{item:{id:'tool',type:'commandExecution',command:'synthetic',aggregatedOutput:''}});
+ event('item/agentMessage/delta',{itemId:'message',delta:' now'});
+ event('item/commandExecution/outputDelta',{itemId:'tool',delta:'result'});
+ event('item/completed',{item:{id:'message',type:'agentMessage',text:'Working now'}});
+ const merged=live.merge({id:'thread',turns:[]});
+ assert.deepEqual(merged.turns[0].items.map(x=>x.id),['user','message','tool']);
+ assert.equal(merged.turns[0].items[1].text,'Working now');
+ assert.equal(live.bytes,[...live.threads.get('thread').get('turn').items.values()].reduce((n,x)=>n+x.bytes,0));
+});
+
 test('session creation is durable, idempotent, project-scoped, and defaults to full permissions',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'pocket-start-'));const {db}=openStore(dir);const calls=[],created=[];
  const codex={ready:false,call:async(method,params)=>{calls.push({method,params});return {thread:{id:'new-thread',cwd:params.cwd,turns:[]}};}};
