@@ -17,16 +17,17 @@ internal data class PresentedReadReceipt(val environment:String,val owner:String
 }
 internal object PresentedReads {
     private const val prefix="presented-read:"
+    private val storage get()=Pocket.context.getSharedPreferences("presented-reads",Context.MODE_PRIVATE)
     @Synchronized fun record(thread:String,kind:String,value:String,environment:String){
         val destination=Pocket.captureEnvironment(environment)?:return
         val r=PresentedReadReceipt(environment,backendOwner(environment+"\u0000"+destination.endpoint,destination.token),thread,kind,value,System.currentTimeMillis())
         if(!r.valid(System.currentTimeMillis()))return
         // Persist before admission. Repeated viewport callbacks share one durable work ID.
-        if(Pocket.prefs.contains(prefix+r.id))return
-        if(!Pocket.prefs.edit().putString(prefix+r.id,r.json().toString()).commit())return
+        if(storage.contains(prefix+r.id))return
+        if(!storage.edit().putString(prefix+r.id,r.json().toString()).commit())return
         enqueue(r.lane)
     }
-    private fun pending()=Pocket.prefs.all.entries.filter{it.key.startsWith(prefix)}.mapNotNull{(key,value)->
+    private fun pending()=storage.all.entries.filter{it.key.startsWith(prefix)}.mapNotNull{(key,value)->
         runCatching{PresentedReadReceipt.parse(value as String)}.getOrElse{remove(key.removePrefix(prefix));null}
     }
     fun restore(){pending().map{it.lane}.distinct().forEach{enqueue(it)}}
@@ -37,8 +38,9 @@ internal object PresentedReads {
         // Append closes the finishing-worker race. Extra wakeups find an empty lane.
         WorkManager.getInstance(Pocket.context).enqueueUniqueWork("presented-read-lane-$lane",ExistingWorkPolicy.APPEND_OR_REPLACE,request)
     }catch(_:Exception){/* Durable receipt remains; next foreground admission retries. */}}
+    fun continueLane(lane:String)=enqueue(lane)
     fun first(lane:String)=pending().filter{it.lane==lane}.minByOrNull{it.at}
-    fun remove(id:String){Pocket.prefs.edit().remove(prefix+id).commit()}
+    fun remove(id:String){storage.edit().remove(prefix+id).commit()}
 }
 class PresentedReadWorker(c:Context,p:WorkerParameters):CoroutineWorker(c,p){
     override suspend fun doWork():Result {
@@ -64,6 +66,7 @@ class PresentedReadWorker(c:Context,p:WorkerParameters):CoroutineWorker(c,p){
             PresentedReads.remove(id)
         }
         }
-        return Result.retry() // Bound each run; unfinished receipts retain their order.
+        PresentedReads.continueLane(lane)
+        return Result.success() // Healthy batches continue without inheriting outage backoff.
     }
 }
