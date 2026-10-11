@@ -11,6 +11,7 @@ object PocketTranscript {
     private var loadingEarlier by mutableStateOf(false)
     val updating get()=refreshPending||(loading&&!loadingEarlier)
     fun markRefreshPending(){if(owner==Pocket.selected&&ownerScope==scopeKey())refreshPending=true}
+    var automaticRetryAllowed by mutableStateOf(true);private set
     var earlier by mutableStateOf(false);private set
     var before:String?=null;private set
     var revision by mutableIntStateOf(0);private set
@@ -41,13 +42,13 @@ object PocketTranscript {
     private var checkedThisOpen=false
     private fun trace(){if(BuildConfig.DEBUG)android.util.Log.d("PocketCache","rows=${rows.size} buffered=${buffered.size} earlier=$browsingEarlier")}
     fun reset(id:String){
-        generation++;owner=id;ownerScope=scopeKey()
+        generation++;owner=id;ownerScope=scopeKey();automaticRetryAllowed=true
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
         earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
     fun latest(){Pocket.refreshDetail()}
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
@@ -61,7 +62,7 @@ object PocketTranscript {
         val cursor=bridgeCursor?:if(older)before else null
         loadingEarlier=older||bridgeCursor!=null
         if(!loadingEarlier)refreshPending=false
-        loading=true;buffered.clear();val baselineRows=rows.associateBy{it.s("id")};var succeeded=false
+        automaticRetryAllowed=true;loading=true;buffered.clear();val baselineRows=rows.associateBy{it.s("id")};var succeeded=false
         try{
             val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
             if(!current())return
@@ -97,14 +98,14 @@ object PocketTranscript {
             val updates=buffered.values.toList();buffered.clear()
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             rememberRecent();revision++;Pocket.error="";succeeded=true;trace()
-        }catch(e:CancellationException){throw e}catch(e:Exception){if(current())Pocket.error=PocketNetwork.error(e)}
+        }catch(e:CancellationException){throw e}catch(e:Exception){if(current()){automaticRetryAllowed=retryableTranscriptRead(e);Pocket.error=PocketNetwork.error(e)}}
         finally {
             if(current()) {
                 if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
                 loading=false;loadingEarlier=false
                 if(missedUpdates) {
                     missedUpdates=false
-                    Pocket.scope.launch{if(!succeeded)delay(450);if(current())PocketTranscript.load()}
+                    if(succeeded||automaticRetryAllowed)Pocket.scope.launch{if(!succeeded)delay(450);if(current())PocketTranscript.load()}
                 } else if(succeeded) {
                     bridgeBefore?.let{next->Pocket.scope.launch{load(bridgeCursor=next)}}
                 }
@@ -162,3 +163,6 @@ internal class RecentTranscriptCache<T>(private val capacity:Int,private val lif
     fun remove(scope:String,id:String){entries.remove(scope to id)}
     fun clear(){entries.clear()}
 }
+
+/** Reads may recover automatically; rejected credentials/cursors need changed state. */
+internal fun retryableTranscriptRead(error:Throwable)=error is java.io.IOException||error is PocketApiException&&(error.status in listOf(408,429)||error.status in 500..599)

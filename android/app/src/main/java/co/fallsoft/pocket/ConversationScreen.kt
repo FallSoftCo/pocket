@@ -149,10 +149,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
     LaunchedEffect(Pocket.environmentId,Pocket.selected,important){
-        snapshotFlow{restoredPosition&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
+        snapshotFlow{restoredPosition&&PocketTranscript.automaticRetryAllowed&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
             .distinctUntilChanged().filter{it}.collect{
                 var retryMs=1000L
-                while(restoredPosition&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
+                while(restoredPosition&&PocketTranscript.automaticRetryAllowed&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
                     val cursor=PocketTranscript.before
                     PocketTranscript.load(true)
                     if(PocketTranscript.before==cursor&&PocketTranscript.earlier){
