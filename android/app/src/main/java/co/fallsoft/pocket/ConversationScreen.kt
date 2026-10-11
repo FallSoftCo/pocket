@@ -38,6 +38,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -78,7 +80,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
+@OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class,FlowPreview::class)
 @Composable fun ConversationScreen(){
     val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
     val task=Pocket.tasks.firstOrNull{it.id==Pocket.selected}
@@ -149,12 +151,19 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
     LaunchedEffect(Pocket.environmentId,Pocket.selected,important){
-        snapshotFlow{restoredPosition&&PocketTranscript.automaticRetryAllowed&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
+        snapshotFlow{restoredPosition&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
             .distinctUntilChanged().filter{it}.collect{
                 var retryMs=1000L
-                while(restoredPosition&&PocketTranscript.automaticRetryAllowed&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
+                while(restoredPosition&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
+                    // Wait for finger/fling and layout to settle before another page.
+                    delay(180)
+                    if(list.isScrollInProgress||!shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading))break
                     val cursor=PocketTranscript.before
-                    PocketTranscript.load(true)
+                    PocketTranscript.load(true,beforeApply={
+                        snapshotFlow{list.isScrollInProgress}.debounce(180).first{!it}
+                    })
+                    androidx.compose.runtime.withFrameNanos{}
+                    androidx.compose.runtime.withFrameNanos{}
                     if(PocketTranscript.before==cursor&&PocketTranscript.earlier){
                         // Remain anchored; retry only while the reader is still near this edge.
                         delay(retryMs);retryMs=(retryMs*2).coerceAtMost(15000)

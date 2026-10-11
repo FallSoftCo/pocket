@@ -52,7 +52,7 @@ object PocketTranscript {
     fun latest(){Pocket.refreshDetail()}
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
-    suspend fun load(older:Boolean=false,bridgeCursor:String?=null){
+    suspend fun load(older:Boolean=false,bridgeCursor:String?=null,beforeApply:suspend ()->Unit={}){
         val id=Pocket.selected?:return
         if(owner!=id||(older&&(!earlier||before==null)))return
         if(loading){if(!older&&bridgeCursor==null){missedUpdates=true;refreshPending=true};return}
@@ -65,6 +65,7 @@ object PocketTranscript {
         automaticRetryAllowed=true;loading=true;buffered.clear();val baselineRows=rows.associateBy{it.s("id")};var succeeded=false
         try{
             val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
+            if(older)beforeApply()
             if(!current())return
             val page=d.optJSONObject("timeline")?:JSONObject();val incoming=page.optJSONArray("rows")?.objects()?:emptyList()
             incoming.forEach{it.put("version",maxOf(it.optLong("version"),d.optLong("revision")))}
