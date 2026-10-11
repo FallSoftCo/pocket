@@ -68,7 +68,7 @@ object PocketTranscript {
         val value=disk.read(scope,id)?.let{JSONObject(it)}?:return@withContext null
         if(value.optInt("schema")!=1||value.s("scope")!=scope||value.s("id")!=id)return@withContext null
         val detail=value.getJSONObject("detail");if(detail.optJSONObject("thread")?.s("id")!=id)return@withContext null
-        val cachedRows=value.getJSONArray("rows").objects().filter{it.s("kind")!="request"};if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
+        val cachedRows=value.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map{it.put("version",0L)};if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
         val position=value.optJSONObject("position")?.let{TranscriptReadPosition(it.s("row"),it.optInt("offset"),it.optBoolean("follow"))}
         Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position)
     }catch(_:Exception){null}}
@@ -184,7 +184,7 @@ object PocketTranscript {
             if(!historyLoaded&&!older&&bridgeCursor==null){
                 val cached=diskSnapshot(scope,id)
                 if(!current())return
-                if(cached!=null){rows=cached.rows;Pocket.detail=cached.detail;before=cached.before;earlier=cached.earlier;bridgeBefore=cached.bridgeBefore;readPosition=cached.position;historyLoaded=true;cacheRestoreRevision++;revision++;trace()}
+                if(cached!=null){rows=cached.rows;Pocket.detail=cached.detail;before=cached.before;earlier=cached.earlier;bridgeBefore=cached.bridgeBefore;readPosition=cached.position;historyLoaded=true;buffered.values.toList().forEach{apply(it,false)};cacheRestoreRevision++;revision++;trace()}
                 baselineRows=rows.associateBy{it.s("id")}
             }
             val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")

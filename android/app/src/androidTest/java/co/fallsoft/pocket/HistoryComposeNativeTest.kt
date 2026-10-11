@@ -81,8 +81,11 @@ class HistoryComposeNativeTest {
   java.io.File(c.cacheDir,"cold-process-cached-passage.png").outputStream().use{image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
   println("Native selection-to-rendered-cached-passage: ${android.os.SystemClock.elapsedRealtime()-restoreStarted}ms; ${PocketTranscript.rows.size} retained rows")
   assertTrue("Stale cache exposed pending action authority",Pocket.detail?.optJSONArray("pending")==null&&Pocket.detail?.optJSONArray("outgoing")==null&&Pocket.detail?.optJSONObject("catchup")==null)
+  main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","native-reading").put("version",1).put("row",JSONObject().put("id","reading-native-30").put("turnId","native-reading").put("kind","message").put("text","Live output with a new runtime counter").put("version",1)))}
+  assertTrue("Stored counter suppressed fresh live output",PocketTranscript.rows.any{it.s("id")=="reading-native-30"&&it.s("text")=="Live output with a new runtime counter"})
   qa("release")
   compose.waitUntil(15000){!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Fresh response 2"}}
+  assertTrue("Fresh read lost buffered live output",PocketTranscript.rows.any{it.s("text")=="Live output with a new runtime counter"})
   assertEquals("Fresh read moved cached reading position",prefs.getFloat("qualification:reading-top",-1f),compose.onNodeWithText(text,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.top,2f)
   assertEquals("Cold restore lost draft","Keep reading draft",prefs.getString("draft:same-thread",null))
   assertEquals("Restore submitted work",0,qa("state").getJSONArray("replies").length())
