@@ -151,7 +151,8 @@ class MainActivity:ComponentActivity(){
     ImmersionText("workflow:"+text,text,modifier=modifier,color=color,fontSize=fontSize,lineHeight=if(lineHeight==TextUnit.Unspecified)(fontSize.value*1.4f).sp else lineHeight,maxLines=maxLines,fontWeight=fontWeight,kind="workflow text",rescue=false,phraseRescue=true)
 }
 @Composable fun Label(text:String,color:Color=Muted){BilingualLabel(text,color=color,fontSize=10.sp,fontWeight=FontWeight.Bold,centered=false)}
-@Composable fun ErrorBanner(message:String=Pocket.error,onDismiss:(()->Unit)?=null){if(message.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){WorkflowText(ConnectionMessages.server(message),color=Coral,fontSize=13.sp,lineHeight=19.sp);Row{if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){BilingualLabel("Reload conversation",color=Mint)};if(onDismiss!=null)TextButton(onDismiss){BilingualLabel("Dismiss",color=Muted)}}}}}
+@OptIn(ExperimentalLayoutApi::class)
+@Composable fun ErrorBanner(message:String=Pocket.error,onDismiss:(()->Unit)?=null){if(message.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){WorkflowText(ConnectionMessages.server(message),color=Coral,fontSize=13.sp,lineHeight=19.sp);FlowRow{if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){BilingualLabel("Reload conversation",color=Mint)};if(onDismiss!=null)TextButton(onDismiss){BilingualLabel("Dismiss",color=Muted)}}}}}
 @Composable fun ConnectionNotice(){
     if(Pocket.connected&&Pocket.codexOnline)return
     if(!Pocket.connected&&!PocketLive.outageVisible)return

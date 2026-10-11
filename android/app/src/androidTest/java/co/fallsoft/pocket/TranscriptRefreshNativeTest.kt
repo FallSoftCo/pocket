@@ -49,7 +49,17 @@ class TranscriptRefreshNativeTest {
   main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&device.hasObject(By.text("Synthetic delayed reply failure"))}
   assertEquals("History reload lost the source delivery ID",sourceReceipt,Pocket.replyFailure("same-thread")?.id)
   assertEquals("Navigation lost unsent draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
-  device.findObject(By.text("Dismiss")).click();await{Pocket.replyFailure("same-thread")==null}
+  val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
+  try{
+   device.executeShellCommand("settings put system font_scale 2.0")
+   assertTrue("Dismiss missing at large text",device.wait(Until.hasObject(By.text("Dismiss")),5000))
+   Thread.sleep(600)
+   val dismiss=device.findObject(By.text("Dismiss"));val bounds=dismiss.parent.visibleBounds
+   val minimum=(48*context.resources.displayMetrics.density).toInt()
+   assertTrue("Large-text dismiss target clipped: $bounds",bounds.width()>=minimum&&bounds.height()>=minimum)
+   dismiss.click();await{Pocket.replyFailure("same-thread")==null}
+  }finally{device.executeShellCommand("settings put system font_scale $font")}
+
   assertEquals("Dismiss replayed the uncertain send",1,qa("state").getJSONArray("replies").length())
   main{Pocket.closeTask()}
   fun popupReply(){
