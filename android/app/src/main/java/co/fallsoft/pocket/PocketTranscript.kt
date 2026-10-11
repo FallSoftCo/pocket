@@ -146,7 +146,7 @@ object PocketTranscript {
         fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
         val cursor=bridgeCursor?:if(older)before else null
         loadingEarlier=older||bridgeCursor!=null
-        if(!loadingEarlier)refreshPending=false
+        if(!loadingEarlier){refreshPending=false;freshForRead=false}
         automaticRetryAllowed=true;loading=true;buffered.clear();val baselineRows=rows.associateBy{it.s("id")};var succeeded=false
         try{
             val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
