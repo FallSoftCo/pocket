@@ -29,7 +29,9 @@ class HistoryReadingNativeTest {
   main{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","reading").put("version",100+n).put("row",JSONObject().put("id","reading-$n").put("turnId","reading").put("kind","message").put("text","Reading passage $n: retained synthetic conversation text with a clear place to return while earlier history arrives.")))}
   assertTrue(device.wait(Until.hasObject(By.textContains("Reading passage 39:")),5000));Thread.sleep(150)
   repeat(3){device.swipe(device.displayWidth/2,device.displayHeight/3,device.displayWidth/2,device.displayHeight*2/3,25);Thread.sleep(200)}
-  assertFalse("Reading gesture returned to latest",device.hasObject(By.textContains("Reading passage 39:")))
+  val last=device.findObject(By.textContains("Reading passage 39:"))
+  println("Reading visible bounds: "+device.findObjects(By.textContains("Reading passage ")).map{it.text.substringBefore(":")+":"+it.visibleBounds})
+  assertTrue("Reading gesture returned to latest: ${last?.visibleBounds}",last==null||last.visibleBounds.isEmpty)
   val anchor=requireNotNull(device.findObjects(By.textContains("Reading passage ")).firstOrNull{it.visibleBounds.top>50&&it.visibleBounds.bottom<device.displayHeight*3/4})
   val text=anchor.text;val top=anchor.visibleBounds.top
   val settled=CompletableDeferred<Unit>();val arrived=CompletableDeferred<Unit>()
