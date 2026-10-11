@@ -28,7 +28,7 @@ class HistoryComposeNativeTest {
   compose.waitUntil(15000){Pocket.connected&&Pocket.tasks.isNotEmpty()}
   main{Pocket.open("same-thread")};compose.waitUntil(15000){PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
   fun text(n:Int)="Native reading passage $n: retained conversation text stays in place as older messages load and this conversation is reopened."
-  main{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("version",100+n).put("row",JSONObject().put("id","reading-native-$n").put("kind","message").put("text",text(n))))}
+  main{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","native-reading").put("version",100+n).put("row",JSONObject().put("id","reading-native-$n").put("turnId","native-reading").put("kind","message").put("text",text(n))))}
   val history=compose.onNodeWithTag("conversation-history")
   history.performScrollToKey("reading-native-10")
   history.performTouchInput{swipe(center,center+Offset(0f,80f),500)}
