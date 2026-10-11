@@ -34,19 +34,27 @@ class PresentedReadRecoveryNativeTest {
   assertEquals(2,prefs.all.keys.count{it.startsWith("presented-read:")})
   assertFalse(PocketNotificationReads.isRead(JSONObject().put("id",1).put("thread_id","same-thread").put("kind","complete")))
   prefs.edit().putInt("qualification:read-recovery-pid",android.os.Process.myPid()).commit()
-  qa("silent") // New unseen view; recovery must keep capture1 rather than acknowledge capture2.
+  qa("silent")
+  main{Pocket.closeTask();Pocket.open("same-thread")}
+  compose.waitUntil(15000){PocketTranscript.rows.any{it.s("text")=="Fresh response 2"}&&!PocketTranscript.loading}
+  compose.onNodeWithText("Fresh response 2",useUnmergedTree=true).assertIsDisplayed()
+  compose.waitUntil(15000){prefs.all.keys.count{it.startsWith("presented-read:")}==4}
+  assertEquals("Newer seen view bypassed an older waiting receipt",0,qa("state").getJSONArray("acknowledgements").length())
+  qa("silent") // View3 is unseen; only the actually presented views1 and2 may recover.
  }
  @Test fun coldProcessRecoversOnlyThePreviouslyPresentedView(){
   guard();val prefs=c.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   assertNotEquals(prefs.getInt("qualification:read-recovery-pid",-1),android.os.Process.myPid())
-  assertEquals(2,prefs.all.keys.count{it.startsWith("presented-read:")})
+  assertEquals(4,prefs.all.keys.count{it.startsWith("presented-read:")})
   main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
-  compose.waitUntil(90000){qa("state").getJSONArray("acknowledgements").length()>=2}
+  compose.waitUntil(90000){qa("state").getJSONArray("acknowledgements").length()>=4}
   val state=qa("state");val rows=state.getJSONArray("acknowledgements").objects()
-  assertTrue(rows.any{it.s("token")=="capture-1"});assertTrue(rows.any{it.optLong("throughId")==1L})
-  assertFalse(rows.any{it.s("token")=="capture-2"||it.optLong("throughId")==2L})
+  assertEquals(listOf("capture-1","capture-2"),rows.filter{it.has("token")}.map{it.s("token")})
+  assertEquals(listOf(1L,2L),rows.filter{it.has("throughId")}.map{it.optLong("throughId")})
+  assertFalse(rows.any{it.s("token")=="capture-3"||it.optLong("throughId")==3L})
   assertTrue(PocketNotificationReads.isRead(JSONObject().put("id",1).put("thread_id","same-thread").put("kind","complete")))
-  assertFalse(PocketNotificationReads.isRead(JSONObject().put("id",2).put("thread_id","same-thread").put("kind","complete")))
+  assertTrue(PocketNotificationReads.isRead(JSONObject().put("id",2).put("thread_id","same-thread").put("kind","complete")))
+  assertFalse(PocketNotificationReads.isRead(JSONObject().put("id",3).put("thread_id","same-thread").put("kind","complete")))
   compose.waitUntil(5000){prefs.all.keys.none{it.startsWith("presented-read:")}}
   assertNull(Pocket.selected);assertEquals("Keep read recovery draft",prefs.getString("draft:same-thread",null))
   assertEquals(0,state.getJSONArray("replies").length())
