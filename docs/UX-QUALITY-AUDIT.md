@@ -171,3 +171,19 @@ scroll-and-filter passage retention and cross-host viewport checks remain open.
 Actual-commit OZZZ worktree nextcomp-viewport-qa completed debug unit tests,
 APK build and lint successfully in1m4s. No runtime restart, pairing change,
 worker activation or phone installation occurred for this candidate.
+
+## Important-filter native passage check
+
+Actual candidate31ceb40 passed owned OZZZ software emulator test in8.798s.
+Thirty synthetic conversation replies alternate final answers and progress;
+three thumb-direction swipes reach older work. Toggling Important on/off
+retains a complete visible final passage within24 screen pixels of its original
+position. This proves a native retained-row flow, not every removed-row/orphan
+case or physical Fold performance. Qualification is nonshrunk. No live session,
+provider or phone state touched. Candidate remains uninstalled.
+
+Three-environment native regression also passed candidate31ceb40 in10.332s:
+correct card navigation/history, scoped drafts, phone notification isolation,
+captured reply and note origin, unknown delivery retained without replay.
+This remains a routing/history test, not direct proof of viewport restoration
+across hosts. Owned fixture and emulator stopped after terminal test receipts.

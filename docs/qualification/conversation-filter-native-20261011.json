@@ -1,0 +1,14 @@
+{
+  "sourceCommit": "31ceb40",
+  "host": "OZZZ-OS",
+  "worktree": "/aosp/development/nextcomp-viewport-qa",
+  "emulator": "nextcomp_env_qa:5620",
+  "renderer": "SwiftShader software",
+  "variant": "qualification nonshrunk",
+  "scenario": "30 synthetic replies, scroll into older work, toggle Important on and off",
+  "result": "passed",
+  "seconds": 8.798,
+  "assertions": ["visible final reply remains present", "filtered reply top stays within 24 screen pixels", "unfilter restores reply within the same tolerance"],
+  "limits": ["no actual Fold gesture or frame pacing measured", "same retained visible final answer only; removed-row and orphan-note positions remain separate cases", "not proof of cross-environment viewport restoration", "candidate not installed on phone"],
+  "externalEffects": "synthetic loopback fixture only; no provider or live session calls"
+}
