@@ -27,6 +27,17 @@ class ClientReplyRecoveryNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
  }
  private fun posts()=qa("state").getJSONArray("replies")
+ @Test fun matchingUnknownReceiptRequiresExplicitRecovery(){
+  start(draft="Unknown receipt test");qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
+  var completed=false;main{Pocket.reply("Unknown receipt test",onDone={completed=true})}
+  await{!Pocket.sending&&PocketReplies.entries("same-thread").singleOrNull()?.state=="unknown"&&device.hasObject(By.text("Retry"))}
+  assertFalse("Unknown receipt cleared draft callback",completed);assertEquals("Unknown receipt test",Pocket.prefs.getString("draft:same-thread",null))
+  Thread.sleep(1000);assertEquals("Unknown receipt started another send",1,posts().length());assertEquals(0,qa("state").getJSONArray("recoveries").length())
+  device.findObject(By.text("Retry")).click();assertEquals(0,qa("state").getJSONArray("recoveries").length())
+  device.findObject(By.text("Check and retry")).click();await{PocketReplies.entries("same-thread").isEmpty()}
+  assertEquals("Recovery posted original turn again",1,posts().length());val action=qa("state").getJSONArray("recoveries").getJSONObject(0)
+  assertEquals(posts().getJSONObject(0).s("id"),action.s("id"));assertTrue(action.optBoolean("confirmUnknown"));assertFalse(Pocket.prefs.contains("draft:same-thread"))
+ }
  @Test fun malformedAcknowledgementAndWrongThreadCannotEraseDraftOrResend(){
   start();qa("bad-reply");main{Pocket.open("same-thread",keyboard=true)}
   await{Pocket.detail!=null&&!PocketTranscript.updating&&device.hasObject(By.clazz("android.widget.EditText"))}

@@ -172,7 +172,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         // Accessibility scroll actions do not emit pointer-drag interactions.
         snapshotFlow{list.isScrollInProgress&&!follow}.distinctUntilChanged().filter{it}.collect{historyGesture++}
     }
-    LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){
+    LaunchedEffect(PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)}){if(follow&&!dragged){
         delay(32)
         if(!follow||dragged||list.isScrollInProgress)return@LaunchedEffect
         val count=list.layoutInfo.totalItemsCount
