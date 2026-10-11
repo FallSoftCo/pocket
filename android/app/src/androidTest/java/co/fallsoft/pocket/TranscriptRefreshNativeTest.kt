@@ -36,7 +36,7 @@ class TranscriptRefreshNativeTest {
   assertFalse("Did not leave latest viewport",device.hasObject(By.text("Fresh response 1")))
   qa("silent");main{Pocket.refreshDetail()};await{has(2)&&!PocketTranscript.updating};Thread.sleep(1000)
   assertFalse("Fetch consumed unseen latest update while reading history",acknowledged(2))
-  repeat(7){device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/4,25)}
+  val latest=device.findObject(By.text("Latest"));assertNotNull("Return to latest action unavailable",latest);latest.click()
   await{acknowledged(2)}
   val important=device.findObject(By.text("Important"));assertNotNull("Important filter unavailable",important);important.click()
   qa("silent");main{Pocket.refreshDetail()};await{has(3)&&!PocketTranscript.updating};Thread.sleep(1000)
