@@ -3,6 +3,44 @@ import assert from 'node:assert/strict';
 import {ThreadHistory} from '../server/history.mjs';
 import {LiveTimeline,timelinePage} from '../server/timeline.mjs';
 
+test('anchored ordering finds a loaded successor beyond recent page without reading or resuming full history',async()=>{
+ const calls=[];
+ const history=new ThreadHistory({async call(method,p){calls.push({method,p});assert.equal(method,'thread/items/list');assert.equal(p.sortDirection,'asc');assert.equal(p.limit,8);
+  if(typeof p.cursor==='object'){assert.deepEqual(p.cursor,{type:'item',itemId:'late-user'});return {data:Array.from({length:8},(_,n)=>({turnId:'turn1',item:{id:'tool-'+n,type:'commandExecution',command:'Synthetic'}})),nextCursor:'next'};}
+  assert.equal(p.cursor,'next');return {data:[{turnId:'turn1',item:{id:'answer',type:'agentMessage',text:'Reply'}},{turnId:'turn1',item:{id:'later',type:'agentMessage',text:'Later'}}]};
+ }});
+ assert.deepEqual(await history.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'late-user',knownItemIds:['prior-commentary','late-user','answer','later']}),{available:true,insertBefore:'turn1/answer',cursor:null});
+ assert.equal(calls.length,2);
+});
+
+test('position continuation bounds work and binds exact thread turn and input',async()=>{
+ let calls=0;const history=new ThreadHistory({async call(method,p){calls++;return {data:[],nextCursor:'cursor-'+calls};}});
+ const args={turnId:'turn1',itemId:'input',knownItemIds:['answer']};
+ const first=await history.locateItemSuccessor('thread1',args);assert.equal(calls,4);assert.ok(first.cursor);
+ await assert.rejects(history.locateItemSuccessor('other', {...args,cursor:first.cursor}),/Invalid item position/);
+ await assert.rejects(history.locateItemSuccessor('thread1',{...args,turnId:'other',cursor:first.cursor}),/Invalid item position/);
+ await assert.rejects(history.locateItemSuccessor('thread1',{...args,itemId:'other',cursor:first.cursor}),/Invalid item position/);
+ assert.equal(calls,4);
+ const next=await history.locateItemSuccessor('thread1',{...args,cursor:first.cursor});assert.equal(calls,8);assert.notEqual(next.cursor,first.cursor);
+});
+
+test('position ignores raw reasoning and unrelated-turn successors, and exposes honest compatibility',async()=>{
+ const history=new ThreadHistory({async call(){return {data:[{turnId:'turn1',item:{id:'raw',type:'reasoning',content:['PRIVATE']}},{turnId:'turn1',item:{id:'answer',type:'agentMessage',text:'Visible'}}]};}});
+ assert.equal((await history.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['raw','answer']})).insertBefore,'turn1/answer');
+ const wrong=new ThreadHistory({async call(){return {data:[{turnId:'another',item:{id:'answer',type:'agentMessage',text:'Wrong'}}]};}});
+ await assert.rejects(wrong.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['answer']}),/outside the requested turn/);
+ const old=new ThreadHistory({async call(){throw Error('invalid type: map, expected a string');}});
+ assert.deepEqual(await old.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['answer']}),{available:false,insertBefore:null,cursor:null});
+});
+
+test('position does not guess when no known successor exists or a transport fails',async()=>{
+ const history=new ThreadHistory({async call(){return {data:[],nextCursor:null};}});
+ assert.equal((await history.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['input','earlier']})).insertBefore,null);
+ const broken=new ThreadHistory({async call(){throw Error('network timeout');}});
+ await assert.rejects(broken.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['answer']}),/network timeout/);
+ await assert.rejects(history.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:Array(257).fill('answer')}),/Invalid item position/);
+});
+
 test('recent opening returns newest batch without walking older items, then resumes losslessly',async()=>{
   const calls=[];
   const reader=new ThreadHistory({async call(method,p){
