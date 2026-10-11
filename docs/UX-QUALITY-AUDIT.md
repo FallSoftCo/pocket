@@ -276,3 +276,9 @@ authoritative snapshot; concurrent updates are covered separately by the passing
 late-input test. Running both methods in one process still exposes shared fixture
 and singleton isolation; use fresh fixture/process for each pending qualification.
 Full keyboard/recording/freshness regression is being re-run. Phone remainsalpha53.
+
+Fresh-process full TranscriptRefreshNativeTest passed38.954seconds on current
+candidate: capture status was visible with IME open, physical-key events and touch
+recording transitions preserved drafts, silent capture errors stayed visible, and
+read freshness/error/retry checks passed. This resolves the earlier synthetic
+recording-visibility regression for this run; physical handset remains unqualified.
