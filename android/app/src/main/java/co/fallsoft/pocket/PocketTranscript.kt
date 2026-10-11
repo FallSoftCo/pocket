@@ -10,7 +10,14 @@ object PocketTranscript {
     var refreshPending by mutableStateOf(false);private set
     private var loadingEarlier by mutableStateOf(false)
     val updating get()=refreshPending||(loading&&!loadingEarlier)
-    fun markRefreshPending(){if(owner==Pocket.selected&&ownerScope==scopeKey())refreshPending=true}
+    fun markRefreshPending(){
+        if(owner==Pocket.selected&&ownerScope==scopeKey()){
+            refreshPending=true
+            // The scheduler coalesces requests while its read is active. Retain
+            // an update arriving after that read began for one follow-up read.
+            if(loading)missedUpdates=true
+        }
+    }
     var automaticRetryAllowed by mutableStateOf(true);private set
     var earlier by mutableStateOf(false);private set
     var before:String?=null;private set

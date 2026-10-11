@@ -20,6 +20,24 @@ class TranscriptRefreshNativeTest {
  private fun await(b:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(b())return;Thread.sleep(50)};assertTrue("Freshness condition timed out",b())}
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+path,JSONObject())}
  private fun has(n:Int)=PocketTranscript.rows.any{it.s("text")=="Fresh response "+n}
+ @Test fun previewDuringScheduledRecentReadIsNotLost(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Keep my draft").commit()
+  main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
+  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.loading}
+  qa("advance")
+  await{qa("state").getJSONArray("reads").objects().any{it.optInt("revision")==2}}
+  qa("advance");await{Pocket.tasks.first().preview=="Fresh response 3"}
+  assertTrue("Cached messages hidden during in-flight refresh",has(1))
+  qa("release")
+  await{has(3)&&!PocketTranscript.updating}
+  assertEquals("Draft lost during coalesced refresh","Keep my draft",prefs.getString("draft:same-thread",null))
+  val reads=qa("state").getJSONArray("reads").length()
+  qa("repeat");Thread.sleep(1000)
+  assertEquals("Unchanged preview caused repeated reads",reads,qa("state").getJSONArray("reads").length())
+ }
  @Test fun cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
