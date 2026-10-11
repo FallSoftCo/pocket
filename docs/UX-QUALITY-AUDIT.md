@@ -374,3 +374,15 @@ Remaining: exact physical causal pair/scrolling/frame pacing; cross-turn orderin
 and reconnect breadth; pathological gaps beyond bounded position search; other
 environment owning releases/browser parity; notification/audio and full immersion/
 accessibility audit. The quality goal is not complete.
+
+Alpha59 candidate: six native conversation-scope/freshness/history/voice checks pass
+on OZZZ-OS. Old scheduled reads no longer suppress new-chat refresh; background
+session events do not reload foreground history; hidden provider reads pause.
+Narrow backend5a1ada9 deployed with433tests and original daemon preserved.
+Routine detail excludes accepted receipts but durable lookup remains accepted.
+See qualification/conversation-refresh-scope-20261011.json for delivery status.
+Physical chronology/frame pacing and wider quality audit remain outstanding.
+
+Alpha59/code77 delivered in place; independent phone package confirmation.
+Both private updater variants validated. Physical transcript interaction remains
+unobserved; owned emulator/fixture stopped. No pairing/data clearing.

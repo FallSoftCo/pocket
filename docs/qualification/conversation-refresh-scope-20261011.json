@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-11",
+  "version": "0.5.0-alpha.59",
+  "versionCode": 77,
+  "source": "f101d27",
+  "backend": "5a1ada9",
+  "cause": "A global refresh job survived conversation navigation, suppressing the newly selected conversation refresh. Background session events also refreshed the foreground transcript.",
+  "fixes": [
+    "Cancel scheduled old-chat refresh on navigation; retain generation-scoped history and drafts.",
+    "Refresh foreground transcript only for relevant session events.",
+    "Pause hidden Codex history reads on provider switch, then refresh on return.",
+    "Exclude accepted/cancelled outgoing receipts from routine detail payload while retaining durable storage and per-receipt lookup."
+  ],
+  "native": [
+    {
+      "method": "switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
+      "seconds": 18.326,
+      "passed": true
+    },
+    {
+      "method": "backgroundSessionEventsDoNotReloadCurrentTranscript",
+      "seconds": 13.732,
+      "passed": true
+    },
+    {
+      "method": "backendSwitchPausesHiddenReadsAndRestoresCodexSelection",
+      "seconds": 8.431,
+      "passed": true
+    },
+    {
+      "method": "cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory",
+      "seconds": 39.99,
+      "passed": true
+    },
+    {
+      "method": "previewDuringScheduledRecentReadIsNotLost",
+      "seconds": 9.668,
+      "passed": true
+    },
+    {
+      "method": "anchoredInputOutsideRecentPageRepairsWithoutBackfillOrLosingLiveText",
+      "seconds": 16.615,
+      "passed": true
+    }
+  ],
+  "nativeHost": "OZZZ-OS owned emulator5620 SwiftShader",
+  "backendTests": 433,
+  "fullSourceNodeTests": 461,
+  "signedBuild": "debug/release tests, lint and APK builds pass on OZZZ-OS",
+  "backendLive": {
+    "wireBytes": 62277,
+    "ms": 45,
+    "outgoingCount": 0,
+    "acceptedReceiptState": "accepted",
+    "daemonPreserved": true,
+    "rows": 6,
+    "view": "timeline"
+  },
+  "phone": {
+    "previous": "alpha58/code76",
+    "installation": "adb install -r Success; independent package manager confirms alpha59/code77",
+    "pairingAndDrafts": "in-place same-signed install, no data clear",
+    "physicalTranscriptVerification": "not performed; do not claim native synthetic test is a physical transcript observation"
+  },
+  "limits": [
+    "Native tests use synthetic data; physical transcript catch-up and frame pacing not yet observed.",
+    "Initial card test was obscured by Pixel Launcher ANR; after dismissing owned-emulator dialog the actual UI card-tap test passed.",
+    "Earlier pre-compile card result is excluded.",
+    "Other environment backends and browser gateways unchanged."
+  ],
+  "unitTestsPerSignedVariant": 277,
+  "privateUpdater": "both signer metadata version77 and hashes verified",
+  "ownedFixtures": "stopped own emulator5620 and fixture only"
+}

@@ -2091,6 +2091,29 @@
         "Distinct primary and source-retained scopes; no universal native-terminal fence",
         "Autonomous native goals and app-owned dynamic tools require explicit controller handover"
       ]
+    },
+    {
+      "id": "foreground-transcript-read-lifetime-20261011",
+      "request": "Conversation switching must not inherit a blocked old refresh. Background work must not poll the foreground transcript. Returning from another backend must preserve selection/cache/draft and fetch current content. Keep routine loads small without losing failed/uncertain sends.",
+      "status": "delivered-alpha59",
+      "implementation": [
+        "Cancel scheduled refresh on open/close and retain captured thread through debounce",
+        "Scope turn/reply/request refresh triggers to selected thread",
+        "Pause hidden Codex reader with a new generation; preserve cached history and selected chat",
+        "Conversation-specific accessible card actions",
+        "Routine chat response includes actionable outgoing only; full receipt storage and /api/replies/:id preserved"
+      ],
+      "evidence": {
+        "livePayloadBeforeBytes": 221927,
+        "acceptedOutgoingBytes": 143475,
+        "outgoingCountBefore": 229
+      },
+      "limits": [
+        "No alpha59 delivery yet",
+        "Physical gesture/reading/IME verification remains pending"
+      ],
+      "verification": "Six native emulator cases pass; 277 unit tests each debug/release; both lints/builds pass; phone package confirms alpha59/code77. Exact physical transcript catch-up not observed.",
+      "qualification": "docs/qualification/conversation-refresh-scope-20261011.json"
     }
   ],
   "current_state": {
