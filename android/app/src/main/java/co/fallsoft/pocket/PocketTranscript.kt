@@ -103,6 +103,7 @@ object PocketTranscript {
             if(current()) {
                 if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
                 loading=false;loadingEarlier=false
+                if(!succeeded&&!automaticRetryAllowed)refreshPending=false
                 if(missedUpdates) {
                     missedUpdates=false
                     if(succeeded||automaticRetryAllowed)Pocket.scope.launch{if(!succeeded)delay(450);if(current())PocketTranscript.load()}

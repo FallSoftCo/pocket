@@ -131,6 +131,7 @@ class TranscriptRefreshNativeTest {
   main{Pocket.refreshDetail();Pocket.refreshDetail()}
   await{!PocketTranscript.loading&&Pocket.error.contains("Synthetic history permission rejected")}
   assertFalse("Permission failure still permits automatic reads",PocketTranscript.automaticRetryAllowed)
+  assertFalse("Rejected coalesced read left perpetual Updating messages",PocketTranscript.updating)
   Thread.sleep(900)
   assertEquals("Rejected read retried unchanged credentials",readsBeforeRejected+1,qa("state").getJSONArray("reads").length())
   device.findObject(By.text("Reload conversation")).click()
