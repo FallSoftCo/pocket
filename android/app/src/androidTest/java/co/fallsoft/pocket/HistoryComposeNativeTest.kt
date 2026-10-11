@@ -3,6 +3,7 @@ package co.fallsoft.pocket
 import android.content.Context
 import android.content.Intent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -74,7 +75,11 @@ class HistoryComposeNativeTest {
   assertEquals("Cold process lost reading position",prefs.getFloat("qualification:reading-top",-1f),compose.onNodeWithText(text,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.top,2f)
   assertTrue("Cold process hid previously local earlier history",PocketTranscript.rows.any{it.s("id")=="older-message"})
   compose.onNodeWithContentDescription("Loading; conversation controls").assertExists()
-  println("Native selection-to-cached-passage: ${android.os.SystemClock.elapsedRealtime()-restoreStarted}ms; ${PocketTranscript.rows.size} retained rows")
+  val image=compose.onNodeWithText(text,useUnmergedTree=true).captureToImage().asAndroidBitmap()
+  var ink=0;for(y in 0 until image.height)for(x in 0 until image.width){val pixel=image.getPixel(x,y);if(android.graphics.Color.red(pixel)>150&&android.graphics.Color.green(pixel)>150&&android.graphics.Color.blue(pixel)>150)ink++}
+  assertTrue("Cached passage was not drawn",ink>100)
+  java.io.File(c.cacheDir,"cold-process-cached-passage.png").outputStream().use{image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+  println("Native selection-to-rendered-cached-passage: ${android.os.SystemClock.elapsedRealtime()-restoreStarted}ms; ${PocketTranscript.rows.size} retained rows")
   assertTrue("Stale cache exposed pending action authority",Pocket.detail?.optJSONArray("pending")==null&&Pocket.detail?.optJSONArray("outgoing")==null&&Pocket.detail?.optJSONObject("catchup")==null)
   qa("release")
   compose.waitUntil(15000){!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Fresh response 2"}}
