@@ -55,9 +55,9 @@ import androidx.compose.ui.window.*
     Popup(popupPositionProvider=position,onDismissRequest=onDismiss,properties=PopupProperties(focusable=true)){
         Surface(color=Panel,shape=RoundedCornerShape(18.dp),shadowElevation=12.dp,modifier=Modifier.widthIn(max=(LocalConfiguration.current.screenWidthDp-24).dp).width(360.dp)){
             Column(Modifier.heightIn(max=popupHeight).padding(12.dp)){
-            Column(Modifier.weight(1f,fill=false).verticalScroll(scroll)){
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Box(Modifier.padding(12.dp)){BilingualLabel("Activity")};TextButton(onDismiss){BilingualLabel("Close")}}
-                if(controlsFirst){details();HorizontalDivider(color=Line,modifier=Modifier.padding(vertical=8.dp))}
+            Column(Modifier.weight(1f,fill=false).verticalScroll(scroll)){
+                if(controlsFirst&&replyTarget==null){details();HorizontalDivider(color=Line,modifier=Modifier.padding(vertical=8.dp))}
                 replyTarget?.let{id->ImmersionText("popup-title:"+id,Pocket.tasks.firstOrNull{it.id==id}?.title?:"Reply",rescue=false,color=Mint,fontSize=12.sp,modifier=Modifier.padding(8.dp));OutlinedTextField(text,{editText(it)},modifier=Modifier.fillMaxWidth().focusRequester(inputFocus).onPreviewKeyEvent{event->if((event.key==Key.Enter||event.key==Key.NumPadEnter)&&!event.isShiftPressed){if(event.type==KeyEventType.KeyDown)send();true}else false},placeholder={BilingualLabel("Message Codex…",centered=false)},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}),maxLines=4)}
                 replyTarget?.let{target->Pocket.replyFailure(target)?.let{failure->WorkflowText(failure.message,color=Coral,modifier=Modifier.padding(8.dp))}}
                 if(passage!=null&&sourceThread!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
@@ -75,7 +75,7 @@ import androidx.compose.ui.window.*
                     }
                 }
 
-                if(!controlsFirst){
+                if(!controlsFirst||replyTarget!=null){
                     TextButton({controls=!controls},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(controls)"Hide controls" else "Controls & usage")}
                     if(controls)details()
                 }
