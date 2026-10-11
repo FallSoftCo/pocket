@@ -55,3 +55,14 @@ unverified. Terminal-fork source and provider registration remain unactivated.
   pass on OZZZ; connected health, unchanged receipt counts and preserved Codex
   daemon verified after scoped reload. Available emulator 5587 identifies as
   another workload, so no shared emulator input/install was performed.
+
+## Native emulator qualification
+
+OZZZ-OS owned nextcomp_env_qa emulator5620 passed the extended native
+TranscriptRefreshNativeTest in17.733s. It verifies visible updating feedback,
+retained older history/cache/draft, no repeated-preview polling, chronological
+repair and preservation/display of newer text arriving during a history request.
+The fixture deliberately holds a refresh response until loading feedback is
+observed. Android permissions were pregranted only in the disposable emulator.
+This is the nonshrunk qualification variant, not proof of optimized-phone frame
+pacing, physical volume buttons, real provider transport or physical ordering.

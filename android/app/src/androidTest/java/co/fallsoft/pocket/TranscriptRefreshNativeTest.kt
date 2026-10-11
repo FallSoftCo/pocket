@@ -30,6 +30,7 @@ class TranscriptRefreshNativeTest {
   qa("advance");await{Pocket.tasks.first().preview=="Fresh response 2"&&PocketTranscript.updating}
   assertTrue("Cached content disappeared during refresh",has(1))
   assertTrue("Refresh indicator not visible",device.wait(Until.hasObject(By.text("Updating messages")),2000))
+  qa("release")
   await{has(2)&&!PocketTranscript.updating}
   val reads=qa("state").getJSONArray("reads").length()
   qa("repeat");Thread.sleep(800)
@@ -43,5 +44,20 @@ class TranscriptRefreshNativeTest {
   await{PocketTranscript.updating};assertTrue("Warm history hidden",has(4))
   await{!PocketTranscript.loading&&!PocketTranscript.updating}
   assertEquals("Unsaved draft preserved",prefs.getString("draft:same-thread",null))
+  qa("order")
+  fun live(id:String,kind:String,text:String,version:Int)=JSONObject().put("threadId","same-thread").put("turnId","order").put("version",version).put("row",JSONObject().put("id","order/"+id).put("turnId","order").put("kind",kind).put("text",text).put("version",version))
+  main{
+   PocketTranscript.reset("same-thread")
+   PocketTranscript.apply(live("answer","message","Cached ordering answer",100))
+   PocketTranscript.apply(live("user","user","Ordering request",101))
+   Pocket.scope.launchEnvironment{PocketTranscript.load()}
+  }
+  await{PocketTranscript.loading}
+  main{PocketTranscript.apply(live("answer","message","Newer answer during fetch",900))}
+  await{!PocketTranscript.loading&&PocketTranscript.rows.any{it.s("id")=="order/end"}}
+  assertEquals(listOf("older-message","same-message","order/header","order/user","order/answer","order/end"),PocketTranscript.rows.map{it.s("id")})
+  assertEquals("Newer answer during fetch",PocketTranscript.rows.single{it.s("id")=="order/answer"}.s("text"))
+  assertTrue("Newer answer absent from native view",device.wait(Until.hasObject(By.text("Newer answer during fetch")),2000))
+  assertEquals("Draft changed during ordering repair","Unsaved draft preserved",prefs.getString("draft:same-thread",null))
  }
 }

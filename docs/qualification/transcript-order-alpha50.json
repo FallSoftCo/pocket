@@ -13,5 +13,28 @@
   "limitations": [
     "Regression tests qualify reconciliation; live phone conversation ordering not yet interactively verified.",
     "No backend or Codex service changes."
-  ]
+  ],
+  "nativeEmulator": {
+    "host": "OZZZ-OS",
+    "avd": "nextcomp_env_qa",
+    "port": 5620,
+    "variant": "nonshrunk qualification, not exact optimized phone APK",
+    "result": "pass",
+    "durationSeconds": 17.733,
+    "checks": [
+      "Visible refresh indicator over retained cached text",
+      "Version0 persisted refresh replaces stale Version80 cache",
+      "Unchanged preview produces no extra reads",
+      "Latest refresh follows older-history loading",
+      "Previously loaded older rows remain visible in state",
+      "Warm reopen retains cache",
+      "Out-of-order live answer/user repaired by authoritative page",
+      "Newer answer arriving during fetch preserved in canonical order",
+      "Newer answer visible in native UI",
+      "Typed draft remains unchanged"
+    ],
+    "testSetup": "Only owned emulator test packages reset; POST_NOTIFICATIONS and RECORD_AUDIO pregranted; response gate used to inspect loading deterministically",
+    "fixture": "synthetic local backend, no provider requests",
+    "phoneInteraction": "not established by this emulator test"
+  }
 }
