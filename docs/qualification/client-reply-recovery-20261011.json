@@ -1,6 +1,6 @@
 {
   "source": "41f35cc",
-  "candidate_not_delivered": true,
+  "candidate_not_delivered": false,
   "native": {
     "malformedAndWrongThread": 6.767,
     "lateHttpIdenticalNewDraft": 7.477,
@@ -14,9 +14,37 @@
   },
   "method": "Owned OZZZ emulator5620 and synthetic fixture19998; no provider model or real worker submissions. Actual process death and same stored receipt identity.",
   "limits": [
-    "Physical Fold interaction not qualified; phone remains alpha62/code80",
+    "Physical interaction with the reported stale screen remains unqualified; installed phone independently verified alpha63/code81.",
     "Existing global footer labels truncate at2x outside recovery card",
     "No voice/coordinator/team receipt claim",
     "No exactly-once external actions claim"
-  ]
+  ],
+  "releaseSource": "f87731a",
+  "signedBuild": {
+    "versionCode": 81,
+    "versionName": "0.5.0-alpha.63",
+    "debugTests": 285,
+    "releaseTests": 285,
+    "failures": 0,
+    "debugLint": "passed",
+    "releaseLint": "passed",
+    "buildHost": "OZZZ-OS"
+  },
+  "freshness": {
+    "activityOnlyNativeSeconds": 12.508,
+    "historyKeyboardVoiceNativeSeconds": 41.889,
+    "sourceFailureDraftLargeTextNativeSeconds": 31.672,
+    "observedInstalledPhone": 80,
+    "currentAuthenticatedHistorySeconds": 0.049,
+    "exactStaleViewportReproduced": false
+  },
+  "delivery": {
+    "versionCode": 81,
+    "versionName": "0.5.0-alpha.63",
+    "installReceipt": "Success",
+    "installedBaseSha256": "75deadbdddfdb8990f1c8e2c0f195c6d046e72d79866fe6b2f8fbc0e341c49a2",
+    "pairingProfileDraftHashesUnchanged": 9,
+    "verifiedUtc": "2026-10-11T20:05:10.501773+00:00",
+    "privateAuthenticatedUpdaterBothSigners": "verified"
+  }
 }

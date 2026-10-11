@@ -33,8 +33,10 @@
       },
       "liveActivityFollowup20261011": {
         "implementation": "Explicit live preview/activity events with advancing activityAt invalidate selected history even when preview/status are unchanged. Duplicate/older events do not poll; inventory timestamps remain excluded.",
-        "status": "native-qualification-pending",
-        "phoneObservation": "alpha62/code80; authenticated current history returned in0.049s; phone system UI foreground, exact stale viewport unobserved."
+        "status": "delivered-alpha63",
+        "phoneObservation": "alpha62/code80; authenticated current history returned in0.049s; phone system UI foreground, exact stale viewport unobserved.",
+        "verification": "Native12.508s activity-only refresh, duplicate-event coalescing, preserved draft, no command submissions; history/keyboard/voice41.889s, source/error/draft31.672s;285tests per signed variant and both lints/builds pass.",
+        "delivery": "In-place install Success; independent package81/alpha63 and installed base SHA verified;9 pairing/profile/draft preference hashes unchanged. Exact reported stale viewport not directly reproduced."
       }
     },
     {
@@ -2139,10 +2141,10 @@
     },
     {
       "id": "frontend-reply-receipt-journal-audit",
-      "status": "native-qualified-candidate",
+      "status": "delivered-alpha63",
       "request": "Preserve outgoing identity across process death and unknown transport outcomes; never treat arbitrary HTTP200 JSON as acknowledged delivery or blindly replay unknown requests.",
       "evidence": "docs/qualification/client-reply-recovery-20261011.json",
-      "next": "Complete combined signed alpha63 delivery; voice/coordinator/team paths require separate receipt audit.",
+      "next": "Continue separate voice/coordinator/team receipt audit and full quality matrix; no exactly-once external execution claim.",
       "implementation": "Persist captured environment/account/thread/message/UUID before dispatch; validate receipt ID/state and lookup thread; reconcile via read-only GET; explicit unknown retry consent; draft generation protects edited or identically retyped text."
     },
     {
