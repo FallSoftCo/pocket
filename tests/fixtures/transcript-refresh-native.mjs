@@ -21,7 +21,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/fail-reply'){failReply=true;holdReply=true;body={ok:true};}
  else if(path==='/_qa/release-reply'){holdReply=false;body={ok:true};}
  else if(path==='/_qa/visibility'){visibility=true;body={ok:true};}
- else if(/^\/api\/threads\/same-thread\/(notifications|catchup)\/read$/.test(path)){const input=JSON.parse(raw);acknowledgements.push({path,...input});body={ok:true,throughId:input.throughId,ids:input.throughId?[input.throughId]:[]};}
+ else if(/^\/api\/threads\/same-thread\/(notifications|catchup)\/read$/.test(path)){const input=JSON.parse(raw);acknowledgements.push({path,...input});body={ok:true,threadId:"same-thread",cursor:0,throughId:input.throughId,ids:input.throughId?[input.throughId]:[]};}
  else if(path==='/_qa/anchored'){anchored=true;holdPosition=true;body={ok:true};}
  else if(path==='/_qa/release-position'){holdPosition=false;body={ok:true};}
  else if(path==='/_qa/fail-position'){failPosition=true;body={ok:true};}

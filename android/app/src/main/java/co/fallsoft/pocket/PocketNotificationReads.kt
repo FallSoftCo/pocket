@@ -1,12 +1,6 @@
 package co.fallsoft.pocket
 
 import android.app.NotificationManager
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.Request
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.security.MessageDigest
 
@@ -28,33 +22,18 @@ object PocketNotificationReads {
         val fetched=notifications.filter{it.s("thread_id")==threadId};val through=fetched.maxOfOrNull{it.optLong("id") }?:return
         if(through<=0)return
         val readKey=key(threadId,local,environment);if(through<=Pocket.prefs.getLong(readKey,0))return
-        val token=Pocket.savedToken(local,environment);val base=Pocket.savedBase(local,environment)
-        Pocket.scope.launch {
-            try{
-                val result=withContext(Dispatchers.IO){
-                    val request=Request.Builder().url(base.trimEnd('/')+"/api/threads/$threadId/notifications/read").header("Authorization","Bearer $token")
-                        .post(JSONObject().put("throughId",through).toString().toRequestBody("application/json".toMediaType())).build()
-                    Pocket.http.newCall(request).execute().use{r->if(!r.isSuccessful)throw IllegalStateException("Read was not acknowledged");JSONObject(r.body?.string()?:"{}")}
-                }
-                if(Pocket.savedToken(local,environment)!=token||Pocket.savedBase(local,environment)!=base||!result.optBoolean("ok"))return@launch
-                Pocket.prefs.edit().putLong(readKey,maxOf(Pocket.prefs.getLong(readKey,0),result.optLong("throughId",through))).apply()
-                val ids=result.optJSONArray("ids")?:return@launch
-                val manager=Pocket.context.getSystemService(NotificationManager::class.java)
-                for(i in 0 until ids.length()){val id=ids.optLong(i);if(id>0)manager.cancel(Pocket.notificationTag(environment),(id+(if(local)500000 else 1000)).toInt())}
-            }catch(_:Exception){/* Keep existing notifications on a failed acknowledgement. */}
-        }
+        PresentedReads.record(threadId,"notifications",through.toString(),environment)
     }
-    // Only the first latest-viewport presentation after an explicit open supplies
-    // this token. Subsequent live refreshes do not imply the user read new work.
+    internal fun accept(threadId:String,through:Long,result:JSONObject,destination:EnvironmentRequest){
+        val environment=destination.environment.id;val local=destination.environment.local
+        val readKey=key(threadId,local,environment)
+        val acknowledged=result.optLong("throughId",0).coerceIn(0,through)
+        Pocket.prefs.edit().putLong(readKey,maxOf(Pocket.prefs.getLong(readKey,0),acknowledged)).commit()
+        val ids=result.optJSONArray("ids")?:return
+        val manager=Pocket.context.getSystemService(NotificationManager::class.java)
+        for(i in 0 until ids.length()){val id=ids.optLong(i);if(id in 1..acknowledged)manager.cancel(Pocket.notificationTag(environment),(id+(if(local)500000 else 1000)).toInt())}
+    }
     private fun acknowledgeCatchup(threadId:String,capture:String,local:Boolean,environment:String){
-        val token=Pocket.savedToken(local,environment);val base=Pocket.savedBase(local,environment)
-        Pocket.scope.launch {
-            try{withContext(Dispatchers.IO){
-                val request=Request.Builder().url(base.trimEnd('/')+"/api/threads/$threadId/catchup/read").header("Authorization","Bearer $token")
-                    .post(JSONObject().put("token",capture).toString().toRequestBody("application/json".toMediaType())).build()
-                Pocket.http.newCall(request).execute().use{r->if(!r.isSuccessful)throw IllegalStateException("Check was not acknowledged")}
-            }}catch(_:Exception){/* Unacknowledged progress stays unseen. */}
-        }
+        PresentedReads.record(threadId,"catchup",capture,environment)
     }
-
 }

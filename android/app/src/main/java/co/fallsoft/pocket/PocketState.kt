@@ -108,6 +108,7 @@ object Pocket {
         PocketAudio.init()
         PocketSpeech.init()
         PocketAttention.init()
+        PresentedReads.restore()
         PocketImmersion.restore()
         if(token.isNotBlank())try{PocketPush.initialize()}catch(_:Exception){}
         if(local)pushStatus="Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))pushStatus="Firebase push is ready"
