@@ -66,6 +66,13 @@ export class LiveTimeline {
       if(snapshot.status!=='inProgress'){if(old&&!old.items.size)this.threads.get(thread.id).delete(snapshot.id);continue;}
       const live=this.turn(thread.id,snapshot.id);live.startedAt=snapshot.startedAt;
       for(const item of snapshot.items||[])if(!live.items.has(item.id))this.store(live,item,0);
+      // A delta arriving during the history read survives the version boundary.
+      // Its newer value must nevertheless occupy the snapshot's canonical slot,
+      // rather than precede every earlier item inserted below that boundary.
+      const ordered=new Map();
+      for(const item of snapshot.items||[]){const entry=live.items.get(item.id);if(entry)ordered.set(item.id,entry);}
+      for(const [id,entry] of live.items)if(!ordered.has(id))ordered.set(id,entry);
+      live.items=ordered;
     }
   }
   turn(threadId,turnId){

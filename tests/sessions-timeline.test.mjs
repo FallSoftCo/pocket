@@ -24,6 +24,24 @@ test('live-only rows retain creation order when earlier messages and tools recei
  assert.equal(live.bytes,[...live.threads.get('thread').get('turn').items.values()].reduce((n,x)=>n+x.bytes,0));
 });
 
+test('snapshot seeding retains newer concurrent text in canonical order before live-only tail',()=>{
+ const live=new LiveTimeline();
+ const event=(item)=>live.ingest({method:'item/started',params:{threadId:'thread',turnId:'turn',item}});
+ event({id:'answer',type:'agentMessage',text:'old'});
+ const boundary=live.version;
+ event({id:'answer',type:'agentMessage',text:'newer during read'});
+ event({id:'tail',type:'agentMessage',text:'live-only tail'});
+ live.seed({id:'thread',turns:[{id:'turn',status:'inProgress',items:[
+  {id:'user',type:'userMessage',content:[{type:'text',text:'request'}]},
+  {id:'tool',type:'commandExecution',command:'synthetic'},
+  {id:'answer',type:'agentMessage',text:'stale snapshot'}
+ ]}]},{throughVersion:boundary});
+ const items=live.merge({id:'thread',turns:[]}).turns[0].items;
+ assert.deepEqual(items.map(x=>x.id),['user','tool','answer','tail']);
+ assert.equal(items[2].text,'newer during read');
+ assert.equal(live.bytes,[...live.threads.get('thread').get('turn').items.values()].reduce((n,x)=>n+x.bytes,0));
+});
+
 test('session creation is durable, idempotent, project-scoped, and defaults to full permissions',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'pocket-start-'));const {db}=openStore(dir);const calls=[],created=[];
  const codex={ready:false,call:async(method,params)=>{calls.push({method,params});return {thread:{id:'new-thread',cwd:params.cwd,turns:[]}};}};
