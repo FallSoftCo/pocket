@@ -413,3 +413,15 @@ stopped; backend/daemon/model/worker state unchanged. See [qualification receipt
 New open source-audit gaps: frontend durable reply intent/receipt validation;
 latest-viewport acknowledgements behind focusable popup/dialog; other async action
 error lifetimes. No real unknown send was replayed. Quality goal remains active.
+
+Alpha61/code79 delivered after verified phone reconnection, in-place Success and
+independent package check. Current phone does not yet include window-focus fix.
+
+Window-focus source485df4e qualified: actual controls popup/rename dialog retain
+unseen updates; dismissal resumes presentation; actual IME still presents latest
+and retains draft. Native26.274s passes; compatible old-gate control fails14.127s.
+Freshness/keyboard/voice40.968s and source-reply/draft/large-font27.161s pass.
+Owned emulator/fixture stopped. This is queued for a combined compatible release
+to reduce disruptive repeated installs. See [receipt](qualification/window-focus-reading-20261011.json).
+Remaining: durable frontend delivery journal and validation, nonfocusable
+occlusion, precise material catch-up presentation, and existing full quality matrix.

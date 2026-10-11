@@ -2125,11 +2125,12 @@
     },
     {
       "id": "source-scoped-reply-failure-20261011",
-      "status": "qualified-alpha61-awaiting-phone",
+      "status": "delivered-alpha61",
       "request": "Late reply failures must remain with the originating environment/session, never contaminate a newly selected chat, retain unsent draft, resolve only the matching receipt and remain visible when returning to affected work. Popup replies need feedback at their own target.",
       "implementation": "Credential-bound per-session delivery failure state; source-specific conversation/popup presentation; receipt-matching acceptance/removal; explicit local dismissal does not retry uncertain delivery.",
       "qualification": "docs/qualification/source-reply-feedback-20261011.json",
-      "verification": "Final native33.549s: source/error receipt routing, popup actual input/error/draft reopen/erase, actual2x font and>=48dp dismiss. Old global-error control fails9.714s. Final source freshness/keyboard/voice regression41.527s, read-state31.639s, chat switch18.5s. Both signed variants277tests/lints/builds pass. Private update79 ready; device offline before install, last verified phone78."
+      "verification": "Final native33.549s: source/error receipt routing, popup actual input/error/draft reopen/erase, actual2x font and>=48dp dismiss. Old global-error control fails9.714s. Final source freshness/keyboard/voice regression41.527s, read-state31.639s, chat switch18.5s. Both signed variants277tests/lints/builds pass. Private update79 ready; device offline before install, last verified phone78.",
+      "delivery": "Verified reconnection; in-place install Success; independent package79/alpha61. Pairing/data not cleared."
     },
     {
       "id": "frontend-reply-receipt-journal-audit",
@@ -2140,10 +2141,13 @@
     },
     {
       "id": "conversation-read-occlusion-audit",
-      "status": "audit-open",
+      "status": "qualified-awaiting-combined-release",
       "request": "A popup or dialog covering the current conversation must not let a fresh background snapshot count as presented latest content.",
       "evidence": "Source inspection: latest-viewport gate checks lifecycle/blackout/voice/filter/scroll/loading, but does not yet account for focusable popup or dialog occlusion. Not yet reproduced on native device.",
-      "next": "Reproduce live updates while controls/popup are open; use actual window focus or owned-overlay presentation gates, preserve IME and recording behavior, verify resume without fetching-driven reads."
+      "next": "Reproduce live updates while controls/popup are open; use actual window focus or owned-overlay presentation gates, preserve IME and recording behavior, verify resume without fetching-driven reads.",
+      "implementation": "Actual main-window focus gates presentation in both snapshotFlow and final acknowledgement. Focus ownership protects activity replacement; resumed lifecycle remains required. No voice/key dispatch changes.",
+      "qualification": "docs/qualification/window-focus-reading-20261011.json",
+      "verification": "Actual controls/dialog/IME native26.274s passes; old gates control fails14.127s; freshness/voice40.968s and reply/draft/large-font27.161s regressions pass. Not yet on phone."
     }
   ],
   "current_state": {

@@ -66,12 +66,10 @@
     "updater": "both signer metadata/hash verifications pass"
   },
   "phoneInstallation": {
-    "status": "not installed; delivery blocked by current phone connectivity",
-    "attempt": "adb exited1 device offline before dispatch; no transfer/installer was started",
-    "helper": "no verified TCP connection or authorized USB device",
-    "tailscale": "single peer ping timeout",
-    "lastVerifiedInstalled": "alpha60/code78",
-    "privateUpdater": "alpha61/code79 both signer variants published and hashes verified"
+    "status": "adb install -r Success after verified reconnection",
+    "independentPackageCheck": "versionCode79/versionName0.5.0-alpha.61",
+    "previousAttempt": "device offline before dispatch; no unknown install was repeated",
+    "privateUpdater": "both signer79 metadata/hash verified"
   },
   "limits": [
     "Native optimized physical handset interaction and frame pacing unverified.",

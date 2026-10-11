@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-11",
+  "source": "485df4e",
+  "status": "qualified source; pending combined release",
+  "implementation": "Actual main-window focus gates latest presentation; owning activity identity prevents old focus/stop callbacks from invalidating a replacement window. IME, voice dispatch and ongoing work unchanged.",
+  "native": {
+    "host": "OZZZ-OS owned emulator5620 SwiftShader",
+    "method": "controlsAndDialogDoNotConsumeUpdatesButImeStillPresentsLatest",
+    "seconds": 26.274,
+    "result": "OK (1 test)",
+    "checks": [
+      "actual conversation controls popup excludes read acknowledgment",
+      "actual rename dialog excludes read acknowledgment",
+      "dismissal permits latest presentation",
+      "keyboard region opens actual IME",
+      "main window remains focused with IME; latest update acknowledged",
+      "draft retained; no replies or task mutations"
+    ]
+  },
+  "control": {
+    "delta": "removed both new focus gates in compatible current source",
+    "seconds": 14.127,
+    "result": "fails Controls popup consumed covered update",
+    "candidateRestored": true
+  },
+  "regression": [
+    {
+      "method": "cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory",
+      "seconds": 40.968,
+      "passed": true
+    },
+    {
+      "method": "delayedReplyFailureStaysWithItsSourceAndResolvesByReceipt",
+      "seconds": 27.161,
+      "passed": true
+    }
+  ],
+  "qualificationBuild": "unit tests, lint, QA app and test APK pass",
+  "delivery": "not included in installed alpha61; batch with next compatible release",
+  "phone": "alpha61/code79 independently verified now; previous failed install had no dispatch",
+  "resources": "owned emulator/fixture stopped; no backend/daemon/worker/model changes",
+  "limits": [
+    "Focusable overlays covered; nonfocusable occlusion and whole-session catch-up semantics still need audit.",
+    "Physical phone viewport behavior and frame pacing not measured."
+  ]
+}
