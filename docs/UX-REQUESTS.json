@@ -2148,6 +2148,13 @@
       "implementation": "Actual main-window focus gates presentation in both snapshotFlow and final acknowledgement. Focus ownership protects activity replacement; resumed lifecycle remains required. No voice/key dispatch changes.",
       "qualification": "docs/qualification/window-focus-reading-20261011.json",
       "verification": "Actual controls/dialog/IME native26.274s passes; old gates control fails14.127s; freshness/voice40.968s and reply/draft/large-font27.161s regressions pass. Not yet on phone."
+    },
+    {
+      "id": "stalled-conversation-read-recovery-20261011",
+      "request": "Conversation remains in a past state while messages and notifications progress; recover history reads visibly without resubmitting work.",
+      "status": "native-qualified-release-in-progress",
+      "implementation": "Validate matching thread and timeline rows before applying; preserve local rows; three read-only retries at 1/2/4 seconds with Updating messages; no permission polling; failed recent fetch cannot acknowledge stale viewport.",
+      "evidence": "docs/qualification/stalled-conversation-20261011.json"
     }
   ],
   "current_state": {
