@@ -35,12 +35,13 @@ class ConversationFilterNativeTest {
   var target:String?=null;var top=0
   for(attempt in 0 until 35){
    val visible=passages();val first=visible.firstOrNull();val number=first?.first?.substringAfter("Filter passage ")?.substringBefore(":")?.toIntOrNull()
+   println("Filter position $attempt: "+visible.map{it.first.substringBefore(":")+"@"+it.second})
    val answer=visible.firstOrNull{it.first.substringAfter("Filter passage ").substringBefore(":").toIntOrNull()?.rem(2)==0&&it.second.top>180&&it.second.bottom<device.displayHeight*3/4}
    if(number!=null&&number%2==1&&answer!=null){target=answer.first;top=answer.second.top;break}
    device.swipe(device.displayWidth/2,device.displayHeight/3,device.displayWidth/2,device.displayHeight/3+100,16);Thread.sleep(180)
   }
-  val text=requireNotNull(target){"Could not position commentary before a visible answer"}
   device.dumpWindowHierarchy(java.io.File(context.cacheDir,"filter-leading-commentary-before.xml"))
+  val text=requireNotNull(target){"Could not position commentary before a visible answer"}
   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"filter-leading-commentary-before.png")))
   device.findObject(By.text("Important")).click();Thread.sleep(500)
   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"filter-leading-commentary-important.png")))
