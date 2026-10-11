@@ -1,0 +1,96 @@
+package co.fallsoft.pocket
+import android.content.Context
+import android.content.Intent
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.*
+import kotlinx.coroutines.runBlocking
+import org.json.JSONObject
+import org.json.JSONArray
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
+@RunWith(AndroidJUnit4::class)
+class ClientReplyRecoveryNativeTest {
+ private val i=InstrumentationRegistry.getInstrumentation()
+ private val context get()=i.targetContext
+ private val device get()=UiDevice.getInstance(i)
+ private fun main(b:()->Unit)=i.runOnMainSync(b)
+ private fun await(b:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(b())return;Thread.sleep(50)};assertTrue("Delivery condition timed out",b())}
+ private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+path,JSONObject())}
+ private fun start(reset:Boolean=true,draft:String="Receipt test"){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
+  device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
+  if(reset)context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread",draft).commit()
+  main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
+ }
+ private fun posts()=qa("state").getJSONArray("replies")
+ @Test fun malformedAcknowledgementAndWrongThreadCannotEraseDraftOrResend(){
+  start();qa("bad-reply");main{Pocket.open("same-thread",keyboard=true)}
+  await{Pocket.detail!=null&&!PocketTranscript.updating&&device.hasObject(By.clazz("android.widget.EditText"))}
+  var completed=false;main{Pocket.reply("Receipt test",onDone={completed=true})}
+  await{!Pocket.sending&&PocketReplies.entries("same-thread").singleOrNull()?.state=="unconfirmed"}
+  assertFalse("Malformed acknowledgement cleared UI callback",completed)
+  assertEquals("Receipt test",Pocket.prefs.getString("draft:same-thread",null))
+  val intent=PocketReplies.entries("same-thread").single();assertEquals(intent.id,posts().getJSONObject(0).s("id"))
+  main{Pocket.reply("Receipt test")};Thread.sleep(1200);assertEquals("Unknown message automatically resent",1,posts().length())
+  qa("wrong-receipt-thread");main{PocketReplies.check(intent)};await{intent.id !in PocketReplies.busy}
+  assertEquals("Wrong-thread receipt erased draft","Receipt test",Pocket.prefs.getString("draft:same-thread",null))
+  assertEquals(1,PocketReplies.entries("same-thread").size)
+  device.findObject(By.clazz("android.widget.EditText")).text="Edited after send"
+  await{Pocket.prefs.getString("draft:same-thread",null)=="Edited after send"}
+  qa("release-receipt");main{PocketReplies.check(PocketReplies.entries("same-thread").single())};await{PocketReplies.entries("same-thread").isEmpty()}
+  assertEquals("Reconciliation erased a newer draft","Edited after send",Pocket.prefs.getString("draft:same-thread",null))
+  assertEquals("Edited after send",device.findObject(By.clazz("android.widget.EditText")).text)
+  assertEquals("Receipt reconciliation submitted another turn",1,posts().length())
+ }
+ @Test fun explicitRetryKeepsSavedIdentityAndRequiresConfirmation(){
+  start(draft="Prepared turn")
+  val destination=requireNotNull(Pocket.captureEnvironment())
+  val saved=ClientReplyIntent("synthetic-unsent-id",Pocket.environmentId,backendOwner(destination.endpoint,destination.token),"same-thread","Prepared turn","auto","draft:same-thread")
+  ClientReplyJournal({Pocket.prefs.getString("client-replies:v1","[]")!!},{Pocket.prefs.edit().putString("client-replies:v1",it).commit()}).put(saved)
+  main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating&&device.hasObject(By.text("Retry"))}
+  assertEquals("Prepared turn sent without consent",0,posts().length())
+  device.findObject(By.text("Retry")).click();assertTrue(device.wait(Until.hasObject(By.text("Check and retry this message?")),3000))
+  device.findObject(By.text("Cancel")).click();assertEquals(0,posts().length())
+  device.findObject(By.text("Retry")).click();device.findObject(By.text("Check and retry")).click()
+  await{posts().length()==1&&PocketReplies.entries("same-thread").isEmpty()&&!Pocket.sending}
+  assertEquals("Retry invented a new identity",saved.id,posts().getJSONObject(0).s("id"))
+  assertFalse(Pocket.prefs.contains("draft:same-thread"))
+ }
+ @Test fun identicalThreadOnAnotherEnvironmentCannotConsumeSavedReply(){
+  start();qa("bad-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
+  main{Pocket.reply("Receipt test")};await{!Pocket.sending&&PocketReplies.entries("same-thread").isNotEmpty()};Thread.sleep(1200)
+  val original=PocketReplies.entries("same-thread").single();val before=qa("state").getJSONArray("receiptReads").length()
+  val p=Pocket.prefs
+  p.edit().putString("environments:v1",JSONArray().put(JSONObject().put("id","workstation").put("name","Synthetic A")).put(JSONObject().put("id","remote-b").put("name","Synthetic B")).toString()).putString(Pocket.environmentKey("server","remote-b"),Pocket.base).putString(Pocket.environmentKey("token","remote-b"),Pocket.token).putString(Pocket.environmentKey("draft:same-thread","remote-b"),"Other environment draft").commit()
+  main{Pocket.activateEnvironment("remote-b");Pocket.open("same-thread",keyboard=true)};await{Pocket.detail!=null&&!PocketTranscript.updating}
+  assertTrue("Other environment exposed saved reply",PocketReplies.entries("same-thread").isEmpty())
+  assertEquals("Other environment reconciled original receipt",before,qa("state").getJSONArray("receiptReads").length())
+  assertEquals("Other environment draft",p.getString(Pocket.environmentKey("draft:same-thread","remote-b"),null))
+  main{Pocket.activateEnvironment("workstation");Pocket.open("same-thread")};await{PocketReplies.entries("same-thread").any{it.id==original.id}&&!PocketTranscript.updating}
+  qa("release-receipt");main{PocketReplies.check(original)};await{PocketReplies.entries("same-thread").isEmpty()}
+  assertEquals("Other environment draft",p.getString(Pocket.environmentKey("draft:same-thread","remote-b"),null))
+  assertEquals(1,posts().length())
+ }
+ @Test fun seedInterruptedDelivery(){
+  start(draft="Interrupted turn");qa("hold-ack");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
+  main{Pocket.reply("Interrupted turn")};await{posts().length()==1&&Pocket.sending}
+  val saved=PocketReplies.entries("same-thread").single();assertEquals("dispatched",saved.phase)
+  Pocket.prefs.edit().putString("diagnostic:interrupted-id",saved.id).putInt("diagnostic:seed-pid",android.os.Process.myPid()).commit()
+  assertEquals("Interrupted turn",Pocket.prefs.getString("draft:same-thread",null))
+ }
+ @Test fun restoreInterruptedDeliveryWithoutResubmission(){
+  start(reset=false);assertNotEquals("Test did not replace application process",Pocket.prefs.getInt("diagnostic:seed-pid",0),android.os.Process.myPid())
+  val id=Pocket.prefs.getString("diagnostic:interrupted-id",null);assertNotNull(id)
+  main{Pocket.open("same-thread",keyboard=true)}
+  await{PocketReplies.entries("same-thread").isEmpty()&&!PocketTranscript.updating&&device.hasObject(By.clazz("android.widget.EditText"))}
+  assertFalse("Accepted interrupted turn left old draft",Pocket.prefs.contains("draft:same-thread"))
+  assertEquals("",device.findObject(By.clazz("android.widget.EditText")).text)
+  assertEquals("Process restart resubmitted turn",1,posts().length())
+  assertEquals(id,posts().getJSONObject(0).s("id"))
+  assertTrue("Original receipt was not read",qa("state").getJSONArray("receiptReads").let{a->(0 until a.length()).any{a.getString(it)==id}})
+ }
+}

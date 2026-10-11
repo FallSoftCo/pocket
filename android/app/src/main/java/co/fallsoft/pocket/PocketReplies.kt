@@ -12,7 +12,8 @@ internal object PocketReplies {
     var dispatching by mutableStateOf(setOf<String>());private set
     val clearedDrafts=mutableStateMapOf<String,String>()
     private fun current(intent:ClientReplyIntent):EnvironmentRequest?=Pocket.captureEnvironment(intent.environment)?.takeIf{backendOwner(it.endpoint,it.token)==intent.owner}
-    fun entries(thread:String):List<ClientReplyIntent>{revision;return runCatching{journal.all().filter{it.environment==Pocket.environmentId&&it.owner==backendOwner(Pocket.base,Pocket.token)&&it.thread==thread}}.getOrDefault(emptyList())}
+    fun entries(thread:String):List<ClientReplyIntent>{revision;return runCatching{journal.all().filter{it.environment==Pocket.environmentId&&it.thread==thread}}.getOrDefault(emptyList())}
+    fun matchesCurrent(intent:ClientReplyIntent)=intent.environment==Pocket.environmentId&&Pocket.captureEnvironment()?.let{current(intent)?.matches(it)}==true
     fun visible(thread:String)=entries(thread).filter{it.state !in listOf("accepted","cancelled")&&Pocket.detail?.optJSONArray("outgoing")?.objects()?.none{row->row.s("id")==it.id}!=false}
     private fun clearDraft(intent:ClientReplyIntent):Boolean{
         if(current(intent)==null)return false
@@ -42,8 +43,8 @@ internal object PocketReplies {
         val destination=Pocket.captureEnvironment()?:return
         val owner=backendOwner(destination.endpoint,destination.token)
         try{
-            val old=journal.all().firstOrNull{it.environment==destination.environment.id&&it.owner==owner&&it.thread==thread&&it.text.trim()==text.trim()&&it.mode==mode&&it.state in listOf("unconfirmed","unknown")}
-            if(old!=null){Pocket.recordReplyFailure(thread,old.id,"Check this message’s delivery before sending it again.");check(old);return}
+            val old=journal.all().firstOrNull{it.environment==destination.environment.id&&it.thread==thread&&it.text.trim()==text.trim()&&it.mode==mode&&it.state in listOf("unconfirmed","unknown")}
+            if(old!=null){Pocket.recordReplyFailure(thread,old.id,if(old.owner==owner)"Check this message’s delivery before sending it again."else "This message was saved under a previous pairing. Review its saved copy before sending again.");check(old);return}
             val intent=ClientReplyIntent(java.util.UUID.randomUUID().toString(),destination.environment.id,owner,thread,text,mode,draftKey)
             journal.put(intent);revision++;dispatch(intent,destination,onDone)
         }catch(e:Exception){Pocket.recordReplyFailure(thread,"storage",e.message?:"Could not save message")}
@@ -63,7 +64,7 @@ internal object PocketReplies {
             finally{busy=busy-intent.id;dispatching=dispatching-intent.id;if(Pocket.captureEnvironment()?.matches(destination)==true)Pocket.sending=false;val pending=runCatching{journal.get(intent.id)}.getOrNull();if(pending?.state=="unconfirmed")Pocket.scope.launch{delay(800);if(current(pending)!=null)check(pending)}}
         }
     }
-    fun reconcile(thread:String){entries(thread).filter{it.id !in busy}.take(16).forEach{check(it)}}
+    fun reconcile(thread:String){entries(thread).filter{matchesCurrent(it)&&it.id !in busy}.take(16).forEach{check(it)}}
     fun event(thread:String,id:String,state:String,message:String=""){
         val intent=runCatching{journal.get(id)}.getOrNull()?:return
         if(intent.thread!=thread||intent.environment!=Pocket.environmentId||current(intent)?.matches(Pocket.captureEnvironment()?:return)!=true)return
