@@ -482,3 +482,12 @@ live rows and replay protects disk hydration. Native preparation9.909s and cold
 restore4.639s pass, including low-counter live output while history is held.
 Alpha69 signed qualification is underway; no new release is claimed yet. No
 worker wakeups, action replay, backend restart, pairing replacement or data clear.
+
+Alpha69/code87 delivered in place. 290 tests per variant, both lints and signed
+builds pass. Both authenticated signer updater endpoints offer87 with matching
+SHA. Actual installed package/base APK hash verified;13 critical preference
+hashes unchanged. First empty preflight preference read aborted before any
+install; independent86 reconciliation then exec-out read and one successful
+installation. No user UI commandeered; reported stale thread remains unspecified,
+so handset content recovery is not claimed. Only owned emulator and fixture
+stopped; source published to reviewable branch. Goal remains open.

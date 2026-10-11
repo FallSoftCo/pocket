@@ -2204,10 +2204,10 @@
     {
       "id": "durable-history-live-refresh-20261011",
       "request": "Retain locally loaded history and reading position across process death; repair conversations stuck on past content while notifications/list are newer.",
-      "status": "alpha68-cache-delivered; alpha69-live-correction-in-qualification",
+      "status": "delivered-alpha69-code87",
       "implementation": "Private scoped bounded presentation cache, fresh authoritative read, visible updating state, restore positions; reset persisted event counters and replay buffered live rows during hydration. No pending decisions/outgoing commands restored.",
-      "verification": "Alpha68 installed code86 APK hash verified with13 critical preference hashes unchanged.290 unit tests per variant; real distinct-process cache/pixel native proof. Follow-up native9.909s/4.639s proves low-counter live output appears during held recent read and remains afterward. Actual paired backend status26ms/thread44ms from workstation; phone cache entries missing8/6 server rows. Exact current phone freeze cause not established.",
-      "limits": "No physical scroll/frame pacing or forced event during disk IO qualification; alpha69 not delivered yet."
+      "verification": "Alpha68 installed code86 APK hash verified with13 critical preference hashes unchanged.290 unit tests per variant; real distinct-process cache/pixel native proof. Follow-up native9.909s/4.639s proves low-counter live output appears during held recent read and remains afterward. Actual paired backend status26ms/thread44ms from workstation; phone cache entries missing8/6 server rows. Exact current phone freeze cause not established. Alpha69 installed and base APK digest verified;13 critical preference hashes unchanged; authenticated both-signer updater offers87. See qualification/stale-live-history-alpha69.json.",
+      "limits": "No physical stale-thread interaction or frame pacing, or forced event during disk IO qualification. User-selected stuck thread not yet established."
     }
   ],
   "current_state": {

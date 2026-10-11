@@ -1,0 +1,51 @@
+{
+  "runtimeSource": "a575413",
+  "versionCode": 87,
+  "versionName": "0.5.0-alpha.69",
+  "state": "installed-owner-phone",
+  "fix": [
+    "Disk-restored event counters reset to presentation-only baseline so current runtime updates can replace cached rows.",
+    "Buffered live updates replayed immediately after disk hydration; current output is not hidden until a held recent read returns."
+  ],
+  "nativeEvidence": {
+    "preparationSeconds": 9.909,
+    "coldProcessSeconds": 4.639,
+    "newPid": true,
+    "heldRecentRead": true,
+    "currentLowCounterUpdateVisible": true,
+    "currentOutputRetainedAfterRead": true,
+    "draftPreserved": true,
+    "noTaskSubmitted": true
+  },
+  "releaseChecks": {
+    "debugUnitTests": 290,
+    "releaseUnitTests": 290,
+    "bothLints": "passed",
+    "bothSignedBuilds": "passed",
+    "authenticatedUpdaterBothSigners": "offers87 with matching digest"
+  },
+  "diagnosis": {
+    "phoneInitiallyInstalled": 86,
+    "pairedBackendStatusSeconds": 0.026,
+    "pairedBackendThisConversationSeconds": 0.044,
+    "cacheEntryMissingServerRows": [
+      8,
+      6
+    ],
+    "phoneForegroundDuringInspection": "launcher/notification shade; no app UI commandeered"
+  },
+  "limits": [
+    "Exact user-selected stale thread not established; optional title question pending.",
+    "Fast workstation backend request does not prove handset live socket health.",
+    "Exact event during disk IO not forced by fixture; low-counter update during held recent history is verified.",
+    "No physical scrolling, frame pacing or fresh-content handset interaction claim."
+  ],
+  "phoneDelivery": {
+    "packageVerified": 87,
+    "installedApkSha256": "8c0b8d8b271b479f5d1b8f6d031e6d5c855b0c19c6104a39c2ca80d4c40cac7c",
+    "preservedCriticalPreferenceHashes": 13,
+    "changedCriticalPreferenceHashes": [],
+    "preflight": "First empty shell preference read aborted before installation; independent version86/file-presence check; exec-out read then one actual successful install.",
+    "limits": "No foreground app commandeering or physical stale-thread content interaction verification."
+  }
+}

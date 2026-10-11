@@ -45,10 +45,11 @@
   ],
   "liveFollowup": {
     "runtimeSource": "bb93712",
-    "state": "alpha69 signed qualification running; not yet delivered",
+    "state": "delivered alpha69/code87, independently package/APK verified",
     "nativePreparationSeconds": 9.909,
     "nativeColdRestoreSeconds": 4.639,
     "verified": "Current low-counter live output visible while recent history is held; retained after authoritative read. Disk hydration replays buffered updates.",
-    "limit": "Exact arrival during disk IO not deterministically forced by the native fixture."
+    "limit": "Exact arrival during disk IO not deterministically forced by the native fixture.",
+    "qualification": "stale-live-history-alpha69.json"
   }
 }
