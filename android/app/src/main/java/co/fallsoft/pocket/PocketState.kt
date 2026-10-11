@@ -219,9 +219,9 @@ object Pocket {
             if(local==profile&&base==endpoint&&token==credential&&showArchived==archived){val incoming=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList();tasks=mergeSessionSnapshot(tasks,incoming,true){it.id};if(search.isBlank())sessionCursor=result.s("nextCursor").takeIf{it.isNotBlank()}}
         }catch(e:Exception){if(local==profile&&base==endpoint)refreshError=PocketNetwork.error(e)}finally{if(environmentId==sourceEnvironment)loadingSessions=false}}
     }
-    fun open(id:String,keyboard:Boolean=false){if(BackendNavigation.open(id))return;openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
+    fun open(id:String,keyboard:Boolean=false){refreshJob?.cancel();refreshJob=null;if(BackendNavigation.open(id))return;openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
     fun refreshDetail(){if(selected==null)return;PocketTranscript.markRefreshPending();scope.launchEnvironment{PocketTranscript.load()}}
-    fun closeTask(){selected=null;detail=null;PocketTranscript.clear()}
+    fun closeTask(){refreshJob?.cancel();refreshJob=null;selected=null;detail=null;PocketTranscript.clear()}
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
     /** External stock sessions arrive through live previews; never refetch on every token. */
     private fun discoverSession(id:String){
@@ -235,7 +235,7 @@ object Pocket {
             refresh()
         }
     }
-    fun scheduleRefresh(){if(selected==null)return;PocketTranscript.markRefreshPending();if(refreshJob?.isActive==true)return;refreshJob=scope.launchEnvironment{delay(400);PocketTranscript.load()}}
+    fun scheduleRefresh(){val id=selected?:return;PocketTranscript.markRefreshPending();if(refreshJob?.isActive==true)return;refreshJob=scope.launchEnvironment{delay(400);if(selected==id)PocketTranscript.load()}}
     private suspend fun environmentRequestCurrent():Boolean {val destination=currentCoroutineContext()[EnvironmentRequestContext]?.destination?:return true;return captureEnvironment()?.matches(destination)==true}
     fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains(key("newTaskRequest")))"A task request is saved. Check its status to continue." else "";scope.launchEnvironment{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not load projects"}}}
     var fullPermissions by mutableStateOf(true); private set
@@ -329,7 +329,7 @@ object Pocket {
             }
             "coordinatorReport" -> {acceptNotification(json.getJSONObject("notification"),"report");PocketWorkUpdates.refresh()}
             "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");refresh()}
-            "reply" -> {if(json.s("state")=="accepted")rememberSessionInteraction(json.s("threadId"),"reply:"+json.s("id"));if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
+            "reply" -> {if(json.s("state")=="accepted")rememberSessionInteraction(json.s("threadId"),"reply:"+json.s("id"));if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");if(json.s("threadId")==selected)scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}
             "turnRecovery" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("recovery",json.optJSONObject("recovery"))}}
             "timeline" -> {
@@ -338,7 +338,7 @@ object Pocket {
                 PocketTranscript.apply(json)
                 if(newInput&&row!=null)PocketTranscript.reconcileInputPosition(row)
                 // A delayed input event needs canonical history, not inferred user-first sorting.
-                if(json.has("turn")||newInput)scheduleRefresh()
+                if(json.s("threadId")==selected&&(json.has("turn")||newInput))scheduleRefresh()
             }
             "immersion" -> PocketImmersion.accept(json)
             "contextNotes" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("notes",json.optJSONArray("notes"))}}
@@ -370,7 +370,7 @@ object Pocket {
                 if(!id.isNullOrBlank())discoverSession(id)
                 val status=when(method){"turn/started"->"active";"turn/completed"->"idle";"thread/status/changed"->p?.optJSONObject("status")?.s("type");else->null}
                 if(!id.isNullOrBlank()&&!status.isNullOrBlank())tasks=tasks.map{if(it.id==id)it.copy(status=status)else it}
-                if(e?.has("id")==true||e?.s("method") in listOf("turn/completed","thread/status/changed"))scheduleRefresh()}
+                if(id==selected&&(e?.has("id")==true||e?.s("method") in listOf("turn/completed","thread/status/changed")))scheduleRefresh()}
         }
     }}
     @Synchronized fun acceptNotification(n:JSONObject,transport:String="history"){

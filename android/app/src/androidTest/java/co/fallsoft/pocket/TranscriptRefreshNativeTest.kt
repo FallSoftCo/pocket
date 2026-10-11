@@ -20,6 +20,50 @@ class TranscriptRefreshNativeTest {
  private fun await(b:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(b())return;Thread.sleep(50)};assertTrue("Freshness condition timed out",b())}
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+path,JSONObject())}
  private fun has(n:Int)=PocketTranscript.rows.any{it.s("text")=="Fresh response "+n}
+ private fun twoChats(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","First saved draft").putString("draft:second-thread","Second saved draft").commit()
+  main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
+  qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
+ }
+ @Test fun switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates(){
+  twoChats()
+  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.loading}
+  qa("advance");await{qa("state").getJSONArray("reads").objects().any{it.s("threadId")!="second-thread"&&it.optInt("revision")==2}}
+  main{Pocket.open("second-thread")}
+  await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}&&!PocketTranscript.loading}
+  qa("advance-second")
+  await{Pocket.tasks.any{it.id=="second-thread"&&it.preview=="Other response 2"}&&PocketTranscript.updating}
+  assertTrue("New chat cache disappeared",PocketTranscript.rows.any{it.s("text")=="Other response 1"})
+  await{PocketTranscript.rows.any{it.s("text")=="Other response 2"}&&!PocketTranscript.updating}
+  qa("release");Thread.sleep(500)
+  assertEquals("Old refresh changed selected chat","second-thread",Pocket.selected)
+  assertEquals("Old response contaminated current chat",listOf("other/message"),PocketTranscript.rows.map{it.s("id")})
+  main{Pocket.reply("Reply after switching")};await{qa("state").getJSONArray("replies").length()==1&&!Pocket.sending}
+  assertEquals("Reply routed to old chat","second-thread",qa("state").getJSONArray("replies").getJSONObject(0).s("threadId"))
+  val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  assertEquals("First draft lost","First saved draft",prefs.getString("draft:same-thread",null))
+  assertEquals("Second draft lost","Second saved draft",prefs.getString("draft:second-thread",null))
+  main{Pocket.closeTask();Pocket.open("same-thread")};await{has(2)&&!PocketTranscript.updating}
+  assertTrue("New chat rows leaked on reopen",PocketTranscript.rows.none{it.s("id")=="other/message"})
+ }
+ @Test fun backgroundSessionEventsDoNotReloadCurrentTranscript(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  val before=qa("state").getJSONArray("reads").length()
+  main{repeat(10){n->
+   Pocket.event(JSONObject().put("type","timeline").put("threadId","second-thread").put("turnId","background-turn").put("turn",JSONObject().put("status","completed")))
+   Pocket.event(JSONObject().put("type","codex").put("event",JSONObject().put("method","turn/completed").put("params",JSONObject().put("threadId","second-thread"))))
+   Pocket.event(JSONObject().put("type","reply").put("threadId","second-thread").put("id","background-$n").put("state","accepted"))
+  }}
+  Thread.sleep(2500)
+  assertEquals("Background work reloaded the current transcript",before,qa("state").getJSONArray("reads").length())
+  assertFalse("Background activity left Updating messages",PocketTranscript.updating)
+  qa("silent")
+  main{Pocket.event(JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","selected-turn").put("turn",JSONObject().put("status","completed")))}
+  await{has(2)&&!PocketTranscript.updating}
+  assertEquals("Selected turn event did not trigger one read",before+1,qa("state").getJSONArray("reads").length())
+ }
  @Test fun previewDuringScheduledRecentReadIsNotLost(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
