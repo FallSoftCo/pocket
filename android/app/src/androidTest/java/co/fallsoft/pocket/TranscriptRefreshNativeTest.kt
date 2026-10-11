@@ -113,5 +113,14 @@ class TranscriptRefreshNativeTest {
   await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
   assertEquals("Repeated touch recording lost draft","Voice must keep this draft",prefs.getString("draft:same-thread",null))
   main{PocketVoice.stop()}
+  val retained=PocketTranscript.rows.map{it.s("id")}
+  qa("fail-read");main{Pocket.refreshDetail()}
+  await{!PocketTranscript.loading&&Pocket.error.contains("Synthetic history refresh unavailable")}
+  assertEquals("Failed refresh discarded local history",retained,PocketTranscript.rows.map{it.s("id")})
+  assertTrue("History refresh error hidden",device.wait(Until.hasObject(By.textContains("Synthetic history refresh unavailable")),2000))
+  assertTrue("Read recovery inaccessible",device.wait(Until.hasObject(By.text("Reload conversation")),2000))
+  device.findObject(By.text("Reload conversation")).click()
+  await{!PocketTranscript.loading&&Pocket.error.isBlank()}
+  assertEquals("Read retry erased typing","Voice must keep this draft",prefs.getString("draft:same-thread",null))
  }
 }
