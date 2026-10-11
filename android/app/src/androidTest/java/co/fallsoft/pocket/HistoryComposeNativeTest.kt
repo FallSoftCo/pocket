@@ -71,6 +71,7 @@ class HistoryComposeNativeTest {
   assertEquals("Cold process lost reading position",prefs.getFloat("qualification:reading-top",-1f),compose.onNodeWithText(text,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.top,2f)
   assertTrue("Cold process hid previously local earlier history",PocketTranscript.rows.any{it.s("id")=="older-message"})
   compose.onNodeWithContentDescription("Loading; conversation controls").assertExists()
+  println("Native cached-history hydration: ${PocketTranscript.lastCacheHydrationMs}ms; ${PocketTranscript.rows.size} retained rows")
   assertTrue("Stale cache exposed pending action authority",Pocket.detail?.optJSONArray("pending")==null&&Pocket.detail?.optJSONArray("outgoing")==null&&Pocket.detail?.optJSONObject("catchup")==null)
   qa("release")
   compose.waitUntil(15000){!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Fresh response 2"}}

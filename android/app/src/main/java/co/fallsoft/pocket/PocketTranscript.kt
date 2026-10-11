@@ -45,6 +45,7 @@ object PocketTranscript {
         return backendOwner(transcriptCacheOwner(Pocket.environmentId,Pocket.base,Pocket.token),identity)
     }
     internal var cacheRestoreRevision by mutableIntStateOf(0);private set
+    internal var lastCacheHydrationMs:Long=-1;private set
     private val disk by lazy{TranscriptDiskCache(java.io.File(Pocket.context.noBackupFilesDir,"transcript-cache-v1"))}
     private val diskSequence=java.util.concurrent.atomic.AtomicLong()
     private val diskRequests=java.util.concurrent.ConcurrentHashMap<String,Long>()
@@ -178,8 +179,10 @@ object PocketTranscript {
         automaticRetryAllowed=true;loading=true;buffered.clear();var baselineRows=rows.associateBy{it.s("id")};var succeeded=false
         try{
             if(!historyLoaded&&!older&&bridgeCursor==null){
+                val cacheStarted=android.os.SystemClock.elapsedRealtime()
                 val cached=diskSnapshot(scope,id)
                 if(!current())return
+                lastCacheHydrationMs=android.os.SystemClock.elapsedRealtime()-cacheStarted
                 if(cached!=null){rows=cached.rows;Pocket.detail=cached.detail;before=cached.before;earlier=cached.earlier;bridgeBefore=cached.bridgeBefore;readPosition=cached.position;historyLoaded=true;cacheRestoreRevision++;revision++;trace()}
                 baselineRows=rows.associateBy{it.s("id")}
             }
