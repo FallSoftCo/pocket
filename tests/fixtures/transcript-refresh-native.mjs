@@ -16,6 +16,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/pacing'){pacing=true;body={ok:true};}
  else if(path==='/_qa/fail-read'){failRead=true;failStatus=503;body={ok:true};}
  else if(path==='/_qa/fail-read-permanent'){failRead=true;failStatus=401;body={ok:true};}
+ else if(path==='/api/threads/second-thread')body={thread:{...thread(),id:'second-thread',name:'Other synthetic work'},timeline:{rows:[{id:'other/message',turnId:'other',kind:'message',text:'Other conversation remains separate'}],hasEarlier:false,before:null},revision:0,notes:[],pending:[],outgoing:[],notifications:[]};
  else if(path==='/api/threads/same-thread'){
   if(failRead){reads.push({at:Date.now(),older:req.url.includes("before="),revision,status:failStatus});failRead=false;res.writeHead(failStatus,{'Content-Type':'application/json'});res.end(JSON.stringify({error:failStatus===401?'Synthetic history permission rejected':'Synthetic history refresh unavailable'}));return;}
   const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');

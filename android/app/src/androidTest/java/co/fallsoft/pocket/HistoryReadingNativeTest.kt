@@ -122,6 +122,19 @@ class HistoryReadingNativeTest {
   main{Pocket.event(event("user","user","Delayed request outside latest page").put("type","timeline"))}
   Thread.sleep(600)
   assertEquals("Repeated input restarted position read",1,qa("state").getJSONArray("positions").length())
+  qa("anchored")
+  main{Pocket.event(event("second-user","user","Second delayed input").put("type","timeline"))}
+  await{qa("state").getJSONArray("positions").length()==2}
+  main{Pocket.open("second-thread")}
+  await{PocketTranscript.rows.any{it.s("id")=="other/message"}&&!PocketTranscript.loading}
+  qa("release-position");Thread.sleep(500)
+  assertEquals("Stale position response changed selected conversation","second-thread",Pocket.selected)
+  assertEquals("Old position rows leaked into other conversation",listOf("other/message"),PocketTranscript.rows.map{it.s("id")})
+  main{Pocket.open("same-thread")}
+  await{!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("id")=="order/second-user"}}
+  val reopened=PocketTranscript.rows.map{it.s("id")}
+  assertTrue("Warm reopen did not repair cancelled outside-page input",reopened.indexOf("order/second-user")<reopened.indexOf("order/answer"))
+  assertEquals("Warm reopen lost draft","Keep anchored draft",prefs.getString("draft:same-thread",null))
  }
 
  @Test fun partialOlderPageRepairsLateInputAgainstRetainedReply(){
