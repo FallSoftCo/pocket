@@ -39,7 +39,7 @@ class ConversationFilterNativeTest {
    println("Filter position $attempt: "+visible.map{it.first.substringBefore(":")+"@"+it.second})
    val answer=visible.firstOrNull{it.first.substringAfter("Filter passage ").substringBefore(":").toIntOrNull()?.rem(2)==0&&it.second.top>180&&it.second.bottom<device.displayHeight*3/4}
    if(number!=null&&number%2==1&&answer!=null){target=answer.first;top=answer.second.top;break}
-   device.swipe(device.displayWidth/2,device.displayHeight/3,device.displayWidth/2,device.displayHeight/3+100,16);Thread.sleep(180)
+   device.swipe(device.displayWidth/2,device.displayHeight/3,device.displayWidth/2,device.displayHeight/3+100,60);Thread.sleep(180)
   }
   device.dumpWindowHierarchy(java.io.File(context.cacheDir,"filter-leading-commentary-before.xml"))
   val text=requireNotNull(target){"Could not position commentary before a visible answer"}
