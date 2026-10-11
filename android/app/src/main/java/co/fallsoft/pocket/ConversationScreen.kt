@@ -87,7 +87,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),latestTurn?.s("status").orEmpty(),task?.previewKind=="thinking",d!=null,PocketTranscript.loading)
     val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.THINKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
     val latestFailure=rows.lastOrNull{it.s("kind")=="turnEnd"}?.takeIf{it.s("status")=="failed"&&(latestTurn==null||it.s("turnId")==latestTurn.s("turnId"))}
-    val list=key(Pocket.local,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
+    val list=key(Pocket.environmentId,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
     val readPosition=remember(Pocket.environmentId,Pocket.selected){PocketTranscript.readPosition}
     var restoredPosition by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition==null||readPosition.follow)}
     var follow by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
@@ -99,9 +99,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
     val shownRows=filteredRows
-    val latestFollow by key(Pocket.local,Pocket.selected){rememberUpdatedState(follow)}
-    val latestRowIds by key(Pocket.local,Pocket.selected){rememberUpdatedState(shownRows.map{it.s("id")})}
-    DisposableEffect(Pocket.local,Pocket.selected){
+    val latestFollow by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(follow)}
+    val latestRowIds by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(shownRows.map{it.s("id")})}
+    DisposableEffect(Pocket.environmentId,Pocket.selected){
         val source=Pocket.selected;val owner=backendOwner(Pocket.base,Pocket.token)
         onDispose{
             // visibleItemsInfo also includes a preceding row inside content padding.
@@ -111,7 +111,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position)
         }
     }
-    LaunchedEffect(Pocket.local,Pocket.selected,rows.size){
+    LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size){
         if(!restoredPosition&&readPosition!=null&&rows.isNotEmpty()){
             val index=transcriptAnchorIndex(rows.map{it.s("id")},readPosition)
             if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
@@ -148,7 +148,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }}
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
-    LaunchedEffect(Pocket.local,Pocket.selected,important){
+    LaunchedEffect(Pocket.environmentId,Pocket.selected,important){
         snapshotFlow{restoredPosition&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
             .distinctUntilChanged().filter{it}.collect{
                 var retryMs=1000L
