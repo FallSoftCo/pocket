@@ -4,6 +4,7 @@ package co.fallsoft.pocket
 object ImmersionVoiceLexicon {
     private val phrases=mapOf(
         "Talk to Codex" to "Parla con Codex", "Voice setup" to "Configurazione vocale", "App settings" to "Impostazioni dell’app",
+        "No speech was captured. Check microphone privacy, then tap the microphone to record again." to "Non è stato registrato alcun parlato. Controlla le impostazioni di privacy del microfono, poi tocca il microfono per registrare di nuovo.",
         "Start voice" to "Avvia la voce", "Start voice in this conversation" to "Parla in questa conversazione",
         "Stop and send recording" to "Ferma e invia la registrazione", "Speech volume" to "Volume della voce",
         "Your message" to "Il tuo messaggio", "Codex message" to "Messaggio di Codex",
