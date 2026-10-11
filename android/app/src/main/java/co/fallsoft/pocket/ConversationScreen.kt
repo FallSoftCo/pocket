@@ -144,7 +144,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             android.util.Log.d("PocketScroll","index=${position.first} offset=${position.second} moving=${position.third} follow=$follow dragged=$dragged rows=${shownRows.size}")
         }
     }
-    LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
+    var historyGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
+    var satisfiedHistoryGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(-1)}
+    LaunchedEffect(dragged){if(dragged){follow=false;historyGesture++}else if(!list.canScrollForward)follow=true}
     LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){
         delay(32)
         if(!follow||dragged||list.isScrollInProgress)return@LaunchedEffect
@@ -157,14 +159,15 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
     LaunchedEffect(Pocket.environmentId,Pocket.selected,important){
-        snapshotFlow{restoredPosition&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
+        snapshotFlow{restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
             .distinctUntilChanged().filter{it}.collect{
                 var retryMs=1000L
-                while(restoredPosition&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
+                while(restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
                     // Wait for finger/fling and layout to settle before another page.
                     delay(180)
                     if(list.isScrollInProgress||!shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading))break
                     val cursor=PocketTranscript.before
+                    val gesture=historyGesture
                     PocketTranscript.load(true,beforeApply={
                         snapshotFlow{list.isScrollInProgress}.debounce(180).first{!it}
                     })
@@ -173,7 +176,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     if(PocketTranscript.before==cursor&&PocketTranscript.earlier){
                         // Remain anchored; retry only while the reader is still near this edge.
                         delay(retryMs);retryMs=(retryMs*2).coerceAtMost(15000)
-                    }else{retryMs=1000L;delay(32)}
+                    }else{
+                        // A short page is not permission to drain the whole history.
+                        // A gesture made during this read remains a fresh demand.
+                        satisfiedHistoryGesture=gesture;retryMs=1000L
+                    }
                 }
             }
     }

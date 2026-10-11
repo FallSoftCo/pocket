@@ -68,4 +68,22 @@ class HistoryReadingNativeTest {
   assertEquals("Repeated input triggered polling",reads,qa("state").getJSONArray("reads").length())
  }
 
+ @Test fun shortHistoryPagesRequireAnotherReadingGesture(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val c=i.targetContext;c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
+  qa("pacing")
+  main{for(n in 0..7)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","reading").put("version",100+n).put("row",JSONObject().put("id","pacing-read-$n").put("turnId","reading").put("kind","message").put("text","Reading passage $n: retained synthetic conversation text with a clear place to return while earlier history arrives.")))}
+  assertTrue(device.wait(Until.hasObject(By.textContains("Reading passage 7:")),5000));Thread.sleep(150)
+  requireNotNull(device.findObject(By.scrollable(true))).scroll(androidx.test.uiautomator.Direction.UP,0.9f)
+  await{PocketTranscript.rows.any{it.s("id")=="pacing-1"}&&!PocketTranscript.loading}
+  Thread.sleep(3000)
+  fun olderReads()=qa("state").getJSONArray("reads").objects().count{it.optBoolean("older")}
+  assertEquals("Idle edge drained multiple history pages",1,olderReads())
+  requireNotNull(device.findObject(By.scrollable(true))).scroll(androidx.test.uiautomator.Direction.UP,0.5f)
+  await{PocketTranscript.rows.any{it.s("id")=="pacing-2"}&&!PocketTranscript.loading}
+  assertEquals("Second gesture did not load exactly one page",2,olderReads())
+ }
+
 }
