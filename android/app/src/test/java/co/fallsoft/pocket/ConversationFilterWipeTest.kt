@@ -2,6 +2,11 @@ package co.fallsoft.pocket
 import org.junit.Assert.*
 import org.junit.Test
 class ConversationFilterWipeTest {
+ @Test fun removedLeadingRowKeepsVisibleAnswerAtItsOffset(){
+  assertEquals(FilterViewportAnchor(1,-140),conversationFilterViewportAnchor(listOf("old-answer","answer"),listOf(FilterVisibleRow("commentary",-70),FilterVisibleRow("answer",140))))
+  assertEquals(FilterViewportAnchor(0,42),conversationFilterViewportAnchor(listOf("answer"),listOf(FilterVisibleRow("answer",-42))))
+  assertNull(conversationFilterViewportAnchor(listOf("old-answer"),listOf(FilterVisibleRow("commentary",-70))))
+ }
  @Test fun filterRetainsPassageAndChronology(){
   assertEquals(1,conversationFilterAnchor(listOf("a","b","c","d"),listOf("a","c","d"),2))
   assertEquals(1,conversationFilterAnchor(listOf("a","b","c","d"),listOf("a","c","d"),1))

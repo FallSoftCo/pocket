@@ -36,10 +36,13 @@ class ConversationFilterNativeTest {
   }
   val text=requireNotNull(target){"Could not position commentary before a visible answer"}
   device.dumpWindowHierarchy(java.io.File(context.cacheDir,"filter-leading-commentary-before.xml"))
+  assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"filter-leading-commentary-before.png")))
   device.findObject(By.text("Important")).click();Thread.sleep(500)
+  assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"filter-leading-commentary-important.png")))
   val answer=device.findObject(By.text(text));assertNotNull("Filter hid visible answer",answer)
   assertTrue("Removing leading commentary moved answer from $top to ${answer.visibleBounds.top}",kotlin.math.abs(answer.visibleBounds.top-top)<=24)
   device.findObject(By.text("Important")).click();Thread.sleep(500)
+  assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"filter-leading-commentary-restored.png")))
   assertTrue("Unfilter shifted visible answer",kotlin.math.abs(device.findObject(By.text(text)).visibleBounds.top-top)<=24)
  }
  @Test fun filterPreservesVisiblePassageAndReturnsWithoutJumping(){

@@ -101,6 +101,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var restoredPosition by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition==null||readPosition.follow)}
     var follow by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
     var important by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
+    var filterPositionJob by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<Job?>(null)}
+    DisposableEffect(Pocket.environmentId,Pocket.selected){onDispose{filterPositionJob?.cancel()}}
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
     fun noteFor(row:JSONObject)=notes.firstOrNull{it.s("id")==row.s("itemId",row.s("id"))||it.s("id")==row.s("id")}
@@ -292,9 +294,18 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val offset=list.firstVisibleItemScrollOffset
             val nextImportant=!important
             val after=if(nextImportant)orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}else rows
-            val anchor=conversationFilterAnchor(before,after.map{it.s("id")},visible)
+            val afterIds=after.map{it.s("id")}
+            val retained=conversationFilterViewportAnchor(afterIds,list.layoutInfo.visibleItemsInfo.map{FilterVisibleRow(it.key.toString(),it.offset)})
+            val anchor=retained?.index?:conversationFilterAnchor(before,afterIds,visible)
+            val targetOffset=retained?.scrollOffset?:if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0
+            val environment=Pocket.environmentId;val source=Pocket.selected
+            filterPositionJob?.cancel()
             follow=false;important=nextImportant
-            scope.launch{androidx.compose.runtime.withFrameNanos{};if(anchor>=0)list.scrollToItem(anchor,if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0)}
+            filterPositionJob=scope.launch{
+                androidx.compose.runtime.withFrameNanos{}
+                if(anchor>=0&&Pocket.environmentId==environment&&Pocket.selected==source)
+                    list.scrollToItem(anchor,targetOffset)
+            }
         },onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
         }
@@ -457,6 +468,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             DropdownMenu(effortMenu,{effortMenu=false}){efforts.forEach{e->DropdownMenuItem(text={BilingualLabel(e.s("reasoningEffort"))},onClick={effort=e.s("reasoningEffort");effortMenu=false})}}}
         Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){BilingualLabel(if(plan)"Plan mode" else "Build mode");WorkflowText(if(plan)"Propose a plan before implementation" else "Carry out the requested work",fontSize=11.sp,color=Muted)};Switch(plan,{plan=it})}
     }},confirmButton={TextButton({Pocket.updateTurnSettings(JSONObject().put("model",model).put("effort",effort).put("mode",if(plan)"plan" else "default"),onDismiss)},enabled=selected!=null&&effort.isNotBlank()&&!loading){BilingualLabel("Save")}},dismissButton={TextButton(onDismiss){BilingualLabel("Cancel")}})
+}
+
+internal data class FilterVisibleRow(val id:String,val offset:Int)
+internal data class FilterViewportAnchor(val index:Int,val scrollOffset:Int)
+/** Keep a surviving native item at its pixel position, even if the leading row disappears. */
+internal fun conversationFilterViewportAnchor(after:List<String>,visible:List<FilterVisibleRow>):FilterViewportAnchor? {
+    val positions=after.withIndex().associate{it.value to it.index}
+    return visible.firstNotNullOfOrNull{row->positions[row.id]?.let{FilterViewportAnchor(it,-row.offset)}}
 }
 
 internal fun conversationFilterAnchor(before:List<String>,after:List<String>,visible:Int):Int {
