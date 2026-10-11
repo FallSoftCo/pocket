@@ -27,7 +27,7 @@ class HistoryReadingNativeTest {
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/$path",JSONObject())}
  private var eventVersion=900
  private fun event(id:String,kind:String,text:String):JSONObject{val version=++eventVersion;return JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",version).put("row",JSONObject().put("id","order/$id").put("turnId","order").put("kind",kind).put("text",text).put("version",version))}
- @Test fun readingAnchorAndLateInputAreReconciledWithoutVoice(){
+ @Test fun readingAnchorSurvivesDeferredOlderPage(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val c=i.targetContext
   c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putBoolean("diagnostic:scroll",true).commit()
@@ -49,15 +49,7 @@ class HistoryReadingNativeTest {
   assertFalse("Page applied during unsettled read",PocketTranscript.rows.any{it.s("id")=="older-message"})
   settled.complete(Unit);await{!PocketTranscript.loading&&PocketTranscript.rows.any{it.s("id")=="older-message"}}
   assertTrue("Prepend shifted reading passage",kotlin.math.abs(requireNotNull(visiblePassages().firstOrNull{it.first==text}).second.top-top)<=24)
-  qa("order")
-  main{PocketTranscript.reset("same-thread");Pocket.event(event("answer","message","Live answer retained"));Pocket.event(event("user","user","Ordering request"))}
-  await{!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("id")=="order/end"}}
-  val ids=PocketTranscript.rows.map{it.s("id")}
-  assertTrue("Late input remains after its response",ids.indexOf("order/user")<ids.indexOf("order/answer"))
-  assertEquals("Reconciliation overwrote streamed answer","Live answer retained",PocketTranscript.rows.single{it.s("id")=="order/answer"}.s("text"))
-  val reads=qa("state").getJSONArray("reads").length()
-  main{Pocket.event(event("user","user","Ordering request"))};Thread.sleep(700)
-  assertEquals("Repeated input caused history polling",reads,qa("state").getJSONArray("reads").length())
+
  }
  @Test fun lateInputEventReconcilesCanonicalOrderOnce(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
