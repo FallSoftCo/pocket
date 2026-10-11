@@ -2183,9 +2183,9 @@
     {
       "id": "important-visible-passage-anchor-20261011",
       "request": "Important filter must not reorder or jump the conversation. Preserve the actual visible answer when leading commentary disappears and when returning to the complete transcript.",
-      "status": "native-candidate-qualification-running",
+      "status": "delivered-alpha66-further-exit-repair-alpha67-qualified",
       "implementation": "Native surviving-item key and pixel offset anchor; return to the same visible passage until further touch reading; cancel competing positioning jobs and guard environment/thread. No history truncation, model polling or worker wakeups.",
-      "verification": "Unchanged alpha65 runtime reproduction fails in11.175s: answer y446 becomes y1015. First repair passes filter but fails return; candidate now retains filter passage identity. Stale test accessibility reference corrected to immutable native hierarchy snapshot."
+      "verification": "Alpha66/code84 installed. Post-composition row request and measured tail compensation pass actual native bounds+window PixelCopy6.069s. Later equivalent6.031s original crops byte-identical across Important and return. Additional non-toggle exit failure reproduced and repaired under saved-context-filter-exit-reading-20261011."
     },
     {
       "id": "catalog-transcript-missed-event-catchup-20261011",
@@ -2193,6 +2193,13 @@
       "status": "delivered-alpha66-code84",
       "implementation": "Selected catalog explicit activityAt advancement also invalidates transcript when preview/status are unchanged; inventory/fetch timestamps are excluded.",
       "verification": "Native emulator missed-event test 12.952s; unchanged refresh no further history read, no submitted replies, saved draft preserved. Cached-history regression 40.215s. Phone remains alpha65 until signed delivery. Final debug/release286 tests each and both lints passed; actual phone code84/base APK hash verified,13 critical preference hashes unchanged. Both authenticated signing variants offered code84."
+    },
+    {
+      "id": "saved-context-filter-exit-reading-20261011",
+      "request": "Keep Important and surrounding-conversation navigation ergonomic, with normal history spacing and no numeric-index/timed scroll guesses; retain local history and reading position.",
+      "status": "native-qualified-alpha67-signing",
+      "implementation": "Filter tail compensation is conditional on Important. Exiting clears pending compensation. Saved source is requested by row ID after committed list update, with full captured environment matching for navigation and removal feedback.",
+      "verification": "Old native exit fails5.472s,1453->1379px. Fixed5.57s; rendered older-history/warm-reopen9.481s within2px; filter rendered text6.031s; short-page gestures14.519s; late-input canonical ordering7.558s. Physical interaction remains unqualified."
     }
   ],
   "current_state": {
