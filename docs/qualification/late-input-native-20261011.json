@@ -1,0 +1,12 @@
+{
+ "sourceCommit":"dcd0f84",
+ "appSource":"ebf026f",
+ "host":"OZZZ-OS",
+ "variant":"nonshrunk qualification",
+ "emulator":"nextcomp_env_qa:5620 SwiftShader",
+ "test":"HistoryReadingNativeTest#lateInputEventReconcilesCanonicalOrderOnce",
+ "result":"passed",
+ "seconds":7.285,
+ "verified":["late new user row invokes coalesced canonical read", "user precedes corresponding response after reconciliation", "newer answer arriving during read retained", "repeated known input does not trigger more reads"],
+ "limits":["phone remains alpha53", "actual reported phone pair not yet captured", "combined reading/scroll test remains failed", "not proof all message chronology cases are solved"]
+}

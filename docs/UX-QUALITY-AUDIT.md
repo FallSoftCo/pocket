@@ -238,3 +238,27 @@ one read and no queued retry, updating stops, explicit reload succeeds, draft
 and local history survive503. No live revocation/worker activity or phone
 installation. Owned fixture/emulator stopped after terminal receipt. Physical
 outage and prolonged edge-pagination behavior remain separate audit cases.
+
+## User-reported scrolling and chronology — open
+
+User reports fast/jagged older-page loading and input after its answering reply.
+Candidateafdb920 waits for settled gestures before automatic page admission and
+before applying an older-page response; two layout frames precede the next page.
+Candidate36f7bb9 rechecks gesture/follow state immediately before pending live
+scroll. These are not yet native-qualified: combined reading test still sees
+latest passage39 on screen after gestures; atomic synthetic hierarchy saved on
+OZZZ /tmp/nextcomp-reading-failure-hierarchy.xml. Both gesture directions failed;
+do not count harness changes as a successful product fix. Earlier combined test
+also failed Recording feedback visibility, retained as separate voice regression.
+
+New-input event previously did not request canonical order. Candidateebf026f
+now schedules one coalesced read only for a newly observed selected-thread user
+row; does not sort all users ahead of commentary or change other environments.
+Isolated native test atdcd0f84 passes7.285s: answer then user event reconciles to
+canonical user/answer order, newer during-read text survives, duplicate known
+input does not poll. Unit/lint builds pass at appsourceebf026f35s. Current server
+copy of this root thread had its latest user before the response; this does not
+prove phone order. Exact affected-phone pair remains needed for root-cause
+confirmation. No phone delivery occurred: alpha53 installed. Alpha54 debug
+builddadf24f passed but delivery held when these new regressions arrived.
+Owned emulator/fixture stopped after collecting terminal receipts and hierarchy.
