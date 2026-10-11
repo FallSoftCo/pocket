@@ -126,5 +126,16 @@ class TranscriptRefreshNativeTest {
   device.findObject(By.text("Reload conversation")).click()
   await{!PocketTranscript.loading&&Pocket.error.isBlank()}
   assertEquals("Read retry erased typing","Voice must keep this draft",prefs.getString("draft:same-thread",null))
+  val readsBeforeRejected=qa("state").getJSONArray("reads").length()
+  qa("fail-read-permanent")
+  main{Pocket.refreshDetail();Pocket.refreshDetail()}
+  await{!PocketTranscript.loading&&Pocket.error.contains("Synthetic history permission rejected")}
+  assertFalse("Permission failure still permits automatic reads",PocketTranscript.automaticRetryAllowed)
+  Thread.sleep(900)
+  assertEquals("Rejected read retried unchanged credentials",readsBeforeRejected+1,qa("state").getJSONArray("reads").length())
+  device.findObject(By.text("Reload conversation")).click()
+  await{!PocketTranscript.loading&&Pocket.error.isBlank()}
+  assertTrue("Explicit successful reload did not restore automatic pagination",PocketTranscript.automaticRetryAllowed)
+
  }
 }
