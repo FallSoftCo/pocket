@@ -90,6 +90,10 @@ class TranscriptRefreshNativeTest {
    assertEquals("Hardware capture lost large-text draft","Large text draft stays here",prefs.getString("draft:same-thread",null))
    assertTrue("Voice hid the IME",device.executeShellCommand("dumpsys input_method").contains("mInputShown=true"))
    assertTrue("Volume inaccessible with IME",device.hasObject(By.desc("Speech volume")))
+   val collapsed=device.findObject(By.text(PocketVoice.problem)).visibleBounds.height()
+   device.findObject(By.text(PocketVoice.problem)).click()
+   await{device.findObject(By.text(PocketVoice.problem)).visibleBounds.height()>collapsed}
+   assertTrue("Inline error help hid IME",device.executeShellCommand("dumpsys input_method").contains("mInputShown=true"))
    assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"bottom-controls-ime-large.png")))
    assertEquals("Layout/capture test submitted work",0,qa("state").getJSONArray("replies").length())
   }finally{main{PocketVoice.stop()};device.executeShellCommand("settings put system font_scale "+font)}

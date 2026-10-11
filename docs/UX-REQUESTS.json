@@ -2163,6 +2163,14 @@
       "status": "delivered-alpha62",
       "implementation": "Validate matching thread and timeline rows before applying; preserve local rows; three read-only retries at 1/2/4 seconds with Updating messages; no permission polling; failed recent fetch cannot acknowledge stale viewport.",
       "evidence": "docs/qualification/stalled-conversation-20261011.json"
+    },
+    {
+      "id": "bottom-controls-large-text-20261011",
+      "status": "native-qualified-candidate-coordinator-qualification-pending",
+      "request": "One-handed mic and keyboard controls must stay legible, directly tappable and reachable at normal and large text; inline volume and update access remain available with IME. Controls use inline language transitions.",
+      "implementation": "Full capture action tile with44dp modeled symbol and wrapping label; keyboard tile matches vertical icon/label arrangement; compact mic uses44dp symbol without clipping a caption inside its circle. Global dock caption remains outside circle. Unknown quota uses dash with full accessibility state; credits use smaller cr unit. Capture/update labels use cached Italian mappings and existing reading-direction transition.",
+      "verification": "Native28.599s normal/1.3x/2x text, actual touch/volume-key capture with IME, preserved draft and no worker submissions. Original29.365s passed tap tests but visual review caught compact Retry clipping, which final source removes.",
+      "remaining": "Coordinator/Italian native case, final broad regression, gallery/release and physical interaction verification."
     }
   ],
   "current_state": {
