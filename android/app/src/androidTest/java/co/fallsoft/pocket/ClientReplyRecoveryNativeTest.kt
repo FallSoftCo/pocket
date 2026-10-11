@@ -46,10 +46,19 @@ class ClientReplyRecoveryNativeTest {
   assertEquals("Edited after send",device.findObject(By.clazz("android.widget.EditText")).text)
   assertEquals("Receipt reconciliation submitted another turn",1,posts().length())
  }
+ @Test fun preparedButUndispatchedMessageContinuesOnce(){
+  start(draft="Prepared continuation")
+  val destination=requireNotNull(Pocket.captureEnvironment())
+  val saved=ClientReplyIntent("synthetic-prepared-id",Pocket.environmentId,backendOwner(destination.endpoint,destination.token),"same-thread","Prepared continuation","auto","draft:same-thread")
+  ClientReplyJournal({Pocket.prefs.getString("client-replies:v1","[]")!!},{Pocket.prefs.edit().putString("client-replies:v1",it).commit()}).put(saved)
+  main{Pocket.open("same-thread")};await{posts().length()==1&&PocketReplies.entries("same-thread").isEmpty()&&!Pocket.sending}
+  assertEquals(saved.id,posts().getJSONObject(0).s("id"));assertFalse(Pocket.prefs.contains("draft:same-thread"))
+  main{PocketReplies.reconcile("same-thread")};Thread.sleep(1000);assertEquals("Prepared message submitted twice",1,posts().length())
+ }
  @Test fun explicitRetryKeepsSavedIdentityAndRequiresConfirmation(){
   start(draft="Prepared turn")
   val destination=requireNotNull(Pocket.captureEnvironment())
-  val saved=ClientReplyIntent("synthetic-unsent-id",Pocket.environmentId,backendOwner(destination.endpoint,destination.token),"same-thread","Prepared turn","auto","draft:same-thread")
+  val saved=ClientReplyIntent("synthetic-unsent-id",Pocket.environmentId,backendOwner(destination.endpoint,destination.token),"same-thread","Prepared turn","auto","draft:same-thread",phase="dispatched")
   ClientReplyJournal({Pocket.prefs.getString("client-replies:v1","[]")!!},{Pocket.prefs.edit().putString("client-replies:v1",it).commit()}).put(saved)
   main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating&&device.hasObject(By.text("Retry"))}
   assertEquals("Prepared turn sent without consent",0,posts().length())

@@ -64,7 +64,13 @@ internal object PocketReplies {
             finally{busy=busy-intent.id;dispatching=dispatching-intent.id;if(Pocket.captureEnvironment()?.matches(destination)==true)Pocket.sending=false;val pending=runCatching{journal.get(intent.id)}.getOrNull();if(pending?.state=="unconfirmed")Pocket.scope.launch{delay(800);if(current(pending)!=null)check(pending)}}
         }
     }
-    fun reconcile(thread:String){entries(thread).filter{matchesCurrent(it)&&it.id !in busy}.take(16).forEach{check(it)}}
+    fun reconcile(thread:String){
+        entries(thread).filter{matchesCurrent(it)&&it.id !in busy}.take(16).forEach{intent->
+            if(intent.phase=="prepared"){if(!Pocket.sending)current(intent)?.let{dispatch(intent,it)}}else check(intent)
+        }
+    }
+    fun cancelPrepared(thread:String){runCatching{entries(thread).filter{matchesCurrent(it)&&it.phase=="prepared"}.forEach{journal.remove(it.id)};revision++}}
+
     fun event(thread:String,id:String,state:String,message:String=""){
         val intent=runCatching{journal.get(id)}.getOrNull()?:return
         if(intent.thread!=thread||intent.environment!=Pocket.environmentId||current(intent)?.matches(Pocket.captureEnvironment()?:return)!=true)return

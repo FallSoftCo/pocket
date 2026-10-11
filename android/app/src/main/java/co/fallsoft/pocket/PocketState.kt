@@ -281,7 +281,7 @@ object Pocket {
             }else startStatus="Your request is saved. Check status before starting again."
         }finally{if(environmentRequestCurrent())starting=false}
     }}
-    fun interrupt(){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/interrupt",JSONObject());scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not stop task"}}}
+    fun interrupt(){val id=selected?:return;PocketReplies.cancelPrepared(id);scope.launchEnvironment{try{api("/api/threads/$id/interrupt",JSONObject());scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not stop task"}}}
     fun messages():List<Message>{
         val thread=detail?.optJSONObject("thread")?:return emptyList()
         return thread.optJSONArray("turns")?.objects()?.flatMap { turn -> turn.optJSONArray("items")?.objects()?.mapNotNull {item->
