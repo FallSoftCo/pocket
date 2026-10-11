@@ -41,6 +41,29 @@ test('position does not guess when no known successor exists or a transport fail
  await assert.rejects(history.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:Array(257).fill('answer')}),/Invalid item position/);
 });
 
+test('compatibility pages keep exact item and turn boundary when new output and a newer turn arrive',async()=>{
+ let advanced=false;const calls=[];
+ const items=()=>Array.from({length:advanced?8:6},(_,n)=>({id:'m'+n,type:'agentMessage',text:'Text '+n}));
+ const history=new ThreadHistory({async call(method,p){calls.push({method,p});assert.equal(method,'thread/turns/list');
+  if(p.cursor==='old-turn')return {data:[{id:'previous',items:[{id:'old',type:'agentMessage',text:'Earlier'}]}]};
+  assert.equal(p.cursor,advanced?'stable-turn':undefined);
+  assert.equal(p.sortDirection,advanced?'asc':'desc');
+  return {data:[{id:'current',items:items()}],backwardsCursor:'stable-turn',nextCursor:advanced?'wrong-ascending-next':'old-turn'};
+ }});history.turnOnlyThreads.add('thread1');
+ const first=await history.read({id:'thread1'},{maxItems:2});assert.deepEqual(first.turns[0].items.map(x=>x.id),['m4','m5']);
+ advanced=true;
+ const second=await history.read({id:'thread1'},{maxItems:2,before:first._pocketPage.before});assert.deepEqual(second.turns[0].items.map(x=>x.id),['m2','m3']);assert.equal(second._pocketPage.insertBefore,'current/m4');
+ const third=await history.read({id:'thread1'},{maxItems:2,before:second._pocketPage.before});assert.deepEqual(third.turns[0].items.map(x=>x.id),['m0','m1']);assert.equal(third._pocketPage.insertBefore,'current/m2');
+ const previous=await history.read({id:'thread1'},{maxItems:2,before:third._pocketPage.before});assert.equal(previous.turns[0].id,'previous');assert.equal(previous._pocketPage.insertBefore,'current/header');
+ assert.ok(calls.every(x=>!['thread/read','thread/resume'].includes(x.method)));
+});
+
+test('compatibility boundary missing from an unstable provider fails instead of skipping retained history',async()=>{
+ const history=new ThreadHistory({async call(){return {data:[{id:'current',items:[]}],nextCursor:null};}});history.turnOnlyThreads.add('thread1');
+ const before='turnfull:'+Buffer.from(JSON.stringify({cursor:null,offset:2,turnId:'current',beforeItemId:'removed'})).toString('base64url');
+ await assert.rejects(history.read({id:'thread1'},{before}),/item boundary is no longer available/);
+});
+
 test('recent opening returns newest batch without walking older items, then resumes losslessly',async()=>{
   const calls=[];
   const reader=new ThreadHistory({async call(method,p){

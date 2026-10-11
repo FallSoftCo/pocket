@@ -124,18 +124,24 @@ export class ThreadHistory {
       if(typeof before!=='string'||before.length>16000)throw Error('Invalid history position. Reopen the task.');
       if(before.startsWith('turnfull:')){
         try{state=JSON.parse(Buffer.from(before.slice(9),'base64url').toString());}catch{throw Error('Invalid history position. Reopen the task.');}
-        if(!state||!Number.isSafeInteger(state.offset)||state.offset<0||(state.cursor!=null&&typeof state.cursor!=='string'))throw Error('Invalid history position. Reopen the task.');
+        if(!state||!Number.isSafeInteger(state.offset)||state.offset<0||['cursor','anchor','nextTurn','turnId','beforeItemId','olderThanRow'].some(k=>state[k]!=null&&typeof state[k]!=='string'))throw Error('Invalid history position. Reopen the task.');
       }else if(before.startsWith('page:'))state.cursor=Buffer.from(before.slice(5),'base64url').toString();
       else throw Error('That history position changed with Codex. Reopen the task.');
     }
-    const page=await this.codex.call('thread/turns/list',{threadId:metadata.id,limit:1,sortDirection:'desc',itemsView:'full',...(state.cursor?{cursor:state.cursor}:{})});
+    const page=await this.codex.call('thread/turns/list',{threadId:metadata.id,limit:1,sortDirection:state.anchor?'asc':'desc',itemsView:'full',...((state.anchor||state.cursor)?{cursor:state.anchor||state.cursor}:{})});
     const turn=page.data[0];
     if(!turn)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
+    if(state.turnId&&turn.id!==state.turnId)throw Error('The history turn boundary is no longer available. Reopen the task.');
     const items=(turn.items||[]).map(item=>displayItem(item,turn.id)).filter(Boolean);
-    const end=Math.max(0,items.length-state.offset);let start=end,bytes=0;
+    const end=state.beforeItemId?items.findIndex(item=>item.id===state.beforeItemId):Math.max(0,items.length-state.offset);
+    if(end<0)throw Error('The history item boundary is no longer available. Reopen the task.');
+    let start=end,bytes=0;
     while(start>0&&end-start<maxItems){const size=Buffer.byteLength(JSON.stringify(items[start-1]));if(start<end&&bytes+size>maxBytes)break;bytes+=size;start--;}
-    const next=start>0?{cursor:state.cursor,offset:items.length-start}:page.nextCursor?{cursor:page.nextCursor,offset:0}:null;
-    return {...metadata,turns:[{...turn,items:items.slice(start,end),_pocketHideEnd:state.offset>0}],_pocketPage:{hasEarlier:!!next,before:next?encode('turnfull:',next):null}};
+    const nextTurn=state.anchor?state.nextTurn:page.nextCursor;
+    const next=start>0?{cursor:state.cursor,offset:items.length-start,beforeItemId:items[start].id,turnId:turn.id,...((state.anchor||page.backwardsCursor)?{anchor:state.anchor||page.backwardsCursor,nextTurn:nextTurn||null}:{}),olderThanRow:`${turn.id}/${items[start].id}`}:
+      nextTurn?{cursor:nextTurn,offset:0,olderThanRow:`${turn.id}/header`}:null;
+    const insertBefore=state.olderThanRow||(state.offset>0&&items[end]?`${turn.id}/${items[end].id}`:null);
+    return {...metadata,turns:[{...turn,items:items.slice(start,end),_pocketHideEnd:state.offset>0||!!state.beforeItemId}],_pocketPage:{hasEarlier:!!next,before:next?encode('turnfull:',next):null,...(insertBefore?{insertBefore}:{})}};
   }
   async legacyPage(threadId,metadata,before){
     if(before)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
