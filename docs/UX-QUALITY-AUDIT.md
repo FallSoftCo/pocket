@@ -47,3 +47,11 @@ Authenticated status is connected afterward, all grouped outgoing/voice/start
 receipt counts are unchanged, and original Codex daemon PID2213121 is alive.
 Pixel installed alpha50/code68 verified again. Live phone visual ordering remains
 unverified. Terminal-fork source and provider registration remain unactivated.
+
+- Further refresh-race reproduction and repair: a newer answer arriving during
+  history fetch formerly survived at the front of the seeded cache, ahead of
+  earlier user/tool rows. Release 6c7ba69 now rebuilds canonical snapshot order
+  while retaining the newer values and live-only tail. 424 narrow-release tests
+  pass on OZZZ; connected health, unchanged receipt counts and preserved Codex
+  daemon verified after scoped reload. Available emulator 5587 identifies as
+  another workload, so no shared emulator input/install was performed.
