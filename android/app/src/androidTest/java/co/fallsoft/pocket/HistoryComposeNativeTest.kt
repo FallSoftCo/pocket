@@ -83,8 +83,12 @@ class HistoryComposeNativeTest {
   assertTrue("Stale cache exposed pending action authority",Pocket.detail?.optJSONArray("pending")==null&&Pocket.detail?.optJSONArray("outgoing")==null&&Pocket.detail?.optJSONObject("catchup")==null)
   main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","native-reading").put("version",1).put("row",JSONObject().put("id","reading-native-30").put("turnId","native-reading").put("kind","message").put("text","Live output with a new runtime counter").put("version",1)))}
   assertTrue("Stored counter suppressed fresh live output",PocketTranscript.rows.any{it.s("id")=="reading-native-30"&&it.s("text")=="Live output with a new runtime counter"})
+  main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","matching-live").put("version",2).put("row",JSONObject().put("id","same-message").put("turnId","matching-live").put("kind","message").put("text","Live replacement of the snapshot row").put("version",2)))}
+  assertTrue("Matching live row was not immediately visible",PocketTranscript.rows.any{it.s("id")=="same-message"&&it.s("text")=="Live replacement of the snapshot row"})
   qa("release")
-  compose.waitUntil(15000){!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Fresh response 2"}}
+  compose.waitUntil(15000){!PocketTranscript.updating}
+  assertTrue("Slower snapshot rolled back the overlapping live row",PocketTranscript.rows.any{it.s("id")=="same-message"&&it.s("text")=="Live replacement of the snapshot row"})
+  assertFalse("Stale snapshot text replaced current output",PocketTranscript.rows.any{it.s("text")=="Fresh response 2"})
   assertTrue("Fresh read lost buffered live output",PocketTranscript.rows.any{it.s("text")=="Live output with a new runtime counter"})
   assertEquals("Fresh read moved cached reading position",prefs.getFloat("qualification:reading-top",-1f),compose.onNodeWithText(text,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.top,2f)
   assertEquals("Cold restore lost draft","Keep reading draft",prefs.getString("draft:same-thread",null))
