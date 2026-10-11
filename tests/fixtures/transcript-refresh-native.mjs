@@ -12,7 +12,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/fail-read'){failRead=true;failStatus=503;body={ok:true};}
  else if(path==='/_qa/fail-read-permanent'){failRead=true;failStatus=401;body={ok:true};}
  else if(path==='/api/threads/same-thread'){
-  if(failRead){failRead=false;res.writeHead(failStatus,{'Content-Type':'application/json'});res.end(JSON.stringify({error:failStatus===401?'Synthetic history permission rejected':'Synthetic history refresh unavailable'}));return;}
+  if(failRead){reads.push({at:Date.now(),older:req.url.includes("before="),revision,status:failStatus});failRead=false;res.writeHead(failStatus,{'Content-Type':'application/json'});res.end(JSON.stringify({error:failStatus===401?'Synthetic history permission rejected':'Synthetic history refresh unavailable'}));return;}
   const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
   await new Promise(r=>setTimeout(r,older?2200:1700));
   while(!older&&rev===2&&holdRefresh)await new Promise(r=>setTimeout(r,50));
