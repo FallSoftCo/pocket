@@ -2,6 +2,7 @@ package co.fallsoft.pocket
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -94,7 +95,7 @@ internal class RenderedPlayback {
             val start = withFrameNanos { it }
             try {
                 while (playback.active) {
-                    val frame = withFrameNanos { renderedFrame(it - start, atlas.fps, atlas.count) }
+                    val frame = withInfiniteAnimationFrameNanos { renderedFrame(it - start, atlas.fps, atlas.count) }
                     playback.frame.intValue = frame
                     val page = frame / atlas.pageFrames
                     if (page != currentPage) {
