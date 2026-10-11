@@ -1,0 +1,17 @@
+{
+  "version": "0.5.0-alpha.50",
+  "versionCode": 68,
+  "buildHost": "OZZZ-OS",
+  "androidUnitTests": 271,
+  "failures": 0,
+  "lint": "pass",
+  "cause": "Overlapping authoritative history pages updated row values without repairing their cached order.",
+  "fix": "Restore canonical overlapping row order while retaining local-only rows and newer live content.",
+  "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+  "apkSha256": "f42261d4438233f45bf75c9015f428398cacb65a19c3e0346f7b403797f7caf0",
+  "phoneInstallation": "ADB in-place installation returned Success; installed package alpha50/code68 verified",
+  "limitations": [
+    "Regression tests qualify reconciliation; live phone conversation ordering not yet interactively verified.",
+    "No backend or Codex service changes."
+  ]
+}

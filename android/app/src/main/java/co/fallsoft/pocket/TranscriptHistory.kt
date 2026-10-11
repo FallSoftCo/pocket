@@ -8,6 +8,13 @@ internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Bool
     val page=incoming.distinctBy(id)
     page.forEach{row->val key=id(row);val previous=values[key];if(previous==null||version(row)>=version(previous))values[key]=row}
     val order=current.map(id).distinct().toMutableList()
+    // Snapshot order is authoritative even for rows already received live.
+    // Replace only overlapping slots: locally retained pages and live-only
+    // output keep their positions and are never discarded by a bounded page.
+    val shared=page.map(id).filter{it in existing}
+    val sharedIds=shared.toHashSet()
+    var sharedIndex=0
+    order.indices.forEach{index->if(order[index] in sharedIds)order[index]=shared[sharedIndex++]}
     if(page.none{id(it) in existing}){
         val anchor=insertBefore?.let{order.indexOf(it)}?:-1
         order.addAll(if(anchor>=0)anchor else if(older)0 else order.size,page.map(id))
