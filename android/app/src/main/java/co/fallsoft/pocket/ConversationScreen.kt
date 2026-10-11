@@ -1,5 +1,7 @@
 package co.fallsoft.pocket
 
+import androidx.compose.ui.platform.testTag
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
@@ -102,8 +104,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var follow by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
     var important by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     var filterPassage by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<String?>(null)}
-    var filterPositionJob by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<Job?>(null)}
-    DisposableEffect(Pocket.environmentId,Pocket.selected){onDispose{filterPositionJob?.cancel()}}
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
     fun noteFor(row:JSONObject)=notes.firstOrNull{it.s("id")==row.s("itemId",row.s("id"))||it.s("id")==row.s("id")}
@@ -226,7 +226,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
-            LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            LazyColumn(Modifier.fillMaxSize().testTag("conversation-history"),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
@@ -296,22 +296,16 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val nextImportant=!important
             val after=if(nextImportant)orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}else rows
             val afterIds=after.map{it.s("id")}
-            val retained=conversationFilterViewportAnchor(afterIds,list.layoutInfo.visibleItemsInfo.map{FilterVisibleRow(it.key.toString(),it.offset)},if(nextImportant)null else filterPassage)
+            val retained=conversationFilterViewportAnchor(afterIds,list.layoutInfo.visibleItemsInfo.map{FilterVisibleRow(it.key.toString(),it.offset,it.size)},if(nextImportant)null else filterPassage,list.layoutInfo.viewportEndOffset)
             val anchor=retained?.index?:conversationFilterAnchor(before,afterIds,visible)
             val targetOffset=retained?.scrollOffset?:if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0
-            val environment=Pocket.environmentId;val source=Pocket.selected
             if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))
                 android.util.Log.d("PocketFilter","next=$nextImportant retained=$retained passage=${afterIds.getOrNull(anchor)} visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
-            filterPositionJob?.cancel()
             filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
             follow=false;important=nextImportant
-            filterPositionJob=scope.launch{
-                androidx.compose.runtime.withFrameNanos{}
-                if(anchor>=0&&Pocket.environmentId==environment&&Pocket.selected==source){
-                    list.scrollToItem(anchor,targetOffset)
-                    if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))android.util.Log.d("PocketFilter","applied index=$anchor offset=$targetOffset visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
-                }
-            }
+            // Apply against the next data-set measure, not an old item index
+            // resumed at the beginning of a frame. Also cancels an active fling.
+            if(anchor>=0)list.requestScrollToItem(anchor,targetOffset)
         },onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
         }
@@ -476,12 +470,15 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }},confirmButton={TextButton({Pocket.updateTurnSettings(JSONObject().put("model",model).put("effort",effort).put("mode",if(plan)"plan" else "default"),onDismiss)},enabled=selected!=null&&effort.isNotBlank()&&!loading){BilingualLabel("Save")}},dismissButton={TextButton(onDismiss){BilingualLabel("Cancel")}})
 }
 
-internal data class FilterVisibleRow(val id:String,val offset:Int)
+internal data class FilterVisibleRow(val id:String,val offset:Int,val size:Int=0)
 internal data class FilterViewportAnchor(val index:Int,val scrollOffset:Int)
 /** Keep a surviving native item at its pixel position, even if the leading row disappears. */
-internal fun conversationFilterViewportAnchor(after:List<String>,visible:List<FilterVisibleRow>,preferred:String?=null):FilterViewportAnchor? {
+internal fun conversationFilterViewportAnchor(after:List<String>,visible:List<FilterVisibleRow>,preferred:String?=null,viewportEnd:Int=Int.MAX_VALUE):FilterViewportAnchor? {
     val positions=after.withIndex().associate{it.value to it.index}
-    val passage=visible.firstOrNull{it.id==preferred&&it.id in positions}?:visible.firstOrNull{it.id in positions}?:return null
+    val survivors=visible.filter{it.id in positions}
+    val passage=survivors.firstOrNull{it.id==preferred}
+        ?:survivors.firstOrNull{it.offset>=0&&it.offset.toLong()+it.size<=viewportEnd}
+        ?:survivors.firstOrNull()?:return null
     return FilterViewportAnchor(positions.getValue(passage.id),-passage.offset)
 }
 
