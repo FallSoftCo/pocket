@@ -28,6 +28,7 @@ NextComp connects a person on Android to ongoing work in their own computing env
 - [Automatic work record](WORK-RECORD.md): requests, observed outputs, file evidence and linked follow-ups; implementation candidate, with private retention and qualification limits.
 - [Context snapshots and independent workers](CONTEXT-CONTROL.md): verified provider branching, portable manifests, compaction provenance and Hollywood coordination design; not a deployed context editor.
 - [Work updates](WORK-UPDATES.md): scheduled reports outside coordinator chat, retained history, exact unread state and direct session links.
+- [Saved typed replies and recovery](CLIENT-REPLY-RECOVERY.md): durable source-bound intents, validated receipts and unknown-delivery limits.
 - [Audited task continuation](CONTINUATION.md): evidence-backed resumption, durable checkpoints, sparse recovery and protected stops.
 - [Work lifecycle replacement](WORK-LIFECYCLE.md): event-driven work, one owner, bounded model admission, acceptance receipts and the qualified rollout boundary.
 - [Session catalog](SESSION-CATALOG.md): canonical identity, work recency, child capabilities and stable native discovery.

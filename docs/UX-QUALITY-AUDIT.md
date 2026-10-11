@@ -425,3 +425,5 @@ Owned emulator/fixture stopped. This is queued for a combined compatible release
 to reduce disruptive repeated installs. See [receipt](qualification/window-focus-reading-20261011.json).
 Remaining: durable frontend delivery journal and validation, nonfocusable
 occlusion, precise material catch-up presentation, and existing full quality matrix.
+
+Alpha62/code80 is independently verified installed. Current alpha63 candidate adds source-bound typed reply journaling and safe receipt validation, identical-retyped-draft preservation, and live-activity history invalidation without inventory polling. Native live-activity case passes12.508s; repeated events cause no new reads. Current authenticated history read49ms; exact user stale viewport remains unobserved because Android system UI was foreground. Existing global footer labels still truncate at2x and remain an open ergonomics gap. Signed release/install and broad native regression are pending.
