@@ -139,6 +139,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val draft=editor.text
     val submit:(String)->Unit={mode->val submitted=editor.text;follow=true;Pocket.reply(submitted,mode=mode){if(editor.text==submitted){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
     val waiting=d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") in listOf("queued","held")&&it.s("mode")=="queue"}?:emptyList()
+    LaunchedEffect(list){
+        if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))snapshotFlow{Triple(list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,list.isScrollInProgress)}.collect{position->
+            android.util.Log.d("PocketScroll","index=${position.first} offset=${position.second} moving=${position.third} follow=$follow dragged=$dragged rows=${shownRows.size}")
+        }
+    }
     LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
     LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){
         delay(32)
