@@ -73,6 +73,22 @@ class TranscriptRefreshNativeTest {
   await{has(2)&&!PocketTranscript.updating}
   assertEquals("Selected turn event did not trigger one read",before+1,qa("state").getJSONArray("reads").length())
  }
+ @Test fun backendSwitchPausesHiddenReadsAndRestoresCodexSelection(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("advance");await{qa("state").getJSONArray("reads").objects().any{it.optInt("revision")==2}}
+  main{Pocket.scheduleRefresh();BackendNavigation.select("losangelex")}
+  await{!PocketTranscript.loading&&!PocketTranscript.updating}
+  assertEquals("Backend switch lost Codex selection","same-thread",Pocket.selected)
+  assertTrue("Backend switch hid retained cache",has(1))
+  qa("release");Thread.sleep(1000)
+  val count=qa("state").getJSONArray("reads").length()
+  assertEquals("Cancelled read restarted behind other backend",2,count)
+  main{Pocket.refreshDetail();Pocket.scheduleRefresh()};Thread.sleep(600)
+  assertEquals("Hidden Codex view fetched history",count,qa("state").getJSONArray("reads").length())
+  main{BackendNavigation.select("codex")};await{has(2)&&!PocketTranscript.updating}
+  assertEquals("Returning to Codex changed selection","same-thread",Pocket.selected)
+  assertEquals("Backend switch lost draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+ }
  @Test fun previewDuringScheduledRecentReadIsNotLost(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)

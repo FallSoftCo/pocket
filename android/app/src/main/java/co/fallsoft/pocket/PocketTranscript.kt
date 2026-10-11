@@ -54,6 +54,12 @@ object PocketTranscript {
     private var historyLoaded=false
     private var checkedThisOpen=false
     private fun trace(){if(BuildConfig.DEBUG)android.util.Log.d("PocketCache","rows=${rows.size} buffered=${buffered.size} earlier=$browsingEarlier")}
+    /** Stop hidden-view reads without discarding its cache, selection or draft. */
+    internal fun pauseReading(){
+        rememberRecent();generation++
+        positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false
+        loading=false;refreshPending=false;loadingEarlier=false;missedUpdates=false;buffered.clear()
+    }
     fun reset(id:String){
         positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false
         generation++;owner=id;ownerScope=scopeKey();automaticRetryAllowed=true
@@ -64,6 +70,7 @@ object PocketTranscript {
     }
     fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
     fun reconcileInputPosition(row:JSONObject){
+        if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return;val turn=row.s("turnId");val target=row.s("id")
         if(owner!=id||ownerScope!=scopeKey()||turn.isBlank()||!target.startsWith("$turn/"))return
         val item=row.s("itemId").ifBlank{target.removePrefix("$turn/")}
@@ -121,6 +128,7 @@ object PocketTranscript {
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
     suspend fun load(older:Boolean=false,bridgeCursor:String?=null,beforeApply:suspend ()->Unit={}){
+        if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return
         if(owner!=id||(older&&(!earlier||before==null)))return
         if(loading){if(!older&&bridgeCursor==null){missedUpdates=true;refreshPending=true};return}

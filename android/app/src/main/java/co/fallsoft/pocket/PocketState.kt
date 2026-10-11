@@ -219,8 +219,9 @@ object Pocket {
             if(local==profile&&base==endpoint&&token==credential&&showArchived==archived){val incoming=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList();tasks=mergeSessionSnapshot(tasks,incoming,true){it.id};if(search.isBlank())sessionCursor=result.s("nextCursor").takeIf{it.isNotBlank()}}
         }catch(e:Exception){if(local==profile&&base==endpoint)refreshError=PocketNetwork.error(e)}finally{if(environmentId==sourceEnvironment)loadingSessions=false}}
     }
-    fun open(id:String,keyboard:Boolean=false){refreshJob?.cancel();refreshJob=null;if(BackendNavigation.open(id))return;openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
-    fun refreshDetail(){if(selected==null)return;PocketTranscript.markRefreshPending();scope.launchEnvironment{PocketTranscript.load()}}
+    internal fun pauseConversationReads(){refreshJob?.cancel();refreshJob=null;PocketTranscript.pauseReading()}
+    fun open(id:String,keyboard:Boolean=false){refreshJob?.cancel();refreshJob=null;if(BackendNavigation.open(id)){PocketTranscript.pauseReading();return};openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
+    fun refreshDetail(){if(selected==null||BackendNavigation.teamSelected())return;PocketTranscript.markRefreshPending();scope.launchEnvironment{PocketTranscript.load()}}
     fun closeTask(){refreshJob?.cancel();refreshJob=null;selected=null;detail=null;PocketTranscript.clear()}
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
     /** External stock sessions arrive through live previews; never refetch on every token. */
@@ -235,7 +236,7 @@ object Pocket {
             refresh()
         }
     }
-    fun scheduleRefresh(){val id=selected?:return;PocketTranscript.markRefreshPending();if(refreshJob?.isActive==true)return;refreshJob=scope.launchEnvironment{delay(400);if(selected==id)PocketTranscript.load()}}
+    fun scheduleRefresh(){if(BackendNavigation.teamSelected())return;val id=selected?:return;PocketTranscript.markRefreshPending();if(refreshJob?.isActive==true)return;refreshJob=scope.launchEnvironment{delay(400);if(selected==id)PocketTranscript.load()}}
     private suspend fun environmentRequestCurrent():Boolean {val destination=currentCoroutineContext()[EnvironmentRequestContext]?.destination?:return true;return captureEnvironment()?.matches(destination)==true}
     fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains(key("newTaskRequest")))"A task request is saved. Check its status to continue." else "";scope.launchEnvironment{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not load projects"}}}
     var fullPermissions by mutableStateOf(true); private set

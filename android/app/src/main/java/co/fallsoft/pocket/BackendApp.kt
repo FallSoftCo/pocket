@@ -35,6 +35,7 @@ object BackendNavigation {
         desired=owner to backend
         notification=null
         Pocket.prefs.edit().putString("backend:$owner",backend).apply()
+        if(backend=="losangelex")Pocket.pauseConversationReads()else Pocket.refreshDetail()
     }
     fun consumed(){notification=null}
     fun teamSelected()=Pocket.prefs.getString("backend:"+backendOwner(Pocket.base,Pocket.token),"codex")=="losangelex"
