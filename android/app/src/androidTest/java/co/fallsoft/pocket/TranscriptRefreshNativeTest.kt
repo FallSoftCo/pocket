@@ -119,7 +119,7 @@ class TranscriptRefreshNativeTest {
   main{PocketVoice.stop()}
   main{for(n in 0..29){PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","read-error").put("version",1000+n).put("row",JSONObject().put("id","error-reading-$n").put("turnId","read-error").put("kind","message").put("text","Older reading position $n: retained synthetic material filling the conversation so errors at its end would be offscreen.")))}}
   assertTrue(device.wait(Until.hasObject(By.textContains("Older reading position 29:")),3000))
-  repeat(3){device.swipe(device.displayWidth/2,device.displayHeight/4,device.displayWidth/2,device.displayHeight/2,25);Thread.sleep(150)}
+  repeat(3){requireNotNull(device.findObject(By.scrollable(true))).scroll(androidx.test.uiautomator.Direction.UP,0.7f);Thread.sleep(150)}
   assertFalse("Reading setup remained at transcript end",device.hasObject(By.textContains("Older reading position 29:")))
   val retained=PocketTranscript.rows.map{it.s("id")}
   qa("fail-read");main{Pocket.refreshDetail()}
