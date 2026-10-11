@@ -48,6 +48,7 @@ class TranscriptRefreshNativeTest {
     device.executeShellCommand("settings put system font_scale "+scale);await{kotlin.math.abs(context.resources.configuration.fontScale-scale)<.05f&&!PocketTranscript.updating}
     reachable(By.text("Record"));reachable(By.text("Keyboard"));reachable(By.desc("Settings, app updates, usage and activity"))
     assertTrue("Volume disappeared",device.hasObject(By.desc("Speech volume")))
+    await{device.hasObject(By.text("Settings"))&&device.hasObject(By.text("↻ —"))};Thread.sleep(300)
     assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"bottom-controls-"+scale+".png")))
    }
    reachable(By.text("Record")).click();await{PocketVoice.state=="Listening"}

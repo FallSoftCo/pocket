@@ -46,6 +46,8 @@ import androidx.lifecycle.repeatOnLifecycle
     if(cardRegion)CardInteractionRegion(PocketImmersion.label("Mic"),modifier,capture)
     else if(dock)Column(modifier.height(usageDockHeight()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
         CaptureMic(capture,control,label,compact=true)
+        Spacer(Modifier.height(4.dp))
+        BilingualLabel(when{PocketVoice.problem.isNotBlank()->"Retry";control==CaptureControl.STOP_SEND->"Send";control==CaptureControl.PROCESSING->"Wait";control==CaptureControl.CHECK_SAVED->"Check";else->"Talk"},fontSize=12.sp,lineHeight=16.sp,maxLines=2,color=if(PocketVoice.problem.isNotBlank())Coral else Paper)
     }
     else if(bar){
         val shortLabel=when(control){CaptureControl.START->"Record";CaptureControl.STOP_SEND->"Stop and send";CaptureControl.PROCESSING->"Processing";CaptureControl.CHECK_SAVED->"Check turn"}
@@ -69,10 +71,7 @@ import androidx.lifecycle.repeatOnLifecycle
 }
 @Composable private fun CaptureMic(capture:()->Unit,control:CaptureControl,label:String,compact:Boolean){
     FilledTonalIconButton(capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,modifier=Modifier.size(if(compact)64.dp else 72.dp).semantics{contentDescription=PocketImmersion.label(label);if(PocketVoice.problem.isNotBlank())stateDescription=PocketVoice.problem},shape=CircleShape,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.22f) else Mint.copy(alpha=.16f),contentColor=Paper)){
-        Column(horizontalAlignment=Alignment.CenterHorizontally){
-            SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",null,Modifier.size(if(compact)32.dp else 44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
-            if(compact)BilingualLabel(when{PocketVoice.problem.isNotBlank()->"Retry";control==CaptureControl.STOP_SEND->"Send";control==CaptureControl.PROCESSING->"Wait";control==CaptureControl.CHECK_SAVED->"Check";else->"Talk"},fontSize=12.sp,color=if(PocketVoice.problem.isNotBlank())Coral else Paper)
-        }
+        SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",null,Modifier.size(44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
     }
 }
 @Composable fun VoiceScreen(){
