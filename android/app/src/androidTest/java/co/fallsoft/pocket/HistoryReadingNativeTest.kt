@@ -58,4 +58,21 @@ class HistoryReadingNativeTest {
   main{Pocket.event(event("user","user","Ordering request"))};Thread.sleep(700)
   assertEquals("Repeated input caused history polling",reads,qa("state").getJSONArray("reads").length())
  }
+ @Test fun lateInputEventReconcilesCanonicalOrderOnce(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val c=i.targetContext;c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
+  qa("order")
+  main{Pocket.event(event("answer","message","Initial streamed answer"));Pocket.event(event("user","user","Ordering request"))}
+  await{PocketTranscript.loading}
+  main{Pocket.event(event("answer","message","New answer during reconciliation"))}
+  await{!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("id")=="order/end"}}
+  val ids=PocketTranscript.rows.map{it.s("id")}
+  assertTrue("Late input remains after its response",ids.indexOf("order/user")<ids.indexOf("order/answer"))
+  assertEquals("New streamed answer overwritten","New answer during reconciliation",PocketTranscript.rows.single{it.s("id")=="order/answer"}.s("text"))
+  val reads=qa("state").getJSONArray("reads").length();main{Pocket.event(event("user","user","Ordering request"))};Thread.sleep(700)
+  assertEquals("Repeated input triggered polling",reads,qa("state").getJSONArray("reads").length())
+ }
+
 }
