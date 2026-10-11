@@ -47,6 +47,12 @@ internal fun shouldPrefetchTranscript(follow:Boolean,filtered:Boolean,firstVisib
     !follow&&!filtered&&firstVisible<=4&&earlier&&!loading
 
 internal data class TranscriptCursor(val before:String?,val hasEarlier:Boolean)
+/** Keep early and recent anchors in a large locally retained turn. */
+internal fun <T> transcriptPositionAnchors(rows:List<T>,limit:Int=256):List<T>{
+    require(limit>=2)
+    if(rows.size<=limit)return rows
+    return (0 until limit).map{rows[(it.toLong()*(rows.size-1)/(limit-1)).toInt()]}
+}
 /** Move only the delayed row against a server-proven same-turn successor. */
 internal fun <T> placeTranscriptRowBefore(rows:List<T>,target:String,successor:String,id:(T)->String):List<T>{
     val from=rows.indexOfFirst{id(it)==target};val to=rows.indexOfFirst{id(it)==successor}

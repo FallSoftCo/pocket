@@ -137,6 +137,17 @@ class HistoryReadingNativeTest {
   val reopened=PocketTranscript.rows.map{it.s("id")}
   assertTrue("Warm reopen did not repair cancelled outside-page input",reopened.indexOf("order/second-user")<reopened.indexOf("order/answer"))
   assertEquals("Warm reopen lost draft","Keep anchored draft",prefs.getString("draft:same-thread",null))
+  qa("fail-position")
+  main{Pocket.event(event("third-user","user","Retain input when position read fails").put("type","timeline"))}
+  await{!PocketTranscript.updating&&Pocket.error.contains("Synthetic item position unavailable")}
+  assertTrue("Read failure hid the delayed input",PocketTranscript.rows.any{it.s("id")=="order/third-user"})
+  val failedCount=qa("state").getJSONArray("positions").length()
+  Thread.sleep(600);assertEquals("Failed position read polled unchanged dependency",failedCount,qa("state").getJSONArray("positions").length())
+  main{Pocket.retryConnection()}
+  await{!PocketTranscript.updating&&Pocket.error.isBlank()}
+  val retried=PocketTranscript.rows.map{it.s("id")}
+  assertTrue("Explicit retry did not repair failed position",retried.indexOf("order/third-user")<retried.indexOf("order/answer"))
+  assertEquals("Position retry lost draft","Keep anchored draft",prefs.getString("draft:same-thread",null))
  }
 
  @Test fun partialOlderPageRepairsLateInputAgainstRetainedReply(){

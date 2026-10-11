@@ -7,6 +7,13 @@ import kotlinx.coroutines.runBlocking
 class TranscriptHistoryTest {
     private data class Row(val id:String,val text:String="",val version:Long=0)
     private fun merge(old:List<Row>,page:List<Row>,older:Boolean=false)=mergeTranscriptPage(old,page,older,{it.id},{it.version})
+    @Test fun positionAnchorsIncludeEarlyWorkAndLatestProgressWithinTheWireBudget(){
+        val rows=(0..30000).map{Row("item-$it")};val anchors=transcriptPositionAnchors(rows)
+        assertEquals(256,anchors.size);assertEquals(rows.first(),anchors.first());assertEquals(rows.last(),anchors.last())
+        assertEquals(256,anchors.distinct().size)
+        assertTrue(anchors.any{it.id.removePrefix("item-").toInt() in 14000..16000})
+        val small=rows.take(8);assertSame(small,transcriptPositionAnchors(small))
+    }
     @Test fun provenSuccessorRepairsLateInputWithoutMovingEarlierCommentaryOrNewLiveOutput(){
         val cached=listOf(Row("past"),Row("turn/header"),Row("commentary"),Row("first-user"),Row("first-answer"),Row("answer","new live",15),Row("steer"),Row("new-output"),Row("end"))
         val result=placeTranscriptRowBefore(cached,"steer","answer"){it.id}
