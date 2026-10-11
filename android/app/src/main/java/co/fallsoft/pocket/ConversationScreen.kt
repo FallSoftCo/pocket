@@ -104,6 +104,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var follow by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
     var important by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     var filterPassage by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<String?>(null)}
+    var filterRequest by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<FilterReadingRequest?>(null)}
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
     fun noteFor(row:JSONObject)=notes.firstOrNull{it.s("id")==row.s("itemId",row.s("id"))||it.s("id")==row.s("id")}
@@ -111,6 +112,16 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
     val shownRows=filteredRows
+    val pendingFilter=filterRequest
+    SideEffect{
+        if(pendingFilter!=null&&pendingFilter.environment==Pocket.environmentId&&pendingFilter.thread==Pocket.selected&&pendingFilter.important==important){
+            // LazyColumn's item provider now contains the committed filtered data.
+            // A frame callback before composition can still address the old index.
+            val index=shownRows.indexOfFirst{it.s("id")==pendingFilter.row}
+            if(index>=0)list.requestScrollToItem(index,pendingFilter.offset)
+            filterRequest=null
+        }
+    }
     val latestFollow by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(follow)}
     val latestRowIds by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(shownRows.map{it.s("id")})}
     DisposableEffect(Pocket.environmentId,Pocket.selected){
@@ -303,9 +314,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 android.util.Log.d("PocketFilter","next=$nextImportant retained=$retained passage=${afterIds.getOrNull(anchor)} visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
             filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
             follow=false;important=nextImportant
-            // Apply against the next data-set measure, not an old item index
-            // resumed at the beginning of a frame. Also cancels an active fling.
-            if(anchor>=0)list.requestScrollToItem(anchor,targetOffset)
+            afterIds.getOrNull(anchor)?.let{filterRequest=FilterReadingRequest(Pocket.environmentId,Pocket.selected,it,targetOffset,nextImportant)}
         },onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
         }
@@ -471,6 +480,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 }
 
 internal data class FilterVisibleRow(val id:String,val offset:Int,val size:Int=0)
+internal data class FilterReadingRequest(val environment:String,val thread:String?,val row:String,val offset:Int,val important:Boolean)
 internal data class FilterViewportAnchor(val index:Int,val scrollOffset:Int)
 /** Keep a surviving native item at its pixel position, even if the leading row disappears. */
 internal fun conversationFilterViewportAnchor(after:List<String>,visible:List<FilterVisibleRow>,preferred:String?=null,viewportEnd:Int=Int.MAX_VALUE):FilterViewportAnchor? {
