@@ -20,6 +20,8 @@ test('recent opening returns newest batch without walking older items, then resu
   const older=await reader.read(metadata,{before:first._pocketPage.before,maxItems:8,maxBytes:512000,maxTurns:1});
   assert.deepEqual(older.turns[0].items.map(i=>i.id),Array.from({length:8},(_,i)=>'item-'+(85+i)));
   assert.equal(older.turns[0]._pocketHideEnd,true);
+  assert.equal(older._pocketPage.insertBefore,'latest/item-93');
+  const next=JSON.parse(Buffer.from(older._pocketPage.before.slice(6),'base64url'));assert.equal(next.olderThanRow,'latest/item-85');
   assert.ok(calls.every(c=>!['thread/read','thread/resume'].includes(c.method)));
 });
 
@@ -116,4 +118,16 @@ test('item history transport failures remain failures rather than triggering com
 test('turn-only compatibility is scoped to the affected thread',async()=>{
  const calls=[];const h=new ThreadHistory({async call(method,p){calls.push({method,p});if(method==='thread/items/list'){if(p.threadId==='old')throw Error('thread/items/list is not supported yet');return {data:[{item:{id:'new-item',type:'agentMessage',text:'New'}}]};}return {data:[{id:'t',items:[]}],nextCursor:null};}});
  await h.read({id:'old'},{preferPaging:true});const modern=await h.read({id:'new'},{preferPaging:true});assert.equal(modern.turns[0].items[0].id,'new-item');assert.equal(h.turnOnlyThreads.has('new'),false);
+});
+
+test('a cursor entering an older turn anchors before the retained newer heading',async()=>{
+ const reader=new ThreadHistory({async call(method,p){
+  if(method==='thread/turns/list')return p.cursor==='older'?{data:[{id:'older-turn',status:'completed'}],backwardsCursor:'older-anchor'}:{data:[{id:'newer-turn',status:'completed'}],nextCursor:'older',backwardsCursor:'newer-anchor'};
+  return {data:[{item:{id:'answer',type:'agentMessage',text:'Result'}}]};
+ }});
+ const metadata={id:'thread',historyMode:'paginated'};
+ const recent=await reader.read(metadata,{maxItems:1,maxTurns:1});
+ const older=await reader.read(metadata,{maxItems:1,maxTurns:1,before:recent._pocketPage.before});
+ assert.equal(older._pocketPage.insertBefore,'newer-turn/header');
+ assert.equal(older.turns[0].id,'older-turn');
 });

@@ -40,12 +40,13 @@ export class ThreadHistory {
       if(typeof before!=='string'||before.length>16000)throw Error('Invalid history position. Reopen the task.');
       if(before.startsWith('items:')){
         try{state=JSON.parse(Buffer.from(before.slice(6),'base64url').toString());}catch{throw Error('Invalid history position. Reopen the task.');}
-        if(!state||typeof state!=='object'||Array.isArray(state)||['anchor','nextTurn','itemCursor'].some(k=>state[k]!=null&&typeof state[k]!=='string'))throw Error('Invalid history position. Reopen the task.');
+        if(!state||typeof state!=='object'||Array.isArray(state)||['anchor','nextTurn','itemCursor','olderThanRow'].some(k=>state[k]!=null&&typeof state[k]!=='string'))throw Error('Invalid history position. Reopen the task.');
       }else if(before.startsWith('page:'))state={nextTurn:Buffer.from(before.slice(5),'base64url').toString()};
       else throw Error('That history position is no longer available. Reopen the task.');
     }
+    const insertBefore=state.olderThanRow||null;
     const turns=[];let count=0,bytes=0;const visited=new Set();
-    const finish=next=>({...metadata,turns:turns.reverse(),_pocketPage:{hasEarlier:!!next,before:next?encode('items:',next):null}});
+    const finish=next=>({...metadata,turns:turns.reverse(),_pocketPage:{hasEarlier:!!next,before:next?encode('items:',next):null,...(insertBefore?{insertBefore}:{})}});
     for(let turnCount=0;turnCount<maxTurns;turnCount++){
       const resumed=!!state.anchor;
       const headers=await this.codex.call('thread/turns/list',{threadId,limit:1,sortDirection:resumed?'asc':'desc',itemsView:'notLoaded',...((state.anchor||state.nextTurn)?{cursor:state.anchor||state.nextTurn}:{})});
@@ -63,7 +64,7 @@ export class ThreadHistory {
         if(count&&(count+items.length>maxItems||bytes+size>maxBytes)){
           turn.items.reverse();if(!turn.items.length)turns.pop();
           if(!anchor)throw Error('Codex did not provide a history anchor. Update Codex to continue paging.');
-          return finish({anchor,nextTurn,itemCursor:cursor});
+          return finish({anchor,nextTurn,itemCursor:cursor,olderThanRow:turn.items.length?`${header.id}/${turn.items[0].id}`:turns.at(-1)?`${turns.at(-1).id}/header`:null});
         }
         turn.items.push(...items);count+=items.length;bytes+=size;
         if(!part.nextCursor)break;
@@ -71,12 +72,12 @@ export class ThreadHistory {
         if(count>=maxItems||bytes>=maxBytes){
           turn.items.reverse();
           if(!anchor)throw Error('Codex did not provide a history anchor. Update Codex to continue paging.');
-          return finish({anchor,nextTurn,itemCursor:cursor});
+          return finish({anchor,nextTurn,itemCursor:cursor,olderThanRow:turn.items.length?`${header.id}/${turn.items[0].id}`:turns.at(-1)?`${turns.at(-1).id}/header`:null});
         }
       }
       turn.items.reverse();
       if(!nextTurn)return finish(null);
-      state={nextTurn};
+      state={nextTurn,olderThanRow:`${header.id}/header`};
       if(count>=maxItems||bytes>=maxBytes)return finish(state);
     }
     return finish(state);
