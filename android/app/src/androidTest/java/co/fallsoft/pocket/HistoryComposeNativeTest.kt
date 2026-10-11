@@ -48,7 +48,8 @@ class HistoryComposeNativeTest {
   assertEquals("Warm reopen shifted reading passage",top,passage.fetchSemanticsNode().boundsInRoot.top,2f)
   assertTrue("Warm reopen hid already local history",PocketTranscript.rows.any{it.s("id")=="older-message"})
   assertEquals("History navigation lost draft","Keep reading draft",prefs.getString("draft:same-thread",null))
-  compose.waitUntil(15000){c.noBackupFilesDir.resolve("transcript-cache-v1").listFiles()?.filter{it.extension=="json"}?.any{file->try{val value=JSONObject(file.readText());value.optJSONObject("position")?.s("row")?.startsWith("reading-native-")==true&&value.optJSONArray("rows")?.objects()?.any{it.s("id")=="older-message"}==true}catch(_:Exception){false}}==true}
+  val cacheScope=PocketTranscript.scopeKey()
+  compose.waitUntil(15000){c.noBackupFilesDir.resolve("transcript-cache-v1").listFiles()?.filter{it.extension=="json"}?.any{file->try{val value=JSONObject(file.readText());value.s("scope")==cacheScope&&value.optJSONObject("position")?.s("row")?.startsWith("reading-native-")==true&&value.optJSONArray("rows")?.objects()?.any{it.s("id")=="older-message"}==true}catch(_:Exception){false}}==true}
   prefs.edit().putFloat("qualification:reading-top",top).putInt("qualification:prepare-pid",android.os.Process.myPid()).commit()
 
  }
