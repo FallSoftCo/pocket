@@ -35,8 +35,12 @@ class TranscriptRefreshNativeTest {
   val reads=qa("state").getJSONArray("reads").length()
   qa("repeat");Thread.sleep(800)
   assertEquals("Repeated previews triggered polling",reads,qa("state").getJSONArray("reads").length())
-  main{Pocket.scope.launchEnvironment{PocketTranscript.load(true)}};await{PocketTranscript.loading}
+  val readerSettled=kotlinx.coroutines.CompletableDeferred<Unit>()
+  main{Pocket.scope.launchEnvironment{PocketTranscript.load(true,beforeApply={readerSettled.await()})}};await{PocketTranscript.loading}
   qa("advance");await{PocketTranscript.updating}
+  Thread.sleep(2400)
+  assertFalse("Older page inserted before reader settled",PocketTranscript.rows.any{it.s("text")=="Older synthetic history"})
+  readerSettled.complete(Unit)
   await{has(3)&&!PocketTranscript.updating}
   assertTrue("Older loaded rows lost",PocketTranscript.rows.any{it.s("text")=="Older synthetic history"})
   qa("silent");main{Pocket.refresh()};await{has(4)&&!PocketTranscript.updating}
