@@ -224,3 +224,17 @@ local rows, failure/reload are visible, retry succeeds and typing survives.
 Unit tests/lint/qualification build pass; provider and phone interactions are
 not qualified. Candidate uninstalled, phone remainsalpha53. Owned fixture and
 emulator stopped after the final receipt.
+
+## Permanent history-read rejection
+
+Automatic edge loading had capped exponential backoff, but retried unchanged
+credentials/cursor errors indefinitely. Candidate7830400 keeps network,
+408/429/5xx eligible and stops automatic page/requeued refresh attempts for
+permanent rejection or malformed data. Explicit reload and successful reads
+restore eligibility. Coalesced permanent failure also clears refreshPending,
+preventing a stuck Updating messages indicator. Unit/lint/QA builds pass36s;
+native regression passes38.424s:401 after two coalesced refresh requests yields
+one read and no queued retry, updating stops, explicit reload succeeds, draft
+and local history survive503. No live revocation/worker activity or phone
+installation. Owned fixture/emulator stopped after terminal receipt. Physical
+outage and prolonged edge-pagination behavior remain separate audit cases.

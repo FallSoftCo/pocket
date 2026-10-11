@@ -1,0 +1,11 @@
+{
+ "sourceCommit":"7830400",
+ "host":"OZZZ-OS",
+ "variant":"nonshrunk qualification",
+ "emulator":"nextcomp_env_qa:5620 SwiftShader",
+ "seconds":38.424,
+ "result":"passed",
+ "verified":["coalesced reads encountering401 make only one request", "no automatic retry during900ms past450ms prior queued-retry delay", "no perpetual Updating messages after rejection", "explicit successful reload restores automatic pagination", "503 read retains cached history and draft with reachable recovery", "existing chronology/freshness/capture/keyboard regressions pass"],
+ "unitAndLint":"pass in36s; unit classification includes408/429/5xx/network versus4xx/malformed history",
+ "limits":["not installed on phone", "UI edge-pagination condition covered by state guard and unit eligibility, not a prolonged actual outage", "synthetic transport only; no live credentials revoked or worker activity"]
+}
