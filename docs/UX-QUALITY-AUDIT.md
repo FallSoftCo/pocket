@@ -97,3 +97,15 @@ now reserves sending synchronously. Native OZZZ emulator scenario passed in
 chronology, freshness, retained history/draft and pending-action checks passed
 in that same run. Android tests and lint pass. No provider action performed;
 phone remains alpha51 and this additional change is not yet delivered.
+
+## Keyboard and back navigation
+
+Extended owned OZZZ native scenario passed in22.127s. Visible Keyboard entry
+opens the editor; the redundant Keyboard control disappears while typing;
+editing persists the draft; Android Back with the editor/IME open returns to
+the session list; reopening restores the editor draft; physical Enter submits
+exact unchanged text and clears the acknowledged draft. Synthetic backend
+observed exactly the additional intended request. Earlier ordering, freshness,
+retained history, pending controls and rapid-admission checks also passed.
+This is Android Back dispatch, not an independently qualified physical swipe
+on the Fold. No live provider actions or handset input were performed.

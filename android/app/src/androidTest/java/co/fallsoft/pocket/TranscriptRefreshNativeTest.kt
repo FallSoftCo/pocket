@@ -78,5 +78,20 @@ class TranscriptRefreshNativeTest {
   main{Pocket.reply("Synthetic rapid submission");Pocket.reply("Synthetic rapid submission")}
   await{!Pocket.sending}
   assertEquals("Rapid input created duplicate submissions",1,qa("state").getJSONArray("replies").length())
+  assertTrue("Keyboard entry missing",device.wait(Until.hasObject(By.pkg("co.fallsoft.pocket").text("Keyboard")),3000))
+  device.findObject(By.pkg("co.fallsoft.pocket").text("Keyboard")).click()
+  assertTrue("Editor did not open",device.wait(Until.hasObject(By.clazz("android.widget.EditText")),3000))
+  device.findObject(By.clazz("android.widget.EditText")).text="One handed draft"
+  await{prefs.getString("draft:same-thread",null)=="One handed draft"}
+  assertFalse("Keyboard control duplicated while typing",device.hasObject(By.pkg("co.fallsoft.pocket").text("Keyboard")))
+  device.pressBack()
+  await{Pocket.selected==null}
+  assertEquals("Back lost the draft","One handed draft",prefs.getString("draft:same-thread",null))
+  main{Pocket.open("same-thread",keyboard=true)}
+  assertTrue("Draft not restored in editor",device.wait(Until.hasObject(By.clazz("android.widget.EditText").text("One handed draft")),3000))
+  device.pressKeyCode(android.view.KeyEvent.KEYCODE_ENTER)
+  await{qa("state").getJSONArray("replies").length()==2&&!Pocket.sending}
+  assertEquals("Enter changed the sent draft","One handed draft",qa("state").getJSONArray("replies").getJSONObject(1).s("text"))
+  await{!prefs.contains("draft:same-thread")}
  }
 }
