@@ -28,6 +28,20 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun historyRecoveryIsBoundedAndCannotFollowNavigation(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  val baseline=qa("state").getJSONArray("reads").length()
+  qa("silent");qa("fail-read-burst");main{Pocket.refreshDetail()}
+  await{qa("state").getJSONArray("reads").length()==baseline+4&&!PocketTranscript.updating}
+  Thread.sleep(2500);assertEquals("Retry budget exceeded",baseline+4,qa("state").getJSONArray("reads").length())
+  assertTrue("Exhaustion lost cached history",has(1));assertTrue("Exhaustion hid actionable error",Pocket.error.isNotBlank())
+  qa("fail-read");main{Pocket.refreshDetail()};await{Pocket.error.contains("Synthetic history refresh unavailable")&&PocketTranscript.updating}
+  main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}&&!PocketTranscript.updating}
+  val afterNavigation=qa("state").getJSONArray("reads").objects().count{it.s("threadId")!="second-thread"}
+  Thread.sleep(1500)
+  assertEquals("Old conversation retried after navigation",afterNavigation,qa("state").getJSONArray("reads").objects().count{it.s("threadId")!="second-thread"})
+  assertEquals("Retry mutated work",0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun transientHistoryFailureRecoversWithoutAnotherEvent(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   qa("silent");qa("fail-read");main{Pocket.refreshDetail()}
