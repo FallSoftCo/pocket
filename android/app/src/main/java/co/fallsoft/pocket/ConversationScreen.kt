@@ -253,7 +253,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 if(important&&shownRows.isEmpty())item{BilingualLabel("No important updates yet",color=Muted)}
                 d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") !in listOf("accepted","cancelled")&&it !in waiting}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(6.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                     val recoverable=r.s("state") in listOf("failed","unknown");val busy=Pocket.isReplyActionBusy(r.s("id"))
-                    Label("YOU · ${r.s("state")}",if(recoverable)Coral else Muted);ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp)
+                    Label("YOU · ${r.s("state")}",if(recoverable)Coral else Muted);ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
                     if(recoverable){WorkflowText(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)
                         Row{TextButton({if(r.s("state")=="unknown")confirmRetry=r else Pocket.queuedReply(r.s("id"),"retry")},enabled=!busy){BilingualLabel("Retry")}
                             TextButton({editingQueue=r;queuedText=r.s("text")},enabled=!busy){BilingualLabel("Edit")}

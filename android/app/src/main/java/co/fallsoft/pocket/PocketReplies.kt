@@ -90,7 +90,7 @@ internal object PocketReplies {
             finally{busy=busy-intent.id}
         }
     }
-    fun forget(intent:ClientReplyIntent){if(intent.id in busy)return;runCatching{journal.remove(intent.id);revision++;Pocket.dismissReplyFailure(intent.thread,intent.id)}}
+    fun forget(intent:ClientReplyIntent){if(intent.id in busy)return;runCatching{if(matchesCurrent(intent)&&!clearDraft(intent))throw java.io.IOException("Could not remove saved draft");journal.remove(intent.id);revision++;Pocket.dismissReplyFailure(intent.thread,intent.id)}.onFailure{problem(intent,"Could not remove this saved copy. Your message remains saved.")}}
     /** Only called after explicit confirmation. Lookup first; retain original identity. */
     fun retry(intent:ClientReplyIntent){
         val destination=current(intent)?:return;if(intent.id in busy||Pocket.sending)return;busy=busy+intent.id

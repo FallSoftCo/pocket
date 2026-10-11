@@ -100,7 +100,7 @@ class TranscriptRefreshNativeTest {
   assertFalse("Failed transport cleared the source draft",completed)
   assertEquals("Delayed failure contaminated selected chat","",Pocket.error)
   assertNull("Delayed failure attached to wrong thread",Pocket.replyFailure("second-thread"))
-  assertFalse("Old chat failure displayed in new chat",device.hasObject(By.text("Synthetic delayed reply failure")))
+  assertFalse("Old chat failure displayed in new chat",device.hasObject(By.textContains("Synthetic delayed reply failure")))
   val sourceReceipt=qa("state").getJSONArray("replies").getJSONObject(0).s("id")
   main{Pocket.event(JSONObject().put("type","reply").put("threadId","second-thread").put("id","second-failure").put("state","unknown").put("error","Synthetic second chat failure"))}
   await{device.hasObject(By.text("Synthetic second chat failure"))}
@@ -108,16 +108,16 @@ class TranscriptRefreshNativeTest {
   Thread.sleep(600);assertEquals("Older accepted receipt erased a newer failure","second-failure",Pocket.replyFailure("second-thread")?.id)
   main{Pocket.event(JSONObject().put("type","reply").put("threadId","second-thread").put("id","second-failure").put("state","accepted"))}
   await{Pocket.replyFailure("second-thread")==null&&!device.hasObject(By.text("Synthetic second chat failure"))}
-  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&device.hasObject(By.text("Synthetic delayed reply failure"))}
+  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&device.hasObject(By.textContains("Synthetic delayed reply failure"))}
   assertEquals("History reload lost the source delivery ID",sourceReceipt,Pocket.replyFailure("same-thread")?.id)
   assertEquals("Navigation lost unsent draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
   try{
    device.executeShellCommand("settings put system font_scale 2.0")
    await{context.resources.configuration.fontScale>=1.9f}
-   assertTrue("Dismiss missing at large text",device.wait(Until.hasObject(By.text("Dismiss")),5000))
+   assertTrue("Remove missing at large text",device.wait(Until.hasObject(By.text("Remove saved copy")),5000))
    Thread.sleep(600)
-   val dismiss=device.findObject(By.text("Dismiss"))
+   val dismiss=device.findObject(By.text("Remove saved copy"))
    var control:androidx.test.uiautomator.UiObject2?=dismiss
    while(control!=null&&!control.isClickable)control=control.parent
    assertNotNull("Dismiss has no clickable target",control)
@@ -138,7 +138,7 @@ class TranscriptRefreshNativeTest {
   }
   popupReply();device.findObject(By.clazz("android.widget.EditText")).text="Preserve this popup draft"
   qa("fail-reply");device.findObject(By.text("Send")).click();await{qa("state").getJSONArray("replies").length()==2}
-  qa("release-reply");await{!Pocket.sending&&device.hasObject(By.text("Synthetic delayed reply failure"))}
+  qa("release-reply");await{!Pocket.sending&&device.hasObject(By.textContains("Synthetic delayed reply failure"))}
   assertEquals("Popup reply routed incorrectly","second-thread",qa("state").getJSONArray("replies").getJSONObject(1).s("threadId"))
   assertEquals("Popup failure contaminated global state","",Pocket.error)
   assertEquals("Popup failure discarded editable draft","Preserve this popup draft",device.findObject(By.clazz("android.widget.EditText")).text)

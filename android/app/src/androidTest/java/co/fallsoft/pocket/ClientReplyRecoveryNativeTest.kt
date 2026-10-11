@@ -104,6 +104,25 @@ class ClientReplyRecoveryNativeTest {
   assertEquals("Other environment draft",p.getString(Pocket.environmentKey("draft:same-thread","remote-b"),null))
   assertEquals(1,posts().length())
  }
+ @Test fun recoveryControlsRemainReachableAtLargeTextAndRemoveDoesNotResend(){
+  val draft="Readability test "+"A deliberately long saved message. ".repeat(70)
+  start(draft=draft);qa("bad-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
+  main{Pocket.reply(draft)};await{!Pocket.sending&&PocketReplies.entries("same-thread").isNotEmpty()};Thread.sleep(1100)
+  val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
+  try{
+   device.executeShellCommand("settings put system font_scale 2.0");await{context.resources.configuration.fontScale>=1.9f&&PocketReplies.busy.isEmpty()}
+   for(label in listOf("Check status","Retry","Edit draft","Remove saved copy")){
+    assertTrue(label+" unavailable at large text",device.wait(Until.hasObject(By.text(label)),3000))
+    var control:UiObject2?=device.findObject(By.text(label));repeat(6){if(control?.isClickable==false)control=control?.parent}
+    assertTrue(label+" lacks touch target",control?.isClickable==true)
+    assertTrue(label+" touch target clipped or too small",control!!.visibleBounds.height()>=48*context.resources.displayMetrics.density-2)
+   }
+   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"reply-recovery-large.png")))
+   device.findObject(By.text("Remove saved copy")).click();await{PocketReplies.entries("same-thread").isEmpty()}
+   assertFalse("Remove left original local draft",Pocket.prefs.contains("draft:same-thread"))
+   assertEquals("Remove resent the message",1,posts().length())
+  }finally{device.executeShellCommand("settings put system font_scale "+font)}
+ }
  @Test fun seedInterruptedDelivery(){
   start(draft="Interrupted turn");qa("hold-ack");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
   main{Pocket.reply("Interrupted turn")};await{posts().length()==1&&Pocket.sending}
