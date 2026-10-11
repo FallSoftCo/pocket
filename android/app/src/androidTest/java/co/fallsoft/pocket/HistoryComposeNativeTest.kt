@@ -65,13 +65,14 @@ class HistoryComposeNativeTest {
   qa("advance") // revision2 intentionally holds recent history in the owned fixture.
   main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   compose.waitUntil(15000){Pocket.connected&&Pocket.tasks.isNotEmpty()}
+  val restoreStarted=android.os.SystemClock.elapsedRealtime()
   main{Pocket.open("same-thread")}
   compose.waitUntil(15000){PocketTranscript.loading&&PocketTranscript.rows.any{it.s("id")=="reading-native-11"}}
   val text="Native reading passage 11: retained conversation text stays in place as older messages load and this conversation is reopened."
   assertEquals("Cold process lost reading position",prefs.getFloat("qualification:reading-top",-1f),compose.onNodeWithText(text,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.top,2f)
   assertTrue("Cold process hid previously local earlier history",PocketTranscript.rows.any{it.s("id")=="older-message"})
   compose.onNodeWithContentDescription("Loading; conversation controls").assertExists()
-  println("Native cached-history hydration: ${PocketTranscript.lastCacheHydrationMs}ms; ${PocketTranscript.rows.size} retained rows")
+  println("Native selection-to-cached-passage: ${android.os.SystemClock.elapsedRealtime()-restoreStarted}ms; ${PocketTranscript.rows.size} retained rows")
   assertTrue("Stale cache exposed pending action authority",Pocket.detail?.optJSONArray("pending")==null&&Pocket.detail?.optJSONArray("outgoing")==null&&Pocket.detail?.optJSONObject("catchup")==null)
   qa("release")
   compose.waitUntil(15000){!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Fresh response 2"}}
