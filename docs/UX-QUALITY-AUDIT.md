@@ -158,3 +158,16 @@ and note-save origin isolation. Both private signing variants checksum-verified
 and authenticated update metadata qualified from code69. No backend/Codex
 restart. Physical interactions and Important-filter passage retention remain
 open; emulator checks do not establish real audio transcription or push transport.
+
+## Environment-scoped viewport candidate
+
+Found six remaining conversation viewport/effect keys using local-versus-remote
+instead of environment identity. Two remote hosts with the same thread ID could
+reuse LazyListState or retain pagination/disposal effect ownership across a
+switch. Commit89fe629 keys these by environment ID. Existing backend-bound
+read-position cache remains unchanged. Candidate is not installed; native
+scroll-and-filter passage retention and cross-host viewport checks remain open.
+
+Actual-commit OZZZ worktree nextcomp-viewport-qa completed debug unit tests,
+APK build and lint successfully in1m4s. No runtime restart, pairing change,
+worker activation or phone installation occurred for this candidate.
