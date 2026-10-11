@@ -127,7 +127,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
     }
     val shownIds=shownRows.map{it.s("id")}
-    LaunchedEffect(filterPaddingRequest,shownIds){
+    LaunchedEffect(important,filterPaddingRequest,shownIds){
+        if(!important){filterTailPixels=0;filterPaddingRequest=null;return@LaunchedEffect}
         val request=filterPaddingRequest?:return@LaunchedEffect
         val index=shownIds.indexOf(request.row);if(index<0)return@LaunchedEffect
         val reserved=filterTailPixels;val ordinaryBottom=with(density){12.dp.roundToPx()}
@@ -255,7 +256,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
-            LazyColumn(Modifier.fillMaxSize().testTag("conversation-history"),state=list,contentPadding=PaddingValues(start=18.dp,end=18.dp,top=12.dp,bottom=12.dp+with(density){filterTailPixels.toDp()}),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            LazyColumn(Modifier.fillMaxSize().testTag("conversation-history"),state=list,contentPadding=PaddingValues(start=18.dp,end=18.dp,top=12.dp,bottom=12.dp+with(density){(if(important)filterTailPixels else 0).toDp()}),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
@@ -272,10 +273,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                                 val found=locateTranscriptSource(owns,{PocketTranscript.loading},{PocketTranscript.earlier},{PocketTranscript.before},
                                     {PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}},
                                     {PocketTranscript.load(true)})
-                                delay(32)
                                 if(owns()&&found>=0){
                                     val target=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}
-                                    if(target>=0)list.scrollToItem(target.coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))
+                                    if(target>=0)filterRequest=FilterReadingRequest(Pocket.environmentId,sourceThread,PocketTranscript.rows[target].s("id"),0,false)
                                 }else if(owns())Pocket.error="The original message is not available in loaded history."
                             }
                         }){BilingualLabel("Surrounding conversation")}
