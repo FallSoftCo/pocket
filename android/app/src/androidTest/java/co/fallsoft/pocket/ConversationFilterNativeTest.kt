@@ -44,8 +44,17 @@ class ConversationFilterNativeTest {
   device.dumpWindowHierarchy(java.io.File(context.cacheDir,"filter-leading-commentary-before.xml"))
   val text=requireNotNull(target){"Could not position commentary before a visible answer"}
   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"filter-leading-commentary-before.png")))
+  fun ink(file:String,bounds:android.graphics.Rect):Int{
+   val bitmap=android.graphics.BitmapFactory.decodeFile(java.io.File(context.cacheDir,file).path)
+   try{var count=0;for(y in bounds.top.coerceAtLeast(0) until bounds.bottom.coerceAtMost(bitmap.height))for(x in bounds.left.coerceAtLeast(0) until bounds.right.coerceAtMost(bitmap.width)){val pixel=bitmap.getPixel(x,y);if(android.graphics.Color.red(pixel)>150&&android.graphics.Color.green(pixel)>150&&android.graphics.Color.blue(pixel)>150)count++};return count}finally{bitmap.recycle()}
+  }
+  val textBounds=passages().first{it.first==text}.second
+  val beforeInk=ink("filter-leading-commentary-before.png",textBounds)
   device.findObject(By.text("Important")).click();Thread.sleep(500)
   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"filter-leading-commentary-important.png")))
+  val afterInk=ink("filter-leading-commentary-important.png",textBounds)
+  println("Filter visible text ink: $beforeInk -> $afterInk")
+  assertTrue("Filtering left semantically present text visually blank: $beforeInk -> $afterInk",beforeInk>0&&afterInk>=beforeInk*.7)
   val answer=device.findObject(By.text(text));assertNotNull("Filter hid visible answer",answer)
   assertTrue("Removing leading commentary moved answer from $top to ${answer.visibleBounds.top}",kotlin.math.abs(answer.visibleBounds.top-top)<=24)
   device.findObject(By.text("Important")).click();Thread.sleep(500)
