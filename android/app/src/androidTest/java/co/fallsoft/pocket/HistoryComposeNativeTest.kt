@@ -49,7 +49,7 @@ class HistoryComposeNativeTest {
   assertTrue("Warm reopen hid already local history",PocketTranscript.rows.any{it.s("id")=="older-message"})
   assertEquals("History navigation lost draft","Keep reading draft",prefs.getString("draft:same-thread",null))
   compose.waitUntil(15000){c.noBackupFilesDir.resolve("transcript-cache-v1").listFiles()?.filter{it.extension=="json"}?.any{file->try{val value=JSONObject(file.readText());value.optJSONObject("position")?.s("row")?.startsWith("reading-native-")==true&&value.optJSONArray("rows")?.objects()?.any{it.s("id")=="older-message"}==true}catch(_:Exception){false}}==true}
-  prefs.edit().putFloat("qualification:reading-top",top).commit()
+  prefs.edit().putFloat("qualification:reading-top",top).putInt("qualification:prepare-pid",android.os.Process.myPid()).commit()
 
  }
  @Test fun coldProcessRestoresHistoryAndPositionBeforeSlowRecentRead(){
@@ -58,6 +58,7 @@ class HistoryComposeNativeTest {
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=c.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   assertTrue("Preparation did not finish",prefs.contains("qualification:reading-top"))
+  assertNotEquals("App process did not change",prefs.getInt("qualification:prepare-pid",-1),android.os.Process.myPid())
   fun main(b:()->Unit)=i.runOnMainSync(b)
   main{Pocket.init(c)}
   assertTrue("App was not a fresh process",PocketTranscript.rows.isEmpty())
