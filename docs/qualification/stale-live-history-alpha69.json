@@ -47,5 +47,18 @@
     "changedCriticalPreferenceHashes": [],
     "preflight": "First empty shell preference read aborted before installation; independent version86/file-presence check; exec-out read then one actual successful install.",
     "limits": "No foreground app commandeering or physical stale-thread content interaction verification."
+  },
+  "overlappingSnapshotRegression": {
+    "testSource": "f9ee607",
+    "runtimeSource": "a575413",
+    "preparationSeconds": 12.15,
+    "coldProcessSeconds": 4.78,
+    "matchingRowLiveTextWins": true,
+    "separateRowLiveTextRetained": true,
+    "oldSnapshotTextAbsent": true,
+    "readingPositionTolerancePixels": 2,
+    "draftPreserved": true,
+    "noWorkSubmitted": true,
+    "phoneRuntimeUnchanged": true
   }
 }

@@ -9,8 +9,8 @@ commands and environment identity throughout.
 | Flow | Acceptance evidence required | Current gap |
 | --- | --- | --- |
 | Message chronology | Interleaved stream, delayed snapshot, overlapping older pages, reconnect and cached reopen retain canonical order and newer text | Alpha58 installed; partial-page and outside-recent-page delayed-input native checks pass; real stock successor read verified. Cross-turn/reconnect breadth and exact physical pair remain open |
-| Freshness and loading | Current list/notification update appears in open chat with visible loading/error state; no full-history startup block | Alpha57/58 in-flight-preview race reproduced/repaired natively. Physical arrival and cross-environment reconnect verification remain open |
-| History and reading | Upward scrolling loads automatically, retained local pages remain visible, message and pixel anchor survive updates | Alpha58 installed; native retained-anchor/short-page pacing pass; compatibility item/turn boundaries stay stable under new output. Physical smoothness unmeasured |
+| Freshness and loading | Current list/notification update appears in open chat with visible loading/error state; no full-history startup block | Alpha69/code87 installed. Native in-flight-preview/cache-counter checks pass; overlapping same-row delayed snapshot regression passes in a new emulator process. Recent handset stale-content report remains unverified in its exact selected thread; physical arrival and cross-environment reconnect remain open |
+| History and reading | Upward scrolling loads automatically, retained local pages remain visible, message and pixel anchor survive updates | Alpha69 installed with bounded persistent local history; distinct-process native pixel/position checks pass. Retained-anchor/short-page pacing and compatibility item/turn boundaries have native coverage. Physical smoothness and large-history eviction/gap behavior remain unmeasured |
 | Session navigation | One tap opens intended session and replies route there; relevant recency without refresh-driven reorder or scroll jumps | Synthetic cross-environment routing and Important-filter anchor checks pass; physical navigation/viewport restore pending |
 | Work state | Working, waiting for input, queued, interrupted and failed states distinguish actual runtime evidence | Native Failed/Stopped/Ready/Needs-you checks pass; physical status evidence pending |
 | One-handed voice/text | Direct mic capture, physical keys with IME, preserved drafts, source-bound stop/send, clear errors and reachable controls | Native IME, volume-key/touch capture and draft checks pass; physical hardware/IME regression pending |
@@ -491,3 +491,13 @@ install; independent86 reconciliation then exec-out read and one successful
 installation. No user UI commandeered; reported stale thread remains unspecified,
 so handset content recovery is not claimed. Only owned emulator and fixture
 stopped; source published to reviewable branch. Goal remains open.
+
+Further freshness qualification on unchanged alpha69 runtime: f9ee607 expands the
+real two-process native test to replace same-message while its history response is
+held. Preparation12.15s and cold-process4.78s pass: overlapping live text remains,
+older snapshot text is absent, separately buffered output remains, reading position
+is within2px, draft preserved, zero replies. This closes a test coverage gap without
+another phone reinstall. Both cases ran on owned OZZZ emulator5620 with synthetic
+fixture; physical user-selected conversation is still unverified. Previous goal
+turn was progress (verified alpha69 delivery); this turn is progress (expanded
+native evidence). Goal remains active; no worker/model wakeups or runtime restart.
