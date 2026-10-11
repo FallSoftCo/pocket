@@ -13,6 +13,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/unknown-reply'){replyAckState='unknown';body={ok:true};}
  else if(/^\/api\/threads\/(same|second)-thread\/replies\/[^/]+$/.test(path)){const id=path.split('/').at(-1);const input=JSON.parse(raw);recoveries.push({id,...input});const saved=replyReceipts.get(id);if(!saved){res.statusCode=404;body={error:'Reply not found.'};}else{saved.state='accepted';body={id,state:'accepted'};}}
  else if(path==='/_qa/bad-reply'){badReply=true;holdReceipt=true;body={ok:true};}
+ else if(path==='/_qa/emit-accepted'){const sent=replies[0];if(sent)for(const socket of sockets)send(socket,{type:'reply',threadId:sent.threadId,id:sent.id,state:'accepted'});body={ok:true};}
  else if(path==='/_qa/hold-ack'){holdReply=true;body={ok:true};}
  else if(path==='/_qa/release-receipt'){holdReceipt=false;wrongReceiptThread=false;body={ok:true};}
  else if(path==='/_qa/wrong-receipt-thread'){wrongReceiptThread=true;holdReceipt=false;body={ok:true};}

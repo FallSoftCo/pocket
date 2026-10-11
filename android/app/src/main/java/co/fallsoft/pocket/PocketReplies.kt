@@ -27,6 +27,7 @@ internal object PocketReplies {
     }
     private fun observed(intent:ClientReplyIntent,receipt:JSONObject,lookup:Boolean=false):String{
         val state=checkedReplyReceipt(receipt,intent,lookup)
+        sendingOwners.remove(intent.id);profileChanged()
         val next=journal.update(intent.id){old->if(old.state in listOf("accepted","cancelled"))old else old.copy(phase="observed",state=state,message=receipt.s("result",receipt.s("error")))}
         if(next!=null){
             val cleared=if(next.state in admittedReplyStates)clearDraft(next)else false

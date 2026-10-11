@@ -105,6 +105,18 @@ class ClientReplyRecoveryNativeTest {
   assertEquals("Other environment draft",p.getString(Pocket.environmentKey("draft:same-thread","remote-b"),null))
   assertEquals(1,posts().length())
  }
+ @Test fun lateHttpAcknowledgementCannotEraseNewIdenticalDraft(){
+  start(draft="Same words typed again");qa("hold-ack");main{Pocket.open("same-thread",keyboard=true)}
+  await{Pocket.detail!=null&&!PocketTranscript.updating&&device.hasObject(By.clazz("android.widget.EditText"))}
+  device.pressEnter();await{posts().length()==1&&Pocket.sending}
+  qa("emit-accepted");await{!Pocket.prefs.contains("draft:same-thread")&&!Pocket.sending&&device.findObject(By.clazz("android.widget.EditText"))?.text==""}
+  device.findObject(By.clazz("android.widget.EditText")).text="Same words typed again"
+  await{Pocket.prefs.getString("draft:same-thread",null)=="Same words typed again"&&replyDraftGeneration("draft:same-thread")!="legacy"}
+  val id=posts().getJSONObject(0).s("id");qa("release-reply");await{id !in PocketReplies.dispatching}
+  assertEquals("Late callback erased retyped draft","Same words typed again",Pocket.prefs.getString("draft:same-thread",null))
+  assertEquals("Same words typed again",device.findObject(By.clazz("android.widget.EditText")).text)
+  assertEquals("Old acknowledgment replayed message",1,posts().length())
+ }
  @Test fun recoveryControlsRemainReachableAtLargeTextAndRemoveDoesNotResend(){
   val draft="Readability test "+"A deliberately long saved message. ".repeat(70)
   start(draft=draft);qa("bad-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
