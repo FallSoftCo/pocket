@@ -32,3 +32,9 @@ internal class TranscriptDiskCache(private val directory:File,private val maxEnt
   }finally{temporary.delete()}
  }
 }
+
+/** Persist labels and saved excerpts, not stale execution settings or pending authority. */
+internal fun transcriptPresentationDetail(id:String,detail:org.json.JSONObject):org.json.JSONObject{
+ val thread=detail.optJSONObject("thread")
+ return org.json.JSONObject().put("thread",org.json.JSONObject().put("id",id).put("name",thread?.s("name").orEmpty()).put("cwd",thread?.s("cwd").orEmpty())).put("notes",detail.optJSONArray("notes"))
+}

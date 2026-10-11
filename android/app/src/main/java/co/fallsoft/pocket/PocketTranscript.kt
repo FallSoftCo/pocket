@@ -54,9 +54,9 @@ object PocketTranscript {
             if(diskRequests[key]!=sequence)return@launch
             // Save presentation only. Pending commands, questions and read acknowledgements
             // must come from the live backend rather than an old disk snapshot.
-            val detail=JSONObject().put("thread",snapshot.detail.optJSONObject("thread")).put("notes",snapshot.detail.optJSONArray("notes"))
+            val detail=transcriptPresentationDetail(id,snapshot.detail)
             val position=snapshot.position?.let{JSONObject().put("row",it.rowId).put("offset",it.offset).put("follow",it.follow)}
-            val body=JSONObject().put("schema",1).put("scope",scope).put("id",id).put("rows",org.json.JSONArray(snapshot.rows)).put("detail",detail).put("before",snapshot.before).put("earlier",snapshot.earlier).put("bridgeBefore",snapshot.bridgeBefore).put("position",position).toString()
+            val body=JSONObject().put("schema",1).put("scope",scope).put("id",id).put("rows",org.json.JSONArray(snapshot.rows.filter{it.s("kind")!="request"})).put("detail",detail).put("before",snapshot.before).put("earlier",snapshot.earlier).put("bridgeBefore",snapshot.bridgeBefore).put("position",position).toString()
             disk.write(scope,id,body){diskRequests[key]==sequence}
         }catch(_:Exception){/* A cache failure never changes delivery, draft or network state. */}}
     }
@@ -64,7 +64,7 @@ object PocketTranscript {
         val value=disk.read(scope,id)?.let{JSONObject(it)}?:return@withContext null
         if(value.optInt("schema")!=1||value.s("scope")!=scope||value.s("id")!=id)return@withContext null
         val detail=value.getJSONObject("detail");if(detail.optJSONObject("thread")?.s("id")!=id)return@withContext null
-        val cachedRows=value.getJSONArray("rows").objects();if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
+        val cachedRows=value.getJSONArray("rows").objects().filter{it.s("kind")!="request"};if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
         val position=value.optJSONObject("position")?.let{TranscriptReadPosition(it.s("row"),it.optInt("offset"),it.optBoolean("follow"))}
         Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position)
     }catch(_:Exception){null}}

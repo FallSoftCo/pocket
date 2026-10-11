@@ -34,4 +34,13 @@ class TranscriptDiskCacheTest {
    assertFalse(cache.write(scope,"two","12345678901"));assertEquals("abcdef",cache.read(scope,"two"))
   }finally{directory.deleteRecursively()}
  }
+ @Test fun cachedPresentationCannotRestorePendingDecisionsOrExecutionSettings(){
+  val input=org.json.JSONObject().put("thread",org.json.JSONObject().put("id","thread").put("name","Useful work").put("cwd","/synthetic").put("status",org.json.JSONObject().put("type","active")).put("approvalPolicy","never").put("sandboxPolicy","full"))
+   .put("pending",org.json.JSONArray().put("old-request")).put("outgoing",org.json.JSONArray().put("old-command")).put("catchup",org.json.JSONObject().put("token","old-view")).put("notes",org.json.JSONArray().put("useful answer"))
+  val cached=transcriptPresentationDetail("thread",input)
+  assertEquals("Useful work",cached.getJSONObject("thread").getString("name"))
+  assertEquals("useful answer",cached.getJSONArray("notes").getString(0))
+  for(field in listOf("pending","outgoing","catchup","status","approvalPolicy","sandboxPolicy"))assertFalse("Cached authority: $field",cached.toString().contains("\"$field\""))
+ }
+
 }
