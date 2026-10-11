@@ -78,3 +78,12 @@ The existing chronology/freshness/cache/draft scenario also passed in this run.
 Android unit suite and lint pass. Candidate only: phone remains alpha50 and this
 change must be delivered in the next compatible update. This test checks logical
 busy state and button semantics, not real transport mutation success.
+
+## Alpha51 delivery
+
+Actual source26d4328 built in a new isolated OZZZ worktree. Debug unit tests,
+debug lint, optimized phone-compatible build, public-signing release build and
+release lint pass. Pixel upgrade returned Success; installed alpha51/code69
+verified. Both checksummed signing variants are available through authenticated
+private update metadata from version68; no backend restart or provider action.
+Physical control interaction remains distinct from installed-version evidence.

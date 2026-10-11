@@ -1,5 +1,5 @@
 {
-  "status": "candidate-native-qualified-not-phone-installed",
+  "status": "alpha51-phone-installed-private-update-available",
   "cause": "UI checked local/remote boolean busy keys while request owner used environment IDs",
   "fix": "Single current-environment busy lookup for all outgoing action controls",
   "nativeHost": "OZZZ-OS",
@@ -15,7 +15,23 @@
   ],
   "androidTestsAndLint": "pass",
   "limits": [
-    "No actual external message mutation performed",
-    "Phone still alpha50; compatible delivery pending"
-  ]
+    "Native UI behavior qualified using nonshrunk emulator build",
+    "Phone installation is not physical control-interaction proof",
+    "Public-signing artifact is prepared privately; no GitHub release publication claimed"
+  ],
+  "phone": {
+    "installation": "ADB returned Success; package alpha51/code69 verified",
+    "signer": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+    "apkSha256": "6195bebd9fb651c1c961129579e185d55043cb88569f1b69f20d54982dc6c118",
+    "physicalControlsInteraction": "not yet verified"
+  },
+  "release": {
+    "source": "26d4328",
+    "worktree": "isolated actual-commit build",
+    "host": "OZZZ-OS",
+    "debugTestsAndLint": "pass",
+    "releaseBuildAndLint": "pass",
+    "authenticatedUpdateMetadata": "both installed/public signer variants available from version68",
+    "providerActions": "none"
+  }
 }

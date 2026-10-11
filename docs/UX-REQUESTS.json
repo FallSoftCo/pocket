@@ -14,6 +14,13 @@
   },
   "requests": [
     {
+      "id": "outgoing-action-busy-20261011",
+      "date": "2026-10-11",
+      "requirement": "Retry/Edit/Remove/Save must visibly disable during the matching outgoing request and re-enable afterward, isolated by environment identity.",
+      "status": "alpha51-phone-installed-native-qualified",
+      "implementation": "Shared current-environment busy lookup; isolated native emulator validates unrelated environment remains enabled, matching state disables controls, and clearing restores Retry. Compatible alpha51/code69 installed in place; both private update variants authenticated and checksum-verified. Physical button interaction not yet observed."
+    },
+    {
       "id": "event-driven-work-lifecycle-20261008",
       "date": "2026-10-08",
       "requirement": "Replace wasteful self-authorized continuation with durable accepted work units, one accountable owner, versioned dependency signals, bounded global model admission, independently accepted results and safe external-effect reconciliation. Preserve useful work and genuine transient recovery; checkpoint observations must not authorize wakeups.",
