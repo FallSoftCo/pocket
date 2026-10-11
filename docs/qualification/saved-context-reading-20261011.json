@@ -1,6 +1,6 @@
 {
   "source": "1a9ccfd",
-  "state": "native-qualified-signed-release-pending",
+  "state": "signed-qualified-private-update-published-install-pending",
   "problem": "Leaving Important through Surrounding conversation retained filter-only tail padding in ordinary history, moving the latest passage by74px. The source jump also used a guessed32ms delay before addressing a changed numeric list index.",
   "repair": "Restrict compensation padding to Important, clear pending padding when it closes, and send the source row identity through the post-composition reading request. Navigation and removal feedback validate the complete captured environment identity, endpoint and credential.",
   "evidence": {
@@ -12,11 +12,34 @@
     "olderPageAndWarmReopenNativeSeconds": 9.481,
     "shortHistoryPageGestureNativeSeconds": 14.519,
     "beforeImportantReturnNativeCrops": "All three original window PixelCopy paragraph images are byte-identical; SHA2d185e8ef850c0de867062b4cfd58b5ff29dfdbe5aefe1599db9b96b7163cb31.",
-    "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-reading-filter-pixel-20261011"
+    "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-reading-filter-pixel-20261011",
+    "finalSavedContextNativeSeconds": 5.522,
+    "finalOlderPageAndWarmReopenNativeSeconds": 9.457,
+    "lateInputOrderingNativeSeconds": 7.558,
+    "galleryValidation": {
+      "task": "6a5b25540353b89d29092f4e52b19958",
+      "cards": 2283,
+      "desktop": "1440x1050 passed",
+      "mobile": "390x844 passed",
+      "failed": [],
+      "reducedMotion": "passed",
+      "reload": "passed"
+    }
   },
   "limits": [
     "Native emulator evidence; physical reading gestures/frame pacing remain unqualified.",
     "Paragraph-level PixelCopy review does not qualify the full-screen UI.",
     "Installed phone remains alpha66/code84 until a successful verified compatible install."
-  ]
+  ],
+  "release": {
+    "versionCode": 85,
+    "versionName": "0.5.0-alpha.67",
+    "debugUnitTests": 286,
+    "releaseUnitTests": 286,
+    "bothLints": "passed",
+    "bothSignedBuilds": "passed",
+    "buildHost": "OZZZ-OS",
+    "privateUpdater": 85,
+    "phoneInstall": "pending"
+  }
 }
