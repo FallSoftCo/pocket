@@ -349,6 +349,18 @@ class TranscriptRefreshNativeTest {
   qa("repeat");Thread.sleep(1000)
   assertEquals("Unchanged preview caused repeated reads",reads,qa("state").getJSONArray("reads").length())
  }
+ @Test fun catalogActivityRepairsMissedEventsDespiteUnchangedPreview(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("clipped-preview");qa("silent")
+  assertTrue("Missed-event setup did not retain old history",has(1))
+  main{Pocket.refresh()};await{has(2)&&!PocketTranscript.updating}
+  assertEquals("Preview should remain unchanged","Fresh response 1",Pocket.tasks.first{it.id=="same-thread"}.preview)
+  val reads=qa("state").getJSONArray("reads").length()
+  main{Pocket.refresh()};Thread.sleep(1500)
+  assertEquals("Unchanged catalog polled history again",reads,qa("state").getJSONArray("reads").length())
+  assertEquals("Catch-up submitted work",0,qa("state").getJSONArray("replies").length())
+  assertEquals("Catch-up erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+ }
  @Test fun cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
