@@ -27,6 +27,30 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun delayedReplyFailureStaysWithItsSourceAndResolvesByReceipt(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("fail-reply");var completed=false
+  main{Pocket.reply("Synthetic held reply",onDone={completed=true})}
+  await{qa("state").getJSONArray("replies").length()==1}
+  main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}&&!PocketTranscript.updating}
+  qa("release-reply");await{!Pocket.sending&&Pocket.replyFailure("same-thread")!=null}
+  assertFalse("Failed transport cleared the source draft",completed)
+  assertEquals("Delayed failure contaminated selected chat","",Pocket.error)
+  assertNull("Delayed failure attached to wrong thread",Pocket.replyFailure("second-thread"))
+  assertFalse("Old chat failure displayed in new chat",device.hasObject(By.text("Synthetic delayed reply failure")))
+  val sourceReceipt=qa("state").getJSONArray("replies").getJSONObject(0).s("id")
+  main{Pocket.event(JSONObject().put("type","reply").put("threadId","second-thread").put("id","second-failure").put("state","unknown").put("error","Synthetic second chat failure"))}
+  await{device.hasObject(By.text("Synthetic second chat failure"))}
+  main{Pocket.event(JSONObject().put("type","reply").put("threadId","second-thread").put("id","older-accepted").put("state","accepted"))}
+  Thread.sleep(600);assertEquals("Older accepted receipt erased a newer failure","second-failure",Pocket.replyFailure("second-thread")?.id)
+  main{Pocket.event(JSONObject().put("type","reply").put("threadId","second-thread").put("id","second-failure").put("state","accepted"))}
+  await{Pocket.replyFailure("second-thread")==null&&!device.hasObject(By.text("Synthetic second chat failure"))}
+  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&device.hasObject(By.text("Synthetic delayed reply failure"))}
+  assertEquals("History reload lost the source delivery ID",sourceReceipt,Pocket.replyFailure("same-thread")?.id)
+  assertEquals("Navigation lost unsent draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  device.findObject(By.text("Dismiss")).click();await{Pocket.replyFailure("same-thread")==null}
+  assertEquals("Dismiss replayed the uncertain send",1,qa("state").getJSONArray("replies").length())
+ }
  @Test fun refreshedHistoryIsNotReadUntilLatestIsActuallyPresented(){
   twoChats();qa("visibility");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   fun acknowledged(n:Int)=qa("state").getJSONArray("acknowledgements").objects().any{it.optInt("throughId")==n}

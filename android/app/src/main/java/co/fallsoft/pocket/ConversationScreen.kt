@@ -87,6 +87,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 @Composable fun ConversationScreen(){
     val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
     val task=Pocket.tasks.firstOrNull{it.id==Pocket.selected}
+    val failureSource=Pocket.selected;val replyFailure=Pocket.replyFailure()
+    val conversationError=Pocket.error.ifBlank{replyFailure?.message.orEmpty()}
     val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
     val latestTurn=rows.lastOrNull{it.s("kind")=="turn"}
     val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),latestTurn?.s("status").orEmpty(),task?.previewKind=="thinking",d!=null,PocketTranscript.loading)
@@ -265,8 +267,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 }
             else if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
                 Box(Modifier.align(Alignment.TopCenter).padding(top=10.dp).size(36.dp).background(Panel,CircleShape),contentAlignment=Alignment.Center){AnimatedMark(28)}
-            if(Pocket.error.isNotBlank())Box(Modifier.align(Alignment.BottomCenter).padding(horizontal=16.dp)){ErrorBanner()}
-            if(Pocket.error.isBlank()&&!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
+            if(conversationError.isNotBlank())Box(Modifier.align(Alignment.BottomCenter).padding(horizontal=16.dp)){ErrorBanner(conversationError,if(Pocket.error.isBlank()&&replyFailure!=null){{Pocket.dismissReplyFailure(failureSource,replyFailure.id)}}else null)}
+            if(conversationError.isBlank()&&!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
         }
 
         if(latestFailure!=null&&!active)Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){
