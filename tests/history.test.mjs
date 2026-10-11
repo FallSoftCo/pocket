@@ -20,6 +20,8 @@ test('recent opening returns newest batch without walking older items, then resu
   const older=await reader.read(metadata,{before:first._pocketPage.before,maxItems:8,maxBytes:512000,maxTurns:1});
   assert.deepEqual(older.turns[0].items.map(i=>i.id),Array.from({length:8},(_,i)=>'item-'+(85+i)));
   assert.equal(older.turns[0]._pocketHideEnd,true);
+  assert.equal(older._pocketPage.insertBefore,'latest/item-93');
+  const next=JSON.parse(Buffer.from(older._pocketPage.before.slice(6),'base64url'));assert.equal(next.olderThanRow,'latest/item-85');
   assert.ok(calls.every(c=>!['thread/read','thread/resume'].includes(c.method)));
 });
 
@@ -125,4 +127,17 @@ test('native inherited archive remains visible and pages stably after new destin
  const page=await history.read(live,{maxItems:1,maxTurns:1});assert.equal(page.turns[0].items[0].id,'new-answer');const cursor=page._pocketPage.before;
  live.turns[0].items.push({id:'later-answer',type:'agentMessage',text:'Later destination progress'});
  const older=await history.read(live,{before:cursor,maxItems:1,maxTurns:1});assert.equal(older.turns[0].items[0].id,'source-answer');const earliest=await history.read(live,{before:older._pocketPage.before,maxItems:1,maxTurns:1});assert.equal(earliest.turns[0].items[0].id,'source-user');assert.equal(earliest._pocketPage.hasEarlier,false);
+});
+
+
+test('a cursor entering an older turn anchors before the retained newer heading',async()=>{
+ const reader=new ThreadHistory({async call(method,p){
+  if(method==='thread/turns/list')return p.cursor==='older'?{data:[{id:'older-turn',status:'completed'}],backwardsCursor:'older-anchor'}:{data:[{id:'newer-turn',status:'completed'}],nextCursor:'older',backwardsCursor:'newer-anchor'};
+  return {data:[{item:{id:'answer',type:'agentMessage',text:'Result'}}]};
+ }});
+ const metadata={id:'thread',historyMode:'paginated'};
+ const recent=await reader.read(metadata,{maxItems:1,maxTurns:1});
+ const older=await reader.read(metadata,{maxItems:1,maxTurns:1,before:recent._pocketPage.before});
+ assert.equal(older._pocketPage.insertBefore,'newer-turn/header');
+ assert.equal(older.turns[0].id,'older-turn');
 });

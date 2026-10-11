@@ -1,7 +1,7 @@
 package co.fallsoft.pocket
 
 /** Retain read rows, but place newly discovered rows in their canonical page order. */
-internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Boolean,id:(T)->String,version:(T)->Long,insertBefore:String?=null):List<T>{
+internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Boolean,id:(T)->String,version:(T)->Long,insertBefore:String?=null,keepPosition:(T)->Boolean={false}):List<T>{
     val values=linkedMapOf<String,T>()
     current.forEach{values[id(it)]=it}
     val existing=values.keys.toHashSet()
@@ -15,7 +15,13 @@ internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Bool
     val sharedIds=shared.toHashSet()
     var sharedIndex=0
     order.indices.forEach{index->if(order[index] in sharedIds)order[index]=shared[sharedIndex++]}
-    if(page.none{id(it) in existing}){
+    val boundary=insertBefore?.takeIf{it in order&&page.none{row->id(row)==it}}
+    if(boundary!=null){
+        // The server cursor proves these page rows precede this retained row.
+        // Repeated turn headings stay at their earliest retained position.
+        val movable=page.filterNot{id(it) in existing&&keepPosition(it)}.map(id)
+        order.removeAll(movable.toSet());order.addAll(order.indexOf(boundary),movable)
+    }else if(page.none{id(it) in existing}){
         val anchor=insertBefore?.let{order.indexOf(it)}?:-1
         order.addAll(if(anchor>=0)anchor else if(older)0 else order.size,page.map(id))
     }else{

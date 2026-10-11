@@ -91,4 +91,21 @@ class HistoryReadingNativeTest {
   assertEquals("Second gesture did not load exactly one page",2,olderReads())
  }
 
+ @Test fun partialOlderPageRepairsLateInputAgainstRetainedReply(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val c=i.targetContext;c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
+  qa("boundary")
+  main{PocketTranscript.apply(event("answer","message","Original live answer"));PocketTranscript.apply(event("user","user","Ordering request"))}
+  val before=PocketTranscript.rows.map{it.s("id")};assertTrue(before.indexOf("order/user")>before.indexOf("order/answer"))
+  main{Pocket.scope.launchEnvironment{PocketTranscript.load(true)}};await{PocketTranscript.loading}
+  main{PocketTranscript.apply(event("answer","message","Live progress during older read"))}
+  await{!PocketTranscript.loading}
+  val after=PocketTranscript.rows.map{it.s("id")}
+  assertTrue("Boundary did not put input before its reply",after.indexOf("order/user")<after.indexOf("order/answer"))
+  assertEquals(1,after.count{it=="order/header"});assertTrue(after.contains("same-message"))
+  assertEquals("Live progress during older read",PocketTranscript.rows.single{it.s("id")=="order/answer"}.s("text"))
+ }
+
 }

@@ -79,7 +79,7 @@ object PocketTranscript {
                 bridgeBefore=if(!overlaps&&page.optBoolean("hasEarlier")&&nextBefore!=cursor)nextBefore else null
             }else{
                 if(!older&&wasLoaded&&!overlaps&&incoming.isNotEmpty()&&page.optBoolean("hasEarlier"))bridgeBefore=nextBefore
-                rows=mergeTranscriptPage(rows,incoming,older,{it.s("id")},{it.optLong("version")})
+                rows=mergeTranscriptPage(rows,incoming,older,{it.s("id")},{it.optLong("version")},insertBefore=if(older)page.s("insertBefore").takeIf{it.isNotBlank()}else null,keepPosition={it.s("kind")=="turn"})
             }
             // A recent refresh must not move the oldest loaded cursor forward.
             retainedTranscriptCursor(TranscriptCursor(before,earlier),wasLoaded,older,bridgeCursor!=null,TranscriptCursor(nextBefore,page.optBoolean("hasEarlier"))).let{
