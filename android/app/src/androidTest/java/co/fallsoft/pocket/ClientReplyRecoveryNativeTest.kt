@@ -52,9 +52,10 @@ class ClientReplyRecoveryNativeTest {
   assertEquals(1,PocketReplies.entries("same-thread").size)
   device.findObject(By.clazz("android.widget.EditText")).text="Edited after send"
   await{Pocket.prefs.getString("draft:same-thread",null)=="Edited after send"}
+  device.findObject(By.clazz("android.widget.EditText")).text="Receipt test";await{Pocket.prefs.getString("draft:same-thread",null)=="Receipt test"}
   qa("release-receipt");main{PocketReplies.check(PocketReplies.entries("same-thread").single())};await{PocketReplies.entries("same-thread").isEmpty()}
-  assertEquals("Reconciliation erased a newer draft","Edited after send",Pocket.prefs.getString("draft:same-thread",null))
-  assertEquals("Edited after send",device.findObject(By.clazz("android.widget.EditText")).text)
+  assertEquals("Reconciliation erased a newer identical draft","Receipt test",Pocket.prefs.getString("draft:same-thread",null))
+  assertEquals("Receipt test",device.findObject(By.clazz("android.widget.EditText")).text)
   assertEquals("Receipt reconciliation submitted another turn",1,posts().length())
  }
  @Test fun explicitStopCancelsPreparedMessageBeforeDispatch(){
@@ -111,11 +112,12 @@ class ClientReplyRecoveryNativeTest {
   val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
   try{
    device.executeShellCommand("settings put system font_scale 2.0");await{context.resources.configuration.fontScale>=1.9f&&PocketReplies.busy.isEmpty()}
+   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"reply-recovery-large.png")))
    for(label in listOf("Check status","Retry","Edit draft","Remove saved copy")){
     assertTrue(label+" unavailable at large text",device.wait(Until.hasObject(By.text(label)),3000))
     var control:UiObject2?=device.findObject(By.text(label));repeat(6){if(control?.isClickable==false)control=control?.parent}
     assertTrue(label+" lacks touch target",control?.isClickable==true)
-    assertTrue(label+" touch target clipped or too small",control!!.visibleBounds.height()>=48*context.resources.displayMetrics.density-2)
+    assertTrue(label+" touch target clipped or too small: "+control!!.visibleBounds,control!!.visibleBounds.height()>=48*context.resources.displayMetrics.density-2)
    }
    assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"reply-recovery-large.png")))
    device.findObject(By.text("Remove saved copy")).click();await{PocketReplies.entries("same-thread").isEmpty()}

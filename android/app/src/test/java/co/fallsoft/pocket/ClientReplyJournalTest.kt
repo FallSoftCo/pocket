@@ -5,11 +5,11 @@ import org.json.JSONObject
 import org.json.JSONArray
 import java.io.IOException
 class ClientReplyJournalTest{
- private fun intent()=ClientReplyIntent("saved-id","environment-a","account-scope","thread-a","Original draft","steer","draft-key")
+ private fun intent()=ClientReplyIntent("saved-id","environment-a","account-scope","thread-a","Original draft","steer","draft-key",draftGeneration="original-edit")
  @Test fun interruptionPreservesOriginalIdentityAndDestination(){
   var disk="[]";val first=ClientReplyJournal({disk},{disk=it;true});first.put(intent());first.update("saved-id"){it.copy(phase="dispatched",state="unconfirmed")}
   val restarted=ClientReplyJournal({disk},{disk=it;true});val recovered=restarted.all().single()
-  assertEquals("saved-id",recovered.id);assertEquals("environment-a",recovered.environment);assertEquals("account-scope",recovered.owner);assertEquals("thread-a",recovered.thread);assertEquals("Original draft",recovered.text);assertEquals("dispatched",recovered.phase)
+  assertEquals("saved-id",recovered.id);assertEquals("environment-a",recovered.environment);assertEquals("account-scope",recovered.owner);assertEquals("thread-a",recovered.thread);assertEquals("Original draft",recovered.text);assertEquals("dispatched",recovered.phase);assertEquals("original-edit",recovered.draftGeneration)
  }
  @Test fun failedPersistenceDoesNotClaimDispatchableIntent(){
   val j=ClientReplyJournal({"[]"},{false});try{j.put(intent());fail("Failed write accepted")}catch(expected:IOException){};assertTrue(j.all().isEmpty())

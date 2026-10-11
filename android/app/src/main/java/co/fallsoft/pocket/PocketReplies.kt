@@ -10,7 +10,7 @@ internal object PocketReplies {
     var revision by mutableIntStateOf(0);private set
     var busy by mutableStateOf(setOf<String>());private set
     var dispatching by mutableStateOf(setOf<String>());private set
-    val clearedDrafts=mutableStateMapOf<String,String>()
+    val clearedDrafts=mutableStateMapOf<String,ClearedReplyDraft>()
     private val sendingOwners=mutableMapOf<String,EnvironmentRequest>()
     fun profileChanged(){Pocket.sending=Pocket.captureEnvironment()?.let{selected->sendingOwners.values.any{it.matches(selected)}}==true}
     private fun current(intent:ClientReplyIntent):EnvironmentRequest?=Pocket.captureEnvironment(intent.environment)?.takeIf{backendOwner(it.endpoint,it.token)==intent.owner}
@@ -20,9 +20,9 @@ internal object PocketReplies {
     private fun clearDraft(intent:ClientReplyIntent):Boolean{
         if(current(intent)==null)return false
         val key=intent.draftKey?:return true
-        if(Pocket.prefs.getString(key,null)!=intent.text)return true
+        if(Pocket.prefs.getString(key,null)!=intent.text||replyDraftGeneration(key)!=intent.draftGeneration)return true
         if(!Pocket.prefs.edit().remove(key).commit())return false
-        clearedDrafts[key]=intent.text;if(clearedDrafts.size>64)clearedDrafts.remove(clearedDrafts.keys.first())
+        clearedDrafts[key]=ClearedReplyDraft(intent.text,intent.draftGeneration);if(clearedDrafts.size>64)clearedDrafts.remove(clearedDrafts.keys.first())
         return true
     }
     private fun observed(intent:ClientReplyIntent,receipt:JSONObject,lookup:Boolean=false):String{
@@ -50,7 +50,7 @@ internal object PocketReplies {
         try{
             val old=journal.all().firstOrNull{it.environment==destination.environment.id&&it.thread==thread&&it.text.trim()==text.trim()&&it.mode==mode&&it.state in listOf("unconfirmed","unknown")}
             if(old!=null){Pocket.recordReplyFailure(thread,old.id,if(old.owner==owner)"Check this message’s delivery before sending it again."else "This message was saved under a previous pairing. Review its saved copy before sending again.");check(old);return}
-            val intent=ClientReplyIntent(java.util.UUID.randomUUID().toString(),destination.environment.id,owner,thread,text,mode,draftKey)
+            val intent=ClientReplyIntent(java.util.UUID.randomUUID().toString(),destination.environment.id,owner,thread,text,mode,draftKey,draftGeneration=draftKey?.let{replyDraftGeneration(it)}?:"legacy")
             journal.put(intent);revision++;dispatch(intent,destination,onDone)
         }catch(e:Exception){Pocket.recordReplyFailure(thread,"storage",e.message?:"Could not save message")}
     }

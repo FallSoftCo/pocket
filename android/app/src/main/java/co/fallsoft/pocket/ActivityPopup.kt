@@ -43,8 +43,8 @@ import androidx.compose.ui.window.*
     var replyTarget by remember{mutableStateOf<String?>(null)}
     val drafts=remember{mutableStateMapOf<String,String>()}
     var text by remember(Pocket.environmentId,replyTarget){mutableStateOf(drafts[replyTarget].orEmpty())}
-    fun editText(value:String){text=value;replyTarget?.let{id->drafts[id]=value;Pocket.prefs.edit().putString(draftKey(id),value).apply()}}
-    LaunchedEffect(PocketReplies.revision,replyTarget){replyTarget?.let{target->val sourceKey=draftKey(target);if(PocketReplies.clearedDrafts[sourceKey]==text&&!Pocket.prefs.contains(sourceKey)){drafts.remove(target);text=""}}}
+    fun editText(value:String){text=value;replyTarget?.let{id->drafts[id]=value;saveReplyDraft(draftKey(id),value)}}
+    LaunchedEffect(PocketReplies.revision,replyTarget){replyTarget?.let{target->val sourceKey=draftKey(target);if(PocketReplies.clearedDrafts[sourceKey]?.let{it.text==text&&it.generation==replyDraftGeneration(sourceKey)}==true&&!Pocket.prefs.contains(sourceKey)){drafts.remove(target);text=""}}}
     val scroll=rememberScrollState()
     var controls by remember{mutableStateOf(false)}
     LaunchedEffect(Pocket.environmentId,Pocket.base,Pocket.token){if(profile!=Triple(Pocket.environmentId,Pocket.base,Pocket.token))onDismiss()}
@@ -54,7 +54,7 @@ import androidx.compose.ui.window.*
     fun replyLabel(id:String)=if(Pocket.tasks.firstOrNull{it.id==id}?.canAcceptDirectInput==false)"Guide parent" else "Reply"
     val inputFocus=remember{FocusRequester()}
     LaunchedEffect(replyTarget){if(replyTarget!=null){scroll.scrollTo(0);inputFocus.requestFocus()}}
-    fun send(){if(!ownsProfile()){onDismiss();return};val target=replyTarget;if(target!=null&&text.isNotBlank()&&!Pocket.sending){val submitted=text;val sourceKey=draftKey(target);Pocket.reply(submitted,threadId=target,mode="steer",draftKey=sourceKey){if(Pocket.prefs.getString(sourceKey,"")==submitted)Pocket.prefs.edit().remove(sourceKey).apply();if(drafts[target]==submitted)drafts.remove(target);if(replyTarget==target&&text==submitted)text=""}}}
+    fun send(){if(!ownsProfile()){onDismiss();return};val target=replyTarget;if(target!=null&&text.isNotBlank()&&!Pocket.sending){val submitted=text;val sourceKey=draftKey(target);val submittedGeneration=replyDraftGeneration(sourceKey);Pocket.reply(submitted,threadId=target,mode="steer",draftKey=sourceKey){if(replyDraftGeneration(sourceKey)==submittedGeneration&&Pocket.prefs.getString(sourceKey,"")==submitted)Pocket.prefs.edit().remove(sourceKey).apply();if(replyDraftGeneration(sourceKey)==submittedGeneration&&drafts[target]==submitted)drafts.remove(target);if(replyDraftGeneration(sourceKey)==submittedGeneration&&replyTarget==target&&text==submitted)text=""}}}
     Popup(popupPositionProvider=position,onDismissRequest=onDismiss,properties=PopupProperties(focusable=true)){
         Surface(color=Panel,shape=RoundedCornerShape(18.dp),shadowElevation=12.dp,modifier=Modifier.widthIn(max=(LocalConfiguration.current.screenWidthDp-24).dp).width(360.dp)){
             Column(Modifier.heightIn(max=popupHeight).padding(12.dp)){
