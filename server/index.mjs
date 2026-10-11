@@ -552,6 +552,10 @@ app.post('/api/threads/:id/continuation/checkpoint',owner,route(async(req,res)=>
  if(!accepted)return res.status(409).json({error:'Checkpoint is stale or conflicts with an already saved observation. Read the current turn before reporting.'});
  res.json({accepted:true,observationOnly:true,admission:'none',observation:workObservations.latest(threadId),recovery:turnRecovery.get(threadId)||null});
 }));
+app.post('/api/threads/:id/timeline/position',route(async(req,res)=>{
+  const id=requireId(req.params.id);await codex.connect();
+  res.json(await history.locateItemSuccessor(id,req.body));
+}));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null,recent:req.query.view==='timeline'});
   const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});

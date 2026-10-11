@@ -336,6 +336,7 @@ object Pocket {
                 val row=json.optJSONObject("row")
                 val newInput=json.s("threadId")==selected&&row?.s("kind")=="user"&&PocketTranscript.rows.none{it.s("id")==row.s("id")}
                 PocketTranscript.apply(json)
+                if(newInput&&row!=null)PocketTranscript.reconcileInputPosition(row)
                 // A delayed input event needs canonical history, not inferred user-first sorting.
                 if(json.has("turn")||newInput)scheduleRefresh()
             }

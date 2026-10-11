@@ -91,6 +91,39 @@ class HistoryReadingNativeTest {
   assertEquals("Second gesture did not load exactly one page",2,olderReads())
  }
 
+ @Test fun anchoredInputOutsideRecentPageRepairsWithoutBackfillOrLosingLiveText(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val c=i.targetContext;val prefs=c.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Keep anchored draft").commit()
+  main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
+  qa("anchored")
+  main{
+   PocketTranscript.apply(event("commentary","message","Earlier commentary"))
+   PocketTranscript.apply(event("prior-user","user","Earlier request"))
+   PocketTranscript.apply(event("prior-answer","message","Earlier reply"))
+   PocketTranscript.apply(event("answer","message","Original anchored reply"))
+   Pocket.event(event("user","user","Delayed request outside latest page").put("type","timeline"))
+  }
+  await{qa("state").getJSONArray("positions").length()==1}
+  await{!PocketTranscript.loading&&PocketTranscript.rows.any{it.s("text")=="Stale anchored answer"}}
+  assertTrue("Position read indicator missing",PocketTranscript.updating)
+  main{PocketTranscript.apply(event("answer","message","Newest live anchored reply").put("version",900))}
+  qa("release-position")
+  await{!PocketTranscript.updating}
+  val ids=PocketTranscript.rows.map{it.s("id")}
+  assertTrue("Delayed request remained below its reply",ids.indexOf("order/user")<ids.indexOf("order/answer"))
+  assertTrue("Earlier reply moved behind later steer",ids.indexOf("order/prior-answer")<ids.indexOf("order/user"))
+  assertTrue("Earlier commentary lost",ids.contains("order/commentary"))
+  assertTrue("Local history hidden",ids.contains("same-message"))
+  assertEquals("Newest live anchored reply",PocketTranscript.rows.single{it.s("id")=="order/answer"}.s("text"))
+  assertEquals("Keep anchored draft",prefs.getString("draft:same-thread",null))
+  assertFalse("Anchored repair fetched older history",qa("state").getJSONArray("reads").objects().any{it.optBoolean("older")})
+  main{Pocket.event(event("user","user","Delayed request outside latest page").put("type","timeline"))}
+  Thread.sleep(600)
+  assertEquals("Repeated input restarted position read",1,qa("state").getJSONArray("positions").length())
+ }
+
  @Test fun partialOlderPageRepairsLateInputAgainstRetainedReply(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val c=i.targetContext;c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()

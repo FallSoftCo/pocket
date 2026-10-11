@@ -4,6 +4,42 @@ const unsupportedItems=e=>/thread\/items\/list.*not supported|list_items.*not su
 const encode=(prefix,value)=>prefix+Buffer.from(JSON.stringify(value)).toString('base64url');
 export class ThreadHistory {
   constructor(codex,{maxItems=400,maxBytes=1024*1024,onPreview=()=>{},inheritedHistory=()=>[]}={}){this.onPreview=onPreview;this.inheritedHistory=inheritedHistory;this.turnOnlyThreads=new Set();this.fullSnapshotThreads=new Set();Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
+  // Resolve chronology without downloading older transcript pages or resuming work.
+  // Each request reads at most four small provider pages; a continuation retains
+  // the exact target and provider cursor, rather than restarting from the tail.
+  async locateItemSuccessor(threadId,{turnId,itemId,knownItemIds,cursor=null}={}){
+    const invalid=()=>Object.assign(Error('Invalid item position.'),{status:400});
+    const validId=v=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,256}$/.test(v);
+    if(!validId(threadId)||!validId(turnId)||!validId(itemId)||!Array.isArray(knownItemIds)||knownItemIds.length>256||knownItemIds.some(id=>!validId(id)))throw invalid();
+    let next={type:'item',itemId};
+    if(cursor!=null){
+      if(typeof cursor!=='string'||cursor.length>16000||!cursor.startsWith('position:'))throw invalid();
+      let state;try{state=JSON.parse(Buffer.from(cursor.slice(9),'base64url').toString());}catch{throw invalid();}
+      if(state?.threadId!==threadId||state.turnId!==turnId||state.itemId!==itemId||typeof state.next!=='string'||!state.next)throw invalid();
+      next=state.next;
+    }
+    if(this.itemAnchorsSupported===false||this.turnOnlyThreads.has(threadId))return {available:false,insertBefore:null,cursor:null};
+    const known=new Set(knownItemIds);known.delete(itemId);const visited=new Set();
+    for(let n=0;n<4;n++){
+      const key=JSON.stringify(next);if(visited.has(key))throw Error('Codex returned a repeated item position.');visited.add(key);
+      let page;
+      try{page=await this.codex.call('thread/items/list',{threadId,turnId,cursor:next,sortDirection:'asc',limit:8});}
+      catch(e){
+        if(unsupportedItems(e)||/invalid type: map, expected a string/i.test(e.message||'')){
+          if(!unsupportedItems(e))this.itemAnchorsSupported=false;
+          return {available:false,insertBefore:null,cursor:null};
+        }
+        throw e;
+      }
+      for(const entry of page.data||[]){
+        if(entry.turnId!=null&&entry.turnId!==turnId)throw Error('Codex returned an item outside the requested turn.');
+        if(known.has(entry.item?.id)&&displayItem(entry.item,turnId))return {available:true,insertBefore:`${turnId}/${entry.item.id}`,cursor:null};
+      }
+      if(!page.nextCursor)return {available:true,insertBefore:null,cursor:null};
+      next=page.nextCursor;
+    }
+    return {available:true,insertBefore:null,cursor:encode('position:',{threadId,turnId,itemId,next})};
+  }
   async preview(metadata){
     const thread=await this.read(metadata,{summary:true});this.onPreview(thread);
     if(this.fullSnapshotThreads.has(metadata.id))return thread;

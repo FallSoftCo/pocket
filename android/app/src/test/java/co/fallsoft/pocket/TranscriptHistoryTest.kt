@@ -7,6 +7,14 @@ import kotlinx.coroutines.runBlocking
 class TranscriptHistoryTest {
     private data class Row(val id:String,val text:String="",val version:Long=0)
     private fun merge(old:List<Row>,page:List<Row>,older:Boolean=false)=mergeTranscriptPage(old,page,older,{it.id},{it.version})
+    @Test fun provenSuccessorRepairsLateInputWithoutMovingEarlierCommentaryOrNewLiveOutput(){
+        val cached=listOf(Row("past"),Row("turn/header"),Row("commentary"),Row("first-user"),Row("first-answer"),Row("answer","new live",15),Row("steer"),Row("new-output"),Row("end"))
+        val result=placeTranscriptRowBefore(cached,"steer","answer"){it.id}
+        assertEquals(listOf("past","turn/header","commentary","first-user","first-answer","steer","answer","new-output","end"),result.map{it.id})
+        assertEquals("new live",result.single{it.id=="answer"}.text)
+        assertSame(cached,placeTranscriptRowBefore(cached,"steer","missing"){it.id})
+        assertSame(cached,placeTranscriptRowBefore(cached,"first-user","first-answer"){it.id})
+    }
     @Test fun olderBoundaryMovesLateInputBeforeCachedReplyWithoutDroppingNewerText(){
         val cached=listOf(Row("past"),Row("turn/header"),Row("turn/answer","new live",15),Row("turn/user"),Row("turn/end"),Row("new-turn/header"))
         val older=listOf(Row("turn/header"),Row("turn/user","request",8))

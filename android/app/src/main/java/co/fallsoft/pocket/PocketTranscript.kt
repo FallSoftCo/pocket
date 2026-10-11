@@ -9,7 +9,8 @@ object PocketTranscript {
     var loading by mutableStateOf(false);private set
     var refreshPending by mutableStateOf(false);private set
     private var loadingEarlier by mutableStateOf(false)
-    val updating get()=refreshPending||(loading&&!loadingEarlier)
+    private var positioning by mutableStateOf(false)
+    val updating get()=refreshPending||(loading&&!loadingEarlier)||positioning
     fun markRefreshPending(){
         if(owner==Pocket.selected&&ownerScope==scopeKey()){
             refreshPending=true
@@ -26,6 +27,10 @@ object PocketTranscript {
     private var generation=0
     private var bridgeBefore:String?=null
     private var missedUpdates=false
+    private data class InputPosition(val turn:String,val target:String,val item:String,val known:List<String>)
+    private val positionQueue=linkedMapOf<String,InputPosition>()
+    private var positionJob:Job?=null
+    private val attemptedPositions=hashSetOf<String>()
     var browsingEarlier by mutableStateOf(false);private set
     internal var readPosition by mutableStateOf<TranscriptReadPosition?>(null);private set
     private data class Snapshot(val rows:List<JSONObject>,val detail:JSONObject,val before:String?,val earlier:Boolean,val bridgeBefore:String?,val position:TranscriptReadPosition?)
@@ -49,13 +54,63 @@ object PocketTranscript {
     private var checkedThisOpen=false
     private fun trace(){if(BuildConfig.DEBUG)android.util.Log.d("PocketCache","rows=${rows.size} buffered=${buffered.size} earlier=$browsingEarlier")}
     fun reset(id:String){
+        positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positioning=false
         generation++;owner=id;ownerScope=scopeKey();automaticRetryAllowed=true
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
         earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun reconcileInputPosition(row:JSONObject){
+        val id=Pocket.selected?:return;val turn=row.s("turnId");val target=row.s("id")
+        if(owner!=id||ownerScope!=scopeKey()||turn.isBlank()||!target.startsWith("$turn/"))return
+        val item=row.s("itemId").ifBlank{target.removePrefix("$turn/")}
+        if(target in attemptedPositions)return
+        val ticket=generation;val scope=scopeKey();val destination=Pocket.captureEnvironment()?:return
+        fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
+        val known=rows.filter{it.s("turnId")==turn&&it.s("kind") !in listOf("turn","turnEnd","request","attachments")}.takeLast(256).map{it.s("itemId").ifBlank{it.s("id").removePrefix("$turn/")}}
+        if(known.none{it!=item})return
+        attemptedPositions.add(target)
+        positionQueue[target]=InputPosition(turn,target,item,known)
+        if(positionJob?.isActive==true)return
+        positioning=true
+        positionJob=Pocket.scope.launch{
+            try{
+                while(current()&&positionQueue.isNotEmpty()){
+                    val request=positionQueue.values.first()
+                    try{
+                        var cursor:String?=null;val visited=hashSetOf<String>()
+                        // One serial read lane, bounded per target and driven only by
+                        // new input events. No model polling or command resubmission.
+                        for(page in 0 until 64){
+                            if(!current())return@launch
+                            val body=JSONObject().put("turnId",request.turn).put("itemId",request.item).put("knownItemIds",org.json.JSONArray(request.known))
+                            cursor?.let{body.put("cursor",it)}
+                            val result=Pocket.apiEnvironment(destination,"/api/threads/$id/timeline/position",body)
+                            if(!current())return@launch
+                            val successor=result.s("insertBefore")
+                            if(successor.isNotBlank()){
+                                if(successor.startsWith("${request.turn}/")){
+                                    val repaired=placeTranscriptRowBefore(rows,request.target,successor){it.s("id")}
+                                    if(repaired!==rows){rows=repaired;rememberRecent();revision++}
+                                }
+                                break
+                            }
+                            cursor=result.s("cursor").takeIf{it.isNotBlank()}
+                            val next=cursor?:break
+                            if(!visited.add(next))break
+                            delay(16)
+                        }
+                    }catch(e:CancellationException){throw e}catch(_:Exception){
+                        // Older backends/unavailable anchors retain normal history
+                        // reconciliation; auxiliary failures never hide messages.
+                    }finally{if(current())positionQueue.remove(request.target)}
+                }
+            }finally{if(current()){positioning=false;positionJob=null}}
+
+        }
+    }
     fun latest(){Pocket.refreshDetail()}
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
@@ -106,6 +161,13 @@ object PocketTranscript {
             val updates=buffered.values.toList();buffered.clear()
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             rememberRecent();revision++;Pocket.error="";succeeded=true;trace()
+            if(!older&&bridgeCursor==null){
+                // A warm reopening must also repair delayed inputs that were outside
+                // its bounded recent page when the previous read was cancelled.
+                val incomingIds=incoming.mapTo(hashSetOf()){it.s("id")}
+                val firstReplies=incoming.filter{it.s("kind")=="message"}.groupBy{it.s("turnId")}.mapValues{(_,items)->rows.indexOfFirst{it.s("id")==items.first().s("id")}}
+                rows.filterIndexed{index,row->row.s("kind")=="user"&&row.s("id") !in incomingIds&&firstReplies[row.s("turnId")]?.let{it>=0&&index>it}==true}.forEach{reconcileInputPosition(it)}
+            }
         }catch(e:CancellationException){throw e}catch(e:Exception){if(current()){automaticRetryAllowed=retryableTranscriptRead(e);Pocket.error=PocketNetwork.error(e)}}
         finally {
             if(current()) {

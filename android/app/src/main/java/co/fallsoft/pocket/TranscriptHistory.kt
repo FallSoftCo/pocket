@@ -47,6 +47,12 @@ internal fun shouldPrefetchTranscript(follow:Boolean,filtered:Boolean,firstVisib
     !follow&&!filtered&&firstVisible<=4&&earlier&&!loading
 
 internal data class TranscriptCursor(val before:String?,val hasEarlier:Boolean)
+/** Move only the delayed row against a server-proven same-turn successor. */
+internal fun <T> placeTranscriptRowBefore(rows:List<T>,target:String,successor:String,id:(T)->String):List<T>{
+    val from=rows.indexOfFirst{id(it)==target};val to=rows.indexOfFirst{id(it)==successor}
+    if(from<0||to<0||from<to||target==successor)return rows
+    return rows.toMutableList().apply{val row=removeAt(from);add(to,row)}
+}
 /** Recent/bridge pages cannot overwrite the cursor preceding the oldest retained local row. */
 internal fun retainedTranscriptCursor(current:TranscriptCursor,hadRows:Boolean,older:Boolean,bridge:Boolean,page:TranscriptCursor)=
     if(older||(!bridge&&!hadRows))page else current
