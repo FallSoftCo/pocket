@@ -81,6 +81,7 @@ object PocketTranscript {
     private var historyLoaded=false
     private var checkedThisOpen=false
     private var freshForRead=false
+    internal val currentHistoryVerified get()=freshForRead
     private fun trace(){if(BuildConfig.DEBUG)android.util.Log.d("PocketCache","rows=${rows.size} buffered=${buffered.size} earlier=$browsingEarlier")}
     /** Stop hidden-view reads without discarding its cache, selection or draft. */
     internal fun pauseReading(){
