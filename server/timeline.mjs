@@ -45,8 +45,11 @@ export class LiveTimeline {
   removeItem(turn,id){const entry=turn.items.get(id);if(entry){this.bytes-=entry.bytes;turn.items.delete(id);}}
   store(turn,item,version){
     const compact=displayItem(item,turn.id);if(!compact)return;
-    this.removeItem(turn,item.id);const bytes=Buffer.byteLength(JSON.stringify(compact));
+    const bytes=Buffer.byteLength(JSON.stringify(compact));
     if(bytes>this.maxBytes)return;
+    // Updating text/output must not move an existing item behind later items.
+    // Map.set preserves insertion order only when the key was not deleted.
+    this.bytes-=turn.items.get(item.id)?.bytes||0;
     turn.items.set(item.id,{item:compact,version,bytes});this.bytes+=bytes;
     while(turn.items.size>this.maxItems)this.removeItem(turn,turn.items.keys().next().value);
     while(this.bytes>this.maxBytes||this.threads.size>this.maxThreads){
