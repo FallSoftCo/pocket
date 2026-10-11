@@ -27,6 +27,10 @@ class ConversationFilterComposeNativeTest {
   i.runOnMainSync{Pocket.open("same-thread")};compose.waitUntil(15000){PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
   fun text(n:Int)="Compose passage $n: a meaningful answer remains at its reading position when surrounding commentary is hidden or restored."
   i.runOnMainSync{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","compose-reading").put("version",100+n).put("row",JSONObject().put("id","compose-passage-$n").put("turnId","compose-reading").put("kind","message").put("phase",if(n%2==0)"final_answer" else "commentary").put("text",text(n))))}
+  val changes=java.util.concurrent.ConcurrentHashMap<Int,java.util.concurrent.atomic.AtomicInteger>()
+  val descriptions=java.util.concurrent.ConcurrentHashMap<Int,String>()
+  val observer=androidx.compose.runtime.snapshots.Snapshot.registerApplyObserver{states,_->states.forEach{state->val key=System.identityHashCode(state);changes.computeIfAbsent(key){java.util.concurrent.atomic.AtomicInteger()}.incrementAndGet();if(!descriptions.containsKey(key))descriptions.putIfAbsent(key,state.toString().take(180))}}
+  try {
   // Arrange via the real LazyColumn's native scroll semantics, avoiding stale
   // UiAutomation virtual-node coordinates during an in-flight gesture.
   compose.onNodeWithTag("conversation-history").performScrollToKey("compose-passage-33")
@@ -46,5 +50,6 @@ class ConversationFilterComposeNativeTest {
   assertEquals("Return moved native answer",before.top,answer.fetchSemanticsNode().boundsInRoot.top,2f)
   assertTrue("Returned answer visually blank",ink("restored")>=originalInk*.7)
   assertEquals("Filter erased draft","Keep filter draft",c.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  }finally{observer.dispose();changes.entries.sortedByDescending{it.value.get()}.take(20).forEach{println("Compose changes ${it.value.get()}: "+descriptions[it.key])}}
  }
 }
