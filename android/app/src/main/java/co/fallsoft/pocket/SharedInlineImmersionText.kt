@@ -88,7 +88,13 @@ import androidx.compose.ui.unit.*
     DisposableEffect(Unit){onDispose{visibilityCallback?.invoke(emptySet(),false)}}
     val incoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
     BoxWithConstraints(modifier.then(immersionIntrinsicLayout(measurer,listOf(effectiveFrom,effectiveTo)+reserve,style,maxLines,overflow))){
-        val available=constraints.maxWidth.coerceAtLeast(1)
+        // Horizontal scrolling controls have no parent width bound. Infinity
+        // is a sentinel, never a physical paragraph width. Reserve the natural
+        // width of every aligned run before shaping caret positions.
+        val available=if(constraints.hasBoundedWidth)constraints.maxWidth.coerceAtLeast(1) else
+            runs.sumOf{run->run.forms.maxOf{form->
+                measurer.measure(immersionDrawText(form),style=style,softWrap=false).size.width
+            }}.coerceAtLeast(1)
         val content=mutableMapOf<String,InlineTextContent>()
         // Parent ellipsis needs physical room beside an atomic placeholder.
         // Children clip at that boundary so the paragraph supplies one ellipsis.
