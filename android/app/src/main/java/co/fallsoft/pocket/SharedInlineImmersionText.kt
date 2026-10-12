@@ -283,6 +283,12 @@ import androidx.compose.ui.unit.*
                 }else false
             }
         }
+        // Inline placeholders reserve measured pixel heights. Their sp round
+        // trip can be one pixel taller than the nominal M line; do not crop
+        // native glyphs to a smaller independently measured line budget.
+        val reservedLineHeight=maxOf(nativeLineHeight,
+            placeholderRanges.maxOfOrNull{with(density){it.item.height.toPx()}}?:0f)
+        val finiteHeightBudget=kotlin.math.ceil(reservedLineHeight.toDouble()).toFloat()
         Text(paragraph,inlineContent=content,style=style,maxLines=maxLines,overflow=overflow,onTextLayout={layout->
             nativeLayout=layout
             val regions=slotKeys.mapIndexedNotNull{index,key->
@@ -294,7 +300,7 @@ import androidx.compose.ui.unit.*
             reportVisibility()
         },
             modifier=(if(fillWidth)Modifier.fillMaxWidth()else Modifier)
-                .then(if(maxLines<Int.MAX_VALUE)Modifier.heightIn(max=with(density){(nativeLineHeight*maxLines).toDp()})else Modifier)
+                .then(if(maxLines<Int.MAX_VALUE)Modifier.heightIn(max=with(density){(finiteHeightBudget*maxLines).toDp()})else Modifier)
                 .onGloballyPositioned{coordinates=it;reportVisibility()}
                 .semantics{customActions=actions;if(projection!=null)text=visible})
     }

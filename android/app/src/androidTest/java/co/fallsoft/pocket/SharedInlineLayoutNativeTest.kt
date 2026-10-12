@@ -658,6 +658,7 @@ class SharedInlineLayoutNativeTest {
    i.runOnMainSync{
     assertNotNull(geometry);assertNotNull(parent)
     assertEquals("Unbounded control invented wrapped/truncated chunks",1,geometry!!.regions.size)
+    android.util.Log.i("ImmersionSearchGeometry","size=${parent!!.size} widthOverflow=${parent!!.didOverflowWidth} heightOverflow=${parent!!.didOverflowHeight} lines=${parent!!.lineCount} bottom=${parent!!.getLineBottom(0)} placeholders=${parent!!.placeholderRects}")
     assertFalse("Natural-width word was clipped",parent!!.hasVisualOverflow)
    }
   }
