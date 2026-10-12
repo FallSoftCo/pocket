@@ -24,10 +24,12 @@ installed-version references are not current handset verification. Phone SSH has
 Installed version and current interaction remain unverified; ordinary Termux
 access is not privileged Android package/foreground evidence.
 
-The update channel remains alpha86/code104. Alpha87-r04/code105 is signed and
-automatically qualified but intentionally unpublished after actual motion review
-exposed immersion reading-flow defects. Later prefix/punctuation fixes are
-qualification-app candidates; they are not a signed delivered release.
+The update channel now offers alpha87/code105, published from frozen r05 source
+c7dd493. Both authenticated signing variants and their checksums were verified.
+One deduplicated announcement was accepted. Handset notification arrival,
+installation and physical interaction remain unverified; ADB is currently
+unavailable while Termux SSH works. See
+[delivery evidence](qualification/alpha87-delivery-20261012.json).
 
 The current source includes durable send identity restoration, transcript
 freshness/cache authority repairs and explicit catalog startup Loading/Ready/Failed.
@@ -35,27 +37,37 @@ The live narrow backend restores provider user-message identity across history
 reconstruction. These are scoped implementations, not proof that every handset
 chronology/freshness issue is resolved.
 
-The critical switching race now uses real Back and card taps while the old
-history response is blocked. Native evidence verifies selected-thread updates,
-no old-response contamination, retained drafts and reply API target; it does not
-exercise the send button or a real provider. See
+The switching race uses real Back and card taps while the old history response
+is blocked, then opens the keyboard and submits via Enter. Native evidence
+verifies selected-thread updates, no old-response contamination, retained drafts
+and reply transport target. Provider echo/history/restart is still a separate
+missing complete journey. See
 [the journey receipt](qualification/switch-card-journey-20261012.json).
 
-[Testing strategy](TESTING-STRATEGY.md) now governs future additions: classify real
+[Testing strategy](TESTING-STRATEGY.md) governs future additions: classify real
 and substituted boundaries, extend meaningful journeys, preserve setup evidence,
 and keep visual/performance/deployment acceptance separate from test totals.
-Current native runner explicitly preflights notification permission and reuses
-only exact installed APK hashes. Whole-run qualification of that revised runner
-remains pending; the identity reuse branch has read-only emulator evidence.
+The revised native runner completed the required r05 policy with notification
+permission preflight and exact installed-APK reuse. Grouped runner consolidation
+and real app-to-backend integration remain unfinished.
+
+Actual motion review led to clause-boundary reservation and prefix/punctuation
+repairs. Closely sampled transition frames were reviewed, with no full-sentence
+blank observed in the inspected interval. This is not evidence of human reading
+comprehension or physical frame pacing. The optimized candidate also passed
+enabled-immersion menu opening without process death; the intrinsic-layout crash
+repair is verified on the emulator, not attributed to a physical crash report.
 
 Next acceptance gaps:
-- Immersion still has conspicuous longer-form reservation gaps; temporal
-  legibility needs full transition inspection, not only sampled contact sheets.
+- Complete user-control send/echo/history/restart across app, real backend and
+  storage, retaining deterministic provider substitution.
 - Obtain exact installed-phone version and reproduce freshness/order reports.
-- Exercise complete send/echo/history/restart and voice stop/transcribe/send
-  journeys through user controls, not state/API shortcuts.
-- Qualify the final optimized artifact and compatible update after repair;
-  do not publish the held r04 candidate.
+- Exercise voice stop/transcribe/send end to end; qualify actual phone keys,
+  IME, playback and provider boundaries separately.
+- Measure history paging and immersion motion under representative activity;
+  pixel-anchor assertions alone do not establish comfortable scrolling/reading.
+- Keep documentation and deployment receipts current without rebuilding an
+  unchanged artifact solely for documentation updates.
 
 ## Verified progress
 
