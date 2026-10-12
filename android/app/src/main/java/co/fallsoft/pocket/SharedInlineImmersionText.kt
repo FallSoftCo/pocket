@@ -101,10 +101,17 @@ import androidx.compose.ui.unit.*
                 val chunks=run.forms.map{form->immersionAnnotatedChunks(form,slotLimit,firstWidth){value->
                     measurer.measure(immersionDrawText(value),style=style,softWrap=false).size.width
                 }}
-                repeat(chunks.maxOf{it.size}){part->
+                val partCount=chunks.maxOf{it.size}
+                // A wrapped clause ends at the line edge in every rendition.
+                // Put unavoidable reservation at a natural reading boundary,
+                // rather than leaving a large hole before the following clause.
+                val clauseBoundary=partCount>1&&run.forms.all{it.text.trimEnd().lastOrNull()?.let{last->last in ",;:.!?…"}==true}&&
+                    runs.getOrNull(index+1)?.let{it.id==null&&it.forms.any{form->form.text.isNotBlank()}}==true
+                repeat(partCount){part->
                     val forms=chunks.map{it.getOrElse(part){AnnotatedString("")}}
                     val natural=forms.map{measurer.measure(immersionDrawText(it),style=style,softWrap=false)}
-                    val width=natural.maxOf{it.size.width}.coerceAtLeast(1).coerceAtMost(slotLimit)
+                    val width=if(clauseBoundary&&part==partCount-1)slotLimit
+                        else natural.maxOf{it.size.width}.coerceAtLeast(1).coerceAtMost(slotLimit)
                     // Native paragraph shaping handles an oversized token. Reserve
                     // its full wrapped height in every form instead of clipping
                     // a one-line child or splitting Unicode graphemes ourselves.

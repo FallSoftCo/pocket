@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "state": "prototype-native-pass-visual-review-pending",
+  "change": "Wrapped punctuated changing phrases reserve their final line to the edge so the following common clause begins on a stable new line. No text insertion, stretched word spacing or per-cycle slot resizing.",
+  "nativeEvidence": {
+    "caseClass": "SharedInlineLayoutNativeTest",
+    "seconds": 43.919,
+    "log": "/tmp/nextcomp-clause-reserve-native.log",
+    "sha256": "ba7fec0b3b3bb2340768340bab65c37e04e19185626b183e14ced0810c5d51ae"
+  },
+  "limits": [
+    "Native component mechanics do not prove reading comfort",
+    "Actual conversation recording/review pending",
+    "Not optimized signed release or handset deployment"
+  ],
+  "publication": "held"
+}
