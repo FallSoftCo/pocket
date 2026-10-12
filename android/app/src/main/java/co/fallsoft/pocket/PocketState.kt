@@ -192,8 +192,16 @@ object Pocket {
         prefs.edit().putString(key("usageSamples"),JSONArray().apply{usageSamples.forEach{put(JSONObject().put("at",it.at).put("remaining",it.remaining).put("reset",it.reset))}}.toString()).apply()
         val edit=prefs.edit();if(json==null)edit.remove(key("weeklyUsage"))else edit.putString(key("weeklyUsage"),json.toString());edit.apply()
     }
-    fun refresh(){if(backgroundRefreshJob?.isActive==true)return;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launchEnvironment{
-        try{
+    private var statusRefreshJob:Job?=null
+    private var statusRefreshOwner:EnvironmentRequest?=null
+    /** A slow catalog/activity request cannot block the selected conversation's cheap status probe. */
+    private fun refreshStatus(){
+        val destination=captureEnvironment()?:return
+        if(statusRefreshJob?.isActive==true&&statusRefreshOwner?.matches(destination)==true)return
+        statusRefreshJob?.cancel();statusRefreshOwner=destination
+        val profileLocal=local;val profileToken=token
+        statusRefreshJob=scope.launchEnvironment{
+            try{
             val revision=statusRevision
             val freshnessThread=selected?.takeIf{PocketVoice.foreground&&!PocketCoordinator.visible&&!BackendNavigation.teamSelected()&&!newTask}
             val freshnessBaseline=PocketTranscript.freshnessBaseline()
@@ -203,6 +211,11 @@ object Pocket {
             val deviceChanged=prefs.getString(key("deviceId"),"")!=r.s("deviceId")
             prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply();if(deviceChanged){PocketImmersion.restore();PocketSpeechCaptions.init()}
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
+            }catch(e:CancellationException){throw e}catch(e:Exception){if(environmentRequestCurrent())refreshError=PocketNetwork.error(e)}
+        }
+    }
+    fun refresh(){refreshStatus();if(backgroundRefreshJob?.isActive==true)return;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launchEnvironment{
+        try{
             val taskBaseline=tasks.associateBy{it.id}
             val taskResult=api(if(profileArchived)"/api/threads?archived=true" else "/api/threads")
             if(local!=profileLocal||token!=profileToken||showArchived!=profileArchived)return@launchEnvironment
