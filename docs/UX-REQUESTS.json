@@ -2304,10 +2304,10 @@
     },
     {
       "id": "short-history-thumb-pull-20261012",
-      "status": "published-phone-transfer-pending",
+      "status": "delivered-native-qualified",
       "requirement": "A short recent history page must allow a pull toward older work without a button; opposite gesture must not load history; require another gesture for each further short page",
       "qualification": "docs/qualification/short-history-pull-20261012.json",
-      "release": "alpha75/code93; signed tests/lints passed; published private update; installed74 remains until verified delivery"
+      "release": "alpha75/code93 installed; package/checksum and13 protected settings verified; emulator gestures qualified; handset gestures not yet verified"
     }
   ],
   "current_state": {

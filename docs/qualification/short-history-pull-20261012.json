@@ -4,7 +4,7 @@
   "directionControl": "native failure9.211s; initial fix fetched a page when swiping toward latest",
   "fixedNative": "pass12.654s; latest-direction zero old reads, older-direction one page, recent text/draft retained, zero submitted work",
   "pacingNative": "pass15.137s; idle edge does not drain pages; another accessibility gesture loads exactly one more page",
-  "phone": "alpha74/code92 unchanged; candidate not delivered",
+  "phone": "alpha75/code93 installed; independently package and APK checksum verified;13 protected setting hashes unchanged",
   "host": "OZZZ-OS disposable emulator5620",
   "checks": {
     "Debug": {
@@ -23,7 +23,7 @@
     "signedChecks": "305 tests per variant and both lints passed; two signer variants below80MiB",
     "backendSourceSuite": "473 tests passed",
     "updater": "published; both APK checksums verified",
-    "phone": "copy in progress; guarded install defers active NextComp, typing and audio; last installed74/92",
-    "physicalFlow": "not yet verified"
+    "phone": "alpha75/code93 installed; independently package and APK checksum verified;13 protected setting hashes unchanged",
+    "physicalFlow": "handset interaction not directly qualified; emulator pointer/accessibility gestures verified"
   }
 }
