@@ -71,7 +71,7 @@ import androidx.compose.ui.unit.*
                     val lines=(maxOf(outgoingLayout.lineCount,incomingLayout.lineCount)-firstChangedLine).coerceAtLeast(1)
                     fun layer(result:TextLayoutResult,incomingLayer:Boolean){
                         val canvas=drawContext.canvas
-                        canvas.saveLayer(Rect(0f,0f,size.width,size.height),Paint())
+                        canvas.saveLayer(Rect(0f,0f,size.width,size.height),Paint().apply{blendMode=if(incomingLayer)BlendMode.Plus else BlendMode.SrcOver})
                         drawText(result)
                         for(line in 0 until result.lineCount){
                             val phase=if(line<firstChangedLine)0f else immersionWipeLineProgress(p,line-firstChangedLine,lines)
@@ -85,7 +85,14 @@ import androidx.compose.ui.unit.*
                         }
                         canvas.restore()
                     }
+                    // Complementary coverage must add inside transparent isolation.
+                    // Source-over would multiply the masks, dimming shared glyphs
+                    // to 75% at their midpoint. Isolation prevents Plus from
+                    // adding incoming ink to the actual screen background.
+                    val canvas=drawContext.canvas
+                    canvas.saveLayer(Rect(0f,0f,size.width,size.height),Paint())
                     layer(outgoingLayout,false);layer(incomingLayout,true)
+                    canvas.restore()
                 })
         }
     }

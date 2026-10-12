@@ -2344,6 +2344,15 @@
         "docs/TRANSCRIPT-INVARIANTS.md",
         "docs/qualification/reading-identity-20261012.json"
       ]
+    },
+    {
+      "id": "immersion-complementary-ink-20261012",
+      "request": "Cascading immersion fades must retain readable ink and avoid a dip toward black or background-dependent brightening.",
+      "status": "alpha84-published-native-pixel-qualified-phone-unverified",
+      "evidence": [
+        "docs/IMMERSION-RENDERING.md",
+        "docs/qualification/immersion-ink-20261012.json"
+      ]
     }
   ],
   "current_state": {
