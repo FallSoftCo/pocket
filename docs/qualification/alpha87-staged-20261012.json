@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "state": "signed-native-qualified-not-published",
+  "date": "2026-10-12",
+  "artifactSourceCommit": "92a1bcc",
+  "versionCode": 105,
+  "versionName": "0.5.0-alpha.87",
+  "productionSourceSha": "c2c4e6e425245fccd0c2f88e3c9a6273792c8dd296da49a4445b7006ad7aeef6",
+  "qualificationInputSha": "9563861d27cfa2ff5188942af6328a2016445cf12634ce0c960ef3edf2be36ed",
+  "unit": {
+    "debug": {
+      "tests": 354,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "release": {
+      "tests": 354,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "backendTests": {
+    "passed": 489,
+    "failed": 0
+  },
+  "lint": {
+    "debug": "pass",
+    "release": "pass"
+  },
+  "dependencyAuditVulnerabilities": 0,
+  "publicSourceCheckedFiles": 1018,
+  "requiredNativeCases": [
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#transientHistoryFailureRecoversWithoutAnotherEvent",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#growingResponseKeepsItsNewestPassageVisible",
+    "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#echoedUnknownSendHasOneBodyAndRetainsRecoveryControls",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#inlinePlaybackVolumePreservesMuteAndTypingDuringCapture",
+    "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#providerMetadataLossDoesNotDuplicateUnknownSend",
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#freshHistoryPaintsBeforeSlowCacheAndLateRestoreRetainsLocalHistory",
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#readingGestureOwnsItsPassageWhenTheLateCacheArrives",
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#switchingDuringSlowCacheCannotRestoreTheOldConversation",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#inlineReplacementKeepsUnchangedWordAtOneNativePosition",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#largeTextReplacementKeepsUnchangedWordAtOneNativePosition",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#replacementRetainsNativeInlineLinkAction",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#oversizedReplacementUsesFullNativeWrappedText",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#accessibilityExposesOneCoherentVisibleSentence",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#intermediateWipePreservesCommonInkAndActuallyChangesPhraseInk",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#laterPhraseCycleCannotReflowAlreadyReservedSurroundingText",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#productionReservedTextRetainsVisibilityAndFreshInlineCallbacks",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#singleLineTruncationRetainsVisibleTextAndExcludesHiddenCue",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#visibleOutgoingWrappedWordStillRespondsDuringWipe",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#reservedBlankSpaceDoesNotCaptureAnInlineAction",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#selectionCopiesOneVisibleParagraphWithoutDuplicatedPhrase",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#selectionCopiesTheTouchedWord",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#originalSelectionDoesNotCopyReservedSlotMarkers",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#originalZeroWidthCharacterSurvivesProjectionCleanup"
+  ],
+  "nativeCasesPassed": 26,
+  "variants": [
+    {
+      "size": 52071079,
+      "sha256": "d0ffa951e507ccd1e0ae48fd580dfaa53b83e946a0d221046e4869efff4db035",
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf"
+    },
+    {
+      "size": 61899764,
+      "sha256": "dbfcdda1dcf0e29f6ac24711b1c3972b2772562981e3561dfc448930c0ca0b79",
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"
+    }
+  ],
+  "releaseGate": "pass",
+  "remaining": [
+    "Actual full motion sequence inspection and gallery review",
+    "Production shrinker runtime interaction review",
+    "Publication to update channel",
+    "Physical phone install and real-device interaction"
+  ],
+  "limits": [
+    "Signed build, qualification APK installation and native test evidence are distinct from installation on the user phone.",
+    "Update channel remains alpha86/code104.",
+    "Other broader world-class UX requirements remain active."
+  ]
+}

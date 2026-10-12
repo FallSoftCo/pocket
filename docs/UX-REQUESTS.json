@@ -2402,8 +2402,8 @@
     {
       "id": "alpha87-expanded-release-qualification",
       "request": "Deliver verified cache/identity and shared-immersion changes through a compatible signed update. Require all 26 new/existing critical native cases against one exact staged APK; preserve source, pairing and ongoing work.",
-      "status": "source-staged-build-and-expanded-qualification-pending",
-      "evidence": "scripts/release-policy.json"
+      "status": "signed-native-qualified-motion-review-and-delivery-pending",
+      "evidence": "docs/qualification/alpha87-staged-20261012.json"
     }
   ],
   "current_state": {
