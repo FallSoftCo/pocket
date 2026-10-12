@@ -1,9 +1,9 @@
 {
-  "state": "qualified-private-updater-published-phone-staging",
+  "state": "installed-owner-phone",
   "runtimeSource": "a6a4a88",
   "nativeTestSource": "a471ef4",
   "candidateVersionCode": 90,
-  "installedPhoneVersionCode": 89,
+  "installedPhoneVersionCode": 90,
   "control": {
     "source": "b552844",
     "failedSeconds": 25.206,
@@ -39,5 +39,12 @@
       "sha256": "fb31b08fce76cf28a6f18df1b67908aebbd89cec53a92b25d75f555de25a95d0",
       "size": 61752308
     }
-  ]
+  ],
+  "delivery": {
+    "privateUpdaterBothSignersVerified": true,
+    "installedBaseApkDigestVerified": true,
+    "protectedPreferenceHashesUnchanged": 13,
+    "changedProtectedPreferences": 0,
+    "physicalQuietReconnectInteractionVerified": false
+  }
 }

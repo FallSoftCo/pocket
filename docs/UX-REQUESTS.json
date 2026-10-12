@@ -16,9 +16,9 @@
     {
       "id": "quiet-authenticated-reconnect-state-20261011",
       "request": "Live connection state must reflect authenticated reconnect even when no application event arrives. Genuine prolonged outages remain visible; reconnect must restore current selected history and preserve drafts without starting or resending work.",
-      "status": "qualified-private-updater-published-phone-staging",
+      "status": "delivered-alpha72-code90",
       "source": "a6a4a88",
-      "evidence": "Native control failed25.206s; corrected quiet reconnect/genuine outage/recovery passed37.542s with draft preserved and no replies.295 Android tests in each variant,both lints/signed builds pass. Private updater90 published; physical installation pending."
+      "evidence": "Control failed25.206s; corrected native quiet reconnect/genuine outage/recovery passed37.542s with draft intact and zero replies.295 Android tests per variant,both lints/signed builds pass. Private updater90 verified for both signers; actual phone90/base APK digest verified and13 pairing/environment/draft hashes unchanged. Physical quiet-reconnect interaction remains unqualified."
     },
     {
       "id": "missed-notification-transcript-freshness-20261011",
