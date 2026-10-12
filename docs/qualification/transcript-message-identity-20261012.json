@@ -1,0 +1,32 @@
+{
+  "status": "qualified-private-updater-published-phone-unreachable",
+  "cause": "Actual installed alpha75 disk cache retained three user rows sharing turnId and clientId but provider IDs UUID/item-1/item-183. Merge previously keyed provider row IDs. No text equality dedup or resend performed. Read-only live backend confirms one matching user row and one accepted receipt for the inspected send.",
+  "architecture": {
+    "identity": "User rows with explicit clientId use turn/client-user/clientId within existing environment+account+thread cache scope. Other rows retain provider ID.",
+    "boundaries": [
+      "live row application",
+      "recent/older/bridge history snapshots",
+      "legacy disk cache loading"
+    ],
+    "anchors": "Keep provider item IDs; translate provider pagination/position/bookmark anchors to display identities. Retain bounded historical provider aliases when migrating duplicate cache rows.",
+    "delivery": "Outgoing UUID/receipt state and unknown-delivery reconciliation unchanged; repair only reads/presentation."
+  },
+  "tests": {
+    "nativeInitial": "providerReconstructionReconcilesLiveHistoryAndLegacyCache passed 11.941 seconds; legacy duplicate cache plus historical reconstruction plus new live provider ID, distinct identical-text sends, navigation and retained draft; zero reply posts.",
+    "finalSource": {
+      "debugUnitTests": 308,
+      "releaseUnitTests": 308,
+      "debugReleaseLint": "pass",
+      "signedBuilds": "pass",
+      "nativeFinal": "8.051 seconds pass including two visible same-text messages after reconstruction and live update; zero reply posts",
+      "publicSourceScanner": "976 tracked files pass"
+    }
+  },
+  "phone": {
+    "installedBefore": "alpha75 / code93",
+    "candidate": "alpha76 / code94",
+    "privateUpdater": "published; both existing signer variants verified under80MiB",
+    "install": "not performed; ADB feature-set failed device offline before transfer, helper could not reconnect, SSH8022 timeout",
+    "settings": "not modified"
+  }
+}

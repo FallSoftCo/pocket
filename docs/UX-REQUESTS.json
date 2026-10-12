@@ -2308,6 +2308,12 @@
       "requirement": "A short recent history page must allow a pull toward older work without a button; opposite gesture must not load history; require another gesture for each further short page",
       "qualification": "docs/qualification/short-history-pull-20261012.json",
       "release": "alpha75/code93 installed; package/checksum and13 protected settings verified; emulator gestures qualified; handset gestures not yet verified"
+    },
+    {
+      "id": "transcript-message-identity-20261012",
+      "request": "Sent messages must appear once across live/history/cache reconstruction. Use stable scoped message identities, retain ordering/pagination anchors and intentional identical sends.",
+      "status": "qualified-update-published-phone-unreachable",
+      "evidence": "docs/qualification/transcript-message-identity-20261012.json"
     }
   ],
   "current_state": {

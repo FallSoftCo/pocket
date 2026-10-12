@@ -32,6 +32,28 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun providerReconstructionReconcilesLiveHistoryAndLegacyCache(){
+  twoChats();qa("message-identity")
+  val scope=PocketTranscript.scopeKey()
+  val old=org.json.JSONArray()
+  listOf("uuid","item-1").forEach{item->old.put(JSONObject().put("id","identity/"+item).put("itemId",item).put("turnId","identity").put("clientId","send-one").put("kind","user").put("text","Same deliberate text"))}
+  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+  assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  fun users()=PocketTranscript.rows.filter{it.s("kind")=="user"}
+  assertEquals("Two distinct sends with identical text must survive",2,users().size)
+  assertEquals(setOf("send-one","send-two"),users().map{it.s("clientId")}.toSet())
+  await{device.findObjects(By.text("Same deliberate text")).size==2}
+  val firstId=users().first().s("id")
+  main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","identity").put("row",JSONObject().put("id","identity/new-live-id").put("itemId","new-live-id").put("turnId","identity").put("clientId","send-one").put("kind","user").put("text","Same deliberate text").put("version",1000)))}
+  assertEquals(2,users().size);assertEquals(firstId,users().first().s("id"))
+  await{device.findObjects(By.text("Same deliberate text")).size==2}
+  main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}}
+  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  assertEquals(2,users().size)
+  assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals("Identity reconciliation must never submit work",0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun legacyCachedGapIsRepairedWithoutLoadingEarlierManually(){
   twoChats();qa("same-turn-gap");qa("head-only-update")
   val scope=PocketTranscript.scopeKey()

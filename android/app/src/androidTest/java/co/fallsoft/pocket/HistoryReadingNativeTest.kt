@@ -42,6 +42,8 @@ class HistoryReadingNativeTest {
   assertEquals("A swipe toward latest unexpectedly fetched older history",0,qa("state").getJSONArray("reads").objects().count{it.optBoolean("older")})
   assertTrue(device.swipe(device.displayWidth/2,device.displayHeight/4,device.displayWidth/2,device.displayHeight/2,35))
   await("A thumb pull on a short page did not load older history"){PocketTranscript.rows.any{it.s("id")=="older-message"}&&!PocketTranscript.loading}
+  assertTrue("Loaded older text stayed outside the viewport",device.wait(Until.hasObject(By.text("Older synthetic history")),3000))
+  assertTrue("Short-page reveal hid the retained recent reply",device.hasObject(By.text("Fresh response 1")))
   assertTrue(PocketTranscript.rows.any{it.s("text")=="Fresh response 1"})
   assertEquals(1,qa("state").getJSONArray("reads").objects().count{it.optBoolean("older")})
   assertEquals("Short history draft",c.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))

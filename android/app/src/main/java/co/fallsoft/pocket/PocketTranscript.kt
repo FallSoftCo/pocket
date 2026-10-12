@@ -71,9 +71,9 @@ object PocketTranscript {
         val value=disk.read(scope,id)?.let{JSONObject(it)}?:return@withContext null
         if(value.optInt("schema")!=1||value.s("scope")!=scope||value.s("id")!=id)return@withContext null
         val detail=value.getJSONObject("detail");if(detail.optJSONObject("thread")?.s("id")!=id)return@withContext null
-        val cachedRows=value.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map{it.put("version",0L)};if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
-        val position=value.optJSONObject("position")?.let{TranscriptReadPosition(it.s("row"),it.optInt("offset"),it.optBoolean("follow"))}
-        Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position,value.optJSONArray("bridgeKnown")?.let{array->(0 until array.length()).map{array.optString(it)}.filter{it.isNotBlank()}.take(1024).toSet()}.orEmpty(),value.s("bridgeBoundary").takeIf{it.isNotBlank()},value.optBoolean("coverageVerified"))
+        val cachedRows=normalizeTranscriptMessages(value.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map{it.put("version",0L)});if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
+        val position=value.optJSONObject("position")?.let{TranscriptReadPosition(transcriptDisplayAnchor(cachedRows,it.s("row"))?:it.s("row"),it.optInt("offset"),it.optBoolean("follow"))}
+        Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position,value.optJSONArray("bridgeKnown")?.let{array->(0 until array.length()).map{array.optString(it)}.filter{it.isNotBlank()}.map{transcriptDisplayAnchor(cachedRows,it)?:it}.take(1024).toSet()}.orEmpty(),transcriptDisplayAnchor(cachedRows,value.s("bridgeBoundary").takeIf{it.isNotBlank()}),value.optBoolean("coverageVerified"))
     }catch(_:Exception){null}}
     private fun rememberRecent(persist:Boolean=false){
         val id=owner?:return;val scope=ownerScope?:return
@@ -164,7 +164,7 @@ object PocketTranscript {
                             cursor?.let{body.put("cursor",it)}
                             val result=Pocket.apiEnvironment(destination,"/api/threads/$id/timeline/position",body)
                             if(!current())return@launch
-                            val successor=result.s("insertBefore")
+                            val successor=transcriptDisplayAnchor(rows,result.s("insertBefore")).orEmpty()
                             if(successor.isNotBlank()){
                                 if(successor.startsWith("${request.turn}/")){
                                     val repaired=placeTranscriptRowBefore(rows,request.target,successor){it.s("id")}
@@ -218,7 +218,7 @@ object PocketTranscript {
             validateTranscriptSnapshot(d,id)
             if(older)beforeApply()
             if(!current())return
-            val page=d.optJSONObject("timeline")?:JSONObject();val incoming=page.optJSONArray("rows")?.objects()?:emptyList()
+            val page=d.optJSONObject("timeline")?:JSONObject();val incoming=normalizeTranscriptMessages(page.optJSONArray("rows")?.objects()?:emptyList())
             incoming.forEach{it.put("version",maxOf(it.optLong("version"),d.optLong("revision")))}
             if(!older&&bridgeCursor==null)rows=authoritativeSnapshotBase(rows,baselineRows,incoming.mapTo(hashSetOf()){it.s("id")},{it.s("id")}){JSONObject(it.toString()).put("version",0)}
             val wasLoaded=historyLoaded&&rows.isNotEmpty()
@@ -230,7 +230,7 @@ object PocketTranscript {
             val nextBefore=page.s("before").takeIf{it.isNotBlank()}
             if(bridgeCursor!=null){
                 if(!overlaps&&page.optBoolean("hasEarlier")&&(nextBefore==null||nextBefore==cursor))throw IllegalStateException("History page did not advance; cached messages are retained.")
-                rows=mergeTranscriptPage(rows,incoming,false,{it.s("id")},{it.optLong("version")},insertBefore=page.s("insertBefore").takeIf{it.isNotBlank()}?:bridgeBoundary,keepPosition={it.s("kind")=="turn"})
+                rows=mergeTranscriptPage(rows,incoming,false,{it.s("id")},{it.optLong("version")},insertBefore=transcriptDisplayAnchor(rows,page.s("insertBefore").takeIf{it.isNotBlank()})?:bridgeBoundary,keepPosition={it.s("kind")=="turn"})
                 bridgeBefore=if(!overlaps&&page.optBoolean("hasEarlier")&&nextBefore!=cursor)nextBefore else null
                 if(bridgeBefore==null){bridgeKnown=emptySet();bridgeBoundary=null;coverageVerified=true}else incomingContent.firstOrNull()?.let{bridgeBoundary=it.s("id")}
             }else{
@@ -244,7 +244,7 @@ object PocketTranscript {
                     }else if(bridgeBefore==null)coverageVerified=true
                 }
                 val mergeRows=if(!older&&wasLoaded&&!overlaps)incoming.filterNot{it.s("kind")=="turn"&&rows.any{old->old.s("id")==it.s("id")}}else incoming
-                rows=mergeTranscriptPage(rows,mergeRows,older,{it.s("id")},{it.optLong("version")},insertBefore=if(older)page.s("insertBefore").takeIf{it.isNotBlank()}else null,keepPosition={it.s("kind")=="turn"})
+                rows=mergeTranscriptPage(rows,mergeRows,older,{it.s("id")},{it.optLong("version")},insertBefore=if(older)transcriptDisplayAnchor(rows,page.s("insertBefore").takeIf{it.isNotBlank()})else null,keepPosition={it.s("kind")=="turn"})
             }
             // A recent refresh must not move the oldest loaded cursor forward.
             retainedTranscriptCursor(TranscriptCursor(before,earlier),wasLoaded,older,bridgeCursor!=null,TranscriptCursor(nextBefore,page.optBoolean("hasEarlier"))).let{
@@ -325,7 +325,7 @@ object PocketTranscript {
             }
         }
         if(next.none{it.s("turnId")==turnId})next.add(JSONObject().put("id","$turnId/header").put("turnId",turnId).put("kind","turn").put("status","inProgress"))
-        update.optJSONObject("row")?.let{put(it)}
+        update.optJSONObject("row")?.let{put(normalizeTranscriptMessage(it))}
         update.optJSONObject("turn")?.let{turn->
             put(JSONObject(turn.toString()).put("id","$turnId/header").put("turnId",turnId).put("kind","turn").put("version",update.optLong("version")))
             val active=turn.s("status")=="inProgress"
