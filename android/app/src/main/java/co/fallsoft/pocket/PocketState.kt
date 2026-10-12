@@ -195,7 +195,10 @@ object Pocket {
     fun refresh(){if(backgroundRefreshJob?.isActive==true)return;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launchEnvironment{
         try{
             val revision=statusRevision
-            val r=api("/api/status");if(local!=profileLocal||token!=profileToken)return@launchEnvironment
+            val freshnessThread=selected?.takeIf{PocketVoice.foreground&&!PocketCoordinator.visible&&!BackendNavigation.teamSelected()&&!newTask}
+            val freshnessBaseline=PocketTranscript.freshnessBaseline()
+            val r=api("/api/status"+(freshnessThread?.let{"?threadId="+android.net.Uri.encode(it)}?:""));if(!environmentRequestCurrent()||local!=profileLocal||token!=profileToken)return@launchEnvironment
+            freshnessThread?.let{PocketTranscript.checkFreshness(it,r.optJSONObject("historyHead"),freshnessBaseline)}
             acceptUsage(r.optJSONObject("usage"));if(statusRevision==revision){codexOnline=r.optBoolean("connected");codexConnectionMessage=ConnectionMessages.server(r.optJSONObject("problem")?.s("message")?:"")};host=r.s("host");defaultCwd=r.s("defaultCwd")
             val deviceChanged=prefs.getString(key("deviceId"),"")!=r.s("deviceId")
             prefs.edit().putString(key("deviceId"),r.s("deviceId")).apply();if(deviceChanged){PocketImmersion.restore();PocketSpeechCaptions.init()}

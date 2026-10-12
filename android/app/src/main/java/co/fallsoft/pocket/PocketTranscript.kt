@@ -81,6 +81,23 @@ object PocketTranscript {
         if(owner==id&&ownerScope==scope){if(readPosition!=position){readPosition=position;rememberRecent(persist=true)};return}
         recent.get(scope,id,now)?.takeIf{it.position!=position}?.let{val snapshot=it.copy(position=position);recent.put(scope,id,snapshot,now);persist(scope,id,snapshot)}
     }
+    private var observedHead:TranscriptHead?=null
+    internal fun freshnessBaseline()=observedHead
+    private fun parseHead(value:JSONObject?,id:String):TranscriptHead? {
+        if(value==null||value.s("threadId")!=id)return null
+        val epoch=value.s("epoch");if(epoch.isBlank()||epoch.length>100)return null
+        val raw=value.opt("version")
+        val version=if(raw==null||raw===JSONObject.NULL)null else {
+            if(raw !is Number)return null
+            val v=raw.toLong();if(v<0||raw.toDouble()!=v.toDouble())return null;v
+        }
+        return TranscriptHead(epoch,version)
+    }
+    internal fun checkFreshness(id:String,value:JSONObject?,baseline:TranscriptHead?){
+        if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey())return
+        val head=parseHead(value,id)?:return
+        if(transcriptHeadAdvanced(observedHead,baseline,head))Pocket.scheduleRefresh()
+    }
     private var owner:String?=null
     private var historyLoaded=false
     private var checkedThisOpen=false
@@ -95,13 +112,13 @@ object PocketTranscript {
     }
     fun reset(id:String){
         positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false
-        generation++;owner=id;ownerScope=scopeKey();automaticRetryAllowed=true
+        generation++;owner=id;ownerScope=scopeKey();observedHead=null;automaticRetryAllowed=true
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
         earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;observedHead=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
     /** Called only by the resumed, unfiltered viewport after settling at latest. */
     internal fun presentedLatest(){
         val id=Pocket.selected?:return
@@ -174,6 +191,7 @@ object PocketTranscript {
         if(owner!=id||(older&&(!earlier||before==null)))return
         if(loading){if(!older&&bridgeCursor==null){missedUpdates=true;refreshPending=true};return}
         if((older||bridgeCursor!=null)&&refreshPending)return
+        val headBaseline=observedHead
         val ticket=generation;val scope=scopeKey();val profileLocal=Pocket.local;val destination=Pocket.captureEnvironment()?:return
         fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
         val cursor=bridgeCursor?:if(older)before else null
@@ -216,7 +234,7 @@ object PocketTranscript {
                 val pendingIds=d.optJSONArray("pending")?.objects()?.map{it.s("id")}.orEmpty().toSet()
                 rows=rows.filter{it.s("kind")!="request"||it.optJSONObject("request")?.s("id") in pendingIds}
             }
-            if(!older&&bridgeCursor==null)freshForRead=true
+            if(!older&&bridgeCursor==null){freshForRead=true;parseHead(d.optJSONObject("historyHead"),id)?.let{observedHead=snapshotTranscriptHead(observedHead,headBaseline,it)}}
             val updates=buffered.values.toList();buffered.clear()
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             rememberRecent(persist=true);revision++;Pocket.error=positionFailures.values.firstOrNull().orEmpty();succeeded=true;trace()
@@ -254,6 +272,11 @@ object PocketTranscript {
     }
     fun apply(update:JSONObject,buffer:Boolean=true){
         if(update.s("threadId")!=Pocket.selected||owner!=Pocket.selected||ownerScope!=scopeKey())return
+        parseHead(update.optJSONObject("historyHead"),owner!!)?.let{head->
+            val changedRuntime=observedHead?.epoch?.let{it!=head.epoch}?:historyLoaded
+            observedHead=observeTranscriptHead(observedHead,head)
+            if(changedRuntime)Pocket.scheduleRefresh()
+        }
         if(update.optBoolean("reload")){if(loading)missedUpdates=true else Pocket.scheduleRefresh();return}
         if(loading&&buffer){
             val key=update.optJSONObject("row")?.s("id")?:update.s("turnId")

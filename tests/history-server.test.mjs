@@ -37,6 +37,20 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
  const api=async path=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{headers:{Authorization:`Bearer ${adminToken}`}});return {status:r.status,data:await r.json()};};
  const recent=await api('/api/threads/large-thread?view=timeline');assert.equal(recent.status,200);assert.equal(recent.data.timeline.rows[0].turnId,'turn-15');assert.ok(recent.data.timeline.hasEarlier);
  assert.equal(blockedRecovery.length,1,'recent HTTP response must finish while missed-history recovery is still blocked');
+ const historyCount=()=>calls.filter(c=>/^thread\/(read|resume|turns\/list|items\/list)$/.test(c.method)).length;
+ const beforeProbe=historyCount();const headStatus=await api('/api/status?threadId=large-thread');
+ assert.equal(headStatus.status,200);assert.deepEqual(headStatus.data.historyHead,recent.data.historyHead);
+ assert.equal(historyCount(),beforeProbe,'status head must not read or resume Codex history');
+ for(const ws of wss.clients)ws.send(JSON.stringify({method:'item/completed',params:{threadId:'large-thread',turnId:'turn-15',item:{id:'answer',type:'agentMessage',text:'Synthetic changed answer'}}}));
+ let changedHead;
+ for(let n=0;n<20;n++){changedHead=(await api('/api/status?threadId=large-thread')).data.historyHead;if(changedHead.version!==null)break;await new Promise(resolve=>setTimeout(resolve,10));}
+ assert.equal(changedHead.epoch,recent.data.historyHead.epoch);assert.ok(changedHead.version>0,'actual runtime event must advance selected history head');
+ assert.equal(historyCount(),beforeProbe,'event freshness probes must not read history or resume work');
+ assert.deepEqual((await api('/api/status?threadId=large-thread')).data.historyHead,changedHead,'unchanged status cannot invent another update');
+
+ assert.equal((await api('/api/status?threadId=invalid%20thread')).status,400);
+ const denied=await fetch(`http://127.0.0.1:${port}/api/status?threadId=large-thread`);assert.equal(denied.status,401);
+
  assert.equal(calls.filter(c=>c.method==='thread/items/list').length,1,'opening must read only the newest item batch');
  let page=recent.data.timeline;const seen=['turn-15'];
  while(page.hasEarlier){
