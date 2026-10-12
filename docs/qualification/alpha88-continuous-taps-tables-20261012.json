@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "release": "0.5.0-alpha.88",
+  "versionCode": 106,
+  "sourceCommit": "f9ad5d3186157b09812db171d7197234af6223f2",
+  "state": "authenticated-update-published-phone-installation-unverified",
+  "productionSourceSha": "a70932c97a7ca6891e5362bbd874d711e951c58f8762b9741d66653c3503c017",
+  "qualificationInputSha": "e9da21bc14abb091ce312eefdb3988e501f305a07205f9055ea9414f387a6a64",
+  "build": {
+    "state": "complete",
+    "tasks": [
+      "testDebugUnitTest",
+      "testReleaseUnitTest",
+      "lintDebug",
+      "lintRelease",
+      "assembleDebug",
+      "assembleRelease",
+      "assembleQualification",
+      "assembleQualificationAndroidTest"
+    ],
+    "unit": {
+      "debug": {
+        "tests": 362,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "release": {
+        "tests": 362,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  },
+  "native": {
+    "requiredCases": 35,
+    "completedCases": 35,
+    "target": "owned disposable nextcomp_env_qa emulator",
+    "naturalDisplayClockJourneyMs": 37320,
+    "tableJourneyMs": 8705
+  },
+  "optimizedRuntime": {
+    "state": "settings-navigation-passed",
+    "apkSha256": "3f454a8d4352f720bfaabe52cc241b0e1d163082f5f7832a84c2dcd4e8baae0b",
+    "earlierSignerAndForegroundFailuresPreserved": true
+  },
+  "motionReview": {
+    "state": "reviewed-incremental-candidate",
+    "sourceCommit": "f9ad5d3186157b09812db171d7197234af6223f2",
+    "captureSha256": "c215bbf134b932eeddbb2729762bb2a2d67ece84b3fbf233692cd01d4d511a73",
+    "reviewClipSha256": "f3e402f988fa635a769079d7da5a13abe2433913ef816df58ac46b2078361dc5",
+    "decodedCaptureFrames": 1359,
+    "captureDurationSeconds": 44.743078,
+    "continuousWaveDecodedFrames": 1010,
+    "continuousWaveFramesWithBrightInk": 1010,
+    "minimumPeakLuma": 237.0,
+    "observations": [
+      "Inspected whole-sequence one-second contact sheet and two successive three-per-second transition detail sheets.",
+      "Upper control changes before body below; endpoints remain at reserved native positions; common ink remains present.",
+      "Native selection/copy state visibly stable; source-grammar vocabulary scaffold retained."
+    ],
+    "limits": [
+      "Contact sheets and all-frame ink analysis do not establish human comprehension or physical handset frame pacing.",
+      "Reserved spacing and intermediate mixed glyph ink still require further aesthetic refinement.",
+      "Private raw capture includes owned-emulator background outside the fixture; gallery clip excludes that background."
+    ]
+  },
+  "delivery": {
+    "authenticatedChannelPublished": true,
+    "announcementIssued": true,
+    "lastObservedPhoneVersionCode": 104,
+    "phoneSSHReachable": true,
+    "phoneADBUnavailable": true,
+    "phoneInstallationVerified": false
+  },
+  "limits": [
+    "Incremental regression qualification, not whole-product completion.",
+    "Physical recording buttons, real-phone motion/frame pacing and provider audio require independent phone evidence.",
+    "Reserved spacing and intermediate mixed glyph ink need further visual refinement.",
+    "Experimental NativeImmersionParagraphView remains unused in production."
+  ]
+}
