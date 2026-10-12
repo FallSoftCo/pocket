@@ -2442,6 +2442,15 @@
       ],
       "evidence": "docs/qualification/target-grammar-scaffold-20261012.json",
       "implementation": "Unified authored target/support catalog and lexical-slot projection for controls/templates/conversation spans. Grammar words retained; no natural-English reordering. Native geometry/action/clipboard/wipe checks pass; signed release and handset delivery pending."
+    },
+    {
+      "id": "immersion-continuous-reading-order-wave",
+      "status": "policy-compiled-boundary-tested-runtime-integration-pending",
+      "request": "Equal local transition speed; continuously repeat staggered top-to-bottom reading-order waves with each language visible for a few seconds. Never compress later lines to finish together.",
+      "confirmedCause": "Fixed4200ms paragraph deadline scales local line speed by line count; controls separately use18s/6s language holds.",
+      "design": "docs/IMMERSION-CASCADE-DESIGN.md",
+      "delivery": "Held alpha88; no phone delivery of this correction.",
+      "evidence": "docs/qualification/immersion-reading-wave-policy-20261012.json"
     }
   ],
   "current_state": {

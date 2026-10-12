@@ -1,0 +1,21 @@
+{
+  "status": "policy-compiled-and-boundary-tested-runtime-not-integrated",
+  "date": "2026-10-12",
+  "source": "android/app/src/main/java/co/fallsoft/pocket/ImmersionReadingWave.kt",
+  "sourceSha256": "06b832bf3747a40ec3d4a1d5713fbe3e6f4bc8b34f9896442db390230e69ac56",
+  "checks": [
+    "bothLanguagesHoldLocallyAndWavesRepeatWithoutACompletionBarrier",
+    "clockIsSafeAtLongRunningAndNegativeEpochs",
+    "complementaryInkNeverHasABlackGapAndKeepsOneHorizontalFrontier",
+    "laterRowsStartAndFinishLaterWithoutAccelerating"
+  ],
+  "buildHost": "ozzz-aosp",
+  "buildLog": "/tmp/nextcomp-reading-wave-policy-r01.log",
+  "limits": [
+    "No production call sites yet",
+    "No emulator visual qualification of the new wave",
+    "No phone install",
+    "Body phrase queue and control clock still require unified viewport integration"
+  ],
+  "next": "Wire one viewport clock into body and controls with per-fragment visible semantics, hit-testing and selection matching the displayed language; freeze/resume correctly under interaction."
+}
