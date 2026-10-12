@@ -1,3 +1,7 @@
+import {SendIdentity} from '../../server/send-identity.mjs';
+import {DatabaseSync} from 'node:sqlite';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {LiveTimeline,timelinePage} from '../../server/timeline.mjs';
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
 const voiceReceiptReads=[];const replyReceipts=new Map(),receiptReads=[],recoveries=[];let replyAckState="accepted";let badReply=false,holdReceipt=false,wrongReceiptThread=false;let failedReadsRemaining=0;let malformedRead=false;let failReply=false,holdReply=false;let quietReading=false;let visibility=false;const acknowledgements=[],ackAttempts=[];let failedAckReads=0;let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let clippedPreview=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
@@ -17,9 +21,16 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/provider-identity-echo'){
   const sent=replies.at(-1);if(!sent){res.statusCode=409;body={error:'No synthetic send recorded'};}else{
    const live=new LiveTimeline();const item={id:'metadata-poor-provider',type:'userMessage',content:[{type:'text',text:sent.text}]};
-   live.ingest({method:'item/completed',params:{threadId:sent.threadId,turnId:'evidence-turn',item}});
-   const merged=live.merge({id:sent.threadId,turns:[{id:'evidence-turn',status:'inProgress',items:[{...item,clientId:sent.id}]}]});
-   const row=timelinePage(merged).rows.find(row=>row.kind==='user');
+   const directory=fs.mkdtempSync(join(tmpdir(),'nextcomp-native-send-evidence-'));
+   let db,row;
+   try{
+    db=new DatabaseSync(join(directory,'evidence.sqlite'));let identity=new SendIdentity(db);
+    identity.event({method:'item/started',params:{threadId:sent.threadId,turnId:'evidence-turn',item:{...item,clientId:sent.id}}});
+    db.close();db=new DatabaseSync(join(directory,'evidence.sqlite'));identity=new SendIdentity(db);
+    live.ingest(identity.event({method:'item/completed',params:{threadId:sent.threadId,turnId:'evidence-turn',item}}));
+    const merged=live.merge(identity.snapshot({id:sent.threadId,turns:[{id:'evidence-turn',status:'inProgress',items:[item]}]}));
+    row=timelinePage(merged).rows.find(row=>row.kind==='user');
+   }finally{db?.close();fs.rmSync(directory,{recursive:true,force:true});}
    for(const socket of sockets)send(socket,{type:'timeline',threadId:sent.threadId,turnId:'evidence-turn',version:1000,row:{...row,version:1000}});
    body={ok:true,clientId:row.clientId,connections:sockets.size};
   }

@@ -4,7 +4,7 @@ import {HistoryPositionIndex} from './history-position-index.mjs';
 const unsupportedItems=e=>/thread\/items\/list.*not supported|list_items.*not supported/i.test(e.message||'');
 const encode=(prefix,value)=>prefix+Buffer.from(JSON.stringify(value)).toString('base64url');
 export class ThreadHistory {
-  constructor(codex,{maxItems=400,maxBytes=1024*1024,onPreview=()=>{},inheritedHistory=()=>[]}={}){this.positions=new HistoryPositionIndex();codex.on?.('disconnected',()=>this.positions.clear());this.onPreview=onPreview;this.inheritedHistory=inheritedHistory;this.turnOnlyThreads=new Set();this.fullSnapshotThreads=new Set();Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
+  constructor(codex,{maxItems=400,maxBytes=1024*1024,onPreview=()=>{},identity=null,inheritedHistory=()=>[]}={}){this.identity=identity;this.positions=new HistoryPositionIndex();codex.on?.('disconnected',()=>this.positions.clear());this.onPreview=onPreview;this.inheritedHistory=inheritedHistory;this.turnOnlyThreads=new Set();this.fullSnapshotThreads=new Set();Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
   observeSnapshot(thread){for(const turn of (thread.turns||[]).slice(-32))this.positions.observe(thread.id,turn.id,(turn.items||[]).map(item=>displayItem(item,turn.id)).filter(Boolean));return thread;}
   // Resolve chronology without downloading older transcript pages or resuming work.
   // Each request reads at most four small provider pages; a continuation retains
@@ -56,11 +56,14 @@ export class ThreadHistory {
     return {...thread,turns:[{...latest,items:[...page.data].reverse().map(entry=>displayItem(entry.item,latest.id)).filter(Boolean)}]};
   }
   async read(metadata,options={}){
-    if(this.fullSnapshotThreads.has(metadata.id))return this.fullSnapshotPage(metadata,options);
-    if(this.turnOnlyThreads.has(metadata.id)&&!options.summary)return this.turnPage(metadata,options);
-    try{return await this.readPaged(metadata,options);}
-    catch(e){if(!unsupportedItems(e))throw e;this.turnOnlyThreads.add(metadata.id);return this.turnPage(metadata,options);}
+    let thread;
+    if(this.fullSnapshotThreads.has(metadata.id))thread=await this.fullSnapshotPage(metadata,options);
+    else if(this.turnOnlyThreads.has(metadata.id)&&!options.summary)thread=await this.turnPage(metadata,options);
+    else try{thread=await this.readPaged(metadata,options);}
+    catch(e){if(!unsupportedItems(e))throw e;this.turnOnlyThreads.add(metadata.id);thread=await this.turnPage(metadata,options);}
+    return this.observeSnapshot(this.identity?.snapshot(thread)||thread);
   }
+
   async readPaged(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8,preferPaging=false}={}){
     const threadId=metadata.id;
     if(metadata.historyMode!=='paginated'&&!preferPaging)return this.observeSnapshot((await this.codex.call('thread/read',{threadId,includeTurns:true})).thread);

@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "state": "qualified-source-not-deployed",
+  "date": "2026-10-12",
+  "backendTests": {
+    "passed": 489,
+    "failed": 0
+  },
+  "focusedTests": {
+    "passed": 34,
+    "failed": 0
+  },
+  "native": {
+    "case": "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#providerMetadataLossDoesNotDuplicateUnknownSend",
+    "result": "pass",
+    "tests": 1,
+    "seconds": 5.896,
+    "avd": "nextcomp_env_qa",
+    "serial": "emulator-5620",
+    "qualificationApkSha": "ac908fab1f4746d8508707e17150738a85007352032535ed17b45081922367f7",
+    "testApkSha": "5d9fa0e856bb5b2b94bdddcabe88757e4aadd572045c0d4cadaf01f289cbfbd5",
+    "logSha": "68f60bcf79b7037d63e37c502090f3fc1e1aa57886ee30b51efa19f010cb9a96",
+    "fixtureSha": "5c4e9447037c57fd204c18d3b3f8e55f11558b2bc93782f7b4bbce7e394c8412",
+    "assertions": [
+      "Identity database closed and reopened before metadata-poor echo",
+      "One native body for proven send; unknown-delivery controls retained",
+      "Two identical intentional sends remain distinct",
+      "One send; no recovery action dispatched"
+    ]
+  },
+  "source": {
+    "server/send-identity.mjs": "ee415bf85ce19d7c62b5142874a41701074baacd50dceed42ef19ab28cd5a97e",
+    "server/history.mjs": "38396f9bec79c945411200d4c8ac524208911bb022130eb5340cc9da0be4d77b",
+    "server/index.mjs": "6d9a2912f827976e4f146bf56825dc7a9f52b6f7af0caf576caac196e510ed5b"
+  },
+  "limits": [
+    "Physical phone unavailable; installed cache and exact reported duplicate not inspected",
+    "Existing rows without provider identity evidence cannot safely be merged by content",
+    "No full Android release claimed; immersion changes remain unreleased",
+    "Narrow production-base backend qualification and deployment tracked separately"
+  ]
+}
