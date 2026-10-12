@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "state": "native-journey-pass",
+  "category": "Android navigation and transcript integration with synthetic HTTP provider",
+  "case": "switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
+  "elapsedSeconds": 19.565,
+  "changes": "Critical blocked-refresh transition now uses real conversation card taps and Back rather than direct selection calls. Existing test extended; no additional test added.",
+  "verified": [
+    "Correct second conversation selection during blocked first refresh",
+    "New selected conversation receives fresh response",
+    "Old refresh cannot contaminate selected conversation",
+    "Reply API targets selected thread",
+    "Both drafts retained",
+    "Real cards reopen respective conversations"
+  ],
+  "realBoundaries": [
+    "Android activity/navigation",
+    "HTTP transport",
+    "Production transcript state and rendering",
+    "App draft preferences"
+  ],
+  "substitutedBoundaries": [
+    "Synthetic provider/server responses",
+    "Reply triggered through app API rather than send-button tap"
+  ],
+  "limits": [
+    "No physical phone verification",
+    "No production optimized APK qualification",
+    "Not a full real Codex/provider delivery journey"
+  ],
+  "logSha256": "a31b09611b0c447f7869614bc86ea521703c4f4dd79d8c11e008d78b5005076c",
+  "log": "/tmp/nextcomp-switch-card-journey-native.log"
+}
