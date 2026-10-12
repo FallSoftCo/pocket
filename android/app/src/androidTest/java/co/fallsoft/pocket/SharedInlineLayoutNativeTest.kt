@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableFloatStateOf
@@ -50,7 +52,7 @@ class SharedInlineLayoutNativeTest {
     PocketImmersion.setEnabled(true)
     activity.setContent{
      androidx.compose.runtime.CompositionLocalProvider(LocalImmersionMotionState provides true,LocalImmersionTransitionAnimated provides false){
-      MaterialTheme{androidx.compose.foundation.layout.Column{
+      MaterialTheme{androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().statusBarsPadding()){
        androidx.compose.material3.TextButton(onClick={taps++}){InterfaceTemplateText(InterfaceTemplate.GENERATED_ARTIFACT,literal)}
        InterfaceTemplateText(InterfaceTemplate.COMMAND_RESULTS,7,5)
       }}
