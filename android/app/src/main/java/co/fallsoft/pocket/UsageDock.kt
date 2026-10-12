@@ -51,7 +51,7 @@ import java.util.Locale
     BilingualLabel(usage.continuationLabel,centered=false,maxLines=3,color=if(usage.continuationState=="spending-blocked")Coral else Muted,fontSize=13.sp)
     if(credits.updatedAt>0){
         val checked=SimpleDateFormat("MMM d · HH:mm:ss",Locale.getDefault()).format(Date(credits.updatedAt))
-        Text((if(credits.isStale(now,Pocket.connected&&Pocket.codexOnline))"Last known · " else "Checked · ")+checked,color=Muted,fontSize=12.sp)
+        InterfaceText((if(credits.isStale(now,Pocket.connected&&Pocket.codexOnline))"Last known · " else "Checked · ")+checked,color=Muted,fontSize=12.sp)
     }else BilingualLabel("Credit data unavailable",centered=false,color=Muted,fontSize=12.sp)
     if(credits.decrease!=null&&credits.fromAt>0&&credits.toAt>credits.fromAt){
         val format=SimpleDateFormat("MMM d HH:mm",Locale.getDefault())

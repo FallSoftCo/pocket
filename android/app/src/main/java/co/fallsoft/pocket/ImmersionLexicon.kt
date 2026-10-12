@@ -201,7 +201,7 @@ object ImmersionLexicon {
     private val normalized=common.mapKeys{it.key.lowercase(Locale.ROOT)}
     // Authored UI templates preserve their literal date/value suffix. They need
     // neither a fresh provider request for every value nor an invented alignment.
-    private val literalSuffixTemplates=listOf("Resets " to "Ripristino ", "Estimated run-out " to "Esaurimento stimato ")
+    private val literalSuffixTemplates=listOf("Resets " to "Ripristino ", "Estimated run-out " to "Esaurimento stimato ", "Last known · " to "Ultimo dato noto · ", "Checked · " to "Verificato · ")
     fun italian(text:String):String?=normalized[text.trim().lowercase(Locale.ROOT)]
         ?:literalSuffixTemplates.firstOrNull{ text.startsWith(it.first) }
             ?.let{(source,target)->target+text.removePrefix(source)}
