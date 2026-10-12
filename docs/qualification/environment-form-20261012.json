@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "state": "native-pass",
+  "elapsedSeconds": 12.781,
+  "case": "sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin",
+  "verified": [
+    "Same-frame remote-to-remote new-task form restores selected environment prompt",
+    "Previous profile prompt absent from current form",
+    "Original form draft retained in scoped preferences",
+    "Existing same-ID transcript, notification, outgoing and note isolation assertions passed"
+  ],
+  "limits": [
+    "Synthetic three-host HTTP fixture",
+    "Not actual phone or production optimized release",
+    "Recovery callback identity guard compiled but not independently exercised by this journey"
+  ],
+  "log": "/tmp/nextcomp-env-form-native.log",
+  "logSha256": "554a9d3dd67ac257cab211cb8d40e8791b00db69ef7bbd5156ed8bedd7f3c8b9"
+}

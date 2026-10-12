@@ -81,5 +81,16 @@ class EnvironmentIsolationNativeTest {
   assertEquals("System76",saved.s("host"));assertEquals("same-thread",saved.s("thread"));assertEquals("retained-origin-a",saved.s("id"))
   await{PocketTranscript.rows.any{it.s("text")=="OZZZ answer only"}}
   assertFalse("Old host note polluted current conversation",Pocket.detail?.optJSONArray("notes")?.objects().orEmpty().any{it.s("id")=="retained-origin-a"})
+  // Keep the form mounted across a same-frame remote-to-remote transition.
+  // The boolean local/remote flag is identical; only full identity can reset it.
+  prefs.edit().putString("newTaskPrompt","System76 new task draft")
+   .putString("environment:remote_qa:newTaskPrompt","OZZZ new task draft").commit()
+  main{Pocket.closeTask();Pocket.composeTask()}
+  assertTrue("OZZZ form draft missing",device.wait(Until.hasObject(By.clazz("android.widget.EditText").text("OZZZ new task draft")),5000))
+  main{Pocket.activateEnvironment("workstation");Pocket.composeTask()}
+  assertTrue("Remote form retained the wrong environment draft",device.wait(Until.hasObject(By.clazz("android.widget.EditText").text("System76 new task draft")),5000))
+  assertFalse("Previous remote form leaked",device.hasObject(By.clazz("android.widget.EditText").text("OZZZ new task draft")))
+  assertEquals("OZZZ new task draft",prefs.getString("environment:remote_qa:newTaskPrompt",null))
+  main{Pocket.newTask=false}
  }
 }
