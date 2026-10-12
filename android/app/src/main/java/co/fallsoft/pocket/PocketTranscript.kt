@@ -67,6 +67,7 @@ object PocketTranscript {
             val position=snapshot.position?.let{JSONObject().put("row",it.rowId).put("offset",it.offset).put("follow",it.follow)}
             val body=JSONObject().put("schema",1).put("scope",scope).put("id",id).put("rows",org.json.JSONArray(snapshot.rows.filter{it.s("kind")!="request"})).put("detail",detail).put("before",snapshot.before).put("earlier",snapshot.earlier).put("bridgeBefore",snapshot.bridgeBefore).put("bridgeKnown",org.json.JSONArray(snapshot.bridgeKnown.toList())).put("bridgeBoundary",snapshot.bridgeBoundary).put("coverageVerified",snapshot.coverageVerified).put("position",position).toString()
             disk.write(scope,id,body){diskRequests[key]==sequence}
+            if(position!=null)disk.writePosition(scope,id,position.toString(),sequence)
         }catch(_:Exception){/* A cache failure never changes delivery, draft or network state. */}}
     }
     private suspend fun diskSnapshot(scope:String,id:String):Snapshot?=withContext(Dispatchers.IO){try{
@@ -74,7 +75,15 @@ object PocketTranscript {
         if(value.optInt("schema")!=1||value.s("scope")!=scope||value.s("id")!=id)return@withContext null
         val detail=value.getJSONObject("detail");if(detail.optJSONObject("thread")?.s("id")!=id)return@withContext null
         val originalRows=value.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map{it.put("version",0L)}
-        val rawPosition=value.optJSONObject("position")
+        // Sidecar state can be newer than the full history checkpoint. Accept
+        // only a reference actually retained in this body; otherwise use its
+        // embedded position until fresh history supplies newer content.
+        val sidecar=disk.readPosition(scope,id)?.let{runCatching{JSONObject(it)}.getOrNull()}
+        val rawPosition=sidecar?.takeIf{candidate->
+            val anchor=candidate.s("row")
+            val resolved=migrateTranscriptAnchors(originalRows,setOf(anchor))[anchor]
+            originalRows.any{transcriptMessageIdentity(it.s("kind"),it.s("turnId"),it.s("clientId"),it.s("id"))==resolved}
+        }?:value.optJSONObject("position")
         val rawBoundary=value.s("bridgeBoundary").takeIf{it.isNotBlank()}
         val rawKnown=value.optJSONArray("bridgeKnown")?.let{array->(0 until minOf(array.length(),1024)).map{array.optString(it)}.filter{it.isNotBlank()}}.orEmpty()
         val requested=rawKnown.toMutableSet().apply{rawPosition?.s("row")?.takeIf{it.isNotBlank()}?.let{add(it)};rawBoundary?.let{add(it)}}
@@ -88,10 +97,15 @@ object PocketTranscript {
         val id=owner?:return;val scope=ownerScope?:return
         if(historyLoaded&&scope==scopeKey())Pocket.detail?.let{val snapshot=Snapshot(rows,it,before,earlier,bridgeBefore,readPosition,bridgeKnown,bridgeBoundary,coverageVerified);recent.put(scope,id,snapshot,android.os.SystemClock.elapsedRealtime());if(persist)persist(scope,id,snapshot)}
     }
+    private fun persistReadingPosition(scope:String,id:String,position:TranscriptReadPosition){
+        val sequence=diskSequence.incrementAndGet()
+        val payload=JSONObject().put("row",position.rowId).put("offset",position.offset).put("follow",position.follow).toString()
+        Pocket.scope.launch(Dispatchers.IO){runCatching{disk.writePosition(scope,id,payload,sequence)}}
+    }
     internal fun rememberPosition(scope:String,id:String,position:TranscriptReadPosition){
         val now=android.os.SystemClock.elapsedRealtime()
-        if(owner==id&&ownerScope==scope){if(readPosition!=position){readPosition=position;rememberRecent(persist=true)};return}
-        recent.get(scope,id,now)?.takeIf{it.position!=position}?.let{val snapshot=it.copy(position=position);recent.put(scope,id,snapshot,now);persist(scope,id,snapshot)}
+        if(owner==id&&ownerScope==scope){if(readPosition!=position){readPosition=position;rememberRecent();persistReadingPosition(scope,id,position)};return}
+        recent.get(scope,id,now)?.takeIf{it.position!=position}?.let{val snapshot=it.copy(position=position);recent.put(scope,id,snapshot,now);persistReadingPosition(scope,id,position)}
     }
     private var observedHead:TranscriptHead?=null
     private var headSnapshotsSupported:Boolean?=null

@@ -43,4 +43,53 @@ class TranscriptDiskCacheTest {
   for(field in listOf("pending","outgoing","catchup","status","approvalPolicy","sandboxPolicy"))assertFalse("Cached authority: $field",cached.toString().contains("\"$field\""))
  }
 
+ private fun point(offset:Int)=org.json.JSONObject().put("row","retained-message").put("offset",offset).put("follow",false).toString()
+ @Test fun positionWritesDoNotRewriteMegabyteHistoryAndSurviveRestart(){
+  val directory=Files.createTempDirectory("position-cache-test").toFile()
+  try{
+   val scope=transcriptCacheOwner("a","https://example","synthetic");val cache=TranscriptDiskCache(directory)
+   val history="retained history ".repeat(65536);assertTrue(cache.write(scope,"thread",history))
+   val original=directory.listFiles()!!.single().readBytes()
+   for(n in 1..20)assertTrue(cache.writePosition(scope,"thread",point(n),n.toLong()))
+   assertArrayEquals(original,directory.listFiles()!!.single{it.extension=="json"}.readBytes())
+   val restored=TranscriptDiskCache(directory)
+   assertEquals(history,restored.read(scope,"thread"));assertEquals(20,org.json.JSONObject(restored.readPosition(scope,"thread")!!).getInt("offset"))
+  }finally{directory.deleteRecursively()}
+ }
+ @Test fun delayedSnapshotCannotRollBackNewerPosition(){
+  val directory=Files.createTempDirectory("position-cache-test").toFile()
+  try{
+   val scope=transcriptCacheOwner("a","https://example","synthetic");val cache=TranscriptDiskCache(directory)
+   assertTrue(cache.writePosition(scope,"thread",point(20),20))
+   assertTrue(cache.write(scope,"thread","delayed full snapshot"))
+   assertFalse(cache.writePosition(scope,"thread",point(10),10))
+   assertEquals(20,org.json.JSONObject(cache.readPosition(scope,"thread")!!).getInt("offset"))
+   // A fresh runtime owns a new sequence epoch; existing metadata remains readable.
+   val restarted=TranscriptDiskCache(directory);assertTrue(restarted.writePosition(scope,"thread",point(30),1))
+   assertEquals(30,org.json.JSONObject(restarted.readPosition(scope,"thread")!!).getInt("offset"))
+  }finally{directory.deleteRecursively()}
+ }
+ @Test fun positionMetadataCannotCrossEnvironmentOrReplaceHistoryWhenMalformed(){
+  val directory=Files.createTempDirectory("position-cache-test").toFile()
+  try{
+   val a=transcriptCacheOwner("a","https://example","synthetic");val b=transcriptCacheOwner("b","https://example","synthetic");val cache=TranscriptDiskCache(directory)
+   assertTrue(cache.write(a,"thread","last complete history"));assertTrue(cache.writePosition(a,"thread",point(8),1))
+   assertNull(cache.readPosition(b,"thread"));assertNull(cache.readPosition(a,"other"))
+   assertFalse(cache.writePosition(a,"thread",org.json.JSONObject().put("row","x".repeat(20000)).toString(),2))
+   directory.listFiles()!!.single{it.extension=="position"}.writeText("partial metadata")
+   assertNull(cache.readPosition(a,"thread"));assertEquals("last complete history",cache.read(a,"thread"))
+  }finally{directory.deleteRecursively()}
+ }
+ @Test fun wholeCheckpointEvictionAlsoRemovesPositionMetadata(){
+  val directory=Files.createTempDirectory("position-cache-test").toFile()
+  try{
+   val scope=transcriptCacheOwner("a","https://example","synthetic");val cache=TranscriptDiskCache(directory,1024,500)
+   assertTrue(cache.write(scope,"one","a".repeat(300)));assertTrue(cache.writePosition(scope,"one",point(1),1))
+   assertTrue(cache.write(scope,"two","b".repeat(300)));assertTrue(cache.writePosition(scope,"two",point(2),2))
+   assertNull(cache.read(scope,"one"));assertNull(cache.readPosition(scope,"one"))
+   assertNotNull(cache.read(scope,"two"));assertNotNull(cache.readPosition(scope,"two"))
+   assertEquals(2,directory.listFiles()!!.size)
+  }finally{directory.deleteRecursively()}
+ }
+
 }

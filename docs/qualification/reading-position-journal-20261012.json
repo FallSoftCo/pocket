@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-12",
+  "status": "alpha85-requalified-authenticated-updater-published-phone-unverified",
+  "sourceGap": "Every settled position change called full snapshot persistence, serializing retained history again.",
+  "changes": [
+    "Small private scope/thread position sidecar",
+    "Runtime epoch plus monotonic sequence rejects delayed older writes",
+    "Main checkpoint and sidecar share eviction accounting",
+    "Legacy/damaged/unavailable positions fall back to embedded checkpoint",
+    "Position-only changes retain in-memory rows without full body serialization"
+  ],
+  "unit": {
+    "result": "pass",
+    "count": 337,
+    "cases": [
+      "Megabyte checkpoint bytes unchanged through twenty position updates and new cache instance",
+      "Late full snapshot cannot roll back newer position",
+      "Fresh runtime epoch can continue after counter reset",
+      "Environment/thread isolation",
+      "Malformed/oversized metadata retains complete history",
+      "Whole checkpoint eviction removes sidecar"
+    ]
+  },
+  "native": [
+    {
+      "test": "TranscriptRefreshNativeTest#readingPositionCheckpointDoesNotRewriteRetainedHistory",
+      "seconds": 14.047,
+      "result": "pass",
+      "assertions": [
+        "Actual upward gesture produces a stable saved position",
+        "Retained history checkpoint bytes unchanged",
+        "Draft retained",
+        "Zero replies"
+      ]
+    },
+    {
+      "test": "TranscriptRefreshNativeTest#readingPositionRestoresFromDiskWhileHistoryIsBlocked",
+      "seconds": 3.89,
+      "result": "pass",
+      "assertions": [
+        "App process force-stopped before restart",
+        "Cached passage visibly restored while history request remains blocked",
+        "Actual gesture row, pixel offset and follow=false retained",
+        "Draft retained",
+        "Zero replies"
+      ],
+      "cachedRestoreMs": 817,
+      "savedRow": "visible-15",
+      "savedOffsetPx": 181
+    },
+    {
+      "test": "HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage",
+      "seconds": 14.478,
+      "result": "pass",
+      "assertions": [
+        "Actual upward gesture and deferred older-history arrival preserve reading passage",
+        "No submitted work"
+      ]
+    }
+  ],
+  "limits": [
+    "Synthetic owned emulator; no physical phone latency/pacing claim",
+    "Single cache writer per app process",
+    "Sudden power-loss durability not qualified",
+    "Open loading concern: cold disk restoration still precedes the latest history request; independent cache/network latency qualification remains pending",
+    "Immersion paragraph reflow remains open"
+  ],
+  "delivery": {
+    "versionCode": 103,
+    "versionName": "0.5.0-alpha.85",
+    "status": "republished-after-real-gesture-qualification",
+    "debugUnitTests": 337,
+    "releaseUnitTests": 337,
+    "lints": "both pass",
+    "signedBuilds": "both pass",
+    "qualificationBuilds": "pass",
+    "nativeInstalledVersionCode": 103,
+    "privateCompatibleApkSha256": "ea5e8cd25652f7fbe8a7fbc77558442495501d43dad46498b19a2e061ca7b75f",
+    "authenticatedUpdater": "offers103 for existing signer/code93",
+    "backendRestart": "none"
+  },
+  "qualificationCorrection": {
+    "initialFinalRun": "failed in17.442s",
+    "observed": "Test injected27px into a short non-scrollable page; the live viewport correctly persisted0px/follow=true afterward",
+    "action": "Initial103 updater publication withdrawn to102; replaced injected-coordinate setup with actual upward gesture on scrollable history, stable viewport observation and visible-passage restart assertion",
+    "newResults": "Both actual-gesture cases pass",
+    "artifact": "Identical signed103 artifact re-published after correction",
+    "phoneInstallationDuringInitialPublication": "not established; phone access unavailable"
+  }
+}

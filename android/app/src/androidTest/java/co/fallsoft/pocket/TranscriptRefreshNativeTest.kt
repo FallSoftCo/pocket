@@ -32,6 +32,46 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun readingPositionCheckpointDoesNotRewriteRetainedHistory(){
+  twoChats();qa("quiet-reading");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  val scope=PocketTranscript.scopeKey();val directory=java.io.File(context.noBackupFilesDir,"transcript-cache-v1");val cache=TranscriptDiskCache(directory)
+  await{cache.read(scope,"same-thread")!=null&&PocketTranscript.readPosition!=null}
+  Thread.sleep(700)
+  val baseline=cache.read(scope,"same-thread")!!
+  requireNotNull(device.findObject(By.scrollable(true))).scroll(Direction.UP,.65f)
+  await{PocketTranscript.readPosition?.follow==false&&!PocketTranscript.loading}
+  val position=PocketTranscript.readPosition!!
+  await{cache.readPosition(scope,"same-thread")?.let{val p=JSONObject(it);p.s("row")==position.rowId&&p.optInt("offset")==position.offset&&!p.optBoolean("follow")}==true}
+  // Allow the normal viewport observer to settle; this is its actual position,
+  // not an injected coordinate on an unscrollable page.
+  Thread.sleep(1200)
+  assertEquals(position,PocketTranscript.readPosition)
+  assertEquals("Reading position rewrote retained message bodies",baseline,cache.read(scope,"same-thread"))
+  assertEquals("First saved draft",Pocket.prefs.getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+  val expected=JSONObject().put("row",position.rowId).put("offset",position.offset).put("follow",position.follow)
+  Pocket.prefs.edit().putString("position-journal-qa-scope",scope).putString("position-journal-qa-expected",expected.toString()).commit()
+ }
+ @Test fun readingPositionRestoresFromDiskWhileHistoryIsBlocked(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
+  assertEquals(Pocket.prefs.getString("position-journal-qa-scope",null),PocketTranscript.scopeKey())
+  val expected=JSONObject(Pocket.prefs.getString("position-journal-qa-expected",null)!!)
+  val started=android.os.SystemClock.elapsedRealtime()
+  main{Pocket.open("same-thread")}
+  await{has(1)&&PocketTranscript.loading&&PocketTranscript.readPosition?.rowId==expected.s("row")&&PocketTranscript.readPosition?.offset==expected.optInt("offset")}
+  val elapsed=android.os.SystemClock.elapsedRealtime()-started
+  assertFalse(PocketTranscript.readPosition!!.follow)
+  assertTrue("Cached history waited for blocked network: ${elapsed}ms",elapsed<2000)
+  val number=expected.s("row").removePrefix("visible-")
+  val passage=device.wait(Until.findObject(By.textStartsWith("Visible passage $number ")),3000)
+  assertNotNull("Saved reading passage is not visible after process restart",passage)
+  assertFalse("Saved passage has empty visible bounds",passage!!.visibleBounds.isEmpty)
+  assertEquals("First saved draft",Pocket.prefs.getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+  java.io.File(context.cacheDir,"position-journal-restore.json").writeText(JSONObject().put("cachedRestoreMs",elapsed).put("row",expected.s("row")).put("offset",expected.optInt("offset")).put("visible",true).toString())
+ }
  @Test fun historyEvidenceRepairsDeferredPositionOnce(){
   twoChats();qa("await-position-history");main{Pocket.open("same-thread")}
   await{PocketTranscript.rows.any{it.s("id")=="order/answer"}&&!PocketTranscript.loading}

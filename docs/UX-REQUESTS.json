@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-07",
+  "updated": "2026-10-12",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -2352,6 +2352,15 @@
       "evidence": [
         "docs/IMMERSION-RENDERING.md",
         "docs/qualification/immersion-ink-20261012.json"
+      ]
+    },
+    {
+      "id": "reading-position-lightweight-persistence-20261012",
+      "request": "Thumb history browsing must not rewrite entire retained transcripts on every settled position change; preserve positions, drafts, environment scope and restart recovery.",
+      "status": "alpha85-published-real-gesture-and-restart-qualified-phone-unverified",
+      "evidence": [
+        "docs/TRANSCRIPT-INVARIANTS.md",
+        "docs/qualification/reading-position-journal-20261012.json"
       ]
     }
   ],

@@ -56,3 +56,18 @@ Missing evidence, a previous pairing and independent identical-text sends remain
 visible. These rules are source scoped by the existing environment/thread guards.
 
 Reading positions and retained gap anchors must migrate along with proven identity enrichment. Restore aliases without changing offset/follow intent. An active viewport changes its key only with unambiguous evidence; existing visible keys and active gestures retain ownership. Ordinary streaming frames do not scan identity aliases.
+
+## Independent reading-position checkpoint
+
+Settled reading movement persists only a small source/thread-bound position
+sidecar. It must not serialize or rewrite retained message bodies. Full history
+checkpoints still run after completed history refreshes and on explicit lifecycle checkpoints.
+An embedded position remains available for legacy, missing or damaged sidecars.
+
+A monotonic write sequence within the cache-owner process prevents a delayed
+snapshot-position write from replacing a newer gesture checkpoint. A fresh
+process uses a new sequence epoch while retaining readable prior metadata. This
+is a single app-cache writer contract, not a multi-process locking protocol.
+Sidecars and bodies share the finished-checkpoint budget and evict together.
+Only a position referencing retained content can supersede the embedded position.
+Cache positions are presentation metadata, never command/read-ack authority.
