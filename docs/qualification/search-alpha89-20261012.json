@@ -1,0 +1,33 @@
+{
+  "versionCode": 107,
+  "versionName": "0.5.0-alpha.89",
+  "sourceCommit": "88b62e481998bedfc70a56eebdf69f88fff4fa97",
+  "productionSourceSha": "82e1903f0c1b6a8b5ad009b16f231953e7b1b7f5a7b6c6e6bafe980ba006dcb0",
+  "unit": {
+    "debug": {
+      "tests": 363,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "release": {
+      "tests": 363,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "nativeCasesPassed": 37,
+  "nativeState": "complete",
+  "optimizedReview": "Actual compatible signed APK: native search survives natural immersion, labels whole and uncropped, dismissal retains process",
+  "publication": "Qualified updater107 published; one notification1531",
+  "phoneDelivery": "Compatible APK downloaded via Termux SSH; SHAe53ce49cf0c77510252e03683f552ae964894d3f4e3e0a4513a356d66ba3e273 verified; installed version remains106",
+  "limits": [
+    "Physical phone UI interaction not verified",
+    "New command grouping, idle treatment and viewport waterfall remain separate candidate"
+  ],
+  "superseded": [
+    "r02 passed36 native cases but actual capture exposed ellipsis clipping",
+    "r03 first new case failed1px placeholder-height overflow; preserved, never published"
+  ]
+}
