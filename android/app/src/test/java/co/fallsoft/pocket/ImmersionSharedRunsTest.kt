@@ -51,4 +51,14 @@ class ImmersionSharedRunsTest {
   assertEquals(form.text,chunks.joinToString(""){it.text})
  }
 
+ @Test fun punctuationStaysBesideThePhraseWithoutDuplicatingContent(){
+  fun input(word:String)=buildAnnotatedString{append("Please ");val at=length;append(word);addStringAnnotation("immersion-reserve","phrase",at,length);append(", next.")}
+  val source=input("search");val target=input("cerca")
+  val runs=requireNotNull(immersionSharedRuns(listOf(source,target)))
+  assertEquals(listOf("search,","cerca,"),runs.single{it.id=="phrase"}.forms.map{it.text})
+  assertEquals(listOf(" next."," next."),runs.last().forms.map{it.text})
+  assertEquals(source.text,runs.joinToString(""){it.forms[0].text})
+  assertEquals(target.text,runs.joinToString(""){it.forms[1].text})
+ }
+
 }

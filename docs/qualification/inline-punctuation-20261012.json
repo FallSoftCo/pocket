@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "state": "native-qualified-actual-punctuation-motion-review-pending",
+  "date": "2026-10-12",
+  "unit": {
+    "tests": 356,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lintQualification": "pass",
+  "native": {
+    "tests": 16,
+    "failures": 0,
+    "seconds": 47.296,
+    "log": "/tmp/nextcomp-inline-punctuation-native.log"
+  },
+  "prefixMotionReview": {
+    "duration": 44.261056,
+    "result": "Prefix isolation fixed with app typography; punctuation separated by padding identified as next fix",
+    "gallery": "nextcomp-immersion-prefix-budget-review"
+  },
+  "punctuationChange": "Fold immediate comma/period/etc into preceding reserved phrase; source/target full text reconstructed exactly; annotations preserved",
+  "physicalPhone": "unverified",
+  "signedRelease": "pending",
+  "sourceSha256": {
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionSharedRuns.kt": "a01e916f4f0297de31e68a3baaf133bdc418348d7231616c29f2e7392f0f67dd",
+    "android/app/src/main/java/co/fallsoft/pocket/SharedInlineImmersionText.kt": "600c442fcbbe8c284c6d7f60e97e24a689b13771970a79d2b6f363ec269a63d7"
+  }
+}
