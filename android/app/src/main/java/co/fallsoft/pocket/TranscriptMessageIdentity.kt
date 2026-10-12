@@ -20,8 +20,22 @@ internal fun normalizeTranscriptMessage(row:JSONObject):JSONObject {
  * This also repairs caches written before semantic message identity existed.
  */
 internal fun normalizeTranscriptMessages(rows:List<JSONObject>):List<JSONObject> {
+    // Identity evidence may arrive later than the provider item itself. Join
+    // only an exact same-turn provider reference with one unambiguous send ID.
+    // Text, timestamps and adjacency are never identity evidence.
+    val claims=mutableMapOf<Pair<String,String>,MutableSet<String>>()
+    fun references(row:JSONObject)=listOf(row.s("id"),row.s("providerRowId"),
+        row.s("itemId").takeIf{it.isNotBlank()}?.let{row.s("turnId")+"/"+it}.orEmpty())+
+        row.optJSONArray("providerRowIds")?.let{a->(0 until a.length()).map{a.optString(it)}}.orEmpty()
+    rows.filter{it.s("kind")=="user"&&it.s("turnId").isNotBlank()&&it.s("clientId").isNotBlank()}.forEach{row->
+        references(row).filter{it.isNotBlank()}.forEach{ref->claims.getOrPut(row.s("turnId") to ref){mutableSetOf()}.add(row.s("clientId"))}
+    }
     val values=linkedMapOf<String,JSONObject>()
-    rows.forEach{raw->val row=normalizeTranscriptMessage(raw);val id=row.s("id");val old=values[id]
+    rows.forEach{original->
+        val candidates=if(original.s("kind")=="user"&&original.s("clientId").isBlank())
+            references(original).flatMap{claims[original.s("turnId") to it].orEmpty()}.toSet() else emptySet()
+        val raw=if(candidates.size==1)JSONObject(original.toString()).put("clientId",candidates.single())else original
+        val row=normalizeTranscriptMessage(raw);val id=row.s("id");val old=values[id]
         val chosen=if(old==null||row.optLong("version")>=old.optLong("version"))row else old
         // Oldest evidence first; a new provider reference must survive the bound.
         val aliases=listOfNotNull(old,row).flatMap{v->
@@ -78,3 +92,24 @@ internal fun mergeTranscriptMessageEvidence(previous:JSONObject?,incoming:JSONOb
     if(previous==null||previous.s("id")!=incoming.s("id")||incoming.s("kind")!="user"||incoming.s("clientId").isBlank())return incoming
     return normalizeTranscriptMessages(listOf(previous,incoming)).single()
 }
+
+/** Reconcile snapshot identity enrichment in linear time before page ordering.
+ * The caller supplies only its current environment/thread's rows. */
+internal fun promoteTranscriptIdentityEvidence(rows:List<JSONObject>,evidence:List<JSONObject>):List<JSONObject>{
+    val claims=mutableMapOf<Pair<String,String>,MutableSet<String>>()
+    evidence.filter{it.s("kind")=="user"&&it.s("clientId").isNotBlank()&&it.s("turnId").isNotBlank()}.forEach{row->
+        val refs=listOf(row.s("id"),row.s("providerRowId"))+
+            row.optJSONArray("providerRowIds")?.let{a->(0 until a.length()).map{a.optString(it)}}.orEmpty()
+        refs.filter{it.isNotBlank()}.forEach{ref->claims.getOrPut(row.s("turnId") to ref){mutableSetOf()}.add(row.s("clientId"))}
+    }
+    return normalizeTranscriptMessages(rows.map{row->
+        val ids=claims[row.s("turnId") to row.s("id")].orEmpty()
+        if(row.s("kind")=="user"&&row.s("clientId").isBlank()&&ids.size==1)
+            normalizeTranscriptMessage(JSONObject(row.toString()).put("clientId",ids.single()))else row
+    })
+}
+
+/** Delivery controls remain available after a transport timeout, but a proven
+ * provider echo owns the single visible body for that send. Never compare text. */
+internal fun transcriptContainsReply(rows:List<JSONObject>,replyId:String):Boolean =
+    replyId.isNotBlank()&&rows.any{it.s("kind")=="user"&&it.s("clientId")==replyId}

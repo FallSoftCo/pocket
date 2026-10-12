@@ -16,6 +16,29 @@ class TranscriptMessageIdentityTest {
   assertEquals("provider",transcriptMessageIdentity("message","turn","send","provider"))
  }
 
+ @Test fun lateSendIdentityEnrichmentCollapsesExactProviderInEitherOrder(){
+  val bare=user("same").removeClient()
+  val identified=user("same",version=2)
+  listOf(listOf(bare,identified),listOf(identified,bare)).forEach{input->
+   val rows=normalizeTranscriptMessages(input)
+   assertEquals(1,rows.size);assertEquals("send",rows.single().s("clientId"))
+  }
+ }
+ @Test fun exactProviderIdentityCannotCrossTurnsOrAmbiguousSendClaims(){
+  val bare=user("same").removeClient()
+  val other=user("same").put("turnId","other")
+  assertEquals(2,normalizeTranscriptMessages(listOf(bare,other)).size)
+  val ambiguous=normalizeTranscriptMessages(listOf(bare,user("same","one"),user("same","two")))
+  assertEquals(3,ambiguous.size)
+ }
+ @Test fun pendingBodyUsesExactProviderEchoButRetainsDistinctRepeatedSends(){
+  val rows=listOf(user("one","send-one"),user("two","send-two"))
+  assertTrue(transcriptContainsReply(rows,"send-one"))
+  assertTrue(transcriptContainsReply(rows,"send-two"))
+  assertFalse(transcriptContainsReply(rows,"not-received"))
+  assertFalse(transcriptContainsReply(rows,""))
+  assertFalse(transcriptContainsReply(listOf(user("one","send-one").put("kind","message")),"send-one"))
+ }
  private fun user(item:String,send:String="send",version:Long=0)=org.json.JSONObject()
   .put("id","turn/"+item).put("itemId",item).put("turnId","turn")
   .put("clientId",send).put("kind","user").put("text","Deliberately repeated text").put("version",version)

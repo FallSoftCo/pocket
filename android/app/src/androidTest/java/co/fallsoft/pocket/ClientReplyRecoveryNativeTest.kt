@@ -27,6 +27,21 @@ class ClientReplyRecoveryNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
  }
  private fun posts()=qa("state").getJSONArray("replies")
+ @Test fun echoedUnknownSendHasOneBodyAndRetainsRecoveryControls(){
+  val text="Single pending body"
+  start(draft=text);qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
+  main{Pocket.reply(text)}
+  await{!Pocket.sending&&PocketReplies.entries("same-thread").singleOrNull()?.state=="unknown"}
+  val intent=PocketReplies.entries("same-thread").single()
+  fun echo(item:String,client:String)=JSONObject().put("threadId","same-thread").put("turnId","echo").put("row",JSONObject().put("id","echo/"+item).put("itemId",item).put("turnId","echo").put("kind","user").put("clientId",client).put("text",text).put("version",1000))
+  main{PocketTranscript.apply(echo("one",intent.id))}
+  await{device.findObjects(By.text(text)).size==1&&device.hasObject(By.text("Check status"))}
+  assertEquals("Provider echo silently accepted uncertain delivery","unknown",PocketReplies.entries("same-thread").single().state)
+  assertEquals(text,Pocket.prefs.getString("draft:same-thread",null))
+  main{PocketTranscript.apply(echo("two","independent-send"))}
+  await{device.findObjects(By.text(text)).size==2}
+  assertEquals(1,posts().length());assertEquals(0,qa("state").getJSONArray("recoveries").length())
+ }
  @Test fun matchingUnknownReceiptRequiresExplicitRecovery(){
   start(draft="Unknown receipt test");qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
   var completed=false;main{Pocket.reply("Unknown receipt test",onDone={completed=true})}

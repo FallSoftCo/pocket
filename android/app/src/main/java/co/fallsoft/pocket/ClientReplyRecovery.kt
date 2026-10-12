@@ -10,14 +10,14 @@ import androidx.compose.ui.text.style.TextOverflow
 
 /** One source-bound recovery surface; local removal never cancels backend work. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun ClientReplyRecovery(intent:ClientReplyIntent,onEdit:(String)->Unit){
+@Composable internal fun ClientReplyRecovery(intent:ClientReplyIntent,representedInTranscript:Boolean=false,onEdit:(String)->Unit){
     var confirm by remember(intent.id){mutableStateOf(false)}
     val busy=intent.id in PocketReplies.busy
     val current=PocketReplies.matchesCurrent(intent)
     val label=if(!current)"Saved under previous pairing"else if(intent.id in PocketReplies.dispatching)"Sending"else when(intent.state){"queued"->"Queued";"held"->"Waiting in queue";"sending"->"Sending";"failed"->"Message failed";else->"Delivery not confirmed"}
     Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         BilingualLabel(label,color=if(intent.state in admittedReplyStates)Mint else Coral)
-        ImmersionText("saved-reply:"+intent.id,intent.text,rescue=false,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+        if(!representedInTranscript)ImmersionText("saved-reply:"+intent.id,intent.text,rescue=false,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
         if(!current)WorkflowText("Switch back to its pairing to check delivery. Removing this copy will not cancel work already submitted.",color=Muted,fontSize=13.sp)
         if(intent.message.isNotBlank())WorkflowText(intent.message,color=Coral,fontSize=13.sp,lineHeight=19.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
         FlowRow{

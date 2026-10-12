@@ -2326,6 +2326,15 @@
       "request": "Use one message identity across live-event novelty, display, position reconciliation and legacy cache anchors. Preserve reading position, new provider ordering evidence and deduplicated safe reads.",
       "status": "qualified-update-published-phone-unreachable",
       "evidence": "docs/qualification/transcript-ingress-and-cache-anchors-20261012.json"
+    },
+    {
+      "id": "single-send-transcript-projection-20261012",
+      "request": "Sending a message must not display it twice. Reconcile pending delivery, live provider events and history by exact identity, preserving drafts and distinct intentional sends.",
+      "status": "alpha82-published-native-qualified-phone-unverified",
+      "evidence": [
+        "docs/TRANSCRIPT-INVARIANTS.md",
+        "docs/qualification/single-send-projection-20261012.json"
+      ]
     }
   ],
   "current_state": {

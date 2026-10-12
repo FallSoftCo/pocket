@@ -233,6 +233,12 @@ object PocketTranscript {
             if(!current())return
             val page=d.optJSONObject("timeline")?:JSONObject();var incoming=normalizeTranscriptMessages(page.optJSONArray("rows")?.objects()?:emptyList())
             incoming.forEach{it.put("version",maxOf(it.optLong("version"),d.optLong("revision")))}
+            // Promote incomplete live/cache identities before the snapshot diff.
+            // Otherwise a metadata-enriched history row is treated as a new send.
+            val reconciled=normalizeTranscriptMessages(rows+incoming)
+            rows=promoteTranscriptIdentityEvidence(rows,reconciled)
+            baselineRows=promoteTranscriptIdentityEvidence(baselineRows.values.toList(),reconciled).associateBy{it.s("id")}
+            incoming=promoteTranscriptIdentityEvidence(incoming,reconciled)
             if(!older&&bridgeCursor==null)rows=authoritativeSnapshotBase(rows,baselineRows,incoming.mapTo(hashSetOf()){it.s("id")},{it.s("id")}){JSONObject(it.toString()).put("version",0)}
             val previousEvidence=rows.associateBy{it.s("id")}
             incoming=incoming.map{mergeTranscriptMessageEvidence(previousEvidence[it.s("id")],it)}
@@ -351,7 +357,8 @@ object PocketTranscript {
             Pocket.detail?.optJSONObject("thread")?.put("status",JSONObject().put("type",if(active)"active" else "idle"))
             if(!active)put(JSONObject().put("id","$turnId/end").put("turnId",turnId).put("kind","turnEnd").put("status",turn.s("status")).put("durationMs",turn.optLong("durationMs")).put("error",turn.optJSONObject("error")).put("text",turn.optJSONObject("error")?.s("message")?:""))
         }
-        rows=next;rememberRecent();revision++
+        // Streaming output cannot enrich user identity; avoid rescanning history per token.
+        rows=if(update.optJSONObject("row")?.s("kind")=="user")normalizeTranscriptMessages(next)else next;rememberRecent();revision++
         if(missedUpdates&&!loading){missedUpdates=false;Pocket.scheduleRefresh()}
     }
 }

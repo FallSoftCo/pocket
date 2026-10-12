@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-12",
+  "status": "alpha82-authenticated-updater-published-phone-unverified",
+  "causeEvidence": {
+    "confirmedSourceGaps": [
+      "late client identity enrichment leaves provider and semantic rows distinct",
+      "pending recovery body can repeat an exact provider echo"
+    ],
+    "installedPhoneCause": "not established; phone SSH and verified ADB unavailable"
+  },
+  "architecture": {
+    "identity": "environment/thread scope; exact same-turn provider reference and unique explicit client send ID",
+    "ordering": "promote retained rows, pre-read baseline and history rows before canonical page reconciliation",
+    "ambiguity": "retain independent/conflicting rows; never use text equality",
+    "delivery": "provider echo owns body; unknown receipt controls and draft remain; no inferred acceptance or resend"
+  },
+  "native": [
+    {
+      "test": "TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
+      "seconds": 11.388,
+      "result": "pass",
+      "assertions": [
+        "cached incomplete identity and enriched history show two intentional sends, not three",
+        "later incomplete live event adds no bubble",
+        "two independent equal-text sends retained",
+        "draft retained",
+        "zero sends"
+      ]
+    },
+    {
+      "test": "ClientReplyRecoveryNativeTest#echoedUnknownSendHasOneBodyAndRetainsRecoveryControls",
+      "seconds": 5.884,
+      "result": "pass",
+      "assertions": [
+        "exact echo and pending recovery show one body",
+        "unknown controls remain",
+        "draft retained",
+        "second independent equal-text echo remains",
+        "one intentional submission, zero recoveries"
+      ]
+    }
+  ],
+  "limits": [
+    "synthetic owned native emulator, not installed handset reproduction",
+    "no replay of user message",
+    "legacy rows without shared explicit evidence are not text-deduplicated",
+    "physical install unverified"
+  ],
+  "delivery": {
+    "versionCode": 100,
+    "versionName": "0.5.0-alpha.82",
+    "status": "published",
+    "debugUnitTests": 332,
+    "releaseUnitTests": 332,
+    "lints": "both pass",
+    "signedBuilds": "both pass",
+    "qualificationBuilds": "pass",
+    "nativeInstalledVersionCode": 100,
+    "privateCompatibleApkSha256": "aed026aa5cc8986c555208bf578f0deb742aaa0a8897b03eda4a67dea8821bd8",
+    "authenticatedUpdater": "offers100 for existing signer/code93",
+    "backendRestart": "none"
+  }
+}

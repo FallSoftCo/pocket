@@ -39,3 +39,18 @@ The backend records only IDs and user client IDs from complete turns already obt
 A missing indexed turn may advertise `awaitingHistory`. Android may reconsider that attempt after an independently successful recent-history snapshot; this signal does not itself request a refresh. Once evidence exists, unchanged refreshes must not repeat a successful position lookup. Legacy servers without the signal keep compatibility behavior.
 
 Message replacement must merge provider alias evidence before replacing metadata. Both live ingress and history snapshots use this rule. Metadata remains version-controlled, aliases remain bounded, and equal text is never used to reconcile sends. Saved anchors are resolved before legacy-cache alias truncation.
+
+## Late identity and pending delivery projection
+
+A provider row can arrive before its client send ID. Before snapshot ordering,
+reconcile an exact same-turn provider reference with a unique explicit send ID.
+Normalize the retained rows, the snapshot baseline and incoming rows together;
+live ingress uses the same normalization. Conflicting claims remain separate.
+This reconciliation is linear in retained evidence and performs no network work.
+
+Pending local/backend delivery controls and transcript messages are separate
+state, but they must not duplicate a body. An exact client-ID provider echo owns
+the visible body. The delivery panel retains its status and recovery controls;
+seeing an echo does not accept an unknown receipt, clear a draft or resend work.
+Missing evidence, a previous pairing and independent identical-text sends remain
+visible. These rules are source scoped by the existing environment/thread guards.

@@ -318,7 +318,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 if(important&&shownRows.isEmpty())item{BilingualLabel("No important updates yet",color=Muted)}
                 d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") !in listOf("accepted","cancelled")&&it !in waiting}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(6.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                     val recoverable=r.s("state") in listOf("failed","unknown");val busy=Pocket.isReplyActionBusy(r.s("id"))
-                    Label("YOU · ${r.s("state")}",if(recoverable)Coral else Muted);ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
+                    Label("YOU · ${r.s("state")}",if(recoverable)Coral else Muted);if(!transcriptContainsReply(rows,r.s("id")))ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
                     if(recoverable){WorkflowText(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)
                         Row{TextButton({if(r.s("state")=="unknown")confirmRetry=r else Pocket.queuedReply(r.s("id"),"retry")},enabled=!busy){BilingualLabel("Retry")}
                             TextButton({editingQueue=r;queuedText=r.s("text")},enabled=!busy){BilingualLabel("Edit")}
@@ -328,7 +328,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 
 
 
-                clientReplies.forEach{intent->item(key="client-reply-"+intent.id){ClientReplyRecovery(intent){value->editor=TextFieldValue(value,TextRange(value.length));saveReplyDraft(draftKey,value);keyboardInput=true}}}
+                clientReplies.forEach{intent->item(key="client-reply-"+intent.id){ClientReplyRecovery(intent,PocketReplies.matchesCurrent(intent)&&transcriptContainsReply(rows,intent.id)){value->editor=TextFieldValue(value,TextRange(value.length));saveReplyDraft(draftKey,value);keyboardInput=true}}}
                 // A row may grow taller than the viewport while streaming. Its
                 // start is not the transcript end: follow the explicit boundary.
                 item(key="transcript-end-anchor",contentType="scroll-anchor"){Spacer(Modifier.height(1.dp))}

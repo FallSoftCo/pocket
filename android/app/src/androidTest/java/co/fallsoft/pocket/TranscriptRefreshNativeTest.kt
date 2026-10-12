@@ -70,6 +70,27 @@ class TranscriptRefreshNativeTest {
   assertEquals("Repeated input event restarted position lookup",2,after.getJSONArray("positions").length())
   assertEquals("Read repair submitted work",0,after.getJSONArray("replies").length())
  }
+ @Test fun incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble(){
+  twoChats();qa("message-identity");qa("hold-history")
+  val scope=PocketTranscript.scopeKey()
+  val bare=JSONObject().put("id","identity/item-183").put("itemId","item-183").put("turnId","identity").put("kind","user").put("text","Same deliberate text")
+  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",org.json.JSONArray().put(bare)).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+  assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+  val restored=PocketTranscript.cacheRestoreRevision
+  main{Pocket.open("same-thread")};await{PocketTranscript.cacheRestoreRevision>restored&&PocketTranscript.loading}
+  assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"})
+  qa("release-history");await{has(1)&&!PocketTranscript.updating}
+  fun users()=PocketTranscript.rows.filter{it.s("kind")=="user"}
+  assertEquals("Incomplete cached identity became a third bubble",2,users().size)
+  assertEquals(setOf("send-one","send-two"),users().map{it.s("clientId")}.toSet())
+  await{device.findObjects(By.text("Same deliberate text")).size==2}
+  main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","identity").put("row",JSONObject(bare.toString()).put("version",1000)))}
+  assertEquals("Late incomplete live event created duplicate bubble",2,users().size)
+  main{Pocket.refreshDetail()};await{!PocketTranscript.updating}
+  assertEquals(2,users().size)
+  assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun providerReconstructionReconcilesLiveHistoryAndLegacyCache(){
   twoChats();qa("message-identity");qa("hold-history")
   val scope=PocketTranscript.scopeKey()
