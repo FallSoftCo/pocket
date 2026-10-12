@@ -2,22 +2,26 @@ package co.fallsoft.pocket
 
 import org.commonmark.node.*
 import org.commonmark.parser.Parser
+import org.commonmark.ext.gfm.tables.*
 
 internal data class MarkdownSpan(val start:Int,val end:Int,val kind:String,val destination:String="")
 internal data class MarkdownImage(val destination:String,val description:String,val requiresMimeCheck:Boolean=false,val position:Int=Int.MAX_VALUE)
 internal data class MarkdownInline(val text:String,val spans:List<MarkdownSpan> = emptyList(),val images:List<MarkdownImage> = emptyList())
-internal data class MarkdownBlock(val content:MarkdownInline,val kind:String="paragraph",val level:Int=0,val prefix:String="",val language:String="")
+internal data class MarkdownTableCell(val content:MarkdownInline,val alignment:String,val header:Boolean,val offset:Int)
+internal data class MarkdownTable(val rows:List<List<MarkdownTableCell>>)
+internal data class MarkdownBlock(val content:MarkdownInline,val kind:String="paragraph",val level:Int=0,val prefix:String="",val language:String="",val table:MarkdownTable?=null)
 internal data class ImmersionDisplayRange(val span:ImmersionSpan,val start:Int,val end:Int)
 
 /** Parse content rather than stripping delimiters; code and escaped punctuation stay literal. */
 internal object MarkdownContent {
-    private val parser=Parser.builder().build()
+    private val parser=Parser.builder().extensions(listOf(TablesExtension.create())).build()
     fun blocks(raw:String):List<MarkdownBlock> {
         val result=mutableListOf<MarkdownBlock>()
         fun walk(parent:Node,depth:Int=0,quote:Boolean=false){
             var node=parent.firstChild
             while(node!=null){
                 when(val current=node){
+                    is TableBlock->result.add(table(current))
                     is Paragraph->result.add(MarkdownBlock(inline(current),if(quote)"quote" else "paragraph",depth))
                     is Heading->result.add(MarkdownBlock(inline(current),"heading",current.level))
                     is FencedCodeBlock->result.add(MarkdownBlock(MarkdownInline(current.literal.trimEnd('\n')),"code",language=current.info.orEmpty().substringBefore(' ')))
@@ -38,6 +42,38 @@ internal object MarkdownContent {
             }
         }
         walk(parser.parse(raw));return result
+    }
+    /** Keep one flattened reading order for preview, copy and immersion offsets. */
+    private fun table(parent:TableBlock):MarkdownBlock {
+        val rows=mutableListOf<List<MarkdownTableCell>>()
+        val text=StringBuilder()
+        val spans=mutableListOf<MarkdownSpan>()
+        val images=mutableListOf<MarkdownImage>()
+        fun walk(node:Node) {
+            if(node is TableRow) {
+                if(rows.isNotEmpty())text.append('\n')
+                val cells=mutableListOf<MarkdownTableCell>()
+                var child=node.firstChild
+                while(child!=null) {
+                    if(child is TableCell) {
+                        if(cells.isNotEmpty())text.append('\t')
+                        val content=inline(child)
+                        val offset=text.length
+                        cells+=MarkdownTableCell(content,child.alignment?.name?.lowercase()?:"left",child.isHeader,offset)
+                        text.append(content.text)
+                        spans+=content.spans.map{it.copy(start=it.start+offset,end=it.end+offset)}
+                        images+=content.images.map{it.copy(position=if(it.position==Int.MAX_VALUE)text.length else it.position+offset)}
+                    }
+                    child=child.next
+                }
+                rows+=cells
+            } else {
+                var child=node.firstChild
+                while(child!=null){walk(child);child=child.next}
+            }
+        }
+        walk(parent)
+        return MarkdownBlock(MarkdownInline(text.toString(),spans,images),"table",table=MarkdownTable(rows))
     }
     private fun inline(parent:Node):MarkdownInline {
         val text=StringBuilder();val spans=mutableListOf<MarkdownSpan>();val images=mutableListOf<MarkdownImage>()

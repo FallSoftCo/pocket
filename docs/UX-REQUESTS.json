@@ -2446,13 +2446,23 @@
     {
       "id": "immersion-continuous-reading-order-wave",
       "status": "native-selectable-paragraph-foundation-qualified-full-integration-pending",
-      "request": "Equal local transition speed; continuously repeat staggered top-to-bottom reading-order waves with each language visible for a few seconds. Never compress later lines to finish together.",
+      "request": "Equal local transition speed; continuously repeat staggered top-to-bottom reading-order waves with each language visible for a few seconds. Never compress later lines to finish together. Ordinary taps must not interrupt the wave or add a post-tap quiet delay; retain the action captured when pressed.",
       "confirmedCause": "Fixed4200ms paragraph deadline scales local line speed by line count; controls separately use18s/6s language holds.",
       "design": "docs/IMMERSION-CASCADE-DESIGN.md",
       "delivery": "Held alpha88; no phone delivery of this correction.",
       "evidence": "docs/qualification/immersion-reading-wave-runtime-20261012.json",
       "interactionFollowup": "The integrated Compose fragment renderer still fails the real phrase-help long-press journey. A separate single native selectable paragraph now passes actual word selection, Select all, exact Copy, six paired slot positions, native-menu language freeze/release and a genuine display-clock cycle. Rich links/accessibility, scrolling, full-app integration and signed native release remain pending.",
-      "foundationEvidence": "docs/qualification/immersion-native-selection-foundation-20261012.json"
+      "foundationEvidence": "docs/qualification/immersion-native-selection-foundation-20261012.json",
+      "tapFollowup": "Candidate removes general touch/1600ms quiet gating. Native styled paragraph passes actual pointer-down ink advancement, stable pointer text offsets, down-captured help action, no residual hold, long-press Select all/Copy and deferred-content release. Integrated app and physical delivery remain pending. Five integrated native checks also pass, including the default motion environment under actual pointer-down/up and exact down-action retention through a language handoff. Fresh callback regression was detected and repaired without changing its assertion."
+    },
+    {
+      "id": "markdown-native-tables",
+      "status": "native-table-journey-qualified-release-pending",
+      "request": "Format Markdown tables correctly in ordinary and immersion conversations, with readable headers, aligned columns, preserved inline content and ergonomic horizontal overflow.",
+      "confirmedCause": "Core CommonMark parser is configured without the optional GFM table extension; both message renderers currently treat pipe rows as ordinary text.",
+      "delivery": "Candidate only; no phone delivery.",
+      "implementation": "Pinned GFM parser extension; typed cells/alignment/header/flattened offsets; shared ordinary/immersion renderer with reserved rendition widths, styled intrinsic sizing, readable word bounds, shared horizontal scroll and overflow thumb.",
+      "evidence": "docs/qualification/markdown-tables-20261012.json"
     }
   ],
   "current_state": {

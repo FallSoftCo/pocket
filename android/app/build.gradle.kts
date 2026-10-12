@@ -44,6 +44,7 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
     implementation("org.commonmark:commonmark:0.27.1")
+    implementation("org.commonmark:commonmark-ext-gfm-tables:0.27.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
     androidTestImplementation("androidx.test:runner:1.6.2")

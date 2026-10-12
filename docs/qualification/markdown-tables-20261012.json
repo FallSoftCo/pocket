@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-12",
+  "status": "candidate-qualified-native-table-journey-release-pending",
+  "parser": "CommonMark core and GFM table extension0.27.1",
+  "unitCases": 9,
+  "unitFailures": 0,
+  "unitScope": "Existing Markdown regressions plus table styles/alignment/escaped pipes, literal/incomplete syntax and source-anchored immersion offsets.",
+  "nativeScope": "Actual RichText and BilingualMessage in owned emulator;240dp viewport, normal and2x text. No real account or external browser.",
+  "nativeTableCases": 1,
+  "nativeBalancedRunSeconds": 4.533,
+  "nativeVerified": [
+    "header/body column alignment",
+    "right-aligned numeric text",
+    "visible comparison column at narrow width",
+    "horizontal touch scrolling",
+    "actual link taps via intercepted UriHandler",
+    "inline target/source replacement retains cell origin/width",
+    "readable larger row height"
+  ],
+  "visualReview": "First draft rejected: a description dominated the viewport and large headers split awkwardly. Revised styled intrinsic sizing and word bounds inspected in normal, Italian and2x native screenshots; complete large Evidence and Portfolio words visible.",
+  "galleryCard": "nextcomp-native-tables-r01",
+  "build": "passed",
+  "lint": "passed",
+  "phoneInstalled": false,
+  "signedReleaseQualified": false,
+  "limits": [
+    "Synthetic fixture, not actual phone",
+    "Very large-table performance",
+    "Real screen-reader traversal",
+    "Full app signed native gate",
+    "Wider integrated immersion selection/blackout gate"
+  ],
+  "sources": {
+    "android/app/src/main/java/co/fallsoft/pocket/MarkdownContent.kt": "50f10178e0bc6474a17ccb1bae6f18ba0c809e2584edd05b2b0dbaaddc47b91a",
+    "android/app/src/main/java/co/fallsoft/pocket/MarkdownTableContent.kt": "a42af5e0ba341c1ad341cdcd4a42dbdaabe27f289ab4cf421be122de308ba339"
+  },
+  "galleryQualification": {
+    "desktopViewport": "1440x1050",
+    "mobileViewport": "390x844",
+    "reducedMotion": true,
+    "automaticReload": true,
+    "status": "passed",
+    "isolatedBrowser": true,
+    "sharedProfile": false
+  },
+  "finalCombinedNativeRun": {
+    "cases": 2,
+    "seconds": 27.513,
+    "status": "passed",
+    "scope": "Table plus paragraph tap/selection/cycle before styled-separator extension; source table unchanged afterward."
+  }
+}

@@ -94,7 +94,8 @@
         "scope": "Code font/background also preserved inside whitespace separators; both forms retain selection/copy, equal slot positions and moving-tap behavior.",
         "model": "Separators retain native rich spans; unsupported different separator styles are rejected rather than silently stripped.",
         "selectionInk": "Native selection paints its underlying semantic copy snapshot rather than retaining a half-transitioned glyph blend.",
-        "remaining": "Full rich-content adapter, scrolling, RTL, cross-block selection and accessibility."
+        "remaining": "Full rich-content adapter, scrolling, RTL, cross-block selection and accessibility.",
+        "visualReview": "Native styled selection screenshot inspected: color/bold and code whitespace remain visible; code background vertical edges still step between native gap and shaped words. Spacing/background polish remains open."
       }
     },
     "finalCombinedChecks": {
