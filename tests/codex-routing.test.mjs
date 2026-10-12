@@ -37,7 +37,7 @@ test('same-thread steering, idle continuation, and exact pending request respons
  await waitFor(async()=>(await api(`/api/replies/${first}`)).data.state==='accepted');
  assert.ok(!(await api('/api/threads/thread-live')).data.outgoing.some(x=>x.id===first),'accepted receipt must not bulk up routine conversation reads');
  assert.equal((await api(`/api/replies/${first}`)).data.state,'accepted');
- const steer=calls.find(x=>x.method==='turn/steer');assert.equal(steer.params.threadId,'thread-live');assert.equal(steer.params.expectedTurnId,'turn-original');
+ const steer=calls.find(x=>x.method==='turn/steer');assert.equal(steer.params.threadId,'thread-live');assert.equal(steer.params.expectedTurnId,'turn-original');assert.equal(steer.params.clientUserMessageId,first);
  active=false;const second=randomUUID();await api('/api/threads/thread-live/reply',{id:second,text:'Continue the existing idle task'});
  await waitFor(async()=>(await api(`/api/replies/${second}`)).data.state==='accepted');
  assert.equal(calls.find(x=>x.method==='turn/start').params.threadId,'thread-live');
