@@ -27,6 +27,32 @@ class HistoryReadingNativeTest {
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/$path",JSONObject())}
  private var eventVersion=900
  private fun event(id:String,kind:String,text:String):JSONObject{val version=++eventVersion;return JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",version).put("row",JSONObject().put("id","order/$id").put("turnId","order").put("kind",kind).put("text",text).put("version",version))}
+ @Test fun growingResponseKeepsItsNewestPassageVisible(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val c=i.targetContext;c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
+  val body=(1..30).joinToString("\n\n"){"Streaming passage $it. "+"Readable synthetic response. ".repeat(5)}+"\n\nStreaming tail marker"
+  main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","streaming").put("version",1000).put("row",JSONObject().put("id","streaming/answer").put("turnId","streaming").put("kind","message").put("text",body)))}
+  assertTrue("Following a growing reply left its latest passage offscreen",device.wait(Until.hasObject(By.text("Streaming tail marker")),5000))
+  val tail=requireNotNull(device.findObject(By.text("Streaming tail marker"))).visibleBounds
+  assertFalse("Latest passage has empty visible bounds",tail.isEmpty)
+  assertTrue("Latest passage is outside the screen",tail.top>=0&&tail.bottom<=device.displayHeight)
+  fun update(text:String,version:Int)=main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","streaming").put("version",version).put("row",JSONObject().put("id","streaming/answer").put("turnId","streaming").put("kind","message").put("text",text)))}
+  val growing=body+"\n\nStreaming revised tail"
+  update(growing,1001)
+  assertTrue("A subsequent delta did not follow the new tail",device.wait(Until.hasObject(By.text("Streaming revised tail")),5000))
+  repeat(2){requireNotNull(device.findObject(By.scrollable(true))).scroll(androidx.test.uiautomator.Direction.UP,0.65f);Thread.sleep(200)}
+  await{!PocketTranscript.loading};device.waitForIdle(2000)
+  val anchor=requireNotNull(device.findObjects(By.textStartsWith("Streaming passage ")).firstOrNull{val b=it.visibleBounds;!b.isEmpty&&b.top>50&&b.bottom<device.displayHeight*3/4})
+  val anchorText=anchor.text;val anchorTop=anchor.visibleBounds.top
+  update(growing+"\n\nStreaming unread tail",1002);Thread.sleep(600);device.waitForIdle(2000)
+  val after=requireNotNull(device.findObject(By.text(anchorText))).visibleBounds
+  assertTrue("A growing reply moved the earlier reading passage",kotlin.math.abs(after.top-anchorTop)<=24)
+  val unread=device.findObject(By.text("Streaming unread tail"))
+  assertTrue("A new delta forced reading back to latest",unread==null||unread.visibleBounds.isEmpty)
+  assertEquals("Auto-follow submitted work",0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun pullingAShortRecentPageLoadsEarlierHistoryWithoutATap(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val c=i.targetContext

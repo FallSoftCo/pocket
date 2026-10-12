@@ -2314,6 +2314,12 @@
       "request": "Sent messages must appear once across live/history/cache reconstruction. Use stable scoped message identities, retain ordering/pagination anchors and intentional identical sends.",
       "status": "qualified-update-published-phone-unreachable",
       "evidence": "docs/qualification/transcript-message-identity-20261012.json"
+    },
+    {
+      "id": "streaming-end-anchor-20261012",
+      "request": "Newest streaming text must remain visible while following tall responses; deliberate earlier reading must preserve its passage during further output; pending questions remain immediately actionable.",
+      "status": "qualified-update-published-phone-unreachable",
+      "evidence": "docs/qualification/streaming-end-anchor-20261012.json"
     }
   ],
   "current_state": {
