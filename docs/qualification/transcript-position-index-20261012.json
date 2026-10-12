@@ -1,0 +1,20 @@
+{
+  "status": "candidate-not-deployed",
+  "problem": "Stock runtime rejects item pagination; provider item identity can change while client send identity remains stable.",
+  "implementation": "Bounded body-free per-thread/per-turn ordering index from normal complete-turn reads; Android carries explicit send identity.",
+  "checks": {
+    "node_history_tests": 22,
+    "android_debug_unit_tests": "passed",
+    "diff_check": "passed",
+    "native_existing_provider_change_race": {
+      "result": "pass",
+      "seconds": 12.604,
+      "scope": "isolated emulator; no command submissions"
+    }
+  },
+  "remaining": [
+    "Dedicated native history-dependent retry test",
+    "Full release qualification, signed release and physical phone delivery"
+  ],
+  "phone": "SSH unreachable; no installation attempted"
+}

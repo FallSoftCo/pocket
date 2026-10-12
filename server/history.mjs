@@ -1,16 +1,20 @@
 import {displayItem} from './timeline.mjs';
+import {HistoryPositionIndex} from './history-position-index.mjs';
 
 const unsupportedItems=e=>/thread\/items\/list.*not supported|list_items.*not supported/i.test(e.message||'');
 const encode=(prefix,value)=>prefix+Buffer.from(JSON.stringify(value)).toString('base64url');
 export class ThreadHistory {
-  constructor(codex,{maxItems=400,maxBytes=1024*1024,onPreview=()=>{},inheritedHistory=()=>[]}={}){this.onPreview=onPreview;this.inheritedHistory=inheritedHistory;this.turnOnlyThreads=new Set();this.fullSnapshotThreads=new Set();Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
+  constructor(codex,{maxItems=400,maxBytes=1024*1024,onPreview=()=>{},inheritedHistory=()=>[]}={}){this.positions=new HistoryPositionIndex();codex.on?.('disconnected',()=>this.positions.clear());this.onPreview=onPreview;this.inheritedHistory=inheritedHistory;this.turnOnlyThreads=new Set();this.fullSnapshotThreads=new Set();Object.assign(this,{codex,maxItems,maxBytes:Math.max(64000,maxBytes)});}
+  observeSnapshot(thread){for(const turn of (thread.turns||[]).slice(-32))this.positions.observe(thread.id,turn.id,(turn.items||[]).map(item=>displayItem(item,turn.id)).filter(Boolean));return thread;}
   // Resolve chronology without downloading older transcript pages or resuming work.
   // Each request reads at most four small provider pages; a continuation retains
   // the exact target and provider cursor, rather than restarting from the tail.
-  async locateItemSuccessor(threadId,{turnId,itemId,knownItemIds,cursor=null}={}){
+  async locateItemSuccessor(threadId,{turnId,itemId,clientId=null,knownItemIds,cursor=null}={}){
     const invalid=()=>Object.assign(Error('Invalid item position.'),{status:400});
     const validId=v=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,256}$/.test(v);
     if(!validId(threadId)||!validId(turnId)||!validId(itemId)||!Array.isArray(knownItemIds)||knownItemIds.length>256||knownItemIds.some(id=>!validId(id)))throw invalid();
+    if(clientId!=null&&!validId(clientId))throw invalid();
+    const observed=this.positions.resolve(threadId,turnId,{itemId,clientId,knownItemIds});if(observed)return observed;
     let next={type:'item',itemId};
     if(cursor!=null){
       if(typeof cursor!=='string'||cursor.length>16000||!cursor.startsWith('position:'))throw invalid();
@@ -18,7 +22,7 @@ export class ThreadHistory {
       if(state?.threadId!==threadId||state.turnId!==turnId||state.itemId!==itemId||typeof state.next!=='string'||!state.next)throw invalid();
       next=state.next;
     }
-    if(this.itemAnchorsSupported===false||this.turnOnlyThreads.has(threadId))return {available:false,insertBefore:null,cursor:null};
+    if(this.itemAnchorsSupported===false||this.turnOnlyThreads.has(threadId))return {available:false,insertBefore:null,cursor:null,...(clientId&&!this.positions.has(threadId,turnId)?{awaitingHistory:true}:{})};
     const known=new Set(knownItemIds);known.delete(itemId);const visited=new Set();
     for(let n=0;n<4;n++){
       const key=JSON.stringify(next);if(visited.has(key))throw Error('Codex returned a repeated item position.');visited.add(key);
@@ -59,7 +63,7 @@ export class ThreadHistory {
   }
   async readPaged(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8,preferPaging=false}={}){
     const threadId=metadata.id;
-    if(metadata.historyMode!=='paginated'&&!preferPaging)return (await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;
+    if(metadata.historyMode!=='paginated'&&!preferPaging)return this.observeSnapshot((await this.codex.call('thread/read',{threadId,includeTurns:true})).thread);
     if(this.paginationSupported!==true){
       if(this.paginationSupported===false)return this.legacyPage(threadId,metadata,before);
       try{await this.codex.call('thread/turns/list',{threadId,limit:1,sortDirection:'desc',itemsView:'notLoaded'});this.paginationSupported=true;}
@@ -135,6 +139,7 @@ export class ThreadHistory {
     if(!turn)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
     if(state.turnId&&turn.id!==state.turnId)throw Error('The history turn boundary is no longer available. Reopen the task.');
     const items=(turn.items||[]).map(item=>displayItem(item,turn.id)).filter(Boolean);
+    this.positions.observe(metadata.id,turn.id,items);
     const end=state.beforeItemId?items.findIndex(item=>item.id===state.beforeItemId):Math.max(0,items.length-state.offset);
     if(end<0)throw Error('The history item boundary is no longer available. Reopen the task.');
     let start=end,bytes=0;
@@ -147,7 +152,7 @@ export class ThreadHistory {
   }
   async legacyPage(threadId,metadata,before){
     if(before)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
-    const thread=(await this.codex.call('thread/read',{threadId,includeTurns:true})).thread;
+    const thread=this.observeSnapshot((await this.codex.call('thread/read',{threadId,includeTurns:true})).thread);
     return {...thread,_pocketPage:{hasEarlier:false,before:null}};
   }
   async fullSnapshotPage(metadata,options={}){

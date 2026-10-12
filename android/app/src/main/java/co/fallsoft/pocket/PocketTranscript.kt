@@ -30,11 +30,12 @@ object PocketTranscript {
     private var bridgeBoundary:String?=null
     private var coverageVerified=false
     private var missedUpdates=false
-    private data class InputPosition(val turn:String,val target:String,val item:String,val known:List<String>)
+    private data class InputPosition(val turn:String,val target:String,val item:String,val client:String,val known:List<String>)
     private val positionQueue=linkedMapOf<String,InputPosition>()
     private var positionJob:Job?=null
     private data class InputAttempt(val target:String,val item:String)
     private val attemptedPositions=hashSetOf<InputAttempt>()
+    private val awaitingPositionHistory=hashSetOf<InputAttempt>()
     private val positionFailures=linkedMapOf<String,String>()
     var browsingEarlier by mutableStateOf(false);private set
     internal var readPosition by mutableStateOf<TranscriptReadPosition?>(null);private set
@@ -124,18 +125,18 @@ object PocketTranscript {
     /** Stop hidden-view reads without discarding its cache, selection or draft. */
     internal fun pauseReading(){
         rememberRecent(persist=true);generation++
-        positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false
+        positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false
         loading=false;refreshPending=false;loadingEarlier=false;missedUpdates=false;pendingHead=null;buffered.clear()
     }
     fun reset(id:String){
-        positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false
+        positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false
         generation++;owner=id;ownerScope=scopeKey();observedHead=null;pendingHead=null;headSnapshotsSupported=null;automaticRetryAllowed=true
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
         earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;bridgeKnown=cached?.bridgeKnown.orEmpty();bridgeBoundary=cached?.bridgeBoundary;coverageVerified=cached?.coverageVerified?:false;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;observedHead=null;pendingHead=null;headSnapshotsSupported=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;bridgeKnown=emptySet();bridgeBoundary=null;coverageVerified=false;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;observedHead=null;pendingHead=null;headSnapshotsSupported=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;bridgeKnown=emptySet();bridgeBoundary=null;coverageVerified=false;earlier=false;browsingEarlier=false;revision++;trace()}
     /** Called only by the resumed, unfiltered viewport after settling at latest. */
     internal fun presentedLatest(){
         val id=Pocket.selected?:return
@@ -157,7 +158,7 @@ object PocketTranscript {
         val known=transcriptPositionAnchors(rows.filter{it.s("turnId")==turn&&it.s("kind") !in listOf("turn","turnEnd","request","attachments")}).map{it.s("itemId").ifBlank{it.s("id").removePrefix("$turn/")}}
         if(known.none{it!=item})return
         attemptedPositions.add(attempt)
-        positionQueue[target]=InputPosition(turn,target,item,known)
+        positionQueue[target]=InputPosition(turn,target,item,row.s("clientId"),known)
         if(positionJob?.isActive==true)return
         positioning=true
         positionJob=Pocket.scope.launch{
@@ -171,9 +172,11 @@ object PocketTranscript {
                         for(page in 0 until 64){
                             if(!current())return@launch
                             val body=JSONObject().put("turnId",request.turn).put("itemId",request.item).put("knownItemIds",org.json.JSONArray(request.known))
+                            if(request.client.isNotBlank())body.put("clientId",request.client)
                             cursor?.let{body.put("cursor",it)}
                             val result=Pocket.apiEnvironment(destination,"/api/threads/$id/timeline/position",body)
                             if(!current())return@launch
+                            if(result.optBoolean("awaitingHistory"))awaitingPositionHistory.add(InputAttempt(request.target,request.item))
                             val successor=transcriptDisplayAnchor(rows,result.s("insertBefore")).orEmpty()
                             if(successor.isNotBlank()){
                                 if(successor.startsWith("${request.turn}/")){
@@ -272,6 +275,8 @@ object PocketTranscript {
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             rememberRecent(persist=true);revision++;Pocket.error=positionFailures.values.firstOrNull().orEmpty();succeeded=true;trace()
             if(!older&&bridgeCursor==null){
+                // Retry only after a successful independent snapshot supplied new ordering evidence.
+                attemptedPositions.removeAll(awaitingPositionHistory);awaitingPositionHistory.clear()
                 // A warm reopening must also repair delayed inputs that were outside
                 // its bounded recent page when the previous read was cancelled.
                 val incomingIds=incoming.mapTo(hashSetOf()){it.s("id")}
