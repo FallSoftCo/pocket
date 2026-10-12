@@ -377,6 +377,18 @@ class TranscriptRefreshNativeTest {
   assertEquals("Reconnect erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   assertEquals("Reconnect submitted work",0,qa("state").getJSONArray("replies").length())
  }
+ @Test fun selectedHistoryRecoversWhenUpdateIsOutsideBothBoundedFeeds(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("notification-overflow");main{Pocket.refresh()};await{has(2)&&!PocketTranscript.updating}
+  assertEquals("Catalog must remain unchanged",1000L,Pocket.tasks.first{it.id=="same-thread"}.activityAt)
+  assertTrue("Global notification feed must omit selected update",Pocket.notifications.none{it.s("thread_id")=="same-thread"})
+  val reads=qa("state").getJSONArray("reads").length()
+  repeat(3){main{Pocket.refresh()};Thread.sleep(600)}
+  Thread.sleep(1500)
+  assertEquals("Unchanged head repeatedly fetched history",reads,qa("state").getJSONArray("reads").length())
+  assertEquals("Freshness recovery submitted work",0,qa("state").getJSONArray("replies").length())
+  assertEquals("Freshness recovery erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+ }
  @Test fun fetchedNotificationRepairsMissedEventWithUnchangedCatalog(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   qa("notification-only");main{Pocket.refresh()};await{has(2)&&!PocketTranscript.updating}

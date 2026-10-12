@@ -1,6 +1,6 @@
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
 const replyReceipts=new Map(),receiptReads=[],recoveries=[];let replyAckState="accepted";let badReply=false,holdReceipt=false,wrongReceiptThread=false;let failedReadsRemaining=0;let malformedRead=false;let failReply=false,holdReply=false;let visibility=false;const acknowledgements=[],ackAttempts=[];let failedAckReads=0;let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let clippedPreview=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
-let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
+let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
 const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+(clippedPreview?1:revision),previewKind:'message',previewRole:'codex',activityAt:(notificationOnly?1:revision)*1000,updatedAt:(notificationOnly?1:revision)*1000,recencyAt:(notificationOnly?1:revision)*1000});
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
@@ -8,7 +8,7 @@ const server=http.createServer(async(req,res)=>{
  let raw='';for await(const b of req)raw+=b;
  if(req.headers.authorization!=='Bearer synthetic-system76'){res.writeHead(401);res.end('{}');return;}
  const path=new URL(req.url,'http://localhost').pathname;let body={};
- if(path==='/api/status')body={host:'Synthetic',connected:true,deviceId:'synthetic-device-a'};
+ if(path==='/api/status'){const selected=new URL(req.url,'http://localhost').searchParams.get('threadId');body={host:'Synthetic',connected:true,deviceId:'synthetic-device-a',...(selected?{historyHead:{threadId:selected,epoch:'synthetic-runtime',version:selected==='same-thread'?revision:secondRevision}}:{})};}
  else if(path==='/api/voice/native/start'){res.statusCode=503;body={error:'Synthetic native transport unavailable'};}
  else if(path==='/api/threads')body={threads:[thread(),...(secondVisible?[secondThread()]:[])]};
  else if(path==='/_qa/unknown-reply'){replyAckState='unknown';body={ok:true};}
@@ -39,7 +39,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/api/threads/second-thread'){
   const rev=secondRevision;reads.push({at:Date.now(),threadId:'second-thread',older:false,revision:rev});
   await new Promise(r=>setTimeout(r,300));
-  body={thread:secondThread(),timeline:{rows:[{id:'other/message',turnId:'other',kind:'message',text:'Other response '+rev}],hasEarlier:false,before:null},revision:0,notes:[],pending:[],outgoing:[],notifications:[]};
+  body={historyHead:{threadId:'second-thread',epoch:'synthetic-runtime',version:rev},thread:secondThread(),timeline:{rows:[{id:'other/message',turnId:'other',kind:'message',text:'Other response '+rev}],hasEarlier:false,before:null},revision:0,notes:[],pending:[],outgoing:[],notifications:[]};
  }
 
  else if(path==='/api/threads/same-thread'){
@@ -48,7 +48,7 @@ const server=http.createServer(async(req,res)=>{
   const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
   await new Promise(r=>setTimeout(r,older?2200:1700));
   while(!older&&rev===2&&holdRefresh)await new Promise(r=>setTimeout(r,50));
-  body={thread:thread(),timeline:{rows:[{id:older?'older-message':'same-message',kind:'message',text:older?'Older synthetic history':'Fresh response '+rev,version:rev===1?80:0}],hasEarlier:!older,before:older?null:'older1'},revision:rev===1?80:0,notes:[],pending:[],outgoing:[],notifications:[]};
+  body={historyHead:{threadId:'same-thread',epoch:'synthetic-runtime',version:rev},thread:thread(),timeline:{rows:[{id:older?'older-message':'same-message',kind:'message',text:older?'Older synthetic history':'Fresh response '+rev,version:rev===1?80:0}],hasEarlier:!older,before:older?null:'older1'},revision:rev===1?80:0,notes:[],pending:[],outgoing:[],notifications:[]};
   if(visibility&&!older){body.timeline={rows:Array.from({length:20},(_,n)=>({id:'visible-'+n,kind:'message',text:n===19?'Fresh response '+rev:('Visible passage '+n+' '+('Readable synthetic history. '.repeat(10)))})),hasEarlier:false,before:null};body.notifications=[{id:rev,thread_id:'same-thread',kind:'complete'}];body.catchup={token:'capture-'+rev};}
   if(pendingNavigation&&!older){
    const request={id:'synthetic-pending',method:'item/tool/requestUserInput',params:{threadId:'same-thread',questions:[{id:'review',question:'Which synthetic review should continue?',options:[{label:'First',description:'Synthetic only'},{label:'Second',description:'Synthetic only'}]}]}};
@@ -65,6 +65,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/activity-only'){revision++;for(const s of sockets)send(s,{type:'sessionActivity',threadId:'same-thread',status:{type:'idle'},activityAt:revision*1000});body={revision};}
  else if(path==='/_qa/repeat-activity'){for(const s of sockets)send(s,{type:'sessionActivity',threadId:'same-thread',status:{type:'idle'},activityAt:revision*1000});body={revision};}
  else if(path==='/_qa/clipped-preview'){clippedPreview=true;body={ok:true};}
+ else if(path==='/_qa/notification-overflow'){notificationOverflow=true;notificationOnly=true;clippedPreview=true;revision++;body={revision};}
  else if(path==='/_qa/notification-only'){notificationOnly=true;clippedPreview=true;revision++;body={revision};}
  else if(path==='/_qa/live-outage'){rejectLive=true;for(const socket of sockets)socket.destroy();body={ok:true};}
  else if(path==='/_qa/live-recover'){rejectLive=false;revision++;body={revision};}
@@ -73,7 +74,7 @@ const server=http.createServer(async(req,res)=>{
  else if(/^\/api\/threads\/(same|second)-thread\/reply$/.test(path)){const sent=JSON.parse(raw);replies.push({...sent,threadId:path.split('/')[3]});if(!failReply)replyReceipts.set(sent.id,{id:sent.id,thread_id:path.split('/')[3],state:replyAckState});while(holdReply)await new Promise(r=>setTimeout(r,50));await new Promise(r=>setTimeout(r,150));if(failReply){failReply=false;res.statusCode=503;body={error:'Synthetic delayed reply failure'};}else if(badReply){badReply=false;body={id:"wrong-id",state:"accepted"};}else body={id:sent.id,state:replyAckState};}
  else if(path==='/_qa/fail-acks'){failedAckReads=2;body={ok:true};}
  else if(path==='/_qa/state')body={revision,connections,reads,replies,positions,acknowledgements,ackAttempts,receiptReads,recoveries};
- else if(path==='/api/notifications')body={notifications:notificationOnly?[{id:revision,thread_id:'same-thread',kind:'complete'}]:[]};
+ else if(path==='/api/notifications')body={notifications:notificationOnly&&!notificationOverflow?[{id:revision,thread_id:'same-thread',kind:'complete'}]:[]};
  else if(path==='/api/attention')body={notifications:[]};
  else if(path==='/api/activity')body={items:[]};
  res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));
