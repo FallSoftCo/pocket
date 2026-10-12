@@ -42,6 +42,11 @@ try{
  const installed=()=>{const path=run(['shell','pm','path','co.fallsoft.pocket']).trim().replace(/^package:/,'');if(!/^\/data\/app\/[a-zA-Z0-9_~.+/=-]+\/base\.apk$/.test(path))throw Error('Unexpected installed APK path.');return run(['shell','sha256sum',path]).split(/\s/)[0];};
  if(!run(['shell','dumpsys','package','co.fallsoft.pocket']).includes('versionCode='+manifest.versionCode+' '))throw Error('Wrong installed version.');
  receipt.installedApkSha=installed();if(receipt.installedApkSha!==build.qualificationApkSha)throw Error('Wrong installed qualification APK.');
+ // Preflight is setup evidence, not a product assertion. Only the owned AVD.
+ run(['shell','pm','grant','co.fallsoft.pocket','android.permission.POST_NOTIFICATIONS']);
+ const permissions=run(['shell','dumpsys','package','co.fallsoft.pocket']);
+ if(!/android\.permission\.POST_NOTIFICATIONS:\s*granted=true/.test(permissions))throw Error('Native setup failed: notification permission unavailable.');
+ receipt.preflight={state:'complete',notificationPermissionGranted:true,fixtureReady:true,installedApkVerified:true,emulatorStartTicks:ticks};persist();
  const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:120000,maxBuffer:4*1024*1024});
  const output=(r.stdout||'')+(r.stderr||'');writeFileSync(join(directory,log),output,{flag:'wx',mode:0o600});receipt.logSha=fileSha(join(directory,log));receipt.exitCode=r.status;
  if(r.status!==0||!nativeOutputPassed(output)||!current()||installed()!==build.qualificationApkSha)throw Error('Native qualification failed; channel must not be published.');
