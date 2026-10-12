@@ -60,6 +60,8 @@ class TranscriptRefreshNativeTest {
   val ids=PocketTranscript.rows.map{it.s("id")}
   assertTrue("Canonical input position lookup could not address the displayed row",ids.indexOf("order/client-user/same-send")<ids.indexOf("order/answer"))
   assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"&&it.s("clientId")=="same-send"})
+  assertEquals("order/client-user/same-send",transcriptDisplayAnchor(PocketTranscript.rows,"order/live-uuid"))
+  assertEquals("order/client-user/same-send",transcriptDisplayAnchor(PocketTranscript.rows,"order/rebuilt-item"))
   val before=qa("state");val reads=before.getJSONArray("reads").length()
   repeat(3){main{Pocket.event(event("rebuilt-item",1001))}}
   Thread.sleep(800)

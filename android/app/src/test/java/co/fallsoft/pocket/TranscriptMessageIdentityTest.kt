@@ -111,4 +111,16 @@ class TranscriptMessageIdentityTest {
   val evidence=transcriptInputEvent(previous,user("new","other",11))
   assertTrue(evidence.newInput);assertTrue(evidence.needsPosition)
  }
+ @org.junit.Test fun replacementRetainsAliasesWithoutRegressingContent(){
+  val old=normalizeTranscriptMessage(user("first",version=10))
+  val newest=normalizeTranscriptMessage(user("second",version=11)).put("text","Updated input")
+  val merged=mergeTranscriptMessageEvidence(old,newest)
+  assertEquals("Updated input",merged.s("text"))
+  assertEquals(merged.s("id"),transcriptDisplayAnchor(listOf(merged),"turn/first"))
+  assertEquals(merged.s("id"),transcriptDisplayAnchor(listOf(merged),"turn/second"))
+  val stale=normalizeTranscriptMessage(user("third",version=9)).put("text","Stale input")
+  val retained=mergeTranscriptMessageEvidence(merged,stale)
+  assertEquals("Updated input",retained.s("text"))
+  assertEquals(retained.s("id"),transcriptDisplayAnchor(listOf(retained),"turn/third"))
+ }
 }

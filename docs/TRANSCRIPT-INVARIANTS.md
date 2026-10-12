@@ -37,3 +37,5 @@ A provider may regenerate physical item IDs while preserving the explicit client
 The backend records only IDs and user client IDs from complete turns already obtained by normal reads. The index is scoped to thread and turn, expires after 15 minutes, is bounded to 32 turns / 20,000 items / 4 MiB, and clears on transport disconnect. It never fetches history, starts a turn, or retains message bodies. Ambiguous or missing identities yield unavailable evidence.
 
 A missing indexed turn may advertise `awaitingHistory`. Android may reconsider that attempt after an independently successful recent-history snapshot; this signal does not itself request a refresh. Once evidence exists, unchanged refreshes must not repeat a successful position lookup. Legacy servers without the signal keep compatibility behavior.
+
+Message replacement must merge provider alias evidence before replacing metadata. Both live ingress and history snapshots use this rule. Metadata remains version-controlled, aliases remain bounded, and equal text is never used to reconcile sends. Saved anchors are resolved before legacy-cache alias truncation.

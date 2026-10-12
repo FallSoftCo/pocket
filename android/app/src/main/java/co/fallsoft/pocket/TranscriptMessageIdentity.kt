@@ -69,3 +69,9 @@ internal fun transcriptInputEvent(previous:List<JSONObject>,raw:JSONObject?):Tra
     val changed=old!=null&&transcriptProviderItem(old)!=transcriptProviderItem(row)
     return TranscriptInputEvent(row,fresh,admitted&&(fresh||changed))
 }
+
+/** Metadata replacement must retain bounded provider evidence for the same send. */
+internal fun mergeTranscriptMessageEvidence(previous:JSONObject?,incoming:JSONObject):JSONObject {
+    if(previous==null||previous.s("id")!=incoming.s("id")||incoming.s("kind")!="user"||incoming.s("clientId").isBlank())return incoming
+    return normalizeTranscriptMessages(listOf(previous,incoming)).single()
+}

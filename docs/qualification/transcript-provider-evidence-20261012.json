@@ -1,0 +1,22 @@
+{
+  "status": "candidate-not-deployed",
+  "cause": "Replacing row metadata could discard earlier provider aliases even with stable message identity.",
+  "implementation": "Shared bounded evidence merge at live row replacement and history snapshot reconciliation; metadata version checks retained.",
+  "checks": {
+    "android_debug_unit_tests": "pass",
+    "native_live_replacement": {
+      "result": "pass",
+      "seconds": 13.878,
+      "assertions": [
+        "original and rebuilt provider reference address one displayed row",
+        "one user message precedes response",
+        "repeated events add no reads or sends"
+      ]
+    }
+  },
+  "remaining": [
+    "Native history-refresh alias preservation check",
+    "Signed release checks and deployment",
+    "Physical phone interaction"
+  ]
+}

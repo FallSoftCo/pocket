@@ -231,9 +231,11 @@ object PocketTranscript {
             validateTranscriptSnapshot(d,id)
             if(older)beforeApply()
             if(!current())return
-            val page=d.optJSONObject("timeline")?:JSONObject();val incoming=normalizeTranscriptMessages(page.optJSONArray("rows")?.objects()?:emptyList())
+            val page=d.optJSONObject("timeline")?:JSONObject();var incoming=normalizeTranscriptMessages(page.optJSONArray("rows")?.objects()?:emptyList())
             incoming.forEach{it.put("version",maxOf(it.optLong("version"),d.optLong("revision")))}
             if(!older&&bridgeCursor==null)rows=authoritativeSnapshotBase(rows,baselineRows,incoming.mapTo(hashSetOf()){it.s("id")},{it.s("id")}){JSONObject(it.toString()).put("version",0)}
+            val previousEvidence=rows.associateBy{it.s("id")}
+            incoming=incoming.map{mergeTranscriptMessageEvidence(previousEvidence[it.s("id")],it)}
             val wasLoaded=historyLoaded&&rows.isNotEmpty()
             val loadedIds=rows.filter{transcriptContentAnchor(it.s("kind"))}.mapTo(hashSetOf()){it.s("id")}
             val incomingContent=incoming.filter{transcriptContentAnchor(it.s("kind"))}
@@ -334,7 +336,7 @@ object PocketTranscript {
         val next=rows.toMutableList()
         fun put(row:JSONObject){
             val at=next.indexOfFirst{it.s("id")==row.s("id")}
-            if(at>=0){if(row.optLong("version")>=next[at].optLong("version"))next[at]=row}
+            if(at>=0){if(row.optLong("version")>=next[at].optLong("version"))next[at]=mergeTranscriptMessageEvidence(next[at],row)}
             else{
                 val end=next.indexOfFirst{it.s("turnId")==turnId&&it.s("kind")=="turnEnd"}
                 val last=next.indexOfLast{it.s("turnId")==turnId}
