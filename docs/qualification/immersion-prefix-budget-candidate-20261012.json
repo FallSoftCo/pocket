@@ -16,9 +16,9 @@
     "setup": "Owned emulator @Before notification permission grant"
   },
   "findings": [
-    "Native text/accessibility lookup and selection regressions after increasing chunk count",
-    "Existing layout tests sometimes assume raw placeholder alternative text equals exposed content; retain behavioral checks while diagnosing semantics",
-    "Do not weaken existing link/selection/common-position requirements"
+    "Prior UI failures were caused by the notification permission modal and are invalidated as renderer evidence",
+    "After owned-emulator permission setup, all 16 native regression cases pass",
+    "Actual app-typography capture confirms prefix shares the line; punctuation spacing recorded and repaired in the subsequent candidate"
   ],
   "production": "Update channel remains alpha86 code104; alpha87-r04 held by visual defect",
   "next": "Review actual conversation capture with original app typography before signed release",
