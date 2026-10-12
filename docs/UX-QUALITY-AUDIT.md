@@ -20,9 +20,9 @@ commands and environment identity throughout.
 ## Current release and evidence checkpoint — 2026-10-12
 
 The table above and older entries below preserve historical observations; their
-installed-version references are not current handset verification. Current
-phone SSH is unavailable, and this audit cannot establish which update the
-handset has installed or reproduce its latest exact failures.
+installed-version references are not current handset verification. Phone SSH has become reachable again (Pixel 9 Pro Fold identity verified).
+Installed version and current interaction remain unverified; ordinary Termux
+access is not privileged Android package/foreground evidence.
 
 The update channel remains alpha86/code104. Alpha87-r04/code105 is signed and
 automatically qualified but intentionally unpublished after actual motion review
