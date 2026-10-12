@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "state": "candidate-failed-native-not-for-release",
+  "date": "2026-10-12",
+  "sourceSha": "f5e8fd91ac187ad7bfcb16cb682d0d1f9af035bb8357046606215cb4861886df",
+  "changes": [
+    "Use native prefix caret to budget first phrase chunk",
+    "Standalone projection ownership for empty reservation slots"
+  ],
+  "native": {
+    "tests": 16,
+    "failures": 12,
+    "log": "/tmp/nextcomp-prefix-owner-native-r02.log"
+  },
+  "findings": [
+    "Native text/accessibility lookup and selection regressions after increasing chunk count",
+    "Existing layout tests sometimes assume raw placeholder alternative text equals exposed content; retain behavioral checks while diagnosing semantics",
+    "Do not weaken existing link/selection/common-position requirements"
+  ],
+  "production": "Update channel remains alpha86 code104; alpha87-r04 held by visual defect",
+  "next": "Inspect actual exposed native semantics before further renderer changes"
+}
