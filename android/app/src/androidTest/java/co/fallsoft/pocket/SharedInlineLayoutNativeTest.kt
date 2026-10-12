@@ -35,6 +35,39 @@ class SharedInlineLayoutNativeTest {
  }
 
 
+ @Test fun interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions(){
+  val literal="/tmp/Review 100%/résultat.json"
+  val original=InterfaceTemplate.GENERATED_ARTIFACT.original(literal)
+  val target=InterfaceTemplate.GENERATED_ARTIFACT.target(literal)
+  val countsOriginal=InterfaceTemplate.COMMAND_RESULTS.original(7,5)
+  val countsTarget=InterfaceTemplate.COMMAND_RESULTS.target(7,5)
+  var taps=0
+  val seen=mutableSetOf<String>()
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{activity->
+    // The owned emulator is paired only to its loopback synthetic fixture.
+    check(Pocket.base.startsWith("http://127.0.0.1:"))
+    PocketImmersion.setEnabled(true)
+    activity.setContent{
+     androidx.compose.runtime.CompositionLocalProvider(LocalImmersionMotionState provides true,LocalImmersionTransitionAnimated provides false){
+      MaterialTheme{androidx.compose.foundation.layout.Column{
+       androidx.compose.material3.TextButton(onClick={taps++}){InterfaceTemplateText(InterfaceTemplate.GENERATED_ARTIFACT,literal)}
+       InterfaceTemplateText(InterfaceTemplate.COMMAND_RESULTS,7,5)
+      }}
+     }
+    }
+   }
+   compose.waitUntil(35000){
+    listOf(original,target,countsOriginal,countsTarget).forEach{form->
+     if(compose.onAllNodesWithText(form).fetchSemanticsNodes().isNotEmpty())seen+=form
+    }
+    seen.containsAll(listOf(original,target,countsOriginal,countsTarget))
+   }
+   val visible=if(compose.onAllNodesWithText(target).fetchSemanticsNodes().isNotEmpty())target else original
+   compose.onNodeWithText(visible).performClick()
+   compose.runOnIdle{assertEquals(1,taps)}
+  }
+ }
  @Test fun longPhraseStartsOnTheSameLineAsItsVisiblePrefix(){
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
   check(UiDevice.getInstance(i).executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")

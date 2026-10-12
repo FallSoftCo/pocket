@@ -32,14 +32,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 
 /** Ordinary action taps stay actions; English rescue replaces the same label in place. */
-@Composable fun BilingualLabel(text:String,modifier:Modifier=Modifier,color:Color=LocalContentColor.current,fontSize:TextUnit=14.sp,fontWeight:FontWeight?=null,maxLines:Int=1,centered:Boolean=true,lineHeight:TextUnit=TextUnit.Unspecified,onActivate:(()->Unit)?=null,overflow:TextOverflow=TextOverflow.Ellipsis){
+@Composable fun BilingualLabel(text:String,modifier:Modifier=Modifier,color:Color=LocalContentColor.current,fontSize:TextUnit=14.sp,fontWeight:FontWeight?=null,maxLines:Int=1,centered:Boolean=true,lineHeight:TextUnit=TextUnit.Unspecified,onActivate:(()->Unit)?=null,overflow:TextOverflow=TextOverflow.Ellipsis,targetOverride:String?=null){
     fun actionText(value:AnnotatedString):AnnotatedString=if(onActivate==null||value.isEmpty())value else buildAnnotatedString{
         append(value)
         // Native link hit testing covers the visible text, not reserved blank width.
         addLink(LinkAnnotation.Clickable("label-action",TextLinkStyles(),linkInteractionListener={onActivate()}),0,length)
     }
-    LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offerLabel(text)}
-    val target=PocketImmersion.label(text)
+    LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.density,targetOverride){if(targetOverride==null)PocketImmersion.offerLabel(text)}
+    val target=if(PocketImmersion.enabled&&targetOverride!=null)targetOverride else PocketImmersion.label(text)
     val key="label-rescue:$text"
     val supported=PocketImmersion.enabled&&target!=text
     val expanded=supported&&PocketImmersion.supportEnabled&&PocketImmersion.originalShown(key)
@@ -137,14 +137,14 @@ internal fun immersionLabelCadence(label:String):ImmersionLabelCadence{
     fontSize:TextUnit=TextUnit.Unspecified,fontWeight:FontWeight?=null,
     maxLines:Int=Int.MAX_VALUE,lineHeight:TextUnit=TextUnit.Unspecified,
     overflow:TextOverflow=TextOverflow.Clip,letterSpacing:TextUnit=TextUnit.Unspecified,
-    style:androidx.compose.ui.text.TextStyle=LocalTextStyle.current
+    style:androidx.compose.ui.text.TextStyle=LocalTextStyle.current,targetOverride:String?=null
 ){
     val resolved=LocalTextStyle.current.merge(style).merge(androidx.compose.ui.text.TextStyle(letterSpacing=letterSpacing))
     CompositionLocalProvider(LocalTextStyle provides resolved){
         BilingualLabel(text,modifier=modifier,
             color=if(color!=Color.Unspecified)color else resolved.color.takeIf{it!=Color.Unspecified}?:LocalContentColor.current,
             fontSize=fontSize.takeIf{it!=TextUnit.Unspecified}?:resolved.fontSize.takeIf{it!=TextUnit.Unspecified}?:14.sp,
-            fontWeight=fontWeight?:resolved.fontWeight,maxLines=maxLines,centered=false,overflow=overflow,
+            fontWeight=fontWeight?:resolved.fontWeight,maxLines=maxLines,centered=false,overflow=overflow,targetOverride=targetOverride,
             lineHeight=lineHeight.takeIf{it!=TextUnit.Unspecified}?:resolved.lineHeight)
     }
 }

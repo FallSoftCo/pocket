@@ -62,9 +62,9 @@ private class WorkRecordClient(val base:String=Pocket.base.trimEnd('/'),val toke
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){TextButton(onBack){InterfaceText("Back")};TextButton({scope.launch{load()}},enabled=!busy){InterfaceText("Refresh")}}
         InterfaceText("Work record",style=MaterialTheme.typography.headlineSmall)
         InterfaceText("Collected automatically from your requests and the resulting work. Follow-ups stay linked to their conversation.",style=MaterialTheme.typography.bodyMedium)
-        Text(coverage,style=MaterialTheme.typography.labelMedium)
+        InterfaceText(coverage,style=MaterialTheme.typography.labelMedium)
         InterfaceText("A completed turn records what the agent returned; it does not prove delivery or satisfaction.",style=MaterialTheme.typography.bodySmall)
-        if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
+        if(error.isNotBlank())InterfaceText(error,color=MaterialTheme.colorScheme.error)
         if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=12.dp)){
             if(rows.isEmpty()&&!busy)item{InterfaceText("Your work will appear here automatically as you use NextComp. Earlier followed conversations are filled in gradually.")}
@@ -80,11 +80,11 @@ private class WorkRecordClient(val base:String=Pocket.base.trimEnd('/'),val toke
                         entries.filter{it.s("kind")=="request"}.forEach{InterfaceText("You asked",style=MaterialTheme.typography.labelLarge);Text(it.s("text"))}
                         val answers=entries.filter{it.s("kind")=="output"}
                         val final=answers.filter{it.s("phase")=="final_answer"}.ifEmpty{answers.takeLast(1)}
-                        final.forEach{Text(if(it.optBoolean("truncated"))"Agent output · excerpt" else "Agent output",style=MaterialTheme.typography.labelLarge);BilingualMessage("work:${row.s("session")}:${row.s("id")}:${it.s("id")}",it.s("text"))}
-                        entries.filter{it.s("kind")=="files"}.forEach{Text("Recorded file changes · ${it.s("status")}",style=MaterialTheme.typography.labelLarge);it.optJSONArray("paths")?.let{paths->for(i in 0 until paths.length())Text(paths.optString(i),style=MaterialTheme.typography.bodySmall)}}
+                        final.forEach{InterfaceText(if(it.optBoolean("truncated"))"Agent output · excerpt" else "Agent output",style=MaterialTheme.typography.labelLarge);BilingualMessage("work:${row.s("session")}:${row.s("id")}:${it.s("id")}",it.s("text"))}
+                        entries.filter{it.s("kind")=="files"}.forEach{InterfaceTemplateText(InterfaceTemplate.FILE_CHANGES,it.s("status"),style=MaterialTheme.typography.labelLarge);it.optJSONArray("paths")?.let{paths->for(i in 0 until paths.length())Text(paths.optString(i),style=MaterialTheme.typography.bodySmall)}}
                         val checks=entries.filter{it.s("kind")=="check"}
-                        if(checks.isNotEmpty())Text("${checks.size} command results · ${checks.count{!it.isNull("exitCode")&&it.optInt("exitCode")==0}} exited successfully",style=MaterialTheme.typography.bodySmall)
-                        entries.filter{it.s("kind")=="artifact"}.forEach{Text("Generated artifact: ${it.s("path")}")}
+                        if(checks.isNotEmpty())InterfaceTemplateText(InterfaceTemplate.COMMAND_RESULTS,checks.size,checks.count{!it.isNull("exitCode")&&it.optInt("exitCode")==0},style=MaterialTheme.typography.bodySmall)
+                        entries.filter{it.s("kind")=="artifact"}.forEach{InterfaceTemplateText(InterfaceTemplate.GENERATED_ARTIFACT,it.s("path"))}
                         TextButton({Pocket.open(row.s("session"));onBack()}){InterfaceText("Open source conversation")}
                     }
                 }
@@ -93,12 +93,12 @@ private class WorkRecordClient(val base:String=Pocket.base.trimEnd('/'),val toke
             if(team.isNotEmpty())item{InterfaceText("Recent team work",style=MaterialTheme.typography.titleMedium)}
             items(team,key={"team:"+it.optJSONObject("source")?.s("environment")+":"+it.s("team")+":"+it.s("id")}){row->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                 Text("${row.s("team")} · ${row.s("task")} · ${row.s("author")}",style=MaterialTheme.typography.titleMedium)
-                Text("Recorded message · ${row.s("visibility")}",style=MaterialTheme.typography.labelMedium)
+                InterfaceTemplateText(InterfaceTemplate.RECORDED_MESSAGE,row.s("visibility"),style=MaterialTheme.typography.labelMedium)
                 BilingualMessage("work-team:${row.optJSONObject("source")?.s("environment")}:${row.s("team")}:${row.s("id")}",row.s("body"))
-                Text("Source message ${row.s("id")}",style=MaterialTheme.typography.bodySmall)
+                InterfaceTemplateText(InterfaceTemplate.SOURCE_MESSAGE,row.s("id"),style=MaterialTheme.typography.bodySmall)
             }}}
             if(voice.isNotEmpty())item{InterfaceText("Recent voice work",style=MaterialTheme.typography.titleMedium)}
-            items(voice,key={"voice:"+it.s("id")}){row->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text(row.s("request"));InterfaceText("Agent output · "+row.s("status"),style=MaterialTheme.typography.labelMedium);Text(row.s("output"))}}}
+            items(voice,key={"voice:"+it.s("id")}){row->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text(row.s("request"));InterfaceTemplateText(InterfaceTemplate.AGENT_STATUS,row.s("status"),style=MaterialTheme.typography.labelMedium);Text(row.s("output"))}}}
         }
     }
 }
