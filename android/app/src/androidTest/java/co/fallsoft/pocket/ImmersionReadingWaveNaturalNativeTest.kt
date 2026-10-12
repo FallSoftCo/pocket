@@ -1,6 +1,9 @@
 package co.fallsoft.pocket
 
 import android.content.Context
+import android.app.Activity
+import android.app.Application
+import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -30,7 +33,7 @@ class ImmersionReadingWaveNaturalNativeTest {
         c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear()
             .putString("server","http://127.0.0.1:18880").commit()
         i.runOnMainSync{Pocket.init(c)}
-        val allowMotion=mutableStateOf(true)
+        val allowMotion=mutableStateOf(false)
         var nativeActivity:MainActivity?=null
         var clock:ImmersionReadingWaveClock?=null
         var taps=0
@@ -38,14 +41,18 @@ class ImmersionReadingWaveNaturalNativeTest {
         val support="Permissions full per i new tasks"
         val controls=mutableSetOf<String>()
         val bodies=mutableSetOf<String>()
+        java.io.File(c.cacheDir,"reading-wave-menu-trace.json").delete()
         val traces=org.json.JSONArray()
         fun capture(stage:String){
             device.takeScreenshot(java.io.File(c.cacheDir,"wave-"+stage+".png"))
             device.dumpWindowHierarchy(java.io.File(c.cacheDir,"wave-"+stage+".xml"))
         }
-        ActivityScenario.launch(MainActivity::class.java).use{scenario->
-            try {
-            scenario.onActivity{activity->
+        check(android.os.Build.VERSION.SDK_INT>=29)
+        val application=c.applicationContext as Application
+        val lifecycle=object:Application.ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity:Activity,savedInstanceState:Bundle?) {}
+            override fun onActivityPostCreated(activity:Activity,savedInstanceState:Bundle?) {
+                if(activity !is MainActivity)return
                 nativeActivity=activity
                 check(Pocket.base=="http://127.0.0.1:18880"&&Pocket.token.isBlank())
                 PocketSpeech.clearAll()
@@ -77,6 +84,21 @@ class ImmersionReadingWaveNaturalNativeTest {
                     }
                 }
             }
+            override fun onActivityStarted(activity:Activity){}
+            override fun onActivityResumed(activity:Activity){}
+            override fun onActivityPaused(activity:Activity){}
+            override fun onActivityStopped(activity:Activity){}
+            override fun onActivitySaveInstanceState(activity:Activity,outState:Bundle){}
+            override fun onActivityDestroyed(activity:Activity){}
+        }
+        // Install the fixture before resumed UI can own a continuous display loop.
+        // Launch/idle completes with its own clock disabled; then use the genuine
+        // Android frame clock without changing system animation preferences.
+        application.registerActivityLifecycleCallbacks(lifecycle)
+        try {
+        ActivityScenario.launch(MainActivity::class.java).use{
+            try {
+            i.runOnMainSync{allowMotion.value=true}
             var controlBounds:String?=null
             var bodyBounds:String?=null
             val started=android.os.SystemClock.elapsedRealtime()
@@ -104,10 +126,36 @@ class ImmersionReadingWaveNaturalNativeTest {
             val body=device.findObjects(By.pkg(c.packageName).textContains("per i")).maxBy{it.visibleBounds.top}
             val x=body.visibleBounds.left+30
             val y=body.visibleBounds.top+25
-            device.swipe(x,y,x,y,120)
+            // Inject an actual stationary hold; a zero-distance swipe is not
+            // evidence that the platform received a long press of known duration.
+            val downAt=android.os.SystemClock.uptimeMillis()
+            fun inject(action:Int):Boolean {
+                val event=android.view.MotionEvent.obtain(downAt,android.os.SystemClock.uptimeMillis(),
+                    action,x.toFloat(),y.toFloat(),0)
+                event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+                return try{i.uiAutomation.injectInputEvent(event,true)}finally{event.recycle()}
+            }
+            try {
+                assertTrue("Native touch-down delivery failed",inject(android.view.MotionEvent.ACTION_DOWN))
+                Thread.sleep(android.view.ViewConfiguration.getLongPressTimeout().toLong()+350)
+            } finally {
+                assertTrue("Native touch-up delivery failed",inject(android.view.MotionEvent.ACTION_UP))
+            }
             val select=device.wait(androidx.test.uiautomator.Until.findObject(By.text("Select all")),5000)
+            if(select==null)capture("selection-open-unavailable")
             assertNotNull("Native body selection did not open its menu",select)
+            val menuTrace=org.json.JSONArray()
+            fun recordMenu(stage:String){
+                val plan=PocketImmersion.presentation("natural-wave-body","Full permissions for new tasks")
+                val selected=PocketImmersion.readingSelection(PocketImmersion.readingKey("natural-wave-body",plan),plan)
+                menuTrace.put(org.json.JSONObject().put("stage",stage).put("wallMs",android.os.SystemClock.elapsedRealtime())
+                    .put("clockMs",clock?.elapsedMs).put("nativeMenu",nativeActivity?.immersionSelectionActive)
+                    .put("waveSelection",clock?.hasSelection).put("readingHelp",selected?.let{immersionPhraseIdentity(it)}))
+            }
+            recordMenu("before-select-all")
             select!!.click()
+            repeat(20){recordMenu("after-select-all");Thread.sleep(25)}
+            java.io.File(c.cacheDir,"reading-wave-menu-trace.json").writeText(menuTrace.toString())
             val copy=device.wait(androidx.test.uiautomator.Until.findObject(By.text("Copy")),5000)
             if(copy==null)capture("copy-unavailable")
             assertNotNull("Native body selection did not offer Copy",copy)
@@ -166,5 +214,6 @@ class ImmersionReadingWaveNaturalNativeTest {
                 i.runOnMainSync { allowMotion.value=false }
             }
         }
+        } finally {application.unregisterActivityLifecycleCallbacks(lifecycle)}
     }
 }

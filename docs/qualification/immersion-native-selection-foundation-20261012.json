@@ -1,0 +1,30 @@
+{
+  "status": "foundation-qualified-integrated-release-held",
+  "date": "2026-10-12",
+  "method": "Actual native touchscreen down/hold/up and platform Select all/Copy",
+  "forms": [
+    "Permessi completi per i nuovi incarichi",
+    "Permissions full per i new tasks"
+  ],
+  "reservedSlots": 6,
+  "sameHorizontalSlotPositions": true,
+  "twoFormNativeRunSeconds": 9.016,
+  "nativeCases": 1,
+  "buildAndLintBeforeExtension": "passed",
+  "extensionAndroidTestBuild": "passed",
+  "phoneInstalled": false,
+  "integratedRendererQualified": false,
+  "rejectedExperiments": [
+    "duplicate phrase-link removal",
+    "parent glyph-only tap ownership",
+    "draw-only placeholder ink"
+  ],
+  "remaining": [
+    "integrated selectable paragraph",
+    "natural wave and full selection interaction",
+    "scroll reanchoring",
+    "keyboard/lifecycle/blackout",
+    "signed release gate",
+    "physical phone delivery"
+  ]
+}
