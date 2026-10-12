@@ -1,0 +1,27 @@
+{
+  "state": "qualification-running-not-installed",
+  "runtimeSource": "f27a8d5",
+  "fixtureSource": "5f8fa48",
+  "nativeTestSource": "3029130",
+  "candidateVersionCode": 91,
+  "installedPhoneVersionCode": 90,
+  "control": {
+    "shortFilteredContentPassedSeconds": 15.199,
+    "multipleLongFinalAnswersFailedSeconds": 16.635,
+    "failure": "Pending navigation scrolled to a filtered-list index"
+  },
+  "fix": "Capture request row ID, clear Important padding and use existing composition-committed row navigation. No answer/skip submission.",
+  "nativeChecks": [
+    "Actual Important tap",
+    "Actual conversation controls and pending action taps",
+    "Visible question and Skip after navigation",
+    "Saved draft retained",
+    "Zero replies"
+  ],
+  "physicalInteractionVerified": false,
+  "publicationGap": {
+    "remoteMainVerified": "e2535b16912cb729c661500f61854a9d8a01080c",
+    "developmentBranchAhead": true,
+    "heldIntegrationReviewRequired": true
+  }
+}

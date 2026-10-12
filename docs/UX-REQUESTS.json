@@ -14,6 +14,13 @@
   },
   "requests": [
     {
+      "id": "pending-question-filter-navigation-20261011",
+      "request": "Answer pending question must navigate directly to the actionable question when Important is enabled, using stable row identity after the full transcript commits. Preserve drafts and do not answer or skip automatically.",
+      "status": "implemented-native-qualification-running",
+      "source": "f27a8d5",
+      "evidence": "Short filtered control passed15.199s, but realistic multiple-long-final-answer control failed16.635s because wrong filtered index was used. Corrected committed-row request pending qualification."
+    },
+    {
       "id": "quiet-authenticated-reconnect-state-20261011",
       "request": "Live connection state must reflect authenticated reconnect even when no application event arrives. Genuine prolonged outages remain visible; reconnect must restore current selected history and preserve drafts without starting or resending work.",
       "status": "delivered-alpha72-code90",
