@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha87-transcript-and-shared-immersion",
+  "qualification": "alpha88-reading-checkpoints-real-backend-journey",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
