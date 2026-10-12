@@ -2296,16 +2296,18 @@
     },
     {
       "id": "history-event-reload-noise-20261012",
-      "status": "qualified-not-deployed",
+      "status": "deployed-workstation",
       "requirement": "Unsupported events must not cause conversation refresh churn or synthetic working state; preserve public output and thinking summaries",
       "evidence": "439 backend tests,18 integrated focused tests, actual HTTP/head event test; control reproduces reload=true",
-      "qualification": "docs/qualification/history-event-filter-20261012.json"
+      "qualification": "docs/qualification/history-event-filter-20261012.json",
+      "deployment": "69cfb2a; health/authenticated head and six preserved Codex runtime PIDs verified"
     },
     {
       "id": "short-history-thumb-pull-20261012",
-      "status": "qualified-not-delivered",
+      "status": "published-phone-transfer-pending",
       "requirement": "A short recent history page must allow a pull toward older work without a button; opposite gesture must not load history; require another gesture for each further short page",
-      "qualification": "docs/qualification/short-history-pull-20261012.json"
+      "qualification": "docs/qualification/short-history-pull-20261012.json",
+      "release": "alpha75/code93; signed tests/lints passed; published private update; installed74 remains until verified delivery"
     }
   ],
   "current_state": {

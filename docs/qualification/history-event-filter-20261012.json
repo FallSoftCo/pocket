@@ -5,6 +5,6 @@
   "backendTests": 439,
   "integratedTargetedTests": 18,
   "httpEventTest": "passed; unsupported event leaves authenticated history head unchanged and requests no history",
-  "delivery": "staged only; live backend remains9d818e4; no additional restart",
+  "delivery": "Workstation narrow backend69cfb2a deployed; health, authenticated head and six original Codex runtime PIDs independently verified; no pending outgoing or active voice turn at restart; other environments unchanged",
   "android": "no source or APK change"
 }

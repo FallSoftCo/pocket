@@ -16,5 +16,14 @@
       "failures": 0
     },
     "lints": "debug/release passed"
+  },
+  "release": {
+    "source": "7d144c4",
+    "version": "alpha75/code93",
+    "signedChecks": "305 tests per variant and both lints passed; two signer variants below80MiB",
+    "backendSourceSuite": "473 tests passed",
+    "updater": "published; both APK checksums verified",
+    "phone": "copy in progress; guarded install defers active NextComp, typing and audio; last installed74/92",
+    "physicalFlow": "not yet verified"
   }
 }
