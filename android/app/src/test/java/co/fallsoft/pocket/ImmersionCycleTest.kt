@@ -4,6 +4,32 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ImmersionCycleTest {
+    @Test fun authoredUiCatalogKeepsCleanPairedUnitsAndCanonicalSources() {
+        InterfaceGrammarScaffolds.translations.forEach { (source,target) ->
+            val span=requireNotNull(InterfaceGrammarScaffolds.find(source,target)) { source }
+            assertTrue("Invalid authored alignment: "+source,alignedTargetValid(span))
+            assertEquals(source,span.source)
+            assertEquals(target,span.targetSegments.joinToString(""){it.target})
+            assertFalse("Leaked phrase delimiter: "+source,target.contains('~'))
+            val support=requireNotNull(immersionGrammarForm(span,true,"catalog")) { source }
+            assertTrue("Support vocabulary missing: "+source,support.text.isNotBlank())
+            assertFalse("Leaked support delimiter: "+source,support.text.contains('~'))
+        }
+        val errorSource="Background refresh: connection lost (E123)"
+        val errorTarget=requireNotNull(InterfaceGrammarScaffolds.italian(errorSource))
+        assertEquals("Aggiornamento in background: connection lost (E123)",errorTarget)
+        val errorSpan=requireNotNull(InterfaceGrammarScaffolds.find(errorSource,errorTarget))
+        assertEquals("connection lost (E123)",errorSpan.targetSegments.last().target)
+        assertEquals(errorSpan.targetSegments.last().target,errorSpan.targetSegments.last().meaning)
+        val source="Speech uses media volume; quiet mode, notification mute and Do Not Disturb still silence it."
+        val target=requireNotNull(InterfaceGrammarScaffolds.italian(source))
+        val span=requireNotNull(InterfaceGrammarScaffolds.find(source,target))
+        val unit=span.targetSegments.first{it.target=="Non disturbare"}
+        assertEquals("Do Not Disturb",unit.meaning)
+        assertEquals("Non disturbare",target.substring(unit.start,unit.end))
+        assertEquals(source,span.source)
+    }
+
     private fun aligned(start:Int,source:String,units:String):ImmersionSpan {
         val pairs=units.split(" ").flatMapIndexed{index,value->
             val split=value.split("|",limit=2)

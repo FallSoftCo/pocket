@@ -2390,8 +2390,9 @@
     {
       "id": "inline-immersion-shared-layout-20261012",
       "request": "Inline cycling must keep reading geometry, cascade in reading direction, preserve visible phrase ownership, fresh in-place actions, native accessibility and bounded dense layouts.",
-      "status": "integrated-source-unreleased",
-      "evidence": "docs/qualification/shared-inline-layout-20261012.json"
+      "status": "alpha88-authenticated-update-published-phone-installation-pending",
+      "evidence": "docs/qualification/shared-inline-layout-20261012.json",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
     },
     {
       "id": "durable-send-identity-20261012",
@@ -2408,18 +2409,20 @@
     {
       "id": "immersion-owned-selection-20261012",
       "request": "Normal native text selection and copying must return one clean visible flow, preserving original zero-width characters and never leaking generated layout placeholders.",
-      "status": "native-qualified-source-unreleased",
-      "evidence": "docs/qualification/immersion-owned-selection-20261012.json"
+      "status": "alpha88-authenticated-update-published-phone-installation-pending",
+      "evidence": "docs/qualification/immersion-owned-selection-20261012.json",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
     },
     {
       "id": "alpha87-expanded-release-qualification",
       "request": "Deliver verified cache/identity and shared-immersion changes through a compatible signed update. Require all 26 new/existing critical native cases against one exact staged APK; preserve source, pairing and ongoing work.",
-      "status": "signed-native-qualified-motion-review-and-delivery-pending",
-      "evidence": "docs/qualification/alpha87-staged-20261012.json"
+      "status": "superseded-by-qualified-alpha88-publication",
+      "evidence": "docs/qualification/alpha87-staged-20261012.json",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
     },
     {
       "id": "all-surface-control-immersion-20261012",
-      "status": "reproduced-incomplete",
+      "status": "static-coverage-extension-in-progress-real-screen-cycle-audit-pending",
       "request": "All visible app strings and controls participate in inline cycling immersion with reading-direction cascading wipe; preserve control actions and single-flow text.",
       "evidence": "Exact optimized alpha88 settings observed for40.6seconds: Backend and Talk cycled, but App updates, Check for updates, Italian immersion and Settings remained Italian in all seven samples. Many workflow strings remained English with synthetic translation unavailable.",
       "required": [
@@ -2428,11 +2431,12 @@
         "Native rendered-state checks preserving tap actions",
         "Recorded transition review; physical behavior distinct"
       ],
-      "release": "alpha88 held; no update publication"
+      "release": "Alpha88 is published, superseding the old hold statement. Additional33 authored catalog rows are a new unreleased candidate.",
+      "coverageFollowup": "Source inventory found33 missing literal contextual mappings. Added target/support scaffolds without runtime translation calls; dynamic branches, interpolated values and raw Text need separate coverage evidence."
     },
     {
       "id": "immersion-target-grammar-position-scaffold",
-      "status": "candidate-native-verified-delivery-pending",
+      "status": "alpha88-authenticated-update-published-phone-installation-pending",
       "request": "Preserve target-language positions and grammar in the English translingual vocabulary layer, as in Mosis. Cycle vocabulary inside one shared target-grammar scaffold; retain grammar-specific target vocabulary where needed. No natural-English reordering, duplicate lines or modal help.",
       "acceptance": [
         "Paired lexical units retain identical positions and line breaks through cycling, reserving the larger counterpart per unit.",
@@ -2441,7 +2445,8 @@
         "Native emulator motion review verifies positional mapping for noun/adjective order, contractions, negation and longer support terms."
       ],
       "evidence": "docs/qualification/target-grammar-scaffold-20261012.json",
-      "implementation": "Unified authored target/support catalog and lexical-slot projection for controls/templates/conversation spans. Grammar words retained; no natural-English reordering. Native geometry/action/clipboard/wipe checks pass; signed release and handset delivery pending."
+      "implementation": "Unified authored target/support catalog and lexical-slot projection for controls/templates/conversation spans. Grammar words retained; no natural-English reordering. Native geometry/action/clipboard/wipe checks pass; signed release and handset delivery pending.",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
     },
     {
       "id": "immersion-continuous-reading-order-wave",
@@ -2449,20 +2454,22 @@
       "request": "Equal local transition speed; continuously repeat staggered top-to-bottom reading-order waves with each language visible for a few seconds. Never compress later lines to finish together. Ordinary taps must not interrupt the wave or add a post-tap quiet delay; retain the action captured when pressed.",
       "confirmedCause": "Fixed4200ms paragraph deadline scales local line speed by line count; controls separately use18s/6s language holds.",
       "design": "docs/IMMERSION-CASCADE-DESIGN.md",
-      "delivery": "Held alpha88; no phone delivery of this correction.",
+      "delivery": "Alpha88/code106 published in authenticated update channel; compatible phone download checksum verified; phone last observed104. Physical installation and interaction remain unverified.",
       "evidence": "docs/qualification/immersion-reading-wave-runtime-20261012.json",
-      "interactionFollowup": "Existing production shared renderer now passes the33.386-second natural-clock journey with phrase help, real long press, Select all/Copy, dismissal/button action and blackout return. No manual assistance or forced focus clearing. Native alternative remains unused; full signed regression, complete motion review and physical delivery remain open.",
+      "interactionFollowup": "Frozen alpha88 natural-clock production journey passes37.320s; all35 native cases, both signed builds/lints, motion diagnostics and separate optimized settings navigation pass. Experimental native alternative remains unused. Further visual refinement and handset acceptance remain open.",
       "foundationEvidence": "docs/qualification/immersion-native-selection-foundation-20261012.json",
-      "tapFollowup": "Candidate removes general touch/1600ms quiet gating. Native styled paragraph passes actual pointer-down ink advancement, stable pointer text offsets, down-captured help action, no residual hold, long-press Select all/Copy and deferred-content release. Integrated app and physical delivery remain pending. Five integrated native checks also pass, including the default motion environment under actual pointer-down/up and exact down-action retention through a language handoff. Fresh callback regression was detected and repaired without changing its assertion."
+      "tapFollowup": "Ordinary touch and post-tap quiet gates removed. Captured pointer-down actions survive language handoff; native selection holds its visible snapshot. Qualified and published in alpha88; physical interaction unverified.",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
     },
     {
       "id": "markdown-native-tables",
       "status": "alpha88-authenticated-update-published-phone-installation-pending",
       "request": "Format Markdown tables correctly in ordinary and immersion conversations, with readable headers, aligned columns, preserved inline content and ergonomic horizontal overflow.",
       "confirmedCause": "Core CommonMark parser is configured without the optional GFM table extension; both message renderers currently treat pipe rows as ordinary text.",
-      "delivery": "Candidate only; no phone delivery.",
+      "delivery": "Alpha88/code106 published in authenticated update channel; compatible phone download checksum verified; phone last observed104. Physical installation and interaction remain unverified.",
       "implementation": "Pinned GFM parser extension; typed cells/alignment/header/flattened offsets; shared ordinary/immersion renderer with reserved rendition widths, styled intrinsic sizing, readable word bounds, shared horizontal scroll and overflow thumb.",
-      "evidence": "docs/qualification/markdown-tables-20261012.json"
+      "evidence": "docs/qualification/markdown-tables-20261012.json",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
     }
   ],
   "current_state": {

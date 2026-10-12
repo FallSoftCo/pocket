@@ -72,6 +72,38 @@ internal fun authoredImmersionScaffold(source:String,units:List<Pair<String,Stri
 internal object InterfaceGrammarScaffolds {
     // Structure/function words remain Italian in the vocabulary support phase.
     private val rows=mapOf(
+        "NextComp server address" to "Indirizzo|Address del server NextComp",
+        "One-time pairing code" to "Codice|Code di associazione|pairing monouso|one-time",
+        "Phone control needs Android access" to "Il controllo|control del telefono|phone richiede|needs accesso|access ad Android",
+        "An update turned off NextComp’s Accessibility service." to "Un aggiornamento|update ha disattivato|disabled il servizio|service di accessibilità|accessibility di NextComp.",
+        "Your updates." to "I tuoi aggiornamenti.|updates.",
+        "Results, questions, and a way forward." to "Risultati,|Results, domande|questions e un modo|way di procedere.|forward.",
+        "Open conversation  ↗" to "Apri|Open la conversazione|conversation ↗",
+        "Translation unavailable · showing originals" to "Traduzione|Translation non disponibile|available · vengono mostrati|shown gli originali|originals",
+        "Your connection." to "La tua connessione.|connection.",
+        "Control this phone" to "Controlla|Control questo telefono|phone",
+        "When both controls are enabled, Codex on this phone can inspect the foreground screen, take screenshots, tap, scroll, enter non-password text, and use Back, Home or Recents." to "Quando entrambi|both i controlli|controls sono abilitati,|enabled, Codex su questo telefono|phone può ispezionare|inspect la schermata|screen in primo~piano,|foreground, acquisire|take schermate,|screenshots, toccare,|tap, scorrere,|scroll, inserire|enter testo|text non~password|non-password e usare|use Indietro,|Back, Home o Recenti.|Recents.",
+        "Screen structure and screenshots are sent to your signed-in Codex only when its phone tools are used. Password fields are never returned or filled." to "La struttura|structure dello schermo|screen e le schermate|screenshots vengono inviate|sent al tuo Codex autenticato|signed-in solo|only quando vengono usati|used i suoi strumenti|tools per il telefono.|phone. I campi|fields password non vengono mai restituiti|returned né compilati.|filled.",
+        "Hear what happened." to "Ascolta|Hear cosa è successo.|happened.",
+        "A different sound for results, questions, approvals and problems." to "Un suono|sound diverso|different per risultati,|results, domande,|questions, approvazioni|approvals e problemi.|problems.",
+        "Generated/played counters cover notification and manual speech. Voice-mode connection time includes idle time. Playback does not prove audibility. Cancelled generation can still consume allowance; these are local activity counters, not billing totals." to "I contatori|counters di generazione/riproduzione|generation/playback coprono|cover la voce|speech delle notifiche|notifications e quella manuale.|manual. Il tempo|time di connessione|connection della modalità|mode vocale|voice include|includes il tempo|time inattivo.|idle. La riproduzione|Playback non dimostra|prove l’udibilità.|audibility. La generazione|Generation annullata|cancelled può ancora consumare|consume la quota;|allowance; questi sono contatori|counters locali|local di attività,|activity, non totali|totals di fatturazione.|billing.",
+        "Speech uses media volume; quiet mode, notification mute and Do Not Disturb still silence it." to "La voce|Speech usa|uses il volume multimediale;|media; la modalità|mode silenziosa,|quiet, le notifiche|notifications mute|muted e Non~disturbare|Do~Not~Disturb la silenziano|silence comunque.|still.",
+        "Remind me when I’m needed" to "Ricordami|Remind~me quando sono richiesto|needed",
+        "Questions, approvals and problems only" to "Solo|Only domande,|questions, approvazioni|approvals e problemi|problems",
+        "Up to three reminders: 5, 15, then 30 minutes apart. Dismiss, reply or resolve the request to stop. Later snoozes for 30 minutes." to "Fino~a tre|three promemoria:|reminders: a 5, 15, poi|then 30 minuti|minutes di distanza.|apart. Chiudi,|Dismiss, rispondi|reply o risolvi|resolve la richiesta|request per fermarli.|stop. Più~tardi|Later rimanda|snoozes di 30 minuti.|minutes.",
+        "Answer this request in the terminal." to "Rispondi|Answer a questa richiesta|request nel terminale.|terminal.",
+        "Switch back to its pairing to check delivery. Removing this copy will not cancel work already submitted." to "Torna|Switch~back alla sua associazione|pairing per verificare|check la consegna.|delivery. Rimuovere|Removing questa copia|copy non annullerà|cancel il lavoro|work già|already inviato.|submitted.",
+        "Codex may already have received it. We’ll check its saved receipt first and keep the same message identity. A missing receipt cannot guarantee that retrying won’t duplicate work." to "Codex potrebbe averlo già|already ricevuto.|received. Verificheremo|We’ll~check prima|first la ricevuta|receipt salvata|saved e manterremo|keep la stessa|same identità|identity del messaggio.|message. Una ricevuta|receipt mancante|missing non può garantire|guarantee che riprovare|retrying non duplichi|duplicate il lavoro.|work.",
+        "Start where the work lives." to "Inizia|Start dove vive|lives il lavoro.|work.",
+        "Describe the task, context and what done looks like." to "Descrivi|Describe l’incarico,|task, il contesto|context e cosa significa|means completato.|done.",
+        "You’ll see progress here and get a notification when the task needs you or finishes." to "Vedrai|You’ll~see qui i progressi|progress e riceverai|receive una notifica|notification quando l’incarico|task richiede|needs il tuo intervento|input o termina.|finishes.",
+        "The queue is empty." to "La coda|queue è vuota.|empty.",
+        "This hides the conversation from recent tasks, pauses queued messages, and stops its notifications. Its history stays on the Codex host." to "Questo nasconde|hides la conversazione|conversation dagli incarichi|tasks recenti,|recent, mette~in~pausa|pauses i messaggi|messages in~coda|queued e ferma|stops le sue notifiche.|notifications. La sua cronologia|history rimane|stays sul computer|host Codex.",
+        "Codex may already have received this message. Retrying can send it twice. Check the conversation first." to "Codex potrebbe aver già|already ricevuto|received questo messaggio.|message. Riprovare|Retrying può inviarlo|send due~volte.|twice. Controlla|Check prima|first la conversazione.|conversation.",
+        "Excerpt · full content remains on the workstation" to "Estratto|Excerpt · il contenuto|content completo|full rimane|remains sul computer|workstation",
+        "Output excerpt · full content remains on the workstation" to "Estratto|Excerpt dell’output · il contenuto|content completo|full rimane|remains sul computer|workstation",
+        "Changes apply when the next turn starts. Steering keeps the running turn's settings." to "Le modifiche|Changes si applicano|apply quando inizia|starts il turno|turn successivo.|next. Orientare|Steering mantiene|keeps le impostazioni|settings del turno|turn in~corso.|running.",
+        "No work updates yet" to "Ancora|Yet nessun aggiornamento|update sul lavoro|work",
         "Full permissions for new tasks" to "Permessi|Permissions completi|full per i nuovi|new incarichi|tasks",
         "Full device access. Commands run without approval prompts." to "Accesso|Access completo|full al dispositivo.|device. I comandi|commands vengono eseguiti|executed senza richieste|requests di approvazione.|approval.",
         "Applies to future tasks in this environment." to "Si applica|applies ai futuri|future incarichi|tasks in questo ambiente.|environment.",
@@ -419,11 +451,12 @@ internal object InterfaceGrammarScaffolds {
         "Questions" to "Domande|Questions",
         "Attention" to "Attenzione|Attention"
     )
-    private fun target(row:String)=row.split(" ").joinToString(" "){it.substringBefore("|")}
+    private fun target(row:String)=row.split(" ").joinToString(" "){it.substringBefore("|").replace("~"," ")}
     internal val translations:Map<String,String> = rows.mapValues{target(it.value)}
     private val normalizedRows=rows.mapKeys{it.key.lowercase(Locale.ROOT)}
     private val normalizedTranslations=translations.mapKeys{it.key.lowercase(Locale.ROOT)}
     private val literalSuffixes=listOf(
+        "Background refresh: " to "Aggiornamento|Refresh in background:",
         "Resets " to "Ripristino|Resets",
         "Estimated run-out " to "Esaurimento|Run-out stimato|estimated",
         "Last known · " to "Ultimo|Last dato|data noto|known ·",
@@ -441,7 +474,7 @@ internal object InterfaceGrammarScaffolds {
         row.split(" ").forEachIndexed { index,value ->
             if(index>0)units+=" " to " "
             val parts=value.split("|",limit=2)
-            units+=parts[0] to parts.getOrElse(1){parts[0]}.replace("~"," ")
+            units+=parts[0].replace("~"," ") to parts.getOrElse(1){parts[0]}.replace("~"," ")
         }
         if(suffix!=null){
             units+=" " to " "
