@@ -1,10 +1,10 @@
 {
-  "state": "candidate-not-enabled-not-published",
+  "state": "integrated-conversation-source-unreleased",
   "native": {
-    "cases": 7,
+    "cases": 9,
     "result": "pass",
-    "seconds": 12.09,
-    "logSha256": "577ec927e676063b1e9aa71ee3ac0b49206e74ac4f80e17e18947bfe29b17f51",
+    "seconds": 14.819,
+    "logSha256": "4487a8055d148f6e74e847b3b0ecc84ce759934e896193c4879239d3d0a177fa",
     "checks": [
       "unchanged word position at 17sp",
       "unchanged word position at 34sp",
@@ -14,7 +14,9 @@
       "Real UiAutomator injected touch activates replacement link in both forms",
       "Exposed custom accessibility action invokes the original replacement callback",
       "Intermediate native image retains common glyph pixels and changes replacement glyph pixels",
-      "Successive changes to two distinct phrases retain common text geometry using all reserved forms"
+      "Successive changes to two distinct phrases retain common text geometry using all reserved forms",
+      "Production ReservedImmersionText reports visible phrase and uses fresh handoff callback while common position remains stable",
+      "Finite single-line ellipsis retains phrase placeholder, excludes hidden cue and stays within native line height"
     ]
   },
   "unit": {
@@ -23,11 +25,12 @@
   },
   "scope": "Isolated native emulator5620 nextcomp_env_qa, synthetic paragraphs, no provider or real sessions",
   "remaining": [
-    "Production visibility/cue tracking and full styled content integration",
     "Actual frames and physical handset qualification",
     "Actual TalkBack utterance/gesture and text selection qualification, including empty reserved slots",
     "Full multi-line frame sequence and physical performance review",
-    "Per-fragment visual handoff and paragraph lexical/action consistency during transitions"
+    "Per-fragment visual handoff and paragraph lexical/action consistency during transitions",
+    "Broader actual app content, styling and all labeled controls qualification",
+    "Signed release and compatible handset delivery"
   ],
   "notes": [
     "Large-text check uses 34sp/52sp, not a complete OS accessibility font-scale audit",
@@ -40,10 +43,15 @@
     "Shared physical paragraph frontier is translated into each fragment coordinate space; RTL mirrors the paragraph, not individual slots.",
     "Native measured line height replaces nominal sp height to avoid rounding a single 69px line into two bands.",
     "Intermediate screenshots initially preceded observed paint. Bounded screenshot observation now requires actual changed glyph pixels; this is not phone latency or 60fps qualification.",
-    "Candidate accepts all alternate annotated forms; current from/to determine active text, while all forms determine shared fragment bounds. Production caller is not yet wired."
+    "Candidate accepts all alternate annotated forms; current from/to determine active text, while all forms determine shared fragment bounds. Production caller is not yet wired.",
+    "Source integration replaces conversation ReservedImmersionText renderer, retaining one existing cycle clock; live published alpha86 is unchanged.",
+    "Inline visibility uses native placeholder rectangles once per fragment and ignores empty reserved-slot markers.",
+    "Before correction, parent ellipsis discarded a full-width placeholder. A measured ellipsis allowance retains it; parent supplies ellipsis and child clips. Finite-height bound retains dense layout.",
+    "Native clipping also reproduced lineIndex(1) out of bounds [0,1) in visibility tracking. Guarded native laid-line geometry removes that crash. No claim this was the physical phone crash cause.",
+    "One source comment was updated during final checks; no executable code changed after candidate APK build."
   ],
-  "candidateApkSha256": "e4d2be90be77368244ca98900c8d7e433ea9ede8a7da2c4cae11f3228465c516",
-  "testApkSha256": "29f1f6e7ea3aa8e19f6e422308892dc0159b0a2eb204638ed4d24cefd11610d6",
+  "candidateApkSha256": "e91c5e6e1f72b6e4e52e1b4e85d8ab43755f5fcf3e05d5050ec6ac19a4379418",
+  "testApkSha256": "bed8356e9d28074ecb309680da6da73b415fc11f21b635e2cff3743782ee9d34",
   "debugUnitSuite": {
     "cases": 349,
     "result": "pass"

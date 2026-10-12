@@ -2374,6 +2374,12 @@
       "request": "Current messages must load without waiting for disk history; retain all local history, reading position and drafts; duplicates require stable message identity across live/history/outbox. Publish only checked artifacts.",
       "status": "published-alpha86-code104-phone-install-unverified",
       "evidence": "docs/qualification/parallel-transcript-20261012.json"
+    },
+    {
+      "id": "inline-immersion-shared-layout-20261012",
+      "request": "Inline cycling must keep reading geometry, cascade in reading direction, preserve visible phrase ownership, fresh in-place actions, native accessibility and bounded dense layouts.",
+      "status": "integrated-source-unreleased",
+      "evidence": "docs/qualification/shared-inline-layout-20261012.json"
     }
   ],
   "current_state": {

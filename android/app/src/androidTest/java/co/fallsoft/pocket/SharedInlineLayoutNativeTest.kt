@@ -285,4 +285,82 @@ class SharedInlineLayoutNativeTest {
   }
  }
 
+ @Test fun productionReservedTextRetainsVisibilityAndFreshInlineCallbacks(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  val source="Please search existing sessions."
+  val target="Please cerca fra tutti i risultati existing sessions."
+  val span=ImmersionSpan(7,13,"search","cerca fra tutti i risultati")
+  val plan=ImmersionPresentation(target,source,true,listOf(span))
+  val progress=mutableFloatStateOf(0f)
+  val handoff=androidx.compose.runtime.mutableStateOf(false)
+  var originalClicks=0;var freshClicks=0
+  var visibleIds:Set<String> = emptySet();var parent:TextLayoutResult?=null
+  fun content(translated:Boolean)=buildAnnotatedString{
+   append(if(translated)target else source)
+   val end=7+(if(translated)span.target.length else span.source.length)
+   addStringAnnotation("immersion-reserve","7:13",7,end)
+   addLink(LinkAnnotation.Clickable("reveal",linkInteractionListener={
+    if(translated)freshClicks++ else originalClicks++
+   }),7,end)
+  }
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    androidx.compose.foundation.layout.Box(Modifier.padding(top=64.dp).width(240.dp)){
+     ReservedImmersionText(content(handoff.value),plan,{1f},17.sp,26.sp,Paper,null,
+      Int.MAX_VALUE,androidx.compose.ui.text.style.TextOverflow.Clip,
+      ImmersionCycleRender(plan,incomingPlan=plan,cueActive=true,cueId=1,
+       cueProgress={progress.floatValue},reportVisible={_,ids->visibleIds=ids}),
+      onTextLayout={parent=it})
+    }
+   }}}
+   compose.waitUntil(5000){visibleIds.contains("7:13")}
+   compose.waitForIdle()
+   val original=parent!!.getBoundingBox(parent!!.layoutInput.text.text.indexOf("existing"))
+   i.runOnMainSync{progress.floatValue=1f;handoff.value=true}
+   compose.waitForIdle()
+   val node=device.wait(androidx.test.uiautomator.Until.findObject(
+    androidx.test.uiautomator.By.text(target)),5000)!!
+   val translated=parent!!.getBoundingBox(parent!!.layoutInput.text.text.indexOf("existing"))
+   assertTrue(kotlin.math.abs(original.left-translated.left)<=2f&&kotlin.math.abs(original.top-translated.top)<=2f)
+   assertTrue(visibleIds.contains("7:13"))
+   val box=parent!!.placeholderRects.first()!!
+   device.click(node.visibleBounds.left+box.center.x.toInt(),node.visibleBounds.top+box.center.y.toInt())
+   compose.waitForIdle()
+   i.runOnMainSync{assertEquals(0,originalClicks);assertEquals(1,freshClicks)}
+  }
+ }
+
+ @Test fun singleLineTruncationRetainsVisibleTextAndExcludesHiddenCue(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
+  check(UiDevice.getInstance(i).executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  fun form(word:String)=buildAnnotatedString{
+   var at=length;append(word)
+   addStringAnnotation("immersion-reserve","first",at,length)
+   append(" with extra context and ");at=length;append("open")
+   addStringAnnotation("immersion-reserve","hidden",at,length)
+   append(" another conversation.")
+  }
+  val from=form("supercalifragilisticexpialidocious")
+  val to=form("pneumonoultramicroscopicsilicovolcanoconiosis")
+  var parent:TextLayoutResult?=null;var ids:Set<String> = emptySet()
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    SharedInlineImmersionText(from,to,{0f},Modifier.padding(top=64.dp).width(240.dp),
+     maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+     onTextLayout={parent=it},onVisibleRanges={visible,_->ids=visible})
+   }}}
+   compose.waitForIdle()
+   val deadline=System.currentTimeMillis()+5000
+   while(parent==null&&System.currentTimeMillis()<deadline){compose.waitForIdle();Thread.sleep(25)}
+   assertEquals(1,parent!!.lineCount)
+   assertTrue("Single line must retain actual phrase ink",parent!!.placeholderRects.first()!=null)
+   assertTrue("Visible phrase must remain available to cycling",ids.contains("first"))
+   assertFalse("Clipped phrase must not acquire a visible cue",ids.contains("hidden"))
+   assertTrue("Single-line height must stay bounded",parent!!.size.height<=kotlin.math.ceil(with(parent!!.layoutInput.density){26.sp.toPx()})+1)
+  }
+ }
+
 }

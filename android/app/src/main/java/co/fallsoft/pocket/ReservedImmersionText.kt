@@ -13,7 +13,8 @@ import androidx.compose.ui.unit.*
 @Composable internal fun ReservedImmersionText(
     content:AnnotatedString,plan:ImmersionPresentation,alpha:(ImmersionSpan)->Float,
     fontSize:TextUnit,lineHeight:TextUnit,color:Color,fontWeight:FontWeight?,maxLines:Int,
-    overflow:TextOverflow,cycle:ImmersionCycleRender
+    overflow:TextOverflow,cycle:ImmersionCycleRender,
+    onTextLayout:((TextLayoutResult)->Unit)?=null
 ){
     val partId=remember {java.util.UUID.randomUUID().toString()}
     val visibilityReport by rememberUpdatedState(cycle.reportVisible)
@@ -48,9 +49,10 @@ import androidx.compose.ui.unit.*
         listOf(content,alternate(content,original),alternate(content,plan))
     }
     val progress:()->Float=if(cycle.cueActive)cycle.cueProgress else ({1f})
-    BlendImmersionText(from,to,progress,content,
+    SharedInlineImmersionText(from,to,progress,snapshot=content,
         fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
         maxLines=maxLines,overflow=overflow,fillWidth=true,reserve=forms,
+        onTextLayout={onTextLayout?.invoke(it)},
         onVisibleRanges={ids,_->visibilityReport(partId,ids)})
 }
 

@@ -72,3 +72,13 @@ The new case changes two phrases in succession and verifies the surrounding
 passage stays fixed; removing full reservations makes that same fixture
 reflow, proving the check detects the intended regression. Production
 ReservedImmersionText is not yet wired to this candidate.
+
+Conversation source integration now uses SharedInlineImmersionText through
+ReservedImmersionText, with full-form reservation, snapshot-fresh callbacks,
+existing cycle ownership and visible-fragment reports. Native placeholder
+rectangles provide readable geometry; empty slot markers do not acquire cues.
+Finite layouts reserve room for the parent ellipsis and bound physical height.
+The clipped-line visibility crash is guarded. All nine native cases, 349 debug
+unit tests and qualification lint pass. This source has not been published;
+alpha86 remains unchanged. Full motion, styling/control audit and physical
+delivery are still release work, not inferred from these tests.
