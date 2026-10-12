@@ -42,6 +42,24 @@ class ClientReplyRecoveryNativeTest {
   await{device.findObjects(By.text(text)).size==2}
   assertEquals(1,posts().length());assertEquals(0,qa("state").getJSONArray("recoveries").length())
  }
+ @Test fun providerMetadataLossDoesNotDuplicateUnknownSend(){
+  val text="Provider projection single send"
+  start(draft=text);qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
+  main{Pocket.reply(text)}
+  await{!Pocket.sending&&PocketReplies.entries("same-thread").singleOrNull()?.state=="unknown"}
+  val intent=PocketReplies.entries("same-thread").single()
+  await{Pocket.connected}
+  val response=qa("provider-identity-echo")
+  assertTrue("Fixture has no native websocket",response.optInt("connections")>0)
+  assertEquals("Backend projection lost explicit send identity",intent.id,response.s("clientId"))
+  await{PocketTranscript.rows.any{it.s("clientId")==intent.id}&&device.findObjects(By.text(text)).size==1&&device.hasObject(By.text("Check status"))}
+  assertEquals("Echo must not accept uncertain delivery","unknown",PocketReplies.entries("same-thread").single().state)
+  assertEquals(text,Pocket.prefs.getString("draft:same-thread",null))
+  qa("provider-independent-echo")
+  await{device.findObjects(By.text(text)).size==2}
+  assertEquals("Rendering initiated another send",1,posts().length())
+  assertEquals("Rendering initiated recovery",0,qa("state").getJSONArray("recoveries").length())
+ }
  @Test fun matchingUnknownReceiptRequiresExplicitRecovery(){
   start(draft="Unknown receipt test");qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
   var completed=false;main{Pocket.reply("Unknown receipt test",onDone={completed=true})}

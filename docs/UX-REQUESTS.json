@@ -2366,7 +2366,7 @@
     {
       "id": "duplicate-send-evidence-20261012",
       "request": "One sent message must display once; preserve independent repeated sends, source-scoped identity and actionable unknown-delivery state. Investigate reported handset duplication rather than masking equal text.",
-      "status": "backend candidate tested; specific handset reproduction and deployment pending",
+      "status": "backend deployed; real projection native test passed; specific handset duplication and installed build unverified",
       "evidence": "docs/qualification/send-identity-evidence-20261012.json"
     }
   ],
