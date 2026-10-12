@@ -90,8 +90,16 @@ class MainActivity:ComponentActivity(){
         val requestedEnvironment=i.getStringExtra("environment")
         if(requestedEnvironment!=null&&Pocket.captureEnvironment(requestedEnvironment)==null){Pocket.error="That environment is no longer paired";return}
         if(i.getBooleanExtra("appUpdate",false)){i.removeExtra("appUpdate");if(!PocketVoice.active){Pocket.closeTask();Pocket.newTask=false;Pocket.tab=1};PocketUpdates.installOrCheck(this)}
-        initialServer=i.getStringExtra("server")?:initialServer;initialCode=i.getStringExtra("code")?:initialCode
-        i.data?.takeIf{it.scheme=="pocket"&&it.host=="pair"}?.let{initialServer=it.getQueryParameter("server")?:initialServer;initialCode=it.getQueryParameter("code")?:initialCode;Pocket.pairingMode=true}
+        val pairLink=i.data?.takeIf{it.scheme=="pocket"&&it.host=="pair"}
+        if(pairLink!=null||i.hasExtra("server")||i.hasExtra("code")){
+            // A prefill belongs to this explicit request, not later notifications
+            // or activity recreation. Never carry an old one-use code into a new host.
+            initialServer=pairLink?.getQueryParameter("server")?:i.getStringExtra("server").orEmpty()
+            initialCode=pairLink?.getQueryParameter("code")?:i.getStringExtra("code").orEmpty()
+            Pocket.pairingMode=true
+            i.removeExtra("server");i.removeExtra("code")
+            if(pairLink!=null)i.data=null
+        }
         if(i.getBooleanExtra("coordinatorReport",false)){
             val origin=i.getBooleanExtra("local",Pocket.local)
             if(PocketVoice.active&&PocketVoice.state in setOf("Listening","Starting microphone","Finishing recording")){Pocket.error="Finish this recording before opening work updates";PocketVoice.problem=Pocket.error;return}
@@ -107,7 +115,6 @@ class MainActivity:ComponentActivity(){
             val destination=if(i.getBooleanExtra("local",false))"phone" else "workstation";Pocket.activateEnvironment(destination)
             if(Pocket.environmentId!=destination)return
         }
-        if(initialServer.isNotBlank()&&initialCode.isNotBlank())Pocket.pairingMode=true
         i.getStringExtra("thread")?.let{if(Pocket.token.isNotBlank())Pocket.open(it)}
         if(Pocket.token.isNotBlank()&&i.getStringExtra("operations_url")=="https://github.com/FallSoftCo/pocket/actions"){
             i.removeExtra("operations_url")
@@ -169,16 +176,24 @@ class MainActivity:ComponentActivity(){
 }
 @Composable fun PairScreen(server:String,code:String){
     var address by remember(server){mutableStateOf(server)};var pin by remember(code){mutableStateOf(code)};var environmentName by remember{mutableStateOf("")}
-    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(28.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
-        Spacer(Modifier.height(34.dp));Mark(70);Spacer(Modifier.height(18.dp));Label("CODEX, WITH YOU",Mint)
-        WorkflowText("Good work.\nWithin reach.",fontSize=46.sp,lineHeight=49.sp,fontWeight=FontWeight.Medium,letterSpacing=(-1.8).sp)
-        WorkflowText("Your tasks, updates and next ideas.\nConnected to Codex here or on your workstation.",color=Muted,fontSize=17.sp,lineHeight=25.sp)
-        Spacer(Modifier.height(14.dp));OutlinedTextField(address,{address=it},label={WorkflowText("NextComp server address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
-        OutlinedTextField(environmentName,{environmentName=it},label={WorkflowText("Environment name")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
-        OutlinedTextField(pin,{pin=it},label={WorkflowText("One-time pairing code")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
-        ErrorBanner();Button({Pocket.pair(address,pin,environmentName)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(6.dp)){if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)else{BilingualLabel("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));SymbolIcon(Icons.AutoMirrored.Rounded.ArrowForward,null)}}
-        if(Pocket.token.isNotBlank())TextButton({Pocket.pairingMode=false},modifier=Modifier.fillMaxWidth()){BilingualLabel("Cancel",color=Muted)}
-
+    Column(Modifier.fillMaxSize().imePadding()){
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal=24.dp,vertical=20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)){
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){
+                Mark(48)
+                BilingualLabel("Environment",fontSize=24.sp,fontWeight=FontWeight.Medium,centered=false)
+            }
+            OutlinedTextField(address,{address=it},label={WorkflowText("NextComp server address")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
+            OutlinedTextField(environmentName,{environmentName=it},label={WorkflowText("Environment name")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
+            OutlinedTextField(pin,{pin=it},label={WorkflowText("One-time pairing code")},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp))
+            ErrorBanner()
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal=24.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+            Button({Pocket.pair(address,pin,environmentName)},enabled=!Pocket.busy&&address.isNotBlank()&&pin.isNotBlank(),modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(12.dp)){
+                if(Pocket.busy)CircularProgressIndicator(Modifier.size(22.dp),color=Ink,strokeWidth=2.dp)
+                else{BilingualLabel("Connect Codex",fontWeight=FontWeight.Bold);Spacer(Modifier.width(12.dp));SymbolIcon(Icons.AutoMirrored.Rounded.ArrowForward,null)}
+            }
+            if(Pocket.token.isNotBlank())TextButton({Pocket.pairingMode=false},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){BilingualLabel("Cancel",color=Muted)}
+        }
     }
 }
 

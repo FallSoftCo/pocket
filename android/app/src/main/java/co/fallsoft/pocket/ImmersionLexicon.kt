@@ -7,6 +7,7 @@ object ImmersionLexicon {
     val common=mapOf(
         "Add environment" to "Aggiungi ambiente",
         "Updating messages" to "Aggiornamento messaggi",
+        "Environment" to "Ambiente",
         "Environment name" to "Nome dell’ambiente",
         "Codex credits" to "Crediti Codex",
         "Credit data unavailable" to "Dati sui crediti non disponibili",

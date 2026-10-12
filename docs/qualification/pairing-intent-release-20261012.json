@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "state": "source-native-qualified-fresh-signed-release-pending",
+  "date": "2026-10-12",
+  "unit": {
+    "tests": 354,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lintQualification": "pass",
+  "native": {
+    "tests": 3,
+    "seconds": 17.915,
+    "visibleIme": true,
+    "physicalPhone": false,
+    "cases": [
+      "cancelledPairingPrefillCannotHijackConversationIntent",
+      "pairingActionsRemainReachableWithKeyboardAndLongError",
+      "providerMetadataLossDoesNotDuplicateUnknownSend"
+    ]
+  },
+  "blockedArtifact": "alpha87-r01",
+  "releasePolicyCases": 28,
+  "galleryCheck": "completed isolated native review gallery task 15e95f86e079d0b4d325acc46d8c445d",
+  "limits": [
+    "Phone SSH unavailable; no claim of installed duplicate resolution",
+    "Signed r01 is withheld due actual optimized pairing regression",
+    "Fresh r02 release and motion review still required"
+  ],
+  "sourceSha256": {
+    "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt": "0646ee8371d40418a00cb76d9c5759e5145558086724b43ce19a371d6240b537",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionLexicon.kt": "d3bb7750db346979fa71c89d909e9c9909798e1c2c4a29671e2b619b87e0dfab",
+    "android/app/src/androidTest/java/co/fallsoft/pocket/PairingNavigationNativeTest.kt": "cf6ffc54925a4ddc8c65ee5d417dc532df525e451ef9cbd95104830bd0405594"
+  }
+}

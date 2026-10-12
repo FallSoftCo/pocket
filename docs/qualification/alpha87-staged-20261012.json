@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "state": "signed-native-qualified-not-published",
+  "state": "blocked-by-optimized-runtime-pairing-regression-not-published",
   "date": "2026-10-12",
   "artifactSourceCommit": "92a1bcc",
   "versionCode": 105,
@@ -83,5 +83,13 @@
     "Signed build, qualification APK installation and native test evidence are distinct from installation on the user phone.",
     "Update channel remains alpha86/code104.",
     "Other broader world-class UX requirements remain active."
-  ]
+  ],
+  "postGateFinding": {
+    "cause": "Consumed pairing extras persisted in activity fields and re-enabled pairing on subsequent thread intent",
+    "scope": "Actual optimized signed r01 emulator reproduction; no user phone install",
+    "candidate": "Consume only fresh pairing payload; keep Connect/Cancel reachable above IME",
+    "candidateNativeCasesPassed": 2,
+    "visibleKeyboardVerified": true,
+    "freshSignedBuildRequired": true
+  }
 }

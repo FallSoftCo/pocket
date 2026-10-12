@@ -14,6 +14,12 @@
   },
   "requests": [
     {
+      "id": "consumed-pairing-navigation-release-20261012",
+      "request": "Consumed one-use pairing prefill must never hijack later conversation navigation; pairing cancel/connect stay reachable with keyboard and validation errors",
+      "status": "native-source-qualified-release-pending",
+      "evidence": "docs/qualification/pairing-intent-release-20261012.json"
+    },
+    {
       "id": "pending-question-filter-navigation-20261011",
       "request": "Answer pending question must navigate directly to the actionable question when Important is enabled, using stable row identity after the full transcript commits. Preserve drafts and do not answer or skip automatically.",
       "status": "delivered-alpha73-code91",
