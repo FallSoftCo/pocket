@@ -44,9 +44,20 @@ class ClientReplyRecoveryNativeTest {
  }
  @Test fun providerMetadataLossDoesNotDuplicateUnknownSend(){
   val text="Provider projection single send"
-  start(draft=text);qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
-  main{Pocket.reply(text)}
+  start(draft=text);qa("unknown-reply")
+  val card=By.desc("Open Chat for Synthetic freshness work")
+  assertTrue("Source card unavailable",device.wait(Until.hasObject(card),3000))
+  device.findObject(card).click();await{Pocket.detail!=null&&!PocketTranscript.updating}
+  assertTrue("Keyboard control unavailable",device.wait(Until.hasObject(By.text("Keyboard")),3000))
+  device.findObject(By.text("Keyboard")).click()
+  assertTrue("Reply editor unavailable",device.wait(Until.hasObject(By.clazz("android.widget.EditText")),3000))
+  assertEquals("Source draft not restored",text,device.findObject(By.clazz("android.widget.EditText")).text)
+  device.pressKeyCode(android.view.KeyEvent.KEYCODE_ENTER)
   await{!Pocket.sending&&PocketReplies.entries("same-thread").singleOrNull()?.state=="unknown"}
+  assertEquals("UI submitted more than once",1,posts().length())
+  device.pressBack();await{Pocket.selected==null}
+  assertTrue("Source card unavailable after sending",device.wait(Until.hasObject(card),3000))
+  device.findObject(card).click();await{Pocket.detail!=null&&!PocketTranscript.updating}
   val intent=PocketReplies.entries("same-thread").single()
   await{Pocket.connected}
   val response=qa("provider-identity-echo")
