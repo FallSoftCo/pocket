@@ -16,10 +16,25 @@ internal enum class InterfaceTemplate(val source:String,val italian:String){
     AGENT_STATUS("Agent output · %1\$s","Risposta dell’agente · %1\$s");
     fun original(vararg values:Any)=String.format(Locale.ROOT,source,*values)
     fun target(vararg values:Any)=String.format(Locale.ITALIAN,italian,*values)
+    fun scaffold(vararg values:Any):ImmersionSpan {
+        fun words(vararg entries:String)=entries.flatMapIndexed{index,entry->
+            val pair=entry.split("|",limit=2).let{parts->parts[0] to parts.getOrElse(1){parts[0]}}
+            if(index==0)listOf(pair)else listOf(" " to " ",pair)
+        }
+        val units=when(this){
+            COMMAND_RESULTS->words(values[0].toString(),"risultati|results","dei","comandi|commands","·",values[1].toString(),"terminati|exited","correttamente|successfully")
+            FILE_CHANGES->words("Modifiche|Changes","ai","file|files","registrate|recorded","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
+            GENERATED_ARTIFACT->words("Risorsa|Artifact","generata:|generated:")+listOf(" " to " ",values[0].toString() to values[0].toString())
+            RECORDED_MESSAGE->words("Messaggio|Message","registrato|recorded","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
+            SOURCE_MESSAGE->words("Messaggio|Message","originale|source")+listOf(" " to " ",values[0].toString() to values[0].toString())
+            AGENT_STATUS->words("Risposta|Output","dell’agente|dell’agent","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
+        }
+        return authoredImmersionScaffold(original(*values),units)
+    }
 }
 @Composable internal fun InterfaceTemplateText(
     template:InterfaceTemplate,vararg values:Any,
     modifier:Modifier=Modifier,style:TextStyle=LocalTextStyle.current
 ){
-    InterfaceText(template.original(*values),modifier=modifier,style=style,targetOverride=template.target(*values))
+    InterfaceText(template.original(*values),modifier=modifier,style=style,targetOverride=template.target(*values),scaffoldOverride=template.scaffold(*values))
 }

@@ -49,11 +49,11 @@ import androidx.compose.ui.unit.*
         listOf(content,alternate(content,original),alternate(content,plan))
     }
     val progress:()->Float=if(cycle.cueActive)cycle.cueProgress else ({1f})
-    SharedInlineImmersionText(from,to,progress,snapshot=content,
+    SharedInlineImmersionText(immersionGrammarParagraph(from,plan),immersionGrammarParagraph(to,plan),progress,snapshot=immersionGrammarParagraph(content,plan),
         fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
-        maxLines=maxLines,overflow=overflow,fillWidth=true,reserve=forms,
+        maxLines=maxLines,overflow=overflow,fillWidth=true,reserve=forms.map{immersionGrammarParagraph(it,plan)},
         onTextLayout={onTextLayout?.invoke(it)},
-        onVisibleRanges={ids,_->visibilityReport(partId,ids)})
+        onVisibleRanges={ids,_->visibilityReport(partId,ids.map{it.substringBefore("/lexical:")}.toSet())})
 }
 
 /** Replacements retain surrounding rich styles; internal styles come from their own exact Markdown. */

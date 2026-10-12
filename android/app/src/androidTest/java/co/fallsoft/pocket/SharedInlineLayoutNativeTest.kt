@@ -37,11 +37,67 @@ class SharedInlineLayoutNativeTest {
  }
 
 
+ @Test fun targetGrammarScaffoldKeepsVocabularyAtTheSameNativePositions(){
+  val permissions=requireNotNull(InterfaceGrammarScaffolds.find(
+   "Full permissions for new tasks","Permessi completi per i nuovi incarichi"))
+  val negative=authoredImmersionScaffold("I am not checking the model",listOf(
+   "Non" to "not"," " to " ","sto" to "am"," " to " ","controllando" to "checking",
+   " " to " ","il" to "the"," " to " ","modello" to "model")).let{span->
+   span.copy(targetSegments=span.targetSegments.mapIndexed{index,segment->when(index){
+    0->segment.copy(role="adverb",relations=listOf(ImmersionRelation("negates",2)))
+    2->segment.copy(role="auxiliary")
+    6->segment.copy(role="determiner")
+    else->segment
+   }})
+  }
+  val contraction=authoredImmersionScaffold("Open the parent task",listOf(
+   "Apri" to "Open"," " to " ","l’incarico" to "l’task"," " to " ","principale" to "parent"))
+  assertEquals("Permissions full per i new tasks",immersionGrammarSupport(permissions))
+  assertEquals("Non sto checking il model",immersionGrammarSupport(negative))
+  assertEquals("Open l’task parent",immersionGrammarSupport(contraction))
+  for(span in listOf(permissions,negative,contraction)){
+   val from=requireNotNull(immersionGrammarForm(span,false,"phrase"))
+   val to=requireNotNull(immersionGrammarForm(span,true,"phrase"))
+   val progress=mutableFloatStateOf(0f)
+   var layout:TextLayoutResult?=null
+   ActivityScenario.launch(MainActivity::class.java).use{scenario->
+    scenario.onActivity{it.setContent{MaterialTheme{
+     androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().statusBarsPadding()){
+      SharedInlineImmersionText(from,to,{progress.floatValue},Modifier.width(220.dp),
+       fontSize=24.sp,lineHeight=34.sp,onTextLayout={value->layout=value})
+     }
+    }}}
+    fun observed(text:String):TextLayoutResult {
+     var result:TextLayoutResult?=null
+     compose.waitUntil(5000){
+      compose.runOnIdle{result=layout?.takeIf{it.layoutInput.text.text==text}}
+      result!=null
+     }
+     return requireNotNull(result)
+    }
+    val a=observed(from.text)
+    val before=a.placeholderRects.toList()
+    compose.runOnIdle{progress.floatValue=1f}
+    val b=observed(to.text)
+    assertEquals("Lexical slot count changed",before.size,b.placeholderRects.size)
+    assertTrue("No lexical placeholders were laid out",before.any{it!=null})
+    before.zip(b.placeholderRects).forEachIndexed{index,(left,right)->
+     assertEquals("Vocabulary slot $index moved for "+span.target,left,right)
+    }
+    assertEquals("Canonical source changed",span.source,when(span){
+     permissions->"Full permissions for new tasks"
+     negative->"I am not checking the model"
+     else->"Open the parent task"
+    })
+   }
+  }
+ }
+
  @Test fun interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions(){
   val literal="/tmp/Review 100%/résultat.json"
-  val original=InterfaceTemplate.GENERATED_ARTIFACT.original(literal)
+  val original=immersionGrammarSupport(InterfaceTemplate.GENERATED_ARTIFACT.scaffold(literal))
   val target=InterfaceTemplate.GENERATED_ARTIFACT.target(literal)
-  val countsOriginal=InterfaceTemplate.COMMAND_RESULTS.original(7,5)
+  val countsOriginal=immersionGrammarSupport(InterfaceTemplate.COMMAND_RESULTS.scaffold(7,5))
   val countsTarget=InterfaceTemplate.COMMAND_RESULTS.target(7,5)
   var taps=0
   val seen=mutableSetOf<String>()

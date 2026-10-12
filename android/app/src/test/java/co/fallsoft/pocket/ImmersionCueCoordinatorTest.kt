@@ -94,7 +94,7 @@ class ImmersionCueCoordinatorTest {
         val incoming=immersionCueOriginals(actual,1,false)
         assertEquals(1,(actual-incoming).size)
         val plan=ImmersionPresentation(contextualHybridText(source,spans)!!,source,true,spans)
-        assertEquals("Check due sessioni and a question.",immersionCyclePlan(plan,actual).text)
+        assertEquals("Check due sessioni and una domanda.",immersionCyclePlan(plan,actual).text)
         assertEquals("Check due sessioni and una domanda.",immersionCyclePlan(plan,incoming).text)
         val reverse=immersionCueOriginals(incoming,0,true)
         assertEquals(setOf(0),reverse)

@@ -2429,6 +2429,19 @@
         "Recorded transition review; physical behavior distinct"
       ],
       "release": "alpha88 held; no update publication"
+    },
+    {
+      "id": "immersion-target-grammar-position-scaffold",
+      "status": "candidate-native-verified-delivery-pending",
+      "request": "Preserve target-language positions and grammar in the English translingual vocabulary layer, as in Mosis. Cycle vocabulary inside one shared target-grammar scaffold; retain grammar-specific target vocabulary where needed. No natural-English reordering, duplicate lines or modal help.",
+      "acceptance": [
+        "Paired lexical units retain identical positions and line breaks through cycling, reserving the larger counterpart per unit.",
+        "Validated target-segment meanings and agreement/grammar relations drive support; no inferred suffix grammar.",
+        "Grammar-bearing target words may remain while content vocabulary changes; canonical source, copying and submitted actions remain unchanged.",
+        "Native emulator motion review verifies positional mapping for noun/adjective order, contractions, negation and longer support terms."
+      ],
+      "evidence": "docs/qualification/target-grammar-scaffold-20261012.json",
+      "implementation": "Unified authored target/support catalog and lexical-slot projection for controls/templates/conversation spans. Grammar words retained; no natural-English reordering. Native geometry/action/clipboard/wipe checks pass; signed release and handset delivery pending."
     }
   ],
   "current_state": {

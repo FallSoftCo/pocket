@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "state": "candidate-native-verified-not-published",
+  "date": "2026-10-12",
+  "requirement": "One target-grammar scaffold with vocabulary counterparts at fixed positions; preserve grammar-bearing target words. No natural-English reordering or parallel presentation.",
+  "implementation": {
+    "catalog": "One authored catalog owns offline translations and contextual target/support units; former separate common/voice catalogs consolidated.",
+    "catalogLabels": 346,
+    "canonicalTranslationParity": "Previous common-catalog precedence retained, including Voice setup; all baseline common and voice-only labels preserved.",
+    "projection": "Validated targetSegments drive lexical placeholders; target/support reserve the larger counterpart and share line breaks. Grammar roles and negation relations retain target vocabulary.",
+    "controls": "Spatial control wave uses the same lexical projection as conversation phrases; authored literal templates preserve counts/IDs/paths.",
+    "unknownAlignment": "Retain target wording without inventing correspondence. Cached multi-span interface plans require valid target segments and source anchors.",
+    "motion": "Reading-direction complementary wipe on shared lexical geometry; canonical source remains separate."
+  },
+  "build": {
+    "qualificationBuild": "passed",
+    "qualificationUnitRegressions": "passed",
+    "qualificationLint": "passed",
+    "productionSourceBaseline": "6c9b2ea4a3135c51c882196bb81b0f163462e164",
+    "sourceFiles": {
+      "android/app/src/androidTest/java/co/fallsoft/pocket/SharedInlineLayoutNativeTest.kt": "3205f86ff8a6397773ef5db51fb5cb4f5870fa7d207000491b6206ac879e2e46",
+      "android/app/src/main/java/co/fallsoft/pocket/BilingualLabel.kt": "252dca3a46b06b104b449b38adb2b50a51fb6836274fa50ae4e3b6b2f8bad75e",
+      "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycle.kt": "b1a2fd6100eb8953de8b7bfb17968bb3417f2da777f764334ff0b7f13213cae4",
+      "android/app/src/main/java/co/fallsoft/pocket/ImmersionGrammarScaffold.kt": "f80f84c7f5916dec430bd7d5cd8c2b9fa81a61d3b4e12e7348d4fe6442458d07",
+      "android/app/src/main/java/co/fallsoft/pocket/ImmersionLexicon.kt": "3641f65570c1ed8a54250fd3c1c2acd6479dfc080b455a762e1ae90ad3fb182b",
+      "android/app/src/main/java/co/fallsoft/pocket/InterfaceTemplateText.kt": "2a90ea8fb95a36ba9f03385ab4b794b55a763728d0ca6631456b28d7197ab56d",
+      "android/app/src/main/java/co/fallsoft/pocket/PocketImmersion.kt": "a483dcd12dfec2dee96790c617d0e205b8ebaa97d1940a54d95c8b0bd970c081",
+      "android/app/src/main/java/co/fallsoft/pocket/ReservedImmersionText.kt": "972b3d5daa25b35a71b97b853f40593e3c713f7f3d34a2b8c676df3dce16fc22",
+      "android/app/src/main/java/co/fallsoft/pocket/SharedInlineImmersionText.kt": "07e7aad4e56d2c27b05c5ab0afe23b86aa5bda775b9d97de307cd8587b6c9921",
+      "android/app/src/test/java/co/fallsoft/pocket/ImmersionCueCoordinatorTest.kt": "0332b520406e73b922bb6936b68c30d428a59d58664db13a94fd5f2ed40e98e1",
+      "android/app/src/test/java/co/fallsoft/pocket/ImmersionCycleTest.kt": "f6b3be0674f915e8f830588993bf7d7c624b2db418882cd3a3d8aea113a6bef6"
+    },
+    "apkSha256": "82d2af1e731b8e337a397fdc6b1a171e2c49c466675691f39efc71a99d2df143",
+    "testApkSha256": "1ee0379a49f865fef40ff9987f38fb8c85db3b6727367b79c1a09d3dc458d9b5"
+  },
+  "native": {
+    "state": "passed",
+    "target": "Owned isolated emulator",
+    "cases": [
+      {
+        "name": "targetGrammarScaffoldKeepsVocabularyAtTheSameNativePositions",
+        "state": "passed",
+        "durationSeconds": 7.167
+      },
+      {
+        "name": "interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions",
+        "state": "passed",
+        "durationSeconds": 5.064
+      },
+      {
+        "name": "productionReservedTextRetainsVisibilityAndFreshInlineCallbacks",
+        "state": "passed",
+        "durationSeconds": 4.846
+      },
+      {
+        "name": "reservedBlankSpaceDoesNotCaptureAnInlineAction",
+        "state": "passed",
+        "durationSeconds": 4.536
+      },
+      {
+        "name": "selectionCopiesOneVisibleParagraphWithoutDuplicatedPhrase",
+        "state": "passed",
+        "durationSeconds": 8.103
+      },
+      {
+        "name": "intermediateWipePreservesCommonInkAndActuallyChangesPhraseInk",
+        "state": "passed",
+        "durationSeconds": 5.763
+      }
+    ],
+    "scope": "Native lexical geometry, template cycling/actions/literals, retained visibility/fresh callbacks, empty-space taps, clipboard and wipe pixels. These cases do not prove every screen or handset performance."
+  },
+  "settingsCapture": {
+    "apkSha256": "542aebd81016da3750839a2837f4db8f1a88ab9d7ff0bf1be24332bb2d23eca5",
+    "videoSha256": "57dc451ae89f7ed1f3590bd9f11fa2513932e38c6482348b1c37eb81768e9c17",
+    "durationSeconds": 37.467589,
+    "decodedFrames": 1203,
+    "dimensions": [
+      720,
+      1616
+    ],
+    "review": "Sixteen half-second crop samples from the initial eight-second window visually inspected. Settings samples contain target and translingual support; permission label bounds match. Final catalog consolidation followed this capture.",
+    "notProven": [
+      "Complete video perceptual review",
+      "Physical frame pacing",
+      "Final-source full-screen capture"
+    ]
+  },
+  "remaining": [
+    "Refine reservation spacing without moving lexical counterparts or shrinking normal text.",
+    "Review final-source whole motion and real-provider grammar quality.",
+    "Complete frozen-release native policy and optimized APK journey on a fresh exact-source stage.",
+    "Publish compatible signed update and verify phone installation/interactions.",
+    "Continue broader transcript/navigation/voice/notification audit; this is not goal completion."
+  ],
+  "phoneDelivery": "Not installed or published this span",
+  "modelCalls": "No real provider/model requests during qualification; synthetic fixture only."
+}

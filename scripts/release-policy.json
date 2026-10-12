@@ -31,7 +31,9 @@
     "co.fallsoft.pocket.PairingNavigationNativeTest#cancelledPairingPrefillCannotHijackConversationIntent",
     "co.fallsoft.pocket.PairingNavigationNativeTest#pairingActionsRemainReachableWithKeyboardAndLongError",
     "co.fallsoft.pocket.CatalogStartupNativeTest#coldStartShowsLoadingAndRetryThenPaintsCatalogBeforeActivity",
-    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#longPhraseStartsOnTheSameLineAsItsVisiblePrefix"
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#longPhraseStartsOnTheSameLineAsItsVisiblePrefix",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#targetGrammarScaffoldKeepsVocabularyAtTheSameNativePositions",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",

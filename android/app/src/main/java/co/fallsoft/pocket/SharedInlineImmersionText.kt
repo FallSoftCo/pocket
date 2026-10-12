@@ -39,7 +39,9 @@ import androidx.compose.ui.unit.*
     onVisibleRanges:((Set<String>,Boolean)->Unit)?=null,
     onTextLayout:(TextLayoutResult)->Unit={},
     onFragmentLayout:(TextLayoutResult)->Unit={},
-    onWipeGeometry:(ImmersionSharedWipeGeometry)->Unit={}
+    onWipeGeometry:(ImmersionSharedWipeGeometry)->Unit={},
+    textAlign:androidx.compose.ui.text.style.TextAlign=androidx.compose.ui.text.style.TextAlign.Start,
+    trackWholeTextVisibility:Boolean=false
 ){
     val projection=LocalImmersionProjectionMarkers.current
     val emptySlots=remember(projection){mutableMapOf<String,String>()}
@@ -50,24 +52,24 @@ import androidx.compose.ui.unit.*
         // Invalid alignment is not evidence of shared geometry. Preserve normal
         // text rather than invent a phrase/word correspondence.
         BlendImmersionText(from,to,progress,snapshot,modifier,fontSize,lineHeight,color,fontWeight,
-            maxLines=maxLines,overflow=overflow,fillWidth=fillWidth,reserve=reserve,onVisibleRanges=onVisibleRanges)
+            maxLines=maxLines,overflow=overflow,fillWidth=fillWidth,reserve=reserve,onVisibleRanges=onVisibleRanges,textAlign=textAlign,trackWholeTextVisibility=trackWholeTextVisibility)
         return
     }
     val measurer=rememberTextMeasurer()
     val density=LocalDensity.current
     val uriHandler=LocalUriHandler.current
     val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
-    val style=LocalTextStyle.current.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight))
+    val style=LocalTextStyle.current.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,textAlign=textAlign))
     val nativeLineHeight=measurer.measure(AnnotatedString("M"),style=style).let{it.getLineBottom(0)-it.getLineTop(0)}
     var nativeLayout by remember {mutableStateOf<TextLayoutResult?>(null)}
     var coordinates by remember {mutableStateOf<LayoutCoordinates?>(null)}
     var lastVisibility by remember {mutableStateOf<Pair<Set<String>,Boolean>?>(null)}
     val visibilityCallback by rememberUpdatedState(onVisibleRanges)
     fun reportVisibility(){
-        val value=immersionVisibleText(nativeLayout,coordinates,false)
+        val value=immersionVisibleText(nativeLayout,coordinates,trackWholeTextVisibility)
         if(value!=lastVisibility){lastVisibility=value;visibilityCallback?.invoke(value.first,value.second)}
     }
-    SideEffect{visibilityCallback?.invoke(lastVisibility?.first?:emptySet(),false)}
+    SideEffect{visibilityCallback?.invoke(lastVisibility?.first?:emptySet(),lastVisibility?.second?:false)}
     DisposableEffect(Unit){onDispose{visibilityCallback?.invoke(emptySet(),false)}}
     val incoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
     BoxWithConstraints(modifier.then(immersionIntrinsicLayout(measurer,listOf(effectiveFrom,effectiveTo)+reserve,style,maxLines,overflow))){
