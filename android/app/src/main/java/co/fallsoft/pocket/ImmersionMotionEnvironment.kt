@@ -51,3 +51,14 @@ internal fun immersionControlPhase(nowMs:Long):ImmersionControlPhase {
     val at=Math.floorMod(nowMs,24000L)
     return if(at<18000)ImmersionControlPhase(false,18000-at)else ImmersionControlPhase(true,24000-at)
 }
+
+/** Shared monotonic control epoch; no periodic global recomposition or provider work. */
+internal object ImmersionControlWave {
+    private val epoch=SystemClock.elapsedRealtime()
+    fun elapsedMs()=SystemClock.elapsedRealtime()-epoch
+}
+/** Top-to-bottom rows, then the locale's reading direction within each row. */
+internal fun immersionControlWaveOffset(vertical:Float,horizontal:Float,rtl:Boolean):Long {
+    val across=if(rtl)1f-horizontal else horizontal
+    return (vertical.coerceIn(0f,1f)*1600f+across.coerceIn(0f,1f)*200f).toLong()
+}

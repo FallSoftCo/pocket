@@ -6,6 +6,13 @@ import androidx.compose.animation.core.LinearEasing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextLinkStyles
@@ -45,36 +52,46 @@ import androidx.compose.ui.unit.*
     val ready=immersionMotionReady()&&nativeVisible
     val transitionAnimated=immersionTransitionAnimated()
     var original by remember(text,target){mutableStateOf(false)}
-    val deadline=remember(text,target){ImmersionCueDeadline()}
-    val owner=remember(text,target){"control:"+java.util.UUID.randomUUID()}
+    // One spatial wave for visible controls. Paragraph cues keep their separate
+    // attention queue; adding controls cannot postpone another label indefinitely.
+    val density=LocalDensity.current
+    val configuration=LocalConfiguration.current
+    val screenHeight=with(density){configuration.screenHeightDp.dp.toPx()}.coerceAtLeast(1f)
+    val screenWidth=with(density){configuration.screenWidthDp.dp.toPx()}.coerceAtLeast(1f)
+    val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
+    var waveOffset by remember{mutableLongStateOf(0L)}
     var from by remember(text,target){mutableStateOf(AnnotatedString(target))}
     var to by remember(text,target){mutableStateOf(AnnotatedString(target))}
     var cueActive by remember(text,target){mutableStateOf(false)}
     val progress=remember(text,target){Animatable(1f)}
     val shown=if(expanded||(original&&PocketImmersion.motionEnabled))text else target
-    LaunchedEffect(text,target,ready,transitionAnimated,expanded,PocketSpeech.displayedOwner){
+    LaunchedEffect(text,target,ready,transitionAnimated,expanded,waveOffset){
         if(!ready||expanded)return@LaunchedEffect
-        // Separate queues replace the old synchronous screen-wide label clock.
-        val cadence=immersionLabelCadence(text)
-        delay(deadline.waitMs(cadence.initialMs))
-        while(isActive){
-            val next=!original
-            runImmersionCue(owner,false,onBegin={
-                from=AnnotatedString(if(original)text else target)
-                to=AnnotatedString(if(next)text else target)
-                progress.snapTo(if(transitionAnimated)0f else 1f)
-                cueActive=transitionAnimated
-            },onHandoff={original=next},onFinish={cueActive=false},animate={
-                if(transitionAnimated)progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))
-                else progress.snapTo(1f)
-            },awaitHandoff={if(transitionAnimated)snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}},returningToTarget=!next)
-            val hold=if(original)4000L else cadence.targetMs
-            deadline.hold(hold)
-            delay(hold)
-        }
+        try{
+            while(isActive){
+                val phase=immersionControlPhase(ImmersionControlWave.elapsedMs()-waveOffset)
+                if(phase.original!=original){
+                    val next=phase.original
+                    from=AnnotatedString(if(original)text else target)
+                    to=AnnotatedString(if(next)text else target)
+                    progress.snapTo(if(transitionAnimated)0f else 1f)
+                    cueActive=transitionAnimated
+                    if(transitionAnimated)coroutineScope{
+                        launch{progress.animateTo(1f,tween(IMMERSION_HANDOFF_DURATION_MS.toInt(),easing=LinearEasing))}
+                        snapshotFlow{progress.value}.first{it>=IMMERSION_HANDOFF_AT_MS.toFloat()/IMMERSION_HANDOFF_DURATION_MS}
+                        original=next
+                    }else original=next
+                    cueActive=false
+                }
+                delay(immersionControlPhase(ImmersionControlWave.elapsedMs()-waveOffset).remainingMs.coerceAtLeast(1L))
+            }
+        }finally{cueActive=false}
     }
     val rescue=if(supported)Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}else Modifier
-    Box(modifier.then(rescue)){
+    Box(modifier.then(rescue).onGloballyPositioned{coordinates->
+        val position=coordinates.positionInWindow()
+        waveOffset=immersionControlWaveOffset(position.y/screenHeight,position.x/screenWidth,rtl)
+    }){
         BlendImmersionText(actionText(if(cueActive)from else AnnotatedString(shown)),actionText(if(cueActive)to else AnnotatedString(shown)),{if(cueActive)progress.value else 1f},actionText(AnnotatedString(shown)),reserve=listOf(AnnotatedString(text),AnnotatedString(target)),color=color,fontSize=fontSize,
             lineHeight=lineHeight.takeIf{it!=TextUnit.Unspecified}?:LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
             fontWeight=fontWeight,maxLines=maxLines,overflow=TextOverflow.Ellipsis,
