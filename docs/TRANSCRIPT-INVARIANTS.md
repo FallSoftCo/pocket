@@ -54,3 +54,5 @@ the visible body. The delivery panel retains its status and recovery controls;
 seeing an echo does not accept an unknown receipt, clear a draft or resend work.
 Missing evidence, a previous pairing and independent identical-text sends remain
 visible. These rules are source scoped by the existing environment/thread guards.
+
+Reading positions and retained gap anchors must migrate along with proven identity enrichment. Restore aliases without changing offset/follow intent. An active viewport changes its key only with unambiguous evidence; existing visible keys and active gestures retain ownership. Ordinary streaming frames do not scan identity aliases.

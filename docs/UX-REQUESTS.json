@@ -2335,6 +2335,15 @@
         "docs/TRANSCRIPT-INVARIANTS.md",
         "docs/qualification/single-send-projection-20261012.json"
       ]
+    },
+    {
+      "id": "reading-position-identity-enrichment-20261012",
+      "request": "Identity reconciliation must preserve saved and active reading passages, pixel offset, follow intent and history-gap anchors.",
+      "status": "alpha83-published-native-qualified-phone-unverified",
+      "evidence": [
+        "docs/TRANSCRIPT-INVARIANTS.md",
+        "docs/qualification/reading-identity-20261012.json"
+      ]
     }
   ],
   "current_state": {

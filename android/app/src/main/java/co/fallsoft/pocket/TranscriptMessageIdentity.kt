@@ -113,3 +113,6 @@ internal fun promoteTranscriptIdentityEvidence(rows:List<JSONObject>,evidence:Li
  * provider echo owns the single visible body for that send. Never compare text. */
 internal fun transcriptContainsReply(rows:List<JSONObject>,replyId:String):Boolean =
     replyId.isNotBlank()&&rows.any{it.s("kind")=="user"&&it.s("clientId")==replyId}
+
+internal fun resolveTranscriptReadPosition(rows:List<JSONObject>,position:TranscriptReadPosition?):TranscriptReadPosition? =
+    position?.let{if(rows.any{row->row.s("id")==it.rowId})it else it.copy(rowId=migrateTranscriptAnchors(rows,setOf(it.rowId))[it.rowId]?:it.rowId)}

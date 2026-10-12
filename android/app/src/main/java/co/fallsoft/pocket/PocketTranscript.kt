@@ -236,6 +236,11 @@ object PocketTranscript {
             // Promote incomplete live/cache identities before the snapshot diff.
             // Otherwise a metadata-enriched history row is treated as a new send.
             val reconciled=normalizeTranscriptMessages(rows+incoming)
+            val requested=bridgeKnown.toMutableSet().apply{readPosition?.let{add(it.rowId)};bridgeBoundary?.let{add(it)}}
+            val moved=migrateTranscriptAnchors(reconciled,requested)
+            readPosition=readPosition?.let{it.copy(rowId=moved[it.rowId]?:it.rowId)}
+            bridgeKnown=bridgeKnown.map{moved[it]?:it}.toSet()
+            bridgeBoundary=bridgeBoundary?.let{moved[it]?:it}
             rows=promoteTranscriptIdentityEvidence(rows,reconciled)
             baselineRows=promoteTranscriptIdentityEvidence(baselineRows.values.toList(),reconciled).associateBy{it.s("id")}
             incoming=promoteTranscriptIdentityEvidence(incoming,reconciled)

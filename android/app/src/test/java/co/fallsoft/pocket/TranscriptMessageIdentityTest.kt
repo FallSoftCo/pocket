@@ -39,6 +39,14 @@ class TranscriptMessageIdentityTest {
   assertFalse(transcriptContainsReply(rows,""))
   assertFalse(transcriptContainsReply(listOf(user("one","send-one").put("kind","message")),"send-one"))
  }
+ @Test fun enrichedIdentityPreservesReadingOffsetAndFollowIntent(){
+  val rows=normalizeTranscriptMessages(listOf(user("same").removeClient(),user("same",version=2)))
+  val saved=TranscriptReadPosition("turn/same",73,false)
+  val restored=resolveTranscriptReadPosition(rows,saved)!!
+  assertEquals("turn/client-user/send",restored.rowId)
+  assertEquals(73,restored.offset);assertFalse(restored.follow)
+  assertEquals(saved.copy(rowId="missing"),resolveTranscriptReadPosition(rows,saved.copy(rowId="missing")))
+ }
  private fun user(item:String,send:String="send",version:Long=0)=org.json.JSONObject()
   .put("id","turn/"+item).put("itemId",item).put("turnId","turn")
   .put("clientId",send).put("kind","user").put("text","Deliberately repeated text").put("version",version)

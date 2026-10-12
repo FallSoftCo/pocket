@@ -130,6 +130,19 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             filterRequest=null
         }
     }
+    // A metadata-enriched key replaces one existing message, not the reader's
+    // passage. Preserve the exact viewport offset before LazyColumn remeasures.
+    SideEffect{
+        if(!follow&&pendingFilter==null&&!list.isScrollInProgress){
+            val visible=list.layoutInfo.visibleItemsInfo.firstOrNull{it.index==list.firstVisibleItemIndex}
+            val old=visible?.key as? String
+            if(old!=null&&shownRows.getOrNull(visible.index)?.s("id")!=old&&shownRows.none{it.s("id")==old}){
+                val resolved=migrateTranscriptAnchors(shownRows,setOf(old))[old]
+                val index=shownRows.indexOfFirst{it.s("id")==resolved}
+                if(index>=0)list.requestScrollToItem(index,list.firstVisibleItemScrollOffset)
+            }
+        }
+    }
     val shownIds=shownRows.map{it.s("id")}
     LaunchedEffect(important,filterPaddingRequest,shownIds){
         if(!important){filterTailPixels=0;filterPaddingRequest=null;return@LaunchedEffect}
@@ -168,7 +181,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size,restoreRevision){
         if(!restoredPosition&&readPosition!=null&&rows.isNotEmpty()){
-            val index=transcriptAnchorIndex(rows.map{it.s("id")},readPosition)
+            val resolved=resolveTranscriptReadPosition(rows,readPosition)?:readPosition
+            val index=transcriptAnchorIndex(rows.map{it.s("id")},resolved)
             if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
             restoredPosition=true
         }

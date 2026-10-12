@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-12",
+  "status": "open-native-regression",
+  "test": "ImmersionLayoutNativeTest#inlineReplacementPreservesSurroundingWordPosition",
+  "result": "fails",
+  "seconds": 2.354,
+  "fixture": "Synthetic custom native Compose text, 240dp width; no model/provider work",
+  "evidence": {
+    "unchangedWordOriginalBoundsPx": [
+      303.1,
+      0.0,
+      327.4,
+      69.0
+    ],
+    "unchangedWordReplacementBoundsPx": [
+      0.0,
+      69.0,
+      23.6,
+      138.0
+    ]
+  },
+  "cause": "Whole paragraph forms independently wrap even with reserved overall width/height.",
+  "needed": "Phrase-aware layout that preserves surrounding reading geometry, links, accessibility and inline interaction without duplicated text or awkward gaps.",
+  "limits": [
+    "Geometry evidence, not frame/visual perception qualification",
+    "No physical handset evidence",
+    "The failing draft test remains preserved separately until renderer correction"
+  ],
+  "releaseImpact": "Pre-existing immersion defect remains open; alpha83 scope is transcript reading-identity preservation."
+}
