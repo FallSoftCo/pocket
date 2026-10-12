@@ -1,0 +1,11 @@
+{
+ "sourceCommit":"f62883b",
+ "host":"OZZZ-OS",
+ "variant":"nonshrunk qualification",
+ "emulator":"nextcomp_env_qa:5620 SwiftShader software",
+ "seconds":36.107,
+ "result":"passed",
+ "verified":["30 additional rows and upward reading gesture put transcript end offscreen", "503 history read retains all local rows", "error and reload control visible without scrolling to transcript end", "reload clears error after successful read", "typed draft retained", "existing freshness/order/capture/Enter regression passes"],
+ "buildAndLint":"passed at3144b2b; native test-only extension f62883b compiled successfully",
+ "limits":["not phone installed", "synthetic 503 does not qualify actual outage or physical network", "no real transcription or model calls"]
+}

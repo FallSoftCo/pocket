@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-11",
+  "sourceCommit": "276b964",
+  "version": "0.5.0-alpha.65",
+  "versionCode": 83,
+  "cause": "A retryable recent-history read could exhaust four attempts without arranging any later read. Cached history remained until another event/manual refresh. This is a reproduced client gap; the specific user-reported stuck conversation is not yet identified.",
+  "readEvidence": {
+    "statusConnected": true,
+    "recentTimelineSeconds": 0.05,
+    "rows": 5,
+    "installedAtDiagnosis": "alpha63/code81"
+  },
+  "implementation": {
+    "backoffSeconds": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      30
+    ],
+    "foregroundOnly": true,
+    "threadEnvironmentGenerationGuard": true,
+    "preservesLocalRowsAndDraft": true,
+    "permissionRejectionRetries": false,
+    "workerOrModelCalls": 0
+  },
+  "builds": {
+    "debugTests": 285,
+    "releaseTests": 285,
+    "failures": 0,
+    "bothLints": "pass",
+    "bothSignedBuilds": "pass",
+    "host": "OZZZ-OS"
+  },
+  "native": {
+    "prolongedHistoryRecoveryCannotFreezeOrFollowNavigation": {
+      "seconds": 28.206,
+      "result": "pass"
+    },
+    "transientHistoryFailureRecoversWithoutAnotherEvent": {
+      "seconds": 17.591,
+      "result": "pass"
+    },
+    "cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory": {
+      "seconds": 43.797,
+      "result": "pass"
+    },
+    "ownedEmulatorAndFixture": "stopped after terminal qualification"
+  },
+  "delivery": {
+    "privateAuthenticatedUpdater": "83 verified for both signing identities",
+    "physical": {
+      "versionCode": 83,
+      "versionName": "0.5.0-alpha.65",
+      "apkSha256": "708a7d73827ae17e4f1378e5b5e9ba55910226f8d07b322fe6ea913d7a94eda8",
+      "preferencesVerified": 12,
+      "preferencesChanged": [],
+      "installedUtc": "2026-10-11T20:52:52.059211+00:00",
+      "interaction": "Install/package/checksum proof; affected stale phone viewport not yet reproduced"
+    }
+  },
+  "limitations": [
+    "Synthetic emulator tests verify recovery, not the unidentified affected phone conversation.",
+    "No provider turns started, messages resent or backend services restarted."
+  ]
+}

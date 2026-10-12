@@ -4,6 +4,16 @@ package co.fallsoft.pocket
 internal fun transcriptPresentationChanged(oldPreview:String?,oldKind:String?,oldStatus:String?,preview:String?,kind:String?,status:String?)=
     oldPreview!=preview||oldKind!=kind||oldStatus!=status
 
+/** Explicit work activity, including a recovered catalog snapshot, can invalidate history.
+ * Never pass inventory updatedAt or fetch timestamps here. */
+internal fun transcriptLiveActivityAdvanced(previous:Long?,incoming:Long)=incoming>0&&(previous==null||incoming>previous)
+
+internal fun transcriptNotificationAdvanced(thread:String?,previous:List<Pair<String,Long>>,incoming:List<Pair<String,Long>>):Boolean {
+    if(thread.isNullOrBlank())return false
+    fun watermark(entries:List<Pair<String,Long>>)=entries.filter{it.first==thread}.maxOfOrNull{it.second}?:0L
+    return watermark(incoming)>watermark(previous)
+}
+
 /** A fresh authoritative read can replace a cached streamed row whose server counter reset.
  * A row replaced by live output during that read keeps its version and wins reconciliation. */
 internal fun <T:Any> authoritativeSnapshotBase(current:List<T>,baseline:Map<String,T>,incomingIds:Set<String>,id:(T)->String,reset:(T)->T)=

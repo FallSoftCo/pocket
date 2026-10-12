@@ -20,10 +20,13 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-fun keepConversationReply(row:JSONObject){val thread=Pocket.selected?:return;Pocket.scope.launch{
-    try{val r=Pocket.api("/api/threads/$thread/notes",JSONObject().put("id",row.s("itemId",row.s("id"))).put("turnId",row.s("turnId")).put("text",row.s("text")))
-        if(Pocket.selected==thread)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",r.optJSONArray("notes"))}
-    }catch(e:Exception){Pocket.error=PocketNetwork.error(e)}
+fun keepConversationReply(row:JSONObject){val thread=Pocket.selected?:return;val destination=Pocket.captureEnvironment()?:return
+    val body=JSONObject().put("id",row.s("itemId",row.s("id"))).put("turnId",row.s("turnId")).put("text",row.s("text"))
+    fun current()=Pocket.selected==thread&&Pocket.captureEnvironment()?.matches(destination)==true
+    Pocket.scope.launch{
+    try{val r=Pocket.apiEnvironment(destination,"/api/threads/$thread/notes",body)
+        if(current())Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",r.optJSONArray("notes"))}
+    }catch(e:Exception){if(current())Pocket.error=PocketNetwork.error(e)}
 }}
 internal data class ConversationContextEntry(val id:String,val text:String,val label:String,val thread:String?,val sourceId:String="",val note:JSONObject?=null,val owner:String?=null,val captionId:Long?=null)
 internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):List<ConversationContextEntry>{
@@ -100,8 +103,8 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
     Column(Modifier.fillMaxWidth()){
     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically){
         TextButton(onControls,modifier=Modifier.weight(1f).heightIn(min=48.dp),contentPadding=PaddingValues(horizontal=4.dp)){
-            SymbolIcon(status.icon,status.label+"; conversation controls",Modifier.size(32.dp),tint=if(status==ConversationRunState.NEEDS_YOU)Coral else Mint,spinning=status.spinning)
-            Spacer(Modifier.width(6.dp));BilingualLabel(status.label,centered=false,color=if(status==ConversationRunState.NEEDS_YOU)Coral else Mint,fontSize=13.sp,maxLines=1)
+            SymbolIcon(status.icon,status.label+"; conversation controls",Modifier.size(32.dp),tint=if(status in listOf(ConversationRunState.NEEDS_YOU,ConversationRunState.FAILED))Coral else Mint,spinning=status.spinning)
+            Spacer(Modifier.width(6.dp));BilingualLabel(status.label,centered=false,color=if(status in listOf(ConversationRunState.NEEDS_YOU,ConversationRunState.FAILED))Coral else Mint,fontSize=13.sp,maxLines=1)
         }
         FilterChip(selected=important,onClick=onFilter,label={BilingualLabel("Important",fontSize=13.sp)},modifier=Modifier.heightIn(min=48.dp))
         if(PocketSpeech.displayedOwner==null&&PocketSpeech.count>0)SpeechPlaybackControls(iconOnly=true)else IconButton({if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}else if(speaking)PocketSpeech.control("pause")else PocketSpeech.speakDisplayed(host,speechText,"Conversation")},enabled=speaking||speechText.isNotBlank()){

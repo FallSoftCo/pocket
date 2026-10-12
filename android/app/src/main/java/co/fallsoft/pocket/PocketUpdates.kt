@@ -142,10 +142,10 @@ object PocketUpdates {
     val c=androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit){PocketUpdates.restore()}
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)){
-        Text("App updates",color=Paper,style=MaterialTheme.typography.titleSmall)
+        BilingualLabel("App updates",color=Paper,centered=false,maxLines=2)
         Text(PocketUpdates.status.ifBlank{"NextComp ${BuildConfig.VERSION_NAME}"},color=Muted,style=MaterialTheme.typography.bodySmall)
         Button(onClick={if(PocketUpdates.ready)PocketUpdates.install(c)else PocketUpdates.check(download=true,force=true)},enabled=PocketUpdates.ready||!PocketUpdates.busy,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
-            Text(if(PocketUpdates.ready)"Install update" else if(PocketUpdates.busy)"Checking update…" else "Check for updates")
+            BilingualLabel(if(PocketUpdates.ready)"Install update" else if(PocketUpdates.busy)"Checking update…" else "Check for updates",maxLines=2)
         }
     }
 }

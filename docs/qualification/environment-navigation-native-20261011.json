@@ -1,0 +1,25 @@
+{
+  "status": "native-qualified",
+  "host": "OZZZ-OS",
+  "avd": "nextcomp_env_qa",
+  "variant": "nonshrunk qualification with current candidates",
+  "durationSeconds": 9.523,
+  "checks": [
+    "Two card preview taps open their respective conversations",
+    "Settings selector changes environment",
+    "Same-ID histories do not mix between hosts",
+    "Per-environment drafts retained",
+    "Phone-local socket notification does not change remote selection",
+    "A-origin background reply while B selected reaches only A",
+    "Exact outgoing request ID and thread preserved",
+    "Unknown-delivery outbox retained and not replayed",
+    "Return to A restores correct cached history"
+  ],
+  "transport": "Three synthetic authenticated loopback HTTP/WebSocket backends",
+  "providerActions": "none",
+  "limits": [
+    "Not real FCM or remote provider verification",
+    "Not physical Fold navigation",
+    "Rapid-send and mic-accessibility candidates remain pending phone delivery"
+  ]
+}

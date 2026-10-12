@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +46,21 @@ import androidx.lifecycle.repeatOnLifecycle
     if(cardRegion)CardInteractionRegion(PocketImmersion.label("Mic"),modifier,capture)
     else if(dock)Column(modifier.height(usageDockHeight()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
         CaptureMic(capture,control,label,compact=true)
+        Spacer(Modifier.height(4.dp))
+        BilingualLabel(when{PocketVoice.problem.isNotBlank()->"Retry";control==CaptureControl.STOP_SEND->"Send";control==CaptureControl.PROCESSING->"Wait";control==CaptureControl.CHECK_SAVED->"Check";else->"Talk"},fontSize=12.sp,lineHeight=16.sp,maxLines=2,color=if(PocketVoice.problem.isNotBlank())Coral else Paper)
+    }
+    else if(bar){
+        val shortLabel=when(control){CaptureControl.START->"Record";CaptureControl.STOP_SEND->"Stop and send";CaptureControl.PROCESSING->"Processing";CaptureControl.CHECK_SAVED->"Check turn"}
+        Surface(onClick=capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,
+            modifier=modifier.heightIn(min=88.dp).semantics{contentDescription=PocketImmersion.label(label);if(PocketVoice.problem.isNotBlank())stateDescription=PocketVoice.problem},
+            shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            border=androidx.compose.foundation.BorderStroke(1.dp,if(control==CaptureControl.STOP_SEND)Coral else Mint.copy(alpha=.5f)),
+            color=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.18f) else Mint.copy(alpha=.12f),contentColor=Paper){
+            Column(Modifier.pressMotion().padding(horizontal=8.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
+                SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",null,Modifier.size(44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
+                BilingualLabel(shortLabel,fontSize=14.sp,lineHeight=18.sp,maxLines=2,color=Paper)
+            }
+        }
     }
     else Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
         CaptureMic(capture,control,label,compact)
@@ -54,11 +70,8 @@ import androidx.lifecycle.repeatOnLifecycle
     }
 }
 @Composable private fun CaptureMic(capture:()->Unit,control:CaptureControl,label:String,compact:Boolean){
-    FilledTonalIconButton(capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,modifier=Modifier.size(if(compact)64.dp else 72.dp),shape=CircleShape,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.22f) else Mint.copy(alpha=.16f),contentColor=Paper)){
-        Column(horizontalAlignment=Alignment.CenterHorizontally){
-            SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",PocketImmersion.label(if(PocketVoice.problem.isNotBlank())PocketVoice.problem else label),Modifier.size(if(compact)32.dp else 44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
-            if(compact)BilingualLabel(when{PocketVoice.problem.isNotBlank()->"Retry";control==CaptureControl.STOP_SEND->"Send";control==CaptureControl.PROCESSING->"Wait";control==CaptureControl.CHECK_SAVED->"Check";else->"Talk"},fontSize=12.sp,color=if(PocketVoice.problem.isNotBlank())Coral else Paper)
-        }
+    FilledTonalIconButton(capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,modifier=Modifier.size(if(compact)64.dp else 72.dp).semantics{contentDescription=PocketImmersion.label(label);if(PocketVoice.problem.isNotBlank())stateDescription=PocketVoice.problem},shape=CircleShape,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.22f) else Mint.copy(alpha=.16f),contentColor=Paper)){
+        SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",null,Modifier.size(44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
     }
 }
 @Composable fun VoiceScreen(){
@@ -128,8 +141,10 @@ import androidx.lifecycle.repeatOnLifecycle
     var elapsed by remember{mutableLongStateOf(0)}
     LaunchedEffect(PocketVoice.state,PocketVoice.recordingStartedAt){while(PocketVoice.state=="Listening"){elapsed=(android.os.SystemClock.elapsedRealtime()-PocketVoice.recordingStartedAt)/1000;kotlinx.coroutines.delay(1000)}}
     val target=if(PocketVoice.targetThread==null)"Coordinator" else Pocket.tasks.firstOrNull{it.id==PocketVoice.targetThread}?.title?:"Conversation"
+    var expandedError by remember(PocketVoice.problem){mutableStateOf(false)}
+    val help=if(PocketVoice.problem.isNotBlank())Modifier.clickable(onClickLabel=if(expandedError)"Collapse capture error" else "Show full capture error"){expandedError=!expandedError}else Modifier
     Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=4.dp).heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-        WorkflowText(if(PocketVoice.problem.isNotBlank())PocketVoice.problem else "${if(PocketVoice.state=="Listening")"Recording %02d:%02d".format(elapsed/60,elapsed%60) else PocketVoice.state} · $target",Modifier.weight(1f),color=if(PocketVoice.problem.isNotBlank())Coral else Mint,fontSize=14.sp,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        WorkflowText(if(PocketVoice.problem.isNotBlank())PocketVoice.problem else "${if(PocketVoice.state=="Listening")"Recording %02d:%02d".format(elapsed/60,elapsed%60) else PocketVoice.state} · $target",Modifier.weight(1f).then(help),color=if(PocketVoice.problem.isNotBlank())Coral else Mint,fontSize=14.sp,maxLines=if(expandedError)Int.MAX_VALUE else 2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         if(PocketVoice.state=="Listening")LinearProgressIndicator(progress={PocketVoice.captureLevel},modifier=Modifier.width(48.dp),color=Coral)
         TextButton({PocketVoice.stop()},modifier=Modifier.widthIn(min=64.dp).heightIn(min=48.dp)){BilingualLabel("End voice",fontSize=14.sp,maxLines=2)}
     }
@@ -145,17 +160,10 @@ import androidx.lifecycle.repeatOnLifecycle
 }
 
 @Composable fun ChatActionButton(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier=Modifier,onClick:()->Unit,recording:Boolean=false){
-    val density=androidx.compose.ui.platform.LocalDensity.current
-    val large=density.fontScale>1.4f
-    val height=if(large)with(density){24.sp.toDp()+52.dp}else 72.dp
-    Surface(onClick=onClick,modifier=modifier.height(height),shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),border=androidx.compose.foundation.BorderStroke(1.dp,if(recording)Coral else Line),color=if(recording)androidx.compose.ui.graphics.Color(0xff451e2a)else Panel,contentColor=Paper){
-        if(large)Column(Modifier.fillMaxSize().pressMotion().padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-            SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)
-            BilingualLabel(label,fontSize=15.sp,fontWeight=FontWeight.Medium)
-        }else Row(Modifier.pressMotion().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
-            SymbolIcon(icon,null,Modifier.size(40.dp),tint=Paper)
-            Spacer(Modifier.width(10.dp))
-            BilingualLabel(label,fontSize=15.sp,fontWeight=FontWeight.Medium)
+    Surface(onClick=onClick,modifier=modifier.heightIn(min=88.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),border=androidx.compose.foundation.BorderStroke(1.dp,if(recording)Coral else Line),color=if(recording)androidx.compose.ui.graphics.Color(0xff451e2a)else Panel,contentColor=Paper){
+        Column(Modifier.pressMotion().padding(horizontal=8.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
+            SymbolIcon(icon,null,Modifier.size(44.dp),tint=Paper)
+            BilingualLabel(label,fontSize=15.sp,lineHeight=18.sp,maxLines=2,fontWeight=FontWeight.Medium)
         }
     }
 }

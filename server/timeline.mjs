@@ -45,8 +45,11 @@ export class LiveTimeline {
   removeItem(turn,id){const entry=turn.items.get(id);if(entry){this.bytes-=entry.bytes;turn.items.delete(id);}}
   store(turn,item,version){
     const compact=displayItem(item,turn.id);if(!compact)return;
-    this.removeItem(turn,item.id);const bytes=Buffer.byteLength(JSON.stringify(compact));
+    const bytes=Buffer.byteLength(JSON.stringify(compact));
     if(bytes>this.maxBytes)return;
+    // Updating text/output must not move an existing item behind later items.
+    // Map.set preserves insertion order only when the key was not deleted.
+    this.bytes-=turn.items.get(item.id)?.bytes||0;
     turn.items.set(item.id,{item:compact,version,bytes});this.bytes+=bytes;
     while(turn.items.size>this.maxItems)this.removeItem(turn,turn.items.keys().next().value);
     while(this.bytes>this.maxBytes||this.threads.size>this.maxThreads){
@@ -63,6 +66,13 @@ export class LiveTimeline {
       if(snapshot.status!=='inProgress'){if(old&&!old.items.size)this.threads.get(thread.id).delete(snapshot.id);continue;}
       const live=this.turn(thread.id,snapshot.id);live.startedAt=snapshot.startedAt;
       for(const item of snapshot.items||[])if(!live.items.has(item.id))this.store(live,item,0);
+      // A delta arriving during the history read survives the version boundary.
+      // Its newer value must nevertheless occupy the snapshot's canonical slot,
+      // rather than precede every earlier item inserted below that boundary.
+      const ordered=new Map();
+      for(const item of snapshot.items||[]){const entry=live.items.get(item.id);if(entry)ordered.set(item.id,entry);}
+      for(const [id,entry] of live.items)if(!ordered.has(id))ordered.set(id,entry);
+      live.items=ordered;
     }
   }
   turn(threadId,turnId){

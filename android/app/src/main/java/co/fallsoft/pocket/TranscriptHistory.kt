@@ -1,14 +1,27 @@
 package co.fallsoft.pocket
 
 /** Retain read rows, but place newly discovered rows in their canonical page order. */
-internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Boolean,id:(T)->String,version:(T)->Long,insertBefore:String?=null):List<T>{
+internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Boolean,id:(T)->String,version:(T)->Long,insertBefore:String?=null,keepPosition:(T)->Boolean={false}):List<T>{
     val values=linkedMapOf<String,T>()
     current.forEach{values[id(it)]=it}
     val existing=values.keys.toHashSet()
     val page=incoming.distinctBy(id)
     page.forEach{row->val key=id(row);val previous=values[key];if(previous==null||version(row)>=version(previous))values[key]=row}
     val order=current.map(id).distinct().toMutableList()
-    if(page.none{id(it) in existing}){
+    // Snapshot order is authoritative even for rows already received live.
+    // Replace only overlapping slots: locally retained pages and live-only
+    // output keep their positions and are never discarded by a bounded page.
+    val shared=page.map(id).filter{it in existing}
+    val sharedIds=shared.toHashSet()
+    var sharedIndex=0
+    order.indices.forEach{index->if(order[index] in sharedIds)order[index]=shared[sharedIndex++]}
+    val boundary=insertBefore?.takeIf{it in order&&page.none{row->id(row)==it}}
+    if(boundary!=null){
+        // The server cursor proves these page rows precede this retained row.
+        // Repeated turn headings stay at their earliest retained position.
+        val movable=page.filterNot{id(it) in existing&&keepPosition(it)}.map(id)
+        order.removeAll(movable.toSet());order.addAll(order.indexOf(boundary),movable)
+    }else if(page.none{id(it) in existing}){
         val anchor=insertBefore?.let{order.indexOf(it)}?:-1
         order.addAll(if(anchor>=0)anchor else if(older)0 else order.size,page.map(id))
     }else{
@@ -34,6 +47,18 @@ internal fun shouldPrefetchTranscript(follow:Boolean,filtered:Boolean,firstVisib
     !follow&&!filtered&&firstVisible<=4&&earlier&&!loading
 
 internal data class TranscriptCursor(val before:String?,val hasEarlier:Boolean)
+/** Keep early and recent anchors in a large locally retained turn. */
+internal fun <T> transcriptPositionAnchors(rows:List<T>,limit:Int=256):List<T>{
+    require(limit>=2)
+    if(rows.size<=limit)return rows
+    return (0 until limit).map{rows[(it.toLong()*(rows.size-1)/(limit-1)).toInt()]}
+}
+/** Move only the delayed row against a server-proven same-turn successor. */
+internal fun <T> placeTranscriptRowBefore(rows:List<T>,target:String,successor:String,id:(T)->String):List<T>{
+    val from=rows.indexOfFirst{id(it)==target};val to=rows.indexOfFirst{id(it)==successor}
+    if(from<0||to<0||from<to||target==successor)return rows
+    return rows.toMutableList().apply{val row=removeAt(from);add(to,row)}
+}
 /** Recent/bridge pages cannot overwrite the cursor preceding the oldest retained local row. */
 internal fun retainedTranscriptCursor(current:TranscriptCursor,hadRows:Boolean,older:Boolean,bridge:Boolean,page:TranscriptCursor)=
     if(older||(!bridge&&!hadRows))page else current

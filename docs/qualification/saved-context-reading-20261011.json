@@ -1,0 +1,49 @@
+{
+  "source": "1a9ccfd",
+  "state": "installed-phone-and-published-private-update",
+  "problem": "Leaving Important through Surrounding conversation retained filter-only tail padding in ordinary history, moving the latest passage by74px. The source jump also used a guessed32ms delay before addressing a changed numeric list index.",
+  "repair": "Restrict compensation padding to Important, clear pending padding when it closes, and send the source row identity through the post-composition reading request. Navigation and removal feedback validate the complete captured environment identity, endpoint and credential.",
+  "evidence": {
+    "oldBehaviorNativeFailureSeconds": 5.472,
+    "oldLatestPassageY": 1453,
+    "oldAfterSurroundingConversationY": 1379,
+    "repairedSavedContextNativeSeconds": 5.57,
+    "filterGeometryAndPixelNativeSeconds": 6.031,
+    "olderPageAndWarmReopenNativeSeconds": 9.481,
+    "shortHistoryPageGestureNativeSeconds": 14.519,
+    "beforeImportantReturnNativeCrops": "All three original window PixelCopy paragraph images are byte-identical; SHA2d185e8ef850c0de867062b4cfd58b5ff29dfdbe5aefe1599db9b96b7163cb31.",
+    "finalSavedContextNativeSeconds": 5.522,
+    "finalOlderPageAndWarmReopenNativeSeconds": 9.457,
+    "lateInputOrderingNativeSeconds": 7.558,
+    "galleryValidation": {
+      "task": "6a5b25540353b89d29092f4e52b19958",
+      "cards": 2283,
+      "desktop": "1440x1050 passed",
+      "mobile": "390x844 passed",
+      "failed": [],
+      "reducedMotion": "passed",
+      "reload": "passed"
+    },
+    "galleryCard": "nextcomp-reading-filter-pixel-20261011",
+    "galleryVisibility": "owner-private; card identifier retained without deployment address"
+  },
+  "limits": [
+    "Native emulator evidence; physical reading gestures/frame pacing remain unqualified.",
+    "Paragraph-level PixelCopy review does not qualify the full-screen UI.",
+    "Physical install is verified; physical reading gestures and frame pacing remain unobserved."
+  ],
+  "release": {
+    "versionCode": 85,
+    "versionName": "0.5.0-alpha.67",
+    "debugUnitTests": 286,
+    "releaseUnitTests": 286,
+    "bothLints": "passed",
+    "bothSignedBuilds": "passed",
+    "buildHost": "OZZZ-OS",
+    "privateUpdater": 85,
+    "phoneInstall": "Success; independent package and base APK SHA verified",
+    "phoneVersionCode": 85,
+    "phoneInstalledSha256": "3f5595fada98b5a9fc87b8d2bb8fc514f285bd4197560c55782fcbd66255f80b",
+    "criticalPreferencesUnchanged": 13
+  }
+}

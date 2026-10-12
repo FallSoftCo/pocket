@@ -37,7 +37,13 @@ class EnvironmentIsolationNativeTest {
    .putString("environments:v1",JSONArray().put(JSONObject().put("id","workstation").put("name","System76")).put(JSONObject().put("id","remote_qa").put("name","OZZZ")).toString()).commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   assertTrue(device.wait(Until.hasObject(By.text("System76 synthetic work")),15000))
-  main{Pocket.open("same-thread")};await{PocketTranscript.rows.any{it.s("text").contains("System76 answer only")}}
+  assertTrue(device.wait(Until.hasObject(By.textContains("System76 second answer only")),5000))
+  device.findObject(By.textContains("System76 second answer only")).click()
+  await{Pocket.selected=="second-thread"&&PocketTranscript.rows.any{it.s("text")=="System76 second answer only"}}
+  main{Pocket.closeTask()}
+  assertTrue(device.wait(Until.hasObject(By.textContains("System76 answer only")),5000))
+  device.findObject(By.textContains("System76 answer only")).click()
+  await{Pocket.selected=="same-thread"&&PocketTranscript.rows.any{it.s("text")=="System76 answer only"}}
   main{Pocket.closeTask()}
   assertTrue(device.wait(Until.hasObject(By.desc("Settings, app updates, usage and activity")),5000));device.findObject(By.desc("Settings, app updates, usage and activity")).click()
   assertTrue(device.wait(Until.hasObject(By.desc("Development environment: System76")),5000));device.findObject(By.desc("Development environment: System76")).click()
@@ -61,5 +67,19 @@ class EnvironmentIsolationNativeTest {
   main{Pocket.activateEnvironment("workstation");Pocket.open("same-thread")};await{PocketTranscript.rows.any{it.s("text").contains("System76 answer only")}}
   assertFalse(PocketTranscript.rows.any{it.s("text").contains("OZZZ answer only")})
   assertEquals("workstation",EnvironmentProfiles(prefs).selected().id)
+  val receipts=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment("workstation")),"/_qa/state")} .getJSONArray("sent").objects()
+  assertEquals(1,receipts.size)
+  assertEquals("System76",receipts.single().s("host"))
+  assertEquals("same-thread",receipts.single().s("thread"))
+  assertEquals("native-origin-a",receipts.single().s("id"))
+  main{
+   keepConversationReply(JSONObject().put("id","retained-origin-a").put("turnId","synthetic").put("text","Save on original host"))
+   Pocket.activateEnvironment("remote_qa");Pocket.open("same-thread")
+  }
+  await{runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment("workstation")),"/_qa/state")}.getJSONArray("notes").length()==1}
+  val saved=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment("workstation")),"/_qa/state")}.getJSONArray("notes").getJSONObject(0)
+  assertEquals("System76",saved.s("host"));assertEquals("same-thread",saved.s("thread"));assertEquals("retained-origin-a",saved.s("id"))
+  await{PocketTranscript.rows.any{it.s("text")=="OZZZ answer only"}}
+  assertFalse("Old host note polluted current conversation",Pocket.detail?.optJSONArray("notes")?.objects().orEmpty().any{it.s("id")=="retained-origin-a"})
  }
 }

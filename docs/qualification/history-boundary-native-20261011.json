@@ -1,0 +1,61 @@
+{
+  "source": "ae1eee7",
+  "buildHost": "OZZZ-OS",
+  "emulator": "nextcomp_env_qa5620 /software SwiftShader",
+  "method": "HistoryReadingNativeTest#partialOlderPageRepairsLateInputAgainstRetainedReply",
+  "control": {
+    "source": "dc4b8ee",
+    "result": "failed as expected: input remained after reply",
+    "seconds": 6.881,
+    "evidence": "/tmp/nextcomp-boundary-control-native.txt"
+  },
+  "candidate": {
+    "result": "passed",
+    "seconds": 6.952,
+    "evidence": "/tmp/nextcomp-boundary-fixed-native.txt",
+    "checks": [
+      "cursor boundary places older input before retained reply",
+      "streamed progress during older read preserved",
+      "one retained turn header",
+      "already-local prior message retained"
+    ]
+  },
+  "backendTargeted": "12 history tests passed including same-turn and cross-turn cursor anchors",
+  "fullBackend": {
+    "tests": 453,
+    "failures": 0,
+    "evidence": "/tmp/nextcomp-boundary-all-node-tests-qualified.log"
+  },
+  "limits": [
+    "exact physical user case not captured",
+    "late input outside bounded recent page still needs targeted reconciliation",
+    "legacy compatibility pages lack new boundary hint"
+  ],
+  "narrowOwningRelease": {
+    "source": "4a81b84",
+    "base": "6c7ba69",
+    "files": [
+      "server/history.mjs",
+      "tests/history.test.mjs"
+    ],
+    "tests": 425,
+    "failures": 0,
+    "evidence": "/tmp/nextcomp-boundary-release-tests.log",
+    "state": "deployed; backend1372872, external Codex daemon2213121 preserved"
+  },
+  "android": {
+    "debugUnitTests": 275,
+    "failures": 0,
+    "lint": "passed",
+    "fullNative": {
+      "passed": true,
+      "seconds": 41.919,
+      "evidence": "/tmp/nextcomp-boundary-full-native.txt"
+    }
+  },
+  "liveBoundary": {
+    "evidence": "/tmp/nextcomp-boundary-live-evidence.json",
+    "result": "new cursor olderThanRow equals next older page insertBefore, and boundary row exists in retained latest page"
+  },
+  "delivery": "system76 backend4a81b84 and alpha56/code74 installed; other environments unchanged"
+}

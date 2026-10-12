@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { readFileSync } from 'node:fs';
+import { readFileSync,existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
@@ -16,5 +16,22 @@ server.tool('notify_user','Send the paired user a phone notification about this 
 },{readOnlyHint:false,destructiveHint:false,openWorldHint:false},async args=>{
   try{const r=await fetch(`${process.env.POCKET_URL||'http://127.0.0.1:18880'}/api/notify`,{method:'POST',headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},body:JSON.stringify(args),signal:AbortSignal.timeout(30000)});const d=await r.json();if(!r.ok)throw new Error(d.error);return {content:[{type:'text',text:JSON.stringify({notification_id:d.notification.id,status:'accepted_by_pocket',thread_id:args.thread_id})}]};}
   catch(e){return {isError:true,content:[{type:'text',text:e.message}]};}
+});
+const migrationRegistryPath=resolve(process.env.POCKET_DATA||resolve(root,'data'),'terminal-forks.json');
+const migrationTargets=existsSync(migrationRegistryPath)?Object.keys(JSON.parse(readFileSync(migrationRegistryPath,'utf8')).targets||{}):[];
+if(migrationTargets.length)server.tool('terminal_fork','Prepare a native fork of your OWN Codex session on an owner-registered environment. Use the actual CODEX_THREAD_ID, never a title or guessed ID. request saves a checkpoint without starting a successor. release yields primary ownership after this turn finishes; make it your final tool action and end the source turn with the checkpoint. The source remains available for explicitly named dependencies. status observes receipts; cancel is permitted only before native fork creation. Unknown delivery is never resent.',{
+  operation:z.enum(['request','release','status','cancel']),migration_id:z.string().min(5).max(100),
+  source_thread_id:z.string().min(5).max(100).describe('This session’s CODEX_THREAD_ID. Do not transfer other sessions.'),
+  target:z.string().optional().describe('Owner-registered destinations: '+migrationTargets.join(', ')),cwd:z.string().optional(),handoff:z.string().max(16000).optional(),primary_scope:z.string().max(4000).optional(),source_scope:z.string().max(4000).optional(),
+  workspace_files:z.array(z.string()).max(256).optional(),dependencies:z.array(z.object({id:z.string(),state:z.enum(['settled','source-retained','unknown']),description:z.string()})).max(64).optional()
+},{readOnlyHint:false,destructiveHint:false,openWorldHint:false},async args=>{
+  try{
+    if(process.env.CODEX_THREAD_ID&&args.source_thread_id!==process.env.CODEX_THREAD_ID)throw Error('This terminal tool can transfer only its own source session.');
+    const api=async(path,body)=>{const r=await fetch(`${process.env.POCKET_URL||'http://127.0.0.1:18880'}${path}`,{headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},...(body?{method:'POST',body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(15000)});const d=await r.json();if(!r.ok)throw Error(d.error||'Terminal transfer failed.');return d;};
+    let result;
+    if(args.operation==='request')result=await api('/api/terminal-forks',{id:args.migration_id,threadId:args.source_thread_id,target:args.target,cwd:args.cwd,handoff:args.handoff,primaryScope:args.primary_scope,sourceScope:args.source_scope||'',workspaceFiles:args.workspace_files||[],dependencies:args.dependencies||[]});
+    else{const path='/api/terminal-forks/'+encodeURIComponent(args.migration_id),existing=await api(path);if(existing.sourceThreadId!==args.source_thread_id)throw Error('This checkpoint belongs to another source session.');result=args.operation==='status'?existing:await api(path+'/'+args.operation,{});}
+    return {content:[{type:'text',text:JSON.stringify(result)}]};
+  }catch(e){return {isError:true,content:[{type:'text',text:e.message}]};}
 });
 await server.connect(new StdioServerTransport());

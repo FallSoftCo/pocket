@@ -9,5 +9,5 @@ class ConversationRunStateTest {
     @Test fun streamedTurnRemainsWorkingBeforeTaskListCatchesUp(){assertEquals(ConversationRunState.WORKING,state(task="idle",turn="inProgress"));assertEquals(ConversationRunState.THINKING,state(thread="active",thinking=true))}
     @Test fun unloadedConversationDoesNotPretendItIsWaitingForInput(){assertEquals(ConversationRunState.LOADING,state(loaded=false,loading=true));assertEquals(ConversationRunState.CHECKING,state(loaded=false))}
     @Test fun knownActivityIsVisibleBeforeHistoryLoads(){assertEquals(ConversationRunState.STARTING,state(task="pending",loaded=false));assertEquals(ConversationRunState.WORKING,state(task="active",loaded=false,loading=true))}
-    @Test fun completionAndInterruptionAreDistinct(){assertEquals(ConversationRunState.YOUR_TURN,state(task="idle",turn="completed"));assertEquals(ConversationRunState.STOPPED,state(turn="interrupted"));assertEquals(ConversationRunState.STOPPED,state(turn="failed"))}
+    @Test fun completionAndInterruptionAreDistinct(){assertEquals(ConversationRunState.YOUR_TURN,state(task="idle",turn="completed"));assertEquals(ConversationRunState.STOPPED,state(turn="interrupted"));assertEquals(ConversationRunState.FAILED,state(turn="failed"))}
 }

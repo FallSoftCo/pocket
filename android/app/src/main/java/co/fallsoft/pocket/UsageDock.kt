@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,9 +75,13 @@ import java.util.Locale
     val day=usage.resetsAt?.let{SimpleDateFormat("EEE",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     val time=usage.resetsAt?.let{SimpleDateFormat("HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     Box(modifier.height(usageDockHeight())) {
-    Surface(onClick={open=true},modifier=Modifier.fillMaxSize().semantics{contentDescription="Settings, app updates, usage and activity"},color=Ink,shape=RoundedCornerShape(20.dp)){
+    Surface(onClick={open=true},modifier=Modifier.fillMaxSize().semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=usage.remainingLabel()+"; "+usage.resetLabel()+"; "+usage.credits.label()},color=Ink,shape=RoundedCornerShape(20.dp)){
         Column(Modifier.fillMaxSize().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){if(!creditPrimary)AnimatedMark(20);Text(if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=18.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1)}
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
+                if(!creditPrimary)AnimatedMark(20)
+                Text(if(creditPrimary)usage.credits.compact()!!.removeSuffix(" cr") else if(remaining==null)"—" else usage.remainingLabel().replace(" left",""),color=color,fontSize=18.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
+                if(creditPrimary)Text("cr",color=color,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
+            }
             Text(if(day.isBlank())"↻ —" else "$day $time",color=Muted,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
             Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally){
                 if(Pocket.environmentProfiles.all().size>1)Text(Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)

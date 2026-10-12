@@ -61,7 +61,8 @@ object PocketSpeechCaptions {
         val dismiss=PendingIntent.getBroadcast(c,997,Intent(c,AttentionReceiver::class.java).setAction("caption-dismiss"),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val public=Notification.Builder(c,"spoken-playback").setSmallIcon(R.drawable.ic_notification).setContentTitle(PocketImmersion.label("NextComp spoken update")).setContentText(PocketImmersion.label("Unlock to read")).build()
         val builder=Notification.Builder(c,"spoken-playback").setSmallIcon(R.drawable.ic_notification).setContentTitle(PocketImmersion.target("caption-title:${state.id}",state.title).ifBlank{PocketImmersion.label("NextComp spoken update")})
-            .setContentIntent(PocketNotifications.open(c,null,998)).setOnlyAlertOnce(true).setAutoCancel(false)
+            // Use the captured notification's known source, never the currently open chat.
+            .setContentIntent(PocketNotifications.open(c,PocketNotificationTitles.threadForId(state.id),998)).setOnlyAlertOnce(true).setAutoCancel(false)
             .setVisibility(Notification.VISIBILITY_PRIVATE).setPublicVersion(public).setDeleteIntent(dismiss)
             .addAction(Notification.Action.Builder(R.drawable.ic_notification,PocketImmersion.label("Dismiss"),dismiss).build())
         try{manager.notify(998,decorate(builder).build())}catch(_:SecurityException){}

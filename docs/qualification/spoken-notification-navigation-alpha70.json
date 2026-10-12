@@ -1,0 +1,42 @@
+{
+  "runtimeSource": "9214d08",
+  "versionCode": 88,
+  "versionName": "0.5.0-alpha.70",
+  "state": "installed-owner-phone",
+  "problem": "Retained spoken notification content intent omitted its known source thread and opened the session list.",
+  "fix": "Resolve stored notification-to-thread association, capturing the current environment through the normal authenticated notification navigation path. Never guess the selected conversation as source.",
+  "nativeEvidence": {
+    "controlSource": "e9ae2ec",
+    "controlFailedSeconds": 17.664,
+    "fixedPassedSeconds": 6.605,
+    "systemPostedNotification": true,
+    "actualPendingIntentExecuted": true,
+    "visibleSourceConversationContent": true,
+    "draftPreserved": true,
+    "submittedReplies": 0,
+    "providerInferenceOrTtsRequested": false,
+    "host": "authorized OZZZ-OS isolated emulator5620"
+  },
+  "releaseChecks": {
+    "debugUnitTests": 290,
+    "releaseUnitTests": 290,
+    "bothLints": "passed",
+    "bothSignedBuilds": "passed",
+    "r8InitialFailure": "3GiB Java heap exhausted; no artifacts published from failed attempt",
+    "r8Recovery": "Disposable no-daemon build with6GiB cap; shared daemon untouched"
+  },
+  "limits": [
+    "No physical notification-shade/lock-screen interaction qualification.",
+    "Unknown source associations retain list fallback; no invented target.",
+    "Complete session-aware audio/read/attention lifecycle audit remains open."
+  ],
+  "phoneDelivery": {
+    "packageVerified": 88,
+    "installedApkSha256": "8c89aacf3de77225003101f1db55b0e67238224784459af76b39de6ad7f140c3",
+    "preservedCriticalPreferenceHashes": 13,
+    "changedCriticalPreferenceHashes": [],
+    "ssh": "Termux banner timeout; verified identity via authorized Tailscale ADB fallback",
+    "foregroundAtPreflight": "launcher/notification shade; no keyboard/audio active",
+    "pairedWorkstationUpdater": "Both authenticated signer endpoints offer88 with matching digest"
+  }
+}

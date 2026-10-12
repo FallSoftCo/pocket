@@ -1,5 +1,8 @@
 package co.fallsoft.pocket
 
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
@@ -38,6 +41,12 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -78,20 +87,30 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
+@OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class,FlowPreview::class)
 @Composable fun ConversationScreen(){
     val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
     val task=Pocket.tasks.firstOrNull{it.id==Pocket.selected}
+    val failureSource=Pocket.selected;val replyFailure=Pocket.replyFailure()
+    val clientReplies=PocketReplies.visible(Pocket.selected.orEmpty())
+    val recoveryAlreadyShown=clientReplies.any{it.id==replyFailure?.id}||d?.optJSONArray("outgoing")?.objects()?.any{it.s("id")==replyFailure?.id}==true
+    val conversationError=Pocket.error.ifBlank{if(recoveryAlreadyShown)"" else replyFailure?.message.orEmpty()}
     val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
     val latestTurn=rows.lastOrNull{it.s("kind")=="turn"}
-    val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),latestTurn?.s("status").orEmpty(),task?.previewKind=="thinking",d!=null,PocketTranscript.loading)
+    val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),if(PocketTranscript.currentHistoryVerified)latestTurn?.s("status").orEmpty() else "",task?.previewKind=="thinking",d!=null&&PocketTranscript.currentHistoryVerified,PocketTranscript.loading)
     val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.THINKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
     val latestFailure=rows.lastOrNull{it.s("kind")=="turnEnd"}?.takeIf{it.s("status")=="failed"&&(latestTurn==null||it.s("turnId")==latestTurn.s("turnId"))}
-    val list=key(Pocket.local,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
-    val readPosition=remember(Pocket.environmentId,Pocket.selected){PocketTranscript.readPosition}
-    var restoredPosition by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition==null||readPosition.follow)}
-    var follow by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(readPosition?.follow?:true)}
+    val list=key(Pocket.environmentId,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
+    val restoreRevision=PocketTranscript.cacheRestoreRevision
+    val readPosition=remember(Pocket.environmentId,Pocket.selected,restoreRevision){PocketTranscript.readPosition}
+    var restoredPosition by remember(Pocket.environmentId,Pocket.selected,restoreRevision){mutableStateOf(readPosition==null||readPosition.follow)}
+    var follow by remember(Pocket.environmentId,Pocket.selected,restoreRevision){mutableStateOf(readPosition?.follow?:true)}
     var important by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
+    var filterPassage by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<String?>(null)}
+    var filterRequest by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<FilterReadingRequest?>(null)}
+    var filterPaddingRequest by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<FilterReadingRequest?>(null)}
+    var filterTailPixels by remember(Pocket.environmentId,Pocket.selected){mutableIntStateOf(0)}
+    val density=LocalDensity.current
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
     fun noteFor(row:JSONObject)=notes.firstOrNull{it.s("id")==row.s("itemId",row.s("id"))||it.s("id")==row.s("id")}
@@ -99,10 +118,35 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
     val shownRows=filteredRows
-    val latestFollow by key(Pocket.local,Pocket.selected){rememberUpdatedState(follow)}
-    val latestRowIds by key(Pocket.local,Pocket.selected){rememberUpdatedState(shownRows.map{it.s("id")})}
-    DisposableEffect(Pocket.local,Pocket.selected){
-        val source=Pocket.selected;val owner=backendOwner(Pocket.base,Pocket.token)
+    val pendingFilter=filterRequest
+    SideEffect{
+        if(pendingFilter!=null&&pendingFilter.environment==Pocket.environmentId&&pendingFilter.thread==Pocket.selected&&pendingFilter.important==important){
+            // LazyColumn's item provider now contains the committed filtered data.
+            // A frame callback before composition can still address the old index.
+            val index=shownRows.indexOfFirst{it.s("id")==pendingFilter.row}
+            if(index>=0)list.requestScrollToItem(index,pendingFilter.offset)
+            filterRequest=null
+        }
+    }
+    val shownIds=shownRows.map{it.s("id")}
+    LaunchedEffect(important,filterPaddingRequest,shownIds){
+        if(!important){filterTailPixels=0;filterPaddingRequest=null;return@LaunchedEffect}
+        val request=filterPaddingRequest?:return@LaunchedEffect
+        val index=shownIds.indexOf(request.row);if(index<0)return@LaunchedEffect
+        val reserved=filterTailPixels;val ordinaryBottom=with(density){12.dp.roundToPx()}
+        val measured=snapshotFlow{list.layoutInfo}.first{info->
+            info.afterContentPadding>=reserved+ordinaryBottom&&info.visibleItemsInfo.any{it.key==request.row&&it.index==index}
+        }
+        // Filtering near the end otherwise clamps the retained passage downwards.
+        // Reserve only the measured missing tail, rather than moving that passage.
+        val last=measured.visibleItemsInfo.firstOrNull{it.index==measured.totalItemsCount-1}
+        filterTailPixels=if(last==null)0 else (measured.viewportEndOffset-last.offset-last.size-ordinaryBottom).coerceIn(0,reserved)
+        filterPaddingRequest=null
+    }
+    val latestFollow by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(follow)}
+    val latestRowIds by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(shownRows.map{it.s("id")})}
+    DisposableEffect(Pocket.environmentId,Pocket.selected){
+        val source=Pocket.selected;val owner=PocketTranscript.scopeKey()
         onDispose{
             // visibleItemsInfo also includes a preceding row inside content padding.
             // Its key must not be paired with the next viewport row's scroll offset.
@@ -111,11 +155,33 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position)
         }
     }
-    LaunchedEffect(Pocket.local,Pocket.selected,rows.size){
+    LaunchedEffect(list,Pocket.environmentId,Pocket.selected){
+        val source=Pocket.selected;val owner=PocketTranscript.scopeKey()
+        snapshotFlow{
+            if(!restoredPosition||PocketTranscript.loading||list.isScrollInProgress||important)null else
+                transcriptReadPosition(list.layoutInfo.visibleItemsInfo.map{TranscriptVisibleRow(it.index,it.key.toString())},list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,follow)
+        }.debounce(350).filterNotNull().distinctUntilChanged().collect{position->
+            if(source!=null)PocketTranscript.rememberPosition(owner,source,position)
+        }
+    }
+    LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size,restoreRevision){
         if(!restoredPosition&&readPosition!=null&&rows.isNotEmpty()){
             val index=transcriptAnchorIndex(rows.map{it.s("id")},readPosition)
             if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
             restoredPosition=true
+        }
+    }
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(list,lifecycle,Pocket.environmentId,Pocket.selected){
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
+            snapshotFlow{
+                val latest=PocketTranscript.rows.lastOrNull{it.s("kind") !in listOf("turn","turnEnd")&&it.s("text").isNotBlank()}?.s("id")
+                val visible=latest!=null&&list.layoutInfo.visibleItemsInfo.any{it.key==latest}
+                val eligible=AppWindowVisibility.focused&&!important&&!BlackoutVisibility.active&&!PocketVoice.active&&!PocketTranscript.loading&&!PocketTranscript.updating&&!list.isScrollInProgress&&!list.canScrollForward&&visible
+                eligible to PocketTranscript.revision
+            }.collectLatest{(eligible,_)->
+                if(eligible){delay(500);PocketTranscript.presentedLatest()}
+            }
         }
     }
     var removingNotes by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(setOf<String>())}
@@ -129,17 +195,30 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var queuedText by remember(Pocket.selected){mutableStateOf("")}
     var queueOpen by remember(Pocket.selected){mutableStateOf(false)}
     val draftKey=Pocket.key("draft:${Pocket.selected}");var editor by remember(Pocket.environmentId,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})}
+    LaunchedEffect(PocketReplies.revision,draftKey){if(PocketReplies.clearedDrafts[draftKey]?.let{it.text==editor.text&&it.generation==replyDraftGeneration(draftKey)}==true&&!Pocket.prefs.contains(draftKey))editor=TextFieldValue("")}
     var keyboardInput by remember(Pocket.selected){mutableStateOf(Pocket.openWithKeyboard)}
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
     LaunchedEffect(keyboardInput){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
     ConversationBack{Pocket.closeTask()}
     val draft=editor.text
-    val submit:(String)->Unit={mode->val submitted=editor.text;follow=true;Pocket.reply(submitted,mode=mode){if(editor.text==submitted){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
+    val submit:(String)->Unit={mode->val submitted=editor.text;val submittedGeneration=replyDraftGeneration(draftKey);follow=true;Pocket.reply(submitted,mode=mode){if(editor.text==submitted&&replyDraftGeneration(draftKey)==submittedGeneration){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
     val waiting=d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") in listOf("queued","held")&&it.s("mode")=="queue"}?:emptyList()
-    LaunchedEffect(dragged){if(dragged)follow=false else if(!list.canScrollForward)follow=true}
-    LaunchedEffect(PocketTranscript.revision){if(follow&&!dragged){
+    LaunchedEffect(list){
+        if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))snapshotFlow{Triple(list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,list.isScrollInProgress)}.collect{position->
+            android.util.Log.d("PocketScroll","index=${position.first} offset=${position.second} moving=${position.third} follow=$follow dragged=$dragged rows=${shownRows.size}")
+        }
+    }
+    var historyGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
+    var satisfiedHistoryGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(-1)}
+    LaunchedEffect(dragged){if(dragged){follow=false;filterPassage=null}else if(!list.canScrollForward)follow=true}
+    LaunchedEffect(list){
+        // Accessibility scroll actions do not emit pointer-drag interactions.
+        snapshotFlow{list.isScrollInProgress&&!follow}.distinctUntilChanged().filter{it}.collect{historyGesture++}
+    }
+    LaunchedEffect(PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)}){if(follow&&!dragged){
         delay(32)
+        if(!follow||dragged||list.isScrollInProgress)return@LaunchedEffect
         val count=list.layoutInfo.totalItemsCount
         // Keep the question heading and its one-tap Skip visible even when a
         // multi-question form is taller than the conversation viewport.
@@ -148,22 +227,40 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }}
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
-    LaunchedEffect(Pocket.local,Pocket.selected,important){
-        snapshotFlow{restoredPosition&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
+    LaunchedEffect(Pocket.environmentId,Pocket.selected,important){
+        snapshotFlow{restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
             .distinctUntilChanged().filter{it}.collect{
                 var retryMs=1000L
-                while(restoredPosition&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
+                while(restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
+                    // Wait for finger/fling and layout to settle before another page.
+                    delay(180)
+                    if(list.isScrollInProgress||!shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading))break
                     val cursor=PocketTranscript.before
-                    PocketTranscript.load(true)
+                    val gesture=historyGesture
+                    PocketTranscript.load(true,beforeApply={
+                        snapshotFlow{list.isScrollInProgress}.debounce(180).first{!it}
+                    })
+                    androidx.compose.runtime.withFrameNanos{}
+                    androidx.compose.runtime.withFrameNanos{}
                     if(PocketTranscript.before==cursor&&PocketTranscript.earlier){
                         // Remain anchored; retry only while the reader is still near this edge.
                         delay(retryMs);retryMs=(retryMs*2).coerceAtMost(15000)
-                    }else{retryMs=1000L;delay(32)}
+                    }else{
+                        // A short page is not permission to drain the whole history.
+                        // A gesture made during this read remains a fresh demand.
+                        satisfiedHistoryGesture=gesture;retryMs=1000L
+                    }
                 }
             }
     }
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
-            if(pending>0)TextButton({actionsOpen=false;important=false;follow=false;scope.launch{val index=rows.indexOfFirst{it.s("kind")=="request"};if(index>=0)list.scrollToItem(index.coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else Pocket.refreshDetail()}},modifier=Modifier.fillMaxWidth()){BilingualLabel("Answer pending question",color=Coral)}
+            if(pending>0)TextButton({
+                actionsOpen=false;important=false;follow=false
+                filterPassage=null;filterPaddingRequest=null;filterTailPixels=0
+                val request=rows.firstOrNull{it.s("kind")=="request"}
+                if(request!=null)filterRequest=FilterReadingRequest(Pocket.environmentId,Pocket.selected,request.s("id"),0,false)
+                else Pocket.refreshDetail()
+            },modifier=Modifier.fillMaxWidth()){BilingualLabel("Answer pending question",color=Coral)}
             UsageDetails()
             d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
@@ -176,7 +273,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
-            LazyColumn(Modifier.fillMaxSize(),state=list,contentPadding=PaddingValues(horizontal=18.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            LazyColumn(Modifier.fillMaxSize().testTag("conversation-history"),state=list,contentPadding=PaddingValues(start=18.dp,end=18.dp,top=12.dp,bottom=12.dp+with(density){(if(important)filterTailPixels else 0).toDp()}),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
@@ -184,29 +281,28 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     TranscriptRow(row){spokenRows[row.s("id")]=it}
                     if(row.s("speechThread").isNotBlank())TextButton({Pocket.open(row.s("speechThread"))}){BilingualLabel("Open source conversation")}
                     if(important)noteFor(row)?.let{note->FlowRow{
-                        TextButton({val context="Regarding your answer:\n"+row.s("text")+"\n\n";val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context;editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply();keyboardInput=true}){BilingualLabel("Reply")}
+                        TextButton({val context="Regarding your answer:\n"+row.s("text")+"\n\n";val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context;editor=TextFieldValue(next,TextRange(next.length));saveReplyDraft(draftKey,next);keyboardInput=true}){BilingualLabel("Reply")}
                         TextButton({
-                            val sourceThread=Pocket.selected;val sourceProfile=Pocket.local;val sourceEndpoint=Pocket.base;val sourceToken=Pocket.token
-                            val owns={Pocket.selected==sourceThread&&Pocket.local==sourceProfile&&Pocket.base==sourceEndpoint&&Pocket.token==sourceToken}
+                            val sourceThread=Pocket.selected;val sourceDestination=Pocket.captureEnvironment()
+                            val owns={Pocket.selected==sourceThread&&sourceDestination!=null&&Pocket.captureEnvironment()?.matches(sourceDestination)==true}
                             important=false;follow=false
                             scope.launch{
                                 val found=locateTranscriptSource(owns,{PocketTranscript.loading},{PocketTranscript.earlier},{PocketTranscript.before},
                                     {PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}},
                                     {PocketTranscript.load(true)})
-                                delay(32)
                                 if(owns()&&found>=0){
                                     val target=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}
-                                    if(target>=0)list.scrollToItem(target.coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))
+                                    if(target>=0)filterRequest=FilterReadingRequest(requireNotNull(sourceDestination).environment.id,sourceThread,PocketTranscript.rows[target].s("id"),0,false)
                                 }else if(owns())Pocket.error="The original message is not available in loaded history."
                             }
                         }){BilingualLabel("Surrounding conversation")}
-                        TextButton({val thread=Pocket.selected;val profile=Pocket.local;val destination=Pocket.captureEnvironment();val endpoint=Pocket.base;val credential=Pocket.token;val id=note.s("id");removingNotes=removingNotes+id;scope.launch{try{val response=Pocket.apiEnvironment(requireNotNull(destination),"/api/threads/$thread/notes/remove",JSONObject().put("id",id));require(response.optJSONArray("notes")!=null){"Removal was not acknowledged. Try again."};if(Pocket.selected==thread&&Pocket.local==profile&&Pocket.base==endpoint&&Pocket.token==credential)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}}catch(e:Exception){if(Pocket.selected==thread&&Pocket.local==profile)Pocket.error=PocketNetwork.error(e)}finally{removingNotes=removingNotes-id}}},enabled=note.s("id") !in removingNotes){BilingualLabel("Unsave",color=Muted)}
+                        TextButton({val thread=Pocket.selected;val destination=Pocket.captureEnvironment();val owns={Pocket.selected==thread&&destination!=null&&Pocket.captureEnvironment()?.matches(destination)==true};val id=note.s("id");removingNotes=removingNotes+id;scope.launch{try{val response=Pocket.apiEnvironment(requireNotNull(destination),"/api/threads/$thread/notes/remove",JSONObject().put("id",id));require(response.optJSONArray("notes")!=null){"Removal was not acknowledged. Try again."};if(owns())Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}}catch(e:Exception){if(owns())Pocket.error=PocketNetwork.error(e)}finally{removingNotes=removingNotes-id}}},enabled=note.s("id") !in removingNotes){BilingualLabel("Unsave",color=Muted)}
                     }}
                 }
                 if(important&&shownRows.isEmpty())item{BilingualLabel("No important updates yet",color=Muted)}
                 d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") !in listOf("accepted","cancelled")&&it !in waiting}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(6.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-                    val recoverable=r.s("state") in listOf("failed","unknown");val busy="${Pocket.local}:${Pocket.selected}:${r.s("id")}" in Pocket.replyActionBusy
-                    Label("YOU · ${r.s("state")}",if(recoverable)Coral else Muted);ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp)
+                    val recoverable=r.s("state") in listOf("failed","unknown");val busy=Pocket.isReplyActionBusy(r.s("id"))
+                    Label("YOU · ${r.s("state")}",if(recoverable)Coral else Muted);ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
                     if(recoverable){WorkflowText(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)
                         Row{TextButton({if(r.s("state")=="unknown")confirmRetry=r else Pocket.queuedReply(r.s("id"),"retry")},enabled=!busy){BilingualLabel("Retry")}
                             TextButton({editingQueue=r;queuedText=r.s("text")},enabled=!busy){BilingualLabel("Edit")}
@@ -215,7 +311,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 }}}
 
 
-                item(key="errors"){ErrorBanner()}
+
+                clientReplies.forEach{intent->item(key="client-reply-"+intent.id){ClientReplyRecovery(intent){value->editor=TextFieldValue(value,TextRange(value.length));saveReplyDraft(draftKey,value);keyboardInput=true}}}
             }
             if(PocketTranscript.updating&&(d!=null||rows.isNotEmpty()))
                 Surface(color=Panel,shape=RoundedCornerShape(16.dp),modifier=Modifier.align(Alignment.TopCenter).padding(top=8.dp).semantics{liveRegion=LiveRegionMode.Polite}){
@@ -223,7 +320,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 }
             else if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
                 Box(Modifier.align(Alignment.TopCenter).padding(top=10.dp).size(36.dp).background(Panel,CircleShape),contentAlignment=Alignment.Center){AnimatedMark(28)}
-            if(!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
+            if(conversationError.isNotBlank())Box(Modifier.align(Alignment.BottomCenter).padding(horizontal=16.dp)){ErrorBanner(conversationError,if(Pocket.error.isBlank()&&replyFailure!=null){{Pocket.dismissReplyFailure(failureSource,replyFailure.id)}}else null)}
+            if(conversationError.isBlank()&&!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
         }
 
         if(latestFailure!=null&&!active)Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){
@@ -232,7 +330,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val automaticRecovery=d?.optJSONObject("recovery")?.s("state") in listOf("waiting","dispatching","running")
             BilingualLabel(if(automaticRecovery)"Waiting to resume automatically" else failure.title,color=if(automaticRecovery)Muted else Coral,fontSize=12.sp,maxLines=2,centered=false,modifier=Modifier.weight(1f))
             if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","dispatching"))TextButton({val source=Pocket.selected;val profile=Pocket.local;val destination=Pocket.captureEnvironment();scope.launch{try{Pocket.apiEnvironment(requireNotNull(destination),"/api/threads/$source/recovery",JSONObject().put("cancel",true));if(Pocket.selected==source&&Pocket.local==profile)Pocket.refreshDetail()}catch(e:Exception){if(Pocket.selected==source&&Pocket.local==profile)Pocket.error=e.message?:"Could not pause recovery"}}}){BilingualLabel("Pause recovery",fontSize=12.sp)}
-            else TextButton({val next=continuationDraft(editor.text);editor=TextFieldValue(next,TextRange(next.length));Pocket.prefs.edit().putString(draftKey,next).apply();keyboardInput=true;scope.launch{delay(32);inputFocus.requestFocus();keyboard?.show()}},enabled=!Pocket.sending){BilingualLabel(if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","running","dispatching"))"Recovery active · review" else "Review continuation",fontSize=12.sp)}
+            else TextButton({val next=continuationDraft(editor.text);editor=TextFieldValue(next,TextRange(next.length));saveReplyDraft(draftKey,next);keyboardInput=true;scope.launch{delay(32);inputFocus.requestFocus();keyboard?.show()}},enabled=!Pocket.sending){BilingualLabel(if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","running","dispatching"))"Recovery active · review" else "Review continuation",fontSize=12.sp)}
         }
         Box{
         val visibleKeys by remember(list){derivedStateOf{list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()}}
@@ -243,9 +341,19 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val offset=list.firstVisibleItemScrollOffset
             val nextImportant=!important
             val after=if(nextImportant)orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}else rows
-            val anchor=conversationFilterAnchor(before,after.map{it.s("id")},visible)
+            val afterIds=after.map{it.s("id")}
+            val retained=conversationFilterViewportAnchor(afterIds,list.layoutInfo.visibleItemsInfo.map{FilterVisibleRow(it.key.toString(),it.offset,it.size)},if(nextImportant)null else filterPassage,list.layoutInfo.viewportEndOffset)
+            val anchor=retained?.index?:conversationFilterAnchor(before,afterIds,visible)
+            val targetOffset=retained?.scrollOffset?:if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0
+            if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))
+                android.util.Log.d("PocketFilter","next=$nextImportant retained=$retained passage=${afterIds.getOrNull(anchor)} visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
+            filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
+            filterTailPixels=if(nextImportant)list.layoutInfo.viewportSize.height else 0
             follow=false;important=nextImportant
-            scope.launch{androidx.compose.runtime.withFrameNanos{};if(anchor>=0)list.scrollToItem(anchor,if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0)}
+            afterIds.getOrNull(anchor)?.let{
+                val request=FilterReadingRequest(Pocket.environmentId,Pocket.selected,it,targetOffset,nextImportant)
+                filterRequest=request;filterPaddingRequest=if(nextImportant)request else null
+            }
         },onControls={actionsOpen=true},speechText=speechText,status=status)
         DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
         }
@@ -253,14 +361,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         if(keyboardInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically){
                 VoiceLaunchButton(modifier=Modifier.size(64.dp),threadId=Pocket.selected,compact=true)
-                BasicTextField(editor,{editor=it;Pocket.prefs.edit().putString(draftKey,it.text).apply()},
+                BasicTextField(editor,{if(editor.text!=it.text)saveReplyDraft(draftKey,it.text);editor=it},
                     modifier=Modifier.weight(1f).focusRequester(inputFocus).heightIn(min=46.dp).padding(top=12.dp,bottom=12.dp,end=8.dp).onPreviewKeyEvent{event->
                         if(event.key==Key.Enter||event.key==Key.NumPadEnter){
                             if(event.type==KeyEventType.KeyDown){
                                 if(event.isShiftPressed){
                                     val position=editor.selection.min
                                     editor=TextFieldValue(editor.text.replaceRange(position,editor.selection.max,"\n"),TextRange(position+1))
-                                    Pocket.prefs.edit().putString(draftKey,editor.text).apply()
+                                    saveReplyDraft(draftKey,editor.text)
                                 }else if(editor.text.isNotBlank()&&!Pocket.sending)submit("steer")
                             }
                             true
@@ -318,11 +426,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     if(settingsOpen)TurnSettingsDialog{settingsOpen=false}
     if(renameOpen)AlertDialog(onDismissRequest={renameOpen=false},title={BilingualLabel("Rename conversation")},text={OutlinedTextField(taskName,{taskName=it},singleLine=true)},confirmButton={TextButton({Pocket.renameTask(taskName){renameOpen=false}},enabled=taskName.isNotBlank()){BilingualLabel("Save")}},dismissButton={TextButton({renameOpen=false}){BilingualLabel("Cancel")}})
     if(confirmArchive)AlertDialog(onDismissRequest={confirmArchive=false},title={BilingualLabel("Archive conversation?")},text={WorkflowText("This hides the conversation from recent tasks, pauses queued messages, and stops its notifications. Its history stays on the Codex host.")},confirmButton={TextButton({confirmArchive=false;Pocket.archiveTask()}){BilingualLabel("Archive")}},dismissButton={TextButton({confirmArchive=false}){BilingualLabel("Cancel")}})
-    confirmRetry?.let{outgoing->AlertDialog(onDismissRequest={confirmRetry=null},title={BilingualLabel("Send this message again?")},text={WorkflowText("Codex may already have received this message. Retrying can send it twice. Check the conversation first.")},confirmButton={TextButton({Pocket.queuedReply(outgoing.s("id"),"retry",confirmUnknown=true){confirmRetry=null}},enabled="${Pocket.local}:${Pocket.selected}:${outgoing.s("id")}" !in Pocket.replyActionBusy){BilingualLabel("Retry anyway")}},dismissButton={TextButton({confirmRetry=null}){BilingualLabel("Cancel")}})}
+    confirmRetry?.let{outgoing->AlertDialog(onDismissRequest={confirmRetry=null},title={BilingualLabel("Send this message again?")},text={WorkflowText("Codex may already have received this message. Retrying can send it twice. Check the conversation first.")},confirmButton={TextButton({Pocket.queuedReply(outgoing.s("id"),"retry",confirmUnknown=true){confirmRetry=null}},enabled=!Pocket.isReplyActionBusy(outgoing.s("id"))){BilingualLabel("Retry anyway")}},dismissButton={TextButton({confirmRetry=null}){BilingualLabel("Cancel")}})}
     editingQueue?.let{queued->AlertDialog(
         onDismissRequest={editingQueue=null},title={BilingualLabel("Edit message")},
         text={OutlinedTextField(queuedText,{queuedText=it},modifier=Modifier.fillMaxWidth(),minLines=3,maxLines=8)},
-        confirmButton={TextButton({Pocket.queuedReply(queued.s("id"),"edit",queuedText){editingQueue=null}},enabled=queuedText.isNotBlank()&&"${Pocket.local}:${Pocket.selected}:${queued.s("id")}" !in Pocket.replyActionBusy){BilingualLabel("Save")}},
+        confirmButton={TextButton({Pocket.queuedReply(queued.s("id"),"edit",queuedText){editingQueue=null}},enabled=queuedText.isNotBlank()&&!Pocket.isReplyActionBusy(queued.s("id"))){BilingualLabel("Save")}},
         dismissButton={TextButton({editingQueue=null}){BilingualLabel("Cancel")}}
     )}
 
@@ -408,6 +516,19 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             DropdownMenu(effortMenu,{effortMenu=false}){efforts.forEach{e->DropdownMenuItem(text={BilingualLabel(e.s("reasoningEffort"))},onClick={effort=e.s("reasoningEffort");effortMenu=false})}}}
         Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){BilingualLabel(if(plan)"Plan mode" else "Build mode");WorkflowText(if(plan)"Propose a plan before implementation" else "Carry out the requested work",fontSize=11.sp,color=Muted)};Switch(plan,{plan=it})}
     }},confirmButton={TextButton({Pocket.updateTurnSettings(JSONObject().put("model",model).put("effort",effort).put("mode",if(plan)"plan" else "default"),onDismiss)},enabled=selected!=null&&effort.isNotBlank()&&!loading){BilingualLabel("Save")}},dismissButton={TextButton(onDismiss){BilingualLabel("Cancel")}})
+}
+
+internal data class FilterVisibleRow(val id:String,val offset:Int,val size:Int=0)
+internal data class FilterReadingRequest(val environment:String,val thread:String?,val row:String,val offset:Int,val important:Boolean)
+internal data class FilterViewportAnchor(val index:Int,val scrollOffset:Int)
+/** Keep a surviving native item at its pixel position, even if the leading row disappears. */
+internal fun conversationFilterViewportAnchor(after:List<String>,visible:List<FilterVisibleRow>,preferred:String?=null,viewportEnd:Int=Int.MAX_VALUE):FilterViewportAnchor? {
+    val positions=after.withIndex().associate{it.value to it.index}
+    val survivors=visible.filter{it.id in positions}
+    val passage=survivors.firstOrNull{it.id==preferred}
+        ?:survivors.firstOrNull{it.offset>=0&&it.offset.toLong()+it.size<=viewportEnd}
+        ?:survivors.firstOrNull()?:return null
+    return FilterViewportAnchor(positions.getValue(passage.id),-passage.offset)
 }
 
 internal fun conversationFilterAnchor(before:List<String>,after:List<String>,visible:Int):Int {

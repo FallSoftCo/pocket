@@ -123,7 +123,7 @@ import kotlinx.coroutines.flow.*
                 VoiceLaunchButton(modifier=Modifier.weight(1f),bar=true)
                 ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{PocketCoordinator.keyboard(true)})
             }
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 IconButton({back()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
                 InlineSpeechVolume(Modifier.weight(1f).widthIn(min=112.dp))
                 UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)

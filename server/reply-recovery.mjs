@@ -15,3 +15,8 @@ export function recoverReply(db,threadId,id,{action,text,confirmUnknown=false},u
   if(!changed.changes)return fail(409,'Message state changed. Refresh before trying again.');
   return {status:200,id,state,dispatch};
 }
+// Conversation views need actionable sends, not a duplicate history of accepted
+// requests. Terminal receipts remain in storage and /api/replies/:id.
+export function pendingOutgoing(db,threadId){
+ return db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state NOT IN ('accepted','cancelled') ORDER BY created_at,rowid").all(threadId);
+}

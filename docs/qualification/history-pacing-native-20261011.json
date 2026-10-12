@@ -1,0 +1,46 @@
+{
+  "source": "3cf2859957bf95fb4a56befb3e133b6447b1e340",
+  "buildHost": "OZZZ-OS",
+  "emulator": "nextcomp_env_qa /5620 /software SwiftShader",
+  "fixture": "synthetic loopback19998; ten single-row older pages",
+  "method": "HistoryReadingNativeTest#shortHistoryPagesRequireAnotherReadingGesture",
+  "before": {
+    "applicationSource": "dc4b8ee",
+    "result": "failed as expected",
+    "seconds": 11.187,
+    "olderReadCountAfterOneGesture": 3,
+    "evidence": "/tmp/nextcomp-pacing-control-results.txt"
+  },
+  "after": {
+    "result": "passed",
+    "seconds": 14.899,
+    "olderReadCountAfterOneGesture": 1,
+    "olderReadCountAfterSecondGesture": 2,
+    "evidence": "/tmp/nextcomp-pacing-results.txt"
+  },
+  "limits": [
+    "native software-emulator checks do not prove physical frame pacing",
+    "specific user-reported chronology pair still uncaptured"
+  ],
+  "accessibleAfter": {
+    "applicationSource": "0f5fb7f",
+    "result": "passed",
+    "seconds": 14.503,
+    "checks": [
+      "touch gesture loads one older page",
+      "quiet edge does not cascade",
+      "native ACTION_SCROLL_BACKWARD loads second page"
+    ],
+    "evidence": "/tmp/nextcomp-pacing-accessibility-results.txt"
+  },
+  "regression": {
+    "unitTestsAndLint": "passed at3cf2859",
+    "fullNative": {
+      "result": "passed",
+      "seconds": 40.403,
+      "source": "a3858a6",
+      "evidence": "/tmp/nextcomp-pacing-bounded-full-native.txt"
+    }
+  },
+  "delivery": "alpha55/code73 installed on phone; see alpha55-delivery-20261011.json"
+}

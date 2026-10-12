@@ -1,0 +1,57 @@
+{
+  "incident": "overnight-workstation-disconnect-20261010",
+  "observedAt": "2026-10-10T15:42:35.442347+00:00",
+  "timesZone": "America/New_York",
+  "evidence": {
+    "backendOOM": [
+      "2026-10-09T23:24:35-04:00",
+      "2026-10-10T00:49:40-04:00"
+    ],
+    "unixSocketRefusalObservedFrom": "2026-10-10T01:03:39-04:00",
+    "unixSocketRefusalObservedUntil": "2026-10-10T11:30:10-04:00",
+    "replacementDaemonStarted": "2026-10-10T11:30:13-04:00",
+    "phoneAuthenticatedContact": "2026-10-10T11:30:26-04:00",
+    "backendFixActive": "2026-10-10T11:40:23-04:00"
+  },
+  "cause": "Workstation global memory exhaustion killed backend twice. Exact shared daemon exit cause not established; repeated refusal ended after daemon/socket replacement. Independent per-thread item-pagination incompatibility repaired.",
+  "recovery": {
+    "backendHealth": true,
+    "pairedStatusHTTP": 200,
+    "catalogHTTP": 200,
+    "previouslyFailingHistoryHTTP": 200,
+    "sameCodexDaemonPreserved": true,
+    "receiptStateCountsUnchanged": [
+      "outgoing",
+      "voice_turns",
+      "turn_recovery"
+    ],
+    "noResends": true,
+    "noWorkerResumption": true,
+    "phoneInstalled": "alpha49/code67",
+    "phoneForeground": "Other app preserved; fresh foreground NextComp reconnect unverified",
+    "phoneSSH": "Two banner timeouts",
+    "phoneTailscaleADB": "identity verified; Tailscale ping112ms"
+  },
+  "tests": {
+    "host": "OZZZ-OS isolated actual-source worktree",
+    "backendTests": 422,
+    "failed": 0
+  },
+  "remaining": [
+    "Determine initiating memory-growth workload owner and durable host containment/migration. Large next-server killed at01:02 with16GiB anonymous RSS; this alone does not prove original initiating cause.",
+    "Verify actual foreground NextComp reconnect without interrupting active phone use.",
+    "Full session-by-session interrupted-work reconciliation not yet complete; no blanket resume.",
+    "Remote endpoints currenthealthy; overnight transport history requires migration-owner receipt."
+  ],
+  "source": "8b6cba2",
+  "targetedTurnAudit": {
+    "scope": "Six distinct threads with outgoing receipts since22:00 Eastern Oct9, metadata plus latest public turn status only",
+    "latestStates": {
+      "completed": 4,
+      "inProgress": 2
+    },
+    "failedLatestTurns": 0,
+    "noResumptionPerformed": true,
+    "coverageLimit": "Does not cover every terminal-only or historical session."
+  }
+}

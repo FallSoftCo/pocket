@@ -7,6 +7,43 @@ import kotlinx.coroutines.runBlocking
 class TranscriptHistoryTest {
     private data class Row(val id:String,val text:String="",val version:Long=0)
     private fun merge(old:List<Row>,page:List<Row>,older:Boolean=false)=mergeTranscriptPage(old,page,older,{it.id},{it.version})
+    @Test fun positionAnchorsIncludeEarlyWorkAndLatestProgressWithinTheWireBudget(){
+        val rows=(0..30000).map{Row("item-$it")};val anchors=transcriptPositionAnchors(rows)
+        assertEquals(256,anchors.size);assertEquals(rows.first(),anchors.first());assertEquals(rows.last(),anchors.last())
+        assertEquals(256,anchors.distinct().size)
+        assertTrue(anchors.any{it.id.removePrefix("item-").toInt() in 14000..16000})
+        val small=rows.take(8);assertSame(small,transcriptPositionAnchors(small))
+    }
+    @Test fun provenSuccessorRepairsLateInputWithoutMovingEarlierCommentaryOrNewLiveOutput(){
+        val cached=listOf(Row("past"),Row("turn/header"),Row("commentary"),Row("first-user"),Row("first-answer"),Row("answer","new live",15),Row("steer"),Row("new-output"),Row("end"))
+        val result=placeTranscriptRowBefore(cached,"steer","answer"){it.id}
+        assertEquals(listOf("past","turn/header","commentary","first-user","first-answer","steer","answer","new-output","end"),result.map{it.id})
+        assertEquals("new live",result.single{it.id=="answer"}.text)
+        assertSame(cached,placeTranscriptRowBefore(cached,"steer","missing"){it.id})
+        assertSame(cached,placeTranscriptRowBefore(cached,"first-user","first-answer"){it.id})
+    }
+    @Test fun olderBoundaryMovesLateInputBeforeCachedReplyWithoutDroppingNewerText(){
+        val cached=listOf(Row("past"),Row("turn/header"),Row("turn/answer","new live",15),Row("turn/user"),Row("turn/end"),Row("new-turn/header"))
+        val older=listOf(Row("turn/header"),Row("turn/user","request",8))
+        val result=mergeTranscriptPage(cached,older,true,{it.id},{it.version},"turn/answer",{it.id.endsWith("/header")})
+        assertEquals(listOf("past","turn/header","turn/user","turn/answer","turn/end","new-turn/header"),result.map{it.id})
+        assertEquals("new live",result.single{it.id=="turn/answer"}.text)
+    }
+    @Test fun unavailableBoundaryFallsBackToRetainingRowsWithoutInventingOrder(){
+        val cached=listOf(Row("header"),Row("answer"))
+        assertEquals(listOf("header","user","answer"),mergeTranscriptPage(cached,listOf(Row("header"),Row("user")),true,{it.id},{it.version},"unavailable").map{it.id})
+    }
+    @Test fun authoritativeRefreshRepairsOutOfOrderLiveRowsWithoutRollingBackTheirContent(){
+        val cached=listOf(Row("older"),Row("header"),Row("answer","live",12),Row("user"),Row("end"),Row("new-live"))
+        val page=listOf(Row("header"),Row("user"),Row("tool"),Row("answer","stale",8),Row("end"))
+        val result=merge(cached,page)
+        assertEquals(listOf("older","header","user","tool","answer","end","new-live"),result.map{it.id})
+        assertEquals("live",result.single{it.id=="answer"}.text)
+    }
+    @Test fun olderOverlapRepairsOrderWithoutDroppingRetainedMiddleOrRecentRows(){
+        val cached=listOf(Row("c"),Row("b"),Row("local"),Row("d"),Row("recent"))
+        assertEquals(listOf("a","b","c","local","d","recent"),merge(cached,listOf(Row("a"),Row("b"),Row("c"),Row("d")),true).map{it.id})
+    }
     @Test fun olderPagesPrependWithoutHidingRecentlyReadMessages(){
         val recent=(8..15).map{Row("$it")}
         val all=merge(recent,(0..7).map{Row("$it")},true)

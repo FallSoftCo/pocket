@@ -3,6 +3,67 @@ import assert from 'node:assert/strict';
 import {ThreadHistory} from '../server/history.mjs';
 import {LiveTimeline,timelinePage} from '../server/timeline.mjs';
 
+test('anchored ordering finds a loaded successor beyond recent page without reading or resuming full history',async()=>{
+ const calls=[];
+ const history=new ThreadHistory({async call(method,p){calls.push({method,p});assert.equal(method,'thread/items/list');assert.equal(p.sortDirection,'asc');assert.equal(p.limit,8);
+  if(typeof p.cursor==='object'){assert.deepEqual(p.cursor,{type:'item',itemId:'late-user'});return {data:Array.from({length:8},(_,n)=>({turnId:'turn1',item:{id:'tool-'+n,type:'commandExecution',command:'Synthetic'}})),nextCursor:'next'};}
+  assert.equal(p.cursor,'next');return {data:[{turnId:'turn1',item:{id:'answer',type:'agentMessage',text:'Reply'}},{turnId:'turn1',item:{id:'later',type:'agentMessage',text:'Later'}}]};
+ }});
+ assert.deepEqual(await history.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'late-user',knownItemIds:['prior-commentary','late-user','answer','later']}),{available:true,insertBefore:'turn1/answer',cursor:null});
+ assert.equal(calls.length,2);
+});
+
+test('position continuation bounds work and binds exact thread turn and input',async()=>{
+ let calls=0;const history=new ThreadHistory({async call(method,p){calls++;return {data:[],nextCursor:'cursor-'+calls};}});
+ const args={turnId:'turn1',itemId:'input',knownItemIds:['answer']};
+ const first=await history.locateItemSuccessor('thread1',args);assert.equal(calls,4);assert.ok(first.cursor);
+ await assert.rejects(history.locateItemSuccessor('other', {...args,cursor:first.cursor}),/Invalid item position/);
+ await assert.rejects(history.locateItemSuccessor('thread1',{...args,turnId:'other',cursor:first.cursor}),/Invalid item position/);
+ await assert.rejects(history.locateItemSuccessor('thread1',{...args,itemId:'other',cursor:first.cursor}),/Invalid item position/);
+ assert.equal(calls,4);
+ const next=await history.locateItemSuccessor('thread1',{...args,cursor:first.cursor});assert.equal(calls,8);assert.notEqual(next.cursor,first.cursor);
+});
+
+test('position ignores raw reasoning and unrelated-turn successors, and exposes honest compatibility',async()=>{
+ const history=new ThreadHistory({async call(){return {data:[{turnId:'turn1',item:{id:'raw',type:'reasoning',content:['PRIVATE']}},{turnId:'turn1',item:{id:'answer',type:'agentMessage',text:'Visible'}}]};}});
+ assert.equal((await history.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['raw','answer']})).insertBefore,'turn1/answer');
+ const wrong=new ThreadHistory({async call(){return {data:[{turnId:'another',item:{id:'answer',type:'agentMessage',text:'Wrong'}}]};}});
+ await assert.rejects(wrong.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['answer']}),/outside the requested turn/);
+ const old=new ThreadHistory({async call(){throw Error('invalid type: map, expected a string');}});
+ assert.deepEqual(await old.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['answer']}),{available:false,insertBefore:null,cursor:null});
+});
+
+test('position does not guess when no known successor exists or a transport fails',async()=>{
+ const history=new ThreadHistory({async call(){return {data:[],nextCursor:null};}});
+ assert.equal((await history.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['input','earlier']})).insertBefore,null);
+ const broken=new ThreadHistory({async call(){throw Error('network timeout');}});
+ await assert.rejects(broken.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:['answer']}),/network timeout/);
+ await assert.rejects(history.locateItemSuccessor('thread1',{turnId:'turn1',itemId:'input',knownItemIds:Array(257).fill('answer')}),/Invalid item position/);
+});
+
+test('compatibility pages keep exact item and turn boundary when new output and a newer turn arrive',async()=>{
+ let advanced=false;const calls=[];
+ const items=()=>Array.from({length:advanced?8:6},(_,n)=>({id:'m'+n,type:'agentMessage',text:'Text '+n}));
+ const history=new ThreadHistory({async call(method,p){calls.push({method,p});assert.equal(method,'thread/turns/list');
+  if(p.cursor==='old-turn')return {data:[{id:'previous',items:[{id:'old',type:'agentMessage',text:'Earlier'}]}]};
+  assert.equal(p.cursor,advanced?'stable-turn':undefined);
+  assert.equal(p.sortDirection,advanced?'asc':'desc');
+  return {data:[{id:'current',items:items()}],backwardsCursor:'stable-turn',nextCursor:advanced?'wrong-ascending-next':'old-turn'};
+ }});history.turnOnlyThreads.add('thread1');
+ const first=await history.read({id:'thread1'},{maxItems:2});assert.deepEqual(first.turns[0].items.map(x=>x.id),['m4','m5']);
+ advanced=true;
+ const second=await history.read({id:'thread1'},{maxItems:2,before:first._pocketPage.before});assert.deepEqual(second.turns[0].items.map(x=>x.id),['m2','m3']);assert.equal(second._pocketPage.insertBefore,'current/m4');
+ const third=await history.read({id:'thread1'},{maxItems:2,before:second._pocketPage.before});assert.deepEqual(third.turns[0].items.map(x=>x.id),['m0','m1']);assert.equal(third._pocketPage.insertBefore,'current/m2');
+ const previous=await history.read({id:'thread1'},{maxItems:2,before:third._pocketPage.before});assert.equal(previous.turns[0].id,'previous');assert.equal(previous._pocketPage.insertBefore,'current/header');
+ assert.ok(calls.every(x=>!['thread/read','thread/resume'].includes(x.method)));
+});
+
+test('compatibility boundary missing from an unstable provider fails instead of skipping retained history',async()=>{
+ const history=new ThreadHistory({async call(){return {data:[{id:'current',items:[]}],nextCursor:null};}});history.turnOnlyThreads.add('thread1');
+ const before='turnfull:'+Buffer.from(JSON.stringify({cursor:null,offset:2,turnId:'current',beforeItemId:'removed'})).toString('base64url');
+ await assert.rejects(history.read({id:'thread1'},{before}),/item boundary is no longer available/);
+});
+
 test('recent opening returns newest batch without walking older items, then resumes losslessly',async()=>{
   const calls=[];
   const reader=new ThreadHistory({async call(method,p){
@@ -20,6 +81,8 @@ test('recent opening returns newest batch without walking older items, then resu
   const older=await reader.read(metadata,{before:first._pocketPage.before,maxItems:8,maxBytes:512000,maxTurns:1});
   assert.deepEqual(older.turns[0].items.map(i=>i.id),Array.from({length:8},(_,i)=>'item-'+(85+i)));
   assert.equal(older.turns[0]._pocketHideEnd,true);
+  assert.equal(older._pocketPage.insertBefore,'latest/item-93');
+  const next=JSON.parse(Buffer.from(older._pocketPage.before.slice(6),'base64url'));assert.equal(next.olderThanRow,'latest/item-85');
   assert.ok(calls.every(c=>!['thread/read','thread/resume'].includes(c.method)));
 });
 
@@ -116,4 +179,26 @@ test('item history transport failures remain failures rather than triggering com
 test('turn-only compatibility is scoped to the affected thread',async()=>{
  const calls=[];const h=new ThreadHistory({async call(method,p){calls.push({method,p});if(method==='thread/items/list'){if(p.threadId==='old')throw Error('thread/items/list is not supported yet');return {data:[{item:{id:'new-item',type:'agentMessage',text:'New'}}]};}return {data:[{id:'t',items:[]}],nextCursor:null};}});
  await h.read({id:'old'},{preferPaging:true});const modern=await h.read({id:'new'},{preferPaging:true});assert.equal(modern.turns[0].items[0].id,'new-item');assert.equal(h.turnOnlyThreads.has('new'),false);
+});
+
+test('native inherited archive remains visible and pages stably after new destination items arrive',async()=>{
+ const inherited=[{id:'source-turn',status:'completed',items:[{id:'source-user',type:'userMessage',content:[{type:'text',text:'Original native request'}]},{id:'source-answer',type:'agentMessage',text:'Preserved useful answer'}]}];
+ const live={id:'destination-thread',turns:[{id:'destination-turn',status:'inProgress',items:[{id:'new-answer',type:'agentMessage',text:'Destination progress'}]}]};
+ const history=new ThreadHistory({async call(method){if(method==='thread/turns/list')return {data:live.turns};if(method==='thread/items/list')return {data:live.turns[0].items.slice().reverse().map(item=>({item}))};throw Error('Unbounded native read '+method);}},{inheritedHistory:()=>inherited});history.fullSnapshotThreads.add(live.id);
+ const page=await history.read(live,{maxItems:1,maxTurns:1});assert.equal(page.turns[0].items[0].id,'new-answer');const cursor=page._pocketPage.before;
+ live.turns[0].items.push({id:'later-answer',type:'agentMessage',text:'Later destination progress'});
+ const older=await history.read(live,{before:cursor,maxItems:1,maxTurns:1});assert.equal(older.turns[0].items[0].id,'source-answer');const earliest=await history.read(live,{before:older._pocketPage.before,maxItems:1,maxTurns:1});assert.equal(earliest.turns[0].items[0].id,'source-user');assert.equal(earliest._pocketPage.hasEarlier,false);
+});
+
+
+test('a cursor entering an older turn anchors before the retained newer heading',async()=>{
+ const reader=new ThreadHistory({async call(method,p){
+  if(method==='thread/turns/list')return p.cursor==='older'?{data:[{id:'older-turn',status:'completed'}],backwardsCursor:'older-anchor'}:{data:[{id:'newer-turn',status:'completed'}],nextCursor:'older',backwardsCursor:'newer-anchor'};
+  return {data:[{item:{id:'answer',type:'agentMessage',text:'Result'}}]};
+ }});
+ const metadata={id:'thread',historyMode:'paginated'};
+ const recent=await reader.read(metadata,{maxItems:1,maxTurns:1});
+ const older=await reader.read(metadata,{maxItems:1,maxTurns:1,before:recent._pocketPage.before});
+ assert.equal(older._pocketPage.insertBefore,'newer-turn/header');
+ assert.equal(older.turns[0].id,'older-turn');
 });

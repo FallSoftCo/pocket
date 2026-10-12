@@ -1,0 +1,55 @@
+{
+  "state": "installed-owner-phone",
+  "runtimeSource": "7753f35",
+  "nativeTestSource": "13f9ab5",
+  "candidateVersionCode": 89,
+  "installedPhoneVersionCode": 89,
+  "diagnosis": {
+    "installedPhoneVerified": true,
+    "currentThreadServerReadSeconds": 0.06,
+    "serverReturnedCurrentActivity": true,
+    "exactReportedStaleThread": "not yet identified",
+    "gap": "Fetched notification did not invalidate open history when catalog preview/status/activity did not change."
+  },
+  "fix": "Compare selected-thread notification watermarks before and after existing authenticated refresh; invalidate only on advance. No model or worker activation, no read acknowledgement on fetch.",
+  "regressionTest": "fetchedNotificationRepairsMissedEventWithUnchangedCatalog",
+  "presentedReadRecovery": {
+    "source": "ea7aac7",
+    "nativePreparationSeconds": 7.532,
+    "optimizedInPlaceReplacementSeconds": 25.761,
+    "orderedAcknowledgements": 4,
+    "newerUnseenViewAcknowledged": false,
+    "draftPreserved": true,
+    "submittedWork": false,
+    "testSignedOnly": true,
+    "limits": "Catch-up captures expire after ten minutes and backend retains at most64 per device. Expiry leaves work unseen."
+  },
+  "physicalReportedConversationRecoveryVerified": false,
+  "nativeTestSeconds": 13.325,
+  "androidUnitTests": {
+    "debug": 295,
+    "release": 295
+  },
+  "bothLintsAndSignedBuildsPassed": true,
+  "productionArtifacts": [
+    {
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "path": "nextcomp-89-b28f55b44c93.apk",
+      "sha256": "6034be7bfc4dc876a747a9616da0f7ab531617abe8b495e69e987ca3668b0245",
+      "size": 52021927
+    },
+    {
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "path": "nextcomp-89-22ecabe28e15.apk",
+      "sha256": "0b0ce84acfdc07ed8c29d65c615ca5e26aab770f9ea9b85aced9d80aa312b637",
+      "size": 75747576
+    }
+  ],
+  "delivery": {
+    "privateUpdaterBothSignersVerified": true,
+    "installedBaseApkDigestVerified": true,
+    "preservedPairingEnvironmentDraftHashes": 13,
+    "changedProtectedPreferences": 0,
+    "physicalReportedConversationRecoveryVerified": false
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "status": "candidate-native-qualified-not-delivered",
+  "fix": "Reserve reply sending before coroutine scheduling; reject additional rapid admission while request is pending",
+  "nativeHost": "OZZZ-OS",
+  "nativeAvd": "nextcomp_env_qa",
+  "nativeVariant": "nonshrunk qualification",
+  "nativeDurationSeconds": 18.641,
+  "nativeResult": "pass",
+  "requestEvidence": "Two same-cycle Pocket.reply calls; synthetic HTTP backend received exactly one request",
+  "androidChecks": "unit tests/lint/build pass",
+  "preservedChecks": [
+    "Chronological refresh reconciliation",
+    "Newer text during fetch",
+    "Retained history/cache/draft",
+    "Environment-bound pending controls"
+  ],
+  "limits": [
+    "Phone remains alpha51",
+    "No provider or external-action request performed",
+    "Does not establish exactly-once external execution or recovery of unknown delivery"
+  ],
+  "delivery": "Compatible alpha52/code70 installed in place; private update metadata verified for both signers"
+}

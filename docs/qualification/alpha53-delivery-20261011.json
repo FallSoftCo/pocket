@@ -1,0 +1,35 @@
+{
+  "version": "0.5.0-alpha.53",
+  "versionCode": 71,
+  "source": "99896dd",
+  "buildHost": "OZZZ-OS",
+  "unitTests": 271,
+  "failures": 0,
+  "buildsAndLints": "both variants passed",
+  "nativeEvidence": [
+    "conversation-filter-native-20261011.json",
+    "conversation-state-native-20261011.json"
+  ],
+  "phoneInstallation": "ADB Success; package manager independently confirms71/alpha53",
+  "privateUpdate": "both artifacts hash-verified; authenticated metadata from70 matches71 and hashes",
+  "artifacts": [
+    {
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "path": "nextcomp-71-b28f55b44c93.apk",
+      "sha256": "5196dabf9722ba0b4d54829b40e6723e2309c6e2e3185f72875b8574822f3334",
+      "size": 51956391
+    },
+    {
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "path": "nextcomp-71-22ecabe28e15.apk",
+      "sha256": "622418aea323b38ea09a88bf7a96f265f1a5e7a2c894fcd1bdc002a4e333c19b",
+      "size": 61539316
+    }
+  ],
+  "limits": [
+    "physical interaction not observed",
+    "cross-environment viewport restoration not directly qualified",
+    "native UI checks use synthetic transport and nonshrunk qualification variant",
+    "no GitHub publication claimed"
+  ]
+}

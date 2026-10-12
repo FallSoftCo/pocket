@@ -114,8 +114,9 @@ class MainActivity:ComponentActivity(){
             startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/FallSoftCo/pocket/actions")))
         }
     }
+    override fun onWindowFocusChanged(hasFocus:Boolean){super.onWindowFocusChanged(hasFocus);AppWindowVisibility.focus(this,hasFocus)}
     override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
-    override fun onStop(){captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!PocketVoice.active)PocketLive.stop();super.onStop()}
+    override fun onStop(){AppWindowVisibility.focus(this,false);captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!PocketVoice.active)PocketLive.stop();super.onStop()}
     private val captureKeys get()=PocketVoice.captureKeys
     private var permissionCaptureThread:String?=null
     private var permissionCaptureInPlace=false
@@ -142,7 +143,7 @@ class MainActivity:ComponentActivity(){
         return super.dispatchKeyEvent(event)
     }
     override fun onDestroy(){blackout.exit(restoreInput=false);super.onDestroy()}
-    override fun onResume(){super.onResume();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail()}}
+    override fun onResume(){super.onResume();PresentedReads.restore();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail();Pocket.selected?.let{PocketReplies.reconcile(it)}}}
 }
 
 @Composable fun Mark(size:Int=44){AnimatedMark(size)}
@@ -151,7 +152,8 @@ class MainActivity:ComponentActivity(){
     ImmersionText("workflow:"+text,text,modifier=modifier,color=color,fontSize=fontSize,lineHeight=if(lineHeight==TextUnit.Unspecified)(fontSize.value*1.4f).sp else lineHeight,maxLines=maxLines,fontWeight=fontWeight,kind="workflow text",rescue=false,phraseRescue=true)
 }
 @Composable fun Label(text:String,color:Color=Muted){BilingualLabel(text,color=color,fontSize=10.sp,fontWeight=FontWeight.Bold,centered=false)}
-@Composable fun ErrorBanner(){if(Pocket.error.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){WorkflowText(ConnectionMessages.server(Pocket.error),color=Coral,fontSize=13.sp,lineHeight=19.sp);if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){BilingualLabel("Reload conversation",color=Mint)}}}}
+@OptIn(ExperimentalLayoutApi::class)
+@Composable fun ErrorBanner(message:String=Pocket.error,onDismiss:(()->Unit)?=null){if(message.isNotBlank())Surface(color=Coral.copy(alpha=.12f),shape=RoundedCornerShape(6.dp),modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)){Column(Modifier.padding(16.dp)){WorkflowText(ConnectionMessages.server(message),color=Coral,fontSize=13.sp,lineHeight=19.sp);FlowRow{if(Pocket.token.isNotBlank())TextButton({Pocket.retryConnection()}){BilingualLabel("Reload conversation",color=Mint)};if(onDismiss!=null)TextButton(onDismiss){BilingualLabel("Dismiss",color=Muted)}}}}}
 @Composable fun ConnectionNotice(){
     if(Pocket.connected&&Pocket.codexOnline)return
     if(!Pocket.connected&&!PocketLive.outageVisible)return
@@ -374,8 +376,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     }.border(1.dp,Line.copy(alpha=.7f),shape).border(2.dp,Mint.copy(alpha=highlight.value),shape)){
         if(!t.archived)Row(Modifier.matchParentSize()){
             VoiceLaunchButton(modifier=Modifier.weight(.22f).fillMaxHeight(),threadId=t.id,cardRegion=true)
-            CardInteractionRegion("Chat",Modifier.weight(.56f).fillMaxHeight()){Pocket.open(t.id)}
-            CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight()){Pocket.open(t.id,keyboard=true)}
+            CardInteractionRegion("Chat",Modifier.weight(.56f).fillMaxHeight(),t.title){Pocket.open(t.id)}
+            CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight(),t.title){Pocket.open(t.id,keyboard=true)}
         }
         Column(Modifier.padding(start=12.dp,end=12.dp,top=2.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){

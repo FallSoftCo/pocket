@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-11",
+  "runtimeSource": "c56e71f",
+  "nativeTestSource": "0d9acff",
+  "versionCode": 80,
+  "versionName": "0.5.0-alpha.62",
+  "status": "delivered-alpha62",
+  "diagnosis": {
+    "liveRootHistorySeconds": 0.066,
+    "liveRootRows": 5,
+    "liveRootRevision": 4077,
+    "phoneBefore": "79/alpha61 verified; another app foreground; no remote UI navigation",
+    "confirmedCodeGaps": [
+      "A single recent-history failure with no subsequent event left cached transcript stale without recovery.",
+      "HTTP200 error/missing or mismatched history could be applied as a successful snapshot."
+    ],
+    "limit": "Exact user-visible failed request not present in handset retained logs; this qualifies confirmed failure paths, not an invented outage cause."
+  },
+  "implementation": {
+    "retries": "Three additional recent-history GETs at 1/2/4 seconds, only recoverable errors; matching environment/thread/generation and pending read required.",
+    "ui": "Keep cached rows and Updating messages during recovery; retain actionable error on exhaustion; failed refresh cannot mark cached viewport fresh.",
+    "safety": "No model calls, agent resumes, mutations, unknown delivery replay or permission polling."
+  },
+  "native": {
+    "transientAndMalformedSeconds": 17.766,
+    "boundedAndNavigationSeconds": 20.48,
+    "regressionSeconds": 39.179,
+    "checks": [
+      "HTTP503 recovers without another event",
+      "Malformed HTTP200 cannot hide cached history",
+      "Visible Updating messages",
+      "401 no polling",
+      "Four total reads maximum without a fresh event",
+      "Navigation prevents old-source retry",
+      "Cached history/drafts/keyboard/voice regression",
+      "No replies submitted"
+    ],
+    "finalRuntimeRecoverySeconds": 17.491,
+    "setupFailures": "One rerun timed out before fixture reads with Android permission task foreground; immediate pm-clear/instrument raced Android remove-task and was killed without Java crash. After granting only disposable-emulator permissions and settled task cleanup, final source passed. Harness now seeds those permissions after exact AVD assertion."
+  },
+  "build": {
+    "debugTests": 279,
+    "releaseTests": 279,
+    "failures": 0,
+    "lint": "debug and release pass",
+    "signedBuildSeconds": 68,
+    "hashes": "Both maintained signing identities and all APK bytes/size verified before publication"
+  },
+  "delivery": {
+    "published": true,
+    "metadataBothSigners": true,
+    "phoneInstalled": true,
+    "installResult": "Performing Streamed Install / Success; terminal exit0, one request",
+    "independentPackageVerification": "versionCode80 / versionName0.5.0-alpha.62",
+    "phoneInteraction": "No remote navigation, typing or recording interruption. Exact user-visible failure not interactively reproduced. Native emulator proof separate."
+  },
+  "preserved": "Backend/Codex/gateways/workers/model/permissions untouched"
+}

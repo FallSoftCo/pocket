@@ -23,6 +23,7 @@ fun JSONArray.objects() = (0 until length()).mapNotNull { optJSONObject(it) }
 fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback else optString(key,fallback)
 data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0,val recencyAt:Long=0,val parentThreadId:String?=null,val isChild:Boolean=false,val agentNickname:String="",val agentRole:String="",val canAcceptDirectInput:Boolean=true,val unreadCount:Int=0,val catalogContext:String="",val needsInput:Boolean=false)
 data class Message(val id:String,val role:String,val text:String)
+data class ReplyFailure(val id:String,val message:String)
 class PocketApiException(val status:Int,message:String):Exception(message)
 
 object Pocket {
@@ -50,6 +51,12 @@ object Pocket {
     var openWithKeyboard by mutableStateOf(false)
     var usageSamples by mutableStateOf(emptyList<UsageSample>())
     var error by mutableStateOf(""); var busy by mutableStateOf(false)
+    private val replyFailures=mutableStateMapOf<String,ReplyFailure>()
+    private fun replyFailureKey(thread:String)=backendOwner(base,token)+"\u0000"+thread
+    fun replyFailure(thread:String?=selected)=thread?.let{replyFailures[replyFailureKey(it)]}
+    internal fun recordReplyFailure(thread:String,id:String,message:String){if(thread.isNotBlank())replyFailures[replyFailureKey(thread)]=ReplyFailure(id,message.ifBlank{"Reply could not be confirmed"})}
+    fun dismissReplyFailure(thread:String?,id:String){if(thread!=null){val key=replyFailureKey(thread);if(replyFailures[key]?.id==id)replyFailures.remove(key)}}
+
     var showArchived by mutableStateOf(false)
     var tasks by mutableStateOf(listOf<Task>())
     var sessionSnapshotComplete=false; private set
@@ -101,6 +108,7 @@ object Pocket {
         PocketAudio.init()
         PocketSpeech.init()
         PocketAttention.init()
+        PresentedReads.restore()
         PocketImmersion.restore()
         if(token.isNotBlank())try{PocketPush.initialize()}catch(_:Exception){}
         if(local)pushStatus="Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))pushStatus="Firebase push is ready"
@@ -160,7 +168,7 @@ object Pocket {
         fullPermissions=prefs.getBoolean(key("fullPermissions"),prefs.getBoolean("fullPermissions",true))
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))"Firebase push is ready" else "Setting up notifications…"
         if(savedToken(true).isNotBlank())LocalMonitorService.start(context) else LocalMonitorService.stop(context)
-        restoreUsage();PocketImmersion.restore();PocketSpeech.init();PocketLive.start();refresh()
+        restoreUsage();PocketImmersion.restore();PocketSpeech.init();PocketReplies.profileChanged();PocketLive.start();refresh()
     }
     fun disconnect(){
         val wasLocal=local;val oldBase=base;val oldToken=token
@@ -199,9 +207,13 @@ object Pocket {
             val fetched=taskResult.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList()
             val previouslySelected=tasks.firstOrNull{it.id==selected}
             tasks=mergeLiveTaskSnapshot(tasks,fetched,taskBaseline,taskResult.optBoolean("refreshPending")||taskResult.s("nextCursor").isNotBlank())
-            tasks.firstOrNull{it.id==selected}?.let{latest->if(transcriptPresentationChanged(previouslySelected?.preview,previouslySelected?.previewKind,previouslySelected?.status,latest.preview,latest.previewKind,latest.status))scheduleRefresh()}
+            tasks.firstOrNull{it.id==selected}?.let{latest->if(transcriptPresentationChanged(previouslySelected?.preview,previouslySelected?.previewKind,previouslySelected?.status,latest.preview,latest.previewKind,latest.status)||transcriptLiveActivityAdvanced(previouslySelected?.activityAt,latest.activityAt))scheduleRefresh()}
             sessionSnapshotComplete=!taskResult.optBoolean("refreshPending");val cursorScope="${local}:${base}:${token}:$showArchived";if(sessionCursorScope!=cursorScope&&!taskResult.optBoolean("refreshPending")){sessionCursorScope=cursorScope;sessionCursor=taskResult.s("nextCursor").takeIf{it.isNotBlank()}}
+            val notificationBaseline=notifications.map{it.s("thread_id") to it.optLong("id")}
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
+            // The notification fetch can recover a missed socket/FCM event even
+            // when the bounded catalog preview happens to remain identical.
+            if(transcriptNotificationAdvanced(selected,notificationBaseline,notifications.map{it.s("thread_id") to it.optLong("id")}))scheduleRefresh()
             if(local==profileLocal&&token==profileToken)notifications.forEach{PocketNotificationTitles.remember(it.put("_local",profileLocal))}
             val latestAttention=api("/api/attention").optJSONArray("notifications")?.objects()?:emptyList()
             val activeIds=latestAttention.map{it.optLong("id")}.toSet()
@@ -219,9 +231,10 @@ object Pocket {
             if(local==profile&&base==endpoint&&token==credential&&showArchived==archived){val incoming=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList();tasks=mergeSessionSnapshot(tasks,incoming,true){it.id};if(search.isBlank())sessionCursor=result.s("nextCursor").takeIf{it.isNotBlank()}}
         }catch(e:Exception){if(local==profile&&base==endpoint)refreshError=PocketNetwork.error(e)}finally{if(environmentId==sourceEnvironment)loadingSessions=false}}
     }
-    fun open(id:String,keyboard:Boolean=false){if(BackendNavigation.open(id))return;openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail()}
-    fun refreshDetail(){if(selected==null)return;PocketTranscript.markRefreshPending();scope.launchEnvironment{PocketTranscript.load()}}
-    fun closeTask(){selected=null;detail=null;PocketTranscript.clear()}
+    internal fun pauseConversationReads(){refreshJob?.cancel();refreshJob=null;PocketTranscript.pauseReading()}
+    fun open(id:String,keyboard:Boolean=false){refreshJob?.cancel();refreshJob=null;if(BackendNavigation.open(id)){PocketTranscript.pauseReading();return};openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail();PocketReplies.reconcile(id)}
+    fun refreshDetail(){if(selected==null||BackendNavigation.teamSelected())return;PocketTranscript.markRefreshPending();scope.launchEnvironment{PocketTranscript.load()}}
+    fun closeTask(){refreshJob?.cancel();refreshJob=null;selected=null;detail=null;PocketTranscript.clear()}
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
     /** External stock sessions arrive through live previews; never refetch on every token. */
     private fun discoverSession(id:String){
@@ -235,7 +248,7 @@ object Pocket {
             refresh()
         }
     }
-    fun scheduleRefresh(){if(selected==null)return;PocketTranscript.markRefreshPending();if(refreshJob?.isActive==true)return;refreshJob=scope.launchEnvironment{delay(400);PocketTranscript.load()}}
+    fun scheduleRefresh(){if(BackendNavigation.teamSelected())return;val id=selected?:return;PocketTranscript.markRefreshPending();if(refreshJob?.isActive==true)return;refreshJob=scope.launchEnvironment{delay(400);if(selected==id)PocketTranscript.load()}}
     private suspend fun environmentRequestCurrent():Boolean {val destination=currentCoroutineContext()[EnvironmentRequestContext]?.destination?:return true;return captureEnvironment()?.matches(destination)==true}
     fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains(key("newTaskRequest")))"A task request is saved. Check its status to continue." else "";scope.launchEnvironment{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not load projects"}}}
     var fullPermissions by mutableStateOf(true); private set
@@ -273,7 +286,7 @@ object Pocket {
             }else startStatus="Your request is saved. Check status before starting again."
         }finally{if(environmentRequestCurrent())starting=false}
     }}
-    fun interrupt(){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/interrupt",JSONObject());scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not stop task"}}}
+    fun interrupt(){val id=selected?:return;PocketReplies.cancelPrepared(id);scope.launchEnvironment{try{api("/api/threads/$id/interrupt",JSONObject());scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not stop task"}}}
     fun messages():List<Message>{
         val thread=detail?.optJSONObject("thread")?:return emptyList()
         return thread.optJSONArray("turns")?.objects()?.flatMap { turn -> turn.optJSONArray("items")?.objects()?.mapNotNull {item->
@@ -284,19 +297,22 @@ object Pocket {
             }
         }?:emptyList() }?.filter{it.text.isNotBlank()}?.takeLast(50)?:emptyList()
     }
-    fun reply(text:String,threadId:String?=selected,mode:String="auto",onDone:()->Unit={}){if(threadId==null||text.isBlank())return;if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";return};scope.launchEnvironment{
-        sending=true;error=""
-        try{api("/api/threads/$threadId/reply",JSONObject().put("text",text).put("mode",mode).put("id",UUID.randomUUID().toString()));onDone();scheduleRefresh()}
-        catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Reply not sent"}finally{if(environmentRequestCurrent())sending=false}
-    }}
+    fun reply(text:String,threadId:String?=selected,mode:String="auto",draftKey:String?=threadId?.let{key("draft:$it")},onDone:()->Unit={}){
+        if(threadId==null||text.isBlank()||sending)return
+        if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";return}
+        if(threadId==selected)error=""
+        replyFailures.remove(replyFailureKey(threadId))
+        PocketReplies.submit(text,threadId,mode,draftKey,onDone)
+    }
     var replyActionBusy by mutableStateOf(setOf<String>())
+    fun isReplyActionBusy(id:String)="$environmentId:$selected:$id" in replyActionBusy
     fun queuedReply(id:String,action:String,text:String="",confirmUnknown:Boolean=false,onDone:()->Unit={}){
         val threadId=selected?:return;val profileLocal=local;val endpoint=base;val credential=token;val previousError=error;val busyKey="$environmentId:$threadId:$id"
         if(busyKey in replyActionBusy)return;replyActionBusy=replyActionBusy+busyKey
         val body=JSONObject().put("action",action).put("text",text).put("confirmUnknown",confirmUnknown)
         val request=Request.Builder().url(endpoint.trimEnd('/')+"/api/threads/$threadId/replies/$id").header("Authorization","Bearer $credential").post(body.toString().toRequestBody("application/json".toMediaType())).build()
         scope.launchEnvironment{try{val acknowledged=withContext(Dispatchers.IO){http.newCall(request).execute().use{r->val json=JSONObject(r.body?.string()?:"{}");if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Could not update outgoing message")));require(json.s("id")==id&&json.s("state").isNotBlank()){"Message update was not acknowledged. Refresh before trying again."};json}}
-            if(local==profileLocal&&base==endpoint&&token==credential){if(selected==threadId){detail=detail?.let{JSONObject(it.toString()).put("outgoing",acknowledgedOutgoing(it.optJSONArray("outgoing"),id,action,text,acknowledged.s("state")))};if(error==previousError)error="";onDone()};scheduleRefresh()}
+            if(local==profileLocal&&base==endpoint&&token==credential){if(acknowledged.s("state") in listOf("accepted","cancelled"))dismissReplyFailure(threadId,id);if(selected==threadId){detail=detail?.let{JSONObject(it.toString()).put("outgoing",acknowledgedOutgoing(it.optJSONArray("outgoing"),id,action,text,acknowledged.s("state")))};if(error==previousError)error="";onDone();scheduleRefresh()}}
         }catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;if(local==profileLocal&&base==endpoint&&token==credential&&selected==threadId)error=e.message?:"Could not update outgoing message"}finally{replyActionBusy=replyActionBusy-busyKey}}
     }
     fun resumeQueue(){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/queue/resume",JSONObject());scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not resume queue"}}}
@@ -326,21 +342,28 @@ object Pocket {
             }
             "coordinatorReport" -> {acceptNotification(json.getJSONObject("notification"),"report");PocketWorkUpdates.refresh()}
             "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");refresh()}
-            "reply" -> {if(json.s("state")=="accepted")rememberSessionInteraction(json.s("threadId"),"reply:"+json.s("id"));if(json.s("state") in listOf("failed","unknown"))error=json.s("error","Reply could not be confirmed");scheduleRefresh()}
+            "reply" -> {val thread=json.s("threadId");val receipt=json.s("id");PocketReplies.event(thread,receipt,json.s("state"),json.s("error"));if(json.s("state")=="accepted"){rememberSessionInteraction(thread,"reply:"+receipt);dismissReplyFailure(thread,receipt)};if(json.s("state") in listOf("failed","unknown"))recordReplyFailure(thread,receipt,json.s("error","Reply could not be confirmed"));if(thread==selected)scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}
             "turnRecovery" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("recovery",json.optJSONObject("recovery"))}}
-            "timeline" -> {PocketTranscript.apply(json);if(json.has("turn"))scheduleRefresh()}
+            "timeline" -> {
+                val row=json.optJSONObject("row")
+                val newInput=json.s("threadId")==selected&&row?.s("kind")=="user"&&PocketTranscript.rows.none{it.s("id")==row.s("id")}
+                PocketTranscript.apply(json)
+                if(newInput&&row!=null)PocketTranscript.reconcileInputPosition(row)
+                // A delayed input event needs canonical history, not inferred user-first sorting.
+                if(json.s("threadId")==selected&&(json.has("turn")||newInput))scheduleRefresh()
+            }
             "immersion" -> PocketImmersion.accept(json)
             "contextNotes" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("notes",json.optJSONArray("notes"))}}
             "activity" -> {activities=json.optJSONArray("items")?.objects()?:emptyList()}
             "sessionPreview" -> {val id=json.s("threadId");val previous=tasks.firstOrNull{it.id==id};discoverSession(id);tasks=tasks.map{if(it.id==id)it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
-                if(id==selected&&transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,json.s("preview"),json.s("previewKind","message"),previous?.status))scheduleRefresh()}
+                if(id==selected&&(transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,json.s("preview"),json.s("previewKind","message"),previous?.status)||transcriptLiveActivityAdvanced(previous?.activityAt,json.optLong("activityAt"))))scheduleRefresh()}
             "sessionActivity" -> {
                 val id=json.s("threadId");discoverSession(id)
                 val status=json.optJSONObject("status")?.s("type")
                 val previous=tasks.firstOrNull{it.id==id}
                 tasks=tasks.map{if(it.id==id)it.copy(status=status?.takeIf{it.isNotBlank()}?:it.status,activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
-                if(id==selected&&!status.isNullOrBlank()&&status!=previous?.status)scheduleRefresh()
+                if(id==selected&&((!status.isNullOrBlank()&&status!=previous?.status)||transcriptLiveActivityAdvanced(previous?.activityAt,json.optLong("activityAt"))))scheduleRefresh()
             }
             "sessionStarted" -> {
                 val thread=json.optJSONObject("thread")
@@ -360,7 +383,7 @@ object Pocket {
                 if(!id.isNullOrBlank())discoverSession(id)
                 val status=when(method){"turn/started"->"active";"turn/completed"->"idle";"thread/status/changed"->p?.optJSONObject("status")?.s("type");else->null}
                 if(!id.isNullOrBlank()&&!status.isNullOrBlank())tasks=tasks.map{if(it.id==id)it.copy(status=status)else it}
-                if(e?.has("id")==true||e?.s("method") in listOf("turn/completed","thread/status/changed"))scheduleRefresh()}
+                if(id==selected&&(e?.has("id")==true||e?.s("method") in listOf("turn/completed","thread/status/changed")))scheduleRefresh()}
         }
     }}
     @Synchronized fun acceptNotification(n:JSONObject,transport:String="history"){

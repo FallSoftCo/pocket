@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-09",
+  "updated": "2026-10-07",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -14,12 +14,85 @@
   },
   "requests": [
     {
-      "id": "web-theme-clean-private-access-20261008",
-      "date": "2026-10-08",
-      "requirement": "Polished web dark theme with system preference and persisted Light/Dark/System choice; clean private HTTPS access without explicit port, retaining pairing, authenticated origins/WebSockets and existing services.",
-      "status": "implemented-and-privately-deployed",
-      "implementation": "Semantic light/dark tokens and before-paint theme script; path-aware assets/API/WebSocket/PWA at /nextcomp/ on existing private HTTPS443. Old URL compatibility shares the unchanged signing key; bounded same-device browser profile transfer preserves old storage.",
-      "verification": "418 backend/gateway tests and synthetic DOM flows pass. Actual private HTTPS old-pair/new-status and authenticated WebSocket pass; foreign origin and owner routes rejected. Existing routes preserved, Funnel absent. Rendered browser, physical Pixelbook and actual cross-origin browser profile transfer remain unqualified."
+      "id": "pending-question-filter-navigation-20261011",
+      "request": "Answer pending question must navigate directly to the actionable question when Important is enabled, using stable row identity after the full transcript commits. Preserve drafts and do not answer or skip automatically.",
+      "status": "delivered-alpha73-code91",
+      "source": "f27a8d5",
+      "evidence": "Short control passed15.199s but long-answer control failed16.635s; corrected native navigation passed9.846s with question/Skip visible, draft preserved and zero replies.295 tests per variant,both lints/signed builds pass. Private updater91 verified both signers; actual phone91/base APK digest verified and13 protected hashes unchanged. Physical pending-question interaction unqualified."
+    },
+    {
+      "id": "quiet-authenticated-reconnect-state-20261011",
+      "request": "Live connection state must reflect authenticated reconnect even when no application event arrives. Genuine prolonged outages remain visible; reconnect must restore current selected history and preserve drafts without starting or resending work.",
+      "status": "delivered-alpha72-code90",
+      "source": "a6a4a88",
+      "evidence": "Control failed25.206s; corrected native quiet reconnect/genuine outage/recovery passed37.542s with draft intact and zero replies.295 Android tests per variant,both lints/signed builds pass. Private updater90 verified for both signers; actual phone90/base APK digest verified and13 pairing/environment/draft hashes unchanged. Physical quiet-reconnect interaction remains unqualified."
+    },
+    {
+      "id": "missed-notification-transcript-freshness-20261011",
+      "request": "Open conversation must catch up when notifications are newer even if catalog preview and status are unchanged; visible loading, retained history/drafts and no worker polling.",
+      "status": "delivered-alpha71-code89",
+      "source": "13f9ab5",
+      "evidence": "Native unchanged-catalog/missed-notification recovery passed13.325s.295 Android tests per variant,both lints and signed builds pass. Private updater verified both signers; phone89 installed with base APK digest and13 protected pairing/environment/draft hashes unchanged. Exact reported conversation screen not identified/verified.",
+      "constraints": [
+        "No model calls or worker resumes",
+        "Only selected thread in selected authenticated environment",
+        "Repeated same notification does not reload history",
+        "Do not equate account-wide server health with exact reported screen recovery"
+      ]
+    },
+    {
+      "id": "conversation-stale-transcript-20261009",
+      "request": "Conversations must catch up with session previews and notifications, with visible loading feedback for cached messages.",
+      "status": "fixed and installed alpha49; native cached/delayed/counter-reset/older-page checks pass,269 Android tests,418 public Node tests",
+      "implementation": [
+        "Meaningful selected preview/status changes refresh the transcript",
+        "Fresh authoritative snapshots replace unchanged cached streamed rows despite persisted version0 or reset counters",
+        "Live output received during a read retains precedence",
+        "Latest messages take priority over older-history paging",
+        "Cached content remains visible with an Updating messages indicator",
+        "Repeated identical previews do not schedule more reads"
+      ],
+      "followup20261011": {
+        "cause": "A preview arriving during scheduleRefresh-owned recent read marked pending but was not retained for a follow-up read.",
+        "fix": "Current-owner markRefreshPending retains missedUpdates during loading, coalescing to a follow-up read.",
+        "qualification": "Old alpha56 code fails exact native in-flight preview case in19.691s; fix passes9.449s. Cached messages and draft retained; identical previews produce no extra reads.",
+        "delivery": "alpha57/code75 installed, private updater metadata verified for both signers; native broad regression42.526s and final targeted9.491s passed."
+      },
+      "liveActivityFollowup20261011": {
+        "implementation": "Explicit live preview/activity events with advancing activityAt invalidate selected history even when preview/status are unchanged. Duplicate/older events do not poll; inventory timestamps remain excluded.",
+        "status": "delivered-alpha63",
+        "phoneObservation": "alpha62/code80; authenticated current history returned in0.049s; phone system UI foreground, exact stale viewport unobserved.",
+        "verification": "Native12.508s activity-only refresh, duplicate-event coalescing, preserved draft, no command submissions; history/keyboard/voice41.889s, source/error/draft31.672s;285tests per signed variant and both lints/builds pass.",
+        "delivery": "In-place install Success; independent package81/alpha63 and installed base SHA verified;9 pairing/profile/draft preference hashes unchanged. Exact reported stale viewport not directly reproduced."
+      }
+    },
+    {
+      "id": "canonical-input-position-20261011",
+      "request": "Repair user messages appearing below their replies even when input lies outside bounded recent page; preserve live text/local history/drafts/selection and keep fast loading.",
+      "status": "alpha58/code76 installed; narrow backend6b7d307 active; native and actual runtime successor qualified",
+      "evidence": "qualification/anchored-history-20261011.json",
+      "implementation": [
+        "Read from exact stock item anchor, find proven loaded successor",
+        "One serial native read lane scoped to conversation/environment",
+        "Early/middle/latest known-anchor sampling for long local turns",
+        "No model polling or worker activation",
+        "Compatibility cursors carry stable item/turn boundary as transcript grows",
+        "Failures remain actionable; explicit retry without automatic read loop"
+      ]
+    },
+    {
+      "id": "note-save-environment-origin-20261011",
+      "date": "2026-10-11",
+      "requirement": "Saving a retained reply must use the environment selected at the tap, even when navigating immediately to an identically identified thread elsewhere; completion/errors must not contaminate the new view.",
+      "status": "alpha52-delivery-in-progress",
+      "implementation": "Capture destination and body before scheduling; explicit environment request and owner-gated UI completion. Three-host native emulator regression passes."
+    },
+    {
+      "id": "outgoing-action-busy-20261011",
+      "date": "2026-10-11",
+      "requirement": "Retry/Edit/Remove/Save must visibly disable during the matching outgoing request and re-enable afterward, isolated by environment identity.",
+      "status": "alpha51-phone-installed-native-qualified",
+      "implementation": "Shared current-environment busy lookup; isolated native emulator validates unrelated environment remains enabled, matching state disables controls, and clearing restores Retry. Compatible alpha51/code69 installed in place; both private update variants authenticated and checksum-verified. Physical button interaction not yet observed."
     },
     {
       "id": "event-driven-work-lifecycle-20261008",
@@ -2029,6 +2102,157 @@
       ]
     },
     {
+      "id": "rolling-codex-work-migration-20261010",
+      "request": "Investigate rolling migration of all Codex work between environments without lost context or duplicated execution.",
+      "status": "design-staged; native-cross-host-portability-and-source-fencing-not-qualified",
+      "document": "docs/ROLLING-MIGRATION.md",
+      "constraints": [
+        "No live cutovers or bulk resumes during investigation",
+        "Reuse migration owner transport/provisioning",
+        "Durable logical work identity, exclusive source/destination ownership and external-action settlement",
+        "Preserve pairing/drafts/history/unknown receipts and existing models/permissions",
+        "No model polling"
+      ]
+    },
+    {
+      "id": "self-service-terminal-fork-20261010",
+      "request": "Allow a session to transfer itself with a native terminal fork, retaining source-only dependencies without duplicating primary work.",
+      "status": "implemented candidate; isolated stock native context/history and SSH protocol verified; production owning release pending",
+      "document": "docs/TERMINAL-FORK.md",
+      "constraints": [
+        "Preserve current model/permissions and unknown deliveries",
+        "No blanket resumption or polling model turns",
+        "Distinct primary and source-retained scopes; no universal native-terminal fence",
+        "Autonomous native goals and app-owned dynamic tools require explicit controller handover"
+      ]
+    },
+    {
+      "id": "foreground-transcript-read-lifetime-20261011",
+      "request": "Conversation switching must not inherit a blocked old refresh. Background work must not poll the foreground transcript. Returning from another backend must preserve selection/cache/draft and fetch current content. Keep routine loads small without losing failed/uncertain sends.",
+      "status": "delivered-alpha59",
+      "implementation": [
+        "Cancel scheduled refresh on open/close and retain captured thread through debounce",
+        "Scope turn/reply/request refresh triggers to selected thread",
+        "Pause hidden Codex reader with a new generation; preserve cached history and selected chat",
+        "Conversation-specific accessible card actions",
+        "Routine chat response includes actionable outgoing only; full receipt storage and /api/replies/:id preserved"
+      ],
+      "evidence": {
+        "livePayloadBeforeBytes": 221927,
+        "acceptedOutgoingBytes": 143475,
+        "outgoingCountBefore": 229
+      },
+      "limits": [
+        "No alpha59 delivery yet",
+        "Physical gesture/reading/IME verification remains pending"
+      ],
+      "verification": "Six native emulator cases pass; 277 unit tests each debug/release; both lints/builds pass; phone package confirms alpha59/code77. Exact physical transcript catch-up not observed.",
+      "qualification": "docs/qualification/conversation-refresh-scope-20261011.json"
+    },
+    {
+      "id": "conversation-read-viewport-20261011",
+      "status": "delivered-alpha60",
+      "request": "Refreshing or preloading must not consume work the user has not presented. Reading older history, Important filtering, background and blackout must preserve unseen latest updates.",
+      "implementation": "Acknowledgement moved from fetch completion to lifecycle-resumed settled unfiltered latest viewport, gated on fresh current-scope read. Catch-up acknowledged at most once per open; notifications keep monotonic device/environment scopes.",
+      "qualification": "docs/qualification/conversation-read-viewport-20261011.json",
+      "verification": "Candidate native31.49s passes older-history/Latest/filter/blackout/background-resume. Old fetch-side control fails11.386s on unseen update consumption. Four native regressions,277tests per signed variant, both lints/builds pass. Phone package independently confirms alpha60/code78. Physical viewport interaction not exercised."
+    },
+    {
+      "id": "source-scoped-reply-failure-20261011",
+      "status": "delivered-alpha61",
+      "request": "Late reply failures must remain with the originating environment/session, never contaminate a newly selected chat, retain unsent draft, resolve only the matching receipt and remain visible when returning to affected work. Popup replies need feedback at their own target.",
+      "implementation": "Credential-bound per-session delivery failure state; source-specific conversation/popup presentation; receipt-matching acceptance/removal; explicit local dismissal does not retry uncertain delivery.",
+      "qualification": "docs/qualification/source-reply-feedback-20261011.json",
+      "verification": "Final native33.549s: source/error receipt routing, popup actual input/error/draft reopen/erase, actual2x font and>=48dp dismiss. Old global-error control fails9.714s. Final source freshness/keyboard/voice regression41.527s, read-state31.639s, chat switch18.5s. Both signed variants277tests/lints/builds pass. Private update79 ready; device offline before install, last verified phone78.",
+      "delivery": "Verified reconnection; in-place install Success; independent package79/alpha61. Pairing/data not cleared."
+    },
+    {
+      "id": "frontend-reply-receipt-journal-audit",
+      "status": "delivered-alpha63",
+      "request": "Preserve outgoing identity across process death and unknown transport outcomes; never treat arbitrary HTTP200 JSON as acknowledged delivery or blindly replay unknown requests.",
+      "evidence": "docs/qualification/client-reply-recovery-20261011.json",
+      "next": "Continue separate voice/coordinator/team receipt audit and full quality matrix; no exactly-once external execution claim.",
+      "implementation": "Persist captured environment/account/thread/message/UUID before dispatch; validate receipt ID/state and lookup thread; reconcile via read-only GET; explicit unknown retry consent; draft generation protects edited or identically retyped text."
+    },
+    {
+      "id": "conversation-read-occlusion-audit",
+      "status": "delivered-alpha62",
+      "request": "A popup or dialog covering the current conversation must not let a fresh background snapshot count as presented latest content.",
+      "evidence": "Source inspection: latest-viewport gate checks lifecycle/blackout/voice/filter/scroll/loading, but does not yet account for focusable popup or dialog occlusion. Not yet reproduced on native device.",
+      "next": "Reproduce live updates while controls/popup are open; use actual window focus or owned-overlay presentation gates, preserve IME and recording behavior, verify resume without fetching-driven reads.",
+      "implementation": "Actual main-window focus gates presentation in both snapshotFlow and final acknowledgement. Focus ownership protects activity replacement; resumed lifecycle remains required. No voice/key dispatch changes.",
+      "qualification": "docs/qualification/window-focus-reading-20261011.json",
+      "verification": "Actual controls/dialog/IME native26.274s passes; old gates control fails14.127s; freshness/voice40.968s and reply/draft/large-font27.161s regressions pass. Not yet on phone."
+    },
+    {
+      "id": "stalled-conversation-read-recovery-20261011",
+      "request": "Conversation remains in a past state while messages and notifications progress; recover history reads visibly without resubmitting work.",
+      "status": "delivered-alpha62",
+      "implementation": "Validate matching thread and timeline rows before applying; preserve local rows; three read-only retries at 1/2/4 seconds with Updating messages; no permission polling; failed recent fetch cannot acknowledge stale viewport.",
+      "evidence": "docs/qualification/stalled-conversation-20261011.json"
+    },
+    {
+      "id": "bottom-controls-large-text-20261011",
+      "status": "delivered-alpha65",
+      "request": "One-handed mic and keyboard controls must stay legible, directly tappable and reachable at normal and large text; inline volume and update access remain available with IME. Controls use inline language transitions.",
+      "implementation": "Full capture action tile with44dp modeled symbol and wrapping label; keyboard tile matches vertical icon/label arrangement; compact mic uses44dp symbol without clipping a caption inside its circle. Global dock caption remains outside circle. Unknown quota uses dash with full accessibility state; credits use smaller cr unit. Capture/update labels use cached Italian mappings and existing reading-direction transition.",
+      "verification": "Final alpha64 native large text/IME29.483s, coordinator2x Italian16.183s and inline playback mute/volume13.152s pass; gallery2276 cards responsive checker passes. Included in physical alpha65/code83, checksum and 12 critical preferences verified unchanged.",
+      "remaining": "Physical hardware-button and full immersion-motion/frame-pacing quality matrix remains open."
+    },
+    {
+      "id": "prolonged-transcript-recovery-20261011",
+      "request": "Conversation stuck in a past state; recover loading without requiring another live notification or manual reopen.",
+      "status": "delivered-alpha65",
+      "implementation": "Keep retryable visible history reads beyond four failures with capped 30-second backoff; gate follow-up on foreground and original environment/thread/generation. Preserve cached rows and drafts. No worker submissions, model calls or automatic retries for permanent permission rejection.",
+      "verification": "285 tests each signing variant, both lints/builds pass. Native prolonged outage/navigation28.206s, transient/malformed/permanent rejection17.591s, cached/live/older history43.797s pass. Physical code83/APK hash verified; 12 critical preferences unchanged. Exact affected user viewport remains unidentified.",
+      "evidence": "docs/qualification/prolonged-transcript-recovery-20261011.json"
+    },
+    {
+      "id": "important-visible-passage-anchor-20261011",
+      "request": "Important filter must not reorder or jump the conversation. Preserve the actual visible answer when leading commentary disappears and when returning to the complete transcript.",
+      "status": "delivered-alpha66-further-exit-repair-alpha67-qualified",
+      "implementation": "Native surviving-item key and pixel offset anchor; return to the same visible passage until further touch reading; cancel competing positioning jobs and guard environment/thread. No history truncation, model polling or worker wakeups.",
+      "verification": "Alpha66/code84 installed. Post-composition row request and measured tail compensation pass actual native bounds+window PixelCopy6.069s. Later equivalent6.031s original crops byte-identical across Important and return. Additional non-toggle exit failure reproduced and repaired under saved-context-filter-exit-reading-20261011."
+    },
+    {
+      "id": "catalog-transcript-missed-event-catchup-20261011",
+      "request": "Conversation remains in past state while newer activity exists. Recover missed live updates without draft loss or polling workers.",
+      "status": "delivered-alpha66-code84",
+      "implementation": "Selected catalog explicit activityAt advancement also invalidates transcript when preview/status are unchanged; inventory/fetch timestamps are excluded.",
+      "verification": "Native emulator missed-event test 12.952s; unchanged refresh no further history read, no submitted replies, saved draft preserved. Cached-history regression 40.215s. Phone remains alpha65 until signed delivery. Final debug/release286 tests each and both lints passed; actual phone code84/base APK hash verified,13 critical preference hashes unchanged. Both authenticated signing variants offered code84."
+    },
+    {
+      "id": "saved-context-filter-exit-reading-20261011",
+      "request": "Keep Important and surrounding-conversation navigation ergonomic, with normal history spacing and no numeric-index/timed scroll guesses; retain local history and reading position.",
+      "status": "delivered-alpha67-code85",
+      "implementation": "Filter tail compensation is conditional on Important. Exiting clears pending compensation. Saved source is requested by row ID after committed list update, with full captured environment matching for navigation and removal feedback.",
+      "verification": "Old native exit fails5.472s,1453->1379px. Fixed5.57s; rendered older-history/warm-reopen9.481s within2px; filter rendered text6.031s; short-page gestures14.519s; late-input canonical ordering7.558s. Physical interaction remains unqualified. Final signed286 tests each and both lints pass; final native exit5.522s/warm-reopen9.457s pass; phone85/base APK SHA verified,13 critical preference hashes unchanged. Both authenticated updater signer variants verified."
+    },
+    {
+      "id": "durable-history-live-refresh-20261011",
+      "request": "Retain locally loaded history and reading position across process death; repair conversations stuck on past content while notifications/list are newer.",
+      "status": "delivered-alpha69-code87",
+      "implementation": "Private scoped bounded presentation cache, fresh authoritative read, visible updating state, restore positions; reset persisted event counters and replay buffered live rows during hydration. No pending decisions/outgoing commands restored.",
+      "verification": "Alpha68 installed code86 APK hash verified with13 critical preference hashes unchanged.290 unit tests per variant; real distinct-process cache/pixel native proof. Follow-up native9.909s/4.639s proves low-counter live output appears during held recent read and remains afterward. Actual paired backend status26ms/thread44ms from workstation; phone cache entries missing8/6 server rows. Exact current phone freeze cause not established. Alpha69 installed and base APK digest verified;13 critical preference hashes unchanged; authenticated both-signer updater offers87. See qualification/stale-live-history-alpha69.json. Expanded f9ee607 native12.15s/4.78s proves overlapping same-row live output survives the held snapshot; draft and2px reading position preserved, zero work submissions. Runtime unchanged.",
+      "limits": "No physical stale-thread interaction or frame pacing, or forced event during disk IO qualification. User-selected stuck thread not yet established."
+    },
+    {
+      "id": "spoken-notification-source-navigation-20261011",
+      "request": "Spoken/latest-work alerts should open their source conversation directly, preserving drafts and source identity.",
+      "status": "delivered-alpha70-code88",
+      "implementation": "Retained speech notification resolves its stored notification-to-thread association instead of opening the generic conversation list. Unknown sources retain the list fallback; selected conversation is never guessed as source.",
+      "verification": "Control e9ae2ec fails17.664s after posted native notification PendingIntent.send. Corrected9214d08 passes6.605s with visible source conversation, preserved draft and zero submissions/provider calls.290 unit tests per variant, both lints and signed builds pass. Actual phone package/base APK digest verified;13 critical preference hashes unchanged; authenticated workstation updater offers88 for both signers. See qualification/spoken-notification-navigation-alpha70.json.",
+      "limits": "No physical banner/lock-screen interaction claim; unknown sources keep list fallback. Broader speech/read lifecycle audit remains open."
+    },
+    {
+      "id": "web-theme-clean-private-access-20261008",
+      "date": "2026-10-08",
+      "requirement": "Polished web dark theme with system preference and persisted Light/Dark/System choice; clean private HTTPS access without explicit port, retaining pairing, authenticated origins/WebSockets and existing services.",
+      "status": "implemented-and-privately-deployed",
+      "implementation": "Semantic light/dark tokens and before-paint theme script; path-aware assets/API/WebSocket/PWA at /nextcomp/ on existing private HTTPS443. Old URL compatibility shares the unchanged signing key; bounded same-device browser profile transfer preserves old storage.",
+      "verification": "418 backend/gateway tests and synthetic DOM flows pass. Actual private HTTPS old-pair/new-status and authenticated WebSocket pass; foreign origin and owner routes rejected. Existing routes preserved, Funnel absent. Rendered browser, physical Pixelbook and actual cross-origin browser profile transfer remain unqualified."
+    },
+    {
       "id": "named-multi-environment-20261009",
       "request": "Retain named remote development environments alongside Phone, with an accessible selector and isolated pairing, session identity, drafts, outgoing receipts, notifications, actions and settings.",
       "status": "implemented and installed alpha48 in place; OS/GPU HTTPS native qualification passed; browser parity separately pending",
@@ -2043,19 +2267,6 @@
         "Unit legacy/profile isolation tests",
         "Disposable native same-ID history, drafts and frozen reply routing",
         "Real authenticated HTTPS disposable pairing on migration backend"
-      ]
-    },
-    {
-      "id": "conversation-stale-transcript-20261009",
-      "request": "Conversations must catch up with session previews and notifications, with visible loading feedback for cached messages.",
-      "status": "fixed and installed alpha49; native cached/delayed/counter-reset/older-page checks pass,269 Android tests,418 public Node tests",
-      "implementation": [
-        "Meaningful selected preview/status changes refresh the transcript",
-        "Fresh authoritative snapshots replace unchanged cached streamed rows despite persisted version0 or reset counters",
-        "Live output received during a read retains precedence",
-        "Latest messages take priority over older-history paging",
-        "Cached content remains visible with an Updating messages indicator",
-        "Repeated identical previews do not schedule more reads"
       ]
     }
   ],

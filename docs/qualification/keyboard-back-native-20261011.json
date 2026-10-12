@@ -1,0 +1,29 @@
+{
+  "status": "native-qualified",
+  "host": "OZZZ-OS",
+  "avd": "nextcomp_env_qa",
+  "variant": "nonshrunk qualification with candidate rapid-send guard",
+  "durationSeconds": 22.127,
+  "checks": [
+    "Keyboard opens editor",
+    "Keyboard control absent during text input",
+    "Edited draft persisted",
+    "Back with editor open returns to list",
+    "Reopening restores draft",
+    "Hardware Enter submits unchanged text",
+    "Acknowledged draft cleared",
+    "Synthetic request count correct"
+  ],
+  "preservedScenarios": [
+    "Ordering",
+    "Refresh feedback",
+    "Retained history",
+    "Pending controls",
+    "Rapid send admission"
+  ],
+  "limits": [
+    "No real Fold back swipe or hardware keyboard qualification",
+    "Synthetic backend, no live agent request",
+    "Candidate rapid-send fix not yet on phone"
+  ]
+}

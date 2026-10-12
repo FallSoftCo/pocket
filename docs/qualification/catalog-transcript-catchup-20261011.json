@@ -1,0 +1,35 @@
+{
+  "source": "0de9447",
+  "state": "installed-phone-and-published-private-update",
+  "problem": "A catalog refresh did not refresh selected history when meaningful work advanced but the clipped preview and status stayed identical.",
+  "fix": "Compare explicit activityAt as well as preview and status; never compare fetch time or inventory updatedAt.",
+  "evidence": {
+    "pairedBackendStatusSeconds": 0.029,
+    "pairedBackendTimelineSeconds": 0.044,
+    "installedAtDiagnosis": "alpha65/code83",
+    "nativeMissedEventsSeconds": 12.952,
+    "nativeCachedRefreshRegressionSeconds": 40.215,
+    "checks": [
+      "missed live events recovered with unchanged preview",
+      "identical subsequent inventory did not fetch history again",
+      "no replies submitted",
+      "draft preserved"
+    ]
+  },
+  "limits": [
+    "User visible stuck session not yet identified; confirmed catch-up gap is not proof of every reported freeze.",
+    "Physical install and APK hash verified; interaction behavior qualified on emulator, not by operating the user phone."
+  ],
+  "release": {
+    "versionCode": 84,
+    "versionName": "0.5.0-alpha.66",
+    "debugUnitTests": 286,
+    "releaseUnitTests": 286,
+    "debugAndReleaseLint": "passed",
+    "finalNativeFilterPixelGeometrySeconds": 6.069,
+    "phonePackageVerified": 84,
+    "phoneInstalledSha256": "49cb3bd4aab3408d362310a06484fe0a54a7695b12486f237164219017224a57",
+    "criticalPreferencesUnchanged": 13,
+    "githubBranch": "docs/nextcomp-reader-friendly-readme"
+  }
+}

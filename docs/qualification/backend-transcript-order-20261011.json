@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-11",
+  "releaseCommit": "6c7ba69",
+  "baseCommit": "e713b61",
+  "changedRuntimeFiles": [
+    "server/timeline.mjs"
+  ],
+  "buildTestHost": "OZZZ-OS",
+  "tests": 424,
+  "failures": 0,
+  "service": "codex-pocket.service",
+  "backendPid": null,
+  "codexDaemonPid": 2213121,
+  "codexDaemonPreserved": true,
+  "authenticatedStatusConnected": true,
+  "receiptStateCountsUnchanged": true,
+  "beforeReload": {
+    "sendingOrQueuedMessages": 0,
+    "processingVoiceTurns": 0,
+    "creatingSessions": 0
+  },
+  "phoneInstalled": "alpha50/code68",
+  "physicalOrderingInteraction": "not yet verified",
+  "terminalForkActivated": false,
+  "rollback": "Remove only 30-order-release.conf and restore the prior reviewed runtime source; do not restart the now-unreleased main checkout blindly.",
+  "additionalFix": "History seed restores snapshot order while preserving text received after the read version boundary and live-only tail",
+  "additionalRegression": "Concurrent answer update during history read cannot precede earlier user/tool rows",
+  "backendPidEvidence": "systemd reports current PID separately; no invented retained PID"
+}

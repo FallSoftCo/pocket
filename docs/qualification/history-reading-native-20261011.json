@@ -1,0 +1,40 @@
+{
+  "source": "c868586",
+  "applicationSource": "dc4b8ee",
+  "buildHost": "OZZZ-OS",
+  "emulator": "nextcomp_env_qa / emulator-5620 / software SwiftShader",
+  "passed": {
+    "method": "HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage",
+    "seconds": 13.732,
+    "evidence": "/tmp/nextcomp-reading-isolated-results.txt",
+    "checks": [
+      "three upward-history gestures leave latest offscreen",
+      "older page not applied until explicit settlement gate released",
+      "visible retained passage top changes no more than24pixels after prepend"
+    ]
+  },
+  "trace": "/tmp/nextcomp-scroll-up-viewport.txt",
+  "limitations": [
+    "No physical phone interaction qualified",
+    "Explicit settlement gate proves retained anchor, not complete automatic pagination pacing",
+    "Combined class shares singleton/fixture state and remains unsuitable without reset isolation",
+    "Latest candidate is not installed; phone remains alpha53"
+  ],
+  "fullRegression": {
+    "method": "TranscriptRefreshNativeTest#cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory",
+    "seconds": 38.954,
+    "result": "passed",
+    "evidence": "/tmp/nextcomp-refresh-current-results.txt",
+    "coverage": [
+      "coalesced latest snapshot and missed updates",
+      "retained older history",
+      "permanent read failure avoids automatic retry",
+      "explicit read retry",
+      "queued actions and duplicate submission guard",
+      "keyboard Enter and retained draft",
+      "volume key recording state/timer/visible feedback with keyboard open",
+      "touch start/stop and silent capture error",
+      "read error visible away from latest"
+    ]
+  }
+}

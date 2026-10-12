@@ -35,6 +35,7 @@ object BackendNavigation {
         desired=owner to backend
         notification=null
         Pocket.prefs.edit().putString("backend:$owner",backend).apply()
+        if(backend=="losangelex")Pocket.pauseConversationReads()else Pocket.refreshDetail()
     }
     fun consumed(){notification=null}
     fun teamSelected()=Pocket.prefs.getString("backend:"+backendOwner(Pocket.base,Pocket.token),"codex")=="losangelex"
@@ -44,12 +45,13 @@ internal fun sameTeamHistoryScope(current:TeamScope,destination:TeamScope)=curre
 internal fun teamReplyRecipient(scope:TeamScope,author:String)=if(author in listOf("you","system"))if(scope.direct)scope.recipient else "" else author
 internal fun teamEnterSends(enter:Boolean,shift:Boolean)=enter&&!shift
 
-private data class BackendSetting(val selected:String,val select:(String)->Unit)
+private data class BackendSetting(val selected:String,val select:(String)->Unit,val workRecord:()->Unit)
 private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
 
 @Composable fun BackendSettingsControl(){
     val setting=LocalBackendSetting.current?:return
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+        OutlinedButton(setting.workRecord,Modifier.fillMaxWidth(),enabled=!PocketVoice.active){Text("Work record")}
         BilingualLabel("Backend",centered=false)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
             listOf("codex" to "Codex","losangelex" to "Losangelex").forEach{(id,label)->
@@ -65,6 +67,7 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
     var losangelex by remember(owner){mutableStateOf(JSONObject())}
     var discovering by remember(owner){mutableStateOf(true)}
     var teamSettings by remember(owner){mutableStateOf(false)}
+    var workRecord by remember(owner){mutableStateOf(false)}
     val scope=rememberCoroutineScope()
     suspend fun discover(){
         discovering=true
@@ -72,13 +75,14 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
         catch(_:Exception){losangelex=JSONObject()}
         finally{discovering=false}
     }
+    LaunchedEffect(PocketVoice.active){if(PocketVoice.active)workRecord=false}
     LaunchedEffect(owner){discover()}
     LaunchedEffect(owner,BackendNavigation.desired){BackendNavigation.desired?.takeIf{it.first==owner}?.let{backend=it.second;teamSettings=false}}
     val requestedNotification=BackendNavigation.notification
     LaunchedEffect(owner,requestedNotification){if(requestedNotification?.first==owner)teamSettings=false}
-    CompositionLocalProvider(LocalBackendSetting provides BackendSetting(backend){chosen->
+    CompositionLocalProvider(LocalBackendSetting provides BackendSetting(backend,{chosen->
         BackendNavigation.select(chosen);backend=chosen;teamSettings=false
-    }){
+    },{workRecord=true})){
     Box(Modifier.fillMaxSize()){
     Column(Modifier.fillMaxSize().imePadding()){
         if(backend=="losangelex")ProfileSwitcher()
@@ -95,10 +99,11 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
             else key(owner,losangelex.s("environmentId")){LosangelexScreen(owner+losangelex.s("environmentId"),onSettings={teamSettings=true})}
         }
     }
-    BackHandler(enabled=backend=="losangelex"&&teamSettings){teamSettings=false}
+    BackHandler(enabled=backend=="losangelex"&&teamSettings&&!workRecord){teamSettings=false}
     if(backend=="losangelex"&&teamSettings)Surface(Modifier.fillMaxSize()){
         Column{TextButton({teamSettings=false}){BilingualLabel("Back")};Box(Modifier.weight(1f)){SettingsScreen()}}
     }
+    if(workRecord)Surface(Modifier.fillMaxSize()){WorkRecordScreen{workRecord=false}}
     }
     }
 }

@@ -9,7 +9,7 @@ import {SessionDiscovery,INTERACTIVE_SOURCES} from './session-discovery.mjs';
 import {catalogFields,catalogName,sessionIdentity,sessionWorkTime,requireDirectSessionInput} from './session-catalog.mjs';
 import {SessionCatchup} from './session-catchup.mjs';
 import {CoordinatorReports} from './coordinator-reports.mjs';
-import {recoverReply} from './reply-recovery.mjs';
+import {recoverReply,pendingOutgoing} from './reply-recovery.mjs';
 import {mountLosangelex} from './losangelex.mjs';
 import {computerUseStatus} from './computer-use.mjs';
 import {NotificationTitles} from './notification-titles.mjs';
@@ -38,6 +38,9 @@ import { CompletionRecovery } from './completions.mjs';
 import { spokenSummary,spokenText,promptContext,turnPrompt } from './speech.mjs';
 import { LiveTimeline,timelinePage } from './timeline.mjs';
 import { ThreadHistory } from './history.mjs';
+import {TerminalForks,TerminalForkImports} from './terminal-forks.mjs';
+import {sshTerminalFork} from './terminal-fork-transport.mjs';
+import { WorkRecord } from './work-record.mjs';
 import { ambiguousDelivery } from './connection-errors.mjs';
 import { AccountRateLimits } from './rate-limits.mjs';
 import { modelCatalogue,validateTurnSettings,turnOverrides } from './turn-settings.mjs';
@@ -121,11 +124,23 @@ const timeline=new LiveTimeline();
 setInterval(()=>timeline.prune(),60000).unref();
 const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
 // Notes hydrate when their conversation opens, not while hundreds of list cards load.
-const history=new ThreadHistory(codex);
+const inheritedHistoryCache=new Map();let inheritedHistoryCacheBytes=0;
+const history=new ThreadHistory(codex,{inheritedHistory:id=>{const cached=inheritedHistoryCache.get(id);if(cached){inheritedHistoryCache.delete(id);inheritedHistoryCache.set(id,cached);return cached.turns;}if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='terminal_fork_imports'").get())return [];const row=db.prepare("SELECT json_extract(packet,'$.publicHistory') AS history FROM terminal_fork_imports WHERE fork_id=? AND state IN ('prepared','accepted','unknown')").get(id);if(!row?.history)return [];const turns=JSON.parse(row.history),bytes=Buffer.byteLength(row.history);if(bytes<=8*1024*1024){while(inheritedHistoryCache.size&&(inheritedHistoryCacheBytes+bytes>8*1024*1024||inheritedHistoryCache.size>=16)){const key=inheritedHistoryCache.keys().next().value;inheritedHistoryCacheBytes-=inheritedHistoryCache.get(key).bytes;inheritedHistoryCache.delete(key);}inheritedHistoryCache.set(id,{turns,bytes});inheritedHistoryCacheBytes+=bytes;}return turns;}});
+const workRecord=new WorkRecord(db,{version:appVersion});
+const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}};
+for(const row of db.prepare("SELECT thread_id FROM watches WHERE enabled=1 UNION SELECT thread_id FROM outgoing UNION SELECT thread_id FROM session_starts WHERE thread_id IS NOT NULL").all())workRecord.enroll({id:row.thread_id});
+let scanningWork=false;
+setInterval(async()=>{
+  if(scanningWork||!codex.ready)return;
+  scanningWork=true;
+  try{await workRecord.scan(history,id=>JSON.parse(db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.metadata||'{}'));}
+  catch(e){console.error('Work record history unavailable:',e.code||e.name);}
+  finally{scanningWork=false;}
+},15000).unref();
 const activityBoard=new ActivityBoard();
 const liveDelivery=new LiveActivityDelivery((type,payload)=>emit(type,payload));
 const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery.preview(threadId,preview));
-const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);});
+const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);recordWork(()=>workRecord.enroll(known));attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);});
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...payload}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
 const rateLimits=new AccountRateLimits(codex,usage=>emit('rateLimits',{usage}),{observations:new CreditObservations(db,secrets.adminToken),creditAuthorization:creditContinuation});
@@ -137,6 +152,29 @@ const requireAuth=(req,res,next)=>{req.device=identity(req); if(!req.device)retu
 const owner=(req,res,next)=>{if(req.device.id!=='owner')return res.status(403).json({error:'Local owner access required'});next();};
 const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 const requireId=id=>{if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(id))throw new Error('Invalid thread identifier');return id;};
+const terminalForkConfigPath=resolve(dir,'terminal-forks.json');
+const terminalForkConfig=existsSync(terminalForkConfigPath)?JSON.parse(readFileSync(terminalForkConfigPath,'utf8')):null;
+const terminalForkImports=terminalForkConfig?new TerminalForkImports({db,codex,codeHome:terminalForkConfig.codeHome,environmentId:terminalForkConfig.environmentId,directory:resolve(dir,'terminal-forks','imports'),onImportPlan:(result,packet)=>{for(const id of result.newIds)internalSessions.register(id,id===packet.bundle.forkId?'terminal-fork-pending':'terminal-fork-ancestor');},onPrepared:(nativeThread,packet)=>{
+  const thread={...nativeThread,name:packet.sourceName||nativeThread.name||'Transferred work',status:{type:'pending'},discoveryPending:true};
+  db.prepare("DELETE FROM pocket_internal_sessions WHERE thread_id=? AND kind='terminal-fork-pending'").run(thread.id);
+  history.fullSnapshotThreads.add(thread.id);sessionDiscovery.remember(thread);attached.add(thread.id);
+  db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1) ON CONFLICT(thread_id) DO UPDATE SET name=excluded.name,enabled=1').run(thread.id,thread.name||'Transferred work');
+  emit('sessionStarted',{threadId:thread.id,thread});
+}}):null;
+if(terminalForkImports)for(const row of db.prepare("SELECT fork_id FROM terminal_fork_imports WHERE state IN ('prepared','accepted','unknown')").all())history.fullSnapshotThreads.add(row.fork_id);
+const terminalForks=terminalForkConfig?new TerminalForks({db,codex,codeHome:terminalForkConfig.codeHome,directory:resolve(dir,'terminal-forks','exports'),environmentId:terminalForkConfig.environmentId,targets:terminalForkConfig.targets||{},transport:sshTerminalFork,publicHistory:thread=>[...history.inheritedHistory(thread.id),...(thread.turns||[])],onFork:id=>internalSessions.register(id,'terminal-fork-export'),publish:transfer=>emit('terminalFork',{transfer}),
+  readSource:async threadId=>{await codex.connect();let thread=(await codex.call('thread/read',{threadId,includeTurns:false})).thread;if(thread.status?.type==='active')return {thread,turn:null};let turns=(await codex.call('thread/turns/list',{threadId,limit:1,itemsView:'summary',sortDirection:'desc'})).data;
+    if(!turns.length){const full=(await codex.call('thread/read',{threadId,includeTurns:true})).thread;turns=full.turns||[];}
+    return {thread,turn:turns.at(-1)};},
+  checkSource:async threadId=>{
+    if([...pending.values()].some(p=>p.params?.threadId===threadId))throw Error('Resolve the source’s pending question or approval before transferring.');
+    if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('unknown','sending','queued','held')").get(threadId))throw Error('Reconcile or explicitly resolve the source’s pending outgoing messages before transferring.');
+    if(db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(threadId)?.archived)throw Error('Archived work is not eligible for self transfer.');
+    const policy=await recoveryUsagePolicy(codex,threadId);if(!policy.ok)throw Error(policy.reason||'Source usage policy prevents continuation.');
+    const {goal}=await codex.call('thread/goal/get',{threadId});if(goal?.status==='active')throw Error('This source has an automatic native goal. Its budget and autonomous admission need an explicit ownership handover before terminal transfer can run.');
+  }
+}):null;
+if(terminalForks)setInterval(()=>{if(codex.ready)void terminalForks.tick().catch(e=>console.error('Terminal fork check',e.code||e.name));},30000).unref();
 const notificationSessionFields=id=>{const row=db.prepare("SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?").get(id);return row?sessionIdentity(JSON.parse(row.metadata)):{};};
 const notificationRow=r=>({...notificationSessionFields(r.thread_id),...r,title_revision:notificationTitles.revision(r.thread_id),spoken_text:r.spoken_text||spokenText(r.title,r.body),attachments:JSON.parse(r.attachments||'[]')});
 function rememberSpeechContext(threadId,turn){
@@ -147,6 +185,8 @@ const recoveryQueue=new RecoveryQueue(db);
 const turnRecovery=new TurnRecovery({db,
   read:async threadId=>{await codex.connect();const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});return history.read(thread,{summary:true});},
   health:async(threadId,kind,thread)=>{
+    try{terminalForkImports?.inputAllowed(threadId);}catch{return {ok:false,blocked:true,reason:'This destination is waiting for terminal-fork ownership release.'};}
+    if(terminalForks&&!terminalForks.recoveryAllowed(threadId))return {ok:false,blocked:true,reason:'This source has a terminal transfer checkpoint. Recovery must not restart its primary task.'};
     if(!codex.ready||syncing.has(threadId))return false;
     if(!recoveryStorageReady(dir))return false;
     const policy=await recoveryUsagePolicy(codex,threadId);if(!policy.ok)return policy;
@@ -237,7 +277,7 @@ function recoverHistory(metadata){
 }
 async function attach(threadId,{before=null,recent=false}={}){
   requireId(threadId); await codex.connect();
-  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);
+  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);recordWork(()=>workRecord.enroll(metadata));
   if(sessionIdentity(metadata).isChild&&!sessionIdentity(metadata).canAcceptDirectInput){
     attached.add(threadId);const snapshotRevision=timeline.version;const thread=await history.read(metadata,{before,preferPaging:true,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});if(!before)timeline.seed(thread,{throughVersion:snapshotRevision});return {...thread,_pocketSnapshotRevision:snapshotRevision};
   }
@@ -261,6 +301,7 @@ async function sendOutgoing(row,initialThread=null){
   if(syncing.has(threadId))return;
   syncing.add(threadId);
   try{
+    let sourceRole;try{terminalForkImports?.inputAllowed(threadId);sourceRole=terminalForks?.inputRole(threadId);}catch{return;}
     const t=initialThread||await attach(row.thread_id);requireDirectSessionInput(t);
     // Re-read after attachment: the user may have edited or removed the waiting message.
     row=db.prepare('SELECT * FROM outgoing WHERE id=?').get(row.id);
@@ -271,7 +312,7 @@ async function sendOutgoing(row,initialThread=null){
       if(earlier)return;
     }
     if(!db.prepare("UPDATE outgoing SET state='sending',updated_at=? WHERE id=? AND state='queued'").run(now(),row.id).changes)return;
-    const input=[{type:'text',text:row.text}],overrides=turnOverrides(savedTurnSettings(t.id));
+    const input=[{type:'text',text:(sourceRole?sourceRole+'\n\nUser input:\n':'')+row.text}],overrides=turnOverrides(savedTurnSettings(t.id));
     let result;
     const active=t.turns?.findLast(x=>x.status==='inProgress');
     if(row.mode!=='queue'&&isActive(t)&&active) {
@@ -307,7 +348,7 @@ codex.on('event',m=>{
   }
   if(m.method==='thread/started'&&p.thread)emit('sessionStarted',{threadId,thread:{...p.thread,...catalogFields(p.thread)}});
   const interaction=sessionInteraction(m);if(interaction)emit('sessionInteraction',{...interaction,activityAt:activity?.activityAt});
-  threadPreviews.observe(m);activityBoard.observe(m);
+  threadPreviews.observe(m);activityBoard.observe(m);recordWork(()=>workRecord.observe(m));
   if(m.method==="item/completed"||p.item?.type==="userMessage")conversationNotes.observe(threadId,p.turnId,p.item);
   if(m.method==="turn/completed")for(const item of p.turn?.items||[])conversationNotes.observe(threadId,p.turn.id,item);
   if(threadId&&/^(item\/|turn\/completed)/.test(m.method))liveDelivery.activity(()=>activityBoard.snapshot());
@@ -374,7 +415,15 @@ app.post('/api/pair',(req,res)=>{
   res.json({token,id,host:hostName,firebase:push.config,local:localMode,...(automation?{automationSecret:automation.secret}:{})});
 });
 app.use('/api',requireAuth);
-mountLosangelex(app,{dir,codex,db,publish:(thread,onPersist)=>notify(thread,'Losangelex needs you','Open the team conversation to review its request.','question',[],null,null,null,null,onPersist),resolve:resolveAttention});
+app.get('/api/terminal-forks',owner,(_req,res)=>res.json({enabled:!!terminalForks,targets:Object.keys(terminalForkConfig?.targets||{}),transfers:terminalForks?db.prepare('SELECT id FROM terminal_forks ORDER BY created_at DESC LIMIT 100').all().map(r=>terminalForks.view(r.id)):[]}));
+app.post('/api/terminal-forks',owner,route(async(req,res)=>{if(!terminalForks)return res.status(503).json({error:'The environment owner has not registered terminal-fork destinations.'});res.status(202).json(terminalForks.request(req.body));}));
+app.get('/api/terminal-forks/imports/:id',owner,(req,res)=>res.json(terminalForkImports?.view(requireId(req.params.id))||{id:req.params.id,state:'disabled'}));
+app.post('/api/terminal-forks/imports/:id/prepare',owner,route(async(req,res)=>{if(!terminalForkImports)return res.status(503).json({error:'This destination has not registered native terminal imports.'});await codex.connect();res.json(await terminalForkImports.prepare(requireId(req.params.id)));}));
+app.post('/api/terminal-forks/imports/:id/activate',owner,route(async(req,res)=>{if(!terminalForkImports)return res.status(503).json({error:'This destination has not registered native terminal imports.'});await codex.connect();res.json(await terminalForkImports.activate(requireId(req.params.id)));}));
+app.get('/api/terminal-forks/:id',owner,(req,res)=>{const result=terminalForks?.view(requireId(req.params.id));if(!result)return res.status(404).json({error:'Transfer not found.'});res.json(result);});
+app.post('/api/terminal-forks/:id/release',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.release(requireId(req.params.id)));if(codex.ready)void terminalForks.tick().catch(()=>{});}catch(e){res.status(e.status||409).json({error:e.message});}});
+app.post('/api/terminal-forks/:id/cancel',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.cancel(requireId(req.params.id)));}catch(e){res.status(e.status||409).json({error:e.message});}});
+mountLosangelex(app,{dir,codex,db,workRecord,publish:(thread,onPersist)=>notify(thread,'Losangelex needs you','Open the team conversation to review its request.','question',[],null,null,null,null,onPersist),resolve:resolveAttention});
 app.get('/api/computer-use',route(async(_req,res)=>res.json(await computerUseStatus())));
 mountAppUpdates(app,{updates:new AppUpdates({dir,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
 app.get('/api/coordinator/reporting',(req,res)=>res.json(coordinatorReports.settings(req.device.id)));
@@ -442,6 +491,7 @@ app.post('/api/threads',(req,res)=>{
   catch(e){res.status(e.status||500).json({error:e.message});}
 });
 app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.params.id);if(!row)return res.status(404).json({error:'Task request not found.'});res.json(row);});
+app.get('/api/work-record',(req,res)=>res.json({...workRecord.list({before:req.query.before,limit:req.query.limit}),team:workRecord.teamList(req.device.id),voice:voiceController.history(req.device.id).turns.slice(-30).reverse().map(turn=>({id:turn.id,status:turn.state,request:turn.transcript,output:turn.response,createdAt:turn.created_at,evidence:'agent-reported',source:{backend:'voice',turnId:turn.id}}))}));
 app.get('/api/activity',(_req,res)=>res.json({items:activityBoard.snapshot()}));
 app.get('/api/threads',route(async(req,res)=>{
   await codex.connect();
@@ -502,6 +552,10 @@ app.post('/api/threads/:id/continuation/checkpoint',owner,route(async(req,res)=>
  if(!accepted)return res.status(409).json({error:'Checkpoint is stale or conflicts with an already saved observation. Read the current turn before reporting.'});
  res.json({accepted:true,observationOnly:true,admission:'none',observation:workObservations.latest(threadId),recovery:turnRecovery.get(threadId)||null});
 }));
+app.post('/api/threads/:id/timeline/position',route(async(req,res)=>{
+  const id=requireId(req.params.id);await codex.connect();
+  res.json(await history.locateItemSuccessor(id,req.body));
+}));
 app.get('/api/threads/:id',route(async(req,res)=>{
   const raw=await attach(req.params.id,{before:req.query.before||null,recent:req.query.view==='timeline'});
   const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});
@@ -510,8 +564,8 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   if(raw._pocketPage)Object.assign(page,raw._pocketPage);
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
-  conversationNotes.remember(t);
-  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:db.prepare("SELECT id,text,mode,state,result,created_at FROM outgoing WHERE thread_id=? AND state!='cancelled' ORDER BY created_at,rowid").all(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
+  conversationNotes.remember(t);recordWork(()=>workRecord.remember(t));
+  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:pendingOutgoing(db,t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
   if(!req.query.before)response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
   res.json(response);
 }));
@@ -571,6 +625,7 @@ app.post('/api/threads/:id/watch',route(async(req,res)=>{
   res.json({ok:true});
 }));
 app.post('/api/threads/:id/reply',route(async(req,res)=>{
+  terminalForkImports?.inputAllowed(requireId(req.params.id));terminalForks?.inputRole(requireId(req.params.id));
   const threadId=requireId(req.params.id), text=String(req.body.text||'').trim(), id=String(req.body.id||randomUUID()), mode=req.body.mode||'auto';
   if(!text||text.length>32000||id.length>100)return res.status(400).json({error:'Reply must be 1–32000 characters.'});
   if(!['auto','steer','queue'].includes(mode))return res.status(400).json({error:'Choose steer or queue.'});

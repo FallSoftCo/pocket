@@ -8,6 +8,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
@@ -35,44 +37,48 @@ import androidx.compose.ui.window.*
             return activityPopupOffset(anchorBounds,windowSize,popupContentSize,gap,imeBottom,systemTop,systemBottom)
         }
     }}
+    val profile=remember{Triple(Pocket.environmentId,Pocket.base,Pocket.token)}
+    fun ownsProfile()=profile==Triple(Pocket.environmentId,Pocket.base,Pocket.token)
+    fun draftKey(id:String)=Pocket.environmentKey("popupDraft:$id",profile.first)
     var replyTarget by remember{mutableStateOf<String?>(null)}
     val drafts=remember{mutableStateMapOf<String,String>()}
-    var text by remember(replyTarget){mutableStateOf(drafts[replyTarget].orEmpty())}
+    var text by remember(Pocket.environmentId,replyTarget){mutableStateOf(drafts[replyTarget].orEmpty())}
+    fun editText(value:String){text=value;replyTarget?.let{id->drafts[id]=value;saveReplyDraft(draftKey(id),value)}}
+    LaunchedEffect(PocketReplies.revision,replyTarget){replyTarget?.let{target->val sourceKey=draftKey(target);if(PocketReplies.clearedDrafts[sourceKey]?.let{it.text==text&&it.generation==replyDraftGeneration(sourceKey)}==true&&!Pocket.prefs.contains(sourceKey)){drafts.remove(target);text=""}}}
     val scroll=rememberScrollState()
     var controls by remember{mutableStateOf(false)}
-    val profile=remember{Pocket.local to Pocket.token}
-    LaunchedEffect(Pocket.local,Pocket.token){if(profile!=(Pocket.local to Pocket.token))onDismiss()}
+    LaunchedEffect(Pocket.environmentId,Pocket.base,Pocket.token){if(profile!=Triple(Pocket.environmentId,Pocket.base,Pocket.token))onDismiss()}
     val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}.map{it.s("thread_id")}.filter{it.isNotBlank()}
     val ids=remember { (listOfNotNull(sourceThread)+attention+Pocket.tasks.filter{it.status=="active"}.map{it.id}+Pocket.tasks.filter{!it.isChild}.sortedByDescending{taskWorkTime(it)}.map{it.id}).distinct().take(8) }
-    fun chooseReply(id:String){val task=Pocket.tasks.firstOrNull{it.id==id};if(task?.canAcceptDirectInput==false){onDismiss();task.parentThreadId?.let{Pocket.open(it,keyboard=true)}?:Pocket.open(id)}else replyTarget=id}
+    fun chooseReply(id:String){if(!ownsProfile()){onDismiss();return};val task=Pocket.tasks.firstOrNull{it.id==id};if(task?.canAcceptDirectInput==false){onDismiss();task.parentThreadId?.let{Pocket.open(it,keyboard=true)}?:Pocket.open(id)}else {drafts[id]=Pocket.prefs.getString(draftKey(id),"").orEmpty();replyTarget=id}}
     fun replyLabel(id:String)=if(Pocket.tasks.firstOrNull{it.id==id}?.canAcceptDirectInput==false)"Guide parent" else "Reply"
     val inputFocus=remember{FocusRequester()}
     LaunchedEffect(replyTarget){if(replyTarget!=null){scroll.scrollTo(0);inputFocus.requestFocus()}}
-    fun send(){val target=replyTarget;if(target!=null&&text.isNotBlank()&&!Pocket.sending){val submitted=text;Pocket.reply(submitted,threadId=target,mode="steer"){if(drafts[target]==submitted)drafts.remove(target);if(replyTarget==target&&text==submitted)text=""}}}
+    fun send(){if(!ownsProfile()){onDismiss();return};val target=replyTarget;if(target!=null&&text.isNotBlank()&&!Pocket.sending){val submitted=text;val sourceKey=draftKey(target);val submittedGeneration=replyDraftGeneration(sourceKey);Pocket.reply(submitted,threadId=target,mode="steer",draftKey=sourceKey){if(replyDraftGeneration(sourceKey)==submittedGeneration&&Pocket.prefs.getString(sourceKey,"")==submitted)Pocket.prefs.edit().remove(sourceKey).apply();if(replyDraftGeneration(sourceKey)==submittedGeneration&&drafts[target]==submitted)drafts.remove(target);if(replyDraftGeneration(sourceKey)==submittedGeneration&&replyTarget==target&&text==submitted)text=""}}}
     Popup(popupPositionProvider=position,onDismissRequest=onDismiss,properties=PopupProperties(focusable=true)){
         Surface(color=Panel,shape=RoundedCornerShape(18.dp),shadowElevation=12.dp,modifier=Modifier.widthIn(max=(LocalConfiguration.current.screenWidthDp-24).dp).width(360.dp)){
             Column(Modifier.heightIn(max=popupHeight).padding(12.dp)){
-            Column(Modifier.weight(1f,fill=false).verticalScroll(scroll)){
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Box(Modifier.padding(12.dp)){BilingualLabel("Activity")};TextButton(onDismiss){BilingualLabel("Close")}}
-                if(controlsFirst){details();HorizontalDivider(color=Line,modifier=Modifier.padding(vertical=8.dp))}
-                replyTarget?.let{id->ImmersionText("popup-title:"+id,Pocket.tasks.firstOrNull{it.id==id}?.title?:"Reply",rescue=false,color=Mint,fontSize=12.sp,modifier=Modifier.padding(8.dp));OutlinedTextField(text,{text=it;drafts[id]=it},modifier=Modifier.fillMaxWidth().focusRequester(inputFocus).onPreviewKeyEvent{event->if((event.key==Key.Enter||event.key==Key.NumPadEnter)&&!event.isShiftPressed){if(event.type==KeyEventType.KeyDown)send();true}else false},placeholder={BilingualLabel("Message Codex…",centered=false)},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}),maxLines=4)}
-                if(replyTarget!=null&&Pocket.error.isNotBlank())WorkflowText(Pocket.error,color=Coral,modifier=Modifier.padding(8.dp))
+            Column(Modifier.weight(1f,fill=false).verticalScroll(scroll)){
+                if(controlsFirst&&replyTarget==null){details();HorizontalDivider(color=Line,modifier=Modifier.padding(vertical=8.dp))}
+                replyTarget?.let{id->ImmersionText("popup-title:"+id,Pocket.tasks.firstOrNull{it.id==id}?.title?:"Reply",rescue=false,color=Mint,fontSize=12.sp,modifier=Modifier.padding(8.dp));OutlinedTextField(text,{editText(it)},modifier=Modifier.fillMaxWidth().focusRequester(inputFocus).onPreviewKeyEvent{event->if((event.key==Key.Enter||event.key==Key.NumPadEnter)&&!event.isShiftPressed){if(event.type==KeyEventType.KeyDown)send();true}else false},placeholder={BilingualLabel("Message Codex…",centered=false)},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}),maxLines=4)}
+                replyTarget?.let{target->val saved=PocketReplies.entries(target).filter{it.state !in listOf("accepted","cancelled")};saved.forEach{intent->ClientReplyRecovery(intent){editText(it)}};if(saved.isEmpty())Pocket.replyFailure(target)?.let{failure->WorkflowText(failure.message,color=Coral,modifier=Modifier.padding(8.dp))}}
                 if(passage!=null&&sourceThread!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
-                    ImmersionText("popup-title:"+sourceThread,Pocket.tasks.firstOrNull{it.id==sourceThread}?.title?:"Conversation",rescue=false,modifier=Modifier.weight(1f).heightIn(min=56.dp).clickable{onDismiss();Pocket.open(sourceThread)}.padding(12.dp),maxLines=2,overflow=TextOverflow.Ellipsis,color=Paper)
+                    ImmersionText("popup-title:"+sourceThread,Pocket.tasks.firstOrNull{it.id==sourceThread}?.title?:"Conversation",rescue=false,modifier=Modifier.weight(1f).heightIn(min=56.dp).clickable{if(ownsProfile()){onDismiss();Pocket.open(sourceThread)}}.padding(12.dp),maxLines=2,overflow=TextOverflow.Ellipsis,color=Paper)
                     TextButton({chooseReply(sourceThread)}){BilingualLabel(replyLabel(sourceThread))}
                 }
                 passage?.let{Text(it,color=Paper,modifier=Modifier.padding(12.dp))}
                 ids.filterNot{passage!=null&&it==sourceThread}.forEach{id->val task=Pocket.tasks.firstOrNull{it.id==id};val alert=Pocket.attention.firstOrNull{it.s("thread_id")==id}
                     Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
-                        Column(Modifier.weight(1f).heightIn(min=56.dp).clickable{onDismiss();Pocket.open(id)}.padding(horizontal=12.dp,vertical=8.dp)){
+                        Column(Modifier.weight(1f).heightIn(min=56.dp).clickable{if(ownsProfile()){onDismiss();Pocket.open(id)}}.padding(horizontal=12.dp,vertical=8.dp)){
                             ImmersionText("popup-title:"+id,task?.title?:alert?.s("title")?:"Conversation",rescue=false,maxLines=1,overflow=TextOverflow.Ellipsis,color=if(id in attention)Coral else Paper)
                             ImmersionText("popup-preview:"+id,task?.preview?.takeIf{it.isNotBlank()}?:alert?.s("body").orEmpty(),rescue=false,maxLines=2,overflow=TextOverflow.Ellipsis,color=Muted,fontSize=12.sp)
                         }
-                        TextButton({chooseReply(id)}){BilingualLabel(replyLabel(id))}
+                        TextButton({chooseReply(id)},modifier=Modifier.semantics{contentDescription=replyLabel(id)+" to "+(task?.title?:"Conversation")}){BilingualLabel(replyLabel(id))}
                     }
                 }
 
-                if(!controlsFirst){
+                if(!controlsFirst||replyTarget!=null){
                     TextButton({controls=!controls},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(controls)"Hide controls" else "Controls & usage")}
                     if(controls)details()
                 }

@@ -1,0 +1,58 @@
+{
+  "state": "installed-owner-phone",
+  "runtimeSource": "f27a8d5",
+  "fixtureSource": "5f8fa48",
+  "nativeTestSource": "3029130",
+  "candidateVersionCode": 91,
+  "installedPhoneVersionCode": 91,
+  "control": {
+    "shortFilteredContentPassedSeconds": 15.199,
+    "multipleLongFinalAnswersFailedSeconds": 16.635,
+    "failure": "Pending navigation scrolled to a filtered-list index"
+  },
+  "fix": "Capture request row ID, clear Important padding and use existing composition-committed row navigation. No answer/skip submission.",
+  "nativeChecks": [
+    "Actual Important tap",
+    "Actual conversation controls and pending action taps",
+    "Visible question and Skip after navigation",
+    "Saved draft retained",
+    "Zero replies"
+  ],
+  "physicalInteractionVerified": false,
+  "publicationGap": {
+    "remoteMainVerified": "e2535b16912cb729c661500f61854a9d8a01080c",
+    "developmentBranchAhead": true,
+    "heldIntegrationReviewRequired": true
+  },
+  "nativePassedSeconds": 9.846,
+  "androidUnitTests": {
+    "debug": 295,
+    "release": 295
+  },
+  "bothLintsAndSignedBuildsPassed": true,
+  "productionArtifacts": [
+    {
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "path": "nextcomp-91-b28f55b44c93.apk",
+      "sha256": "4c654ca70950734ae1a9c412589a59b64cea6b785f56c1704bf6e5e8e71df530",
+      "size": 52021931
+    },
+    {
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "path": "nextcomp-91-22ecabe28e15.apk",
+      "sha256": "0251a187d4b3445e07bbb99851e6a6ce635b0a28ab7f19e7a0106a59121d25c5",
+      "size": 61752308
+    }
+  ],
+  "nativeReceipts": {
+    "failed": "pending-question-navigation-control.txt",
+    "passed": "pending-question-navigation-native.txt"
+  },
+  "delivery": {
+    "privateUpdaterBothSignersVerified": true,
+    "installedBaseApkDigestVerified": true,
+    "protectedPreferenceHashesUnchanged": 13,
+    "changedProtectedPreferences": 0,
+    "physicalPendingQuestionInteractionVerified": false
+  }
+}

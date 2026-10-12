@@ -34,11 +34,12 @@ test('same-thread steering, idle continuation, and exact pending request respons
  const modelNotice=await api('/api/notify',{thread_id:'thread-live',title:'Wrong context',message:'All tests pass.',spoken_context:'Improve spoken notifications',spoken_summary:'The fix is ready.'});
  assert.equal(modelNotice.data.notification.spoken_text,'Improve spoken notifications. The fix is ready.');
  const first=randomUUID();await api('/api/threads/thread-live/reply',{id:first,text:'Steer the same live task'});
- await waitFor(async()=>(await api('/api/threads/thread-live')).data.outgoing.find(x=>x.id===first&&x.state==='accepted'));
+ await waitFor(async()=>(await api(`/api/replies/${first}`)).data.state==='accepted');
+ assert.ok(!(await api('/api/threads/thread-live')).data.outgoing.some(x=>x.id===first),'accepted receipt must not bulk up routine conversation reads');
  assert.equal((await api(`/api/replies/${first}`)).data.state,'accepted');
  const steer=calls.find(x=>x.method==='turn/steer');assert.equal(steer.params.threadId,'thread-live');assert.equal(steer.params.expectedTurnId,'turn-original');
  active=false;const second=randomUUID();await api('/api/threads/thread-live/reply',{id:second,text:'Continue the existing idle task'});
- await waitFor(async()=>(await api('/api/threads/thread-live')).data.outgoing.find(x=>x.id===second&&x.state==='accepted'));
+ await waitFor(async()=>(await api(`/api/replies/${second}`)).data.state==='accepted');
  assert.equal(calls.find(x=>x.method==='turn/start').params.threadId,'thread-live');
  peer.send(JSON.stringify({id:901,method:'item/commandExecution/requestApproval',params:{threadId:'thread-live',turnId:'turn-next',itemId:'command-1',command:'echo test',availableDecisions:['accept','decline']}}));
  await waitFor(async()=>(await api('/api/threads/thread-live')).data.pending.length===1);
