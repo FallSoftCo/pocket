@@ -38,7 +38,7 @@ The existing signature/source/native receipt gate remains intact as provenance e
 
 ## Current audit, 2026-10-12
 
-The inspected suite has 169 files across backend, Android unit and native directories. This is inventory, not quality. The current release policy requires 30 native cases, many component checks rather than complete journeys. Signed r04 passed automation but motion review found layout defects and publication remains held. A permission dialog also invalidated earlier native failures. These are concrete reasons to improve journey coverage, setup and visual acceptance rather than accumulate more units.
+The inspected suite has 169 files across backend, Android unit and native directories. This is inventory, not quality. The current release policy requires 30 native cases, many component checks rather than complete journeys. The historical signed r04 candidate passed automation but motion review found layout defects, so it was rejected. The corrected alpha87 r05 candidate subsequently qualified and was published; physical installation remains unverified (see qualification/alpha87-delivery-20261012.json). A permission dialog also invalidated earlier native failures. These are concrete reasons to improve journey coverage, setup and visual acceptance rather than accumulate more units.
 
 A real app-to-backend send/echo/restart journey now passes with provider RPC substituted; see [its boundary-specific evidence](qualification/android-real-backend-20261012.json). Grouped runner consolidation and broader app-to-backend journey coverage remain unfinished. No existing tests or safeguards have been removed.
 
@@ -50,3 +50,11 @@ https://developer.android.com/training/testing/fundamentals/what-to-test
 https://developer.android.com/training/testing/ui-tests
 
 The real-backend journey now covers thumb pagination and retained passage geometry across cold restart; see [history evidence](qualification/android-real-history-20261012.json). This is retention/navigation evidence, not a smoothness or human-reading assessment.
+
+## Review contract for future changes
+
+Each change must identify its user-visible risk and select the cheapest test that crosses the failing boundary. A unit-only pass cannot close a transport, persistence, navigation or lifecycle defect. Extend the existing real-backend journey when the risk spans those boundaries; retain small units for difficult invariants.
+
+Release reviews should report which critical journeys ran, their real and substituted boundaries, failures discovered, and remaining unqualified behavior. Track escaped defects by missing boundary rather than rewarding added case counts. For scrolling and language transitions, require recorded visual review and frame/latency measurements when making performance claims; assertions about geometry alone are insufficient.
+
+Do not replace a failing user interaction with an internal method call to obtain a pass. Accessibility setup used to arrange a reading checkpoint must be disclosed separately from thumb navigation, as in the current reading-metadata candidate receipt. Consolidate redundant tests only after mapping the outcomes they protect and demonstrating replacement coverage.
