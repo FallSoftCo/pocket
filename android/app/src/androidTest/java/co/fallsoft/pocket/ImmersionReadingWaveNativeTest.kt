@@ -53,7 +53,7 @@ class ImmersionReadingWaveNativeTest {
                 PocketImmersion.setMotionEnabled(true)
                 PocketImmersion.setSupportEnabled(true)
                 activity.setContent {
-                    CompositionLocalProvider(LocalImmersionMotionState provides true,
+                    CompositionLocalProvider(LocalImmersionMotionState provides rememberImmersionMotionEnvironment(),
                         LocalImmersionTransitionAnimated provides animation.value,LocalImmersionRendererObserver provides observer) {
                         MaterialTheme{ImmersionReadingWaveHost {
                             clock=LocalImmersionReadingWave.current
@@ -85,6 +85,26 @@ class ImmersionReadingWaveNativeTest {
             val i=InstrumentationRegistry.getInstrumentation()
             val device=UiDevice.getInstance(i)
             i.runOnMainSync{animation.value=true}
+            val nativeControl=device.findObjects(androidx.test.uiautomator.By.pkg(i.targetContext.packageName).textContains("per i"))
+                .sortedBy{it.visibleBounds.top}.first()
+            val down=android.os.SystemClock.uptimeMillis()
+            fun inject(action:Int) {
+                val event=android.view.MotionEvent.obtain(down,android.os.SystemClock.uptimeMillis(),action,
+                    nativeControl.visibleBounds.exactCenterX(),nativeControl.visibleBounds.exactCenterY(),0)
+                event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+                try{assertTrue(i.uiAutomation.injectInputEvent(event,true))}finally{event.recycle()}
+            }
+            inject(android.view.MotionEvent.ACTION_DOWN)
+            val pressed=clock!!.elapsedMs
+            compose.mainClock.advanceTimeBy(96)
+            i.runOnMainSync{assertTrue("An ordinary native tap must keep the shared clock advancing",clock!!.elapsedMs!=pressed)}
+            inject(android.view.MotionEvent.ACTION_UP)
+            val released=clock!!.elapsedMs
+            compose.mainClock.advanceTimeBy(96)
+            i.runOnMainSync{
+                assertTrue("Tap release must not add a post-tap quiet interval",clock!!.elapsedMs!=released)
+                assertEquals(1,taps)
+            }
             val controlForms=mutableSetOf<String>()
             val bodyForms=mutableSetOf<String>()
             val traces=org.json.JSONArray()
@@ -114,7 +134,7 @@ class ImmersionReadingWaveNativeTest {
             assertEquals(originalControl,compose.onNodeWithTag("wave-control").fetchSemanticsNode().boundsInRoot)
             assertEquals(originalBody,compose.onNodeWithTag("wave-body").fetchSemanticsNode().boundsInRoot)
             compose.onNodeWithTag("wave-control").performClick()
-            compose.runOnIdle{assertEquals(1,taps)}
+            compose.runOnIdle{assertEquals(2,taps)}
             val owner=Any()
             i.runOnMainSync{animation.value=true;clock!!.selecting(owner,true)}
             val paused=clock!!.elapsedMs

@@ -11,16 +11,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
-import kotlinx.coroutines.delay
 
-/** Text motion yields to direct interaction; ordinary action hit regions never change. */
+/** Touch diagnostics only: ordinary taps must not stop the reading clock. */
 internal object ImmersionInteraction {
     var touching by mutableStateOf(false); private set
-    var quietUntil by mutableLongStateOf(0); private set
     fun touch(action:Int){
         when(action){
             MotionEvent.ACTION_DOWN,MotionEvent.ACTION_MOVE -> touching=true
-            MotionEvent.ACTION_UP,MotionEvent.ACTION_CANCEL -> {touching=false;quietUntil=SystemClock.elapsedRealtime()+1600}
+            MotionEvent.ACTION_UP,MotionEvent.ACTION_CANCEL -> touching=false
         }
     }
 }
@@ -38,12 +36,8 @@ internal val LocalImmersionTransitionAnimated=staticCompositionLocalOf<Boolean?>
     val accessibility=remember(context){context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager}
     var exploration by remember(accessibility){mutableStateOf(accessibility.isTouchExplorationEnabled)}
     DisposableEffect(accessibility){val listener=AccessibilityManager.TouchExplorationStateChangeListener{exploration=it};accessibility.addTouchExplorationStateChangeListener(listener);onDispose{accessibility.removeTouchExplorationStateChangeListener(listener)}}
-    val touching=ImmersionInteraction.touching
-    val until=ImmersionInteraction.quietUntil
-    var quiet by remember{mutableStateOf(false)}
-    LaunchedEffect(touching,until){quiet=false;if(!touching){delay((until-SystemClock.elapsedRealtime()).coerceAtLeast(0));quiet=true}}
     // Editable input remains source text. An open IME must not freeze the rest of the screen.
-    return PocketImmersion.motionEnabled&&resumed&&!exploration&&!touching&&quiet
+    return PocketImmersion.motionEnabled&&resumed&&!exploration
 }
 
 internal data class ImmersionControlPhase(val original:Boolean,val remainingMs:Long)

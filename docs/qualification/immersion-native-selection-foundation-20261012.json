@@ -30,7 +30,7 @@
   "staticFoundationSourceCommit": "c095f14ac3b889bc00d891e2f1d538d3d18fa162",
   "nativeRuntime": {
     "implementation": "android/app/src/main/java/co/fallsoft/pocket/NativeImmersionParagraphView.kt",
-    "sourceSha256": "93ccd4c0d70348f6ebea60e1f26f865248638a7afa9c449df2833dc34a4fd5d3",
+    "sourceSha256": "c82a48aa50656b296474e622e1d5e12ad5bd05910e0c39979ea2f15774de8ebb",
     "sourceStatus": "single-paragraph candidate; not wired into production rich-content rendering",
     "buildAndLint": "passed",
     "finalNativeRunSeconds": 21.116,
@@ -68,6 +68,40 @@
       "remaining": "conspicuous reserved width spacing; rich-content integration and perceptual/full-app qualification",
       "unusedContactTiles": 1,
       "galleryCard": "nextcomp-native-selection-foundation-r01"
+    },
+    "tapContinuity": {
+      "nativeRunSeconds": 24.211,
+      "pointerDownHold": false,
+      "postTapQuietHold": false,
+      "ink": "Native view painted output differs when supplied clock advances during pointer-down; semantic offsets remain stable until release.",
+      "action": "Exact pointer-down help listener fires once even after ink advances; trailing reserved blank is not actionable.",
+      "selection": "Both forms retain actual native long-press, Select all and exact Copy; incoming content is deferred until Copy releases selection.",
+      "styleScope": "First word bold/color; last word mono/italic; contextual link. Full style/whitespace, RTL, accessibility and app adapter are not yet qualified.",
+      "scope": "owned emulator; candidate, not integrated app or physical phone",
+      "integratedChecks": {
+        "nativeGroupSeconds": 29.339,
+        "nativeCases": 5,
+        "status": "passed",
+        "actualDefaultEnvironmentTap": "Real pointer-down/up into a control; shared clock advances while pressed and immediately after release.",
+        "movingAction": "Actual short press crosses a language handoff and dispatches the exact down action.",
+        "metadata": "Fresh paragraph callbacks resolved before capture; outgoing word and reserved-blank cases preserved.",
+        "failedIntermediateGroup": "Five cases, one stale-callback failure;16.917 seconds. The repair preserves the assertion rather than weakening it.",
+        "limits": "Does not qualify integrated long-press help/selection/blackout journey or phone delivery."
+      },
+      "styledSeparatorFollowup": {
+        "nativeRunSeconds": 24.418,
+        "status": "passed",
+        "scope": "Code font/background also preserved inside whitespace separators; both forms retain selection/copy, equal slot positions and moving-tap behavior.",
+        "model": "Separators retain native rich spans; unsupported different separator styles are rejected rather than silently stripped.",
+        "selectionInk": "Native selection paints its underlying semantic copy snapshot rather than retaining a half-transitioned glyph blend.",
+        "remaining": "Full rich-content adapter, scrolling, RTL, cross-block selection and accessibility."
+      }
+    },
+    "finalCombinedChecks": {
+      "nativeCases": 2,
+      "seconds": 27.513,
+      "status": "passed",
+      "scope": "Table journey plus paragraph selection/tap/cycle before styled separator extension."
     }
   }
 }

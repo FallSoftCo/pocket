@@ -193,10 +193,11 @@ class SharedInlineLayoutNativeTest {
   check(UiDevice.getInstance(i).executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
   var clicks=0
+  val clickedForms=mutableListOf<String>()
   fun form(phrase:String)=buildAnnotatedString{
    append("Please ");val at=length;append(phrase)
    addStringAnnotation("immersion-reserve","7:13",at,length)
-   addLink(LinkAnnotation.Clickable("reveal",linkInteractionListener={clicks++}),at,length)
+   addLink(LinkAnnotation.Clickable("reveal",linkInteractionListener={clicks++;clickedForms+=phrase}),at,length)
    append(" existing sessions.")
   }
   val from=form("search");val to=form("cerca")
@@ -218,14 +219,32 @@ class SharedInlineLayoutNativeTest {
     compose.waitForIdle()
    }
    tapVisibleLink("search")
-   i.runOnMainSync{assertEquals(1,clicks);progress.floatValue=1f}
+   i.runOnMainSync{assertEquals(1,clicks)}
+   // A language handoff during a short native press must retain its down action.
+   val device=UiDevice.getInstance(i)
+   val node=device.wait(androidx.test.uiautomator.Until.findObject(
+    androidx.test.uiautomator.By.pkg(c.packageName).text("Please search existing sessions.")),5000)!!
+   val box=parentLayout!!.placeholderRects.single()!!
+   val x=node.visibleBounds.left+box.center.x
+   val y=node.visibleBounds.top+box.center.y
+   val down=android.os.SystemClock.uptimeMillis()
+   fun inject(action:Int){
+    val event=android.view.MotionEvent.obtain(down,android.os.SystemClock.uptimeMillis(),action,x,y,0)
+    event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+    try{assertTrue(i.uiAutomation.injectInputEvent(event,true))}finally{event.recycle()}
+   }
+   inject(android.view.MotionEvent.ACTION_DOWN)
+   i.runOnMainSync{progress.floatValue=1f}
    compose.waitForIdle()
+   inject(android.view.MotionEvent.ACTION_UP)
+   compose.waitForIdle()
+   i.runOnMainSync{assertEquals(2,clicks);assertEquals("search",clickedForms.last())}
    tapVisibleLink("cerca")
-   i.runOnMainSync{assertEquals(2,clicks)}
+   i.runOnMainSync{assertEquals(3,clicks);assertEquals("cerca",clickedForms.last())}
    val actions=compose.onNodeWithText("Please cerca existing sessions.",useUnmergedTree=true)
     .fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsActions.CustomActions]
    assertEquals("cerca",actions.single().label)
-   i.runOnMainSync{assertTrue(actions.single().action());assertEquals(3,clicks)}
+   i.runOnMainSync{assertTrue(actions.single().action());assertEquals(4,clicks)}
   }
  }
 

@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.*
             maxLines=maxLines,overflow=overflow,fillWidth=fillWidth,reserve=reserve,onVisibleRanges=onVisibleRanges,textAlign=textAlign,trackWholeTextVisibility=trackWholeTextVisibility)
         return
     }
+    val latestRuns by rememberUpdatedState(runs)
     val measurer=rememberTextMeasurer()
     val density=LocalDensity.current
     val uriHandler=LocalUriHandler.current
@@ -209,13 +210,9 @@ import androidx.compose.ui.unit.*
                             return null
                         }
                         val hit by rememberUpdatedState<(Offset)->LinkAnnotation?>(::renderedLink)
-                        val dispatch by rememberUpdatedState<(LinkAnnotation)->Unit>{initial->
-                            val current=if(if(readingWave==null)immersionInkPhase(progress()).incoming else selectedSlots[key]==true)1 else 0
-                            val link=if(initial is LinkAnnotation.Clickable)
-                                forms[current].getLinkAnnotations(0,forms[current].length)
-                                    .map{it.item}.filterIsInstance<LinkAnnotation.Clickable>()
-                                    .firstOrNull{it.tag==initial.tag}?:initial
-                                else initial
+                        val dispatch by rememberUpdatedState<(LinkAnnotation)->Unit>{link->
+                            // The action is captured at pointer-down. A moving wave
+                            // must not replace its listener before this tap releases.
                             val listener=link.linkInteractionListener
                             if(listener!=null)listener.onClick(link)
                             else if(link is LinkAnnotation.Url)uriHandler.openUri(link.url)
@@ -224,15 +221,24 @@ import androidx.compose.ui.unit.*
                         val interaction=if(!hasLinks)Modifier else Modifier.pointerInput(run.id,part){
                             awaitEachGesture{
                                 val down=awaitFirstDown()
-                                val intended=hit(down.position)?:return@awaitEachGesture
+                                val touched=hit(down.position)?:return@awaitEachGesture
+                                val selected=if(if(readingWave==null)immersionInkPhase(progress()).incoming else selectedSlots[key]==true)1 else 0
+                                // Native layout caching can retain old link metadata.
+                                // Resolve against the current parent content exactly
+                                // once, before retaining this press's action.
+                                val intended=if(touched is LinkAnnotation.Clickable)
+                                    latestRuns.getOrNull(index)?.forms?.getOrNull(selected)
+                                        ?.getLinkAnnotations(0,latestRuns[index].forms[selected].length)
+                                        ?.map{it.item}?.filterIsInstance<LinkAnnotation.Clickable>()
+                                        ?.firstOrNull{it.tag==touched.tag}?:touched
+                                    else touched
                                 down.consume()
                                 // A hold belongs to native selection, never language help.
                                 val up=withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis){
                                     waitForUpOrCancellation()
                                 }?:return@awaitEachGesture
-                                val link=hit(up.position)?:intended
                                 up.consume()
-                                dispatch(link)
+                                dispatch(intended)
                             }
                         }
                         // Parent paragraph owns selection and clipboard order.
