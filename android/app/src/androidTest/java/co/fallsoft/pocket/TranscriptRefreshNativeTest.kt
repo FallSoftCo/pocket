@@ -397,6 +397,12 @@ class TranscriptRefreshNativeTest {
    assertTrue("Live response missing from screen",device.wait(Until.hasObject(By.text("Fresh response 4")),4000))
    main{Pocket.refresh()};Thread.sleep(1600)
    assertEquals("Already delivered live head polled history",resetReads,qa("state").getJSONArray("reads").length())
+   qa("head-only-update");qa("fail-read-permanent");main{Pocket.refresh()}
+   await{Pocket.error.contains("Synthetic history permission rejected")&&!PocketTranscript.updating}
+   val deniedReads=qa("state").getJSONArray("reads").length()
+   repeat(3){main{Pocket.refresh()};Thread.sleep(600)};Thread.sleep(1600)
+   assertEquals("Permanent rejection was repeatedly retried by head probes",deniedReads,qa("state").getJSONArray("reads").length())
+   assertTrue("Permission error erased last readable response",device.hasObject(By.text("Fresh response 4")))
    assertEquals("Freshness recovery submitted work",0,qa("state").getJSONArray("replies").length())
    assertEquals("Freshness recovery erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   }finally{qa("release-catalog")}

@@ -4,7 +4,7 @@ internal data class TranscriptHead(val epoch:String,val version:Long?)
 /** Ignore an older status response after a concurrent stream changed runtime. */
 internal fun transcriptHeadAdvanced(current:TranscriptHead?,requestBaseline:TranscriptHead?,incoming:TranscriptHead):Boolean {
     if(current==null)return true
-    if(current.epoch!=incoming.epoch)return current==requestBaseline
+    if(current.epoch!=incoming.epoch)return current.epoch==requestBaseline?.epoch
     val version=incoming.version?:return false
     return current.version==null||version>current.version
 }

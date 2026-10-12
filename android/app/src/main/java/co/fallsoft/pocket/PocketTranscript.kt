@@ -82,6 +82,8 @@ object PocketTranscript {
         recent.get(scope,id,now)?.takeIf{it.position!=position}?.let{val snapshot=it.copy(position=position);recent.put(scope,id,snapshot,now);persist(scope,id,snapshot)}
     }
     private var observedHead:TranscriptHead?=null
+    private data class PendingHead(val head:TranscriptHead,val baseline:TranscriptHead?)
+    private var pendingHead:PendingHead?=null
     internal fun freshnessBaseline()=observedHead
     private fun parseHead(value:JSONObject?,id:String):TranscriptHead? {
         if(value==null||value.s("threadId")!=id)return null
@@ -94,9 +96,12 @@ object PocketTranscript {
         return TranscriptHead(epoch,version)
     }
     internal fun checkFreshness(id:String,value:JSONObject?,baseline:TranscriptHead?){
-        if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey())return
+        if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey()||!automaticRetryAllowed)return
         val head=parseHead(value,id)?:return
-        if(transcriptHeadAdvanced(observedHead,baseline,head))Pocket.scheduleRefresh()
+        if(transcriptHeadAdvanced(observedHead,baseline,head)){
+            if(loading){pendingHead=PendingHead(head,baseline);refreshPending=true}
+            else Pocket.scheduleRefresh()
+        }
     }
     private var owner:String?=null
     private var historyLoaded=false
@@ -108,17 +113,17 @@ object PocketTranscript {
     internal fun pauseReading(){
         rememberRecent(persist=true);generation++
         positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false
-        loading=false;refreshPending=false;loadingEarlier=false;missedUpdates=false;buffered.clear()
+        loading=false;refreshPending=false;loadingEarlier=false;missedUpdates=false;pendingHead=null;buffered.clear()
     }
     fun reset(id:String){
         positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false
-        generation++;owner=id;ownerScope=scopeKey();observedHead=null;automaticRetryAllowed=true
+        generation++;owner=id;ownerScope=scopeKey();observedHead=null;pendingHead=null;automaticRetryAllowed=true
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
         earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;observedHead=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;observedHead=null;pendingHead=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
     /** Called only by the resumed, unfiltered viewport after settling at latest. */
     internal fun presentedLatest(){
         val id=Pocket.selected?:return
@@ -250,6 +255,9 @@ object PocketTranscript {
             if(current()) {
                 if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
                 loading=false;loadingEarlier=false
+                pendingHead?.let{pending->if(automaticRetryAllowed&&transcriptHeadAdvanced(observedHead,pending.baseline,pending.head))missedUpdates=true}
+                pendingHead=null
+                if(succeeded&&!missedUpdates)refreshPending=false
                 if(!succeeded&&!automaticRetryAllowed)refreshPending=false
                 if(!succeeded&&automaticRetryAllowed&&!older&&bridgeCursor==null){
                     missedUpdates=false;refreshPending=true

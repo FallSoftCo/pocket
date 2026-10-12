@@ -67,6 +67,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/clipped-preview'){clippedPreview=true;body={ok:true};}
  else if(path==='/_qa/hold-catalog'){holdCatalog=true;body={ok:true};}
  else if(path==='/_qa/release-catalog'){holdCatalog=false;body={ok:true};}
+ else if(path==='/_qa/head-only-update'){headCounter=(headCounter??revision)+1;revision++;body={revision};}
  else if(path==='/_qa/head-live-update'){revision++;headCounter=81;for(const socket of sockets)send(socket,{type:'timeline',threadId:'same-thread',turnId:'synthetic-turn',version:81,historyHead:{threadId:'same-thread',epoch:headEpoch,version:81},row:{id:'same-message',turnId:'synthetic-turn',kind:'message',text:'Fresh response '+revision,version:81}});body={revision};}
  else if(path==='/_qa/reset-history-head'){headEpoch='synthetic-runtime-restarted';headCounter=1;revision++;body={revision};}
  else if(path==='/_qa/notification-overflow'){notificationOverflow=true;notificationOnly=true;clippedPreview=true;revision++;body={revision};}
