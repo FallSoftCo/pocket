@@ -14,6 +14,13 @@
   },
   "requests": [
     {
+      "id": "quiet-authenticated-reconnect-state-20261011",
+      "request": "Live connection state must reflect authenticated reconnect even when no application event arrives. Genuine prolonged outages remain visible; reconnect must restore current selected history and preserve drafts without starting or resending work.",
+      "status": "implemented-native-qualification-running",
+      "source": "a6a4a88",
+      "evidence": "Native alpha71 control reproduced fresh history loaded while old eight-second timer falsely marked authenticated socket disconnected; failure25.206s. New control includes real refused socket outage and subsequent quiet recovery."
+    },
+    {
       "id": "missed-notification-transcript-freshness-20261011",
       "request": "Open conversation must catch up when notifications are newer even if catalog preview and status are unchanged; visible loading, retained history/drafts and no worker polling.",
       "status": "delivered-alpha71-code89",

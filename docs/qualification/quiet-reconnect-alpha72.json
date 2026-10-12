@@ -1,0 +1,23 @@
+{
+  "state": "qualification-running-not-installed",
+  "runtimeSource": "a6a4a88",
+  "nativeTestSource": "a471ef4",
+  "candidateVersionCode": 90,
+  "installedPhoneVersionCode": 89,
+  "control": {
+    "source": "b552844",
+    "failedSeconds": 25.206,
+    "failure": "Authenticated live socket falsely reported disconnected",
+    "newHistoryAlreadyLoaded": true
+  },
+  "fix": "Successful authenticated101 clears pending disconnect timer/warning and marks transport connected. Codex health is still separate; no healthy-handshake retry counter reset. Stale socket callbacks remain rejected.",
+  "nativeChecks": [
+    "quiet handshake with no application event",
+    "missed content recovered on reconnect",
+    "real refused socket warning after grace period",
+    "subsequent quiet recovery clears warning and reads current history",
+    "draft preserved",
+    "zero replies"
+  ],
+  "physicalInteractionVerified": false
+}
