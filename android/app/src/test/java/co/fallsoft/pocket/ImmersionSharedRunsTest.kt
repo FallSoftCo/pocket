@@ -27,4 +27,21 @@ class ImmersionSharedRunsTest {
   assertEquals(emptyList<ImmersionSharedRun>(),immersionSharedRuns(emptyList()))
   assertEquals("Already equal",immersionSharedRuns(listOf(AnnotatedString("Already equal"),AnnotatedString("Already equal")))!!.single().forms.first().text)
  }
+ @Test fun chunkingPreservesWholePhraseAndItsInlineAnnotations(){
+  val form=buildAnnotatedString{
+   append("one two three")
+   addStringAnnotation("meaning","context",0,length)
+   addLink(LinkAnnotation.Url("https://example.invalid/owned"),0,length)
+  }
+  val chunks=immersionAnnotatedChunks(form,7){it.length}
+  assertEquals(form.text,chunks.joinToString(""){it.text})
+  assertEquals(listOf("one ","two ","three"),chunks.map{it.text})
+  assertTrue(chunks.all{it.getLinkAnnotations(0,it.length).size==1})
+  assertTrue(chunks.all{it.getStringAnnotations("meaning",0,it.length).single().item=="context"})
+ }
+ @Test fun chunkingDoesNotSplitAnUnbreakableTokenOrInventWordAlignment(){
+  val chunks=immersionAnnotatedChunks(AnnotatedString("longunbreakabletoken tail"),5){it.length}
+  assertEquals(listOf("longunbreakabletoken ","tail"),chunks.map{it.text})
+ }
+
 }

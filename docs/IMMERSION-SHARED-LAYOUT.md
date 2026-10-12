@@ -35,3 +35,9 @@ Before enabling the renderer:
 This work changes no production update channel. Alpha86 remains the qualified
 transcript release. The draft native regression is intentionally not presented
 as passing.
+
+Candidate progress: SharedInlineImmersionText now uses native inline placeholders
+for shared fragment geometry. Three native checks pass, including 34sp text and
+clickable replacement links. Six structural/chunking tests pass. It remains
+disabled: global line cascade, accessibility/selection, oversize unbreakable
+words, production cue tracking and frame/physical review are not qualified.

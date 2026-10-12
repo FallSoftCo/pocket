@@ -1,0 +1,31 @@
+{
+  "state": "candidate-not-enabled-not-published",
+  "native": {
+    "cases": 3,
+    "result": "pass",
+    "seconds": 3.911,
+    "logSha256": "af29ae778aae0e84158982ad92549803490a1f1ccb7718ac651383f686e837de",
+    "checks": [
+      "unchanged word position at 17sp",
+      "unchanged word position at 34sp",
+      "native inline link click before and after replacement"
+    ]
+  },
+  "unit": {
+    "cases": 6,
+    "result": "pass"
+  },
+  "scope": "Isolated native emulator5620 nextcomp_env_qa, synthetic paragraphs, no provider or real sessions",
+  "remaining": [
+    "Global reading-direction line cascade, not simultaneous independent phrase wipes",
+    "Screen reader and selection behavior for inline placeholder text",
+    "Unbreakable words wider than a line must not clip",
+    "Production visibility/cue tracking and full styled content integration",
+    "Actual frames and physical handset qualification"
+  ],
+  "notes": [
+    "Large-text check uses 34sp/52sp, not a complete OS accessibility font-scale audit",
+    "Parent native offsets include empty reserved-slot markers; tests use actual native offsets for unchanged text",
+    "Candidate is not wired into ReservedImmersionText"
+  ]
+}
