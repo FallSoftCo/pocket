@@ -119,7 +119,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val latestAnswer=rows.lastOrNull{it.s("kind")=="message"}
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
-    val shownRows=filteredRows
+    var expandedRunIds by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(emptySet<String>())}
+    val runProjection=remember(filteredRows,expandedRunIds){commandRunProjection(filteredRows,expandedRunIds)}
+    val shownRows=runProjection.rows
     val pendingFilter=filterRequest
     SideEffect{
         if(pendingFilter!=null&&pendingFilter.environment==Pocket.environmentId&&pendingFilter.thread==Pocket.selected&&pendingFilter.important==important){
@@ -137,7 +139,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val visible=list.layoutInfo.visibleItemsInfo.firstOrNull{it.index==list.firstVisibleItemIndex}
             val old=visible?.key as? String
             if(old!=null&&shownRows.getOrNull(visible.index)?.s("id")!=old&&shownRows.none{it.s("id")==old}){
-                val resolved=migrateTranscriptAnchors(shownRows,setOf(old))[old]
+                val resolved=migrateTranscriptAnchors(rows,setOf(old))[old]?.let(runProjection::displayId)?:runProjection.displayId(old)
                 val index=shownRows.indexOfFirst{it.s("id")==resolved}
                 if(index>=0)list.requestScrollToItem(index,list.firstVisibleItemScrollOffset)
             }
@@ -182,7 +184,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size,restoreRevision){
         if(!restoredPosition&&readPosition!=null&&rows.isNotEmpty()){
             val resolved=resolveTranscriptReadPosition(rows,readPosition)?:readPosition
-            val index=transcriptAnchorIndex(rows.map{it.s("id")},resolved)
+            val index=transcriptAnchorIndex(shownIds,resolved.copy(rowId=runProjection.displayId(resolved.rowId)))
             if(PocketTranscript.mayRestorePosition(restoreRevision)&&!dragged){
                 if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
             }
@@ -311,7 +313,17 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
                     if(row.optBoolean("retainedExcerpt"))BilingualLabel("Retained passage · source outside loaded history",color=Muted,fontSize=12.sp)
-                    TranscriptRow(row){spokenRows[row.s("id")]=it}
+                    val commandGroup=runProjection.groups[row.s("id")]
+                    if(row.s("kind")=="commandRuns"&&commandGroup!=null) {
+                        val expanded=commandGroup.any{it.s("id") in expandedRunIds}
+                        CommandRunsHeader(commandGroup,expanded){
+                            PocketTranscript.readerInteraction();follow=false
+                            val members=commandGroup.map{it.s("id")}.toSet()
+                            expandedRunIds=if(expanded)expandedRunIds-members else expandedRunIds+members
+                        }
+                        if(expanded)ActivityRow(commandGroup.first(),fullyExpanded=true)
+                    } else if(isCommandRun(row))ActivityRow(row,fullyExpanded=true)
+                    else TranscriptRow(row){spokenRows[row.s("id")]=it}
                     if(row.s("speechThread").isNotBlank())TextButton({Pocket.open(row.s("speechThread"))}){BilingualLabel("Open source conversation")}
                     if(important)noteFor(row)?.let{note->FlowRow{
                         TextButton({val context="Regarding your answer:\n"+row.s("text")+"\n\n";val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context;editor=TextFieldValue(next,TextRange(next.length));saveReplyDraft(draftKey,next);keyboardInput=true}){BilingualLabel("Reply")}
@@ -357,6 +369,19 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             else if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
                 Box(Modifier.align(Alignment.TopCenter).padding(top=10.dp).size(36.dp).background(Panel,CircleShape),contentAlignment=Alignment.Center){AnimatedMark(28)}
             if(conversationError.isNotBlank())Box(Modifier.align(Alignment.BottomCenter).padding(horizontal=16.dp)){ErrorBanner(conversationError,if(Pocket.error.isBlank()&&replyFailure!=null){{Pocket.dismissReplyFailure(failureSource,replyFailure.id)}}else null)}
+            if(conversationError.isBlank()&&runProjection.groups.values.any{group->group.any{it.s("id") in expandedRunIds}})
+                FilledTonalButton({
+                    PocketTranscript.readerInteraction();follow=false
+                    val key=list.layoutInfo.visibleItemsInfo.firstOrNull{it.index==list.firstVisibleItemIndex}?.key as? String
+                    val collapsed=commandRunProjection(filteredRows,emptySet())
+                    val target=key?.let(collapsed::displayId)
+                    val offset=list.firstVisibleItemScrollOffset
+                    expandedRunIds=emptySet()
+                    val index=collapsed.rows.indexOfFirst{it.s("id")==target}
+                    if(index>=0)list.requestScrollToItem(index,if(target==key&&collapsed.rows[index].s("kind")!="commandRuns")offset else 0)
+                },modifier=Modifier.align(Alignment.BottomStart).padding(14.dp).heightIn(min=48.dp)){
+                    BilingualLabel("Collapse runs",fontSize=12.sp)
+                }
             if(conversationError.isBlank()&&!follow&&list.canScrollForward)FilledTonalButton({follow=true;scope.launch{list.animateScrollToItem((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp)){SymbolIcon(Icons.Rounded.ArrowDownward,null,Modifier.size(16.dp));Spacer(Modifier.width(5.dp));BilingualLabel("Latest",fontSize=12.sp)}
         }
 
@@ -376,7 +401,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val visible=list.firstVisibleItemIndex.coerceAtMost((before.size-1).coerceAtLeast(0))
             val offset=list.firstVisibleItemScrollOffset
             val nextImportant=!important
-            val after=if(nextImportant)orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}else rows
+            val after=commandRunProjection(if(nextImportant)orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}else rows,expandedRunIds).rows
             val afterIds=after.map{it.s("id")}
             val retained=conversationFilterViewportAnchor(afterIds,list.layoutInfo.visibleItemsInfo.map{FilterVisibleRow(it.key.toString(),it.offset,it.size)},if(nextImportant)null else filterPassage,list.layoutInfo.viewportEndOffset)
             val anchor=retained?.index?:conversationFilterAnchor(before,afterIds,visible)
@@ -499,12 +524,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         else->ActivityRow(row)
     }
 }
-@Composable fun ActivityRow(row:JSONObject){
+@Composable fun ActivityRow(row:JSONObject,fullyExpanded:Boolean=false){
     val sourceId="activity:"+row.s("id")
     LaunchedEffect(row.s("text"),PocketImmersion.enabled){if(row.s("type")!="commandExecution")PocketImmersion.offer(sourceId,row.s("text"),"public thought or activity")}
-    var expanded by remember(row.s("id")){mutableStateOf(false)}
+    var locallyExpanded by remember(row.s("id")){mutableStateOf(false)}
+    val expanded=fullyExpanded||locallyExpanded
     val running=row.s("status")=="inProgress";val failed=row.s("status") in listOf("failed","declined")||(!row.isNull("exitCode")&&row.optInt("exitCode")!=0)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Panel.copy(alpha=.6f)).clickable{expanded=!expanded}.padding(horizontal=11.dp,vertical=9.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Panel.copy(alpha=.6f)).then(if(fullyExpanded)Modifier else Modifier.clickable{locallyExpanded=!locallyExpanded}).padding(horizontal=11.dp,vertical=9.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
             Box(Modifier.size(24.dp),contentAlignment=Alignment.Center){
                 if(running)SymbolIcon(if(row.s("type")=="reasoning")"Psychology" else "Codex","Working",Modifier.size(24.dp),spinning=true)
@@ -512,7 +538,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             }
             BilingualLabel(row.s("title"),fontSize=12.sp,color=if(running)Mint else Muted,modifier=Modifier.weight(1f),centered=false)
             if(row.optLong("durationMs")>0)Text("${row.optLong("durationMs")/1000}s",fontSize=10.sp,color=Muted)
-            SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse activity" else "Expand activity",tint=Muted,modifier=Modifier.size(16.dp))
+            if(!fullyExpanded)SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse activity" else "Expand activity",tint=Muted,modifier=Modifier.size(16.dp))
         }
         if(row.s("text").isNotBlank()){
             val text=PocketImmersion.target(sourceId,row.s("text"))
@@ -577,4 +603,21 @@ internal fun conversationFilterAnchor(before:List<String>,after:List<String>,vis
         val previous=position-distance;if(previous>=0){val found=after.indexOf(before[previous]);if(found>=0)return found}
     }
     return after.lastIndex
+}
+
+/** Compact command history; failures remain evident even when details are folded. */
+@Composable internal fun CommandRunsHeader(runs:List<JSONObject>,expanded:Boolean,onToggle:()->Unit) {
+    val working=runs.any{it.s("status")=="inProgress"}
+    val failed=runs.count{it.s("status") in listOf("failed","declined")||(!it.isNull("exitCode")&&it.optInt("exitCode")!=0)}
+    Row(Modifier.fillMaxWidth().heightIn(min=48.dp).clickable(
+        onClickLabel=if(expanded)"Collapse command runs" else "Expand command runs",onClick=onToggle
+    ).padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+        SymbolIcon(if(working)"Codex" else if(failed>0)"Stop" else "Terminal",if(working)"Working" else if(failed>0)"Failed" else "Command runs",Modifier.size(20.dp),spinning=working)
+        Text(runs.size.toString(),fontSize=13.sp,color=Muted)
+        BilingualLabel("Runs",fontSize=13.sp,color=Muted)
+        if(working)BilingualLabel("Working",fontSize=12.sp,color=Mint)
+        if(failed>0){Text(failed.toString(),fontSize=12.sp,color=Coral);BilingualLabel("Failed",fontSize=12.sp,color=Coral)}
+        Spacer(Modifier.weight(1f))
+        SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse command runs" else "Expand command runs",Modifier.size(20.dp),tint=Muted)
+    }
 }

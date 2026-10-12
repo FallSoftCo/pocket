@@ -98,7 +98,7 @@ import androidx.compose.ui.unit.*
         val content=mutableMapOf<String,InlineTextContent>()
         // Parent ellipsis needs physical room beside an atomic placeholder.
         // Children clip at that boundary so the paragraph supplies one ellipsis.
-        val ellipsisAllowance=if(maxLines<Int.MAX_VALUE&&overflow==TextOverflow.Ellipsis)
+        val ellipsisAllowance=if(constraints.hasBoundedWidth&&maxLines<Int.MAX_VALUE&&overflow==TextOverflow.Ellipsis)
             measurer.measure(AnnotatedString("…"),style=style,softWrap=false).size.width+1 else 0
         val slotLimit=(available-ellipsisAllowance).coerceAtLeast(1)
         val fragmentOverflow=if(ellipsisAllowance>0)TextOverflow.Clip else overflow
@@ -108,11 +108,12 @@ import androidx.compose.ui.unit.*
         var wipeGeometry by remember(from,to,reserve,available,fontSize,lineHeight){
             mutableStateOf<ImmersionSharedWipeGeometry?>(null)
         }
-        val screenWidth=androidx.compose.ui.platform.LocalView.current.width.toFloat().coerceAtLeast(1f)
+        val screenWidth=(readingWave?.viewportWidthPx?.takeIf{it>0f}
+            ?:androidx.compose.ui.platform.LocalView.current.width.toFloat()).coerceAtLeast(1f)
         fun waveMask(key:String,localTop:Float):ImmersionSharedWipeMask? {
             val clock=readingWave?:return null
             val rect=wipeGeometry?.regions?.get(key)?:return null
-            val origin=coordinates?.takeIf{it.isAttached}?.localToWindow(Offset.Zero)?:return null
+            val origin=coordinates?.takeIf{it.isAttached}?.localToScreen(Offset.Zero)?.minus(clock.viewportOrigin)?:return null
             val frame=clock.policy.frame(clock.elapsedMs,((origin.y+rect.top+localTop)/density.density).toDouble())
             val feather=(screenWidth*.06f).coerceAtLeast(12f)
             val frontier=-feather+(screenWidth+2f*feather)*frame.progress
@@ -283,6 +284,12 @@ import androidx.compose.ui.unit.*
                 }else false
             }
         }
+        // Inline placeholders reserve measured pixel heights. Their sp round
+        // trip can be one pixel taller than the nominal M line; do not crop
+        // native glyphs to a smaller independently measured line budget.
+        val reservedLineHeight=maxOf(nativeLineHeight,
+            placeholderRanges.maxOfOrNull{with(density){it.item.height.toPx()}}?:0f)
+        val finiteHeightBudget=kotlin.math.ceil(reservedLineHeight.toDouble()).toFloat()
         Text(paragraph,inlineContent=content,style=style,maxLines=maxLines,overflow=overflow,onTextLayout={layout->
             nativeLayout=layout
             val regions=slotKeys.mapIndexedNotNull{index,key->
@@ -294,7 +301,7 @@ import androidx.compose.ui.unit.*
             reportVisibility()
         },
             modifier=(if(fillWidth)Modifier.fillMaxWidth()else Modifier)
-                .then(if(maxLines<Int.MAX_VALUE)Modifier.heightIn(max=with(density){(nativeLineHeight*maxLines).toDp()})else Modifier)
+                .then(if(maxLines<Int.MAX_VALUE)Modifier.heightIn(max=with(density){(finiteHeightBudget*maxLines).toDp()})else Modifier)
                 .onGloballyPositioned{coordinates=it;reportVisibility()}
                 .semantics{customActions=actions;if(projection!=null)text=visible})
     }

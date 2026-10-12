@@ -6,7 +6,7 @@ import kotlin.math.roundToLong
  * Continuous viewport wave. Local speed never depends on paragraph length.
  * Tuning is a visual prototype, not a human reading-speed threshold.
  *
- * Callers supply window-space coordinates in dp, not pixels or line counts.
+ * Callers supply viewport-relative screen coordinates in dp, not line counts.
  * One elapsed clock must be shared by controls and body text. Drawing consumes
  * frames; this policy creates no timer, model request or lifecycle work.
  */
@@ -19,6 +19,16 @@ internal data class ImmersionReadingWave(
         require(sweepMs>0 && holdMs>=0)
         require(sweepMs<=Long.MAX_VALUE/4 && holdMs<=Long.MAX_VALUE/4)
         require(verticalMsPerDp.isFinite() && verticalMsPerDp>=0)
+    }
+    companion object {
+        /** One complete viewport sweep finishes before its opposite begins.
+         * Every line keeps the same local wipe speed; only its onset changes. */
+        fun forViewport(heightDp:Double):ImmersionReadingWave {
+            require(heightDp.isFinite()&&heightDp>0)
+            val travelMs=1600L
+            return ImmersionReadingWave(sweepMs=1200L,holdMs=travelMs+2000L,
+                verticalMsPerDp=travelMs/heightDp)
+        }
     }
     val halfPeriodMs:Long=sweepMs+holdMs
     val periodMs:Long=halfPeriodMs*2

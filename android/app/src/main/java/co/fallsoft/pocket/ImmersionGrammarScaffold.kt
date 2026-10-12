@@ -73,6 +73,8 @@ internal object InterfaceGrammarScaffolds {
     // Structure/function words remain Italian in the vocabulary support phase.
     private val rows=mapOf(
         "NextComp server address" to "Indirizzo|Address del server NextComp",
+        "Runs" to "Esecuzioni|Runs",
+        "Collapse runs" to "Comprimi|Collapse le esecuzioni|runs",
         "One-time pairing code" to "Codice|Code di associazione|pairing monouso|one-time",
         "Phone control needs Android access" to "Il controllo|control del telefono|phone richiede|needs accesso|access ad Android",
         "An update turned off NextComp’s Accessibility service." to "Un aggiornamento|update ha disattivato|disabled il servizio|service di accessibilità|accessibility di NextComp.",
