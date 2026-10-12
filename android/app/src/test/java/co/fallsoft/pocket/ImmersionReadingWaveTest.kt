@@ -55,4 +55,18 @@ class ImmersionReadingWaveTest {
             assertTrue(frame.progress in 0f..1f)
         }
     }
+
+ @org.junit.Test fun viewportWaterfallNeverWrapsBeforeReachingTheBottom() {
+  for(height in listOf(480.0,900.0,1400.0)) {
+   val wave=ImmersionReadingWave.forViewport(height)
+   assertTrue(wave.onsetMs(height)+wave.sweepMs<wave.halfPeriodMs)
+   assertEquals(1600L,wave.onsetMs(height))
+   for(time in 0L..wave.halfPeriodMs step 40L) {
+    val coverage=(0..32).map{line->wave.frame(time,height*line/32).supportCoverage(.5f)}
+    coverage.zipWithNext().forEach{(above,below)->assertTrue("Downward wave reversed at $time",above+0.0001f>=below)}
+    val returning=(0..32).map{line->wave.frame(time+wave.halfPeriodMs,height*line/32).supportCoverage(.5f)}
+    returning.zipWithNext().forEach{(above,below)->assertTrue("Returning wave reversed at $time",above<=below+0.0001f)}
+   }
+  }
+ }
 }

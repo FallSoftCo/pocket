@@ -2476,27 +2476,73 @@
       "request": "Tapping search crashes the installed app.",
       "status": "published-alpha89-phone-file-verified-install-pending",
       "evidence": "docs/qualification/search-alpha89-20261012.json",
-      "verification": "Real search screen plus reserved-word geometry; alpha89 frozen qualification pending corrected candidate."
+      "verification": "37 frozen native cases and actual compatible signed APK visual review passed;107 published and phone file hash verified; installed phone remains106.",
+      "reproduction": {
+        "installed_phone_version": 106,
+        "emulator_reproduction": "alpha88 optimized compatible APK, immersion enabled, search tap; fatal Constraints width 2147483647 at SharedInlineImmersionText.kt:140",
+        "cause": "Horizontal search filter row supplies unbounded width; aligned renderer used Infinity as fixed paragraph width.",
+        "fix": "Use natural reserved width of aligned runs when parent width is unbounded. Preserve bounded paragraph geometry, cycling and horizontal search controls.",
+        "phone_crash_stack": "unavailable; SSH verified installed version, ADB unavailable"
+      }
+    },
+    {
+      "id": "compact-command-run-groups",
+      "request": "Group runs between outputs into one expandable subtitle with thumb-reachable collapse all.",
+      "status": "implementation-in-progress",
+      "constraints": [
+        "Preserve source rows and command/output details.",
+        "Do not group answers, questions, user messages or turn boundaries.",
+        "Preserve reading anchors when groups expand/collapse and history arrives.",
+        "Expanded runs stay lazy; no giant nested command column."
+      ]
+    },
+    {
+      "id": "viewport-global-immersion-waterfall",
+      "request": "Words that never change need coverage; cascade must flow from global top to global bottom across containers.",
+      "status": "geometry-and-coverage-investigation",
+      "constraints": [
+        "One viewport clock and spatial frontier across controls and content.",
+        "Keep paired target grammar/support positions.",
+        "No provider polling or translation calls from animation.",
+        "Natural-clock emulator geometry/capture proof required; phone verification separate."
+      ]
+    },
+    {
+      "id": "compact-child-count-header-badge",
+      "request": "Replace space-consuming sub-agent subtitle with a tappable count/status badge in card header.",
+      "status": "implementation-in-progress",
+      "constraints": [
+        "Retain agent results and direct/parent control availability.",
+        "Preserve environment-scoped expansion and paging preferences.",
+        "At least 48dp touch target without increasing existing header height.",
+        "No subtitle row when children are collapsed."
+      ]
+    },
+    {
+      "id": "distinct-idle-card-surface-20261012",
+      "request": "Make idle sessions immediately distinguishable through lower brightness and saturation, preserving readable text and distinct active and input-blocked states; recency must not imply activity.",
+      "status": "native-capture-reviewed-release-pending",
+      "evidence": "Native actual three-state capture r02 reviewed: working green, idle dim neutral, input-needed coral with corrected Needs your input label. Unit/lint/build passed; not published."
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "caa0fb3ead89463b3355af14b361f403571a2a94",
-    "published_release": "v0.5.0-alpha.34",
+    "latest_pushed_commit": "88b62e481998bedfc70a56eebdf69f88fff4fa97",
+    "published_release": "v0.5.0-alpha.89",
     "server_tests": 222,
     "android_tests": 194,
-    "phone_endpoint": "Termux SSH banner exchange currently times out; no verified ADB connection",
+    "phone_endpoint": "Termux SSH verified; phone-adb found no verified TCP or authorized USB connection",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
     "owned_emulator": "Owned5562 restored app absence/font1/animator0/gestural and stopped; unrelated TV emulator preserved.",
     "owned_fixture_port": "Owned19997 stopped and18880 reverse removed; shared ADB preserved.",
-    "installed_development_version": "Fresh installed base SHA verifies alpha32/code50 db93804c8e840204994b789dd115edc961b19752de700d64727791efd718463b",
+    "installed_development_version": "Phone106 via package query; own emulator107 qualification candidate",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 original modeled controls, 120-frame60fps swivel assets and160-frame Codex/Psychology/N turns; display-clock playback, live reduced motion and background fallback. Real Fold cadence unqualified.",
-    "phone_install": "Last independent installed observation alpha32/code50;52 installation not verified",
+    "phone_install": "SSH package query confirms106; qualified107 APK delivered and checksum verified, installation unverified",
     "qualification": "Alpha34:194 Android tests per variant/39 suites, both lints/signed builds, exact-source CI37559593224 pass; native synthetic body roundtrips, previews, titles, controls and steady background qualified.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Alpha34 native cycling review;1890-card desktop/mobile/reduced-motion/reload checks pass.",
@@ -2514,7 +2560,8 @@
     "qualified_build": "0.5.0-alpha.34 / code52",
     "candidate_release": "Alpha34 published and52 offered; handset receipt and installation unverified",
     "candidate_android_tests": 194,
-    "delivery_audit": "All111 requests reconciled against actual source and versioned evidence; see qualification/delivery-audit-2026-10-06.json."
+    "delivery_audit": "All111 requests reconciled against actual source and versioned evidence; see qualification/delivery-audit-2026-10-06.json.",
+    "legacy_fields_note": "Other unchanged fields in this legacy block are historical; current qualification receipts are authoritative."
   },
   "remaining": [
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",

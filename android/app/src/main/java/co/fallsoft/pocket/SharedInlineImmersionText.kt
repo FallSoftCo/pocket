@@ -108,17 +108,26 @@ import androidx.compose.ui.unit.*
         var wipeGeometry by remember(from,to,reserve,available,fontSize,lineHeight){
             mutableStateOf<ImmersionSharedWipeGeometry?>(null)
         }
-        val screenWidth=androidx.compose.ui.platform.LocalView.current.width.toFloat().coerceAtLeast(1f)
+        val screenWidth=(readingWave?.viewportWidthPx?.takeIf{it>0f}
+            ?:androidx.compose.ui.platform.LocalView.current.width.toFloat()).coerceAtLeast(1f)
         fun waveMask(key:String,localTop:Float):ImmersionSharedWipeMask? {
             val clock=readingWave?:return null
             val rect=wipeGeometry?.regions?.get(key)?:return null
-            val origin=coordinates?.takeIf{it.isAttached}?.localToWindow(Offset.Zero)?:return null
-            val frame=clock.policy.frame(clock.elapsedMs,((origin.y+rect.top+localTop)/density.density).toDouble())
-            val feather=(screenWidth*.06f).coerceAtLeast(12f)
-            val frontier=-feather+(screenWidth+2f*feather)*frame.progress
-            val globalCenter=if(rtl)screenWidth-frontier else frontier
-            return ImmersionSharedWipeMask(globalCenter-origin.x-rect.left,feather,frame.towardSupport)
+            val origin=coordinates?.takeIf{it.isAttached}?.localToScreen(Offset.Zero)?.minus(clock.viewportOrigin)?:return null
+            val mask=clock.lineMask(origin.y+rect.top+localTop,rtl)?:return null
+            return mask.copy(center=mask.center-origin.x-rect.left)
         }
+        val visibleHeight=readingWave?.viewportHeightPx?.takeIf{it>0f}
+            ?:androidx.compose.ui.platform.LocalView.current.height.toFloat()
+        fun publishLines() {
+            val clock=readingWave?:return
+            val origin=coordinates?.takeIf{it.isAttached}?.localToScreen(Offset.Zero)?.minus(clock.viewportOrigin)?:return
+            val lines=wipeGeometry?.regions?.values.orEmpty().map{rect->
+                androidx.compose.ui.geometry.Rect(origin.x+rect.left,origin.y+rect.top,origin.x+rect.right,origin.y+rect.bottom)
+            }.filter{it.bottom>0f&&it.top<visibleHeight}
+            clock.lines(waveOwner,lines)
+        }
+        SideEffect{publishLines()}
         fun waveSelected(key:String):Boolean {
             val rect=wipeGeometry?.regions?.get(key)?:return false
             val mask=waveMask(key,0f)?:return false

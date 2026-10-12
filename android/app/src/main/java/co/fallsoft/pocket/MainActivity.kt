@@ -402,7 +402,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     val p=if(days<=1)days*0.35 else 0.35+0.65*(kotlin.math.ln(days)/kotlin.math.ln(90.0)).coerceIn(0.0,1.0)
     return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
 }
-@Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis()){
+@Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis(),headerBadge:(@Composable ()->Unit)?=null){
     val active=t.status in listOf("active","pending");val activityTime=taskWorkTime(t);val ageColor=sessionAgeColor(activityTime,now)
     LaunchedEffect(t.preview,PocketImmersion.enabled){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
@@ -412,8 +412,11 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     var observed by remember(t.id){mutableStateOf(revision)}
     LaunchedEffect(revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
     val shape=RoundedCornerShape(8.dp)
-    Box(Modifier.fillMaxWidth().clip(shape).background(Panel).drawBehind{
-        drawRoundRect(Brush.radialGradient(colors=listOf(ageColor.copy(alpha=.26f),ageColor.copy(alpha=.06f),Color.Transparent),center=Offset(size.width*.85f,0f),radius=size.width*.95f),cornerRadius=CornerRadius(8.dp.toPx()))
+    val stateAccent=if(t.needsInput&&!active)Coral else ageColor
+    val stateGlow=if(active||t.needsInput)1f else .18f
+    val stateSurface=if(active||t.needsInput)Panel else androidx.compose.ui.graphics.lerp(Ink,Panel,.35f)
+    Box(Modifier.fillMaxWidth().clip(shape).background(stateSurface).drawBehind{
+        drawRoundRect(Brush.radialGradient(colors=listOf(stateAccent.copy(alpha=.26f*stateGlow),stateAccent.copy(alpha=.06f*stateGlow),Color.Transparent),center=Offset(size.width*.85f,0f),radius=size.width*.95f),cornerRadius=CornerRadius(8.dp.toPx()))
     }.border(1.dp,Line.copy(alpha=.7f),shape).border(2.dp,Mint.copy(alpha=highlight.value),shape)){
         if(!t.archived)Row(Modifier.matchParentSize()){
             VoiceLaunchButton(modifier=Modifier.weight(.22f).fillMaxHeight(),threadId=t.id,cardRegion=true)
@@ -435,6 +438,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                     BilingualLabel(t.title,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,centered=false,onActivate={name=t.title;rename=true})
                 }
             }
+            if(!rename)headerBadge?.invoke()
             val age=now-activityTime
             val ageLabel=if(age in 20_000..59_999)"${age/1000}s" else lastActivity(activityTime)
             if(age>=20_000)Text(ageLabel,color=Muted,fontSize=11.sp,modifier=Modifier.semantics{contentDescription="Last active "+ageLabel}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -453,7 +457,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            ImmersionText("card:"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)"Idle · "+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else Paper,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
+            ImmersionText("card:"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(if(t.needsInput)"Needs your input · " else "Idle · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else Paper,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
         }
 
     }
