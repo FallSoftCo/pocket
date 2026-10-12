@@ -39,6 +39,7 @@ import { CompletionRecovery } from './completions.mjs';
 import { spokenSummary,spokenText,promptContext,turnPrompt } from './speech.mjs';
 import { LiveTimeline,timelinePage } from './timeline.mjs';
 import { ThreadHistory } from './history.mjs';
+import {SendIdentity} from './send-identity.mjs';
 import { WorkRecord } from './work-record.mjs';
 import { ambiguousDelivery } from './connection-errors.mjs';
 import { AccountRateLimits } from './rate-limits.mjs';
@@ -55,6 +56,7 @@ const hostName=process.env.POCKET_HOST_NAME||hostname();
 const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
 const {db,secrets}=openStore(dir);
+const sendIdentity=new SendIdentity(db);
 const workObservations=new WorkObservations(db);
 const catalogContext=new CatalogContext(db);
 const notificationReads=new NotificationReads(db);
@@ -124,7 +126,7 @@ const historyHeads=new HistoryHeads();
 setInterval(()=>timeline.prune(),60000).unref();
 const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
 // Notes hydrate when their conversation opens, not while hundreds of list cards load.
-const history=new ThreadHistory(codex);
+const history=new ThreadHistory(codex,{identity:sendIdentity});
 const workRecord=new WorkRecord(db,{version:appVersion});
 const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}};
 for(const row of db.prepare("SELECT thread_id FROM watches WHERE enabled=1 UNION SELECT thread_id FROM outgoing UNION SELECT thread_id FROM session_starts WHERE thread_id IS NOT NULL").all())workRecord.enroll({id:row.thread_id});
@@ -312,6 +314,7 @@ async function flush(){if(!codex.ready)return;for(const row of db.prepare("SELEC
 db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during delivery; check the conversation before resending.' WHERE state='sending'").run();
 
 codex.on('event',m=>{
+  m=sendIdentity.event(m);
   const p=m.params||{}, threadId=p.threadId || p.thread?.id;
   if(threadId&&(internalSessions.owns(threadId,p.thread)||voiceController.owns(threadId)||nativeVoice.owns(threadId)||immersion.ownsThread(threadId)))return;
   const activity=sessionDiscovery.observe(m);

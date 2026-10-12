@@ -61,7 +61,7 @@ test('queued messages wait, can be edited or removed, and run in FIFO order one 
 test('steer now promotes one queued message without disturbing the rest; stop pauses the queue until resume',async t=>{
  const f=await fixture(t);await f.reply('first','Hold this');await f.reply('second','Guide now');
  await f.api('/api/threads/task-live/replies/second',{action:'send'});await waitFor(async()=>await f.status('second')==='accepted');
- assert.deepEqual(f.state.calls.find(x=>x.method==='turn/steer').params,{threadId:'task-live',expectedTurnId:'turn-current',input:[{type:'text',text:'Guide now'}]});
+ assert.deepEqual(f.state.calls.find(x=>x.method==='turn/steer').params,{threadId:'task-live',expectedTurnId:'turn-current',clientUserMessageId:'second',input:[{type:'text',text:'Guide now'}]});
  assert.equal((await f.api('/api/threads/task-live/interrupt',{})).status,200);
  assert.equal(await f.status('first'),'held');
  await f.finish('interrupted');await f.reply('third','After resume');

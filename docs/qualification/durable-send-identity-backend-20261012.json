@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "state": "qualified-not-deployed",
+  "base": "82b695e",
+  "tests": {
+    "passed": 446,
+    "failed": 0,
+    "logSha": "5ebe5a1ef7748fe1d3675df3fa47ebf540aa81f1d0c3503737f656af63d1e5d8"
+  },
+  "productionSource": {
+    "server/send-identity.mjs": "ee415bf85ce19d7c62b5142874a41701074baacd50dceed42ef19ab28cd5a97e",
+    "server/history.mjs": "ad3149ee8e4be9c8ec7e2c2f41dcffc4b1ad099ee0c36edfdeaa38df6ae9f801",
+    "server/index.mjs": "42f75b6861fec783c93a05b7425180ed2452706718343fb0efa4bf11a5dca050"
+  },
+  "scope": "Narrow backend-only release; no Android APK, native runtime restart, model or continuation changes",
+  "nativeEvidence": "Companion source qualification durable-send-identity-20261012.json; actual native reopened database echo passed one test",
+  "remaining": "Physical installed app/cache and exact duplicate unverified; unproven legacy identities must not be merged by text",
+  "baselineTestRepair": "Assert already-deployed clientUserMessageId in steer control contract; prior stale expectation was the sole first-run failure"
+}
