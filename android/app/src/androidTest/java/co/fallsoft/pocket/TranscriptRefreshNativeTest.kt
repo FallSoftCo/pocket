@@ -349,6 +349,18 @@ class TranscriptRefreshNativeTest {
   qa("repeat");Thread.sleep(1000)
   assertEquals("Unchanged preview caused repeated reads",reads,qa("state").getJSONArray("reads").length())
  }
+ @Test fun pendingQuestionJumpUsesCommittedUnfilteredRows(){
+  twoChats();qa("pending-navigation");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  assertTrue("Pending question initially missing",device.wait(Until.hasObject(By.text("Which synthetic review should continue?")),3000))
+  device.findObject(By.text("Important")).click();Thread.sleep(400)
+  device.findObject(By.text("Needs you")).click()
+  assertTrue("Pending navigation action missing",device.wait(Until.hasObject(By.text("Answer pending question")),2000))
+  device.findObject(By.text("Answer pending question")).click()
+  assertTrue("Pending navigation scrolled to a filtered-list index",device.wait(Until.hasObject(By.text("Which synthetic review should continue?")),3000))
+  assertTrue("Question skip not immediately reachable",device.hasObject(By.text("Skip")))
+  assertEquals("Pending navigation erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals("Pending navigation submitted work",0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun quietAuthenticatedReconnectRestoresMessagesWithoutFalseDisconnect(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   val connections=qa("state").getInt("connections")

@@ -1,6 +1,6 @@
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
 const replyReceipts=new Map(),receiptReads=[],recoveries=[];let replyAckState="accepted";let badReply=false,holdReceipt=false,wrongReceiptThread=false;let failedReadsRemaining=0;let malformedRead=false;let failReply=false,holdReply=false;let visibility=false;const acknowledgements=[],ackAttempts=[];let failedAckReads=0;let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let clippedPreview=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
-let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
+let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
 const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+(clippedPreview?1:revision),previewKind:'message',previewRole:'codex',activityAt:(notificationOnly?1:revision)*1000,updatedAt:(notificationOnly?1:revision)*1000,recencyAt:(notificationOnly?1:revision)*1000});
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
@@ -21,6 +21,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path.startsWith('/api/replies/')){const id=path.split('/').at(-1);receiptReads.push(id);const saved=replyReceipts.get(id);if(!saved||holdReceipt){res.statusCode=404;body={error:'Reply not found.'};}else body={...saved,...(wrongReceiptThread?{thread_id:'wrong-thread'}:{})};}
  else if(path==='/_qa/fail-reply'){failReply=true;holdReply=true;body={ok:true};}
  else if(path==='/_qa/release-reply'){holdReply=false;body={ok:true};}
+ else if(path==='/_qa/pending-navigation'){pendingNavigation=true;body={ok:true};}
  else if(path==='/_qa/visibility'){visibility=true;body={ok:true};}
  else if(/^\/api\/threads\/same-thread\/(notifications|catchup)\/read$/.test(path)){const input=JSON.parse(raw);ackAttempts.push({path,...input});if(failedAckReads>0){failedAckReads--;res.writeHead(503,{"Content-Type":"application/json"});res.end(JSON.stringify({error:"Synthetic acknowledgement outage"}));return;}acknowledgements.push({path,...input});body={ok:true,threadId:"same-thread",cursor:0,throughId:input.throughId,ids:input.throughId?[input.throughId]:[]};}
  else if(path==='/_qa/anchored'){anchored=true;holdPosition=true;body={ok:true};}
@@ -49,6 +50,10 @@ const server=http.createServer(async(req,res)=>{
   while(!older&&rev===2&&holdRefresh)await new Promise(r=>setTimeout(r,50));
   body={thread:thread(),timeline:{rows:[{id:older?'older-message':'same-message',kind:'message',text:older?'Older synthetic history':'Fresh response '+rev,version:rev===1?80:0}],hasEarlier:!older,before:older?null:'older1'},revision:rev===1?80:0,notes:[],pending:[],outgoing:[],notifications:[]};
   if(visibility&&!older){body.timeline={rows:Array.from({length:20},(_,n)=>({id:'visible-'+n,kind:'message',text:n===19?'Fresh response '+rev:('Visible passage '+n+' '+('Readable synthetic history. '.repeat(10)))})),hasEarlier:false,before:null};body.notifications=[{id:rev,thread_id:'same-thread',kind:'complete'}];body.catchup={token:'capture-'+rev};}
+  if(pendingNavigation&&!older){
+   const request={id:'synthetic-pending',method:'item/tool/requestUserInput',params:{threadId:'same-thread',questions:[{id:'review',question:'Which synthetic review should continue?',options:[{label:'First',description:'Synthetic only'},{label:'Second',description:'Synthetic only'}]}]}};
+   body.timeline={rows:Array.from({length:30},(_,n)=>n===12?{id:'request/synthetic-pending',kind:'request',request}:n===29?{id:'pending/final',kind:'message',phase:'final_answer',text:'Fresh response '+rev}:{id:'pending/activity-'+n,kind:'activity',type:'commandExecution',status:'completed',title:'Synthetic inspection',text:('Read synthetic context '+n+'. ').repeat(12)}),hasEarlier:false,before:null};body.pending=[request];
+  }
   if(boundary&&older)body.timeline={rows:[{id:'order/header',turnId:'order',kind:'turn',status:'inProgress'},{id:'order/user',turnId:'order',kind:'user',text:'Ordering request'}],hasEarlier:false,before:null,insertBefore:'order/answer'};
   if(pacing&&older){const n=Number(new URL(req.url,'http://localhost').searchParams.get('before')?.match(/\d+/)?.[0]||1);body.timeline={rows:[{id:'pacing-'+n,kind:'message',text:'Earlier pacing passage '+n}],hasEarlier:n<10,before:'older'+(n+1)};}
   if(anchored&&!older)body.timeline.rows=[{id:'order/header',turnId:'order',kind:'turn',status:'inProgress'},{id:'order/answer',itemId:'answer',turnId:'order',kind:'message',text:'Stale anchored answer'}];
