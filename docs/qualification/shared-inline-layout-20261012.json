@@ -1,10 +1,10 @@
 {
   "state": "integrated-conversation-source-unreleased",
   "native": {
-    "cases": 9,
+    "cases": 11,
     "result": "pass",
-    "seconds": 14.819,
-    "logSha256": "4487a8055d148f6e74e847b3b0ecc84ce759934e896193c4879239d3d0a177fa",
+    "seconds": 19.096,
+    "logSha256": "3b2bbdf481c5d2e70093b1947a9e67c64e56f293ac0e398cf5db967838e6423b",
     "checks": [
       "unchanged word position at 17sp",
       "unchanged word position at 34sp",
@@ -16,7 +16,9 @@
       "Intermediate native image retains common glyph pixels and changes replacement glyph pixels",
       "Successive changes to two distinct phrases retain common text geometry using all reserved forms",
       "Production ReservedImmersionText reports visible phrase and uses fresh handoff callback while common position remains stable",
-      "Finite single-line ellipsis retains phrase placeholder, excludes hidden cue and stays within native line height"
+      "Finite single-line ellipsis retains phrase placeholder, excludes hidden cue and stays within native line height",
+      "Outgoing wrapped glyph remains tappable mid-wipe and resolves stable help tag to current callback",
+      "Reserved blank space invokes no inline action and does not consume the surrounding action"
     ]
   },
   "unit": {
@@ -28,14 +30,13 @@
     "Actual frames and physical handset qualification",
     "Actual TalkBack utterance/gesture and text selection qualification, including empty reserved slots",
     "Full multi-line frame sequence and physical performance review",
-    "Per-fragment visual handoff and paragraph lexical/action consistency during transitions",
     "Broader actual app content, styling and all labeled controls qualification",
     "Signed release and compatible handset delivery"
   ],
   "notes": [
     "Large-text check uses 34sp/52sp, not a complete OS accessibility font-scale audit",
     "Parent native offsets include empty reserved-slot markers; tests use actual native offsets for unchanged text",
-    "Candidate is not wired into ReservedImmersionText",
+    "Historical pre-integration stage: Candidate is not wired into ReservedImmersionText",
     "Oversized fragments use native wrapping and maximum wrapped height; no manual Unicode token slicing.",
     "Before fix, Android exported both search and Please search existing sessions.; two phrase occurrences. Duplicate child readout is cleared; parent retains phrase custom actions.",
     "Initial accessibility fixture was behind the status bar; qualification moved it into visible content before diagnosing duplicate export.",
@@ -43,15 +44,20 @@
     "Shared physical paragraph frontier is translated into each fragment coordinate space; RTL mirrors the paragraph, not individual slots.",
     "Native measured line height replaces nominal sp height to avoid rounding a single 69px line into two bands.",
     "Intermediate screenshots initially preceded observed paint. Bounded screenshot observation now requires actual changed glyph pixels; this is not phone latency or 60fps qualification.",
-    "Candidate accepts all alternate annotated forms; current from/to determine active text, while all forms determine shared fragment bounds. Production caller is not yet wired.",
+    "Historical pre-integration stage: Candidate accepts all alternate annotated forms; current from/to determine active text, while all forms determine shared fragment bounds. Production caller is not yet wired.",
     "Source integration replaces conversation ReservedImmersionText renderer, retaining one existing cycle clock; live published alpha86 is unchanged.",
     "Inline visibility uses native placeholder rectangles once per fragment and ignores empty reserved-slot markers.",
     "Before correction, parent ellipsis discarded a full-width placeholder. A measured ellipsis allowance retains it; parent supplies ellipsis and child clips. Finite-height bound retains dense layout.",
     "Native clipping also reproduced lineIndex(1) out of bounds [0,1) in visibility tracking. Guarded native laid-line geometry removes that crash. No claim this was the physical phone crash cause.",
-    "One source comment was updated during final checks; no executable code changed after candidate APK build."
+    "One source comment was updated during final checks; no executable code changed after candidate APK build.",
+    "Before interaction correction, a still-visible outgoing glyph on a lower line did not respond after native lexical handoff to a shorter target. The native regression failed with zero clicks.",
+    "Fragments now use native measured glyph boxes and the same spatial mask as drawing. Only actual glyph regions consume touch. Stable clickable tags use current context; a pressed action remains available if its glyph fades before release.",
+    "Native position lookup returns a nearest insertion caret; adjacent glyph bounds are checked instead of treating the caret as a character box.",
+    "Child link interaction is replaced by spatial hit handling while native link styles are retained and parent accessibility actions remain exposed.",
+    "SelectionContainer surrounds actual conversation BilingualMessage in ConversationScreen; its long-press/copy behavior is a real remaining qualification requirement."
   ],
-  "candidateApkSha256": "e91c5e6e1f72b6e4e52e1b4e85d8ab43755f5fcf3e05d5050ec6ac19a4379418",
-  "testApkSha256": "bed8356e9d28074ecb309680da6da73b415fc11f21b635e2cff3743782ee9d34",
+  "candidateApkSha256": "cd6422bedb75dd9d825eee3c8e7f4bc0ec64cec21ddd525573bf5dcc5ff4e5db",
+  "testApkSha256": "79ca90c01b56de4202b07d9713227864284d03cc4413de2bede27367a2ba78e2",
   "debugUnitSuite": {
     "cases": 349,
     "result": "pass"

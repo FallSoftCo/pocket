@@ -82,3 +82,13 @@ The clipped-line visibility crash is guarded. All nine native cases, 349 debug
 unit tests and qualification lint pass. This source has not been published;
 alpha86 remains unchanged. Full motion, styling/control audit and physical
 delivery are still release work, not inferred from these tests.
+
+Spatial interaction corrected: native lexical handoff formerly made an
+outgoing wrapped word stop responding while it was still drawn. Fragment
+hit tests now use native glyph bounds and the same paragraph wipe mask.
+Blank reserved space does not consume taps. Current help callbacks are
+resolved through stable clickable tags, and press intent survives a fading
+glyph. Eleven final native cases pass, including surrounding-action
+propagation and fresh callback selection. Real conversation content lives
+in SelectionContainer; long-press/copy, full motion review and signed delivery
+remain required before publication.

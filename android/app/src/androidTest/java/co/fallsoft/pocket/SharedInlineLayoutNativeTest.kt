@@ -1,6 +1,7 @@
 package co.fallsoft.pocket
 
 import android.content.Context
+import androidx.compose.foundation.clickable
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
@@ -360,6 +361,69 @@ class SharedInlineLayoutNativeTest {
    assertTrue("Visible phrase must remain available to cycling",ids.contains("first"))
    assertFalse("Clipped phrase must not acquire a visible cue",ids.contains("hidden"))
    assertTrue("Single-line height must stay bounded",parent!!.size.height<=kotlin.math.ceil(with(parent!!.layoutInput.density){26.sp.toPx()})+1)
+  }
+ }
+
+ @Test fun visibleOutgoingWrappedWordStillRespondsDuringWipe(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  val word="supercalifragilisticexpialidocious"
+  var clicks=0;var outgoingClicks=0
+  fun form(value:String)=buildAnnotatedString{
+   append("Please ");val at=length;append(value)
+   addStringAnnotation("immersion-reserve","7:40",at,length)
+   addLink(LinkAnnotation.Clickable("reveal",linkInteractionListener={clicks++;if(value==word)outgoingClicks++}),at,length)
+   append(" existing sessions.")
+  }
+  val from=form(word);val to=form("cerca")
+  val progress=mutableFloatStateOf(0f)
+  var parent:TextLayoutResult?=null;var sourceLayout:TextLayoutResult?=null
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    SharedInlineImmersionText(from,to,{progress.floatValue},Modifier.padding(top=64.dp).width(120.dp),
+     onTextLayout={parent=it},onFragmentLayout={if(it.layoutInput.text.text==word)sourceLayout=it})
+   }}}
+   compose.waitForIdle()
+   device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.text(from.text)),5000)
+   val glyph=sourceLayout!!.getBoundingBox(word.length-1)
+   assertTrue("Fixture requires an outgoing word on its second line",glyph.top>0f)
+   val slot=parent!!.placeholderRects.first()!!
+   i.runOnMainSync{progress.floatValue=.4f}
+   compose.waitForIdle()
+   val node=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(to.text)),5000)!!
+   device.click(node.visibleBounds.left+(slot.left+glyph.center.x).toInt(),
+    node.visibleBounds.top+(slot.top+glyph.center.y).toInt())
+   compose.waitForIdle()
+   i.runOnMainSync{assertEquals("Still-visible outgoing glyph must remain actionable",1,clicks);assertEquals("Stable help tag must use current context",0,outgoingClicks)}
+  }
+ }
+
+ @Test fun reservedBlankSpaceDoesNotCaptureAnInlineAction(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  var phraseClicks=0;var surroundingClicks=0;var parent:TextLayoutResult?=null
+  fun form(word:String)=buildAnnotatedString{
+   append("Please ");val at=length;append(word)
+   addStringAnnotation("immersion-reserve","phrase",at,length)
+   addLink(LinkAnnotation.Clickable("reveal",linkInteractionListener={phraseClicks++}),at,length)
+   append(" existing sessions.")
+  }
+  val from=form("cerca");val to=form("cerca fra tutti i risultati")
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    androidx.compose.foundation.layout.Box(
+     Modifier.padding(top=64.dp).width(240.dp).clickable{surroundingClicks++}){
+     SharedInlineImmersionText(from,to,{0f},onTextLayout={parent=it})
+    }
+   }}}
+   compose.waitForIdle()
+   val node=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(from.text)),5000)!!
+   val slot=parent!!.placeholderRects.first()!!
+   device.click(node.visibleBounds.left+slot.right.toInt()-8,node.visibleBounds.top+slot.center.y.toInt())
+   compose.waitForIdle()
+   i.runOnMainSync{assertEquals(0,phraseClicks);assertEquals(1,surroundingClicks)}
   }
  }
 

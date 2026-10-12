@@ -32,7 +32,8 @@ import androidx.compose.ui.unit.*
     onVisibleRanges:((Set<String>,Boolean)->Unit)?=null,
     trackWholeTextVisibility:Boolean=false,
     onNativeTextLayout:((TextLayoutResult)->Unit)?=null,
-    sharedWipeMask:((Float,Float)->ImmersionSharedWipeMask)?=null
+    sharedWipeMask:((Float,Float)->ImmersionSharedWipeMask)?=null,
+    nativeLinkInteractions:Boolean=true
 ){
     val measurer=rememberTextMeasurer()
     val density=androidx.compose.ui.platform.LocalDensity.current
@@ -42,6 +43,9 @@ import androidx.compose.ui.unit.*
     // Fresh callbacks/styles when wording is unchanged; keep the previous visible
     // flow until the phase effect has actually installed the incoming text.
     val visible=if(incoming){if(to.text==snapshot.text)snapshot else to}else from
+    val nativeVisible=if(nativeLinkInteractions)visible else immersionDrawText(visible).let{
+        AnnotatedString(it.text,it.spanStyles,it.paragraphStyles)
+    }
     val changed=remember(from,to){immersionChangedTextRanges(from,to)}
     val ranges=if(incoming)changed.second else changed.first
     var layout by remember {mutableStateOf<TextLayoutResult?>(null)}
@@ -65,7 +69,7 @@ import androidx.compose.ui.unit.*
         Box(Modifier.size(with(density){width.toDp()},with(density){height.toDp()})){
             val outgoingLayout=measure(from,width,true)
             val incomingLayout=measure(to,width,true)
-            Text(visible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
+            Text(nativeVisible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
                 onTextLayout={layout=it;onNativeTextLayout?.invoke(it);reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithContent{
                     val p=progress().coerceIn(0f,1f)
                     if(from.text==to.text||p<=0f||p>=1f){drawContent();return@drawWithContent}

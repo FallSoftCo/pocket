@@ -10,6 +10,11 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -100,8 +105,72 @@ import androidx.compose.ui.unit.*
                     content[key]=InlineTextContent(
                         Placeholder(with(density){width.toSp()},with(density){height.toSp()},PlaceholderVerticalAlign.TextCenter)
                     ){
+                        fun renderedLink(position:Offset):LinkAnnotation? {
+                            val p=progress().coerceIn(0f,1f)
+                            val current=if(immersionInkPhase(p).incoming)1 else 0
+                            val candidates=if(forms[0].text==forms[1].text)listOf(current)
+                                else if(p<=0f)listOf(0)else if(p>=1f)listOf(1)else listOf(0,1)
+                            for(index in candidates){
+                                val layout=measured[index]
+                                val text=layout.layoutInput.text
+                                if(text.isEmpty())continue
+                                // Native hit lookup returns the nearest insertion
+                                // caret, which can be after the glyph being touched.
+                                val caret=layout.getOffsetForPosition(position)
+                                val offset=listOf(caret,caret-1).firstOrNull{
+                                    it in 0 until text.length&&layout.getLineForOffset(it) in 0 until layout.lineCount&&
+                                        it<layout.getLineEnd(layout.getLineForOffset(it),visibleEnd=true)&&
+                                        layout.getBoundingBox(it).contains(position)
+                                }?:continue
+                                val line=layout.getLineForOffset(offset)
+                                if(line !in 0 until layout.lineCount)continue
+                                if(p>0f&&p<1f&&forms[0].text!=forms[1].text){
+                                    val mask=wipeGeometry?.mask(key,layout.getLineTop(line),p,rtl)
+                                        ?:ImmersionSharedWipeMask(if(rtl)width+48f else -48f,48f)
+                                    val incomingCoverage=(if(rtl)(position.x-mask.center+mask.feather)
+                                        else(mask.center+mask.feather-position.x))/(2f*mask.feather)
+                                    val coverage=if(index==1)incomingCoverage.coerceIn(0f,1f)
+                                        else 1f-incomingCoverage.coerceIn(0f,1f)
+                                    if(coverage<.5f)continue
+                                }
+                                val link=text.getLinkAnnotations(offset,offset+1).firstOrNull()?.item?:continue
+                                // A phrase's stable clickable tag retains current help
+                                // context even while outgoing glyphs are still drawn.
+                                return if(link is LinkAnnotation.Clickable)
+                                    forms[current].getLinkAnnotations(0,forms[current].length)
+                                        .map{it.item}.filterIsInstance<LinkAnnotation.Clickable>()
+                                        .firstOrNull{it.tag==link.tag}?:link
+                                    else link
+                            }
+                            return null
+                        }
+                        val hit by rememberUpdatedState<(Offset)->LinkAnnotation?>(::renderedLink)
+                        val dispatch by rememberUpdatedState<(LinkAnnotation)->Unit>{initial->
+                            val current=if(immersionInkPhase(progress()).incoming)1 else 0
+                            val link=if(initial is LinkAnnotation.Clickable)
+                                forms[current].getLinkAnnotations(0,forms[current].length)
+                                    .map{it.item}.filterIsInstance<LinkAnnotation.Clickable>()
+                                    .firstOrNull{it.tag==initial.tag}?:initial
+                                else initial
+                            val listener=link.linkInteractionListener
+                            if(listener!=null)listener.onClick(link)
+                            else if(link is LinkAnnotation.Url)uriHandler.openUri(link.url)
+                        }
+                        val hasLinks=forms.take(2).any{it.getLinkAnnotations(0,it.length).isNotEmpty()}
+                        val interaction=if(!hasLinks)Modifier else Modifier.pointerInput(run.id,part){
+                            awaitEachGesture{
+                                val down=awaitFirstDown()
+                                val intended=hit(down.position)?:return@awaitEachGesture
+                                down.consume()
+                                val up=waitForUpOrCancellation()?:return@awaitEachGesture
+                                val link=hit(up.position)?:intended
+                                up.consume()
+                                dispatch(link)
+                            }
+                        }
                         BlendImmersionText(forms[0],forms[1],progress,forms[if(incoming)1 else 0],
-                            modifier=Modifier.clearAndSetSemantics{},
+                            modifier=Modifier.clearAndSetSemantics{}.then(interaction),
+                            nativeLinkInteractions=false,
                             fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
                             onNativeTextLayout=onFragmentLayout,
                             sharedWipeMask={p,top->wipeGeometry?.mask(key,top,p,rtl)
