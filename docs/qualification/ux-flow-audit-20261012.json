@@ -85,8 +85,33 @@
       }
     },
     "notificationsAudio": {
-      "status": "requires integrated flow audit",
-      "remaining": "Session source identity, unseen state, read clearing and interruption/catch-up without opaque backlog"
+      "status": "read-state and caption routing native verified; physical/audio quality incomplete",
+      "remaining": "Session source identity, unseen state, read clearing and interruption/catch-up without opaque backlog",
+      "nativeChecks": {
+        "versionCode": 99,
+        "versionName": "0.5.0-alpha.81",
+        "presentationReadState": {
+          "result": "pass",
+          "seconds": 32.146,
+          "assertions": [
+            "fetch does not consume unseen update",
+            "latest visible content acknowledges appropriate update",
+            "blackout does not consume updates",
+            "background does not consume updates",
+            "no redundant catch-up acknowledgement"
+          ]
+        },
+        "retainedSpokenNotification": {
+          "result": "pass",
+          "seconds": 6.392,
+          "assertions": [
+            "latest spoken passage retained in notification",
+            "notification content intent opens exact source",
+            "draft preserved",
+            "zero replies submitted"
+          ]
+        }
+      }
     },
     "accessibleImmersion": {
       "status": "incomplete",
@@ -95,7 +120,8 @@
     "deviceDelivery": {
       "status": "unverified",
       "evidence": "Authenticated private updater offers alpha80; last verified phone alpha75",
-      "remaining": "Compatible installation and real-device interaction"
+      "remaining": "Compatible installation and real-device interaction",
+      "currentProbe": "SSH timeout; helper found no verified TCP or authorized Pixel USB across5037/5039; no network toggles, resets or installs performed"
     }
   }
 }
