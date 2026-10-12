@@ -20,6 +20,20 @@
       "signedBuilds": "pass",
       "nativeFinal": "8.051 seconds pass including two visible same-text messages after reconstruction and live update; zero reply posts",
       "publicSourceScanner": "976 tracked files pass"
+    },
+    "extendedIdentityCoverage": {
+      "qualificationUnitTests": 316,
+      "failures": 0,
+      "cases": [
+        "All six live/reconstructed snapshot arrival orders converge to one input and newest metadata",
+        "Legacy cache provider bookmark aliases survive JSON persistence",
+        "Input remains before its answer after provider ID reconstruction",
+        "Identical contents without explicit send identity remain separate",
+        "Distinct queued send identities with identical contents remain separate",
+        "Missing turn/non-user rows keep provider identity",
+        "Historical provider aliases remain bounded at32"
+      ],
+      "note": "Test-only addition after published build; runtime source unchanged. Assertions check semantic identity/bookmarks, not JSON field or alias order."
     }
   },
   "phone": {
