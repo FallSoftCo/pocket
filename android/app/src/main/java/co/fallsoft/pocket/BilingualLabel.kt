@@ -83,7 +83,12 @@ import androidx.compose.ui.unit.*
                     }else original=next
                     cueActive=false
                 }
-                delay(immersionControlPhase(ImmersionControlWave.elapsedMs()-waveOffset).remainingMs.coerceAtLeast(1L))
+                val current=immersionControlPhase(ImmersionControlWave.elapsedMs()-waveOffset)
+                // Entering near a boundary can finish the wipe in the next phase.
+                // Reconcile immediately instead of holding the stale language for
+                // that entire next phase.
+                if(current.original!=original)continue
+                delay(current.remainingMs.coerceAtLeast(1L))
             }
         }finally{cueActive=false}
     }

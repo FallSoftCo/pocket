@@ -5,6 +5,15 @@ import java.util.Locale
 /** Authored, offline learning vocabulary. Match whole labels; never rewrite executable syntax. */
 object ImmersionLexicon {
     val common=mapOf(
+        "Work record" to "Registro delle attività",
+        "NextComp is up to date" to "NextComp è aggiornato",
+        "Blackout · keep screen awake" to "Schermo nero · mantieni lo schermo acceso",
+        "Tap the black screen to return. Voice keeps working; Home and Lock remain available." to "Tocca lo schermo nero per tornare. La voce continua a funzionare; Home e il blocco restano disponibili.",
+        "Full permissions for new tasks" to "Permessi completi per i nuovi incarichi",
+        "Full device access. Commands run without approval prompts." to "Accesso completo al dispositivo. I comandi vengono eseguiti senza richieste di approvazione.",
+        "Applies to future tasks in this environment." to "Si applica ai futuri incarichi in questo ambiente.",
+        "Coordinator check-ins" to "Aggiornamenti del coordinatore",
+        "Status checks only; agent messages are manual" to "Solo controlli dello stato; i messaggi agli agenti sono manuali",
         "Add environment" to "Aggiungi ambiente",
         "Updating messages" to "Aggiornamento messaggi",
         "Environment" to "Ambiente",
