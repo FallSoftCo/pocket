@@ -92,3 +92,13 @@ glyph. Eleven final native cases pass, including surrounding-action
 propagation and fresh callback selection. Real conversation content lives
 in SelectionContainer; long-press/copy, full motion review and signed delivery
 remain required before publication.
+
+Selection audit: parent and child text both registered with the surrounding
+SelectionContainer, so Select all copied the child word twice. Drawable
+children now use DisableSelection; paragraph and touched-word Copy pass.
+The final native suite is NOT green: 13/14 pass, and the original-language
+copy includes two generated U+200B empty-slot markers. Preserve this failing
+test and block release until owned projection markers are excluded without
+stripping original content. Runtime foundation1.9.3 uses LocalClipboard and
+converts AnnotatedString before writing; string annotations are not retained
+by that conversion. App selectors now exclude the OS clipboard-preview UI.

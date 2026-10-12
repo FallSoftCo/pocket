@@ -1,10 +1,10 @@
 {
-  "state": "integrated-conversation-source-unreleased",
+  "state": "integrated-source-unreleased-selection-marker-regression-open",
   "native": {
-    "cases": 11,
-    "result": "pass",
-    "seconds": 19.096,
-    "logSha256": "3b2bbdf481c5d2e70093b1947a9e67c64e56f293ac0e398cf5db967838e6423b",
+    "cases": 14,
+    "result": "one-known-regression",
+    "seconds": 36.635,
+    "logSha256": "afe579b330a6e523af3fcccd047433e2272665cb3b1fdefd57e3a4811b80f890",
     "checks": [
       "unchanged word position at 17sp",
       "unchanged word position at 34sp",
@@ -18,8 +18,18 @@
       "Production ReservedImmersionText reports visible phrase and uses fresh handoff callback while common position remains stable",
       "Finite single-line ellipsis retains phrase placeholder, excludes hidden cue and stays within native line height",
       "Outgoing wrapped glyph remains tappable mid-wipe and resolves stable help tag to current callback",
-      "Reserved blank space invokes no inline action and does not consume the surrounding action"
-    ]
+      "Reserved blank space invokes no inline action and does not consume the surrounding action",
+      "Paragraph Copy no longer appends duplicated inline child text",
+      "Native touched-word Copy returns the selected word"
+    ],
+    "passed": 13,
+    "failed": 1,
+    "openRegression": {
+      "case": "originalSelectionDoesNotCopyReservedSlotMarkers",
+      "expected": "Please search existing sessions.",
+      "actual": "Please search\u200b\u200b existing sessions.",
+      "cause": "Alternative text for empty native inline placeholders reaches copied paragraph"
+    }
   },
   "unit": {
     "cases": 6,
@@ -31,7 +41,8 @@
     "Actual TalkBack utterance/gesture and text selection qualification, including empty reserved slots",
     "Full multi-line frame sequence and physical performance review",
     "Broader actual app content, styling and all labeled controls qualification",
-    "Signed release and compatible handset delivery"
+    "Signed release and compatible handset delivery",
+    "Remove only owned empty-slot projection characters from selection copy while preserving original zero-width characters"
   ],
   "notes": [
     "Large-text check uses 34sp/52sp, not a complete OS accessibility font-scale audit",
@@ -54,10 +65,14 @@
     "Fragments now use native measured glyph boxes and the same spatial mask as drawing. Only actual glyph regions consume touch. Stable clickable tags use current context; a pressed action remains available if its glyph fades before release.",
     "Native position lookup returns a nearest insertion caret; adjacent glyph bounds are checked instead of treating the caret as a character box.",
     "Child link interaction is replaced by spatial hit handling while native link styles are retained and parent accessibility actions remain exposed.",
-    "SelectionContainer surrounds actual conversation BilingualMessage in ConversationScreen; its long-press/copy behavior is a real remaining qualification requirement."
+    "SelectionContainer surrounds actual conversation BilingualMessage in ConversationScreen; its long-press/copy behavior is a real remaining qualification requirement.",
+    "Native Select all/Copy reproduced duplicate clipboard text: Please cerca existing sessions. followed by another cerca. DisableSelection on drawable children gives the paragraph sole selection ownership.",
+    "Native long press requires advancing the controlled Compose test clock while the injected finger remains down; physical timing is not qualified by this fixture.",
+    "After Copy tests were added, the OS clipboard preview also exposed copied text. App accessibility/text selectors are now scoped to target package; platform selection-toolbar selectors remain platform actions.",
+    "Installed Compose BOM2025.10.00 resolves foundation1.9.3. Actual class inspection confirms SelectionContainer uses LocalClipboard and converts copied AnnotatedString to ClipEntry before writing; custom string annotations do not survive that converter. Do not implement a deprecated LocalClipboardManager-only fix."
   ],
-  "candidateApkSha256": "cd6422bedb75dd9d825eee3c8e7f4bc0ec64cec21ddd525573bf5dcc5ff4e5db",
-  "testApkSha256": "79ca90c01b56de4202b07d9713227864284d03cc4413de2bede27367a2ba78e2",
+  "candidateApkSha256": "ac908fab1f4746d8508707e17150738a85007352032535ed17b45081922367f7",
+  "testApkSha256": "5d9fa0e856bb5b2b94bdddcabe88757e4aadd572045c0d4cadaf01f289cbfbd5",
   "debugUnitSuite": {
     "cases": 349,
     "result": "pass"

@@ -1,5 +1,6 @@
 package co.fallsoft.pocket
 
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -168,6 +169,9 @@ import androidx.compose.ui.unit.*
                                 dispatch(link)
                             }
                         }
+                        // Parent paragraph owns selection and clipboard order.
+                        // A drawable child must not register a second text copy.
+                        DisableSelection{
                         BlendImmersionText(forms[0],forms[1],progress,forms[if(incoming)1 else 0],
                             modifier=Modifier.clearAndSetSemantics{}.then(interaction),
                             nativeLinkInteractions=false,
@@ -176,6 +180,7 @@ import androidx.compose.ui.unit.*
                             sharedWipeMask={p,top->wipeGeometry?.mask(key,top,p,rtl)
                                 ?:ImmersionSharedWipeMask(if(rtl)width+48f else -48f,48f)},
                             maxLines=maxLines,overflow=fragmentOverflow,fillWidth=true,reserve=forms)
+                        }
                     }
                     val start=length
                     appendInlineContent(key,forms[if(incoming)1 else 0].text.ifEmpty{"\u200b"})

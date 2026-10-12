@@ -84,7 +84,7 @@ class SharedInlineLayoutNativeTest {
    fun tapVisibleLink(word:String){
     val device=UiDevice.getInstance(i)
     val node=device.wait(androidx.test.uiautomator.Until.findObject(
-     androidx.test.uiautomator.By.text("Please $word existing sessions.")),5000)!!
+     androidx.test.uiautomator.By.pkg(c.packageName).text("Please $word existing sessions.")),5000)!!
     var box:androidx.compose.ui.geometry.Rect?=null
     i.runOnMainSync{box=parentLayout!!.placeholderRects.single()}
     val bounds=node.visibleBounds
@@ -150,9 +150,9 @@ class SharedInlineLayoutNativeTest {
    }}}
    fun checkSentence(word:String){
     compose.waitForIdle()
-    device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.textContains(word)),5000)
+    device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.pkg(c.packageName).textContains(word)),5000)
     device.dumpWindowHierarchy(java.io.File(c.cacheDir,"shared-accessibility.xml"))
-    val texts=device.findObjects(androidx.test.uiautomator.By.textContains(word)).mapNotNull{it.text}
+    val texts=device.findObjects(androidx.test.uiautomator.By.pkg(c.packageName).textContains(word)).mapNotNull{it.text}
     assertEquals("Visible phrase duplicated in accessibility: $texts",1,
      texts.sumOf{Regex(Regex.escape(word)).findAll(it).count()})
     assertTrue("Accessibility must preserve one ordered sentence: $texts",texts.contains("Please $word existing sessions."))
@@ -182,7 +182,7 @@ class SharedInlineLayoutNativeTest {
    }}}
    compose.waitForIdle()
    val node=device.wait(androidx.test.uiautomator.Until.findObject(
-    androidx.test.uiautomator.By.text("Please search existing sessions.")),5000)!!
+    androidx.test.uiautomator.By.pkg(c.packageName).text("Please search existing sessions.")),5000)!!
    val bounds=node.visibleBounds
    var common:androidx.compose.ui.geometry.Rect?=null;var phrase:androidx.compose.ui.geometry.Rect?=null
    i.runOnMainSync{
@@ -196,7 +196,7 @@ class SharedInlineLayoutNativeTest {
    compose.waitForIdle()
    assertTrue("Native text must hand off before sampling its frame",
     device.wait(androidx.test.uiautomator.Until.hasObject(
-     androidx.test.uiautomator.By.text("Please cerca fra tutti i risultati existing sessions.")),5000))
+     androidx.test.uiautomator.By.pkg(c.packageName).text("Please cerca fra tutti i risultati existing sessions.")),5000))
    device.waitForIdle()
    var middle=i.uiAutomation.takeScreenshot()!!
    fun differences(rect:androidx.compose.ui.geometry.Rect):Int{
@@ -322,7 +322,7 @@ class SharedInlineLayoutNativeTest {
    i.runOnMainSync{progress.floatValue=1f;handoff.value=true}
    compose.waitForIdle()
    val node=device.wait(androidx.test.uiautomator.Until.findObject(
-    androidx.test.uiautomator.By.text(target)),5000)!!
+    androidx.test.uiautomator.By.pkg(c.packageName).text(target)),5000)!!
    val translated=parent!!.getBoundingBox(parent!!.layoutInput.text.text.indexOf("existing"))
    assertTrue(kotlin.math.abs(original.left-translated.left)<=2f&&kotlin.math.abs(original.top-translated.top)<=2f)
    assertTrue(visibleIds.contains("7:13"))
@@ -385,13 +385,13 @@ class SharedInlineLayoutNativeTest {
      onTextLayout={parent=it},onFragmentLayout={if(it.layoutInput.text.text==word)sourceLayout=it})
    }}}
    compose.waitForIdle()
-   device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.text(from.text)),5000)
+   device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.pkg(c.packageName).text(from.text)),5000)
    val glyph=sourceLayout!!.getBoundingBox(word.length-1)
    assertTrue("Fixture requires an outgoing word on its second line",glyph.top>0f)
    val slot=parent!!.placeholderRects.first()!!
    i.runOnMainSync{progress.floatValue=.4f}
    compose.waitForIdle()
-   val node=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(to.text)),5000)!!
+   val node=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.pkg(c.packageName).text(to.text)),5000)!!
    device.click(node.visibleBounds.left+(slot.left+glyph.center.x).toInt(),
     node.visibleBounds.top+(slot.top+glyph.center.y).toInt())
    compose.waitForIdle()
@@ -419,11 +419,70 @@ class SharedInlineLayoutNativeTest {
     }
    }}}
    compose.waitForIdle()
-   val node=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(from.text)),5000)!!
+   val node=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.pkg(c.packageName).text(from.text)),5000)!!
    val slot=parent!!.placeholderRects.first()!!
    device.click(node.visibleBounds.left+slot.right.toInt()-8,node.visibleBounds.top+slot.center.y.toInt())
    compose.waitForIdle()
    i.runOnMainSync{assertEquals(0,phraseClicks);assertEquals(1,surroundingClicks)}
+  }
+ }
+
+ @Test fun selectionCopiesOneVisibleParagraphWithoutDuplicatedPhrase()=
+  checkSelectionCopy("search","cerca",1f,true,"Please cerca existing sessions.")
+ @Test fun selectionCopiesTheTouchedWord()=
+  checkSelectionCopy("search","cerca",1f,false,"cerca")
+ @Test fun originalSelectionDoesNotCopyReservedSlotMarkers()=
+  checkSelectionCopy("search","cerca fra tutti i risultati in tutte le conversazioni disponibili",0f,true,"Please search existing sessions.")
+ private fun checkSelectionCopy(sourceWord:String,targetWord:String,phase:Float,whole:Boolean,expected:String){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  fun form(word:String)=buildAnnotatedString{
+   append("Please ");val at=length;append(word)
+   addStringAnnotation("immersion-reserve","phrase",at,length)
+   append(" existing sessions.")
+  }
+  val from=form(sourceWord);val to=form(targetWord)
+  val activeWord=if(phase==0f)sourceWord else targetWord
+  var parent:TextLayoutResult?=null;var glyphLayout:TextLayoutResult?=null
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    androidx.compose.foundation.text.selection.SelectionContainer{
+     SharedInlineImmersionText(from,to,{phase},Modifier.padding(top=64.dp).width(240.dp),onTextLayout={parent=it},
+      onFragmentLayout={if(it.layoutInput.text.text==activeWord)glyphLayout=it})
+    }
+   }}}
+   compose.waitForIdle()
+   val node=device.wait(androidx.test.uiautomator.Until.findObject(
+    androidx.test.uiautomator.By.pkg(c.packageName).textContains("Please "+activeWord.take(4))),5000)!!
+   val slot=parent!!.placeholderRects.first()!!
+   val glyph=glyphLayout!!.getBoundingBox(activeWord.length/2)
+   val x=node.visibleBounds.left+(slot.left+glyph.center.x).toInt()
+   val y=node.visibleBounds.top+(slot.top+glyph.center.y).toInt()
+   val downAt=android.os.SystemClock.uptimeMillis()
+   val down=android.view.MotionEvent.obtain(downAt,downAt,android.view.MotionEvent.ACTION_DOWN,x.toFloat(),y.toFloat(),0)
+   down.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+   assertTrue(i.uiAutomation.injectInputEvent(down,true));down.recycle()
+   compose.mainClock.advanceTimeBy(1000);compose.waitForIdle()
+   val up=android.view.MotionEvent.obtain(downAt,android.os.SystemClock.uptimeMillis(),android.view.MotionEvent.ACTION_UP,x.toFloat(),y.toFloat(),0)
+   up.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+   assertTrue(i.uiAutomation.injectInputEvent(up,true));up.recycle()
+   compose.waitForIdle()
+   device.dumpWindowHierarchy(java.io.File(c.cacheDir,"selection-toolbar.xml"))
+   if(whole){
+    val select=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text("Select all")),5000)
+    assertNotNull("Native long press must offer Select all",select)
+    select!!.click()
+   }
+   val copy=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text("Copy")),5000)
+   assertNotNull("Native selection must offer Copy",copy)
+   copy!!.click();compose.waitForIdle()
+   var actual:String?=null
+   i.runOnMainSync{
+    val clipboard=c.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+    actual=clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+   }
+   assertEquals("Copy must contain one ordered visible flow",expected,actual)
   }
  }
 
