@@ -18,6 +18,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.Before
 import org.junit.Rule
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -26,6 +27,29 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SharedInlineLayoutNativeTest {
  @get:Rule val compose=createEmptyComposeRule()
+ @Before fun ownedEmulatorPermissionSetup(){
+  val i=InstrumentationRegistry.getInstrumentation()
+  val device=UiDevice.getInstance(i)
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  device.executeShellCommand("pm grant "+i.targetContext.packageName+" android.permission.POST_NOTIFICATIONS")
+ }
+
+
+ @Test fun longPhraseStartsOnTheSameLineAsItsVisiblePrefix(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
+  check(UiDevice.getInstance(i).executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  fun form(phrase:String)=buildAnnotatedString{append("Please ");val start=length;append(phrase);addStringAnnotation("immersion-reserve","long-phrase",start,length);append(", then inspect two new sessions.")}
+  val from=form("review the latest coordinator conversation history")
+  val to=form("rivedi la cronologia più recente del coordinatore")
+  var layout:TextLayoutResult?=null
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{SharedInlineImmersionText(from,to,{0f},Modifier.width(360.dp),onTextLayout={layout=it})}}}
+   compose.waitUntil(5000){layout!=null}
+   val actual=requireNotNull(layout)
+   assertEquals("Long replacement isolated the preceding word",actual.getLineForOffset(0),actual.getLineForOffset(7))
+  }
+ }
  @Test fun inlineReplacementKeepsUnchangedWordAtOneNativePosition()=checkGeometry(17.sp,26.sp)
  @Test fun largeTextReplacementKeepsUnchangedWordAtOneNativePosition()=checkGeometry(34.sp,52.sp)
  private fun checkGeometry(fontSize:TextUnit,lineHeight:TextUnit){

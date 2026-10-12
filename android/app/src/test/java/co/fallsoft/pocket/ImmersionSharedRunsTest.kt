@@ -44,4 +44,11 @@ class ImmersionSharedRunsTest {
   assertEquals(listOf("longunbreakabletoken ","tail"),chunks.map{it.text})
  }
 
+ @Test fun firstChunkUsesRemainingLineWidthThenFullWidth(){
+  val form=AnnotatedString("one two three")
+  val chunks=immersionAnnotatedChunks(form,12,4){it.length}
+  assertEquals(listOf("one ","two three"),chunks.map{it.text})
+  assertEquals(form.text,chunks.joinToString(""){it.text})
+ }
+
 }

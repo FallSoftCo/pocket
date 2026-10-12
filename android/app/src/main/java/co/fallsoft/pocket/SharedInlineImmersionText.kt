@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.*
         val slotLimit=(available-ellipsisAllowance).coerceAtLeast(1)
         val fragmentOverflow=if(ellipsisAllowance>0)TextOverflow.Clip else overflow
         val slotKeys=mutableListOf<String>()
+        val placeholderRanges=mutableListOf<AnnotatedString.Range<Placeholder>>()
         val changedKeys=mutableSetOf<String>()
         var wipeGeometry by remember(from,to,reserve,available,fontSize,lineHeight){
             mutableStateOf<ImmersionSharedWipeGeometry?>(null)
@@ -89,7 +90,15 @@ import androidx.compose.ui.unit.*
                 if(run.id==null){append(run.forms[if(incoming)1 else 0]);return@forEachIndexed}
                 // Split at natural token boundaries without claiming translation
                 // word alignment. A long phrase is not an unbreakable giant box.
-                val chunks=run.forms.map{form->immersionAnnotatedChunks(form,available){value->
+                val prefix=toAnnotatedString()
+                val used=if(prefix.isEmpty())0 else {
+                    val shaped=measurer.measure(prefix,style=style,placeholders=placeholderRanges,
+                        constraints=Constraints(minWidth=available,maxWidth=available))
+                    val caret=shaped.getHorizontalPosition(prefix.length,true)
+                    (if(rtl)available-caret else caret).toInt().coerceIn(0,available)
+                }
+                val firstWidth=(slotLimit-used).coerceAtLeast(1)
+                val chunks=run.forms.map{form->immersionAnnotatedChunks(form,slotLimit,firstWidth){value->
                     measurer.measure(immersionDrawText(value),style=style,softWrap=false).size.width
                 }}
                 repeat(chunks.maxOf{it.size}){part->
@@ -105,9 +114,8 @@ import androidx.compose.ui.unit.*
                     val key="shared-$index-$part"
                     slotKeys+=key
                     if(forms[0].text!=forms[1].text)changedKeys+=key
-                    content[key]=InlineTextContent(
-                        Placeholder(with(density){width.toSp()},with(density){height.toSp()},PlaceholderVerticalAlign.TextCenter)
-                    ){
+                    val placeholder=Placeholder(with(density){width.toSp()},with(density){height.toSp()},PlaceholderVerticalAlign.TextCenter)
+                    content[key]=InlineTextContent(placeholder){
                         fun renderedLink(position:Offset):LinkAnnotation? {
                             val p=progress().coerceIn(0f,1f)
                             val current=if(immersionInkPhase(p).incoming)1 else 0
@@ -188,6 +196,7 @@ import androidx.compose.ui.unit.*
                     appendInlineContent(key,forms[if(incoming)1 else 0].text.ifEmpty{
                         if(projection==null)"\u200b" else emptySlots.getOrPut(key){projection.create((listOf(from,to,snapshot)+reserve).map{it.text})}
                     })
+                    placeholderRanges+=AnnotatedString.Range(placeholder,start,length)
                     addStringAnnotation("immersion-reserve",run.id,start,length)
                 }
             }
@@ -224,13 +233,13 @@ import androidx.compose.ui.unit.*
 }
 
 internal fun immersionAnnotatedChunks(
-    form:AnnotatedString,maxWidth:Int,width:(AnnotatedString)->Int
+    form:AnnotatedString,maxWidth:Int,firstWidth:Int=maxWidth,width:(AnnotatedString)->Int
 ):List<AnnotatedString>{
     if(form.isEmpty())return emptyList()
     val result=mutableListOf<AnnotatedString>()
     var start=0;var end=0
     for(token in Regex("\\S+\\s*|\\s+").findAll(form.text)){
-        if(end>start&&width(form.subSequence(start,token.range.last+1))>maxWidth){
+        if(end>start&&width(form.subSequence(start,token.range.last+1))>(if(result.isEmpty())firstWidth else maxWidth)){
             result+=form.subSequence(start,end);start=end
         }
         end=token.range.last+1
