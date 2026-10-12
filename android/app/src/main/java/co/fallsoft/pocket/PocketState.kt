@@ -209,7 +209,11 @@ object Pocket {
             tasks=mergeLiveTaskSnapshot(tasks,fetched,taskBaseline,taskResult.optBoolean("refreshPending")||taskResult.s("nextCursor").isNotBlank())
             tasks.firstOrNull{it.id==selected}?.let{latest->if(transcriptPresentationChanged(previouslySelected?.preview,previouslySelected?.previewKind,previouslySelected?.status,latest.preview,latest.previewKind,latest.status)||transcriptLiveActivityAdvanced(previouslySelected?.activityAt,latest.activityAt))scheduleRefresh()}
             sessionSnapshotComplete=!taskResult.optBoolean("refreshPending");val cursorScope="${local}:${base}:${token}:$showArchived";if(sessionCursorScope!=cursorScope&&!taskResult.optBoolean("refreshPending")){sessionCursorScope=cursorScope;sessionCursor=taskResult.s("nextCursor").takeIf{it.isNotBlank()}}
+            val notificationBaseline=notifications.map{it.s("thread_id") to it.optLong("id")}
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
+            // The notification fetch can recover a missed socket/FCM event even
+            // when the bounded catalog preview happens to remain identical.
+            if(transcriptNotificationAdvanced(selected,notificationBaseline,notifications.map{it.s("thread_id") to it.optLong("id")}))scheduleRefresh()
             if(local==profileLocal&&token==profileToken)notifications.forEach{PocketNotificationTitles.remember(it.put("_local",profileLocal))}
             val latestAttention=api("/api/attention").optJSONArray("notifications")?.objects()?:emptyList()
             val activeIds=latestAttention.map{it.optLong("id")}.toSet()

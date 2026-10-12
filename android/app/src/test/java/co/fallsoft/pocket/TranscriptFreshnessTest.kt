@@ -2,6 +2,14 @@ package co.fallsoft.pocket
 import org.junit.Test
 import org.junit.Assert.*
 class TranscriptFreshnessTest {
+ @Test fun recoveredNotificationInvalidatesOnlyItsOwnOpenConversation(){
+  val old=listOf("open" to 10L,"other" to 99L)
+  assertTrue(transcriptNotificationAdvanced("open",old,listOf("open" to 11L,"other" to 99L)))
+  assertTrue(transcriptNotificationAdvanced("open",emptyList(),listOf("open" to 11L)))
+  assertFalse(transcriptNotificationAdvanced("open",old,listOf("open" to 10L,"other" to 100L)))
+  assertFalse(transcriptNotificationAdvanced("open",old,listOf("open" to 9L)))
+  assertFalse(transcriptNotificationAdvanced(null,old,listOf("open" to 11L)))
+ }
  @Test fun advancingLiveWorkInvalidatesEvenAnUnchangedClippedPreview(){
   assertTrue(transcriptLiveActivityAdvanced(1000,2000))
   assertTrue(transcriptLiveActivityAdvanced(null,2000))
