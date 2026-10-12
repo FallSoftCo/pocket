@@ -32,14 +32,39 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun canonicalInputPositionSurvivesProviderChangeDuringLookup(){
+  twoChats();qa("anchored");main{Pocket.open("same-thread")}
+  await{PocketTranscript.rows.any{it.s("id")=="order/answer"}&&!PocketTranscript.loading}
+  fun event(item:String,version:Int)=JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",version).put("row",JSONObject().put("id","order/"+item).put("itemId",item).put("turnId","order").put("clientId","same-send").put("kind","user").put("text","Late same-send input").put("version",version))
+  main{Pocket.event(event("live-uuid",1000))}
+  await{qa("state").getJSONArray("positions").length()==1}
+  main{Pocket.event(event("rebuilt-item",1001))}
+  qa("release-position")
+  await{qa("state").getJSONArray("positions").length()==2&&!PocketTranscript.updating}
+  val ids=PocketTranscript.rows.map{it.s("id")}
+  assertTrue("Canonical input position lookup could not address the displayed row",ids.indexOf("order/client-user/same-send")<ids.indexOf("order/answer"))
+  assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"&&it.s("clientId")=="same-send"})
+  val before=qa("state");val reads=before.getJSONArray("reads").length()
+  repeat(3){main{Pocket.event(event("rebuilt-item",1001))}}
+  Thread.sleep(800)
+  val after=qa("state")
+  assertEquals("Repeated input event restarted canonical reads",reads,after.getJSONArray("reads").length())
+  assertEquals("Repeated input event restarted position lookup",2,after.getJSONArray("positions").length())
+  assertEquals("Read repair submitted work",0,after.getJSONArray("replies").length())
+ }
  @Test fun providerReconstructionReconcilesLiveHistoryAndLegacyCache(){
-  twoChats();qa("message-identity")
+  twoChats();qa("message-identity");qa("hold-history")
   val scope=PocketTranscript.scopeKey()
   val old=org.json.JSONArray()
-  listOf("uuid","item-1").forEach{item->old.put(JSONObject().put("id","identity/"+item).put("itemId",item).put("turnId","identity").put("clientId","send-one").put("kind","user").put("text","Same deliberate text"))}
-  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+  (listOf("uuid")+(1..99).map{"item-"+it}).forEach{item->old.put(JSONObject().put("id","identity/"+item).put("itemId",item).put("turnId","identity").put("clientId","send-one").put("kind","user").put("text","Same deliberate text"))}
+  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("position",JSONObject().put("row","identity/item-32").put("offset",17).put("follow",false))
   assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
-  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  val restoredBefore=PocketTranscript.cacheRestoreRevision
+  main{Pocket.open("same-thread")};await{PocketTranscript.cacheRestoreRevision>restoredBefore&&PocketTranscript.loading}
+  assertEquals("Legacy reading anchor was lost during duplicate collapse","identity/client-user/send-one",PocketTranscript.readPosition?.rowId)
+  assertEquals(17,PocketTranscript.readPosition?.offset)
+  assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"})
+  qa("release-history");await{has(1)&&!PocketTranscript.updating}
   fun users()=PocketTranscript.rows.filter{it.s("kind")=="user"}
   assertEquals("Two distinct sends with identical text must survive",2,users().size)
   assertEquals(setOf("send-one","send-two"),users().map{it.s("clientId")}.toSet())

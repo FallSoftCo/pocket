@@ -33,7 +33,8 @@ object PocketTranscript {
     private data class InputPosition(val turn:String,val target:String,val item:String,val known:List<String>)
     private val positionQueue=linkedMapOf<String,InputPosition>()
     private var positionJob:Job?=null
-    private val attemptedPositions=hashSetOf<String>()
+    private data class InputAttempt(val target:String,val item:String)
+    private val attemptedPositions=hashSetOf<InputAttempt>()
     private val positionFailures=linkedMapOf<String,String>()
     var browsingEarlier by mutableStateOf(false);private set
     internal var readPosition by mutableStateOf<TranscriptReadPosition?>(null);private set
@@ -71,9 +72,16 @@ object PocketTranscript {
         val value=disk.read(scope,id)?.let{JSONObject(it)}?:return@withContext null
         if(value.optInt("schema")!=1||value.s("scope")!=scope||value.s("id")!=id)return@withContext null
         val detail=value.getJSONObject("detail");if(detail.optJSONObject("thread")?.s("id")!=id)return@withContext null
-        val cachedRows=normalizeTranscriptMessages(value.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map{it.put("version",0L)});if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
-        val position=value.optJSONObject("position")?.let{TranscriptReadPosition(transcriptDisplayAnchor(cachedRows,it.s("row"))?:it.s("row"),it.optInt("offset"),it.optBoolean("follow"))}
-        Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position,value.optJSONArray("bridgeKnown")?.let{array->(0 until array.length()).map{array.optString(it)}.filter{it.isNotBlank()}.map{transcriptDisplayAnchor(cachedRows,it)?:it}.take(1024).toSet()}.orEmpty(),transcriptDisplayAnchor(cachedRows,value.s("bridgeBoundary").takeIf{it.isNotBlank()}),value.optBoolean("coverageVerified"))
+        val originalRows=value.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map{it.put("version",0L)}
+        val rawPosition=value.optJSONObject("position")
+        val rawBoundary=value.s("bridgeBoundary").takeIf{it.isNotBlank()}
+        val rawKnown=value.optJSONArray("bridgeKnown")?.let{array->(0 until minOf(array.length(),1024)).map{array.optString(it)}.filter{it.isNotBlank()}}.orEmpty()
+        val requested=rawKnown.toMutableSet().apply{rawPosition?.s("row")?.takeIf{it.isNotBlank()}?.let{add(it)};rawBoundary?.let{add(it)}}
+        val migrated=migrateTranscriptAnchors(originalRows,requested)
+        val cachedRows=normalizeTranscriptMessages(originalRows)
+        if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
+        val position=rawPosition?.let{TranscriptReadPosition(migrated[it.s("row")]?:it.s("row"),it.optInt("offset"),it.optBoolean("follow"))}
+        Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position,rawKnown.map{migrated[it]?:it}.toSet(),rawBoundary?.let{migrated[it]?:it},value.optBoolean("coverageVerified"))
     }catch(_:Exception){null}}
     private fun rememberRecent(persist:Boolean=false){
         val id=owner?:return;val scope=ownerScope?:return
@@ -136,17 +144,19 @@ object PocketTranscript {
         PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=Pocket.local,catchup=if(!checkedThisOpen)d.optJSONObject("catchup")else null,environment=Pocket.environmentId)
         checkedThisOpen=true
     }
-    fun reconcileInputPosition(row:JSONObject){
+    fun reconcileInputPosition(raw:JSONObject){
+        val row=normalizeTranscriptMessage(raw)
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return;val turn=row.s("turnId");val target=row.s("id")
         if(owner!=id||ownerScope!=scopeKey()||turn.isBlank()||!target.startsWith("$turn/"))return
-        val item=row.s("itemId").ifBlank{target.removePrefix("$turn/")}
-        if(target in attemptedPositions)return
+        val item=transcriptProviderItem(row)
+        val attempt=InputAttempt(target,item)
+        if(attempt in attemptedPositions)return
         val ticket=generation;val scope=scopeKey();val destination=Pocket.captureEnvironment()?:return
         fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
         val known=transcriptPositionAnchors(rows.filter{it.s("turnId")==turn&&it.s("kind") !in listOf("turn","turnEnd","request","attachments")}).map{it.s("itemId").ifBlank{it.s("id").removePrefix("$turn/")}}
         if(known.none{it!=item})return
-        attemptedPositions.add(target)
+        attemptedPositions.add(attempt)
         positionQueue[target]=InputPosition(turn,target,item,known)
         if(positionJob?.isActive==true)return
         positioning=true
@@ -185,13 +195,13 @@ object PocketTranscript {
                             positionFailures[request.target]="Could not confirm message order. "+PocketNetwork.error(e)
                             if(Pocket.error.isBlank())Pocket.error=positionFailures.values.first()
                         }
-                    }finally{if(current())positionQueue.remove(request.target)}
+                    }finally{if(current()&&positionQueue[request.target]===request)positionQueue.remove(request.target)}
                 }
             }finally{if(current()){positioning=false;positionJob=null}}
 
         }
     }
-    fun latest(){positionFailures.keys.forEach{attemptedPositions.remove(it)};positionFailures.clear();Pocket.refreshDetail()}
+    fun latest(){attemptedPositions.removeAll{it.target in positionFailures.keys};positionFailures.clear();Pocket.refreshDetail()}
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
     suspend fun load(older:Boolean=false,bridgeCursor:String?=null,retryAttempt:Int=0,beforeApply:suspend ()->Unit={}){

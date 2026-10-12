@@ -29,3 +29,43 @@ internal fun normalizeTranscriptMessages(rows:List<JSONObject>):List<JSONObject>
 }
 internal fun transcriptDisplayAnchor(rows:List<JSONObject>,provider:String?):String? =
     provider?.let{anchor->rows.firstOrNull{it.s("id")==anchor||it.s("providerRowId")==anchor||it.optJSONArray("providerRowIds")?.let{a->(0 until a.length()).any{n->a.optString(n)==anchor}}==true||"${it.s("turnId")}/${it.s("itemId")}"==anchor}?.s("id")?:anchor}
+
+/** Resolve only persisted anchors while the full legacy rows still exist.
+ * Bounded display alias retention must not discard a saved reading/gap anchor.
+ * Unknown or conflicting aliases remain unchanged rather than guessing a row.
+ */
+internal fun migrateTranscriptAnchors(original:List<JSONObject>,requested:Set<String>):Map<String,String> {
+    require(requested.size<=1026)
+    if(requested.isEmpty())return emptyMap()
+    val matches=mutableMapOf<String,String>()
+    val ambiguous=mutableSetOf<String>()
+    original.forEach{row->
+        val identity=transcriptMessageIdentity(row.s("kind"),row.s("turnId"),row.s("clientId"),row.s("id"))
+        fun observe(alias:String){
+            if(alias.isBlank()||alias !in requested)return
+            val previous=matches.putIfAbsent(alias,identity)
+            if(previous!=null&&previous!=identity)ambiguous.add(alias)
+        }
+        observe(row.s("id"));observe(row.s("providerRowId"))
+        if(row.s("turnId").isNotBlank()&&row.s("itemId").isNotBlank())observe("${row.s("turnId")}/${row.s("itemId")}")
+        row.optJSONArray("providerRowIds")?.let{aliases->for(n in 0 until aliases.length())observe(aliases.optString(n))}
+    }
+    return requested.associateWith{if(it in ambiguous)it else matches[it]?:it}
+}
+
+internal fun transcriptProviderItem(row:JSONObject):String = row.s("itemId").ifBlank{
+    row.s("providerRowId").ifBlank{row.s("id")}.removePrefix(row.s("turnId")+"/")
+}
+internal data class TranscriptInputEvent(val row:JSONObject?,val newInput:Boolean,val needsPosition:Boolean)
+/** One ingress identity for display, novelty and canonical position lookup.
+ * A newer provider reference is new ordering evidence, not another user send.
+ */
+internal fun transcriptInputEvent(previous:List<JSONObject>,raw:JSONObject?):TranscriptInputEvent {
+    val row=raw?.let{normalizeTranscriptMessage(it)}
+    if(row==null||row.s("kind")!="user")return TranscriptInputEvent(row,false,false)
+    val old=previous.firstOrNull{it.s("id")==row.s("id")}
+    val fresh=old==null
+    val admitted=old==null||row.optLong("version")>=old.optLong("version")
+    val changed=old!=null&&transcriptProviderItem(old)!=transcriptProviderItem(row)
+    return TranscriptInputEvent(row,fresh,admitted&&(fresh||changed))
+}

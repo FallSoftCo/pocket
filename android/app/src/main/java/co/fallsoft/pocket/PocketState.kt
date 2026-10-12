@@ -362,10 +362,10 @@ object Pocket {
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));refresh();scheduleRefresh()}
             "turnRecovery" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("recovery",json.optJSONObject("recovery"))}}
             "timeline" -> {
-                val row=json.optJSONObject("row")
-                val newInput=json.s("threadId")==selected&&row?.s("kind")=="user"&&PocketTranscript.rows.none{it.s("id")==row.s("id")}
+                val input=if(json.s("threadId")==selected)transcriptInputEvent(PocketTranscript.rows,json.optJSONObject("row"))else null
+                val newInput=input?.newInput==true
                 PocketTranscript.apply(json)
-                if(newInput&&row!=null)PocketTranscript.reconcileInputPosition(row)
+                if(input?.needsPosition==true)input.row?.let{PocketTranscript.reconcileInputPosition(it)}
                 // A delayed input event needs canonical history, not inferred user-first sorting.
                 if(json.s("threadId")==selected&&(json.has("turn")||newInput))scheduleRefresh()
             }

@@ -2320,6 +2320,12 @@
       "request": "Newest streaming text must remain visible while following tall responses; deliberate earlier reading must preserve its passage during further output; pending questions remain immediately actionable.",
       "status": "qualified-update-published-phone-unreachable",
       "evidence": "docs/qualification/streaming-end-anchor-20261012.json"
+    },
+    {
+      "id": "transcript-ingress-and-cache-anchors-20261012",
+      "request": "Use one message identity across live-event novelty, display, position reconciliation and legacy cache anchors. Preserve reading position, new provider ordering evidence and deduplicated safe reads.",
+      "status": "qualified-update-published-phone-unreachable",
+      "evidence": "docs/qualification/transcript-ingress-and-cache-anchors-20261012.json"
     }
   ],
   "current_state": {

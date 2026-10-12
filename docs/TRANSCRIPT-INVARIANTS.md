@@ -6,7 +6,8 @@ A displayed transcript is a projection of source-scoped send receipts, provider 
 
 - Capture environment, account pairing, thread, draft generation and send UUID before dispatch. Persist the intent first. An accepted receipt means admitted work, not completed work.
 - For a user row with explicit `clientId` and `turnId`, use one semantic display identity within the existing environment/account/thread cache scope. Normalize live events, all history pages and old disk caches before merging.
-- Keep the provider `itemId` and provider row aliases for ordering and pagination. Translate saved reading and provider boundary anchors when migrating caches.
+- Keep the provider `itemId` and provider row aliases for ordering and pagination. Resolve saved reading and gap anchors against the original cache before collapsing duplicates; bounded alias retention must not lose persisted anchors. Unknown or conflicting references are never guessed.
+- Live-event novelty and position requests use the same normalized identity as display. A provider-ID change is new ordering evidence, not a new send. Deduplicate lookup attempts by message identity and provider reference; completing an old lookup cannot delete a newer queued request.
 - Without explicit identity evidence, retain the provider identity. Text equality never proves equivalence. Distinct send UUIDs remain distinct even when text matches.
 - Transcript repair performs reads and projection updates. It must not resend a command, restart a worker, infer failed delivery from missing history, or silently retry an unknown external effect.
 
@@ -26,3 +27,5 @@ A displayed transcript is a projection of source-scoped send receipts, provider 
 `HistoryReadingNativeTest#growingResponseKeepsItsNewestPassageVisible` checks tall streaming content, subsequent growth and manual reading retention. Native Important-filter and pending-question tests cover the corresponding navigation exceptions. Native fixture scenarios require independent fresh fixture state; a mixed scenario run is not qualification.
 
 Source tests, emulator UI checks, signed builds, updater publication, handset installation and physical interaction are separate evidence levels. Passing one must not be reported as another. Current receipts are in `docs/qualification/transcript-message-identity-20261012.json` and `docs/qualification/streaming-end-anchor-20261012.json`.
+
+`TranscriptRefreshNativeTest#canonicalInputPositionSurvivesProviderChangeDuringLookup` exercises the real event ingress, an in-flight provider change, canonical ordering and repeated-event read deduplication. Its control and final evidence are in `docs/qualification/transcript-ingress-and-cache-anchors-20261012.json`.

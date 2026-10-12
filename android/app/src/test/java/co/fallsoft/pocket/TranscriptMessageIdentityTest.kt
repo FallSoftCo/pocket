@@ -73,4 +73,42 @@ class TranscriptMessageIdentityTest {
   assertEquals(32,rows.single().getJSONArray("providerRowIds").length())
   assertEquals(rows.single().s("id"),transcriptDisplayAnchor(rows,"turn/item-100"))
  }
+ @Test fun legacyReadingAnchorSurvivesBeyondRetainedProviderAliases(){
+  val original=(1..100).map{user("item-"+it)}
+  val collapsed=normalizeTranscriptMessages(original)
+  val migrated=migrateTranscriptAnchors(original,original.map{it.s("id")}.toSet())
+  original.forEach{assertEquals("Lost legacy anchor "+it.s("id"),collapsed.single().s("id"),migrated[it.s("id")])}
+ }
+ @Test fun unknownAndConflictingAnchorsAreNotGuessed(){
+  val original=listOf(user("shared","one"),user("shared","two"))
+  val migrated=migrateTranscriptAnchors(original,setOf("turn/shared","turn/missing"))
+  assertEquals("turn/shared",migrated["turn/shared"])
+  assertEquals("turn/missing",migrated["turn/missing"])
+ }
+ @Test fun cacheAnchorMigrationKeepsNonUserAnchors(){
+  val row=org.json.JSONObject().put("id","turn/answer").put("itemId","answer").put("turnId","turn").put("kind","message")
+  assertEquals("turn/answer",migrateTranscriptAnchors(listOf(row),setOf("turn/answer"))["turn/answer"])
+ }
+ @Test fun noPersistedAnchorsNeedNoMigrationState(){assertTrue(migrateTranscriptAnchors(emptyList(),emptySet()).isEmpty())}
+ @Test fun repeatedProviderEventsAreNotNewSendsOrPositionEvidence(){
+  val raw=user("uuid",version=10);val previous=listOf(normalizeTranscriptMessage(raw))
+  val evidence=transcriptInputEvent(previous,raw)
+  assertFalse(evidence.newInput);assertFalse(evidence.needsPosition)
+ }
+ @Test fun newProviderReferenceUsesExistingSendIdentity(){
+  val previous=listOf(normalizeTranscriptMessage(user("uuid",version=10)))
+  val evidence=transcriptInputEvent(previous,user("item-183",version=11))
+  assertFalse(evidence.newInput);assertTrue(evidence.needsPosition)
+  assertEquals(previous.single().s("id"),evidence.row?.s("id"))
+  assertEquals("item-183",transcriptProviderItem(requireNotNull(evidence.row)))
+ }
+ @Test fun olderProviderEvidenceCannotCausePositionReads(){
+  val previous=listOf(normalizeTranscriptMessage(user("uuid",version=10)))
+  assertFalse(transcriptInputEvent(previous,user("older",version=9)).needsPosition)
+ }
+ @Test fun separateSendIsNewEvenWithIdenticalContents(){
+  val previous=listOf(normalizeTranscriptMessage(user("uuid",version=10)))
+  val evidence=transcriptInputEvent(previous,user("new","other",11))
+  assertTrue(evidence.newInput);assertTrue(evidence.needsPosition)
+ }
 }

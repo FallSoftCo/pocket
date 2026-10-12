@@ -1,6 +1,6 @@
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
 const replyReceipts=new Map(),receiptReads=[],recoveries=[];let replyAckState="accepted";let badReply=false,holdReceipt=false,wrongReceiptThread=false;let failedReadsRemaining=0;let malformedRead=false;let failReply=false,holdReply=false;let visibility=false;const acknowledgements=[],ackAttempts=[];let failedAckReads=0;let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let clippedPreview=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
-let messageIdentity=false;let sameTurnGap=false;let omitSnapshotHead=false;let headEpoch="synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
+let holdHistory=false;let messageIdentity=false;let sameTurnGap=false;let omitSnapshotHead=false;let headEpoch="synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
 const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+(clippedPreview?1:revision),previewKind:'message',previewRole:'codex',activityAt:(notificationOnly?1:revision)*1000,updatedAt:(notificationOnly?1:revision)*1000,recencyAt:(notificationOnly?1:revision)*1000});
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
@@ -34,6 +34,8 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/fail-read-burst'){failedReadsRemaining=4;failStatus=503;body={ok:true};}
  else if(path==='/_qa/fail-read'){failRead=true;failStatus=503;body={ok:true};}
  else if(path==='/_qa/fail-read-permanent'){failRead=true;failStatus=401;body={ok:true};}
+ else if(path==='/_qa/hold-history'){holdHistory=true;body={ok:true};}
+ else if(path==='/_qa/release-history'){holdHistory=false;body={ok:true};}
  else if(path==='/_qa/message-identity'){messageIdentity=true;body={ok:true};}
  else if(path==='/_qa/same-turn-gap'){sameTurnGap=true;body={ok:true};}
  else if(path==='/_qa/show-second'){secondVisible=true;body={ok:true};}
@@ -49,6 +51,7 @@ const server=http.createServer(async(req,res)=>{
   if(failRead||failedReadsRemaining>0){if(failedReadsRemaining>0)failedReadsRemaining--;reads.push({at:Date.now(),older:req.url.includes("before="),revision,status:failStatus});failRead=false;res.writeHead(failStatus,{'Content-Type':'application/json'});res.end(JSON.stringify({error:failStatus===401?'Synthetic history permission rejected':'Synthetic history refresh unavailable'}));return;}
   const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
   await new Promise(r=>setTimeout(r,older?2200:1700));
+  while(holdHistory)await new Promise(r=>setTimeout(r,30));
   while(!older&&rev===2&&holdRefresh)await new Promise(r=>setTimeout(r,50));
   body={historyHead:{threadId:'same-thread',epoch:headEpoch,version:headCounter??rev},thread:thread(),timeline:{rows:[{id:older?'older-message':'same-message',kind:'message',turnId:'synthetic-turn',text:older?'Older synthetic history':'Fresh response '+rev,version:rev===1?80:0}],hasEarlier:!older,before:older?null:'older1'},revision:rev===1?80:0,notes:[],pending:[],outgoing:[],notifications:[]};
   if(sameTurnGap){
