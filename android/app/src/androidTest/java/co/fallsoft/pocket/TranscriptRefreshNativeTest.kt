@@ -358,6 +358,10 @@ class TranscriptRefreshNativeTest {
   Thread.sleep(9000)
   assertTrue("Authenticated live socket falsely reported disconnected",Pocket.connected)
   assertFalse("Healthy quiet reconnect kept outage warning",PocketLive.outageVisible)
+  qa("live-outage");await{!Pocket.connected&&PocketLive.outageVisible}
+  assertTrue("Genuine outage omitted connection explanation",Pocket.connectionError.isNotBlank())
+  qa("live-recover");await{Pocket.connected&&!PocketLive.outageVisible&&has(3)&&!PocketTranscript.updating}
+  assertEquals("Recovered transport kept stale connection error","",Pocket.connectionError)
   assertEquals("Reconnect erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   assertEquals("Reconnect submitted work",0,qa("state").getJSONArray("replies").length())
  }
