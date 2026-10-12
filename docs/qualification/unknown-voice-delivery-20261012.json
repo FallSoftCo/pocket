@@ -1,5 +1,5 @@
 {
-  "status": "candidate-not-deployed",
+  "status": "alpha81-updater-published-phone-unverified",
   "cause": "Unknown voice outcome cleared pending receipt/recording; unrelated native speech could also acknowledge a pending recording.",
   "fix": [
     "Unknown outcome retains pending receipt, target and recording; check status does not resend",
@@ -20,12 +20,11 @@
     }
   },
   "remaining": [
-    "Signed release qualification and deployment",
-    "Successful provider transcription/send test",
-    "Physical phone interaction"
+    "Physical phone installation and interaction",
+    "Successful provider transcription/send qualification"
   ],
   "environmentOwnership": {
-    "status": "native-verified-release-pending",
+    "status": "native-verified-alpha81-published",
     "cause": "Saved voice state identified remote versus phone but not named remote environment or pairing",
     "changes": [
       "Persist explicit environment ID and backend credential fingerprint with receipt",
@@ -69,5 +68,17 @@
         ]
       }
     }
+  },
+  "delivery": {
+    "versionCode": 99,
+    "versionName": "0.5.0-alpha.81",
+    "privateCompatibleApkSha256": "e276e1e788cdc30bf5cff838f38ba5ce292b67e7eb4229b502a5ac46248fc888",
+    "debugUnitTests": 329,
+    "releaseUnitTests": 329,
+    "lints": "both pass",
+    "signedBuilds": "both pass",
+    "qualificationBuilds": "pass",
+    "authenticatedUpdater": "offers99 for existing signer/code93",
+    "backendRestart": "none"
   }
 }
