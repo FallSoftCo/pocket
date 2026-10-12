@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "observedAt": "2026-10-12T14:38:50Z",
+  "versionCode": 105,
+  "versionName": "0.5.0-alpha.87",
+  "sourceCommit": "c7dd493ca0c512018a4838cf9954e32a48328b90",
+  "state": "authenticated-update-channel-published",
+  "evidence": {
+    "nativePolicy": "Required artifact-bound regression cases completed; policy is not whole-product certification.",
+    "environmentJourney": "Native UI verified environment-scoped histories, drafts, outgoing-host isolation and delayed voice-history rejection using synthetic HTTP providers.",
+    "optimizedArtifact": "Installed optimized APK hash matched; immersion enabled through label-side toggle; opening menu retained the same app process.",
+    "updater": "Authenticated live backend returned version 105 and matching hashes for both maintained signers.",
+    "announcement": "One deduplicated announcement accepted; handset receipt not verified."
+  },
+  "limits": [
+    "Phone SSH available, ADB unavailable; installation and physical interaction unverified.",
+    "Provider voice, FCM arrival, real handset frame pacing and full app-to-backend journey coverage remain unqualified.",
+    "No live task submission, worker wakeup, pairing replacement or backend restart performed."
+  ],
+  "testingMethodology": "Report outcomes and named real/substituted boundaries, not suite totals. Separate build, native interaction, optimized artifact, visual/performance review, channel delivery and physical installation."
+}
