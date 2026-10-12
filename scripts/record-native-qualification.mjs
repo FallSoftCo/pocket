@@ -38,7 +38,26 @@ try{
  const fixture=spawn(process.execPath,['tests/fixtures/transcript-refresh-native.mjs'],{cwd:root,env:{...childEnv,PORT:'19998',NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},stdio:['ignore',fd,fd],detached:true});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);fixture.unref();owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:19998/api/status',{headers:{Authorization:'Bearer synthetic-system76'},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host==='Synthetic'&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes('Owned transcript fixture ready')){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
  run(['reverse','tcp:18880','tcp:19998']);
- for(const [file,sha]of [['qualification.apk',build.qualificationApkSha],['qualification-test.apk',build.testApkSha]]){if(fileSha(join(directory,file))!==sha)throw Error('Native APK changed.');run(['install','-r',...(file.includes('test')?['-t']:[]),join(directory,file)]);}
+ const installedPackageSha=packageName=>{
+  const result=spawnSync(adb,['-s',serial,'shell','pm','path',packageName],{encoding:'utf8',env:childEnv,timeout:30000});
+  if(result.status!==0)return null;
+  const paths=(result.stdout||'').trim().split(/\r?\n/);
+  if(paths.length!==1)return null; // Never assume a split installation is identical.
+  const path=paths[0].replace(/^package:/,'');
+  if(!/^\/data\/app\/[a-zA-Z0-9_~.+/=-]+\/base\.apk$/.test(path))return null;
+  return run(['shell','sha256sum',path]).split(/\s/)[0];
+ };
+ receipt.installation=[];
+ for(const [file,sha,packageName]of [
+  ['qualification.apk',build.qualificationApkSha,'co.fallsoft.pocket'],
+  ['qualification-test.apk',build.testApkSha,'co.fallsoft.pocket.test']
+ ]){
+  if(fileSha(join(directory,file))!==sha)throw Error('Native APK changed.');
+  const reused=installedPackageSha(packageName)===sha;
+  if(!reused)run(['install','-r',...(file.includes('test')?['-t']:[]),join(directory,file)]);
+  if(installedPackageSha(packageName)!==sha)throw Error('Installed native package identity differs.');
+  receipt.installation.push({packageName,sha256:sha,reused});persist();
+ }
  const installed=()=>{const path=run(['shell','pm','path','co.fallsoft.pocket']).trim().replace(/^package:/,'');if(!/^\/data\/app\/[a-zA-Z0-9_~.+/=-]+\/base\.apk$/.test(path))throw Error('Unexpected installed APK path.');return run(['shell','sha256sum',path]).split(/\s/)[0];};
  if(!run(['shell','dumpsys','package','co.fallsoft.pocket']).includes('versionCode='+manifest.versionCode+' '))throw Error('Wrong installed version.');
  receipt.installedApkSha=installed();if(receipt.installedApkSha!==build.qualificationApkSha)throw Error('Wrong installed qualification APK.');
