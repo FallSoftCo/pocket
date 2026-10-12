@@ -29,7 +29,8 @@
     "co.fallsoft.pocket.SharedInlineLayoutNativeTest#originalSelectionDoesNotCopyReservedSlotMarkers",
     "co.fallsoft.pocket.SharedInlineLayoutNativeTest#originalZeroWidthCharacterSurvivesProjectionCleanup",
     "co.fallsoft.pocket.PairingNavigationNativeTest#cancelledPairingPrefillCannotHijackConversationIntent",
-    "co.fallsoft.pocket.PairingNavigationNativeTest#pairingActionsRemainReachableWithKeyboardAndLongError"
+    "co.fallsoft.pocket.PairingNavigationNativeTest#pairingActionsRemainReachableWithKeyboardAndLongError",
+    "co.fallsoft.pocket.CatalogStartupNativeTest#coldStartShowsLoadingAndRetryThenPaintsCatalogBeforeActivity"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",

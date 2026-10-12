@@ -230,6 +230,15 @@ class MainActivity:ComponentActivity(){
         UsageDock(Modifier.width(usageDockWidth()))
     }
 }
+@Composable fun CatalogStartupStatus(){
+    Column(Modifier.fillMaxWidth().padding(vertical=28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)){
+        when(val state=Pocket.catalogLoad){
+            CatalogLoadState.Loading->{Mark(88);BilingualLabel("Loading conversations",fontSize=17.sp);WorkflowText(Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,color=Muted,fontSize=13.sp)}
+            is CatalogLoadState.Failed->{WorkflowText("Conversations unavailable",fontSize=17.sp);WorkflowText(ConnectionMessages.server(state.message),color=Coral,fontSize=13.sp);Button({Pocket.refresh()},modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)){BilingualLabel("Retry")}}
+            CatalogLoadState.Ready->Unit
+        }
+    }
+}
 @Composable fun PhoneControlNotice(){
     if(!Pocket.local||!PocketAutomation.allowed)return
     val c=LocalContext.current
@@ -338,6 +347,7 @@ class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntState
 
         item{ErrorBanner()}
         if(showCoordinator)item(key="nextcomp-coordinator"){CoordinatorCard()}
+        if(displayed.isEmpty()&&Pocket.catalogLoad!=CatalogLoadState.Ready)item(key="catalog-startup"){CatalogStartupStatus()}
 
         val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
         if(attention.isNotEmpty()){item{Label("NEEDS YOU · ${attention.size}",Coral)};items(attention,key={"attention-${it.optLong("id")}"}){AttentionCard(it)}}

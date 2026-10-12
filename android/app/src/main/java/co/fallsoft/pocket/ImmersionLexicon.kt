@@ -8,6 +8,8 @@ object ImmersionLexicon {
         "Add environment" to "Aggiungi ambiente",
         "Updating messages" to "Aggiornamento messaggi",
         "Environment" to "Ambiente",
+        "Loading conversations" to "Caricamento delle conversazioni",
+        "Conversations unavailable" to "Conversazioni non disponibili",
         "Environment name" to "Nome dell’ambiente",
         "Codex credits" to "Crediti Codex",
         "Credit data unavailable" to "Dati sui crediti non disponibili",

@@ -42,6 +42,7 @@ object Pocket {
     var connected by mutableStateOf(false); var codexOnline by mutableStateOf(false)
     var connectionError by mutableStateOf("")
     var refreshError by mutableStateOf("")
+    var catalogLoad by mutableStateOf<CatalogLoadState>(CatalogLoadState.Loading);private set
     private var backgroundRefreshJob:Job?=null
     private var discoveryRefreshJob:Job?=null
     private var lastDiscoveryRefreshAt=0L
@@ -160,7 +161,7 @@ object Pocket {
         val forLocal=destination.environment.local
         val nextBase=destination.endpoint;val nextToken=destination.token
         backgroundRefreshJob?.cancel();backgroundRefreshJob=null;discoveryRefreshJob?.cancel();discoveryRefreshJob=null;lastDiscoveryRefreshAt=0L;refreshError="";statusRevision++
-        refreshJob?.cancel();refreshJob=null;sessionSnapshotComplete=false;sessionOrderRequest=0;sessionOrderHandled=0;sessionCursor=null;sessionCursorScope=null
+        refreshJob?.cancel();refreshJob=null;catalogLoad=CatalogLoadState.Loading;sessionSnapshotComplete=false;sessionOrderRequest=0;sessionOrderHandled=0;sessionCursor=null;sessionCursorScope=null
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
         PocketLive.stop();PocketTranscript.clear();environmentId=id;local=forLocal;base=nextBase;token=nextToken;host=destination.environment.name
         loadingSessions=false;sending=false;starting=false;busy=false;error="";startStatus="";connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
@@ -214,17 +215,18 @@ object Pocket {
             }catch(e:CancellationException){throw e}catch(e:Exception){if(environmentRequestCurrent())refreshError=PocketNetwork.error(e)}
         }
     }
-    fun refresh(){refreshStatus();if(backgroundRefreshJob?.isActive==true)return;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launchEnvironment{
+    fun refresh(){refreshStatus();if(backgroundRefreshJob?.isActive==true)return;if(catalogLoad is CatalogLoadState.Failed)catalogLoad=CatalogLoadState.Loading;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launchEnvironment{
         try{
             val taskBaseline=tasks.associateBy{it.id}
             val taskResult=api(if(profileArchived)"/api/threads?archived=true" else "/api/threads")
             if(local!=profileLocal||token!=profileToken||showArchived!=profileArchived)return@launchEnvironment
-            activities=try{api("/api/activity").optJSONArray("items")?.objects()?:emptyList()}catch(e:PocketApiException){if(e.status==404)emptyList() else throw e}
             val fetched=taskResult.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList()
             val previouslySelected=tasks.firstOrNull{it.id==selected}
             tasks=mergeLiveTaskSnapshot(tasks,fetched,taskBaseline,taskResult.optBoolean("refreshPending")||taskResult.s("nextCursor").isNotBlank())
             tasks.firstOrNull{it.id==selected}?.let{latest->if(transcriptPresentationChanged(previouslySelected?.preview,previouslySelected?.previewKind,previouslySelected?.status,latest.preview,latest.previewKind,latest.status)||transcriptLiveActivityAdvanced(previouslySelected?.activityAt,latest.activityAt))scheduleRefresh()}
             sessionSnapshotComplete=!taskResult.optBoolean("refreshPending");val cursorScope="${local}:${base}:${token}:$showArchived";if(sessionCursorScope!=cursorScope&&!taskResult.optBoolean("refreshPending")){sessionCursorScope=cursorScope;sessionCursor=taskResult.s("nextCursor").takeIf{it.isNotBlank()}}
+            catalogLoad=CatalogLoadState.Ready
+            activities=try{api("/api/activity").optJSONArray("items")?.objects()?:emptyList()}catch(e:PocketApiException){if(e.status==404)emptyList() else throw e}
             val notificationBaseline=notifications.map{it.s("thread_id") to it.optLong("id")}
             notifications=api("/api/notifications").optJSONArray("notifications")?.objects()?.reversed()?:emptyList()
             // The notification fetch can recover a missed socket/FCM event even
@@ -236,7 +238,7 @@ object Pocket {
             prefs.all.keys.filter{it.startsWith(key("attention:"))}.mapNotNull{it.substringAfterLast(':').toLongOrNull()}.filter{it !in activeIds}.forEach{PocketAttention.dismiss(it)}
             attention=latestAttention
             refreshError=""
-        }catch(e:CancellationException){throw e}catch(e:Exception){if(local==profileLocal&&token==profileToken)refreshError=PocketNetwork.error(e)}
+        }catch(e:CancellationException){throw e}catch(e:Exception){if(environmentRequestCurrent()&&local==profileLocal&&token==profileToken){refreshError=PocketNetwork.error(e);if(catalogLoad!=CatalogLoadState.Ready)catalogLoad=CatalogLoadState.Failed(refreshError)}}
     }}
     private var sessionCursorScope:String?=null
     var sessionCursor by mutableStateOf<String?>(null);private set
