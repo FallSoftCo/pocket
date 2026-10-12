@@ -37,6 +37,7 @@ export function displayItem(item,turnId){
   for(let shrink=0;shrink<16&&Buffer.byteLength(JSON.stringify(compact()))>64000;shrink++){row.text=row.text.slice(0,Math.floor(row.text.length/2));row.detail=row.detail.slice(0,Math.floor(row.detail.length/2));row.truncated=true;}
   return Buffer.byteLength(JSON.stringify(compact()))<=64000?compact():null;
 }
+const displayEventMethods=new Set(['turn/started','turn/completed','item/started','item/completed','item/agentMessage/delta','item/plan/delta','item/commandExecution/outputDelta','item/reasoning/summaryTextDelta']);
 export class LiveTimeline {
   constructor({maxBytes=8*1024*1024,maxThreads=32,maxItems=500,ttlMs=15*60000,clock=Date.now}={}){this.threads=new Map();this.version=0;this.bytes=0;Object.assign(this,{maxBytes,maxThreads,maxItems,ttlMs,clock});}
   clear(){this.threads.clear();this.bytes=0;}
@@ -85,6 +86,7 @@ export class LiveTimeline {
     return turns.get(turnId);
   }
   ingest(m){
+    if(!displayEventMethods.has(m.method))return null;
     const p=m.params||{},threadId=p.threadId,turnId=p.turnId||p.turn?.id;
     if(!threadId||!turnId)return null;
     const turn=this.turn(threadId,turnId);const version=++this.version;

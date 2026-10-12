@@ -1,0 +1,10 @@
+{
+  "problem": "Unsupported events requested display-history reloads and allocated empty live turns",
+  "control": "new regression test failed: unsupported reasoning event returned reload true and version1",
+  "fix": "recognize supported display methods before allocating cache state or incrementing version",
+  "backendTests": 439,
+  "integratedTargetedTests": 18,
+  "httpEventTest": "passed; unsupported event leaves authenticated history head unchanged and requests no history",
+  "delivery": "staged only; live backend remains9d818e4; no additional restart",
+  "android": "no source or APK change"
+}

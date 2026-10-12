@@ -2288,6 +2288,13 @@
         "fixed": "native pass 16.172s; automatic two-page bridge, canonical input/old answer/new answer/tool ordering, draft retained, zero submitted commands",
         "delivery": "candidate only; installed phone remains alpha73"
       }
+    },
+    {
+      "id": "history-event-reload-noise-20261012",
+      "status": "qualified-not-deployed",
+      "requirement": "Unsupported events must not cause conversation refresh churn or synthetic working state; preserve public output and thinking summaries",
+      "evidence": "439 backend tests,18 integrated focused tests, actual HTTP/head event test; control reproduces reload=true",
+      "qualification": "docs/qualification/history-event-filter-20261012.json"
     }
   ],
   "current_state": {
