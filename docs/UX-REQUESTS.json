@@ -2520,7 +2520,8 @@
     {
       "id": "distinct-idle-card-surface-20261012",
       "request": "Make idle sessions immediately distinguishable through lower brightness and saturation, preserving readable text and distinct active and input-blocked states; recency must not imply activity.",
-      "status": "implemented-native-qualification-pending"
+      "status": "native-capture-reviewed-release-pending",
+      "evidence": "Native actual three-state capture r02 reviewed: working green, idle dim neutral, input-needed coral with corrected Needs your input label. Unit/lint/build passed; not published."
     }
   ],
   "current_state": {

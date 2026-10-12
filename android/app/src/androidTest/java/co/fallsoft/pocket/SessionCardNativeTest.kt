@@ -3,6 +3,8 @@ package co.fallsoft.pocket
 import android.content.Context
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Modifier
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.*
@@ -54,4 +56,32 @@ class SessionCardNativeTest {
    assertNull(Pocket.selected)
   }
  }
+ @Test fun workingIdleAndInputBlockedCardsRemainReadableAndCompact() {
+  val i=InstrumentationRegistry.getInstrumentation()
+  val device=UiDevice.getInstance(i)
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val context=i.targetContext
+  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear()
+   .putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76")
+   .putString("deviceId","synthetic-device").commit()
+  i.runOnMainSync{Pocket.init(context)}
+  val tasks=listOf(
+   Task("visual-working","Working session","/synthetic","active",1000,false,preview="Checking the release candidate"),
+   Task("visual-idle","Idle session","/synthetic","idle",1000,false,preview="Checks completed and results ready"),
+   Task("visual-blocked","Waiting for your answer","/synthetic","idle",1000,false,preview="Which environment should this use?",needsInput=true))
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{
+    CompositionLocalProvider(LocalImmersionMotionState provides false,LocalImmersionTransitionAnimated provides false){
+     MaterialTheme{Column(Modifier.statusBarsPadding()){tasks.forEach{TaskCard(it,1000)}}}
+    }
+   }}
+   compose.onNodeWithContentDescription("Working").assertExists()
+   compose.onNodeWithContentDescription("Idle").assertExists()
+   compose.onNodeWithContentDescription("Needs your input").assertExists()
+   tasks.forEach{compose.onNodeWithText(it.title).assertIsDisplayed()}
+   compose.waitForIdle()
+   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"session-state-native.png")))
+  }
+ }
+
 }
