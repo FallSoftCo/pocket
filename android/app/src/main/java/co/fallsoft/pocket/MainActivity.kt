@@ -233,7 +233,7 @@ class MainActivity:ComponentActivity(){
 @Composable fun CatalogStartupStatus(){
     Column(Modifier.fillMaxWidth().padding(vertical=28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)){
         when(val state=Pocket.catalogLoad){
-            CatalogLoadState.Loading->{Mark(88);BilingualLabel("Loading conversations",fontSize=17.sp);WorkflowText(Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,color=Muted,fontSize=13.sp)}
+            CatalogLoadState.Loading->{Mark(88);BilingualLabel("Loading conversations",color=Paper,fontSize=17.sp);BilingualLabel(Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,color=Muted,fontSize=13.sp,maxLines=1)}
             is CatalogLoadState.Failed->{WorkflowText("Conversations unavailable",fontSize=17.sp);WorkflowText(ConnectionMessages.server(state.message),color=Coral,fontSize=13.sp);Button({Pocket.refresh()},modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)){BilingualLabel("Retry")}}
             CatalogLoadState.Ready->Unit
         }
@@ -306,6 +306,9 @@ class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntState
         while(true){
             val latest=Pocket.tasks;val now=android.os.SystemClock.elapsedRealtime()
             if(System.currentTimeMillis()-listClock>=5_000)listClock=System.currentTimeMillis()
+            // Initial membership comes from an authenticated catalog read, not
+            // Codex runtime health. An offline worker must not hide readable work.
+            if(displayed.isEmpty()&&latest.isNotEmpty()&&Pocket.catalogLoad==CatalogLoadState.Ready)displayed=latest
             val changed=latest.count{observed[it.id]!=it};observed=latest.associateBy{it.id}
             pacing.record(now,changed)
             val active=latest.count{it.status in listOf("active","pending")}

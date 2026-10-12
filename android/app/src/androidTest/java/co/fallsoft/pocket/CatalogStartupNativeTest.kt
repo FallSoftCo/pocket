@@ -24,7 +24,7 @@ class CatalogStartupNativeTest{
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Startup draft preserved").commit()
   main{Pocket.init(context)}
-  qa("hold-catalog")
+  qa("runtime-offline");qa("hold-catalog")
   main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
   try{
    await{qa("state").optBoolean("catalogBlocked")&&device.hasObject(By.text("Loading conversations"))}
@@ -36,7 +36,7 @@ class CatalogStartupNativeTest{
    device.findObject(By.text("Retry")).click()
    await{Pocket.catalogLoad==CatalogLoadState.Ready&&Pocket.tasks.any{it.id=="same-thread"}}
    await{!device.hasObject(By.text("Loading conversations"))&&!device.hasObject(By.text("Conversations unavailable"))}
-   await{device.hasObject(By.text(Pocket.tasks.first{it.id=="same-thread"}.title))}
+   await{!Pocket.codexOnline&&device.hasObject(By.text(Pocket.tasks.first{it.id=="same-thread"}.title))}
    qa("release-activity");await{Pocket.refreshError.isBlank()}
    qa("hold-catalog");main{Pocket.refresh()}
    await{qa("state").optBoolean("catalogBlocked")}
@@ -44,6 +44,6 @@ class CatalogStartupNativeTest{
    assertFalse("Background refresh replaced readable sessions with startup loading",device.hasObject(By.text("Loading conversations")))
    assertEquals("Startup draft preserved",prefs.getString("draft:same-thread",null))
    assertEquals(0,qa("state").getJSONArray("replies").length())
-  }finally{qa("release-catalog");qa("release-activity")}
+  }finally{qa("release-catalog");qa("release-activity");qa("runtime-online")}
  }
 }

@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {LiveTimeline,timelinePage} from '../../server/timeline.mjs';
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
 const voiceReceiptReads=[];const replyReceipts=new Map(),receiptReads=[],recoveries=[];let replyAckState="accepted";let badReply=false,holdReceipt=false,wrongReceiptThread=false;let failedReadsRemaining=0;let malformedRead=false;let failReply=false,holdReply=false;let quietReading=false;let visibility=false;const acknowledgements=[],ackAttempts=[];let failedAckReads=0;let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let clippedPreview=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
-let awaitingPosition=false,positionEvidence=false;let holdHistory=false;let messageIdentity=false;let sameTurnGap=false;let omitSnapshotHead=false;let headEpoch="synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false,holdActivity=false,failCatalog=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
+let awaitingPosition=false,positionEvidence=false;let holdHistory=false;let messageIdentity=false;let sameTurnGap=false;let omitSnapshotHead=false;let headEpoch="synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false,holdActivity=false,failCatalog=false,runtimeOffline=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
 const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+(clippedPreview?1:revision),previewKind:'message',previewRole:'codex',activityAt:(notificationOnly?1:revision)*1000,updatedAt:(notificationOnly?1:revision)*1000,recencyAt:(notificationOnly?1:revision)*1000});
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
@@ -13,7 +13,7 @@ const server=http.createServer(async(req,res)=>{
  let raw='';for await(const b of req)raw+=b;
  if(req.headers.authorization!=='Bearer synthetic-system76'){res.writeHead(401);res.end('{}');return;}
  const path=new URL(req.url,'http://localhost').pathname;let body={};
- if(path==='/api/status'){const selected=new URL(req.url,'http://localhost').searchParams.get('threadId');body={host:'Synthetic',connected:true,deviceId:'synthetic-device-a',...(selected?{historyHead:{threadId:selected,epoch:headEpoch,version:selected==='same-thread'?(headCounter??revision):secondRevision}}:{})};}
+ if(path==='/api/status'){const selected=new URL(req.url,'http://localhost').searchParams.get('threadId');body={host:'Synthetic',connected:!runtimeOffline,deviceId:'synthetic-device-a',...(selected?{historyHead:{threadId:selected,epoch:headEpoch,version:selected==='same-thread'?(headCounter??revision):secondRevision}}:{})};}
  else if(path==='/api/voice/turns/saved-unknown'){voiceReceiptReads.push(path);body={id:'saved-unknown',state:'unknown',error:'Synthetic uncertain delivery'};}
  else if(path==='/api/voice/native/start'){res.statusCode=503;body={error:'Synthetic native transport unavailable'};}
  else if(path==='/api/threads'){catalogBlocked=holdCatalog;while(holdCatalog)await new Promise(resolve=>setTimeout(resolve,30));catalogBlocked=false;if(failCatalog){failCatalog=false;res.statusCode=503;body={error:'Synthetic catalog temporarily unavailable'};}else body={threads:[thread(),...(secondVisible?[secondThread()]:[])]};}
@@ -136,11 +136,13 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/state')body={revision,catalogBlocked,connections,reads,replies,positions,voiceReceiptReads,acknowledgements,ackAttempts,receiptReads,recoveries};
  else if(path==='/api/notifications')body={notifications:notificationOnly&&!notificationOverflow?[{id:revision,thread_id:'same-thread',kind:'complete'}]:[]};
  else if(path==='/api/attention')body={notifications:[]};
+ else if(path==='/_qa/runtime-offline'){runtimeOffline=true;body={ok:true};}
+ else if(path==='/_qa/runtime-online'){runtimeOffline=false;body={ok:true};}
  else if(path==='/_qa/fail-catalog'){failCatalog=true;body={ok:true};}
  else if(path==='/_qa/hold-activity'){holdActivity=true;body={ok:true};}
  else if(path==='/_qa/release-activity'){holdActivity=false;body={ok:true};}
  else if(path==='/api/activity'){while(holdActivity)await new Promise(r=>setTimeout(r,30));body={items:[]};}
  res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));
 });
-server.on('upgrade',(req,socket)=>{if(rejectLive){socket.destroy();return;}if(req.headers.authorization!=='Bearer synthetic-system76'){socket.destroy();return;}socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+crypto.createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n\r\n');connections++;sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));if(!quietReconnect)send(socket,{type:'status',connected:true});});
+server.on('upgrade',(req,socket)=>{if(rejectLive){socket.destroy();return;}if(req.headers.authorization!=='Bearer synthetic-system76'){socket.destroy();return;}socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+crypto.createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n\r\n');connections++;sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));if(!quietReconnect)send(socket,{type:'status',connected:!runtimeOffline});});
 server.listen(19998,'127.0.0.1',()=>console.log('Owned transcript fixture ready'));
