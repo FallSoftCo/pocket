@@ -16,9 +16,9 @@
     {
       "id": "missed-notification-transcript-freshness-20261011",
       "request": "Open conversation must catch up when notifications are newer even if catalog preview and status are unchanged; visible loading, retained history/drafts and no worker polling.",
-      "status": "implemented-native-qualification-running",
+      "status": "delivered-alpha71-code89",
       "source": "13f9ab5",
-      "evidence": "Installed alpha70/code88 verified. Authenticated current-thread bounded timeline returned current tool activity in 0.06 seconds. No diagnostic phone navigation or input performed. Native unchanged-catalog/missed-notification recovery test pending.",
+      "evidence": "Native unchanged-catalog/missed-notification recovery passed13.325s.295 Android tests per variant,both lints and signed builds pass. Private updater verified both signers; phone89 installed with base APK digest and13 protected pairing/environment/draft hashes unchanged. Exact reported conversation screen not identified/verified.",
       "constraints": [
         "No model calls or worker resumes",
         "Only selected thread in selected authenticated environment",
