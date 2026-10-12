@@ -1,5 +1,7 @@
 package co.fallsoft.pocket
 
+import androidx.compose.foundation.selection.toggleable
+
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -492,10 +494,10 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         WorkflowText("Tap the black screen to return. Voice keeps working; Home and Lock remain available.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
         TaskPermissionsControl()
         CoordinatorReportingControl()
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Italian immersion",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.enabled,{PocketImmersion.setEnabled(it)})}
+        Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=PocketImmersion.enabled,role=androidx.compose.ui.semantics.Role.Switch,onValueChange={PocketImmersion.setEnabled(it)}),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Italian immersion",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.enabled,onCheckedChange=null)}
         if(PocketImmersion.enabled)ImmersionDensityControl()
-        if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Automatic language cycling",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.motionEnabled,{PocketImmersion.setMotionEnabled(it)})}
-        if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){BilingualLabel("English support",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.supportEnabled,{PocketImmersion.setSupportEnabled(it)})}
+        if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=PocketImmersion.motionEnabled,role=androidx.compose.ui.semantics.Role.Switch,onValueChange={PocketImmersion.setMotionEnabled(it)}),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Automatic language cycling",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.motionEnabled,onCheckedChange=null)}
+        if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=PocketImmersion.supportEnabled,role=androidx.compose.ui.semantics.Role.Switch,onValueChange={PocketImmersion.setSupportEnabled(it)}),verticalAlignment=Alignment.CenterVertically){BilingualLabel("English support",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.supportEnabled,onCheckedChange=null)}
         if(PocketImmersion.enabled&&PocketImmersion.motionEnabled&&PocketImmersion.supportEnabled&&!motionAllowed())BilingualLabel("Reduced motion · cycling without animation",color=Muted,maxLines=2,centered=false)
         if(PocketImmersion.unavailable)WorkflowText("Translation unavailable · showing originals",color=Muted,fontSize=12.sp)
         Label("MADE TO BE YOURS",Mint);WorkflowText("Your connection.",fontSize=34.sp,letterSpacing=(-1).sp)
