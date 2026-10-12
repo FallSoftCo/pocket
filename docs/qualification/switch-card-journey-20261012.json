@@ -3,15 +3,17 @@
   "state": "native-journey-pass",
   "category": "Android navigation and transcript integration with synthetic HTTP provider",
   "case": "switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
-  "elapsedSeconds": 19.565,
-  "changes": "Critical blocked-refresh transition now uses real conversation card taps and Back rather than direct selection calls. Existing test extended; no additional test added.",
+  "elapsedSeconds": 23.346,
+  "changes": "Existing journey now uses Back/card navigation, Keyboard control, restored editor draft, typed replacement and Enter-to-send. No additional test added.",
   "verified": [
     "Correct second conversation selection during blocked first refresh",
     "New selected conversation receives fresh response",
     "Old refresh cannot contaminate selected conversation",
     "Reply API targets selected thread",
     "Both drafts retained",
-    "Real cards reopen respective conversations"
+    "Real cards reopen respective conversations",
+    "Selected editor restores its own saved draft",
+    "Enter submits edited text to selected conversation via real UI"
   ],
   "realBoundaries": [
     "Android activity/navigation",
@@ -20,14 +22,13 @@
     "App draft preferences"
   ],
   "substitutedBoundaries": [
-    "Synthetic provider/server responses",
-    "Reply triggered through app API rather than send-button tap"
+    "Synthetic provider/server responses"
   ],
   "limits": [
     "No physical phone verification",
     "No production optimized APK qualification",
     "Not a full real Codex/provider delivery journey"
   ],
-  "logSha256": "a31b09611b0c447f7869614bc86ea521703c4f4dd79d8c11e008d78b5005076c",
-  "log": "/tmp/nextcomp-switch-card-journey-native.log"
+  "logSha256": "f4704025922238cb3bc254ce79d7e9b3f09f26326600de9e30527ea444f674db",
+  "log": "/tmp/nextcomp-switch-editor-native.log"
 }

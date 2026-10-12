@@ -472,11 +472,21 @@ class TranscriptRefreshNativeTest {
   qa("release");Thread.sleep(500)
   assertEquals("Old refresh changed selected chat","second-thread",Pocket.selected)
   assertEquals("Old response contaminated current chat",listOf("other/message"),PocketTranscript.rows.map{it.s("id")})
-  main{Pocket.reply("Reply after switching")};await{qa("state").getJSONArray("replies").length()==1&&!Pocket.sending}
-  assertEquals("Reply routed to old chat","second-thread",qa("state").getJSONArray("replies").getJSONObject(0).s("threadId"))
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   assertEquals("First draft lost","First saved draft",prefs.getString("draft:same-thread",null))
   assertEquals("Second draft lost","Second saved draft",prefs.getString("draft:second-thread",null))
+  assertTrue("Keyboard control missing after switching",device.wait(Until.hasObject(By.text("Keyboard")),3000))
+  device.findObject(By.text("Keyboard")).click()
+  assertTrue("Editor missing after switching",device.wait(Until.hasObject(By.clazz("android.widget.EditText")),3000))
+  val editor=device.findObject(By.clazz("android.widget.EditText"))
+  assertEquals("Selected conversation draft not restored","Second saved draft",editor.text)
+  editor.text="Reply after switching"
+  device.pressKeyCode(android.view.KeyEvent.KEYCODE_ENTER)
+  await{qa("state").getJSONArray("replies").length()==1&&!Pocket.sending}
+  val submitted=qa("state").getJSONArray("replies").getJSONObject(0)
+  assertEquals("Reply routed to old chat","second-thread",submitted.s("threadId"))
+  assertEquals("Enter did not submit the edited text","Reply after switching",submitted.s("text"))
+  device.pressBack()
   main{Pocket.closeTask();Pocket.open("same-thread")};await{has(2)&&!PocketTranscript.updating}
   assertTrue("New chat rows leaked on reopen",PocketTranscript.rows.none{it.s("id")=="other/message"})
   main{Pocket.closeTask()}
