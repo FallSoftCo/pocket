@@ -25,7 +25,7 @@
     "Physical phone interaction"
   ],
   "environmentOwnership": {
-    "status": "candidate-unit-tested-native-pending",
+    "status": "native-verified-release-pending",
     "cause": "Saved voice state identified remote versus phone but not named remote environment or pairing",
     "changes": [
       "Persist explicit environment ID and backend credential fingerprint with receipt",
@@ -34,17 +34,40 @@
     ],
     "checks": "Unit tests pass matching owner, different environment, changed pairing and missing legacy ownership",
     "remaining": [
-      "Native mismatch/restart and matching-owner saved receipt checks",
-      "Legacy recording ownership recovery UX before release"
+      "Signed release and physical delivery"
     ],
     "legacyRecovery": {
-      "status": "implemented-unit-tested-native-pending",
+      "status": "native-verified",
       "trigger": "Explicit Check saved turn interaction",
       "transport": "Only authenticated receipt GETs against captured paired destinations; bounded4s each/16 destinations maximum",
       "acceptance": "Exactly one matching receipt ID with valid state; all other backends definitively absent; matching pairing still current",
       "preservation": "No audio uploads, voice starts, turn creation or automatic profile selection; unavailable and ambiguous results keep original recording",
       "nativeScenario": "savedVoiceOwnerIsCheckedBeforeServiceAndLegacyDiscoveryNeverResends",
       "build": "debug unit tests and qualification APK/test APK pass"
+    },
+    "nativeChecks": {
+      "legacyAndMismatch": {
+        "result": "pass",
+        "seconds": 8.279,
+        "assertions": [
+          "mismatched owner zero voice receipt reads",
+          "legacy exactly one receipt read",
+          "correct owner fingerprint persisted",
+          "no voice service started",
+          "recording bytes retained",
+          "zero submitted work"
+        ]
+      },
+      "matchingUnknown": {
+        "result": "pass",
+        "seconds": 7.849,
+        "assertions": [
+          "same original receipt checked repeatedly",
+          "recording and target preserved",
+          "new recording blocked",
+          "zero submitted work"
+        ]
+      }
     }
   }
 }
