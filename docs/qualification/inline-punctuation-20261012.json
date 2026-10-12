@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "state": "native-qualified-actual-punctuation-motion-review-pending",
+  "state": "native-qualified-publication-held-reading-flow-review",
   "date": "2026-10-12",
   "unit": {
     "tests": 356,
@@ -26,5 +26,18 @@
   "sourceSha256": {
     "android/app/src/main/java/co/fallsoft/pocket/ImmersionSharedRuns.kt": "a01e916f4f0297de31e68a3baaf133bdc418348d7231616c29f2e7392f0f67dd",
     "android/app/src/main/java/co/fallsoft/pocket/SharedInlineImmersionText.kt": "600c442fcbbe8c284c6d7f60e97e24a689b13771970a79d2b6f363ec269a63d7"
+  },
+  "punctuationMotionReview": {
+    "durationSeconds": 44.260511,
+    "artifact": "/tmp/nextcomp-punctuation-review.mp4",
+    "contactSheet": "/tmp/nextcomp-punctuation-contact.png",
+    "sampling": "One frame every five seconds; not a complete temporal/perception qualification",
+    "findings": [
+      "Immediate comma now follows the visible changed phrase.",
+      "Reserved unused phrase width still creates conspicuous gap before then inspect.",
+      "Intermediate mixed glyphs visible in samples; transition readability not established.",
+      "Physical phone and optimized final candidate remain unverified."
+    ],
+    "decision": "Hold publication; do not infer comfortable reading from native layout tests."
   }
 }
