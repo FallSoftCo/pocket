@@ -1,7 +1,7 @@
 {
   "requirement": "selected conversation must recover missed and cached intermediate messages automatically",
-  "delivered": false,
-  "installedPhone": "alpha73/code91 unchanged",
+  "delivered": true,
+  "installedPhone": "alpha74/code92; independently package/hash verified",
   "host": "OZZZ-OS",
   "emulator": "owned nextcomp_env_qa emulator5620",
   "control": {
@@ -23,10 +23,9 @@
   },
   "unitTests": 304,
   "remaining": [
-    "signed variant builds/lints",
-    "final-source reconnect/head regression",
-    "coherent backend deployment",
-    "signed update and real handset verification"
+    "physical reported-chat interaction verification",
+    "freshness-head parity on other environment backends",
+    "browser implementation parity"
   ],
   "finalHeadRegression": {
     "source": "55fe6f3",
@@ -40,11 +39,12 @@
     "releaseTests": 304,
     "lints": "both passed",
     "twoSigningVariants": "prepared under 80MiB",
-    "phone": "delivery pending"
+    "phone": "installed; APK checksum verified;13 protected preference hashes unchanged"
   },
   "backend": {
     "source": "9d818e4",
     "qualification": "437 Node tests and five targeted actual HTTP/event tests passed",
     "deployment": "workstation only; authenticated head and Codex connection verified; no pending outgoing; unknown voice receipts preserved"
-  }
+  },
+  "physicalInteraction": "reported specific frozen chat not directly reproduced on handset; native emulator interaction verified"
 }

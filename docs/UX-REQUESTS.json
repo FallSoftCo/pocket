@@ -2286,7 +2286,12 @@
       "sameTurnGapQualification": {
         "control": "native failure 24.370s; latest tool received, intermediate answer absent; two recent reads only",
         "fixed": "native pass 16.172s; automatic two-page bridge, canonical input/old answer/new answer/tool ordering, draft retained, zero submitted commands",
-        "delivery": "candidate only; installed phone remains alpha73"
+        "delivery": "alpha74 installed; native interaction passed; physical reported-chat interaction not yet verified"
+      },
+      "deliveryEvidence": {
+        "android": "alpha74/code92 installed; checksum and13 protected settings verified",
+        "backend": "workstation9d818e4 authenticated head/live health verified; other environment backends unchanged",
+        "physicalFlow": "specific reported freeze not directly reproduced on handset"
       }
     },
     {
