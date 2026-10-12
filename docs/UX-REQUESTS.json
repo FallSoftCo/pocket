@@ -2480,9 +2480,10 @@
         "emulator_reproduction": "alpha88 optimized compatible APK, immersion enabled, search tap; fatal Constraints width 2147483647 at SharedInlineImmersionText.kt:140",
         "cause": "Horizontal search filter row supplies unbounded width; aligned renderer used Infinity as fixed paragraph width.",
         "fix": "Use natural reserved width of aligned runs when parent width is unbounded. Preserve bounded paragraph geometry, cycling and horizontal search controls.",
-        "phone_crash_stack": "unavailable; SSH verified installed version, ADB unavailable"
+        "phone_crash_stack": "unavailable; SSH verified installed version, ADB unavailable",
+        "visual_review": "Optimized native review caught unbounded filter clipping: ellipsis allowance must only apply to bounded width. Candidate 107 not published; earlier receipts retained."
       },
-      "verification": "Real search screen typing, language handoff, dismissal and draft preservation; pending alpha89 frozen qualification."
+      "verification": "Real search screen plus reserved-word geometry; alpha89 frozen qualification pending corrected candidate."
     }
   ],
   "current_state": {

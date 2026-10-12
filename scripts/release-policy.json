@@ -37,7 +37,8 @@
     "co.fallsoft.pocket.ImmersionReadingWaveNativeTest#controlsAndBodyCycleOnOneNativeClockAndPauseForSelectionAndReducedMotion",
     "co.fallsoft.pocket.ImmersionReadingWaveNaturalNativeTest#naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds",
     "co.fallsoft.pocket.MarkdownTableNativeTest#ordinaryAndImmersionTablesRetainColumnsScrollingLinksAndLargeText",
-    "co.fallsoft.pocket.SearchNativeTest#immersionSearchOpensTypesFiltersAndDismissesWithoutLosingDraft"
+    "co.fallsoft.pocket.SearchNativeTest#immersionSearchOpensTypesFiltersAndDismissesWithoutLosingDraft",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#unboundedControlKeepsItsWholeReservedWordWithoutEllipsisChunks"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",

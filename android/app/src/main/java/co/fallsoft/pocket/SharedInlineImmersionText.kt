@@ -98,7 +98,7 @@ import androidx.compose.ui.unit.*
         val content=mutableMapOf<String,InlineTextContent>()
         // Parent ellipsis needs physical room beside an atomic placeholder.
         // Children clip at that boundary so the paragraph supplies one ellipsis.
-        val ellipsisAllowance=if(maxLines<Int.MAX_VALUE&&overflow==TextOverflow.Ellipsis)
+        val ellipsisAllowance=if(constraints.hasBoundedWidth&&maxLines<Int.MAX_VALUE&&overflow==TextOverflow.Ellipsis)
             measurer.measure(AnnotatedString("…"),style=style,softWrap=false).size.width+1 else 0
         val slotLimit=(available-ellipsisAllowance).coerceAtLeast(1)
         val fragmentOverflow=if(ellipsisAllowance>0)TextOverflow.Clip else overflow

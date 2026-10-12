@@ -2,6 +2,8 @@ package co.fallsoft.pocket
 
 import android.content.Context
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
@@ -634,4 +636,30 @@ class SharedInlineLayoutNativeTest {
   }
  }
 
+
+ @Test fun unboundedControlKeepsItsWholeReservedWordWithoutEllipsisChunks() {
+  val i=InstrumentationRegistry.getInstrumentation()
+  i.targetContext.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  fun form(word:String)=buildAnnotatedString{
+   append(word);addStringAnnotation("immersion-reserve","recent-control",0,length)
+  }
+  var geometry:ImmersionSharedWipeGeometry?=null
+  var parent:TextLayoutResult?=null
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    androidx.compose.foundation.layout.Row(Modifier.horizontalScroll(rememberScrollState())){
+     SharedInlineImmersionText(form("Recent"),form("Recenti"),{1f},
+      fontSize=14.sp,lineHeight=18.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+      reserve=listOf(form("Recent"),form("Recenti")),
+      onTextLayout={parent=it},onWipeGeometry={geometry=it})
+    }
+   }}}
+   compose.waitForIdle()
+   i.runOnMainSync{
+    assertNotNull(geometry);assertNotNull(parent)
+    assertEquals("Unbounded control invented wrapped/truncated chunks",1,geometry!!.regions.size)
+    assertFalse("Natural-width word was clipped",parent!!.hasVisualOverflow)
+   }
+  }
+ }
 }
