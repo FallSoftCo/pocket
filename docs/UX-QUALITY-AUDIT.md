@@ -40,16 +40,14 @@ chronology/freshness issue is resolved.
 The switching race uses real Back and card taps while the old history response
 is blocked, then opens the keyboard and submits via Enter. Native evidence
 verifies selected-thread updates, no old-response contamination, retained drafts
-and reply transport target. Provider echo/history/restart is still a separate
-missing complete journey. See
+and reply transport target. The separate real-backend journey now verifies provider echo, durable identity and restart through actual app navigation, HTTP/WS and SQLite, with only Codex RPC substituted. See qualification/android-real-backend-20261012.json and qualification/reading-metadata-candidate-20261012.json. See
 [the journey receipt](qualification/switch-card-journey-20261012.json).
 
 [Testing strategy](TESTING-STRATEGY.md) governs future additions: classify real
 and substituted boundaries, extend meaningful journeys, preserve setup evidence,
 and keep visual/performance/deployment acceptance separate from test totals.
 The revised native runner completed the required r05 policy with notification
-permission preflight and exact installed-APK reuse. Grouped runner consolidation
-and real app-to-backend integration remain unfinished.
+permission preflight and exact installed-APK reuse. Grouped runner consolidation remains unfinished. Real app-to-backend send and retained-history journeys now pass with a deterministic provider substitute; voice, notifications and real-network breadth remain open.
 
 Actual motion review led to clause-boundary reservation and prefix/punctuation
 repairs. Closely sampled transition frames were reviewed, with no full-sentence
@@ -59,8 +57,7 @@ enabled-immersion menu opening without process death; the intrinsic-layout crash
 repair is verified on the emulator, not attributed to a physical crash report.
 
 Next acceptance gaps:
-- Complete user-control send/echo/history/restart across app, real backend and
-  storage, retaining deterministic provider substitution.
+- Extend the verified real-backend journey to reconnect/failure recovery and voice; keep physical/provider boundaries explicitly separate.
 - Obtain exact installed-phone version and reproduce freshness/order reports.
 - Exercise voice stop/transcribe/send end to end; qualify actual phone keys,
   IME, playback and provider boundaries separately.
@@ -583,3 +580,7 @@ isolation verification still need work; the full goal remains active.
 ## Reading checkpoint candidate — 2026-10-12
 
 Position-only updates now preserve measured cache payload weight. Changed row or detail references retain normal full-snapshot measurement. Focused cache checks and the real-backend history journey pass after requiring an exact durable reading checkpoint before process termination. This removes a history scan from steady position updates; physical smoothness is not established. [Candidate evidence](qualification/reading-metadata-candidate-20261012.json). Signed release and phone delivery remain pending; alpha87 is unchanged.
+
+## Alpha88 release qualification in progress — 2026-10-12
+
+Frozen source2e08f21 has completed signed builds and release lint for both maintained signing identities. Artifact-bound native regression qualification is running on the owned OZZZ emulator. This does not constitute publication, installation, physical smoothness or whole-product acceptance. The real-backend reading journey remains a separate required acceptance check for this release. Alpha87/code105 remains the update channel.
