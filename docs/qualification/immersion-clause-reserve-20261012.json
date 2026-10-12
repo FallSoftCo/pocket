@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "state": "prototype-native-pass-visual-review-pending",
+  "state": "native-pass-sampled-conversation-improved-full-temporal-review-pending",
   "change": "Wrapped punctuated changing phrases reserve their final line to the edge so the following common clause begins on a stable new line. No text insertion, stretched word spacing or per-cycle slot resizing.",
   "nativeEvidence": {
     "caseClass": "SharedInlineLayoutNativeTest",
@@ -13,5 +13,12 @@
     "Actual conversation recording/review pending",
     "Not optimized signed release or handset deployment"
   ],
-  "publication": "held"
+  "publication": "held",
+  "conversationReview": {
+    "gallery": "nextcomp-immersion-clause-review",
+    "capture": "/tmp/nextcomp-clause-review-r02.mp4",
+    "setup": "Italian switch checked=true verified before capture",
+    "observation": "Samples show fixed following clause/paragraph and no conspicuous middle-of-sentence reservation gap",
+    "limits": "Five-second sampling does not qualify transition legibility or handset pacing"
+  }
 }

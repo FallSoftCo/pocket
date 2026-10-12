@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "state": "direct-native-menu-and-row-pass-component-suite-running",
+  "state": "direct-native-menu-row-and-component-regressions-pass",
   "cause": "Material menu intrinsic measurement queried BoxWithConstraints in immersion text; reproduced IllegalStateException on emulator when immersion was enabled.",
   "repair": "Intrinsic layout adapter answers with native text shaping without querying subcomposed children.",
   "verified": [
@@ -28,8 +28,12 @@
   ],
   "limits": [
     "Actual installed phone crash not attributed to this cause without phone logs",
-    "Qualification app, not optimized production artifact",
-    "Native regression suite running separately"
+    "Qualification app, not optimized production artifact"
   ],
-  "phoneChanged": false
+  "phoneChanged": false,
+  "componentRegression": {
+    "class": "SharedInlineLayoutNativeTest",
+    "seconds": 46.843,
+    "logSha256": "3394cbe89319febe70f03c15e2061485ae9b502f8d8aa9beccfebee7b431df68"
+  }
 }
