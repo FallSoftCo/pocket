@@ -23,5 +23,19 @@
     "Signed release qualification and deployment",
     "Successful provider transcription/send test",
     "Physical phone interaction"
-  ]
+  ],
+  "environmentOwnership": {
+    "status": "candidate-unit-tested-native-pending",
+    "cause": "Saved voice state identified remote versus phone but not named remote environment or pairing",
+    "changes": [
+      "Persist explicit environment ID and backend credential fingerprint with receipt",
+      "Guard explicit check and service startup before any backend voice call",
+      "Preserve unowned legacy recordings rather than guessing"
+    ],
+    "checks": "Unit tests pass matching owner, different environment, changed pairing and missing legacy ownership",
+    "remaining": [
+      "Native mismatch/restart and matching-owner saved receipt checks",
+      "Legacy recording ownership recovery UX before release"
+    ]
+  }
 }

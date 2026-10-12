@@ -15,4 +15,11 @@ class VoiceCapturePolicyTest {
   assertFalse(voiceSpeechMayClearPending("", ""))
   assertTrue(voiceSpeechMayClearPending("completed","completed"))
  }
+ @Test fun pendingVoiceCannotCrossEnvironmentOrPairingAndLegacyIsNotGuessed(){
+  assertTrue(voicePendingMatchesEnvironment(false,null,null,"a","owner"))
+  assertTrue(voicePendingMatchesEnvironment(true,"a","owner","a","owner"))
+  assertFalse(voicePendingMatchesEnvironment(true,"a","owner","b","owner"))
+  assertFalse(voicePendingMatchesEnvironment(true,"a","owner","a","new-pairing"))
+  assertFalse(voicePendingMatchesEnvironment(true,null,null,"a","owner"))
+ }
 }

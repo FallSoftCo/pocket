@@ -25,3 +25,6 @@ internal fun captureFeedbackVisible(active:Boolean,launching:Boolean,state:Strin
 /** Unrelated/error speech cannot acknowledge a recording with unknown delivery. */
 internal fun voiceSpeechMayClearPending(completedTurn:String?,pendingTurn:String?)=
     !completedTurn.isNullOrBlank()&&completedTurn==pendingTurn
+
+internal fun voicePendingMatchesEnvironment(pending:Boolean,savedEnvironment:String?,savedOwner:String?,environment:String,owner:String)=
+    !pending||(!savedEnvironment.isNullOrBlank()&&!savedOwner.isNullOrBlank()&&savedEnvironment==environment&&savedOwner==owner)

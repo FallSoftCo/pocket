@@ -122,7 +122,7 @@ class TranscriptRefreshNativeTest {
  @Test fun unknownVoiceReceiptRetainsRecordingAndOnlyChecksOriginalTurn(){
   twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   val recording=java.io.File(context.filesDir,"voice-pending.wav");val bytes=byteArrayOf(1,2,3,4);recording.writeBytes(bytes)
-  prefs.edit().putString("voicePendingId","saved-unknown").putBoolean("voicePendingLocal",false).putString("voicePendingTarget","same-thread").commit()
+  prefs.edit().putString("voicePendingId","saved-unknown").putString("voicePendingEnvironment",Pocket.environmentId).putString("voicePendingOwner",backendOwner(Pocket.base,Pocket.token)).putBoolean("voicePendingLocal",false).putString("voicePendingTarget","same-thread").commit()
   try{
    main{PocketVoice.start(context,"same-thread",recordImmediately=false,inPlace=true,checkSaved=true)}
    await{PocketVoice.state=="Retry needed"&&PocketVoice.problem.contains("Synthetic uncertain delivery")}
@@ -133,7 +133,7 @@ class TranscriptRefreshNativeTest {
    assertEquals("Recording replaced uncertain turn","saved-unknown",prefs.getString("voicePendingId",null))
    assertTrue(PocketVoice.problem.contains("saved voice turn"))
    assertEquals(0,qa("state").getJSONArray("replies").length())
-  }finally{main{PocketVoice.stop()};prefs.edit().remove("voicePendingId").remove("voicePendingLocal").remove("voicePendingTarget").commit();recording.delete()}
+  }finally{main{PocketVoice.stop()};prefs.edit().remove("voicePendingId").remove("voicePendingLocal").remove("voicePendingTarget").commit();prefs.edit().remove("voicePendingEnvironment").remove("voicePendingOwner").commit();recording.delete()}
  }
  @Test fun inlinePlaybackVolumePreservesMuteAndTypingDuringCapture(){
   twoChats();main{Pocket.open("same-thread",keyboard=true)}
