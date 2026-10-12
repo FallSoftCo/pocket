@@ -33,5 +33,11 @@
   "failed_controls": [
     "Read-count assertions initially did not account for existing new-input refresh",
     "Native evidence demonstrated pending attempts were not retried by heuristic misplaced-row filtering; exact deferred identities fixed this"
-  ]
+  ],
+  "backend_delivery": {
+    "status": "deployed",
+    "source": "d771256",
+    "actual_read_only_check": "Stable client identity resolved deliberately stale physical ID to response successor after two bounded normal history pages",
+    "preservation": "Original Codex daemon PIDs unchanged; outgoing commands had no pending states; three unknown voice receipts preserved"
+  }
 }
