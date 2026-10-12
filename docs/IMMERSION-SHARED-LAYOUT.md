@@ -54,3 +54,13 @@ accessibility actions. Five final native cases pass, including exported sentence
 uniqueness, real injected link taps and original callback via custom action.
 TalkBack utterances/gestures and selection remain unqualified; the candidate
 is still disabled and alpha86 has not changed.
+
+Shared wipe implemented: actual native placeholder rectangles define one
+reading frontier for the whole paragraph. Same-line slots share horizontal
+progress; later physical line bands wait. RTL mirrors the whole frontier.
+Native measured line height avoids fractional-sp rounding creating phantom
+bands. Four geometry tests and six final native cases pass; one native
+intermediate image proves unchanged common ink and changed replacement ink.
+This is a single-phase pixel check, not a watched frame sequence or phone
+performance proof. Cross-cue reservations, production cue visibility,
+lexical/action handoff consistency and physical review remain open.

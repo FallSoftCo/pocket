@@ -162,4 +162,76 @@ class SharedInlineLayoutNativeTest {
   }
  }
 
+ @Test fun intermediateWipePreservesCommonInkAndActuallyChangesPhraseInk(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  fun form(word:String)=buildAnnotatedString{
+   append("Please ");val at=length;append(word)
+   addStringAnnotation("immersion-reserve","7:13",at,length)
+   append(" existing sessions.")
+  }
+  val progress=mutableFloatStateOf(0f)
+  var parent:TextLayoutResult?=null
+  var geometry:ImmersionSharedWipeGeometry?=null
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    SharedInlineImmersionText(form("search"),form("cerca fra tutti i risultati"),{progress.floatValue},
+     Modifier.padding(top=64.dp).width(240.dp),onTextLayout={parent=it},onWipeGeometry={geometry=it})
+   }}}
+   compose.waitForIdle()
+   val node=device.wait(androidx.test.uiautomator.Until.findObject(
+    androidx.test.uiautomator.By.text("Please search existing sessions.")),5000)!!
+   val bounds=node.visibleBounds
+   var common:androidx.compose.ui.geometry.Rect?=null;var phrase:androidx.compose.ui.geometry.Rect?=null
+   i.runOnMainSync{
+    val layout=parent!!
+    common=layout.getBoundingBox(layout.layoutInput.text.text.indexOf("existing"))
+    phrase=layout.placeholderRects.first()
+   }
+   val baseline=i.uiAutomation.takeScreenshot()!!
+   i.runOnMainSync{progress.floatValue=.65f}
+   compose.mainClock.advanceTimeBy(32)
+   compose.waitForIdle()
+   assertTrue("Native text must hand off before sampling its frame",
+    device.wait(androidx.test.uiautomator.Until.hasObject(
+     androidx.test.uiautomator.By.text("Please cerca fra tutti i risultati existing sessions.")),5000))
+   device.waitForIdle()
+   var middle=i.uiAutomation.takeScreenshot()!!
+   fun differences(rect:androidx.compose.ui.geometry.Rect):Int{
+    var changed=0
+    for(y in (bounds.top+rect.top.toInt()).coerceAtLeast(0) until (bounds.top+rect.bottom.toInt()).coerceAtMost(baseline.height)){
+     for(x in (bounds.left+rect.left.toInt()).coerceAtLeast(0) until (bounds.left+rect.right.toInt()).coerceAtMost(baseline.width)){
+      if(baseline.getPixel(x,y)!=middle.getPixel(x,y))changed++
+     }
+    }
+    return changed
+   }
+   fun colors(rect:androidx.compose.ui.geometry.Rect)=buildSet<Int>{
+    for(y in bounds.top+rect.top.toInt() until bounds.top+rect.bottom.toInt()){
+     for(x in bounds.left+rect.left.toInt() until bounds.left+rect.right.toInt())add(baseline.getPixel(x,y))
+    }
+   }.size
+   val paintStarted=android.os.SystemClock.elapsedRealtime()
+   while(differences(phrase!!)<=10&&android.os.SystemClock.elapsedRealtime()-paintStarted<2000){
+    middle.recycle();Thread.sleep(50);middle=i.uiAutomation.takeScreenshot()!!
+   }
+   val a=IntArray(baseline.width*baseline.height);val b=IntArray(a.size)
+   baseline.getPixels(a,0,baseline.width,0,0,baseline.width,baseline.height)
+   middle.getPixels(b,0,middle.width,0,0,middle.width,middle.height)
+   java.io.File(c.cacheDir,"shared-wipe-pixels.json").writeText(
+    org.json.JSONObject().put("bounds",bounds.toString()).put("common",common.toString())
+     .put("phrase",phrase.toString()).put("geometry",geometry.toString())
+     .put("commonColors",colors(common!!)).put("phraseColors",colors(phrase!!))
+     .put("paintObservationWaitMs",android.os.SystemClock.elapsedRealtime()-paintStarted)
+     .put("allChangedPixels",a.indices.count{a[it]!=b[it]})
+     .put("phraseChangedPixels",differences(phrase!!)).toString())
+   try{
+    assertTrue("Screenshot must contain actual common glyph ink",colors(common!!)>2)
+    assertEquals("Unchanged ink should not fade or shift",0,differences(common!!))
+    assertTrue("A mid-wipe frame must actually change replacement ink",differences(phrase!!)>10)
+   }finally{baseline.recycle();middle.recycle()}
+  }
+ }
+
 }

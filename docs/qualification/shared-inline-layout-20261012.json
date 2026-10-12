@@ -1,10 +1,10 @@
 {
   "state": "candidate-not-enabled-not-published",
   "native": {
-    "cases": 5,
+    "cases": 6,
     "result": "pass",
-    "seconds": 8.366,
-    "logSha256": "47161948d2b682a77d4a35b57746d3a5de7eff5f218c6d6b6a6afbdb5be8f763",
+    "seconds": 11.52,
+    "logSha256": "23444cbff8326b283e28d74e19534c6e815573754ab373b516a48061e51835fb",
     "checks": [
       "unchanged word position at 17sp",
       "unchanged word position at 34sp",
@@ -12,7 +12,8 @@
       "oversized unbroken tokens wrap completely in both forms without height clipping",
       "Android accessibility export contains the visible sentence once in both languages",
       "Real UiAutomator injected touch activates replacement link in both forms",
-      "Exposed custom accessibility action invokes the original replacement callback"
+      "Exposed custom accessibility action invokes the original replacement callback",
+      "Intermediate native image retains common glyph pixels and changes replacement glyph pixels"
     ]
   },
   "unit": {
@@ -21,10 +22,12 @@
   },
   "scope": "Isolated native emulator5620 nextcomp_env_qa, synthetic paragraphs, no provider or real sessions",
   "remaining": [
-    "Global reading-direction line cascade, not simultaneous independent phrase wipes",
     "Production visibility/cue tracking and full styled content integration",
     "Actual frames and physical handset qualification",
-    "Actual TalkBack utterance/gesture and text selection qualification, including empty reserved slots"
+    "Actual TalkBack utterance/gesture and text selection qualification, including empty reserved slots",
+    "Full multi-line frame sequence and physical performance review",
+    "Per-fragment visual handoff and paragraph lexical/action consistency during transitions",
+    "Stable reservations across all alternate plans, not just current from/to pair"
   ],
   "notes": [
     "Large-text check uses 34sp/52sp, not a complete OS accessibility font-scale audit",
@@ -33,8 +36,17 @@
     "Oversized fragments use native wrapping and maximum wrapped height; no manual Unicode token slicing.",
     "Before fix, Android exported both search and Please search existing sessions.; two phrase occurrences. Duplicate child readout is cleared; parent retains phrase custom actions.",
     "Initial accessibility fixture was behind the status bar; qualification moved it into visible content before diagnosing duplicate export.",
-    "A failed test-source compilation produced an old-APK run; that run is excluded. Final build succeeded before final five-case instrumentation."
+    "A failed test-source compilation produced an old-APK run; that run is excluded. Final build succeeded before final five-case instrumentation.",
+    "Shared physical paragraph frontier is translated into each fragment coordinate space; RTL mirrors the paragraph, not individual slots.",
+    "Native measured line height replaces nominal sp height to avoid rounding a single 69px line into two bands.",
+    "Intermediate screenshots initially preceded observed paint. Bounded screenshot observation now requires actual changed glyph pixels; this is not phone latency or 60fps qualification."
   ],
-  "candidateApkSha256": "47b14f23528357bf4962273dccf589a3efbd0527bf5c0acfc34a92b3ba91cd4b",
-  "testApkSha256": "a480be24d9f362bbff469136440d2343f533841c9ff3930b50a40c1af00211ef"
+  "candidateApkSha256": "a925b27eb42ec1d8527e3e26f7dde42450df22ae7d3dcaca976abb0afa58c5c6",
+  "testApkSha256": "1c92cc1c209e0ed2744a66fafbe0b8f408074e3f579e21ca4751c029e61d0403",
+  "debugUnitSuite": {
+    "cases": 349,
+    "result": "pass"
+  },
+  "sharedWipeUnitCases": 4,
+  "qualificationLint": "pass"
 }

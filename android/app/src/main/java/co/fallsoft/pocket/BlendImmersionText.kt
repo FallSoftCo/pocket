@@ -31,7 +31,8 @@ import androidx.compose.ui.unit.*
     fillWidth:Boolean=false,reserve:List<AnnotatedString> = emptyList(),
     onVisibleRanges:((Set<String>,Boolean)->Unit)?=null,
     trackWholeTextVisibility:Boolean=false,
-    onNativeTextLayout:((TextLayoutResult)->Unit)?=null
+    onNativeTextLayout:((TextLayoutResult)->Unit)?=null,
+    sharedWipeMask:((Float,Float)->ImmersionSharedWipeMask)?=null
 ){
     val measurer=rememberTextMeasurer()
     val density=androidx.compose.ui.platform.LocalDensity.current
@@ -76,12 +77,13 @@ import androidx.compose.ui.unit.*
                         drawText(result)
                         for(line in 0 until result.lineCount){
                             val phase=if(line<firstChangedLine)0f else immersionWipeLineProgress(p,line-firstChangedLine,lines)
-                            val feather=(size.width*.12f).coerceIn(12f,48f)
+                            val shared=sharedWipeMask?.invoke(p,result.getLineTop(line))
+                            val feather=shared?.feather?:(size.width*.12f).coerceIn(12f,48f)
                             val frontier=-feather+(size.width+2f*feather)*phase
                             val left=if(incomingLayer)1f else 0f
                             val right=1f-left
                             val colors=if(rtl)listOf(Color.Black.copy(alpha=right),Color.Black.copy(alpha=left))else listOf(Color.Black.copy(alpha=left),Color.Black.copy(alpha=right))
-                            val center=if(rtl)size.width-frontier else frontier
+                            val center=shared?.center?:if(rtl)size.width-frontier else frontier
                             drawRect(Brush.horizontalGradient(colors,center-feather,center+feather),topLeft=Offset(0f,result.getLineTop(line)),size=Size(size.width,result.getLineBottom(line)-result.getLineTop(line)),blendMode=BlendMode.DstIn)
                         }
                         canvas.restore()

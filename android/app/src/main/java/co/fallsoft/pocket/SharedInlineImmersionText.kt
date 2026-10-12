@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.*
@@ -23,7 +24,8 @@ import androidx.compose.ui.unit.*
     modifier:Modifier=Modifier,fontSize:TextUnit=17.sp,lineHeight:TextUnit=26.sp,
     color:Color=Paper,fontWeight:FontWeight?=null,
     onTextLayout:(TextLayoutResult)->Unit={},
-    onFragmentLayout:(TextLayoutResult)->Unit={}
+    onFragmentLayout:(TextLayoutResult)->Unit={},
+    onWipeGeometry:(ImmersionSharedWipeGeometry)->Unit={}
 ){
     val runs=remember(from,to){immersionSharedRuns(listOf(from,to))}
     if(runs==null){
@@ -35,11 +37,18 @@ import androidx.compose.ui.unit.*
     val measurer=rememberTextMeasurer()
     val density=LocalDensity.current
     val uriHandler=LocalUriHandler.current
+    val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
     val style=LocalTextStyle.current.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight))
+    val nativeLineHeight=measurer.measure(AnnotatedString("M"),style=style).let{it.getLineBottom(0)-it.getLineTop(0)}
     val incoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
     BoxWithConstraints(modifier){
         val available=constraints.maxWidth.coerceAtLeast(1)
         val content=mutableMapOf<String,InlineTextContent>()
+        val slotKeys=mutableListOf<String>()
+        val changedKeys=mutableSetOf<String>()
+        var wipeGeometry by remember(from,to,available,fontSize,lineHeight){
+            mutableStateOf<ImmersionSharedWipeGeometry?>(null)
+        }
         val paragraph=buildAnnotatedString{
             runs.forEachIndexed{index,run->
                 if(run.id==null){append(run.forms[if(incoming)1 else 0]);return@forEachIndexed}
@@ -59,6 +68,8 @@ import androidx.compose.ui.unit.*
                         constraints=Constraints(maxWidth=width))}
                     val height=measured.maxOf{it.size.height}.coerceAtLeast(1)
                     val key="shared-$index-$part"
+                    slotKeys+=key
+                    if(forms[0].text!=forms[1].text)changedKeys+=key
                     content[key]=InlineTextContent(
                         Placeholder(with(density){width.toSp()},with(density){height.toSp()},PlaceholderVerticalAlign.TextCenter)
                     ){
@@ -66,6 +77,8 @@ import androidx.compose.ui.unit.*
                             modifier=Modifier.clearAndSetSemantics{},
                             fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
                             onNativeTextLayout=onFragmentLayout,
+                            sharedWipeMask={p,top->wipeGeometry?.mask(key,top,p,rtl)
+                                ?:ImmersionSharedWipeMask(if(rtl)width+48f else -48f,48f)},
                             maxLines=Int.MAX_VALUE,overflow=TextOverflow.Clip,fillWidth=true,reserve=forms)
                     }
                     val start=length
@@ -88,7 +101,14 @@ import androidx.compose.ui.unit.*
                 }else false
             }
         }
-        Text(paragraph,inlineContent=content,style=style,onTextLayout=onTextLayout,
+        Text(paragraph,inlineContent=content,style=style,onTextLayout={layout->
+            val regions=slotKeys.mapIndexedNotNull{index,key->
+                layout.placeholderRects.getOrNull(index)?.takeIf{key in changedKeys}?.let{key to it}
+            }.toMap()
+            wipeGeometry=ImmersionSharedWipeGeometry(regions,layout.size.width.toFloat(),nativeLineHeight)
+            onWipeGeometry(wipeGeometry!!)
+            onTextLayout(layout)
+        },
             modifier=Modifier.semantics{customActions=actions})
     }
 }
