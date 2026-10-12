@@ -92,7 +92,7 @@ import java.util.UUID
         Text(event.s("body"));Text(state,color=Muted)
         if(!approval)OutlinedTextField(text,{text=it;Pocket.prefs.edit().putString("$key:draft",it).apply()},enabled=open&&pending==null&&!busy,label={BilingualLabel("Your answer",centered=false)},maxLines=5)
         if(error.isNotBlank())Text(error,color=Coral)
-        if(uncertainApproval)Text("Approval outcome is unconfirmed. Refresh its state before any further action.")
+        if(uncertainApproval)InterfaceText("Approval outcome is unconfirmed. Refresh its state before any further action.")
     }},confirmButton={if(approval)Row{TextButton({answer("decline")},enabled=open&&!busy&&!uncertainApproval){BilingualLabel("Decline",centered=false)};TextButton({answer("accept")},enabled=open&&!busy&&!uncertainApproval&&event.optJSONObject("data")?.optBoolean("canAccept")==true){BilingualLabel("Approve once",centered=false)}}
         else TextButton({answer()},enabled=open&&!busy&&(pending!=null||text.isNotBlank()&&text.length<=3500)){BilingualLabel(if(pending==null)"Send answer" else "Retry saved answer")}},dismissButton={Row{TextButton({jobs.launch{try{check();if(state!="open"){uncertainApproval=false;Pocket.prefs.edit().remove("approval-unconfirmed:${client.owner}:$team:$id").apply()}}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}},enabled=!busy){BilingualLabel("Refresh",centered=false)};TextButton(dismiss,enabled=!busy){BilingualLabel("Close",centered=false)}}})
 }

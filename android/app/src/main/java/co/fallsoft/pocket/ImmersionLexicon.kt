@@ -5,6 +5,10 @@ import java.util.Locale
 /** Authored, offline learning vocabulary. Match whole labels; never rewrite executable syntax. */
 object ImmersionLexicon {
     val common=mapOf(
+        "Checking Losangelex…" to "Verifica di Losangelex…",
+        "Connect Losangelex" to "Collega Losangelex",
+        "Your NextComp host needs a Losangelex backend connection. Register its private endpoint and token file on the host, then reload." to "Il computer di NextComp richiede una connessione al motore Losangelex. Registra sul computer l’indirizzo privato e il file del token, poi ricarica.",
+        "Approval outcome is unconfirmed. Refresh its state before any further action." to "L’esito dell’approvazione non è confermato. Aggiorna lo stato prima di qualsiasi altra azione.",
         "Stale after" to "Inattivo dopo",
         "Change target" to "Cambia destinazione",
         "Previous agents" to "Agenti precedenti",
@@ -195,5 +199,10 @@ object ImmersionLexicon {
         "Language motion" to "Transizioni di lingua", "Italian immersion" to "Immersione in italiano", "Original / Italiano" to "Originale / Italiano"
     )
     private val normalized=common.mapKeys{it.key.lowercase(Locale.ROOT)}
+    // Authored UI templates preserve their literal date/value suffix. They need
+    // neither a fresh provider request for every value nor an invented alignment.
+    private val literalSuffixTemplates=listOf("Resets " to "Ripristino ", "Estimated run-out " to "Esaurimento stimato ")
     fun italian(text:String):String?=normalized[text.trim().lowercase(Locale.ROOT)]
+        ?:literalSuffixTemplates.firstOrNull{ text.startsWith(it.first) }
+            ?.let{(source,target)->target+text.removePrefix(source)}
 }
