@@ -54,6 +54,20 @@
     ],
     "visualReview": "static immediate and settled native diagnostic inspected; normal native hanging handles, reserved spacing remains conspicuous",
     "galleryCard": "nextcomp-native-selection-foundation-r01",
-    "phoneInstalled": false
+    "phoneInstalled": false,
+    "motionReview": {
+      "nativeJourneySeconds": 21.003,
+      "captureWidth": 720,
+      "captureHeight": 1616,
+      "captureDurationSeconds": 23.582756,
+      "decodedFrames": 819,
+      "inspectedSamples": 11,
+      "sampleIntervalSeconds": 1,
+      "scope": "cropped paragraph contact-sheet inspection; not exhaustive frame review or physical frame pacing",
+      "observed": "both forms, partial lexical wave transitions, stable common words; no whole-paragraph black fade in inspected samples",
+      "remaining": "conspicuous reserved width spacing; rich-content integration and perceptual/full-app qualification",
+      "unusedContactTiles": 1,
+      "galleryCard": "nextcomp-native-selection-foundation-r01"
+    }
   }
 }
