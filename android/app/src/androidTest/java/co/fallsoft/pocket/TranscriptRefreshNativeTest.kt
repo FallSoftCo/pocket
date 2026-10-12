@@ -32,6 +32,22 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun historyEvidenceRepairsDeferredPositionOnce(){
+  twoChats();qa("await-position-history");main{Pocket.open("same-thread")}
+  await{PocketTranscript.rows.any{it.s("id")=="order/answer"}&&!PocketTranscript.loading}
+  val initialReads=qa("state").getJSONArray("reads").length()
+  val event=JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",1000).put("row",JSONObject().put("id","order/live").put("itemId","live").put("turnId","order").put("clientId","same-send").put("kind","user").put("text","Deferred input").put("version",1000))
+  main{Pocket.event(event)}
+  await{qa("state").getJSONArray("positions").length()==2&&!PocketTranscript.updating}
+  assertEquals("Ordering repair added reads beyond the normal new-input refresh",initialReads+1,qa("state").getJSONArray("reads").length())
+  val ids=PocketTranscript.rows.map{it.s("id")}
+  assertTrue(ids.indexOf("order/client-user/same-send")<ids.indexOf("order/answer"))
+  assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"&&it.s("clientId")=="same-send"})
+  val inputs=qa("state").getJSONArray("positions");assertEquals("same-send",inputs.getJSONObject(1).getString("clientId"))
+  main{Pocket.refreshDetail()};await{!PocketTranscript.loading};Thread.sleep(600)
+  assertEquals("Successful evidence was needlessly re-requested",2,qa("state").getJSONArray("positions").length())
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun canonicalInputPositionSurvivesProviderChangeDuringLookup(){
   twoChats();qa("anchored");main{Pocket.open("same-thread")}
   await{PocketTranscript.rows.any{it.s("id")=="order/answer"}&&!PocketTranscript.loading}

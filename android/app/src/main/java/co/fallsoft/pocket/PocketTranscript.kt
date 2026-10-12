@@ -276,7 +276,9 @@ object PocketTranscript {
             rememberRecent(persist=true);revision++;Pocket.error=positionFailures.values.firstOrNull().orEmpty();succeeded=true;trace()
             if(!older&&bridgeCursor==null){
                 // Retry only after a successful independent snapshot supplied new ordering evidence.
+                val deferredTargets=awaitingPositionHistory.mapTo(hashSetOf()){it.target}
                 attemptedPositions.removeAll(awaitingPositionHistory);awaitingPositionHistory.clear()
+                rows.filter{it.s("id") in deferredTargets}.forEach{reconcileInputPosition(it)}
                 // A warm reopening must also repair delayed inputs that were outside
                 // its bounded recent page when the previous read was cancelled.
                 val incomingIds=incoming.mapTo(hashSetOf()){it.s("id")}

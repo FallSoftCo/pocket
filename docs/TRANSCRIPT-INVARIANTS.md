@@ -29,3 +29,11 @@ A displayed transcript is a projection of source-scoped send receipts, provider 
 Source tests, emulator UI checks, signed builds, updater publication, handset installation and physical interaction are separate evidence levels. Passing one must not be reported as another. Current receipts are in `docs/qualification/transcript-message-identity-20261012.json` and `docs/qualification/streaming-end-anchor-20261012.json`.
 
 `TranscriptRefreshNativeTest#canonicalInputPositionSurvivesProviderChangeDuringLookup` exercises the real event ingress, an in-flight provider change, canonical ordering and repeated-event read deduplication. Its control and final evidence are in `docs/qualification/transcript-ingress-and-cache-anchors-20261012.json`.
+
+## History-derived ordering evidence
+
+A provider may regenerate physical item IDs while preserving the explicit client send ID. Position repair therefore sends both identities and uses a unique client identity when available. Text equality never establishes identity.
+
+The backend records only IDs and user client IDs from complete turns already obtained by normal reads. The index is scoped to thread and turn, expires after 15 minutes, is bounded to 32 turns / 20,000 items / 4 MiB, and clears on transport disconnect. It never fetches history, starts a turn, or retains message bodies. Ambiguous or missing identities yield unavailable evidence.
+
+A missing indexed turn may advertise `awaitingHistory`. Android may reconsider that attempt after an independently successful recent-history snapshot; this signal does not itself request a refresh. Once evidence exists, unchanged refreshes must not repeat a successful position lookup. Legacy servers without the signal keep compatibility behavior.

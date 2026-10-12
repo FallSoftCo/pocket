@@ -1,6 +1,6 @@
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
 const replyReceipts=new Map(),receiptReads=[],recoveries=[];let replyAckState="accepted";let badReply=false,holdReceipt=false,wrongReceiptThread=false;let failedReadsRemaining=0;let malformedRead=false;let failReply=false,holdReply=false;let visibility=false;const acknowledgements=[],ackAttempts=[];let failedAckReads=0;let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let clippedPreview=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
-let holdHistory=false;let messageIdentity=false;let sameTurnGap=false;let omitSnapshotHead=false;let headEpoch="synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
+let awaitingPosition=false,positionEvidence=false;let holdHistory=false;let messageIdentity=false;let sameTurnGap=false;let omitSnapshotHead=false;let headEpoch="synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
 const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+(clippedPreview?1:revision),previewKind:'message',previewRole:'codex',activityAt:(notificationOnly?1:revision)*1000,updatedAt:(notificationOnly?1:revision)*1000,recencyAt:(notificationOnly?1:revision)*1000});
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
@@ -25,9 +25,10 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/visibility'){visibility=true;body={ok:true};}
  else if(/^\/api\/threads\/same-thread\/(notifications|catchup)\/read$/.test(path)){const input=JSON.parse(raw);ackAttempts.push({path,...input});if(failedAckReads>0){failedAckReads--;res.writeHead(503,{"Content-Type":"application/json"});res.end(JSON.stringify({error:"Synthetic acknowledgement outage"}));return;}acknowledgements.push({path,...input});body={ok:true,threadId:"same-thread",cursor:0,throughId:input.throughId,ids:input.throughId?[input.throughId]:[]};}
  else if(path==='/_qa/anchored'){anchored=true;holdPosition=true;body={ok:true};}
+ else if(path==='/_qa/await-position-history'){anchored=true;holdPosition=false;awaitingPosition=true;positionEvidence=false;body={ok:true};}
  else if(path==='/_qa/release-position'){holdPosition=false;body={ok:true};}
  else if(path==='/_qa/fail-position'){failPosition=true;body={ok:true};}
- else if(path==='/api/threads/same-thread/timeline/position'){const input=JSON.parse(raw);positions.push(input);if(failPosition){failPosition=false;res.statusCode=503;body={error:'Synthetic item position unavailable'};}else{while(holdPosition)await new Promise(r=>setTimeout(r,50));body=anchored?{available:true,insertBefore:input.turnId+'/answer',cursor:null}:{available:false,insertBefore:null,cursor:null};}}
+ else if(path==='/api/threads/same-thread/timeline/position'){const input=JSON.parse(raw);positions.push(input);if(failPosition){failPosition=false;res.statusCode=503;body={error:'Synthetic item position unavailable'};}else{while(holdPosition)await new Promise(r=>setTimeout(r,50));body=awaitingPosition&&!positionEvidence?{available:false,insertBefore:null,cursor:null,awaitingHistory:true}:anchored?{available:true,insertBefore:input.turnId+'/answer',cursor:null}:{available:false,insertBefore:null,cursor:null};}}
  else if(path==='/_qa/boundary'){boundary=true;body={ok:true};}
  else if(path==='/_qa/pacing'){pacing=true;body={ok:true};}
  else if(path==='/_qa/malformed-read'){malformedRead=true;body={ok:true};}
@@ -49,6 +50,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/api/threads/same-thread'){
   if(malformedRead){malformedRead=false;res.setHeader('Content-Type','application/json');res.end(JSON.stringify({error:'Synthetic invalid successful response'}));return;}
   if(failRead||failedReadsRemaining>0){if(failedReadsRemaining>0)failedReadsRemaining--;reads.push({at:Date.now(),older:req.url.includes("before="),revision,status:failStatus});failRead=false;res.writeHead(failStatus,{'Content-Type':'application/json'});res.end(JSON.stringify({error:failStatus===401?'Synthetic history permission rejected':'Synthetic history refresh unavailable'}));return;}
+  if(awaitingPosition&&positions.length)positionEvidence=true;
   const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
   await new Promise(r=>setTimeout(r,older?2200:1700));
   while(holdHistory)await new Promise(r=>setTimeout(r,30));

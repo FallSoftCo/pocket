@@ -4,17 +4,34 @@
   "implementation": "Bounded body-free per-thread/per-turn ordering index from normal complete-turn reads; Android carries explicit send identity.",
   "checks": {
     "node_history_tests": 22,
-    "android_debug_unit_tests": "passed",
+    "android_debug_unit_tests": "passed after final retry fix",
     "diff_check": "passed",
     "native_existing_provider_change_race": {
       "result": "pass",
       "seconds": 12.604,
       "scope": "isolated emulator; no command submissions"
+    },
+    "full_node_suite": 477,
+    "native_history_dependent_retry": {
+      "result": "pass",
+      "seconds": 12.029,
+      "assertions": [
+        "one normal new-input history read",
+        "two position requests total",
+        "exact client identity forwarded",
+        "one input before response",
+        "unchanged subsequent refresh no extra position request",
+        "zero command submissions"
+      ]
     }
   },
   "remaining": [
-    "Dedicated native history-dependent retry test",
-    "Full release qualification, signed release and physical phone delivery"
+    "Full signed release qualification and deployment",
+    "Physical phone delivery and interaction"
   ],
-  "phone": "SSH unreachable; no installation attempted"
+  "phone": "SSH unreachable; no installation attempted",
+  "failed_controls": [
+    "Read-count assertions initially did not account for existing new-input refresh",
+    "Native evidence demonstrated pending attempts were not retried by heuristic misplaced-row filtering; exact deferred identities fixed this"
+  ]
 }

@@ -6,6 +6,7 @@ export class HistoryPositionIndex {
   prune(){for(const [key,value] of this.turns)if(this.now()-value.at>=this.ttl)this.turns.delete(key);}
   observe(thread,turn,items){
     this.prune();const key=JSON.stringify([thread,turn]);this.turns.delete(key);
+    if(items.length>this.maxItems)return;
     const rows=items.map(item=>{const row=item._pocketRow||item;return {id:item.id,client:row.kind==='user'&&typeof row.clientId==='string'?row.clientId:null};});
     const bytes=Buffer.byteLength(JSON.stringify(rows));
     if(rows.length>this.maxItems||bytes>this.maxBytes)return;
