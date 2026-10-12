@@ -104,5 +104,22 @@
       "status": "passed",
       "scope": "Table journey plus paragraph selection/tap/cycle before styled separator extension."
     }
+  },
+  "productionRendererRecheck": {
+    "status": "passed",
+    "nativeCases": 1,
+    "nativeRunSeconds": 33.386,
+    "renderer": "Existing production shared inline renderer; native alternative remains unused.",
+    "flow": [
+      "Real Android display-clock control/body cycling",
+      "Phrase help enabled",
+      "Actual touch hold",
+      "Platform Select all and exact Copy",
+      "Selection dismissal and button action",
+      "Blackout enter/frozen clock/exit/resumed clock"
+    ],
+    "assistance": "No manual operator input or forced focus clearing.",
+    "interpretation": "Passed after general touch gating and fresh down-action ownership fixes together; contribution to prior selection failure was not isolated.",
+    "limits": "One synthetic native journey; full signed frozen regression policy, production optimized runtime and handset remain separate."
   }
 }

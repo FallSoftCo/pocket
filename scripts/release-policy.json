@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha88-reading-checkpoints-real-backend-journey",
+  "qualification": "alpha88-continuous-taps-structured-tables-reading-recovery",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
@@ -35,7 +35,8 @@
     "co.fallsoft.pocket.SharedInlineLayoutNativeTest#targetGrammarScaffoldKeepsVocabularyAtTheSameNativePositions",
     "co.fallsoft.pocket.SharedInlineLayoutNativeTest#interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions",
     "co.fallsoft.pocket.ImmersionReadingWaveNativeTest#controlsAndBodyCycleOnOneNativeClockAndPauseForSelectionAndReducedMotion",
-    "co.fallsoft.pocket.ImmersionReadingWaveNaturalNativeTest#naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds"
+    "co.fallsoft.pocket.ImmersionReadingWaveNaturalNativeTest#naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds",
+    "co.fallsoft.pocket.MarkdownTableNativeTest#ordinaryAndImmersionTablesRetainColumnsScrollingLinksAndLargeText"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",

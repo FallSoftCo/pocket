@@ -8,6 +8,6 @@ Preview and immersion use a single row-major text flow with tabs between cells a
 
 Sizing samples the header and first64 body rows from each reserved rendition. Later content still renders and wraps within those columns; it is not dropped. Very large table composition/performance and real screen-reader traversal remain unqualified.
 
-See [qualification](qualification/markdown-tables-20261012.json). Source/native checks are not a signed release or physical phone delivery. The wider immersion interaction gate remains open.
+See [qualification](qualification/markdown-tables-20261012.json). Source/native checks are not a signed release or physical phone delivery. The previously failing synthetic immersion selection/blackout journey now passes; the full signed regression policy and handset delivery remain open.
 
 The parser's extension setup follows [CommonMark Java documentation](https://github.com/commonmark/commonmark-java#extensions); the existing core and added table artifact remain pinned together at0.27.1.
