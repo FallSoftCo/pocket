@@ -17,6 +17,46 @@ commands and environment identity throughout.
 | Notifications and speech | Correct source, rename/read state, session-aware playback, actionable questions, no stale duplicate pinned output | Retained speech source navigation reproduced and corrected natively; alpha70/code88 installed; physical tap remains unverified. Session queues, rename/attention and physical playback lifecycle breadth remain open |
 | Immersion/accessibility | Inline reading-direction transitions without duplicates, legible normal/large text, reduced-motion behavior | Audit pending |
 
+## Current release and evidence checkpoint — 2026-10-12
+
+The table above and older entries below preserve historical observations; their
+installed-version references are not current handset verification. Current
+phone SSH is unavailable, and this audit cannot establish which update the
+handset has installed or reproduce its latest exact failures.
+
+The update channel remains alpha86/code104. Alpha87-r04/code105 is signed and
+automatically qualified but intentionally unpublished after actual motion review
+exposed immersion reading-flow defects. Later prefix/punctuation fixes are
+qualification-app candidates; they are not a signed delivered release.
+
+The current source includes durable send identity restoration, transcript
+freshness/cache authority repairs and explicit catalog startup Loading/Ready/Failed.
+The live narrow backend restores provider user-message identity across history
+reconstruction. These are scoped implementations, not proof that every handset
+chronology/freshness issue is resolved.
+
+The critical switching race now uses real Back and card taps while the old
+history response is blocked. Native evidence verifies selected-thread updates,
+no old-response contamination, retained drafts and reply API target; it does not
+exercise the send button or a real provider. See
+[the journey receipt](qualification/switch-card-journey-20261012.json).
+
+[Testing strategy](TESTING-STRATEGY.md) now governs future additions: classify real
+and substituted boundaries, extend meaningful journeys, preserve setup evidence,
+and keep visual/performance/deployment acceptance separate from test totals.
+Current native runner explicitly preflights notification permission and reuses
+only exact installed APK hashes. Whole-run qualification of that revised runner
+remains pending; the identity reuse branch has read-only emulator evidence.
+
+Next acceptance gaps:
+- Immersion still has conspicuous longer-form reservation gaps; temporal
+  legibility needs full transition inspection, not only sampled contact sheets.
+- Obtain exact installed-phone version and reproduce freshness/order reports.
+- Exercise complete send/echo/history/restart and voice stop/transcribe/send
+  journeys through user controls, not state/API shortcuts.
+- Qualify the final optimized artifact and compatible update after repair;
+  do not publish the held r04 candidate.
+
 ## Verified progress
 
 - Alpha50/code68 installed in place on the Pixel. 271 Android tests and lint
