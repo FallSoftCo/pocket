@@ -455,9 +455,15 @@ class TranscriptRefreshNativeTest {
  }
  @Test fun switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates(){
   twoChats()
-  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.loading}
+  fun openCard(title:String){
+   val selector=By.desc("Open Chat for "+title)
+   assertTrue("Conversation card missing: "+title,device.wait(Until.hasObject(selector),3000))
+   device.findObject(selector).click()
+  }
+  openCard("Synthetic freshness work");await{has(1)&&!PocketTranscript.loading}
   qa("advance");await{qa("state").getJSONArray("reads").objects().any{it.s("threadId")!="second-thread"&&it.optInt("revision")==2}}
-  main{Pocket.open("second-thread")}
+  device.pressBack();await{Pocket.selected==null}
+  openCard("Other synthetic work")
   await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}&&!PocketTranscript.loading}
   qa("advance-second")
   await{Pocket.tasks.any{it.id=="second-thread"&&it.preview=="Other response 2"}&&PocketTranscript.updating}
