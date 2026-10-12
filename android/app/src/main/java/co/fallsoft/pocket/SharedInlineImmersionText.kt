@@ -70,7 +70,7 @@ import androidx.compose.ui.unit.*
     SideEffect{visibilityCallback?.invoke(lastVisibility?.first?:emptySet(),false)}
     DisposableEffect(Unit){onDispose{visibilityCallback?.invoke(emptySet(),false)}}
     val incoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
-    BoxWithConstraints(modifier){
+    BoxWithConstraints(modifier.then(immersionIntrinsicLayout(measurer,listOf(effectiveFrom,effectiveTo)+reserve,style,maxLines,overflow))){
         val available=constraints.maxWidth.coerceAtLeast(1)
         val content=mutableMapOf<String,InlineTextContent>()
         // Parent ellipsis needs physical room beside an atomic placeholder.

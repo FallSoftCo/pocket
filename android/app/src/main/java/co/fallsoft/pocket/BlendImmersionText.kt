@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.*
     // The callback owner can change while geometry stays unchanged (navigation).
     SideEffect{visibilityCallback?.invoke(lastVisibility?.first?:emptySet(),lastVisibility?.second?:false)}
     DisposableEffect(Unit){onDispose{visibilityCallback?.invoke(emptySet(),false)}}
-    BoxWithConstraints(modifier){
+    BoxWithConstraints(modifier.then(immersionIntrinsicLayout(measurer,listOf(from,to)+reserve,style,maxLines,overflow))){
         val available=constraints.maxWidth.coerceAtLeast(1)
         fun measure(text:AnnotatedString,width:Int,fixed:Boolean=false)=measurer.measure(immersionDrawText(text),style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(minWidth=if(fixed)width else 0,maxWidth=width))
         val forms=listOf(from,to)+reserve
