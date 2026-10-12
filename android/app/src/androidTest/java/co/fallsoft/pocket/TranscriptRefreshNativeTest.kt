@@ -349,6 +349,18 @@ class TranscriptRefreshNativeTest {
   qa("repeat");Thread.sleep(1000)
   assertEquals("Unchanged preview caused repeated reads",reads,qa("state").getJSONArray("reads").length())
  }
+ @Test fun quietAuthenticatedReconnectRestoresMessagesWithoutFalseDisconnect(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  val connections=qa("state").getInt("connections")
+  qa("quiet-reconnect")
+  await{qa("state").getInt("connections")>connections&&has(2)&&!PocketTranscript.updating}
+  // Wait beyond the old disconnect timer, with no application status/event frame.
+  Thread.sleep(9000)
+  assertTrue("Authenticated live socket falsely reported disconnected",Pocket.connected)
+  assertFalse("Healthy quiet reconnect kept outage warning",PocketLive.outageVisible)
+  assertEquals("Reconnect erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals("Reconnect submitted work",0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun fetchedNotificationRepairsMissedEventWithUnchangedCatalog(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   qa("notification-only");main{Pocket.refresh()};await{has(2)&&!PocketTranscript.updating}
