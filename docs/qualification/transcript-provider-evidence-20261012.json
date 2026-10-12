@@ -12,11 +12,24 @@
         "one user message precedes response",
         "repeated events add no reads or sends"
       ]
+    },
+    "native_history_refresh_full_alias_cache": {
+      "result": "pass",
+      "seconds": 13.546,
+      "assertions": [
+        "legacy saved reading anchor retained",
+        "two same-text distinct sends survive",
+        "new live provider reference survives full32alias cap",
+        "canonical metadata refreshed",
+        "both provider references resolve to one row after switching",
+        "draft preserved",
+        "zero submissions"
+      ]
     }
   },
   "remaining": [
-    "Native history-refresh alias preservation check",
     "Signed release checks and deployment",
     "Physical phone interaction"
-  ]
+  ],
+  "failed_control": "Before newest-evidence retention fix native test failed: new live provider reference lost after full alias cache"
 }

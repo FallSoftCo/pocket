@@ -92,8 +92,11 @@ class TranscriptRefreshNativeTest {
   assertEquals(2,users().size);assertEquals(firstId,users().first().s("id"))
   await{device.findObjects(By.text("Same deliberate text")).size==2}
   main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}}
-  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&users().firstOrNull{it.s("clientId")=="send-one"}?.s("itemId")=="item-183"}
   assertEquals(2,users().size)
+  assertEquals("History replacement discarded live provider evidence",firstId,transcriptDisplayAnchor(PocketTranscript.rows,"identity/new-live-id"))
+  assertEquals("Canonical history reference no longer addresses the send",firstId,transcriptDisplayAnchor(PocketTranscript.rows,"identity/item-183"))
+  assertEquals("Canonical provider metadata did not refresh","item-183",users().first{it.s("clientId")=="send-one"}.s("itemId"))
   assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   assertEquals("Identity reconciliation must never submit work",0,qa("state").getJSONArray("replies").length())
  }

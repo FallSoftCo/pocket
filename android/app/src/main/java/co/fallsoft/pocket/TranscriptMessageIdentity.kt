@@ -23,7 +23,10 @@ internal fun normalizeTranscriptMessages(rows:List<JSONObject>):List<JSONObject>
     val values=linkedMapOf<String,JSONObject>()
     rows.forEach{raw->val row=normalizeTranscriptMessage(raw);val id=row.s("id");val old=values[id]
         val chosen=if(old==null||row.optLong("version")>=old.optLong("version"))row else old
-        val aliases=(listOfNotNull(old?.s("providerRowId"),row.s("providerRowId"))+listOfNotNull(old,row).flatMap{v->v.optJSONArray("providerRowIds")?.let{a->(0 until a.length()).map{a.optString(it)}}.orEmpty()}).filter{it.isNotBlank()}.distinct().takeLast(32)
+        // Oldest evidence first; a new provider reference must survive the bound.
+        val aliases=listOfNotNull(old,row).flatMap{v->
+            v.optJSONArray("providerRowIds")?.let{a->(0 until a.length()).map{a.optString(it)}}.orEmpty()+v.s("providerRowId")
+        }.filter{it.isNotBlank()}.asReversed().distinct().asReversed().takeLast(32)
         values[id]=if(aliases.isEmpty())chosen else JSONObject(chosen.toString()).put("providerRowIds",org.json.JSONArray(aliases))}
     return values.values.toList()
 }

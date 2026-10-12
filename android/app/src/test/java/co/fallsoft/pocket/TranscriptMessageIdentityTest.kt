@@ -123,4 +123,12 @@ class TranscriptMessageIdentityTest {
   assertEquals("Updated input",retained.s("text"))
   assertEquals(retained.s("id"),transcriptDisplayAnchor(listOf(retained),"turn/third"))
  }
+ @Test fun fullAliasCacheRetainsNewestReplacementReference(){
+  val original=normalizeTranscriptMessages((1..100).map{user("item-"+it)}).single()
+  val incoming=normalizeTranscriptMessage(user("new-provider",version=1))
+  val merged=mergeTranscriptMessageEvidence(original,incoming)
+  assertEquals("turn/client-user/send",transcriptDisplayAnchor(listOf(merged),"turn/new-provider"))
+  assertEquals(32,merged.getJSONArray("providerRowIds").length())
+  assertEquals("turn/new-provider",merged.getJSONArray("providerRowIds").getString(31))
+ }
 }
