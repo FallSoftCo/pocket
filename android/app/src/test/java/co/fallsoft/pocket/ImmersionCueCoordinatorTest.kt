@@ -120,14 +120,6 @@ class ImmersionCueCoordinatorTest {
         job.cancelAndJoin()
         assertFalse(began)
     }
-    @Test fun labelsBecomeEligibleWithinSecondsAndKeepDispersedStartup(){
-        val labels=(0..40).map{"Control $it"}
-        val cadences=labels.map(::immersionLabelCadence)
-        assertEquals(immersionLabelCadence("Important"),immersionLabelCadence("Important"))
-        assertTrue(cadences.all{it.initialMs in 6000L..9000L&&it.targetMs in 10000L..15000L})
-        assertTrue(cadences.map{it.initialMs}.distinct().size>35)
-        assertTrue(cadences.maxOf{it.initialMs}-cadences.minOf{it.initialMs}>2000)
-    }
     @Test fun cancellationBeforeHandoffPreservesVisibleSnapshot()=runBlocking {
         var actual="source";var finished=false
         val started=CompletableDeferred<Unit>()

@@ -122,13 +122,6 @@ import androidx.compose.ui.unit.*
     }
 }
 
-internal data class ImmersionLabelCadence(val initialMs:Long,val targetMs:Long)
-internal fun immersionLabelCadence(label:String):ImmersionLabelCadence{
-    fun mix(value:Int):Int{var seed=value;seed=seed xor(seed ushr 16);seed*= -2048144789;seed=seed xor(seed ushr 13);seed*= -1028477387;return seed xor(seed ushr 16)}
-    return ImmersionLabelCadence(6000L+Math.floorMod(mix(label.hashCode()),3001),10000L+Math.floorMod(mix(label.hashCode() xor 0x517cc1b7),5001))
-}
-
-
 /** Authored interface prose uses the same bounded language layer as controls.
  * Typography remains native; executable strings and identifiers use literal Text.
  */
