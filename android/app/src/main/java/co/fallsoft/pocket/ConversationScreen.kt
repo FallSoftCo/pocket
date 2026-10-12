@@ -254,7 +254,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             }
     }
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
-            if(pending>0)TextButton({actionsOpen=false;important=false;follow=false;scope.launch{val index=rows.indexOfFirst{it.s("kind")=="request"};if(index>=0)list.scrollToItem(index.coerceAtMost((list.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))else Pocket.refreshDetail()}},modifier=Modifier.fillMaxWidth()){BilingualLabel("Answer pending question",color=Coral)}
+            if(pending>0)TextButton({
+                actionsOpen=false;important=false;follow=false
+                filterPassage=null;filterPaddingRequest=null;filterTailPixels=0
+                val request=rows.firstOrNull{it.s("kind")=="request"}
+                if(request!=null)filterRequest=FilterReadingRequest(Pocket.environmentId,Pocket.selected,request.s("id"),0,false)
+                else Pocket.refreshDetail()
+            },modifier=Modifier.fillMaxWidth()){BilingualLabel("Answer pending question",color=Coral)}
             UsageDetails()
             d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
