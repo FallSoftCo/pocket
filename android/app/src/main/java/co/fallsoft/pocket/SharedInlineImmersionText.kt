@@ -9,6 +9,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -20,7 +22,8 @@ import androidx.compose.ui.unit.*
     from:AnnotatedString,to:AnnotatedString,progress:()->Float,
     modifier:Modifier=Modifier,fontSize:TextUnit=17.sp,lineHeight:TextUnit=26.sp,
     color:Color=Paper,fontWeight:FontWeight?=null,
-    onTextLayout:(TextLayoutResult)->Unit={}
+    onTextLayout:(TextLayoutResult)->Unit={},
+    onFragmentLayout:(TextLayoutResult)->Unit={}
 ){
     val runs=remember(from,to){immersionSharedRuns(listOf(from,to))}
     if(runs==null){
@@ -31,6 +34,7 @@ import androidx.compose.ui.unit.*
     }
     val measurer=rememberTextMeasurer()
     val density=LocalDensity.current
+    val uriHandler=LocalUriHandler.current
     val style=LocalTextStyle.current.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight))
     val incoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
     BoxWithConstraints(modifier){
@@ -59,7 +63,9 @@ import androidx.compose.ui.unit.*
                         Placeholder(with(density){width.toSp()},with(density){height.toSp()},PlaceholderVerticalAlign.TextCenter)
                     ){
                         BlendImmersionText(forms[0],forms[1],progress,forms[if(incoming)1 else 0],
+                            modifier=Modifier.clearAndSetSemantics{},
                             fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
+                            onNativeTextLayout=onFragmentLayout,
                             maxLines=Int.MAX_VALUE,overflow=TextOverflow.Clip,fillWidth=true,reserve=forms)
                     }
                     val start=length
@@ -68,7 +74,22 @@ import androidx.compose.ui.unit.*
                 }
             }
         }
-        Text(paragraph,inlineContent=content,style=style,onTextLayout=onTextLayout)
+        val visible=if(incoming)to else from
+        val phraseRanges=visible.getStringAnnotations("immersion-reserve",0,visible.length)
+        val actions=visible.getLinkAnnotations(0,visible.length).filter{link->
+            phraseRanges.any{it.start<=link.start&&it.end>=link.end}
+        }.map{range->
+            CustomAccessibilityAction(visible.text.substring(range.start,range.end)){
+                val link=range.item
+                val listener=link.linkInteractionListener
+                if(listener!=null){listener.onClick(link);true}
+                else if(link is LinkAnnotation.Url){
+                    try{uriHandler.openUri(link.url);true}catch(_:IllegalArgumentException){false}
+                }else false
+            }
+        }
+        Text(paragraph,inlineContent=content,style=style,onTextLayout=onTextLayout,
+            modifier=Modifier.semantics{customActions=actions})
     }
 }
 

@@ -46,3 +46,11 @@ Overflow correction: oversized unbroken fragments now reserve full native
 wrapped height in both forms. All four native cases pass after this change.
 Global cascade and accessibility/selection are still release prerequisites;
 there is no production integration or new published APK from this candidate.
+
+Accessibility correction: Android exported the replacement twice (standalone
+word and full paragraph). Inline child semantics are now cleared while native
+touch handling remains; replacement links are available as parent custom
+accessibility actions. Five final native cases pass, including exported sentence
+uniqueness, real injected link taps and original callback via custom action.
+TalkBack utterances/gestures and selection remain unqualified; the candidate
+is still disabled and alpha86 has not changed.

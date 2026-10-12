@@ -30,7 +30,8 @@ import androidx.compose.ui.unit.*
     overflow:TextOverflow=TextOverflow.Clip,textAlign:TextAlign=TextAlign.Start,
     fillWidth:Boolean=false,reserve:List<AnnotatedString> = emptyList(),
     onVisibleRanges:((Set<String>,Boolean)->Unit)?=null,
-    trackWholeTextVisibility:Boolean=false
+    trackWholeTextVisibility:Boolean=false,
+    onNativeTextLayout:((TextLayoutResult)->Unit)?=null
 ){
     val measurer=rememberTextMeasurer()
     val density=androidx.compose.ui.platform.LocalDensity.current
@@ -64,7 +65,7 @@ import androidx.compose.ui.unit.*
             val outgoingLayout=measure(from,width,true)
             val incomingLayout=measure(to,width,true)
             Text(visible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
-                onTextLayout={layout=it;reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithContent{
+                onTextLayout={layout=it;onNativeTextLayout?.invoke(it);reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithContent{
                     val p=progress().coerceIn(0f,1f)
                     if(from.text==to.text||p<=0f||p>=1f){drawContent();return@drawWithContent}
                     val firstChangedLine=(changed.first.map{outgoingLayout.getLineForOffset(it.start.coerceIn(0,(from.length-1).coerceAtLeast(0)))}+changed.second.map{incomingLayout.getLineForOffset(it.start.coerceIn(0,(to.length-1).coerceAtLeast(0)))}).minOrNull()?:0

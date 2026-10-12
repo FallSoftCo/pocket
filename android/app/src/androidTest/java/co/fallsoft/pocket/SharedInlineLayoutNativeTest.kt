@@ -3,6 +3,7 @@ package co.fallsoft.pocket
 import android.content.Context
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Modifier
@@ -72,16 +73,32 @@ class SharedInlineLayoutNativeTest {
    append(" existing sessions.")
   }
   val from=form("search");val to=form("cerca")
+  var parentLayout:TextLayoutResult?=null
   val progress=mutableFloatStateOf(0f)
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
    scenario.onActivity{it.setContent{MaterialTheme{
-    SharedInlineImmersionText(from,to,{progress.floatValue},Modifier.width(240.dp))
+    SharedInlineImmersionText(from,to,{progress.floatValue},Modifier.padding(top=64.dp).width(240.dp),onTextLayout={parentLayout=it})
    }}}
-   compose.onNodeWithText("search",useUnmergedTree=true).performClick()
+   compose.waitForIdle()
+   fun tapVisibleLink(word:String){
+    val device=UiDevice.getInstance(i)
+    val node=device.wait(androidx.test.uiautomator.Until.findObject(
+     androidx.test.uiautomator.By.text("Please $word existing sessions.")),5000)!!
+    var box:androidx.compose.ui.geometry.Rect?=null
+    i.runOnMainSync{box=parentLayout!!.placeholderRects.single()}
+    val bounds=node.visibleBounds
+    device.click(bounds.left+box!!.center.x.toInt(),bounds.top+box!!.center.y.toInt())
+    compose.waitForIdle()
+   }
+   tapVisibleLink("search")
    i.runOnMainSync{assertEquals(1,clicks);progress.floatValue=1f}
    compose.waitForIdle()
-   compose.onNodeWithText("cerca",useUnmergedTree=true).performClick()
+   tapVisibleLink("cerca")
    i.runOnMainSync{assertEquals(2,clicks)}
+   val actions=compose.onNodeWithText("Please cerca existing sessions.",useUnmergedTree=true)
+    .fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsActions.CustomActions]
+   assertEquals("cerca",actions.single().label)
+   i.runOnMainSync{assertTrue(actions.single().action());assertEquals(3,clicks)}
   }
  }
 
@@ -97,15 +114,14 @@ class SharedInlineLayoutNativeTest {
    append(" then continue.")
   }
   val progress=mutableFloatStateOf(0f)
+  var fragmentLayout:TextLayoutResult?=null
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
    scenario.onActivity{it.setContent{MaterialTheme{
-    SharedInlineImmersionText(form(source),form(target),{progress.floatValue},Modifier.width(120.dp))
+    SharedInlineImmersionText(form(source),form(target),{progress.floatValue},Modifier.width(120.dp),onFragmentLayout={fragmentLayout=it})
    }}}
    fun assertComplete(word:String){
-    val layouts=mutableListOf<TextLayoutResult>()
-    compose.onNodeWithText(word,useUnmergedTree=true).performSemanticsAction(
-     androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult){it(layouts)}
-    val layout=layouts.single()
+    val layout=fragmentLayout!!
+    assertEquals(word,layout.layoutInput.text.text)
     assertTrue("Long token should wrap",layout.lineCount>1)
     assertFalse("Wrapped token must not overflow height",layout.didOverflowHeight)
     assertEquals(word.length,layout.getLineEnd(layout.lineCount-1))
@@ -113,6 +129,36 @@ class SharedInlineLayoutNativeTest {
    compose.waitForIdle();assertComplete(source)
    i.runOnMainSync{progress.floatValue=1f}
    compose.waitForIdle();assertComplete(target)
+  }
+ }
+
+ @Test fun accessibilityExposesOneCoherentVisibleSentence(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
+  val device=UiDevice.getInstance(i)
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  fun form(word:String)=buildAnnotatedString{
+   append("Please ");val at=length;append(word)
+   addStringAnnotation("immersion-reserve","7:13",at,length)
+   append(" existing sessions.")
+  }
+  val progress=mutableFloatStateOf(0f)
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    SharedInlineImmersionText(form("search"),form("cerca"),{progress.floatValue},Modifier.padding(top=64.dp).width(240.dp))
+   }}}
+   fun checkSentence(word:String){
+    compose.waitForIdle()
+    device.wait(androidx.test.uiautomator.Until.hasObject(androidx.test.uiautomator.By.textContains(word)),5000)
+    device.dumpWindowHierarchy(java.io.File(c.cacheDir,"shared-accessibility.xml"))
+    val texts=device.findObjects(androidx.test.uiautomator.By.textContains(word)).mapNotNull{it.text}
+    assertEquals("Visible phrase duplicated in accessibility: $texts",1,
+     texts.sumOf{Regex(Regex.escape(word)).findAll(it).count()})
+    assertTrue("Accessibility must preserve one ordered sentence: $texts",texts.contains("Please $word existing sessions."))
+   }
+   checkSentence("search")
+   i.runOnMainSync{progress.floatValue=1f}
+   checkSentence("cerca")
   }
  }
 

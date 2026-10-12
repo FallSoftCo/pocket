@@ -1,15 +1,18 @@
 {
   "state": "candidate-not-enabled-not-published",
   "native": {
-    "cases": 4,
+    "cases": 5,
     "result": "pass",
-    "seconds": 5.684,
-    "logSha256": "90b6bfcc28ab84f959ac2b3042ec13a09fb1c4f41a453a5b1cb2c6cd66f09b92",
+    "seconds": 8.366,
+    "logSha256": "47161948d2b682a77d4a35b57746d3a5de7eff5f218c6d6b6a6afbdb5be8f763",
     "checks": [
       "unchanged word position at 17sp",
       "unchanged word position at 34sp",
       "native inline link click before and after replacement",
-      "oversized unbroken tokens wrap completely in both forms without height clipping"
+      "oversized unbroken tokens wrap completely in both forms without height clipping",
+      "Android accessibility export contains the visible sentence once in both languages",
+      "Real UiAutomator injected touch activates replacement link in both forms",
+      "Exposed custom accessibility action invokes the original replacement callback"
     ]
   },
   "unit": {
@@ -19,16 +22,19 @@
   "scope": "Isolated native emulator5620 nextcomp_env_qa, synthetic paragraphs, no provider or real sessions",
   "remaining": [
     "Global reading-direction line cascade, not simultaneous independent phrase wipes",
-    "Screen reader and selection behavior for inline placeholder text",
     "Production visibility/cue tracking and full styled content integration",
-    "Actual frames and physical handset qualification"
+    "Actual frames and physical handset qualification",
+    "Actual TalkBack utterance/gesture and text selection qualification, including empty reserved slots"
   ],
   "notes": [
     "Large-text check uses 34sp/52sp, not a complete OS accessibility font-scale audit",
     "Parent native offsets include empty reserved-slot markers; tests use actual native offsets for unchanged text",
     "Candidate is not wired into ReservedImmersionText",
-    "Oversized fragments use native wrapping and maximum wrapped height; no manual Unicode token slicing."
+    "Oversized fragments use native wrapping and maximum wrapped height; no manual Unicode token slicing.",
+    "Before fix, Android exported both search and Please search existing sessions.; two phrase occurrences. Duplicate child readout is cleared; parent retains phrase custom actions.",
+    "Initial accessibility fixture was behind the status bar; qualification moved it into visible content before diagnosing duplicate export.",
+    "A failed test-source compilation produced an old-APK run; that run is excluded. Final build succeeded before final five-case instrumentation."
   ],
-  "candidateApkSha256": "5dc2dd7153ca5929540c075e94843ce1cfe02c1978eb3e19a5b96e41f24a652f",
-  "testApkSha256": "9f630bfebffbbc081ca12fac13f1bdabb918018c479060fdf329d95215d76ebd"
+  "candidateApkSha256": "47b14f23528357bf4962273dccf589a3efbd0527bf5c0acfc34a92b3ba91cd4b",
+  "testApkSha256": "a480be24d9f362bbff469136440d2343f533841c9ff3930b50a40c1af00211ef"
 }
