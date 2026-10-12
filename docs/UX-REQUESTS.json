@@ -2384,7 +2384,7 @@
     {
       "id": "durable-send-identity-20261012",
       "request": "One visible message for each send across receipt/event/history/cache/reconnect/restart, preserving repeated intentional inputs and actionable uncertain delivery. Production identity architecture and fault-injection qualification.",
-      "status": "backend-source-qualified-phone-regression-not-yet-verified",
+      "status": "narrow-backend-active-phone-regression-not-yet-verified",
       "evidence": "docs/qualification/durable-send-identity-20261012.json"
     }
   ],

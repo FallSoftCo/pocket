@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "state": "qualified-source-not-deployed",
+  "state": "narrow-backend-deployed-phone-regression-unverified",
   "date": "2026-10-12",
   "backendTests": {
     "passed": 489,
@@ -38,5 +38,15 @@
     "Existing rows without provider identity evidence cannot safely be merged by content",
     "No full Android release claimed; immersion changes remain unreleased",
     "Narrow production-base backend qualification and deployment tracked separately"
-  ]
+  ],
+  "deployment": {
+    "backendCommit": "03ec2b1c3eeebadf8993ac01cdef9d818fc0648e",
+    "productionBaseTestsPassed": 446,
+    "backendHealthConnected": true,
+    "identityLedgerLoaded": true,
+    "queuedSendingUnknownOutgoingAfter": 0,
+    "stockRuntimeSocketUnchanged": true,
+    "androidApkChanged": false,
+    "physicalPhoneVerified": false
+  }
 }
