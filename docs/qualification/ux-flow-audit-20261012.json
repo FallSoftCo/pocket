@@ -49,8 +49,40 @@
       }
     },
     "voiceKeyboardErgonomics": {
-      "status": "requires current-release native and physical flow audit",
-      "remaining": "Foreground hardware keys with IME, stop/send origin, playback volume, blackout and drafts"
+      "status": "controls native verified; successful voice delivery and physical interactions unverified",
+      "remaining": "Foreground hardware keys with IME, stop/send origin, playback volume, blackout and drafts",
+      "directChatNative": {
+        "result": "pass",
+        "seconds": 11.611,
+        "assertions": [
+          "injected foreground volume keys start and stop capture with IME open",
+          "intentional playback mute unchanged by capture keys",
+          "inline playback slider changes volume",
+          "slider keeps IME open",
+          "draft retained",
+          "capture failure visible",
+          "zero submitted work"
+        ],
+        "limits": [
+          "synthetic provider failure; no successful transcription/send proof",
+          "emulator key injection; no physical button qualification"
+        ]
+      },
+      "coordinatorNative": {
+        "result": "pass",
+        "seconds": 15.909,
+        "assertions": [
+          "2x text and Italian controls",
+          "mic tap directly starts capture",
+          "second tap stops capture",
+          "coordinator target retained",
+          "volume keys start/stop with IME open",
+          "draft and IME retained",
+          "inline volume available",
+          "zero submitted work"
+        ],
+        "limits": "Synthetic provider failure; no successful transcription/send proof or physical hardware qualification"
+      }
     },
     "notificationsAudio": {
       "status": "requires integrated flow audit",
