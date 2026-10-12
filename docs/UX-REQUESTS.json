@@ -2243,6 +2243,31 @@
       "implementation": "Retained speech notification resolves its stored notification-to-thread association instead of opening the generic conversation list. Unknown sources retain the list fallback; selected conversation is never guessed as source.",
       "verification": "Control e9ae2ec fails17.664s after posted native notification PendingIntent.send. Corrected9214d08 passes6.605s with visible source conversation, preserved draft and zero submissions/provider calls.290 unit tests per variant, both lints and signed builds pass. Actual phone package/base APK digest verified;13 critical preference hashes unchanged; authenticated workstation updater offers88 for both signers. See qualification/spoken-notification-navigation-alpha70.json.",
       "limits": "No physical banner/lock-screen interaction claim; unknown sources keep list fallback. Broader speech/read lifecycle audit remains open."
+    },
+    {
+      "id": "web-theme-clean-private-access-20261008",
+      "date": "2026-10-08",
+      "requirement": "Polished web dark theme with system preference and persisted Light/Dark/System choice; clean private HTTPS access without explicit port, retaining pairing, authenticated origins/WebSockets and existing services.",
+      "status": "implemented-and-privately-deployed",
+      "implementation": "Semantic light/dark tokens and before-paint theme script; path-aware assets/API/WebSocket/PWA at /nextcomp/ on existing private HTTPS443. Old URL compatibility shares the unchanged signing key; bounded same-device browser profile transfer preserves old storage.",
+      "verification": "418 backend/gateway tests and synthetic DOM flows pass. Actual private HTTPS old-pair/new-status and authenticated WebSocket pass; foreign origin and owner routes rejected. Existing routes preserved, Funnel absent. Rendered browser, physical Pixelbook and actual cross-origin browser profile transfer remain unqualified."
+    },
+    {
+      "id": "named-multi-environment-20261009",
+      "request": "Retain named remote development environments alongside Phone, with an accessible selector and isolated pairing, session identity, drafts, outgoing receipts, notifications, actions and settings.",
+      "status": "implemented and installed alpha48 in place; OS/GPU HTTPS native qualification passed; browser parity separately pending",
+      "implementation": [
+        "Legacy workstation and phone keys remain intact",
+        "Captured originating credentials for requests and background actions",
+        "Unknown deliveries held without automatic replay",
+        "Independent phone notification monitor",
+        "Additive one-use HTTPS pairing; backend provisioning remains separately owned"
+      ],
+      "verification": [
+        "Unit legacy/profile isolation tests",
+        "Disposable native same-ID history, drafts and frozen reply routing",
+        "Real authenticated HTTPS disposable pairing on migration backend"
+      ]
     }
   ],
   "current_state": {
