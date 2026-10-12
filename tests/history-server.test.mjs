@@ -47,6 +47,11 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
  assert.equal(changedHead.epoch,recent.data.historyHead.epoch);assert.ok(changedHead.version>0,'actual runtime event must advance selected history head');
  assert.equal(historyCount(),beforeProbe,'event freshness probes must not read history or resume work');
  assert.deepEqual((await api('/api/status?threadId=large-thread')).data.historyHead,changedHead,'unchanged status cannot invent another update');
+ for(const ws of wss.clients)ws.send(JSON.stringify({method:'item/reasoning/textDelta',params:{threadId:'large-thread',turnId:'turn-15',itemId:'uncached-private-item',delta:'Synthetic private event'}}));
+ await new Promise(resolve=>setTimeout(resolve,30));
+ assert.deepEqual((await api('/api/status?threadId=large-thread')).data.historyHead,changedHead,'unsupported private events must not invent display freshness');
+ assert.equal(historyCount(),beforeProbe,'unsupported events cannot request history work');
+
 
  assert.equal((await api('/api/status?threadId=invalid%20thread')).status,400);
  const denied=await fetch(`http://127.0.0.1:${port}/api/status?threadId=large-thread`);assert.equal(denied.status,401);
