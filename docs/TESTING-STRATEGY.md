@@ -40,7 +40,7 @@ The existing signature/source/native receipt gate remains intact as provenance e
 
 The inspected suite has 169 files across backend, Android unit and native directories. This is inventory, not quality. The current release policy requires 30 native cases, many component checks rather than complete journeys. Signed r04 passed automation but motion review found layout defects and publication remains held. A permission dialog also invalidated earlier native failures. These are concrete reasons to improve journey coverage, setup and visual acceptance rather than accumulate more units.
 
-Grouped runner consolidation and full app-to-backend journey coverage remain unfinished. No existing tests or safeguards have been removed.
+A real app-to-backend send/echo/restart journey now passes with provider RPC substituted; see [its boundary-specific evidence](qualification/android-real-backend-20261012.json). Grouped runner consolidation and broader app-to-backend journey coverage remain unfinished. No existing tests or safeguards have been removed.
 
 ## Primary guidance
 

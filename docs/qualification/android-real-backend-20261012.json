@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "state": "passed",
+  "command": "node tests/fixtures/real-backend-smoke.mjs --native",
+  "phases": [
+    {
+      "phase": "send",
+      "seconds": 12.655,
+      "logSha256": "fe4964da8cbebcd68b0773d8b73d7a9a4c92cd37136f49160a325936383bc392"
+    },
+    {
+      "phase": "restore",
+      "seconds": 7.604,
+      "logSha256": "d20abc42e6d4a9cbdcc6004eb7638f5cad30cf99ae2f5ce203a14a9995660e33"
+    }
+  ],
+  "appSha256": "fa4b60b449cf3bc9b48c6132b3964cdd7c4d7af02bc8633ac3348ce37ebf65f8",
+  "testApkSha256": "7775eaceac71a1bcada6c7f6ebf4df8277bdc212d090a188f5a7a104116821c5",
+  "realBoundaries": [
+    "Android card navigation, keyboard, Enter and editor",
+    "Production backend entry point, device pairing and routes",
+    "SQLite outgoing and send-identity stores",
+    "Authenticated WebSocket delivery and transcript history",
+    "Actual backend restart and separate Android processes"
+  ],
+  "substitutedBoundary": "Deterministic stdio Codex provider; no tools/network/model calls",
+  "outcomes": [
+    "One provider start",
+    "One canonical and visible user message",
+    "Input precedes answer",
+    "Pairing survives backend and app restart",
+    "Draft restored in cold editor",
+    "Provider metadata loss repaired from persisted send identity",
+    "Accepted-ID reconciliation does not replay work"
+  ],
+  "failedHarnessObservations": [
+    "First native send passed; checker reused a closed pooled socket before restart. Dedicated checker uses Connection: close.",
+    "Both native phases passed; final checker incorrectly assumed auto mode. Durable original mode is now used for exact-ID reconciliation."
+  ],
+  "limits": [
+    "Qualification APK on owned software emulator, not optimized physical phone",
+    "Voice, push, Tailscale outages, paging and concurrent multi-session loading not covered by this journey",
+    "No whole-product completion claim"
+  ]
+}
