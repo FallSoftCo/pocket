@@ -27,6 +27,26 @@ class HistoryReadingNativeTest {
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/$path",JSONObject())}
  private var eventVersion=900
  private fun event(id:String,kind:String,text:String):JSONObject{val version=++eventVersion;return JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",version).put("row",JSONObject().put("id","order/$id").put("turnId","order").put("kind",kind).put("text",text).put("version",version))}
+ @Test fun pullingAShortRecentPageLoadsEarlierHistoryWithoutATap(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val c=i.targetContext
+  device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
+  device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Short history draft").commit()
+  main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")}
+  await{PocketTranscript.rows.any{it.s("text")=="Fresh response 1"}&&!PocketTranscript.updating}
+  Thread.sleep(400)
+  assertTrue(device.swipe(device.displayWidth/2,device.displayHeight/2,device.displayWidth/2,device.displayHeight/4,35))
+  Thread.sleep(3500)
+  assertEquals("A swipe toward latest unexpectedly fetched older history",0,qa("state").getJSONArray("reads").objects().count{it.optBoolean("older")})
+  assertTrue(device.swipe(device.displayWidth/2,device.displayHeight/4,device.displayWidth/2,device.displayHeight/2,35))
+  await("A thumb pull on a short page did not load older history"){PocketTranscript.rows.any{it.s("id")=="older-message"}&&!PocketTranscript.loading}
+  assertTrue(PocketTranscript.rows.any{it.s("text")=="Fresh response 1"})
+  assertEquals(1,qa("state").getJSONArray("reads").objects().count{it.optBoolean("older")})
+  assertEquals("Short history draft",c.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun readingAnchorSurvivesDeferredOlderPage(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val c=i.targetContext

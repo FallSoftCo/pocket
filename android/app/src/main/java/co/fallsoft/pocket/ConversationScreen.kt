@@ -1,5 +1,7 @@
 package co.fallsoft.pocket
 
+import androidx.compose.ui.input.nestedscroll.*
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
 
@@ -211,7 +213,21 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     var historyGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
     var satisfiedHistoryGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(-1)}
-    LaunchedEffect(dragged){if(dragged){follow=false;filterPassage=null}else if(!list.canScrollForward)follow=true}
+    var shortHistoryPull by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
+    val historyScrollObserver=remember(list,Pocket.environmentId,Pocket.selected){object:NestedScrollConnection{
+        override fun onPreScroll(available:Offset,source:NestedScrollSource):Offset{
+            // Observe only; LazyColumn retains all gesture consumption and inertia.
+            if(source==NestedScrollSource.UserInput&&available.y>0&&!list.canScrollBackward&&!list.canScrollForward&&PocketTranscript.earlier)shortHistoryPull=true
+            return Offset.Zero
+        }
+    }}
+    LaunchedEffect(dragged){
+        if(dragged){follow=false;filterPassage=null}
+        else{
+            if(shouldResumeTranscriptFollowing(list.canScrollForward,list.canScrollBackward,PocketTranscript.earlier,shortHistoryPull))follow=true
+            shortHistoryPull=false
+        }
+    }
     LaunchedEffect(list){
         // Accessibility scroll actions do not emit pointer-drag interactions.
         snapshotFlow{list.isScrollInProgress&&!follow}.distinctUntilChanged().filter{it}.collect{historyGesture++}
@@ -273,7 +289,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
-            LazyColumn(Modifier.fillMaxSize().testTag("conversation-history"),state=list,contentPadding=PaddingValues(start=18.dp,end=18.dp,top=12.dp,bottom=12.dp+with(density){(if(important)filterTailPixels else 0).toDp()}),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            LazyColumn(Modifier.fillMaxSize().nestedScroll(historyScrollObserver).testTag("conversation-history"),state=list,contentPadding=PaddingValues(start=18.dp,end=18.dp,top=12.dp,bottom=12.dp+with(density){(if(important)filterTailPixels else 0).toDp()}),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)

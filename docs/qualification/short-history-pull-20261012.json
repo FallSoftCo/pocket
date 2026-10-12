@@ -1,0 +1,20 @@
+{
+  "requirement": "Older history must be reachable by a thumb pull even when recent content fits the screen; latest-direction gestures must not fetch old pages",
+  "originalControl": "native failure21.026s; no older page after pull",
+  "directionControl": "native failure9.211s; initial fix fetched a page when swiping toward latest",
+  "fixedNative": "pass12.654s; latest-direction zero old reads, older-direction one page, recent text/draft retained, zero submitted work",
+  "pacingNative": "pass15.137s; idle edge does not drain pages; another accessibility gesture loads exactly one more page",
+  "phone": "alpha74/code92 unchanged; candidate not delivered",
+  "host": "OZZZ-OS disposable emulator5620",
+  "checks": {
+    "Debug": {
+      "tests": 305,
+      "failures": 0
+    },
+    "Release": {
+      "tests": 305,
+      "failures": 0
+    },
+    "lints": "debug/release passed"
+  }
+}

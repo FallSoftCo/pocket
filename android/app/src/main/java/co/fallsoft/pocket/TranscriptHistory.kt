@@ -95,3 +95,7 @@ internal fun transcriptReadPosition(visibleRows:List<TranscriptVisibleRow>,first
 
 /** Repeated structural headings do not prove content coverage between bounded pages. */
 internal fun transcriptContentAnchor(kind:String)=kind=="user"||kind=="message"||kind=="activity"
+
+/** A short latest page can still have older history: retain the reader's pull intent. */
+internal fun shouldResumeTranscriptFollowing(canScrollForward:Boolean,canScrollBackward:Boolean,earlier:Boolean,shortHistoryPull:Boolean=false)=
+    !canScrollForward&&(canScrollBackward||!earlier||!shortHistoryPull)
