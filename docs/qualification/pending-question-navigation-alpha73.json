@@ -1,10 +1,10 @@
 {
-  "state": "qualified-private-updater-published-phone-staging",
+  "state": "installed-owner-phone",
   "runtimeSource": "f27a8d5",
   "fixtureSource": "5f8fa48",
   "nativeTestSource": "3029130",
   "candidateVersionCode": 91,
-  "installedPhoneVersionCode": 90,
+  "installedPhoneVersionCode": 91,
   "control": {
     "shortFilteredContentPassedSeconds": 15.199,
     "multipleLongFinalAnswersFailedSeconds": 16.635,
@@ -47,5 +47,12 @@
   "nativeReceipts": {
     "failed": "pending-question-navigation-control.txt",
     "passed": "pending-question-navigation-native.txt"
+  },
+  "delivery": {
+    "privateUpdaterBothSignersVerified": true,
+    "installedBaseApkDigestVerified": true,
+    "protectedPreferenceHashesUnchanged": 13,
+    "changedProtectedPreferences": 0,
+    "physicalPendingQuestionInteractionVerified": false
   }
 }
