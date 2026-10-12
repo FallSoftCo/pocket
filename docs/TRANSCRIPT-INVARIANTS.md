@@ -71,3 +71,14 @@ is a single app-cache writer contract, not a multi-process locking protocol.
 Sidecars and bodies share the finished-checkpoint budget and evict together.
 Only a position referencing retained content can supersede the embedded position.
 Cache positions are presentation metadata, never command/read-ack authority.
+
+## Provider metadata monotonicity
+
+A metadata-poor live completion must not erase a previously observed client send
+ID for the exact same provider item in the same thread and turn. Snapshot/live
+merging follows the same rule. Explicit conflicting claims are never inferred
+to be equivalent. Live events must publish the same projected identity as the
+bounded cache; independent projections can otherwise disagree until refresh.
+
+This is covered by `tests/send-identity-evidence.test.mjs`. It addresses an
+observed source defect, not a verified diagnosis of every handset duplicate.

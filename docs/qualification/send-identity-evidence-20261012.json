@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-12",
+  "scope": "backend timeline projection",
+  "baseline": {
+    "lostIdentityAfterMetadataPoorCompletion": true,
+    "lostSnapshotIdentityToBareLiveItem": true
+  },
+  "change": "Retain explicit client send identity for the exact same provider item within thread and turn; live ingress publishes the same projected row as the bounded cache. Explicit conflicts and different items/threads remain distinct.",
+  "tests": {
+    "targetedPassed": 30,
+    "fullBackendPassed": 480,
+    "fullBackendFailed": 0,
+    "host": "OZZZ-OS"
+  },
+  "handset": {
+    "ssh": "bounded connection timeout",
+    "adb": "no verified TCP connection or authorized USB",
+    "installedVersion": "unverified",
+    "reportedDuplicateCause": "not established"
+  },
+  "deployment": "not deployed; no backend/runtime restart, app install or reply resend",
+  "limits": [
+    "Does not infer identity from equal text, adjacency or timing",
+    "Does not merge two different provider references without explicit common identity",
+    "Physical duplicate reproduction remains open",
+    "Separate release-gate drafts and failing immersion-layout candidate preserved"
+  ]
+}
