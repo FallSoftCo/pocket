@@ -26,5 +26,34 @@
     "keyboard/lifecycle/blackout",
     "signed release gate",
     "physical phone delivery"
-  ]
+  ],
+  "staticFoundationSourceCommit": "c095f14ac3b889bc00d891e2f1d538d3d18fa162",
+  "nativeRuntime": {
+    "implementation": "android/app/src/main/java/co/fallsoft/pocket/NativeImmersionParagraphView.kt",
+    "sourceSha256": "93ccd4c0d70348f6ebea60e1f26f865248638a7afa9c449df2833dc34a4fd5d3",
+    "sourceStatus": "single-paragraph candidate; not wired into production rich-content rendering",
+    "buildAndLint": "passed",
+    "finalNativeRunSeconds": 21.116,
+    "nativeCases": 1,
+    "displayClock": "genuine Android Choreographer;11000ms observation; both complete forms observed; no hardware frame-pacing claim",
+    "selection": "actual touchscreen word selection, platform Select all and exact Copy in both forms",
+    "hold": "native menu rejects language advancement; Copy releases interaction hold",
+    "geometry": "six horizontal slot positions equal; selected-word native highlight and end caret both on line0 in each form",
+    "mask": "complementary premultiplied additive group; visible GPU pixel appearance not yet qualified",
+    "unseenOrUnqualified": [
+      "rich-content integration",
+      "styled links",
+      "RTL",
+      "enlarged/overlong tokens",
+      "cross-block selection",
+      "accessibility",
+      "scroll reanchoring",
+      "app lifecycle",
+      "signed release gate",
+      "physical phone"
+    ],
+    "visualReview": "static immediate and settled native diagnostic inspected; normal native hanging handles, reserved spacing remains conspicuous",
+    "galleryCard": "nextcomp-native-selection-foundation-r01",
+    "phoneInstalled": false
+  }
 }

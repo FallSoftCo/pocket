@@ -3,18 +3,12 @@ package co.fallsoft.pocket
 import android.app.Activity
 import android.app.Application
 import android.content.Context
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.os.Bundle
-import android.text.SpannableString
-import android.text.Spanned
-import android.text.style.ReplacementSpan
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.ViewConfiguration
 import android.widget.FrameLayout
-import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -40,36 +34,19 @@ class NativeReservedWordSelectionTest {
             .putString("server","http://127.0.0.1:18880").commit()
         i.runOnMainSync{Pocket.init(c)}
         val forms=listOf("Permessi completi per i nuovi incarichi", "Permissions full per i new tasks")
-        fun reservedPhrase(view:TextView, phrase:String):SpannableString {
-            val value=SpannableString(phrase)
-            val paired=forms.map{it.split(" ")}
-            var offset=0
-            phrase.split(" ").forEachIndexed { index,word ->
-                val reserved=kotlin.math.ceil(paired.maxOf{view.paint.measureText(it[index])}).toInt()
-                value.setSpan(object:ReplacementSpan(){
-                    override fun getSize(paint:Paint,text:CharSequence,start:Int,end:Int,fm:Paint.FontMetricsInt?):Int {
-                        fm?.let{paint.getFontMetricsInt(it)}
-                        return reserved
-                    }
-                    override fun draw(canvas:Canvas,text:CharSequence,start:Int,end:Int,x:Float,top:Int,y:Int,bottom:Int,paint:Paint) {
-                        canvas.drawText(text,start,end,x,y.toFloat(),paint)
-                    }
-                },offset,offset+word.length,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                offset+=word.length+1
-            }
-            return value
-        }
         val app=c.applicationContext as Application
-        var text:TextView?=null
+        var text:NativeImmersionParagraphView?=null
+        val interactionHold=java.util.concurrent.atomic.AtomicBoolean(false)
         val lifecycle=object:Application.ActivityLifecycleCallbacks {
             override fun onActivityPostCreated(activity:Activity,state:Bundle?) {
                 if(activity !is MainActivity)return
-                val view=TextView(activity).apply {
+                val view=NativeImmersionParagraphView(activity).apply {
                     textSize=17f
                     setTextColor(Color.WHITE)
                     typeface=ResourcesCompat.getFont(c,R.font.inter_regular)
                     setTextIsSelectable(true)
-                    setText(reservedPhrase(this,forms.first()),TextView.BufferType.SPANNABLE)
+                    onInteractionHold={interactionHold.set(it)}
+                    check(setAlignedForms(forms[0],forms[1]))
                 }
                 text=view
                 val dp=c.resources.displayMetrics.density
@@ -91,8 +68,12 @@ class NativeReservedWordSelectionTest {
         try {
             ActivityScenario.launch(MainActivity::class.java).use {
                 val slotPositions=mutableListOf<List<Float>>()
+                val selectionGeometry=org.json.JSONArray()
                 for(phrase in forms) {
-                i.runOnMainSync{text!!.setText(reservedPhrase(text!!,phrase),TextView.BufferType.SPANNABLE)}
+                i.runOnMainSync{
+                    assertTrue(text!!.setAlignedForms(phrase,forms.first{it!=phrase}))
+                    text!!.present(0,c.resources.displayMetrics.widthPixels.toFloat())
+                }
                 device.waitForIdle()
                 i.runOnMainSync {
                     val view=text!!
@@ -125,6 +106,34 @@ class NativeReservedWordSelectionTest {
                 var selected=""
                 i.runOnMainSync{val v=text!!;selected=v.text.subSequence(v.selectionStart,v.selectionEnd).toString()}
                 assertEquals("Native selection must select the actual word",phrase.substringBefore(" "),selected)
+                i.runOnMainSync {
+                    assertTrue("Native menu must hold the shared interaction clock",interactionHold.get())
+                    val before=text!!.text.toString()
+                    text!!.present(4200,c.resources.displayMetrics.widthPixels.toFloat())
+                    assertEquals("A native menu must retain the precise selected language",before,text!!.text.toString())
+                }
+                // Record the settled native affordance, not the handle's
+                // entrance animation inherited from the previous selection.
+                Thread.sleep(500)
+                i.runOnMainSync {
+                    val view=text!!
+                    val path=android.graphics.Path()
+                    view.layout.getSelectionPath(view.selectionStart,view.selectionEnd,path)
+                    val bounds=android.graphics.RectF()
+                    path.computeBounds(bounds,true)
+                    val line=view.layout.getLineForOffset(view.selectionStart)
+                    assertTrue("A single selected native word must not highlight another line",
+                        bounds.bottom<=view.layout.getLineBottom(line)+1f)
+                    val endLine=view.layout.getLineForOffset(view.selectionEnd)
+                    selectionGeometry.put(org.json.JSONObject()
+                        .put("visible",view.text.toString()).put("layoutText",view.layout.text.toString())
+                        .put("start",view.selectionStart).put("end",view.selectionEnd)
+                        .put("startLine",line).put("endLine",endLine)
+                        .put("endCaretX",view.layout.getPrimaryHorizontal(view.selectionEnd))
+                        .put("endLineBaseline",view.layout.getLineBaseline(endLine))
+                        .put("highlightBounds",bounds.toString()))
+                    java.io.File(c.cacheDir,"native-selection-geometry.json").writeText(selectionGeometry.toString(2))
+                }
                 device.takeScreenshot(java.io.File(c.cacheDir,"native-reserved-word-selection.png"))
                 val all=device.wait(Until.findObject(By.text("Select all")),3000)
                 assertNotNull("Native paragraph did not offer Select all",all)
@@ -137,6 +146,53 @@ class NativeReservedWordSelectionTest {
                 assertEquals("Native reserved span corrupted clipboard text",phrase,copied)
                 }
                 assertEquals("Paired grammar forms must preserve all six native slot positions",slotPositions[0],slotPositions[1])
+                val observed=mutableSetOf<String>()
+                i.runOnMainSync {
+                    assertFalse("Copy must release the native interaction hold",interactionHold.get())
+                    val view=text!!
+                    assertTrue(view.setAlignedForms(forms[0],forms[1]))
+                    for(time in 0L..8400L step 100L) {
+                        view.present(time,c.resources.displayMetrics.widthPixels.toFloat())
+                        observed+=view.text.toString()
+                    }
+                    assertFalse("Unaligned phrases must be rejected",view.setAlignedForms("one word","three different words"))
+                }
+                assertTrue("A complete shared-clock period must show the target form",forms[0] in observed)
+                assertTrue("A complete shared-clock period must show the grammar-preserving support form",forms[1] in observed)
+                // Genuine Android display-clock qualification, with no idle wait
+                // while the loop runs and guaranteed owned callback teardown.
+                val liveForms=mutableSetOf<String>()
+                val liveClock=ImmersionReadingWaveClock()
+                val liveOwner=Any()
+                var frames=0
+                var previous=0L
+                var active=true
+                val callback=object:android.view.Choreographer.FrameCallback {
+                    override fun doFrame(now:Long) {
+                        if(!active)return
+                        if(previous!=0L)liveClock.advanceNanos(now-previous)
+                        previous=now
+                        text!!.present(liveClock.elapsedMs,c.resources.displayMetrics.widthPixels.toFloat())
+                        liveForms+=text!!.text.toString()
+                        frames++
+                        android.view.Choreographer.getInstance().postFrameCallback(this)
+                    }
+                }
+                try {
+                    i.runOnMainSync {
+                        text!!.onInteractionHold={held->interactionHold.set(held);liveClock.selecting(liveOwner,held)}
+                        android.view.Choreographer.getInstance().postFrameCallback(callback)
+                    }
+                    Thread.sleep(11000)
+                } finally {
+                    i.runOnMainSync {
+                        active=false
+                        android.view.Choreographer.getInstance().removeFrameCallback(callback)
+                    }
+                }
+                assertTrue("Native display clock did not produce sustained rendering",frames>30)
+                assertTrue("Native live wave never presented the complete target",forms[0] in liveForms)
+                assertTrue("Native live wave never presented the complete grammar-preserving support",forms[1] in liveForms)
             }
         } finally {app.unregisterActivityLifecycleCallbacks(lifecycle)}
     }

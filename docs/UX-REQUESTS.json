@@ -2445,13 +2445,14 @@
     },
     {
       "id": "immersion-continuous-reading-order-wave",
-      "status": "shared-wave-native-menu-repair-blackout-and-full-flow-qualification-pending",
+      "status": "native-selectable-paragraph-foundation-qualified-full-integration-pending",
       "request": "Equal local transition speed; continuously repeat staggered top-to-bottom reading-order waves with each language visible for a few seconds. Never compress later lines to finish together.",
       "confirmedCause": "Fixed4200ms paragraph deadline scales local line speed by line count; controls separately use18s/6s language holds.",
       "design": "docs/IMMERSION-CASCADE-DESIGN.md",
       "delivery": "Held alpha88; no phone delivery of this correction.",
       "evidence": "docs/qualification/immersion-reading-wave-runtime-20261012.json",
-      "interactionFollowup": "Native platform menu lifecycle now pauses shared wave; actual select/copy/resume stages pass. Restored blackout/menu return remains failing; release held."
+      "interactionFollowup": "The integrated Compose fragment renderer still fails the real phrase-help long-press journey. A separate single native selectable paragraph now passes actual word selection, Select all, exact Copy, six paired slot positions, native-menu language freeze/release and a genuine display-clock cycle. Rich links/accessibility, scrolling, full-app integration and signed native release remain pending.",
+      "foundationEvidence": "docs/qualification/immersion-native-selection-foundation-20261012.json"
     }
   ],
   "current_state": {
