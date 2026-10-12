@@ -108,7 +108,14 @@ object PocketLive {
         val eventBase=Pocket.base.replaceFirst("https://","wss://").replaceFirst("http://","ws://")
         val request=Request.Builder().url(eventBase+"/events").header("Authorization","Bearer ${Pocket.token}").build()
         ws=client.newWebSocket(request,object:WebSocketListener(){
-            override fun onOpen(webSocket:WebSocket,response:Response){Pocket.scope.launch{if(webSocket!==ws)return@launch;Pocket.catchUp();Pocket.refresh();Pocket.refreshDetail();Pocket.selected?.let{PocketReplies.reconcile(it)}}}
+            override fun onOpen(webSocket:WebSocket,response:Response){Pocket.scope.launch{
+                if(webSocket!==ws)return@launch
+                // An authenticated transport handshake is live even while the
+                // server is quiet. Codex execution health remains a separate status.
+                disconnectNotice?.cancel();disconnectNotice=null
+                outageVisible=false;Pocket.connected=true;Pocket.connectionError=""
+                Pocket.catchUp();Pocket.refresh();Pocket.refreshDetail();Pocket.selected?.let{PocketReplies.reconcile(it)}
+            }}
             override fun onMessage(webSocket:WebSocket,text:String){Pocket.scope.launch{if(webSocket!==ws)return@launch;try{val event=JSONObject(text);disconnectNotice?.cancel();outageVisible=false;attempt=0;Pocket.connected=true;Pocket.connectionError="";Pocket.event(event)}catch(_:Exception){}}}
             override fun onFailure(webSocket:WebSocket,t:Throwable,response:Response?){reconnect(webSocket,PocketNetwork.error(t))}
             override fun onClosing(webSocket:WebSocket,code:Int,reason:String){webSocket.close(code,reason)}
