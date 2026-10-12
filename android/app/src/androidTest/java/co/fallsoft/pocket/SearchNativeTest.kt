@@ -30,6 +30,8 @@ class SearchNativeTest {
    find.click()
    val input=device.wait(Until.findObject(By.clazz("android.widget.EditText")),10000)
    assertNotNull("Search did not open with immersion enabled",input)
+   input.click()
+   assertTrue("Typing keyboard did not open",device.wait(Until.hasObject(By.pkg("com.google.android.inputmethod.latin")),5000))
    input.text="Transcript"
    assertEquals("Transcript",input.text)
    // Search chips are in a horizontally unbounded row. Keep the real screen
