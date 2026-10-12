@@ -12,7 +12,6 @@
     "olderPageAndWarmReopenNativeSeconds": 9.481,
     "shortHistoryPageGestureNativeSeconds": 14.519,
     "beforeImportantReturnNativeCrops": "All three original window PixelCopy paragraph images are byte-identical; SHA2d185e8ef850c0de867062b4cfd58b5ff29dfdbe5aefe1599db9b96b7163cb31.",
-    "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-reading-filter-pixel-20261011",
     "finalSavedContextNativeSeconds": 5.522,
     "finalOlderPageAndWarmReopenNativeSeconds": 9.457,
     "lateInputOrderingNativeSeconds": 7.558,
@@ -24,7 +23,9 @@
       "failed": [],
       "reducedMotion": "passed",
       "reload": "passed"
-    }
+    },
+    "galleryCard": "nextcomp-reading-filter-pixel-20261011",
+    "galleryVisibility": "owner-private; card identifier retained without deployment address"
   },
   "limits": [
     "Native emulator evidence; physical reading gestures/frame pacing remain unqualified.",

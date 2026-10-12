@@ -48,9 +48,10 @@
     "result": "Final normal-key native installs/tests pass"
   },
   "gallery": {
-    "url": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-ux-normal-20261011",
     "cards": 2276,
     "check": "Passed 1440x1050 and 390x844 layout/card health, reduced motion and live gallery reload",
-    "task": "2095e247059055192886120452ae3278"
+    "task": "2095e247059055192886120452ae3278",
+    "galleryCard": "nextcomp-ux-normal-20261011",
+    "galleryVisibility": "owner-private; card identifier retained without deployment address"
   }
 }

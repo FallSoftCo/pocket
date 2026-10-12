@@ -24,7 +24,8 @@
     "noWorkSubmitted": true,
     "draftPreserved": true,
     "nativeImageSha256": "6e29241cb5fb1be1be09c13f3a175faa4b6d174963c468076fafd12f43569fea",
-    "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-cold-history-native-20261011"
+    "galleryCard": "nextcomp-cold-history-native-20261011",
+    "galleryVisibility": "owner-private; card identifier retained without deployment address"
   },
   "release": {
     "versionCode": 86,
