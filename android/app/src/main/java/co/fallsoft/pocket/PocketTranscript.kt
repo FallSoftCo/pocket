@@ -10,7 +10,7 @@ object PocketTranscript {
     var refreshPending by mutableStateOf(false);private set
     private var loadingEarlier by mutableStateOf(false)
     private var positioning by mutableStateOf(false)
-    val updating get()=refreshPending||(loading&&!loadingEarlier)||positioning
+    val updating get()=refreshPending||(loading&&!loadingEarlier)||positioning||(bridgeBefore!=null&&automaticRetryAllowed)
     fun markRefreshPending(){
         if(owner==Pocket.selected&&ownerScope==scopeKey()){
             refreshPending=true
@@ -26,6 +26,9 @@ object PocketTranscript {
     private val buffered=linkedMapOf<String,JSONObject>()
     private var generation=0
     private var bridgeBefore:String?=null
+    private var bridgeKnown:Set<String> = emptySet()
+    private var bridgeBoundary:String?=null
+    private var coverageVerified=false
     private var missedUpdates=false
     private data class InputPosition(val turn:String,val target:String,val item:String,val known:List<String>)
     private val positionQueue=linkedMapOf<String,InputPosition>()
@@ -34,7 +37,7 @@ object PocketTranscript {
     private val positionFailures=linkedMapOf<String,String>()
     var browsingEarlier by mutableStateOf(false);private set
     internal var readPosition by mutableStateOf<TranscriptReadPosition?>(null);private set
-    private data class Snapshot(val rows:List<JSONObject>,val detail:JSONObject,val before:String?,val earlier:Boolean,val bridgeBefore:String?,val position:TranscriptReadPosition?)
+    private data class Snapshot(val rows:List<JSONObject>,val detail:JSONObject,val before:String?,val earlier:Boolean,val bridgeBefore:String?,val position:TranscriptReadPosition?,val bridgeKnown:Set<String> = emptySet(),val bridgeBoundary:String?=null,val coverageVerified:Boolean=false)
     private val rowWeights=java.util.WeakHashMap<JSONObject,Long>()
     private val recent=RecentTranscriptCache<Snapshot>(4,Long.MAX_VALUE,12L*1024*1024){snapshot->
         snapshot.rows.sumOf{row->rowWeights.getOrPut(row){row.toString().length.toLong()*2}}+snapshot.detail.toString().length*2L
@@ -60,7 +63,7 @@ object PocketTranscript {
             // must come from the live backend rather than an old disk snapshot.
             val detail=transcriptPresentationDetail(id,snapshot.detail)
             val position=snapshot.position?.let{JSONObject().put("row",it.rowId).put("offset",it.offset).put("follow",it.follow)}
-            val body=JSONObject().put("schema",1).put("scope",scope).put("id",id).put("rows",org.json.JSONArray(snapshot.rows.filter{it.s("kind")!="request"})).put("detail",detail).put("before",snapshot.before).put("earlier",snapshot.earlier).put("bridgeBefore",snapshot.bridgeBefore).put("position",position).toString()
+            val body=JSONObject().put("schema",1).put("scope",scope).put("id",id).put("rows",org.json.JSONArray(snapshot.rows.filter{it.s("kind")!="request"})).put("detail",detail).put("before",snapshot.before).put("earlier",snapshot.earlier).put("bridgeBefore",snapshot.bridgeBefore).put("bridgeKnown",org.json.JSONArray(snapshot.bridgeKnown.toList())).put("bridgeBoundary",snapshot.bridgeBoundary).put("coverageVerified",snapshot.coverageVerified).put("position",position).toString()
             disk.write(scope,id,body){diskRequests[key]==sequence}
         }catch(_:Exception){/* A cache failure never changes delivery, draft or network state. */}}
     }
@@ -70,11 +73,11 @@ object PocketTranscript {
         val detail=value.getJSONObject("detail");if(detail.optJSONObject("thread")?.s("id")!=id)return@withContext null
         val cachedRows=value.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map{it.put("version",0L)};if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
         val position=value.optJSONObject("position")?.let{TranscriptReadPosition(it.s("row"),it.optInt("offset"),it.optBoolean("follow"))}
-        Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position)
+        Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position,value.optJSONArray("bridgeKnown")?.let{array->(0 until array.length()).map{array.optString(it)}.filter{it.isNotBlank()}.take(1024).toSet()}.orEmpty(),value.s("bridgeBoundary").takeIf{it.isNotBlank()},value.optBoolean("coverageVerified"))
     }catch(_:Exception){null}}
     private fun rememberRecent(persist:Boolean=false){
         val id=owner?:return;val scope=ownerScope?:return
-        if(historyLoaded&&scope==scopeKey())Pocket.detail?.let{val snapshot=Snapshot(rows,it,before,earlier,bridgeBefore,readPosition);recent.put(scope,id,snapshot,android.os.SystemClock.elapsedRealtime());if(persist)persist(scope,id,snapshot)}
+        if(historyLoaded&&scope==scopeKey())Pocket.detail?.let{val snapshot=Snapshot(rows,it,before,earlier,bridgeBefore,readPosition,bridgeKnown,bridgeBoundary,coverageVerified);recent.put(scope,id,snapshot,android.os.SystemClock.elapsedRealtime());if(persist)persist(scope,id,snapshot)}
     }
     internal fun rememberPosition(scope:String,id:String,position:TranscriptReadPosition){
         val now=android.os.SystemClock.elapsedRealtime()
@@ -82,6 +85,7 @@ object PocketTranscript {
         recent.get(scope,id,now)?.takeIf{it.position!=position}?.let{val snapshot=it.copy(position=position);recent.put(scope,id,snapshot,now);persist(scope,id,snapshot)}
     }
     private var observedHead:TranscriptHead?=null
+    private var headSnapshotsSupported:Boolean?=null
     private data class PendingHead(val head:TranscriptHead,val baseline:TranscriptHead?)
     private var pendingHead:PendingHead?=null
     internal fun freshnessBaseline()=observedHead
@@ -96,10 +100,10 @@ object PocketTranscript {
         return TranscriptHead(epoch,version)
     }
     internal fun checkFreshness(id:String,value:JSONObject?,baseline:TranscriptHead?){
-        if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey()||!automaticRetryAllowed)return
+        if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey()||!automaticRetryAllowed||headSnapshotsSupported==false)return
         val head=parseHead(value,id)?:return
         if(transcriptHeadAdvanced(observedHead,baseline,head)){
-            if(loading){pendingHead=PendingHead(head,baseline);refreshPending=true}
+            if(loading||refreshPending){pendingHead=PendingHead(head,baseline);refreshPending=true}
             else Pocket.scheduleRefresh()
         }
     }
@@ -117,17 +121,17 @@ object PocketTranscript {
     }
     fun reset(id:String){
         positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false
-        generation++;owner=id;ownerScope=scopeKey();observedHead=null;pendingHead=null;automaticRetryAllowed=true
+        generation++;owner=id;ownerScope=scopeKey();observedHead=null;pendingHead=null;headSnapshotsSupported=null;automaticRetryAllowed=true
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
-        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
+        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;bridgeKnown=cached?.bridgeKnown.orEmpty();bridgeBoundary=cached?.bridgeBoundary;coverageVerified=cached?.coverageVerified?:false;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;observedHead=null;pendingHead=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;generation++;owner=null;ownerScope=null;observedHead=null;pendingHead=null;headSnapshotsSupported=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;bridgeKnown=emptySet();bridgeBoundary=null;coverageVerified=false;earlier=false;browsingEarlier=false;revision++;trace()}
     /** Called only by the resumed, unfiltered viewport after settling at latest. */
     internal fun presentedLatest(){
         val id=Pocket.selected?:return
-        if(owner!=id||ownerScope!=scopeKey()||!freshForRead||loading||updating||BackendNavigation.teamSelected()||!PocketVoice.foreground||!AppWindowVisibility.focused||BlackoutVisibility.active||PocketVoice.active||Pocket.newTask)return
+        if(owner!=id||ownerScope!=scopeKey()||!freshForRead||bridgeBefore!=null||loading||updating||BackendNavigation.teamSelected()||!PocketVoice.foreground||!AppWindowVisibility.focused||BlackoutVisibility.active||PocketVoice.active||Pocket.newTask)return
         val d=Pocket.detail?:return
         PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=Pocket.local,catchup=if(!checkedThisOpen)d.optJSONObject("catchup")else null,environment=Pocket.environmentId)
         checkedThisOpen=true
@@ -200,14 +204,14 @@ object PocketTranscript {
         val ticket=generation;val scope=scopeKey();val profileLocal=Pocket.local;val destination=Pocket.captureEnvironment()?:return
         fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
         val cursor=bridgeCursor?:if(older)before else null
-        loadingEarlier=older||bridgeCursor!=null
+        loadingEarlier=older
         if(!loadingEarlier){refreshPending=false;freshForRead=false}
         automaticRetryAllowed=true;loading=true;buffered.clear();var baselineRows=rows.associateBy{it.s("id")};var succeeded=false
         try{
             if(!historyLoaded&&!older&&bridgeCursor==null){
                 val cached=diskSnapshot(scope,id)
                 if(!current())return
-                if(cached!=null){rows=cached.rows;Pocket.detail=cached.detail;before=cached.before;earlier=cached.earlier;bridgeBefore=cached.bridgeBefore;readPosition=cached.position;historyLoaded=true;buffered.values.toList().forEach{apply(it,false)};cacheRestoreRevision++;revision++;trace()}
+                if(cached!=null){rows=cached.rows;Pocket.detail=cached.detail;before=cached.before;earlier=cached.earlier;bridgeBefore=cached.bridgeBefore;bridgeKnown=cached.bridgeKnown;bridgeBoundary=cached.bridgeBoundary;coverageVerified=cached.coverageVerified;readPosition=cached.position;historyLoaded=true;buffered.values.toList().forEach{apply(it,false)};cacheRestoreRevision++;revision++;trace()}
                 baselineRows=rows.associateBy{it.s("id")}
             }
             val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
@@ -218,15 +222,29 @@ object PocketTranscript {
             incoming.forEach{it.put("version",maxOf(it.optLong("version"),d.optLong("revision")))}
             if(!older&&bridgeCursor==null)rows=authoritativeSnapshotBase(rows,baselineRows,incoming.mapTo(hashSetOf()){it.s("id")},{it.s("id")}){JSONObject(it.toString()).put("version",0)}
             val wasLoaded=historyLoaded&&rows.isNotEmpty()
-            val loadedIds=rows.mapTo(hashSetOf()){it.s("id")}
-            val overlaps=incoming.any{it.s("id") in loadedIds}
+            val loadedIds=rows.filter{transcriptContentAnchor(it.s("kind"))}.mapTo(hashSetOf()){it.s("id")}
+            val incomingContent=incoming.filter{transcriptContentAnchor(it.s("kind"))}
+            val incomingIds=incomingContent.mapTo(hashSetOf()){it.s("id")}
+            val overlapTargets=if(bridgeCursor!=null&&bridgeKnown.isNotEmpty())bridgeKnown else loadedIds
+            val overlaps=incomingContent.any{it.s("id") in overlapTargets}
             val nextBefore=page.s("before").takeIf{it.isNotBlank()}
             if(bridgeCursor!=null){
-                rows=mergeTranscriptPage(rows,incoming,false,{it.s("id")},{it.optLong("version")},"$bridgeCursor/header")
+                if(!overlaps&&page.optBoolean("hasEarlier")&&(nextBefore==null||nextBefore==cursor))throw IllegalStateException("History page did not advance; cached messages are retained.")
+                rows=mergeTranscriptPage(rows,incoming,false,{it.s("id")},{it.optLong("version")},insertBefore=page.s("insertBefore").takeIf{it.isNotBlank()}?:bridgeBoundary,keepPosition={it.s("kind")=="turn"})
                 bridgeBefore=if(!overlaps&&page.optBoolean("hasEarlier")&&nextBefore!=cursor)nextBefore else null
+                if(bridgeBefore==null){bridgeKnown=emptySet();bridgeBoundary=null;coverageVerified=true}else incomingContent.firstOrNull()?.let{bridgeBoundary=it.s("id")}
             }else{
-                if(!older&&wasLoaded&&!overlaps&&incoming.isNotEmpty()&&page.optBoolean("hasEarlier"))bridgeBefore=nextBefore
-                rows=mergeTranscriptPage(rows,incoming,older,{it.s("id")},{it.optLong("version")},insertBefore=if(older)page.s("insertBefore").takeIf{it.isNotBlank()}else null,keepPosition={it.s("kind")=="turn"})
+                if(!older){
+                    val retainedOutside=loadedIds-incomingIds
+                    val needsBridge=wasLoaded&&incomingContent.isNotEmpty()&&page.optBoolean("hasEarlier")&&(!overlaps||(!coverageVerified&&retainedOutside.isNotEmpty())||bridgeBefore!=null)
+                    if(needsBridge){
+                        if(bridgeKnown.isEmpty())bridgeKnown=retainedOutside.toList().takeLast(1024).toSet()
+                        bridgeBoundary=incomingContent.first().s("id")
+                        bridgeBefore=nextBefore
+                    }else if(bridgeBefore==null)coverageVerified=true
+                }
+                val mergeRows=if(!older&&wasLoaded&&!overlaps)incoming.filterNot{it.s("kind")=="turn"&&rows.any{old->old.s("id")==it.s("id")}}else incoming
+                rows=mergeTranscriptPage(rows,mergeRows,older,{it.s("id")},{it.optLong("version")},insertBefore=if(older)page.s("insertBefore").takeIf{it.isNotBlank()}else null,keepPosition={it.s("kind")=="turn"})
             }
             // A recent refresh must not move the oldest loaded cursor forward.
             retainedTranscriptCursor(TranscriptCursor(before,earlier),wasLoaded,older,bridgeCursor!=null,TranscriptCursor(nextBefore,page.optBoolean("hasEarlier"))).let{
@@ -239,7 +257,7 @@ object PocketTranscript {
                 val pendingIds=d.optJSONArray("pending")?.objects()?.map{it.s("id")}.orEmpty().toSet()
                 rows=rows.filter{it.s("kind")!="request"||it.optJSONObject("request")?.s("id") in pendingIds}
             }
-            if(!older&&bridgeCursor==null){freshForRead=true;parseHead(d.optJSONObject("historyHead"),id)?.let{observedHead=snapshotTranscriptHead(observedHead,headBaseline,it)}}
+            if(!older&&bridgeCursor==null){freshForRead=true;val head=parseHead(d.optJSONObject("historyHead"),id);headSnapshotsSupported=head!=null;head?.let{observedHead=snapshotTranscriptHead(observedHead,headBaseline,it)}}
             val updates=buffered.values.toList();buffered.clear()
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             rememberRecent(persist=true);revision++;Pocket.error=positionFailures.values.firstOrNull().orEmpty();succeeded=true;trace()
@@ -255,11 +273,11 @@ object PocketTranscript {
             if(current()) {
                 if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
                 loading=false;loadingEarlier=false
-                pendingHead?.let{pending->if(automaticRetryAllowed&&transcriptHeadAdvanced(observedHead,pending.baseline,pending.head))missedUpdates=true}
+                pendingHead?.let{pending->if(automaticRetryAllowed&&headSnapshotsSupported!=false&&transcriptHeadAdvanced(observedHead,pending.baseline,pending.head))missedUpdates=true}
                 pendingHead=null
                 if(succeeded&&!missedUpdates)refreshPending=false
                 if(!succeeded&&!automaticRetryAllowed)refreshPending=false
-                if(!succeeded&&automaticRetryAllowed&&!older&&bridgeCursor==null){
+                if(!succeeded&&automaticRetryAllowed&&!older){
                     missedUpdates=false;refreshPending=true
                     Pocket.scope.launch{
                         // History reads do not start workers. A prolonged outage

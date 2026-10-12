@@ -92,3 +92,6 @@ internal suspend fun locateTranscriptSource(
 internal data class TranscriptVisibleRow(val index:Int,val rowId:String)
 internal fun transcriptReadPosition(visibleRows:List<TranscriptVisibleRow>,firstViewportIndex:Int,firstViewportOffset:Int,follow:Boolean)=
     visibleRows.firstOrNull{it.index==firstViewportIndex}?.let{TranscriptReadPosition(it.rowId,firstViewportOffset,follow)}
+
+/** Repeated structural headings do not prove content coverage between bounded pages. */
+internal fun transcriptContentAnchor(kind:String)=kind=="user"||kind=="message"||kind=="activity"

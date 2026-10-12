@@ -32,6 +32,25 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun legacyCachedGapIsRepairedWithoutLoadingEarlierManually(){
+  twoChats();qa("same-turn-gap");qa("head-only-update")
+  val scope=PocketTranscript.scopeKey()
+  val oldRows=org.json.JSONArray("""[{"id":"synthetic-turn/header","kind":"turn","turnId":"synthetic-turn"},{"id":"gap-user","kind":"user","turnId":"synthetic-turn","text":"Shared turn request"},{"id":"gap-old-answer","kind":"message","turnId":"synthetic-turn","text":"Fresh response 1"},{"id":"gap-new-tool","kind":"activity","turnId":"synthetic-turn","text":"New tool action"}]""")
+  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",oldRows).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+  assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+  main{Pocket.open("same-thread")};await{has(2)&&!PocketTranscript.updating}
+  assertEquals(listOf("gap-user","gap-old-answer","gap-new-answer","gap-new-tool"),PocketTranscript.rows.filter{it.s("kind")!="turn"}.map{it.s("id")})
+  assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+ }
+ @Test fun sameTurnHeaderDoesNotHideAnIntermediateAnswer(){
+  twoChats();qa("same-turn-gap");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("head-only-update");main{Pocket.refresh()}
+  await{has(2)&&!PocketTranscript.updating}
+  assertEquals(listOf("gap-user","gap-old-answer","gap-new-answer","gap-new-tool"),PocketTranscript.rows.filter{it.s("kind")!="turn"}.map{it.s("id")})
+  assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+ }
  @Test fun inlinePlaybackVolumePreservesMuteAndTypingDuringCapture(){
   twoChats();main{Pocket.open("same-thread",keyboard=true)}
   await{has(1)&&device.hasObject(By.clazz("android.widget.EditText"))&&device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")}
@@ -376,6 +395,17 @@ class TranscriptRefreshNativeTest {
   assertEquals("Recovered transport kept stale connection error","",Pocket.connectionError)
   assertEquals("Reconnect erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   assertEquals("Reconnect submitted work",0,qa("state").getJSONArray("replies").length())
+ }
+ @Test fun incompleteOptionalHeadProtocolCannotCreateAHistoryReadLoop(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("omit-snapshot-head");qa("notification-overflow");main{Pocket.refresh()};await{has(2)&&!PocketTranscript.updating}
+  val reads=qa("state").getJSONArray("reads").length()
+  repeat(3){main{Pocket.refresh()};Thread.sleep(600)};Thread.sleep(1600)
+  assertEquals("Incomplete optional protocol polled history",reads,qa("state").getJSONArray("reads").length())
+  qa("restore-snapshot-head");main{Pocket.refreshDetail()};await{has(2)&&!PocketTranscript.updating}
+  qa("head-only-update");main{Pocket.refresh()};await{has(3)&&!PocketTranscript.updating}
+  assertTrue("Restored protocol response not visible",device.wait(Until.hasObject(By.text("Fresh response 3")),4000))
+  assertEquals("Compatibility recovery submitted work",0,qa("state").getJSONArray("replies").length())
  }
  @Test fun selectedHistoryRecoversWhenUpdateIsOutsideBothBoundedFeeds(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}

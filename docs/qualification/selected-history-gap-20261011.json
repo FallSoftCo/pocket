@@ -1,0 +1,31 @@
+{
+  "requirement": "selected conversation must recover missed and cached intermediate messages automatically",
+  "delivered": false,
+  "installedPhone": "alpha73/code91 unchanged",
+  "host": "OZZZ-OS",
+  "emulator": "owned nextcomp_env_qa emulator5620",
+  "control": {
+    "seconds": 24.37,
+    "result": "failed; repeated turn header masks gap"
+  },
+  "fixed": {
+    "seconds": 16.172,
+    "result": "passed; canonical user/old answer/new answer/tool order; draft retained; no commands"
+  },
+  "legacyCache": {
+    "seconds": 13.488,
+    "result": "passed; missing middle answer recovered from pre-fix disk cache automatically"
+  },
+  "optionalProtocolCompatibility": {
+    "seconds": 19.301,
+    "result": "passed; partial backend protocol does not create history read loop",
+    "source": "before persisted-gap additions"
+  },
+  "unitTests": 304,
+  "remaining": [
+    "signed variant builds/lints",
+    "final-source reconnect/head regression",
+    "coherent backend deployment",
+    "signed update and real handset verification"
+  ]
+}
