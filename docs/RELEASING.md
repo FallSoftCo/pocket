@@ -27,13 +27,15 @@ export POCKET_SIGNING_STORE=/private/path/pocket-release.jks
 export POCKET_SIGNING_ALIAS=pocket
 read -rs POCKET_SIGNING_PASSWORD
 export POCKET_SIGNING_PASSWORD
+export NEXTCOMP_BUILD_HOST=your-verified-authorized-build-host
+export POCKET_RELEASE_STAGE=/private/new-release-stage
 node scripts/build-release.mjs
 unset POCKET_SIGNING_PASSWORD
 ```
 
 For distinct key/store passwords, set `POCKET_SIGNING_KEY_PASSWORD` too. Do not put passwords in shell history, git, Gradle properties, logs, or release assets. Keep a secure off-machine backup of the signing key and credentials; losing them prevents updates under that identity. The signing script requires explicit credentials and has no debug fallback.
 
-Unsigned CI builds validate compilation and lint; they are not installable releases and are never uploaded as release APKs. Original release builds are made locally with the private signing identity. Pin package/Android/backend versions together and increase `versionCode` before each release.
+Unsigned CI builds validate compilation and lint; they are not installable releases and are never uploaded as release APKs. Original release builds run on the authorized build host with the private signing identity. Pin package/Android/backend versions together and increase `versionCode` before each release.
 
 ## Upgrade and migration
 
@@ -51,7 +53,7 @@ For a personal-debug → public-alpha migration, finish/check pending replies, r
 
 ## Updates without ADB
 
-The release builder prepares verified APK variants in the private runtime `data/app-updates` directory (or `POCKET_DATA/app-updates`). The manifest includes the actual APK package/version, SHA-256 and signing certificate. Stable release APKs remain the public GitHub artifacts; compatible development-signed APKs are only served to paired devices through authenticated endpoints. Do not upload development APKs or the private runtime directory.
+The release builder prepares verified APK variants in the new private `POCKET_RELEASE_STAGE/app-updates` staging directory. It does not write the live update channel. The manifest includes the actual APK package/version, SHA-256 and signing certificate. Stable release APKs remain the public GitHub artifacts; compatible development-signed APKs are only served to paired devices through authenticated endpoints. Do not upload development APKs or the private runtime directory.
 
 Once the new backend is deployed, announce the prepared update with:
 
@@ -60,3 +62,54 @@ node scripts/announce-app-update.mjs
 ```
 
 Announcements are deduplicated per build/device. NextComp selects its installed signing identity, downloads and verifies the APK, and offers an Install notification and Settings control. Android requires allowing NextComp as an installation source once and confirming the system installer. No ADB connection is needed for subsequent updates. Existing pairings are retained.
+
+## Checked incremental-alpha publication
+
+The earlier manual publication path could overlook a native failure because
+`am instrument` can exit zero while printing `FAILURES!!!`. Use the checked path
+for future releases. The gate verifies the actual final log, one successful test
+summary, source/test-input fingerprints, APK hashes, version, build tasks and
+required case receipts. It rejects missing, failed, stale or altered evidence.
+
+`build-release.mjs` runs both unit variants, both lints, both signed APK builds
+and separate qualification/test APK builds. It binds receipts to the APK's actual
+version, rather than the package-manager metadata. Configure the authorized build
+host and a new private stage; the builder also checks the 80 GiB recovery reserve.
+Credentials stay outside source. Set the maintained compatible debug signing store
+when that installed identity is an intended update recipient.
+
+Create an explicitly owned `nextcomp_env_qa` emulator on serial `emulator-5620`.
+Its private owner receipt records the actor, live emulator PID/start ticks and
+owned fixture PID. Set `NEXTCOMP_QA_OWNER_RECEIPT`, `NEXTCOMP_QA_OWNER` and the SDK
+path. For each case in the staged `policy.json`, run:
+
+```sh
+node scripts/record-native-qualification.mjs "$POCKET_RELEASE_STAGE/app-updates" "$NATIVE_CASE"
+```
+
+The recorder verifies current ownership, creates a fresh synthetic fixture per
+case, installs only into that emulator and records the installed artifact hash.
+Its children receive no signing passwords or administrative configuration. An
+existing intent is inspected rather than automatically replayed. Clean up only
+the verified owned fixture/emulator after qualification. Physical phone input,
+provider speech and optimized runtime behavior remain separate evidence.
+
+Read the current live channel version and supply it explicitly:
+
+```sh
+node scripts/publish-qualified-update.mjs "$POCKET_RELEASE_STAGE/app-updates" "$PRIVATE_UPDATE_CHANNEL" "$EXPECTED_CURRENT_CODE" --check
+node scripts/publish-qualified-update.mjs "$POCKET_RELEASE_STAGE/app-updates" "$PRIVATE_UPDATE_CHANNEL" "$EXPECTED_CURRENT_CODE"
+```
+
+Only qualified signing variants are copied; qualification APKs and test logs are
+not served as updates. Artifacts are checked before the atomic manifest change.
+A version compare-and-swap, publication lock and durable intent prevent ordinary
+competing publishers or accidental retries from silently replacing the channel.
+After an uncertain publication, inspect the journal, live manifest and artifact
+hashes; do not rerun it. This trusted operator pipeline is not an administrative
+security fence against arbitrary filesystem writes.
+
+The policy is an explicit incremental regression set, not certification of every
+UX requirement. Extend it for each change. Known open immersion reflow and real
+handset qualification remain open; passing this gate cannot claim world-class UX
+is finished.

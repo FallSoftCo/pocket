@@ -183,8 +183,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         if(!restoredPosition&&readPosition!=null&&rows.isNotEmpty()){
             val resolved=resolveTranscriptReadPosition(rows,readPosition)?:readPosition
             val index=transcriptAnchorIndex(rows.map{it.s("id")},resolved)
-            if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
+            if(PocketTranscript.mayRestorePosition(restoreRevision)&&!dragged){
+                if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
+            }
             restoredPosition=true
+            PocketTranscript.positionRestored(Pocket.selected,restoreRevision)
         }
     }
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -236,7 +239,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
     }}
     LaunchedEffect(dragged){
-        if(dragged){follow=false;filterPassage=null}
+        if(dragged){PocketTranscript.readerInteraction();follow=false;filterPassage=null}
         else{
             if(shouldResumeTranscriptFollowing(list.canScrollForward,list.canScrollBackward,PocketTranscript.earlier,shortHistoryPull))follow=true
             shortHistoryPull=false
@@ -285,7 +288,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
             if(pending>0)TextButton({
-                actionsOpen=false;important=false;follow=false
+                actionsOpen=false;important=false;follow=false;PocketTranscript.readerInteraction()
                 filterPassage=null;filterPaddingRequest=null;filterTailPixels=0
                 val request=rows.firstOrNull{it.s("kind")=="request"}
                 if(request!=null)filterRequest=FilterReadingRequest(Pocket.environmentId,Pocket.selected,request.s("id"),0,false)
@@ -315,7 +318,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                         TextButton({
                             val sourceThread=Pocket.selected;val sourceDestination=Pocket.captureEnvironment()
                             val owns={Pocket.selected==sourceThread&&sourceDestination!=null&&Pocket.captureEnvironment()?.matches(sourceDestination)==true}
-                            important=false;follow=false
+                            important=false;follow=false;PocketTranscript.readerInteraction()
                             scope.launch{
                                 val found=locateTranscriptSource(owns,{PocketTranscript.loading},{PocketTranscript.earlier},{PocketTranscript.before},
                                     {PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}},
@@ -382,7 +385,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 android.util.Log.d("PocketFilter","next=$nextImportant retained=$retained passage=${afterIds.getOrNull(anchor)} visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
             filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
             filterTailPixels=if(nextImportant)list.layoutInfo.viewportSize.height else 0
-            follow=false;important=nextImportant
+            PocketTranscript.readerInteraction();follow=false;important=nextImportant
             afterIds.getOrNull(anchor)?.let{
                 val request=FilterReadingRequest(Pocket.environmentId,Pocket.selected,it,targetOffset,nextImportant)
                 filterRequest=request;filterPaddingRequest=if(nextImportant)request else null

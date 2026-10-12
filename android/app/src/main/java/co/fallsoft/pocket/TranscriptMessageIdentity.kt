@@ -116,3 +116,13 @@ internal fun transcriptContainsReply(rows:List<JSONObject>,replyId:String):Boole
 
 internal fun resolveTranscriptReadPosition(rows:List<JSONObject>,position:TranscriptReadPosition?):TranscriptReadPosition? =
     position?.let{if(rows.any{row->row.s("id")==it.rowId})it else it.copy(rowId=migrateTranscriptAnchors(rows,setOf(it.rowId))[it.rowId]?:it.rowId)}
+
+/** Late disk restoration retains older local content while current live/read
+ * values own shared identities and ordering. Cache metadata never dispatches work. */
+internal fun mergeRestoredTranscriptRows(cached:List<JSONObject>,current:List<JSONObject>):List<JSONObject>{
+    val evidence=normalizeTranscriptMessages(cached+current)
+    val old=promoteTranscriptIdentityEvidence(cached,evidence)
+    val previous=old.associateBy{it.s("id")}
+    val fresh=promoteTranscriptIdentityEvidence(current,evidence).map{mergeTranscriptMessageEvidence(previous[it.s("id")],it)}
+    return mergeTranscriptPage(old,fresh,false,{it.s("id")},{it.optLong("version")},keepPosition={it.s("kind")=="turn"})
+}

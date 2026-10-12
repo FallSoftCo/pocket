@@ -82,3 +82,25 @@ bounded cache; independent projections can otherwise disagree until refresh.
 
 This is covered by `tests/send-identity-evidence.test.mjs`. It addresses an
 observed source defect, not a verified diagnosis of every handset duplicate.
+
+## Independent cold-open inputs
+
+Disk restoration and current-history fetching start independently. Current text
+can paint while the disk read remains pending. A late cache merges older local
+rows into the current projection; fresh/live bodies and canonical identities win
+over cached values. The earlier retained cursor and any proven history gap remain
+separate from the recent network page.
+
+A pending restore must not persist a truncated network-only body over unopened
+local history. Partial in-memory snapshots retain a disk-pending marker so a
+subsequent warm reopen still restores the older disk contents. Selection/source
+generation invalidates the former cache job before it can mutate another chat.
+A thumb gesture or Important/navigation action owns the current reading passage;
+late saved positions cannot override it. Freshness/read acknowledgements remain
+blocked until pending restoration and any saved-position viewport application
+settle. These are presentation reads, never worker activations or reply retries.
+
+`ParallelTranscriptNativeTest` tests a held cache versus visible network text,
+retained local history and newer live content, actual thumb-scroll retention and
+chat switching while restoration is held. A completed cache checkpoint is still
+required for process-death persistence; this cache is not a transcript archive.

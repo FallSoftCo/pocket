@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "qualification": "incremental-alpha-native",
+  "requiredNativeCases": [
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#transientHistoryFailureRecoversWithoutAnotherEvent",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#growingResponseKeepsItsNewestPassageVisible",
+    "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#echoedUnknownSendHasOneBodyAndRetainsRecoveryControls",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#inlinePlaybackVolumePreservesMuteAndTypingDuringCapture",
+    "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#providerMetadataLossDoesNotDuplicateUnknownSend",
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#freshHistoryPaintsBeforeSlowCacheAndLateRestoreRetainsLocalHistory",
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#readingGestureOwnsItsPassageWhenTheLateCacheArrives",
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#switchingDuringSlowCacheCannotRestoreTheOldConversation"
+  ],
+  "limits": [
+    "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",
+    "Known open immersion reflow is not covered by this incremental-alpha policy"
+  ]
+}

@@ -2,6 +2,18 @@ package co.fallsoft.pocket
 import org.junit.Test
 import org.junit.Assert.*
 class TranscriptMessageIdentityTest {
+ @Test fun lateCacheKeepsCurrentBodiesAndRetainsOlderLocalRows(){
+  val cached=listOf(user("older","old").put("text","Retained old input"),user("uuid","send").put("text","Stale cached input"))
+  val current=listOf(user("item-183","send",80).put("text","Current input"))
+  val rows=mergeRestoredTranscriptRows(cached,current)
+  assertEquals(2,rows.size);assertEquals(listOf("Retained old input","Current input"),rows.map{it.s("text")})
+  assertEquals("turn/client-user/send",transcriptDisplayAnchor(rows,"turn/uuid"))
+ }
+ @Test fun lateCacheDoesNotReplaceEqualVersionAuthoritativeMetadata(){
+  val old=user("same").put("text","Old")
+  val fresh=user("same").put("text","Fresh")
+  assertEquals("Fresh",mergeRestoredTranscriptRows(listOf(old),listOf(fresh)).single().s("text"))
+ }
  @Test fun reconstructedProviderIdsKeepOneSendIdentity(){
   val live=transcriptMessageIdentity("user","turn","send","turn/uuid")
   assertEquals(live,transcriptMessageIdentity("user","turn","send","turn/item-1"))
