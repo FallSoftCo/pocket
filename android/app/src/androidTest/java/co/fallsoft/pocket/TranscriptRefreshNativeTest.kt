@@ -381,7 +381,8 @@ class TranscriptRefreshNativeTest {
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   qa("hold-catalog");main{Pocket.refresh()};await{qa("state").optBoolean("catalogBlocked")}
   try{
-   qa("notification-overflow");main{Pocket.refresh()};await{has(2)&&!PocketTranscript.updating}
+   qa("notification-overflow");main{Pocket.refresh()};assertTrue("Refresh must show visible loading feedback",device.wait(Until.hasObject(By.text("Updating messages")),4000));await{has(2)&&!PocketTranscript.updating}
+   assertTrue("Recovered response missing from screen",device.wait(Until.hasObject(By.text("Fresh response 2")),4000))
    assertTrue("Recovery must occur before slow catalog finishes",qa("state").optBoolean("catalogBlocked"))
    assertEquals("Catalog must remain unchanged",1000L,Pocket.tasks.first{it.id=="same-thread"}.activityAt)
    assertTrue("Global notification feed must omit selected update",Pocket.notifications.none{it.s("thread_id")=="same-thread"})
@@ -389,8 +390,13 @@ class TranscriptRefreshNativeTest {
    repeat(3){main{Pocket.refresh()};Thread.sleep(600)};Thread.sleep(1500)
    assertEquals("Unchanged head repeatedly fetched history",reads,qa("state").getJSONArray("reads").length())
    qa("reset-history-head");main{Pocket.refresh()};await{has(3)&&!PocketTranscript.updating}
+   assertTrue("Restarted response missing from screen",device.wait(Until.hasObject(By.text("Fresh response 3")),4000))
    val resetReads=qa("state").getJSONArray("reads").length();main{Pocket.refresh()};Thread.sleep(1600)
    assertEquals("Same restarted head repeatedly fetched history",resetReads,qa("state").getJSONArray("reads").length())
+   qa("head-live-update");await{has(4)}
+   assertTrue("Live response missing from screen",device.wait(Until.hasObject(By.text("Fresh response 4")),4000))
+   main{Pocket.refresh()};Thread.sleep(1600)
+   assertEquals("Already delivered live head polled history",resetReads,qa("state").getJSONArray("reads").length())
    assertEquals("Freshness recovery submitted work",0,qa("state").getJSONArray("replies").length())
    assertEquals("Freshness recovery erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   }finally{qa("release-catalog")}

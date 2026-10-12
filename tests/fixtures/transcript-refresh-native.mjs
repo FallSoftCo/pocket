@@ -48,7 +48,7 @@ const server=http.createServer(async(req,res)=>{
   const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
   await new Promise(r=>setTimeout(r,older?2200:1700));
   while(!older&&rev===2&&holdRefresh)await new Promise(r=>setTimeout(r,50));
-  body={historyHead:{threadId:'same-thread',epoch:headEpoch,version:headCounter??rev},thread:thread(),timeline:{rows:[{id:older?'older-message':'same-message',kind:'message',text:older?'Older synthetic history':'Fresh response '+rev,version:rev===1?80:0}],hasEarlier:!older,before:older?null:'older1'},revision:rev===1?80:0,notes:[],pending:[],outgoing:[],notifications:[]};
+  body={historyHead:{threadId:'same-thread',epoch:headEpoch,version:headCounter??rev},thread:thread(),timeline:{rows:[{id:older?'older-message':'same-message',kind:'message',turnId:'synthetic-turn',text:older?'Older synthetic history':'Fresh response '+rev,version:rev===1?80:0}],hasEarlier:!older,before:older?null:'older1'},revision:rev===1?80:0,notes:[],pending:[],outgoing:[],notifications:[]};
   if(visibility&&!older){body.timeline={rows:Array.from({length:20},(_,n)=>({id:'visible-'+n,kind:'message',text:n===19?'Fresh response '+rev:('Visible passage '+n+' '+('Readable synthetic history. '.repeat(10)))})),hasEarlier:false,before:null};body.notifications=[{id:rev,thread_id:'same-thread',kind:'complete'}];body.catchup={token:'capture-'+rev};}
   if(pendingNavigation&&!older){
    const request={id:'synthetic-pending',method:'item/tool/requestUserInput',params:{threadId:'same-thread',questions:[{id:'review',question:'Which synthetic review should continue?',options:[{label:'First',description:'Synthetic only'},{label:'Second',description:'Synthetic only'}]}]}};
@@ -67,6 +67,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/clipped-preview'){clippedPreview=true;body={ok:true};}
  else if(path==='/_qa/hold-catalog'){holdCatalog=true;body={ok:true};}
  else if(path==='/_qa/release-catalog'){holdCatalog=false;body={ok:true};}
+ else if(path==='/_qa/head-live-update'){revision++;headCounter=81;for(const socket of sockets)send(socket,{type:'timeline',threadId:'same-thread',turnId:'synthetic-turn',version:81,historyHead:{threadId:'same-thread',epoch:headEpoch,version:81},row:{id:'same-message',turnId:'synthetic-turn',kind:'message',text:'Fresh response '+revision,version:81}});body={revision};}
  else if(path==='/_qa/reset-history-head'){headEpoch='synthetic-runtime-restarted';headCounter=1;revision++;body={revision};}
  else if(path==='/_qa/notification-overflow'){notificationOverflow=true;notificationOnly=true;clippedPreview=true;revision++;body={revision};}
  else if(path==='/_qa/notification-only'){notificationOnly=true;clippedPreview=true;revision++;body={revision};}
