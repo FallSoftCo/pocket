@@ -349,6 +349,16 @@ class TranscriptRefreshNativeTest {
   qa("repeat");Thread.sleep(1000)
   assertEquals("Unchanged preview caused repeated reads",reads,qa("state").getJSONArray("reads").length())
  }
+ @Test fun fetchedNotificationRepairsMissedEventWithUnchangedCatalog(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("notification-only");main{Pocket.refresh()};await{has(2)&&!PocketTranscript.updating}
+  assertEquals("Catalog should be unchanged",1000L,Pocket.tasks.first{it.id=="same-thread"}.activityAt)
+  val reads=qa("state").getJSONArray("reads").length()
+  main{Pocket.refresh()};Thread.sleep(1500)
+  assertEquals("Same notification repeatedly fetched history",reads,qa("state").getJSONArray("reads").length())
+  assertEquals("Recovery submitted work",0,qa("state").getJSONArray("replies").length())
+  assertEquals("Recovery erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+ }
  @Test fun catalogActivityRepairsMissedEventsDespiteUnchangedPreview(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   qa("clipped-preview");qa("silent")
