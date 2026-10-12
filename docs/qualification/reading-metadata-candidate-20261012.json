@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "state": "candidate-qualified-focused-checks",
+  "change": "Position-only cache updates preserve measured payload weight; changed rows/detail still refresh full snapshot.",
+  "focusedChecks": [
+    "Existing weighted-cache regression verifies metadata updates do not remeasure payload or break eviction",
+    "Qualification app and native test APK build",
+    "Real-backend send, thumb-pagination and cold reading restoration journey"
+  ],
+  "phases": [
+    {
+      "phase": "send",
+      "seconds": 12.43,
+      "logSha256": "7c5766f48cfc8a83e7728c3627729d5bc5e4ed067b478563584bc508065343d7"
+    },
+    {
+      "phase": "restore",
+      "seconds": 6.016,
+      "logSha256": "f42c6b964ae0c026c404af7a5ec4170073ddac86826710f3b5db474f549d3481"
+    }
+  ],
+  "readingSetup": "After thumb pagination, use actual accessibility ScrollToKey and await matching durable row/offset/follow checkpoint before cold restart.",
+  "outcomes": [
+    "Reading passage restores within 24 pixels",
+    "Loaded rows, pairing and draft retained",
+    "One provider start and one canonical user input"
+  ],
+  "limits": [
+    "No measured handset frame-rate or latency improvement claim",
+    "Previous unaligned checkpoint failure retained privately; old cold-restore result did not establish an exact persisted reading target",
+    "Notes/detail identity guard reviewed in source; direct note-removal native journey not part of this receipt",
+    "Signed release, complete release gate and phone delivery not yet qualified"
+  ],
+  "releaseStatus": "unpublished; alpha87 channel unchanged"
+}

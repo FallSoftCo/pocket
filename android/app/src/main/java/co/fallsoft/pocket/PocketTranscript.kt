@@ -114,8 +114,16 @@ object PocketTranscript {
     }
     internal fun rememberPosition(scope:String,id:String,position:TranscriptReadPosition){
         val now=android.os.SystemClock.elapsedRealtime()
-        if(owner==id&&ownerScope==scope){if(readPosition!=position){readPosition=position;rememberRecent();if(!cacheRestoring)persistReadingPosition(scope,id,position)};return}
-        recent.get(scope,id,now)?.takeIf{it.position!=position}?.let{val snapshot=it.copy(position=position);recent.put(scope,id,snapshot,now);persistReadingPosition(scope,id,position)}
+        if(owner==id&&ownerScope==scope){if(readPosition!=position){
+            readPosition=position
+            val cached=recent.get(scope,id,now)
+            // Preserve notes/detail changes made by UI actions between history reads.
+            // Only an identical retained payload may reuse its measured weight.
+            if(cached!=null&&(cached.rows!==rows||cached.detail!==Pocket.detail))rememberRecent()
+            else recent.updateMetadata(scope,id,now){it.copy(position=position)}
+            if(!cacheRestoring)persistReadingPosition(scope,id,position)
+        };return}
+        recent.get(scope,id,now)?.takeIf{it.position!=position}?.let{val snapshot=it.copy(position=position);recent.updateMetadata(scope,id,now){snapshot};persistReadingPosition(scope,id,position)}
     }
     private var observedHead:TranscriptHead?=null
     private var headSnapshotsSupported:Boolean?=null
@@ -457,6 +465,15 @@ internal class RecentTranscriptCache<T>(private val capacity:Int,private val lif
         if(size>maxWeight)return // Oversized inactive history is honestly evicted as a whole.
         entries[key]=Entry(value,now,size)
         while(entries.size>capacity||entries.values.sumOf{it.weight}>maxWeight)entries.remove(entries.keys.first())
+    }
+    /** Update unweighed presentation metadata only; the retained payload must
+     * remain unchanged. Reading-position copies preserve rows and detail. */
+    fun updateMetadata(scope:String,id:String,now:Long,transform:(T)->T):T?{
+        val key=scope to id;val entry=entries[key]?:return null
+        if(now-entry.savedAt>lifetimeMs){entries.remove(key);return null}
+        val value=transform(entry.value)
+        entries.remove(key);entries[key]=Entry(value,now,entry.weight)
+        return value
     }
     fun get(scope:String,id:String,now:Long):T?{val key=scope to id;val entry=entries.remove(key)?:return null;if(now-entry.savedAt>lifetimeMs)return null;entries[key]=entry;return entry.value}
     fun remove(scope:String,id:String){entries.remove(scope to id)}

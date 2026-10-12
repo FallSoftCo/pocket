@@ -579,3 +579,7 @@ commandeered, speech generated, task submitted, model woken or backend restarted
 Native control/correction evidence is in spoken-notification-navigation-alpha70.
 Physical banner/lock-screen, broader playback/read/attention and named-environment
 isolation verification still need work; the full goal remains active.
+
+## Reading checkpoint candidate — 2026-10-12
+
+Position-only updates now preserve measured cache payload weight. Changed row or detail references retain normal full-snapshot measurement. Focused cache checks and the real-backend history journey pass after requiring an exact durable reading checkpoint before process termination. This removes a history scan from steady position updates; physical smoothness is not established. [Candidate evidence](qualification/reading-metadata-candidate-20261012.json). Signed release and phone delivery remain pending; alpha87 is unchanged.

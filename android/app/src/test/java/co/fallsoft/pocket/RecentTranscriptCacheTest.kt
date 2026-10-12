@@ -37,5 +37,16 @@ class RecentTranscriptCacheTest {
         cache.put("a","huge","12345678901",50)
         assertNull(cache.get("a","huge",60))
         assertEquals("abcd",cache.get("a","three",60))
+        data class Checkpoint(val body:String,val offset:Int=0)
+        var measurements=0
+        val reading=RecentTranscriptCache<Checkpoint>(4,Long.MAX_VALUE,10){measurements++;it.body.length.toLong()}
+        reading.put("a","one",Checkpoint("12345"),0);reading.put("a","two",Checkpoint("67890"),10)
+        repeat(250){offset->reading.updateMetadata("a","one",20L+offset){it.copy(offset=offset)}}
+        assertEquals("Position changes remeasured retained history",2,measurements)
+        assertEquals(249,reading.get("a","one",300)?.offset)
+        assertNull("Missing history was fabricated",reading.updateMetadata("b","one",300){it})
+        reading.put("a","three",Checkpoint("abcd"),301)
+        assertNull("Metadata updates broke weighted LRU eviction",reading.get("a","two",302))
+        assertEquals("12345",reading.get("a","one",302)?.body)
     }
 }

@@ -91,10 +91,16 @@ class RealBackendJourneyNativeTest {
    val viewport=compose.onNodeWithTag("conversation-history").fetchSemanticsNode().boundsInRoot
    val passage=compose.onAllNodes(hasText("History passage ",substring=true),useUnmergedTree=true).fetchSemanticsNodes().firstOrNull{val b=it.boundsInRoot;!b.isEmpty&&b.top>=viewport.top&&b.bottom<=viewport.bottom}
    assertNotNull("No fully visible reading passage",passage)
-   val visible=passage!!
-   val text=visible.config[SemanticsProperties.Text].joinToString(""){it.text}
-   prefs.edit().putString("qa-history-anchor",text).putInt("qa-history-top",visible.boundsInRoot.top.toInt()).putStringSet("qa-history-ids",PocketTranscript.rows.map{it.s("id")}.toSet()).commit()
+   val text=passage!!.config[SemanticsProperties.Text].joinToString(""){it.text}
+   val rowId=PocketTranscript.rows.single{it.s("text").trim()==text.trim()}.s("id")
+   // Arrange an exact reading target through the actual accessibility scroll
+   // action, then require its durable checkpoint before killing the process.
+   compose.onNodeWithTag("conversation-history").performScrollToKey(rowId)
+   await{PocketTranscript.readPosition?.let{it.rowId==rowId&&it.offset==0&&!it.follow}==true}
    val cache=TranscriptDiskCache(java.io.File(c.noBackupFilesDir,"transcript-cache-v1"))
+   await{cache.readPosition(PocketTranscript.scopeKey(),tid)?.let{raw->val saved=org.json.JSONObject(raw);saved.s("row")==rowId&&saved.optInt("offset")==0&&!saved.optBoolean("follow")}==true}
+   val visible=compose.onNodeWithText(text,useUnmergedTree=true).assertIsDisplayed().fetchSemanticsNode()
+   prefs.edit().putString("qa-history-anchor",text).putInt("qa-history-top",visible.boundsInRoot.top.toInt()).putStringSet("qa-history-ids",PocketTranscript.rows.map{it.s("id")}.toSet()).commit()
    await{cache.read(PocketTranscript.scopeKey(),tid)?.contains(text)==true}
    assertFalse("Reading follows latest",PocketTranscript.readPosition?.follow?:true)
   }
