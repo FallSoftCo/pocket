@@ -214,10 +214,17 @@ class PocketVoiceService:Service(){
     private fun wake(){lock?.acquire(10*60*1000L)}
     private fun beep(ok:Boolean=true){if(!PocketVoice.active)return;tones.startTone(if(ok)ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_PROP_NACK,110)}
     private fun state(s:String){PocketVoice.state=s;if(s=="Listening")PocketVoice.recordingStartedAt=SystemClock.elapsedRealtime();if(s!="Listening")PocketVoice.captureLevel=0f;if(s=="Paused")caption?.let{PocketSpeechCaptions.pause(it.profile);refreshCaptionNotification()};android.util.Log.i("PocketVoice","State: $s");idleDisconnect?.cancel();if(s=="Ready")idleDisconnect=scope.launch{delay(30000);if(PocketVoice.state=="Ready"&&turnId==null&&recorder==null)disconnectNative()}}
-    private suspend fun api(path:String,body:JSONObject?=null,base:String=endpoint,token:String=credential):JSONObject=withContext(Dispatchers.IO){
-        val b=Request.Builder().url(base+path).header("Authorization","Bearer $token")
-        if(body!=null)b.post(body.toString().toRequestBody("application/json".toMediaType()))
-        http.newCall(b.build()).execute().use{r->val j=try{JSONObject(r.body?.string()?:"{}")}catch(_:Exception){JSONObject()};if(!r.isSuccessful)throw PocketApiException(r.code,j.s("error","Server returned ${r.code}"));j}
+    private suspend fun api(path:String,body:JSONObject?=null,base:String=endpoint,token:String=credential):JSONObject{
+        val requestEnvironment=capturedEnvironment
+        val result=withContext(Dispatchers.IO){
+            val b=Request.Builder().url(base+path).header("Authorization","Bearer $token")
+            if(body!=null)b.post(body.toString().toRequestBody("application/json".toMediaType()))
+            http.newCall(b.build()).execute().use{r->val j=try{JSONObject(r.body?.string()?:"{}")}catch(_:Exception){JSONObject()};if(!r.isSuccessful)throw PocketApiException(r.code,j.s("error","Server returned ${r.code}"));j}
+        }
+        if(capturedEnvironment!=requestEnvironment||Pocket.environmentId!=requestEnvironment||
+            Pocket.base.trimEnd('/')!=base||Pocket.token!=token)
+            throw CancellationException("Voice response belongs to a previous environment or pairing")
+        return result
     }
     private fun boot(){if(starting)return;starting=true;work=scope.launch{
         wake();state("Connecting")
