@@ -11,14 +11,13 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import kotlinx.coroutines.isActive
 
 /** One screen-owned display clock, enrolled only by actually visible text. */
-internal class ImmersionReadingWaveClock(policy:ImmersionReadingWave=ImmersionReadingWave()) {
-    var policy by mutableStateOf(policy); private set
+internal class ImmersionReadingWaveClock {
     var viewportOrigin by mutableStateOf(Offset.Zero); private set
     var viewportWidthPx by mutableFloatStateOf(0f); private set
+    var viewportHeightPx by mutableFloatStateOf(0f); private set
     fun viewport(origin:Offset,widthPx:Float,heightPx:Float,density:Float) {
         if(widthPx<=0f||heightPx<=0f||density<=0f)return
-        viewportOrigin=origin;viewportWidthPx=widthPx
-        policy=ImmersionReadingWave.forViewport((heightPx/density).toDouble())
+        viewportOrigin=origin;viewportWidthPx=widthPx;viewportHeightPx=heightPx
         rebuildLanes()
     }
     var elapsedMs by mutableLongStateOf(0L); private set
@@ -36,6 +35,13 @@ internal class ImmersionReadingWaveClock(policy:ImmersionReadingWave=ImmersionRe
     private var laneHalfPeriod=1L
     private var laneVelocity=1f
     private var laneFeather=12f
+    private data class LanePlan(val lanes:List<Lane>,val halfPeriod:Long,val velocity:Float,val feather:Float)
+    private var pendingPlan:LanePlan?=null
+    private var cycleEpochMs=0L
+    private fun applyPlan(plan:LanePlan){
+        laneSchedule=plan.lanes;laneHalfPeriod=plan.halfPeriod
+        laneVelocity=plan.velocity;laneFeather=plan.feather
+    }
     private fun rebuildLanes() {
         val sorted=lineGeometry.values.flatten().sortedBy{it.top}
         val result=mutableListOf<Rect>()
@@ -45,18 +51,20 @@ internal class ImmersionReadingWaveClock(policy:ImmersionReadingWave=ImmersionRe
                 result[result.lastIndex]=Rect(minOf(last.left,rect.left),minOf(last.top,rect.top),maxOf(last.right,rect.right),maxOf(last.bottom,rect.bottom))
             else result+=rect
         }
-        laneFeather=(viewportWidthPx*.06f).coerceAtLeast(12f)
-        laneVelocity=(viewportWidthPx+2*laneFeather).coerceAtLeast(1f)/1200f
+        val feather=(viewportWidthPx*.06f).coerceAtLeast(12f)
+        val velocity=(viewportWidthPx+2*feather).coerceAtLeast(1f)/1200f
         var start=0f
-        laneSchedule=result.map{rect->
-            val distance=rect.width+2*laneFeather
-            Lane(rect,start,distance).also{start+=distance/laneVelocity+120f}
+        val lanes=result.map{rect->
+            val distance=rect.width+2*feather
+            Lane(rect,start,distance).also{start+=distance/velocity+120f}
         }
-        laneHalfPeriod=(start+1880f).toLong().coerceAtLeast(1)
+        val plan=LanePlan(lanes,(start+1880f).toLong().coerceAtLeast(1),velocity,feather)
+        if(elapsedMs==0L||laneSchedule.isEmpty()){applyPlan(plan);pendingPlan=null}
+        else pendingPlan=plan
     }
     fun lineMask(y:Float,rtl:Boolean):ImmersionSharedWipeMask? {
         val lane=laneSchedule.minByOrNull{kotlin.math.abs(it.rect.top-y)}?:return null
-        val time=Math.floorMod(elapsedMs,laneHalfPeriod*2)
+        val time=Math.floorMod(elapsedMs-cycleEpochMs,laneHalfPeriod*2)
         val incoming=time<laneHalfPeriod
         val phase=if(incoming)time.toFloat()else(time-laneHalfPeriod).toFloat()
         val distance=((phase-lane.start)*laneVelocity).coerceIn(0f,lane.distance)
@@ -65,12 +73,20 @@ internal class ImmersionReadingWaveClock(policy:ImmersionReadingWave=ImmersionRe
     }
     fun selecting(owner:Any,value:Boolean){if(value)selection[owner]=true else selection.remove(owner)}
     val hasSelection:Boolean get()=selection.isNotEmpty()
-    fun visible(owner:Any,value:Boolean){if(value)visible[owner]=true else {visible.remove(owner);if(lineGeometry.remove(owner)!=null)rebuildLanes()}}
+    fun visible(owner:Any,value:Boolean){if(value)visible[owner]=true else {visible.remove(owner);if(lineGeometry.remove(owner)!=null)rebuildLanes()
+        if(visible.isEmpty()){laneSchedule=emptyList();pendingPlan=null;cycleEpochMs=elapsedMs}}}
     val hasVisible:Boolean get()=visible.isNotEmpty()
     fun advanceNanos(deltaNanos:Long){
         if(hasSelection||BlackoutVisibility.active)return
         nanos=(nanos+deltaNanos.coerceIn(0L,100_000_000L)).coerceAtLeast(0L)
         elapsedMs=nanos/1_000_000L
+        // Layout discovery may change total travel time. Latch it only between
+        // complete waves, so a popup or newly visible line cannot flip phase.
+        val period=laneHalfPeriod*2
+        if(elapsedMs-cycleEpochMs>=period){
+            cycleEpochMs+=((elapsedMs-cycleEpochMs)/period)*period
+            pendingPlan?.let{applyPlan(it);pendingPlan=null}
+        }
     }
 }
 internal val LocalImmersionReadingWave=staticCompositionLocalOf<ImmersionReadingWaveClock?>{null}

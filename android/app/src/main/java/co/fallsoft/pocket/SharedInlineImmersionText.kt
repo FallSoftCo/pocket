@@ -117,7 +117,8 @@ import androidx.compose.ui.unit.*
             val mask=clock.lineMask(origin.y+rect.top+localTop,rtl)?:return null
             return mask.copy(center=mask.center-origin.x-rect.left)
         }
-        val visibleHeight=androidx.compose.ui.platform.LocalView.current.height
+        val visibleHeight=readingWave?.viewportHeightPx?.takeIf{it>0f}
+            ?:androidx.compose.ui.platform.LocalView.current.height.toFloat()
         fun publishLines() {
             val clock=readingWave?:return
             val origin=coordinates?.takeIf{it.isAttached}?.localToScreen(Offset.Zero)?.minus(clock.viewportOrigin)?:return
