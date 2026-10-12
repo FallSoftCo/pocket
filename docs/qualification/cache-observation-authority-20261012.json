@@ -33,15 +33,21 @@
     "qualificationLint": "pass",
     "logSha": "1c54ddb4df050a9c44e19600d0a8a77cae699edd82a6e7449001591d05d49a8b"
   },
-  "source": {
-    "android/app/src/main/java/co/fallsoft/pocket/TranscriptHistory.kt": "3da526b751792a4330a0dbc5241005b3217f3bfc80faf94f29554ad6a1ee1107",
-    "android/app/src/main/java/co/fallsoft/pocket/TranscriptMessageIdentity.kt": "a56d510c213da80f0cfe411dc05b270ab291b02de5fc75a5819867fc43e04b2f",
-    "android/app/src/androidTest/java/co/fallsoft/pocket/ParallelTranscriptNativeTest.kt": "8d70c498f6ef6c4066c011890c40ea2aa7f823f42f5a7ee296a9b27889f314f4"
-  },
   "limits": [
     "Disk restoration already resets stored versions to zero. The helper counter-reset defect is not established as the physical phone stale-view cause.",
     "High cached version in the native fixture also verifies the existing disk normalization guard; unit cases directly exercise helper authority.",
     "Physical phone unavailable; no install or phone interaction verified.",
-    "No production APK updated. Unreleased immersion and full release qualification remain pending."
-  ]
+    "No production APK updated. Unreleased immersion and full release qualification remain pending.",
+    "Only the merge-contract source comment changed after artifact qualification. Executable code is unchanged; a future signed release requires fresh source-bound artifacts and full release gate."
+  ],
+  "artifactBuildSourceFileSha": {
+    "android/app/src/main/java/co/fallsoft/pocket/TranscriptHistory.kt": "3da526b751792a4330a0dbc5241005b3217f3bfc80faf94f29554ad6a1ee1107",
+    "android/app/src/main/java/co/fallsoft/pocket/TranscriptMessageIdentity.kt": "a56d510c213da80f0cfe411dc05b270ab291b02de5fc75a5819867fc43e04b2f",
+    "android/app/src/androidTest/java/co/fallsoft/pocket/ParallelTranscriptNativeTest.kt": "8d70c498f6ef6c4066c011890c40ea2aa7f823f42f5a7ee296a9b27889f314f4"
+  },
+  "currentSourceFileSha": {
+    "android/app/src/main/java/co/fallsoft/pocket/TranscriptHistory.kt": "3da526b751792a4330a0dbc5241005b3217f3bfc80faf94f29554ad6a1ee1107",
+    "android/app/src/main/java/co/fallsoft/pocket/TranscriptMessageIdentity.kt": "dc474acbb8e89f555b9a99cd7a1079bcb5bd4736013c8c0bdef18ff906140d4f",
+    "android/app/src/androidTest/java/co/fallsoft/pocket/ParallelTranscriptNativeTest.kt": "8d70c498f6ef6c4066c011890c40ea2aa7f823f42f5a7ee296a9b27889f314f4"
+  }
 }
