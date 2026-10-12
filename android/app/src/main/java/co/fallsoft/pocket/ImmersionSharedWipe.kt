@@ -4,7 +4,7 @@ import androidx.compose.ui.geometry.Rect
 import kotlin.math.ceil
 import kotlin.math.floor
 
-internal data class ImmersionSharedWipeMask(val center:Float,val feather:Float)
+internal data class ImmersionSharedWipeMask(val center:Float,val feather:Float,val incomingAtReadingStart:Boolean=true)
 
 /** One physical reading path for all changed fragments in a paragraph.
  * Native placeholder bounds determine line bands and horizontal origins.

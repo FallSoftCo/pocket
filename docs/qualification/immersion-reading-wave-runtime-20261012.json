@@ -1,0 +1,82 @@
+{
+  "status": "native-candidate-verified-not-published",
+  "date": "2026-10-12",
+  "behavior": "One viewport clock with fixed local sweep timing and spatially staggered reading-order onsets; controls and conversation text share the wave.",
+  "confirmedDefects": [
+    "Fixed paragraph deadline accelerated later lines as line count increased.",
+    "Empty annotated boundary slices introduced phantom phrase reservations; paired body forms had7 versus8 markers, rejected alignment, and stayed in fallback text.",
+    "Controls initially reserved only the currently static language when motion was disabled; reserve both forms to keep bounds stable."
+  ],
+  "repair": "Skip empty boundary slices, retain target-grammar lexical slots, use fixed paired forms in shared native renderer, select semantics/actions according to local coverage.",
+  "sourceSha256": {
+    "android/app/src/main/java/co/fallsoft/pocket/BilingualLabel.kt": "d61a8c40ddf0a7a49fae32a7e9e39f28b68242e57fffd86f48ccb7e15a308b65",
+    "android/app/src/main/java/co/fallsoft/pocket/BlendImmersionText.kt": "6790f36e8b80f91f80e4859a66b4976e7fabd9559fc944845b2135b183282fc5",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt": "38b51d4805c713ac56dc20b92562051a6955af0fb722e230bea4623fcce05738",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionReadingWave.kt": "06b832bf3747a40ec3d4a1d5713fbe3e6f4bc8b34f9896442db390230e69ac56",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionReadingWaveHost.kt": "5f3c6cbef95dc3a250691a9f687b50ef19df58b020a79f2e5273d672a528b175",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionSelection.kt": "2cfd152ea15c27855f0628a63e3ccefcf3729be99f9d74f8a80d8493e4dd3826",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionSharedWipe.kt": "47af91e33b1fec080e7bdf0827431a6acd87feb7335405b11717aa664798e577",
+    "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt": "fa6756c9b455c159c6d29ef5ee5f92bc8f720aed48e8586ea249a0553ca814c4",
+    "android/app/src/main/java/co/fallsoft/pocket/ReservedImmersionText.kt": "1a0b4f7dffbc5fbccd0d81d2e1950004537db0db9051b4a385b76d79ad8f76a9",
+    "android/app/src/main/java/co/fallsoft/pocket/SharedInlineImmersionText.kt": "07309014efa0dd4a06c5ac0245bf4d81db327b3deffa29e96e9a54fea5330b6c"
+  },
+  "nativeEvidence": {
+    "controlled": {
+      "passed": true,
+      "checks": [
+        "Body and controls both readable forms",
+        "Fixed native bounds",
+        "Button action",
+        "Selection-owner clock pause",
+        "Reduced motion stops clock and shows target"
+      ],
+      "clock": "Explicitly driven Compose test display clock"
+    },
+    "natural": {
+      "passed": true,
+      "checks": [
+        "Real Android display clock without Compose test-clock rule",
+        "Repeated readable body/control forms",
+        "Fixed native bounds",
+        "One native button tap invokes action"
+      ],
+      "durationSeconds": 26.393
+    },
+    "regressions": {
+      "passed": true,
+      "checks": [
+        "Fresh inline callbacks and visibility",
+        "Reserved blank-space tap exclusion",
+        "One ordered clipboard flow",
+        "Complementary ink coverage",
+        "Fixed target-grammar lexical geometry"
+      ]
+    }
+  },
+  "media": {
+    "width": 720,
+    "height": 1616,
+    "capturedSeconds": 28.779778,
+    "decodedFrames": 1167,
+    "review": "48 samples at2fps inspected; this is sampled visual review, not a claim that every frame was watched or physical phone FPS measured.",
+    "privateReviewCard": "nextcomp-reading-wave-native-review-r01"
+  },
+  "phone": {
+    "observedVersionCode": 104,
+    "installedApkSha256": "94db6d7fe92bb246aed7a2acad81acca37816ca346f5d4afb78a507262382d59",
+    "access": "Read-only Termux SSH; no install/input performed"
+  },
+  "remaining": [
+    "Full signed frozen release gate has not run on this source.",
+    "Physical phone interaction and frame pacing unverified.",
+    "Actual selection toolbar with moving wave, scrolling/reanchoring, IME, blackout and longer paragraphs still need integration qualification.",
+    "Reserved shorter vocabulary still leaves visible spacing; this is not final typographic polish.",
+    "Raw UI string coverage remains part of the broader UX audit."
+  ],
+  "retainedFailures": [
+    "r01 global-idle test-clock failure",
+    "r02 unadvanced virtual clock",
+    "r03 initial virtual frame setup",
+    "r04 andr05 actual body marker alignment rejection"
+  ]
+}

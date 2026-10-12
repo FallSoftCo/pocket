@@ -33,13 +33,15 @@ import androidx.compose.ui.unit.*
     trackWholeTextVisibility:Boolean=false,
     onNativeTextLayout:((TextLayoutResult)->Unit)?=null,
     sharedWipeMask:((Float,Float)->ImmersionSharedWipeMask)?=null,
-    nativeLinkInteractions:Boolean=true
+    nativeLinkInteractions:Boolean=true,
+    continuousWipe:Boolean=false,incomingOverride:Boolean?=null
 ){
     val measurer=rememberTextMeasurer()
     val density=androidx.compose.ui.platform.LocalDensity.current
     val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
     val style=LocalTextStyle.current.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,textAlign=textAlign))
-    val incoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
+    val legacyIncoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
+    val incoming=incomingOverride?:legacyIncoming
     // Fresh callbacks/styles when wording is unchanged; keep the previous visible
     // flow until the phase effect has actually installed the incoming text.
     val visible=if(incoming){if(to.text==snapshot.text)snapshot else to}else from
@@ -72,7 +74,7 @@ import androidx.compose.ui.unit.*
             Text(nativeVisible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
                 onTextLayout={layout=it;onNativeTextLayout?.invoke(it);reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithContent{
                     val p=progress().coerceIn(0f,1f)
-                    if(from.text==to.text||p<=0f||p>=1f){drawContent();return@drawWithContent}
+                    if(from.text==to.text||(!continuousWipe&&(p<=0f||p>=1f))){drawContent();return@drawWithContent}
                     val firstChangedLine=(changed.first.map{outgoingLayout.getLineForOffset(it.start.coerceIn(0,(from.length-1).coerceAtLeast(0)))}+changed.second.map{incomingLayout.getLineForOffset(it.start.coerceIn(0,(to.length-1).coerceAtLeast(0)))}).minOrNull()?:0
                     val lines=(maxOf(outgoingLayout.lineCount,incomingLayout.lineCount)-firstChangedLine).coerceAtLeast(1)
                     fun layer(result:TextLayoutResult,incomingLayer:Boolean){
@@ -84,7 +86,7 @@ import androidx.compose.ui.unit.*
                             val shared=sharedWipeMask?.invoke(p,result.getLineTop(line))
                             val feather=shared?.feather?:(size.width*.12f).coerceIn(12f,48f)
                             val frontier=-feather+(size.width+2f*feather)*phase
-                            val left=if(incomingLayer)1f else 0f
+                            val left=if(incomingLayer==(shared?.incomingAtReadingStart?:true))1f else 0f
                             val right=1f-left
                             val colors=if(rtl)listOf(Color.Black.copy(alpha=right),Color.Black.copy(alpha=left))else listOf(Color.Black.copy(alpha=left),Color.Black.copy(alpha=right))
                             val center=shared?.center?:if(rtl)size.width-frontier else frontier

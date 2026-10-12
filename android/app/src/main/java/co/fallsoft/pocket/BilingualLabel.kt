@@ -52,6 +52,19 @@ import androidx.compose.ui.unit.*
             overflow=overflow,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
         return
     }
+    val readingWave=LocalImmersionReadingWave.current
+    if(readingWave!=null&&plan!=null&&support!=target){
+        val waveAllowed=!expanded&&PocketImmersion.motionEnabled&&immersionTransitionAnimated()
+        val current=if(expanded)support else target
+        val rescue=Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}
+        SharedInlineImmersionText(actionText(form(current)),actionText(form(if(waveAllowed)support else current)),{1f},
+            modifier=modifier.then(rescue),color=color,fontSize=fontSize,fontWeight=fontWeight,maxLines=maxLines,
+            lineHeight=lineHeight.takeIf{it!=TextUnit.Unspecified}?:LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
+            overflow=overflow,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
+            snapshot=actionText(form(current)),reserve=listOf(form(target),form(support)),
+            readingWave=if(waveAllowed)readingWave else null,trackWholeTextVisibility=true)
+        return
+    }
     var nativeVisible by remember(text,target,plan){mutableStateOf(false)}
     val ready=immersionMotionReady()&&nativeVisible&&plan!=null&&support!=target
     val transitionAnimated=immersionTransitionAnimated()

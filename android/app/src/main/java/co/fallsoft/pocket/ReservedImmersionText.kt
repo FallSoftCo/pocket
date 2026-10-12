@@ -39,6 +39,15 @@ import androidx.compose.ui.unit.*
     }
     // Capture the pending phrase at cue start; actual text updates at the same
     // clock's handoff and supplies fresh link callbacks without restarting it.
+    if(cycle.readingWave!=null){
+        val support=alternate(content,immersionCyclePlan(plan,plan.spans.indices.toSet()))
+        SharedInlineImmersionText(immersionGrammarParagraph(content,plan),immersionGrammarParagraph(support,plan),{1f},
+            snapshot=immersionGrammarParagraph(content,plan),reserve=listOf(immersionGrammarParagraph(content,plan),immersionGrammarParagraph(support,plan)),
+            fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,fillWidth=true,
+            readingWave=cycle.readingWave,onTextLayout={onTextLayout?.invoke(it)},
+            onVisibleRanges={ids,_->visibilityReport(partId,ids.map{it.substringBefore("/lexical:")}.toSet())})
+        return
+    }
     val pending=remember(plan.source,cycle.cueId,cycle.cueActive){
         content to (cycle.incomingPlan?.let{alternate(content,it)}?:content)
     }
@@ -62,13 +71,16 @@ internal fun immersionAnnotatedParagraph(content:AnnotatedString,replacements:Li
     return buildAnnotatedString{
         replacements.sortedBy{it.first}.forEach{(start,end,replacement)->
             if(start<cursor||end<start||end>content.length)return null
-            append(content.subSequence(cursor,start))
+            // An empty AnnotatedString slice can retain a zero-length boundary
+            // reservation. Appending it creates a phantom duplicate phrase ID
+            // beside the new lexical IDs and invalidates the paired layout.
+            if(cursor<start)append(content.subSequence(cursor,start))
             val at=length;append(replacement)
             val inherited=content.subSequence(start,end)
             inherited.spanStyles.filter{it.start==0&&it.end==inherited.length}.forEach{addStyle(it.item,at,length)}
             inherited.getLinkAnnotations(0,inherited.length).filter{it.start==0&&it.end==inherited.length}.forEach{annotation->when(val link=annotation.item){is LinkAnnotation.Url->addLink(link,at,length);is LinkAnnotation.Clickable->addLink(link,at,length)}}
             cursor=end
         }
-        append(content.subSequence(cursor,content.length))
+        if(cursor<content.length)append(content.subSequence(cursor,content.length))
     }
 }

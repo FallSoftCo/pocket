@@ -41,13 +41,26 @@ import androidx.compose.ui.unit.*
     onFragmentLayout:(TextLayoutResult)->Unit={},
     onWipeGeometry:(ImmersionSharedWipeGeometry)->Unit={},
     textAlign:androidx.compose.ui.text.style.TextAlign=androidx.compose.ui.text.style.TextAlign.Start,
-    trackWholeTextVisibility:Boolean=false
+    trackWholeTextVisibility:Boolean=false,
+    readingWave:ImmersionReadingWaveClock?=null
 ){
+    val waveOwner=remember{Any()}
+    var waveVisible by remember{mutableStateOf(false)}
+    DisposableEffect(readingWave,waveOwner,waveVisible){
+        readingWave?.visible(waveOwner,waveVisible)
+        onDispose{readingWave?.visible(waveOwner,false)}
+    }
     val projection=LocalImmersionProjectionMarkers.current
     val emptySlots=remember(projection){mutableMapOf<String,String>()}
     val effectiveFrom=if(from.text==snapshot.text)snapshot else from
     val effectiveTo=if(to.text==snapshot.text)snapshot else to
     val runs=remember(effectiveFrom,effectiveTo,reserve){immersionSharedRuns(listOf(effectiveFrom,effectiveTo)+reserve)}
+    val observer=LocalImmersionRendererObserver.current
+    if(observer!=null){
+        val marks=(listOf(effectiveFrom,effectiveTo)+reserve).map{it.getStringAnnotations("immersion-reserve",0,it.length).map{mark->mark.item}}
+        val status=ImmersionRendererStatus(readingWave!=null,runs!=null,runs?.count{it.id!=null}?:0,marks.map{it.size},marks.all{it==marks.first()})
+        LaunchedEffect(observer,status){observer(status)}
+    }
     if(runs==null){
         // Invalid alignment is not evidence of shared geometry. Preserve normal
         // text rather than invent a phrase/word correspondence.
@@ -67,6 +80,7 @@ import androidx.compose.ui.unit.*
     val visibilityCallback by rememberUpdatedState(onVisibleRanges)
     fun reportVisibility(){
         val value=immersionVisibleText(nativeLayout,coordinates,trackWholeTextVisibility)
+        waveVisible=value.first.isNotEmpty()||value.second
         if(value!=lastVisibility){lastVisibility=value;visibilityCallback?.invoke(value.first,value.second)}
     }
     SideEffect{visibilityCallback?.invoke(lastVisibility?.first?:emptySet(),lastVisibility?.second?:false)}
@@ -87,9 +101,36 @@ import androidx.compose.ui.unit.*
         var wipeGeometry by remember(from,to,reserve,available,fontSize,lineHeight){
             mutableStateOf<ImmersionSharedWipeGeometry?>(null)
         }
+        val screenWidth=androidx.compose.ui.platform.LocalView.current.width.toFloat().coerceAtLeast(1f)
+        fun waveMask(key:String,localTop:Float):ImmersionSharedWipeMask? {
+            val clock=readingWave?:return null
+            val rect=wipeGeometry?.regions?.get(key)?:return null
+            val origin=coordinates?.takeIf{it.isAttached}?.localToWindow(Offset.Zero)?:return null
+            val frame=clock.policy.frame(clock.elapsedMs,((origin.y+rect.top+localTop)/density.density).toDouble())
+            val feather=(screenWidth*.06f).coerceAtLeast(12f)
+            val frontier=-feather+(screenWidth+2f*feather)*frame.progress
+            val globalCenter=if(rtl)screenWidth-frontier else frontier
+            return ImmersionSharedWipeMask(globalCenter-origin.x-rect.left,feather,frame.towardSupport)
+        }
+        fun waveSelected(key:String):Boolean {
+            val rect=wipeGeometry?.regions?.get(key)?:return false
+            val mask=waveMask(key,0f)?:return false
+            val x=rect.width/2f
+            val incomingCoverage=(if(rtl)(x-mask.center+mask.feather)
+                else(mask.center+mask.feather-x))/(2f*mask.feather)
+            val support=if(mask.incomingAtReadingStart)incomingCoverage else 1f-incomingCoverage
+            return support>=.5f
+        }
+        // Derived booleans change only as the frontier crosses a lexical slot.
+        // The frame state itself is read by drawing, never the whole screen.
+        val selectedSlots by remember(readingWave,wipeGeometry,coordinates,screenWidth,rtl){
+            derivedStateOf(structuralEqualityPolicy()){if(readingWave==null)emptyMap()else
+                wipeGeometry?.regions?.keys.orEmpty().associateWith(::waveSelected)}
+        }
+        val visibleParts=mutableListOf<AnnotatedString>()
         val paragraph=buildAnnotatedString{
             runs.forEachIndexed{index,run->
-                if(run.id==null){append(run.forms[if(incoming)1 else 0]);return@forEachIndexed}
+                if(run.id==null){val literal=run.forms[if(incoming)1 else 0];append(literal);visibleParts+=literal;return@forEachIndexed}
                 // Split at natural token boundaries without claiming translation
                 // word alignment. A long phrase is not an unbreakable giant box.
                 val prefix=toAnnotatedString()
@@ -121,15 +162,18 @@ import androidx.compose.ui.unit.*
                         constraints=Constraints(maxWidth=width),maxLines=maxLines,overflow=fragmentOverflow)}
                     val height=measured.maxOf{it.size.height}.coerceAtLeast(1)
                     val key="shared-$index-$part"
+                    val slotIncoming=if(readingWave==null)incoming else selectedSlots[key]==true
+                    val shownForm=forms[if(slotIncoming)1 else 0]
+                    visibleParts+=shownForm
                     slotKeys+=key
                     if(forms[0].text!=forms[1].text)changedKeys+=key
                     val placeholder=Placeholder(with(density){width.toSp()},with(density){height.toSp()},PlaceholderVerticalAlign.TextCenter)
                     content[key]=InlineTextContent(placeholder){
                         fun renderedLink(position:Offset):LinkAnnotation? {
                             val p=progress().coerceIn(0f,1f)
-                            val current=if(immersionInkPhase(p).incoming)1 else 0
+                            val current=if(if(readingWave==null)immersionInkPhase(p).incoming else selectedSlots[key]==true)1 else 0
                             val candidates=if(forms[0].text==forms[1].text)listOf(current)
-                                else if(p<=0f)listOf(0)else if(p>=1f)listOf(1)else listOf(0,1)
+                                else if(readingWave!=null)listOf(0,1)else if(p<=0f)listOf(0)else if(p>=1f)listOf(1)else listOf(0,1)
                             for(index in candidates){
                                 val layout=measured[index]
                                 val text=layout.layoutInput.text
@@ -144,13 +188,13 @@ import androidx.compose.ui.unit.*
                                 }?:continue
                                 val line=layout.getLineForOffset(offset)
                                 if(line !in 0 until layout.lineCount)continue
-                                if(p>0f&&p<1f&&forms[0].text!=forms[1].text){
-                                    val mask=wipeGeometry?.mask(key,layout.getLineTop(line),p,rtl)
+                                if((readingWave!=null||(p>0f&&p<1f))&&forms[0].text!=forms[1].text){
+                                    val mask=(if(readingWave!=null)waveMask(key,layout.getLineTop(line))else wipeGeometry?.mask(key,layout.getLineTop(line),p,rtl))
                                         ?:ImmersionSharedWipeMask(if(rtl)width+48f else -48f,48f)
                                     val incomingCoverage=(if(rtl)(position.x-mask.center+mask.feather)
                                         else(mask.center+mask.feather-position.x))/(2f*mask.feather)
-                                    val coverage=if(index==1)incomingCoverage.coerceIn(0f,1f)
-                                        else 1f-incomingCoverage.coerceIn(0f,1f)
+                                    val supportCoverage=if(mask.incomingAtReadingStart)incomingCoverage.coerceIn(0f,1f)else 1f-incomingCoverage.coerceIn(0f,1f)
+                                    val coverage=if(index==1)supportCoverage else 1f-supportCoverage
                                     if(coverage<.5f)continue
                                 }
                                 val link=text.getLinkAnnotations(offset,offset+1).firstOrNull()?.item?:continue
@@ -166,7 +210,7 @@ import androidx.compose.ui.unit.*
                         }
                         val hit by rememberUpdatedState<(Offset)->LinkAnnotation?>(::renderedLink)
                         val dispatch by rememberUpdatedState<(LinkAnnotation)->Unit>{initial->
-                            val current=if(immersionInkPhase(progress()).incoming)1 else 0
+                            val current=if(if(readingWave==null)immersionInkPhase(progress()).incoming else selectedSlots[key]==true)1 else 0
                             val link=if(initial is LinkAnnotation.Clickable)
                                 forms[current].getLinkAnnotations(0,forms[current].length)
                                     .map{it.item}.filterIsInstance<LinkAnnotation.Clickable>()
@@ -191,18 +235,18 @@ import androidx.compose.ui.unit.*
                         // Parent paragraph owns selection and clipboard order.
                         // A drawable child must not register a second text copy.
                         DisableSelection{
-                        BlendImmersionText(forms[0],forms[1],progress,forms[if(incoming)1 else 0],
+                        BlendImmersionText(forms[0],forms[1],progress,shownForm,
                             modifier=Modifier.clearAndSetSemantics{}.then(interaction),
-                            nativeLinkInteractions=false,
+                            nativeLinkInteractions=false,continuousWipe=readingWave!=null,incomingOverride=if(readingWave!=null)slotIncoming else null,
                             fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
                             onNativeTextLayout=onFragmentLayout,
-                            sharedWipeMask={p,top->wipeGeometry?.mask(key,top,p,rtl)
+                            sharedWipeMask={p,top->(if(readingWave!=null)waveMask(key,top)else wipeGeometry?.mask(key,top,p,rtl))
                                 ?:ImmersionSharedWipeMask(if(rtl)width+48f else -48f,48f)},
                             maxLines=maxLines,overflow=fragmentOverflow,fillWidth=true,reserve=forms)
                         }
                     }
                     val start=length
-                    appendInlineContent(key,forms[if(incoming)1 else 0].text.ifEmpty{
+                    appendInlineContent(key,shownForm.text.ifEmpty{
                         if(projection==null)"\u200b" else emptySlots.getOrPut(key){projection.create((listOf(from,to,snapshot)+reserve).map{it.text})}
                     })
                     placeholderRanges+=AnnotatedString.Range(placeholder,start,length)
@@ -210,7 +254,7 @@ import androidx.compose.ui.unit.*
                 }
             }
         }
-        val visible=if(incoming)effectiveTo else effectiveFrom
+        val visible=if(readingWave==null){if(incoming)effectiveTo else effectiveFrom}else buildAnnotatedString{visibleParts.forEach{append(it)}}
         val phraseRanges=visible.getStringAnnotations("immersion-reserve",0,visible.length)
         val actions=visible.getLinkAnnotations(0,visible.length).filter{link->
             phraseRanges.any{it.start<=link.start&&it.end>=link.end&&it.item in lastVisibility?.first.orEmpty()}

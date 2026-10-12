@@ -8,6 +8,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.TextToolbar
+import androidx.compose.ui.geometry.Rect
 
 /** Projection tokens are owned by this selectable message, never original text. */
 internal class ImmersionProjectionMarkers(private val original:String,private val nextId:()->String={java.util.UUID.randomUUID().toString()}){
@@ -33,6 +36,25 @@ internal fun immersionOwnedProjectionRanges(text:String,owned:Set<String>):List<
     return ranges.distinct().sortedByDescending{it.first}
 }
 @Composable internal fun ImmersionSelection(original:String,content:@Composable ()->Unit){
+    val wave=LocalImmersionReadingWave.current
+    val owner=remember{Any()}
+    val nativeToolbar=LocalTextToolbar.current
+    val toolbar=remember(nativeToolbar,wave,owner){object:TextToolbar by nativeToolbar {
+        override fun showMenu(rect:Rect,onCopyRequested:(()->Unit)?,onPasteRequested:(()->Unit)?,
+            onCutRequested:(()->Unit)?,onSelectAllRequested:(()->Unit)?) {
+            wave?.selecting(owner,true)
+            try{nativeToolbar.showMenu(rect,onCopyRequested,onPasteRequested,onCutRequested,onSelectAllRequested)}
+            catch(error:Throwable){wave?.selecting(owner,false);throw error}
+        }
+        override fun showMenu(rect:Rect,onCopyRequested:(()->Unit)?,onPasteRequested:(()->Unit)?,
+            onCutRequested:(()->Unit)?,onSelectAllRequested:(()->Unit)?,onAutofillRequested:(()->Unit)?) {
+            wave?.selecting(owner,true)
+            try{nativeToolbar.showMenu(rect,onCopyRequested,onPasteRequested,onCutRequested,onSelectAllRequested,onAutofillRequested)}
+            catch(error:Throwable){wave?.selecting(owner,false);throw error}
+        }
+        override fun hide(){try{nativeToolbar.hide()}finally{wave?.selecting(owner,false)}}
+    }}
+    DisposableEffect(wave,owner){onDispose{wave?.selecting(owner,false)}}
     val delegate=LocalClipboard.current
     val markers=remember(original){ImmersionProjectionMarkers(original)}
     val clipboard=remember(delegate,markers){object:Clipboard by delegate{
@@ -49,7 +71,7 @@ internal fun immersionOwnedProjectionRanges(text:String,owned:Set<String>):List<
             delegate.setClipEntry(ClipEntry(ClipData(ClipDescription(data.description),ClipData.Item(clean))))
         }
     }}
-    CompositionLocalProvider(LocalClipboard provides clipboard,LocalImmersionProjectionMarkers provides markers){
+    CompositionLocalProvider(LocalClipboard provides clipboard,LocalImmersionProjectionMarkers provides markers,LocalTextToolbar provides toolbar){
         SelectionContainer(content=content)
     }
 }
