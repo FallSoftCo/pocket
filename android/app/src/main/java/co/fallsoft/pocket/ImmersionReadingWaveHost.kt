@@ -1,6 +1,7 @@
 package co.fallsoft.pocket
 
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.isActive
 
 /** One screen-owned display clock, enrolled only by actually visible text. */
@@ -14,7 +15,7 @@ internal class ImmersionReadingWaveClock(val policy:ImmersionReadingWave=Immersi
     fun visible(owner:Any,value:Boolean){if(value)visible[owner]=true else visible.remove(owner)}
     val hasVisible:Boolean get()=visible.isNotEmpty()
     fun advanceNanos(deltaNanos:Long){
-        if(hasSelection)return
+        if(hasSelection||BlackoutVisibility.active)return
         nanos=Math.floorMod(nanos+deltaNanos.coerceIn(0L,100_000_000L),policy.periodMs*1_000_000L)
         elapsedMs=nanos/1_000_000L
     }
@@ -23,7 +24,14 @@ internal val LocalImmersionReadingWave=staticCompositionLocalOf<ImmersionReading
 
 @Composable internal fun ImmersionReadingWaveHost(content:@Composable ()->Unit) {
     val clock=remember{ImmersionReadingWaveClock()}
-    val running=immersionMotionReady()&&immersionTransitionAnimated()&&clock.hasVisible&&!clock.hasSelection
+    val activity=LocalContext.current.nextCompActivity()
+    val nativeOwner=remember{Any()}
+    val nativeSelection=activity?.immersionSelectionActive==true
+    DisposableEffect(clock,nativeOwner,nativeSelection){
+        clock.selecting(nativeOwner,nativeSelection)
+        onDispose{clock.selecting(nativeOwner,false)}
+    }
+    val running=immersionMotionReady()&&immersionTransitionAnimated()&&clock.hasVisible&&!clock.hasSelection&&!BlackoutVisibility.active
     LaunchedEffect(clock,running) {
         if(!running)return@LaunchedEffect
         var previous=withFrameNanos{it}

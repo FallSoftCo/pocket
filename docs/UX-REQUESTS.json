@@ -2445,12 +2445,13 @@
     },
     {
       "id": "immersion-continuous-reading-order-wave",
-      "status": "runtime-native-candidate-verified-release-and-full-flow-qualification-pending",
+      "status": "shared-wave-native-menu-repair-blackout-and-full-flow-qualification-pending",
       "request": "Equal local transition speed; continuously repeat staggered top-to-bottom reading-order waves with each language visible for a few seconds. Never compress later lines to finish together.",
       "confirmedCause": "Fixed4200ms paragraph deadline scales local line speed by line count; controls separately use18s/6s language holds.",
       "design": "docs/IMMERSION-CASCADE-DESIGN.md",
       "delivery": "Held alpha88; no phone delivery of this correction.",
-      "evidence": "docs/qualification/immersion-reading-wave-runtime-20261012.json"
+      "evidence": "docs/qualification/immersion-reading-wave-runtime-20261012.json",
+      "interactionFollowup": "Native platform menu lifecycle now pauses shared wave; actual select/copy/resume stages pass. Restored blackout/menu return remains failing; release held."
     }
   ],
   "current_state": {

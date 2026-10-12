@@ -71,6 +71,17 @@ val AppFont=FontFamily(androidx.compose.ui.text.font.Font(R.font.inter_regular,F
 val NextGreen=Color(0xff00a85d);val NextCerise=Color(0xffeb4d97)
 
 class MainActivity:ComponentActivity(){
+    // Observe the platform-owned menu rather than Compose's version-specific provider.
+    private val immersionActionModes=mutableStateMapOf<android.view.ActionMode,Boolean>()
+    internal val immersionSelectionActive:Boolean get()=immersionActionModes.isNotEmpty()
+    override fun onActionModeStarted(mode:android.view.ActionMode){
+        super.onActionModeStarted(mode)
+        immersionActionModes[mode]=true
+    }
+    override fun onActionModeFinished(mode:android.view.ActionMode){
+        immersionActionModes.remove(mode)
+        super.onActionModeFinished(mode)
+    }
     private val blackout by lazy { ScreenBlackout(this) }
     fun enterBlackout(){blackout.enter()}
     private var initialServer by mutableStateOf("");private var initialCode by mutableStateOf("")
@@ -151,7 +162,7 @@ class MainActivity:ComponentActivity(){
         if(event.action==android.view.KeyEvent.ACTION_UP)captureKeys.up(event.keyCode)
         return super.dispatchKeyEvent(event)
     }
-    override fun onDestroy(){blackout.exit(restoreInput=false);super.onDestroy()}
+    override fun onDestroy(){immersionActionModes.clear();blackout.exit(restoreInput=false);super.onDestroy()}
     override fun onResume(){super.onResume();PresentedReads.restore();if(Pocket.token.isNotBlank()){Pocket.refresh();Pocket.refreshDetail();Pocket.selected?.let{PocketReplies.reconcile(it)}}}
 }
 
