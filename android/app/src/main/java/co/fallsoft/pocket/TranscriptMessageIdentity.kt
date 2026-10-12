@@ -19,7 +19,7 @@ internal fun normalizeTranscriptMessage(row:JSONObject):JSONObject {
 /** Preserve the earliest display slot; newer evidence supplies current metadata.
  * This also repairs caches written before semantic message identity existed.
  */
-internal fun normalizeTranscriptMessages(rows:List<JSONObject>):List<JSONObject> {
+internal fun normalizeTranscriptMessages(rows:List<JSONObject>,preferIncoming:Boolean=false):List<JSONObject> {
     // Identity evidence may arrive later than the provider item itself. Join
     // only an exact same-turn provider reference with one unambiguous send ID.
     // Text, timestamps and adjacency are never identity evidence.
@@ -36,7 +36,7 @@ internal fun normalizeTranscriptMessages(rows:List<JSONObject>):List<JSONObject>
             references(original).flatMap{claims[original.s("turnId") to it].orEmpty()}.toSet() else emptySet()
         val raw=if(candidates.size==1)JSONObject(original.toString()).put("clientId",candidates.single())else original
         val row=normalizeTranscriptMessage(raw);val id=row.s("id");val old=values[id]
-        val chosen=if(old==null||row.optLong("version")>=old.optLong("version"))row else old
+        val chosen=if(old==null||preferIncoming||row.optLong("version")>=old.optLong("version"))row else old
         // Oldest evidence first; a new provider reference must survive the bound.
         val aliases=listOfNotNull(old,row).flatMap{v->
             v.optJSONArray("providerRowIds")?.let{a->(0 until a.length()).map{a.optString(it)}}.orEmpty()+v.s("providerRowId")
@@ -88,9 +88,9 @@ internal fun transcriptInputEvent(previous:List<JSONObject>,raw:JSONObject?):Tra
 }
 
 /** Metadata replacement must retain bounded provider evidence for the same send. */
-internal fun mergeTranscriptMessageEvidence(previous:JSONObject?,incoming:JSONObject):JSONObject {
+internal fun mergeTranscriptMessageEvidence(previous:JSONObject?,incoming:JSONObject,preferIncoming:Boolean=false):JSONObject {
     if(previous==null||previous.s("id")!=incoming.s("id")||incoming.s("kind")!="user"||incoming.s("clientId").isBlank())return incoming
-    return normalizeTranscriptMessages(listOf(previous,incoming)).single()
+    return normalizeTranscriptMessages(listOf(previous,incoming),preferIncoming).single()
 }
 
 /** Reconcile snapshot identity enrichment in linear time before page ordering.
@@ -117,12 +117,14 @@ internal fun transcriptContainsReply(rows:List<JSONObject>,replyId:String):Boole
 internal fun resolveTranscriptReadPosition(rows:List<JSONObject>,position:TranscriptReadPosition?):TranscriptReadPosition? =
     position?.let{if(rows.any{row->row.s("id")==it.rowId})it else it.copy(rowId=migrateTranscriptAnchors(rows,setOf(it.rowId))[it.rowId]?:it.rowId)}
 
-/** Late disk restoration retains older local content while current live/read
- * values own shared identities and ordering. Cache metadata never dispatches work. */
+/** Late restoration retains older local content while current live/read values
+ * own shared identities and ordering. Explicit source authority avoids comparing
+ * counters from different runtimes. Disk also normalizes old versions at ingress;
+ * this contract must hold independently. Cache metadata never dispatches work. */
 internal fun mergeRestoredTranscriptRows(cached:List<JSONObject>,current:List<JSONObject>):List<JSONObject>{
     val evidence=normalizeTranscriptMessages(cached+current)
     val old=promoteTranscriptIdentityEvidence(cached,evidence)
     val previous=old.associateBy{it.s("id")}
-    val fresh=promoteTranscriptIdentityEvidence(current,evidence).map{mergeTranscriptMessageEvidence(previous[it.s("id")],it)}
-    return mergeTranscriptPage(old,fresh,false,{it.s("id")},{it.optLong("version")},keepPosition={it.s("kind")=="turn"})
+    val fresh=promoteTranscriptIdentityEvidence(current,evidence).map{mergeTranscriptMessageEvidence(previous[it.s("id")],it,preferIncoming=true)}
+    return mergeTranscriptPage(old,fresh,false,{it.s("id")},{it.optLong("version")},keepPosition={it.s("kind")=="turn"},preferIncoming=true)
 }

@@ -174,4 +174,23 @@ class TranscriptMessageIdentityTest {
   assertEquals(32,merged.getJSONArray("providerRowIds").length())
   assertEquals("turn/new-provider",merged.getJSONArray("providerRowIds").getString(31))
  }
+
+ @org.junit.Test fun lateCacheCannotOverwriteFreshRowsAfterRuntimeCounterReset(){
+  val cached=org.json.JSONObject().put("id","turn/answer").put("kind","message").put("text","Old cached answer").put("version",9000)
+  val local=org.json.JSONObject().put("id","older/local").put("kind","message").put("text","Retained local history")
+  val fresh=org.json.JSONObject().put("id","turn/answer").put("kind","message").put("text","Fresh streaming answer").put("version",2)
+  val rows=mergeRestoredTranscriptRows(listOf(local,cached),listOf(fresh))
+  assertEquals(listOf("older/local","turn/answer"),rows.map{it.s("id")})
+  assertEquals("Fresh streaming answer",rows.last().s("text"))
+  assertEquals(2,rows.last().optInt("version"))
+ }
+ @org.junit.Test fun lateCacheUserMetadataCannotReplaceCurrentSendEvidence(){
+  val cached=normalizeTranscriptMessage(user("cached",version=9000)).put("text","Old user projection")
+  val current=normalizeTranscriptMessage(user("current",version=2)).put("text","Current user projection")
+  val row=mergeRestoredTranscriptRows(listOf(cached),listOf(current)).single()
+  assertEquals("Current user projection",row.s("text"))
+  assertEquals(2,row.optInt("version"))
+  assertEquals("turn/current",row.s("providerRowId"))
+  assertEquals("turn/client-user/send",transcriptDisplayAnchor(listOf(row),"turn/cached"))
+ }
 }

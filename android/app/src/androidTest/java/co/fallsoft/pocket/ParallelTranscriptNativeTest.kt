@@ -29,7 +29,7 @@ class ParallelTranscriptNativeTest {
  }
  private fun seed():Pair<TranscriptDiskCache,String>{
   val scope=PocketTranscript.scopeKey();val cache=TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1"))
-  val rows=JSONArray().put(JSONObject().put("id","retained-local").put("kind","message").put("text","Earlier retained local passage")).put(JSONObject().put("id","same-message").put("kind","message").put("text","Stale cached response"))
+  val rows=JSONArray().put(JSONObject().put("id","retained-local").put("kind","message").put("text","Earlier retained local passage")).put(JSONObject().put("id","same-message").put("kind","message").put("text","Stale cached response").put("version",9000))
   val body=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",rows).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",true).put("before","older1").put("position",JSONObject().put("row","retained-local").put("offset",0).put("follow",false)).toString()
   assertTrue(cache.write(scope,"same-thread",body));return cache to body
  }

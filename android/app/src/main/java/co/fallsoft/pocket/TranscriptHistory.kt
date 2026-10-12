@@ -1,12 +1,12 @@
 package co.fallsoft.pocket
 
 /** Retain read rows, but place newly discovered rows in their canonical page order. */
-internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Boolean,id:(T)->String,version:(T)->Long,insertBefore:String?=null,keepPosition:(T)->Boolean={false}):List<T>{
+internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Boolean,id:(T)->String,version:(T)->Long,insertBefore:String?=null,keepPosition:(T)->Boolean={false},preferIncoming:Boolean=false):List<T>{
     val values=linkedMapOf<String,T>()
     current.forEach{values[id(it)]=it}
     val existing=values.keys.toHashSet()
     val page=incoming.distinctBy(id)
-    page.forEach{row->val key=id(row);val previous=values[key];if(previous==null||version(row)>=version(previous))values[key]=row}
+    page.forEach{row->val key=id(row);val previous=values[key];if(previous==null||preferIncoming||version(row)>=version(previous))values[key]=row}
     val order=current.map(id).distinct().toMutableList()
     // Snapshot order is authoritative even for rows already received live.
     // Replace only overlapping slots: locally retained pages and live-only

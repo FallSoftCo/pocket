@@ -2386,6 +2386,12 @@
       "request": "One visible message for each send across receipt/event/history/cache/reconnect/restart, preserving repeated intentional inputs and actionable uncertain delivery. Production identity architecture and fault-injection qualification.",
       "status": "narrow-backend-active-phone-regression-not-yet-verified",
       "evidence": "docs/qualification/durable-send-identity-20261012.json"
+    },
+    {
+      "id": "cache-observation-authority-20261012",
+      "request": "Current observed message content and provider evidence must win late local-cache restoration; retain local history and reading position across asynchronous loads and runtime counters.",
+      "status": "qualified-source-unreleased-phone-cause-unverified",
+      "evidence": "docs/qualification/cache-observation-authority-20261012.json"
     }
   ],
   "current_state": {
