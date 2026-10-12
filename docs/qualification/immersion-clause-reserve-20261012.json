@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "state": "native-pass-sampled-conversation-improved-full-temporal-review-pending",
+  "state": "native-pass-layout-improved-transition-samples-reviewed",
   "change": "Wrapped punctuated changing phrases reserve their final line to the edge so the following common clause begins on a stable new line. No text insertion, stretched word spacing or per-cycle slot resizing.",
   "nativeEvidence": {
     "caseClass": "SharedInlineLayoutNativeTest",
@@ -20,5 +20,35 @@
     "setup": "Italian switch checked=true verified before capture",
     "observation": "Samples show fixed following clause/paragraph and no conspicuous middle-of-sentence reservation gap",
     "limits": "Five-second sampling does not qualify transition legibility or handset pacing"
+  },
+  "transitionReview": {
+    "decodedFrames": 972,
+    "durationSeconds": 44.205856,
+    "inspectedWindowSeconds": [
+      22,
+      26
+    ],
+    "sampleHz": 8,
+    "observations": [
+      "First sheet stable target-language hold",
+      "Second sheet shows reading-direction moving boundary with local overlapping glyphs",
+      "No whole-sentence blank interval in inspected samples",
+      "Follow-up paragraph remains at its existing position"
+    ],
+    "limitations": [
+      "32 sampled frames, not inspection of all decoded frames",
+      "Narrow overlapping boundary remains transiently ambiguous",
+      "No comprehension study or physical handset pacing qualification"
+    ],
+    "artifacts": [
+      {
+        "path": "/tmp/nextcomp-clause-transition-01.png",
+        "sha256": "c9f657304ca886264589e417730ca3e4de644adbecef3ebc526c30e6cae98fa6"
+      },
+      {
+        "path": "/tmp/nextcomp-clause-transition-02.png",
+        "sha256": "eefc463fe1439e2fb9349ca623d5af339c65b5ade0ecf41df934eaacb7b59efd"
+      }
+    ]
   }
 }
