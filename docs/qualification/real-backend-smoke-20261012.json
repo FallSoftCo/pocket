@@ -15,12 +15,17 @@
     "Reply accepted",
     "Exactly one provider start",
     "Exactly one canonical user history row",
-    "Matching send identity delivered over WebSocket"
+    "Matching send identity delivered over WebSocket",
+    "Actual disposable backend process restarted",
+    "Existing paired token remained valid",
+    "Accepted receipt survived restart",
+    "History restored identity after provider clientId metadata loss",
+    "Exact accepted-ID reconciliation retained one provider start"
   ],
   "limits": [
     "Native UI has not yet been connected to this real-backend harness",
-    "Backend/process restart journey remains unfinished",
-    "Provider, push, Tailscale and physical handset unqualified"
+    "Provider, push, Tailscale and physical handset unqualified",
+    "Android cold-process history restoration is not yet joined to this real-backend journey"
   ],
   "isolation": [
     "Disposable data and HOME/CODEX_HOME",
