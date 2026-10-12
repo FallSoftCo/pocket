@@ -289,7 +289,7 @@ async function sendOutgoing(row,initialThread=null){
     let result;
     const active=t.turns?.findLast(x=>x.status==='inProgress');
     if(row.mode!=='queue'&&isActive(t)&&active) {
-      try {result=await codex.call('turn/steer',{threadId:t.id,expectedTurnId:active.id,input});}
+      try {result=await codex.call('turn/steer',{threadId:t.id,expectedTurnId:active.id,clientUserMessageId:row.id,input});}
       catch(e){
         // Retry only when Codex explicitly reports that the turn has finished.
         if(e.rpc && /no active turn|no turn in progress/i.test(e.message))result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});else throw e;
