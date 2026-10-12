@@ -119,6 +119,22 @@ class TranscriptRefreshNativeTest {
   assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   assertEquals(0,qa("state").getJSONArray("replies").length())
  }
+ @Test fun unknownVoiceReceiptRetainsRecordingAndOnlyChecksOriginalTurn(){
+  twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  val recording=java.io.File(context.filesDir,"voice-pending.wav");val bytes=byteArrayOf(1,2,3,4);recording.writeBytes(bytes)
+  prefs.edit().putString("voicePendingId","saved-unknown").putBoolean("voicePendingLocal",false).putString("voicePendingTarget","same-thread").commit()
+  try{
+   main{PocketVoice.start(context,"same-thread",recordImmediately=false,inPlace=true,checkSaved=true)}
+   await{PocketVoice.state=="Retry needed"&&PocketVoice.problem.contains("Synthetic uncertain delivery")}
+   assertEquals("saved-unknown",prefs.getString("voicePendingId",null));assertArrayEquals(bytes,recording.readBytes())
+   main{PocketVoice.retry()};await{qa("state").getJSONArray("voiceReceiptReads").length()>=4&&PocketVoice.state=="Retry needed"}
+   assertEquals("same-thread",prefs.getString("voicePendingTarget",null));assertArrayEquals(bytes,recording.readBytes())
+   main{PocketVoice.start(context,"second-thread",inPlace=true)}
+   assertEquals("Recording replaced uncertain turn","saved-unknown",prefs.getString("voicePendingId",null))
+   assertTrue(PocketVoice.problem.contains("saved voice turn"))
+   assertEquals(0,qa("state").getJSONArray("replies").length())
+  }finally{main{PocketVoice.stop()};prefs.edit().remove("voicePendingId").remove("voicePendingLocal").remove("voicePendingTarget").commit();recording.delete()}
+ }
  @Test fun inlinePlaybackVolumePreservesMuteAndTypingDuringCapture(){
   twoChats();main{Pocket.open("same-thread",keyboard=true)}
   await{has(1)&&device.hasObject(By.clazz("android.widget.EditText"))&&device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")}

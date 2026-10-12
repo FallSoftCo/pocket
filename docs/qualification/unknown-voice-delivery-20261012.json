@@ -1,0 +1,27 @@
+{
+  "status": "candidate-not-deployed",
+  "cause": "Unknown voice outcome cleared pending receipt/recording; unrelated native speech could also acknowledge a pending recording.",
+  "fix": [
+    "Unknown outcome retains pending receipt, target and recording; check status does not resend",
+    "Native speech can clear pending data only when matching a confirmed completed turn"
+  ],
+  "checks": {
+    "debugUnitTests": "pass",
+    "nativeSavedReceipt": {
+      "result": "pass",
+      "seconds": 10,
+      "assertions": [
+        "repeated status check uses original turn",
+        "receipt and original target retained",
+        "recording bytes unchanged",
+        "new recording blocked",
+        "zero submitted work"
+      ]
+    }
+  },
+  "remaining": [
+    "Signed release qualification and deployment",
+    "Successful provider transcription/send test",
+    "Physical phone interaction"
+  ]
+}

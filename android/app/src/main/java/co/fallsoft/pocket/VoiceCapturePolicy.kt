@@ -21,3 +21,7 @@ internal fun capturePcmLevel(bytes:ByteArray,length:Int):Float {
 }
 
 internal fun captureFeedbackVisible(active:Boolean,launching:Boolean,state:String,problem:String)=problem.isNotBlank()||launching||active&&state !in setOf("Ready","Paused","Speaking")
+
+/** Unrelated/error speech cannot acknowledge a recording with unknown delivery. */
+internal fun voiceSpeechMayClearPending(completedTurn:String?,pendingTurn:String?)=
+    !completedTurn.isNullOrBlank()&&completedTurn==pendingTurn

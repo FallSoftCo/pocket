@@ -95,6 +95,7 @@ class PocketVoiceService:Service(){
     private var nativeHeartbeat:Job?=null
     private var idleDisconnect:Job?=null
     private var transportGeneration=0L
+    private var completedSpeechTurnId:String?=null
     private var nativeSpeaking=false
     private var nativeRendering=false
     private var nativePaused=false
@@ -212,7 +213,7 @@ class PocketVoiceService:Service(){
                 val bytes=android.util.Base64.decode(payload.s("data"),android.util.Base64.DEFAULT)
                 val cached=withContext(Dispatchers.IO){File.createTempFile("voice-spoken-",".tmp",filesDir).apply{writeBytes(bytes)}}
                 if(generation!=speechGeneration||ticket!=transportGeneration){cached.delete();return@launch}
-                check(cached.renameTo(spokenFile)){"Unable to save spoken response."};clearPending()
+                check(cached.renameTo(spokenFile)){"Unable to save spoken response."};clearCompletedSpeechPending()
                 if(payload.optBoolean("live")){
                     nativeRendering=false;nativeSpeaking=false;nativeCacheReady=true
                     if(nativePaused){if(nativeResumeRequested){nativePaused=false;play(spokenFile,true,nativePausedPositionMs)}else state("Paused")}
@@ -221,7 +222,7 @@ class PocketVoiceService:Service(){
             }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}
             "timing","network"->{android.util.Log.i("PocketVoiceTiming","Native $kind $data")}
             "preparing"->{state("Preparing speech")}
-            "speaking"->{nativePaused=false;nativeSpeaking=true;nativeAudioBeganAt=SystemClock.elapsedRealtime();clearPending();state("Speaking");captionStarted()}
+            "speaking"->{nativePaused=false;nativeSpeaking=true;nativeAudioBeganAt=SystemClock.elapsedRealtime();clearCompletedSpeechPending();state("Speaking");captionStarted()}
             "paused"->{nativePausedPositionMs=if(nativeAudioCacheStartedAt>0)(SystemClock.elapsedRealtime()-nativeAudioCacheStartedAt).toInt().coerceAtLeast(0) else 0;nativePaused=true;nativeSpeaking=false;state("Paused");caption?.let{PocketSpeechCaptions.pause(it.profile);refreshCaptionNotification()}}
             "finished"->{/* Cache callback completes this generation after its atomic file commit. */}
             "error"->{if((recorder!=null||(turnId==captureTurnId&&captureStreaming&&!nativeRendering))&&ready.isCompleted){captureStreamFailed=true;captureStreaming=false;capturePrefix.clear();disconnectNative();return@audio};nativeRendering=false;nativeSpeaking=false;if(!ready.isCompleted)ready.completeExceptionally(IllegalStateException(data))else{PocketVoice.problem=data;recording?.cancel();fail(IllegalStateException(data))}}
@@ -328,8 +329,13 @@ class PocketVoiceService:Service(){
                 delay(1000)
             }
             if(result!!.s("state")!="completed"){
-                val message=result.s("error","The voice turn stopped.");clearPending();PocketVoice.problem=message;speak(message);return@launch
+                val message=result.s("error","The voice turn stopped.")
+                if(result.s("state")=="unknown"){
+                    fail(IllegalStateException(message+" Your recording remains saved. Check this turn’s status before recording again."));return@launch
+                }
+                clearPending();PocketVoice.problem=message;speak(message);return@launch
             }
+            completedSpeechTurnId=id
             android.util.Log.i("PocketVoiceTiming","Turn $id response received")
             PocketVoice.response=result.s("response")
             if(PocketVoice.inPlace&&PocketCoordinator.visible)PocketCoordinator.loadHistory()
@@ -342,6 +348,9 @@ class PocketVoiceService:Service(){
             applyActions(actions.filter{it.s("type") !in listOf("profile","exit")})
         }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}
     }}
+    private fun clearCompletedSpeechPending(){
+        if(voiceSpeechMayClearPending(completedSpeechTurnId,Pocket.prefs.getString("voicePendingId",null)))clearPending()
+    }
     private fun clearPending(){Pocket.prefs.edit().remove("voicePendingId").remove("voicePendingLocal").remove("voicePendingTarget").commit();pendingFile.delete()}
     private fun applyActions(actions:List<JSONObject>){for(a in actions)when(a.s("type")){
         "select"->{PocketVoice.targetThread=a.s("threadId").takeIf{it.isNotBlank()};if(Pocket.local==local){if(PocketVoice.targetThread==null)Pocket.closeTask()else Pocket.open(PocketVoice.targetThread!!) }}
