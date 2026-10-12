@@ -16,9 +16,9 @@
     {
       "id": "quiet-authenticated-reconnect-state-20261011",
       "request": "Live connection state must reflect authenticated reconnect even when no application event arrives. Genuine prolonged outages remain visible; reconnect must restore current selected history and preserve drafts without starting or resending work.",
-      "status": "implemented-native-qualification-running",
+      "status": "qualified-private-updater-published-phone-staging",
       "source": "a6a4a88",
-      "evidence": "Native alpha71 control reproduced fresh history loaded while old eight-second timer falsely marked authenticated socket disconnected; failure25.206s. New control includes real refused socket outage and subsequent quiet recovery."
+      "evidence": "Native control failed25.206s; corrected quiet reconnect/genuine outage/recovery passed37.542s with draft preserved and no replies.295 Android tests in each variant,both lints/signed builds pass. Private updater90 published; physical installation pending."
     },
     {
       "id": "missed-notification-transcript-freshness-20261011",
