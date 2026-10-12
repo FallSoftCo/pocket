@@ -127,3 +127,23 @@ internal fun immersionLabelCadence(label:String):ImmersionLabelCadence{
     fun mix(value:Int):Int{var seed=value;seed=seed xor(seed ushr 16);seed*= -2048144789;seed=seed xor(seed ushr 13);seed*= -1028477387;return seed xor(seed ushr 16)}
     return ImmersionLabelCadence(6000L+Math.floorMod(mix(label.hashCode()),3001),10000L+Math.floorMod(mix(label.hashCode() xor 0x517cc1b7),5001))
 }
+
+
+/** Authored interface prose uses the same bounded language layer as controls.
+ * Typography remains native; executable strings and identifiers use literal Text.
+ */
+@Composable fun InterfaceText(
+    text:String,modifier:Modifier=Modifier,color:Color=Color.Unspecified,
+    fontSize:TextUnit=TextUnit.Unspecified,fontWeight:FontWeight?=null,
+    maxLines:Int=Int.MAX_VALUE,lineHeight:TextUnit=TextUnit.Unspecified,
+    style:androidx.compose.ui.text.TextStyle=LocalTextStyle.current
+){
+    val resolved=LocalTextStyle.current.merge(style)
+    CompositionLocalProvider(LocalTextStyle provides resolved){
+        BilingualLabel(text,modifier=modifier,
+            color=if(color!=Color.Unspecified)color else resolved.color.takeIf{it!=Color.Unspecified}?:LocalContentColor.current,
+            fontSize=fontSize.takeIf{it!=TextUnit.Unspecified}?:resolved.fontSize.takeIf{it!=TextUnit.Unspecified}?:14.sp,
+            fontWeight=fontWeight?:resolved.fontWeight,maxLines=maxLines,centered=false,
+            lineHeight=lineHeight.takeIf{it!=TextUnit.Unspecified}?:resolved.lineHeight)
+    }
+}

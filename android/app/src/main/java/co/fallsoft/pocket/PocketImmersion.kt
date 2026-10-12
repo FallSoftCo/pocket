@@ -56,7 +56,7 @@ object PocketImmersion {
         translations=saved.objects().asReversed().associateBy{it.s("id")};byContent=translations.values.associateBy{it.s("version")}
         if(ownerChanged||oldDensity!=densityState){originals=emptySet();clearReadingChoices()};unavailable=false;if(enabled)sync()
     }
-    fun offerLabel(text:String){if(text.length<=200)offer("label:"+version(text),text,"interface label")}
+    fun offerLabel(text:String){if(text.length<=12000)offer("label:"+version(text),text,"interface label")}
     fun label(text:String):String=if(enabled)(ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text))?:cached("label:"+version(text),text)?.s("text",text)?:text else text
     fun setEnabled(value:Boolean){enabledState=value;Pocket.prefs.edit().putBoolean(profileKey(),value).apply();pending.clear();job?.cancel();originals=emptySet();clearReadingChoices();sync()}
     private fun sync(){val captured=profileKey();Pocket.scope.launch{try{val result=Pocket.api("/api/immersion",JSONObject().put("enabled",enabled).put("density",density));if(captured==profileKey())accept(result)}catch(_:Exception){if(captured==profileKey())unavailable=enabled}}}

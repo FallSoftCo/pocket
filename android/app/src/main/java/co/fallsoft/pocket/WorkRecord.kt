@@ -59,15 +59,15 @@ private class WorkRecordClient(val base:String=Pocket.base.trimEnd('/'),val toke
     LaunchedEffect(owner){load()}
     BackHandler{onBack()}
     Column(Modifier.fillMaxSize().padding(16.dp)){
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){TextButton(onBack){Text("Back")};TextButton({scope.launch{load()}},enabled=!busy){Text("Refresh")}}
-        Text("Work record",style=MaterialTheme.typography.headlineSmall)
-        Text("Collected automatically from your requests and the resulting work. Follow-ups stay linked to their conversation.",style=MaterialTheme.typography.bodyMedium)
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){TextButton(onBack){InterfaceText("Back")};TextButton({scope.launch{load()}},enabled=!busy){InterfaceText("Refresh")}}
+        InterfaceText("Work record",style=MaterialTheme.typography.headlineSmall)
+        InterfaceText("Collected automatically from your requests and the resulting work. Follow-ups stay linked to their conversation.",style=MaterialTheme.typography.bodyMedium)
         Text(coverage,style=MaterialTheme.typography.labelMedium)
-        Text("A completed turn records what the agent returned; it does not prove delivery or satisfaction.",style=MaterialTheme.typography.bodySmall)
+        InterfaceText("A completed turn records what the agent returned; it does not prove delivery or satisfaction.",style=MaterialTheme.typography.bodySmall)
         if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
         if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=12.dp)){
-            if(rows.isEmpty()&&!busy)item{Text("Your work will appear here automatically as you use NextComp. Earlier followed conversations are filled in gradually.")}
+            if(rows.isEmpty()&&!busy)item{InterfaceText("Your work will appear here automatically as you use NextComp. Earlier followed conversations are filled in gradually.")}
             items(rows,key={it.s("session")+"/"+it.s("id")}){row->
                 Card(Modifier.fillMaxWidth()){
                     Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
@@ -75,9 +75,9 @@ private class WorkRecordClient(val base:String=Pocket.base.trimEnd('/'),val toke
                         val at=row.optLong("source_at").takeIf{it>0}?:row.optLong("observed_at")
                         Text((if(row.optLong("source_at")>0)"" else "Observed ")+DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.SHORT).format(Date(at))+" · "+row.s("status","Observed"),style=MaterialTheme.typography.labelMedium)
                         if(row.s("cwd").isNotBlank())Text(row.s("cwd"),style=MaterialTheme.typography.bodySmall)
-                        if(row.optBoolean("continuation"))Text("Follow-up in the same conversation",style=MaterialTheme.typography.labelMedium)
+                        if(row.optBoolean("continuation"))InterfaceText("Follow-up in the same conversation",style=MaterialTheme.typography.labelMedium)
                         val entries=row.optJSONArray("items")?.objects().orEmpty()
-                        entries.filter{it.s("kind")=="request"}.forEach{Text("You asked",style=MaterialTheme.typography.labelLarge);Text(it.s("text"))}
+                        entries.filter{it.s("kind")=="request"}.forEach{InterfaceText("You asked",style=MaterialTheme.typography.labelLarge);Text(it.s("text"))}
                         val answers=entries.filter{it.s("kind")=="output"}
                         val final=answers.filter{it.s("phase")=="final_answer"}.ifEmpty{answers.takeLast(1)}
                         final.forEach{Text(if(it.optBoolean("truncated"))"Agent output · excerpt" else "Agent output",style=MaterialTheme.typography.labelLarge);BilingualMessage("work:${row.s("session")}:${row.s("id")}:${it.s("id")}",it.s("text"))}
@@ -85,20 +85,20 @@ private class WorkRecordClient(val base:String=Pocket.base.trimEnd('/'),val toke
                         val checks=entries.filter{it.s("kind")=="check"}
                         if(checks.isNotEmpty())Text("${checks.size} command results · ${checks.count{!it.isNull("exitCode")&&it.optInt("exitCode")==0}} exited successfully",style=MaterialTheme.typography.bodySmall)
                         entries.filter{it.s("kind")=="artifact"}.forEach{Text("Generated artifact: ${it.s("path")}")}
-                        TextButton({Pocket.open(row.s("session"));onBack()}){Text("Open source conversation")}
+                        TextButton({Pocket.open(row.s("session"));onBack()}){InterfaceText("Open source conversation")}
                     }
                 }
             }
-            if(before!=null)item{TextButton({scope.launch{load(true)}},enabled=!busy){Text("Earlier work")}}
-            if(team.isNotEmpty())item{Text("Recent team work",style=MaterialTheme.typography.titleMedium)}
+            if(before!=null)item{TextButton({scope.launch{load(true)}},enabled=!busy){InterfaceText("Earlier work")}}
+            if(team.isNotEmpty())item{InterfaceText("Recent team work",style=MaterialTheme.typography.titleMedium)}
             items(team,key={"team:"+it.optJSONObject("source")?.s("environment")+":"+it.s("team")+":"+it.s("id")}){row->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                 Text("${row.s("team")} · ${row.s("task")} · ${row.s("author")}",style=MaterialTheme.typography.titleMedium)
                 Text("Recorded message · ${row.s("visibility")}",style=MaterialTheme.typography.labelMedium)
                 BilingualMessage("work-team:${row.optJSONObject("source")?.s("environment")}:${row.s("team")}:${row.s("id")}",row.s("body"))
                 Text("Source message ${row.s("id")}",style=MaterialTheme.typography.bodySmall)
             }}}
-            if(voice.isNotEmpty())item{Text("Recent voice work",style=MaterialTheme.typography.titleMedium)}
-            items(voice,key={"voice:"+it.s("id")}){row->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text(row.s("request"));Text("Agent output · "+row.s("status"),style=MaterialTheme.typography.labelMedium);Text(row.s("output"))}}}
+            if(voice.isNotEmpty())item{InterfaceText("Recent voice work",style=MaterialTheme.typography.titleMedium)}
+            items(voice,key={"voice:"+it.s("id")}){row->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text(row.s("request"));InterfaceText("Agent output · "+row.s("status"),style=MaterialTheme.typography.labelMedium);Text(row.s("output"))}}}
         }
     }
 }

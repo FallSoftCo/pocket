@@ -51,13 +51,13 @@ internal fun readOnlyChildSelected():Boolean {
 }
 // Mic integration must not capture against an unresolved or unsupported destination.
 internal fun conversationInputUnavailable()=conversationIdentityPending()||readOnlyChildSelected()
-@Composable fun LoadingSessionIdentity(){Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Loading conversation…",color=Paper);ErrorBanner();CircularProgressIndicator();TextButton({Pocket.closeTask()}){BilingualLabel("Back")}}}
+@Composable fun LoadingSessionIdentity(){Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){InterfaceText("Loading conversation…",color=Paper);ErrorBanner();CircularProgressIndicator();TextButton({Pocket.closeTask()}){BilingualLabel("Back")}}}
 @Composable fun ChildConversationScreen(){
     val task=Pocket.tasks.firstOrNull{it.id==Pocket.selected};val t=Pocket.detail?.optJSONObject("thread")
     val parent=task?.parentThreadId?:t?.s("parentThreadId")?.takeIf{it.isNotBlank()}
     Column(Modifier.fillMaxSize()){
         Text(task?.agentNickname?.ifBlank{task.title}?:t?.s("name","Delegated agent")?:"Delegated agent",modifier=Modifier.padding(16.dp),color=Paper,style=MaterialTheme.typography.titleLarge)
-        Text("This agent reports to its parent task. Review its results here and open the parent to send guidance. Direct replies to this agent are unavailable.",modifier=Modifier.padding(horizontal=16.dp),color=Muted)
+        InterfaceText("This agent reports to its parent task. Review its results here and open the parent to send guidance. Direct replies to this agent are unavailable.",modifier=Modifier.padding(horizontal=16.dp),color=Muted)
         InlineCaptureStatus()
         if(captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND)VoiceLaunchButton(threadId=PocketVoice.targetThread,bar=true,modifier=Modifier.padding(horizontal=16.dp))
         ErrorBanner()
