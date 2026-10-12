@@ -1,0 +1,69 @@
+{
+  "scope": "Ongoing full UX goal; no overall completion claim",
+  "source": "52dff10",
+  "publishedVersion": "alpha80/code98",
+  "requirementsCatalogCount": 167,
+  "evidenceRule": "A catalog status or unit test is not proof of deployed physical interaction.",
+  "flows": {
+    "chronologyFreshness": {
+      "status": "partial",
+      "evidence": [
+        "transcript-position-index-20261012.json",
+        "transcript-provider-evidence-20261012.json"
+      ],
+      "remaining": [
+        "physical installed interaction",
+        "broader reconnect and stream combinations"
+      ]
+    },
+    "sessionNavigation": {
+      "status": "native verified; physical unverified",
+      "seconds": 19.042,
+      "assertions": [
+        "blocked old-chat refresh cannot overwrite selection or rows",
+        "new-chat updates remain visible",
+        "reply routes to selected thread",
+        "both saved drafts retained",
+        "actual list-card taps open respective threads"
+      ],
+      "scope": "disposable emulator and synthetic backend; not real user messages"
+    },
+    "retainedHistoryScrolling": {
+      "status": "partial",
+      "evidence": "Legacy native cache anchor and short-page qualification exists; physical sustained gestures remain unverified"
+    },
+    "workingWaitingErrors": {
+      "status": "requires integrated native flow audit",
+      "remaining": "Current-release actual running and pending-question states plus physical interaction",
+      "historyReadRecovery": {
+        "status": "native verified; physical unverified",
+        "seconds": 17.735,
+        "assertions": [
+          "cached messages survive failed and malformed reads",
+          "Updating messages indicator visible",
+          "transient read retries without another event",
+          "successful read clears error",
+          "401 rejection stops repeated reads",
+          "zero submitted work"
+        ]
+      }
+    },
+    "voiceKeyboardErgonomics": {
+      "status": "requires current-release native and physical flow audit",
+      "remaining": "Foreground hardware keys with IME, stop/send origin, playback volume, blackout and drafts"
+    },
+    "notificationsAudio": {
+      "status": "requires integrated flow audit",
+      "remaining": "Session source identity, unseen state, read clearing and interruption/catch-up without opaque backlog"
+    },
+    "accessibleImmersion": {
+      "status": "incomplete",
+      "remaining": "Reading-direction transitions and common controls across screens; perceptual timing, layout stability and reduced motion"
+    },
+    "deviceDelivery": {
+      "status": "unverified",
+      "evidence": "Authenticated private updater offers alpha80; last verified phone alpha75",
+      "remaining": "Compatible installation and real-device interaction"
+    }
+  }
+}
