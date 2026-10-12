@@ -18,7 +18,7 @@
     "android/app/src/main/java/co/fallsoft/pocket/ImmersionSharedWipe.kt": "47af91e33b1fec080e7bdf0827431a6acd87feb7335405b11717aa664798e577",
     "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt": "c2c4fa43bb1e01b908b8353086d5a88aa880a02fa75879b36619cd0ef9cc66f1",
     "android/app/src/main/java/co/fallsoft/pocket/ReservedImmersionText.kt": "1a0b4f7dffbc5fbccd0d81d2e1950004537db0db9051b4a385b76d79ad8f76a9",
-    "android/app/src/main/java/co/fallsoft/pocket/SharedInlineImmersionText.kt": "07309014efa0dd4a06c5ac0245bf4d81db327b3deffa29e96e9a54fea5330b6c"
+    "android/app/src/main/java/co/fallsoft/pocket/SharedInlineImmersionText.kt": "11628c53e756c077579454fbb167b41b954db237e6cc21c13532c828de1934cc"
   },
   "nativeEvidence": {
     "controlled": {
@@ -82,7 +82,8 @@
     "Focus-lifecycle experiment froze/copy passed but did not resume after touchscreen interaction; experiment removed.",
     "ActionMode r01/r02: blackout restored native menu; wave correctly remained held, original test assumed no menu.",
     "ActionMode r03: Back exited fixture activity; did not qualify menu dismissal.",
-    "ActionMode r04/r05: restored menu remained active after content-tap/copy-button followups."
+    "ActionMode r04/r05: restored menu remained active after content-tap/copy-button followups.",
+    "Interactive baseline/fix: Select all offered, subsequent Copy unavailable; no completion claimed."
   ],
   "interactionFollowup": {
     "status": "native menu pause/copy/resume passed; combined blackout/menu return still failing; release held",
@@ -115,6 +116,26 @@
       "qualificationLint": true,
       "fullSignedReleaseGate": false,
       "physicalPhoneDelivery": false
+    },
+    "nextEvidence": {
+      "actualUi": "Captured restored-menu and unavailable-copy native screenshots; restored menu is genuinely visible, not stale registry bookkeeping.",
+      "scopeCorrection": "Earlier fixture disabled phrase help. That path cannot establish help-tap interference. Interactive fixture now enables normal conversation phrase help.",
+      "fixtureIdleFix": "Blackout entry uses runOnMainSync, not ActivityScenario.onActivity idle waiting during continuous frames. Running-state hierarchy captures removed.",
+      "assistedRun": "One noninteractive journey reported OK after an operator blank-area tap unblocked idle waiting; retained as assisted diagnosis, not unattended qualification.",
+      "interactiveBaseline": "Native long press opens Select all, but Copy disappears after Select all. Baseline and candidate both fail; full journey remains unqualified.",
+      "boundedTapRepair": "AwaitPointerEventScope timeout prevents a long hold from dispatching language-help tap on release. Speculative focus-clearing removed.",
+      "regressions": {
+        "actualNativeCasesPassed": 5,
+        "seconds": 19.079,
+        "checks": [
+          "Fresh visible inline callbacks",
+          "Reservation blank-space hit exclusion",
+          "Single ordered clipboard flow",
+          "Complementary ink coverage",
+          "Target grammar fixed positions"
+        ]
+      },
+      "checks": "Qualification APK/instrumentation APK, unit checks and lint passed; full signed gate and physical phone unverified."
     }
   }
 }

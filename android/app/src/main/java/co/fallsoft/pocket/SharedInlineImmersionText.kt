@@ -226,7 +226,10 @@ import androidx.compose.ui.unit.*
                                 val down=awaitFirstDown()
                                 val intended=hit(down.position)?:return@awaitEachGesture
                                 down.consume()
-                                val up=waitForUpOrCancellation()?:return@awaitEachGesture
+                                // A hold belongs to native selection, never language help.
+                                val up=withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis){
+                                    waitForUpOrCancellation()
+                                }?:return@awaitEachGesture
                                 val link=hit(up.position)?:intended
                                 up.consume()
                                 dispatch(link)

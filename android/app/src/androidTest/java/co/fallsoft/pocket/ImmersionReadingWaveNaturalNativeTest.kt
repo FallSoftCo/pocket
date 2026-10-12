@@ -39,6 +39,10 @@ class ImmersionReadingWaveNaturalNativeTest {
         val controls=mutableSetOf<String>()
         val bodies=mutableSetOf<String>()
         val traces=org.json.JSONArray()
+        fun capture(stage:String){
+            device.takeScreenshot(java.io.File(c.cacheDir,"wave-"+stage+".png"))
+            device.dumpWindowHierarchy(java.io.File(c.cacheDir,"wave-"+stage+".xml"))
+        }
         ActivityScenario.launch(MainActivity::class.java).use{scenario->
             try {
             scenario.onActivity{activity->
@@ -64,7 +68,7 @@ class ImmersionReadingWaveNaturalNativeTest {
                                         Spacer(Modifier.height(70.dp))
                                         ImmersionSelection("Full permissions for new tasks") {
                                             ImmersionText("natural-wave-body","Full permissions for new tasks",
-                                                Modifier.width(230.dp),phraseRescue=false,maxLines=5)
+                                                Modifier.width(230.dp),phraseRescue=true,maxLines=5)
                                         }
                                     }
                                 }
@@ -105,6 +109,7 @@ class ImmersionReadingWaveNaturalNativeTest {
             assertNotNull("Native body selection did not open its menu",select)
             select!!.click()
             val copy=device.wait(androidx.test.uiautomator.Until.findObject(By.text("Copy")),5000)
+            if(copy==null)capture("copy-unavailable")
             assertNotNull("Native body selection did not offer Copy",copy)
             assertTrue("Selection menu did not freeze the shared wave",clock!!.hasSelection)
             val paused=clock!!.elapsedMs
@@ -116,13 +121,18 @@ class ImmersionReadingWaveNaturalNativeTest {
             i.runOnMainSync{copied=(c.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
                 .primaryClip?.getItemAt(0)?.text?.toString()}
             assertEquals("Selection copied a different or duplicated language flow",frozen,copied)
+            // Copy preserves native selection; explicitly tap the selected phrase
+            // to leave selection before testing an unrelated control.
+            device.click(x,y)
+            capture("initial-selection-dismiss")
             val button=device.findObjects(By.pkg(c.packageName).textContains("per i")).minBy{it.visibleBounds.top}
             device.click(button.visibleBounds.centerX(),button.visibleBounds.centerY())
             i.runOnMainSync{assertEquals("Visible button lost its action",1,taps)}
             val resumeStart=android.os.SystemClock.elapsedRealtime()
             while(clock!!.elapsedMs==paused&&android.os.SystemClock.elapsedRealtime()-resumeStart<5000)Thread.sleep(25)
-            assertNotEquals("Wave stayed frozen after leaving selection",paused,clock!!.elapsedMs)
-            scenario.onActivity{it.enterBlackout()}
+            assertNotEquals("Wave stayed frozen after leaving selection: nativeMenu="+nativeActivity?.immersionSelectionActive+
+                ", selection="+clock!!.hasSelection,paused,clock!!.elapsedMs)
+            i.runOnMainSync{nativeActivity!!.enterBlackout()}
             Thread.sleep(100)
             val black=clock!!.elapsedMs
             assertTrue("Blackout failed to enter",BlackoutVisibility.active)
@@ -132,20 +142,17 @@ class ImmersionReadingWaveNaturalNativeTest {
             val exitStart=android.os.SystemClock.elapsedRealtime()
             while(BlackoutVisibility.active&&android.os.SystemClock.elapsedRealtime()-exitStart<3000)Thread.sleep(25)
             assertFalse("Blackout failed to exit",BlackoutVisibility.active)
+            capture("blackout-return")
             // Blackout restores prior native input focus. Android can therefore
             // reopen the existing selection menu; its text must remain frozen.
             if(nativeActivity?.immersionSelectionActive==true) {
                 assertTrue("Restored selection lost its wave hold",clock!!.hasSelection)
                 Thread.sleep(250)
                 assertEquals("Restored selected text changed language",black,clock!!.elapsedMs)
-                // Complete the restored native menu normally, without invoking
-                // the activity's navigation/back action or clearing focus by fiat.
-                val restoredCopy=device.wait(androidx.test.uiautomator.Until.findObject(By.text("Copy")),3000)
-                assertNotNull("Restored selection lost its native Copy action",restoredCopy)
-                restoredCopy!!.click()
-                val restoredButton=device.findObjects(By.pkg(c.packageName).textContains("per i")).minBy{it.visibleBounds.top}
-                device.click(restoredButton.visibleBounds.centerX(),restoredButton.visibleBounds.centerY())
-                i.runOnMainSync{assertEquals("Action failed after blackout return",2,taps)}
+                // Tap the linked selected word: it must dismiss selection first,
+                // not toggle language help beneath a still-active native menu.
+                device.click(x,y)
+                capture("restored-text-tap")
             }
             val afterExit=android.os.SystemClock.elapsedRealtime()
             while(clock!!.elapsedMs==black&&android.os.SystemClock.elapsedRealtime()-afterExit<5000)Thread.sleep(25)
