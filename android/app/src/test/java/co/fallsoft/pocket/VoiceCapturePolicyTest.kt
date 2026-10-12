@@ -22,4 +22,10 @@ class VoiceCapturePolicyTest {
   assertFalse(voicePendingMatchesEnvironment(true,"a","owner","a","new-pairing"))
   assertFalse(voicePendingMatchesEnvironment(true,null,null,"a","owner"))
  }
+ @Test fun receiptDiscoveryRequiresOneOwnerAndCompleteEvidence(){
+  assertEquals("a",uniqueVoiceReceiptOwner(listOf("a"),false))
+  assertNull(uniqueVoiceReceiptOwner(listOf("a"),true))
+  assertNull(uniqueVoiceReceiptOwner(listOf("a","b"),false))
+  assertNull(uniqueVoiceReceiptOwner(emptyList(),false))
+ }
 }

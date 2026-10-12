@@ -36,6 +36,15 @@
     "remaining": [
       "Native mismatch/restart and matching-owner saved receipt checks",
       "Legacy recording ownership recovery UX before release"
-    ]
+    ],
+    "legacyRecovery": {
+      "status": "implemented-unit-tested-native-pending",
+      "trigger": "Explicit Check saved turn interaction",
+      "transport": "Only authenticated receipt GETs against captured paired destinations; bounded4s each/16 destinations maximum",
+      "acceptance": "Exactly one matching receipt ID with valid state; all other backends definitively absent; matching pairing still current",
+      "preservation": "No audio uploads, voice starts, turn creation or automatic profile selection; unavailable and ambiguous results keep original recording",
+      "nativeScenario": "savedVoiceOwnerIsCheckedBeforeServiceAndLegacyDiscoveryNeverResends",
+      "build": "debug unit tests and qualification APK/test APK pass"
+    }
   }
 }

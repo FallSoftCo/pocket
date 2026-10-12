@@ -28,3 +28,7 @@ internal fun voiceSpeechMayClearPending(completedTurn:String?,pendingTurn:String
 
 internal fun voicePendingMatchesEnvironment(pending:Boolean,savedEnvironment:String?,savedOwner:String?,environment:String,owner:String)=
     !pending||(!savedEnvironment.isNullOrBlank()&&!savedOwner.isNullOrBlank()&&savedEnvironment==environment&&savedOwner==owner)
+
+/** Ownership is proved only after every paired backend answered definitively. */
+internal fun uniqueVoiceReceiptOwner(found:List<String>,unavailable:Boolean):String?=
+    if(!unavailable&&found.size==1)found.single() else null

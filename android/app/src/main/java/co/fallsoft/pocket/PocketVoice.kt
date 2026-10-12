@@ -53,8 +53,35 @@ object PocketVoice {
         Pocket.prefs.getString("voicePendingId",null)!=null,
         Pocket.prefs.getString("voicePendingEnvironment",null),Pocket.prefs.getString("voicePendingOwner",null),
         Pocket.environmentId,backendOwner(Pocket.base,Pocket.token))
+    private var resolvingSavedOwner=false
+    private fun resolveLegacySavedOwner(inPlace:Boolean){
+        if(resolvingSavedOwner)return
+        val id=Pocket.prefs.getString("voicePendingId",null)?:return
+        val destinations=Pocket.environmentProfiles.all().mapNotNull{Pocket.captureEnvironment(it.id)}
+        if(destinations.isEmpty()||destinations.size>16){captureFailure("Select the original paired environment to resolve this saved recording.",inPlace);return}
+        resolvingSavedOwner=true;this.inPlace=inPlace;problem="";state="Checking saved turn"
+        Pocket.scope.launch{
+            try{
+                val found=mutableListOf<EnvironmentRequest>();var unavailable=false
+                for(destination in destinations){
+                    try{
+                        val result=withTimeout(4000){Pocket.apiEnvironment(destination,"/api/voice/turns/${android.net.Uri.encode(id)}")}
+                        if(result.s("id")==id&&result.s("state") in setOf("completed","failed","unknown","transcribing","thinking","running"))found.add(destination)else unavailable=true
+                    }catch(e:CancellationException){if(e !is TimeoutCancellationException)throw e;unavailable=true}
+                    catch(e:Exception){if(e !is PocketApiException||e.status!=404)unavailable=true}
+                }
+                if(Pocket.prefs.getString("voicePendingId",null)!=id)return@launch
+                val owner=uniqueVoiceReceiptOwner(found.map{it.environment.id},unavailable)
+                val destination=found.singleOrNull()?.takeIf{it.environment.id==owner&&Pocket.captureEnvironment(owner!!)?.matches(it)==true}
+                if(destination==null){captureFailure(if(unavailable)"Some environments could not confirm the saved turn. It remains saved; check again when connected." else "No unique environment confirmed this recording. It remains saved and has not been resent.",inPlace);return@launch}
+                if(!Pocket.prefs.edit().putString("voicePendingEnvironment",destination.environment.id).putString("voicePendingOwner",backendOwner(destination.endpoint,destination.token)).commit()){captureFailure("Could not save recording ownership. The recording is kept.",inPlace);return@launch}
+                captureFailure("Saved turn found in ${destination.environment.name}. Check it there; the recording has not been resent.",inPlace)
+            }finally{resolvingSavedOwner=false;if(Pocket.prefs.getString("voicePendingId",null)==id)state="Ready"}
+        }
+    }
     fun start(c:Context,threadId:String?=null,recordImmediately:Boolean=true,inPlace:Boolean=false,checkSaved:Boolean=false){
         if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){problem="Allow microphone access to use voice.";return}
+        if(checkSaved&&Pocket.prefs.getString("voicePendingId",null)!=null&&Pocket.prefs.getString("voicePendingEnvironment",null).isNullOrBlank()){resolveLegacySavedOwner(inPlace);return}
         if(checkSaved&&!savedTurnMatchesCurrentEnvironment()){captureFailure("Switch to the recording’s original environment and pairing before checking it. Legacy recordings without verified ownership remain saved; they have not been resent.",inPlace);return}
         if(active&&captureControl(true,state,Pocket.prefs.getString("voicePendingId",null)!=null)==CaptureControl.PROCESSING)return
         if(Pocket.prefs.getString("voicePendingId",null)!=null&&!checkSaved&&!(active&&state in setOf("Listening","Starting microphone"))){captureFailure("A saved voice turn needs checking. Tap Check saved turn; it has not been resent.",inPlace);return}

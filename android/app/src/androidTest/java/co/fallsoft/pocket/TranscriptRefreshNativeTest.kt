@@ -119,6 +119,23 @@ class TranscriptRefreshNativeTest {
   assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   assertEquals(0,qa("state").getJSONArray("replies").length())
  }
+ @Test fun savedVoiceOwnerIsCheckedBeforeServiceAndLegacyDiscoveryNeverResends(){
+  twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  val recording=java.io.File(context.filesDir,"voice-pending.wav");val bytes=byteArrayOf(9,8,7);recording.writeBytes(bytes)
+  prefs.edit().putString("voicePendingId","saved-unknown").putString("voicePendingEnvironment","other-environment").putString("voicePendingOwner","other-owner").putString("voicePendingTarget","same-thread").commit()
+  try{
+   main{PocketVoice.start(context,checkSaved=true,inPlace=true)}
+   assertTrue(PocketVoice.problem.contains("original environment"));assertFalse(PocketVoice.active)
+   assertEquals(0,qa("state").getJSONArray("voiceReceiptReads").length())
+   prefs.edit().remove("voicePendingEnvironment").remove("voicePendingOwner").commit()
+   main{PocketVoice.start(context,checkSaved=true,inPlace=true)}
+   await{prefs.getString("voicePendingEnvironment",null)==Pocket.environmentId&&PocketVoice.state=="Ready"}
+   assertEquals(1,qa("state").getJSONArray("voiceReceiptReads").length())
+   assertEquals(backendOwner(Pocket.base,Pocket.token),prefs.getString("voicePendingOwner",null))
+   assertFalse(PocketVoice.active);assertArrayEquals(bytes,recording.readBytes())
+   assertEquals(0,qa("state").getJSONArray("replies").length())
+  }finally{main{PocketVoice.stop()};prefs.edit().remove("voicePendingId").remove("voicePendingLocal").remove("voicePendingTarget").remove("voicePendingEnvironment").remove("voicePendingOwner").commit();recording.delete()}
+ }
  @Test fun unknownVoiceReceiptRetainsRecordingAndOnlyChecksOriginalTurn(){
   twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   val recording=java.io.File(context.filesDir,"voice-pending.wav");val bytes=byteArrayOf(1,2,3,4);recording.writeBytes(bytes)
