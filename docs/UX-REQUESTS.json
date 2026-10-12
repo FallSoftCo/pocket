@@ -2392,6 +2392,12 @@
       "request": "Current observed message content and provider evidence must win late local-cache restoration; retain local history and reading position across asynchronous loads and runtime counters.",
       "status": "qualified-source-unreleased-phone-cause-unverified",
       "evidence": "docs/qualification/cache-observation-authority-20261012.json"
+    },
+    {
+      "id": "immersion-owned-selection-20261012",
+      "request": "Normal native text selection and copying must return one clean visible flow, preserving original zero-width characters and never leaking generated layout placeholders.",
+      "status": "native-qualified-source-unreleased",
+      "evidence": "docs/qualification/immersion-owned-selection-20261012.json"
     }
   ],
   "current_state": {

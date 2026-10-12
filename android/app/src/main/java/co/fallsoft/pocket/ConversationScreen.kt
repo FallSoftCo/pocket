@@ -492,7 +492,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             SymbolIcon(if(you)"User" else "Codex",if(you)"Your message" else "Codex message",Modifier.size(20.dp))
             val sourceId="row:"+row.s("id")
             LaunchedEffect(row.s("text"),PocketImmersion.enabled){PocketImmersion.offer(sourceId,row.s("text"),if(you)"user message" else "Codex response")}
-            SelectionContainer{BilingualMessage(sourceId,row.s("text"),onDisplayedText=onDisplayedText)}
+            ImmersionSelection(row.s("text")){BilingualMessage(sourceId,row.s("text"),onDisplayedText=onDisplayedText)}
 
             if(row.optBoolean("truncated"))WorkflowText("Excerpt · full content remains on the workstation",fontSize=10.sp,color=Muted)
         }}

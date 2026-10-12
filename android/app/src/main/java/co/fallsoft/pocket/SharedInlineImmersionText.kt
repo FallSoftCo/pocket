@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.*
     onFragmentLayout:(TextLayoutResult)->Unit={},
     onWipeGeometry:(ImmersionSharedWipeGeometry)->Unit={}
 ){
+    val projection=LocalImmersionProjectionMarkers.current
+    val emptySlots=remember(projection){mutableMapOf<String,String>()}
     val effectiveFrom=if(from.text==snapshot.text)snapshot else from
     val effectiveTo=if(to.text==snapshot.text)snapshot else to
     val runs=remember(effectiveFrom,effectiveTo,reserve){immersionSharedRuns(listOf(effectiveFrom,effectiveTo)+reserve)}
@@ -183,7 +185,9 @@ import androidx.compose.ui.unit.*
                         }
                     }
                     val start=length
-                    appendInlineContent(key,forms[if(incoming)1 else 0].text.ifEmpty{"\u200b"})
+                    appendInlineContent(key,forms[if(incoming)1 else 0].text.ifEmpty{
+                        if(projection==null)"\u200b" else emptySlots.getOrPut(key){projection.create((listOf(from,to,snapshot)+reserve).map{it.text})}
+                    })
                     addStringAnnotation("immersion-reserve",run.id,start,length)
                 }
             }
@@ -215,7 +219,7 @@ import androidx.compose.ui.unit.*
             modifier=(if(fillWidth)Modifier.fillMaxWidth()else Modifier)
                 .then(if(maxLines<Int.MAX_VALUE)Modifier.heightIn(max=with(density){(nativeLineHeight*maxLines).toDp()})else Modifier)
                 .onGloballyPositioned{coordinates=it;reportVisibility()}
-                .semantics{customActions=actions})
+                .semantics{customActions=actions;if(projection!=null)text=visible})
     }
 }
 

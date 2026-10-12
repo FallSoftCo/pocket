@@ -1,5 +1,5 @@
 {
-  "state": "integrated-source-unreleased-selection-marker-regression-open",
+  "state": "integrated-source-selection-qualified-unreleased",
   "native": {
     "cases": 14,
     "result": "one-known-regression",
@@ -69,7 +69,8 @@
     "Native Select all/Copy reproduced duplicate clipboard text: Please cerca existing sessions. followed by another cerca. DisableSelection on drawable children gives the paragraph sole selection ownership.",
     "Native long press requires advancing the controlled Compose test clock while the injected finger remains down; physical timing is not qualified by this fixture.",
     "After Copy tests were added, the OS clipboard preview also exposed copied text. App accessibility/text selectors are now scoped to target package; platform selection-toolbar selectors remain platform actions.",
-    "Installed Compose BOM2025.10.00 resolves foundation1.9.3. Actual class inspection confirms SelectionContainer uses LocalClipboard and converts copied AnnotatedString to ClipEntry before writing; custom string annotations do not survive that converter. Do not implement a deprecated LocalClipboardManager-only fix."
+    "Installed Compose BOM2025.10.00 resolves foundation1.9.3. Actual class inspection confirms SelectionContainer uses LocalClipboard and converts copied AnnotatedString to ClipEntry before writing; custom string annotations do not survive that converter. Do not implement a deprecated LocalClipboardManager-only fix.",
+    "Former empty reserved-slot marker copy regression is closed by the 15-case native owned-selection receipt; physical delivery and broader motion remain open."
   ],
   "candidateApkSha256": "ac908fab1f4746d8508707e17150738a85007352032535ed17b45081922367f7",
   "testApkSha256": "5d9fa0e856bb5b2b94bdddcabe88757e4aadd572045c0d4cadaf01f289cbfbd5",
@@ -84,5 +85,6 @@
     "seconds": 2.058,
     "proof": "Same native fixture reflows its common passage when full reservations are removed",
     "logSha256": "1f82cf092a1a28b004c15bde5b46332fb61fa3ba3f1201a023622ef4401fbbe3"
-  }
+  },
+  "selectionQualification": "immersion-owned-selection-20261012.json"
 }

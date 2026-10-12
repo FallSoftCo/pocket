@@ -433,6 +433,9 @@ class SharedInlineLayoutNativeTest {
   checkSelectionCopy("search","cerca",1f,false,"cerca")
  @Test fun originalSelectionDoesNotCopyReservedSlotMarkers()=
   checkSelectionCopy("search","cerca fra tutti i risultati in tutte le conversazioni disponibili",0f,true,"Please search existing sessions.")
+ @Test fun originalZeroWidthCharacterSurvivesProjectionCleanup(){
+  checkSelectionCopy("search\u200b","cerca fra tutti i risultati in tutte le conversazioni disponibili",0f,true,"Please search\u200b existing sessions.")
+ }
  private fun checkSelectionCopy(sourceWord:String,targetWord:String,phase:Float,whole:Boolean,expected:String){
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
@@ -447,7 +450,7 @@ class SharedInlineLayoutNativeTest {
   var parent:TextLayoutResult?=null;var glyphLayout:TextLayoutResult?=null
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
    scenario.onActivity{it.setContent{MaterialTheme{
-    androidx.compose.foundation.text.selection.SelectionContainer{
+    ImmersionSelection(from.text){
      SharedInlineImmersionText(from,to,{phase},Modifier.padding(top=64.dp).width(240.dp),onTextLayout={parent=it},
       onFragmentLayout={if(it.layoutInput.text.text==activeWord)glyphLayout=it})
     }

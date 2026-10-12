@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "state": "qualified-source-unreleased",
+  "date": "2026-10-12",
+  "fix": "Message-scoped clipboard projection removes only registered generated tokens; original characters, native styled text and non-text clipboard entries retain ownership. One native selection owner.",
+  "unit": {
+    "passed": 354,
+    "failed": 0,
+    "newRegistryCases": 3
+  },
+  "native": {
+    "passed": 15,
+    "failed": 0,
+    "seconds": 42.095,
+    "class": "co.fallsoft.pocket.SharedInlineLayoutNativeTest",
+    "avd": "nextcomp_env_qa",
+    "serial": "emulator-5620",
+    "qualificationApkSha": "87952db66d2b3bc620461167017f973cda8f4efcc768db64fca4118e1aa0a695",
+    "testApkSha": "884c4e72d0464c86cae3998018b5bc669825053997fcdb56a6c57596e527a71f",
+    "logSha": "3b58a7419d896ab2ffd578de303b2b2e53fad17140f96d1c72510af418dd3822",
+    "newCase": "originalZeroWidthCharacterSurvivesProjectionCleanup"
+  },
+  "qualificationLint": "pass",
+  "source": {
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionSelection.kt": "d830f1c173850feb8659bfd135fcb2723b657ba902331a9cbe41fcf2dbbc2440",
+    "android/app/src/main/java/co/fallsoft/pocket/SharedInlineImmersionText.kt": "ffdc8f2ff50a730514b37c062da443b8dd3532c72413ef12c5f12309eac257b2",
+    "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt": "777c96cee94f916bf77a88ba50ec12fe8089bb8bd2725e692574cbf4f25bb8dc",
+    "android/app/src/androidTest/java/co/fallsoft/pocket/SharedInlineLayoutNativeTest.kt": "882298577d97cc9d53b58eb9624b9838ecf3705f3424c8e73c828048ef578c92"
+  },
+  "remaining": [
+    "Fresh signed release with new version and full source-bound release gate",
+    "Physical phone install and interaction",
+    "Full motion sequence and physical frame pacing",
+    "Actual TalkBack gesture and utterance qualification",
+    "Broader content/styles and all labeled controls"
+  ]
+}
