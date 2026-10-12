@@ -584,3 +584,7 @@ Position-only updates now preserve measured cache payload weight. Changed row or
 ## Alpha88 release qualification in progress — 2026-10-12
 
 Frozen source2e08f21 has completed signed builds and release lint for both maintained signing identities. Artifact-bound native regression qualification is running on the owned OZZZ emulator. This does not constitute publication, installation, physical smoothness or whole-product acceptance. The real-backend reading journey remains a separate required acceptance check for this release. Alpha87/code105 remains the update channel.
+
+## Control immersion reproduction — 2026-10-12
+
+Exact optimized alpha88 settings sampled seven times over40.6seconds. Backend and Talk briefly returned to English, while App updates, Check for updates, Italian immersion and Settings stayed Italian in every sample. This is partial scheduling, not an entirely stopped clock. Controls currently serialize through one cue broker with a4.2second cooldown. Several workflow strings stayed English because the synthetic provider has no translation worker; that alone does not establish a live translation failure. All-surface coverage and bounded control cycling remain required. Alpha88 publication is held for this user report.
