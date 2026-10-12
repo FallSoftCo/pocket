@@ -46,8 +46,13 @@ import androidx.compose.ui.unit.*
                 }}
                 repeat(chunks.maxOf{it.size}){part->
                     val forms=chunks.map{it.getOrElse(part){AnnotatedString("")}}
-                    val measured=forms.map{measurer.measure(immersionDrawText(it),style=style,softWrap=false)}
-                    val width=measured.maxOf{it.size.width}.coerceAtLeast(1).coerceAtMost(available)
+                    val natural=forms.map{measurer.measure(immersionDrawText(it),style=style,softWrap=false)}
+                    val width=natural.maxOf{it.size.width}.coerceAtLeast(1).coerceAtMost(available)
+                    // Native paragraph shaping handles an oversized token. Reserve
+                    // its full wrapped height in every form instead of clipping
+                    // a one-line child or splitting Unicode graphemes ourselves.
+                    val measured=forms.map{measurer.measure(immersionDrawText(it),style=style,
+                        constraints=Constraints(maxWidth=width))}
                     val height=measured.maxOf{it.size.height}.coerceAtLeast(1)
                     val key="shared-$index-$part"
                     content[key]=InlineTextContent(
@@ -55,11 +60,11 @@ import androidx.compose.ui.unit.*
                     ){
                         BlendImmersionText(forms[0],forms[1],progress,forms[if(incoming)1 else 0],
                             fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
-                            maxLines=1,overflow=TextOverflow.Clip,fillWidth=true,reserve=forms)
+                            maxLines=Int.MAX_VALUE,overflow=TextOverflow.Clip,fillWidth=true,reserve=forms)
                     }
                     val start=length
                     appendInlineContent(key,forms[if(incoming)1 else 0].text.ifEmpty{"\u200b"})
-                    addStringAnnotation("immersion-reserve",run.id!!,start,length)
+                    addStringAnnotation("immersion-reserve",run.id,start,length)
                 }
             }
         }

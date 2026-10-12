@@ -85,4 +85,35 @@ class SharedInlineLayoutNativeTest {
   }
  }
 
+ @Test fun oversizedReplacementUsesFullNativeWrappedText(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
+  check(UiDevice.getInstance(i).executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  val source="supercalifragilisticexpialidocious"
+  val target="pneumonoultramicroscopicsilicovolcanoconiosis"
+  fun form(word:String)=buildAnnotatedString{
+   append("Please ");val at=length;append(word)
+   addStringAnnotation("immersion-reserve","7:40",at,length)
+   append(" then continue.")
+  }
+  val progress=mutableFloatStateOf(0f)
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    SharedInlineImmersionText(form(source),form(target),{progress.floatValue},Modifier.width(120.dp))
+   }}}
+   fun assertComplete(word:String){
+    val layouts=mutableListOf<TextLayoutResult>()
+    compose.onNodeWithText(word,useUnmergedTree=true).performSemanticsAction(
+     androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult){it(layouts)}
+    val layout=layouts.single()
+    assertTrue("Long token should wrap",layout.lineCount>1)
+    assertFalse("Wrapped token must not overflow height",layout.didOverflowHeight)
+    assertEquals(word.length,layout.getLineEnd(layout.lineCount-1))
+   }
+   compose.waitForIdle();assertComplete(source)
+   i.runOnMainSync{progress.floatValue=1f}
+   compose.waitForIdle();assertComplete(target)
+  }
+ }
+
 }

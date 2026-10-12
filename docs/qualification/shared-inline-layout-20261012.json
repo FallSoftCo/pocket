@@ -1,14 +1,15 @@
 {
   "state": "candidate-not-enabled-not-published",
   "native": {
-    "cases": 3,
+    "cases": 4,
     "result": "pass",
-    "seconds": 3.911,
-    "logSha256": "af29ae778aae0e84158982ad92549803490a1f1ccb7718ac651383f686e837de",
+    "seconds": 5.684,
+    "logSha256": "90b6bfcc28ab84f959ac2b3042ec13a09fb1c4f41a453a5b1cb2c6cd66f09b92",
     "checks": [
       "unchanged word position at 17sp",
       "unchanged word position at 34sp",
-      "native inline link click before and after replacement"
+      "native inline link click before and after replacement",
+      "oversized unbroken tokens wrap completely in both forms without height clipping"
     ]
   },
   "unit": {
@@ -19,13 +20,15 @@
   "remaining": [
     "Global reading-direction line cascade, not simultaneous independent phrase wipes",
     "Screen reader and selection behavior for inline placeholder text",
-    "Unbreakable words wider than a line must not clip",
     "Production visibility/cue tracking and full styled content integration",
     "Actual frames and physical handset qualification"
   ],
   "notes": [
     "Large-text check uses 34sp/52sp, not a complete OS accessibility font-scale audit",
     "Parent native offsets include empty reserved-slot markers; tests use actual native offsets for unchanged text",
-    "Candidate is not wired into ReservedImmersionText"
-  ]
+    "Candidate is not wired into ReservedImmersionText",
+    "Oversized fragments use native wrapping and maximum wrapped height; no manual Unicode token slicing."
+  ],
+  "candidateApkSha256": "5dc2dd7153ca5929540c075e94843ce1cfe02c1978eb3e19a5b96e41f24a652f",
+  "testApkSha256": "9f630bfebffbbc081ca12fac13f1bdabb918018c479060fdf329d95215d76ebd"
 }

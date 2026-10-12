@@ -41,3 +41,8 @@ for shared fragment geometry. Three native checks pass, including 34sp text and
 clickable replacement links. Six structural/chunking tests pass. It remains
 disabled: global line cascade, accessibility/selection, oversize unbreakable
 words, production cue tracking and frame/physical review are not qualified.
+
+Overflow correction: oversized unbroken fragments now reserve full native
+wrapped height in both forms. All four native cases pass after this change.
+Global cascade and accessibility/selection are still release prerequisites;
+there is no production integration or new published APK from this candidate.
