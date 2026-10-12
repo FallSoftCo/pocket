@@ -28,7 +28,7 @@ Run affected focused checks while editing. Run broad release checks once the can
 
 ## Setup and triage
 
-Preflight artifact identity, emulator ownership, permission state, pairing, foreground package and fixture readiness. Record these in receipts. Separate setup failures from product failures; retain hierarchy, screenshot and transport evidence. A permission dialog obscuring the app invalidates that observation, not the renderer. Preserve the original failed receipt and correction. Synchronize to observable state instead of arbitrary sleeps.
+Preflight artifact identity, emulator ownership, permission state, pairing, foreground package and fixture readiness. Record these in receipts. Separate setup failures from product failures; retain hierarchy, screenshot and transport evidence. A permission dialog obscuring the app invalidates that observation, not the renderer. Preserve the original failed receipt and correction. Synchronize to observable rendered state instead of arbitrary sleeps. Model readiness is insufficient: wait for the actual card/content. Use one UI framework per journey and its own clock synchronization. When pagination deliberately coalesces demand, await cursor advancement at the loaded edge before issuing the next gesture.
 
 ## Release acceptance
 
@@ -48,3 +48,5 @@ Android recommends critical user journeys close to production and distinguishes 
 https://developer.android.com/training/testing/fundamentals/strategies
 https://developer.android.com/training/testing/fundamentals/what-to-test
 https://developer.android.com/training/testing/ui-tests
+
+The real-backend journey now covers thumb pagination and retained passage geometry across cold restart; see [history evidence](qualification/android-real-history-20261012.json). This is retention/navigation evidence, not a smoothness or human-reading assessment.

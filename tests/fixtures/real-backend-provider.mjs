@@ -23,8 +23,9 @@ createInterface({input:process.stdin}).on('line',line=>{
    case 'thread/turns/list':{
     if(!t)throw Error('Unknown synthetic thread');
     const turns=p.sortDirection==='asc'?[...t.turns]:[...t.turns].reverse();
-    const offset=Number(p.cursor||0),limit=p.limit||8;
-    result={data:turns.slice(offset,offset+limit).map(turn=>({...turn,items:p.itemsView==='notLoaded'?[]:turn.items})),nextCursor:offset+limit<turns.length?String(offset+limit):null,backwardsCursor:String(offset)};break;
+    const offset=p.cursor?turns.findIndex(turn=>'at:'+turn.id===p.cursor):0,limit=p.limit||8;
+    if(offset<0)throw Error('Unknown synthetic turn cursor');
+    result={data:turns.slice(offset,offset+limit).map(turn=>({...turn,items:p.itemsView==='notLoaded'?[]:turn.items})),nextCursor:offset+limit<turns.length?'at:'+turns[offset+limit].id:null,backwardsCursor:turns[offset]?'at:'+turns[offset].id:null};break;
    }
    case 'thread/items/list':{
     const turn=t?.turns.find(turn=>turn.id===p.turnId);if(!turn)throw Error('Unknown synthetic turn');

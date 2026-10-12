@@ -4,6 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {createHash} from 'node:crypto';
 import {once} from 'node:events';import {createServer} from 'node:net';import WebSocket from 'ws';
 const native=process.argv.includes('--native');
+const historyJourney=process.argv.includes('--history');if(historyJourney&&!native)throw Error('History journey requires native UI');
 const adb=process.env.ANDROID_HOME+'/platform-tools/adb';
 const digest=p=>createHash('sha256').update(readFileSync(p)).digest('hex');
 const adbRun=args=>{const r=spawnSync(adb,['-s','emulator-5620',...args],{encoding:'utf8',timeout:90000,maxBuffer:4*1024*1024});if(r.status!==0)throw Error('Owned emulator command failed: '+args[0]);return r.stdout;};
@@ -21,7 +22,9 @@ if(native){
 const dir=mkdtempSync(join(tmpdir(),'nextcomp-real-backend-')),state=join(dir,'provider.json');
 mkdirSync(join(dir,'home'));mkdirSync(join(dir,'codex'));
 const tid='11111111-1111-4111-8111-111111111111';
-writeFileSync(state,JSON.stringify({threads:[{id:tid,name:'Synthetic integration work',cwd:'/synthetic',source:'cli',status:{type:'idle'},createdAt:1,updatedAt:1,turns:[]}],starts:[]}));
+const oldTurns=historyJourney?Array.from({length:12},(_,n)=>({id:'history-turn-'+n,status:'completed',items:[{id:'history-user-'+n,type:'userMessage',content:[{type:'text',text:'History request '+n}]},{id:'history-answer-'+n,type:'agentMessage',phase:'final_answer',text:'History passage '+n+'. '+('Retained reading context and natural thumb scrolling. '.repeat(14))}]})):[];
+writeFileSync(state,JSON.stringify({threads:[{id:tid,name:'Synthetic integration work',cwd:'/synthetic',source:'cli',historyMode:'paginated',status:{type:'idle'},createdAt:1,updatedAt:1,turns:oldTurns}],starts:[]}));
+
 const reservation=createServer();
 await new Promise((resolve,reject)=>{reservation.once('error',reject);reservation.listen(19999,'127.0.0.1',resolve);});
 await new Promise(resolve=>reservation.close(resolve));
@@ -56,7 +59,7 @@ try{
  const device=await api('/api/pair',{code:pairing.code,name:'Synthetic integration device'});token=device.token;
  const nativePhase=phase=>{
   adbRun(['shell','am','force-stop','co.fallsoft.pocket']);
-  const out=adbRun(['shell','am','instrument','-w','-e','class','co.fallsoft.pocket.RealBackendJourneyNativeTest#sendEchoAndColdRestore','-e','qaOwner','01a0f2bc-ff5a-70c2-b682-10f0987dab80','-e','realBackendPhase',phase,'-e','pairedToken',token,'-e','pairedDevice',device.id,'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner']);
+  const out=adbRun(['shell','am','instrument','-w','-e','class','co.fallsoft.pocket.RealBackendJourneyNativeTest#sendEchoAndColdRestore','-e','qaOwner','01a0f2bc-ff5a-70c2-b682-10f0987dab80','-e','realBackendPhase',phase,'-e','historyJourney',historyJourney?'1':'0','-e','pairedToken',token,'-e','pairedDevice',device.id,'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner']);
   writeFileSync(join(dir,'native-'+phase+'.log'),out,{mode:0o600});
   if(!/^OK \(1 test\)$/m.test(out)||/FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|shortMsg=/.test(out))throw Error('Native phase failed: '+phase+'; private log retained');
  };
@@ -91,7 +94,7 @@ try{
  if(duplicate.state!=='accepted')throw Error('Accepted-ID reconciliation changed state');
  const finalCalls=JSON.parse(readFileSync(state));
  if(finalCalls.starts.length!==1)throw Error('Restart or reconciliation duplicated provider work');
- const result={state:'passed',dir,nativeUi:native,real:['server/index.mjs','HTTP authentication/routes','SQLite outgoing and send identity','WebSocket event delivery'],substituted:'Deterministic stdio provider',providerStarts:calls.starts.length,replyState:receipt.state,canonicalUsers:users.length,restart:{pairingPreserved:true,acceptedReceiptPreserved:true,providerIdentityRestored:true,noDuplicateStart:true}};
+ const result={state:'passed',dir,nativeUi:native,historyJourney,real:['server/index.mjs','HTTP authentication/routes','SQLite outgoing and send identity','WebSocket event delivery'],substituted:'Deterministic stdio provider',providerStarts:calls.starts.length,replyState:receipt.state,canonicalUsers:users.length,restart:{pairingPreserved:true,acceptedReceiptPreserved:true,providerIdentityRestored:true,noDuplicateStart:true}};
  writeFileSync(native?'/tmp/nextcomp-real-backend-native-result.json':'/tmp/nextcomp-real-backend-smoke-result.json',JSON.stringify(result,null,2));writeFileSync(join(dir,'journey.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));
 }catch(error){
  writeFileSync(join(dir,'journey.json'),JSON.stringify({state:'failed',native,error:error.message,finishedAt:Date.now()}));throw error;
