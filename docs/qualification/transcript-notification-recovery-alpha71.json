@@ -1,0 +1,28 @@
+{
+  "state": "native-qualification-running-not-delivered",
+  "runtimeSource": "7753f35",
+  "nativeTestSource": "13f9ab5",
+  "candidateVersionCode": 89,
+  "installedPhoneVersionCode": 88,
+  "diagnosis": {
+    "installedPhoneVerified": true,
+    "currentThreadServerReadSeconds": 0.06,
+    "serverReturnedCurrentActivity": true,
+    "exactReportedStaleThread": "not yet identified",
+    "gap": "Fetched notification did not invalidate open history when catalog preview/status/activity did not change."
+  },
+  "fix": "Compare selected-thread notification watermarks before and after existing authenticated refresh; invalidate only on advance. No model or worker activation, no read acknowledgement on fetch.",
+  "regressionTest": "fetchedNotificationRepairsMissedEventWithUnchangedCatalog",
+  "presentedReadRecovery": {
+    "source": "ea7aac7",
+    "nativePreparationSeconds": 7.532,
+    "optimizedInPlaceReplacementSeconds": 25.761,
+    "orderedAcknowledgements": 4,
+    "newerUnseenViewAcknowledged": false,
+    "draftPreserved": true,
+    "submittedWork": false,
+    "testSignedOnly": true,
+    "limits": "Catch-up captures expire after ten minutes and backend retains at most64 per device. Expiry leaves work unseen."
+  },
+  "physicalReportedConversationRecoveryVerified": false
+}
