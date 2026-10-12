@@ -1,5 +1,5 @@
 {
-  "status": "candidate-not-deployed",
+  "status": "alpha80-updater-published-phone-unverified",
   "cause": "Replacing row metadata could discard earlier provider aliases even with stable message identity.",
   "implementation": "Shared bounded evidence merge at live row replacement and history snapshot reconciliation; metadata version checks retained.",
   "checks": {
@@ -25,11 +25,25 @@
         "draft preserved",
         "zero submissions"
       ]
+    },
+    "signed_release_checks": {
+      "debugUnitTests": 326,
+      "releaseUnitTests": 326,
+      "debugLint": "pass",
+      "releaseLint": "pass",
+      "bothSignerBuilds": "pass",
+      "qualificationBuilds": "pass"
     }
   },
   "remaining": [
-    "Signed release checks and deployment",
-    "Physical phone interaction"
+    "Physical phone installation and interaction"
   ],
-  "failed_control": "Before newest-evidence retention fix native test failed: new live provider reference lost after full alias cache"
+  "failed_control": "Before newest-evidence retention fix native test failed: new live provider reference lost after full alias cache",
+  "delivery": {
+    "versionCode": 98,
+    "versionName": "0.5.0-alpha.80",
+    "privateCompatibleApkSha256": "3d56b9890eba35c667ce03fd277e8b1fb50640a4408833798ea194d997f995d4",
+    "authenticatedUpdater": "available at code93 for existing private signer",
+    "phoneInstallation": "not verified"
+  }
 }
