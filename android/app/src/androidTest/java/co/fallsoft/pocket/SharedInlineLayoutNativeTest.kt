@@ -94,6 +94,14 @@ class SharedInlineLayoutNativeTest {
  }
 
  @Test fun interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions(){
+  val instrument=InstrumentationRegistry.getInstrumentation()
+  val context=instrument.targetContext
+  // Each journey owns its synthetic pairing; earlier navigation cases deliberately
+  // leave different profiles selected. Never inherit their state or contact a live host.
+  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear()
+   .putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76")
+   .putString("deviceId","synthetic-device").putBoolean("activeLocal",false).commit()
+  instrument.runOnMainSync{Pocket.init(context)}
   val literal="/tmp/Review 100%/résultat.json"
   val original=immersionGrammarSupport(InterfaceTemplate.GENERATED_ARTIFACT.scaffold(literal))
   val target=InterfaceTemplate.GENERATED_ARTIFACT.target(literal)
@@ -104,7 +112,7 @@ class SharedInlineLayoutNativeTest {
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
    scenario.onActivity{activity->
     // The owned emulator is paired only to its loopback synthetic fixture.
-    check(Pocket.base.startsWith("http://127.0.0.1:"))
+    check(Pocket.base=="http://127.0.0.1:18880"){"Template fixture profile was not initialized"}
     PocketImmersion.setEnabled(true)
     activity.setContent{
      androidx.compose.runtime.CompositionLocalProvider(LocalImmersionMotionState provides true,LocalImmersionTransitionAnimated provides false){
