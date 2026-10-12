@@ -64,3 +64,11 @@ intermediate image proves unchanged common ink and changed replacement ink.
 This is a single-phase pixel check, not a watched frame sequence or phone
 performance proof. Cross-cue reservations, production cue visibility,
 lexical/action handoff consistency and physical review remain open.
+
+Cross-cycle reservation implemented: all supported annotated forms contribute
+to shared fragment width/height before any particular cue begins. Current
+from/to still determine the lexical transition. Seven final native cases pass.
+The new case changes two phrases in succession and verifies the surrounding
+passage stays fixed; removing full reservations makes that same fixture
+reflow, proving the check detects the intended regression. Production
+ReservedImmersionText is not yet wired to this candidate.

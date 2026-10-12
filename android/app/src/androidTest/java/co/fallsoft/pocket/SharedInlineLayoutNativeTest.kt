@@ -234,4 +234,55 @@ class SharedInlineLayoutNativeTest {
   }
  }
 
+ @Test fun laterPhraseCycleCannotReflowAlreadyReservedSurroundingText(){
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
+  check(UiDevice.getInstance(i).executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().commit()
+  fun form(first:String,second:String)=buildAnnotatedString{
+   append("Please ");var at=length;append(first)
+   addStringAnnotation("immersion-reserve","first",at,length)
+   append(" existing sessions and ");at=length;append(second)
+   addStringAnnotation("immersion-reserve","second",at,length)
+   append(" before continuing.")
+  }
+  val original=form("search","open")
+  val first=form("cerca fra tutti i risultati","open")
+  val both=form("cerca fra tutti i risultati","apri una nuova conversazione")
+  val cycle=androidx.compose.runtime.mutableIntStateOf(0)
+  val reserveAll=androidx.compose.runtime.mutableStateOf(true)
+  val progress=mutableFloatStateOf(0f)
+  var current:TextLayoutResult?=null
+  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   scenario.onActivity{it.setContent{MaterialTheme{
+    SharedInlineImmersionText(if(cycle.intValue==0)original else first,
+     if(cycle.intValue==0)first else both,{progress.floatValue},Modifier.width(240.dp),
+     reserve=if(reserveAll.value)listOf(original,both)else emptyList(),onTextLayout={current=it})
+   }}}
+   fun passage(text:String):androidx.compose.ui.geometry.Rect{
+    val deadline=System.currentTimeMillis()+5000
+    while(System.currentTimeMillis()<deadline){
+     compose.waitForIdle()
+     var layout:TextLayoutResult?=null
+     i.runOnMainSync{layout=current?.takeIf{it.layoutInput.text.text.replace("\u200b","")==text}}
+     if(layout!=null)return layout!!.getBoundingBox(layout!!.layoutInput.text.text.indexOf("before"))
+     Thread.sleep(25)
+    }
+    error("Current cycle layout unavailable")
+   }
+   val a=passage(original.text)
+   i.runOnMainSync{progress.floatValue=1f}
+   val b=passage(first.text)
+   i.runOnMainSync{cycle.intValue=1;progress.floatValue=0f}
+   val c1=passage(first.text)
+   i.runOnMainSync{progress.floatValue=1f}
+   val d=passage(both.text)
+   for(rect in listOf(b,c1,d))assertTrue("Later cue reflowed common text: $a -> $rect",
+    kotlin.math.abs(a.left-rect.left)<=2f&&kotlin.math.abs(a.top-rect.top)<=2f)
+   i.runOnMainSync{reserveAll.value=false;cycle.intValue=0;progress.floatValue=0f}
+   val missingReservation=passage(original.text)
+   assertTrue("Fixture must detect the missing cross-cycle reservation: $a -> $missingReservation",
+    kotlin.math.abs(a.left-missingReservation.left)>2f||kotlin.math.abs(a.top-missingReservation.top)>2f)
+  }
+ }
+
 }

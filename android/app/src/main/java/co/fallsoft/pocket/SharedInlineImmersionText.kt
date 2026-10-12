@@ -23,11 +23,12 @@ import androidx.compose.ui.unit.*
     from:AnnotatedString,to:AnnotatedString,progress:()->Float,
     modifier:Modifier=Modifier,fontSize:TextUnit=17.sp,lineHeight:TextUnit=26.sp,
     color:Color=Paper,fontWeight:FontWeight?=null,
+    reserve:List<AnnotatedString> = emptyList(),
     onTextLayout:(TextLayoutResult)->Unit={},
     onFragmentLayout:(TextLayoutResult)->Unit={},
     onWipeGeometry:(ImmersionSharedWipeGeometry)->Unit={}
 ){
-    val runs=remember(from,to){immersionSharedRuns(listOf(from,to))}
+    val runs=remember(from,to,reserve){immersionSharedRuns(listOf(from,to)+reserve)}
     if(runs==null){
         // Invalid alignment is not evidence of shared geometry. Preserve normal
         // text rather than invent a phrase/word correspondence.
@@ -46,7 +47,7 @@ import androidx.compose.ui.unit.*
         val content=mutableMapOf<String,InlineTextContent>()
         val slotKeys=mutableListOf<String>()
         val changedKeys=mutableSetOf<String>()
-        var wipeGeometry by remember(from,to,available,fontSize,lineHeight){
+        var wipeGeometry by remember(from,to,reserve,available,fontSize,lineHeight){
             mutableStateOf<ImmersionSharedWipeGeometry?>(null)
         }
         val paragraph=buildAnnotatedString{

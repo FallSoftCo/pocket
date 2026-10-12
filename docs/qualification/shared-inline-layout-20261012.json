@@ -1,10 +1,10 @@
 {
   "state": "candidate-not-enabled-not-published",
   "native": {
-    "cases": 6,
+    "cases": 7,
     "result": "pass",
-    "seconds": 11.52,
-    "logSha256": "23444cbff8326b283e28d74e19534c6e815573754ab373b516a48061e51835fb",
+    "seconds": 12.09,
+    "logSha256": "577ec927e676063b1e9aa71ee3ac0b49206e74ac4f80e17e18947bfe29b17f51",
     "checks": [
       "unchanged word position at 17sp",
       "unchanged word position at 34sp",
@@ -13,7 +13,8 @@
       "Android accessibility export contains the visible sentence once in both languages",
       "Real UiAutomator injected touch activates replacement link in both forms",
       "Exposed custom accessibility action invokes the original replacement callback",
-      "Intermediate native image retains common glyph pixels and changes replacement glyph pixels"
+      "Intermediate native image retains common glyph pixels and changes replacement glyph pixels",
+      "Successive changes to two distinct phrases retain common text geometry using all reserved forms"
     ]
   },
   "unit": {
@@ -26,8 +27,7 @@
     "Actual frames and physical handset qualification",
     "Actual TalkBack utterance/gesture and text selection qualification, including empty reserved slots",
     "Full multi-line frame sequence and physical performance review",
-    "Per-fragment visual handoff and paragraph lexical/action consistency during transitions",
-    "Stable reservations across all alternate plans, not just current from/to pair"
+    "Per-fragment visual handoff and paragraph lexical/action consistency during transitions"
   ],
   "notes": [
     "Large-text check uses 34sp/52sp, not a complete OS accessibility font-scale audit",
@@ -39,14 +39,21 @@
     "A failed test-source compilation produced an old-APK run; that run is excluded. Final build succeeded before final five-case instrumentation.",
     "Shared physical paragraph frontier is translated into each fragment coordinate space; RTL mirrors the paragraph, not individual slots.",
     "Native measured line height replaces nominal sp height to avoid rounding a single 69px line into two bands.",
-    "Intermediate screenshots initially preceded observed paint. Bounded screenshot observation now requires actual changed glyph pixels; this is not phone latency or 60fps qualification."
+    "Intermediate screenshots initially preceded observed paint. Bounded screenshot observation now requires actual changed glyph pixels; this is not phone latency or 60fps qualification.",
+    "Candidate accepts all alternate annotated forms; current from/to determine active text, while all forms determine shared fragment bounds. Production caller is not yet wired."
   ],
-  "candidateApkSha256": "a925b27eb42ec1d8527e3e26f7dde42450df22ae7d3dcaca976abb0afa58c5c6",
-  "testApkSha256": "1c92cc1c209e0ed2744a66fafbe0b8f408074e3f579e21ca4751c029e61d0403",
+  "candidateApkSha256": "e4d2be90be77368244ca98900c8d7e433ea9ede8a7da2c4cae11f3228465c516",
+  "testApkSha256": "29f1f6e7ea3aa8e19f6e422308892dc0159b0a2eb204638ed4d24cefd11610d6",
   "debugUnitSuite": {
     "cases": 349,
     "result": "pass"
   },
   "sharedWipeUnitCases": 4,
-  "qualificationLint": "pass"
+  "qualificationLint": "pass",
+  "crossCycleCounterfactual": {
+    "state": "pass",
+    "seconds": 2.058,
+    "proof": "Same native fixture reflows its common passage when full reservations are removed",
+    "logSha256": "1f82cf092a1a28b004c15bde5b46332fb61fa3ba3f1201a023622ef4401fbbe3"
+  }
 }
