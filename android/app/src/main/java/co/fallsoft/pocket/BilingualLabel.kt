@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 
 /** Ordinary action taps stay actions; English rescue replaces the same label in place. */
-@Composable fun BilingualLabel(text:String,modifier:Modifier=Modifier,color:Color=LocalContentColor.current,fontSize:TextUnit=14.sp,fontWeight:FontWeight?=null,maxLines:Int=1,centered:Boolean=true,lineHeight:TextUnit=TextUnit.Unspecified,onActivate:(()->Unit)?=null){
+@Composable fun BilingualLabel(text:String,modifier:Modifier=Modifier,color:Color=LocalContentColor.current,fontSize:TextUnit=14.sp,fontWeight:FontWeight?=null,maxLines:Int=1,centered:Boolean=true,lineHeight:TextUnit=TextUnit.Unspecified,onActivate:(()->Unit)?=null,overflow:TextOverflow=TextOverflow.Ellipsis){
     fun actionText(value:AnnotatedString):AnnotatedString=if(onActivate==null||value.isEmpty())value else buildAnnotatedString{
         append(value)
         // Native link hit testing covers the visible text, not reserved blank width.
@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.*
     val expanded=supported&&PocketImmersion.supportEnabled&&PocketImmersion.originalShown(key)
     if(!supported){
         Text(actionText(AnnotatedString(target)),modifier=modifier,color=color,fontSize=fontSize,fontWeight=fontWeight,maxLines=maxLines,lineHeight=lineHeight,
-            overflow=TextOverflow.Ellipsis,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
+            overflow=overflow,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
         return
     }
     var nativeVisible by remember(text,target){mutableStateOf(false)}
@@ -99,7 +99,7 @@ import androidx.compose.ui.unit.*
     }){
         BlendImmersionText(actionText(if(cueActive)from else AnnotatedString(shown)),actionText(if(cueActive)to else AnnotatedString(shown)),{if(cueActive)progress.value else 1f},actionText(AnnotatedString(shown)),reserve=listOf(AnnotatedString(text),AnnotatedString(target)),color=color,fontSize=fontSize,
             lineHeight=lineHeight.takeIf{it!=TextUnit.Unspecified}?:LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
-            fontWeight=fontWeight,maxLines=maxLines,overflow=TextOverflow.Ellipsis,
+            fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,
             textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
             onVisibleRanges={_,readable->nativeVisible=readable},trackWholeTextVisibility=true)
     }
@@ -136,14 +136,15 @@ internal fun immersionLabelCadence(label:String):ImmersionLabelCadence{
     text:String,modifier:Modifier=Modifier,color:Color=Color.Unspecified,
     fontSize:TextUnit=TextUnit.Unspecified,fontWeight:FontWeight?=null,
     maxLines:Int=Int.MAX_VALUE,lineHeight:TextUnit=TextUnit.Unspecified,
+    overflow:TextOverflow=TextOverflow.Clip,letterSpacing:TextUnit=TextUnit.Unspecified,
     style:androidx.compose.ui.text.TextStyle=LocalTextStyle.current
 ){
-    val resolved=LocalTextStyle.current.merge(style)
+    val resolved=LocalTextStyle.current.merge(style).merge(androidx.compose.ui.text.TextStyle(letterSpacing=letterSpacing))
     CompositionLocalProvider(LocalTextStyle provides resolved){
         BilingualLabel(text,modifier=modifier,
             color=if(color!=Color.Unspecified)color else resolved.color.takeIf{it!=Color.Unspecified}?:LocalContentColor.current,
             fontSize=fontSize.takeIf{it!=TextUnit.Unspecified}?:resolved.fontSize.takeIf{it!=TextUnit.Unspecified}?:14.sp,
-            fontWeight=fontWeight?:resolved.fontWeight,maxLines=maxLines,centered=false,
+            fontWeight=fontWeight?:resolved.fontWeight,maxLines=maxLines,centered=false,overflow=overflow,
             lineHeight=lineHeight.takeIf{it!=TextUnit.Unspecified}?:resolved.lineHeight)
     }
 }
