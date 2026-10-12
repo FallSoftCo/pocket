@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "incremental-alpha-native",
+  "qualification": "alpha87-transcript-and-shared-immersion",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
@@ -12,10 +12,26 @@
     "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#providerMetadataLossDoesNotDuplicateUnknownSend",
     "co.fallsoft.pocket.ParallelTranscriptNativeTest#freshHistoryPaintsBeforeSlowCacheAndLateRestoreRetainsLocalHistory",
     "co.fallsoft.pocket.ParallelTranscriptNativeTest#readingGestureOwnsItsPassageWhenTheLateCacheArrives",
-    "co.fallsoft.pocket.ParallelTranscriptNativeTest#switchingDuringSlowCacheCannotRestoreTheOldConversation"
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#switchingDuringSlowCacheCannotRestoreTheOldConversation",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#inlineReplacementKeepsUnchangedWordAtOneNativePosition",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#largeTextReplacementKeepsUnchangedWordAtOneNativePosition",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#replacementRetainsNativeInlineLinkAction",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#oversizedReplacementUsesFullNativeWrappedText",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#accessibilityExposesOneCoherentVisibleSentence",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#intermediateWipePreservesCommonInkAndActuallyChangesPhraseInk",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#laterPhraseCycleCannotReflowAlreadyReservedSurroundingText",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#productionReservedTextRetainsVisibilityAndFreshInlineCallbacks",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#singleLineTruncationRetainsVisibleTextAndExcludesHiddenCue",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#visibleOutgoingWrappedWordStillRespondsDuringWipe",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#reservedBlankSpaceDoesNotCaptureAnInlineAction",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#selectionCopiesOneVisibleParagraphWithoutDuplicatedPhrase",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#selectionCopiesTheTouchedWord",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#originalSelectionDoesNotCopyReservedSlotMarkers",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#originalZeroWidthCharacterSurvivesProjectionCleanup"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",
-    "Known open immersion reflow is not covered by this incremental-alpha policy"
+    "Native paragraph, visibility, accessibility export, actions and clipboard checks do not prove physical frame pacing or actual TalkBack utterances",
+    "Full motion sequence review is required separately before publication"
   ]
 }

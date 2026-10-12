@@ -2398,6 +2398,12 @@
       "request": "Normal native text selection and copying must return one clean visible flow, preserving original zero-width characters and never leaking generated layout placeholders.",
       "status": "native-qualified-source-unreleased",
       "evidence": "docs/qualification/immersion-owned-selection-20261012.json"
+    },
+    {
+      "id": "alpha87-expanded-release-qualification",
+      "request": "Deliver verified cache/identity and shared-immersion changes through a compatible signed update. Require all 26 new/existing critical native cases against one exact staged APK; preserve source, pairing and ongoing work.",
+      "status": "source-staged-build-and-expanded-qualification-pending",
+      "evidence": "scripts/release-policy.json"
     }
   ],
   "current_state": {
