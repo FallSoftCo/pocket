@@ -57,11 +57,14 @@ class SharedInlineLayoutNativeTest {
      }
     }
    }
-   compose.waitUntil(35000){
+   try{compose.waitUntil(35000){
     listOf(original,target,countsOriginal,countsTarget).forEach{form->
      if(compose.onAllNodesWithText(form).fetchSemanticsNodes().isNotEmpty())seen+=form
     }
     seen.containsAll(listOf(original,target,countsOriginal,countsTarget))
+   }}catch(error:Throwable){
+    android.util.Log.i("InterfaceTemplateQA","seen="+seen+" enabled="+PocketImmersion.enabled+" motion="+PocketImmersion.motionEnabled+" tree="+compose.onRoot().printToString())
+    throw AssertionError("seen="+seen+" enabled="+PocketImmersion.enabled+" motion="+PocketImmersion.motionEnabled+" tree="+compose.onRoot().printToString(),error)
    }
    val visible=if(compose.onAllNodesWithText(target).fetchSemanticsNodes().isNotEmpty())target else original
    compose.onNodeWithText(visible).performClick()
