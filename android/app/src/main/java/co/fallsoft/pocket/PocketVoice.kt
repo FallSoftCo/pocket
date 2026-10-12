@@ -386,7 +386,11 @@ class PocketVoiceService:Service(){
         if(voiceSpeechMayClearPending(completedSpeechTurnId,Pocket.prefs.getString("voicePendingId",null)))clearPending()
     }
     private fun clearPending(){Pocket.prefs.edit().remove("voicePendingId").remove("voicePendingLocal").remove("voicePendingTarget").remove("voicePendingEnvironment").remove("voicePendingOwner").commit();pendingFile.delete()}
-    private fun applyActions(actions:List<JSONObject>){for(a in actions)when(a.s("type")){
+    private fun applyActions(actions:List<JSONObject>){
+        // A completed turn belongs to its captured backend. User navigation or
+        // re-pairing must not let late UI actions mutate another environment.
+        if(Pocket.environmentId!=capturedEnvironment||Pocket.base.trimEnd('/')!=endpoint||Pocket.token!=credential)return
+        for(a in actions)when(a.s("type")){
         "select"->{PocketVoice.targetThread=a.s("threadId").takeIf{it.isNotBlank()};if(Pocket.local==local){if(PocketVoice.targetThread==null)Pocket.closeTask()else Pocket.open(PocketVoice.targetThread!!) }}
         "permissions"->{Pocket.updateFullPermissions(a.optBoolean("full"))}
         "profile"->{checkpointNativeUsage(stop=true);stopNativeRemote();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeHeartbeat?.cancel();val next=a.optBoolean("local");if(Pocket.savedToken(next).isBlank()){PocketVoice.problem="That device is not paired. Pair it in NextComp first.";beep(false)}else{Pocket.activate(next);local=next;coordinatorReady=false;captureProfile();loadHistory();boot()}}
