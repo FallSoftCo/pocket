@@ -1,0 +1,23 @@
+{
+  "state": "native-candidate-qualified-not-delivered",
+  "cause": "After initial catalog display, membership changes depended on activity reorder gate requiring Codex online. A healthy authenticated backend catalog could contain new sessions never shown while runtime offline.",
+  "fix": "Separate complete authenticated membership reconciliation at settled interaction boundary from worker-gated activity reordering. Preserve existing relative order and stable row keys; admit new identities without forcing viewport to newest.",
+  "nativeEvidence": {
+    "state": "passed",
+    "completed": [
+      "CatalogStartupNativeTest#coldStartShowsLoadingAndRetryThenPaintsCatalogBeforeActivity"
+    ],
+    "apkSha": "9e51559318d46bf074e09f376a7c36f2d83efd86a498047162850647c6089da0",
+    "testSha": "c32cbe34e376d4fef8d018a72e8589e5e5ee2ddfe1bc6262e15d23297d785d41",
+    "startedAt": 1791871909.1119387,
+    "scope": "Actual startup and catalog UI: offline worker does not hide readable catalog; 40 authenticated synthetic session additions; reverse page-up reaches older cards; page-down returns to same recent cards; draft preserved; zero worker replies.",
+    "current": "CatalogStartupNativeTest#coldStartShowsLoadingAndRetryThenPaintsCatalogBeforeActivity",
+    "fixtureStopped": true,
+    "fixturePid": 1253737,
+    "finishedAt": 1791871923.4612954
+  },
+  "remaining": [
+    "Coordinator paging qualification.",
+    "Signed release and physical phone delivery."
+  ]
+}

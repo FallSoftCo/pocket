@@ -17,7 +17,7 @@ class CatalogStartupNativeTest{
  private val device get()=UiDevice.getInstance(i)
  private fun main(action:()->Unit)=i.runOnMainSync(action)
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+path,JSONObject())}
- private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(condition())return;Thread.sleep(50)};assertTrue("Startup condition timed out",condition())}
+ private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache();if(condition())return;Thread.sleep(50)};if(!condition()){device.dumpWindowHierarchy(java.io.File(context.cacheDir,"catalog-paging-failure.xml"));device.takeScreenshot(java.io.File(context.cacheDir,"catalog-paging-failure.png"))};assertTrue("Startup condition timed out",condition())}
  @Test fun coldStartShowsLoadingAndRetryThenPaintsCatalogBeforeActivity(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
@@ -44,6 +44,25 @@ class CatalogStartupNativeTest{
    assertFalse("Background refresh replaced readable sessions with startup loading",device.hasObject(By.text("Loading conversations")))
    assertEquals("Startup draft preserved",prefs.getString("draft:same-thread",null))
    assertEquals(0,qa("state").getJSONArray("replies").length())
+   qa("release-catalog");qa("catalog-pages");main{Pocket.refresh()}
+   await{Pocket.tasks.count{it.id.startsWith("catalog-page-")}==40}
+   fun titles():Set<String>{
+    if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
+    return device.findObjects(By.textStartsWith("Catalog passage ")).filter{it.visibleBounds.top>50&&it.visibleBounds.bottom<device.displayHeight*3/4}.map{it.text}.toSet()
+   }
+   // Background membership refresh retains the existing reader anchor.
+   if(titles().isEmpty()){requireNotNull(device.findObject(By.res("reader-page-down"))).click();Thread.sleep(600)}
+   await{titles().isNotEmpty()};device.waitForIdle(2000)
+   val initial=titles();assertTrue(initial.isNotEmpty())
+   requireNotNull(device.findObject(By.res("reader-page-up"))).click();Thread.sleep(600)
+   val older=titles();assertTrue("Page-up didn't reach older cards",older.isNotEmpty()&&older!=initial)
+   fun newest(names:Set<String>)=names.minOf{it.substringAfter("Catalog passage ").toInt()}
+   assertTrue("Reverse list paged in the wrong direction",newest(older)>newest(initial))
+   requireNotNull(device.findObject(By.res("reader-page-down"))).click();Thread.sleep(600)
+   assertEquals("Paging back lost recent cards",initial,titles())
+   assertEquals("Paging lost draft","Startup draft preserved",prefs.getString("draft:same-thread",null))
+   assertEquals("Paging started worker commands",0,qa("state").getJSONArray("replies").length())
+
   }finally{qa("release-catalog");qa("release-activity");qa("runtime-online")}
  }
 }

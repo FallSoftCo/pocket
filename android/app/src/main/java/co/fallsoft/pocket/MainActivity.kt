@@ -341,6 +341,16 @@ class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntState
                 // Deliver live text/status in place; membership changes wait for a safe moment.
                 displayed=sessionContentInPlace(displayed,latest){it.id};pacing.contentDelivered(now)
             }
+            // Authenticated complete catalog membership is independent of worker health.
+            // Add/remove identities at a settled reading boundary; preserve existing
+            // relative order and LazyColumn keys instead of promoting stale activity.
+            if(Pocket.sessionSnapshotComplete&&Pocket.connected&&Pocket.catalogLoad==CatalogLoadState.Ready&&pacing.interactionSettled(now,interacting)&&displayed.map{it.id}.toSet()!=latest.map{it.id}.toSet()){
+                val surviving=latest.map{it.id}.toSet()
+                val existing=order.filter{it in surviving}
+                val additions=latest.filter{it.id !in existing}.sortedByDescending{taskWorkTime(it)}.map{it.id}
+                order=additions+existing
+                displayed=latest
+            }
             if(orderDue){
                 // Safe bounded delivery promotes genuine activity; live peers remain tied.
                 val families=sessionGroups(latest).associateBy{it.task.id}
