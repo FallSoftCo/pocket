@@ -1,5 +1,5 @@
 {
-  "state": "integrated-native-qualified-frozen-release-pending",
+  "state": "alpha90-published-native-and-signed-review-qualified",
   "nativeJourneysPassed": 5,
   "features": [
     "Independent header and canonical command-row identities",
@@ -14,8 +14,25 @@
     "Initial popup launch timeout retained; idle launch fixture corrected"
   ],
   "limits": [
-    "Full frozen alpha90 release qualification pending",
-    "Optimized APK review pending",
-    "Physical phone interaction unavailable; SSH works, no verified ADB"
-  ]
+    "Physical phone interaction unavailable; SSH works, no verified ADB",
+    "Phone APK transfer and actual installed version verification still pending",
+    "All authored strings and full world-class goal remain under audit"
+  ],
+  "versionCode": 108,
+  "frozenSourceCommit": "87fadae5dbdbe49f66140796290ac55666d5d345",
+  "frozenNativeJourneysPassed": 41,
+  "unitChecksPerVariant": 365,
+  "lintVariants": [
+    "debug",
+    "release"
+  ],
+  "compatibleApkSha256": "739d4870d5db9a354c77cae8298024fd24174a31d86e75f1c42b5b9a906c166f",
+  "compatibleApkBytes": 62129140,
+  "publication": "CAS from107 to108; qualified journal published",
+  "updateNotification": {
+    "id": 1546,
+    "announced": 1,
+    "pushEnabled": true
+  },
+  "optimizedReview": "Actual compatible signed APK search screenshot inspected; whole labels remain readable; native display-clock survives. Idle card distinctly subdued."
 }
