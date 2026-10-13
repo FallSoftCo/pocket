@@ -39,15 +39,15 @@ class CommandHistoryNativeTest {
   }
   append("before","message","Answer before commands")
   append("one","activity","First command stdout","commandExecution","First full command detail")
-  append("two","activity","Second command stdout","commandExecution","Second full command detail")
+  append("two","activity","Waiting for the operation","sleep","Wait detail preserved")
   append("after","message","Answer after commands")
   assertTrue(device.wait(Until.hasObject(By.text("Answer after commands")),5000))
   assertFalse(device.hasObject(By.text("First command stdout")))
-  assertFalse(device.hasObject(By.text("Second command stdout")))
+  assertFalse(device.hasObject(By.text("Waiting for the operation")))
   val source=PocketTranscript.rows.map{it.toString()}
   requireNotNull(device.findObject(By.desc("Expand command runs"))).click()
   assertTrue(device.wait(Until.hasObject(By.text("First full command detail")),5000))
-  assertTrue(device.wait(Until.hasObject(By.text("Second full command detail")),5000))
+  assertTrue(device.wait(Until.hasObject(By.text("Wait detail preserved")),5000))
   assertTrue(device.hasObject(By.text("Answer after commands")))
   assertEquals("Expansion changed canonical history",source,PocketTranscript.rows.map{it.toString()})
   val protected=PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")}.map{Triple(it.s("id"),it.s("text"),it.s("detail"))}
@@ -56,10 +56,10 @@ class CommandHistoryNativeTest {
   main{Pocket.open("same-thread")}
   await{Pocket.selected=="same-thread"&&!PocketTranscript.loading}
   assertTrue("Returning collapsed the command passage",device.wait(Until.hasObject(By.text("First full command detail")),5000))
-  assertTrue(device.hasObject(By.text("Second full command detail")))
+  assertTrue(device.hasObject(By.text("Wait detail preserved")))
   requireNotNull(device.findObject(By.text("Collapse runs"))).click()
   assertTrue(device.wait(Until.gone(By.text("First full command detail")),5000))
-  assertFalse(device.hasObject(By.text("Second command stdout")))
+  assertFalse(device.hasObject(By.text("Waiting for the operation")))
   assertTrue(device.hasObject(By.text("Answer after commands")))
   assertEquals("Navigation lost or changed the command passage",protected,PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")}.map{Triple(it.s("id"),it.s("text"),it.s("detail"))})
   assertEquals("same-thread",Pocket.selected)

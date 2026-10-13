@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.File
@@ -231,16 +232,23 @@ class MainActivity:ComponentActivity(){
             }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it},workListState,workCatalogView);else->SettingsScreen()}}
             ConversationSpeechDock()
             InlineCaptureStatus()
-            PocketDock(onFind={Pocket.tab=0;workToolsOpen=true},onTab={workToolsOpen=false})
+            PocketDock(onFind={Pocket.tab=0;workToolsOpen=true},onTab={workToolsOpen=false},listState=workListState)
         }
     }
 }
-@Composable fun PocketDock(onFind:()->Unit,onTab:()->Unit){
-    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)).padding(4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+@OptIn(ExperimentalLayoutApi::class)
+@Composable fun PocketDock(onFind:()->Unit,onTab:()->Unit,listState:androidx.compose.foundation.lazy.LazyListState?=null){
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)),horizontalArrangement=Arrangement.spacedBy(2.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
         IconButton({Pocket.tab=0;onFind()},modifier=Modifier.size(48.dp)){SymbolIcon("Search","Find",Modifier.size(32.dp),tint=Mint)}
-        VoiceLaunchButton(modifier=Modifier.width(64.dp),dock=true)
-        InlineSpeechVolume(Modifier.weight(1f).widthIn(min=64.dp))
-        UsageDock(Modifier.width(usageDockWidth()))
+        VoiceLaunchButton(modifier=Modifier.width(48.dp),compact=true,smallDock=true)
+        if(Pocket.tab==0&&listState!=null)ReaderPagingButtons(listState,hasEarlier=Pocket.sessionCursor!=null,onPrepare={up->
+            if(up&&!listState.canScrollForward&&Pocket.sessionCursor!=null&&!Pocket.loadingSessions){
+                Pocket.moreSessions()
+                snapshotFlow{Pocket.loadingSessions}.first{!it}
+            }
+        })
+        InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
+        UsageDock(Modifier.width(compactUsageDockWidth()),compact=true)
     }
 }
 @Composable fun CatalogStartupStatus(){
@@ -447,8 +455,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             val ageLabel=if(age in 20_000..59_999)"${age/1000}s" else lastActivity(activityTime)
             if(age>=20_000)Text(ageLabel,color=Muted,fontSize=11.sp,modifier=Modifier.semantics{contentDescription="Last active "+ageLabel}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
             Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true) else SymbolIcon(if(t.needsInput)Icons.Rounded.ErrorOutline else Icons.Rounded.Pause,if(t.needsInput)"Needs your input" else "Idle",tint=if(t.needsInput)Coral else Muted,modifier=Modifier.size(18.dp))}
-            Surface(onClick={Pocket.watchTask(t.id,!t.watched)},modifier=Modifier.size(48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
-                Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+            Surface(onClick={Pocket.watchTask(t.id,!t.watched)},modifier=Modifier.width(48.dp).heightIn(min=48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
+                Column(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(vertical=4.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
                     SymbolIcon(if(t.watched)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,null,modifier=Modifier.size(24.dp),tint=if(t.watched)Paper else Muted.copy(alpha=.65f))
                     BilingualLabel(if(t.watched)"On" else "Off",fontSize=10.sp,color=if(t.watched)Mint else Muted)
                 }

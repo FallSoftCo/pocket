@@ -13,8 +13,10 @@ internal data class CommandRunProjection(
      ?:displayId.removePrefix("ui:run-group:")
  fun headerFor(sourceId:String)=groups.entries.firstOrNull{(_,rows)->rows.any{it.s("id")==sourceId}}?.key
 }
-internal fun isCommandRun(row:JSONObject)=row.s("kind")=="activity"&&
- row.s("type") in setOf("commandExecution","mcpToolCall","dynamicToolCall","fileChange","webSearch")
+// Canonical activity is the operation boundary, not a brittle tool-name whitelist.
+// Public reasoning remains readable; messages, requests and turn boundaries are
+// different kinds and cannot disappear into an operational group.
+internal fun isCommandRun(row:JSONObject)=row.s("kind")=="activity"&&row.s("type")!="reasoning"
 
 /** Outputs, questions, user inputs and turn boundaries never disappear into a run group. */
 internal fun commandRunProjection(source:List<JSONObject>,expanded:Set<String>):CommandRunProjection {

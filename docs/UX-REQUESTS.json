@@ -2537,6 +2537,26 @@
       "request": "Continue polishing responsive global immersion without per-frame object churn or changing the waterfall, text legibility or taps.",
       "status": "native-qualified-alpha92-candidate",
       "evidence": "Matched existing natural native journey:55.4MB to44.1MB allocations; median draw4.52ms to3.29ms. Ink coverage, outgoing-word tap and native inline-link checks pass. Overall frame timing not proven improved; physical phone unverified."
+    },
+    {
+      "id": "compact-footer-paging-and-volume-20261013",
+      "request": "Replace the volume slider with one visible0/50/100percent cycling button; add seamless page-up/down controls in the reclaimed space; consolidate top footer controls into its bottom row; investigate and repair slow/laggy conversation rendering and scrolling.",
+      "status": "implementation-in-isolated-footer-worktree",
+      "constraints": [
+        "Preserve mute on mount, drafts, IME focus and hardware recording keys.",
+        "Page by the real visible reading viewport without a deliberate overlap; keep finger scrolling available.",
+        "Explicit paging is reader intent, not permission to drain historical pages or wake workers.",
+        "Preserve important filtering, clear runtime state, speech controls, settings/update access and source-bound navigation.",
+        "Measure actual conversation rendering before attributing lag; distinguish emulator from phone."
+      ],
+      "verification": "Pending native production-flow checks and performance observation; alpha92 remains the published version."
+    },
+    {
+      "id": "fold-all-operations-including-waits-20261013",
+      "request": "Fold waits and all such operations into the compact expandable run groups, rather than only selected tool types.",
+      "status": "implemented-native-verification-pending",
+      "implementation": "Group canonical activity by turn and output boundaries, excluding public reasoning. Preserve messages, questions, user input, turn boundaries, source IDs, details and expanded passage state. Unknown future operation types group without a tool-name whitelist.",
+      "verification": "Existing projection boundary test expanded to waits, function outputs, agent activity, compaction, images, review and future operations; existing native history journey now includes a wait. No additional granular test cases."
     }
   ],
   "current_state": {

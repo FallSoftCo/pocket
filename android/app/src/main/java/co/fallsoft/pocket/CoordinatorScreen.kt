@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.*
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun CoordinatorScreen(){
     val draftKey=Pocket.key("coordinatorDraft")
     var draft by remember(Pocket.environmentId,Pocket.token){mutableStateOf(Pocket.prefs.getString(draftKey,"").orEmpty())}
@@ -123,10 +124,17 @@ import kotlinx.coroutines.flow.*
                 VoiceLaunchButton(modifier=Modifier.weight(1f),bar=true)
                 ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{PocketCoordinator.keyboard(true)})
             }
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
+            FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(2.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
                 IconButton({back()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
-                InlineSpeechVolume(Modifier.weight(1f).widthIn(min=112.dp))
-                UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)
+                ReaderPagingButtons(scroll,hasEarlier=PocketCoordinator.historyEarlier,onPrepare={up->
+                    followLatest=false
+                    if(up&&!scroll.canScrollBackward&&PocketCoordinator.historyEarlier){
+                        PocketCoordinator.olderHistory()
+                        snapshotFlow{PocketCoordinator.historyLoading}.first{!it}
+                    }
+                },onSettled={up,completed->if(!up&&completed&&!scroll.canScrollForward)followLatest=true})
+                InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
+                UsageDock(Modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true)
             }
         }
     }

@@ -228,9 +228,11 @@ class TranscriptRefreshNativeTest {
    device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_UP);await{PocketVoice.state=="Listening"}
    device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_DOWN);await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
    assertEquals("Capture keys changed intentional playback mute",0,audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))
-   val slider=device.findObject(By.desc("Speech volume")).visibleBounds
-   device.click(slider.left+slider.width()*3/4,slider.centerY())
-   await{audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)>0}
+   val maximum=audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+   for(expected in listOf((maximum+1)/2,maximum,0)){
+    device.findObject(By.desc("Speech volume")).click()
+    await{audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)==expected}
+   }
    assertTrue("Volume adjustment dismissed typing",device.executeShellCommand("dumpsys input_method").contains("mInputShown=true"))
    assertEquals("Volume adjustment erased draft","Playback volume keeps my draft",prefs.getString("draft:same-thread",null))
    assertEquals("Volume/capture controls submitted work",0,qa("state").getJSONArray("replies").length())

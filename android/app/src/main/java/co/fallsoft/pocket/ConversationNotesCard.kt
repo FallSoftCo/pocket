@@ -93,27 +93,33 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
     }
 }
 
-/** Filters the existing transcript; never displays another copy of its content. */
-@Composable internal fun ConversationNotesCard(important:Boolean,onFilter:()->Unit,onControls:()->Unit,speechText:String,status:ConversationRunState){
+/** Bottom-row controls share one stable playback owner across popup changes. */
+@Composable internal fun ConversationNotesControls(important:Boolean,onFilter:()->Unit,hasSpeech:Boolean,speechText:()->String){
     val host="filter:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}:${Pocket.selected}"
     DisposableEffect(host){onDispose{PocketSpeech.displayedOwner?.takeIf{it==host}?.let{PocketSpeech.stopDisplayed(it)}}}
     val speaking=PocketSpeech.displayedRunning||PocketSpeech.count>0&&!PocketSpeech.paused
-    val queued=PocketSpeech.queue.current
-    val caption=conversationLiveSpeechCaption(Pocket.selected,queued?.let{PocketNotificationTitles.threadForId(it.id)},queued?.id,PocketSpeech.paused,PocketSpeech.displayedOwner,PocketSpeechCaptions.state)
-    Column(Modifier.fillMaxWidth()){
-    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically){
-        TextButton(onControls,modifier=Modifier.weight(1f).heightIn(min=48.dp),contentPadding=PaddingValues(horizontal=4.dp)){
-            SymbolIcon(status.icon,status.label+"; conversation controls",Modifier.size(32.dp),tint=if(status in listOf(ConversationRunState.NEEDS_YOU,ConversationRunState.FAILED))Coral else Mint,spinning=status.spinning)
-            Spacer(Modifier.width(6.dp));BilingualLabel(status.label,centered=false,color=if(status in listOf(ConversationRunState.NEEDS_YOU,ConversationRunState.FAILED))Coral else Mint,fontSize=13.sp,maxLines=1)
-        }
-        FilterChip(selected=important,onClick=onFilter,label={BilingualLabel("Important",fontSize=13.sp)},modifier=Modifier.heightIn(min=48.dp))
-        if(PocketSpeech.displayedOwner==null&&PocketSpeech.count>0)SpeechPlaybackControls(iconOnly=true)else IconButton({if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}else if(speaking)PocketSpeech.control("pause")else PocketSpeech.speakDisplayed(host,speechText,"Conversation")},enabled=speaking||speechText.isNotBlank()){
-            SymbolIcon(if(speaking)Icons.Rounded.Stop else Icons.Rounded.VolumeUp,if(speaking)"Stop speaking conversation" else "Speak visible conversation",Modifier.size(30.dp),tint=if(speaking)Coral else Mint)
-        }
+    FilledTonalIconToggleButton(checked=important,onCheckedChange={onFilter()},modifier=Modifier.size(48.dp).semantics{
+        contentDescription=PocketImmersion.label("Important")
+        stateDescription=if(important)"Important messages" else "All messages"
+    }){
+        SymbolIcon("Layers",null,Modifier.size(32.dp),tint=if(important)Mint else Muted)
     }
-    if(caption.isNotBlank())Text(caption,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=2.dp),color=Muted,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+    IconButton({
+        if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}
+        else if(PocketSpeech.count>0)PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")
+        else speechText().takeIf{it.isNotBlank()}?.let{PocketSpeech.speakDisplayed(host,it,"Conversation")}
+    },enabled=speaking||PocketSpeech.count>0||hasSpeech,modifier=Modifier.size(48.dp)){
+        SymbolIcon(if(speaking)"Stop" else "VolumeUp",
+            PocketImmersion.label(if(speaking)"Stop speaking conversation" else "Speak visible conversation"),
+            Modifier.size(30.dp),tint=if(speaking)Coral else Mint)
     }
 }
+@Composable internal fun ConversationLiveCaption(){
+    val queued=PocketSpeech.queue.current
+    val caption=conversationLiveSpeechCaption(Pocket.selected,queued?.let{PocketNotificationTitles.threadForId(it.id)},queued?.id,PocketSpeech.paused,PocketSpeech.displayedOwner,PocketSpeechCaptions.state)
+    if(caption.isNotBlank())Text(caption,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=2.dp),color=Muted,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+}
+
 internal fun importantConversationKind(kind:String,type:String,status:String,retained:Boolean,phase:String="",latest:Boolean=false)=retained||kind=="request"||kind=="message"&&(phase=="final_answer"||phase.isBlank()&&latest)||kind=="turnEnd"&&status=="failed"||kind=="activity"&&type!="reasoning"&&status in listOf("failed","declined")
 
 internal fun sameConversationContext(note:String,speech:String):Boolean{

@@ -202,13 +202,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             PocketTranscript.positionRestored(Pocket.selected,restoreRevision)
         }
     }
+    var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(list,lifecycle,Pocket.environmentId,Pocket.selected){
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
             snapshotFlow{
                 val latest=PocketTranscript.rows.lastOrNull{it.s("kind") !in listOf("turn","turnEnd")&&it.s("text").isNotBlank()}?.s("id")
                 val visible=latest!=null&&list.layoutInfo.visibleItemsInfo.any{it.key==latest}
-                val eligible=AppWindowVisibility.focused&&!important&&!BlackoutVisibility.active&&!PocketVoice.active&&!PocketTranscript.loading&&!PocketTranscript.updating&&!list.isScrollInProgress&&!list.canScrollForward&&visible
+                val eligible=AppWindowVisibility.focused&&!actionsOpen&&!important&&!BlackoutVisibility.active&&!PocketVoice.active&&!PocketTranscript.loading&&!PocketTranscript.updating&&!list.isScrollInProgress&&!list.canScrollForward&&visible
                 eligible to PocketTranscript.revision
             }.collectLatest{(eligible,_)->
                 if(eligible){delay(500);PocketTranscript.presentedLatest()}
@@ -216,8 +217,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
     }
     var removingNotes by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(setOf<String>())}
-    val spokenRows=remember(Pocket.environmentId,Pocket.selected){mutableStateMapOf<String,String>()}
-    var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
+    val spokenRows=remember(Pocket.environmentId,Pocket.selected){mutableStateMapOf<String,Pair<String,String>>()}
     var settingsOpen by remember(Pocket.selected){mutableStateOf(false)}
     var renameOpen by remember(Pocket.selected){mutableStateOf(false)}
     var taskName by remember(Pocket.selected){mutableStateOf("")}
@@ -240,6 +240,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             android.util.Log.d("PocketScroll","index=${position.first} offset=${position.second} moving=${position.third} follow=$follow dragged=$dragged rows=${shownRows.size}")
         }
     }
+    var pagingViewport by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
+    var pageHydrated by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(true)}
+    var pageGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
     var historyGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
     var satisfiedHistoryGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(-1)}
     var shortHistoryPull by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
@@ -259,7 +262,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     LaunchedEffect(list){
         // Accessibility scroll actions do not emit pointer-drag interactions.
-        snapshotFlow{list.isScrollInProgress&&!follow}.distinctUntilChanged().filter{it}.collect{historyGesture++}
+        snapshotFlow{list.isScrollInProgress&&!follow&&!pagingViewport}.distinctUntilChanged().filter{it}.collect{historyGesture++}
     }
     LaunchedEffect(PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)}){if(follow&&!dragged){
         delay(32)
@@ -273,13 +276,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
     LaunchedEffect(Pocket.environmentId,Pocket.selected,important){
-        snapshotFlow{restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
+        snapshotFlow{!pagingViewport&&restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
             .distinctUntilChanged().filter{it}.collect{
                 var retryMs=1000L
-                while(restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
+                while(!pagingViewport&&restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
                     // Wait for finger/fling and layout to settle before another page.
                     delay(180)
-                    if(list.isScrollInProgress||!shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading))break
+                    if(pagingViewport||list.isScrollInProgress||!shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading))break
                     val cursor=PocketTranscript.before
                     val gesture=historyGesture
                     PocketTranscript.load(true,beforeApply={
@@ -316,6 +319,39 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             TextButton({actionsOpen=false;confirmArchive=true},enabled=!active,modifier=Modifier.fillMaxWidth()){BilingualLabel("Archive")}
             TextButton({actionsOpen=false;submit("queue")},enabled=draft.isNotBlank()&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue message")}
     }
+    val visibleSpeechKeys by remember(list){derivedStateOf{list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()}}
+    val hasVisibleSpeech=shownRows.any{it.s("id") in visibleSpeechKeys&&it.s("kind")=="message"&&it.s("text").isNotBlank()}
+    // This closure reads current language/viewport only on an explicit speech action.
+    // Reading the changing spokenRows map during composition invalidates the footer
+    // for every phrase crossing, even when its visible controls are unchanged.
+    val visibleSpeech:()->String={
+        val keys=list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()
+        shownRows.filter{it.s("id") in keys&&it.s("kind")=="message"}
+            .map{row->spokenRows[row.s("id")]?.takeIf{it.first==row.s("text")}?.second?:PocketImmersion.display("row:"+row.s("id"),row.s("text"))}
+            .filter{it.isNotBlank()}.joinToString("\n\n")
+    }
+    val toggleImportant:()->Unit={
+
+            val before=shownRows.map{it.s("id")}
+            val visible=list.firstVisibleItemIndex.coerceAtMost((before.size-1).coerceAtLeast(0))
+            val offset=list.firstVisibleItemScrollOffset
+            val nextImportant=!important
+            val after=commandRunProjection(if(nextImportant)orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}else rows,expandedRunIds).rows
+            val afterIds=after.map{it.s("id")}
+            val retained=conversationFilterViewportAnchor(afterIds,list.layoutInfo.visibleItemsInfo.map{FilterVisibleRow(it.key.toString(),it.offset,it.size)},if(nextImportant)null else filterPassage,list.layoutInfo.viewportEndOffset)
+            val anchor=retained?.index?:conversationFilterAnchor(before,afterIds,visible)
+            val targetOffset=retained?.scrollOffset?:if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0
+            if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))
+                android.util.Log.d("PocketFilter","next=$nextImportant retained=$retained passage=${afterIds.getOrNull(anchor)} visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
+            filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
+            filterTailPixels=if(nextImportant)list.layoutInfo.viewportSize.height else 0
+            PocketTranscript.readerInteraction();follow=false;important=nextImportant
+            afterIds.getOrNull(anchor)?.let{
+                val request=FilterReadingRequest(Pocket.environmentId,Pocket.selected,it,targetOffset,nextImportant)
+                filterRequest=request;filterPaddingRequest=if(nextImportant)request else null
+            }
+
+    }
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize().nestedScroll(historyScrollObserver).testTag("conversation-history"),state=list,contentPadding=PaddingValues(start=18.dp,end=18.dp,top=12.dp,bottom=12.dp+with(density){(if(important)filterTailPixels else 0).toDp()}),verticalArrangement=Arrangement.spacedBy(10.dp)){
@@ -332,7 +368,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                             setRunExpansion(if(expanded)expandedRunIds-members else expandedRunIds+members)
                         }
                     } else if(isCommandRun(row))ActivityRow(row,fullyExpanded=true)
-                    else TranscriptRow(row){spokenRows[row.s("id")]=it}
+                    else {val sourceText=row.s("text");TranscriptRow(row){spokenRows[row.s("id")]=sourceText to it}}
                     if(row.s("speechThread").isNotBlank())TextButton({Pocket.open(row.s("speechThread"))}){BilingualLabel("Open source conversation")}
                     if(important)noteFor(row)?.let{note->FlowRow{
                         TextButton({val context="Regarding your answer:\n"+row.s("text")+"\n\n";val next=if(editor.text.isBlank())context else editor.text+"\n\n"+context;editor=TextFieldValue(next,TextRange(next.length));saveReplyDraft(draftKey,next);keyboardInput=true}){BilingualLabel("Reply")}
@@ -402,35 +438,12 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","dispatching"))TextButton({val source=Pocket.selected;val profile=Pocket.environmentId;val destination=Pocket.captureEnvironment();scope.launch{try{Pocket.apiEnvironment(requireNotNull(destination),"/api/threads/$source/recovery",JSONObject().put("cancel",true));if(Pocket.selected==source&&Pocket.environmentId==profile)Pocket.refreshDetail()}catch(e:Exception){if(Pocket.selected==source&&Pocket.environmentId==profile)Pocket.error=e.message?:"Could not pause recovery"}}}){BilingualLabel("Pause recovery",fontSize=12.sp)}
             else TextButton({val next=continuationDraft(editor.text);editor=TextFieldValue(next,TextRange(next.length));saveReplyDraft(draftKey,next);keyboardInput=true;scope.launch{delay(32);inputFocus.requestFocus();keyboard?.show()}},enabled=!Pocket.sending){BilingualLabel(if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","running","dispatching"))"Recovery active · review" else "Review continuation",fontSize=12.sp)}
         }
-        Box{
-        val visibleKeys by remember(list){derivedStateOf{list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()}}
-        val speechText=shownRows.filter{it.s("id") in visibleKeys&&it.s("kind")=="message"}.map{row->spokenRows[row.s("id")]?:PocketImmersion.display("row:"+row.s("id"),row.s("text"))}.filter{it.isNotBlank()}.joinToString("\n\n")
-        ConversationNotesCard(important=important,onFilter={
-            val before=shownRows.map{it.s("id")}
-            val visible=list.firstVisibleItemIndex.coerceAtMost((before.size-1).coerceAtLeast(0))
-            val offset=list.firstVisibleItemScrollOffset
-            val nextImportant=!important
-            val after=commandRunProjection(if(nextImportant)orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}else rows,expandedRunIds).rows
-            val afterIds=after.map{it.s("id")}
-            val retained=conversationFilterViewportAnchor(afterIds,list.layoutInfo.visibleItemsInfo.map{FilterVisibleRow(it.key.toString(),it.offset,it.size)},if(nextImportant)null else filterPassage,list.layoutInfo.viewportEndOffset)
-            val anchor=retained?.index?:conversationFilterAnchor(before,afterIds,visible)
-            val targetOffset=retained?.scrollOffset?:if(after.getOrNull(anchor)?.s("id")==before.getOrNull(visible))offset else 0
-            if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))
-                android.util.Log.d("PocketFilter","next=$nextImportant retained=$retained passage=${afterIds.getOrNull(anchor)} visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
-            filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
-            filterTailPixels=if(nextImportant)list.layoutInfo.viewportSize.height else 0
-            PocketTranscript.readerInteraction();follow=false;important=nextImportant
-            afterIds.getOrNull(anchor)?.let{
-                val request=FilterReadingRequest(Pocket.environmentId,Pocket.selected,it,targetOffset,nextImportant)
-                filterRequest=request;filterPaddingRequest=if(nextImportant)request else null
-            }
-        },onControls={actionsOpen=true},speechText=speechText,status=status)
-        DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){ConversationActivityControls()}
-        }
+        ConversationLiveCaption()
         InlineCaptureStatus()
         if(keyboardInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically){
                 VoiceLaunchButton(modifier=Modifier.size(64.dp),threadId=Pocket.selected,compact=true)
+                if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
                 BasicTextField(editor,{if(editor.text!=it.text)saveReplyDraft(draftKey,it.text);editor=it},
                     modifier=Modifier.weight(1f).focusRequester(inputFocus).heightIn(min=46.dp).padding(top=12.dp,bottom=12.dp,end=8.dp).onPreviewKeyEvent{event->
                         if(event.key==Key.Enter||event.key==Key.NumPadEnter){
@@ -459,15 +472,41 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 }
             }
         }
-        if(!keyboardInput)Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
+        if(!keyboardInput)Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
             VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=Pocket.selected,bar=true)
+            if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
             ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
-            IconButton({keyboard?.hide();Pocket.closeTask()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
-            InlineSpeechVolume(Modifier.weight(1f).widthIn(min=64.dp))
-            UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)
-            if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
+        val pageEnvironment=Pocket.environmentId
+        FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(2.dp),verticalArrangement=Arrangement.spacedBy(2.dp) ){
+            key(important){ReaderPagingButtons(list,hasEarlier=PocketTranscript.earlier&&!important,
+                onPrepare={up->
+                    pagingViewport=true;pageHydrated=true
+                    PocketTranscript.readerInteraction();follow=false;filterPassage=null
+                    if(up){
+                        historyGesture++;pageGesture=historyGesture
+                        if(!important&&!list.canScrollBackward&&PocketTranscript.earlier){
+                            if(PocketTranscript.loading)snapshotFlow{PocketTranscript.loading}.first{!it}
+                            val cursor=PocketTranscript.before
+                            if(PocketTranscript.earlier)PocketTranscript.load(true)
+                            pageHydrated=!PocketTranscript.earlier||PocketTranscript.before!=cursor
+                        }
+                    }
+                },onSettled={up,completed->
+                    pagingViewport=false
+                    if(up&&completed&&pageHydrated)satisfiedHistoryGesture=pageGesture
+                    if(!up&&completed&&!important&&!list.canScrollForward)follow=true
+                },onError={error->if(Pocket.selected==failureSource&&Pocket.environmentId==pageEnvironment)Pocket.error=PocketNetwork.error(error)})}
+            InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
+            ConversationNotesControls(important,toggleImportant,hasVisibleSpeech,visibleSpeech)
+            Box{
+                UsageDock(Modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true,statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning,onOpen={actionsOpen=true})
+                DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp),properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
+                    TextButton({actionsOpen=false;keyboard?.hide();Pocket.closeTask()}){BilingualLabel("Back")}
+                    if(PocketSpeech.count>0)TextButton({PocketSpeech.clear();actionsOpen=false}){BilingualLabel("Clear speech from active session")}
+                    ConversationActivityControls()
+                }
+            }
         }
     }
     if(queueOpen)ModalBottomSheet(onDismissRequest={queueOpen=false},containerColor=Panel){

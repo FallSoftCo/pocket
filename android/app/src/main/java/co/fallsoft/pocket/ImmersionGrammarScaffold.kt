@@ -173,6 +173,8 @@ internal object InterfaceGrammarScaffolds {
         "Queued messages" to "Messaggi|Messages in coda|queue",
         "Resume queue" to "Riprendi|Resume la coda|queue",
         "Send message" to "Invia|Send messaggio|message",
+        "Page up" to "Pagina|Page precedente|previous",
+        "Page down" to "Pagina|Page successiva|next",
         "Stop & send" to "Ferma|Stop e invia|send",
         "Stop & Send" to "Ferma|Stop e invia|send",
         "Stop and send" to "Ferma|Stop e invia|send",

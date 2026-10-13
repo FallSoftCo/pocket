@@ -91,6 +91,17 @@ class HistoryReadingNativeTest {
   assertTrue("Reading gesture returned to latest: ${last?.second}",last==null||last.second.isEmpty)
   val anchor=requireNotNull(visible.firstOrNull{!it.second.isEmpty&&it.second.top>50&&it.second.bottom<device.displayHeight*3/4})
   val text=anchor.first;val top=anchor.second.top
+  // Exercise the real footer pager, not a direct LazyListState mutation.
+  val beforePage=visiblePassages().filter{it.second.top>50&&it.second.bottom<device.displayHeight*3/4}.map{it.first}.toSet()
+  requireNotNull(device.findObject(By.res("reader-page-up"))).click()
+  Thread.sleep(600);device.waitForIdle(2000)
+  val afterPage=visiblePassages().filter{it.second.top>50&&it.second.bottom<device.displayHeight*3/4}.map{it.first}.toSet()
+  assertTrue("Page up did not change the reading passage",afterPage.isNotEmpty()&&afterPage!=beforePage)
+  assertTrue("Full passages overlap across a full viewport page",beforePage.intersect(afterPage).isEmpty())
+  requireNotNull(device.findObject(By.res("reader-page-down"))).click()
+  Thread.sleep(600);device.waitForIdle(2000)
+  assertTrue("Paging back lost the reading anchor",kotlin.math.abs(requireNotNull(visiblePassages().firstOrNull{it.first==text}).second.top-top)<=24)
+
   val settled=CompletableDeferred<Unit>();val arrived=CompletableDeferred<Unit>()
   main{Pocket.scope.launchEnvironment{PocketTranscript.load(true,beforeApply={arrived.complete(Unit);settled.await()})}}
   await{PocketTranscript.loading};await{arrived.isCompleted}

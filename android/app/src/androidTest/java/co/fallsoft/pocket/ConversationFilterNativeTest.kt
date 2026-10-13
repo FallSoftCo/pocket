@@ -17,7 +17,7 @@ class ConversationFilterNativeTest {
  private val i=InstrumentationRegistry.getInstrumentation()
  private val device=UiDevice.getInstance(i)
  private fun main(block:()->Unit)=i.runOnMainSync(block)
- private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(condition())return;Thread.sleep(100)};assertTrue(condition())}
+ private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache();if(condition())return;Thread.sleep(100)};if(!condition()){device.dumpWindowHierarchy(java.io.File(i.targetContext.cacheDir,"filter-failure.xml"));device.takeScreenshot(java.io.File(i.targetContext.cacheDir,"filter-failure.png"))};assertTrue(condition())}
  private fun visiblePassages(prefix:String):List<Pair<String,android.graphics.Rect>>{
   if(android.os.Build.VERSION.SDK_INT>=34)assertTrue("Accessibility cache did not clear",i.uiAutomation.clearCache())
   val out=java.io.ByteArrayOutputStream();device.dumpWindowHierarchy(out)
@@ -68,7 +68,7 @@ class ConversationFilterNativeTest {
   }
   assertEquals("Reader moved during baseline capture",textBounds,passages().first{it.first==text}.second)
   val beforeInk=ink("filter-leading-commentary-before.png",textBounds)
-  device.findObject(By.text("Important")).click();Thread.sleep(500)
+  device.findObject(By.desc("Important")).click();Thread.sleep(500)
   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"filter-leading-commentary-important.png")))
   val afterInk=ink("filter-leading-commentary-important.png",textBounds)
   println("Filter visible text ink: $beforeInk -> $afterInk")
@@ -76,7 +76,7 @@ class ConversationFilterNativeTest {
   println("Filtered settled bounds: "+passages())
   val answer=device.findObject(By.text(text));assertNotNull("Filter hid visible answer",answer)
   assertTrue("Removing leading commentary moved answer from $top to ${answer.visibleBounds.top}",kotlin.math.abs(answer.visibleBounds.top-top)<=24)
-  device.findObject(By.text("Important")).click();Thread.sleep(500)
+  device.findObject(By.desc("Important")).click();Thread.sleep(500)
   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"filter-leading-commentary-restored.png")))
   assertTrue("Unfilter shifted visible answer",kotlin.math.abs(device.findObject(By.text(text)).visibleBounds.top-top)<=24)
  }
@@ -99,11 +99,11 @@ class ConversationFilterNativeTest {
   fun visibleFinal()=settledPassages("Passage ").firstOrNull{it.first.substringAfter("Passage ").substringBefore(":").toIntOrNull()?.rem(2)==0&&it.second.top>50&&it.second.bottom<device.displayHeight*3/4}
   val passage=requireNotNull(visibleFinal()){"No complete final passage visible after scroll"}
   val text=passage.first;val top=passage.second.top
-  device.findObject(By.text("Important")).click();Thread.sleep(400)
+  device.findObject(By.desc("Important")).click();Thread.sleep(400)
   settledPassages("Passage ")
   val filtered=device.findObject(By.text(text));assertNotNull("Important filter lost reading passage",filtered)
   assertTrue("Important filter moved passage from $top to ${filtered.visibleBounds.top}",kotlin.math.abs(filtered.visibleBounds.top-top)<=24)
-  device.findObject(By.text("Important")).click();Thread.sleep(400)
+  device.findObject(By.desc("Important")).click();Thread.sleep(400)
   settledPassages("Passage ")
   val restored=device.findObject(By.text(text));assertNotNull("Unfilter lost reading passage",restored)
   assertTrue("Unfilter moved reading passage",kotlin.math.abs(restored.visibleBounds.top-top)<=24)

@@ -100,7 +100,7 @@ object PocketCoordinator {
                 turns.clear();turns.putAll(merged)
                 before=result.optLong("before").takeIf{it>0};historyEarlier=result.optBoolean("hasEarlier");publish()
             }catch(e:Exception){if(e is CancellationException)throw e;if(current(t))historyProblem=PocketNetwork.error(e)}
-            finally{if(current(t)){historyLoading=false;resumePending()}}
+            finally{if(current(t)){historyLoading=false;if(!older)resumePending()}}
         }
     }
     private fun rememberActions(t:Ticket,id:String,actions:List<JSONObject>,completed:Boolean){
