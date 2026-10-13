@@ -42,7 +42,7 @@ import java.util.UUID
     var error by remember{mutableStateOf("")}
     val jobs=rememberCoroutineScope()
     AlertDialog(onDismissRequest={if(!busy)dismiss()},title={BilingualLabel("New team task")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-        Text("Losangelex · $team · Coordinator")
+        InterfaceTemplateText(InterfaceTemplate.TEAM_COORDINATOR,team)
         OutlinedTextField(title,{title=it;Pocket.prefs.edit().putString("$key:title",it).apply()},enabled=command==null&&!busy,label={BilingualLabel("Task name",centered=false)})
         OutlinedTextField(body,{body=it;Pocket.prefs.edit().putString("$key:body",it).apply()},enabled=command==null&&!busy,label={BilingualLabel("What should the team do?",centered=false)},maxLines=6)
         if(error.isNotBlank())Text(error,color=Coral)
@@ -111,7 +111,7 @@ import java.util.UUID
         catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}finally{busy=false}
     }
     LaunchedEffect(team){load()}
-    AlertDialog(onDismissRequest=dismiss,title={Text("Needs you · $team")},text={Column{
+    AlertDialog(onDismissRequest=dismiss,title={InterfaceTemplateText(InterfaceTemplate.TEAM_ATTENTION,team)},text={Column{
         LazyColumn(Modifier.heightIn(max=350.dp)){items(events,key={it.optLong("id")}){event->TextButton({inspect(JSONObject(event.toString()).put("team_id",team))}){Text("${event.s("author")} · ${event.s("task")}\n${event.s("body")}")}}}
         if(loaded&&events.isEmpty())BilingualLabel("No pending requests",centered=false)
         if(error.isNotBlank())Text(error,color=Coral)

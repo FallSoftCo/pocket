@@ -112,6 +112,11 @@ class SharedInlineLayoutNativeTest {
   val creditPeriod="Oct 12 10:00 – Oct 12 11:00"
   val creditsOriginal=immersionGrammarSupport(InterfaceTemplate.CREDIT_OBSERVATION.scaffold("62.57",creditPeriod))
   val creditsTarget=InterfaceTemplate.CREDIT_OBSERVATION.target("62.57",creditPeriod)
+  val teamLiteral="Review 100% · équipe"
+  val teamOriginal=immersionGrammarSupport(InterfaceTemplate.TEAM_COORDINATOR.scaffold(teamLiteral))
+  val teamTarget=InterfaceTemplate.TEAM_COORDINATOR.target(teamLiteral)
+  val attentionOriginal=immersionGrammarSupport(InterfaceTemplate.TEAM_ATTENTION.scaffold(teamLiteral))
+  val attentionTarget=InterfaceTemplate.TEAM_ATTENTION.target(teamLiteral)
   var taps=0
   val seen=mutableSetOf<String>()
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
@@ -125,15 +130,17 @@ class SharedInlineLayoutNativeTest {
        androidx.compose.material3.TextButton(onClick={taps++}){InterfaceTemplateText(InterfaceTemplate.GENERATED_ARTIFACT,literal)}
        InterfaceTemplateText(InterfaceTemplate.COMMAND_RESULTS,7,5)
        InterfaceTemplateText(InterfaceTemplate.CREDIT_OBSERVATION,"62.57",creditPeriod)
+       InterfaceTemplateText(InterfaceTemplate.TEAM_COORDINATOR,teamLiteral)
+       InterfaceTemplateText(InterfaceTemplate.TEAM_ATTENTION,teamLiteral)
       }}
      }
     }
    }
    try{compose.waitUntil(35000){
-    listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget).forEach{form->
+    listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget,teamOriginal,teamTarget,attentionOriginal,attentionTarget).forEach{form->
      if(compose.onAllNodesWithText(form).fetchSemanticsNodes().isNotEmpty())seen+=form
     }
-    seen.containsAll(listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget))
+    seen.containsAll(listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget,teamOriginal,teamTarget,attentionOriginal,attentionTarget))
    }}catch(error:Throwable){
     android.util.Log.i("InterfaceTemplateQA","seen="+seen+" enabled="+PocketImmersion.enabled+" motion="+PocketImmersion.motionEnabled+" tree="+compose.onRoot().printToString())
     throw AssertionError("seen="+seen+" enabled="+PocketImmersion.enabled+" motion="+PocketImmersion.motionEnabled+" tree="+compose.onRoot().printToString(),error)
