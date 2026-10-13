@@ -30,10 +30,19 @@
   },
   "galleryCard": "nextcomp-alpha91-signed-review",
   "limits": [
-    "Phone installed version106 at last read; APK transfer in progress, not installed.",
+    "Phone APK verified in Downloads; installed version106. No installation claim.",
     "No physical hardware/120Hz verification.",
     "Remaining Team control follow-up isolated, unbuilt and not part of this release.",
     "Incremental packaging gap tracked; frozen APK not rewritten."
   ],
-  "filterDiagnosis": "Earlier apparent226px jump and missing-text claim withdrawn: measured pixel masks and cache-fresh native bounds proved stale automation metadata. Original receipts preserved."
+  "filterDiagnosis": "Earlier apparent226px jump and missing-text claim withdrawn: measured pixel masks and cache-fresh native bounds proved stale automation metadata. Original receipts preserved.",
+  "phoneDelivery": {
+    "state": "file-verified-install-pending",
+    "filename": "NextComp-alpha91.apk",
+    "sha256": "00c65c738c779606e924c94a80de4f6a70aff389e480218a49672c93ac3ac916",
+    "bytes": 76510172,
+    "installedVersionCodeAtVerification": 106,
+    "verifiedAt": "2026-10-13T01:56:34.772678+00:00",
+    "method": "Termux SSH transfer and independent hash/size read; no installer foreground or pairing reset"
+  }
 }
