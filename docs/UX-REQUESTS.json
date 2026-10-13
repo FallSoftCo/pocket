@@ -2561,13 +2561,19 @@
     {
       "id": "paging-input-wave-reconnect-followup-20261013",
       "request": "Page buttons must replace the viewport immediately, sit in ergonomic full-width footer regions, and clearly name the Important filter. Measure and fix input lag including immersion wave shaping/recomposition. Transient history refresh failures must not appear as immediate send/disconnected failures. Complete visible equivalents for conversation phrases without disrupting the global reading cascade.",
-      "status": "implementation-and-native-qualification-in-progress",
-      "evidence": "docs/qualification/footer-input-immersion-followup-20261013.json",
+      "status": "published-alpha94-phone-install-awaiting-unlock",
+      "evidence": "docs/qualification/alpha94-release-20261013.json",
       "constraints": [
         "Preserve drafts, source routing, actual delivery errors and history anchors.",
         "Do not claim all untranslated words are animation failures; inspect source replacement coverage and rendered forms.",
         "Use emulator integration journeys and measured performance, not unit count as release evidence."
       ]
+    },
+    {
+      "id": "large-text-refresh-overlay-20261013",
+      "request": "The temporary Updating overlay overlaps the first passage at double text size. Put refresh state in the existing footer/status area without obscuring reading or shifting anchors.",
+      "status": "recorded-followup-not-released",
+      "evidence": "docs/qualification/alpha94-release-20261013.json"
     }
   ],
   "current_state": {
@@ -2588,7 +2594,7 @@
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 original modeled controls, 120-frame60fps swivel assets and160-frame Codex/Psychology/N turns; display-clock playback, live reduced motion and background fallback. Real Fold cadence unqualified.",
     "phone_install": "Compatible alpha93 APK SHA256/62112756-byte size verified over SSH. One update notification accepted by FCM; phone remains110.",
-    "qualification": "Alpha93:365 units per debug/release variant, both lints, two signed variants,50 frozen native journeys, actual optimized search/routing/footer and recorded-motion review passed",
+    "qualification": "Alpha94:52 frozen native journeys, both signed variants, both lints and actual signed UI/motion review passed; published112. Phone hash verified; install awaits Android unlock.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Alpha34 native cycling review;1890-card desktop/mobile/reduced-motion/reload checks pass.",
     "native_audio_qualification": "Actual native account foreground and optimized cold screen-off rendering/playback verified, no mic/task calls. Fresh cold rendering15.425sec; physical secure-keyguard, push receipt and perceptual quality separate.",
@@ -2606,7 +2612,8 @@
     "candidate_release": "Alpha34 published and52 offered; handset receipt and installation unverified",
     "candidate_android_tests": 194,
     "delivery_audit": "All111 requests reconciled against actual source and versioned evidence; see qualification/delivery-audit-2026-10-06.json.",
-    "legacy_fields_note": "Other unchanged fields in this legacy block are historical; current qualification receipts are authoritative."
+    "legacy_fields_note": "Other unchanged fields in this legacy block are historical; current qualification receipts are authoritative.",
+    "latest_release": "0.5.0-alpha.94 (112)"
   },
   "remaining": [
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",
