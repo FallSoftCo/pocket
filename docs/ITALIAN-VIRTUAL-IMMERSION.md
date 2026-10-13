@@ -36,7 +36,24 @@ One isolated stock ChatGPT-authenticated Codex turn on advertised gpt-6-luna / m
 
 Initial validation rejected a grammar relation on “due”. Under the current optional-metadata contract, replay of that same recorded response retains its exact safe replacement and omits only that span's invalid teaching metadata; the other spans retain valid metadata. No guessed grammar, source change or second model request was used. This qualifies teacher transport/selection and final backend replay, not live phone rendering or guaranteed latency. Source, protected-range, overlap, short-span and partial-selection safeguards still reject unsafe replacements.
 
-## Automatic inline cycling
+## Current reading wave
+
+Current Android candidates cycle controls and content on one enrolled
+visible-screen clock, with a cascading reading-direction wipe from global top
+to bottom. Target-grammar support keeps vocabulary aligned with its Italian
+counterpart. Literal names/IDs stay exact and cannot become template markup.
+[Current rendering and perception evidence](IMMERSION-PERCEPTION-DESIGN.md)
+distinguishes this implementation from historical prototypes. Cycling does not
+call a model; semantic plans are cached separately.
+
+The alpha92 candidate extends typed cycling to Team/Task/To/Agent selector
+prefixes, direct recipient labels, reply clearing and authored event kinds.
+[The actual native Team journey](qualification/team-control-coverage-20261012.json)
+checks both languages, scoped drafts and an exact synthetic direct send.
+Quoted reply bodies and agent status inside literal choices still need integration;
+live team-provider and phone interaction are not qualified.
+
+## Historical automatic inline cycling (alpha24)
 
 Alpha24 adds automatic changes within the existing single text flow. Source and target phrases share reserved native phrase geometry, with a short fade, independent staggering and reading-length dwell; Italian stays visible longer. Tapping holds the original phrase and tapping again resumes cycling. Explicit displayed speech holds its captured flow, including after reopening the view. URLs, commands and code retain their original semantics. This does not introduce subtitles, duplicate lines or a modal.
 
