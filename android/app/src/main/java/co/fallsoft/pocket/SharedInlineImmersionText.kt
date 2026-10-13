@@ -260,6 +260,10 @@ import androidx.compose.ui.unit.*
                             else if(link is LinkAnnotation.Url)uriHandler.openUri(link.url)
                         }
                         val hasLinks=forms.take(2).any{it.getLinkAnnotations(0,it.length).isNotEmpty()}
+                        val holdOwner=remember{Any()}
+                        DisposableEffect(readingWave,holdOwner){
+                            onDispose{readingWave?.selecting(holdOwner,false)}
+                        }
                         val interaction=if(!hasLinks)Modifier else Modifier.pointerInput(run.id,part){
                             awaitEachGesture{
                                 val down=awaitFirstDown()
@@ -277,9 +281,20 @@ import androidx.compose.ui.unit.*
                                 // Leave down available to native selection and scrolling.
                                 // Consume only a recognized short tap on release.
                                 // A hold belongs to native selection, never language help.
-                                val up=withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis){
-                                    waitForUpOrCancellation()
-                                }?:return@awaitEachGesture
+                                val tap=withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis){
+                                    // Distinguish a cancelled scroll from an actual hold timeout.
+                                    true to waitForUpOrCancellation()
+                                }
+                                if(tap==null){
+                                    // Once this is a long press, keep native selection's
+                                    // lexical snapshot stable until it claims the toolbar.
+                                    // Ordinary taps and cancelled drags never pause the wave.
+                                    readingWave?.selecting(holdOwner,true)
+                                    try{waitForUpOrCancellation()}
+                                    finally{readingWave?.selecting(holdOwner,false)}
+                                    return@awaitEachGesture
+                                }
+                                val up=tap.second?:return@awaitEachGesture
                                 up.consume()
                                 dispatch(intended)
                             }
