@@ -56,14 +56,9 @@ import java.util.Locale
     if(credits.decrease!=null&&credits.fromAt>0&&credits.toAt>credits.fromAt){
         val format=SimpleDateFormat("MMM d HH:mm",Locale.getDefault())
         BilingualLabel("Observed balance decrease",centered=false,color=Muted,fontSize=12.sp)
-        val observation="${credits.decrease} credits · ${format.format(Date(credits.fromAt))} – ${format.format(Date(credits.toAt))}"
-        // Only authored vocabulary changes; measured amounts and timestamps remain literal.
-        val literalPrefix="${credits.decrease} "
-        val literalPeriod=" · ${format.format(Date(credits.fromAt))} – ${format.format(Date(credits.toAt))}"
-        val observationScaffold=authoredImmersionScaffold(observation,listOf(
-            literalPrefix to literalPrefix,"crediti" to "credits",literalPeriod to literalPeriod))
-        InterfaceText(observation,color=Paper,fontSize=13.sp,
-            targetOverride=observationScaffold.target,scaffoldOverride=observationScaffold)
+        InterfaceTemplateText(InterfaceTemplate.CREDIT_OBSERVATION,credits.decrease.toString(),
+            "${format.format(Date(credits.fromAt))} – ${format.format(Date(credits.toAt))}",
+            style=LocalTextStyle.current.copy(color=Paper,fontSize=13.sp))
         BilingualLabel("Across this account; not lifetime or per-session spending",centered=false,maxLines=3,color=Muted,fontSize=12.sp)
     }else BilingualLabel(if(credits.comparisonState=="balance-increased")"Balance increased · comparison restarted" else "Waiting for comparable balance observations",centered=false,maxLines=2,color=Muted,fontSize=12.sp)
     ConnectionPill()

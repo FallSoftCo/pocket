@@ -109,6 +109,9 @@ class SharedInlineLayoutNativeTest {
   val target=InterfaceTemplate.GENERATED_ARTIFACT.target(literal)
   val countsOriginal=immersionGrammarSupport(InterfaceTemplate.COMMAND_RESULTS.scaffold(7,5))
   val countsTarget=InterfaceTemplate.COMMAND_RESULTS.target(7,5)
+  val creditPeriod="Oct 12 10:00 – Oct 12 11:00"
+  val creditsOriginal=immersionGrammarSupport(InterfaceTemplate.CREDIT_OBSERVATION.scaffold("62.57",creditPeriod))
+  val creditsTarget=InterfaceTemplate.CREDIT_OBSERVATION.target("62.57",creditPeriod)
   var taps=0
   val seen=mutableSetOf<String>()
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
@@ -121,15 +124,16 @@ class SharedInlineLayoutNativeTest {
       MaterialTheme{androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().statusBarsPadding()){
        androidx.compose.material3.TextButton(onClick={taps++}){InterfaceTemplateText(InterfaceTemplate.GENERATED_ARTIFACT,literal)}
        InterfaceTemplateText(InterfaceTemplate.COMMAND_RESULTS,7,5)
+       InterfaceTemplateText(InterfaceTemplate.CREDIT_OBSERVATION,"62.57",creditPeriod)
       }}
      }
     }
    }
    try{compose.waitUntil(35000){
-    listOf(original,target,countsOriginal,countsTarget).forEach{form->
+    listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget).forEach{form->
      if(compose.onAllNodesWithText(form).fetchSemanticsNodes().isNotEmpty())seen+=form
     }
-    seen.containsAll(listOf(original,target,countsOriginal,countsTarget))
+    seen.containsAll(listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget))
    }}catch(error:Throwable){
     android.util.Log.i("InterfaceTemplateQA","seen="+seen+" enabled="+PocketImmersion.enabled+" motion="+PocketImmersion.motionEnabled+" tree="+compose.onRoot().printToString())
     throw AssertionError("seen="+seen+" enabled="+PocketImmersion.enabled+" motion="+PocketImmersion.motionEnabled+" tree="+compose.onRoot().printToString(),error)

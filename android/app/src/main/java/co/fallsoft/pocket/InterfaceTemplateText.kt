@@ -8,6 +8,7 @@ import java.util.Locale
 
 /** Authored grammar, literal parameters: no model request for changing IDs/counts/paths. */
 internal enum class InterfaceTemplate(val source:String,val italian:String){
+    CREDIT_OBSERVATION("%1\$s credits · %2\$s","%1\$s crediti · %2\$s"),
     COMMAND_RESULTS("%1\$s command results · %2\$s exited successfully","%1\$s risultati dei comandi · %2\$s terminati correttamente"),
     FILE_CHANGES("Recorded file changes · %1\$s","Modifiche ai file registrate · %1\$s"),
     GENERATED_ARTIFACT("Generated artifact: %1\$s","Risorsa generata: %1\$s"),
@@ -22,6 +23,7 @@ internal enum class InterfaceTemplate(val source:String,val italian:String){
             if(index==0)listOf(pair)else listOf(" " to " ",pair)
         }
         val units=when(this){
+            CREDIT_OBSERVATION->listOf(values[0].toString() to values[0].toString()," " to " ","crediti" to "credits"," · " to " · ",values[1].toString() to values[1].toString())
             COMMAND_RESULTS->words(values[0].toString(),"risultati|results","dei","comandi|commands","·",values[1].toString(),"terminati|exited","correttamente|successfully")
             FILE_CHANGES->words("Modifiche|Changes","ai","file|files","registrate|recorded","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
             GENERATED_ARTIFACT->words("Risorsa|Artifact","generata:|generated:")+listOf(" " to " ",values[0].toString() to values[0].toString())
