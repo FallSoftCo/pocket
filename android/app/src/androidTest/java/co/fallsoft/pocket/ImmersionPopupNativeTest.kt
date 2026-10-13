@@ -81,7 +81,7 @@ class ImmersionPopupNativeTest {
      Thread.sleep(200)
     }
     java.io.File(c.cacheDir,"immersion-popup-trace.json").writeText(trace.toString())
-    assertTrue("Bottom popup did not show both complete languages: "+seen,seen.containsAll(listOf("Permessi completi per i nuovi incarichi","Permissions full per i new tasks")))
+    assertTrue("Bottom popup did not show both complete languages: "+seen,seen.containsAll(listOf("Permessi completi per i nuovi incarichi","Permissions full for the new tasks")))
     val node=requireNotNull(device.findObject(By.pkg(c.packageName).textContains("per i")))
     device.click(node.visibleBounds.centerX(),node.visibleBounds.centerY())
     i.runOnMainSync{assertEquals(1,taps);assertFalse(opened.value)}
