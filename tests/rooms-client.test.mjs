@@ -29,3 +29,10 @@ test('desired membership forwards PUT with server credential and no model comman
   assert.equal(observed.url.pathname,`/hollywood/v2/teams/research/rooms/${room}/members/${actor}`);
   assert.equal(observed.options.redirect,'manual');
 });
+
+test('room creation forwards only metadata and permits exact recovery lookup',()=>{
+  const body={task:'room-stable-id',title:'Product engineering',purpose:'Implementation and delivery'};
+  assert.deepEqual(teamRequest('POST','teams/enterprise/rooms',{},body),{path:'teams/enterprise/rooms',body});
+  assert.deepEqual(teamRequest('GET','teams/enterprise/rooms',{task:body.task}),{path:'teams/enterprise/rooms',query:{task:body.task}});
+  for(const bad of [{...body,targets:['global-steward']},{...body,commandId:'pretend-work'},{...body,url:'https://injected.example'},{...body,title:''},{...body,task:'wrong/path'}])assert.throws(()=>teamRequest('POST','teams/enterprise/rooms',{},bad));
+});

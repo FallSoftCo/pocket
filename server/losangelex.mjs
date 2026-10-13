@@ -45,7 +45,7 @@ export class Losangelex {
   }
 }
 
-const queryKeys={actors:['cursor','limit'],rooms:['cursor','limit'],teams:['cursor','limit'],overview:[],teammates:['cursor','limit'],history:['task','visibility','before','after','around','limit'],messages:['task','after','limit'],attention:['cursor','limit'],conversations:['task','agent','cursor','limit']};
+const queryKeys={actors:['cursor','limit'],rooms:['cursor','limit','task'],teams:['cursor','limit'],overview:[],teammates:['cursor','limit'],history:['task','visibility','before','after','around','limit'],messages:['task','after','limit'],attention:['cursor','limit'],conversations:['task','agent','cursor','limit']};
 export function teamRequest(method,tail,query,body){
   const parts=tail.split('/').filter(Boolean);
   if(method==='GET'&&parts.length===1&&['teams','attention'].includes(parts[0]))return {path:parts[0],query:checkedQuery(parts[0],query)};
@@ -58,12 +58,14 @@ export function teamRequest(method,tail,query,body){
   if(method!=='POST')throw fail(404,'Unknown Losangelex operation.');
   let allowed;
   if(parts.length===3&&resource==='messages')allowed=['commandId','task','body','targets','visibility','replyTo'];
+  else if(parts.length===3&&resource==='rooms')allowed=['task','title','purpose'];
   else if(parts.length===3&&resource==='tasks')allowed=['commandId','id','title','body','targets'];
   else if(parts.length===3&&resource==='control')allowed=['commandId','task','agent','action'];
   else if(parts.length===5&&number(parts[3])&&resource==='attention'&&['answer','dismiss'].includes(parts[4]))allowed=parts[4]==='answer'?['commandId','body']:['commandId'];
   else if(parts.length===5&&number(parts[3])&&resource==='approval'&&parts[4]==='answer')allowed=['decision'];
   else throw fail(404,'Unknown Losangelex operation.');
   if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!allowed.includes(k)))throw fail(400,'Unsupported command fields.');
+  if(resource==='rooms'&&(!slug(body.task)||typeof body.title!=='string'||!body.title.trim()||body.title.length>200||(body.purpose!==undefined&&(typeof body.purpose!=='string'||body.purpose.length>4000))))throw fail(400,'Invalid room metadata.');
   if(allowed.includes('commandId')&&(typeof body.commandId!=='string'||!/^[a-zA-Z0-9_-]{1,128}$/.test(body.commandId)))throw fail(400,'Keep a stable command identifier for this submission.');
   return {path:base+parts.slice(2).join('/'),body};
 }

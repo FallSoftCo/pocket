@@ -28,6 +28,7 @@ import java.util.UUID
     val jobs=rememberCoroutineScope()
     var roomBrowsing by remember(owner){mutableStateOf(true)}
     var roomMembers by remember(owner){mutableStateOf(false)}
+    var roomAuthority by remember(owner){mutableStateOf("")}
     var rooms by remember(owner){mutableStateOf(emptyList<JSONObject>())}
     var teams by remember{mutableStateOf(emptyList<JSONObject>())}
     var team by remember{mutableStateOf(Pocket.prefs.getString("team:$owner","")?:"")}
@@ -68,7 +69,7 @@ import java.util.UUID
         val roomRows=mutableListOf<JSONObject>();var roomCursor="";val roomSeen=mutableSetOf<String>()
         do{
             val page=client.call("teams/${destination.team}/rooms?limit=100"+if(roomCursor.isNotBlank())"&cursor=$roomCursor" else "")
-            roomRows+=page.optJSONArray("rooms")?.objects().orEmpty();roomCursor=page.s("next_cursor")
+            roomAuthority=page.s("authorityId");roomRows+=page.optJSONArray("rooms")?.objects().orEmpty();roomCursor=page.s("next_cursor")
             if(roomCursor.isNotBlank()&&!roomSeen.add(roomCursor))throw Exception("Repeated room cursor")
         }while(roomCursor.isNotBlank())
         val inbox=client.call("teams/${destination.team}/attention?limit=100")
@@ -133,7 +134,7 @@ import java.util.UUID
         RoomBrowser(teams,team,rooms,error,
             {team=it;task="";rooms=emptyList();recipient="";direct=false;replyTo=null},
             {room->task=room.s("task");recipient="";direct=false;replyTo=null;roomBrowsing=false},onSettings,{newTask=true})
-        if(newTask)TeamNewTask(client,team,{newTask=false}){id->task=id;recipient="";direct=false;replyTo=null;newTask=false;roomBrowsing=false}
+        if(newTask)RoomCreateDialog(client,team,{newTask=false}){id->task=id;recipient="";direct=false;replyTo=null;newTask=false;roomBrowsing=false}
         return
     }
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
@@ -155,6 +156,12 @@ import java.util.UUID
             direct->InterfaceTemplateText(InterfaceTemplate.TEAM_DIRECT_TASK,recipient,taskTitle,style=headingStyle)
             task.isBlank()->InterfaceTemplateText(InterfaceTemplate.TEAM_ROOM_LOADING,style=headingStyle)
             else->InterfaceTemplateText(InterfaceTemplate.TEAM_ROOM_TASK,taskTitle,style=headingStyle)
+        }
+        val selectedRoom=rooms.firstOrNull{it.s("task")==task}
+        val selectedAgent=recipient.ifBlank{teams.firstOrNull{it.s("id")==team}?.s("coordinator").orEmpty()}
+        val voiceActor=selectedRoom?.optJSONArray("members")?.objects()?.firstOrNull{it.s("agent")==selectedAgent}
+        if(selectedRoom!=null&&voiceActor!=null&&roomAuthority.isNotBlank()){
+            VoiceLaunchButton(compact=true,roomDestination=JSONObject().put("team",team).put("roomId",selectedRoom.s("id")).put("authorityId",roomAuthority).put("actorId",voiceActor.s("id")).put("direct",direct))
         }
         BilingualLabel("Full access",fontSize=12.sp,color=Muted)
         if(error.isNotBlank())ImmersionText("team-error:$owner:$team",error,color=Coral,fontSize=13.sp)

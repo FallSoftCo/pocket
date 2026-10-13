@@ -27,3 +27,17 @@ test('replacing notification synthesis stops only previous speech lane',async()=
  assert.throws(()=>s.voice.session('device',first.id),/expired/);assert.equal(s.voice.session('device',live.id).id,live.id);assert.equal(s.voice.session('device',second.id).id,second.id);
  assert.equal(s.calls.filter(c=>c.method==='thread/realtime/stop').length,1);await s.voice.stop('device',second.id);
 }finally{await s.cleanup()}});
+
+test('a recording commits to its captured room even when the next focus changes',async()=>{
+ const s=setup();let focus={roomId:'original-room'},captured;
+ s.voice.controller.capture=()=>focus;
+ const submit=s.voice.controller.submitText;
+ s.voice.controller.submitText=(device,id,text,destination)=>{captured=destination;return submit(device,id,text);};
+ try{
+  const {id}=await s.voice.start('device','v=0\r\n');s.voice.begin('device',id,'room-recording-001');
+  focus={roomId:'other-room'};
+  s.codex.emit('event',{method:'thread/realtime/transcript/delta',params:{threadId:'audio-thread',role:'user',delta:'Read status'}});
+  await s.voice.commit('device',id,'room-recording-001');
+  assert.deepEqual(captured,{roomId:'original-room'});assert.equal(s.sends,1);
+ }finally{await s.cleanup();}
+});

@@ -57,7 +57,8 @@
     "co.fallsoft.pocket.RoomNavigationNativeTest#roomIdentityDraftsAndMembershipStayScoped",
     "co.fallsoft.pocket.RoomNavigationNativeTest#unknownMembershipReconcilesWithoutAnotherSubmission",
     "co.fallsoft.pocket.UpdateOriginNativeTest#inactiveProfilePushChecksCapturedPairingWithoutChangingSessionOrUnknownReceipts",
-    "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin"
+    "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin",
+    "co.fallsoft.pocket.RoomVoiceNativeTest#unknownTypedTurnKeepsRoomAndReceiptAcrossServiceRestart"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",

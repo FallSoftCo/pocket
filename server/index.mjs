@@ -20,6 +20,8 @@ import {ConversationNotes} from "./conversation-notes.mjs";
 import {LiveActivityDelivery} from "./live-activity-delivery.mjs";
 import {ActivityBoard} from './activity-board.mjs';
 import {NativeVoice} from './native-voice.mjs';
+import {RoomVoice} from './room-voice.mjs';
+import {Losangelex,loadLosangelex} from './losangelex.mjs';
 import {ThreadPreviews,sessionInteraction} from './thread-previews.mjs';
 import express from 'express';
 import http from 'node:http';
@@ -91,7 +93,15 @@ const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,ho
   }});
 
 const nativeVoiceCodex=new Codex();
-const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:voiceController,cwd:defaultCwd});
+const roomVoice=new RoomVoice({db,client:new Losangelex(loadLosangelex(dir))});
+const roomVoiceFocus=new Map();
+const audioController={db,
+ capture:device=>roomVoiceFocus.get(device)||null,
+ get:(device,id)=>roomVoice.get(device,id)||voiceController.get(device,id),
+ submitText:(device,id,text,destination)=>destination?roomVoice.submitText(device,id,text,destination):voiceController.submitText(device,id,text),
+ mark:(device,id,...args)=>{if(!roomVoice.get(device,id))voiceController.mark(device,id,...args);}
+};
+const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:audioController,cwd:defaultCwd});
 const sessionDiscovery=new SessionDiscovery({db,codex,hidden:(id,thread)=>internalSessions.owns(id,thread)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)});
 const catchupHidden=id=>internalSessions.owns(id)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)||!!db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived;
 const sessionCatchup=new SessionCatchup({db,hidden:catchupHidden,resolvePending:(requestId,threadId)=>{
@@ -438,6 +448,13 @@ app.post('/api/coordinator/reporting/:deviceId',owner,route(async(req,res)=>res.
 app.get('/api/coordinator/reports',(req,res)=>{try{res.json(coordinatorReports.inbox(req.device.id,{before:Number(req.query.before||Number.MAX_SAFE_INTEGER),limit:Number(req.query.limit||40)}));}catch(e){res.status(e.status||500).json({error:e.message});}});
 app.get('/api/voice/history',(req,res)=>{const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before,{conversationOnly:req.query.conversationOnly==='1'}));});
 app.post('/api/voice/start',route(async(req,res)=>{
+  if(req.body.room){
+    if(req.body.threadId)throw Object.assign(Error('Choose one room or session focus.'),{status:400});
+    const destination=await roomVoice.destination(req.body.room);
+    roomVoiceFocus.set(req.device.id,destination);
+    return res.json({focus:'room',room:destination,host:hostName,native:true});
+  }
+  roomVoiceFocus.delete(req.device.id);
   let threadId=null;
   if(req.body.threadId){threadId=requireId(req.body.threadId);if(catchupHidden(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();const result=await codex.call('thread/read',{threadId,includeTurns:false});if(result.thread?.id!==threadId)return res.status(409).json({error:'Session identity changed. Choose the intended session again.'});requireDirectSessionInput(result.thread);}
   await voiceController.ensure(req.device.id);
@@ -452,9 +469,9 @@ app.post('/api/voice/native/commit',route(async(req,res)=>res.json(await nativeV
 app.post('/api/voice/native/speak',route(async(req,res)=>res.json(await nativeVoice.speak(req.device.id,req.body.connectionId,req.body.text,req.body.voiceTurnId))));
 app.post('/api/voice/native/heartbeat',route(async(req,res)=>{nativeVoice.session(req.device.id,req.body.connectionId);res.json({ok:true});}));
 app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:'4mb'}),(req,res,next)=>{try{if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
-app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(voiceController.submitText(req.device.id,req.body.turnId,req.body.text,req.body.correctionOf));}));
-app.get('/api/voice/turns/:id',(req,res)=>{const row=voiceController.get(req.device.id,req.params.id);if(!row)return res.status(404).json({error:'Voice turn not found.'});if(row.state==='completed')voiceController.mark(req.device.id,req.params.id,'response_first_fetched');res.json(row);});
-app.post('/api/voice/turns/:id/presented',route(async(req,res)=>res.json(voiceController.presented(req.device.id,req.params.id))));
+app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(roomVoiceFocus.has(req.device.id)?roomVoice.submitText(req.device.id,req.body.turnId,req.body.text,roomVoiceFocus.get(req.device.id)):voiceController.submitText(req.device.id,req.body.turnId,req.body.text,req.body.correctionOf));}));
+app.get('/api/voice/turns/:id',route(async(req,res)=>{const row=roomVoice.get(req.device.id,req.params.id)?await roomVoice.refresh(req.device.id,req.params.id):voiceController.get(req.device.id,req.params.id);if(!row)return res.status(404).json({error:'Voice turn not found.'});if(row.state==='completed')voiceController.mark(req.device.id,req.params.id,'response_first_fetched');res.json(row);}));
+app.post('/api/voice/turns/:id/presented',route(async(req,res)=>res.json(roomVoice.get(req.device.id,req.params.id)?.state==='completed'?{ok:true}:voiceController.presented(req.device.id,req.params.id))));
 app.get('/api/voice/speech',(_req,res)=>res.json(voiceSpeech.status()));
 app.post('/api/voice/speech',route(async(req,res)=>{
   if(speechRequests>=2)return res.status(429).json({error:'Speech is busy. Retry shortly.'});

@@ -1,5 +1,7 @@
 package co.fallsoft.pocket
 
+import org.json.JSONObject
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -32,15 +34,15 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 
-@Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false,cardRegion:Boolean=false,smallDock:Boolean=false){
+@Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false,cardRegion:Boolean=false,smallDock:Boolean=false,roomDestination:JSONObject?=null){
     val c=LocalContext.current
     val here=compact||bar||dock
     val control=captureControl(PocketVoice.active||PocketVoice.launching,PocketVoice.state,Pocket.prefs.getString("voicePendingId",null)!=null)
-    val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ok->if(ok)PocketVoice.start(c,threadId,inPlace=here,checkSaved=control==CaptureControl.CHECK_SAVED)else PocketVoice.captureFailure("Allow microphone access to record. Your draft is kept.",here)}
+    val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ok->if(ok)PocketVoice.start(c,threadId,inPlace=here,checkSaved=control==CaptureControl.CHECK_SAVED,roomDestination=roomDestination)else PocketVoice.captureFailure("Allow microphone access to record. Your draft is kept.",here)}
     val label=when(control){CaptureControl.START->"Start recording";CaptureControl.STOP_SEND->"Stop and send recording";CaptureControl.PROCESSING->PocketVoice.state;CaptureControl.CHECK_SAVED->"Check saved turn"}
     val capture:()->Unit={
         if(control==CaptureControl.CHECK_SAVED&&PocketVoice.active)PocketVoice.retry()
-        else if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)PocketVoice.start(c,threadId,inPlace=here,checkSaved=control==CaptureControl.CHECK_SAVED)
+        else if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)PocketVoice.start(c,threadId,inPlace=here,checkSaved=control==CaptureControl.CHECK_SAVED,roomDestination=roomDestination)
         else permission.launch(Manifest.permission.RECORD_AUDIO)
     }
     if(cardRegion)CardInteractionRegion(PocketImmersion.label("Mic"),modifier,capture)
