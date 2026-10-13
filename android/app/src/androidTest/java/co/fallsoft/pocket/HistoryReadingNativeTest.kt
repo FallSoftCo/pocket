@@ -83,6 +83,22 @@ class HistoryReadingNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")};await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
   main{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","reading").put("version",100+n).put("row",JSONObject().put("id","reading-$n").put("turnId","reading").put("kind","message").put("text","Reading passage $n: retained synthetic conversation text with a clear place to return while earlier history arrives.")))}
   assertTrue(device.wait(Until.hasObject(By.textContains("Reading passage 39:")),5000));Thread.sleep(150)
+  if(InstrumentationRegistry.getArguments().getString("profileConversation")=="true"){
+   var window:android.view.Window?=null
+   main{window=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().single().window}
+   val frames=java.util.Collections.synchronizedList(mutableListOf<LongArray>())
+   val worker=android.os.HandlerThread("ConversationFrameObservation").apply{start()}
+   val listener=android.view.Window.OnFrameMetricsAvailableListener{_,f,_->frames.add(longArrayOf(f.getMetric(android.view.FrameMetrics.TOTAL_DURATION),f.getMetric(android.view.FrameMetrics.DRAW_DURATION),f.getMetric(android.view.FrameMetrics.DEADLINE)))}
+   val before=android.os.Debug.getRuntimeStats();val cpu=android.os.Process.getElapsedCpuTime();val started=android.os.SystemClock.elapsedRealtime()
+   main{window!!.addOnFrameMetricsAvailableListener(listener,android.os.Handler(worker.looper))}
+   try{
+    repeat(6){n->device.swipe(device.displayWidth/2,if(n%2==0)device.displayHeight/3 else device.displayHeight*2/3,device.displayWidth/2,if(n%2==0)device.displayHeight*2/3 else device.displayHeight/3,30);Thread.sleep(600)}
+   }finally{main{window!!.removeOnFrameMetricsAvailableListener(listener)};worker.quitSafely();worker.join(2000)}
+   val after=android.os.Debug.getRuntimeStats();val deltas=JSONObject();listOf("art.gc.bytes-allocated","art.gc.gc-count","art.gc.gc-time").forEach{k->val a=before[k]?.toLongOrNull();val b=after[k]?.toLongOrNull();if(a!=null&&b!=null)deltas.put(k,b-a)}
+   val samples=org.json.JSONArray();synchronized(frames){frames.forEach{samples.put(org.json.JSONArray().put(it[0]).put(it[1]).put(it[2]))}}
+   java.io.File(c.cacheDir,"conversation-scroll-performance.json").writeText(JSONObject().put("scope","Actual production conversation with 40 synthetic messages, alternating finger scrolls, immersion disabled, software emulator; not physical frame pacing").put("wallMs",android.os.SystemClock.elapsedRealtime()-started).put("processCpuMs",android.os.Process.getElapsedCpuTime()-cpu).put("runtimeDeltas",deltas).put("frames",samples).toString())
+  }
+
   repeat(3){requireNotNull(device.findObject(By.scrollable(true))).scroll(androidx.test.uiautomator.Direction.UP,0.7f);Thread.sleep(200)}
   device.waitForIdle(2000)
   device.dumpWindowHierarchy(java.io.File(c.cacheDir,"history-reading-hierarchy.xml"))

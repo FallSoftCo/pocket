@@ -1,0 +1,23 @@
+{
+  "scope": "Actual production conversation with 40 synthetic messages, alternating finger scrolls, immersion disabled, software emulator; not physical frame pacing",
+  "candidateApkSha": "db7a5c3596121684dd3969c3a5aec4ce58f7d449fd19863021b2f15bdbdb696a",
+  "status": "measured-not-performance-qualified",
+  "wallMs": 7368,
+  "processCpuMs": 11002,
+  "frames": 413,
+  "medianTotalMs": 30.793125,
+  "p95TotalMs": 50.169771,
+  "medianDrawMs": 3.096388,
+  "runtimeDeltas": {
+    "art.gc.bytes-allocated": 14111184,
+    "art.gc.gc-count": 5,
+    "art.gc.gc-time": 223
+  },
+  "remaining": [
+    "Matched published baseline required before claiming improvement or cause.",
+    "Immersion-enabled and physical-phone frame pacing remain unqualified."
+  ],
+  "nativeJourney": [
+    "HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage"
+  ]
+}
