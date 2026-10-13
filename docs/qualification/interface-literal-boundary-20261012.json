@@ -3,7 +3,7 @@
   "base": "d222257d7382c841172630a70535388094224058",
   "finding": "New unreleased team templates passed arbitrary team names through authored pipe-delimited vocabulary parser. Pipe/tilde names could diverge from exact formatted target.",
   "fix": "Authored words and literal parameters now separate constructors. Team names, recipients, task titles, amounts and paths are never vocabulary syntax. Command count arguments use literal slots too.",
-  "coverage": "Room/direct headings and loading states now use shared inline renderer; team/title literals retained. Existing native template journey extended with pipe/tilde/percent/unicode names and exact scaffold/target invariants; native execution pending after primary emulator gate settles.",
+  "coverage": "Room/direct headings and loading states now use shared inline renderer; team/title literals retained. Existing native template journey extended with pipe/tilde/percent/unicode names and exact scaffold/target invariants; corrected native template journey passed.",
   "build": "Both Kotlin variants plus qualification APK/test APK compile on OZZZ-OS, maxworkers1.",
   "releaseHold": "alpha91-r01 must not publish. Integrate correction after frozen gate settles; qualify new immutable candidate. Published alpha90 remains unchanged.",
   "additionalAudit": [
@@ -21,7 +21,15 @@
     "beforeTop": 462,
     "afterTop": 688,
     "pixelShift": 226,
-    "visualReview": "Before/after actual emulator screenshots also show missing text after filter. Cause not yet established; do not relax assertions or publish.",
-    "remainingCase": "filterPreservesVisiblePassageAndReturnsWithoutJumping not run after first failure."
+    "visualReview": "Earlier resized-image inspection suggested missing text, but measured screenshot ink was unchanged in the test rectangle. That visual interpretation is unproven; retain original captures and investigate before claiming a rendering defect.",
+    "remainingCase": "filterPreservesVisiblePassageAndReturnsWithoutJumping not run after first failure.",
+    "testSynchronization": "Original test sampled top before a second hierarchy read and screenshot, then used a later rectangle for ink. Corrected test requires consecutive equal bounds and unchanged baseline capture; original 24px and 70% ink assertions retained. Native r02 running; no production filter change or passing claim.",
+    "synchronizationAttempts": {
+      "r02": "Explicitly stopped own instrumentation after global Instrumentation.waitForIdleSync did not return; process-crashed runner result was intentional test termination, not evidence of app crash. No case passed.",
+      "r03": "Failed after bounded idle and consecutive stable baseline bounds: answer moved236->462 (226px). Baseline rectangle consistency and ink assertions passed. Synchronization correction does not eliminate position failure; production anchor/layout investigation required. Second case not run.",
+      "r04": "Scoped measurement logs only: first journey passed, second failed missing visible passage. Position issue is timing-sensitive; no deterministic production diagnosis claimed.",
+      "r06": "First journey passed after fresh settled hierarchy read. Layout diagnostic keeps answer item at204 before/after filter and restore. Second journey passed filter/restore position assertions, then failed Failed-turn label assertion; investigate verified-history/live-status fixture contract next. No full filter gate pass or production position fix claimed."
+    },
+    "candidateFix": "r05 measured-anchor acknowledgement did not eliminate226px failure and was removed. Diagnostic measured layout retained target offset204 through initial padding; next investigation must correlate later layout and native text bounds after trim, without accepting ineffective fix."
   }
 }

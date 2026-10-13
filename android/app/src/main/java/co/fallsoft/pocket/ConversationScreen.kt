@@ -167,7 +167,12 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         // Filtering near the end otherwise clamps the retained passage downwards.
         // Reserve only the measured missing tail, rather than moving that passage.
         val last=measured.visibleItemsInfo.firstOrNull{it.index==measured.totalItemsCount-1}
+        if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))
+            android.util.Log.d("PocketFilter","padding measured request=$request reserved=$reserved end=${measured.viewportEndOffset} padding=${measured.afterContentPadding} items="+measured.visibleItemsInfo.map{Triple(it.key,it.offset,it.size)})
         filterTailPixels=if(last==null)0 else (measured.viewportEndOffset-last.offset-last.size-ordinaryBottom).coerceIn(0,reserved)
+        if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))
+            android.util.Log.d("PocketFilter","padding trimmed=$filterTailPixels first=${list.firstVisibleItemIndex} offset=${list.firstVisibleItemScrollOffset}")
+
         filterPaddingRequest=null
     }
     val latestFollow by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(follow)}
@@ -238,6 +243,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     LaunchedEffect(list){
         if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))snapshotFlow{Triple(list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,list.isScrollInProgress)}.collect{position->
             android.util.Log.d("PocketScroll","index=${position.first} offset=${position.second} moving=${position.third} follow=$follow dragged=$dragged rows=${shownRows.size}")
+            android.util.Log.d("PocketFilter","observed index=${position.first} offset=${position.second} moving=${position.third} items="+list.layoutInfo.visibleItemsInfo.map{Triple(it.key,it.offset,it.size)})
         }
     }
     var historyGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
