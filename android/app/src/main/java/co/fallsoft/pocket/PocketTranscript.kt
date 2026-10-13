@@ -234,7 +234,7 @@ object PocketTranscript {
                         // repeatedly retrying an unchanged dependency.
                         if(current()&&!(e is PocketApiException&&e.status==404)){
                             positionFailures[request.target]="Could not confirm message order. "+PocketNetwork.error(e)
-                            if(Pocket.error.isBlank())Pocket.error=positionFailures.values.first()
+                            if(readError.isBlank())readError=positionFailures.values.first()
                         }
                     }finally{if(current()&&positionQueue[request.target]===request)positionQueue.remove(request.target)}
                 }
