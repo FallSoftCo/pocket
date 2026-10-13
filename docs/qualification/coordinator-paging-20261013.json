@@ -1,0 +1,23 @@
+{
+  "state": "native-candidate-qualified-not-delivered",
+  "nativeEvidence": {
+    "state": "passed",
+    "completed": [
+      "TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion"
+    ],
+    "apkSha": "9e51559318d46bf074e09f376a7c36f2d83efd86a498047162850647c6089da0",
+    "testSha": "82b4142d1e09ccb90d0f2e88eb23e163278d051d7dfefe8bb801ba1c35fb86c4",
+    "startedAt": 1791872110.354993,
+    "scope": "Actual coordinator conversation and backend history: page-up changes visible local responses; page-down restores them; no older-history reads from local paging; zero worker replies. Existing 2x Italian control, microphone tap, injected hardware volume capture and typing draft journey also passed.",
+    "current": "TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion",
+    "fixtureStopped": true,
+    "fixturePid": 1266352,
+    "finishedAt": 1791872133.6677916
+  },
+  "limits": [
+    "Ordinary recent-history refreshes continue; no claim that paging stops those cheap reads.",
+    "Older-edge coordinator hydration not covered by this journey.",
+    "Emulator hardware key injection, not physical-phone verification.",
+    "Signed release/phone installation remain pending."
+  ]
+}

@@ -242,7 +242,19 @@ class TranscriptRefreshNativeTest {
   twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
   try{
-   main{Pocket.closeTask();PocketImmersion.setEnabled(true);PocketCoordinator.open()}
+   qa("coordinator-pages")
+   main{Pocket.closeTask();PocketImmersion.setEnabled(false);PocketCoordinator.open()}
+   await{PocketCoordinator.visible&&!PocketCoordinator.historyLoading&&PocketCoordinator.messages.size==25}
+   fun passages():Set<String>{if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache();return device.findObjects(By.textStartsWith("Coordinator passage ")).map{it.text}.toSet()}
+   await{passages().isNotEmpty()};device.waitForIdle(2000)
+   val recent=passages()
+   requireNotNull(device.findObject(By.res("reader-page-up"))).click();Thread.sleep(600)
+   val older=passages();assertTrue("Coordinator page did not advance",older.isNotEmpty()&&older!=recent)
+   requireNotNull(device.findObject(By.res("reader-page-down"))).click();Thread.sleep(600)
+   assertEquals("Coordinator page back lost recent responses",recent,passages())
+   assertEquals("Local paging fetched older history",0,qa("state").getJSONArray("coordinatorHistoryReads").objects().count{it.optBoolean("older")})
+   assertEquals("Paging started worker commands",0,qa("state").getJSONArray("replies").length())
+   main{PocketImmersion.setEnabled(true)}
    await{PocketCoordinator.visible&&!PocketCoordinator.historyLoading}
    device.executeShellCommand("settings put system font_scale 2.0");await{context.resources.configuration.fontScale>=1.9f}
    for(label in listOf("Registra","Tastiera","Impostazioni"))assertTrue("Translated control missing: "+label,device.wait(Until.hasObject(By.text(label)),3000))
