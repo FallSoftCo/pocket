@@ -112,11 +112,24 @@ class SharedInlineLayoutNativeTest {
   val creditPeriod="Oct 12 10:00 – Oct 12 11:00"
   val creditsOriginal=immersionGrammarSupport(InterfaceTemplate.CREDIT_OBSERVATION.scaffold("62.57",creditPeriod))
   val creditsTarget=InterfaceTemplate.CREDIT_OBSERVATION.target("62.57",creditPeriod)
-  val teamLiteral="Review 100% · équipe"
+  val teamLiteral="Review 100% | équipe ~ native"
   val teamOriginal=immersionGrammarSupport(InterfaceTemplate.TEAM_COORDINATOR.scaffold(teamLiteral))
   val teamTarget=InterfaceTemplate.TEAM_COORDINATOR.target(teamLiteral)
   val attentionOriginal=immersionGrammarSupport(InterfaceTemplate.TEAM_ATTENTION.scaffold(teamLiteral))
   val attentionTarget=InterfaceTemplate.TEAM_ATTENTION.target(teamLiteral)
+  listOf(InterfaceTemplate.TEAM_COORDINATOR,InterfaceTemplate.TEAM_ATTENTION).forEach{
+   assertEquals("Team name must bypass authored vocabulary syntax",it.target(teamLiteral),it.scaffold(teamLiteral).target)
+  }
+  val roomForms=listOf(
+   InterfaceTemplate.TEAM_ROOM_TASK to arrayOf<Any>(teamLiteral),
+   InterfaceTemplate.TEAM_DIRECT_TASK to arrayOf<Any>(teamLiteral,literal),
+   InterfaceTemplate.TEAM_ROOM_LOADING to emptyArray<Any>(),
+   InterfaceTemplate.TEAM_DIRECT_LOADING to arrayOf<Any>(teamLiteral))
+  val roomExpected=roomForms.flatMap{(template,args)->
+   val scaffold=template.scaffold(*args)
+   assertEquals("Literal team identity altered by scaffold syntax",template.target(*args),scaffold.target)
+   listOf(immersionGrammarSupport(scaffold),template.target(*args))
+  }
   var taps=0
   val seen=mutableSetOf<String>()
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
@@ -132,15 +145,16 @@ class SharedInlineLayoutNativeTest {
        InterfaceTemplateText(InterfaceTemplate.CREDIT_OBSERVATION,"62.57",creditPeriod)
        InterfaceTemplateText(InterfaceTemplate.TEAM_COORDINATOR,teamLiteral)
        InterfaceTemplateText(InterfaceTemplate.TEAM_ATTENTION,teamLiteral)
+       roomForms.forEach{(template,args)->InterfaceTemplateText(template,*args)}
       }}
      }
     }
    }
    try{compose.waitUntil(35000){
-    listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget,teamOriginal,teamTarget,attentionOriginal,attentionTarget).forEach{form->
+    (listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget,teamOriginal,teamTarget,attentionOriginal,attentionTarget)+roomExpected).forEach{form->
      if(compose.onAllNodesWithText(form).fetchSemanticsNodes().isNotEmpty())seen+=form
     }
-    seen.containsAll(listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget,teamOriginal,teamTarget,attentionOriginal,attentionTarget))
+    seen.containsAll((listOf(original,target,countsOriginal,countsTarget,creditsOriginal,creditsTarget,teamOriginal,teamTarget,attentionOriginal,attentionTarget)+roomExpected))
    }}catch(error:Throwable){
     android.util.Log.i("InterfaceTemplateQA","seen="+seen+" enabled="+PocketImmersion.enabled+" motion="+PocketImmersion.motionEnabled+" tree="+compose.onRoot().printToString())
     throw AssertionError("seen="+seen+" enabled="+PocketImmersion.enabled+" motion="+PocketImmersion.motionEnabled+" tree="+compose.onRoot().printToString(),error)

@@ -8,6 +8,10 @@ import java.util.Locale
 
 /** Authored grammar, literal parameters: no model request for changing IDs/counts/paths. */
 internal enum class InterfaceTemplate(val source:String,val italian:String){
+    TEAM_ROOM_TASK("Room · %1\$s","Stanza · %1\$s"),
+    TEAM_DIRECT_TASK("Direct · %1\$s · %2\$s","Diretto · %1\$s · %2\$s"),
+    TEAM_ROOM_LOADING("Room · Loading…","Stanza · Caricamento…"),
+    TEAM_DIRECT_LOADING("Direct · %1\$s · Loading…","Diretto · %1\$s · Caricamento…"),
     TEAM_COORDINATOR("Losangelex · %1\$s · Coordinator","Losangelex · %1\$s · Coordinatore"),
     TEAM_ATTENTION("Needs you · %1\$s","Serve il tuo intervento · %1\$s"),
     CREDIT_OBSERVATION("%1\$s credits · %2\$s","%1\$s crediti · %2\$s"),
@@ -24,11 +28,16 @@ internal enum class InterfaceTemplate(val source:String,val italian:String){
             val pair=entry.split("|",limit=2).let{parts->parts[0] to parts.getOrElse(1){parts[0]}}
             if(index==0)listOf(pair)else listOf(" " to " ",pair)
         }
+        fun literal(index:Int)=values[index].toString().let{it to it}
         val units=when(this){
-            TEAM_COORDINATOR->words("Losangelex","·",values[0].toString(),"·","Coordinatore|Coordinator")
-            TEAM_ATTENTION->words("Serve|Needs","il","tuo","intervento|input","·",values[0].toString())
+            TEAM_ROOM_TASK->words("Stanza|Room","·")+listOf(" " to " ",literal(0))
+            TEAM_DIRECT_TASK->words("Diretto|Direct","·")+listOf(" " to " ",literal(0)," · " to " · ",literal(1))
+            TEAM_ROOM_LOADING->words("Stanza|Room","·","Caricamento…|Loading…")
+            TEAM_DIRECT_LOADING->words("Diretto|Direct","·")+listOf(" " to " ",literal(0)," · " to " · ")+words("Caricamento…|Loading…")
+            TEAM_COORDINATOR->words("Losangelex","·")+listOf(" " to " ",literal(0)," · " to " · ")+words("Coordinatore|Coordinator")
+            TEAM_ATTENTION->words("Serve|Needs","il","tuo","intervento|input","·")+listOf(" " to " ",literal(0))
             CREDIT_OBSERVATION->listOf(values[0].toString() to values[0].toString()," " to " ","crediti" to "credits"," · " to " · ",values[1].toString() to values[1].toString())
-            COMMAND_RESULTS->words(values[0].toString(),"risultati|results","dei","comandi|commands","·",values[1].toString(),"terminati|exited","correttamente|successfully")
+            COMMAND_RESULTS->listOf(literal(0)," " to " ")+words("risultati|results","dei","comandi|commands","·")+listOf(" " to " ",literal(1)," " to " ")+words("terminati|exited","correttamente|successfully")
             FILE_CHANGES->words("Modifiche|Changes","ai","file|files","registrate|recorded","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
             GENERATED_ARTIFACT->words("Risorsa|Artifact","generata:|generated:")+listOf(" " to " ",values[0].toString() to values[0].toString())
             RECORDED_MESSAGE->words("Messaggio|Message","registrato|recorded","·")+listOf(" " to " ",values[0].toString() to values[0].toString())

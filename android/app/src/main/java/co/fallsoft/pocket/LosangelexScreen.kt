@@ -129,7 +129,13 @@ import java.util.UUID
             FilterChip(direct,{direct=true;replyTo=null},label={BilingualLabel("Direct")},enabled=recipient.isNotBlank())
             TextButton({jobs.launch{try{refresh(target)}catch(e:Exception){error=e.message.orEmpty()}}}){BilingualLabel("Refresh")}
         }
-        Text("${if(direct)"Direct · $recipient" else "Room"} · ${if(task.isBlank())"Loading…" else taskTitle}",style=MaterialTheme.typography.labelMedium,color=Mint)
+        val headingStyle=MaterialTheme.typography.labelMedium.copy(color=Mint)
+        when {
+            direct&&task.isBlank()->InterfaceTemplateText(InterfaceTemplate.TEAM_DIRECT_LOADING,recipient,style=headingStyle)
+            direct->InterfaceTemplateText(InterfaceTemplate.TEAM_DIRECT_TASK,recipient,taskTitle,style=headingStyle)
+            task.isBlank()->InterfaceTemplateText(InterfaceTemplate.TEAM_ROOM_LOADING,style=headingStyle)
+            else->InterfaceTemplateText(InterfaceTemplate.TEAM_ROOM_TASK,taskTitle,style=headingStyle)
+        }
         BilingualLabel("Full access",fontSize=12.sp,color=Muted)
         if(error.isNotBlank())ImmersionText("team-error:$owner:$team",error,color=Coral,fontSize=13.sp)
         if(attention.isNotEmpty())TextButton({inbox=true}){BilingualLabel("Needs you");Text(" · ${attention.size}")}

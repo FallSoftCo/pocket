@@ -1,0 +1,17 @@
+{
+  "state": "implemented-and-compiled-native-check-pending",
+  "base": "d222257d7382c841172630a70535388094224058",
+  "finding": "New unreleased team templates passed arbitrary team names through authored pipe-delimited vocabulary parser. Pipe/tilde names could diverge from exact formatted target.",
+  "fix": "Authored words and literal parameters now separate constructors. Team names, recipients, task titles, amounts and paths are never vocabulary syntax. Command count arguments use literal slots too.",
+  "coverage": "Room/direct headings and loading states now use shared inline renderer; team/title literals retained. Existing native template journey extended with pipe/tilde/percent/unicode names and exact scaffold/target invariants; native execution pending after primary emulator gate settles.",
+  "build": "Both Kotlin variants plus qualification APK/test APK compile on OZZZ-OS, maxworkers1.",
+  "releaseHold": "alpha91-r01 must not publish. Integrate correction after frozen gate settles; qualify new immutable candidate. Published alpha90 remains unchanged.",
+  "additionalAudit": [
+    "Existing ConversationFilterNativeTest cases directly cover Important-filter position/pixel stability and clear turn states but are not in current46-case gate. Qualify them before adding to next gate."
+  ],
+  "limits": [
+    "No physical-phone verification",
+    "No claims about full Losangelex workflow from template checks",
+    "No backend or web ownership changes"
+  ]
+}
