@@ -23,12 +23,12 @@ export function loadLosangelex(dir){
 
 export class Losangelex {
   constructor(config,{fetchImpl=fetch}={}){this.config=config;this.fetch=fetchImpl;}
-  async call(path,{body,query={}}={}){
+  async call(path,{body,query={},method}={}){
     if(!this.config||this.config.invalid)throw fail(503,'Losangelex needs a valid owner registration on this environment.');
     const url=new URL('/hollywood/v2/'+path,this.config.url);
     for(const [key,value] of Object.entries(query))if(value!==undefined&&value!==null)url.searchParams.set(key,String(value));
     let response;
-    try{response=await this.fetch(url,{method:body===undefined?'GET':'POST',headers:{Authorization:`Bearer ${this.config.token}`,...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)}),redirect:'manual',signal:AbortSignal.timeout(10000)});}
+    try{response=await this.fetch(url,{method:method??(body===undefined?'GET':'POST'),headers:{Authorization:`Bearer ${this.config.token}`,...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)}),redirect:'manual',signal:AbortSignal.timeout(10000)});}
     catch{throw fail(503,body===undefined?'Losangelex is unavailable. Retry when connected.':'Submission is unconfirmed. Retry the same saved command; do not submit a new copy.');}
     if(response.status>=300&&response.status<400)throw fail(502,'Losangelex endpoint redirected; update its owner registration.');
     // Bound upstream data even on owner-operated endpoints.
@@ -45,14 +45,16 @@ export class Losangelex {
   }
 }
 
-const queryKeys={teams:['cursor','limit'],overview:[],teammates:['cursor','limit'],history:['task','visibility','before','after','around','limit'],messages:['task','after','limit'],attention:['cursor','limit'],conversations:['task','agent','cursor','limit']};
+const queryKeys={actors:['cursor','limit'],rooms:['cursor','limit'],teams:['cursor','limit'],overview:[],teammates:['cursor','limit'],history:['task','visibility','before','after','around','limit'],messages:['task','after','limit'],attention:['cursor','limit'],conversations:['task','agent','cursor','limit']};
 export function teamRequest(method,tail,query,body){
   const parts=tail.split('/').filter(Boolean);
   if(method==='GET'&&parts.length===1&&['teams','attention'].includes(parts[0]))return {path:parts[0],query:checkedQuery(parts[0],query)};
   if(parts[0]!=='teams'||!slug(parts[1]))throw fail(404,'Unknown Losangelex operation.');
   const base=`teams/${parts[1]}/`,resource=parts[2];
   if(method==='GET'&&parts.length===3&&resource in queryKeys)return {path:base+resource,query:checkedQuery(resource,query)};
+  if(method==='GET'&&parts.length===4&&resource==='rooms'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(parts[3]))return {path:base+resource+'/'+parts[3],query:checkedQuery('overview',query)};
   if(method==='GET'&&parts.length===4&&((resource==='messages'&&number(parts[3]))||(resource==='commands'&&/^[a-zA-Z0-9_-]{1,128}$/.test(parts[3]))))return {path:base+resource+'/'+parts[3],query:{}};
+  if(method==='PUT'&&parts.length===6&&resource==='rooms'&&parts[4]==='members'&&[parts[3],parts[5]].every(id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id))){if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length)throw fail(400,'Membership uses an empty desired-state body.');return {path:base+parts.slice(2).join('/'),body,method:'PUT'};}
   if(method!=='POST')throw fail(404,'Unknown Losangelex operation.');
   let allowed;
   if(parts.length===3&&resource==='messages')allowed=['commandId','task','body','targets','visibility','replyTo'];

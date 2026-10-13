@@ -61,6 +61,7 @@ class TeamControlWorkflowNativeTest {
     node.findObjects(By.text(Pattern.compile(".+"))).forEach{seen+=it.text.orEmpty()}
     seen.any{it=="Squadra"}&&seen.any{it=="Team"}
    }
+   click("hollywood-room:11111111-1111-4111-8111-111111111111")
    choose("Violet")
    assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"team-identity-native.png")))
    type("Room root draft")

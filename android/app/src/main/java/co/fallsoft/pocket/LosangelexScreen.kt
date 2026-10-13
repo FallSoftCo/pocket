@@ -26,6 +26,9 @@ import java.util.UUID
 @Composable fun LosangelexScreen(owner:String,onSettings:()->Unit={}){
     val client=remember(owner){LosangelexClient(owner)}
     val jobs=rememberCoroutineScope()
+    var roomBrowsing by remember(owner){mutableStateOf(true)}
+    var roomMembers by remember(owner){mutableStateOf(false)}
+    var rooms by remember(owner){mutableStateOf(emptyList<JSONObject>())}
     var teams by remember{mutableStateOf(emptyList<JSONObject>())}
     var team by remember{mutableStateOf(Pocket.prefs.getString("team:$owner","")?:"")}
     var task by remember{mutableStateOf("")}
@@ -62,9 +65,15 @@ import java.util.UUID
             rosterCursor=page.s("next_cursor")
         }
         snapshot.put("team",roster)
+        val roomRows=mutableListOf<JSONObject>();var roomCursor="";val roomSeen=mutableSetOf<String>()
+        do{
+            val page=client.call("teams/${destination.team}/rooms?limit=100"+if(roomCursor.isNotBlank())"&cursor=$roomCursor" else "")
+            roomRows+=page.optJSONArray("rooms")?.objects().orEmpty();roomCursor=page.s("next_cursor")
+            if(roomCursor.isNotBlank()&&!roomSeen.add(roomCursor))throw Exception("Repeated room cursor")
+        }while(roomCursor.isNotBlank())
         val inbox=client.call("teams/${destination.team}/attention?limit=100")
         if(currentTarget.team!=destination.team)return
-        overview=snapshot;attention=inbox.optJSONArray("data")?.objects().orEmpty()
+        rooms=roomRows;overview=snapshot;attention=inbox.optJSONArray("data")?.objects().orEmpty()
         if(task.isBlank()){task=snapshot.s("lobby","lobby");return}
         if(history){
             val visibility=if(destination.direct)"direct:${destination.recipient}" else "room"
@@ -89,7 +98,7 @@ import java.util.UUID
         if(request!=null&&request.first==backendOwner(Pocket.base,Pocket.token)){
             try{
                 val origin=client.call("notification-target/${request.second}")
-                team=origin.s("team");task=origin.s("task");recipient=origin.s("agent")
+                roomBrowsing=false;team=origin.s("team");task=origin.s("task");recipient=origin.s("agent")
                 val event=origin.getJSONObject("event");direct=event.s("visibility").startsWith("direct:")
                 inspected=JSONObject(event.toString()).put("team_id",team)
                 BackendNavigation.consumed()
@@ -120,12 +129,19 @@ import java.util.UUID
     }
     val canSend=!busy&&team.isNotBlank()&&task.isNotBlank()&&(pending!=null||text.isNotBlank()&&text.length<=3500)&&(!direct||recipient.isNotBlank())
     fun send(){if(canSend&&!busy)submit(pending?:JSONObject().put("path","teams/$team/messages").put("body",target.message(UUID.randomUUID().toString(),text)))}
+    if(roomBrowsing){
+        RoomBrowser(teams,team,rooms,error,
+            {team=it;task="";rooms=emptyList();recipient="";direct=false;replyTo=null},
+            {room->task=room.s("task");recipient="";direct=false;replyTo=null;roomBrowsing=false},onSettings,{newTask=true})
+        if(newTask)TeamNewTask(client,team,{newTask=false}){id->task=id;recipient="";direct=false;replyTo=null;newTask=false;roomBrowsing=false}
+        return
+    }
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         WeeklyLimitBar()
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){TextButton(onSettings){BilingualLabel("Settings")};TextButton({newTask=true},enabled=team.isNotBlank()&&!busy){BilingualLabel("New task")}}
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            TeamChoice(InterfaceTemplate.TEAM_CHOICE_TEAM,teams.map{it.s("id") to it.s("name")},team,Modifier.weight(1f)){team=it;task="";recipient="";direct=false;replyTo=null}
-            TeamChoice(InterfaceTemplate.TEAM_CHOICE_TASK,overview.optJSONArray("tasks")?.objects().orEmpty().map{it.s("id") to it.s("title")},task,Modifier.weight(1f)){task=it;replyTo=null}
+            TextButton({roomBrowsing=true},modifier=Modifier.weight(1f).testTag("hollywood-rooms")){Text("Rooms")}
+            TextButton({roomMembers=true},modifier=Modifier.weight(1f).testTag("hollywood-members")){Text("Members")}
             TeamChoice(InterfaceTemplate.TEAM_CHOICE_TO,listOf("" to "Coordinator")+(overview.optJSONObject("team")?.keys()?.asSequence()?.map{it to it}?.toList().orEmpty()),recipient,Modifier.weight(1f)){recipient=it;replyTo=null;if(it.isBlank())direct=false}
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
@@ -181,6 +197,7 @@ import java.util.UUID
         },maxLines=4,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}))
         Button({send()},enabled=canSend,modifier=Modifier.fillMaxWidth().testTag("team-send")){BilingualLabel(if(busy)"Submitting…" else if(pending!=null)"Retry saved command" else "Send")}
     }
+    if(roomMembers)RoomMembers(client,team,roomForTask(rooms,task)){roomMembers=false}
     if(newTask)TeamNewTask(client,team,{newTask=false}){id->task=id;recipient="";direct=false;replyTo=null;newTask=false}
     if(inbox)TeamInbox(client,team,{inbox=false}){event->inspected=event;inbox=false}
     inspected?.let{event->TeamAttentionDialog(client,team,event,{inspected=null}){jobs.launch{try{refresh(currentTarget)}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}}}

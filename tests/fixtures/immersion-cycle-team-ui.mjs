@@ -22,6 +22,19 @@ app.get('/guide',(_,r)=>r.type('html').send('<title>Synthetic guide</title><h1>S
 app.get('/api/backends',(_,r)=>r.json({backends:[{id:'codex',configured:true,available:true},{id:'losangelex',configured:true,available:true,environmentId:'synthetic-alpha24'}]}));
 app.get('/api/losangelex/teams',(_,r)=>r.json({teams:[{id:'studio',name:'Synthetic studio'}],next_cursor:null}));
 app.get('/api/losangelex/teams/:team/overview',(_,r)=>r.json({team:{Violet:{},Amber:{}},tasks:[{id:'lobby',title:'Lobby'},{id:'texture',title:'Texture study'}],lobby:'lobby',agents:[]}));
+let failNextMembership=false;
+app.post('/fixture/team/fail-next-membership',(_,r)=>{failNextMembership=true;r.json({ok:true});});
+const roomIds={lobby:'11111111-1111-4111-8111-111111111111',texture:'22222222-2222-4222-8222-222222222222'};
+const roomActors=[{id:'33333333-3333-4333-8333-333333333333',agent:'Violet',role:'Coordinate'},{id:'44444444-4444-4444-8444-444444444444',agent:'Amber',role:'Review'}];
+const roomMembership={lobby:new Set([roomActors[0].id]),texture:new Set([roomActors[0].id])};
+const roomRow=task=>({id:roomIds[task],task,title:'Shared title',purpose:task==='lobby'?'Coordination':'Texture work',members:roomActors.filter(a=>roomMembership[task].has(a.id)),contextIsolation:'room-local',membershipGrantsExecution:false});
+app.get('/api/losangelex/teams/:team/rooms',(_,r)=>r.json({authorityId:'fixture-authority',rooms:['lobby','texture'].map(roomRow),next_cursor:null}));
+app.get('/api/losangelex/teams/:team/actors',(_,r)=>r.json({actors:roomActors,next_cursor:null}));
+app.put('/api/losangelex/teams/:team/rooms/:room/members/:actor',(q,r)=>{
+ const task=Object.keys(roomIds).find(task=>roomIds[task]===q.params.room);
+ if(!task||!roomActors.some(a=>a.id===q.params.actor))return r.status(400).json({error:'Unknown membership'});
+ roomMembership[task].add(q.params.actor);teamRequests.push({method:'membership',task,actor:q.params.actor});if(failNextMembership){failNextMembership=false;return r.status(503).json({error:'Synthetic response lost after membership persisted'});}return r.json(roomRow(task));
+});
 app.get('/api/losangelex/teams/:team/attention',(_,r)=>r.json({data:[]}));
 app.get('/api/losangelex/teams/:team/history',(q,r)=>{const scope=q.query.visibility||'room',task=q.query.task||'lobby';const own={id:201,kind:'message',author:'you',body:`Your own direct message stays with ${scope.startsWith('direct:')?scope.slice(7):'the room'}.`,visibility:scope,task,created_at:Date.now()};const msg={id:202,kind:'message',author:scope.startsWith('direct:')?scope.slice(7):'Violet',body:`Synthetic ${scope} history for ${task}.`,visibility:scope,task,created_at:Date.now()};teamRequests.push({method:'history',scope,task});const data=scope.startsWith('direct:')?[own,msg]:[msg];setTimeout(()=>r.json({data,olderCursor:null}),delayTeamHistory&&scope==='direct:Violet'?20000:0);});
 app.post('/api/losangelex/teams/:team/messages',(q,r)=>{teamRequests.push({method:'send',team:q.params.team,body:q.body});r.json({id:Date.now(),accepted:true});});

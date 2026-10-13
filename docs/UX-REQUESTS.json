@@ -2568,6 +2568,13 @@
         "Do not claim all untranslated words are animation failures; inspect source replacement coverage and rendered forms.",
         "Use emulator integration journeys and measured performance, not unit count as release evidence."
       ]
+    },
+    {
+      "id": "native-hollywood-room-first-20261013",
+      "request": "Rooms are the primary Hollywood view, with one agent able to belong to multiple rooms; preserve existing profiles, drafts and session control.",
+      "status": "implementation-candidate",
+      "evidence": "Native catalog tests and typed gateway tests; Android build and physical delivery pending.",
+      "scope": "Current owner OZZZ-OS workstation; multi-human and cross-authority membership remain future qualification."
     }
   ],
   "current_state": {
