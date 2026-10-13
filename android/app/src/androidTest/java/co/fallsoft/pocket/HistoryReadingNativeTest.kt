@@ -18,11 +18,12 @@ class HistoryReadingNativeTest {
  private val device=UiDevice.getInstance(i)
  private fun main(block:()->Unit)=i.runOnMainSync(block)
  private fun await(message:String="Reading condition timed out",condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(condition())return;Thread.sleep(100)};assertTrue(message,condition())}
- private fun visiblePassages():List<Pair<String,android.graphics.Rect>>{
+ private fun visiblePassages(prefix:String="Reading passage "):List<Pair<String,android.graphics.Rect>>{
+  if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
   val out=java.io.ByteArrayOutputStream();device.dumpWindowHierarchy(out)
   val doc=javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(java.io.ByteArrayInputStream(out.toByteArray()))
   val nodes=doc.getElementsByTagName("node")
-  return (0 until nodes.length).mapNotNull{index->val n=nodes.item(index) as org.w3c.dom.Element;val text=n.getAttribute("text");if(!text.startsWith("Reading passage "))null else {val b=Regex("[0-9]+").findAll(n.getAttribute("bounds")).map{it.value.toInt()}.toList();if(b.size!=4)null else text to android.graphics.Rect(b[0],b[1],b[2],b[3])}}
+  return (0 until nodes.length).mapNotNull{index->val n=nodes.item(index) as org.w3c.dom.Element;val text=n.getAttribute("text");if(!text.startsWith(prefix))null else {val b=Regex("[0-9]+").findAll(n.getAttribute("bounds")).map{it.value.toInt()}.toList();if(b.size!=4)null else text to android.graphics.Rect(b[0],b[1],b[2],b[3])}}
  }
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/$path",JSONObject())}
  private var eventVersion=900
@@ -44,13 +45,18 @@ class HistoryReadingNativeTest {
   assertTrue("A subsequent delta did not follow the new tail",device.wait(Until.hasObject(By.text("Streaming revised tail")),5000))
   repeat(2){requireNotNull(device.findObject(By.scrollable(true))).scroll(androidx.test.uiautomator.Direction.UP,0.65f);Thread.sleep(200)}
   await{!PocketTranscript.loading};device.waitForIdle(2000)
-  val anchor=requireNotNull(device.findObjects(By.textStartsWith("Streaming passage ")).firstOrNull{val b=it.visibleBounds;!b.isEmpty&&b.top>50&&b.bottom<device.displayHeight*3/4})
-  val anchorText=anchor.text;val anchorTop=anchor.visibleBounds.top
+  var snapshot=visiblePassages("Streaming passage ")
+  var stable=0
+  await("Reading viewport never settled"){
+   val next=visiblePassages("Streaming passage ");stable=if(next==snapshot)stable+1 else 0;snapshot=next;stable>=2
+  }
+  val anchor=requireNotNull(snapshot.firstOrNull{(_,b)->!b.isEmpty&&b.top>50&&b.bottom<device.displayHeight*3/4})
+  val anchorText=anchor.first;val anchorTop=anchor.second.top
   update(growing+"\n\nStreaming unread tail",1002);Thread.sleep(600);device.waitForIdle(2000)
-  val after=requireNotNull(device.findObject(By.text(anchorText))).visibleBounds
+  val after=requireNotNull(visiblePassages("Streaming passage ").firstOrNull{it.first==anchorText}).second
   assertTrue("A growing reply moved the earlier reading passage",kotlin.math.abs(after.top-anchorTop)<=24)
-  val unread=device.findObject(By.text("Streaming unread tail"))
-  assertTrue("A new delta forced reading back to latest",unread==null||unread.visibleBounds.isEmpty)
+  val unread=visiblePassages("Streaming unread tail")
+  assertTrue("A new delta forced reading back to latest",unread.none{!it.second.isEmpty})
   assertEquals("Auto-follow submitted work",0,qa("state").getJSONArray("replies").length())
  }
  @Test fun pullingAShortRecentPageLoadsEarlierHistoryWithoutATap(){
