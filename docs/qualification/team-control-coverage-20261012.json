@@ -38,5 +38,27 @@
     "candidate": "alpha92-r01",
     "routing": "Exact optimized Send to Violet and draft restoration passed.",
     "visual": "All selector values hidden by long cycling captions. Separate caption/name layout added; new gate and visual review required before publication."
+  },
+  "readableIdentityCorrection": {
+    "sourceCommit": "82a53fe33bda995708c1d85180c2cd8f9edfc53f",
+    "nativeReceipt": {
+      "state": "passed",
+      "completed": [
+        "SharedInlineLayoutNativeTest#interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions",
+        "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget"
+      ],
+      "apkSha": "eef517225739d6670fc0c42b048281e08c8afd3dea3a24c2a8d9cf64a72f4da6",
+      "testSha": "fe32f3df18b540b43428403ef42961735663cb82fc440610edba85d466fcbe3d",
+      "startedAt": 1791861119.6642256,
+      "scope": "Own emulator; separate Team-control candidate; actual production Team screen against synthetic HTTP fixture; one controlled synthetic send; no real worker",
+      "current": "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget",
+      "fixtureStopped": true,
+      "fixturePid": 663502,
+      "finishedAt": 1791861175.9273643
+    },
+    "visual": "Original 1080x2424 capture inspected: normal-size caption and literal selected team/task/recipient remain visible. Natural caption cycling, popup selection, scoped drafts and one exact direct synthetic send passed.",
+    "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-team-readable-r04",
+    "release": "Replacement alpha92-r02 frozen full build/native/optimized qualification underway. Rejected r01 must never be published.",
+    "limits": "Emulator and synthetic service only; no physical phone or live provider claim."
   }
 }
