@@ -96,7 +96,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val failureSource=Pocket.selected;val replyFailure=Pocket.replyFailure()
     val clientReplies=PocketReplies.visible(Pocket.selected.orEmpty())
     val recoveryAlreadyShown=clientReplies.any{it.id==replyFailure?.id}||d?.optJSONArray("outgoing")?.objects()?.any{it.s("id")==replyFailure?.id}==true
-    val conversationError=Pocket.error.ifBlank{if(recoveryAlreadyShown)"" else replyFailure?.message.orEmpty()}
+    val conversationError=Pocket.error.ifBlank{if(recoveryAlreadyShown)"" else replyFailure?.message.orEmpty()}.ifBlank{PocketTranscript.readError}
     val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
     val latestTurn=rows.lastOrNull{it.s("kind")=="turn"}
     val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),if(PocketTranscript.currentHistoryVerified)latestTurn?.s("status").orEmpty() else "",task?.previewKind=="thinking",d!=null&&PocketTranscript.currentHistoryVerified,PocketTranscript.loading)
@@ -225,14 +225,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var editingQueue by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     var queuedText by remember(Pocket.selected){mutableStateOf("")}
     var queueOpen by remember(Pocket.selected){mutableStateOf(false)}
-    val draftKey=Pocket.key("draft:${Pocket.selected}");var editor by remember(Pocket.environmentId,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})}
+    val draftKey=Pocket.key("draft:${Pocket.selected}");val editorState=remember(Pocket.environmentId,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})};var editor by editorState
     LaunchedEffect(PocketReplies.revision,draftKey){if(PocketReplies.clearedDrafts[draftKey]?.let{it.text==editor.text&&it.generation==replyDraftGeneration(draftKey)}==true&&!Pocket.prefs.contains(draftKey))editor=TextFieldValue("")}
     var keyboardInput by remember(Pocket.selected){mutableStateOf(Pocket.openWithKeyboard)}
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
     LaunchedEffect(keyboardInput){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
     ConversationBack{Pocket.closeTask()}
-    val draft=editor.text
+    val hasDraft by remember(editorState){derivedStateOf{editorState.value.text.isNotBlank()}}
     val submit:(String)->Unit={mode->val submitted=editor.text;val submittedGeneration=replyDraftGeneration(draftKey);follow=true;Pocket.reply(submitted,mode=mode){if(editor.text==submitted&&replyDraftGeneration(draftKey)==submittedGeneration){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
     val waiting=d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") in listOf("queued","held")&&it.s("mode")=="queue"}?:emptyList()
     LaunchedEffect(list){
@@ -317,7 +317,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Model, effort & mode")}
             TextButton({actionsOpen=false;taskName=t?.s("name").orEmpty();renameOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Rename")}
             TextButton({actionsOpen=false;confirmArchive=true},enabled=!active,modifier=Modifier.fillMaxWidth()){BilingualLabel("Archive")}
-            TextButton({actionsOpen=false;submit("queue")},enabled=draft.isNotBlank()&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue message")}
+            TextButton({actionsOpen=false;submit("queue")},enabled=hasDraft&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue message")}
     }
     val visibleSpeechKeys by remember(list){derivedStateOf{list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()}}
     val hasVisibleSpeech=shownRows.any{it.s("id") in visibleSpeechKeys&&it.s("kind")=="message"&&it.s("text").isNotBlank()}
@@ -440,7 +440,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
         ConversationLiveCaption()
         InlineCaptureStatus()
-        if(keyboardInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
+        if(keyboardInput)DraftComposerScope{
+        val draft=editor.text
+        Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically){
                 VoiceLaunchButton(modifier=Modifier.size(64.dp),threadId=Pocket.selected,compact=true)
                 if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
@@ -472,13 +474,24 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 }
             }
         }
+        }
         if(!keyboardInput)Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
             VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=Pocket.selected,bar=true)
             if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
             ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
         }
         val pageEnvironment=Pocket.environmentId
-        FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(2.dp),verticalArrangement=Arrangement.spacedBy(2.dp) ){
+        FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp) ){
+            InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
+            ConversationNotesControls(important,toggleImportant,hasVisibleSpeech,visibleSpeech)
+            Box{
+                UsageDock(Modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true,statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning,onOpen={actionsOpen=true})
+                DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp),properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
+                    TextButton({actionsOpen=false;keyboard?.hide();Pocket.closeTask()}){BilingualLabel("Back")}
+                    if(PocketSpeech.count>0)TextButton({PocketSpeech.clear();actionsOpen=false}){BilingualLabel("Clear speech from active session")}
+                    ConversationActivityControls()
+                }
+            }
             key(important){ReaderPagingButtons(list,hasEarlier=PocketTranscript.earlier&&!important,
                 onPrepare={up->
                     pagingViewport=true;pageHydrated=true
@@ -497,16 +510,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     if(up&&completed&&pageHydrated)satisfiedHistoryGesture=pageGesture
                     if(!up&&completed&&!important&&!list.canScrollForward)follow=true
                 },onError={error->if(Pocket.selected==failureSource&&Pocket.environmentId==pageEnvironment)Pocket.error=PocketNetwork.error(error)})}
-            InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-            ConversationNotesControls(important,toggleImportant,hasVisibleSpeech,visibleSpeech)
-            Box{
-                UsageDock(Modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true,statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning,onOpen={actionsOpen=true})
-                DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp),properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
-                    TextButton({actionsOpen=false;keyboard?.hide();Pocket.closeTask()}){BilingualLabel("Back")}
-                    if(PocketSpeech.count>0)TextButton({PocketSpeech.clear();actionsOpen=false}){BilingualLabel("Clear speech from active session")}
-                    ConversationActivityControls()
-                }
-            }
         }
     }
     if(queueOpen)ModalBottomSheet(onDismissRequest={queueOpen=false},containerColor=Panel){
@@ -669,3 +672,8 @@ internal fun conversationFilterAnchor(before:List<String>,after:List<String>,vis
         SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse command runs" else "Expand command runs",Modifier.size(20.dp),tint=Muted)
     }
 }
+
+
+// Keystrokes are observed in this restart scope, not by the transcript owner.
+// The owner observes only empty/nonempty draft changes for its menu enablement.
+@Composable private fun DraftComposerScope(content:@Composable ()->Unit){content()}

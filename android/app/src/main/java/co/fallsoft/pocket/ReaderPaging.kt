@@ -1,7 +1,5 @@
 package co.fallsoft.pocket
 
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.size
@@ -36,7 +34,6 @@ import androidx.compose.ui.draw.alpha
     var pagingJob by remember(list){mutableStateOf<Job?>(null)}
     val dragged by list.interactionSource.collectIsDraggedAsState()
     LaunchedEffect(dragged){if(dragged)pagingJob?.cancel()}
-    val animated=motionAllowed()
     val reverse=list.layoutInfo.reverseLayout
     val upEnabled=(if(reverse)list.canScrollForward else list.canScrollBackward)||hasEarlier
     val downEnabled=if(reverse)list.canScrollBackward else list.canScrollForward
@@ -51,8 +48,9 @@ import androidx.compose.ui.draw.alpha
                 val height=list.layoutInfo.viewportSize.height.toFloat()
                 val direction=if(up xor list.layoutInfo.reverseLayout)-1f else 1f
                 if(height>0f){
-                    if(animated)list.animateScrollBy(height*direction,tween(180))
-                    else list.scrollBy(height*direction)
+                    // A page is one immediate viewport replacement, never an animated
+                    // journey through text the reader did not choose to inspect.
+                    list.scrollBy(height*direction)
                 }
                 completed=true
             }catch(e:CancellationException){throw e}

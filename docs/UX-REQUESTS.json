@@ -2557,6 +2557,17 @@
       "status": "published-alpha93-phone-install-pending",
       "implementation": "Group canonical activity by turn and output boundaries, excluding public reasoning. Preserve messages, questions, user input, turn boundaries, source IDs, details and expanded passage state. Unknown future operation types group without a tool-name whitelist.",
       "verification": "Frozen native run-group expansion/navigation/collapse journey passes with waits; all canonical operations group without a tool whitelist. Actual phone interaction pending."
+    },
+    {
+      "id": "paging-input-wave-reconnect-followup-20261013",
+      "request": "Page buttons must replace the viewport immediately, sit in ergonomic full-width footer regions, and clearly name the Important filter. Measure and fix input lag including immersion wave shaping/recomposition. Transient history refresh failures must not appear as immediate send/disconnected failures. Complete visible equivalents for conversation phrases without disrupting the global reading cascade.",
+      "status": "implementation-and-native-qualification-in-progress",
+      "evidence": "docs/qualification/footer-input-immersion-followup-20261013.json",
+      "constraints": [
+        "Preserve drafts, source routing, actual delivery errors and history anchors.",
+        "Do not claim all untranslated words are animation failures; inspect source replacement coverage and rendered forms.",
+        "Use emulator integration journeys and measured performance, not unit count as release evidence."
+      ]
     }
   ],
   "current_state": {

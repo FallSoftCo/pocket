@@ -98,11 +98,13 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
     val host="filter:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}:${Pocket.selected}"
     DisposableEffect(host){onDispose{PocketSpeech.displayedOwner?.takeIf{it==host}?.let{PocketSpeech.stopDisplayed(it)}}}
     val speaking=PocketSpeech.displayedRunning||PocketSpeech.count>0&&!PocketSpeech.paused
-    FilledTonalIconToggleButton(checked=important,onCheckedChange={onFilter()},modifier=Modifier.size(48.dp).semantics{
+    FilledTonalButton(onClick=onFilter,modifier=Modifier.heightIn(min=48.dp).semantics{
+        role=Role.Checkbox
+        toggleableState=if(important)androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off
         contentDescription=PocketImmersion.label("Important")
         stateDescription=if(important)"Important messages" else "All messages"
     }){
-        SymbolIcon("Layers",null,Modifier.size(32.dp),tint=if(important)Mint else Muted)
+        BilingualLabel("Important",fontSize=12.sp,color=if(important)Mint else Paper)
     }
     IconButton({
         if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}

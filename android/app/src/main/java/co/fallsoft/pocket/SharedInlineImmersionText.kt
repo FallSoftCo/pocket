@@ -102,6 +102,14 @@ import androidx.compose.ui.unit.*
             measurer.measure(AnnotatedString("…"),style=style,softWrap=false).size.width+1 else 0
         val slotLimit=(available-ellipsisAllowance).coerceAtLeast(1)
         val fragmentOverflow=if(ellipsisAllowance>0)TextOverflow.Clip else overflow
+        // Lexical handoffs change the displayed form, not reservation geometry.
+        // Retain shaping across those handoffs; content, typography, width or
+        // accessibility changes invalidate the complete cache together.
+        val geometryKey=listOf(runs,style,available,slotLimit,density.density,density.fontScale,maxLines,fragmentOverflow)
+        val prefixWidths=remember(geometryKey){mutableMapOf<Int,Int>()}
+        val chunkForms=remember(geometryKey){mutableMapOf<Int,List<List<AnnotatedString>>>()}
+        val slotLayouts=remember(geometryKey){mutableMapOf<Pair<Int,Int>,Pair<Int,List<TextLayoutResult>>>()}
+
         val slotKeys=mutableListOf<String>()
         val placeholderRanges=mutableListOf<AnnotatedString.Range<Placeholder>>()
         val changedKeys=mutableSetOf<String>()
@@ -150,16 +158,16 @@ import androidx.compose.ui.unit.*
                 // Split at natural token boundaries without claiming translation
                 // word alignment. A long phrase is not an unbreakable giant box.
                 val prefix=toAnnotatedString()
-                val used=if(prefix.isEmpty())0 else {
+                val used=prefixWidths.getOrPut(index){if(prefix.isEmpty())0 else {
                     val shaped=measurer.measure(prefix,style=style,placeholders=placeholderRanges,
                         constraints=Constraints(minWidth=available,maxWidth=available))
                     val caret=shaped.getHorizontalPosition(prefix.length,true)
                     (if(rtl)available-caret else caret).toInt().coerceIn(0,available)
-                }
-                val firstWidth=(slotLimit-used).coerceAtLeast(1)
-                val chunks=run.forms.map{form->immersionAnnotatedChunks(form,slotLimit,firstWidth){value->
-                    measurer.measure(immersionDrawText(value),style=style,softWrap=false).size.width
                 }}
+                val firstWidth=(slotLimit-used).coerceAtLeast(1)
+                val chunks=chunkForms.getOrPut(index){run.forms.map{form->immersionAnnotatedChunks(form,slotLimit,firstWidth){value->
+                    measurer.measure(immersionDrawText(value),style=style,softWrap=false).size.width
+                }}}
                 val partCount=chunks.maxOf{it.size}
                 // A wrapped clause ends at the line edge in every rendition.
                 // Put unavoidable reservation at a natural reading boundary,
@@ -168,6 +176,7 @@ import androidx.compose.ui.unit.*
                     runs.getOrNull(index+1)?.let{it.id==null&&it.forms.any{form->form.text.isNotBlank()}}==true
                 repeat(partCount){part->
                     val forms=chunks.map{it.getOrElse(part){AnnotatedString("")}}
+                    val cachedLayout=slotLayouts.getOrPut(index to part){
                     val natural=forms.map{measurer.measure(immersionDrawText(it),style=style,softWrap=false)}
                     val width=if(clauseBoundary&&part==partCount-1)slotLimit
                         else natural.maxOf{it.size.width}.coerceAtLeast(1).coerceAtMost(slotLimit)
@@ -176,6 +185,10 @@ import androidx.compose.ui.unit.*
                     // a one-line child or splitting Unicode graphemes ourselves.
                     val measured=forms.map{measurer.measure(immersionDrawText(it),style=style,
                         constraints=Constraints(maxWidth=width),maxLines=maxLines,overflow=fragmentOverflow)}
+                    width to measured
+                    }
+                    val width=cachedLayout.first
+                    val measured=cachedLayout.second
                     val height=measured.maxOf{it.size.height}.coerceAtLeast(1)
                     val key="shared-$index-$part"
                     val slotIncoming=if(readingWave==null)incoming else selectedSlots[key]==true
