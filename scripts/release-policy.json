@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha95-native-room-navigation-and-membership-recovery",
+  "qualification": "alpha96-native-room-navigation-and-update-origin-isolation",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
@@ -55,7 +55,9 @@
     "co.fallsoft.pocket.ImmersionReadingWaveNaturalNativeTest#knownGrammarMeaningsAndUnalignedPhraseBothRevealInPlace",
     "co.fallsoft.pocket.HistoryReadingNativeTest#typingWithReadingWavePreservesDraftAndReportsDispatchLatency",
     "co.fallsoft.pocket.RoomNavigationNativeTest#roomIdentityDraftsAndMembershipStayScoped",
-    "co.fallsoft.pocket.RoomNavigationNativeTest#unknownMembershipReconcilesWithoutAnotherSubmission"
+    "co.fallsoft.pocket.RoomNavigationNativeTest#unknownMembershipReconcilesWithoutAnotherSubmission",
+    "co.fallsoft.pocket.UpdateOriginNativeTest#inactiveProfilePushChecksCapturedPairingWithoutChangingSessionOrUnknownReceipts",
+    "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",

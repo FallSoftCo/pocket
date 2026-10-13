@@ -1,7 +1,7 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 const profiles=[{port:19995,host:'System76',token:'synthetic-system76',device:'synthetic-device-a'},{port:19996,host:'OZZZ',token:'synthetic-ozzz',device:'synthetic-device-b'},{port:19997,host:'Phone',token:'synthetic-phone',device:'synthetic-device-phone'}];
-const sent=[],notes=[];let holdVoiceHistory=false;const voiceReads=[],voiceReturns=[];
+const sent=[],notes=[],updateChecks=[];let holdVoiceHistory=false;const voiceReads=[],voiceReturns=[];
 function event(socket,value){const b=Buffer.from(JSON.stringify(value));socket.write(Buffer.concat([b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]),b]));}
 for(const profile of profiles){
  const sockets=new Set();
@@ -14,6 +14,7 @@ for(const profile of profiles){
   else if(path==='/api/threads')body={threads:[thread(),thread('second-thread')]};
   else if(/^\/api\/threads\/[^/]+$/.test(path)){const t=thread(path.split('/').at(-1));body={thread:{...t,turns:[]},timeline:{rows:[{id:t.id+'/answer',turnId:'synthetic',kind:'message',text:t.preview}],hasEarlier:false,before:null},revision:0,notes:[],pending:[],notifications:[],outgoing:[]};}
   else if(/^\/api\/threads\/[^/]+\/reply$/.test(path)){const input=JSON.parse(raw);sent.push({host:profile.host,thread:path.split('/')[3],id:input.id});body={id:input.id,state:'accepted'};}
+  else if(path==='/api/app/update'){updateChecks.push({host:profile.host,device:profile.device});body={available:false};}
   else if(path==='/api/notifications'||path==='/api/attention')body={notifications:[],items:[]};
   else if(path==='/api/activity')body={items:[]};
   else if(path==='/_qa/notify'){for(const socket of sockets)event(socket,{type:'notification',notification:{id:901,thread_id:'same-thread',title:'Phone result only',body:'Synthetic phone result',kind:'result',attachments:[],created_at:Date.now()}});body={ok:true};}
@@ -27,7 +28,7 @@ for(const profile of profiles){
    body={turns:[{id:'history-'+profile.host,transcript:profile.host+' voice input',response:profile.host+' voice response'}],hasEarlier:false};
   }
   else if(path.startsWith('/api/voice/')){res.statusCode=503;body={error:'Synthetic fixture blocks voice execution and speech'};}
-  else if(path==='/_qa/state')body={sent,notes,voiceReads,voiceReturns};
+  else if(path==='/_qa/state')body={sent,notes,voiceReads,voiceReturns,updateChecks};
   res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));
  });
  server.on('upgrade',(req,socket)=>{if(req.headers.authorization!=='Bearer '+profile.token){socket.destroy();return;}socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+crypto.createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n\r\n');sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));event(socket,{type:'status',connected:true});});

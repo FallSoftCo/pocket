@@ -102,6 +102,12 @@ object PocketUpdates {
         WorkManager.getInstance(Pocket.context).enqueueUniqueWork("nextcomp-app-updates",ExistingWorkPolicy.APPEND_OR_REPLACE,work)
     }
     fun offer(local:Boolean=false){check(download=true,local=local,force=true)}
+    fun offer(origin:EnvironmentRequest){
+        if(origin.environment.local||Pocket.environmentProfiles.capture(origin.environment.id)?.matches(origin)!=true)return
+        enqueueCaptured(JSONObject().put("local",false).put("environment",origin.environment.id)
+            .put("base",origin.endpoint).put("token",origin.token).put("download",true))
+    }
+
     fun installOrCheck(c:Context){restore();if(ready)install(c)else check(download=true,force=true)}
     internal fun job(key:String)=prefs.getString(key,null)?.let{JSONObject(it)}
     @Synchronized internal fun finishJob(key:String){

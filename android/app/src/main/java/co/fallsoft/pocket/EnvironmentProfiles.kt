@@ -23,6 +23,12 @@ class EnvironmentProfiles(private val prefs:SharedPreferences) {
         val base=prefs.getString(profile.key("server"),"").orEmpty();val token=prefs.getString(profile.key("token"),"").orEmpty()
         return if(base.isBlank()||token.isBlank())null else EnvironmentRequest(profile,base,token)
     }
+    /** A push belongs to exactly one still-paired remote; selection is irrelevant. */
+    fun capturePush(deviceId:String):EnvironmentRequest? {
+        if(deviceId.isBlank())return null
+        val profile=all().filter{!it.local&&prefs.getString(it.key("deviceId"),null)==deviceId}.singleOrNull()?:return null
+        return capture(profile.id)
+    }
     fun select(id:String):Boolean {
         val destination=capture(id)?:return false
         val edit=prefs.edit().putString("activeEnvironment",id).putBoolean("activeLocal",destination.environment.local)

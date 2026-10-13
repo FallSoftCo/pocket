@@ -37,4 +37,22 @@ class EnvironmentProfilesTest {
   val store=EnvironmentProfiles(prefs(values));val paired=store.add("Workstation","https://old.example","rotated-private","device-rotated")
   assertEquals("workstation",paired.id);assertEquals("uncertain",values["newTaskRequest"]);assertEquals("rotated-private",store.capture("workstation")?.token)
  }
+
+ @Test fun inactivePushCapturesItsOwnPairingWithoutChangingConversationState(){
+  val values=mutableMapOf<String,Any>("server" to "https://old.example","token" to "old-private","deviceId" to "old-device","draft:same" to "Keep typing","outbox:unknown" to "Uncertain receipt")
+  val store=EnvironmentProfiles(prefs(values));val remote=store.add("OZZZ","https://ozzz.example","new-private","new-device")
+  val before=values.toMap();val origin=requireNotNull(store.capturePush("new-device"))
+  assertEquals(remote.id,origin.environment.id);assertEquals("https://ozzz.example",origin.endpoint)
+  assertEquals("new-private",origin.token);assertEquals("workstation",store.selected().id)
+  assertEquals(before,values)
+  store.select("workstation");assertEquals(origin,store.capturePush("new-device"))
+ }
+ @Test fun unknownMissingRevokedAndAmbiguousPushOriginsNeverFallBackToSelectedHost(){
+  val values=mutableMapOf<String,Any>("server" to "https://old.example","token" to "old-private","deviceId" to "old-device")
+  val store=EnvironmentProfiles(prefs(values));val remote=store.add("OZZZ","https://ozzz.example","new-private","new-device")
+  assertNull(store.capturePush(""));assertNull(store.capturePush("unknown-device"))
+  values.remove(remote.key("token"));assertNull(store.capturePush("new-device"))
+  values[remote.key("token")]="new-private";values[remote.key("deviceId")]="old-device"
+  assertNull(store.capturePush("old-device"));assertEquals("workstation",store.selected().id)
+ }
 }
