@@ -11,7 +11,8 @@ export function publishQualifiedUpdate({directory,destination,expectedVersion,ch
  directory=resolve(directory);destination=resolve(destination);
  const manifest=read(join(directory,'manifest.json')),build=read(join(directory,'build.json')),policy=read(join(directory,'policy.json'));
  const native=readdirSync(directory).filter(name=>/^native-.+\.json$/.test(name)).map(name=>read(join(directory,name)));
- const qualified=validateReleaseQualification({directory,manifest,build,policy,native});
+ const review=()=>policy.requiredOptimizedReview?read(join(directory,'optimized-review.json')):undefined;
+ const qualified=validateReleaseQualification({directory,manifest,build,policy,native,optimizedReview:review()});
  const manifestPath=join(destination,'manifest.json');
  const current=()=>existsSync(manifestPath)?read(manifestPath):null;
  const before=current();
@@ -33,7 +34,7 @@ export function publishQualifiedUpdate({directory,destination,expectedVersion,ch
   }
   if(digest(current())!==digest(before))throw Error('Channel changed during staging.');
   // Revalidate logs/artifacts after staging and before the one live-channel write.
-  validateReleaseQualification({directory,manifest,build,policy,native});
+  validateReleaseQualification({directory,manifest,build,policy,native,optimizedReview:review()});
   const temporary=manifestPath+'.qualified-'+process.pid+'.tmp';
   try{writeFileSync(temporary,JSON.stringify(manifest,null,2)+'\n',{mode:0o600,flag:'wx'});sync(temporary);renameSync(temporary,manifestPath);sync(destination);}finally{if(existsSync(temporary))unlinkSync(temporary);}
   receipt.state='published';receipt.finishedAt=Date.now();writeFileSync(journal,JSON.stringify(receipt,null,2)+'\n',{mode:0o600});sync(journal);return {...qualified,state:'published'};

@@ -24,7 +24,7 @@ export function confinedFile(directory,name){
  const root=realpathSync(directory),path=realpathSync(resolve(root,name)),rel=relative(root,path);
  if((rel==='..'||rel.startsWith('../'))||isAbsolute(rel)||!statSync(path).isFile())fail('Qualification file escapes artifact directory.');return path;
 }
-export function validateReleaseQualification({directory,manifest,build,native,policy}){
+export function validateReleaseQualification({directory,manifest,build,native,policy,optimizedReview}){
  if(manifest.packageName!=='co.fallsoft.pocket'||!Number.isSafeInteger(manifest.versionCode)||manifest.versionCode<1||!Array.isArray(manifest.variants)||!manifest.variants.length)fail('Invalid prepared manifest.');
  if(build.schema!==1||build.state!=='complete'||!hex.test(build.productionSourceSha)||build.productionSourceBefore!==build.productionSourceSha||build.manifestSha!==sha256(Buffer.from(JSON.stringify(manifest))))fail('Missing, stale or incomplete build qualification.');
  const tasks=['testDebugUnitTest','testReleaseUnitTest','lintDebug','lintRelease','assembleDebug','assembleRelease','assembleQualification','assembleQualificationAndroidTest'];
@@ -42,5 +42,12 @@ export function validateReleaseQualification({directory,manifest,build,native,po
   if(byCase.has(receipt.case))fail('Duplicate native receipt.');byCase.set(receipt.case,receipt);
  }
  for(const name of policy.requiredNativeCases)if(!byCase.has(name))fail('Required native case missing: '+name);
+ if(policy.requiredOptimizedReview){
+  const review=optimizedReview;
+  if(!review||review.schema!==1||review.state!=='complete'||review.kind!==policy.requiredOptimizedReview||review.versionCode!==manifest.versionCode||review.productionSourceSha!==build.productionSourceSha||review.qualificationInputSha!==build.qualificationInputSha||!manifest.variants.some(v=>v.sha256===review.apkSha256)||!Number.isFinite(review.reviewedAt)||review.reviewedAt<build.finishedAt)fail('Optimized review is missing, failed, stale or for another APK.');
+  if(['searchSurvived','selectedIdentitiesReadable','recipientDraftsPreserved','correctSingleSend'].some(key=>review.observations?.[key]!==true))fail('Required optimized interaction/visual review did not pass.');
+  if(!Array.isArray(review.artifacts)||review.artifacts.length!==2||new Set(review.artifacts.map(a=>a.path)).size!==2)fail('Optimized review artifacts missing.');
+  for(const artifact of review.artifacts)if(!hex.test(artifact.sha256)||fileSha(confinedFile(directory,artifact.path))!==artifact.sha256)fail('Optimized review artifact changed.');
+ }
  return {versionCode:manifest.versionCode,productionSourceSha:build.productionSourceSha,qualification:policy.qualification,nativeCases:policy.requiredNativeCases.length};
 }

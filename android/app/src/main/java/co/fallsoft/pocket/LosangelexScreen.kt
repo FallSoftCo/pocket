@@ -186,15 +186,23 @@ import java.util.UUID
     inspected?.let{event->TeamAttentionDialog(client,team,event,{inspected=null}){jobs.launch{try{refresh(currentTarget)}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}}}
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable internal fun TeamChoice(label:InterfaceTemplate,choices:List<Pair<String,String>>,selected:String,modifier:Modifier=Modifier,onSelect:(String)->Unit){
     var open by remember{mutableStateOf(false)}
     val name=choices.firstOrNull{it.first==selected}?.second?:selected
+    val caption=when(label){
+        InterfaceTemplate.TEAM_CHOICE_TEAM->InterfaceTemplate.TEAM_CAPTION_TEAM
+        InterfaceTemplate.TEAM_CHOICE_TASK->InterfaceTemplate.TEAM_CAPTION_TASK
+        InterfaceTemplate.TEAM_CHOICE_TO->InterfaceTemplate.TEAM_CAPTION_TO
+        InterfaceTemplate.TEAM_CHOICE_AGENT->InterfaceTemplate.TEAM_CAPTION_AGENT
+        else->error("Unsupported Team selector caption")
+    }
     Box(modifier){
         TextButton({open=true},modifier=Modifier.fillMaxWidth().testTag("team-choice:"+label.name),contentPadding=PaddingValues(horizontal=4.dp,vertical=4.dp)){
             // Keep identity readable independently of the longer cycling caption.
             // Both stay inside one existing thumb target, without another toolbar row.
             Column(horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally){
-                InterfaceTemplateText(label,"",style=MaterialTheme.typography.labelSmall.copy(fontSize=10.sp,lineHeight=12.sp),maxLines=1,overflow=TextOverflow.Ellipsis)
+                InterfaceTemplateText(caption,style=MaterialTheme.typography.labelSmall.copy(fontSize=14.sp,lineHeight=16.sp),maxLines=1,overflow=TextOverflow.Ellipsis)
                 if(label==InterfaceTemplate.TEAM_CHOICE_TO&&selected.isBlank())BilingualLabel("Coordinator",fontSize=14.sp,maxLines=1)
                 else Text(name,fontSize=14.sp,lineHeight=18.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
@@ -202,7 +210,7 @@ import java.util.UUID
         DropdownMenu(open,{open=false}){
             choices.forEach{(id,value)->DropdownMenuItem(
                 text={if(label==InterfaceTemplate.TEAM_CHOICE_TO&&id.isBlank())BilingualLabel("Coordinator",centered=false)else Text(value)},
-                modifier=Modifier.testTag("team-choice-option:"+label.name+":"+id),
+                modifier=Modifier.testTag("team-choice-option:"+label.name+":"+id).semantics{testTagsAsResourceId=true},
                 onClick={open=false;onSelect(id)})}
         }
     }

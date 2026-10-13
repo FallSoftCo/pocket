@@ -59,9 +59,10 @@ class TeamControlWorkflowNativeTest {
     val node=requireNotNull(tag("team-choice:TEAM_CHOICE_TEAM"))
     seen+=node.text.orEmpty()
     node.findObjects(By.text(Pattern.compile(".+"))).forEach{seen+=it.text.orEmpty()}
-    seen.any{it.contains("Squadra:")}&&seen.any{it.contains("Team:")}
+    seen.any{it=="Squadra"}&&seen.any{it=="Team"}
    }
    choose("Violet")
+   assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"team-identity-native.png")))
    type("Room root draft")
    click("team-reply:202")
    type("Retained scoped reply draft")

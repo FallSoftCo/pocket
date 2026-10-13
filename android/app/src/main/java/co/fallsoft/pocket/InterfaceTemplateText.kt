@@ -8,6 +8,10 @@ import java.util.Locale
 
 /** Authored grammar, literal parameters: no model request for changing IDs/counts/paths. */
 internal enum class InterfaceTemplate(val source:String,val italian:String){
+    TEAM_CAPTION_TEAM("Team","Squadra"),
+    TEAM_CAPTION_TASK("Task","Compito"),
+    TEAM_CAPTION_TO("To","A"),
+    TEAM_CAPTION_AGENT("Agent","Agente"),
     TEAM_EVENT_MESSAGE("%1\$s · message","%1\$s · messaggio"),
     TEAM_EVENT_ATTENTION("%1\$s · attention","%1\$s · attenzione"),
     TEAM_EVENT_APPROVAL("%1\$s · approval","%1\$s · approvazione"),
@@ -40,6 +44,10 @@ internal enum class InterfaceTemplate(val source:String,val italian:String){
         }
         fun literal(index:Int)=values[index].toString().let{it to it}
         val units=when(this){
+            TEAM_CAPTION_TEAM->words("Squadra|Team")
+            TEAM_CAPTION_TASK->words("Compito|Task")
+            TEAM_CAPTION_TO->words("A|To")
+            TEAM_CAPTION_AGENT->words("Agente|Agent")
             TEAM_EVENT_MESSAGE->listOf(literal(0)," · " to " · ")+words("messaggio|message")
             TEAM_EVENT_ATTENTION->listOf(literal(0)," · " to " · ")+words("attenzione|attention")
             TEAM_EVENT_APPROVAL->listOf(literal(0)," · " to " · ")+words("approvazione|approval")

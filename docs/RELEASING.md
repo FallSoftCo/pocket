@@ -120,3 +120,12 @@ APK files before assembling. This avoids dead ZIP gaps left by incremental
 packaging; it does not remove dependencies, source, staged qualified artifacts
 or published updates. The build intent records the exact reset set. Signing,
 version checks, APK limits and native review remain required.
+
+
+When the release policy requires optimized review, publication also requires
+artifact-bound native search/Team observations and a completed visual review.
+Readable selected identities are explicit: passing routing tests cannot excuse
+controls which hide their destination. The review records the exact optimized
+APK, source/test fingerprints and capture digests; missing, rejected, stale or
+changed evidence blocks both the check and publication paths. This is a trusted
+operator attestation, not an automated aesthetic score or proof of handset use.

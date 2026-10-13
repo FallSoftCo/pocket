@@ -56,5 +56,6 @@
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",
     "Native paragraph, visibility, accessibility export, actions and clipboard checks do not prove physical frame pacing or actual TalkBack utterances",
     "Full motion sequence review is required separately before publication"
-  ]
+  ],
+  "requiredOptimizedReview": "native-search-and-team-identity-and-routing"
 }

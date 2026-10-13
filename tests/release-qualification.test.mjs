@@ -38,3 +38,25 @@ test('release executables parse before any build, emulator or publication effect
   const r=spawnSync(process.execPath,['--check',file],{encoding:'utf8',timeout:10000});assert.equal(r.status,0,file+': '+r.stderr);
  }
 });
+
+
+test('green native logs cannot publish a missing or rejected optimized visual review',()=>{
+ for(const rejected of ['missing','unreadable-identities','wrong-apk','changed-capture']){
+  const f=fixture();try{
+   f.policy.requiredOptimizedReview='native-search-and-team-identity-and-routing';f.build.policySha=digest(f.policy);f.save();
+   const image=Buffer.from('Synthetic capture binding; no visual qualification claim');
+   for(const name of ['search.png','team.png'])writeFileSync(join(f.directory,name),image);
+   const review={schema:1,state:'complete',kind:f.policy.requiredOptimizedReview,versionCode:2,productionSourceSha:f.build.productionSourceSha,qualificationInputSha:f.build.qualificationInputSha,apkSha256:f.manifest.variants[0].sha256,reviewedAt:5,observations:{searchSurvived:true,selectedIdentitiesReadable:true,recipientDraftsPreserved:true,correctSingleSend:true},artifacts:['search.png','team.png'].map(path=>({path,sha256:sha256(image)}))};
+   assert.equal(validateReleaseQualification({...f,optimizedReview:review}).nativeCases,1);
+   if(rejected!=='missing'){
+    if(rejected==='unreadable-identities')review.observations.selectedIdentitiesReadable=false;
+    if(rejected==='wrong-apk')review.apkSha256='e'.repeat(64);
+    if(rejected==='changed-capture')writeFileSync(join(f.directory,'team.png'),'Changed');
+    writeFileSync(join(f.directory,'optimized-review.json'),JSON.stringify(review));
+   }
+   const before=readFileSync(join(f.destination,'manifest.json'));
+   assert.throws(()=>publishQualifiedUpdate({...f,expectedVersion:1}));
+   assert.deepEqual(readFileSync(join(f.destination,'manifest.json')),before);
+  }finally{rmSync(f.root,{recursive:true,force:true});}
+ }
+});
