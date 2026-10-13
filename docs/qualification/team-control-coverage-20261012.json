@@ -5,5 +5,17 @@
   "changes": "Typed cycling reply-clear and recipient labels; literal ID/name slots preserve authored target-grammar positions. Clear callback, draft scope, recipient and send routing unchanged. Typed Team/Task/To/Agent selector prefixes, authored Coordinator default, one-line ellipsis preserved; arbitrary selected names remain literal. Authored message/attention/approval event labels cycle with literal author names; unknown kinds remain exact provider text.",
   "verification": "Existing native template journey extended with each added template and hostile literal names. Not yet built or run; actual Team selector/clear/recipient/action verification required after release gate relinquishes owned emulator.",
   "remaining": "Quoted reply body/prefix and Agent status embedded in literal selection still require content/control integration. Source remains unbuilt; no actual Team workflow qualification claimed.",
-  "ownership": "Separate worktree; frozen alpha91-r02 unchanged. No builds while release gate owns emulator and build resources."
+  "ownership": "Separate worktree; frozen alpha91-r02 unchanged. No builds while release gate owns emulator and build resources.",
+  "nativeWorkflowQualification": {
+    "fixture": "tests/fixtures/losangelex-ui.mjs",
+    "inspectedContract": "Synthetic service only; no Codex calls; commandId+body digest deduplication; room/direct visibility filtering; /fixture/state exposes exact commands/events. Fixture not started during frozen gate.",
+    "journey": [
+      "Observe authored selector/recipient/event text over full waterfall cycles, retaining exact hostile literal names.",
+      "Select Maya from To dropdown; type unique draft; verify recipient and direct scope without sending to real service.",
+      "Reply to synthetic room event; verify correct author and replyTo; clear inline reply; verify replyTo absent while draft preserved.",
+      "Switch room/direct recipients; verify scoped draft restoration; submit one synthetic direct message and reconcile exact commandId/body/targets/visibility from fixture state.",
+      "Tap selectors in each language phase; verify unchanged targets and one-line ellipsis at large text."
+    ],
+    "qualificationLimits": "Template samples alone cannot qualify this workflow. Live team/API, actual phone, unknown kind translations remain unverified."
+  }
 }
