@@ -15,9 +15,27 @@
     "finishedAt": 1791872133.6677916
   },
   "limits": [
-    "Ordinary recent-history refreshes continue; no claim that paging stops those cheap reads.",
-    "Older-edge coordinator hydration not covered by this journey.",
-    "Emulator hardware key injection, not physical-phone verification.",
+    "Ordinary cheap recent-history refreshes continue.",
+    "Emulator volume-key injection is not physical-phone verification.",
+    "Persisted cache remains existing last-100-turn policy; this change preserves loaded history during live refresh, not an unlimited disk archive.",
     "Signed release/phone installation remain pending."
-  ]
+  ],
+  "retainedHistoryRepair": {
+    "cause": "Recent history merge discarded unchanged older local turns; recent page also reset older frontier.",
+    "fix": "Preserve current history before overlaying fresh page and concurrent newer turn evidence. Retain known older frontier across recent refreshes; empty initial history adopts fresh cursor.",
+    "nativeEvidence": {
+      "state": "passed",
+      "completed": [
+        "TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion"
+      ],
+      "apkSha": "e542a09714669b79c96a6b236546fa79d1414ffa74729f85dc44a7b99b74df03",
+      "testSha": "6068236b74656c621a6a9c2e34509786614f038c4ed8c079ba937c6e5bab78bd",
+      "startedAt": 1791872445.988861,
+      "scope": "Actual coordinator UI: local viewport paging; older-edge pages hydrate once; all 30 turns survive recent refresh; already-loaded frontier remains exhausted; enlarged-text voice/IME/draft checks also pass; zero worker replies.",
+      "current": "TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion",
+      "fixtureStopped": true,
+      "fixturePid": 1288687,
+      "finishedAt": 1791872474.173436
+    }
+  }
 }

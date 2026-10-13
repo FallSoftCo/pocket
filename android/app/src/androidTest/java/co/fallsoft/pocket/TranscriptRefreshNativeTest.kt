@@ -254,6 +254,12 @@ class TranscriptRefreshNativeTest {
    assertEquals("Coordinator page back lost recent responses",recent,passages())
    assertEquals("Local paging fetched older history",0,qa("state").getJSONArray("coordinatorHistoryReads").objects().count{it.optBoolean("older")})
    assertEquals("Paging started worker commands",0,qa("state").getJSONArray("replies").length())
+   repeat(24){if(PocketCoordinator.messages.size<30&&PocketCoordinator.historyEarlier){requireNotNull(device.findObject(By.res("reader-page-up"))).click();Thread.sleep(400)}}
+   await{PocketCoordinator.messages.size==30&&!PocketCoordinator.historyLoading}
+   assertEquals("Repeated older-page fetch",1,qa("state").getJSONArray("coordinatorHistoryReads").objects().count{it.optBoolean("older")})
+   main{PocketCoordinator.loadHistory()};await{!PocketCoordinator.historyLoading}
+   assertEquals("Recent refresh hid retained older turns",30,PocketCoordinator.messages.size)
+   assertFalse("Recent refresh reinstated already-loaded history",PocketCoordinator.historyEarlier)
    main{PocketImmersion.setEnabled(true)}
    await{PocketCoordinator.visible&&!PocketCoordinator.historyLoading}
    device.executeShellCommand("settings put system font_scale 2.0");await{context.resources.configuration.fontScale>=1.9f}
