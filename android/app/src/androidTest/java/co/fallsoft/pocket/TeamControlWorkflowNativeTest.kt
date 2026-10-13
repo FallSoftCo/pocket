@@ -45,7 +45,11 @@ class TeamControlWorkflowNativeTest {
   fun click(name:String){await{tag(name)!=null};requireNotNull(tag(name)).click()}
   fun input()=requireNotNull(tag("team-input"))
   fun type(text:String){await{tag("team-input")!=null};input().click();input().text=text}
-  fun choose(name:String){click("team-choice:TEAM_CHOICE_TO");await{device.hasObject(By.text(name))};requireNotNull(device.findObject(By.text(name))).click()}
+  fun choose(name:String){
+   click("team-choice:TEAM_CHOICE_TO")
+   click("team-choice-option:TEAM_CHOICE_TO:"+name)
+   await{tag("team-choice:TEAM_CHOICE_TO")?.findObject(By.text(name))!=null}
+  }
   fun assertDraft(text:String)=await{tag("team-input")?.text==text}
   i.runOnMainSync{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
   try{

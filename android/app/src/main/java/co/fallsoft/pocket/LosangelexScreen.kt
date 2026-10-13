@@ -188,5 +188,22 @@ import java.util.UUID
 
 @Composable internal fun TeamChoice(label:InterfaceTemplate,choices:List<Pair<String,String>>,selected:String,modifier:Modifier=Modifier,onSelect:(String)->Unit){
     var open by remember{mutableStateOf(false)}
-    Box(modifier){TextButton({open=true},modifier=Modifier.fillMaxWidth().testTag("team-choice:"+label.name),contentPadding=PaddingValues(horizontal=4.dp)){if(label==InterfaceTemplate.TEAM_CHOICE_TO&&selected.isBlank())InterfaceTemplateText(InterfaceTemplate.TEAM_CHOICE_COORDINATOR,maxLines=1,overflow=TextOverflow.Ellipsis)else InterfaceTemplateText(label,choices.firstOrNull{it.first==selected}?.second?:selected,maxLines=1,overflow=TextOverflow.Ellipsis)};DropdownMenu(open,{open=false}){choices.forEach{(id,name)->DropdownMenuItem(text={if(label==InterfaceTemplate.TEAM_CHOICE_TO&&id.isBlank())BilingualLabel("Coordinator",centered=false)else Text(name)},onClick={open=false;onSelect(id)})}}}
+    val name=choices.firstOrNull{it.first==selected}?.second?:selected
+    Box(modifier){
+        TextButton({open=true},modifier=Modifier.fillMaxWidth().testTag("team-choice:"+label.name),contentPadding=PaddingValues(horizontal=4.dp,vertical=4.dp)){
+            // Keep identity readable independently of the longer cycling caption.
+            // Both stay inside one existing thumb target, without another toolbar row.
+            Column(horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally){
+                InterfaceTemplateText(label,"",style=MaterialTheme.typography.labelSmall.copy(fontSize=10.sp,lineHeight=12.sp),maxLines=1,overflow=TextOverflow.Ellipsis)
+                if(label==InterfaceTemplate.TEAM_CHOICE_TO&&selected.isBlank())BilingualLabel("Coordinator",fontSize=14.sp,maxLines=1)
+                else Text(name,fontSize=14.sp,lineHeight=18.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            }
+        }
+        DropdownMenu(open,{open=false}){
+            choices.forEach{(id,value)->DropdownMenuItem(
+                text={if(label==InterfaceTemplate.TEAM_CHOICE_TO&&id.isBlank())BilingualLabel("Coordinator",centered=false)else Text(value)},
+                modifier=Modifier.testTag("team-choice-option:"+label.name+":"+id),
+                onClick={open=false;onSelect(id)})}
+        }
+    }
 }

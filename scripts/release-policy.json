@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha92-team-controls-idle-and-cached-immersion-drawing",
+  "qualification": "alpha92-r02-readable-team-identities-idle-and-cached-immersion",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",

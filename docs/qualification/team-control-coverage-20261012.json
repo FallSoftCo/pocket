@@ -32,5 +32,11 @@
   },
   "build": "Debug/release Kotlin and qualification APK/test APK passed on OZZZ-OS. Locked npm dependencies installed with ignore-scripts; audit0 reported vulnerabilities.",
   "nativeTemplate": "Existing native template journey passed all added selector/recipient/reply-clear/event forms, exact literal-name scaffold invariants and existing action callback. Own fixture stopped and reaped.",
-  "nativeApkSha256": "3c9fcc266ac01f4f453c08bbee917d8af7013629c39078a6bab113311ae2ad39"
+  "nativeApkSha256": "3c9fcc266ac01f4f453c08bbee917d8af7013629c39078a6bab113311ae2ad39",
+  "optimizedReview": {
+    "state": "rejected-selected-identities-truncated",
+    "candidate": "alpha92-r01",
+    "routing": "Exact optimized Send to Violet and draft restoration passed.",
+    "visual": "All selector values hidden by long cycling captions. Separate caption/name layout added; new gate and visual review required before publication."
+  }
 }
