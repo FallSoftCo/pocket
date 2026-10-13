@@ -27,9 +27,9 @@ NextComp is a self-hosted Android interface for working with agents on your own 
 
 ## Native interface
 
-The latest reviews show **alpha90's compatible signed APK** with search open, and the **October 12 native session-state review**: working stays colorful, idle becomes subdued, and a task needing your answer uses coral. These captures use synthetic tasks on the owned Android emulator. Alpha90 passed 41 frozen native journeys; physical-phone installation and interaction are not yet verified. [Read the qualification and limits](docs/qualification/compact-ux-integration-20261012.json).
+The published **alpha91** compatible signed APK passed 48 native regression journeys, including search, conversation freshness and ordering, retained history, voice/keyboard drafts, and inline immersion. Its signed search capture is below. The adjacent **alpha92 candidate** shows the stronger idle treatment: cool, glow-free idle cards; brighter working cards; coral when your answer is needed. That candidate passed the native card interaction check and is undergoing its complete release gate. These are synthetic emulator captures. Alpha91's compatible APK reached the phone's Downloads folder and was hash-verified; installation and physical interaction remain unverified. [Alpha91 evidence](docs/qualification/alpha91-20261012.json) · [Idle candidate evidence](docs/qualification/idle-emphasis-20261012.json).
 
-<p align="center"><img src="docs/images/search-alpha90.png" width="240" alt="Alpha90 signed Android APK: readable search controls and subdued idle session behind the sheet"><img src="docs/images/session-states-20261012.png" width="240" alt="Native session-state review: colorful working, subdued idle, and coral input-needed cards with readable text"></p>
+<p align="center"><img src="docs/images/search-alpha91.png" width="240" alt="Published alpha91 signed Android APK: readable search controls"><img src="docs/images/session-states-alpha92-candidate.png" width="240" alt="Alpha92 candidate: brighter working, cool glow-free idle, and coral input-needed cards"></p>
 
 The earlier [normal and large-text bottom-control qualification](docs/qualification/bottom-controls-large-text-20261011.json) remains available as historical evidence.
 
