@@ -21,6 +21,7 @@ import {LiveActivityDelivery} from "./live-activity-delivery.mjs";
 import {ActivityBoard} from './activity-board.mjs';
 import {NativeVoice} from './native-voice.mjs';
 import {RoomVoice} from './room-voice.mjs';
+import {RoomProgress} from './room-progress.mjs';
 import {Losangelex,loadLosangelex} from './losangelex.mjs';
 import {ThreadPreviews,sessionInteraction} from './thread-previews.mjs';
 import express from 'express';
@@ -438,6 +439,13 @@ app.post('/api/terminal-forks/imports/:id/activate',owner,route(async(req,res)=>
 app.get('/api/terminal-forks/:id',owner,(req,res)=>{const result=terminalForks?.view(requireId(req.params.id));if(!result)return res.status(404).json({error:'Transfer not found.'});res.json(result);});
 app.post('/api/terminal-forks/:id/release',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.release(requireId(req.params.id)));if(codex.ready)void terminalForks.tick().catch(()=>{});}catch(e){res.status(e.status||409).json({error:e.message});}});
 app.post('/api/terminal-forks/:id/cancel',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.cancel(requireId(req.params.id)));}catch(e){res.status(e.status||409).json({error:e.message});}});
+const roomProgressConfig=resolve(dir,'room-progress.json');
+const roomProgressScopes=existsSync(roomProgressConfig)?JSON.parse(readFileSync(roomProgressConfig,'utf8')):[];
+const roomProgress=new RoomProgress({db,client:roomVoice.client,scopes:roomProgressScopes,
+ publish:(thread,title,event,onPersist)=>notify(thread,title,event.body,'update',[],null,null,null,null,onPersist)});
+roomProgress.mount(app);
+const roomProgressPoll=()=>void roomProgress.poll().catch(e=>console.error('Room progress unavailable',e.name));
+setInterval(roomProgressPoll,10000).unref();roomProgressPoll();
 mountLosangelex(app,{dir,codex,db,workRecord,publish:(thread,onPersist)=>notify(thread,'Losangelex needs you','Open the team conversation to review its request.','question',[],null,null,null,null,onPersist),resolve:resolveAttention});
 app.get('/api/computer-use',route(async(_req,res)=>res.json(await computerUseStatus())));
 mountAppUpdates(app,{updates:new AppUpdates({dir,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
