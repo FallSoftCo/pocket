@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -2541,7 +2541,7 @@
     {
       "id": "compact-footer-paging-and-volume-20261013",
       "request": "Replace the volume slider with one visible0/50/100percent cycling button; add seamless page-up/down controls in the reclaimed space; consolidate top footer controls into its bottom row; investigate and repair slow/laggy conversation rendering and scrolling.",
-      "status": "implementation-in-isolated-footer-worktree",
+      "status": "published-alpha93-phone-install-pending",
       "constraints": [
         "Preserve mute on mount, drafts, IME focus and hardware recording keys.",
         "Page by the real visible reading viewport without a deliberate overlap; keep finger scrolling available.",
@@ -2549,35 +2549,35 @@
         "Preserve important filtering, clear runtime state, speech controls, settings/update access and source-bound navigation.",
         "Measure actual conversation rendering before attributing lag; distinguish emulator from phone."
       ],
-      "verification": "Pending native production-flow checks and performance observation; alpha92 remains the published version."
+      "verification": "Native conversation/catalog/coordinator paging and0/50/100 volume/IME/draft journeys passed; optimized footer reviewed at1x/2x. Matched software-emulator performance results are mixed; lag is not declared fixed."
     },
     {
       "id": "fold-all-operations-including-waits-20261013",
       "request": "Fold waits and all such operations into the compact expandable run groups, rather than only selected tool types.",
-      "status": "implemented-native-verification-pending",
+      "status": "published-alpha93-phone-install-pending",
       "implementation": "Group canonical activity by turn and output boundaries, excluding public reasoning. Preserve messages, questions, user input, turn boundaries, source IDs, details and expanded passage state. Unknown future operation types group without a tool-name whitelist.",
-      "verification": "Existing projection boundary test expanded to waits, function outputs, agent activity, compaction, images, review and future operations; existing native history journey now includes a wait. No additional granular test cases."
+      "verification": "Frozen native run-group expansion/navigation/collapse journey passes with waits; all canonical operations group without a tool whitelist. Actual phone interaction pending."
     }
   ],
   "current_state": {
     "latest_pushed_commit": "87fadae5dbdbe49f66140796290ac55666d5d345",
-    "published_release": "v0.5.0-alpha.90",
-    "server_tests": 222,
+    "published_release": "Private update channel0.5.0-alpha.93, version111",
+    "server_tests": 490,
     "android_tests": 365,
     "phone_endpoint": "Termux SSH verified; phone-adb found no verified TCP or authorized USB connection",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
-    "owned_emulator": "Own emulator5620 nextcomp_env_qa; compatible signed108 installed for final visual review",
+    "owned_emulator": "Owned emulator5620; compatible optimized alpha93 reviewed; disposable fixture stopped",
     "owned_fixture_port": "Owned19997 stopped and18880 reverse removed; shared ADB preserved.",
-    "installed_development_version": "Phone last verified106; own emulator108",
+    "installed_development_version": "Phone package110 last verified; alpha93 file verified in Downloads, installation pending",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 original modeled controls, 120-frame60fps swivel assets and160-frame Codex/Psychology/N turns; display-clock playback, live reduced motion and background fallback. Real Fold cadence unqualified.",
-    "phone_install": "Termux SSH confirms106; compatible108 APK fully delivered and SHA256/size verified; installation unverified",
-    "qualification": "Alpha90:365 unit checks per variant, both lints and signed builds,41 frozen native journeys, actual optimized compatible search visual review passed",
+    "phone_install": "Compatible alpha93 APK SHA256/62112756-byte size verified over SSH. One update notification accepted by FCM; phone remains110.",
+    "qualification": "Alpha93:365 units per debug/release variant, both lints, two signed variants,50 frozen native journeys, actual optimized search/routing/footer and recorded-motion review passed",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Alpha34 native cycling review;1890-card desktop/mobile/reduced-motion/reload checks pass.",
     "native_audio_qualification": "Actual native account foreground and optimized cold screen-off rendering/playback verified, no mic/task calls. Fresh cold rendering15.425sec; physical secure-keyguard, push receipt and perceptual quality separate.",

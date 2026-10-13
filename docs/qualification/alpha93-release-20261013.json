@@ -1,0 +1,35 @@
+{
+  "state": "published-phone-file-verified-install-pending",
+  "versionCode": 111,
+  "versionName": "0.5.0-alpha.93",
+  "frozenSourceCommit": "dd2d78023d4590b0b1afae3f271b000a106d118f",
+  "productionSourceSha": "627530d53117ae356018a5bcc4879f267e3ad6b6c64ebd88f756eb6dfc313137",
+  "backendTests": 490,
+  "androidUnitTestsPerVariant": 365,
+  "nativeJourneys": 50,
+  "optimizedReview": [
+    "Search survived natural immersion",
+    "Literal identities readable",
+    "Scoped drafts retained",
+    "One synthetic direct send to Violet; Amber draft retained",
+    "Normal and2x footer inspection",
+    "516-frame motion-region analysis and sampled visual review"
+  ],
+  "phoneFile": {
+    "name": "NextComp-alpha93.apk",
+    "sha256": "4146db49be28fd30cefc5fe3997b40f3146da78daef929d61d459fbff97a469d",
+    "bytes": 62112756
+  },
+  "phoneInstalledVersionObserved": 110,
+  "updateNotification": {
+    "id": 1612,
+    "state": "accepted_by_fcm",
+    "attempts": 1
+  },
+  "limits": [
+    "FCM acceptance is not handset banner proof",
+    "File delivery is not installation",
+    "Software-emulator performance comparison is mixed; no physical smoothness claim",
+    "All immersion strings/global real-screen cascade and held quoted-context work remain incomplete"
+  ]
+}

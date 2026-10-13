@@ -29,7 +29,9 @@ NextComp is a self-hosted Android interface for working with agents on your own 
 
 The published **alpha91** compatible signed APK passed 48 native regression journeys, including search, conversation freshness and ordering, retained history, voice/keyboard drafts, and inline immersion. Its signed search capture is below. The adjacent **alpha92 candidate** shows the stronger idle treatment: cool, glow-free idle cards; brighter working cards; coral when your answer is needed. That candidate passed the native card interaction check and is undergoing its complete release gate. These are synthetic emulator captures. Alpha91's compatible APK reached the phone's Downloads folder and was hash-verified; installation and physical interaction remain unverified. [Alpha91 evidence](docs/qualification/alpha91-20261012.json) · [Idle candidate evidence](docs/qualification/idle-emphasis-20261012.json).
 
-<p align="center"><img src="docs/images/search-alpha91.png" width="240" alt="Published alpha91 signed Android APK: readable search controls"><img src="docs/images/session-states-alpha92-candidate.png" width="240" alt="Alpha92 candidate: brighter working, cool glow-free idle, and coral input-needed cards"></p>
+<p align="center"><img src="docs/images/list-alpha93.png" width="240" alt="Published alpha93: compact footer, direct voice, volume cycling and session paging"><img src="docs/images/conversation-alpha93.png" width="240" alt="Published alpha93: conversation updating state and consolidated reading controls"></p>
+
+These are synthetic native-emulator captures of the shipped signed APK. They show the current controls; they are not physical-phone performance evidence.
 
 The earlier [normal and large-text bottom-control qualification](docs/qualification/bottom-controls-large-text-20261011.json) remains available as historical evidence.
 
