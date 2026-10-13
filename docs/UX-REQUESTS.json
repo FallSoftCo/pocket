@@ -2499,55 +2499,59 @@
     {
       "id": "viewport-global-immersion-waterfall",
       "request": "Words that never change need coverage; cascade must flow from global top to global bottom across containers.",
-      "status": "geometry-and-coverage-investigation",
+      "status": "alpha90-published-native-qualified-phone-install-unverified",
       "constraints": [
         "One viewport clock and spatial frontier across controls and content.",
         "Keep paired target grammar/support positions.",
         "No provider polling or translation calls from animation.",
         "Natural-clock emulator geometry/capture proof required; phone verification separate."
-      ]
+      ],
+      "delivery": "Alpha90/code108 published after41 frozen native journeys,365 unit checks each debug/release and both lints. Compatible signed APK visually reviewed; notification1546 sent once. Phone installation unverified.",
+      "remaining": "Complete authored-string coverage and physical-handset motion/performance remain under audit."
     },
     {
       "id": "compact-child-count-header-badge",
       "request": "Replace space-consuming sub-agent subtitle with a tappable count/status badge in card header.",
-      "status": "implementation-in-progress",
+      "status": "alpha90-published-native-qualified-phone-install-unverified",
       "constraints": [
         "Retain agent results and direct/parent control availability.",
         "Preserve environment-scoped expansion and paging preferences.",
         "At least 48dp touch target without increasing existing header height.",
         "No subtitle row when children are collapsed."
-      ]
+      ],
+      "delivery": "Alpha90/code108 published after41 frozen native journeys,365 unit checks each debug/release and both lints. Compatible signed APK visually reviewed; notification1546 sent once. Phone installation unverified."
     },
     {
       "id": "distinct-idle-card-surface-20261012",
       "request": "Make idle sessions immediately distinguishable through lower brightness and saturation, preserving readable text and distinct active and input-blocked states; recency must not imply activity.",
-      "status": "native-capture-reviewed-release-pending",
-      "evidence": "Native actual three-state capture r02 reviewed: working green, idle dim neutral, input-needed coral with corrected Needs your input label. Unit/lint/build passed; not published."
+      "status": "alpha90-published-native-qualified-phone-install-unverified",
+      "evidence": "Native three-state capture reviewed: working color, idle dim/desaturated neutral, input-needed coral with Needs your input label. Frozen signed release published.",
+      "delivery": "Alpha90/code108 published after41 frozen native journeys,365 unit checks each debug/release and both lints. Compatible signed APK visually reviewed; notification1546 sent once. Phone installation unverified."
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "88b62e481998bedfc70a56eebdf69f88fff4fa97",
-    "published_release": "v0.5.0-alpha.89",
+    "latest_pushed_commit": "87fadae5dbdbe49f66140796290ac55666d5d345",
+    "published_release": "v0.5.0-alpha.90",
     "server_tests": 222,
-    "android_tests": 194,
+    "android_tests": 365,
     "phone_endpoint": "Termux SSH verified; phone-adb found no verified TCP or authorized USB connection",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
-    "owned_emulator": "Owned5562 restored app absence/font1/animator0/gestural and stopped; unrelated TV emulator preserved.",
+    "owned_emulator": "Own emulator5620 nextcomp_env_qa; compatible signed108 installed for final visual review",
     "owned_fixture_port": "Owned19997 stopped and18880 reverse removed; shared ADB preserved.",
-    "installed_development_version": "Phone106 via package query; own emulator107 qualification candidate",
+    "installed_development_version": "Phone last verified106; own emulator108",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 original modeled controls, 120-frame60fps swivel assets and160-frame Codex/Psychology/N turns; display-clock playback, live reduced motion and background fallback. Real Fold cadence unqualified.",
-    "phone_install": "SSH package query confirms106; qualified107 APK delivered and checksum verified, installation unverified",
-    "qualification": "Alpha34:194 Android tests per variant/39 suites, both lints/signed builds, exact-source CI37559593224 pass; native synthetic body roundtrips, previews, titles, controls and steady background qualified.",
+    "phone_install": "Compatible108 APK transfer running over SSH; install and interaction unverified",
+    "qualification": "Alpha90:365 unit checks per variant, both lints and signed builds,41 frozen native journeys, actual optimized compatible search visual review passed",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Alpha34 native cycling review;1890-card desktop/mobile/reduced-motion/reload checks pass.",
     "native_audio_qualification": "Actual native account foreground and optimized cold screen-off rendering/playback verified, no mic/task calls. Fresh cold rendering15.425sec; physical secure-keyguard, push receipt and perceptual quality separate.",
-    "update_delivery": "Update51 offered for both maintained signing identities; announcement598 once, handset receipt unverified.",
+    "update_delivery": "Update108 published; announcement1546 once; physical receipt unverified",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
     "session_list": "Genuine recent/reactivated work automatically promotes to bottom; concurrent ties stable; touching/scrolling holds movement. Backend deployed without restarting stock workers.",
