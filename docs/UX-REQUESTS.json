@@ -2546,7 +2546,7 @@
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 original modeled controls, 120-frame60fps swivel assets and160-frame Codex/Psychology/N turns; display-clock playback, live reduced motion and background fallback. Real Fold cadence unqualified.",
-    "phone_install": "Compatible108 APK transfer running over SSH; install and interaction unverified",
+    "phone_install": "Termux SSH confirms106; compatible108 APK fully delivered and SHA256/size verified; installation unverified",
     "qualification": "Alpha90:365 unit checks per variant, both lints and signed builds,41 frozen native journeys, actual optimized compatible search visual review passed",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Alpha34 native cycling review;1890-card desktop/mobile/reduced-motion/reload checks pass.",

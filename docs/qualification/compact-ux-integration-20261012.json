@@ -14,8 +14,8 @@
     "Initial popup launch timeout retained; idle launch fixture corrected"
   ],
   "limits": [
-    "Physical phone interaction unavailable; SSH works, no verified ADB",
-    "Phone APK transfer and actual installed version verification still pending",
+    "Physical phone interaction unavailable; no verified ADB",
+    "Phone remains106; compatible108 file verified, installation unverified",
     "All authored strings and full world-class goal remain under audit"
   ],
   "versionCode": 108,
@@ -34,5 +34,12 @@
     "announced": 1,
     "pushEnabled": true
   },
-  "optimizedReview": "Actual compatible signed APK search screenshot inspected; whole labels remain readable; native display-clock survives. Idle card distinctly subdued."
+  "optimizedReview": "Actual compatible signed APK search screenshot inspected; whole labels remain readable; native display-clock survives. Idle card distinctly subdued.",
+  "phoneDelivery": {
+    "path": "Download/NextComp-alpha90.apk",
+    "sha256": "739d4870d5db9a354c77cae8298024fd24174a31d86e75f1c42b5b9a906c166f",
+    "bytes": 62129140,
+    "verifiedBy": "Termux SSH after completed transfer",
+    "installedVersionCode": 106
+  }
 }
