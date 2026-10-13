@@ -1,22 +1,34 @@
 {
-  "state": "compiled-template-native-qualified-team-workflow-pending",
+  "state": "native-template-and-production-team-workflow-qualified",
   "base": "6a7fc06e924f94efc49b29f7c792d6b09bed0e4d",
-  "recordedAt": 1791855068.7308347,
+  "recordedAt": 1791857610.8434412,
   "changes": "Typed cycling reply-clear and recipient labels; literal ID/name slots preserve authored target-grammar positions. Clear callback, draft scope, recipient and send routing unchanged. Typed Team/Task/To/Agent selector prefixes, authored Coordinator default, one-line ellipsis preserved; arbitrary selected names remain literal. Authored message/attention/approval event labels cycle with literal author names; unknown kinds remain exact provider text.",
-  "verification": "Template journey passed; actual Team screen selector/draft/routing workflow remains pending and required before integration. No publication/physical-phone claim.",
-  "remaining": "Quoted reply body/prefix and Agent status embedded in literal selection still require content/control integration. Source remains unbuilt; no actual Team workflow qualification claimed.",
+  "verification": "Actual MainActivity to production Team screen against isolated synthetic HTTP service passed: both selector language forms, reply clear and return, recipient-scoped drafts and exactly one direct send to Violet. No real provider or phone interaction.",
+  "remaining": "Quoted reply body/prefix and Agent status embedded in literal selection still require content/control integration. Physical phone and live provider behavior remain unqualified.",
   "ownership": "Separate worktree; frozen alpha91-r02 unchanged. No builds while release gate owns emulator and build resources.",
   "nativeWorkflowQualification": {
-    "fixture": "tests/fixtures/losangelex-ui.mjs",
-    "inspectedContract": "Synthetic service only; no Codex calls; commandId+body digest deduplication; room/direct visibility filtering; /fixture/state exposes exact commands/events. Fixture not started during frozen gate.",
+    "fixture": "tests/fixtures/immersion-cycle-team-ui.mjs",
     "journey": [
-      "Observe authored selector/recipient/event text over full waterfall cycles, retaining exact hostile literal names.",
-      "Select Maya from To dropdown; type unique draft; verify recipient and direct scope without sending to real service.",
-      "Reply to synthetic room event; verify correct author and replyTo; clear inline reply; verify replyTo absent while draft preserved.",
-      "Switch room/direct recipients; verify scoped draft restoration; submit one synthetic direct message and reconcile exact commandId/body/targets/visibility from fixture state.",
-      "Tap selectors in each language phase; verify unchanged targets and one-line ellipsis at large text."
+      "Observed both authored Team selector forms on natural display clock.",
+      "Restored root draft after clearing reply; retained reply-specific draft.",
+      "Restored drafts across Violet/Amber direct recipients.",
+      "One native Send produced exactly one fixture request to Violet, direct visibility, no stale reply ID; Amber draft retained."
     ],
-    "qualificationLimits": "Template samples alone cannot qualify this workflow. Live team/API, actual phone, unknown kind translations remain unverified."
+    "receipt": {
+      "state": "passed",
+      "completed": [
+        "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget"
+      ],
+      "apkSha": "7482eb0bb6512618c78b6b272bcaa71a407af73c81a797a8da5844275cd15819",
+      "testSha": "325f1f1b25cb4f21eb6b3f4ddb2abe97d5a226b5a9f9f4a292e19e748736949e",
+      "startedAt": 1791857104.0649986,
+      "scope": "Own emulator; separate Team-control candidate; actual production Team screen against synthetic HTTP fixture; one controlled synthetic send; no real worker",
+      "current": "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget",
+      "fixtureStopped": true,
+      "fixturePid": 439914,
+      "finishedAt": 1791857141.027767
+    },
+    "limits": "Synthetic provider only. Continuous animation kept enabled. Native accessibility cache explicitly refreshed; no global Espresso idling wait. Prior attempts failed at test startup/idling before any fixture send; independently reconciled."
   },
   "build": "Debug/release Kotlin and qualification APK/test APK passed on OZZZ-OS. Locked npm dependencies installed with ignore-scripts; audit0 reported vulnerabilities.",
   "nativeTemplate": "Existing native template journey passed all added selector/recipient/reply-clear/event forms, exact literal-name scaffold invariants and existing action callback. Own fixture stopped and reaped.",

@@ -12,6 +12,9 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,6 +22,7 @@ import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.util.UUID
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable fun LosangelexScreen(owner:String,onSettings:()->Unit={}){
     val client=remember(owner){LosangelexClient(owner)}
     val jobs=rememberCoroutineScope()
@@ -116,7 +120,7 @@ import java.util.UUID
     }
     val canSend=!busy&&team.isNotBlank()&&task.isNotBlank()&&(pending!=null||text.isNotBlank()&&text.length<=3500)&&(!direct||recipient.isNotBlank())
     fun send(){if(canSend&&!busy)submit(pending?:JSONObject().put("path","teams/$team/messages").put("body",target.message(UUID.randomUUID().toString(),text)))}
-    Column(Modifier.fillMaxSize().imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+    Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         WeeklyLimitBar()
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){TextButton(onSettings){BilingualLabel("Settings")};TextButton({newTask=true},enabled=team.isNotBlank()&&!busy){BilingualLabel("New task")}}
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
@@ -125,8 +129,8 @@ import java.util.UUID
             TeamChoice(InterfaceTemplate.TEAM_CHOICE_TO,listOf("" to "Coordinator")+(overview.optJSONObject("team")?.keys()?.asSequence()?.map{it to it}?.toList().orEmpty()),recipient,Modifier.weight(1f)){recipient=it;replyTo=null;if(it.isBlank())direct=false}
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            FilterChip(!direct,{direct=false;replyTo=null},label={BilingualLabel("Room")})
-            FilterChip(direct,{direct=true;replyTo=null},label={BilingualLabel("Direct")},enabled=recipient.isNotBlank())
+            FilterChip(!direct,{direct=false;replyTo=null},modifier=Modifier.testTag("team-room"),label={BilingualLabel("Room")})
+            FilterChip(direct,{direct=true;replyTo=null},modifier=Modifier.testTag("team-direct"),label={BilingualLabel("Direct")},enabled=recipient.isNotBlank())
             TextButton({jobs.launch{try{refresh(target)}catch(e:Exception){error=e.message.orEmpty()}}}){BilingualLabel("Refresh")}
         }
         val headingStyle=MaterialTheme.typography.labelMedium.copy(color=Mint)
@@ -157,15 +161,15 @@ import java.util.UUID
                         LaunchedEffect(sourceId,event.s("body"),PocketImmersion.enabled){PocketImmersion.offer(sourceId,event.s("body"),"team conversation")}
                         BilingualMessage(sourceId,event.s("body"))
                         if(event.s("kind") in listOf("attention","approval")&&event.s("attentionState")=="open")TextButton({inspected=JSONObject(event.toString()).put("team_id",team)}){BilingualLabel("Open request")}
-                        else if(event.s("kind")=="message")TextButton({replyTo=event.optLong("id");recipient=teamReplyRecipient(target,event.s("author"))}){BilingualLabel("Reply")}
+                        else if(event.s("kind")=="message")TextButton({replyTo=event.optLong("id");recipient=teamReplyRecipient(target,event.s("author"))},modifier=Modifier.testTag("team-reply:"+event.optLong("id"))){BilingualLabel("Reply")}
                     }
                 }
             }
         }
         TeamAgentControls(client,team,task,overview,jobs,{receipt=it},{error=it})
-        if(replyTo!=null)TextButton({replyTo=null}){InterfaceTemplateText(InterfaceTemplate.TEAM_REPLY_CLEAR,requireNotNull(replyTo))}
+        if(replyTo!=null)TextButton({replyTo=null},modifier=Modifier.testTag("team-reply-clear")){InterfaceTemplateText(InterfaceTemplate.TEAM_REPLY_CLEAR,requireNotNull(replyTo))}
         if(receipt.isNotBlank())ImmersionText("team-receipt:$owner:$team",receipt,fontSize=12.sp,color=Muted)
-        OutlinedTextField(input,{input=it;client.saveDraft(target,it.text)},enabled=pending==null&&!busy,label={if(direct)InterfaceTemplateText(InterfaceTemplate.TEAM_MESSAGE_RECIPIENT,recipient)else BilingualLabel("Message the team")},modifier=Modifier.fillMaxWidth().onPreviewKeyEvent{event->
+        OutlinedTextField(input,{input=it;client.saveDraft(target,it.text)},enabled=pending==null&&!busy,label={if(direct)InterfaceTemplateText(InterfaceTemplate.TEAM_MESSAGE_RECIPIENT,recipient)else BilingualLabel("Message the team")},modifier=Modifier.fillMaxWidth().testTag("team-input").onPreviewKeyEvent{event->
             val enter=event.key==Key.Enter||event.key==Key.NumPadEnter
             if(enter){
                 if(event.type==KeyEventType.KeyDown){
@@ -175,7 +179,7 @@ import java.util.UUID
                 true
             }else false
         },maxLines=4,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}))
-        Button({send()},enabled=canSend,modifier=Modifier.fillMaxWidth()){BilingualLabel(if(busy)"Submitting…" else if(pending!=null)"Retry saved command" else "Send")}
+        Button({send()},enabled=canSend,modifier=Modifier.fillMaxWidth().testTag("team-send")){BilingualLabel(if(busy)"Submitting…" else if(pending!=null)"Retry saved command" else "Send")}
     }
     if(newTask)TeamNewTask(client,team,{newTask=false}){id->task=id;recipient="";direct=false;replyTo=null;newTask=false}
     if(inbox)TeamInbox(client,team,{inbox=false}){event->inspected=event;inbox=false}
@@ -184,5 +188,5 @@ import java.util.UUID
 
 @Composable internal fun TeamChoice(label:InterfaceTemplate,choices:List<Pair<String,String>>,selected:String,modifier:Modifier=Modifier,onSelect:(String)->Unit){
     var open by remember{mutableStateOf(false)}
-    Box(modifier){TextButton({open=true},modifier=Modifier.fillMaxWidth(),contentPadding=PaddingValues(horizontal=4.dp)){if(label==InterfaceTemplate.TEAM_CHOICE_TO&&selected.isBlank())InterfaceTemplateText(InterfaceTemplate.TEAM_CHOICE_COORDINATOR,maxLines=1,overflow=TextOverflow.Ellipsis)else InterfaceTemplateText(label,choices.firstOrNull{it.first==selected}?.second?:selected,maxLines=1,overflow=TextOverflow.Ellipsis)};DropdownMenu(open,{open=false}){choices.forEach{(id,name)->DropdownMenuItem(text={BilingualLabel(name,centered=false)},onClick={open=false;onSelect(id)})}}}
+    Box(modifier){TextButton({open=true},modifier=Modifier.fillMaxWidth().testTag("team-choice:"+label.name),contentPadding=PaddingValues(horizontal=4.dp)){if(label==InterfaceTemplate.TEAM_CHOICE_TO&&selected.isBlank())InterfaceTemplateText(InterfaceTemplate.TEAM_CHOICE_COORDINATOR,maxLines=1,overflow=TextOverflow.Ellipsis)else InterfaceTemplateText(label,choices.firstOrNull{it.first==selected}?.second?:selected,maxLines=1,overflow=TextOverflow.Ellipsis)};DropdownMenu(open,{open=false}){choices.forEach{(id,name)->DropdownMenuItem(text={if(label==InterfaceTemplate.TEAM_CHOICE_TO&&id.isBlank())BilingualLabel("Coordinator",centered=false)else Text(name)},onClick={open=false;onSelect(id)})}}}
 }
