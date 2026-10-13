@@ -8,6 +8,8 @@ import java.util.Locale
 
 /** Authored grammar, literal parameters: no model request for changing IDs/counts/paths. */
 internal enum class InterfaceTemplate(val source:String,val italian:String){
+    TEAM_REPLY_CLEAR("Reply to #%1\$s · clear","Rispondi a #%1\$s · cancella"),
+    TEAM_MESSAGE_RECIPIENT("Message %1\$s","Messaggio a %1\$s"),
     TEAM_ROOM_TASK("Room · %1\$s","Stanza · %1\$s"),
     TEAM_DIRECT_TASK("Direct · %1\$s · %2\$s","Diretto · %1\$s · %2\$s"),
     TEAM_ROOM_LOADING("Room · Loading…","Stanza · Caricamento…"),
@@ -30,6 +32,8 @@ internal enum class InterfaceTemplate(val source:String,val italian:String){
         }
         fun literal(index:Int)=values[index].toString().let{it to it}
         val units=when(this){
+            TEAM_REPLY_CLEAR->words("Rispondi|Reply","a|to")+listOf(" #" to " #",literal(0)," · " to " · ")+words("cancella|clear")
+            TEAM_MESSAGE_RECIPIENT->words("Messaggio|Message","a|to")+listOf(" " to " ",literal(0))
             TEAM_ROOM_TASK->words("Stanza|Room","·")+listOf(" " to " ",literal(0))
             TEAM_DIRECT_TASK->words("Diretto|Direct","·")+listOf(" " to " ",literal(0)," · " to " · ",literal(1))
             TEAM_ROOM_LOADING->words("Stanza|Room","·","Caricamento…|Loading…")

@@ -121,6 +121,8 @@ class SharedInlineLayoutNativeTest {
    assertEquals("Team name must bypass authored vocabulary syntax",it.target(teamLiteral),it.scaffold(teamLiteral).target)
   }
   val roomForms=listOf(
+   InterfaceTemplate.TEAM_REPLY_CLEAR to arrayOf<Any>(731),
+   InterfaceTemplate.TEAM_MESSAGE_RECIPIENT to arrayOf<Any>(teamLiteral),
    InterfaceTemplate.TEAM_ROOM_TASK to arrayOf<Any>(teamLiteral),
    InterfaceTemplate.TEAM_DIRECT_TASK to arrayOf<Any>(teamLiteral,literal),
    InterfaceTemplate.TEAM_ROOM_LOADING to emptyArray<Any>(),

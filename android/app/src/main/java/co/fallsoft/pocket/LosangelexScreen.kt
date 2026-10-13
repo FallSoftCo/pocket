@@ -156,9 +156,9 @@ import java.util.UUID
             }
         }
         TeamAgentControls(client,team,task,overview,jobs,{receipt=it},{error=it})
-        if(replyTo!=null)TextButton({replyTo=null}){BilingualLabel("Reply to #$replyTo · clear")}
+        if(replyTo!=null)TextButton({replyTo=null}){InterfaceTemplateText(InterfaceTemplate.TEAM_REPLY_CLEAR,requireNotNull(replyTo))}
         if(receipt.isNotBlank())ImmersionText("team-receipt:$owner:$team",receipt,fontSize=12.sp,color=Muted)
-        OutlinedTextField(input,{input=it;client.saveDraft(target,it.text)},enabled=pending==null&&!busy,label={BilingualLabel(if(direct)"Message $recipient" else "Message the team")},modifier=Modifier.fillMaxWidth().onPreviewKeyEvent{event->
+        OutlinedTextField(input,{input=it;client.saveDraft(target,it.text)},enabled=pending==null&&!busy,label={if(direct)InterfaceTemplateText(InterfaceTemplate.TEAM_MESSAGE_RECIPIENT,recipient)else BilingualLabel("Message the team")},modifier=Modifier.fillMaxWidth().onPreviewKeyEvent{event->
             val enter=event.key==Key.Enter||event.key==Key.NumPadEnter
             if(enter){
                 if(event.type==KeyEventType.KeyDown){
