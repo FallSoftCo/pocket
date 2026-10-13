@@ -32,7 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 
-@Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false,cardRegion:Boolean=false){
+@Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false,cardRegion:Boolean=false,smallDock:Boolean=false){
     val c=LocalContext.current
     val here=compact||bar||dock
     val control=captureControl(PocketVoice.active||PocketVoice.launching,PocketVoice.state,Pocket.prefs.getString("voicePendingId",null)!=null)
@@ -63,14 +63,14 @@ import androidx.lifecycle.repeatOnLifecycle
         }
     }
     else Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-        CaptureMic(capture,control,label,compact)
+        CaptureMic(capture,control,label,compact,smallDock)
         if(!compact)Column(Modifier.weight(1f)){
             BilingualLabel(label,centered=false,color=Mint,fontSize=14.sp,maxLines=2)
         }
     }
 }
-@Composable private fun CaptureMic(capture:()->Unit,control:CaptureControl,label:String,compact:Boolean){
-    FilledTonalIconButton(capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,modifier=Modifier.size(if(compact)64.dp else 72.dp).semantics{contentDescription=PocketImmersion.label(label);if(PocketVoice.problem.isNotBlank())stateDescription=PocketVoice.problem},shape=CircleShape,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.22f) else Mint.copy(alpha=.16f),contentColor=Paper)){
+@Composable private fun CaptureMic(capture:()->Unit,control:CaptureControl,label:String,compact:Boolean,smallDock:Boolean=false){
+    FilledTonalIconButton(capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,modifier=Modifier.size(if(smallDock)48.dp else if(compact)64.dp else 72.dp).semantics{contentDescription=PocketImmersion.label(label);if(PocketVoice.problem.isNotBlank())stateDescription=PocketVoice.problem},shape=CircleShape,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.22f) else Mint.copy(alpha=.16f),contentColor=Paper)){
         SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",null,Modifier.size(44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
     }
 }
@@ -150,13 +150,45 @@ import androidx.lifecycle.repeatOnLifecycle
     }
 }
 
-/** Media volume stays visible in the toolbar and never steals editor focus. */
+@Composable internal fun inlineVolumeControlWidth():androidx.compose.ui.unit.Dp{
+    val density=androidx.compose.ui.platform.LocalDensity.current
+    val measure=androidx.compose.ui.text.rememberTextMeasurer()
+    val pixels=measure.measure(androidx.compose.ui.text.AnnotatedString("100%"),style=LocalTextStyle.current.copy(fontSize=15.sp)).size.width
+    return with(density){pixels.toDp()+12.dp}.coerceAtLeast(48.dp)
+}
+
+/** Three deliberate playback presets; mounting never changes an existing mute. */
 @Composable fun InlineSpeechVolume(modifier:Modifier=Modifier){
-    val audio=LocalContext.current.getSystemService(android.media.AudioManager::class.java)
-    val max=remember{audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)}
-    var volume by remember{mutableIntStateOf(audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))}
-    LaunchedEffect(audio){while(true){volume=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);kotlinx.coroutines.delay(500)}}
-    Slider(value=volume.toFloat(),onValueChange={volume=it.toInt();audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,volume,0)},valueRange=0f..max.toFloat(),steps=(max-1).coerceAtLeast(0),modifier=modifier.heightIn(min=48.dp).semantics{contentDescription="Speech volume"})
+    val context=LocalContext.current
+    val audio=context.getSystemService(android.media.AudioManager::class.java)
+    val max=remember(audio){audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)}
+    val middle=(max+1)/2
+    var volume by remember(audio){mutableIntStateOf(audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))}
+    var problem by remember{mutableStateOf("")}
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(audio,lifecycle){lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
+        while(true){volume=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);kotlinx.coroutines.delay(500)}
+    }}
+    // Report pre-existing custom system levels honestly until the first deliberate tap.
+    val percent=when{max<=0||volume<=0->0;volume==max->100;volume==middle->50;else->(volume*100.0/max).toInt()}
+    TextButton({
+        try{
+            val current=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
+            val next=when{current<middle->middle;current<max->max;else->0}
+            audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,next,0)
+            volume=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);problem=""
+        }catch(e:Exception){
+            problem=e.message?:"Could not change playback volume"
+            android.widget.Toast.makeText(context,problem,android.widget.Toast.LENGTH_LONG).show()
+        }
+    },enabled=max>0&&!audio.isVolumeFixed,modifier=modifier.widthIn(min=48.dp).heightIn(min=48.dp).semantics{
+        contentDescription="Speech volume";stateDescription="$percent%"+if(problem.isBlank())"" else "; $problem"
+    },contentPadding=PaddingValues(horizontal=4.dp,vertical=2.dp)){
+        Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(0.dp)){
+            SymbolIcon("VolumeUp",null,Modifier.size(24.dp),tint=if(problem.isNotBlank())Coral else if(volume==0)Muted else Mint)
+            Text(if(problem.isBlank())"$percent%" else "!",fontSize=15.sp,lineHeight=18.sp,color=if(problem.isNotBlank())Coral else Paper,maxLines=1)
+        }
+    }
 }
 
 @Composable fun ChatActionButton(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier=Modifier,onClick:()->Unit,recording:Boolean=false){

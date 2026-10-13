@@ -1,0 +1,48 @@
+{
+  "status": "qualified-private-updater-published-phone-unreachable",
+  "problem": "Following a response taller than the viewport targeted the first pixel of the final row, hiding its newest text. Reproduced in native UI with a30-passage streaming response.",
+  "architecture": "The LazyColumn now owns an explicit end boundary, independently of message row heights/IDs. Existing follow mode targets that boundary; questions retain their heading target; manual reading continues to disable following. This1dp UI anchor is not a transcript/message/activity record and is never persisted or sent.",
+  "native": {
+    "control": {
+      "source": "alpha76",
+      "seconds": 9.841,
+      "result": "failed: latest passage offscreen"
+    },
+    "fixedFirstPass": {
+      "seconds": 5.668,
+      "result": "pass latest passage visible"
+    },
+    "extended": {
+      "seconds": 12.108,
+      "result": "pass subsequent delta tail visible; two upward thumb gestures followed by output growth preserve reading passage within24px; unread tail remains offscreen; zero replies"
+    },
+    "importantFilter": {
+      "seconds": 8.3,
+      "result": "pass native answer geometry within2px and visible ink retained on filter/return"
+    },
+    "pendingQuestion": {
+      "seconds": 14.327,
+      "result": "pass navigation to actionable question using committed unfiltered rows"
+    },
+    "identity": {
+      "seconds": 12.763,
+      "result": "pass fresh isolated fixture; prior mixed question fixture failed and is excluded"
+    },
+    "shortPage": {
+      "seconds": 13.534,
+      "result": "pass older text visible and retained recent reply without load button"
+    }
+  },
+  "candidate": "alpha77 / code95",
+  "phone": "Last verified alpha75 / code93; ADB and Termux SSH unavailable. No alpha77 install claimed.",
+  "remaining": [
+    "Physical handset installation and follow/reading/pacing verification"
+  ],
+  "signed": {
+    "debugTests": 316,
+    "releaseTests": 316,
+    "lint": "both pass",
+    "builds": "both pass",
+    "update": "private updater95 published for both existing signing identities; each under80MiB"
+  }
+}

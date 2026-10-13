@@ -27,6 +27,50 @@ class ClientReplyRecoveryNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
  }
  private fun posts()=qa("state").getJSONArray("replies")
+ @Test fun echoedUnknownSendHasOneBodyAndRetainsRecoveryControls(){
+  val text="Single pending body"
+  start(draft=text);qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
+  main{Pocket.reply(text)}
+  await{!Pocket.sending&&PocketReplies.entries("same-thread").singleOrNull()?.state=="unknown"}
+  val intent=PocketReplies.entries("same-thread").single()
+  fun echo(item:String,client:String)=JSONObject().put("threadId","same-thread").put("turnId","echo").put("row",JSONObject().put("id","echo/"+item).put("itemId",item).put("turnId","echo").put("kind","user").put("clientId",client).put("text",text).put("version",1000))
+  main{PocketTranscript.apply(echo("one",intent.id))}
+  await{device.findObjects(By.text(text)).size==1&&device.hasObject(By.text("Check status"))}
+  assertEquals("Provider echo silently accepted uncertain delivery","unknown",PocketReplies.entries("same-thread").single().state)
+  assertEquals(text,Pocket.prefs.getString("draft:same-thread",null))
+  main{PocketTranscript.apply(echo("two","independent-send"))}
+  await{device.findObjects(By.text(text)).size==2}
+  assertEquals(1,posts().length());assertEquals(0,qa("state").getJSONArray("recoveries").length())
+ }
+ @Test fun providerMetadataLossDoesNotDuplicateUnknownSend(){
+  val text="Provider projection single send"
+  start(draft=text);qa("unknown-reply")
+  val card=By.desc("Open Chat for Synthetic freshness work")
+  assertTrue("Source card unavailable",device.wait(Until.hasObject(card),3000))
+  device.findObject(card).click();await{Pocket.detail!=null&&!PocketTranscript.updating}
+  assertTrue("Keyboard control unavailable",device.wait(Until.hasObject(By.text("Keyboard")),3000))
+  device.findObject(By.text("Keyboard")).click()
+  assertTrue("Reply editor unavailable",device.wait(Until.hasObject(By.clazz("android.widget.EditText")),3000))
+  assertEquals("Source draft not restored",text,device.findObject(By.clazz("android.widget.EditText")).text)
+  device.pressKeyCode(android.view.KeyEvent.KEYCODE_ENTER)
+  await{!Pocket.sending&&PocketReplies.entries("same-thread").singleOrNull()?.state=="unknown"}
+  assertEquals("UI submitted more than once",1,posts().length())
+  device.pressBack();await{Pocket.selected==null}
+  assertTrue("Source card unavailable after sending",device.wait(Until.hasObject(card),3000))
+  device.findObject(card).click();await{Pocket.detail!=null&&!PocketTranscript.updating}
+  val intent=PocketReplies.entries("same-thread").single()
+  await{Pocket.connected}
+  val response=qa("provider-identity-echo")
+  assertTrue("Fixture has no native websocket",response.optInt("connections")>0)
+  assertEquals("Backend projection lost explicit send identity",intent.id,response.s("clientId"))
+  await{PocketTranscript.rows.any{it.s("clientId")==intent.id}&&device.findObjects(By.text(text)).size==1&&device.hasObject(By.text("Check status"))}
+  assertEquals("Echo must not accept uncertain delivery","unknown",PocketReplies.entries("same-thread").single().state)
+  assertEquals(text,Pocket.prefs.getString("draft:same-thread",null))
+  qa("provider-independent-echo")
+  await{device.findObjects(By.text(text)).size==2}
+  assertEquals("Rendering initiated another send",1,posts().length())
+  assertEquals("Rendering initiated recovery",0,qa("state").getJSONArray("recoveries").length())
+ }
  @Test fun matchingUnknownReceiptRequiresExplicitRecovery(){
   start(draft="Unknown receipt test");qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
   var completed=false;main{Pocket.reply("Unknown receipt test",onDone={completed=true})}

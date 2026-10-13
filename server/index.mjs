@@ -37,7 +37,9 @@ import { SessionStarts,recentProjects,permissionOptions } from './sessions.mjs';
 import { CompletionRecovery } from './completions.mjs';
 import { spokenSummary,spokenText,promptContext,turnPrompt } from './speech.mjs';
 import { LiveTimeline,timelinePage } from './timeline.mjs';
+import {HistoryHeads} from './history-heads.mjs';
 import { ThreadHistory } from './history.mjs';
+import {SendIdentity} from './send-identity.mjs';
 import {TerminalForks,TerminalForkImports} from './terminal-forks.mjs';
 import {sshTerminalFork} from './terminal-fork-transport.mjs';
 import { WorkRecord } from './work-record.mjs';
@@ -56,6 +58,7 @@ const hostName=process.env.POCKET_HOST_NAME||hostname();
 const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
 const {db,secrets}=openStore(dir);
+const sendIdentity=new SendIdentity(db);
 const workObservations=new WorkObservations(db);
 const catalogContext=new CatalogContext(db);
 const notificationReads=new NotificationReads(db);
@@ -121,11 +124,12 @@ voiceController.reports=coordinatorReports;
 setInterval(()=>void coordinatorReports.tick().catch(error=>console.error('Coordinator report',error.message)),60000).unref();
 
 const timeline=new LiveTimeline();
+const historyHeads=new HistoryHeads();
 setInterval(()=>timeline.prune(),60000).unref();
 const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
 // Notes hydrate when their conversation opens, not while hundreds of list cards load.
 const inheritedHistoryCache=new Map();let inheritedHistoryCacheBytes=0;
-const history=new ThreadHistory(codex,{inheritedHistory:id=>{const cached=inheritedHistoryCache.get(id);if(cached){inheritedHistoryCache.delete(id);inheritedHistoryCache.set(id,cached);return cached.turns;}if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='terminal_fork_imports'").get())return [];const row=db.prepare("SELECT json_extract(packet,'$.publicHistory') AS history FROM terminal_fork_imports WHERE fork_id=? AND state IN ('prepared','accepted','unknown')").get(id);if(!row?.history)return [];const turns=JSON.parse(row.history),bytes=Buffer.byteLength(row.history);if(bytes<=8*1024*1024){while(inheritedHistoryCache.size&&(inheritedHistoryCacheBytes+bytes>8*1024*1024||inheritedHistoryCache.size>=16)){const key=inheritedHistoryCache.keys().next().value;inheritedHistoryCacheBytes-=inheritedHistoryCache.get(key).bytes;inheritedHistoryCache.delete(key);}inheritedHistoryCache.set(id,{turns,bytes});inheritedHistoryCacheBytes+=bytes;}return turns;}});
+const history=new ThreadHistory(codex,{identity:sendIdentity,inheritedHistory:id=>{const cached=inheritedHistoryCache.get(id);if(cached){inheritedHistoryCache.delete(id);inheritedHistoryCache.set(id,cached);return cached.turns;}if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='terminal_fork_imports'").get())return [];const row=db.prepare("SELECT json_extract(packet,'$.publicHistory') AS history FROM terminal_fork_imports WHERE fork_id=? AND state IN ('prepared','accepted','unknown')").get(id);if(!row?.history)return [];const turns=JSON.parse(row.history),bytes=Buffer.byteLength(row.history);if(bytes<=8*1024*1024){while(inheritedHistoryCache.size&&(inheritedHistoryCacheBytes+bytes>8*1024*1024||inheritedHistoryCache.size>=16)){const key=inheritedHistoryCache.keys().next().value;inheritedHistoryCacheBytes-=inheritedHistoryCache.get(key).bytes;inheritedHistoryCache.delete(key);}inheritedHistoryCache.set(id,{turns,bytes});inheritedHistoryCacheBytes+=bytes;}return turns;}});
 const workRecord=new WorkRecord(db,{version:appVersion});
 const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}};
 for(const row of db.prepare("SELECT thread_id FROM watches WHERE enabled=1 UNION SELECT thread_id FROM outgoing UNION SELECT thread_id FROM session_starts WHERE thread_id IS NOT NULL").all())workRecord.enroll({id:row.thread_id});
@@ -279,7 +283,7 @@ async function attach(threadId,{before=null,recent=false}={}){
   requireId(threadId); await codex.connect();
   let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);recordWork(()=>workRecord.enroll(metadata));
   if(sessionIdentity(metadata).isChild&&!sessionIdentity(metadata).canAcceptDirectInput){
-    attached.add(threadId);const snapshotRevision=timeline.version;const thread=await history.read(metadata,{before,preferPaging:true,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});if(!before)timeline.seed(thread,{throughVersion:snapshotRevision});return {...thread,_pocketSnapshotRevision:snapshotRevision};
+    attached.add(threadId);const snapshotRevision=timeline.version,snapshotHistoryHead=historyHeads.snapshot(threadId);const thread=await history.read(metadata,{before,preferPaging:true,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});if(!before)timeline.seed(thread,{throughVersion:snapshotRevision});return {...thread,_pocketSnapshotRevision:snapshotRevision,_pocketSnapshotHistoryHead:snapshotHistoryHead};
   }
   if(!attached.has(threadId)){
     // Opening history inherits the runtime profile; it must not undo an external permission change.
@@ -291,8 +295,8 @@ async function attach(threadId,{before=null,recent=false}={}){
     }
   }
   const latestTurn=initial?.turns?.at(-1);if(latestTurn)rememberSpeechContext(threadId,latestTurn);
-  const snapshotRevision=timeline.version;
-  const thread=initial||await history.read(metadata,{before,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1,preferPaging:true}:{})});if(!before){timeline.seed(thread,{throughVersion:snapshotRevision});rememberSpeechContext(threadId,thread.turns?.at(-1));}return {...thread,_pocketSnapshotRevision:snapshotRevision};
+  const snapshotRevision=timeline.version,snapshotHistoryHead=historyHeads.snapshot(threadId);
+  const thread=initial||await history.read(metadata,{before,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1,preferPaging:true}:{})});if(!before){timeline.seed(thread,{throughVersion:snapshotRevision});rememberSpeechContext(threadId,thread.turns?.at(-1));}return {...thread,_pocketSnapshotRevision:snapshotRevision,_pocketSnapshotHistoryHead:snapshotHistoryHead};
 }
 const isActive=t=>t.status?.type==='active';
 const savedTurnSettings=id=>{const row=db.prepare('SELECT settings FROM turn_settings WHERE thread_id=?').get(id);return row?JSON.parse(row.settings):null;};
@@ -316,7 +320,7 @@ async function sendOutgoing(row,initialThread=null){
     let result;
     const active=t.turns?.findLast(x=>x.status==='inProgress');
     if(row.mode!=='queue'&&isActive(t)&&active) {
-      try {result=await codex.call('turn/steer',{threadId:t.id,expectedTurnId:active.id,input});}
+      try {result=await codex.call('turn/steer',{threadId:t.id,expectedTurnId:active.id,clientUserMessageId:row.id,input});}
       catch(e){
         // Retry only when Codex explicitly reports that the turn has finished.
         if(e.rpc && /no active turn|no turn in progress/i.test(e.message))result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});else throw e;
@@ -339,6 +343,7 @@ async function flush(){if(!codex.ready)return;for(const row of db.prepare("SELEC
 db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during delivery; check the conversation before resending.' WHERE state='sending'").run();
 
 codex.on('event',m=>{
+  m=sendIdentity.event(m);
   const p=m.params||{}, threadId=p.threadId || p.thread?.id;
   if(threadId&&(internalSessions.owns(threadId,p.thread)||voiceController.owns(threadId)||nativeVoice.owns(threadId)||immersion.ownsThread(threadId)))return;
   const activity=sessionDiscovery.observe(m);
@@ -354,7 +359,7 @@ codex.on('event',m=>{
   if(threadId&&/^(item\/|turn\/completed)/.test(m.method))liveDelivery.activity(()=>activityBoard.snapshot());
   if(m.method==='account/rateLimits/updated')rateLimits.liveUpdate(p);
   if(m.method==='account/updated'){rateLimits.clear();void rateLimits.refresh({force:true});}
-  if(threadId&&attached.has(threadId)){const update=timeline.ingest(m);if(update)emit('timeline',update);}
+  if(threadId&&attached.has(threadId)){const update=timeline.ingest(m);if(update){historyHeads.observe(threadId,update.version);emit('timeline',{...update,historyHead:historyHeads.snapshot(threadId)});}}
   if(m.method==='serverRequest/resolved'){pending.delete(String(p.requestId));resolveAttention('request_id=?',String(p.requestId));}
   if(threadId&&attached.has(threadId)&&m.method==='turn/started'){
     if(p.turn?.id)db.prepare('DELETE FROM speech_contexts WHERE thread_id=? AND turn_id IS NOT ?').run(threadId,p.turn.id);
@@ -465,7 +470,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>{void rateLimits.refresh();res.json({...codex.status(),usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
+app.get('/api/status',(req,res)=>{const threadId=req.query.threadId;if(threadId!==undefined&&(typeof threadId!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(threadId)))return res.status(400).json({error:'Invalid thread identifier'});void rateLimits.refresh();res.json({...codex.status(),...(threadId?{historyHead:historyHeads.snapshot(threadId)}:{}),usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -565,7 +570,7 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
   conversationNotes.remember(t);recordWork(()=>workRecord.remember(t));
-  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:pendingOutgoing(db,t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
+  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,historyHead:raw._pocketSnapshotHistoryHead,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:pendingOutgoing(db,t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
   if(!req.query.before)response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
   res.json(response);
 }));

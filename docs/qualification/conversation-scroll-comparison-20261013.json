@@ -1,0 +1,34 @@
+{
+  "published": {
+    "apkSha": "1112482e8b7c3aa53c2185ba805db909ad22ab0d82ce8712481739cdfe39f7ad",
+    "testSha": "9cae50811e0bbbfff0d9639353e01a32ca971f615cb6104a602a3998e78deae7",
+    "frames": 422,
+    "wallMs": 7465,
+    "processCpuMs": 11068,
+    "medianTotalMs": 36.123000000000005,
+    "p95TotalMs": 47.455681,
+    "medianDrawMs": 2.9978375,
+    "runtimeDeltas": {
+      "art.gc.bytes-allocated": 12722832,
+      "art.gc.gc-count": 5,
+      "art.gc.gc-time": 224
+    }
+  },
+  "candidate": {
+    "apkSha": "db7a5c3596121684dd3969c3a5aec4ce58f7d449fd19863021b2f15bdbdb696a",
+    "testSha": "9cae50811e0bbbfff0d9639353e01a32ca971f615cb6104a602a3998e78deae7",
+    "frames": 413,
+    "wallMs": 7339,
+    "processCpuMs": 10712,
+    "medianTotalMs": 30.893323,
+    "p95TotalMs": 50.158133,
+    "medianDrawMs": 3.0711,
+    "runtimeDeltas": {
+      "art.gc.bytes-allocated": 13931264,
+      "art.gc.gc-count": 5,
+      "art.gc.gc-time": 208
+    }
+  },
+  "scope": "Matched synthetic 40-message production conversation, same six alternating finger gestures and test APK, immersion disabled, same owned software emulator. One pair, not a statistical benchmark or physical-phone qualification.",
+  "conclusion": "Mixed result: lower median frame duration, higher p95 and allocation bytes. No proven overall smoothness improvement. Candidate footer exposes a different viewport; do not interpret this as isolated renderer optimization."
+}

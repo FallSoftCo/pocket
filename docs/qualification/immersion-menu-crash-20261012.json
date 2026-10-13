@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "state": "direct-native-menu-row-and-component-regressions-pass",
+  "cause": "Material menu intrinsic measurement queried BoxWithConstraints in immersion text; reproduced IllegalStateException on emulator when immersion was enabled.",
+  "repair": "Intrinsic layout adapter answers with native text shaping without querying subcomposed children.",
+  "verified": [
+    "Rebuilt qualification app opens original activity menu with immersion enabled",
+    "App process remains alive after opening settings",
+    "Label-side tap disables and enables the full-row switch, verified checked state"
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/nextcomp-menu-intrinsic-crash.log",
+      "sha256": "2b91f3459013352b39e619de8792fc6cd445f1aefe08c04140b38bebde478e08"
+    },
+    {
+      "path": "/tmp/nextcomp-menu-repair-open.xml",
+      "sha256": "9595cc94b8301f04a4253a7a67a1e3c62061ab5f8d11bdd14ab4cb2f5fafd2ea"
+    },
+    {
+      "path": "/tmp/nextcomp-row-toggle-off.xml",
+      "sha256": "b4a1c78e1313d5ce9de7b16b65b66652cbba3f684aa28948b497097bab579e86"
+    },
+    {
+      "path": "/tmp/nextcomp-row-toggle-on.xml",
+      "sha256": "6d5cd00f347050895f0b9063bec4aacb98f5175ee7491ec698df574098a95ad0"
+    }
+  ],
+  "limits": [
+    "Actual installed phone crash not attributed to this cause without phone logs",
+    "Qualification app, not optimized production artifact"
+  ],
+  "phoneChanged": false,
+  "componentRegression": {
+    "class": "SharedInlineLayoutNativeTest",
+    "seconds": 46.843,
+    "logSha256": "3394cbe89319febe70f03c15e2061485ae9b502f8d8aa9beccfebee7b431df68"
+  }
+}

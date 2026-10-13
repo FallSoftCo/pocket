@@ -1,0 +1,10 @@
+{
+  "problem": "Unsupported events requested display-history reloads and allocated empty live turns",
+  "control": "new regression test failed: unsupported reasoning event returned reload true and version1",
+  "fix": "recognize supported display methods before allocating cache state or incrementing version",
+  "backendTests": 439,
+  "integratedTargetedTests": 18,
+  "httpEventTest": "passed; unsupported event leaves authenticated history head unchanged and requests no history",
+  "delivery": "Workstation narrow backend69cfb2a deployed; health, authenticated head and six original Codex runtime PIDs independently verified; no pending outgoing or active voice turn at restart; other environments unchanged",
+  "android": "no source or APK change"
+}

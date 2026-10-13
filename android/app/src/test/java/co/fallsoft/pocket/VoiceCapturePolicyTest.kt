@@ -9,4 +9,23 @@ class VoiceCapturePolicyTest {
  @Test fun meterRespectsPcmBoundaryAndSaturates(){assertEquals(0f,capturePcmLevel(byteArrayOf(0,0,99),2));assertEquals(1f,capturePcmLevel(byteArrayOf(0,-128),2));assertEquals(0f,capturePcmLevel(byteArrayOf(99),1))}
  @Test fun captureFeedbackIsConditionalNotAnotherIdleToolbar(){assertFalse(captureFeedbackVisible(true,false,"Ready",""));assertFalse(captureFeedbackVisible(true,false,"Speaking",""));assertTrue(captureFeedbackVisible(true,false,"Listening",""));assertTrue(captureFeedbackVisible(false,false,"Ready","Microphone denied"))}
  @Test fun microphoneStartupStillHonorsSecondTap(){assertEquals(VoiceRecordIntent.STOP_AND_SEND,voiceRecordIntent(true,true,true,"Starting microphone",false));assertEquals(CaptureControl.STOP_SEND,captureControl(true,"Starting microphone",false));assertEquals(VoiceRecordIntent.BUSY,voiceRecordIntent(false,true,true,"Connecting",false))}
+ @Test fun onlySpeechForConfirmedCompletedTurnCanClearSavedDelivery(){
+  assertFalse(voiceSpeechMayClearPending(null,"unknown-turn"))
+  assertFalse(voiceSpeechMayClearPending("completed-other","unknown-turn"))
+  assertFalse(voiceSpeechMayClearPending("", ""))
+  assertTrue(voiceSpeechMayClearPending("completed","completed"))
+ }
+ @Test fun pendingVoiceCannotCrossEnvironmentOrPairingAndLegacyIsNotGuessed(){
+  assertTrue(voicePendingMatchesEnvironment(false,null,null,"a","owner"))
+  assertTrue(voicePendingMatchesEnvironment(true,"a","owner","a","owner"))
+  assertFalse(voicePendingMatchesEnvironment(true,"a","owner","b","owner"))
+  assertFalse(voicePendingMatchesEnvironment(true,"a","owner","a","new-pairing"))
+  assertFalse(voicePendingMatchesEnvironment(true,null,null,"a","owner"))
+ }
+ @Test fun receiptDiscoveryRequiresOneOwnerAndCompleteEvidence(){
+  assertEquals("a",uniqueVoiceReceiptOwner(listOf("a"),false))
+  assertNull(uniqueVoiceReceiptOwner(listOf("a"),true))
+  assertNull(uniqueVoiceReceiptOwner(listOf("a","b"),false))
+  assertNull(uniqueVoiceReceiptOwner(emptyList(),false))
+ }
 }

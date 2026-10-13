@@ -1,0 +1,41 @@
+{
+  "state": "native-candidate-qualified-not-delivered",
+  "nativeEvidence": {
+    "state": "passed",
+    "completed": [
+      "TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion"
+    ],
+    "apkSha": "9e51559318d46bf074e09f376a7c36f2d83efd86a498047162850647c6089da0",
+    "testSha": "82b4142d1e09ccb90d0f2e88eb23e163278d051d7dfefe8bb801ba1c35fb86c4",
+    "startedAt": 1791872110.354993,
+    "scope": "Actual coordinator conversation and backend history: page-up changes visible local responses; page-down restores them; no older-history reads from local paging; zero worker replies. Existing 2x Italian control, microphone tap, injected hardware volume capture and typing draft journey also passed.",
+    "current": "TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion",
+    "fixtureStopped": true,
+    "fixturePid": 1266352,
+    "finishedAt": 1791872133.6677916
+  },
+  "limits": [
+    "Ordinary cheap recent-history refreshes continue.",
+    "Emulator volume-key injection is not physical-phone verification.",
+    "Persisted cache remains existing last-100-turn policy; this change preserves loaded history during live refresh, not an unlimited disk archive.",
+    "Signed release/phone installation remain pending."
+  ],
+  "retainedHistoryRepair": {
+    "cause": "Recent history merge discarded unchanged older local turns; recent page also reset older frontier.",
+    "fix": "Preserve current history before overlaying fresh page and concurrent newer turn evidence. Retain known older frontier across recent refreshes; empty initial history adopts fresh cursor.",
+    "nativeEvidence": {
+      "state": "passed",
+      "completed": [
+        "TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion"
+      ],
+      "apkSha": "e542a09714669b79c96a6b236546fa79d1414ffa74729f85dc44a7b99b74df03",
+      "testSha": "6068236b74656c621a6a9c2e34509786614f038c4ed8c079ba937c6e5bab78bd",
+      "startedAt": 1791872445.988861,
+      "scope": "Actual coordinator UI: local viewport paging; older-edge pages hydrate once; all 30 turns survive recent refresh; already-loaded frontier remains exhausted; enlarged-text voice/IME/draft checks also pass; zero worker replies.",
+      "current": "TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion",
+      "fixtureStopped": true,
+      "fixturePid": 1288687,
+      "finishedAt": 1791872474.173436
+    }
+  }
+}

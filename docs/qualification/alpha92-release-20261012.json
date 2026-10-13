@@ -1,0 +1,151 @@
+{
+  "state": "published-phone-installation-unverified",
+  "versionCode": 110,
+  "versionName": "0.5.0-alpha.92",
+  "frozenSourceCommit": "82a53fe33bda995708c1d85180c2cd8f9edfc53f",
+  "productionSourceSha": "199c91c0b5929ab2bc56a7234c30f46bbe9efd8801dcd4579a17e15b3403b851",
+  "qualificationInputSha": "5f405754eab20c36a0a67a9b4744d785634aa04fa89c4cca07440fb0d6d4e650",
+  "nativeCases": [
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#transientHistoryFailureRecoversWithoutAnotherEvent",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#growingResponseKeepsItsNewestPassageVisible",
+    "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#echoedUnknownSendHasOneBodyAndRetainsRecoveryControls",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#inlinePlaybackVolumePreservesMuteAndTypingDuringCapture",
+    "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#providerMetadataLossDoesNotDuplicateUnknownSend",
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#freshHistoryPaintsBeforeSlowCacheAndLateRestoreRetainsLocalHistory",
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#readingGestureOwnsItsPassageWhenTheLateCacheArrives",
+    "co.fallsoft.pocket.ParallelTranscriptNativeTest#switchingDuringSlowCacheCannotRestoreTheOldConversation",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#inlineReplacementKeepsUnchangedWordAtOneNativePosition",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#largeTextReplacementKeepsUnchangedWordAtOneNativePosition",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#replacementRetainsNativeInlineLinkAction",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#oversizedReplacementUsesFullNativeWrappedText",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#accessibilityExposesOneCoherentVisibleSentence",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#intermediateWipePreservesCommonInkAndActuallyChangesPhraseInk",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#laterPhraseCycleCannotReflowAlreadyReservedSurroundingText",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#productionReservedTextRetainsVisibilityAndFreshInlineCallbacks",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#singleLineTruncationRetainsVisibleTextAndExcludesHiddenCue",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#visibleOutgoingWrappedWordStillRespondsDuringWipe",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#reservedBlankSpaceDoesNotCaptureAnInlineAction",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#selectionCopiesOneVisibleParagraphWithoutDuplicatedPhrase",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#selectionCopiesTheTouchedWord",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#originalSelectionDoesNotCopyReservedSlotMarkers",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#originalZeroWidthCharacterSurvivesProjectionCleanup",
+    "co.fallsoft.pocket.PairingNavigationNativeTest#cancelledPairingPrefillCannotHijackConversationIntent",
+    "co.fallsoft.pocket.PairingNavigationNativeTest#pairingActionsRemainReachableWithKeyboardAndLongError",
+    "co.fallsoft.pocket.CatalogStartupNativeTest#coldStartShowsLoadingAndRetryThenPaintsCatalogBeforeActivity",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#longPhraseStartsOnTheSameLineAsItsVisiblePrefix",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#targetGrammarScaffoldKeepsVocabularyAtTheSameNativePositions",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions",
+    "co.fallsoft.pocket.ImmersionReadingWaveNativeTest#controlsAndBodyCycleOnOneNativeClockAndPauseForSelectionAndReducedMotion",
+    "co.fallsoft.pocket.ImmersionReadingWaveNaturalNativeTest#naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds",
+    "co.fallsoft.pocket.MarkdownTableNativeTest#ordinaryAndImmersionTablesRetainColumnsScrollingLinksAndLargeText",
+    "co.fallsoft.pocket.SearchNativeTest#immersionSearchOpensTypesFiltersAndDismissesWithoutLosingDraft",
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#unboundedControlKeepsItsWholeReservedWordWithoutEllipsisChunks",
+    "co.fallsoft.pocket.CommandHistoryNativeTest#groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory",
+    "co.fallsoft.pocket.SessionCardNativeTest#childBadgeExpandsInPlaceWithoutOpeningParentAndRetainsCompactHeader",
+    "co.fallsoft.pocket.SessionCardNativeTest#workingIdleAndInputBlockedCardsRemainReadableAndCompact",
+    "co.fallsoft.pocket.ImmersionPopupNativeTest#bottomPopupJoinsTheRootClockAndKeepsItsAction",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#pullingAShortRecentPageLoadsEarlierHistoryWithoutATap",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#lateInputEventReconcilesCanonicalOrderOnce",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#shortHistoryPagesRequireAnotherReadingGesture",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#anchoredInputOutsideRecentPageRepairsWithoutBackfillOrLosingLiveText",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#partialOlderPageRepairsLateInputAgainstRetainedReply",
+    "co.fallsoft.pocket.ConversationFilterNativeTest#filterKeepsVisibleAnswerWhenLeadingCommentaryIsRemoved",
+    "co.fallsoft.pocket.ConversationFilterNativeTest#filterPreservesVisiblePassageAndReturnsWithoutJumping",
+    "co.fallsoft.pocket.TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget"
+  ],
+  "build": {
+    "unit": {
+      "debug": {
+        "tests": 365,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "release": {
+        "tests": 365,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "tasks": [
+      "testDebugUnitTest",
+      "testReleaseUnitTest",
+      "lintDebug",
+      "lintRelease",
+      "assembleDebug",
+      "assembleRelease",
+      "assembleQualification",
+      "assembleQualificationAndroidTest"
+    ],
+    "exitCode": 0
+  },
+  "backend": {
+    "passed": 490,
+    "failed": 0
+  },
+  "optimizedReview": {
+    "schema": 1,
+    "state": "complete",
+    "kind": "native-search-and-team-identity-and-routing",
+    "versionCode": 110,
+    "productionSourceSha": "199c91c0b5929ab2bc56a7234c30f46bbe9efd8801dcd4579a17e15b3403b851",
+    "qualificationInputSha": "5f405754eab20c36a0a67a9b4744d785634aa04fa89c4cca07440fb0d6d4e650",
+    "apkSha256": "c357fbb1147d1d2a0511714f9ac839c3976e6c08e6abbfdfe59d9143fa2f1818",
+    "reviewedAt": 1791862841106,
+    "observations": {
+      "searchSurvived": true,
+      "selectedIdentitiesReadable": true,
+      "recipientDraftsPreserved": true,
+      "correctSingleSend": true
+    },
+    "artifacts": [
+      {
+        "path": "optimized-search.png",
+        "sha256": "fb432e1a5418bd4b2b512c29215d1e235ce82fbfde1cd85ef1c45b2238e76b83"
+      },
+      {
+        "path": "optimized-team.png",
+        "sha256": "6edc35c91c265cf0f079cf4fdc81fabc9ead6447c2cb5204f255b1dc9a975d15"
+      }
+    ],
+    "limits": "Synthetic native emulator and compatible optimized signed app only. Sampled original motion frames plus all-frame ink-region checks are not physical frame pacing, every-string coverage or a human perception study."
+  },
+  "publication": {
+    "state": "published",
+    "priorVersionCode": 109,
+    "announcementNotificationId": 1583,
+    "announced": 1,
+    "backendRestarted": false
+  },
+  "phone": {
+    "observedVersionCode": 106,
+    "candidateInstalled": false,
+    "sshAvailable": true,
+    "adbAvailable": false,
+    "uiControlAvailable": false,
+    "download": "NextComp-alpha92.apk",
+    "transferVerification": "Exact SHA256 and62145524-byte size verified through independent phone SSH read after completed transfer; installed package remains106.",
+    "apkSha256": "c357fbb1147d1d2a0511714f9ac839c3976e6c08e6abbfdfe59d9143fa2f1818"
+  },
+  "galleryCards": [
+    "nextcomp-alpha92-r02-team",
+    "nextcomp-alpha92-r02-search",
+    "nextcomp-alpha92-r02-motion"
+  ],
+  "changes": [
+    "Cool near-black idle cards without recency activity glow; readable softened text; bright working and coral input-needed preserved.",
+    "Normal-size cycling selector captions separated from literal team/task/recipient identity.",
+    "Cached immersion draw resources reduce measured allocation on the software emulator; no consistent total-frame timing improvement claimed.",
+    "Fresh per-checkout packaging avoids stale incremental APK ZIP gaps.",
+    "Publication requires reviewed compatible optimized APK artifacts and exact source/APK-matched native receipts."
+  ],
+  "remaining": "Physical installation and real interaction remain unverified. Goal remains active: real phone voice keys, frame pacing, provider behavior and complete immersion-surface coverage need separate evidence.",
+  "galleryReview": {
+    "state": "completed",
+    "taskId": "d8df79e1aa69a366af1aa5406bf9d5bb"
+  }
+}

@@ -49,4 +49,42 @@ class MarkdownContentTest {
         assertEquals("https://example.com/docs",inline.spans.single().destination)
         assertEquals("the docs",inline.text.substring(inline.spans.single().start,inline.spans.single().end))
     }
+    @Test fun tablesPreserveCellsAlignmentInlineStylesAndEscapedPipes(){
+        val raw="| Role | Fit | Evidence |\n| :--- | ---: | :---: |\n| **Engineer** | 92% | [work](https://example.com/work) |\n| `a\\|b` | 80% | *review* |"
+        val block=MarkdownContent.blocks(raw).single()
+        assertEquals("table",block.kind)
+        val rows=block.table!!.rows
+        assertEquals(listOf("left","right","center"),rows.first().map{it.alignment})
+        assertTrue(rows.first().all{it.header})
+        assertTrue(rows.drop(1).flatten().none{it.header})
+        assertEquals("Engineer",rows[1][0].content.text)
+        assertEquals("bold",rows[1][0].content.spans.single().kind)
+        assertEquals("a|b",rows[2][0].content.text)
+        assertEquals("code",rows[2][0].content.spans.single().kind)
+        assertEquals("https://example.com/work",rows[1][2].content.spans.single().destination)
+        rows.flatten().forEach{cell->
+            assertEquals(cell.content.text,block.content.text.substring(cell.offset,cell.offset+cell.content.text.length))
+        }
+        assertEquals("Role\tFit\tEvidence\nEngineer\t92%\twork\na|b\t80%\treview",MarkdownContent.preview(raw).text)
+    }
+    @Test fun streamingAndLiteralPipesAreNotFabricatedIntoTables(){
+        assertNull(MarkdownContent.blocks("one | two").single().table)
+        assertNull(MarkdownContent.blocks("| one | two |\n| --").single().table)
+        val literal=MarkdownContent.blocks("```\n| a | b |\n| --- | --- |\n```").single()
+        assertEquals("code",literal.kind)
+        assertNull(literal.table)
+    }
+    @Test fun tableImmersionUsesExactCellOffsetsBeforeAndAfterOtherBlocks(){
+        val source="Before\n\n| Task | Status |\n| --- | --- |\n| sessions | ready |\n\nAfter sessions"
+        val start=source.indexOf("sessions")
+        val span=ImmersionSpan(start,start+8,"sessions","sessioni")
+        val plan=ImmersionPresentation(contextualHybridText(source,listOf(span))!!,source,true,listOf(span))
+        val visible=MarkdownContent.preview(plan.text).text
+        val ranges=MarkdownContent.replacementRanges(plan,plan.text,null)
+        assertEquals(1,ranges.size)
+        assertEquals(visible.indexOf("sessioni"),ranges.single().start)
+        assertEquals("sessioni",visible.substring(ranges.single().start,ranges.single().end))
+        assertTrue(visible.endsWith("After sessions"))
+    }
+
 }

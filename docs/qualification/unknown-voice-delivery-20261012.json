@@ -1,0 +1,84 @@
+{
+  "status": "alpha81-updater-published-phone-unverified",
+  "cause": "Unknown voice outcome cleared pending receipt/recording; unrelated native speech could also acknowledge a pending recording.",
+  "fix": [
+    "Unknown outcome retains pending receipt, target and recording; check status does not resend",
+    "Native speech can clear pending data only when matching a confirmed completed turn"
+  ],
+  "checks": {
+    "debugUnitTests": "pass",
+    "nativeSavedReceipt": {
+      "result": "pass",
+      "seconds": 10,
+      "assertions": [
+        "repeated status check uses original turn",
+        "receipt and original target retained",
+        "recording bytes unchanged",
+        "new recording blocked",
+        "zero submitted work"
+      ]
+    }
+  },
+  "remaining": [
+    "Physical phone installation and interaction",
+    "Successful provider transcription/send qualification"
+  ],
+  "environmentOwnership": {
+    "status": "native-verified-alpha81-published",
+    "cause": "Saved voice state identified remote versus phone but not named remote environment or pairing",
+    "changes": [
+      "Persist explicit environment ID and backend credential fingerprint with receipt",
+      "Guard explicit check and service startup before any backend voice call",
+      "Preserve unowned legacy recordings rather than guessing"
+    ],
+    "checks": "Unit tests pass matching owner, different environment, changed pairing and missing legacy ownership",
+    "remaining": [
+      "Signed release and physical delivery"
+    ],
+    "legacyRecovery": {
+      "status": "native-verified",
+      "trigger": "Explicit Check saved turn interaction",
+      "transport": "Only authenticated receipt GETs against captured paired destinations; bounded4s each/16 destinations maximum",
+      "acceptance": "Exactly one matching receipt ID with valid state; all other backends definitively absent; matching pairing still current",
+      "preservation": "No audio uploads, voice starts, turn creation or automatic profile selection; unavailable and ambiguous results keep original recording",
+      "nativeScenario": "savedVoiceOwnerIsCheckedBeforeServiceAndLegacyDiscoveryNeverResends",
+      "build": "debug unit tests and qualification APK/test APK pass"
+    },
+    "nativeChecks": {
+      "legacyAndMismatch": {
+        "result": "pass",
+        "seconds": 8.279,
+        "assertions": [
+          "mismatched owner zero voice receipt reads",
+          "legacy exactly one receipt read",
+          "correct owner fingerprint persisted",
+          "no voice service started",
+          "recording bytes retained",
+          "zero submitted work"
+        ]
+      },
+      "matchingUnknown": {
+        "result": "pass",
+        "seconds": 7.849,
+        "assertions": [
+          "same original receipt checked repeatedly",
+          "recording and target preserved",
+          "new recording blocked",
+          "zero submitted work"
+        ]
+      }
+    }
+  },
+  "delivery": {
+    "versionCode": 99,
+    "versionName": "0.5.0-alpha.81",
+    "privateCompatibleApkSha256": "e276e1e788cdc30bf5cff838f38ba5ce292b67e7eb4229b502a5ac46248fc888",
+    "debugUnitTests": 329,
+    "releaseUnitTests": 329,
+    "lints": "both pass",
+    "signedBuilds": "both pass",
+    "qualificationBuilds": "pass",
+    "authenticatedUpdater": "offers99 for existing signer/code93",
+    "backendRestart": "none"
+  }
+}

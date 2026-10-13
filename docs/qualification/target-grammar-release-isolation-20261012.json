@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "state": "retained-failure-test-isolation-fix",
+  "sourceCommit": "9a18999a161f477f50e1820980ced5e5e42f3f92",
+  "attempt": "alpha88-r02",
+  "qualifiedNativeCasesBeforeFailure": 31,
+  "failedCase": "SharedInlineLayoutNativeTest#interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions",
+  "failure": "Loopback pairing precondition failed before render/cycle assertions; earlier pairing navigation case left a different synthetic profile. Standalone native passes had inherited loopback pairing.",
+  "correction": "Initialize the test-owned loopback profile explicitly before launching the activity, using the same setup pattern as existing transcript journeys. Retain exact endpoint guard.",
+  "publication": "Not published; original failed receipt retained. Fresh frozen qualification required.",
+  "architectureFinding": "Journey isolation must establish its own profile rather than depend on test order; a standalone component pass cannot replace ordered release qualification."
+}

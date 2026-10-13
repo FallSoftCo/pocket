@@ -4,6 +4,40 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ImmersionCycleTest {
+    @Test fun authoredUiCatalogKeepsCleanPairedUnitsAndCanonicalSources() {
+        InterfaceGrammarScaffolds.translations.forEach { (source,target) ->
+            val span=requireNotNull(InterfaceGrammarScaffolds.find(source,target)) { source }
+            assertTrue("Invalid authored alignment: "+source,alignedTargetValid(span))
+            assertEquals(source,span.source)
+            assertEquals(target,span.targetSegments.joinToString(""){it.target})
+            assertFalse("Leaked phrase delimiter: "+source,target.contains('~'))
+            val support=requireNotNull(immersionGrammarForm(span,true,"catalog")) { source }
+            assertTrue("Support vocabulary missing: "+source,support.text.isNotBlank())
+            assertFalse("Leaked support delimiter: "+source,support.text.contains('~'))
+        }
+        val errorSource="Background refresh: connection lost (E123)"
+        val errorTarget=requireNotNull(InterfaceGrammarScaffolds.italian(errorSource))
+        assertEquals("Aggiornamento in background: connection lost (E123)",errorTarget)
+        val errorSpan=requireNotNull(InterfaceGrammarScaffolds.find(errorSource,errorTarget))
+        assertEquals("connection lost (E123)",errorSpan.targetSegments.last().target)
+        assertEquals(errorSpan.targetSegments.last().target,errorSpan.targetSegments.last().meaning)
+        val source="Speech uses media volume; quiet mode, notification mute and Do Not Disturb still silence it."
+        val target=requireNotNull(InterfaceGrammarScaffolds.italian(source))
+        val span=requireNotNull(InterfaceGrammarScaffolds.find(source,target))
+        val unit=span.targetSegments.first{it.target=="Non disturbare"}
+        assertEquals("Do Not Disturb",unit.meaning)
+        assertEquals("Non disturbare",target.substring(unit.start,unit.end))
+        assertEquals(source,span.source)
+    }
+
+    private fun aligned(start:Int,source:String,units:String):ImmersionSpan {
+        val pairs=units.split(" ").flatMapIndexed{index,value->
+            val split=value.split("|",limit=2)
+            val pair=split[0] to split.getOrElse(1){split[0]}
+            if(index==0)listOf(pair)else listOf(" " to " ",pair)
+        }
+        return authoredImmersionScaffold(source,pairs).copy(start=start,end=start+source.length)
+    }
     @Test fun punctuationStaysAttachedWithoutConsumingTheFollowingWord(){
         assertEquals(7,immersionPhraseEnd("phrase, next",6))
         assertEquals(9,immersionPhraseEnd("phrase…). next",6))
@@ -39,10 +73,11 @@ class ImmersionCycleTest {
     @Test fun oneFlowPreservesProtectedContentAndIndependentChoices(){
         val source="Check `git status`: two new sessions and an important question."
         val a=source.indexOf("two new sessions");val b=source.indexOf("an important question")
-        val spans=listOf(ImmersionSpan(a,a+16,"two new sessions","due nuove sessioni"),ImmersionSpan(b,b+21,"an important question","una domanda importante"))
+        val spans=listOf(aligned(a,"two new sessions","due|two nuove|new sessioni|sessions"),aligned(b,"an important question","una domanda|question importante|important"))
         val plan=ImmersionPresentation(contextualHybridText(source,spans)!!,source,true,spans)
         assertEquals("Check `git status`: two new sessions and una domanda importante.",immersionCyclePlan(plan,setOf(0)).text)
-        assertEquals(source,immersionCyclePlan(plan,setOf(0,1)).text)
+        assertEquals("Check `git status`: two new sessions and una question important.",immersionCyclePlan(plan,setOf(0,1)).text)
+        assertEquals(source,plan.source)
         assertEquals(plan.text,immersionCyclePlan(plan,emptySet()).text)
         assertFalse(immersionCyclePlan(plan,setOf(0)).text.contains('\n'))
     }
@@ -80,11 +115,12 @@ class ImmersionCycleTest {
     @Test fun recreatedCompositionRecoversCapturedMixedSnapshot(){
         val source="Read new sessions and important questions now."
         val a=source.indexOf("new sessions");val b=source.indexOf("important questions")
-        val spans=listOf(ImmersionSpan(a,a+12,"new sessions","nuove sessioni"),ImmersionSpan(b,b+19,"important questions","domande importanti"))
+        val spans=listOf(aligned(a,"new sessions","nuove|new sessioni|sessions"),aligned(b,"important questions","domande|questions importanti|important"))
         val plan=ImmersionPresentation(contextualHybridText(source,spans)!!,source,true,spans)
         val captured=immersionCyclePlan(plan,setOf(1)).text
         assertEquals(setOf(1),immersionCapturedOriginals(plan,"Context: $captured"))
-        assertEquals(setOf(0,1),immersionCapturedOriginals(plan,source))
+        assertEquals(setOf(0,1),immersionCapturedOriginals(plan,immersionCyclePlan(plan,setOf(0,1)).text))
+        assertNull(immersionCapturedOriginals(plan,source)) // Natural-English reordering is not a scaffold snapshot.
         assertEquals(emptySet<Int>(),immersionCapturedOriginals(plan,plan.text))
         assertNull(immersionCapturedOriginals(plan,captured.replace("now.","later.")))
     }

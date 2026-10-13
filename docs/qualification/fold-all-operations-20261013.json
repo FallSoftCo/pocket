@@ -1,0 +1,22 @@
+{
+  "status": "native-candidate-qualified-not-phone-delivered",
+  "operationBoundary": "All canonical activity rows except public reasoning; answers, user inputs, questions and turn boundaries remain visible.",
+  "nativeEvidence": {
+    "state": "passed",
+    "completed": [
+      "CommandHistoryNativeTest#groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory"
+    ],
+    "apkSha": "8741dbc23408fb3e6e1051f6e2be381bed382cf33a77a2b459a689c75d80d07c",
+    "testSha": "85f40d5d669393b982066825966c302adf2c029a9bdbc5769e8966eb58699ad0",
+    "startedAt": 1791869918.9759746,
+    "scope": "Own emulator; production conversation with synthetic HTTP fixture; command and wait grouping, expansion/navigation/restoration/collapse, answers and canonical history preserved; no worker commands",
+    "current": "CommandHistoryNativeTest#groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory",
+    "fixtureStopped": true,
+    "fixturePid": 1131412,
+    "finishedAt": 1791869930.6199508
+  },
+  "limits": [
+    "Synthetic fixture on owned Android emulator, not physical phone.",
+    "Latest footer candidate remains unreleased."
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "state": "native-motion-reviewed-not-released",
+  "implementation": "Visible native line geometry across containers, sequential top-to-bottom lanes, uniform pixel velocity; geometry sorting outside draw loop",
+  "build": "Unit checks, debug lint and qualification APKs pass",
+  "native": "Natural clock cycling, stable bounds, native selection/copy, blackout and restoration pass",
+  "observedSequence": [
+    {
+      "clockMs": 5116,
+      "control": "Italian complete",
+      "body": "English support unchanged"
+    },
+    {
+      "clockMs": 5499,
+      "control": "Italian complete",
+      "body": "Italian transition begins"
+    },
+    {
+      "clockMs": 6349,
+      "control": "Italian complete",
+      "body": "Italian complete"
+    }
+  ],
+  "visualReview": "Successive actual captured frames inspected; previous lower-line early completion corrected in this fixture",
+  "limits": [
+    "Not physical-phone frame pacing",
+    "Long-page scrolling and changing geometry remain to qualify",
+    "This is not proof all authored strings cycle"
+  ],
+  "receipts": [
+    "/tmp/nextcomp-sequential-waterfall-build-r02.log",
+    "/tmp/nextcomp-sequential-waterfall-native-r01.json",
+    "/tmp/nextcomp-sequential-waterfall-r01-trace.json"
+  ],
+  "popupQualification": {
+    "state": "passed",
+    "case": "ImmersionPopupNativeTest#bottomPopupJoinsTheRootClockAndKeepsItsAction",
+    "observed": "Small bottom native popup cycles both complete language forms and receives native tap; shared viewport height, latched cycle changes",
+    "receipt": "/tmp/nextcomp-popup-native-r02.json",
+    "preservedFailure": "r01 launch setup timed out before popup; static idle launch fixture corrected before r02"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "status": "qualified-private-updater-published-phone-unreachable",
+  "problem": "Identity normalization previously stopped at display rows: the live handler classified inputs by raw provider ID, while position lookup also addressed raw IDs. This could issue redundant reads and fail to move the canonical displayed input. Legacy anchor migration also depended on a bounded alias set after duplicate collapse.",
+  "architecture": [
+    "Classify live input novelty and position evidence using the same normalized row identity used for rendering. A different provider reference is ordering evidence, not another send. Reject stale provider evidence.",
+    "Deduplicate position attempts by display identity and provider reference; completing an old lookup cannot erase a newer queued lookup for that input.",
+    "Resolve requested saved reading/gap anchors from original cache rows before collapsing them. Keep only requested migration state (max1026), preserve unknown/conflicting aliases without guessing, and retain bounded display aliases."
+  ],
+  "control": {
+    "cache": "Original bounded-alias-only migration fails for saved turn/item-32 among100 legacy rows.",
+    "live": {
+      "seconds": 24.211,
+      "result": "native control fails;3 position requests for2 provider references",
+      "note": "Control target was the cache-only qualification build with the old alpha77 event path. No alpha78 production publication or handset installation occurred."
+    }
+  },
+  "native": {
+    "cacheFirst": {
+      "seconds": 12.833,
+      "result": "100 legacy provider rows collapse; saved semantic reading anchor and17px offset preserved while fresh history held; distinct sends/live updates/navigation/draft preserved; zero replies"
+    },
+    "live": {
+      "seconds": 12.366,
+      "result": "canonical input precedes response; newer provider request survives active older lookup; repeated events cause no added history or position reads; zero replies"
+    },
+    "cacheFinal": {
+      "seconds": 12.885,
+      "result": "pass after ingress integration; preserved anchor/offset, visible distinct sends, retained draft/navigation, zero replies"
+    }
+  },
+  "remaining": [
+    "Physical phone installation/interaction"
+  ],
+  "phone": "Last verified alpha75/code93. Phone SSH timed out; no new install claimed.",
+  "sourceBoundary": "No backend/web gateway/daemon restart, worker activation, send/retry, permission/model or account changes.",
+  "signed": {
+    "debugUnitTests": 324,
+    "releaseUnitTests": 324,
+    "lint": "both pass",
+    "builds": "both pass",
+    "packaging": {
+      "beforeBytes": 75791632,
+      "afterBytes": 61768692,
+      "allReferencedEntriesByteIdentical": true,
+      "entries": 385
+    },
+    "update": "Private updater96 published for both existing signer identities; authenticated backend metadata verifies96 available for the phone signer;61,768,692B phone variant."
+  },
+  "candidate": "alpha78 / code96"
+}

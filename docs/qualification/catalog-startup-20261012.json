@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "date": "2026-10-12",
+  "state": "native-source-qualified-not-delivered",
+  "native": {
+    "case": "co.fallsoft.pocket.CatalogStartupNativeTest#coldStartShowsLoadingAndRetryThenPaintsCatalogBeforeActivity",
+    "tests": 1,
+    "seconds": 4.672,
+    "avd": "nextcomp_env_qa",
+    "assertions": [
+      "Visible loading during deliberately held initial catalog",
+      "Visible failure and physical Retry interaction",
+      "Catalog ready and visible before blocked activity response",
+      "Existing catalog remains visible during held background refresh",
+      "Draft unchanged and zero replies",
+      "Native session title remains visible with Codex runtime deliberately offline"
+    ],
+    "priorRunsSeconds": [
+      4.552,
+      4.569
+    ]
+  },
+  "debugUnitTests": 354,
+  "qualificationLint": "pass",
+  "architecture": [
+    "Explicit catalog Loading/Ready/Failed state scoped to current environment",
+    "Publish session response before optional activity/notification reads",
+    "Background failures cannot turn an already readable catalog into startup failure",
+    "First catalog membership does not depend on live Codex runtime availability"
+  ],
+  "limits": [
+    "Fresh signed release including startup changes pending",
+    "Actual physical phone unavailable",
+    "No claim of persistent disk session-list cache"
+  ],
+  "sourceSha256": {
+    "android/app/src/main/java/co/fallsoft/pocket/CatalogLoadState.kt": "fa623b87c34105a1a255a26db207021ba3bf1a1f9a55456c99536b934917af57",
+    "android/app/src/main/java/co/fallsoft/pocket/PocketState.kt": "8ec3d8e81ae0c65ae0ba208c069761c2886d9a16d0f1c6e25bbb567452ee33f5",
+    "android/app/src/androidTest/java/co/fallsoft/pocket/CatalogStartupNativeTest.kt": "6b1b0d47d113e4dc3bcc19ce4e1baef73d3377e08b2ec1c71c6b0f907446ff90",
+    "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt": "f002fbe356faa5ebb2c8b289c775b1e51931e84fb1a5fe18a05b0877c2890a59"
+  }
+}

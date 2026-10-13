@@ -1,0 +1,100 @@
+{
+  "versionCode": 112,
+  "versionName": "0.5.0-alpha.94",
+  "state": "published-phone-install-awaiting-unlock",
+  "sourceCommit": "6949a40de012822f93a02f1035bb8328de6a4db7",
+  "productionSourceSha": "479b2befb8a129efb390aa04410603d630b8782b848f002046e3389a8e9886c8",
+  "qualificationInputSha": "ba1beb0e0ab1e1d8156a598208bece932fc1a69c3dfbc08fe436160f8f8eb5db",
+  "changes": [
+    "Immediate full-viewport paging without animated scrolling; full-width conversation footer with paging at the right and a labeled Important filter.",
+    "Editor keystrokes are observed in a dedicated composer scope.",
+    "Immersion shaping is retained across lexical handoffs; opaque holds bypass blend layers and only changing frontier masks invalidate drawing.",
+    "Known grammatical/vocabulary meanings cycle in target-language order; absent alignment reveals the original phrase rather than permanently retaining the target.387 previously absent authored functional-word equivalents and templated control equivalents added offline.",
+    "Short help taps consume release; recognized long holds stabilize the selection snapshot without pausing ordinary taps or cancelled scrolling.",
+    "History and message-position errors belong to read state, separate from command/send errors; brief transient refresh failures use the existing updating indicator and persistent/permanent errors remain actionable."
+  ],
+  "checks": {
+    "units": {
+      "debug": {
+        "tests": 366,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "release": {
+        "tests": 366,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "lints": [
+      "debug",
+      "release"
+    ],
+    "signedVariants": [
+      {
+        "sha256": "31616b482fa7e1c2c54d8ddc3c21e226a37b51def617beae3042928f2b482b0f",
+        "size": 52152999,
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf"
+      },
+      {
+        "sha256": "60506e09740df736593efae4112f5e4f9e517df7f82a9ce662d640ded146bc34",
+        "size": 62112756,
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"
+      }
+    ],
+    "nativeJourneys": 52,
+    "optimizedReview": "complete",
+    "nativeMotion": {
+      "encodedFrames": 483,
+      "decodedFrames": 483,
+      "durationSeconds": 23.196867,
+      "averageSoftwareCaptureFps": 20.821777354674662,
+      "originalSamplesReviewed": 23,
+      "checkedRegionsWithoutBlankFrames": 8
+    },
+    "backendTests": 490,
+    "publicSourceScan": "passed"
+  },
+  "phone": {
+    "ssh": "reachable",
+    "authenticatedAccessibility": "reachable; read-only snapshot succeeded",
+    "adb": "no verified USB/TCP connection",
+    "artifact": "compatible signed APK transferred and hash/size verified before any installer action",
+    "installer": "not launched; Android reported Device locked; user unlock requested",
+    "pairingAndDrafts": "not modified"
+  },
+  "delivery": {
+    "privateChannel": 112,
+    "announcement": "one announcement; FCM accepted once; visible handset banner and install remain unqualified"
+  },
+  "performance": {
+    "scope": "Single matched pre-release renderer comparison on an owned software emulator; not handset frame pacing. Later complete-equivalent and long-hold changes were separately qualified.",
+    "baseline": {
+      "wallMs": 23126,
+      "cpuMs": 27684,
+      "medianFrameMs": 36.503675,
+      "p95FrameMs": 50.200142,
+      "allocatedBytes": 43181488
+    },
+    "frontierRenderer": {
+      "cpuMs": 14207,
+      "medianFrameMs": 27.027233,
+      "p95FrameMs": 49.40016,
+      "allocatedBytes": 41723312,
+      "wallMs": 23085
+    },
+    "typing": "Real Android key dispatch and retained-draft observations alternated cycling off/on; software-emulator overhead remains. No optical or physical typing-latency claim."
+  },
+  "gallery": "#nextcomp-alpha94-motion (main private 8bar gallery)",
+  "limits": [
+    "Physical frame pacing and hardware-volume behavior remain unqualified.",
+    "Partial immersion preserves protected/unchanged text; this is not every-word translation or full language proficiency.",
+    "A transient Updating overlay overlaps the first passage at double text size; explicit follow-up, not a flawless accessibility claim.",
+    "Unmerged quotation/status candidate remains separate; unrelated services, workers, account settings and permissions were preserved."
+  ],
+  "holds": [
+    "Earlier changed-input build held; subsequent native checks found and corrected global position-read error ownership and intermittent moving-wave long-press selection.Only the final52-case qualified candidate was published."
+  ]
+}

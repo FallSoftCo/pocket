@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "state": "passed-scoped-native-observation",
+  "sourceCommit": "44e52ce",
+  "apkSha256": "b62b6d870238b6dd0beaed5b6a2046756abe8bb37e5c93d96d15ff16caf71870",
+  "boundaries": [
+    "Actual Settings navigation and viewport scroll on owned emulator",
+    "Six controls reach both language forms; upper cohort has bounded sampled English runs"
+  ],
+  "observedEnglishRunsSeconds": {
+    "Backend": [
+      3.77,
+      3.66
+    ],
+    "App updates": [
+      3.77,
+      3.66
+    ],
+    "Check for updates": [
+      3.77,
+      3.66
+    ],
+    "Talk": [
+      3.77,
+      7.35
+    ],
+    "Settings": [
+      3.77,
+      7.35
+    ]
+  },
+  "limits": [
+    "Discrete hierarchy samples do not establish exact phase duration or wipe comfort",
+    "Lower immersion control coverage is presence-only after scrolling",
+    "Process survived update-action tap; this does not prove updater success",
+    "Later shared workflow and backend string changes are not covered by this artifact",
+    "No phone delivery or physical frame-pacing evidence"
+  ]
+}

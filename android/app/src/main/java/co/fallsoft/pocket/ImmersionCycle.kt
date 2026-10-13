@@ -29,7 +29,7 @@ fun immersionReserveWords(source:String,target:String):List<ImmersionReserveWord
 }
 fun immersionCyclePlan(plan:ImmersionPresentation,originals:Set<Int>):ImmersionPresentation {
     if(contextualHybridText(plan.source,plan.spans)!=plan.text)return ImmersionPresentation(plan.source,plan.source,false)
-    val spans=plan.spans.mapIndexed{index,span->if(index in originals)span.copy(target=span.source)else span}
+    val spans=plan.spans.mapIndexed{index,span->if(index in originals)span.copy(target=immersionGrammarSupport(span))else span}
     return plan.copy(text=contextualHybridText(plan.source,spans)?:plan.source,spans=spans)
 }
 
@@ -48,7 +48,7 @@ fun immersionCapturedOriginals(plan:ImmersionPresentation,captured:String):Set<I
         if(!captured.startsWith(gap,at))return null
         val position=at+gap.length
         for(original in listOf(false,true)){
-            val word=if(original)span.source else span.target
+            val word=if(original)immersionGrammarSupport(span) else span.target
             if(captured.startsWith(word,position)){
                 val result=match(index+1,position+word.length,if(original)originals+index else originals)
                 if(result!=null)return result

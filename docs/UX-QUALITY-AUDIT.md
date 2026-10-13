@@ -17,6 +17,55 @@ commands and environment identity throughout.
 | Notifications and speech | Correct source, rename/read state, session-aware playback, actionable questions, no stale duplicate pinned output | Retained speech source navigation reproduced and corrected natively; alpha70/code88 installed; physical tap remains unverified. Session queues, rename/attention and physical playback lifecycle breadth remain open |
 | Immersion/accessibility | Inline reading-direction transitions without duplicates, legible normal/large text, reduced-motion behavior | Audit pending |
 
+## Current release and evidence checkpoint — 2026-10-12
+
+The table above and older entries below preserve historical observations; their
+installed-version references are not current handset verification. Phone SSH has become reachable again (Pixel 9 Pro Fold identity verified).
+Installed version and current interaction remain unverified; ordinary Termux
+access is not privileged Android package/foreground evidence.
+
+The update channel now offers alpha87/code105, published from frozen r05 source
+c7dd493. Both authenticated signing variants and their checksums were verified.
+One deduplicated announcement was accepted. Handset notification arrival,
+installation and physical interaction remain unverified; ADB is currently
+unavailable while Termux SSH works. See
+[delivery evidence](qualification/alpha87-delivery-20261012.json).
+
+The current source includes durable send identity restoration, transcript
+freshness/cache authority repairs and explicit catalog startup Loading/Ready/Failed.
+The live narrow backend restores provider user-message identity across history
+reconstruction. These are scoped implementations, not proof that every handset
+chronology/freshness issue is resolved.
+
+The switching race uses real Back and card taps while the old history response
+is blocked, then opens the keyboard and submits via Enter. Native evidence
+verifies selected-thread updates, no old-response contamination, retained drafts
+and reply transport target. The separate real-backend journey now verifies provider echo, durable identity and restart through actual app navigation, HTTP/WS and SQLite, with only Codex RPC substituted. See qualification/android-real-backend-20261012.json and qualification/reading-metadata-candidate-20261012.json. See
+[the journey receipt](qualification/switch-card-journey-20261012.json).
+
+[Testing strategy](TESTING-STRATEGY.md) governs future additions: classify real
+and substituted boundaries, extend meaningful journeys, preserve setup evidence,
+and keep visual/performance/deployment acceptance separate from test totals.
+The revised native runner completed the required r05 policy with notification
+permission preflight and exact installed-APK reuse. Grouped runner consolidation remains unfinished. Real app-to-backend send and retained-history journeys now pass with a deterministic provider substitute; voice, notifications and real-network breadth remain open.
+
+Actual motion review led to clause-boundary reservation and prefix/punctuation
+repairs. Closely sampled transition frames were reviewed, with no full-sentence
+blank observed in the inspected interval. This is not evidence of human reading
+comprehension or physical frame pacing. The optimized candidate also passed
+enabled-immersion menu opening without process death; the intrinsic-layout crash
+repair is verified on the emulator, not attributed to a physical crash report.
+
+Next acceptance gaps:
+- Extend the verified real-backend journey to reconnect/failure recovery and voice; keep physical/provider boundaries explicitly separate.
+- Obtain exact installed-phone version and reproduce freshness/order reports.
+- Exercise voice stop/transcribe/send end to end; qualify actual phone keys,
+  IME, playback and provider boundaries separately.
+- Measure history paging and immersion motion under representative activity;
+  pixel-anchor assertions alone do not establish comfortable scrolling/reading.
+- Keep documentation and deployment receipts current without rebuilding an
+  unchanged artifact solely for documentation updates.
+
 ## Verified progress
 
 - Alpha50/code68 installed in place on the Pixel. 271 Android tests and lint
@@ -527,3 +576,17 @@ commandeered, speech generated, task submitted, model woken or backend restarted
 Native control/correction evidence is in spoken-notification-navigation-alpha70.
 Physical banner/lock-screen, broader playback/read/attention and named-environment
 isolation verification still need work; the full goal remains active.
+
+## Reading checkpoint candidate — 2026-10-12
+
+Position-only updates now preserve measured cache payload weight. Changed row or detail references retain normal full-snapshot measurement. Focused cache checks and the real-backend history journey pass after requiring an exact durable reading checkpoint before process termination. This removes a history scan from steady position updates; physical smoothness is not established. [Candidate evidence](qualification/reading-metadata-candidate-20261012.json). Signed release and phone delivery remain pending; alpha87 is unchanged.
+
+## Alpha88 release qualification in progress — 2026-10-12
+
+Frozen source2e08f21 has completed signed builds and release lint for both maintained signing identities. Artifact-bound native regression qualification is running on the owned OZZZ emulator. This does not constitute publication, installation, physical smoothness or whole-product acceptance. The real-backend reading journey remains a separate required acceptance check for this release. Alpha87/code105 remains the update channel.
+
+## Control immersion reproduction — 2026-10-12
+
+Exact optimized alpha88 settings sampled seven times over40.6seconds. Backend and Talk briefly returned to English, while App updates, Check for updates, Italian immersion and Settings stayed Italian in every sample. This is partial scheduling, not an entirely stopped clock. Controls currently serialize through one cue broker with a4.2second cooldown. Several workflow strings stayed English because the synthetic provider has no translation worker; that alone does not establish a live translation failure. All-surface coverage and bounded control cycling remain required. Alpha88 publication is held for this user report.
+
+Control-wave qualification on d86fb94 reached both forms for six actual Settings/footer labels, but timestamp inspection exposed an excessive English dwell when a transition crossed a phase boundary. Presence-only coverage is insufficient. Candidate now reconciles the phase immediately after a transition. Repeat duration-sensitive native observation and visual review before declaring scheduling fixed. Added offline settings vocabulary is not yet qualified. Alpha88 remains held.

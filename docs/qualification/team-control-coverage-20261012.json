@@ -1,0 +1,64 @@
+{
+  "state": "native-template-and-production-team-workflow-qualified",
+  "base": "6a7fc06e924f94efc49b29f7c792d6b09bed0e4d",
+  "recordedAt": 1791857610.8434412,
+  "changes": "Typed cycling reply-clear and recipient labels; literal ID/name slots preserve authored target-grammar positions. Clear callback, draft scope, recipient and send routing unchanged. Typed Team/Task/To/Agent selector prefixes, authored Coordinator default, one-line ellipsis preserved; arbitrary selected names remain literal. Authored message/attention/approval event labels cycle with literal author names; unknown kinds remain exact provider text.",
+  "verification": "Actual MainActivity to production Team screen against isolated synthetic HTTP service passed: both selector language forms, reply clear and return, recipient-scoped drafts and exactly one direct send to Violet. No real provider or phone interaction.",
+  "remaining": "Quoted reply body/prefix and Agent status embedded in literal selection still require content/control integration. Physical phone and live provider behavior remain unqualified.",
+  "ownership": "Separate worktree; frozen alpha91-r02 unchanged. No builds while release gate owns emulator and build resources.",
+  "nativeWorkflowQualification": {
+    "fixture": "tests/fixtures/immersion-cycle-team-ui.mjs",
+    "journey": [
+      "Observed both authored Team selector forms on natural display clock.",
+      "Restored root draft after clearing reply; retained reply-specific draft.",
+      "Restored drafts across Violet/Amber direct recipients.",
+      "One native Send produced exactly one fixture request to Violet, direct visibility, no stale reply ID; Amber draft retained."
+    ],
+    "receipt": {
+      "state": "passed",
+      "completed": [
+        "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget"
+      ],
+      "apkSha": "7482eb0bb6512618c78b6b272bcaa71a407af73c81a797a8da5844275cd15819",
+      "testSha": "325f1f1b25cb4f21eb6b3f4ddb2abe97d5a226b5a9f9f4a292e19e748736949e",
+      "startedAt": 1791857104.0649986,
+      "scope": "Own emulator; separate Team-control candidate; actual production Team screen against synthetic HTTP fixture; one controlled synthetic send; no real worker",
+      "current": "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget",
+      "fixtureStopped": true,
+      "fixturePid": 439914,
+      "finishedAt": 1791857141.027767
+    },
+    "limits": "Synthetic provider only. Continuous animation kept enabled. Native accessibility cache explicitly refreshed; no global Espresso idling wait. Prior attempts failed at test startup/idling before any fixture send; independently reconciled."
+  },
+  "build": "Debug/release Kotlin and qualification APK/test APK passed on OZZZ-OS. Locked npm dependencies installed with ignore-scripts; audit0 reported vulnerabilities.",
+  "nativeTemplate": "Existing native template journey passed all added selector/recipient/reply-clear/event forms, exact literal-name scaffold invariants and existing action callback. Own fixture stopped and reaped.",
+  "nativeApkSha256": "3c9fcc266ac01f4f453c08bbee917d8af7013629c39078a6bab113311ae2ad39",
+  "optimizedReview": {
+    "state": "rejected-selected-identities-truncated",
+    "candidate": "alpha92-r01",
+    "routing": "Exact optimized Send to Violet and draft restoration passed.",
+    "visual": "All selector values hidden by long cycling captions. Separate caption/name layout added; new gate and visual review required before publication."
+  },
+  "readableIdentityCorrection": {
+    "sourceCommit": "82a53fe33bda995708c1d85180c2cd8f9edfc53f",
+    "nativeReceipt": {
+      "state": "passed",
+      "completed": [
+        "SharedInlineLayoutNativeTest#interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions",
+        "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget"
+      ],
+      "apkSha": "eef517225739d6670fc0c42b048281e08c8afd3dea3a24c2a8d9cf64a72f4da6",
+      "testSha": "fe32f3df18b540b43428403ef42961735663cb82fc440610edba85d466fcbe3d",
+      "startedAt": 1791861119.6642256,
+      "scope": "Own emulator; separate Team-control candidate; actual production Team screen against synthetic HTTP fixture; one controlled synthetic send; no real worker",
+      "current": "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget",
+      "fixtureStopped": true,
+      "fixturePid": 663502,
+      "finishedAt": 1791861175.9273643
+    },
+    "visual": "Original 1080x2424 capture inspected: normal-size caption and literal selected team/task/recipient remain visible. Natural caption cycling, popup selection, scoped drafts and one exact direct synthetic send passed.",
+    "gallery": "Main private gallery card #nextcomp-team-readable-r04",
+    "release": "Replacement alpha92-r02 frozen full build/native/optimized qualification underway. Rejected r01 must never be published.",
+    "limits": "Emulator and synthetic service only; no physical phone or live provider claim."
+  }
+}

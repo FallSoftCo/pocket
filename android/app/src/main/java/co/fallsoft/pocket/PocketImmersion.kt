@@ -56,8 +56,20 @@ object PocketImmersion {
         translations=saved.objects().asReversed().associateBy{it.s("id")};byContent=translations.values.associateBy{it.s("version")}
         if(ownerChanged||oldDensity!=densityState){originals=emptySet();clearReadingChoices()};unavailable=false;if(enabled)sync()
     }
-    fun offerLabel(text:String){if(text.length<=200)offer("label:"+version(text),text,"interface label")}
-    fun label(text:String):String=if(enabled)(ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text))?:cached("label:"+version(text),text)?.s("text",text)?:text else text
+    fun offerLabel(text:String){if(text.length<=12000)offer("label:"+version(text),text,"interface label")}
+    fun label(text:String):String {
+        if(!enabled)return text
+        ImmersionLexicon.italian(text)?.let{return it}
+        val row=cached("label:"+version(text),text)?:return text
+        return row.s("text").takeIf{contextualHybridText(text,spans(row))==it}?:text
+    }
+    internal fun labelPresentation(text:String,target:String):ImmersionPresentation? {
+        InterfaceGrammarScaffolds.find(text,target)?.let{return ImmersionPresentation(target,text,true,listOf(it))}
+        val row=cached("label:"+version(text),text)?:return null
+        val plan=spans(row)
+        return if(plan.isNotEmpty()&&plan.all(::alignedTargetValid)&&contextualHybridText(text,plan)==target)
+            ImmersionPresentation(target,text,true,plan) else null
+    }
     fun setEnabled(value:Boolean){enabledState=value;Pocket.prefs.edit().putBoolean(profileKey(),value).apply();pending.clear();job?.cancel();originals=emptySet();clearReadingChoices();sync()}
     private fun sync(){val captured=profileKey();Pocket.scope.launch{try{val result=Pocket.api("/api/immersion",JSONObject().put("enabled",enabled).put("density",density));if(captured==profileKey())accept(result)}catch(_:Exception){if(captured==profileKey())unavailable=enabled}}}
     fun accept(event:JSONObject){if(!enabled)return;unavailable=event.optBoolean("unavailable",false);val list=event.optJSONArray("translations")?.objects()?:return;translations=(translations+list.associateBy{it.s("id")}).entries.toList().takeLast(600).associate{it.toPair()};byContent=translations.values.associateBy{it.s("version")};persistCache();if(list.isNotEmpty())PocketNotifications.refreshImmersion()}
@@ -77,15 +89,15 @@ object PocketImmersion {
     fun originalShown(id:String)=id in originals
     fun target(id:String,text:String):String {
         if(!enabled)return text
-        val offline=ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text);if(offline!=null)return offline
+        val offline=ImmersionLexicon.italian(text);if(offline!=null)return offline
         val row=cached(id,text)?:return text
         return if(contextualHybridText(text,spans(row))==row.s("text"))row.s("text") else text
     }
     private fun spans(row:JSONObject)=row.optJSONArray("spans")?.objects()?.map{r->ImmersionSpan(r.optInt("start"),r.optInt("end"),r.s("source"),r.s("target"),r.s("note"),r.s("unit","phrase"),r.optJSONArray("targetSegments")?.objects()?.map{s->ImmersionTargetSegment(s.optInt("start"),s.optInt("end"),s.s("target"),s.s("meaning"),s.s("role","other"),s.optJSONArray("features")?.objects()?.map{ImmersionFeature(it.s("name"),it.s("value"))}?:emptyList(),s.optJSONArray("relations")?.objects()?.map{ImmersionRelation(it.s("kind"),it.optInt("toSegment",-1))}?:emptyList())}?:emptyList())}?.takeIf{list->list.all{it.targetSegments.isEmpty()||alignedTargetValid(it)}}?:emptyList()
     fun presentation(id:String,text:String):ImmersionPresentation {
         if(!enabled)return ImmersionPresentation(text,text,true)
-        val offline=ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text)
-        if(offline!=null)return ImmersionPresentation(offline,text,true,listOf(ImmersionSpan(0,text.length,text,offline)))
+        val offline=ImmersionLexicon.italian(text)
+        if(offline!=null)return ImmersionPresentation(offline,text,true,listOf(InterfaceGrammarScaffolds.find(text,offline)?:ImmersionSpan(0,text.length,text,offline)))
         val exact=cached(id,text)
         if(exact!=null){val plan=spans(exact);if(contextualHybridText(text,plan)==exact.s("text"))return ImmersionPresentation(exact.s("text"),text,true,plan)}
         val older=translations[id]?.takeIf{eligible(it)&&it.s("original").isNotBlank()}
@@ -94,7 +106,7 @@ object PocketImmersion {
         return ImmersionPresentation(text,text,false)
     }
     fun revealOriginal(id:String){originals=if(id in originals)originals-id else originals+id}
-    fun hasTranslation(id:String,text:String)=enabled&&((ImmersionLexicon.italian(text)?:ImmersionVoiceLexicon.italian(text))!=null||cached(id,text)?.let{contextualHybridText(text,spans(it))==it.s("text")}==true)
+    fun hasTranslation(id:String,text:String)=enabled&&(ImmersionLexicon.italian(text)!=null||cached(id,text)?.let{contextualHybridText(text,spans(it))==it.s("text")}==true)
     fun display(id:String,text:String):String {if(!enabled||id in originals)return text;return target(id,text)}
     /** Call after coalescing visible state; never for every incoming token. */
     fun offer(id:String,text:String,kind:String="message") {

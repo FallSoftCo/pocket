@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "state": "passed",
+  "case": "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#providerMetadataLossDoesNotDuplicateUnknownSend",
+  "elapsedSeconds": 13.188,
+  "logSha256": "5a6ab7dc56344a1354289667f1d9102b915dcecacea1bad891eb7524450e8421",
+  "journey": [
+    "Tap source conversation card",
+    "Open keyboard and restore saved draft",
+    "Submit with Enter",
+    "Navigate back with keyboard open and reopen via card",
+    "Receive provider metadata-loss echo over native WebSocket after SQLite identity-store reopen",
+    "Verify one body and retained unknown-delivery controls",
+    "Receive independent same-text send and verify separate body"
+  ],
+  "realBoundaries": [
+    "Android navigation and IME/send controls",
+    "HTTP reply transport",
+    "WebSocket event transport",
+    "SendIdentity SQLite reopen and production timeline projection",
+    "Client outgoing journal and transcript rendering"
+  ],
+  "substitutedBoundaries": [
+    "Synthetic HTTP server rather than complete production server",
+    "Synthetic provider items rather than Codex runtime",
+    "Disposable emulator rather than physical phone"
+  ],
+  "noExternalEffects": true,
+  "limits": [
+    "Not a complete production-backend integration journey",
+    "Not installed-phone verification",
+    "No performance or human-reading claim"
+  ]
+}

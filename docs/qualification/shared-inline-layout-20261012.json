@@ -1,0 +1,90 @@
+{
+  "state": "integrated-source-selection-qualified-unreleased",
+  "native": {
+    "cases": 14,
+    "result": "one-known-regression",
+    "seconds": 36.635,
+    "logSha256": "afe579b330a6e523af3fcccd047433e2272665cb3b1fdefd57e3a4811b80f890",
+    "checks": [
+      "unchanged word position at 17sp",
+      "unchanged word position at 34sp",
+      "native inline link click before and after replacement",
+      "oversized unbroken tokens wrap completely in both forms without height clipping",
+      "Android accessibility export contains the visible sentence once in both languages",
+      "Real UiAutomator injected touch activates replacement link in both forms",
+      "Exposed custom accessibility action invokes the original replacement callback",
+      "Intermediate native image retains common glyph pixels and changes replacement glyph pixels",
+      "Successive changes to two distinct phrases retain common text geometry using all reserved forms",
+      "Production ReservedImmersionText reports visible phrase and uses fresh handoff callback while common position remains stable",
+      "Finite single-line ellipsis retains phrase placeholder, excludes hidden cue and stays within native line height",
+      "Outgoing wrapped glyph remains tappable mid-wipe and resolves stable help tag to current callback",
+      "Reserved blank space invokes no inline action and does not consume the surrounding action",
+      "Paragraph Copy no longer appends duplicated inline child text",
+      "Native touched-word Copy returns the selected word"
+    ],
+    "passed": 13,
+    "failed": 1,
+    "openRegression": {
+      "case": "originalSelectionDoesNotCopyReservedSlotMarkers",
+      "expected": "Please search existing sessions.",
+      "actual": "Please search\u200b\u200b existing sessions.",
+      "cause": "Alternative text for empty native inline placeholders reaches copied paragraph"
+    }
+  },
+  "unit": {
+    "cases": 6,
+    "result": "pass"
+  },
+  "scope": "Isolated native emulator5620 nextcomp_env_qa, synthetic paragraphs, no provider or real sessions",
+  "remaining": [
+    "Actual frames and physical handset qualification",
+    "Actual TalkBack utterance/gesture and text selection qualification, including empty reserved slots",
+    "Full multi-line frame sequence and physical performance review",
+    "Broader actual app content, styling and all labeled controls qualification",
+    "Signed release and compatible handset delivery",
+    "Remove only owned empty-slot projection characters from selection copy while preserving original zero-width characters"
+  ],
+  "notes": [
+    "Large-text check uses 34sp/52sp, not a complete OS accessibility font-scale audit",
+    "Parent native offsets include empty reserved-slot markers; tests use actual native offsets for unchanged text",
+    "Historical pre-integration stage: Candidate is not wired into ReservedImmersionText",
+    "Oversized fragments use native wrapping and maximum wrapped height; no manual Unicode token slicing.",
+    "Before fix, Android exported both search and Please search existing sessions.; two phrase occurrences. Duplicate child readout is cleared; parent retains phrase custom actions.",
+    "Initial accessibility fixture was behind the status bar; qualification moved it into visible content before diagnosing duplicate export.",
+    "A failed test-source compilation produced an old-APK run; that run is excluded. Final build succeeded before final five-case instrumentation.",
+    "Shared physical paragraph frontier is translated into each fragment coordinate space; RTL mirrors the paragraph, not individual slots.",
+    "Native measured line height replaces nominal sp height to avoid rounding a single 69px line into two bands.",
+    "Intermediate screenshots initially preceded observed paint. Bounded screenshot observation now requires actual changed glyph pixels; this is not phone latency or 60fps qualification.",
+    "Historical pre-integration stage: Candidate accepts all alternate annotated forms; current from/to determine active text, while all forms determine shared fragment bounds. Production caller is not yet wired.",
+    "Source integration replaces conversation ReservedImmersionText renderer, retaining one existing cycle clock; live published alpha86 is unchanged.",
+    "Inline visibility uses native placeholder rectangles once per fragment and ignores empty reserved-slot markers.",
+    "Before correction, parent ellipsis discarded a full-width placeholder. A measured ellipsis allowance retains it; parent supplies ellipsis and child clips. Finite-height bound retains dense layout.",
+    "Native clipping also reproduced lineIndex(1) out of bounds [0,1) in visibility tracking. Guarded native laid-line geometry removes that crash. No claim this was the physical phone crash cause.",
+    "One source comment was updated during final checks; no executable code changed after candidate APK build.",
+    "Before interaction correction, a still-visible outgoing glyph on a lower line did not respond after native lexical handoff to a shorter target. The native regression failed with zero clicks.",
+    "Fragments now use native measured glyph boxes and the same spatial mask as drawing. Only actual glyph regions consume touch. Stable clickable tags use current context; a pressed action remains available if its glyph fades before release.",
+    "Native position lookup returns a nearest insertion caret; adjacent glyph bounds are checked instead of treating the caret as a character box.",
+    "Child link interaction is replaced by spatial hit handling while native link styles are retained and parent accessibility actions remain exposed.",
+    "SelectionContainer surrounds actual conversation BilingualMessage in ConversationScreen; its long-press/copy behavior is a real remaining qualification requirement.",
+    "Native Select all/Copy reproduced duplicate clipboard text: Please cerca existing sessions. followed by another cerca. DisableSelection on drawable children gives the paragraph sole selection ownership.",
+    "Native long press requires advancing the controlled Compose test clock while the injected finger remains down; physical timing is not qualified by this fixture.",
+    "After Copy tests were added, the OS clipboard preview also exposed copied text. App accessibility/text selectors are now scoped to target package; platform selection-toolbar selectors remain platform actions.",
+    "Installed Compose BOM2025.10.00 resolves foundation1.9.3. Actual class inspection confirms SelectionContainer uses LocalClipboard and converts copied AnnotatedString to ClipEntry before writing; custom string annotations do not survive that converter. Do not implement a deprecated LocalClipboardManager-only fix.",
+    "Former empty reserved-slot marker copy regression is closed by the 15-case native owned-selection receipt; physical delivery and broader motion remain open."
+  ],
+  "candidateApkSha256": "ac908fab1f4746d8508707e17150738a85007352032535ed17b45081922367f7",
+  "testApkSha256": "5d9fa0e856bb5b2b94bdddcabe88757e4aadd572045c0d4cadaf01f289cbfbd5",
+  "debugUnitSuite": {
+    "cases": 349,
+    "result": "pass"
+  },
+  "sharedWipeUnitCases": 4,
+  "qualificationLint": "pass",
+  "crossCycleCounterfactual": {
+    "state": "pass",
+    "seconds": 2.058,
+    "proof": "Same native fixture reflows its common passage when full reservations are removed",
+    "logSha256": "1f82cf092a1a28b004c15bde5b46332fb61fa3ba3f1201a023622ef4401fbbe3"
+  },
+  "selectionQualification": "immersion-owned-selection-20261012.json"
+}

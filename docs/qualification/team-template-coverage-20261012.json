@@ -1,0 +1,14 @@
+{
+  "state": "native-template-qualified-source-not-released",
+  "finding": "New team task coordinator heading and team attention dialog title used plain Text and never joined immersion.",
+  "change": "Existing interface template renderer now supplies TEAM_COORDINATOR and TEAM_ATTENTION. Team identity is a literal slot; Italian grammatical structure is retained in vocabulary-support form. No model request or polling added.",
+  "native": "Existing interface template journey extended and passed on owned emulator5620, checking both complete forms of both headings with exact literal Review100%/unicode team text, existing counts/credit period and tap dispatch. Test count unchanged.",
+  "apkSha256": "84ac7c9732d83d0e097345bc0d527ec6adf55e433ac20f7d9359afdae5168db0",
+  "build": "Qualification APK/test APK and release Kotlin compilation passed on OZZZ-OS.",
+  "limits": [
+    "Actual Losangelex dialog workflow not requalified by template composition check",
+    "Not in already published alpha90",
+    "Remaining team status/reply labels require further audit",
+    "Physical phone remains unqualified"
+  ]
+}

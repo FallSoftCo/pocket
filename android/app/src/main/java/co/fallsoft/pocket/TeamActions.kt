@@ -19,7 +19,7 @@ import java.util.UUID
     val agents=overview.optJSONArray("agents")?.objects().orEmpty().filter{it.s("task")==task}
     if(agents.isEmpty())return
     Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
-        TeamChoice("Agent",agents.map{it.s("agent") to "${it.s("agent")} · ${it.s("status")}"},selected,Modifier.weight(1f)){selected=it}
+        TeamChoice(InterfaceTemplate.TEAM_CHOICE_AGENT,agents.map{it.s("agent") to "${it.s("agent")} · ${it.s("status")}"},selected,Modifier.weight(1f)){selected=it}
         listOf("interrupt" to "Stop","pause" to "Pause","resume" to "Resume").forEach{(action,label)->
             TextButton({
                 val destination=TeamScope(team,task,selected)
@@ -42,7 +42,7 @@ import java.util.UUID
     var error by remember{mutableStateOf("")}
     val jobs=rememberCoroutineScope()
     AlertDialog(onDismissRequest={if(!busy)dismiss()},title={BilingualLabel("New team task")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-        Text("Losangelex · $team · Coordinator")
+        InterfaceTemplateText(InterfaceTemplate.TEAM_COORDINATOR,team)
         OutlinedTextField(title,{title=it;Pocket.prefs.edit().putString("$key:title",it).apply()},enabled=command==null&&!busy,label={BilingualLabel("Task name",centered=false)})
         OutlinedTextField(body,{body=it;Pocket.prefs.edit().putString("$key:body",it).apply()},enabled=command==null&&!busy,label={BilingualLabel("What should the team do?",centered=false)},maxLines=6)
         if(error.isNotBlank())Text(error,color=Coral)
@@ -92,7 +92,7 @@ import java.util.UUID
         Text(event.s("body"));Text(state,color=Muted)
         if(!approval)OutlinedTextField(text,{text=it;Pocket.prefs.edit().putString("$key:draft",it).apply()},enabled=open&&pending==null&&!busy,label={BilingualLabel("Your answer",centered=false)},maxLines=5)
         if(error.isNotBlank())Text(error,color=Coral)
-        if(uncertainApproval)Text("Approval outcome is unconfirmed. Refresh its state before any further action.")
+        if(uncertainApproval)InterfaceText("Approval outcome is unconfirmed. Refresh its state before any further action.")
     }},confirmButton={if(approval)Row{TextButton({answer("decline")},enabled=open&&!busy&&!uncertainApproval){BilingualLabel("Decline",centered=false)};TextButton({answer("accept")},enabled=open&&!busy&&!uncertainApproval&&event.optJSONObject("data")?.optBoolean("canAccept")==true){BilingualLabel("Approve once",centered=false)}}
         else TextButton({answer()},enabled=open&&!busy&&(pending!=null||text.isNotBlank()&&text.length<=3500)){BilingualLabel(if(pending==null)"Send answer" else "Retry saved answer")}},dismissButton={Row{TextButton({jobs.launch{try{check();if(state!="open"){uncertainApproval=false;Pocket.prefs.edit().remove("approval-unconfirmed:${client.owner}:$team:$id").apply()}}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}},enabled=!busy){BilingualLabel("Refresh",centered=false)};TextButton(dismiss,enabled=!busy){BilingualLabel("Close",centered=false)}}})
 }
@@ -111,7 +111,7 @@ import java.util.UUID
         catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}finally{busy=false}
     }
     LaunchedEffect(team){load()}
-    AlertDialog(onDismissRequest=dismiss,title={Text("Needs you · $team")},text={Column{
+    AlertDialog(onDismissRequest=dismiss,title={InterfaceTemplateText(InterfaceTemplate.TEAM_ATTENTION,team)},text={Column{
         LazyColumn(Modifier.heightIn(max=350.dp)){items(events,key={it.optLong("id")}){event->TextButton({inspect(JSONObject(event.toString()).put("team_id",team))}){Text("${event.s("author")} · ${event.s("task")}\n${event.s("body")}")}}}
         if(loaded&&events.isEmpty())BilingualLabel("No pending requests",centered=false)
         if(error.isNotBlank())Text(error,color=Coral)

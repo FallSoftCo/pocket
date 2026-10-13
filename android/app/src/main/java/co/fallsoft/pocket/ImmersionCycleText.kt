@@ -18,12 +18,25 @@ internal class ImmersionCycleRender(
     val plan:ImmersionPresentation,val alpha:(ImmersionSpan)->Float={1f},
     val incomingPlan:ImmersionPresentation?=null,val cueProgress:()->Float={1f},
     val cueActive:Boolean=false,val cueId:Long=0L,
-    val reportVisible:(String,Set<String>)->Unit={_,_->}
+    val reportVisible:(String,Set<String>)->Unit={_,_->},
+    val readingWave:ImmersionReadingWaveClock?=null
 )
 internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.end}:${span.source}:${span.target}"
 
 /** Exact actual snapshots; late replacements are staged, with one screen-wide cue at a time. */
 @Composable internal fun rememberImmersionCycle(plan:ImmersionPresentation,readingKey:ImmersionReadingKey,selected:ImmersionSpan?,enabled:Boolean):ImmersionCycleRender {
+    val sharedWave=LocalImmersionReadingWave.current
+    val waveAnimation=immersionTransitionAnimated()
+    if(sharedWave!=null){
+        // Production uses fixed paired forms and native viewport geometry. The
+        // old phrase queue must not run alongside the continuous screen wave.
+        val selectedIndex=plan.spans.indexOf(selected)
+        val frozen=if(PocketSpeech.displayedOwner==null)null else immersionCapturedOriginals(plan,PocketSpeech.displayedText)
+        val shown=immersionCyclePlan(plan,frozen?:if(enabled&&selectedIndex>=0)setOf(selectedIndex)else emptySet())
+        return ImmersionCycleRender(shown,readingWave=sharedWave.takeIf{
+            enabled&&selectedIndex<0&&PocketSpeech.displayedOwner==null&&PocketImmersion.motionEnabled&&waveAnimation
+        })
+    }
     val ready=immersionMotionReady()
     val transitionAnimated=immersionTransitionAnimated()
     val identity=readingKey.copy(targetHash="")

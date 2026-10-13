@@ -1,0 +1,43 @@
+{
+  "status": "alpha83-authenticated-updater-published-phone-unverified",
+  "date": "2026-10-12",
+  "sourceGap": "Provider-to-send key enrichment did not migrate retained reading/gap references; restore could fall back to latest.",
+  "changes": [
+    "Saved position and bounded gap references migrate using unique identity evidence",
+    "Restore resolves old aliases while retaining offset/follow",
+    "Active viewport retains its exact offset on a proven key replacement; existing keys, ambiguous references and active gestures are not redirected",
+    "No identity scan on ordinary streamed output frames"
+  ],
+  "unit": "333 debug tests pass",
+  "native": {
+    "test": "TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
+    "seconds": 11.498,
+    "result": "pass",
+    "assertions": [
+      "Saved provider reference becomes semantic send reference",
+      "17px saved offset and follow=false retained",
+      "Two intentional identical-text sends remain separate",
+      "Draft retained",
+      "Zero reply submissions"
+    ]
+  },
+  "limits": [
+    "Owned synthetic emulator; saved-state assertions are not physical-phone pixel-pacing qualification",
+    "Phone SSH/ADB unavailable",
+    "No independent real-handset history-scroll observation"
+  ],
+  "delivery": {
+    "versionCode": 101,
+    "versionName": "0.5.0-alpha.83",
+    "status": "published",
+    "debugUnitTests": 333,
+    "releaseUnitTests": 333,
+    "lints": "both pass",
+    "signedBuilds": "both pass",
+    "qualificationBuilds": "pass",
+    "nativeInstalledVersionCode": 101,
+    "privateCompatibleApkSha256": "bcb2ab8f1da2d36a058432cd54a67b1bee8865d4c6ec1314e3524f9033e631bd",
+    "authenticatedUpdater": "offers101 for existing signer/code93",
+    "backendRestart": "none"
+  }
+}

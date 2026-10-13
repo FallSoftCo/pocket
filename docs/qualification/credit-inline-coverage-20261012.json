@@ -1,0 +1,17 @@
+{
+  "state": "native-template-qualified-source-not-released",
+  "finding": "Observed credit balance decrease used plain Text, bypassing interface immersion.",
+  "change": "Observed credit decrease uses existing CREDIT_OBSERVATION interface template; amount and period are literal parameters, crediti/credits form one reserved vocabulary slot.",
+  "build": "Both debug and release Kotlin compilation passed on OZZZ-OS; no new unit-test count for this reversible presentation change.",
+  "limits": [
+    "Not in already published alpha90",
+    "Full settings screen/physical interaction remains unqualified",
+    "Other dynamic team labels remain under coverage audit"
+  ],
+  "preserved": [
+    "No account calls, billing inference, balance mutation or model polling added",
+    "No published APK or frozen qualification input altered"
+  ],
+  "native": "Existing interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions journey extended and passed with actual qualification APK; both credit forms appear with exact62.57 and identical observation period; existing tap dispatch retained.",
+  "nativeApkSha256": "b203ce45c40b9164907843d7406a09cf542f51776c731026bcbefa32ab0db196"
+}

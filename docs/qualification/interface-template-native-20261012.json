@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "state": "passed-native-component",
+  "testSourceCommit": "12336f1",
+  "testApkSha256": "4d36f4537489be71001beed86d5e5fc06adb8a5ab67ae502c3e48c12098b8343",
+  "logSha256": "1dc838407eceedd47c2ddc5d9fcd6f4405c693c935c1e301a8b1267fff17e346",
+  "case": "SharedInlineLayoutNativeTest#interfaceTemplatesCycleWithoutChangingLiteralValuesOrActions",
+  "outcomes": [
+    "Rendered source and target forms preserve a path containing spaces, Unicode and percent",
+    "Rendered command-result counts remain7 and5 in both forms",
+    "Visible template button fires its local action once"
+  ],
+  "setupCorrection": "Test-only layout initially placed button under status bar. Retained failure diagnostics identified geometry; corrected to match actual app insets.",
+  "limits": [
+    "Component check with synthetic loopback configuration and nonanimated transition; not complete Work record backend journey",
+    "Seeing both forms does not establish full-period timing or physical motion quality",
+    "Phone delivery remains unverified"
+  ],
+  "obsoleteCoverageRemoved": "Unused hash-based cadence and its isolated dispersion test removed; active spatial-wave invariant and scoped native cycling observations retained."
+}

@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-12",
+  "scope": "backend timeline projection",
+  "baseline": {
+    "lostIdentityAfterMetadataPoorCompletion": true,
+    "lostSnapshotIdentityToBareLiveItem": true
+  },
+  "change": "Retain explicit client send identity for the exact same provider item within thread and turn; live ingress publishes the same projected row as the bounded cache. Explicit conflicts and different items/threads remain distinct.",
+  "tests": {
+    "targetedPassed": 30,
+    "fullBackendPassed": 480,
+    "fullBackendFailed": 0,
+    "host": "OZZZ-OS"
+  },
+  "handset": {
+    "ssh": "bounded connection timeout",
+    "adb": "no verified TCP connection or authorized USB",
+    "installedVersion": "unverified",
+    "reportedDuplicateCause": "not established"
+  },
+  "deployment": {
+    "backend": "current workstation endpoint",
+    "commit": "82b695e",
+    "healthy": true,
+    "elapsedMs": 1102,
+    "codexAppServerPidsUnchanged": true,
+    "pairingRowsUnchanged": true,
+    "androidInstall": "no physical installation",
+    "otherEnvironments": "not restarted or deployed"
+  },
+  "limits": [
+    "Does not infer identity from equal text, adjacency or timing",
+    "Does not merge two different provider references without explicit common identity",
+    "Physical duplicate reproduction remains open",
+    "Separate release-gate drafts and failing immersion-layout candidate preserved"
+  ],
+  "native": {
+    "case": "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#providerMetadataLossDoesNotDuplicateUnknownSend",
+    "passed": true,
+    "durationSeconds": 6.112,
+    "avd": "nextcomp_env_qa",
+    "versionCode": 103,
+    "qualificationApkSha256": "5ed65ecdfa7e292747c85f661a9614bb7a432cdaa6c8622d0fb5d9fedcb7cd41",
+    "installedApkSha256": "5ed65ecdfa7e292747c85f661a9614bb7a432cdaa6c8622d0fb5d9fedcb7cd41",
+    "testApkSha256": "466c059e6fcaeac933b5e3e1cfebfd8b0ce9dbcc3fa60f9aab74acbefa926525",
+    "sourceBackendSha256": "1de89774dfb4404d7003f5b8afc3716fb885d7d235131869040a37d6072ab0ef",
+    "assertions": [
+      "Real backend projection streamed over WebSocket",
+      "One body for unknown send with provider echo; recovery controls and draft retained",
+      "Independent equal-text send remains a second body",
+      "Exactly one submitted reply and zero recovery requests"
+    ],
+    "limits": [
+      "Synthetic fixture, qualification APK; not physical phone or live provider reproduction"
+    ]
+  }
+}

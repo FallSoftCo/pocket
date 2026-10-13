@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "state": "passed",
+  "scope": "Real-backend integration smoke; not Android end-to-end qualification",
+  "command": "node tests/fixtures/real-backend-smoke.mjs",
+  "realBoundaries": [
+    "Production server entry point and routes",
+    "Disposable device pairing and authenticated HTTP",
+    "SQLite outgoing journal and send identity",
+    "History reconstruction",
+    "Authenticated WebSocket delivery"
+  ],
+  "substitutedBoundary": "Codex stdio RPC only; deterministic local fixture with no network/tools",
+  "outcomes": [
+    "Reply accepted",
+    "Exactly one provider start",
+    "Exactly one canonical user history row",
+    "Matching send identity delivered over WebSocket",
+    "Actual disposable backend process restarted",
+    "Existing paired token remained valid",
+    "Accepted receipt survived restart",
+    "History restored identity after provider clientId metadata loss",
+    "Exact accepted-ID reconciliation retained one provider start"
+  ],
+  "limits": [
+    "Native UI has not yet been connected to this real-backend harness",
+    "Provider, push, Tailscale and physical handset unqualified",
+    "Android cold-process history restoration is not yet joined to this real-backend journey"
+  ],
+  "isolation": [
+    "Disposable data and HOME/CODEX_HOME",
+    "No live endpoint restart",
+    "No inherited provider key",
+    "Owned backend stopped after observation"
+  ]
+}

@@ -2,6 +2,15 @@ export function displayTurnError(error){
   if(!error)return undefined;
   return {message:String(error.message||'').slice(0,16000),additionalDetails:typeof error.additionalDetails==='string'?error.additionalDetails.slice(0,16000):null,codexErrorInfo:typeof error.codexErrorInfo==='string'?error.codexErrorInfo:undefined};
 }
+// Missing optional fields must not erase observed identity for the exact
+// provider item. Callers scope this evidence to one thread and turn.
+export function retainUserSendIdentity(previous,incoming){
+  if(!previous||previous.id!==incoming.id||previous.type!=='userMessage'||incoming.type!=='userMessage')return incoming;
+  const client=item=>item._pocketRow?.clientId||item.clientId;
+  const known=client(previous),next=client(incoming);
+  if(typeof known!=='string'||!known||next)return incoming;
+  return incoming._pocketRow?{...incoming,_pocketRow:{...incoming._pocketRow,clientId:known}}:{...incoming,clientId:known};
+}
 const clip=(v,n=12000)=>String(v??'').slice(-n);
 const textContent=v=>typeof v==='string'?v:Array.isArray(v)?v.map(x=>typeof x==='string'?x:x.text||'').filter(Boolean).join('\n'):'';
 export function itemRow(item,turnId,version=0){
@@ -37,6 +46,7 @@ export function displayItem(item,turnId){
   for(let shrink=0;shrink<16&&Buffer.byteLength(JSON.stringify(compact()))>64000;shrink++){row.text=row.text.slice(0,Math.floor(row.text.length/2));row.detail=row.detail.slice(0,Math.floor(row.detail.length/2));row.truncated=true;}
   return Buffer.byteLength(JSON.stringify(compact()))<=64000?compact():null;
 }
+const displayEventMethods=new Set(['turn/started','turn/completed','item/started','item/completed','item/agentMessage/delta','item/plan/delta','item/commandExecution/outputDelta','item/reasoning/summaryTextDelta']);
 export class LiveTimeline {
   constructor({maxBytes=8*1024*1024,maxThreads=32,maxItems=500,ttlMs=15*60000,clock=Date.now}={}){this.threads=new Map();this.version=0;this.bytes=0;Object.assign(this,{maxBytes,maxThreads,maxItems,ttlMs,clock});}
   clear(){this.threads.clear();this.bytes=0;}
@@ -44,6 +54,7 @@ export class LiveTimeline {
   prune(){for(const [id,turns] of this.threads)if(this.clock()-turns.touched>=this.ttlMs)this.dropThread(id);}
   removeItem(turn,id){const entry=turn.items.get(id);if(entry){this.bytes-=entry.bytes;turn.items.delete(id);}}
   store(turn,item,version){
+    item=retainUserSendIdentity(turn.items.get(item.id)?.item,item);
     const compact=displayItem(item,turn.id);if(!compact)return;
     const bytes=Buffer.byteLength(JSON.stringify(compact));
     if(bytes>this.maxBytes)return;
@@ -58,6 +69,7 @@ export class LiveTimeline {
       const oldest=turns.values().next().value;this.removeItem(oldest,oldest.items.keys().next().value);
       if(!oldest.items.size&&turns.size>1)turns.delete(oldest.id);
     }
+    return compact;
   }
   seed(thread,{throughVersion=this.version}={}){
     for(const snapshot of thread.turns||[]){
@@ -85,6 +97,7 @@ export class LiveTimeline {
     return turns.get(turnId);
   }
   ingest(m){
+    if(!displayEventMethods.has(m.method))return null;
     const p=m.params||{},threadId=p.threadId,turnId=p.turnId||p.turn?.id;
     if(!threadId||!turnId)return null;
     const turn=this.turn(threadId,turnId);const version=++this.version;
@@ -109,8 +122,7 @@ export class LiveTimeline {
     delete item._pocketRow;
     // Raw reasoning and raw Responses API content never enter the phone transcript.
     if(item.type==='reasoning')delete item.content;
-    this.store(turn,item,version);
-    const compact=displayItem(item,turnId);const row=compact?itemRow(compact,turnId,version):null;return row?{threadId,turnId,version,row}:null;
+    const compact=this.store(turn,item,version);const row=compact?itemRow(compact,turnId,version):null;return row?{threadId,turnId,version,row}:null;
   }
   merge(thread,{includeMissing=true,includeMissingItems=true}={}){
     this.prune();
@@ -120,7 +132,7 @@ export class LiveTimeline {
       if(!turn){if(!includeMissing)continue;turn={...live,items:[]};result.turns.push(turn);}
       if(live.version)Object.assign(turn,{status:live.status,startedAt:turn.startedAt||live.startedAt,completedAt:live.completedAt||turn.completedAt,durationMs:live.durationMs??turn.durationMs});
       for(const {item,version} of live.items.values()){
-        const at=turn.items.findIndex(x=>x.id===item.id);const next={...item,_version:version};
+        const at=turn.items.findIndex(x=>x.id===item.id);const next={...retainUserSendIdentity(at>=0?turn.items[at]:null,item),_version:version};
         if(at<0){if(includeMissingItems)turn.items.push(next);}else turn.items[at]={...turn.items[at],...next,...(!next._pocketRow?{_pocketRow:undefined}:{})};
       }
     }

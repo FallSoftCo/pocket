@@ -10,6 +10,16 @@ class ImmersionControlPhaseTest {
         assertEquals(ImmersionControlPhase(true,6000),immersionControlPhase(18000))
         assertEquals(ImmersionControlPhase(false,18000),immersionControlPhase(24000))
         assertEquals(immersionControlPhase(3500),immersionControlPhase(3500+24000))
+        assertEquals(0L,immersionControlWaveOffset(0f,0f,false))
+        assertEquals(1800L,immersionControlWaveOffset(1f,1f,false))
+        assertEquals(0L,immersionControlWaveOffset(0f,1f,true))
+        assertTrue(immersionControlWaveOffset(.8f,0f,false)>immersionControlWaveOffset(.2f,1f,false))
+        // Every visible position shares the same bounded period regardless of label count.
+        for(y in 0..10)for(x in 0..10){
+            val offset=immersionControlWaveOffset(y/10f,x/10f,false)
+            assertTrue(immersionControlPhase(20000-offset).original)
+            assertFalse(immersionControlPhase(10000-offset).original)
+        }
     }
     @Test fun handoverNeverBlanksOrRequiresTwoTextLayouts(){
         for(step in 0..100){

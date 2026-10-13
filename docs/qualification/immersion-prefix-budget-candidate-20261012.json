@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "state": "source-native-qualified-actual-motion-review-pending",
+  "date": "2026-10-12",
+  "sourceSha": "600c442fcbbe8c284c6d7f60e97e24a689b13771970a79d2b6f363ec269a63d7",
+  "changes": [
+    "Use native prefix caret to budget first phrase chunk",
+    "Preserve existing projection and selection ownership",
+    "Add native first-line wrapping case and owned-emulator permission setup"
+  ],
+  "native": {
+    "tests": 16,
+    "failures": 0,
+    "seconds": 45.014,
+    "log": "/tmp/nextcomp-prefix-permission-native-full.log",
+    "setup": "Owned emulator @Before notification permission grant"
+  },
+  "findings": [
+    "Prior UI failures were caused by the notification permission modal and are invalidated as renderer evidence",
+    "After owned-emulator permission setup, all 16 native regression cases pass",
+    "Actual app-typography capture confirms prefix shares the line; punctuation spacing recorded and repaired in the subsequent candidate"
+  ],
+  "production": "Update channel remains alpha86 code104; alpha87-r04 held by visual defect",
+  "next": "Review actual conversation capture with original app typography before signed release",
+  "qualificationCorrection": "Saved native accessibility XML contains only Android permission controller notification prompt and system UI. Prior UI failures are not evidence of renderer regression; actual first-line reservation defect remains proven by optimized recording.",
+  "priorNativeRun": {
+    "tests": 16,
+    "failures": 12,
+    "invalidatedBy": "Notification permission dialog covered UI after own emulator reinstall"
+  },
+  "unit": {
+    "tests": 355,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "status": "candidate-native-journey-passed-not-delivered",
+  "build": "Unit checks and qualification APK builds passed.",
+  "nativeEvidence": {
+    "state": "passed",
+    "completed": [
+      "HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage"
+    ],
+    "apkSha": "0b17a399020ad03fd7c0c2a2c27008a5353f74110114d8b34bf964ab56c6cac5",
+    "testSha": "ecb2c3d0412e42c1b11cde5359cfbfc87703f460c8987de3d3ef3ed5381ad3d7",
+    "startedAt": 1791870037.415596,
+    "scope": "Owned emulator, actual conversation footer: page up changes visible passages without fully visible passage overlap; page down restores anchor within 24 pixels; deferred older history preserves reading anchor. Synthetic history only.",
+    "current": "HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage",
+    "fixtureStopped": true,
+    "fixturePid": 1138219,
+    "finishedAt": 1791870057.4783742
+  },
+  "remaining": [
+    "Catalog reverse paging and coordinator paging qualification.",
+    "Normal and enlarged-text footer visual review.",
+    "Conversation performance measurement.",
+    "Signed release gate and phone install verification."
+  ],
+  "visualReview": {
+    "normal": "Catalog and direct-chat compact footer visibly present in native captures.",
+    "enlarged": "Settings clipping reproduced at 2x; fixed intrinsic sizing; fresh native 2x catalog capture shows whole Settings label.",
+    "remainingDefect": "Existing card notification Off label clipped at 2x.",
+    "scope": "Synthetic owned emulator, not physical phone.",
+    "evidence": "Gallery nextcomp-footer-catalog-2.0-r02; private capture receipts footer-visual-r01/r02."
+  },
+  "integratedRegression": {
+    "state": "passed",
+    "failure": "Important filter native journey retained anchors but failed visible Failed-state assertion after upper footer removal.",
+    "correction": "Compact conversation activity control now displays its status label; catalog keeps Settings label.",
+    "nativeReceipt": "/tmp/nextcomp-footer-integrated-native-r03.json",
+    "delivery": "No phone publication or installation of this candidate.",
+    "diagnosis": "Failure-boundary actual pixels display Failed; cached accessibility hierarchy showed Working. Conversation and dock composition both traced Failed. Previous stale-rendering diagnosis withdrawn. Native await now explicitly clears supported accessibility cache, matching existing settled-passages observer.",
+    "nativeEvidence": {
+      "state": "passed",
+      "completed": [
+        "CommandHistoryNativeTest#groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory",
+        "ConversationFilterNativeTest#filterKeepsVisibleAnswerWhenLeadingCommentaryIsRemoved",
+        "ConversationFilterNativeTest#filterPreservesVisiblePassageAndReturnsWithoutJumping",
+        "TranscriptRefreshNativeTest#inlinePlaybackVolumePreservesMuteAndTypingDuringCapture",
+        "HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage"
+      ],
+      "apkSha": "db7a5c3596121684dd3969c3a5aec4ce58f7d449fd19863021b2f15bdbdb696a",
+      "testSha": "6fc7a7751af8ccf3f5114e5335bc28687210cc77eb14a7237536031b275c2aa0",
+      "startedAt": 1791871131.2302127,
+      "scope": "Five actual native conversation journeys: operations folded; Important filtering and anchors; visible run-state transitions; 0/50/100 media volume and capture with IME/draft preserved; viewport paging and deferred history anchor.",
+      "current": "HistoryReadingNativeTest#readingAnchorSurvivesDeferredOlderPage",
+      "fixtureStopped": true,
+      "fixturePid": 1205406,
+      "finishedAt": 1791871212.9141543
+    }
+  }
+}

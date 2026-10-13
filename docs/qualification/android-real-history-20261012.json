@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "state": "passed",
+  "command": "node tests/fixtures/real-backend-smoke.mjs --native --history",
+  "phases": [
+    {
+      "phase": "send",
+      "seconds": 12.076,
+      "logSha256": "97c61401a978f2f1a162b6075a183f92f6030e6c2a8e5d4b84dc5ff5ab7c1b46"
+    },
+    {
+      "phase": "restore",
+      "seconds": 5.65,
+      "logSha256": "51bafa476c7e4b0bc9bb281d733ca24244a583ff45e05e557d7311be0b3e1cd7"
+    }
+  ],
+  "realBoundaries": [
+    "Compose touch gestures on actual conversation viewport",
+    "Production backend pagination routes and history projection",
+    "SQLite outgoing/send identity and app presentation cache",
+    "Actual backend restart and cold Android process"
+  ],
+  "substitutedBoundary": "Deterministic Codex stdio RPC with twelve historical turns",
+  "outcomes": [
+    "At least three historical answer passages loaded without a load button",
+    "Single visible input with input-before-answer order",
+    "Loaded row identities retained after cold restart",
+    "Same visible passage restored within 24 pixels",
+    "Draft and pairing retained",
+    "Exactly one provider start"
+  ],
+  "methodCorrections": [
+    "Wait for rendered catalog and content, not only model state",
+    "Use one Compose UI framework and its clock synchronization",
+    "At loaded-history edge, await completed cursor advancement before next gesture",
+    "Direction-independent synthetic turn anchors"
+  ],
+  "limits": [
+    "Qualification app on software emulator; no physical smoothness/frame-pacing claim",
+    "Cold restoration is not a blocked-network cache-first timing test",
+    "No voice/push/Tailscale or multi-environment performance qualification"
+  ],
+  "productionChanged": false
+}

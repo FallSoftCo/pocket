@@ -6,7 +6,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.BlendMode
@@ -30,16 +31,24 @@ import androidx.compose.ui.unit.*
     overflow:TextOverflow=TextOverflow.Clip,textAlign:TextAlign=TextAlign.Start,
     fillWidth:Boolean=false,reserve:List<AnnotatedString> = emptyList(),
     onVisibleRanges:((Set<String>,Boolean)->Unit)?=null,
-    trackWholeTextVisibility:Boolean=false
+    trackWholeTextVisibility:Boolean=false,
+    onNativeTextLayout:((TextLayoutResult)->Unit)?=null,
+    sharedWipeMask:((Float,Float)->ImmersionSharedWipeMask)?=null,
+    nativeLinkInteractions:Boolean=true,
+    continuousWipe:Boolean=false,incomingOverride:Boolean?=null
 ){
     val measurer=rememberTextMeasurer()
     val density=androidx.compose.ui.platform.LocalDensity.current
     val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
     val style=LocalTextStyle.current.merge(TextStyle(fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,textAlign=textAlign))
-    val incoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
+    val legacyIncoming by remember(progress){derivedStateOf{immersionInkPhase(progress()).incoming}}
+    val incoming=incomingOverride?:legacyIncoming
     // Fresh callbacks/styles when wording is unchanged; keep the previous visible
     // flow until the phase effect has actually installed the incoming text.
     val visible=if(incoming){if(to.text==snapshot.text)snapshot else to}else from
+    val nativeVisible=if(nativeLinkInteractions)visible else immersionDrawText(visible).let{
+        AnnotatedString(it.text,it.spanStyles,it.paragraphStyles)
+    }
     val changed=remember(from,to){immersionChangedTextRanges(from,to)}
     val ranges=if(incoming)changed.second else changed.first
     var layout by remember {mutableStateOf<TextLayoutResult?>(null)}
@@ -53,7 +62,7 @@ import androidx.compose.ui.unit.*
     // The callback owner can change while geometry stays unchanged (navigation).
     SideEffect{visibilityCallback?.invoke(lastVisibility?.first?:emptySet(),lastVisibility?.second?:false)}
     DisposableEffect(Unit){onDispose{visibilityCallback?.invoke(emptySet(),false)}}
-    BoxWithConstraints(modifier){
+    BoxWithConstraints(modifier.then(immersionIntrinsicLayout(measurer,listOf(from,to)+reserve,style,maxLines,overflow))){
         val available=constraints.maxWidth.coerceAtLeast(1)
         fun measure(text:AnnotatedString,width:Int,fixed:Boolean=false)=measurer.measure(immersionDrawText(text),style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(minWidth=if(fixed)width else 0,maxWidth=width))
         val forms=listOf(from,to)+reserve
@@ -63,29 +72,90 @@ import androidx.compose.ui.unit.*
         Box(Modifier.size(with(density){width.toDp()},with(density){height.toDp()})){
             val outgoingLayout=measure(from,width,true)
             val incomingLayout=measure(to,width,true)
-            Text(visible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
-                onTextLayout={layout=it;reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithContent{
-                    val p=progress().coerceIn(0f,1f)
-                    if(from.text==to.text||p<=0f||p>=1f){drawContent();return@drawWithContent}
+            Text(nativeVisible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
+                onTextLayout={layout=it;onNativeTextLayout?.invoke(it);reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithCache{
+                    // Geometry and shaders live for the draw cache, not one display frame.
+                    // Progress remains a draw-only read; changing language/layout invalidates
+                    // this cache while ordinary clock ticks only redraw its masks.
+                    val layerBounds=Rect(0f,0f,size.width,size.height)
+                    val isolationPaint=Paint()
+                    val outgoingPaint=Paint()
+                    val incomingPaint=Paint().apply{blendMode=BlendMode.Plus}
                     val firstChangedLine=(changed.first.map{outgoingLayout.getLineForOffset(it.start.coerceIn(0,(from.length-1).coerceAtLeast(0)))}+changed.second.map{incomingLayout.getLineForOffset(it.start.coerceIn(0,(to.length-1).coerceAtLeast(0)))}).minOrNull()?:0
                     val lines=(maxOf(outgoingLayout.lineCount,incomingLayout.lineCount)-firstChangedLine).coerceAtLeast(1)
+                    var cachedFeather=Float.NaN
+                    var startOpaque:Brush?=null
+                    var endOpaque:Brush?=null
+                    fun mask(feather:Float,opaqueAtReadingStart:Boolean):Brush{
+                        if(feather!=cachedFeather){
+                            cachedFeather=feather
+                            val colors=if(rtl)listOf(Color.Transparent,Color.Black)else listOf(Color.Black,Color.Transparent)
+                            startOpaque=Brush.horizontalGradient(colors,-feather,feather)
+                            endOpaque=Brush.horizontalGradient(colors.reversed(),-feather,feather)
+                        }
+                        return requireNotNull(if(opaqueAtReadingStart)startOpaque else endOpaque)
+                    }
+                    onDrawWithContent{
+                    val p=progress().coerceIn(0f,1f)
+                    if(from.text==to.text||(!continuousWipe&&(p<=0f||p>=1f))){drawContent();return@onDrawWithContent}
+                    if(continuousWipe&&sharedWipeMask!=null){
+                        // Most slots are holding one form while the screen-wide
+                        // frontier visits another line. Do not allocate three
+                        // off-screen layers for fully opaque, unchanged holds.
+                        var heldForm:Int?=null
+                        var uniform=true
+                        for(line in 0 until maxOf(outgoingLayout.lineCount,incomingLayout.lineCount)){
+                            for(formIndex in 0..1){
+                                val result=if(formIndex==0)outgoingLayout else incomingLayout
+                                if(line>=result.lineCount)continue
+                                val shared=sharedWipeMask.invoke(p,result.getLineTop(line))
+                                val startCoverage=if(rtl){
+                                    if(shared.center+shared.feather<=0f)1
+                                    else if(shared.center-shared.feather>=size.width)0 else -1
+                                }else{
+                                    if(shared.center-shared.feather>=size.width)1
+                                    else if(shared.center+shared.feather<=0f)0 else -1
+                                }
+                                if(startCoverage<0){uniform=false;break}
+                                val form=if(shared.incomingAtReadingStart)startCoverage else 1-startCoverage
+                                if(heldForm!=null&&heldForm!=form){uniform=false;break}
+                                heldForm=form
+                            }
+                            if(!uniform)break
+                        }
+                        if(uniform&&heldForm!=null){
+                            drawText(if(heldForm==1)incomingLayout else outgoingLayout)
+                            return@onDrawWithContent
+                        }
+                    }
                     fun layer(result:TextLayoutResult,incomingLayer:Boolean){
                         val canvas=drawContext.canvas
-                        canvas.saveLayer(Rect(0f,0f,size.width,size.height),Paint())
+                        canvas.saveLayer(layerBounds,if(incomingLayer)incomingPaint else outgoingPaint)
                         drawText(result)
                         for(line in 0 until result.lineCount){
                             val phase=if(line<firstChangedLine)0f else immersionWipeLineProgress(p,line-firstChangedLine,lines)
-                            val feather=(size.width*.12f).coerceIn(12f,48f)
+                            val shared=sharedWipeMask?.invoke(p,result.getLineTop(line))
+                            val feather=shared?.feather?:(size.width*.12f).coerceIn(12f,48f)
                             val frontier=-feather+(size.width+2f*feather)*phase
-                            val left=if(incomingLayer)1f else 0f
-                            val right=1f-left
-                            val colors=if(rtl)listOf(Color.Black.copy(alpha=right),Color.Black.copy(alpha=left))else listOf(Color.Black.copy(alpha=left),Color.Black.copy(alpha=right))
-                            val center=if(rtl)size.width-frontier else frontier
-                            drawRect(Brush.horizontalGradient(colors,center-feather,center+feather),topLeft=Offset(0f,result.getLineTop(line)),size=Size(size.width,result.getLineBottom(line)-result.getLineTop(line)),blendMode=BlendMode.DstIn)
+                            val center=shared?.center?:if(rtl)size.width-frontier else frontier
+                            val brush=mask(feather,incomingLayer==(shared?.incomingAtReadingStart?:true))
+                            // Translate the cached gradient, keeping its rectangle over the
+                            // same full line. No new shader is needed as the frontier moves.
+                            withTransform({translate(left=center)}){
+                                drawRect(brush,topLeft=Offset(-center,result.getLineTop(line)),size=Size(size.width,result.getLineBottom(line)-result.getLineTop(line)),blendMode=BlendMode.DstIn)
+                            }
                         }
                         canvas.restore()
                     }
+                    // Complementary coverage must add inside transparent isolation.
+                    // Source-over would multiply the masks, dimming shared glyphs
+                    // to 75% at their midpoint. Isolation prevents Plus from
+                    // adding incoming ink to the actual screen background.
+                    val canvas=drawContext.canvas
+                    canvas.saveLayer(layerBounds,isolationPaint)
                     layer(outgoingLayout,false);layer(incomingLayout,true)
+                    canvas.restore()
+                    }
                 })
         }
     }

@@ -1,0 +1,23 @@
+{
+  "state": "native-existing-journeys-qualified-next-release-gate-strengthened",
+  "finding": "Frozen alpha90 required two history-reading journeys but omitted five existing cases directly covering reported chronology and ergonomic pagination failures.",
+  "nativeApkSha256": "84ac7c9732d83d0e097345bc0d527ec6adf55e433ac20f7d9359afdae5168db0",
+  "passed": [
+    "pullingAShortRecentPageLoadsEarlierHistoryWithoutATap",
+    "lateInputEventReconcilesCanonicalOrderOnce",
+    "shortHistoryPagesRequireAnotherReadingGesture",
+    "anchoredInputOutsideRecentPageRepairsWithoutBackfillOrLosingLiveText",
+    "partialOlderPageRepairsLateInputAgainstRetainedReply"
+  ],
+  "releaseChange": "Future frozen release policy requires all five additional existing cases,46 total. No new unit tests or native case implementations added. Already published alpha90 artifacts/policy unchanged.",
+  "supervisorReconciliation": [
+    "First pass short-pull complete; child reaping assertion stopped before next action. Process/port verified settled.",
+    "Second pass late-input complete; TIME_WAIT bind probe rejected before next action. Corrected probe usesSO_REUSEADDR; stopped child reaped.",
+    "Third pass remaining three completed with fresh owned fixtures; passed cases not replayed."
+  ],
+  "scope": "Owned emulator5620; fresh loopback synthetic fixture per case; no real sessions, provider calls, submissions or phone changes.",
+  "limits": [
+    "Native synthetic histories only; physical handset and real provider transport remain separate",
+    "Next signed release must rerun46 against immutable source/APKs; these receipts are not substituted for frozen-release evidence"
+  ]
+}

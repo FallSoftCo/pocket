@@ -1,5 +1,39 @@
 # Inline immersion: reading before animation
 
+
+## Current implementation and evidence boundary
+
+The current candidate uses one visible-screen reading wave, shared by body text,
+controls and enrolled popup windows. Visible lines join a global top-to-bottom
+schedule; each line wipes in reading direction at the same local speed. Newly
+discovered geometry is adopted between complete waves rather than flipping the
+current phase. Ordinary control activation retains its action; native text
+selection pauses the wave for copying. Background, reduced motion and blackout
+also stop automatic motion. These are observable interface policies, not gaze
+tracking.
+
+Target-language grammar scaffolds retain vocabulary in matched native positions:
+for example, Italian “Permessi completi per i nuovi incarichi” cycles with the
+support form “Permissions full per i new tasks.” That support form deliberately
+keeps target grammar and its particles. Protected names, IDs, paths and action
+payloads remain exact. Longer forms reserve geometry before cycling; this does
+not justify duplicate lines, translated subtitles or modal help.
+
+Complementary outgoing/incoming ink masks share transparent isolation, preserving
+common glyph brightness rather than fading an entire container to black. One
+native semantic text flow owns selection and actions. In the alpha92 candidate,
+draw-cache paints and translated gradient masks avoid repeated shader creation.
+[Matched native observation](qualification/immersion-draw-cache-20261012.json)
+records lower allocations and draw duration, with **no consistent improvement
+in total frame timing**. Physical phone smoothness and human comprehension are
+still unqualified. The native release policy includes natural-clock cycling,
+stable vocabulary positions, ink, accessibility, selection and action journeys;
+passing it does not certify every string or every screen.
+
+The sections below retain historical prototypes, rejected designs and their
+evidence. Their earlier dwell times and independent phrase clocks are not the
+current policy.
+
 The alpha26 display still has alpha24's 75 ms fade-out through zero followed by a 75 ms fade-in. Many independent phrase clocks can create repeated attention demands. Inline reservations measure an imposed Medium weight but can render a different inherited weight; `TextTop` placeholders containing full line-height text also risk different baseline and leading from adjacent native text. Default semantic colors, weight and agreement underlines compound those differences. Interface labels use another renderer, so they do not participate in the same language transition.
 
 ## Evidence and limits

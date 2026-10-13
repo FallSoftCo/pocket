@@ -12,7 +12,7 @@ import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 
-private fun MarkdownInline.annotated(clickableLinks:Boolean=true):AnnotatedString=buildAnnotatedString {
+internal fun MarkdownInline.annotated(clickableLinks:Boolean=true):AnnotatedString=buildAnnotatedString {
     append(text)
     spans.forEach{span->
         when(span.kind){
@@ -41,6 +41,13 @@ private fun MarkdownInline.annotated(clickableLinks:Boolean=true):AnnotatedStrin
                         Text(block.content.text,fontFamily=FontFamily.Monospace,fontSize=12.sp,color=Paper,lineHeight=18.sp,modifier=Modifier.horizontalScroll(rememberScrollState()))
                     }
                 }
+                "table"->block.table?.let{table->MarkdownTableContent(table){cell->
+                    MarkdownImageFlow(cell.content.annotated(),cell.content.images){part->
+                        Text(part,fontSize=17.sp,lineHeight=26.sp,color=Paper,
+                            fontWeight=if(cell.header)FontWeight.SemiBold else FontWeight.Normal,
+                            textAlign=markdownCellAlignment(cell),modifier=Modifier.fillMaxWidth())
+                    }
+                }}
                 "rule"->HorizontalDivider(color=Line)
                 else->{
                     val size=if(block.kind=="heading")when(block.level){1->24.sp;2->21.sp;else->18.sp}else 15.sp

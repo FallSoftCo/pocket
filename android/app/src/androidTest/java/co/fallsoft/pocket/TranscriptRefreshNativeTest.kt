@@ -32,6 +32,190 @@ class TranscriptRefreshNativeTest {
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
  }
+ @Test fun readingPositionCheckpointDoesNotRewriteRetainedHistory(){
+  twoChats();qa("quiet-reading");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  val scope=PocketTranscript.scopeKey();val directory=java.io.File(context.noBackupFilesDir,"transcript-cache-v1");val cache=TranscriptDiskCache(directory)
+  await{cache.read(scope,"same-thread")!=null&&PocketTranscript.readPosition!=null}
+  Thread.sleep(700)
+  val baseline=cache.read(scope,"same-thread")!!
+  requireNotNull(device.findObject(By.scrollable(true))).scroll(Direction.UP,.65f)
+  await{PocketTranscript.readPosition?.follow==false&&!PocketTranscript.loading}
+  val position=PocketTranscript.readPosition!!
+  await{cache.readPosition(scope,"same-thread")?.let{val p=JSONObject(it);p.s("row")==position.rowId&&p.optInt("offset")==position.offset&&!p.optBoolean("follow")}==true}
+  // Allow the normal viewport observer to settle; this is its actual position,
+  // not an injected coordinate on an unscrollable page.
+  Thread.sleep(1200)
+  assertEquals(position,PocketTranscript.readPosition)
+  assertEquals("Reading position rewrote retained message bodies",baseline,cache.read(scope,"same-thread"))
+  assertEquals("First saved draft",Pocket.prefs.getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+  val expected=JSONObject().put("row",position.rowId).put("offset",position.offset).put("follow",position.follow)
+  Pocket.prefs.edit().putString("position-journal-qa-scope",scope).putString("position-journal-qa-expected",expected.toString()).commit()
+ }
+ @Test fun readingPositionRestoresFromDiskWhileHistoryIsBlocked(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
+  assertEquals(Pocket.prefs.getString("position-journal-qa-scope",null),PocketTranscript.scopeKey())
+  val expected=JSONObject(Pocket.prefs.getString("position-journal-qa-expected",null)!!)
+  val started=android.os.SystemClock.elapsedRealtime()
+  main{Pocket.open("same-thread")}
+  await{has(1)&&PocketTranscript.loading&&PocketTranscript.readPosition?.rowId==expected.s("row")&&PocketTranscript.readPosition?.offset==expected.optInt("offset")}
+  val elapsed=android.os.SystemClock.elapsedRealtime()-started
+  assertFalse(PocketTranscript.readPosition!!.follow)
+  assertTrue("Cached history waited for blocked network: ${elapsed}ms",elapsed<2000)
+  val number=expected.s("row").removePrefix("visible-")
+  val passage=device.wait(Until.findObject(By.textStartsWith("Visible passage $number ")),3000)
+  assertNotNull("Saved reading passage is not visible after process restart",passage)
+  assertFalse("Saved passage has empty visible bounds",passage!!.visibleBounds.isEmpty)
+  assertEquals("First saved draft",Pocket.prefs.getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+  java.io.File(context.cacheDir,"position-journal-restore.json").writeText(JSONObject().put("cachedRestoreMs",elapsed).put("row",expected.s("row")).put("offset",expected.optInt("offset")).put("visible",true).toString())
+ }
+ @Test fun historyEvidenceRepairsDeferredPositionOnce(){
+  twoChats();qa("await-position-history");main{Pocket.open("same-thread")}
+  await{PocketTranscript.rows.any{it.s("id")=="order/answer"}&&!PocketTranscript.loading}
+  val initialReads=qa("state").getJSONArray("reads").length()
+  val event=JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",1000).put("row",JSONObject().put("id","order/live").put("itemId","live").put("turnId","order").put("clientId","same-send").put("kind","user").put("text","Deferred input").put("version",1000))
+  main{Pocket.event(event)}
+  await{qa("state").getJSONArray("positions").length()==2&&!PocketTranscript.updating}
+  assertEquals("Ordering repair added reads beyond the normal new-input refresh",initialReads+1,qa("state").getJSONArray("reads").length())
+  val ids=PocketTranscript.rows.map{it.s("id")}
+  assertTrue(ids.indexOf("order/client-user/same-send")<ids.indexOf("order/answer"))
+  assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"&&it.s("clientId")=="same-send"})
+  val inputs=qa("state").getJSONArray("positions");assertEquals("same-send",inputs.getJSONObject(1).getString("clientId"))
+  main{Pocket.refreshDetail()};await{!PocketTranscript.loading};Thread.sleep(600)
+  assertEquals("Successful evidence was needlessly re-requested",2,qa("state").getJSONArray("positions").length())
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+ }
+ @Test fun canonicalInputPositionSurvivesProviderChangeDuringLookup(){
+  twoChats();qa("anchored");main{Pocket.open("same-thread")}
+  await{PocketTranscript.rows.any{it.s("id")=="order/answer"}&&!PocketTranscript.loading}
+  fun event(item:String,version:Int)=JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",version).put("row",JSONObject().put("id","order/"+item).put("itemId",item).put("turnId","order").put("clientId","same-send").put("kind","user").put("text","Late same-send input").put("version",version))
+  main{Pocket.event(event("live-uuid",1000))}
+  await{qa("state").getJSONArray("positions").length()==1}
+  main{Pocket.event(event("rebuilt-item",1001))}
+  qa("release-position")
+  await{qa("state").getJSONArray("positions").length()==2&&!PocketTranscript.updating}
+  val ids=PocketTranscript.rows.map{it.s("id")}
+  assertTrue("Canonical input position lookup could not address the displayed row",ids.indexOf("order/client-user/same-send")<ids.indexOf("order/answer"))
+  assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"&&it.s("clientId")=="same-send"})
+  assertEquals("order/client-user/same-send",transcriptDisplayAnchor(PocketTranscript.rows,"order/live-uuid"))
+  assertEquals("order/client-user/same-send",transcriptDisplayAnchor(PocketTranscript.rows,"order/rebuilt-item"))
+  val before=qa("state");val reads=before.getJSONArray("reads").length()
+  repeat(3){main{Pocket.event(event("rebuilt-item",1001))}}
+  Thread.sleep(800)
+  val after=qa("state")
+  assertEquals("Repeated input event restarted canonical reads",reads,after.getJSONArray("reads").length())
+  assertEquals("Repeated input event restarted position lookup",2,after.getJSONArray("positions").length())
+  assertEquals("Read repair submitted work",0,after.getJSONArray("replies").length())
+ }
+ @Test fun incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble(){
+  twoChats();qa("message-identity");qa("hold-history")
+  val scope=PocketTranscript.scopeKey()
+  val bare=JSONObject().put("id","identity/item-183").put("itemId","item-183").put("turnId","identity").put("kind","user").put("text","Same deliberate text")
+  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",org.json.JSONArray().put(bare)).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("position",JSONObject().put("row","identity/item-183").put("offset",17).put("follow",false))
+  assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+  val restored=PocketTranscript.cacheRestoreRevision
+  main{Pocket.open("same-thread")};await{PocketTranscript.cacheRestoreRevision>restored&&PocketTranscript.loading}
+  assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"})
+  qa("release-history");await{has(1)&&!PocketTranscript.updating}
+  fun users()=PocketTranscript.rows.filter{it.s("kind")=="user"}
+  assertEquals("Incomplete cached identity became a third bubble",2,users().size)
+  assertEquals("identity/client-user/send-one",PocketTranscript.readPosition?.rowId)
+  assertEquals(17,PocketTranscript.readPosition?.offset)
+  assertEquals(false,PocketTranscript.readPosition?.follow)
+  assertEquals(setOf("send-one","send-two"),users().map{it.s("clientId")}.toSet())
+  await{device.findObjects(By.text("Same deliberate text")).size==2}
+  main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","identity").put("row",JSONObject(bare.toString()).put("version",1000)))}
+  assertEquals("Late incomplete live event created duplicate bubble",2,users().size)
+  main{Pocket.refreshDetail()};await{!PocketTranscript.updating}
+  assertEquals(2,users().size)
+  assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+ }
+ @Test fun providerReconstructionReconcilesLiveHistoryAndLegacyCache(){
+  twoChats();qa("message-identity");qa("hold-history")
+  val scope=PocketTranscript.scopeKey()
+  val old=org.json.JSONArray()
+  (listOf("uuid")+(1..99).map{"item-"+it}).forEach{item->old.put(JSONObject().put("id","identity/"+item).put("itemId",item).put("turnId","identity").put("clientId","send-one").put("kind","user").put("text","Same deliberate text"))}
+  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("position",JSONObject().put("row","identity/item-32").put("offset",17).put("follow",false))
+  assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+  val restoredBefore=PocketTranscript.cacheRestoreRevision
+  main{Pocket.open("same-thread")};await{PocketTranscript.cacheRestoreRevision>restoredBefore&&PocketTranscript.loading}
+  assertEquals("Legacy reading anchor was lost during duplicate collapse","identity/client-user/send-one",PocketTranscript.readPosition?.rowId)
+  assertEquals(17,PocketTranscript.readPosition?.offset)
+  assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"})
+  qa("release-history");await{has(1)&&!PocketTranscript.updating}
+  fun users()=PocketTranscript.rows.filter{it.s("kind")=="user"}
+  assertEquals("Two distinct sends with identical text must survive",2,users().size)
+  assertEquals(setOf("send-one","send-two"),users().map{it.s("clientId")}.toSet())
+  await{device.findObjects(By.text("Same deliberate text")).size==2}
+  val firstId=users().first().s("id")
+  main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","identity").put("row",JSONObject().put("id","identity/new-live-id").put("itemId","new-live-id").put("turnId","identity").put("clientId","send-one").put("kind","user").put("text","Same deliberate text").put("version",1000)))}
+  assertEquals(2,users().size);assertEquals(firstId,users().first().s("id"))
+  await{device.findObjects(By.text("Same deliberate text")).size==2}
+  main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}}
+  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&users().firstOrNull{it.s("clientId")=="send-one"}?.s("itemId")=="item-183"}
+  assertEquals(2,users().size)
+  assertEquals("History replacement discarded live provider evidence",firstId,transcriptDisplayAnchor(PocketTranscript.rows,"identity/new-live-id"))
+  assertEquals("Canonical history reference no longer addresses the send",firstId,transcriptDisplayAnchor(PocketTranscript.rows,"identity/item-183"))
+  assertEquals("Canonical provider metadata did not refresh","item-183",users().first{it.s("clientId")=="send-one"}.s("itemId"))
+  assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals("Identity reconciliation must never submit work",0,qa("state").getJSONArray("replies").length())
+ }
+ @Test fun legacyCachedGapIsRepairedWithoutLoadingEarlierManually(){
+  twoChats();qa("same-turn-gap");qa("head-only-update")
+  val scope=PocketTranscript.scopeKey()
+  val oldRows=org.json.JSONArray("""[{"id":"synthetic-turn/header","kind":"turn","turnId":"synthetic-turn"},{"id":"gap-user","kind":"user","turnId":"synthetic-turn","text":"Shared turn request"},{"id":"gap-old-answer","kind":"message","turnId":"synthetic-turn","text":"Fresh response 1"},{"id":"gap-new-tool","kind":"activity","turnId":"synthetic-turn","text":"New tool action"}]""")
+  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",oldRows).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+  assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+  main{Pocket.open("same-thread")};await{has(2)&&!PocketTranscript.updating}
+  assertEquals(listOf("gap-user","gap-old-answer","gap-new-answer","gap-new-tool"),PocketTranscript.rows.filter{it.s("kind")!="turn"}.map{it.s("id")})
+  assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+ }
+ @Test fun sameTurnHeaderDoesNotHideAnIntermediateAnswer(){
+  twoChats();qa("same-turn-gap");main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("head-only-update");main{Pocket.refresh()}
+  await{has(2)&&!PocketTranscript.updating}
+  assertEquals(listOf("gap-user","gap-old-answer","gap-new-answer","gap-new-tool"),PocketTranscript.rows.filter{it.s("kind")!="turn"}.map{it.s("id")})
+  assertEquals("First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  assertEquals(0,qa("state").getJSONArray("replies").length())
+ }
+ @Test fun savedVoiceOwnerIsCheckedBeforeServiceAndLegacyDiscoveryNeverResends(){
+  twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  val recording=java.io.File(context.filesDir,"voice-pending.wav");val bytes=byteArrayOf(9,8,7);recording.writeBytes(bytes)
+  prefs.edit().putString("voicePendingId","saved-unknown").putString("voicePendingEnvironment","other-environment").putString("voicePendingOwner","other-owner").putString("voicePendingTarget","same-thread").commit()
+  try{
+   main{PocketVoice.start(context,checkSaved=true,inPlace=true)}
+   assertTrue(PocketVoice.problem.contains("original environment"));assertFalse(PocketVoice.active)
+   assertEquals(0,qa("state").getJSONArray("voiceReceiptReads").length())
+   prefs.edit().remove("voicePendingEnvironment").remove("voicePendingOwner").commit()
+   main{PocketVoice.start(context,checkSaved=true,inPlace=true)}
+   await{prefs.getString("voicePendingEnvironment",null)==Pocket.environmentId&&PocketVoice.state=="Ready"}
+   assertEquals(1,qa("state").getJSONArray("voiceReceiptReads").length())
+   assertEquals(backendOwner(Pocket.base,Pocket.token),prefs.getString("voicePendingOwner",null))
+   assertFalse(PocketVoice.active);assertArrayEquals(bytes,recording.readBytes())
+   assertEquals(0,qa("state").getJSONArray("replies").length())
+  }finally{main{PocketVoice.stop()};prefs.edit().remove("voicePendingId").remove("voicePendingLocal").remove("voicePendingTarget").remove("voicePendingEnvironment").remove("voicePendingOwner").commit();recording.delete()}
+ }
+ @Test fun unknownVoiceReceiptRetainsRecordingAndOnlyChecksOriginalTurn(){
+  twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  val recording=java.io.File(context.filesDir,"voice-pending.wav");val bytes=byteArrayOf(1,2,3,4);recording.writeBytes(bytes)
+  prefs.edit().putString("voicePendingId","saved-unknown").putString("voicePendingEnvironment",Pocket.environmentId).putString("voicePendingOwner",backendOwner(Pocket.base,Pocket.token)).putBoolean("voicePendingLocal",false).putString("voicePendingTarget","same-thread").commit()
+  try{
+   main{PocketVoice.start(context,"same-thread",recordImmediately=false,inPlace=true,checkSaved=true)}
+   await{PocketVoice.state=="Retry needed"&&PocketVoice.problem.contains("Synthetic uncertain delivery")}
+   assertEquals("saved-unknown",prefs.getString("voicePendingId",null));assertArrayEquals(bytes,recording.readBytes())
+   main{PocketVoice.retry()};await{qa("state").getJSONArray("voiceReceiptReads").length()>=4&&PocketVoice.state=="Retry needed"}
+   assertEquals("same-thread",prefs.getString("voicePendingTarget",null));assertArrayEquals(bytes,recording.readBytes())
+   main{PocketVoice.start(context,"second-thread",inPlace=true)}
+   assertEquals("Recording replaced uncertain turn","saved-unknown",prefs.getString("voicePendingId",null))
+   assertTrue(PocketVoice.problem.contains("saved voice turn"))
+   assertEquals(0,qa("state").getJSONArray("replies").length())
+  }finally{main{PocketVoice.stop()};prefs.edit().remove("voicePendingId").remove("voicePendingLocal").remove("voicePendingTarget").commit();prefs.edit().remove("voicePendingEnvironment").remove("voicePendingOwner").commit();recording.delete()}
+ }
  @Test fun inlinePlaybackVolumePreservesMuteAndTypingDuringCapture(){
   twoChats();main{Pocket.open("same-thread",keyboard=true)}
   await{has(1)&&device.hasObject(By.clazz("android.widget.EditText"))&&device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")}
@@ -44,9 +228,11 @@ class TranscriptRefreshNativeTest {
    device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_UP);await{PocketVoice.state=="Listening"}
    device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_DOWN);await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
    assertEquals("Capture keys changed intentional playback mute",0,audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))
-   val slider=device.findObject(By.desc("Speech volume")).visibleBounds
-   device.click(slider.left+slider.width()*3/4,slider.centerY())
-   await{audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)>0}
+   val maximum=audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+   for(expected in listOf((maximum+1)/2,maximum,0)){
+    device.findObject(By.desc("Speech volume")).click()
+    await{audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)==expected}
+   }
    assertTrue("Volume adjustment dismissed typing",device.executeShellCommand("dumpsys input_method").contains("mInputShown=true"))
    assertEquals("Volume adjustment erased draft","Playback volume keeps my draft",prefs.getString("draft:same-thread",null))
    assertEquals("Volume/capture controls submitted work",0,qa("state").getJSONArray("replies").length())
@@ -56,7 +242,25 @@ class TranscriptRefreshNativeTest {
   twoChats();val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
   try{
-   main{Pocket.closeTask();PocketImmersion.setEnabled(true);PocketCoordinator.open()}
+   qa("coordinator-pages")
+   main{Pocket.closeTask();PocketImmersion.setEnabled(false);PocketCoordinator.open()}
+   await{PocketCoordinator.visible&&!PocketCoordinator.historyLoading&&PocketCoordinator.messages.size==25}
+   fun passages():Set<String>{if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache();return device.findObjects(By.textStartsWith("Coordinator passage ")).map{it.text}.toSet()}
+   await{passages().isNotEmpty()};device.waitForIdle(2000)
+   val recent=passages()
+   requireNotNull(device.findObject(By.res("reader-page-up"))).click();Thread.sleep(600)
+   val older=passages();assertTrue("Coordinator page did not advance",older.isNotEmpty()&&older!=recent)
+   requireNotNull(device.findObject(By.res("reader-page-down"))).click();Thread.sleep(600)
+   assertEquals("Coordinator page back lost recent responses",recent,passages())
+   assertEquals("Local paging fetched older history",0,qa("state").getJSONArray("coordinatorHistoryReads").objects().count{it.optBoolean("older")})
+   assertEquals("Paging started worker commands",0,qa("state").getJSONArray("replies").length())
+   repeat(24){if(PocketCoordinator.messages.size<30&&PocketCoordinator.historyEarlier){requireNotNull(device.findObject(By.res("reader-page-up"))).click();Thread.sleep(400)}}
+   await{PocketCoordinator.messages.size==30&&!PocketCoordinator.historyLoading}
+   assertEquals("Repeated older-page fetch",1,qa("state").getJSONArray("coordinatorHistoryReads").objects().count{it.optBoolean("older")})
+   main{PocketCoordinator.loadHistory()};await{!PocketCoordinator.historyLoading}
+   assertEquals("Recent refresh hid retained older turns",30,PocketCoordinator.messages.size)
+   assertFalse("Recent refresh reinstated already-loaded history",PocketCoordinator.historyEarlier)
+   main{PocketImmersion.setEnabled(true)}
    await{PocketCoordinator.visible&&!PocketCoordinator.historyLoading}
    device.executeShellCommand("settings put system font_scale 2.0");await{context.resources.configuration.fontScale>=1.9f}
    for(label in listOf("Registra","Tastiera","Impostazioni"))assertTrue("Translated control missing: "+label,device.wait(Until.hasObject(By.text(label)),3000))
@@ -132,10 +336,10 @@ class TranscriptRefreshNativeTest {
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   val baseline=qa("state").getJSONArray("reads").length()
   qa("silent");qa("fail-read-burst");main{Pocket.refreshDetail()}
-  await{qa("state").getJSONArray("reads").length()==baseline+4&&PocketTranscript.updating}
-  assertTrue("Outage lost cached history",has(1));assertTrue("Outage hid actionable error",Pocket.error.isNotBlank())
+  await{qa("state").getJSONArray("reads").length()==baseline+4&&PocketTranscript.updating&&!PocketTranscript.loading&&PocketTranscript.readError.isNotBlank()}
+  assertTrue("Outage lost cached history",has(1));assertTrue("Outage hid actionable error",PocketTranscript.readError.isNotBlank())
   await{qa("state").getJSONArray("reads").length()>=baseline+5&&has(2)&&!PocketTranscript.updating}
-  qa("fail-read");main{Pocket.refreshDetail()};await{Pocket.error.contains("Synthetic history refresh unavailable")&&PocketTranscript.updating}
+  qa("fail-read");main{Pocket.refreshDetail()};await{!PocketTranscript.loading&&PocketTranscript.updating};assertTrue("Brief refresh failed the send surface",Pocket.error.isBlank()&&PocketTranscript.readError.isBlank())
   main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}&&!PocketTranscript.updating}
   val afterNavigation=qa("state").getJSONArray("reads").objects().count{it.s("threadId")!="second-thread"}
   Thread.sleep(1500)
@@ -145,16 +349,18 @@ class TranscriptRefreshNativeTest {
  @Test fun transientHistoryFailureRecoversWithoutAnotherEvent(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   qa("silent");qa("fail-read");main{Pocket.refreshDetail()}
-  await{Pocket.error.contains("Synthetic history refresh unavailable")&&PocketTranscript.updating}
+  await{!PocketTranscript.loading&&PocketTranscript.updating}
+  assertTrue("Brief refresh showed a disconnected error",Pocket.error.isBlank()&&PocketTranscript.readError.isBlank())
   assertTrue("Cached history discarded on failure",has(1))
   assertTrue("Loading indicator missing",device.wait(Until.hasObject(By.text("Updating messages")),3000))
   await{has(2)&&!PocketTranscript.updating&&Pocket.error.isBlank()}
   qa("silent");qa("malformed-read");main{Pocket.refreshDetail()}
-  await{Pocket.error.contains("Messages were not returned")&&PocketTranscript.updating}
+  await{!PocketTranscript.loading&&PocketTranscript.updating}
+  assertTrue("Brief malformed refresh failed the send surface",Pocket.error.isBlank()&&PocketTranscript.readError.isBlank())
   assertTrue("Malformed response erased cached history",has(2))
   await{has(3)&&!PocketTranscript.updating&&Pocket.error.isBlank()}
   qa("silent");qa("fail-read-permanent");main{Pocket.refreshDetail()}
-  await{Pocket.error.contains("Synthetic history permission rejected")&&!PocketTranscript.updating}
+  await{PocketTranscript.readError.contains("Synthetic history permission rejected")&&!PocketTranscript.updating}
   val reads=qa("state").getJSONArray("reads").length();Thread.sleep(2500)
   assertEquals("Rejected permission was polled",reads,qa("state").getJSONArray("reads").length())
   assertTrue("Permission failure hid local history",has(3))
@@ -271,9 +477,15 @@ class TranscriptRefreshNativeTest {
  }
  @Test fun switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates(){
   twoChats()
-  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.loading}
+  fun openCard(title:String){
+   val selector=By.desc("Open Chat for "+title)
+   assertTrue("Conversation card missing: "+title,device.wait(Until.hasObject(selector),3000))
+   device.findObject(selector).click()
+  }
+  openCard("Synthetic freshness work");await{has(1)&&!PocketTranscript.loading}
   qa("advance");await{qa("state").getJSONArray("reads").objects().any{it.s("threadId")!="second-thread"&&it.optInt("revision")==2}}
-  main{Pocket.open("second-thread")}
+  device.pressBack();await{Pocket.selected==null}
+  openCard("Other synthetic work")
   await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}&&!PocketTranscript.loading}
   qa("advance-second")
   await{Pocket.tasks.any{it.id=="second-thread"&&it.preview=="Other response 2"}&&PocketTranscript.updating}
@@ -282,11 +494,21 @@ class TranscriptRefreshNativeTest {
   qa("release");Thread.sleep(500)
   assertEquals("Old refresh changed selected chat","second-thread",Pocket.selected)
   assertEquals("Old response contaminated current chat",listOf("other/message"),PocketTranscript.rows.map{it.s("id")})
-  main{Pocket.reply("Reply after switching")};await{qa("state").getJSONArray("replies").length()==1&&!Pocket.sending}
-  assertEquals("Reply routed to old chat","second-thread",qa("state").getJSONArray("replies").getJSONObject(0).s("threadId"))
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   assertEquals("First draft lost","First saved draft",prefs.getString("draft:same-thread",null))
   assertEquals("Second draft lost","Second saved draft",prefs.getString("draft:second-thread",null))
+  assertTrue("Keyboard control missing after switching",device.wait(Until.hasObject(By.text("Keyboard")),3000))
+  device.findObject(By.text("Keyboard")).click()
+  assertTrue("Editor missing after switching",device.wait(Until.hasObject(By.clazz("android.widget.EditText")),3000))
+  val editor=device.findObject(By.clazz("android.widget.EditText"))
+  assertEquals("Selected conversation draft not restored","Second saved draft",editor.text)
+  editor.text="Reply after switching"
+  device.pressKeyCode(android.view.KeyEvent.KEYCODE_ENTER)
+  await{qa("state").getJSONArray("replies").length()==1&&!Pocket.sending}
+  val submitted=qa("state").getJSONArray("replies").getJSONObject(0)
+  assertEquals("Reply routed to old chat","second-thread",submitted.s("threadId"))
+  assertEquals("Enter did not submit the edited text","Reply after switching",submitted.s("text"))
+  device.pressBack()
   main{Pocket.closeTask();Pocket.open("same-thread")};await{has(2)&&!PocketTranscript.updating}
   assertTrue("New chat rows leaked on reopen",PocketTranscript.rows.none{it.s("id")=="other/message"})
   main{Pocket.closeTask()}
@@ -376,6 +598,47 @@ class TranscriptRefreshNativeTest {
   assertEquals("Recovered transport kept stale connection error","",Pocket.connectionError)
   assertEquals("Reconnect erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
   assertEquals("Reconnect submitted work",0,qa("state").getJSONArray("replies").length())
+ }
+ @Test fun incompleteOptionalHeadProtocolCannotCreateAHistoryReadLoop(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("omit-snapshot-head");qa("notification-overflow");main{Pocket.refresh()};await{has(2)&&!PocketTranscript.updating}
+  val reads=qa("state").getJSONArray("reads").length()
+  repeat(3){main{Pocket.refresh()};Thread.sleep(600)};Thread.sleep(1600)
+  assertEquals("Incomplete optional protocol polled history",reads,qa("state").getJSONArray("reads").length())
+  qa("restore-snapshot-head");main{Pocket.refreshDetail()};await{has(2)&&!PocketTranscript.updating}
+  qa("head-only-update");main{Pocket.refresh()};await{has(3)&&!PocketTranscript.updating}
+  assertTrue("Restored protocol response not visible",device.wait(Until.hasObject(By.text("Fresh response 3")),4000))
+  assertEquals("Compatibility recovery submitted work",0,qa("state").getJSONArray("replies").length())
+ }
+ @Test fun selectedHistoryRecoversWhenUpdateIsOutsideBothBoundedFeeds(){
+  twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
+  qa("hold-catalog");main{Pocket.refresh()};await{qa("state").optBoolean("catalogBlocked")}
+  try{
+   qa("notification-overflow");main{Pocket.refresh()};assertTrue("Refresh must show visible loading feedback",device.wait(Until.hasObject(By.text("Updating messages")),4000));await{has(2)&&!PocketTranscript.updating}
+   assertTrue("Recovered response missing from screen",device.wait(Until.hasObject(By.text("Fresh response 2")),4000))
+   assertTrue("Recovery must occur before slow catalog finishes",qa("state").optBoolean("catalogBlocked"))
+   assertEquals("Catalog must remain unchanged",1000L,Pocket.tasks.first{it.id=="same-thread"}.activityAt)
+   assertTrue("Global notification feed must omit selected update",Pocket.notifications.none{it.s("thread_id")=="same-thread"})
+   val reads=qa("state").getJSONArray("reads").length()
+   repeat(3){main{Pocket.refresh()};Thread.sleep(600)};Thread.sleep(1500)
+   assertEquals("Unchanged head repeatedly fetched history",reads,qa("state").getJSONArray("reads").length())
+   qa("reset-history-head");main{Pocket.refresh()};await{has(3)&&!PocketTranscript.updating}
+   assertTrue("Restarted response missing from screen",device.wait(Until.hasObject(By.text("Fresh response 3")),4000))
+   val resetReads=qa("state").getJSONArray("reads").length();main{Pocket.refresh()};Thread.sleep(1600)
+   assertEquals("Same restarted head repeatedly fetched history",resetReads,qa("state").getJSONArray("reads").length())
+   qa("head-live-update");await{has(4)}
+   assertTrue("Live response missing from screen",device.wait(Until.hasObject(By.text("Fresh response 4")),4000))
+   main{Pocket.refresh()};Thread.sleep(1600)
+   assertEquals("Already delivered live head polled history",resetReads,qa("state").getJSONArray("reads").length())
+   qa("head-only-update");qa("fail-read-permanent");main{Pocket.refresh()}
+   await{PocketTranscript.readError.contains("Synthetic history permission rejected")&&!PocketTranscript.updating}
+   val deniedReads=qa("state").getJSONArray("reads").length()
+   repeat(3){main{Pocket.refresh()};Thread.sleep(600)};Thread.sleep(1600)
+   assertEquals("Permanent rejection was repeatedly retried by head probes",deniedReads,qa("state").getJSONArray("reads").length())
+   assertTrue("Permission error erased last readable response",device.hasObject(By.text("Fresh response 4")))
+   assertEquals("Freshness recovery submitted work",0,qa("state").getJSONArray("replies").length())
+   assertEquals("Freshness recovery erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+  }finally{qa("release-catalog")}
  }
  @Test fun fetchedNotificationRepairsMissedEventWithUnchangedCatalog(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
@@ -502,23 +765,23 @@ class TranscriptRefreshNativeTest {
   assertFalse("Reading setup remained at transcript end",device.hasObject(By.textContains("Older reading position 29:")))
   val retained=PocketTranscript.rows.map{it.s("id")}
   qa("fail-read");main{Pocket.refreshDetail()}
-  await{!PocketTranscript.loading&&Pocket.error.contains("Synthetic history refresh unavailable")}
+  await{!PocketTranscript.loading&&PocketTranscript.readError.contains("Synthetic history refresh unavailable")}
   assertEquals("Failed refresh discarded local history",retained,PocketTranscript.rows.map{it.s("id")})
   assertTrue("History refresh error hidden",device.wait(Until.hasObject(By.textContains("Synthetic history refresh unavailable")),2000))
   assertTrue("Read recovery inaccessible",device.wait(Until.hasObject(By.text("Reload conversation")),2000))
   device.findObject(By.text("Reload conversation")).click()
-  await{!PocketTranscript.loading&&Pocket.error.isBlank()}
+  await{!PocketTranscript.loading&&PocketTranscript.readError.isBlank()}
   assertEquals("Read retry erased typing","Voice must keep this draft",prefs.getString("draft:same-thread",null))
   val readsBeforeRejected=qa("state").getJSONArray("reads").length()
   qa("fail-read-permanent")
   main{Pocket.refreshDetail();Pocket.refreshDetail()}
-  await{!PocketTranscript.loading&&Pocket.error.contains("Synthetic history permission rejected")}
+  await{!PocketTranscript.loading&&PocketTranscript.readError.contains("Synthetic history permission rejected")}
   assertFalse("Permission failure still permits automatic reads",PocketTranscript.automaticRetryAllowed)
   assertFalse("Rejected coalesced read left perpetual Updating messages",PocketTranscript.updating)
   Thread.sleep(900)
   assertEquals("Rejected read retried unchanged credentials",readsBeforeRejected+1,qa("state").getJSONArray("reads").length())
   device.findObject(By.text("Reload conversation")).click()
-  await{!PocketTranscript.loading&&Pocket.error.isBlank()}
+  await{!PocketTranscript.loading&&PocketTranscript.readError.isBlank()}
   assertTrue("Explicit successful reload did not restore automatic pagination",PocketTranscript.automaticRetryAllowed)
 
  }

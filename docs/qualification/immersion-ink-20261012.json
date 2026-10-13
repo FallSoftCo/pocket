@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-12",
+  "status": "alpha84-authenticated-updater-published-phone-unverified",
+  "baseline": {
+    "test": "ImmersionInkNativeTest#unchangedInkDoesNotDimDuringComplementaryWipe",
+    "result": "fails",
+    "seconds": 2.769,
+    "glyphRedBefore": 1.0,
+    "glyphRedDuring": 0.7490196,
+    "phase": 0.071625344
+  },
+  "fix": "Complementary masks add inside an isolated transparent group; the group composites normally onto the screen.",
+  "native": {
+    "result": "pass",
+    "seconds": 2.349,
+    "scenarios": [
+      "white ink on black",
+      "colored ink on gray"
+    ],
+    "assertions": [
+      "Common glyph red intensity retained within 0.035",
+      "Common glyph green/blue tint retained within 0.035"
+    ]
+  },
+  "limits": [
+    "Native synthetic SwiftShader emulator raster measurement",
+    "Physical handset install and frame pacing unverified",
+    "Paragraph reflow remains a separately reproduced open failure",
+    "No full human-perception or motion review claimed"
+  ],
+  "delivery": {
+    "versionCode": 102,
+    "versionName": "0.5.0-alpha.84",
+    "status": "published",
+    "debugUnitTests": 333,
+    "releaseUnitTests": 333,
+    "lints": "both pass",
+    "signedBuilds": "both pass",
+    "qualificationBuilds": "pass",
+    "nativeInstalledVersionCode": 102,
+    "privateCompatibleApkSha256": "4d720a1508df247523b3af8ea689a222640832652f2f03f76afab53404a4fc3b",
+    "authenticatedUpdater": "offers102 for existing signer/code93",
+    "backendRestart": "none"
+  }
+}

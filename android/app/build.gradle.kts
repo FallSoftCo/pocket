@@ -4,7 +4,7 @@ android {
     compileSdk = 36
     testBuildType = "qualification"
     defaultConfig { applicationId = "co.fallsoft.pocket"; minSdk = 28; targetSdk = 36; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 91; versionName = "0.5.0-alpha.73" }
+        versionCode = 112; versionName = "0.5.0-alpha.94" }
     signingConfigs {
         if (System.getenv("POCKET_SIGNING_STORE") != null) {
             create("release") {
@@ -44,6 +44,7 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
     implementation("org.commonmark:commonmark:0.27.1")
+    implementation("org.commonmark:commonmark-ext-gfm-tables:0.27.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
     androidTestImplementation("androidx.test:runner:1.6.2")

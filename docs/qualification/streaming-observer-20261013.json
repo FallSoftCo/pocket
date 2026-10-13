@@ -1,0 +1,20 @@
+{
+  "state": "native-observer-corrected",
+  "cause": "UiObject2 reference became stale while streaming and viewport settled.",
+  "correction": "Fresh hierarchy snapshots with supported cache clearing and consecutive stable bounds; original 24-pixel anchor and no forced-tail assertions retained.",
+  "nativeEvidence": {
+    "state": "passed",
+    "completed": [
+      "HistoryReadingNativeTest#growingResponseKeepsItsNewestPassageVisible"
+    ],
+    "apkSha": "de424216120a234049a3653c5c5a5bbc0df1d44d4a3a4e2d8bbf5d686433b392",
+    "testSha": "e7d35b4d055e7f565c205c60657ded093eb1a5c2bd58e716dab8374394cb9e8c",
+    "startedAt": 1791873146.3597589,
+    "scope": "Same held alpha93 qualification app APK. Fresh immutable native hierarchy and settled anchor observation: growing output follows tail until a reader scrolls, then subsequent deltas preserve the earlier reading passage; zero worker commands.",
+    "current": "HistoryReadingNativeTest#growingResponseKeepsItsNewestPassageVisible",
+    "fixtureStopped": true,
+    "fixturePid": 1331360,
+    "finishedAt": 1791873163.9519053
+  },
+  "release": "Previous failed release receipt preserved; no publication; fresh qualification required."
+}

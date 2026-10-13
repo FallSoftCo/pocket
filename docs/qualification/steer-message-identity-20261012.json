@@ -1,0 +1,24 @@
+{
+  "status": "backend-deployed-phone-unverified",
+  "cause": "Active-turn steer requests omitted the saved send identity although new-turn requests included it.",
+  "change": "Carry the same outgoing receipt ID as clientUserMessageId through steer and explicit no-active-turn fallback.",
+  "protocolEvidence": "Generated installed Codex 0.162.0 TurnSteerParams schema declares optional clientUserMessageId; no live user steer was submitted to test.",
+  "checks": {
+    "real_http_mock_runtime_suites": 12,
+    "coverage": [
+      "active steer carries receipt identity",
+      "queued promotion preserves exact identity",
+      "accepted receipt not repeated in routine outgoing history",
+      "failed and unknown recovery preserves original send identity",
+      "no model override while steering"
+    ],
+    "full_backend_suite": 477
+  },
+  "remaining": [
+    "Actual phone interaction on alpha79"
+  ],
+  "deployment": {
+    "source": "a1904ce",
+    "verified": "Authenticated status connected; original Codex PIDs preserved; no pending sends or active voice turns at restart; three unknown voice receipts preserved"
+  }
+}

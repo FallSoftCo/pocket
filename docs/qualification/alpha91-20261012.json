@@ -1,0 +1,48 @@
+{
+  "state": "published-phone-install-unverified",
+  "versionCode": 109,
+  "versionName": "0.5.0-alpha.91",
+  "sourceCommit": "6a7fc06e924f94efc49b29f7c792d6b09bed0e4d",
+  "recordedAt": "2026-10-13T01:45:36.355248+00:00",
+  "changes": [
+    "Literal team names and parameters bypass vocabulary syntax.",
+    "Room/direct headings use typed immersion templates.",
+    "Filter retains clipped surviving reading passage; cache-fresh native position checks.",
+    "Existing history/navigation/voice/immersion functionality validated by frozen native gate."
+  ],
+  "checks": {
+    "debugUnitTests": 365,
+    "releaseUnitTests": 365,
+    "unitFailures": 0,
+    "lints": "debug and release passed",
+    "nativeJourneys": 48,
+    "signedReview": "Exact compatible APK native search survived8sec; screenshot inspected.",
+    "publicSourceFiles": 1084
+  },
+  "compatibleApk": {
+    "sha256": "00c65c738c779606e924c94a80de4f6a70aff389e480218a49672c93ac3ac916",
+    "bytes": 76510172
+  },
+  "publication": {
+    "guardedChannelTransition": "108 to109",
+    "notificationCount": 1,
+    "notificationId": 1575
+  },
+  "galleryCard": "nextcomp-alpha91-signed-review",
+  "limits": [
+    "Phone APK verified in Downloads; installed version106. No installation claim.",
+    "No physical hardware/120Hz verification.",
+    "Remaining Team control follow-up isolated, unbuilt and not part of this release.",
+    "Incremental packaging gap tracked; frozen APK not rewritten."
+  ],
+  "filterDiagnosis": "Earlier apparent226px jump and missing-text claim withdrawn: measured pixel masks and cache-fresh native bounds proved stale automation metadata. Original receipts preserved.",
+  "phoneDelivery": {
+    "state": "file-verified-install-pending",
+    "filename": "NextComp-alpha91.apk",
+    "sha256": "00c65c738c779606e924c94a80de4f6a70aff389e480218a49672c93ac3ac916",
+    "bytes": 76510172,
+    "installedVersionCodeAtVerification": 106,
+    "verifiedAt": "2026-10-13T01:56:34.772678+00:00",
+    "method": "Termux SSH transfer and independent hash/size read; no installer foreground or pairing reset"
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "status": "native-candidate-verified-not-published",
+  "date": "2026-10-12",
+  "behavior": "One viewport clock with fixed local sweep timing and spatially staggered reading-order onsets; controls and conversation text share the wave.",
+  "confirmedDefects": [
+    "Fixed paragraph deadline accelerated later lines as line count increased.",
+    "Empty annotated boundary slices introduced phantom phrase reservations; paired body forms had7 versus8 markers, rejected alignment, and stayed in fallback text.",
+    "Controls initially reserved only the currently static language when motion was disabled; reserve both forms to keep bounds stable."
+  ],
+  "repair": "Skip empty boundary slices, retain target-grammar lexical slots, use fixed paired forms in shared native renderer, select semantics/actions according to local coverage.",
+  "sourceSha256": {
+    "android/app/src/main/java/co/fallsoft/pocket/BilingualLabel.kt": "d61a8c40ddf0a7a49fae32a7e9e39f28b68242e57fffd86f48ccb7e15a308b65",
+    "android/app/src/main/java/co/fallsoft/pocket/BlendImmersionText.kt": "6790f36e8b80f91f80e4859a66b4976e7fabd9559fc944845b2135b183282fc5",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt": "38b51d4805c713ac56dc20b92562051a6955af0fb722e230bea4623fcce05738",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionReadingWave.kt": "06b832bf3747a40ec3d4a1d5713fbe3e6f4bc8b34f9896442db390230e69ac56",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionReadingWaveHost.kt": "6b535af949f532b7717eb1596d5cdf3704eb98ae52b0d5228cf7cfbd67c8958e",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionSelection.kt": "2cfd152ea15c27855f0628a63e3ccefcf3729be99f9d74f8a80d8493e4dd3826",
+    "android/app/src/main/java/co/fallsoft/pocket/ImmersionSharedWipe.kt": "47af91e33b1fec080e7bdf0827431a6acd87feb7335405b11717aa664798e577",
+    "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt": "c2c4fa43bb1e01b908b8353086d5a88aa880a02fa75879b36619cd0ef9cc66f1",
+    "android/app/src/main/java/co/fallsoft/pocket/ReservedImmersionText.kt": "1a0b4f7dffbc5fbccd0d81d2e1950004537db0db9051b4a385b76d79ad8f76a9",
+    "android/app/src/main/java/co/fallsoft/pocket/SharedInlineImmersionText.kt": "11628c53e756c077579454fbb167b41b954db237e6cc21c13532c828de1934cc"
+  },
+  "nativeEvidence": {
+    "controlled": {
+      "passed": true,
+      "checks": [
+        "Body and controls both readable forms",
+        "Fixed native bounds",
+        "Button action",
+        "Selection-owner clock pause",
+        "Reduced motion stops clock and shows target"
+      ],
+      "clock": "Explicitly driven Compose test display clock"
+    },
+    "natural": {
+      "passed": true,
+      "checks": [
+        "Real Android display clock without Compose test-clock rule",
+        "Repeated readable body/control forms",
+        "Fixed native bounds",
+        "One native button tap invokes action"
+      ],
+      "durationSeconds": 26.393
+    },
+    "regressions": {
+      "passed": true,
+      "checks": [
+        "Fresh inline callbacks and visibility",
+        "Reserved blank-space tap exclusion",
+        "One ordered clipboard flow",
+        "Complementary ink coverage",
+        "Fixed target-grammar lexical geometry"
+      ]
+    }
+  },
+  "media": {
+    "width": 720,
+    "height": 1616,
+    "capturedSeconds": 28.779778,
+    "decodedFrames": 1167,
+    "review": "48 samples at2fps inspected; this is sampled visual review, not a claim that every frame was watched or physical phone FPS measured.",
+    "privateReviewCard": "nextcomp-reading-wave-native-review-r01"
+  },
+  "phone": {
+    "observedVersionCode": 104,
+    "installedApkSha256": "94db6d7fe92bb246aed7a2acad81acca37816ca346f5d4afb78a507262382d59",
+    "access": "Read-only Termux SSH; no install/input performed"
+  },
+  "remaining": [
+    "Full signed frozen release gate has not run on this source.",
+    "Physical phone interaction and frame pacing unverified.",
+    "Actual selection toolbar with moving wave, scrolling/reanchoring, IME, blackout and longer paragraphs still need integration qualification.",
+    "Reserved shorter vocabulary still leaves visible spacing; this is not final typographic polish.",
+    "Raw UI string coverage remains part of the broader UX audit."
+  ],
+  "retainedFailures": [
+    "r01 global-idle test-clock failure",
+    "r02 unadvanced virtual clock",
+    "r03 initial virtual frame setup",
+    "r04 andr05 actual body marker alignment rejection",
+    "Actual modern menu did not pause wave; original teardown-idle hang reconciled without app/service restart.",
+    "Focus-lifecycle experiment froze/copy passed but did not resume after touchscreen interaction; experiment removed.",
+    "ActionMode r01/r02: blackout restored native menu; wave correctly remained held, original test assumed no menu.",
+    "ActionMode r03: Back exited fixture activity; did not qualify menu dismissal.",
+    "ActionMode r04/r05: restored menu remained active after content-tap/copy-button followups.",
+    "Interactive baseline/fix: Select all offered, subsequent Copy unavailable; no completion claimed."
+  ],
+  "interactionFollowup": {
+    "status": "native menu pause/copy/resume passed; combined blackout/menu return still failing; release held",
+    "cause": "Compose 1.9 modern native context-menu provider bypasses legacy LocalTextToolbar wrapper.",
+    "repair": "Observe platform-owned ActionMode start/finish through Activity public callbacks; activity-scoped identities hold one shared wave until the actual menu finishes. Legacy toolbar wrapper retained. No internal Compose flags/reflection or menu replacement.",
+    "nativeMenuEvidence": {
+      "passedStages": [
+        "23 seconds natural body/control cycling and fixed bounds",
+        "Actual long-press / Select all acquires pause",
+        "750ms frozen native selection clock",
+        "Copy matches exactly one visible language flow",
+        "Native button action and clock resume before blackout"
+      ],
+      "fullJourneyPassed": false
+    },
+    "blackoutEvidence": {
+      "passedStages": [
+        "Blackout enters and pauses clock",
+        "Blackout exits and preserves input focus"
+      ],
+      "remaining": "Restored native menu remains active after tested copy/button interaction; no claim of completed blackout/menu resume. Native Back exited the artificial activity and is not proof of menu dismissal."
+    },
+    "fixtureCleanup": "Motion disabled in inner finally before ActivityScenario idle cleanup. All subsequent failed native attempts produced terminal receipts without app/service kills.",
+    "rejectedExperiment": "Focus-only pause retained focus after touch; removed.",
+    "api": "https://developer.android.com/reference/android/app/Activity#onActionModeStarted(android.view.ActionMode)",
+    "buildChecks": {
+      "qualificationApk": true,
+      "qualificationInstrumentationApk": true,
+      "qualificationUnitTests": true,
+      "qualificationLint": true,
+      "fullSignedReleaseGate": false,
+      "physicalPhoneDelivery": false
+    },
+    "nextEvidence": {
+      "actualUi": "Captured restored-menu and unavailable-copy native screenshots; restored menu is genuinely visible, not stale registry bookkeeping.",
+      "scopeCorrection": "Earlier fixture disabled phrase help. That path cannot establish help-tap interference. Interactive fixture now enables normal conversation phrase help.",
+      "fixtureIdleFix": "Blackout entry uses runOnMainSync, not ActivityScenario.onActivity idle waiting during continuous frames. Running-state hierarchy captures removed.",
+      "assistedRun": "One noninteractive journey reported OK after an operator blank-area tap unblocked idle waiting; retained as assisted diagnosis, not unattended qualification.",
+      "interactiveBaseline": "Native long press opens Select all, but Copy disappears after Select all. Baseline and candidate both fail; full journey remains unqualified.",
+      "boundedTapRepair": "AwaitPointerEventScope timeout prevents a long hold from dispatching language-help tap on release. Speculative focus-clearing removed.",
+      "regressions": {
+        "actualNativeCasesPassed": 5,
+        "seconds": 19.079,
+        "checks": [
+          "Fresh visible inline callbacks",
+          "Reservation blank-space hit exclusion",
+          "Single ordered clipboard flow",
+          "Complementary ink coverage",
+          "Target grammar fixed positions"
+        ]
+      },
+      "checks": "Qualification APK/instrumentation APK, unit checks and lint passed; full signed gate and physical phone unverified."
+    }
+  }
+}

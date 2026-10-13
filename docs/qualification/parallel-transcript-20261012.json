@@ -1,0 +1,32 @@
+{
+  "versionCode": 104,
+  "versionName": "0.5.0-alpha.86",
+  "state": "published to authenticated update channel; physical install unverified",
+  "change": "Independent disk restoration and current history fetching, preserving cached history and user reading intent",
+  "checks": {
+    "debugUnitTests": 339,
+    "releaseUnitTests": 339,
+    "nodeTests": 485,
+    "nativeCases": 11,
+    "releaseGateTests": 5,
+    "debugLint": "pass",
+    "releaseLint": "pass"
+  },
+  "measurement": {
+    "freshVisibleMs": 2268,
+    "syntheticLatestHistoryDelayMs": 1700,
+    "cacheHeldAtFreshPaint": true
+  },
+  "limits": [
+    "Synthetic initialized-app emulator evidence, not physical phone roundtrip",
+    "Physical installation and optimized APK UI runtime unverified",
+    "Immersion line geometry remains open"
+  ],
+  "releaseArchitecture": "Artifact-bound source, build, signature and native receipts with atomic version-CAS publication; reject failed instrumentation even with process exit zero",
+  "publication": {
+    "versionCode": 104,
+    "previousVersionCode": 103,
+    "authenticatedMetadataVerified": true,
+    "privateApkSha256": "94db6d7fe92bb246aed7a2acad81acca37816ca346f5d4afb78a507262382d59"
+  }
+}

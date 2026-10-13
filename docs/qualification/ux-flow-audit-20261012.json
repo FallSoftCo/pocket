@@ -1,0 +1,127 @@
+{
+  "scope": "Ongoing full UX goal; no overall completion claim",
+  "source": "52dff10",
+  "publishedVersion": "alpha80/code98",
+  "requirementsCatalogCount": 167,
+  "evidenceRule": "A catalog status or unit test is not proof of deployed physical interaction.",
+  "flows": {
+    "chronologyFreshness": {
+      "status": "partial",
+      "evidence": [
+        "transcript-position-index-20261012.json",
+        "transcript-provider-evidence-20261012.json"
+      ],
+      "remaining": [
+        "physical installed interaction",
+        "broader reconnect and stream combinations"
+      ]
+    },
+    "sessionNavigation": {
+      "status": "native verified; physical unverified",
+      "seconds": 19.042,
+      "assertions": [
+        "blocked old-chat refresh cannot overwrite selection or rows",
+        "new-chat updates remain visible",
+        "reply routes to selected thread",
+        "both saved drafts retained",
+        "actual list-card taps open respective threads"
+      ],
+      "scope": "disposable emulator and synthetic backend; not real user messages"
+    },
+    "retainedHistoryScrolling": {
+      "status": "partial",
+      "evidence": "Legacy native cache anchor and short-page qualification exists; physical sustained gestures remain unverified"
+    },
+    "workingWaitingErrors": {
+      "status": "requires integrated native flow audit",
+      "remaining": "Current-release actual running and pending-question states plus physical interaction",
+      "historyReadRecovery": {
+        "status": "native verified; physical unverified",
+        "seconds": 17.735,
+        "assertions": [
+          "cached messages survive failed and malformed reads",
+          "Updating messages indicator visible",
+          "transient read retries without another event",
+          "successful read clears error",
+          "401 rejection stops repeated reads",
+          "zero submitted work"
+        ]
+      }
+    },
+    "voiceKeyboardErgonomics": {
+      "status": "controls native verified; successful voice delivery and physical interactions unverified",
+      "remaining": "Foreground hardware keys with IME, stop/send origin, playback volume, blackout and drafts",
+      "directChatNative": {
+        "result": "pass",
+        "seconds": 11.611,
+        "assertions": [
+          "injected foreground volume keys start and stop capture with IME open",
+          "intentional playback mute unchanged by capture keys",
+          "inline playback slider changes volume",
+          "slider keeps IME open",
+          "draft retained",
+          "capture failure visible",
+          "zero submitted work"
+        ],
+        "limits": [
+          "synthetic provider failure; no successful transcription/send proof",
+          "emulator key injection; no physical button qualification"
+        ]
+      },
+      "coordinatorNative": {
+        "result": "pass",
+        "seconds": 15.909,
+        "assertions": [
+          "2x text and Italian controls",
+          "mic tap directly starts capture",
+          "second tap stops capture",
+          "coordinator target retained",
+          "volume keys start/stop with IME open",
+          "draft and IME retained",
+          "inline volume available",
+          "zero submitted work"
+        ],
+        "limits": "Synthetic provider failure; no successful transcription/send proof or physical hardware qualification"
+      }
+    },
+    "notificationsAudio": {
+      "status": "read-state and caption routing native verified; physical/audio quality incomplete",
+      "remaining": "Session source identity, unseen state, read clearing and interruption/catch-up without opaque backlog",
+      "nativeChecks": {
+        "versionCode": 99,
+        "versionName": "0.5.0-alpha.81",
+        "presentationReadState": {
+          "result": "pass",
+          "seconds": 32.146,
+          "assertions": [
+            "fetch does not consume unseen update",
+            "latest visible content acknowledges appropriate update",
+            "blackout does not consume updates",
+            "background does not consume updates",
+            "no redundant catch-up acknowledgement"
+          ]
+        },
+        "retainedSpokenNotification": {
+          "result": "pass",
+          "seconds": 6.392,
+          "assertions": [
+            "latest spoken passage retained in notification",
+            "notification content intent opens exact source",
+            "draft preserved",
+            "zero replies submitted"
+          ]
+        }
+      }
+    },
+    "accessibleImmersion": {
+      "status": "incomplete",
+      "remaining": "Reading-direction transitions and common controls across screens; perceptual timing, layout stability and reduced motion"
+    },
+    "deviceDelivery": {
+      "status": "unverified",
+      "evidence": "Authenticated private updater offers alpha80; last verified phone alpha75",
+      "remaining": "Compatible installation and real-device interaction",
+      "currentProbe": "SSH timeout; helper found no verified TCP or authorized Pixel USB across5037/5039; no network toggles, resets or installs performed"
+    }
+  }
+}

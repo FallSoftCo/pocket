@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "state": "native-history-race-pass",
+  "elapsedSeconds": 15.265,
+  "realBoundaries": [
+    "Android foreground voice service",
+    "HTTP request/response",
+    "Environment switching and shared history UI state"
+  ],
+  "substitutedBoundaries": [
+    "Three synthetic authenticated loopback hosts",
+    "Controlled history response delay"
+  ],
+  "verified": [
+    "Service active while original-host history held",
+    "Switch to other remote environment before response release",
+    "Late original-host history absent from selected environment",
+    "Existing transcript/draft/outgoing/notification isolation journey still passes"
+  ],
+  "limits": [
+    "Does not independently prove action-only guard",
+    "No audio recording/transcription/speech provider journey",
+    "Not production optimized APK or handset evidence"
+  ],
+  "priorFailure": {
+    "reason": "Fixture incorrectly assumed one total history read; existing coordinator history reads made that predicate impossible",
+    "classification": "Invalid scenario counter assumption, not established product failure"
+  },
+  "logs": [
+    {
+      "path": "/tmp/nextcomp-env-voice-native.log",
+      "sha256": "df7607d1714af1127b5e903a68d9b57a07a97dc5c288f752f6a8aa0eb87c806e"
+    },
+    {
+      "path": "/tmp/nextcomp-env-voice-r02-native.log",
+      "sha256": "364153a735617389b07dbf7d4c0d066c2c1f661787e87abb319e678d91ecbf31"
+    }
+  ]
+}

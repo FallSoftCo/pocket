@@ -1,0 +1,17 @@
+{
+  "state": "publication-held-by-visual-reading-flow-defect",
+  "sourceCommit": "1d09e8a",
+  "nativeCasesPassed": 29,
+  "unitTestsPerVariant": 354,
+  "optimizedApkSha": "59d6b070be765aca15b8d29c8c7f4870dcdd6cab49881cc83b3b30ff234bd315",
+  "videoSeconds": 59.180911,
+  "captureFramesReported": 1104,
+  "findings": [
+    "Common prefix Please isolated on its own line by atomic long-phrase reservation",
+    "English form leaves large reservation gaps before comma",
+    "Native correctness tests do not establish comfortable paragraph reading"
+  ],
+  "navigation": "Pairing followed by conversation intent opens requested thread without reopening pairing",
+  "physicalPhone": "unverified",
+  "updateChannel": "unchanged alpha86 code104"
+}

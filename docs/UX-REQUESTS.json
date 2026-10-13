@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-07",
+  "updated": "2026-10-13",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,18 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "visible-catalog-startup-20261012",
+      "request": "Initial loading must visibly communicate progress and actionable failure without hiding existing sessions during refresh",
+      "status": "native-source-qualified-release-pending",
+      "evidence": "docs/qualification/catalog-startup-20261012.json"
+    },
+    {
+      "id": "consumed-pairing-navigation-release-20261012",
+      "request": "Consumed one-use pairing prefill must never hijack later conversation navigation; pairing cancel/connect stay reachable with keyboard and validation errors",
+      "status": "native-source-qualified-release-pending",
+      "evidence": "docs/qualification/pairing-intent-release-20261012.json"
+    },
     {
       "id": "pending-question-filter-navigation-20261011",
       "request": "Answer pending question must navigate directly to the actionable question when Important is enabled, using stable row identity after the full transcript commits. Preserve drafts and do not answer or skip automatically.",
@@ -2268,31 +2280,325 @@
         "Disposable native same-ID history, drafts and frozen reply routing",
         "Real authenticated HTTPS disposable pairing on migration backend"
       ]
+    },
+    {
+      "id": "selected-history-head-20261011",
+      "request": "Open conversation must recover missed updates outside bounded catalog and notification feeds without repeatedly fetching unchanged histories or starting workers.",
+      "state": "implementing",
+      "evidence": {
+        "controlSource": "de0f6b8",
+        "nativeControlFailedSeconds": 24.979,
+        "historyReads": 1,
+        "backendRevision": 2,
+        "workReplies": 0,
+        "actualReportedPhoneFreezeReproduced": false
+      },
+      "implementation": "Per-thread process-epoch update marker from observed timeline events; reused authenticated status request, snapshot and live-event evidence; environment and concurrent-read guards.",
+      "delivery": "Not released or deployed.",
+      "sameTurnGapQualification": {
+        "control": "native failure 24.370s; latest tool received, intermediate answer absent; two recent reads only",
+        "fixed": "native pass 16.172s; automatic two-page bridge, canonical input/old answer/new answer/tool ordering, draft retained, zero submitted commands",
+        "delivery": "alpha74 installed; native interaction passed; physical reported-chat interaction not yet verified"
+      },
+      "deliveryEvidence": {
+        "android": "alpha74/code92 installed; checksum and13 protected settings verified",
+        "backend": "workstation9d818e4 authenticated head/live health verified; other environment backends unchanged",
+        "physicalFlow": "specific reported freeze not directly reproduced on handset"
+      }
+    },
+    {
+      "id": "history-event-reload-noise-20261012",
+      "status": "deployed-workstation",
+      "requirement": "Unsupported events must not cause conversation refresh churn or synthetic working state; preserve public output and thinking summaries",
+      "evidence": "439 backend tests,18 integrated focused tests, actual HTTP/head event test; control reproduces reload=true",
+      "qualification": "docs/qualification/history-event-filter-20261012.json",
+      "deployment": "69cfb2a; health/authenticated head and six preserved Codex runtime PIDs verified"
+    },
+    {
+      "id": "short-history-thumb-pull-20261012",
+      "status": "delivered-native-qualified",
+      "requirement": "A short recent history page must allow a pull toward older work without a button; opposite gesture must not load history; require another gesture for each further short page",
+      "qualification": "docs/qualification/short-history-pull-20261012.json",
+      "release": "alpha75/code93 installed; package/checksum and13 protected settings verified; emulator gestures qualified; handset gestures not yet verified"
+    },
+    {
+      "id": "transcript-message-identity-20261012",
+      "request": "Sent messages must appear once across live/history/cache reconstruction. Use stable scoped message identities, retain ordering/pagination anchors and intentional identical sends.",
+      "status": "qualified-update-published-phone-unreachable",
+      "evidence": "docs/qualification/transcript-message-identity-20261012.json"
+    },
+    {
+      "id": "streaming-end-anchor-20261012",
+      "request": "Newest streaming text must remain visible while following tall responses; deliberate earlier reading must preserve its passage during further output; pending questions remain immediately actionable.",
+      "status": "qualified-update-published-phone-unreachable",
+      "evidence": "docs/qualification/streaming-end-anchor-20261012.json"
+    },
+    {
+      "id": "transcript-ingress-and-cache-anchors-20261012",
+      "request": "Use one message identity across live-event novelty, display, position reconciliation and legacy cache anchors. Preserve reading position, new provider ordering evidence and deduplicated safe reads.",
+      "status": "qualified-update-published-phone-unreachable",
+      "evidence": "docs/qualification/transcript-ingress-and-cache-anchors-20261012.json"
+    },
+    {
+      "id": "single-send-transcript-projection-20261012",
+      "request": "Sending a message must not display it twice. Reconcile pending delivery, live provider events and history by exact identity, preserving drafts and distinct intentional sends.",
+      "status": "alpha82-published-native-qualified-phone-unverified",
+      "evidence": [
+        "docs/TRANSCRIPT-INVARIANTS.md",
+        "docs/qualification/single-send-projection-20261012.json"
+      ]
+    },
+    {
+      "id": "reading-position-identity-enrichment-20261012",
+      "request": "Identity reconciliation must preserve saved and active reading passages, pixel offset, follow intent and history-gap anchors.",
+      "status": "alpha83-published-native-qualified-phone-unverified",
+      "evidence": [
+        "docs/TRANSCRIPT-INVARIANTS.md",
+        "docs/qualification/reading-identity-20261012.json"
+      ]
+    },
+    {
+      "id": "immersion-complementary-ink-20261012",
+      "request": "Cascading immersion fades must retain readable ink and avoid a dip toward black or background-dependent brightening.",
+      "status": "alpha84-published-native-pixel-qualified-phone-unverified",
+      "evidence": [
+        "docs/IMMERSION-RENDERING.md",
+        "docs/qualification/immersion-ink-20261012.json"
+      ]
+    },
+    {
+      "id": "reading-position-lightweight-persistence-20261012",
+      "request": "Thumb history browsing must not rewrite entire retained transcripts on every settled position change; preserve positions, drafts, environment scope and restart recovery.",
+      "status": "alpha85-published-real-gesture-and-restart-qualified-phone-unverified",
+      "evidence": [
+        "docs/TRANSCRIPT-INVARIANTS.md",
+        "docs/qualification/reading-position-journal-20261012.json"
+      ]
+    },
+    {
+      "id": "duplicate-send-evidence-20261012",
+      "request": "One sent message must display once; preserve independent repeated sends, source-scoped identity and actionable unknown-delivery state. Investigate reported handset duplication rather than masking equal text.",
+      "status": "backend deployed; real projection native test passed; specific handset duplication and installed build unverified",
+      "evidence": "docs/qualification/send-identity-evidence-20261012.json"
+    },
+    {
+      "id": "parallel-cold-history-release-gate-20261012",
+      "request": "Current messages must load without waiting for disk history; retain all local history, reading position and drafts; duplicates require stable message identity across live/history/outbox. Publish only checked artifacts.",
+      "status": "published-alpha86-code104-phone-install-unverified",
+      "evidence": "docs/qualification/parallel-transcript-20261012.json"
+    },
+    {
+      "id": "inline-immersion-shared-layout-20261012",
+      "request": "Inline cycling must keep reading geometry, cascade in reading direction, preserve visible phrase ownership, fresh in-place actions, native accessibility and bounded dense layouts.",
+      "status": "alpha88-authenticated-update-published-phone-installation-pending",
+      "evidence": "docs/qualification/shared-inline-layout-20261012.json",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
+    },
+    {
+      "id": "durable-send-identity-20261012",
+      "request": "One visible message for each send across receipt/event/history/cache/reconnect/restart, preserving repeated intentional inputs and actionable uncertain delivery. Production identity architecture and fault-injection qualification.",
+      "status": "narrow-backend-active-phone-regression-not-yet-verified",
+      "evidence": "docs/qualification/durable-send-identity-20261012.json"
+    },
+    {
+      "id": "cache-observation-authority-20261012",
+      "request": "Current observed message content and provider evidence must win late local-cache restoration; retain local history and reading position across asynchronous loads and runtime counters.",
+      "status": "qualified-source-unreleased-phone-cause-unverified",
+      "evidence": "docs/qualification/cache-observation-authority-20261012.json"
+    },
+    {
+      "id": "immersion-owned-selection-20261012",
+      "request": "Normal native text selection and copying must return one clean visible flow, preserving original zero-width characters and never leaking generated layout placeholders.",
+      "status": "alpha88-authenticated-update-published-phone-installation-pending",
+      "evidence": "docs/qualification/immersion-owned-selection-20261012.json",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
+    },
+    {
+      "id": "alpha87-expanded-release-qualification",
+      "request": "Deliver verified cache/identity and shared-immersion changes through a compatible signed update. Require all 26 new/existing critical native cases against one exact staged APK; preserve source, pairing and ongoing work.",
+      "status": "superseded-by-qualified-alpha88-publication",
+      "evidence": "docs/qualification/alpha87-staged-20261012.json",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
+    },
+    {
+      "id": "all-surface-control-immersion-20261012",
+      "status": "static-coverage-extension-in-progress-real-screen-cycle-audit-pending",
+      "request": "All visible app strings and controls participate in inline cycling immersion with reading-direction cascading wipe; preserve control actions and single-flow text.",
+      "evidence": "Exact optimized alpha88 settings observed for40.6seconds: Backend and Talk cycled, but App updates, Check for updates, Italian immersion and Settings remained Italian in all seven samples. Many workflow strings remained English with synthetic translation unavailable.",
+      "required": [
+        "Bounded visible-control cycle coverage without per-label queue starvation",
+        "Coverage inventory for static and dynamic UI strings across screens",
+        "Native rendered-state checks preserving tap actions",
+        "Recorded transition review; physical behavior distinct"
+      ],
+      "release": "Alpha88 is published, superseding the old hold statement. Additional33 authored catalog rows are a new unreleased candidate.",
+      "coverageFollowup": "Source inventory found33 missing literal contextual mappings. Added target/support scaffolds without runtime translation calls; dynamic branches, interpolated values and raw Text need separate coverage evidence."
+    },
+    {
+      "id": "immersion-target-grammar-position-scaffold",
+      "status": "alpha88-authenticated-update-published-phone-installation-pending",
+      "request": "Preserve target-language positions and grammar in the English translingual vocabulary layer, as in Mosis. Cycle vocabulary inside one shared target-grammar scaffold; retain grammar-specific target vocabulary where needed. No natural-English reordering, duplicate lines or modal help.",
+      "acceptance": [
+        "Paired lexical units retain identical positions and line breaks through cycling, reserving the larger counterpart per unit.",
+        "Validated target-segment meanings and agreement/grammar relations drive support; no inferred suffix grammar.",
+        "Grammar-bearing target words may remain while content vocabulary changes; canonical source, copying and submitted actions remain unchanged.",
+        "Native emulator motion review verifies positional mapping for noun/adjective order, contractions, negation and longer support terms."
+      ],
+      "evidence": "docs/qualification/target-grammar-scaffold-20261012.json",
+      "implementation": "Unified authored target/support catalog and lexical-slot projection for controls/templates/conversation spans. Grammar words retained; no natural-English reordering. Native geometry/action/clipboard/wipe checks pass; signed release and handset delivery pending.",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
+    },
+    {
+      "id": "immersion-continuous-reading-order-wave",
+      "status": "alpha88-authenticated-update-published-phone-installation-pending",
+      "request": "Equal local transition speed; continuously repeat staggered top-to-bottom reading-order waves with each language visible for a few seconds. Never compress later lines to finish together. Ordinary taps must not interrupt the wave or add a post-tap quiet delay; retain the action captured when pressed.",
+      "confirmedCause": "Fixed4200ms paragraph deadline scales local line speed by line count; controls separately use18s/6s language holds.",
+      "design": "docs/IMMERSION-CASCADE-DESIGN.md",
+      "delivery": "Alpha88/code106 published in authenticated update channel; compatible phone download checksum verified; phone last observed104. Physical installation and interaction remain unverified.",
+      "evidence": "docs/qualification/immersion-reading-wave-runtime-20261012.json",
+      "interactionFollowup": "Frozen alpha88 natural-clock production journey passes37.320s; all35 native cases, both signed builds/lints, motion diagnostics and separate optimized settings navigation pass. Experimental native alternative remains unused. Further visual refinement and handset acceptance remain open.",
+      "foundationEvidence": "docs/qualification/immersion-native-selection-foundation-20261012.json",
+      "tapFollowup": "Ordinary touch and post-tap quiet gates removed. Captured pointer-down actions survive language handoff; native selection holds its visible snapshot. Qualified and published in alpha88; physical interaction unverified.",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
+    },
+    {
+      "id": "markdown-native-tables",
+      "status": "alpha88-authenticated-update-published-phone-installation-pending",
+      "request": "Format Markdown tables correctly in ordinary and immersion conversations, with readable headers, aligned columns, preserved inline content and ergonomic horizontal overflow.",
+      "confirmedCause": "Core CommonMark parser is configured without the optional GFM table extension; both message renderers currently treat pipe rows as ordinary text.",
+      "delivery": "Alpha88/code106 published in authenticated update channel; compatible phone download checksum verified; phone last observed104. Physical installation and interaction remain unverified.",
+      "implementation": "Pinned GFM parser extension; typed cells/alignment/header/flattened offsets; shared ordinary/immersion renderer with reserved rendition widths, styled intrinsic sizing, readable word bounds, shared horizontal scroll and overflow thumb.",
+      "evidence": "docs/qualification/markdown-tables-20261012.json",
+      "latestReleaseEvidence": "docs/qualification/alpha88-continuous-taps-tables-20261012.json"
+    },
+    {
+      "id": "immersion-search-unbounded-layout-crash",
+      "request": "Tapping search crashes the installed app.",
+      "status": "published-alpha89-phone-file-verified-install-pending",
+      "evidence": "docs/qualification/search-alpha89-20261012.json",
+      "verification": "37 frozen native cases and actual compatible signed APK visual review passed;107 published and phone file hash verified; installed phone remains106.",
+      "reproduction": {
+        "installed_phone_version": 106,
+        "emulator_reproduction": "alpha88 optimized compatible APK, immersion enabled, search tap; fatal Constraints width 2147483647 at SharedInlineImmersionText.kt:140",
+        "cause": "Horizontal search filter row supplies unbounded width; aligned renderer used Infinity as fixed paragraph width.",
+        "fix": "Use natural reserved width of aligned runs when parent width is unbounded. Preserve bounded paragraph geometry, cycling and horizontal search controls.",
+        "phone_crash_stack": "unavailable; SSH verified installed version, ADB unavailable"
+      }
+    },
+    {
+      "id": "compact-command-run-groups",
+      "request": "Group runs between outputs into one expandable subtitle with thumb-reachable collapse all.",
+      "status": "published-alpha90-and-revalidated-alpha91-phone-install-unverified",
+      "constraints": [
+        "Preserve source rows and command/output details.",
+        "Do not group answers, questions, user messages or turn boundaries.",
+        "Preserve reading anchors when groups expand/collapse and history arrives.",
+        "Expanded runs stay lazy; no giant nested command column."
+      ],
+      "verification": "Frozen alpha91 native grouped-run journey passed expand/collapse, visible answer and immutable history checks; source already published in alpha90. Installed phone remains106 at last observation."
+    },
+    {
+      "id": "viewport-global-immersion-waterfall",
+      "request": "Words that never change need coverage; cascade must flow from global top to global bottom across containers.",
+      "status": "alpha90-published-native-qualified-phone-install-unverified",
+      "constraints": [
+        "One viewport clock and spatial frontier across controls and content.",
+        "Keep paired target grammar/support positions.",
+        "No provider polling or translation calls from animation.",
+        "Natural-clock emulator geometry/capture proof required; phone verification separate."
+      ],
+      "delivery": "Alpha90/code108 published after41 frozen native journeys,365 unit checks each debug/release and both lints. Compatible signed APK visually reviewed; notification1546 sent once. Phone installation unverified.",
+      "remaining": "Complete authored-string coverage and physical-handset motion/performance remain under audit."
+    },
+    {
+      "id": "compact-child-count-header-badge",
+      "request": "Replace space-consuming sub-agent subtitle with a tappable count/status badge in card header.",
+      "status": "alpha90-published-native-qualified-phone-install-unverified",
+      "constraints": [
+        "Retain agent results and direct/parent control availability.",
+        "Preserve environment-scoped expansion and paging preferences.",
+        "At least 48dp touch target without increasing existing header height.",
+        "No subtitle row when children are collapsed."
+      ],
+      "delivery": "Alpha90/code108 published after41 frozen native journeys,365 unit checks each debug/release and both lints. Compatible signed APK visually reviewed; notification1546 sent once. Phone installation unverified."
+    },
+    {
+      "id": "distinct-idle-card-surface-20261012",
+      "request": "Make idle sessions immediately distinguishable through lower brightness and saturation, preserving readable text and distinct active and input-blocked states; recency must not imply activity.",
+      "status": "alpha90-published-native-qualified-phone-install-unverified",
+      "evidence": "Native three-state capture reviewed: working color, idle dim/desaturated neutral, input-needed coral with Needs your input label. Frozen signed release published.",
+      "delivery": "Alpha90/code108 published after41 frozen native journeys,365 unit checks each debug/release and both lints. Compatible signed APK visually reviewed; notification1546 sent once. Phone installation unverified.",
+      "follow_up": "User still finds idle unclear: remove idle recency glow entirely, use cool near-black surface and opaque softer text; preserve bright working and coral input-needed states.",
+      "follow_up_status": "alpha92-published-native-and-optimized-reviewed-phone-installation-unverified",
+      "follow_up_evidence": "docs/qualification/alpha92-release-20261012.json"
+    },
+    {
+      "id": "immersion-draw-cache-20261012",
+      "request": "Continue polishing responsive global immersion without per-frame object churn or changing the waterfall, text legibility or taps.",
+      "status": "native-qualified-alpha92-candidate",
+      "evidence": "Matched existing natural native journey:55.4MB to44.1MB allocations; median draw4.52ms to3.29ms. Ink coverage, outgoing-word tap and native inline-link checks pass. Overall frame timing not proven improved; physical phone unverified."
+    },
+    {
+      "id": "compact-footer-paging-and-volume-20261013",
+      "request": "Replace the volume slider with one visible0/50/100percent cycling button; add seamless page-up/down controls in the reclaimed space; consolidate top footer controls into its bottom row; investigate and repair slow/laggy conversation rendering and scrolling.",
+      "status": "published-alpha93-phone-install-pending",
+      "constraints": [
+        "Preserve mute on mount, drafts, IME focus and hardware recording keys.",
+        "Page by the real visible reading viewport without a deliberate overlap; keep finger scrolling available.",
+        "Explicit paging is reader intent, not permission to drain historical pages or wake workers.",
+        "Preserve important filtering, clear runtime state, speech controls, settings/update access and source-bound navigation.",
+        "Measure actual conversation rendering before attributing lag; distinguish emulator from phone."
+      ],
+      "verification": "Native conversation/catalog/coordinator paging and0/50/100 volume/IME/draft journeys passed; optimized footer reviewed at1x/2x. Matched software-emulator performance results are mixed; lag is not declared fixed."
+    },
+    {
+      "id": "fold-all-operations-including-waits-20261013",
+      "request": "Fold waits and all such operations into the compact expandable run groups, rather than only selected tool types.",
+      "status": "published-alpha93-phone-install-pending",
+      "implementation": "Group canonical activity by turn and output boundaries, excluding public reasoning. Preserve messages, questions, user input, turn boundaries, source IDs, details and expanded passage state. Unknown future operation types group without a tool-name whitelist.",
+      "verification": "Frozen native run-group expansion/navigation/collapse journey passes with waits; all canonical operations group without a tool whitelist. Actual phone interaction pending."
+    },
+    {
+      "id": "paging-input-wave-reconnect-followup-20261013",
+      "request": "Page buttons must replace the viewport immediately, sit in ergonomic full-width footer regions, and clearly name the Important filter. Measure and fix input lag including immersion wave shaping/recomposition. Transient history refresh failures must not appear as immediate send/disconnected failures. Complete visible equivalents for conversation phrases without disrupting the global reading cascade.",
+      "status": "published-alpha94-phone-install-awaiting-unlock",
+      "evidence": "docs/qualification/alpha94-release-20261013.json",
+      "constraints": [
+        "Preserve drafts, source routing, actual delivery errors and history anchors.",
+        "Do not claim all untranslated words are animation failures; inspect source replacement coverage and rendered forms.",
+        "Use emulator integration journeys and measured performance, not unit count as release evidence."
+      ]
+    },
+    {
+      "id": "large-text-refresh-overlay-20261013",
+      "request": "The temporary Updating overlay overlaps the first passage at double text size. Put refresh state in the existing footer/status area without obscuring reading or shifting anchors.",
+      "status": "recorded-followup-not-released",
+      "evidence": "docs/qualification/alpha94-release-20261013.json"
     }
   ],
   "current_state": {
-    "latest_pushed_commit": "caa0fb3ead89463b3355af14b361f403571a2a94",
-    "published_release": "v0.5.0-alpha.34",
-    "server_tests": 222,
-    "android_tests": 194,
-    "phone_endpoint": "Termux SSH banner exchange currently times out; no verified ADB connection",
+    "latest_pushed_commit": "87fadae5dbdbe49f66140796290ac55666d5d345",
+    "published_release": "Private update channel0.5.0-alpha.93, version111",
+    "server_tests": 490,
+    "android_tests": 365,
+    "phone_endpoint": "Termux SSH verified; phone-adb found no verified TCP or authorized USB connection",
     "farm_preparation_job": "nextcomp-voxel-v01-prepare",
     "farm_source": "branding/voxel/source/build_symbols.py",
     "remote_asset_root": "/aosp/houdini/nextcomp/voxel-v01",
-    "owned_emulator": "Owned5562 restored app absence/font1/animator0/gestural and stopped; unrelated TV emulator preserved.",
+    "owned_emulator": "Owned emulator5620; compatible optimized alpha93 reviewed; disposable fixture stopped",
     "owned_fixture_port": "Owned19997 stopped and18880 reverse removed; shared ADB preserved.",
-    "installed_development_version": "Fresh installed base SHA verifies alpha32/code50 db93804c8e840204994b789dd115edc961b19752de700d64727791efd718463b",
+    "installed_development_version": "Phone package110 last verified; alpha93 file verified in Downloads, installation pending",
     "farm_geometry_revision": "v05 cubic equal-XYZ N",
     "native_uhd_masters": "Completed and published: 18 native 3840 RGBA EXRs, 38 PNG master/HD exports, 16 distinct cubic rotation frames, verified Indie/XPU",
     "mission_visual_review": "Stable XY sentences, direct conversation/back, no scrolling or thinking; actual enlarged-text footer reviewed at font scale 2",
     "list_visual_review": "dense cards invariant height 284px across empty/short/long/thinking/active/idle; finger hold positions stable",
     "native_motion": "37 original modeled controls, 120-frame60fps swivel assets and160-frame Codex/Psychology/N turns; display-clock playback, live reduced motion and background fallback. Real Fold cadence unqualified.",
-    "phone_install": "Last independent installed observation alpha32/code50;52 installation not verified",
-    "qualification": "Alpha34:194 Android tests per variant/39 suites, both lints/signed builds, exact-source CI37559593224 pass; native synthetic body roundtrips, previews, titles, controls and steady background qualified.",
+    "phone_install": "Compatible alpha93 APK SHA256/62112756-byte size verified over SSH. One update notification accepted by FCM; phone remains110.",
+    "qualification": "Alpha94:52 frozen native journeys, both signed variants, both lints and actual signed UI/motion review passed; published112. Phone hash verified; install awaits Android unlock.",
     "speech_caption_review": "Persistent banner and existing expanded view synthetic qualified; alpha15 anchored popup/source switching in progress.",
     "gallery_review": "Alpha34 native cycling review;1890-card desktop/mobile/reduced-motion/reload checks pass.",
     "native_audio_qualification": "Actual native account foreground and optimized cold screen-off rendering/playback verified, no mic/task calls. Fresh cold rendering15.425sec; physical secure-keyguard, push receipt and perceptual quality separate.",
-    "update_delivery": "Update51 offered for both maintained signing identities; announcement598 once, handset receipt unverified.",
+    "update_delivery": "Update108 published; announcement1546 once; physical receipt unverified",
     "update_qualification": "Actual authenticated download and Android system upgrade to a newer same-signer APK verified on owned emulator; pairing retained; invalid candidates rejected and staged state/late requests preserved",
     "remaining_source": "Alpha20 ten backend/package files synced to phone with exact hashes, private backup, protected state unchanged and phone-local backend stopped.",
     "session_list": "Genuine recent/reactivated work automatically promotes to bottom; concurrent ties stable; touching/scrolling holds movement. Backend deployed without restarting stock workers.",
@@ -2305,7 +2611,9 @@
     "qualified_build": "0.5.0-alpha.34 / code52",
     "candidate_release": "Alpha34 published and52 offered; handset receipt and installation unverified",
     "candidate_android_tests": 194,
-    "delivery_audit": "All111 requests reconciled against actual source and versioned evidence; see qualification/delivery-audit-2026-10-06.json."
+    "delivery_audit": "All111 requests reconciled against actual source and versioned evidence; see qualification/delivery-audit-2026-10-06.json.",
+    "legacy_fields_note": "Other unchanged fields in this legacy block are historical; current qualification receipts are authoritative.",
+    "latest_release": "0.5.0-alpha.94 (112)"
   },
   "remaining": [
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",

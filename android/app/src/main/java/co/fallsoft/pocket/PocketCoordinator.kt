@@ -35,6 +35,7 @@ object PocketCoordinator {
     private var owner=""
     private var generation=0
     private var before:Long?=null
+    private var historyCoverageLoaded=false
     private var ready=false
     private var work:Job?=null
     private var historyJob:Job?=null
@@ -48,7 +49,7 @@ object PocketCoordinator {
         val local=Pocket.local;val id=identity(local)
         if(owner!=id){
             generation++;work?.cancel();historyJob?.cancel();work=null;historyJob=null
-            owner=id;ready=false;before=null;historyEarlier=false;historyLoading=false;historyProblem="";problem="";state="Ready";pendingText="";turns.clear();routes.clear();actionsByTurn.clear();presentationTickets.clear();correctionOf=null
+            owner=id;ready=false;historyCoverageLoaded=false;before=null;historyEarlier=false;historyLoading=false;historyProblem="";problem="";state="Ready";pendingText="";turns.clear();routes.clear();actionsByTurn.clear();presentationTickets.clear();correctionOf=null
             runCatching{JSONArray(Pocket.prefs.getString("coordinator-history:$id","[]")!!).objects().forEach{row->val turnId=row.s("id");if(scheduledCoordinatorReport(turnId,row.s("user")))return@forEach;turns[turnId]=Pair(row.s("user"),row.s("response"));val actions=row.optJSONArray("actions")?.objects().orEmpty();actionsByTurn[turnId]=actions;routes[turnId]=routeReceipts(actions,turnId)}}
             messages=turns.map{(id,text)->CoordinatorMessage(id,text.first,text.second)};turnIds=turns.keys.toList();messageIds=turns.keys.toSet()
         }
@@ -98,9 +99,9 @@ object PocketCoordinator {
                 }
                 val merged=mergeCoordinatorHistory(page,initialTurns,turns.toMap(),older)
                 turns.clear();turns.putAll(merged)
-                before=result.optLong("before").takeIf{it>0};historyEarlier=result.optBoolean("hasEarlier");publish()
+                if(older||!historyCoverageLoaded||initialTurns.isEmpty()){before=result.optLong("before").takeIf{it>0};historyEarlier=result.optBoolean("hasEarlier")};historyCoverageLoaded=true;publish()
             }catch(e:Exception){if(e is CancellationException)throw e;if(current(t))historyProblem=PocketNetwork.error(e)}
-            finally{if(current(t)){historyLoading=false;resumePending()}}
+            finally{if(current(t)){historyLoading=false;if(!older)resumePending()}}
         }
     }
     private fun rememberActions(t:Ticket,id:String,actions:List<JSONObject>,completed:Boolean){
@@ -173,6 +174,10 @@ internal fun mergeCoordinatorHistory(
     current:Map<String,Pair<String,String>>,
     older:Boolean
 ):LinkedHashMap<String,Pair<String,String>> = linkedMapOf<String,Pair<String,String>>().apply{
-    putAll(page)
-    putAll(if(older)current else current.filter{(id,text)->initial[id]!=text})
+    if(older){putAll(page);putAll(current)}else{
+        // A recent page is an update, not the complete locally retained history.
+        putAll(current);putAll(page)
+        // A response completed while this read was in flight owns newer evidence.
+        putAll(current.filter{(id,text)->initial[id]!=text})
+    }
 }

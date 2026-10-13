@@ -1,0 +1,45 @@
+{
+  "state": "alpha90-published-native-and-signed-review-qualified",
+  "nativeJourneysPassed": 5,
+  "features": [
+    "Independent header and canonical command-row identities",
+    "Environment-scoped persistent command expansion across chat navigation",
+    "Thumb-reachable collapse-all with retained outputs and history",
+    "Compact child count badge with in-place disclosure",
+    "Readable distinct idle, working and input-needed card states",
+    "Sequential viewport-global immersion with bottom-popup enrollment and cycle-boundary latching"
+  ],
+  "regressionsPreserved": [
+    "Two projection assertion corrections retained in private failed build logs",
+    "Initial popup launch timeout retained; idle launch fixture corrected"
+  ],
+  "limits": [
+    "Physical phone interaction unavailable; no verified ADB",
+    "Phone remains106; compatible108 file verified, installation unverified",
+    "All authored strings and full world-class goal remain under audit"
+  ],
+  "versionCode": 108,
+  "frozenSourceCommit": "87fadae5dbdbe49f66140796290ac55666d5d345",
+  "frozenNativeJourneysPassed": 41,
+  "unitChecksPerVariant": 365,
+  "lintVariants": [
+    "debug",
+    "release"
+  ],
+  "compatibleApkSha256": "739d4870d5db9a354c77cae8298024fd24174a31d86e75f1c42b5b9a906c166f",
+  "compatibleApkBytes": 62129140,
+  "publication": "CAS from107 to108; qualified journal published",
+  "updateNotification": {
+    "id": 1546,
+    "announced": 1,
+    "pushEnabled": true
+  },
+  "optimizedReview": "Actual compatible signed APK search screenshot inspected; whole labels remain readable; native display-clock survives. Idle card distinctly subdued.",
+  "phoneDelivery": {
+    "path": "Download/NextComp-alpha90.apk",
+    "sha256": "739d4870d5db9a354c77cae8298024fd24174a31d86e75f1c42b5b9a906c166f",
+    "bytes": 62129140,
+    "verifiedBy": "Termux SSH after completed transfer",
+    "installedVersionCode": 106
+  }
+}

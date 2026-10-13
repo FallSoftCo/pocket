@@ -51,7 +51,7 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
 @Composable fun BackendSettingsControl(){
     val setting=LocalBackendSetting.current?:return
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-        OutlinedButton(setting.workRecord,Modifier.fillMaxWidth(),enabled=!PocketVoice.active){Text("Work record")}
+        OutlinedButton(setting.workRecord,Modifier.fillMaxWidth(),enabled=!PocketVoice.active){InterfaceText("Work record")}
         BilingualLabel("Backend",centered=false)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
             listOf("codex" to "Codex","losangelex" to "Losangelex").forEach{(id,label)->
@@ -88,11 +88,11 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
         if(backend=="losangelex")ProfileSwitcher()
         Box(Modifier.weight(1f)){
             if(backend=="codex")PocketApp()
-            else if(discovering)Column(Modifier.padding(24.dp)){CircularProgressIndicator();Text("Checking Losangelex…")}
+            else if(discovering)Column(Modifier.padding(24.dp)){CircularProgressIndicator();InterfaceText("Checking Losangelex…")}
             else if(!losangelex.optBoolean("configured"))Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-                Text("Connect Losangelex",style=MaterialTheme.typography.titleLarge)
+                InterfaceText("Connect Losangelex",style=MaterialTheme.typography.titleLarge)
                 TextButton({teamSettings=true}){BilingualLabel("Settings")}
-                Text("Your NextComp host needs a Losangelex backend connection. Register its private endpoint and token file on the host, then reload.")
+                InterfaceText("Your NextComp host needs a Losangelex backend connection. Register its private endpoint and token file on the host, then reload.")
                 Button({scope.launch{discover()}}){BilingualLabel("Reload backends")}
                 TextButton({BackendNavigation.select("codex");backend="codex"}){BilingualLabel("Use Codex")}
             }

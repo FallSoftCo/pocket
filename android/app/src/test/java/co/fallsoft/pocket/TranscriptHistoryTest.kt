@@ -5,6 +5,20 @@ import org.junit.Test
 import kotlinx.coroutines.runBlocking
 
 class TranscriptHistoryTest {
+    @org.junit.Test fun headingsCannotCloseAContentGap(){
+        org.junit.Assert.assertFalse(transcriptContentAnchor("turn"))
+        org.junit.Assert.assertFalse(transcriptContentAnchor("turnEnd"))
+        org.junit.Assert.assertFalse(transcriptContentAnchor("request"))
+        for(kind in listOf("user","message","activity"))org.junit.Assert.assertTrue(transcriptContentAnchor(kind))
+    }
+
+    @Test fun shortPageWithOlderHistoryKeepsTheReadersPullIntent(){
+        assertFalse(shouldResumeTranscriptFollowing(false,false,true,true))
+        assertTrue(shouldResumeTranscriptFollowing(false,false,true,false))
+        assertTrue(shouldResumeTranscriptFollowing(false,false,false))
+        assertTrue(shouldResumeTranscriptFollowing(false,true,true))
+        assertFalse(shouldResumeTranscriptFollowing(true,true,true))
+    }
     private data class Row(val id:String,val text:String="",val version:Long=0)
     private fun merge(old:List<Row>,page:List<Row>,older:Boolean=false)=mergeTranscriptPage(old,page,older,{it.id},{it.version})
     @Test fun positionAnchorsIncludeEarlyWorkAndLatestProgressWithinTheWireBudget(){

@@ -1,0 +1,50 @@
+{
+  "requirement": "selected conversation must recover missed and cached intermediate messages automatically",
+  "delivered": true,
+  "installedPhone": "alpha74/code92; independently package/hash verified",
+  "host": "OZZZ-OS",
+  "emulator": "owned nextcomp_env_qa emulator5620",
+  "control": {
+    "seconds": 24.37,
+    "result": "failed; repeated turn header masks gap"
+  },
+  "fixed": {
+    "seconds": 16.172,
+    "result": "passed; canonical user/old answer/new answer/tool order; draft retained; no commands"
+  },
+  "legacyCache": {
+    "seconds": 13.488,
+    "result": "passed; missing middle answer recovered from pre-fix disk cache automatically"
+  },
+  "optionalProtocolCompatibility": {
+    "seconds": 19.301,
+    "result": "passed; partial backend protocol does not create history read loop",
+    "source": "before persisted-gap additions"
+  },
+  "unitTests": 304,
+  "remaining": [
+    "physical reported-chat interaction verification",
+    "freshness-head parity on other environment backends",
+    "browser implementation parity"
+  ],
+  "finalHeadRegression": {
+    "source": "55fe6f3",
+    "seconds": 26.996,
+    "result": "passed; slow catalog, epoch restart, live delivery without extra read, permanent rejection, drafts and no submitted commands"
+  },
+  "signedBuild": {
+    "source": "07fb4e1",
+    "version": "alpha74/code92",
+    "debugTests": 304,
+    "releaseTests": 304,
+    "lints": "both passed",
+    "twoSigningVariants": "prepared under 80MiB",
+    "phone": "installed; APK checksum verified;13 protected preference hashes unchanged"
+  },
+  "backend": {
+    "source": "9d818e4",
+    "qualification": "437 Node tests and five targeted actual HTTP/event tests passed",
+    "deployment": "workstation only; authenticated head and Codex connection verified; no pending outgoing; unknown voice receipts preserved"
+  },
+  "physicalInteraction": "reported specific frozen chat not directly reproduced on handset; native emulator interaction verified"
+}

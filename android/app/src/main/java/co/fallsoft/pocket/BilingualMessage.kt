@@ -31,9 +31,9 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 }
 
 /** One native text flow. Help substitutes the selected phrase; it never adds another line. */
-@Composable private fun ImmersionReading(content:AnnotatedString,selected:ImmersionSpan?,fontSize:TextUnit,lineHeight:TextUnit,color:Color=Paper,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,overflow:TextOverflow=TextOverflow.Clip,cycle:ImmersionCycleRender?=null,plan:ImmersionPresentation?=null,onClose:()->Unit){
-    if(cycle!=null&&plan!=null){Box(if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose)){ReservedImmersionText(content,plan,cycle.alpha,fontSize,lineHeight,color,fontWeight,maxLines,overflow,cycle)};return}
-    Text(content,fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,modifier=if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose))
+@Composable private fun ImmersionReading(content:AnnotatedString,selected:ImmersionSpan?,fontSize:TextUnit,lineHeight:TextUnit,color:Color=Paper,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,overflow:TextOverflow=TextOverflow.Clip,cycle:ImmersionCycleRender?=null,plan:ImmersionPresentation?=null,textAlign:TextAlign=TextAlign.Start,onClose:()->Unit){
+    if(cycle!=null&&plan!=null){Box(if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose)){ReservedImmersionText(content,plan,cycle.alpha,fontSize,lineHeight,color,fontWeight,maxLines,overflow,cycle,textAlign=textAlign)};return}
+    Text(content,fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,textAlign=textAlign,modifier=if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose))
 }
 
 /** Context-aware target phrases remain inline at ordinary reading size. */
@@ -48,11 +48,22 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
     val shown=if(originalOnly)plan.source else cycle.plan.text
     ReportDisplayedImmersion(id,shown,onDisplayedText)
     val blocks=remember(shown){MarkdownContent.blocks(shown)}
+    val tableReserves=remember(plan.source,plan.text){listOf(MarkdownContent.blocks(plan.source),MarkdownContent.blocks(plan.text))}
     val ranges=remember(plan,shown,cycle.plan,originalOnly){if(originalOnly)emptyList()else MarkdownContent.replacementRanges(cycle.plan,shown,null).map{range->range.copy(span=plan.spans.first{it.start==range.span.start&&it.end==range.span.end})}}
     val offsets=remember(blocks){var offset=0;blocks.map{block->if(block.kind=="rule")-1 else {if(offset>0)offset++;offset+=block.prefix.length;val at=offset;offset+=block.content.text.length;at}}}
     Column(modifier,verticalArrangement=Arrangement.spacedBy(9.dp)){
         blocks.forEachIndexed { index,block -> when(block.kind){
             "code"->Surface(color=Ink,shape=RoundedCornerShape(12.dp),modifier=Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp)){if(block.language.isNotBlank())Text(block.language,color=Muted,fontSize=12.sp);Text(block.content.text,fontFamily=FontFamily.Monospace,fontSize=14.sp,lineHeight=21.sp,color=Paper,modifier=Modifier.horizontalScroll(rememberScrollState()))}}
+            "table"->block.table?.let{table->MarkdownTableContent(table,reserve=tableReserves.mapNotNull{it.getOrNull(index)?.table}){cell->
+                val content=hybridAnnotated(cell.content,ranges,offsets[index]+cell.offset,selected,
+                    !originalOnly&&PocketImmersion.supportEnabled){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)}
+                MarkdownImageFlow(content,cell.content.images){part->
+                    ImmersionReading(part,selected.takeIf{PocketImmersion.supportEnabled},fontSize=17.sp,lineHeight=26.sp,
+                        fontWeight=if(cell.header)FontWeight.SemiBold else FontWeight.Normal,
+                        textAlign=markdownCellAlignment(cell),cycle=cycle.takeIf{PocketImmersion.supportEnabled&&!originalOnly},
+                        plan=plan,onClose={PocketImmersion.selectReading(readingKey,null)})
+                }
+            }}
             "rule"->HorizontalDivider(color=Line)
             else->{val content=hybridAnnotated(block.content,ranges,offsets[index],selected,!originalOnly&&PocketImmersion.supportEnabled){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)};val size=if(block.kind=="heading")when(block.level){1->24.sp;2->21.sp;else->18.sp}else 17.sp
                 MarkdownImageFlow(buildAnnotatedString{append(block.prefix);append(content)},block.content.images,block.prefix.length){part->

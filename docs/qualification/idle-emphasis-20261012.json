@@ -1,0 +1,16 @@
+{
+  "state": "passed",
+  "completed": [
+    "SessionCardNativeTest#workingIdleAndInputBlockedCardsRemainReadableAndCompact"
+  ],
+  "apkSha": "0143909f65f1ae6312454d93e049ad7a330ddd334e43d928b857d91e6b8c773d",
+  "testSha": "e9c55e2a8ed12f95db38ef73f1b9831f00e2d8fba33c26b6fc639907baa75a6d",
+  "startedAt": 1791857392.6079588,
+  "scope": "Own emulator; actual idle/working/input-needed cards; synthetic fixture; no real sends",
+  "current": "SessionCardNativeTest#workingIdleAndInputBlockedCardsRemainReadableAndCompact",
+  "fixtureStopped": true,
+  "fixturePid": 456539,
+  "finishedAt": 1791857400.420262,
+  "phone": "Not deployed; isolated qualification candidate only",
+  "review": "Actual capture reviewed: idle text remains legible; working glow and input-needed coral separate states."
+}

@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "state": "passed-scoped-observation-with-string-gap",
+  "sourceCommit": "399ac89",
+  "apkSha256": "c4501a28275a8ade4da8269b7835ce9e84f54ac052e3ef1fbca36f0439d08fe5",
+  "controlCoverage": {
+    "Backend": true,
+    "App updates": true,
+    "Check for updates": true,
+    "Talk": true,
+    "Settings": true
+  },
+  "observedEnglishRunsSeconds": {
+    "Backend": [
+      3.99,
+      3.95
+    ],
+    "App updates": [
+      3.99,
+      3.95
+    ],
+    "Check for updates": [
+      3.99,
+      3.95
+    ],
+    "Talk": [
+      3.99,
+      7.65
+    ],
+    "Settings": [
+      3.99,
+      7.65
+    ]
+  },
+  "authoredProseObservations": {
+    "Work record": {
+      "sourceObserved": true,
+      "targetObserved": true
+    },
+    "Full permissions for new tasks": {
+      "sourceObserved": true,
+      "targetObserved": true
+    },
+    "Coordinator check-ins": {
+      "sourceObserved": true,
+      "targetObserved": true
+    },
+    "Applies to future tasks in this environment.": {
+      "sourceObserved": true,
+      "targetObserved": true
+    },
+    "NextComp is up to date": {
+      "sourceObserved": true,
+      "targetObserved": false
+    }
+  },
+  "limits": [
+    "Discrete samples; no exact dwell-time or physical frame-pacing claim",
+    "Lower immersion setting presence-only after actual scroll",
+    "Update action process survival is not updater success",
+    "Updater status bypass identified; subsequent repair is not qualified by this artifact",
+    "Remaining dynamic text and accessibility-string coverage need audit; no full-product completion claim"
+  ]
+}

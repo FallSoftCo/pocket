@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "state": "captured-reviewed-samples-needs-refinement",
+  "sourceCommit": "3af23ad",
+  "apkSha256": "7d2df0d78aba8a2183c5d010596f747951bcca9e7ea106a0a8d044d114dea270",
+  "videoSha256": "38cb937974138292919fa58ad20ecde4e86a6005e8e159d5e3c6ae9f6433450f",
+  "capture": {
+    "width": 720,
+    "height": 1616,
+    "durationSeconds": 31.5623,
+    "decodedFrames": 1347
+  },
+  "reviewedFrames": [
+    "frame-02.png",
+    "frame-05.png",
+    "frame-07.png"
+  ],
+  "observations": [
+    "Readable English and Italian static states",
+    "Reserved rows retain surrounding layout in inspected samples",
+    "Unequal centered label lengths produce faint partial fragments during wipe"
+  ],
+  "limits": [
+    "Three sampled frames do not prove every intermediate frame or human comprehension",
+    "Recording media rate is not physical app frame pacing",
+    "Synthetic qualification app; no signed update or handset delivery"
+  ],
+  "release": "held for visual refinement and remaining coverage"
+}

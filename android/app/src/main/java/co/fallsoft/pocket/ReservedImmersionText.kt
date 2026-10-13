@@ -13,7 +13,9 @@ import androidx.compose.ui.unit.*
 @Composable internal fun ReservedImmersionText(
     content:AnnotatedString,plan:ImmersionPresentation,alpha:(ImmersionSpan)->Float,
     fontSize:TextUnit,lineHeight:TextUnit,color:Color,fontWeight:FontWeight?,maxLines:Int,
-    overflow:TextOverflow,cycle:ImmersionCycleRender
+    overflow:TextOverflow,cycle:ImmersionCycleRender,
+    onTextLayout:((TextLayoutResult)->Unit)?=null,
+    textAlign:androidx.compose.ui.text.style.TextAlign=androidx.compose.ui.text.style.TextAlign.Start
 ){
     val partId=remember {java.util.UUID.randomUUID().toString()}
     val visibilityReport by rememberUpdatedState(cycle.reportVisible)
@@ -38,6 +40,15 @@ import androidx.compose.ui.unit.*
     }
     // Capture the pending phrase at cue start; actual text updates at the same
     // clock's handoff and supplies fresh link callbacks without restarting it.
+    if(cycle.readingWave!=null){
+        val support=alternate(content,immersionCyclePlan(plan,plan.spans.indices.toSet()))
+        SharedInlineImmersionText(immersionGrammarParagraph(content,plan),immersionGrammarParagraph(support,plan),{1f},
+            snapshot=immersionGrammarParagraph(content,plan),reserve=listOf(immersionGrammarParagraph(content,plan),immersionGrammarParagraph(support,plan)),
+            fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,fillWidth=true,textAlign=textAlign,
+            readingWave=cycle.readingWave,onTextLayout={onTextLayout?.invoke(it)},
+            onVisibleRanges={ids,_->visibilityReport(partId,ids.map{it.substringBefore("/lexical:")}.toSet())})
+        return
+    }
     val pending=remember(plan.source,cycle.cueId,cycle.cueActive){
         content to (cycle.incomingPlan?.let{alternate(content,it)}?:content)
     }
@@ -48,10 +59,11 @@ import androidx.compose.ui.unit.*
         listOf(content,alternate(content,original),alternate(content,plan))
     }
     val progress:()->Float=if(cycle.cueActive)cycle.cueProgress else ({1f})
-    BlendImmersionText(from,to,progress,content,
+    SharedInlineImmersionText(immersionGrammarParagraph(from,plan),immersionGrammarParagraph(to,plan),progress,snapshot=immersionGrammarParagraph(content,plan),
         fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
-        maxLines=maxLines,overflow=overflow,fillWidth=true,reserve=forms,
-        onVisibleRanges={ids,_->visibilityReport(partId,ids)})
+        maxLines=maxLines,overflow=overflow,fillWidth=true,textAlign=textAlign,reserve=forms.map{immersionGrammarParagraph(it,plan)},
+        onTextLayout={onTextLayout?.invoke(it)},
+        onVisibleRanges={ids,_->visibilityReport(partId,ids.map{it.substringBefore("/lexical:")}.toSet())})
 }
 
 /** Replacements retain surrounding rich styles; internal styles come from their own exact Markdown. */
@@ -60,13 +72,16 @@ internal fun immersionAnnotatedParagraph(content:AnnotatedString,replacements:Li
     return buildAnnotatedString{
         replacements.sortedBy{it.first}.forEach{(start,end,replacement)->
             if(start<cursor||end<start||end>content.length)return null
-            append(content.subSequence(cursor,start))
+            // An empty AnnotatedString slice can retain a zero-length boundary
+            // reservation. Appending it creates a phantom duplicate phrase ID
+            // beside the new lexical IDs and invalidates the paired layout.
+            if(cursor<start)append(content.subSequence(cursor,start))
             val at=length;append(replacement)
             val inherited=content.subSequence(start,end)
             inherited.spanStyles.filter{it.start==0&&it.end==inherited.length}.forEach{addStyle(it.item,at,length)}
             inherited.getLinkAnnotations(0,inherited.length).filter{it.start==0&&it.end==inherited.length}.forEach{annotation->when(val link=annotation.item){is LinkAnnotation.Url->addLink(link,at,length);is LinkAnnotation.Clickable->addLink(link,at,length)}}
             cursor=end
         }
-        append(content.subSequence(cursor,content.length))
+        if(cursor<content.length)append(content.subSequence(cursor,content.length))
     }
 }

@@ -1,0 +1,82 @@
+{
+  "state": "matched-native-sample-and-ink-action-regressions-passed",
+  "recordedAt": 1791858062.3562958,
+  "change": "Reuse draw-cache paints, bounds, changed-line geometry and complementary gradient brushes; translate cached masks instead of creating shaders for moving frontiers. Display progress remains a draw-only read.",
+  "samples": {
+    "before": {
+      "wallMs": 23129,
+      "processCpuMs": 28407,
+      "runtimeDeltas": {
+        "art.gc.bytes-allocated": 55362992,
+        "art.gc.gc-count": 5,
+        "art.gc.gc-time": 285,
+        "art.gc.blocking-gc-count": 0
+      },
+      "observedFrames": 1309,
+      "medianDrawMs": 4.520489,
+      "p95DrawMs": 9.444454,
+      "medianTotalMs": 46.322103,
+      "overReportedDeadline": 45,
+      "nativeReceipt": {
+        "state": "passed",
+        "completed": [
+          "ImmersionReadingWaveNaturalNativeTest#naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds"
+        ],
+        "apkSha": "9268063838a6c6f424f3439fd909671f1e5e3de2ed0c0ded6ef66e6d53f15317",
+        "testSha": "4ffef70c32576e393c81054147e2dc51a9fe3d0ddb2019ebc743881b21fd5dfa",
+        "startedAt": 1791857687.8931952,
+        "scope": "Own software emulator; natural reading-wave observation and performance baseline; no real sends",
+        "current": "ImmersionReadingWaveNaturalNativeTest#naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds",
+        "fixtureStopped": true,
+        "fixturePid": 471797,
+        "finishedAt": 1791857725.2089922
+      }
+    },
+    "after": {
+      "wallMs": 23341,
+      "processCpuMs": 27275,
+      "runtimeDeltas": {
+        "art.gc.bytes-allocated": 44131760,
+        "art.gc.gc-count": 4,
+        "art.gc.gc-time": 190,
+        "art.gc.blocking-gc-count": 0
+      },
+      "observedFrames": 1310,
+      "medianDrawMs": 3.285192,
+      "p95DrawMs": 8.364689,
+      "medianTotalMs": 47.0406425,
+      "overReportedDeadline": 49,
+      "nativeReceipt": {
+        "state": "passed",
+        "completed": [
+          "ImmersionReadingWaveNaturalNativeTest#naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds"
+        ],
+        "apkSha": "bf3162661d5874b1058d573c5d8372416b532f9754bc0453fbcdd6b5a70ff398",
+        "testSha": "cdfbedfcb925f0e2c8ff99b178cabd3e279fe5e64498fb7e15deb4042ed2f43c",
+        "startedAt": 1791857845.2167468,
+        "scope": "Own software emulator; natural reading-wave observation and performance candidate; no real sends",
+        "current": "ImmersionReadingWaveNaturalNativeTest#naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds",
+        "fixtureStopped": true,
+        "fixturePid": 482789,
+        "finishedAt": 1791857882.4498777
+      }
+    }
+  },
+  "regressions": {
+    "state": "passed",
+    "completed": [
+      "SharedInlineLayoutNativeTest#intermediateWipePreservesCommonInkAndActuallyChangesPhraseInk",
+      "SharedInlineLayoutNativeTest#visibleOutgoingWrappedWordStillRespondsDuringWipe",
+      "SharedInlineLayoutNativeTest#replacementRetainsNativeInlineLinkAction"
+    ],
+    "apkSha": "bf3162661d5874b1058d573c5d8372416b532f9754bc0453fbcdd6b5a70ff398",
+    "testSha": "cdfbedfcb925f0e2c8ff99b178cabd3e279fe5e64498fb7e15deb4042ed2f43c",
+    "startedAt": 1791857949.2623358,
+    "scope": "Own software emulator; natural reading-wave observation and performance candidate; no real sends",
+    "current": "SharedInlineLayoutNativeTest#replacementRetainsNativeInlineLinkAction",
+    "fixtureStopped": true,
+    "fixturePid": 488428,
+    "finishedAt": 1791857967.0238574
+  },
+  "limits": "Single matched 23-second sample on owned software emulator with accessibility observer overhead. Allocations and draw duration fell; total frame timing and missed reported deadlines did not consistently improve. No physical-phone smoothness/FPS/comprehension claim. No change to language timing, progression, reading order or action identity."
+}
