@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha90-compact-command-session-and-sequential-immersion",
+  "qualification": "post-alpha90-critical-history-and-interface-coverage",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
@@ -42,7 +42,12 @@
     "co.fallsoft.pocket.CommandHistoryNativeTest#groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory",
     "co.fallsoft.pocket.SessionCardNativeTest#childBadgeExpandsInPlaceWithoutOpeningParentAndRetainsCompactHeader",
     "co.fallsoft.pocket.SessionCardNativeTest#workingIdleAndInputBlockedCardsRemainReadableAndCompact",
-    "co.fallsoft.pocket.ImmersionPopupNativeTest#bottomPopupJoinsTheRootClockAndKeepsItsAction"
+    "co.fallsoft.pocket.ImmersionPopupNativeTest#bottomPopupJoinsTheRootClockAndKeepsItsAction",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#pullingAShortRecentPageLoadsEarlierHistoryWithoutATap",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#lateInputEventReconcilesCanonicalOrderOnce",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#shortHistoryPagesRequireAnotherReadingGesture",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#anchoredInputOutsideRecentPageRepairsWithoutBackfillOrLosingLiveText",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#partialOlderPageRepairsLateInputAgainstRetainedReply"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",
