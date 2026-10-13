@@ -49,11 +49,19 @@ class CommandHistoryNativeTest {
   assertTrue(device.wait(Until.hasObject(By.text("First full command detail")),5000))
   assertTrue(device.wait(Until.hasObject(By.text("Second full command detail")),5000))
   assertTrue(device.hasObject(By.text("Answer after commands")))
+  assertEquals("Expansion changed canonical history",source,PocketTranscript.rows.map{it.toString()})
+  val protected=PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")}.map{Triple(it.s("id"),it.s("text"),it.s("detail"))}
+  main{Pocket.open("second-thread")}
+  await{Pocket.selected=="second-thread"&&!PocketTranscript.loading}
+  main{Pocket.open("same-thread")}
+  await{Pocket.selected=="same-thread"&&!PocketTranscript.loading}
+  assertTrue("Returning collapsed the command passage",device.wait(Until.hasObject(By.text("First full command detail")),5000))
+  assertTrue(device.hasObject(By.text("Second full command detail")))
   requireNotNull(device.findObject(By.text("Collapse runs"))).click()
   assertTrue(device.wait(Until.gone(By.text("First full command detail")),5000))
   assertFalse(device.hasObject(By.text("Second command stdout")))
   assertTrue(device.hasObject(By.text("Answer after commands")))
-  assertEquals("Presentation folding changed canonical history",source,PocketTranscript.rows.map{it.toString()})
+  assertEquals("Navigation lost or changed the command passage",protected,PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")}.map{Triple(it.s("id"),it.s("text"),it.s("detail"))})
   assertEquals("same-thread",Pocket.selected)
  }
 }

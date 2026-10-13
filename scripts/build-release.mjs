@@ -19,9 +19,9 @@ const run=(command,args,env=process.env,cwd=root)=>{const disk=statfsSync(stage)
 const unit=variant=>{const directory=join(root,'android/app/build/test-results/test'+variant+'UnitTest');const result={tests:0,failures:0,errors:0,skipped:0};for(const name of readdirSync(directory).filter(n=>/^TEST-.+\.xml$/.test(n))){const xml=readFileSync(join(directory,name),'utf8'),header=xml.match(/<testsuite\s[^>]+>/)?.[0];if(!header)throw Error('Invalid JUnit output.');for(const key of Object.keys(result)){const value=header.match(new RegExp('\\b'+key+'="(\\d+)"'))?.[1];if(value===undefined)throw Error('Incomplete JUnit output.');result[key]+=Number(value);}}if(!result.tests||result.failures||result.errors||result.skipped>=result.tests)throw Error('Unit checks failed or unavailable.');return result;};
 try{
  const signed=['testDebugUnitTest','testReleaseUnitTest','lintDebug','lintRelease','assembleDebug','assembleRelease'];
- run('./gradlew',['--no-daemon','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8',...signed],process.env,join(root,'android'));record.tasks.push(...signed);record.unit={debug:unit('Debug'),release:unit('Release')};
+ run('./gradlew',['--no-daemon','--max-workers=2','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8',...signed],process.env,join(root,'android'));record.tasks.push(...signed);record.unit={debug:unit('Debug'),release:unit('Release')};
  const qaEnv={...process.env};delete qaEnv.POCKET_DEBUG_STORE;
- const qa=['assembleQualification','assembleQualificationAndroidTest'];run('./gradlew',['--no-daemon','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8',...qa],qaEnv,join(root,'android'));record.tasks.push(...qa);
+ const qa=['assembleQualification','assembleQualificationAndroidTest'];run('./gradlew',['--no-daemon','--max-workers=2','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8',...qa],qaEnv,join(root,'android'));record.tasks.push(...qa);
  const env={...process.env,POCKET_DATA:stage};delete env.POCKET_SIGNING_PASSWORD;delete env.POCKET_SIGNING_KEY_PASSWORD;
  const release=join(root,'android/app/build/outputs/apk/release/app-release.apk');
  run(process.execPath,[join(root,'scripts/prepare-app-update.mjs'),release,join(root,'android/app/build/outputs/apk/debug/app-debug.apk')],env);

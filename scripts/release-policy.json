@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha89-immersion-search-unbounded-layout",
+  "qualification": "alpha90-compact-command-session-and-sequential-immersion",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
@@ -38,7 +38,11 @@
     "co.fallsoft.pocket.ImmersionReadingWaveNaturalNativeTest#naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds",
     "co.fallsoft.pocket.MarkdownTableNativeTest#ordinaryAndImmersionTablesRetainColumnsScrollingLinksAndLargeText",
     "co.fallsoft.pocket.SearchNativeTest#immersionSearchOpensTypesFiltersAndDismissesWithoutLosingDraft",
-    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#unboundedControlKeepsItsWholeReservedWordWithoutEllipsisChunks"
+    "co.fallsoft.pocket.SharedInlineLayoutNativeTest#unboundedControlKeepsItsWholeReservedWordWithoutEllipsisChunks",
+    "co.fallsoft.pocket.CommandHistoryNativeTest#groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory",
+    "co.fallsoft.pocket.SessionCardNativeTest#childBadgeExpandsInPlaceWithoutOpeningParentAndRetainsCompactHeader",
+    "co.fallsoft.pocket.SessionCardNativeTest#workingIdleAndInputBlockedCardsRemainReadableAndCompact",
+    "co.fallsoft.pocket.ImmersionPopupNativeTest#bottomPopupJoinsTheRootClockAndKeepsItsAction"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",

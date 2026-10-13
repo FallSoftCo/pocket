@@ -17,18 +17,22 @@ internal class ImmersionReadingWaveClock {
     var viewportHeightPx by mutableFloatStateOf(0f); private set
     fun viewport(origin:Offset,widthPx:Float,heightPx:Float,density:Float) {
         if(widthPx<=0f||heightPx<=0f||density<=0f)return
+        if(viewportOrigin==origin&&viewportWidthPx==widthPx&&viewportHeightPx==heightPx)return
         viewportOrigin=origin;viewportWidthPx=widthPx;viewportHeightPx=heightPx
-        rebuildLanes()
+        geometryDirty=true
     }
     var elapsedMs by mutableLongStateOf(0L); private set
     private val visible=mutableStateMapOf<Any,Boolean>()
     private val selection=mutableStateMapOf<Any,Boolean>()
     private var nanos=0L
-    private val lineGeometry=mutableStateMapOf<Any,List<Rect>>()
+    private val lineGeometry=HashMap<Any,List<Rect>>()
+    private var geometryDirty=false
     fun lines(owner:Any,lines:List<Rect>){
-        if(lineGeometry[owner]==lines)return
-        if(lines.isEmpty())lineGeometry.remove(owner) else lineGeometry[owner]=lines
-        rebuildLanes()
+        if(lines.isEmpty()){
+            if(lineGeometry.remove(owner)!=null)geometryDirty=true
+        }else if(lineGeometry[owner]!=lines){
+            lineGeometry[owner]=lines;geometryDirty=true
+        }
     }
     private data class Lane(val rect:Rect,val start:Float,val distance:Float)
     private var laneSchedule by mutableStateOf(emptyList<Lane>())
@@ -73,11 +77,13 @@ internal class ImmersionReadingWaveClock {
     }
     fun selecting(owner:Any,value:Boolean){if(value)selection[owner]=true else selection.remove(owner)}
     val hasSelection:Boolean get()=selection.isNotEmpty()
-    fun visible(owner:Any,value:Boolean){if(value)visible[owner]=true else {visible.remove(owner);if(lineGeometry.remove(owner)!=null)rebuildLanes()
+    fun visible(owner:Any,value:Boolean){if(value)visible[owner]=true else {visible.remove(owner);if(lineGeometry.remove(owner)!=null)geometryDirty=true
         if(visible.isEmpty()){laneSchedule=emptyList();pendingPlan=null;cycleEpochMs=elapsedMs}}}
     val hasVisible:Boolean get()=visible.isNotEmpty()
     fun advanceNanos(deltaNanos:Long){
         if(hasSelection||BlackoutVisibility.active)return
+        // Batch all layout callbacks into one geometry sort per display frame.
+        if(geometryDirty){rebuildLanes();geometryDirty=false}
         nanos=(nanos+deltaNanos.coerceIn(0L,100_000_000L)).coerceAtLeast(0L)
         elapsedMs=nanos/1_000_000L
         // Layout discovery may change total travel time. Latch it only between

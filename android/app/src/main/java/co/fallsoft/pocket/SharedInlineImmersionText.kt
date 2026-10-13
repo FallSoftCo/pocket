@@ -310,7 +310,7 @@ import androidx.compose.ui.unit.*
         },
             modifier=(if(fillWidth)Modifier.fillMaxWidth()else Modifier)
                 .then(if(maxLines<Int.MAX_VALUE)Modifier.heightIn(max=with(density){(finiteHeightBudget*maxLines).toDp()})else Modifier)
-                .onGloballyPositioned{coordinates=it;reportVisibility()}
+                .onGloballyPositioned{coordinates=it;reportVisibility();publishLines()}
                 .semantics{customActions=actions;if(projection!=null)text=visible})
     }
 }

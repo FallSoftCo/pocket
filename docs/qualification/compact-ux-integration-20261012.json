@@ -1,0 +1,21 @@
+{
+  "state": "integrated-native-qualified-frozen-release-pending",
+  "nativeJourneysPassed": 5,
+  "features": [
+    "Independent header and canonical command-row identities",
+    "Environment-scoped persistent command expansion across chat navigation",
+    "Thumb-reachable collapse-all with retained outputs and history",
+    "Compact child count badge with in-place disclosure",
+    "Readable distinct idle, working and input-needed card states",
+    "Sequential viewport-global immersion with bottom-popup enrollment and cycle-boundary latching"
+  ],
+  "regressionsPreserved": [
+    "Two projection assertion corrections retained in private failed build logs",
+    "Initial popup launch timeout retained; idle launch fixture corrected"
+  ],
+  "limits": [
+    "Full frozen alpha90 release qualification pending",
+    "Optimized APK review pending",
+    "Physical phone interaction unavailable; SSH works, no verified ADB"
+  ]
+}

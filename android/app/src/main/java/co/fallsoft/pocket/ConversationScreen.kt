@@ -119,9 +119,17 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val latestAnswer=rows.lastOrNull{it.s("kind")=="message"}
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
-    var expandedRunIds by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(emptySet<String>())}
+    val runExpansionKey=Pocket.key("runExpansion:"+Pocket.selected)
+    var expandedRunIds by remember(Pocket.environmentId,Pocket.selected){
+        mutableStateOf(Pocket.prefs.getStringSet(runExpansionKey,emptySet()).orEmpty().toSet())
+    }
+    fun setRunExpansion(next:Set<String>){
+        expandedRunIds=next
+        Pocket.prefs.edit().putStringSet(runExpansionKey,next).apply()
+    }
     val runProjection=remember(filteredRows,expandedRunIds){commandRunProjection(filteredRows,expandedRunIds)}
     val shownRows=runProjection.rows
+    val latestRunProjection by rememberUpdatedState(runProjection)
     val pendingFilter=filterRequest
     SideEffect{
         if(pendingFilter!=null&&pendingFilter.environment==Pocket.environmentId&&pendingFilter.thread==Pocket.selected&&pendingFilter.important==important){
@@ -139,7 +147,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val visible=list.layoutInfo.visibleItemsInfo.firstOrNull{it.index==list.firstVisibleItemIndex}
             val old=visible?.key as? String
             if(old!=null&&shownRows.getOrNull(visible.index)?.s("id")!=old&&shownRows.none{it.s("id")==old}){
-                val resolved=migrateTranscriptAnchors(rows,setOf(old))[old]?.let(runProjection::displayId)?:runProjection.displayId(old)
+                val canonical=runProjection.canonicalId(old)
+                val migrated=migrateTranscriptAnchors(rows,setOf(canonical))[canonical]?:canonical
+                val resolved=if(old.startsWith("ui:run-group:"))runProjection.headerFor(migrated)?:runProjection.displayId(migrated) else runProjection.displayId(migrated)
                 val index=shownRows.indexOfFirst{it.s("id")==resolved}
                 if(index>=0)list.requestScrollToItem(index,list.firstVisibleItemScrollOffset)
             }
@@ -169,7 +179,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             // Its key must not be paired with the next viewport row's scroll offset.
             val visible=list.layoutInfo.visibleItemsInfo.filter{it.key.toString() in latestRowIds}.map{TranscriptVisibleRow(it.index,it.key.toString())}
             val position=transcriptReadPosition(visible,list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,latestFollow)
-            if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position)
+            if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position.copy(rowId=latestRunProjection.canonicalId(position.rowId),offset=if(position.rowId.startsWith("ui:run-group:"))0 else position.offset))
         }
     }
     LaunchedEffect(list,Pocket.environmentId,Pocket.selected){
@@ -178,7 +188,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(!restoredPosition||PocketTranscript.loading||list.isScrollInProgress||important)null else
                 transcriptReadPosition(list.layoutInfo.visibleItemsInfo.map{TranscriptVisibleRow(it.index,it.key.toString())},list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,follow)
         }.debounce(350).filterNotNull().distinctUntilChanged().collect{position->
-            if(source!=null)PocketTranscript.rememberPosition(owner,source,position)
+            if(source!=null)PocketTranscript.rememberPosition(owner,source,position.copy(rowId=latestRunProjection.canonicalId(position.rowId),offset=if(position.rowId.startsWith("ui:run-group:"))0 else position.offset))
         }
     }
     LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size,restoreRevision){
@@ -186,7 +196,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val resolved=resolveTranscriptReadPosition(rows,readPosition)?:readPosition
             val index=transcriptAnchorIndex(shownIds,resolved.copy(rowId=runProjection.displayId(resolved.rowId)))
             if(PocketTranscript.mayRestorePosition(restoreRevision)&&!dragged){
-                if(index>=0)list.scrollToItem(index,readPosition.offset.coerceAtLeast(0))else follow=true
+                if(index>=0)list.scrollToItem(index,if(shownIds[index].startsWith("ui:run-group:"))0 else readPosition.offset.coerceAtLeast(0))else follow=true
             }
             restoredPosition=true
             PocketTranscript.positionRestored(Pocket.selected,restoreRevision)
@@ -319,9 +329,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                         CommandRunsHeader(commandGroup,expanded){
                             PocketTranscript.readerInteraction();follow=false
                             val members=commandGroup.map{it.s("id")}.toSet()
-                            expandedRunIds=if(expanded)expandedRunIds-members else expandedRunIds+members
+                            setRunExpansion(if(expanded)expandedRunIds-members else expandedRunIds+members)
                         }
-                        if(expanded)ActivityRow(commandGroup.first(),fullyExpanded=true)
                     } else if(isCommandRun(row))ActivityRow(row,fullyExpanded=true)
                     else TranscriptRow(row){spokenRows[row.s("id")]=it}
                     if(row.s("speechThread").isNotBlank())TextButton({Pocket.open(row.s("speechThread"))}){BilingualLabel("Open source conversation")}
@@ -376,7 +385,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     val collapsed=commandRunProjection(filteredRows,emptySet())
                     val target=key?.let(collapsed::displayId)
                     val offset=list.firstVisibleItemScrollOffset
-                    expandedRunIds=emptySet()
+                    setRunExpansion(emptySet())
                     val index=collapsed.rows.indexOfFirst{it.s("id")==target}
                     if(index>=0)list.requestScrollToItem(index,if(target==key&&collapsed.rows[index].s("kind")!="commandRuns")offset else 0)
                 },modifier=Modifier.align(Alignment.BottomStart).padding(14.dp).heightIn(min=48.dp)){

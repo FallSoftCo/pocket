@@ -9,6 +9,9 @@ internal data class CommandRunProjection(
  val displayIds:Map<String,String>
 ) {
  fun displayId(sourceId:String)=displayIds[sourceId]?:sourceId
+ fun canonicalId(displayId:String)=groups[displayId]?.firstOrNull()?.s("id")
+     ?:displayId.removePrefix("ui:run-group:")
+ fun headerFor(sourceId:String)=groups.entries.firstOrNull{(_,rows)->rows.any{it.s("id")==sourceId}}?.key
 }
 internal fun isCommandRun(row:JSONObject)=row.s("kind")=="activity"&&
  row.s("type") in setOf("commandExecution","mcpToolCall","dynamicToolCall","fileChange","webSearch")
@@ -26,15 +29,13 @@ internal fun commandRunProjection(source:List<JSONObject>,expanded:Set<String>):
   val turn=first.s("turnId")
   do{index++}while(index<source.size&&isCommandRun(source[index])&&source[index].s("turnId")==turn)
   val group=source.subList(start,index).toList()
-  val key=first.s("id")
+  val key="ui:run-group:"+first.s("id")
   val open=group.any{it.s("id") in expanded}
   groups[key]=group
-  // Reuse the first real run identity as the header's key, including through
-  // expansion. The original first run remains inside this one lazy item;
-  // following runs retain their own lazy keys when expanded.
-  display+=JSONObject(first.toString()).put("kind","commandRuns")
-  ids[key]=key
-  group.drop(1).forEach{row->
+  // Headers are presentation identities. Every expanded provider row keeps
+  // its own unchanged lazy key, including when an older member is prepended.
+  display+=JSONObject(first.toString()).put("id",key).put("kind","commandRuns")
+  group.forEach{row->
    ids[row.s("id")]=if(open)row.s("id")else key
    if(open)display+=row
   }
