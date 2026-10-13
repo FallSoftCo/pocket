@@ -99,6 +99,7 @@ class HistoryReadingNativeTest {
    java.io.File(c.cacheDir,"conversation-scroll-performance.json").writeText(JSONObject().put("scope","Actual production conversation with 40 synthetic messages, alternating finger scrolls, immersion disabled, software emulator; not physical frame pacing").put("wallMs",android.os.SystemClock.elapsedRealtime()-started).put("processCpuMs",android.os.Process.getElapsedCpuTime()-cpu).put("runtimeDeltas",deltas).put("frames",samples).toString())
   }
 
+  if(InstrumentationRegistry.getArguments().getString("profileOnly")=="true")return
   repeat(3){requireNotNull(device.findObject(By.scrollable(true))).scroll(androidx.test.uiautomator.Direction.UP,0.7f);Thread.sleep(200)}
   device.waitForIdle(2000)
   device.dumpWindowHierarchy(java.io.File(c.cacheDir,"history-reading-hierarchy.xml"))
