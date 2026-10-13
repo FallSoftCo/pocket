@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.*
     val nativeLineHeight=measurer.measure(AnnotatedString("M"),style=style).let{it.getLineBottom(0)-it.getLineTop(0)}
     var nativeLayout by remember {mutableStateOf<TextLayoutResult?>(null)}
     var coordinates by remember {mutableStateOf<LayoutCoordinates?>(null)}
+    var screenOrigin by remember {mutableStateOf<Offset?>(null)}
     var lastVisibility by remember {mutableStateOf<Pair<Set<String>,Boolean>?>(null)}
     val visibilityCallback by rememberUpdatedState(onVisibleRanges)
     fun reportVisibility(){
@@ -118,12 +119,25 @@ import androidx.compose.ui.unit.*
         }
         val screenWidth=(readingWave?.viewportWidthPx?.takeIf{it>0f}
             ?:androidx.compose.ui.platform.LocalView.current.width.toFloat()).coerceAtLeast(1f)
+        val maskCache=remember(readingWave,wipeGeometry,rtl){
+            mutableMapOf<Pair<String,Float>,State<ImmersionSharedWipeMask?>>()
+        }
         fun waveMask(key:String,localTop:Float):ImmersionSharedWipeMask? {
             val clock=readingWave?:return null
-            val rect=wipeGeometry?.regions?.get(key)?:return null
-            val origin=coordinates?.takeIf{it.isAttached}?.localToScreen(Offset.Zero)?.minus(clock.viewportOrigin)?:return null
-            val mask=clock.lineMask(origin.y+rect.top+localTop,rtl)?:return null
-            return mask.copy(center=mask.center-origin.x-rect.left)
+            // A clock tick must invalidate only frontier-adjacent fragments,
+            // not every translated word elsewhere on the screen. Clamp opaque
+            // holds to identical geometry and let snapshot equality gate draws.
+            return maskCache.getOrPut(key to localTop){
+                derivedStateOf(structuralEqualityPolicy()){
+                    val rect=wipeGeometry?.regions?.get(key)
+                    val origin=screenOrigin?.minus(clock.viewportOrigin)
+                    if(rect==null||origin==null)null else {
+                        val mask=clock.lineMask(origin.y+rect.top+localTop,rtl)
+                        mask?.copy(center=(mask.center-origin.x-rect.left)
+                            .coerceIn(-mask.feather,rect.width+mask.feather))
+                    }
+                }
+            }.value
         }
         val visibleHeight=readingWave?.viewportHeightPx?.takeIf{it>0f}
             ?:androidx.compose.ui.platform.LocalView.current.height.toFloat()
@@ -260,7 +274,8 @@ import androidx.compose.ui.unit.*
                                         ?.map{it.item}?.filterIsInstance<LinkAnnotation.Clickable>()
                                         ?.firstOrNull{it.tag==touched.tag}?:touched
                                     else touched
-                                down.consume()
+                                // Leave down available to native selection and scrolling.
+                                // Consume only a recognized short tap on release.
                                 // A hold belongs to native selection, never language help.
                                 val up=withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis){
                                     waitForUpOrCancellation()
@@ -323,7 +338,7 @@ import androidx.compose.ui.unit.*
         },
             modifier=(if(fillWidth)Modifier.fillMaxWidth()else Modifier)
                 .then(if(maxLines<Int.MAX_VALUE)Modifier.heightIn(max=with(density){(finiteHeightBudget*maxLines).toDp()})else Modifier)
-                .onGloballyPositioned{coordinates=it;reportVisibility();publishLines()}
+                .onGloballyPositioned{coordinates=it;screenOrigin=it.localToScreen(Offset.Zero);reportVisibility();publishLines()}
                 .semantics{customActions=actions;if(projection!=null)text=visible})
     }
 }

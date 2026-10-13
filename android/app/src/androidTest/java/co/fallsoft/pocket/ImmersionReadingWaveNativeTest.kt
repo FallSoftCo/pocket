@@ -45,7 +45,7 @@ class ImmersionReadingWaveNativeTest {
         val rendererStates=mutableListOf<ImmersionRendererStatus>()
         val observer:(ImmersionRendererStatus)->Unit={rendererStates+=it}
         val target="Permessi completi per i nuovi incarichi"
-        val support="Permissions full per i new tasks"
+        val support="Permissions full for the new tasks"
         ActivityScenario.launch(MainActivity::class.java).use{scenario->
             scenario.onActivity{activity->
                 check(Pocket.base=="http://127.0.0.1:18880"&&Pocket.token.isBlank())
@@ -85,7 +85,7 @@ class ImmersionReadingWaveNativeTest {
             val i=InstrumentationRegistry.getInstrumentation()
             val device=UiDevice.getInstance(i)
             i.runOnMainSync{animation.value=true}
-            val nativeControl=device.findObjects(androidx.test.uiautomator.By.pkg(i.targetContext.packageName).textContains("per i"))
+            val nativeControl=device.findObjects(androidx.test.uiautomator.By.pkg(i.targetContext.packageName).text(java.util.regex.Pattern.compile("(Permessi|Permissions).*")))
                 .sortedBy{it.visibleBounds.top}.first()
             val down=android.os.SystemClock.uptimeMillis()
             fun inject(action:Int) {
@@ -114,7 +114,7 @@ class ImmersionReadingWaveNativeTest {
                 // a physical frame-pacing or real-time perception measurement.
                 // A continuously drawing screen need not satisfy Espresso's
                 // global-idle contract. Inspect actual native accessibility output.
-                val nodes=device.findObjects(androidx.test.uiautomator.By.pkg(i.targetContext.packageName).textContains("per i"))
+                val nodes=device.findObjects(androidx.test.uiautomator.By.pkg(i.targetContext.packageName).text(java.util.regex.Pattern.compile("(Permessi|Permissions).*")))
                     .sortedBy{it.visibleBounds.top}
                 if(nodes.size>=2){
                     val c=nodes[0].text

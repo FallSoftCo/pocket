@@ -28,6 +28,48 @@ class HistoryReadingNativeTest {
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/$path",JSONObject())}
  private var eventVersion=900
  private fun event(id:String,kind:String,text:String):JSONObject{val version=++eventVersion;return JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","order").put("version",version).put("row",JSONObject().put("id","order/$id").put("turnId","order").put("kind",kind).put("text",text).put("version",version))}
+ @Test fun typingWithReadingWavePreservesDraftAndReportsDispatchLatency(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val c=i.targetContext
+  c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+  await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
+  main{
+   Pocket.open("same-thread",keyboard=true)
+   PocketImmersion.setEnabled(true);PocketImmersion.setSupportEnabled(true)
+  }
+  await{PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
+  main{for(n in 0..39)PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","typing-wave").put("version",500+n).put("row",JSONObject().put("id","typing-wave-$n").put("turnId","typing-wave").put("kind","message").put("text","Full permissions for new tasks")))}
+  val field=By.clazz("android.widget.EditText")
+  assertTrue(device.wait(Until.hasObject(field),5000))
+  requireNotNull(device.findObject(field)).click()
+  val reports=org.json.JSONArray()
+  val draftKey=Pocket.key("draft:same-thread")
+  var count=0
+  for(cycling in listOf(false,true,false,true)){
+   main{PocketImmersion.setMotionEnabled(cycling)}
+   Thread.sleep(500)
+   val timings=org.json.JSONArray()
+   repeat(16){
+    val before=android.os.SystemClock.elapsedRealtimeNanos()
+    val eventTime=android.os.SystemClock.uptimeMillis()
+    assertTrue(i.uiAutomation.injectInputEvent(android.view.KeyEvent(eventTime,eventTime,android.view.KeyEvent.ACTION_DOWN,android.view.KeyEvent.KEYCODE_A,0),true))
+    assertTrue(i.uiAutomation.injectInputEvent(android.view.KeyEvent(eventTime,eventTime,android.view.KeyEvent.ACTION_UP,android.view.KeyEvent.KEYCODE_A,0),true))
+    count++
+    val deadline=android.os.SystemClock.elapsedRealtime()+2000
+    while(Pocket.prefs.getString(draftKey,"")!!.length<count&&android.os.SystemClock.elapsedRealtime()<deadline)Thread.sleep(2)
+    assertEquals(count,Pocket.prefs.getString(draftKey,"")!!.length)
+    timings.put((android.os.SystemClock.elapsedRealtimeNanos()-before)/1e6)
+    Thread.sleep(70)
+   }
+   reports.put(org.json.JSONObject().put("cycling",cycling).put("dispatchToSavedDraftMs",timings))
+  }
+  val expected="a".repeat(count)
+  assertEquals(expected,Pocket.prefs.getString(draftKey,""))
+  main{Pocket.closeTask();Pocket.open("same-thread",keyboard=true)}
+  await{device.findObject(field)?.text==expected}
+  java.io.File(c.cacheDir,"conversation-typing-performance.json").writeText(org.json.JSONObject().put("scope","Production conversation with 40 synthetic offline-translated messages and real hardware-key dispatch; timing includes direct Android input dispatch and saved-draft observation, not optical display latency; software emulator only").put("runs",reports).put("draftRetained",true).toString())
+ }
  @Test fun growingResponseKeepsItsNewestPassageVisible(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val c=i.targetContext;c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()

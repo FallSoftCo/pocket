@@ -22,6 +22,14 @@ class BilingualContentTest {
   assertFalse(alignedTargetValid(span.copy(targetSegments=span.targetSegments.mapIndexed{i,s->if(i==1)s.copy(meaning="invented grammar")else s})))
  }
 
+ @Test fun everyAlignedWordHasItsMeaningAndUnalignedPhrasesRevealSource(){
+  val span=phrase()
+  assertEquals("a question important",immersionGrammarSupport(span))
+  assertEquals(span.source,immersionGrammarSupport(span.copy(targetSegments=emptyList())))
+  assertEquals("una domanda importante",immersionGrammarForm(span,false,"phrase")!!.text)
+  assertEquals("a question important",immersionGrammarForm(span,true,"phrase")!!.text)
+ }
+
  @Test fun agreementHighlightsBothEndsWithoutInventingVerbAgreement(){
   assertEquals(setOf(0,2,4),agreementSegments(phrase()))
   val verb=ImmersionTargetSegment(0,4,"sono","are","verb",features=listOf(ImmersionFeature("number","plural")))

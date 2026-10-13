@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha93-compact-footer-paging-operations-and-retained-history",
+  "qualification": "alpha94-frontier-only-immersion-direct-paging-and-input",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
@@ -51,7 +51,9 @@
     "co.fallsoft.pocket.ConversationFilterNativeTest#filterKeepsVisibleAnswerWhenLeadingCommentaryIsRemoved",
     "co.fallsoft.pocket.ConversationFilterNativeTest#filterPreservesVisiblePassageAndReturnsWithoutJumping",
     "co.fallsoft.pocket.TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget",
-    "co.fallsoft.pocket.TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion"
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion",
+    "co.fallsoft.pocket.ImmersionReadingWaveNaturalNativeTest#knownGrammarMeaningsAndUnalignedPhraseBothRevealInPlace",
+    "co.fallsoft.pocket.HistoryReadingNativeTest#typingWithReadingWavePreservesDraftAndReportsDispatchLatency"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",

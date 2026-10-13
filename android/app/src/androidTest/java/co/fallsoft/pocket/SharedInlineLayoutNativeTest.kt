@@ -54,8 +54,8 @@ class SharedInlineLayoutNativeTest {
   }
   val contraction=authoredImmersionScaffold("Open the parent task",listOf(
    "Apri" to "Open"," " to " ","l’incarico" to "l’task"," " to " ","principale" to "parent"))
-  assertEquals("Permissions full per i new tasks",immersionGrammarSupport(permissions))
-  assertEquals("Non sto checking il model",immersionGrammarSupport(negative))
+  assertEquals("Permissions full for the new tasks",immersionGrammarSupport(permissions))
+  assertEquals("not am checking the model",immersionGrammarSupport(negative))
   assertEquals("Open l’task parent",immersionGrammarSupport(contraction))
   for(span in listOf(permissions,negative,contraction)){
    val from=requireNotNull(immersionGrammarForm(span,false,"phrase"))

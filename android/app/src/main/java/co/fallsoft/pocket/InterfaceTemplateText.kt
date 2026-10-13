@@ -63,14 +63,14 @@ internal enum class InterfaceTemplate(val source:String,val italian:String){
             TEAM_ROOM_LOADING->words("Stanza|Room","·","Caricamento…|Loading…")
             TEAM_DIRECT_LOADING->words("Diretto|Direct","·")+listOf(" " to " ",literal(0)," · " to " · ")+words("Caricamento…|Loading…")
             TEAM_COORDINATOR->words("Losangelex","·")+listOf(" " to " ",literal(0)," · " to " · ")+words("Coordinatore|Coordinator")
-            TEAM_ATTENTION->words("Serve|Needs","il","tuo","intervento|input","·")+listOf(" " to " ",literal(0))
+            TEAM_ATTENTION->words("Serve|Needs","il|the","tuo|your","intervento|input","·")+listOf(" " to " ",literal(0))
             CREDIT_OBSERVATION->listOf(values[0].toString() to values[0].toString()," " to " ","crediti" to "credits"," · " to " · ",values[1].toString() to values[1].toString())
-            COMMAND_RESULTS->listOf(literal(0)," " to " ")+words("risultati|results","dei","comandi|commands","·")+listOf(" " to " ",literal(1)," " to " ")+words("terminati|exited","correttamente|successfully")
-            FILE_CHANGES->words("Modifiche|Changes","ai","file|files","registrate|recorded","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
+            COMMAND_RESULTS->listOf(literal(0)," " to " ")+words("risultati|results","dei|of the","comandi|commands","·")+listOf(" " to " ",literal(1)," " to " ")+words("terminati|exited","correttamente|successfully")
+            FILE_CHANGES->words("Modifiche|Changes","ai|to the","file|files","registrate|recorded","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
             GENERATED_ARTIFACT->words("Risorsa|Artifact","generata:|generated:")+listOf(" " to " ",values[0].toString() to values[0].toString())
             RECORDED_MESSAGE->words("Messaggio|Message","registrato|recorded","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
             SOURCE_MESSAGE->words("Messaggio|Message","originale|source")+listOf(" " to " ",values[0].toString() to values[0].toString())
-            AGENT_STATUS->words("Risposta|Output","dell’agente|dell’agent","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
+            AGENT_STATUS->words("Risposta|Output","dell’agente|of the agent","·")+listOf(" " to " ",values[0].toString() to values[0].toString())
         }
         return authoredImmersionScaffold(original(*values),units)
     }

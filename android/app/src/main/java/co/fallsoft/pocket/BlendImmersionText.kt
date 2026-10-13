@@ -98,6 +98,36 @@ import androidx.compose.ui.unit.*
                     onDrawWithContent{
                     val p=progress().coerceIn(0f,1f)
                     if(from.text==to.text||(!continuousWipe&&(p<=0f||p>=1f))){drawContent();return@onDrawWithContent}
+                    if(continuousWipe&&sharedWipeMask!=null){
+                        // Most slots are holding one form while the screen-wide
+                        // frontier visits another line. Do not allocate three
+                        // off-screen layers for fully opaque, unchanged holds.
+                        var heldForm:Int?=null
+                        var uniform=true
+                        for(line in 0 until maxOf(outgoingLayout.lineCount,incomingLayout.lineCount)){
+                            for(formIndex in 0..1){
+                                val result=if(formIndex==0)outgoingLayout else incomingLayout
+                                if(line>=result.lineCount)continue
+                                val shared=sharedWipeMask.invoke(p,result.getLineTop(line))
+                                val startCoverage=if(rtl){
+                                    if(shared.center+shared.feather<=0f)1
+                                    else if(shared.center-shared.feather>=size.width)0 else -1
+                                }else{
+                                    if(shared.center-shared.feather>=size.width)1
+                                    else if(shared.center+shared.feather<=0f)0 else -1
+                                }
+                                if(startCoverage<0){uniform=false;break}
+                                val form=if(shared.incomingAtReadingStart)startCoverage else 1-startCoverage
+                                if(heldForm!=null&&heldForm!=form){uniform=false;break}
+                                heldForm=form
+                            }
+                            if(!uniform)break
+                        }
+                        if(uniform&&heldForm!=null){
+                            drawText(if(heldForm==1)incomingLayout else outgoingLayout)
+                            return@onDrawWithContent
+                        }
+                    }
                     fun layer(result:TextLayoutResult,incomingLayer:Boolean){
                         val canvas=drawContext.canvas
                         canvas.saveLayer(layerBounds,if(incomingLayer)incomingPaint else outgoingPaint)

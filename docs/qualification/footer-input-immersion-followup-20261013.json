@@ -15,7 +15,11 @@
     "History load catch wrote global Pocket.error; candidate isolates readError with five-second transient grace while existing updating indicator remains",
     "SharedInlineImmersionText reconstructs placeholder paragraph and repeated prefix/chunk measurements when selectedSlots changes; measurement and optimization pending",
     "Editor TextFieldValue now observed inside a dedicated composer restart scope; owner observes only draft empty/nonempty. Native typing verification pending.",
-    "Grammar support deliberately retains Italian articles/prepositions/auxiliaries/pronouns/conjunctions, even with known meanings. Missing validated alignment falls back to the Italian target unchanged. Both explain some never-revealed equivalents; corrective design/source qualification remains pending."
+    "Grammar support deliberately retains Italian articles/prepositions/auxiliaries/pronouns/conjunctions, even with known meanings. Missing validated alignment falls back to the Italian target unchanged. Both explain some never-revealed equivalents; corrective design/source qualification remains pending.",
+    "Opaque holds bypass blending layers; per-fragment structurally equal, bounded mask states prevent unrelated clock ticks from redrawing every word.",
+    "Known teacher meanings include grammatical words; unaligned replacement support falls back to original source.",
+    "Authored UI catalog now includes387 previously absent functional-word equivalents as explicit offline pairs; names, IDs and suffix literals retained.",
+    "Short help taps consume release rather than initial touch; native selection can claim a long press."
   ],
   "limits": [
     "No new release or phone install",
@@ -26,7 +30,9 @@
     "Debug Kotlin compilation passed after editor/footer changes",
     "Debug unit tests passed before editor scope change",
     "Qualification app/test APK built before editor/footer reorder",
-    "Natural display-clock native journey passed for cached-shaping candidate; fixture stopped"
+    "Natural display-clock native journey passed for cached-shaping candidate; fixture stopped",
+    "Current natural wave, known equivalents/source fallback and real-key typing native scenarios passed; actual native selection and draft restoration checked.",
+    "Transient and prolonged read recovery independently passed; no worker submission."
   ],
   "performance": {
     "scope": "One matched 23-second natural wave journey per frozen alpha93/candidate on same owned software emulator; not handset or typing latency",
@@ -52,5 +58,11 @@
       "ConversationFilterNativeTest"
     ],
     "limits": "Fresh fixture per scenario; broad earlier class run failed with shared mutable fixture and is retained. These checks do not qualify physical typing or all language coverage."
+  },
+  "current_native_apk_sha256": "0b04e6ffe94581b4f4c51720e2d170f5ab45322f7d008418f7c910127cd63db5",
+  "physical_phone": {
+    "adb": "Pixel USB unavailable and no verified TCP connection; helper checked5037/5039 on2026-10-13",
+    "ssh": "Termux SSH reachable, Android16; TCP debug property empty",
+    "limits": "No physical input/frame pacing or install claim"
   }
 }

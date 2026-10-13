@@ -24,6 +24,52 @@ import org.junit.runner.RunWith
 /** Real Android display clock: deliberately no Compose test-clock/idling rule. */
 @RunWith(AndroidJUnit4::class)
 class ImmersionReadingWaveNaturalNativeTest {
+    @Test fun knownGrammarMeaningsAndUnalignedPhraseBothRevealInPlace(){
+        val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
+        val device=UiDevice.getInstance(i)
+        check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+        c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").commit()
+        i.runOnMainSync{Pocket.init(c)}
+        ActivityScenario.launch(MainActivity::class.java).use{scenario->
+            scenario.onActivity{activity->
+                PocketImmersion.setEnabled(true);PocketImmersion.setSupportEnabled(true);PocketImmersion.setMotionEnabled(true)
+                val segments=org.json.JSONArray()
+                listOf(Triple("una","a","determiner"),Triple(" ","","separator"),Triple("domanda","question","noun"),Triple(" ","","separator"),Triple("importante","important","adjective")).let{words->
+                    var at=0;words.forEach{(target,meaning,role)->
+                        segments.put(org.json.JSONObject().put("start",at).put("end",at+target.length).put("target",target).put("meaning",meaning).put("role",role));at+=target.length
+                    }
+                }
+                fun row(id:String,source:String,target:String,aligned:org.json.JSONArray)=org.json.JSONObject().put("id",id).put("original",source).put("text",target).put("version",immersionSourceHash(source)).put("density","strong").put("planVersion","inline-replacement-v3").put("spans",org.json.JSONArray().put(org.json.JSONObject().put("start",0).put("end",source.length).put("source",source).put("target",target).put("targetSegments",aligned)))
+                PocketImmersion.accept(org.json.JSONObject().put("translations",org.json.JSONArray().put(row("grammar-wave","an important question","una domanda importante",segments)).put(row("unaligned-wave","two sessions","due sessioni",org.json.JSONArray()))))
+                activity.setContent{
+                    CompositionLocalProvider(LocalImmersionMotionState provides true,LocalImmersionTransitionAnimated provides true){
+                        MaterialTheme{
+                            ImmersionReadingWaveHost{
+                                Surface(Modifier.fillMaxSize(),color=Ink){
+                                    Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp)){
+                                        BilingualMessage("grammar-wave","an important question",Modifier.width(260.dp))
+                                        Spacer(Modifier.height(30.dp))
+                                        BilingualMessage("unaligned-wave","two sessions",Modifier.width(260.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            val forms=mutableSetOf<String>();val deadline=android.os.SystemClock.elapsedRealtime()+26000
+            while(android.os.SystemClock.elapsedRealtime()<deadline){
+                if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
+                for(text in listOf("una domanda importante","a question important","due sessioni","two sessions"))
+                    if(device.hasObject(By.text(text)))forms+=text
+                if(forms.size==4)break
+                Thread.sleep(100)
+            }
+            assertEquals(setOf("una domanda importante","a question important","due sessioni","two sessions"),forms)
+            assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"complete-grammar-equivalents.png")))
+            device.dumpWindowHierarchy(java.io.File(c.cacheDir,"complete-grammar-equivalents.xml"))
+        }
+    }
     @Test fun naturalDisplayClockCyclesReadableBodyAndControlWithoutMovingTheirBounds() {
         val i=InstrumentationRegistry.getInstrumentation()
         val c=i.targetContext
@@ -38,7 +84,7 @@ class ImmersionReadingWaveNaturalNativeTest {
         var clock:ImmersionReadingWaveClock?=null
         var taps=0
         val target="Permessi completi per i nuovi incarichi"
-        val support="Permissions full per i new tasks"
+        val support="Permissions full for the new tasks"
         val controls=mutableSetOf<String>()
         val bodies=mutableSetOf<String>()
         java.io.File(c.cacheDir,"reading-wave-menu-trace.json").delete()
@@ -121,7 +167,7 @@ class ImmersionReadingWaveNaturalNativeTest {
             var bodyBounds:String?=null
             val started=android.os.SystemClock.elapsedRealtime()
             while(android.os.SystemClock.elapsedRealtime()-started<23000) {
-                val nodes=device.findObjects(By.pkg(c.packageName).textContains("per i")).sortedBy{it.visibleBounds.top}
+                val nodes=device.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile("(Permessi|Permissions).*"))).sortedBy{it.visibleBounds.top}
                 if(nodes.size>=2) {
                     val control=nodes[0]
                     val body=nodes[1]
@@ -156,7 +202,7 @@ class ImmersionReadingWaveNaturalNativeTest {
             assertTrue("Control did not cycle naturally: "+controls,controls.containsAll(listOf(target,support)))
             assertTrue("Body did not cycle naturally: "+bodies,bodies.containsAll(listOf(target,support)))
             // Actual native selection menu, not direct clock-owner injection.
-            val body=device.findObjects(By.pkg(c.packageName).textContains("per i")).maxBy{it.visibleBounds.top}
+            val body=device.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile("(Permessi|Permissions).*"))).maxBy{it.visibleBounds.top}
             val x=body.visibleBounds.left+30
             val y=body.visibleBounds.top+25
             // Inject an actual stationary hold; a zero-distance swipe is not
@@ -194,7 +240,7 @@ class ImmersionReadingWaveNaturalNativeTest {
             assertNotNull("Native body selection did not offer Copy",copy)
             assertTrue("Selection menu did not freeze the shared wave",clock!!.hasSelection)
             val paused=clock!!.elapsedMs
-            val frozen=device.findObjects(By.pkg(c.packageName).textContains("per i")).maxBy{it.visibleBounds.top}.text
+            val frozen=device.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile("(Permessi|Permissions).*"))).maxBy{it.visibleBounds.top}.text
             Thread.sleep(750)
             assertEquals("Wave changed while native selection menu was open",paused,clock!!.elapsedMs)
             copy!!.click()
@@ -206,7 +252,7 @@ class ImmersionReadingWaveNaturalNativeTest {
             // to leave selection before testing an unrelated control.
             device.click(x,y)
             capture("initial-selection-dismiss")
-            val button=device.findObjects(By.pkg(c.packageName).textContains("per i")).minBy{it.visibleBounds.top}
+            val button=device.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile("(Permessi|Permissions).*"))).minBy{it.visibleBounds.top}
             device.click(button.visibleBounds.centerX(),button.visibleBounds.centerY())
             i.runOnMainSync{assertEquals("Visible button lost its action",1,taps)}
             val resumeStart=android.os.SystemClock.elapsedRealtime()

@@ -336,10 +336,10 @@ class TranscriptRefreshNativeTest {
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   val baseline=qa("state").getJSONArray("reads").length()
   qa("silent");qa("fail-read-burst");main{Pocket.refreshDetail()}
-  await{qa("state").getJSONArray("reads").length()==baseline+4&&PocketTranscript.updating}
-  assertTrue("Outage lost cached history",has(1));assertTrue("Outage hid actionable error",Pocket.error.isNotBlank())
+  await{qa("state").getJSONArray("reads").length()==baseline+4&&PocketTranscript.updating&&!PocketTranscript.loading&&PocketTranscript.readError.isNotBlank()}
+  assertTrue("Outage lost cached history",has(1));assertTrue("Outage hid actionable error",PocketTranscript.readError.isNotBlank())
   await{qa("state").getJSONArray("reads").length()>=baseline+5&&has(2)&&!PocketTranscript.updating}
-  qa("fail-read");main{Pocket.refreshDetail()};await{Pocket.error.contains("Synthetic history refresh unavailable")&&PocketTranscript.updating}
+  qa("fail-read");main{Pocket.refreshDetail()};await{!PocketTranscript.loading&&PocketTranscript.updating};assertTrue("Brief refresh failed the send surface",Pocket.error.isBlank()&&PocketTranscript.readError.isBlank())
   main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}&&!PocketTranscript.updating}
   val afterNavigation=qa("state").getJSONArray("reads").objects().count{it.s("threadId")!="second-thread"}
   Thread.sleep(1500)
@@ -349,16 +349,18 @@ class TranscriptRefreshNativeTest {
  @Test fun transientHistoryFailureRecoversWithoutAnotherEvent(){
   twoChats();main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating}
   qa("silent");qa("fail-read");main{Pocket.refreshDetail()}
-  await{Pocket.error.contains("Synthetic history refresh unavailable")&&PocketTranscript.updating}
+  await{!PocketTranscript.loading&&PocketTranscript.updating}
+  assertTrue("Brief refresh showed a disconnected error",Pocket.error.isBlank()&&PocketTranscript.readError.isBlank())
   assertTrue("Cached history discarded on failure",has(1))
   assertTrue("Loading indicator missing",device.wait(Until.hasObject(By.text("Updating messages")),3000))
   await{has(2)&&!PocketTranscript.updating&&Pocket.error.isBlank()}
   qa("silent");qa("malformed-read");main{Pocket.refreshDetail()}
-  await{Pocket.error.contains("Messages were not returned")&&PocketTranscript.updating}
+  await{!PocketTranscript.loading&&PocketTranscript.updating}
+  assertTrue("Brief malformed refresh failed the send surface",Pocket.error.isBlank()&&PocketTranscript.readError.isBlank())
   assertTrue("Malformed response erased cached history",has(2))
   await{has(3)&&!PocketTranscript.updating&&Pocket.error.isBlank()}
   qa("silent");qa("fail-read-permanent");main{Pocket.refreshDetail()}
-  await{Pocket.error.contains("Synthetic history permission rejected")&&!PocketTranscript.updating}
+  await{PocketTranscript.readError.contains("Synthetic history permission rejected")&&!PocketTranscript.updating}
   val reads=qa("state").getJSONArray("reads").length();Thread.sleep(2500)
   assertEquals("Rejected permission was polled",reads,qa("state").getJSONArray("reads").length())
   assertTrue("Permission failure hid local history",has(3))
@@ -629,7 +631,7 @@ class TranscriptRefreshNativeTest {
    main{Pocket.refresh()};Thread.sleep(1600)
    assertEquals("Already delivered live head polled history",resetReads,qa("state").getJSONArray("reads").length())
    qa("head-only-update");qa("fail-read-permanent");main{Pocket.refresh()}
-   await{Pocket.error.contains("Synthetic history permission rejected")&&!PocketTranscript.updating}
+   await{PocketTranscript.readError.contains("Synthetic history permission rejected")&&!PocketTranscript.updating}
    val deniedReads=qa("state").getJSONArray("reads").length()
    repeat(3){main{Pocket.refresh()};Thread.sleep(600)};Thread.sleep(1600)
    assertEquals("Permanent rejection was repeatedly retried by head probes",deniedReads,qa("state").getJSONArray("reads").length())
@@ -763,23 +765,23 @@ class TranscriptRefreshNativeTest {
   assertFalse("Reading setup remained at transcript end",device.hasObject(By.textContains("Older reading position 29:")))
   val retained=PocketTranscript.rows.map{it.s("id")}
   qa("fail-read");main{Pocket.refreshDetail()}
-  await{!PocketTranscript.loading&&Pocket.error.contains("Synthetic history refresh unavailable")}
+  await{!PocketTranscript.loading&&PocketTranscript.readError.contains("Synthetic history refresh unavailable")}
   assertEquals("Failed refresh discarded local history",retained,PocketTranscript.rows.map{it.s("id")})
   assertTrue("History refresh error hidden",device.wait(Until.hasObject(By.textContains("Synthetic history refresh unavailable")),2000))
   assertTrue("Read recovery inaccessible",device.wait(Until.hasObject(By.text("Reload conversation")),2000))
   device.findObject(By.text("Reload conversation")).click()
-  await{!PocketTranscript.loading&&Pocket.error.isBlank()}
+  await{!PocketTranscript.loading&&PocketTranscript.readError.isBlank()}
   assertEquals("Read retry erased typing","Voice must keep this draft",prefs.getString("draft:same-thread",null))
   val readsBeforeRejected=qa("state").getJSONArray("reads").length()
   qa("fail-read-permanent")
   main{Pocket.refreshDetail();Pocket.refreshDetail()}
-  await{!PocketTranscript.loading&&Pocket.error.contains("Synthetic history permission rejected")}
+  await{!PocketTranscript.loading&&PocketTranscript.readError.contains("Synthetic history permission rejected")}
   assertFalse("Permission failure still permits automatic reads",PocketTranscript.automaticRetryAllowed)
   assertFalse("Rejected coalesced read left perpetual Updating messages",PocketTranscript.updating)
   Thread.sleep(900)
   assertEquals("Rejected read retried unchanged credentials",readsBeforeRejected+1,qa("state").getJSONArray("reads").length())
   device.findObject(By.text("Reload conversation")).click()
-  await{!PocketTranscript.loading&&Pocket.error.isBlank()}
+  await{!PocketTranscript.loading&&PocketTranscript.readError.isBlank()}
   assertTrue("Explicit successful reload did not restore automatic pagination",PocketTranscript.automaticRetryAllowed)
 
  }
