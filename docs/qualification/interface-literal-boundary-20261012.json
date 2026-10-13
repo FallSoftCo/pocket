@@ -1,5 +1,5 @@
 {
-  "state": "implemented-and-compiled-native-check-pending",
+  "state": "native-literal-template-passed-filter-regression-blocks-release",
   "base": "d222257d7382c841172630a70535388094224058",
   "finding": "New unreleased team templates passed arbitrary team names through authored pipe-delimited vocabulary parser. Pipe/tilde names could diverge from exact formatted target.",
   "fix": "Authored words and literal parameters now separate constructors. Team names, recipients, task titles, amounts and paths are never vocabulary syntax. Command count arguments use literal slots too.",
@@ -13,5 +13,15 @@
     "No physical-phone verification",
     "No claims about full Losangelex workflow from template checks",
     "No backend or web ownership changes"
-  ]
+  ],
+  "native": "Existing interface template journey passed with pipe/tilde/percent/unicode names, all room/direct loading/task forms and exact literal target invariants.",
+  "nativeApkSha256": "ffd3aadc253947e7fda047d6a0904f4b0626eae4805cd0dad84f557d363b8002",
+  "filterFailure": {
+    "case": "filterKeepsVisibleAnswerWhenLeadingCommentaryIsRemoved",
+    "beforeTop": 462,
+    "afterTop": 688,
+    "pixelShift": 226,
+    "visualReview": "Before/after actual emulator screenshots also show missing text after filter. Cause not yet established; do not relax assertions or publish.",
+    "remainingCase": "filterPreservesVisiblePassageAndReturnsWithoutJumping not run after first failure."
+  }
 }
