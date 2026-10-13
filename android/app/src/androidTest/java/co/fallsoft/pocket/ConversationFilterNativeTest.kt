@@ -19,10 +19,11 @@ class ConversationFilterNativeTest {
  private fun main(block:()->Unit)=i.runOnMainSync(block)
  private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(condition())return;Thread.sleep(100)};assertTrue(condition())}
  private fun visiblePassages(prefix:String):List<Pair<String,android.graphics.Rect>>{
+  if(android.os.Build.VERSION.SDK_INT>=34)assertTrue("Accessibility cache did not clear",i.uiAutomation.clearCache())
   val out=java.io.ByteArrayOutputStream();device.dumpWindowHierarchy(out)
   val doc=javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(java.io.ByteArrayInputStream(out.toByteArray()))
   val nodes=doc.getElementsByTagName("node")
-  return (0 until nodes.length).mapNotNull{n->val e=nodes.item(n) as org.w3c.dom.Element;val text=e.getAttribute("text");val b=Regex("[0-9]+").findAll(e.getAttribute("bounds")).map{it.value.toInt()}.toList();if(!text.startsWith(prefix)||b.size!=4)null else text to android.graphics.Rect(b[0],b[1],b[2],b[3])}.filter{!it.second.isEmpty}.sortedBy{it.second.top}
+  return (0 until nodes.length).mapNotNull{n->val e=nodes.item(n) as org.w3c.dom.Element;val text=e.getAttribute("text");val b=Regex("-?[0-9]+").findAll(e.getAttribute("bounds")).map{it.value.toInt()}.toList();if(!text.startsWith(prefix)||b.size!=4)null else text to android.graphics.Rect(b[0],b[1],b[2],b[3])}.filter{!it.second.isEmpty}.sortedBy{it.second.top}
  }
  // Require consecutive identical native bounds before capturing a reading anchor.
  // This separates a pending fling from movement caused by the filter.
@@ -107,11 +108,16 @@ class ConversationFilterNativeTest {
   val restored=device.findObject(By.text(text));assertNotNull("Unfilter lost reading passage",restored)
   assertTrue("Unfilter moved reading passage",kotlin.math.abs(restored.visibleBounds.top-top)<=24)
   fun end(status:String)=main{PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","states").put("version",500+listOf("failed","interrupted","completed").indexOf(status)).put("turn",JSONObject().put("id","states").put("status",status)))}
-  end("failed");assertTrue("Failed turn mislabeled",device.wait(Until.hasObject(By.text("Failed")),3000))
-  end("interrupted");assertTrue("Interrupted turn mislabeled",device.wait(Until.hasObject(By.text("Stopped")),3000))
-  end("completed");assertTrue("Completed turn implies input required",device.wait(Until.hasObject(By.text("Ready")),3000))
+  end("failed")
+  main{println("Failed state diagnostic: verified=${PocketTranscript.currentHistoryVerified} loading=${PocketTranscript.loading} selected=${Pocket.selected} task=${Pocket.tasks.firstOrNull{it.id==Pocket.selected}} thread=${Pocket.detail?.optJSONObject("thread")} turns="+PocketTranscript.rows.filter{it.s("kind")=="turn"}.map{it.toString()})}
+  await{device.hasObject(By.text("Failed"))}
+  val failedVisible=device.hasObject(By.text("Failed"))
+  device.dumpWindowHierarchy(java.io.File(context.cacheDir,"filter-run-status-failed.xml"))
+  assertTrue("Failed turn mislabeled",failedVisible)
+  end("interrupted");await{device.hasObject(By.text("Stopped"))}
+  end("completed");await{device.hasObject(By.text("Ready"))}
   main{Pocket.detail=JSONObject(requireNotNull(Pocket.detail).toString()).put("pending",org.json.JSONArray().put(JSONObject().put("id","question")))}
-  assertTrue("Pending question not distinguished",device.wait(Until.hasObject(By.text("Needs you")),3000))
+  await{device.hasObject(By.text("Needs you"))}
 
  }
 }

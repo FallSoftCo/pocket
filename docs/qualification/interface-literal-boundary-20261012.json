@@ -1,5 +1,5 @@
 {
-  "state": "native-literal-template-passed-filter-regression-blocks-release",
+  "state": "native-literal-and-filter-journeys-passed-owning-release-pending",
   "base": "d222257d7382c841172630a70535388094224058",
   "finding": "New unreleased team templates passed arbitrary team names through authored pipe-delimited vocabulary parser. Pipe/tilde names could diverge from exact formatted target.",
   "fix": "Authored words and literal parameters now separate constructors. Team names, recipients, task titles, amounts and paths are never vocabulary syntax. Command count arguments use literal slots too.",
@@ -28,8 +28,14 @@
       "r02": "Explicitly stopped own instrumentation after global Instrumentation.waitForIdleSync did not return; process-crashed runner result was intentional test termination, not evidence of app crash. No case passed.",
       "r03": "Failed after bounded idle and consecutive stable baseline bounds: answer moved236->462 (226px). Baseline rectangle consistency and ink assertions passed. Synchronization correction does not eliminate position failure; production anchor/layout investigation required. Second case not run.",
       "r04": "Scoped measurement logs only: first journey passed, second failed missing visible passage. Position issue is timing-sensitive; no deterministic production diagnosis claimed.",
-      "r06": "First journey passed after fresh settled hierarchy read. Layout diagnostic keeps answer item at204 before/after filter and restore. Second journey passed filter/restore position assertions, then failed Failed-turn label assertion; investigate verified-history/live-status fixture contract next. No full filter gate pass or production position fix claimed."
+      "r06": "First journey passed after fresh settled hierarchy read. Layout diagnostic keeps answer item at204 before/after filter and restore. Second journey passed filter/restore position assertions, then failed Failed-turn label assertion; investigate verified-history/live-status fixture contract next. No full filter gate pass or production position fix claimed.",
+      "r07": "Filter/restore passed;3sec Failed wait failed. Main-thread snapshot: verified history true, loading false, task/thread idle, last turn failed. Native hierarchy captured immediately afterward contains Failed label and Failed; conversation controls. No status logic defect established.",
+      "r08": "Failed before status checks: partially clipped visible passage shifted142->421. Existing anchor deliberately chose first fully visible survivor, skipping clipped survivor.",
+      "r09": "Failed reported236->463. Actual before/after white text mask at463..715 is byte-identical (intersection/union1.0); same-screen236..488 overlap0.9863; shifted236->463 overlap0.0121. Layout key36offset205 retained. Reported jump not supported by captured pixels; accessibility-cache diagnosis now evidence-backed.",
+      "r10": "Both native journeys passed, including exact position24px/ink70% assertions, filter/restore, Failed/Stopped/Ready/Needs-you. Owned fixture stopped and reaped. Source/APK hashes in private r10 receipt; production integration and fresh immutable release gate pending."
     },
-    "candidateFix": "r05 measured-anchor acknowledgement did not eliminate226px failure and was removed. Diagnostic measured layout retained target offset204 through initial padding; next investigation must correlate later layout and native text bounds after trim, without accepting ineffective fix."
-  }
+    "candidateFix": "Choose first surviving item intersecting viewport, including partially clipped passage; preserve exact item offset. Existing unit expectation corrected for clipped survivor; targeted unit/build/native qualification pending r09. No release claim.",
+    "resolution": "Original apparent226px jump came from stale accessibility-cache bounds, proven by same-position screenshot masks and cache-cleared native results. Separate clipped-survivor anchor policy improved and qualified. Earlier missing-text claim withdrawn; original failures preserved."
+  },
+  "candidateCleanup": "Temporary verbose layout diagnostics removed before owning qualification; original opt-in diagnostic remains. Native tests retain explicit accessibility-cache clearing and stable samples."
 }
