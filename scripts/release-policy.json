@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "post-alpha90-critical-history-and-interface-coverage",
+  "qualification": "alpha91-environment-card-isolation-interface-and-critical-history",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
