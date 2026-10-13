@@ -2527,7 +2527,9 @@
       "request": "Make idle sessions immediately distinguishable through lower brightness and saturation, preserving readable text and distinct active and input-blocked states; recency must not imply activity.",
       "status": "alpha90-published-native-qualified-phone-install-unverified",
       "evidence": "Native three-state capture reviewed: working color, idle dim/desaturated neutral, input-needed coral with Needs your input label. Frozen signed release published.",
-      "delivery": "Alpha90/code108 published after41 frozen native journeys,365 unit checks each debug/release and both lints. Compatible signed APK visually reviewed; notification1546 sent once. Phone installation unverified."
+      "delivery": "Alpha90/code108 published after41 frozen native journeys,365 unit checks each debug/release and both lints. Compatible signed APK visually reviewed; notification1546 sent once. Phone installation unverified.",
+      "follow_up": "User still finds idle unclear: remove idle recency glow entirely, use cool near-black surface and opaque softer text; preserve bright working and coral input-needed states.",
+      "follow_up_status": "native-reviewed-release-pending"
     }
   ],
   "current_state": {

@@ -413,11 +413,15 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     LaunchedEffect(Pocket.environmentId,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
     val shape=RoundedCornerShape(8.dp)
     val stateAccent=if(t.needsInput&&!active)Coral else ageColor
-    val stateGlow=if(active||t.needsInput)1f else .18f
-    val stateSurface=if(active||t.needsInput)Panel else androidx.compose.ui.graphics.lerp(Ink,Panel,.35f)
+    val stateGlow=if(active||t.needsInput)1f else 0f
+    // Runtime activity and age are independent: idle cards stay neutral even when recent.
+    // Keep text opaque for readability rather than dimming the entire touch surface.
+    val quiet=!active&&!t.needsInput
+    val cardText=if(quiet)Color(0xffb8bdc7) else Paper
+    val stateSurface=if(quiet)Color(0xff080b10) else Panel
     Box(Modifier.fillMaxWidth().clip(shape).background(stateSurface).drawBehind{
         drawRoundRect(Brush.radialGradient(colors=listOf(stateAccent.copy(alpha=.26f*stateGlow),stateAccent.copy(alpha=.06f*stateGlow),Color.Transparent),center=Offset(size.width*.85f,0f),radius=size.width*.95f),cornerRadius=CornerRadius(8.dp.toPx()))
-    }.border(1.dp,Line.copy(alpha=.7f),shape).border(2.dp,Mint.copy(alpha=highlight.value),shape)){
+    }.border(1.dp,if(quiet)Color(0xff252b34)else Line.copy(alpha=.7f),shape).border(2.dp,Mint.copy(alpha=highlight.value),shape)){
         if(!t.archived)Row(Modifier.matchParentSize()){
             VoiceLaunchButton(modifier=Modifier.weight(.22f).fillMaxHeight(),threadId=t.id,cardRegion=true)
             CardInteractionRegion("Chat",Modifier.weight(.56f).fillMaxHeight(),t.title){Pocket.open(t.id)}
@@ -435,7 +439,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalViewConfiguration provides object:androidx.compose.ui.platform.ViewConfiguration by titleConfiguration {
                     override val minimumTouchTargetSize=androidx.compose.ui.unit.DpSize.Zero
                 }){
-                    BilingualLabel(t.title,color=Paper,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,centered=false,onActivate={name=t.title;rename=true})
+                    BilingualLabel(t.title,color=cardText,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,centered=false,onActivate={name=t.title;rename=true})
                 }
             }
             if(!rename)headerBadge?.invoke()
@@ -457,7 +461,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            ImmersionText("card:"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(if(t.needsInput)"Needs your input · " else "Idle · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else Paper,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
+            ImmersionText("card:"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(if(t.needsInput)"Needs your input · " else "Idle · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
         }
 
     }
