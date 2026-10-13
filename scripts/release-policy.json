@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha91-environment-card-isolation-interface-and-critical-history",
+  "qualification": "alpha91-r02-literal-boundary-filter-and-critical-history",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
@@ -47,7 +47,9 @@
     "co.fallsoft.pocket.HistoryReadingNativeTest#lateInputEventReconcilesCanonicalOrderOnce",
     "co.fallsoft.pocket.HistoryReadingNativeTest#shortHistoryPagesRequireAnotherReadingGesture",
     "co.fallsoft.pocket.HistoryReadingNativeTest#anchoredInputOutsideRecentPageRepairsWithoutBackfillOrLosingLiveText",
-    "co.fallsoft.pocket.HistoryReadingNativeTest#partialOlderPageRepairsLateInputAgainstRetainedReply"
+    "co.fallsoft.pocket.HistoryReadingNativeTest#partialOlderPageRepairsLateInputAgainstRetainedReply",
+    "co.fallsoft.pocket.ConversationFilterNativeTest#filterKeepsVisibleAnswerWhenLeadingCommentaryIsRemoved",
+    "co.fallsoft.pocket.ConversationFilterNativeTest#filterPreservesVisiblePassageAndReturnsWithoutJumping"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",
