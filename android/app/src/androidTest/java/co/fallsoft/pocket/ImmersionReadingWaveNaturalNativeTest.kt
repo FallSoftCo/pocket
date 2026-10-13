@@ -97,8 +97,26 @@ class ImmersionReadingWaveNaturalNativeTest {
         application.registerActivityLifecycleCallbacks(lifecycle)
         try {
         ActivityScenario.launch(MainActivity::class.java).use{
+            var stopPerformance:(()->Unit)?=null
             try {
-            i.runOnMainSync{allowMotion.value=true}
+            val samples=java.util.Collections.synchronizedList(mutableListOf<LongArray>())
+            val frameThread=android.os.HandlerThread("OwnedWaveFrameObservation").apply{start()}
+            val frameListener=android.view.Window.OnFrameMetricsAvailableListener { _,metrics,_ ->
+                samples.add(longArrayOf(metrics.getMetric(android.view.FrameMetrics.TOTAL_DURATION),
+                    metrics.getMetric(android.view.FrameMetrics.DRAW_DURATION),
+                    metrics.getMetric(android.view.FrameMetrics.DEADLINE)))
+            }
+            val allocationStart=android.os.Debug.getRuntimeStats()
+            val cpuStart=android.os.Process.getElapsedCpuTime()
+            val observationStart=android.os.SystemClock.elapsedRealtime()
+            i.runOnMainSync{
+                nativeActivity!!.window.addOnFrameMetricsAvailableListener(frameListener,android.os.Handler(frameThread.looper))
+                allowMotion.value=true
+            }
+            stopPerformance={
+                i.runOnMainSync{nativeActivity!!.window.removeOnFrameMetricsAvailableListener(frameListener)}
+                frameThread.quitSafely();frameThread.join(2000)
+            }
             var controlBounds:String?=null
             var bodyBounds:String?=null
             val started=android.os.SystemClock.elapsedRealtime()
@@ -119,6 +137,21 @@ class ImmersionReadingWaveNaturalNativeTest {
                 }
                 Thread.sleep(200)
             }
+            stopPerformance.invoke();stopPerformance=null
+            val allocationEnd=android.os.Debug.getRuntimeStats()
+            val frameSnapshot=synchronized(samples){samples.toList()}
+            val frameValues=org.json.JSONArray()
+            frameSnapshot.forEach{frameValues.put(org.json.JSONArray().put(it[0]).put(it[1]).put(it[2]))}
+            val allocationDelta=org.json.JSONObject()
+            listOf("art.gc.bytes-allocated","art.gc.gc-count","art.gc.gc-time","art.gc.blocking-gc-count").forEach{key->
+                val a=allocationStart[key]?.toLongOrNull();val b=allocationEnd[key]?.toLongOrNull()
+                if(a!=null&&b!=null)allocationDelta.put(key,b-a)
+            }
+            java.io.File(c.cacheDir,"reading-wave-performance.json").writeText(org.json.JSONObject()
+                .put("scope","Owned software emulator; 23-second natural reading-wave journey with native accessibility observations; physical frame pacing unqualified")
+                .put("wallMs",android.os.SystemClock.elapsedRealtime()-observationStart)
+                .put("processCpuMs",android.os.Process.getElapsedCpuTime()-cpuStart)
+                .put("runtimeDeltas",allocationDelta).put("frames",frameValues).toString())
             java.io.File(c.cacheDir,"reading-wave-natural-trace.json").writeText(traces.toString())
             assertTrue("Control did not cycle naturally: "+controls,controls.containsAll(listOf(target,support)))
             assertTrue("Body did not cycle naturally: "+bodies,bodies.containsAll(listOf(target,support)))
@@ -211,6 +244,7 @@ class ImmersionReadingWaveNaturalNativeTest {
             } finally {
                 // Stop the fixture display clock before ActivityScenario waits for idle.
                 // Failed interaction assertions must produce a receipt rather than hang teardown.
+                stopPerformance?.invoke()
                 i.runOnMainSync { allowMotion.value=false }
             }
         }

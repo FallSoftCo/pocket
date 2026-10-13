@@ -2529,7 +2529,13 @@
       "evidence": "Native three-state capture reviewed: working color, idle dim/desaturated neutral, input-needed coral with Needs your input label. Frozen signed release published.",
       "delivery": "Alpha90/code108 published after41 frozen native journeys,365 unit checks each debug/release and both lints. Compatible signed APK visually reviewed; notification1546 sent once. Phone installation unverified.",
       "follow_up": "User still finds idle unclear: remove idle recency glow entirely, use cool near-black surface and opaque softer text; preserve bright working and coral input-needed states.",
-      "follow_up_status": "native-reviewed-release-pending"
+      "follow_up_status": "native-reviewed-alpha92-candidate"
+    },
+    {
+      "id": "immersion-draw-cache-20261012",
+      "request": "Continue polishing responsive global immersion without per-frame object churn or changing the waterfall, text legibility or taps.",
+      "status": "native-qualified-alpha92-candidate",
+      "evidence": "Matched existing natural native journey:55.4MB to44.1MB allocations; median draw4.52ms to3.29ms. Ink coverage, outgoing-word tap and native inline-link checks pass. Overall frame timing not proven improved; physical phone unverified."
     }
   ],
   "current_state": {

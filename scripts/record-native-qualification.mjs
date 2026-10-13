@@ -27,17 +27,25 @@ const receipt={schema:1,state:'running',case:name,actor,startedAt:Date.now(),ver
 writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{flag:'wx',mode:0o600});
 const persist=()=>writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{mode:0o600});
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+// Only reviewed synthetic services can run inside release qualification.
+const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget';
+const fixtureScript=teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
+const fixturePort=teamCase?'19992':'19998';
+const fixtureToken=teamCase?'synthetic-alpha24-only':'synthetic-system76';
+const fixtureHost=teamCase?'Synthetic alpha24':'Synthetic';
+const fixtureReadyMessage=teamCase?'Synthetic alpha24 fixture19992':'Owned transcript fixture ready';
+const ownedFixtures=['tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
 try{
  if(owner.fixturePid&&existsSync('/proc/'+owner.fixturePid)){
   const args=readFileSync('/proc/'+owner.fixturePid+'/cmdline','utf8');
-  if(!args.includes('tests/fixtures/transcript-refresh-native.mjs')||realpathSync('/proc/'+owner.fixturePid+'/cwd')!==resolve(root))throw Error('Refuse to stop an unrelated fixture process.');
+  if(!ownedFixtures.some(script=>args.includes(script))||realpathSync('/proc/'+owner.fixturePid+'/cwd')!==resolve(root))throw Error('Refuse to stop an unrelated fixture process.');
   process.kill(owner.fixturePid,'SIGTERM');for(let n=0;n<60&&existsSync('/proc/'+owner.fixturePid);n++)await pause(50);
   if(existsSync('/proc/'+owner.fixturePid))throw Error('Old owned fixture has not stopped.');
  }
  const fd=openSync(join(directory,'fixture-'+id+'.log'),'wx',0o600);
- const fixture=spawn(process.execPath,['tests/fixtures/transcript-refresh-native.mjs'],{cwd:root,env:{...childEnv,PORT:'19998',NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},stdio:['ignore',fd,fd],detached:true});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);fixture.unref();owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
- let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:19998/api/status',{headers:{Authorization:'Bearer synthetic-system76'},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host==='Synthetic'&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes('Owned transcript fixture ready')){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
- run(['reverse','tcp:18880','tcp:19998']);
+ const fixture=spawn(process.execPath,[fixtureScript],{cwd:root,env:{...childEnv,PORT:fixturePort,NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},stdio:['ignore',fd,fd],detached:true});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);fixture.unref();owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
+ let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
+ run(['reverse','tcp:18880','tcp:'+fixturePort]);
  const installedPackageSha=packageName=>{
   const result=spawnSync(adb,['-s',serial,'shell','pm','path',packageName],{encoding:'utf8',env:childEnv,timeout:30000});
   if(result.status!==0)return null;

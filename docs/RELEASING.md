@@ -113,3 +113,10 @@ The policy is an explicit incremental regression set, not certification of every
 UX requirement. Extend it for each change. Known open immersion reflow and real
 handset qualification remain open; passing this gate cannot claim world-class UX
 is finished.
+
+
+Release builds reset only their own disposable APK packaging caches and output
+APK files before assembling. This avoids dead ZIP gaps left by incremental
+packaging; it does not remove dependencies, source, staged qualified artifacts
+or published updates. The build intent records the exact reset set. Signing,
+version checks, APK limits and native review remain required.

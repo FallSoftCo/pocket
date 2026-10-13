@@ -6,7 +6,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.BlendMode
@@ -72,25 +73,47 @@ import androidx.compose.ui.unit.*
             val outgoingLayout=measure(from,width,true)
             val incomingLayout=measure(to,width,true)
             Text(nativeVisible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
-                onTextLayout={layout=it;onNativeTextLayout?.invoke(it);reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithContent{
-                    val p=progress().coerceIn(0f,1f)
-                    if(from.text==to.text||(!continuousWipe&&(p<=0f||p>=1f))){drawContent();return@drawWithContent}
+                onTextLayout={layout=it;onNativeTextLayout?.invoke(it);reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithCache{
+                    // Geometry and shaders live for the draw cache, not one display frame.
+                    // Progress remains a draw-only read; changing language/layout invalidates
+                    // this cache while ordinary clock ticks only redraw its masks.
+                    val layerBounds=Rect(0f,0f,size.width,size.height)
+                    val isolationPaint=Paint()
+                    val outgoingPaint=Paint()
+                    val incomingPaint=Paint().apply{blendMode=BlendMode.Plus}
                     val firstChangedLine=(changed.first.map{outgoingLayout.getLineForOffset(it.start.coerceIn(0,(from.length-1).coerceAtLeast(0)))}+changed.second.map{incomingLayout.getLineForOffset(it.start.coerceIn(0,(to.length-1).coerceAtLeast(0)))}).minOrNull()?:0
                     val lines=(maxOf(outgoingLayout.lineCount,incomingLayout.lineCount)-firstChangedLine).coerceAtLeast(1)
+                    var cachedFeather=Float.NaN
+                    var startOpaque:Brush?=null
+                    var endOpaque:Brush?=null
+                    fun mask(feather:Float,opaqueAtReadingStart:Boolean):Brush{
+                        if(feather!=cachedFeather){
+                            cachedFeather=feather
+                            val colors=if(rtl)listOf(Color.Transparent,Color.Black)else listOf(Color.Black,Color.Transparent)
+                            startOpaque=Brush.horizontalGradient(colors,-feather,feather)
+                            endOpaque=Brush.horizontalGradient(colors.reversed(),-feather,feather)
+                        }
+                        return requireNotNull(if(opaqueAtReadingStart)startOpaque else endOpaque)
+                    }
+                    onDrawWithContent{
+                    val p=progress().coerceIn(0f,1f)
+                    if(from.text==to.text||(!continuousWipe&&(p<=0f||p>=1f))){drawContent();return@onDrawWithContent}
                     fun layer(result:TextLayoutResult,incomingLayer:Boolean){
                         val canvas=drawContext.canvas
-                        canvas.saveLayer(Rect(0f,0f,size.width,size.height),Paint().apply{blendMode=if(incomingLayer)BlendMode.Plus else BlendMode.SrcOver})
+                        canvas.saveLayer(layerBounds,if(incomingLayer)incomingPaint else outgoingPaint)
                         drawText(result)
                         for(line in 0 until result.lineCount){
                             val phase=if(line<firstChangedLine)0f else immersionWipeLineProgress(p,line-firstChangedLine,lines)
                             val shared=sharedWipeMask?.invoke(p,result.getLineTop(line))
                             val feather=shared?.feather?:(size.width*.12f).coerceIn(12f,48f)
                             val frontier=-feather+(size.width+2f*feather)*phase
-                            val left=if(incomingLayer==(shared?.incomingAtReadingStart?:true))1f else 0f
-                            val right=1f-left
-                            val colors=if(rtl)listOf(Color.Black.copy(alpha=right),Color.Black.copy(alpha=left))else listOf(Color.Black.copy(alpha=left),Color.Black.copy(alpha=right))
                             val center=shared?.center?:if(rtl)size.width-frontier else frontier
-                            drawRect(Brush.horizontalGradient(colors,center-feather,center+feather),topLeft=Offset(0f,result.getLineTop(line)),size=Size(size.width,result.getLineBottom(line)-result.getLineTop(line)),blendMode=BlendMode.DstIn)
+                            val brush=mask(feather,incomingLayer==(shared?.incomingAtReadingStart?:true))
+                            // Translate the cached gradient, keeping its rectangle over the
+                            // same full line. No new shader is needed as the frontier moves.
+                            withTransform({translate(left=center)}){
+                                drawRect(brush,topLeft=Offset(-center,result.getLineTop(line)),size=Size(size.width,result.getLineBottom(line)-result.getLineTop(line)),blendMode=BlendMode.DstIn)
+                            }
                         }
                         canvas.restore()
                     }
@@ -99,9 +122,10 @@ import androidx.compose.ui.unit.*
                     // to 75% at their midpoint. Isolation prevents Plus from
                     // adding incoming ink to the actual screen background.
                     val canvas=drawContext.canvas
-                    canvas.saveLayer(Rect(0f,0f,size.width,size.height),Paint())
+                    canvas.saveLayer(layerBounds,isolationPaint)
                     layer(outgoingLayout,false);layer(incomingLayout,true)
                     canvas.restore()
+                    }
                 })
         }
     }

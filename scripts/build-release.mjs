@@ -1,5 +1,5 @@
 import {spawnSync} from 'node:child_process';
-import {copyFileSync,mkdirSync,readFileSync,writeFileSync,readdirSync,existsSync,statfsSync} from 'node:fs';
+import {copyFileSync,mkdirSync,readFileSync,writeFileSync,readdirSync,existsSync,statfsSync,rmSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {join,resolve,isAbsolute,relative} from 'node:path';
 import {hostname} from 'node:os';
@@ -18,6 +18,22 @@ writeFileSync(join(directory,'build-intent.json'),JSON.stringify(record,null,2)+
 const run=(command,args,env=process.env,cwd=root)=>{const disk=statfsSync(stage);if(disk.bavail*disk.bsize<80*1024**3+512*1024**2)throw Error('Build recovery reserve unavailable.');const r=spawnSync(command,args,{cwd,env,stdio:'inherit'});if(r.status!==0)throw Error(`Release command did not complete: ${command} (${r.status??r.signal})`);};
 const unit=variant=>{const directory=join(root,'android/app/build/test-results/test'+variant+'UnitTest');const result={tests:0,failures:0,errors:0,skipped:0};for(const name of readdirSync(directory).filter(n=>/^TEST-.+\.xml$/.test(n))){const xml=readFileSync(join(directory,name),'utf8'),header=xml.match(/<testsuite\s[^>]+>/)?.[0];if(!header)throw Error('Invalid JUnit output.');for(const key of Object.keys(result)){const value=header.match(new RegExp('\\b'+key+'="(\\d+)"'))?.[1];if(value===undefined)throw Error('Incomplete JUnit output.');result[key]+=Number(value);}}if(!result.tests||result.failures||result.errors||result.skipped>=result.tests)throw Error('Unit checks failed or unavailable.');return result;};
 try{
+ // Incremental ZIP packaging can retain large dead gaps after input changes.
+ // Rebuild only this checkout's disposable package caches and final APK files.
+ // Staged/qualified/published artifacts are outside these fixed paths.
+ record.freshPackaging=[];
+ const packages=[
+  ['packageDebug','debug/app-debug.apk'],
+  ['packageRelease','release/app-release.apk'],
+  ['packageQualification','qualification/app-qualification.apk'],
+  ['packageQualificationAndroidTest','androidTest/qualification/app-qualification-androidTest.apk']
+ ];
+ for(const [cache,apk]of packages){
+  const paths=[join(root,'android/app/build/intermediates/incremental',cache),join(root,'android/app/build/outputs/apk',apk)];
+  paths.forEach(path=>rmSync(path,{recursive:true,force:true}));
+  record.freshPackaging.push({cache,apk});
+ }
+ writeFileSync(join(directory,'build-intent.json'),JSON.stringify(record,null,2)+'\n',{mode:0o600});
  const signed=['testDebugUnitTest','testReleaseUnitTest','lintDebug','lintRelease','assembleDebug','assembleRelease'];
  run('./gradlew',['--no-daemon','--max-workers=2','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8',...signed],process.env,join(root,'android'));record.tasks.push(...signed);record.unit={debug:unit('Debug'),release:unit('Release')};
  const qaEnv={...process.env};delete qaEnv.POCKET_DEBUG_STORE;
