@@ -27,9 +27,11 @@ NextComp is a self-hosted Android interface for working with agents on your own 
 
 ## Native interface
 
-These **alpha64 native captures** use synthetic conversation data in the Android qualification build. The controls were checked at normal, 1.3× and 2× text size, including recording while typing, preserved drafts, playback volume and update access. [See the verification and its limits](docs/qualification/bottom-controls-large-text-20261011.json).
+The latest reviews show **alpha90's compatible signed APK** with search open, and the **October 12 native session-state review**: working stays colorful, idle becomes subdued, and a task needing your answer uses coral. These captures use synthetic tasks on the owned Android emulator. Alpha90 passed 41 frozen native journeys; physical-phone installation and interaction are not yet verified. [Read the qualification and limits](docs/qualification/compact-ux-integration-20261012.json).
 
-<p align="center"><img src="docs/images/bottom-controls-alpha64.png" width="240" alt="Alpha64 native emulator: normal-size Record and Keyboard controls, inline playback volume and Settings"><img src="docs/images/bottom-controls-large-alpha64.png" width="240" alt="The same native controls at twice the text size, with full labels and reachable Settings"></p>
+<p align="center"><img src="docs/images/search-alpha90.png" width="240" alt="Alpha90 signed Android APK: readable search controls and subdued idle session behind the sheet"><img src="docs/images/session-states-20261012.png" width="240" alt="Native session-state review: colorful working, subdued idle, and coral input-needed cards with readable text"></p>
+
+The earlier [normal and large-text bottom-control qualification](docs/qualification/bottom-controls-large-text-20261011.json) remains available as historical evidence.
 
 An [earlier physical-phone capture from alpha45](docs/images/reading-wipe-alpha45.mp4) demonstrates the in-place, reading-direction language transition; it is historical motion evidence rather than a capture of the current full interface.
 
