@@ -2,8 +2,8 @@
   "state": "implementation-unbuilt-unqualified",
   "base": "6a7fc06e924f94efc49b29f7c792d6b09bed0e4d",
   "recordedAt": 1791855068.7308347,
-  "changes": "Typed cycling reply-clear and recipient labels; literal ID/name slots preserve authored target-grammar positions. Clear callback, draft scope, recipient and send routing unchanged.",
+  "changes": "Typed cycling reply-clear and recipient labels; literal ID/name slots preserve authored target-grammar positions. Clear callback, draft scope, recipient and send routing unchanged. Typed Team/Task/To/Agent selector prefixes, authored Coordinator default, one-line ellipsis preserved; arbitrary selected names remain literal.",
   "verification": "Existing native template journey extended, not yet run. Actual Team screen/action verification still required.",
-  "remaining": "TeamChoice dynamic label/selection plus event author/kind/reply body still require coverage.",
+  "remaining": "Event author/kind/reply body still require coverage; Agent status embedded in literal selection remains a separate pending item.",
   "ownership": "Separate worktree; frozen alpha91-r02 unchanged. No builds while release gate owns emulator and build resources."
 }

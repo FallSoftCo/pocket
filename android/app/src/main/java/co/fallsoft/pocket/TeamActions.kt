@@ -19,7 +19,7 @@ import java.util.UUID
     val agents=overview.optJSONArray("agents")?.objects().orEmpty().filter{it.s("task")==task}
     if(agents.isEmpty())return
     Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
-        TeamChoice("Agent",agents.map{it.s("agent") to "${it.s("agent")} · ${it.s("status")}"},selected,Modifier.weight(1f)){selected=it}
+        TeamChoice(InterfaceTemplate.TEAM_CHOICE_AGENT,agents.map{it.s("agent") to "${it.s("agent")} · ${it.s("status")}"},selected,Modifier.weight(1f)){selected=it}
         listOf("interrupt" to "Stop","pause" to "Pause","resume" to "Resume").forEach{(action,label)->
             TextButton({
                 val destination=TeamScope(team,task,selected)

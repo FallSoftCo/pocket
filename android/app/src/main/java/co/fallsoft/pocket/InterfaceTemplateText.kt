@@ -8,6 +8,11 @@ import java.util.Locale
 
 /** Authored grammar, literal parameters: no model request for changing IDs/counts/paths. */
 internal enum class InterfaceTemplate(val source:String,val italian:String){
+    TEAM_CHOICE_TEAM("Team: %1\$s","Squadra: %1\$s"),
+    TEAM_CHOICE_TASK("Task: %1\$s","Compito: %1\$s"),
+    TEAM_CHOICE_TO("To: %1\$s","Destinatario: %1\$s"),
+    TEAM_CHOICE_AGENT("Agent: %1\$s","Agente: %1\$s"),
+    TEAM_CHOICE_COORDINATOR("To: Coordinator","Destinatario: Coordinatore"),
     TEAM_REPLY_CLEAR("Reply to #%1\$s · clear","Rispondi a #%1\$s · cancella"),
     TEAM_MESSAGE_RECIPIENT("Message %1\$s","Messaggio a %1\$s"),
     TEAM_ROOM_TASK("Room · %1\$s","Stanza · %1\$s"),
@@ -32,6 +37,11 @@ internal enum class InterfaceTemplate(val source:String,val italian:String){
         }
         fun literal(index:Int)=values[index].toString().let{it to it}
         val units=when(this){
+            TEAM_CHOICE_TEAM->words("Squadra:|Team:")+listOf(" " to " ",literal(0))
+            TEAM_CHOICE_TASK->words("Compito:|Task:")+listOf(" " to " ",literal(0))
+            TEAM_CHOICE_TO->words("Destinatario:|Recipient:")+listOf(" " to " ",literal(0))
+            TEAM_CHOICE_AGENT->words("Agente:|Agent:")+listOf(" " to " ",literal(0))
+            TEAM_CHOICE_COORDINATOR->words("Destinatario:|Recipient:","Coordinatore|Coordinator")
             TEAM_REPLY_CLEAR->words("Rispondi|Reply","a|to")+listOf(" #" to " #",literal(0)," · " to " · ")+words("cancella|clear")
             TEAM_MESSAGE_RECIPIENT->words("Messaggio|Message","a|to")+listOf(" " to " ",literal(0))
             TEAM_ROOM_TASK->words("Stanza|Room","·")+listOf(" " to " ",literal(0))
@@ -53,7 +63,8 @@ internal enum class InterfaceTemplate(val source:String,val italian:String){
 }
 @Composable internal fun InterfaceTemplateText(
     template:InterfaceTemplate,vararg values:Any,
-    modifier:Modifier=Modifier,style:TextStyle=LocalTextStyle.current
+    modifier:Modifier=Modifier,style:TextStyle=LocalTextStyle.current,maxLines:Int=Int.MAX_VALUE,
+    overflow:androidx.compose.ui.text.style.TextOverflow=androidx.compose.ui.text.style.TextOverflow.Clip
 ){
-    InterfaceText(template.original(*values),modifier=modifier,style=style,targetOverride=template.target(*values),scaffoldOverride=template.scaffold(*values))
+    InterfaceText(template.original(*values),modifier=modifier,style=style,maxLines=maxLines,overflow=overflow,targetOverride=template.target(*values),scaffoldOverride=template.scaffold(*values))
 }

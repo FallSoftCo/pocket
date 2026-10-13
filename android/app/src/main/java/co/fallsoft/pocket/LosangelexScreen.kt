@@ -120,9 +120,9 @@ import java.util.UUID
         WeeklyLimitBar()
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){TextButton(onSettings){BilingualLabel("Settings")};TextButton({newTask=true},enabled=team.isNotBlank()&&!busy){BilingualLabel("New task")}}
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            TeamChoice("Team",teams.map{it.s("id") to it.s("name")},team,Modifier.weight(1f)){team=it;task="";recipient="";direct=false;replyTo=null}
-            TeamChoice("Task",overview.optJSONArray("tasks")?.objects().orEmpty().map{it.s("id") to it.s("title")},task,Modifier.weight(1f)){task=it;replyTo=null}
-            TeamChoice("To",listOf("" to "Coordinator")+(overview.optJSONObject("team")?.keys()?.asSequence()?.map{it to it}?.toList().orEmpty()),recipient,Modifier.weight(1f)){recipient=it;replyTo=null;if(it.isBlank())direct=false}
+            TeamChoice(InterfaceTemplate.TEAM_CHOICE_TEAM,teams.map{it.s("id") to it.s("name")},team,Modifier.weight(1f)){team=it;task="";recipient="";direct=false;replyTo=null}
+            TeamChoice(InterfaceTemplate.TEAM_CHOICE_TASK,overview.optJSONArray("tasks")?.objects().orEmpty().map{it.s("id") to it.s("title")},task,Modifier.weight(1f)){task=it;replyTo=null}
+            TeamChoice(InterfaceTemplate.TEAM_CHOICE_TO,listOf("" to "Coordinator")+(overview.optJSONObject("team")?.keys()?.asSequence()?.map{it to it}?.toList().orEmpty()),recipient,Modifier.weight(1f)){recipient=it;replyTo=null;if(it.isBlank())direct=false}
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
             FilterChip(!direct,{direct=false;replyTo=null},label={BilingualLabel("Room")})
@@ -175,7 +175,7 @@ import java.util.UUID
     inspected?.let{event->TeamAttentionDialog(client,team,event,{inspected=null}){jobs.launch{try{refresh(currentTarget)}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}}}
 }
 
-@Composable fun TeamChoice(label:String,choices:List<Pair<String,String>>,selected:String,modifier:Modifier=Modifier,onSelect:(String)->Unit){
+@Composable internal fun TeamChoice(label:InterfaceTemplate,choices:List<Pair<String,String>>,selected:String,modifier:Modifier=Modifier,onSelect:(String)->Unit){
     var open by remember{mutableStateOf(false)}
-    Box(modifier){TextButton({open=true},modifier=Modifier.fillMaxWidth(),contentPadding=PaddingValues(horizontal=4.dp)){BilingualLabel("$label: "+(choices.firstOrNull{it.first==selected}?.second?:selected),maxLines=1,centered=false)};DropdownMenu(open,{open=false}){choices.forEach{(id,name)->DropdownMenuItem(text={BilingualLabel(name,centered=false)},onClick={open=false;onSelect(id)})}}}
+    Box(modifier){TextButton({open=true},modifier=Modifier.fillMaxWidth(),contentPadding=PaddingValues(horizontal=4.dp)){if(label==InterfaceTemplate.TEAM_CHOICE_TO&&selected.isBlank())InterfaceTemplateText(InterfaceTemplate.TEAM_CHOICE_COORDINATOR,maxLines=1,overflow=TextOverflow.Ellipsis)else InterfaceTemplateText(label,choices.firstOrNull{it.first==selected}?.second?:selected,maxLines=1,overflow=TextOverflow.Ellipsis)};DropdownMenu(open,{open=false}){choices.forEach{(id,name)->DropdownMenuItem(text={BilingualLabel(name,centered=false)},onClick={open=false;onSelect(id)})}}}
 }
