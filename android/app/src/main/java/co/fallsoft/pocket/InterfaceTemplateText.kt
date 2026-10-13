@@ -8,6 +8,9 @@ import java.util.Locale
 
 /** Authored grammar, literal parameters: no model request for changing IDs/counts/paths. */
 internal enum class InterfaceTemplate(val source:String,val italian:String){
+    TEAM_EVENT_MESSAGE("%1\$s · message","%1\$s · messaggio"),
+    TEAM_EVENT_ATTENTION("%1\$s · attention","%1\$s · attenzione"),
+    TEAM_EVENT_APPROVAL("%1\$s · approval","%1\$s · approvazione"),
     TEAM_CHOICE_TEAM("Team: %1\$s","Squadra: %1\$s"),
     TEAM_CHOICE_TASK("Task: %1\$s","Compito: %1\$s"),
     TEAM_CHOICE_TO("To: %1\$s","Destinatario: %1\$s"),
@@ -37,6 +40,9 @@ internal enum class InterfaceTemplate(val source:String,val italian:String){
         }
         fun literal(index:Int)=values[index].toString().let{it to it}
         val units=when(this){
+            TEAM_EVENT_MESSAGE->listOf(literal(0)," · " to " · ")+words("messaggio|message")
+            TEAM_EVENT_ATTENTION->listOf(literal(0)," · " to " · ")+words("attenzione|attention")
+            TEAM_EVENT_APPROVAL->listOf(literal(0)," · " to " · ")+words("approvazione|approval")
             TEAM_CHOICE_TEAM->words("Squadra:|Team:")+listOf(" " to " ",literal(0))
             TEAM_CHOICE_TASK->words("Compito:|Task:")+listOf(" " to " ",literal(0))
             TEAM_CHOICE_TO->words("Destinatario:|Recipient:")+listOf(" " to " ",literal(0))

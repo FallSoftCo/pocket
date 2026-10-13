@@ -144,7 +144,14 @@ import java.util.UUID
             items(messages,key={it.optLong("id")}){event->
                 Surface(color=Panel,modifier=Modifier.fillMaxWidth()){
                     Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
-                        Text(event.s("author")+" · "+event.s("kind"),style=MaterialTheme.typography.labelMedium,color=Mint)
+                        val eventTemplate=when(event.s("kind")){
+                            "message"->InterfaceTemplate.TEAM_EVENT_MESSAGE
+                            "attention"->InterfaceTemplate.TEAM_EVENT_ATTENTION
+                            "approval"->InterfaceTemplate.TEAM_EVENT_APPROVAL
+                            else->null
+                        }
+                        if(eventTemplate!=null)InterfaceTemplateText(eventTemplate,event.s("author"),style=MaterialTheme.typography.labelMedium.copy(color=Mint))
+                        else Text(event.s("author")+" · "+event.s("kind"),style=MaterialTheme.typography.labelMedium,color=Mint)
                         event.optJSONObject("reply")?.let{Text("Reply to ${it.s("author")}: ${it.s("body")}",style=MaterialTheme.typography.bodySmall,color=Muted)}
                         val sourceId="team-message:$owner:$team:${event.optLong("id")}"
                         LaunchedEffect(sourceId,event.s("body"),PocketImmersion.enabled){PocketImmersion.offer(sourceId,event.s("body"),"team conversation")}
