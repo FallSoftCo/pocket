@@ -1,7 +1,12 @@
 {
-  "state": "implemented-compiled-native-switch-verification-pending",
+  "state": "native-same-id-card-switch-qualified-source-not-released",
   "finding": "TaskCard rename draft, edit visibility, highlight animation and observed revision were remembered by thread ID alone. Equal IDs across environments could retain local visual state.",
   "change": "Include current environment in all four remembered card states and visible title/preview/highlight effects. Existing environment-scoped group expansion retained.",
-  "validation": "Both Kotlin build variants pass on OZZZ-OS. Native same-ID cross-environment edit/highlight journey remains pending; no handset behavior claim.",
-  "constraints": "No environment activation, API mutation, pairing overwrite or pending delivery replay performed."
+  "validation": "Both Kotlin variants pass. Existing native three-state card journey extended: keep card composition mounted, edit host A title without submitting, switch synthetic environment with identical thread ID, assert host B title visible and previous rename editor/draft absent. Passed.",
+  "constraints": "No environment activation, API mutation, pairing overwrite or pending delivery replay performed.",
+  "nativeApkSha256": "e1a9d798240de839a34675e26e9d9003c7e90c7b7a65f23cfaa52d6be7e773e4",
+  "limits": [
+    "Not yet in signed release",
+    "Full real-host environment selection and physical handset still separate qualification"
+  ]
 }

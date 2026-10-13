@@ -81,6 +81,32 @@ class SessionCardNativeTest {
    tasks.forEach{compose.onNodeWithText(it.title).assertIsDisplayed()}
    compose.waitForIdle()
    assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"session-state-native.png")))
+   // Retain this actual card composition across hosts with the same thread ID.
+   // Editing host A must not carry an unsent rename into host B.
+   val shown=androidx.compose.runtime.mutableStateOf(tasks[1])
+   scenario.onActivity{it.setContent{
+    CompositionLocalProvider(LocalImmersionMotionState provides false,LocalImmersionTransitionAnimated provides false){
+     MaterialTheme{Column(Modifier.statusBarsPadding()){TaskCard(shown.value,1000)}}
+    }
+   }}
+   compose.onNodeWithText("Idle session").performClick()
+   compose.onNode(hasSetTextAction()).performTextReplacement("Unsaved host A name")
+   compose.onNodeWithText("Unsaved host A name").assertExists()
+   i.runOnMainSync{
+    context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit()
+     .putString("environment:remote_card_qa:server","http://127.0.0.1:18880")
+     .putString("environment:remote_card_qa:token","synthetic-system76")
+     .putString("environment:remote_card_qa:deviceId","synthetic-device-b")
+     .putString("environments:v1",org.json.JSONArray().put(org.json.JSONObject().put("id","workstation").put("name","Host A")).put(org.json.JSONObject().put("id","remote_card_qa").put("name","Host B")).toString())
+     .putString("activeEnvironment","remote_card_qa").commit()
+    Pocket.init(context)
+    shown.value=tasks[1].copy(title="Host B same-thread session")
+   }
+   compose.onNodeWithText("Host B same-thread session").assertIsDisplayed()
+   compose.onNodeWithText("Unsaved host A name").assertDoesNotExist()
+   compose.onNode(hasSetTextAction()).assertDoesNotExist()
+   assertEquals("remote_card_qa",Pocket.environmentId)
+
   }
  }
 
