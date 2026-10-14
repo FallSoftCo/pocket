@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {Losangelex,loadLosangelex,mountLosangelex,teamRequest} from '../server/losangelex.mjs';
-import {TeamAttention} from '../server/losangelex-attention.mjs';
+import {TeamAttention,teamNotificationFields} from '../server/losangelex-attention.mjs';
 
 test('owner registration isolates endpoints and credentials from device commands',()=>{
   const dir=mkdtempSync(join(tmpdir(),'team-config-')),token=join(dir,'token');writeFileSync(token,'private-token');
@@ -68,6 +68,25 @@ test('incomplete paginated attention scans never clear already-visible questions
   const client={config:{environmentId:'test'},call:async()=>{if(++requests===2)throw Error('page lost');return {data:[{id:1,team_id:'one',task:'task',author:'maya'}],next_cursor:1};}};
   const observer=new TeamAttention({client,db,publish:(_,commit)=>commit({id:5}),resolve:(...x)=>resolved.push(x)});
   await assert.rejects(observer.poll());assert.deepEqual(resolved,[]);assert.equal(db.prepare('SELECT count(*) AS n FROM losangelex_notifications').get().n,1);db.close();
+});
+
+test('attention publication retains approval kind and exact waiting actor context',async()=>{
+  const db=new DatabaseSync(':memory:');const event={id:51,team_id:'team',task_id:'room',author:'agent',kind:'approval',body:'Review this change'};
+  let captured;
+  const observer=new TeamAttention({db,client:{config:{environmentId:'origin'},call:async()=>({data:[event]})},publish:(thread,commit,source)=>{captured=source;commit({id:9});},resolve:()=>assert.fail('Open approval cannot resolve')});
+  await observer.poll();assert.deepEqual(captured,event);
+  const row=db.prepare('SELECT * FROM losangelex_notifications').get();
+  assert.equal(row.environment,'origin');assert.equal(row.team,'team');assert.equal(row.task,'room');assert.equal(row.agent,'agent');assert.equal(row.event,51);db.close();
+});
+
+test('notification provenance retains captured authority independently of current registration',async()=>{
+  const db=new DatabaseSync(':memory:');assert.deepEqual(teamNotificationFields(db,9),{});
+  const client={config:{environmentId:'source'},call:async()=>({data:[{id:61,team_id:'team',task_id:'room',author:'waiting-agent'}]})};
+  let notice;
+  const observer=new TeamAttention({db,client,publish:(thread,commit)=>{notice={id:9};commit(notice);},resolve:()=>{}});
+  await observer.poll();client.config.environmentId='destination';
+  const expected={question_provider:'losangelex',question_authority:'source',question_team:'team',question_task:'room',question_agent:'waiting-agent',question_event:'61'};
+  assert.deepEqual(teamNotificationFields(db,9),expected);assert.deepEqual(notice,{id:9,...expected});db.close();
 });
 
 test('work-record storage failure cannot change an accepted provider response',async t=>{

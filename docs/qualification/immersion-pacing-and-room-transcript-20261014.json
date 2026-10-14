@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "humanRequest": 2607,
+  "state": "measured-cache-improvement-final-room-candidate-qualification-running",
+  "sourceChanges": [
+    "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/RoomTranscriptProjection.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/CommandRunProjection.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/LosangelexScreen.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt"
+  ],
+  "bottleneck": "Repeated visible motion-atlas WebP decode and upload under32MiB LRU; competing CPU/GC/render work while immersion clock draws",
+  "fix": "Bounded64MiB decoded-page LRU; no wave timing/geometry, voice/backend or profile/receipt changes",
+  "before": {
+    "versionCode": 115,
+    "apkSha256": "752c5905f0d5503173c07b2de2cbdcb23f5b6c1fd2bda66d970905e17750ccda",
+    "profileDurationSeconds": 20,
+    "totalFrames": 625,
+    "jankyFrames": 405,
+    "p50Ms": 69,
+    "p95Ms": 117,
+    "softwareGpu": true,
+    "physicalPhone": false,
+    "providerAudioUsed": false
+  },
+  "after": {
+    "versionCode": 116,
+    "apkSha256": "3e85a13d659744c03a84010d3a26f56821aead51e8411b796e03653427b168e0",
+    "profileDurationSeconds": 20,
+    "totalFrames": 645,
+    "jankyFrames": 392,
+    "p50Ms": 61,
+    "p95Ms": 109,
+    "softwareGpu": true,
+    "physicalPhone": false,
+    "providerAudioUsed": false
+  },
+  "limits": [
+    "One bounded20-second profile per exact signed APK on owned software-GPU emulator; not physical-phone pacing proof",
+    "Jank remains high on software rendering; do not claim60fps or complete stutter resolution",
+    "Long translated stress body separately triggered existing Android32-custom-action accessibility limit on native enumeration; retained crash evidence, not attributed to wave scheduling"
+  ],
+  "privateEvidence": "/home/aosp/.local/share/nextcomp-qa/20261014-immersion-pacing-r01",
+  "evidenceHashes": {
+    "before-gfx.txt": "b81a5a4edc58257ad3c0cb3b1c668b9bba634637478f88a7144bb29932886be1",
+    "after-gfx.txt": "117850307919fc02a3cc740836377fc59af7e26b951169e2bd6d694ecd46dfdf",
+    "before-cpu.txt": "e22aca7f2d09e3f6add6bfcf4a5c8f3a3419cea394985c2de550eb1491709b6e",
+    "after-cpu.txt": "a3ab1c04eb6d4721f2cf36acab7c432009524ad6a70634ae06a74ddb5b84e586",
+    "before-profile.data": "abf1838be6b5253305e0e88735e5133315a1d80cf5fe3377072def48332b4290",
+    "after-profile.data": "190b798649e23a8be87141a73df71546b58f98a298bb87f3aaeffbcbe385b4ea"
+  },
+  "finalCandidate": "116/alpha98 stage20261014-room-routing-116-r04 building; includes urgent lobby default and room-list lifecycle fix",
+  "releaseGate116r02": {
+    "state": "failed-held",
+    "passedCases": 4,
+    "failedCase": "HistoryReadingNativeTest#growingResponseKeepsItsNewestPassageVisible",
+    "assertion": "A subsequent delta did not follow the new tail",
+    "receiptPreserved": true,
+    "fix": "Measured rows and scroll idle wait implemented; focused growing-tail verification passed; final gate case passed"
+  },
+  "roomUx": {
+    "runs": "Condense captured author/thread/item operational updates; stable identity across start backfill; native Runs expand/collapse, normal messages/questions remain visible",
+    "author": "One literal author label per uninterrupted projected block",
+    "entry": "Latest/bottom on each room entry, measured current history before scrolling; subsequent refresh preserves manual reading",
+    "nativeTests": "RoomTranscriptNativeTest two required native cases; four projection unit cases",
+    "optimizedReview": "Actual signed final release247ebee... on owned emulator5640; native search/draft/single-send review complete"
+  },
+  "retainedFailureEvidence": [
+    "116r02 release stopped at required growing-tail case after4 passes",
+    "Focused combined wave group selection-menu assertion failed; same case isolated passed; final116r03 required isolated case passed"
+  ],
+  "finalBuild": {
+    "versionCode": 116,
+    "stage": "/home/aosp/.local/share/nextcomp-backend/staging/20261014-immersion-room-116-r03/app-updates",
+    "unitDebug": 374,
+    "unitRelease": 374,
+    "lints": [
+      "debug",
+      "release"
+    ],
+    "requiredNativeCases": 59,
+    "state": "native-gate-running",
+    "releaseSha256": "247ebee3fb27daf21623c55f4baf7a16a31098829bc44773f378c24528ea4582",
+    "compatibleSha256": "4d1d8a48b02b52975b67b09328d48b62757a29b8aefa2609ed33f7580c2882b2"
+  },
+  "releaseGate116r03": {
+    "state": "qualified-not-published-superseded-by-routing-correction",
+    "requiredNativeCases": 59,
+    "complete": 59,
+    "optimizedSignedReview": "complete",
+    "reason": "New urgent scoped Global-default routing and room-list refresh corrections after source freeze"
+  },
+  "urgentRouting": {
+    "scope": [
+      2960,
+      3228,
+      3267
+    ],
+    "cause": "Blank public root targets all actual room members; public notification open preselects origin agent without explicit Reply",
+    "fix": "Captured team lobby/coordinator default only; public notification scope clears recipient/replyTo; explicit direct/replies and old pending JSON preserved",
+    "roomList": "RESUMED catalog-only refresh while browsing; no selected-history or discovery-roster blocking",
+    "observedLive": "Enterprise discovery7, actual Global room members coordinator plus marketing2; cards derive only actual members, no membership mutation",
+    "tests": "TeamScope focused units passed;2 new required RoomRoutingNativeTest cases added; signed116r04 building"
+  }
+}

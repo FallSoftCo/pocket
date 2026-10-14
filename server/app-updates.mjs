@@ -45,6 +45,6 @@ export class AppUpdates {
 }
 export function mountAppUpdates(app,{updates,owner,route,onAnnounce=()=>{}}){
   app.get('/api/app/update',route(async(req,res)=>res.json(updates.metadata(req.query.signer,req.query.versionCode))));
-  app.get('/api/app/update/apk',route(async(req,res)=>{const a=updates.artifact(req.query.signer);if(!a)return res.status(404).json({error:'No update matches this app signing identity.'});res.set('Content-Type','application/vnd.android.package-archive');res.set('Content-Disposition',`attachment; filename="nextcomp-${a.versionName.replace(/[^\w.-]/g,'_')}.apk"`);res.set('X-APK-SHA256',a.sha256);res.sendFile(a.file);}));
+  app.get('/api/app/update/apk',route(async(req,res)=>{const a=updates.artifact(req.query.signer);if(!a)return res.status(404).json({error:'No update matches this app signing identity.'});res.set('Content-Type','application/vnd.android.package-archive');res.set('Content-Disposition',`attachment; filename="nextcomp-${a.versionName.replace(/[^\w.-]/g,'_')}.apk"`);res.set('X-APK-SHA256',a.sha256);res.sendFile(a.file,{dotfiles:'allow'});}));
   app.post('/api/app/update/announce',owner,route(async(_req,res)=>{const result=await updates.announce();if(result.notificationId)onAnnounce({id:result.notificationId,kind:'app_update',title:'NextComp update ready',body:'A new NextComp build is ready. Tap to update.',created_at:Date.now()});res.json(result);}));
 }

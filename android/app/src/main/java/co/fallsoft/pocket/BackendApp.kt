@@ -41,7 +41,8 @@ object BackendNavigation {
     fun teamSelected()=Pocket.prefs.getString("backend:"+backendOwner(Pocket.base,Pocket.token),"codex")=="losangelex"
 }
 
-internal fun sameTeamHistoryScope(current:TeamScope,destination:TeamScope)=current.copy(replyTo=null)==destination.copy(replyTo=null)
+internal fun sameTeamHistoryScope(current:TeamScope,destination:TeamScope)=
+    current.copy(replyTo=null,recipient=if(current.direct)current.recipient else "")==destination.copy(replyTo=null,recipient=if(destination.direct)destination.recipient else "")
 internal fun teamReplyRecipient(scope:TeamScope,author:String)=if(author in listOf("you","system"))if(scope.direct)scope.recipient else "" else author
 internal fun teamEnterSends(enter:Boolean,shift:Boolean)=enter&&!shift
 
@@ -85,7 +86,6 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
     },{workRecord=true})){
     Box(Modifier.fillMaxSize()){
     Column(Modifier.fillMaxSize().imePadding()){
-        if(backend=="losangelex")ProfileSwitcher()
         Box(Modifier.weight(1f)){
             if(backend=="codex")PocketApp()
             else if(discovering)Column(Modifier.padding(24.dp)){CircularProgressIndicator();InterfaceText("Checking Losangelex…")}
@@ -106,4 +106,33 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
     if(workRecord)Surface(Modifier.fillMaxSize()){WorkRecordScreen{workRecord=false}}
     }
     }
+}
+
+/** A group opens through backend callbacks; these IDs are never stock Codex destinations. */
+internal fun roomSessionGroup(room:JSONObject):SessionGroup {
+    val members=room.optJSONArray("members")?.objects().orEmpty()
+    val task=Task("lx-room:"+room.s("id"),room.s("title"),"",if(members.any{it.s("status")=="working"})"active" else "idle",
+        room.optLong("updated_at"),false,preview=room.s("preview").ifBlank{room.s("purpose")})
+    val children=members.filter{it.s("thread").isNotBlank()}.map{member->
+        Task("${task.id}:${member.s("id")}",member.s("agent"),"",if(member.s("status")=="working")"active" else "idle",0,false,
+            preview=member.s("preview"),agentNickname=member.s("agent"),agentRole=member.s("role"))
+    }
+    return SessionGroup(task,children)
+}
+internal fun notificationTeamScope(team:String,task:String,agent:String,visibility:String)=
+    TeamScope(team,task,if(visibility.startsWith("direct:"))agent else "",visibility.startsWith("direct:"))
+
+internal fun scopedRoomMessage(scope:TeamScope,id:String,text:String,room:JSONObject?,lobby:String="",coordinator:String=""):JSONObject {
+    if(scope.direct||scope.recipient.isNotBlank())return scope.message(id,text)
+    val observed=requireNotNull(room){"Conversation destination is unavailable"}
+    require(observed.s("task")==scope.task){"Conversation destination is unavailable"}
+    // The lobby is the coordinator's conversation. Its membership is discovery,
+    // never an implicit broadcast or a remembered notification recipient.
+    if(lobby.isNotBlank()&&scope.task==lobby){
+        require(coordinator.isNotBlank()){"Conversation coordinator is unavailable"}
+        return scope.message(id,text).put("targets",org.json.JSONArray(listOf(coordinator)))
+    }
+    val targets=observed.optJSONArray("members")?.objects().orEmpty().map{it.s("agent")}.filter{it.isNotBlank()}.distinct()
+    require(targets.isNotEmpty()){"Conversation has no destinations"}
+    return scope.message(id,text).put("targets",org.json.JSONArray(targets))
 }

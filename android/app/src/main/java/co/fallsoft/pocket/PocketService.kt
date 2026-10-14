@@ -73,6 +73,9 @@ object PocketNotifications {
             b.addAction(R.drawable.ic_notification,PocketImmersion.label("Answer"),open(c,thread,id,local,n.s("kind")=="coordinator_report",environment))
             if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Skip"),PocketAttention.action(c,n.optLong("id"),"skip",local,environment))
             if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local,environment))
+        }else if(thread!=null&&n.s("kind")=="approval"){
+            b.addAction(R.drawable.ic_notification,PocketImmersion.label("Review approval"),open(c,thread,id,local,environment=environment))
+            if(attention)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Later · 30m"),PocketAttention.action(c,n.optLong("id"),"snooze",local,environment))
         }else if(thread!=null&&!n.optBoolean("canAcceptDirectInput",true)){
             val parent=n.s("parentThreadId").takeIf{it.isNotBlank()}
             if(parent!=null)b.addAction(R.drawable.ic_notification,PocketImmersion.label("Guide parent"),open(c,parent,id+100000,local,environment=environment))

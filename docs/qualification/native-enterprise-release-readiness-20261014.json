@@ -1,0 +1,234 @@
+{
+  "schema": 1,
+  "humanRequest": 1198,
+  "state": "115-reactivated2583-live-both-variants-verified-offer-deduplicated-install-unobserved",
+  "scope": [
+    "Native shared room list and conversation over independent agent contexts",
+    "Direct accountable-room routing without required Global relay",
+    "Durable source-bound Android notification question answers",
+    "Truthful observed owner, progress, blocker and delivery state in existing surfaces"
+  ],
+  "existingArtifact": {
+    "versionCode": 115,
+    "versionName": "0.5.0-alpha.97",
+    "stage": "/home/aosp/.local/share/nextcomp-backend/staging/20261014-native-room-115-r02/app-updates",
+    "compatibleApk": "nextcomp-115-22ecabe28e15.apk",
+    "compatibleSha256": "ea37c0ccbe83c1b080dfe1f51b97f35cbeea749d44bdfc483233ec2ec3798271",
+    "compatibleBytes": 62194734,
+    "releaseApk": "nextcomp-115-b28f55b44c93.apk",
+    "releaseSha256": "383d41e1fb5d2f5c0664f4f5267e34d096b74c79ef2658fa38b50ec611ba16bd",
+    "releaseBytes": 52185767,
+    "actualHashesRechecked": true,
+    "contains": "Room UX source at build time; no inline question answer",
+    "predatesCurrentSource": true,
+    "phoneDelivered": false
+  },
+  "passedGates": [
+    "r02:369 debug units and369 release units, both lints, signed debug/release builds and qualification packaging",
+    "Current notification source:13 focused Node tests; Kotlin qualification compilation",
+    "Current routing/persistence source:7 TeamScope qualification units;0 failures/errors/skips",
+    "Current JavaScript syntax and whitespace checks"
+  ],
+  "notPassedGates": [
+    "Inline question answer implementation is incomplete; no answer receipt/reconciliation fixture or native trial",
+    "Exact current-source signed APK has not been built",
+    "115r02 complete native release policy and optimized visual review have not run",
+    "Physical handset notification receipt, inline answer, exact waiting-agent receipt and retained pairing/drafts have not been verified",
+    "Global coordinated continuity review, pinned additive backend artifacts and safe native capability-refresh path remain pending"
+  ],
+  "initialFailedCheck": "Kotlin compilation first lacked SDK configuration; corrected SDK invocation passed",
+  "dependencies": {
+    "hollywood": "Pin additive114-compatible attention answer/command lookup validation, waiting-agent dispatch, room-owner defaults and durable observed state schema; owning-room requests2145 and2134",
+    "lax": "Pin native context/request lifetime, receipt/resolution support and safe same-thread Global refresh; owning-room request2152",
+    "incident": "Human896 targetsGlobal; Global904 targets lax-owner replyTo896. Distinct authors/events support relay. Incoming command envelope and ID still pending; no duplicate-client claim."
+  },
+  "deliveryPlan": [
+    "Finish durable inline answer and map authoritative observed state into existing cards/conversation/actions after exact owner contracts; do not silently route to Codex",
+    "Run focused question-answer failure/unknown/profile-switch/routing checks once; fix actual failures without broad repetition",
+    "Build a fresh private immutable115 candidate containing final source with existing package/signer; preserve115r02 as historical evidence",
+    "Complete required release policy and exact optimized native review once on that artifact; retain failed gates explicitly",
+    "Global reviews pinned compatible backend/native changes and sequencing that preserves its live thread, existing114 API, accepted/queued/unknown work and pairings",
+    "After scoped rollout approval, stage/offer correct signer update from original paired source; verify actual download and installed package/version rather than FCM acceptance",
+    "On the physical handset, receive a room question with app closed, answer inline, verify exact waiting-agent event/command receipt, retained pairing/drafts and unknown-receipt behavior; record delivery separately from task completion"
+  ],
+  "deploymentRestartOrInstallPerformed": false,
+  "releaseScope1406": "Fixed native rooms UX; unfinished inline answers and migrations remain separately tracked, excluded from this artifact claim",
+  "currentCandidate": {
+    "stage": "/home/aosp/.local/share/nextcomp-backend/staging/20261014-native-room-115-r03/app-updates",
+    "versionCode": 115,
+    "versionName": "0.5.0-alpha.97",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "path": "nextcomp-115-b28f55b44c93.apk",
+        "sha256": "752c5905f0d5503173c07b2de2cbdcb23f5b6c1fd2bda66d970905e17750ccda",
+        "size": 52185767
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "path": "nextcomp-115-22ecabe28e15.apk",
+        "sha256": "74709e19eadc0348e9b142c1714b3989fb59008dab4176b50ac4c1bf47170238",
+        "size": 62194734
+      }
+    ],
+    "productionSourceSha": "e272b491288acf54545d8e4ecffeb611019154e8cf13ab6dc9e0a01023e5a000",
+    "qualificationInputSha": "a1f0768ca3e40fab9a82c5eae7f4354c7c7a63feb6ea617f9e35adf4f66b4e6b",
+    "unit": {
+      "debug": {
+        "tests": 370,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "release": {
+        "tests": 370,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "buildState": "complete",
+    "nativePolicyCases": 57,
+    "nativeState": "57-of57-passed-once",
+    "optimizedReview": "passed-actual-signed-release",
+    "published": true,
+    "installedOnPhone": false,
+    "publicationHistory": "Qualified publication, held after hidden-path404, reconciled through canonical private channel without restart; channel held per Global2468 after prior notification78; hold released and115 reactivated per2583, both live variant downloads verified"
+  },
+  "runtimeCompatibilityEvidence": {
+    "laxOwner2157": "Deployed0.163.0-lax.20261013: no proven native room-UX blocker; provisioning/multihost separate",
+    "activeGatewayReadOnly": "Losangelex configured/available/runtimeReady; teams API succeeds; gateway18885",
+    "hollywoodOwnerConfirmation": "requested2180; pending",
+    "publicationChannel": "/home/aosp/.local/share/nextcomp-backend/data/app-updates",
+    "currentChannelVersion": 0,
+    "installedPhoneVersion": "114 human baseline, not re-observed"
+  },
+  "announcementSent": true,
+  "phoneDelivered": false,
+  "resolvedDeliveryBlocker": {
+    "owner": "nextcomp-owner",
+    "failure": "Express hidden-path APK404",
+    "resolution": "Configured channel symlink canonicalizes to owner-private700 nonhidden storage; existing gateway serves exact115 bytes without code deployment or restart",
+    "canonicalChannel": "/home/aosp/nextcomp-private-updates/20261014-channel115",
+    "oldHeldDirectory": "/home/aosp/.local/share/nextcomp-backend/data/app-updates-held-download404-20261014",
+    "liveAuthenticatedDownload": {
+      "status": 200,
+      "sha256": "74709e19eadc0348e9b142c1714b3989fb59008dab4176b50ac4c1bf47170238",
+      "bytes": 62194734
+    },
+    "stagedCodeHotfix": "Not deployed; unnecessary for current channel",
+    "restartAttention2478": "Superseded; no restart required"
+  },
+  "updateOffer": {
+    "notificationId": 78,
+    "announcedDevices": 1,
+    "pushState": "accepted_by_fcm",
+    "attempts": 1,
+    "phoneBannerObserved": false,
+    "phoneInstallationObserved": false
+  },
+  "services": {
+    "nextcompGateway": {
+      "active": true,
+      "unchangedPid": 861885
+    },
+    "lax": {
+      "active": true,
+      "unchangedPid": 861703
+    },
+    "restartPerformed": false,
+    "databaseTokensProfilesChanged": false
+  },
+  "remaining": "Actual physical phone banner/download/installation observation; separate inline-question/migration work. No release hold or restart dependency for115 room UX.",
+  "liveServingSecurityChecks": {
+    "authenticatedFullBody": {
+      "status": 200,
+      "bytes": 62194734,
+      "sha256": "74709e19eadc0348e9b142c1714b3989fb59008dab4176b50ac4c1bf47170238"
+    },
+    "unauthenticated": 401,
+    "traversalSigner": 400,
+    "unknownSigner": 404,
+    "otherFilePath": 404,
+    "encodedTraversalPath": 404,
+    "verifiedAt": 1791952694536
+  },
+  "lateInstruction2458": {
+    "announcement": "Already sent once before this instruction arrived; no further announcements; delivered push cannot be retracted",
+    "manifestAndReceipts": "Preserved; active qualified download remains available",
+    "restartMechanism": "systemctl --user restart nextcomp-ozzz.service exists but was not used; would also recycle its own stock Codex bridge; no reload needed for canonical channel pointer remedy",
+    "codeChange": "server/app-updates.mjs and tests/app-updates.test.mjs staged source fix only, not deployed",
+    "phoneInstallationObserved": false
+  },
+  "currentHold": {
+    "owner": "global-steward",
+    "instruction": 2468,
+    "manifest": "/home/aosp/nextcomp-private-updates/20261014-channel115/manifest-115-held-global2468.json",
+    "liveMetadata": {
+      "available": true,
+      "versionCode": 115
+    },
+    "furtherAnnouncements": false,
+    "codeRolloutOrRestartAuthorized": false,
+    "commandsAndEvidence": "docs/qualification/gateway-download-115-continuity-20261014.md",
+    "globalContextMapping": "requested Hollywood2553; process cgroup separation observed, full dependency independence not claimed",
+    "clearedBy": 2583,
+    "active": false
+  },
+  "reactivation2583": {
+    "schema": 1,
+    "state": "reactivated-live-verified",
+    "authorization": 2583,
+    "versionCode": 115,
+    "at": 1791952963648,
+    "restartPerformed": false,
+    "priorNotification": 78,
+    "newAnnouncementSent": false,
+    "verified": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "status": 200,
+        "bytes": 52185767,
+        "sha256": "752c5905f0d5503173c07b2de2cbdcb23f5b6c1fd2bda66d970905e17750ccda"
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "status": 200,
+        "bytes": 62194734,
+        "sha256": "74709e19eadc0348e9b142c1714b3989fb59008dab4176b50ac4c1bf47170238"
+      }
+    ],
+    "accessChecks": [
+      {
+        "name": "unauthenticated",
+        "status": 401
+      },
+      {
+        "name": "traversal-signer",
+        "status": 400
+      },
+      {
+        "name": "unknown-signer",
+        "status": 404
+      },
+      {
+        "name": "other-file",
+        "status": 404
+      },
+      {
+        "name": "encoded-traversal",
+        "status": 404
+      }
+    ],
+    "verifiedAt": 1791952997547
+  },
+  "offerReconciliation": {
+    "announced": 0,
+    "notificationId": 78,
+    "pushState": "accepted_by_fcm",
+    "attempts": 1,
+    "error": null,
+    "duplicatePushSent": false,
+    "phoneInstallationObserved": false
+  }
+}

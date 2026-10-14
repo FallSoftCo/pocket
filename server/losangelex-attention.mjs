@@ -1,5 +1,12 @@
 import {createHash} from 'node:crypto';
 
+// Stable notification provenance survives queue retries and backend restarts.
+export function teamNotificationFields(db,id){
+  if(!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='losangelex_notifications'").get())return {};
+  const row=db.prepare('SELECT * FROM losangelex_notifications WHERE notification_id=?').get(id);
+  return row?{question_provider:'losangelex',question_authority:row.environment,question_team:row.team,question_task:row.task,question_agent:row.agent,question_event:String(row.event)}:{};
+}
+
 // Observer only: durable pending attention is the source, never model polling turns.
 export class TeamAttention {
   constructor({client,db,publish,resolve}){
@@ -28,7 +35,10 @@ export class TeamAttention {
           const old=this.db.prepare('SELECT notification_id FROM losangelex_notifications WHERE environment=? AND event=?').get(environment,id);
           if(old?.notification_id)continue;
           const thread='lx-'+createHash('sha256').update(environment+'\0'+team+'\0'+id).digest('hex').slice(0,24);
-          this.publish(thread,n=>this.db.prepare('INSERT INTO losangelex_notifications VALUES(?,?,?,?,?,?,?)').run(environment,id,team,task,event.author,thread,n.id));
+          this.publish(thread,n=>{
+            this.db.prepare('INSERT INTO losangelex_notifications VALUES(?,?,?,?,?,?,?)').run(environment,id,team,task,event.author,thread,n.id);
+            Object.assign(n,teamNotificationFields(this.db,n.id));
+          },event);
         }
         cursor=page.next_cursor??page.nextCursor??null;
         if(cursor&&seen.has(String(cursor)))throw Error('Repeated attention cursor');

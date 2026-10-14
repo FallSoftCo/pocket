@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "date": "2026-10-14",
+  "status": "superseded-source-candidate",
+  "host": "ozzz-aosp",
+  "authorization": "Enterprise-nextcomp brief 157, clarified by brief 252: reuse actual Codex components and layouts",
+  "audit": {
+    "before": "Initial cosmetic-parity candidate duplicated catalog geometry, card styling, message framing, composer and action navigation. Profile/voice/Markdown implementations were already shared.",
+    "after": "Codex and Hollywood now consume the same extracted presentation components. Backend identities, persistence and actions remain caller-owned."
+  },
+  "reused": {
+    "WorkCatalogList": "Existing WorkScreen reverse-layout catalog, 16dp horizontal padding, 8dp spacing and bottom anchoring; consumed by WorkScreen and RoomBrowser",
+    "WorkCardSurface": "Existing TaskCard quiet surface, rounded border, activity glow and highlight; consumed by TaskCard and RoomBrowser",
+    "ConversationMessageSurface": "Existing TranscriptRow user/assistant framing; consumed by TranscriptRow and Hollywood message rows",
+    "ConversationComposerRow": "Existing Codex inline panel layout; consumed by both conversation composers",
+    "ConversationDraftField": "Existing Codex BasicTextField typography, cursor, placeholder and IME Send; used by both composers with caller-owned input/persistence/key routing",
+    "ConversationSendButton": "Existing Codex 64dp icon/send/busy/disabled semantics; rooms supply their exact command callback, Codex retains queue long-press",
+    "ConversationActionsMenu": "Existing session UsageDock and anchored dropdown; used by Codex and Hollywood with backend-specific menu content",
+    "existing": "UsageDock in room catalog; ProfileSwitcher in tools/actions; BilingualMessage Markdown/immersion; VoiceLaunchButton in both composer mic slots"
+  },
+  "componentPath": "android/app/src/main/java/co/fallsoft/pocket/WorkSurfaces.kt",
+  "paths": [
+    "android/app/src/main/java/co/fallsoft/pocket/WorkSurfaces.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/RoomBrowser.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/LosangelexScreen.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/BackendApp.kt"
+  ],
+  "preserved": [
+    "Pairing and named profiles",
+    "Room UUID/task/actor identity and direct visibility",
+    "Draft scopes and exact command journals",
+    "Unknown receipts and explicit retry identity",
+    "Origin-bound voice destination",
+    "Package/version/signing configuration and account"
+  ],
+  "build": {
+    "variant": "qualification",
+    "tasks": [
+      "assembleQualification",
+      "assembleQualificationAndroidTest"
+    ],
+    "passed": true,
+    "apkSha256": "ac335e5cff1f38c04f19609c3e0a3e8c78b0dab4b5d7d25efc9f339781fc0d01",
+    "testApkSha256": "d76eb4a06cb74480a08c3785ef76e44aeef52c02b1daf832c838a8eac78957d7"
+  },
+  "unit": {
+    "passed": 23,
+    "failed": 0,
+    "classes": [
+      "TeamScopeTest",
+      "TeamComposerTest",
+      "EnvironmentProfilesTest",
+      "ClientReplyJournalTest",
+      "SessionCatalogTest"
+    ]
+  },
+  "native": {
+    "serial": "emulator-5640",
+    "avd": "nextcomp_env_qa",
+    "ownership": "Separately launched read-only disposable emulator; original AVD state not persisted",
+    "providers": "Only synthetic team and transcript fixtures; no model, real audio provider or push",
+    "passedMethods": [
+      "RoomNavigationNativeTest#roomIdentityDraftsAndMembershipStayScoped",
+      "RoomNavigationNativeTest#unknownMembershipReconcilesWithoutAnotherSubmission",
+      "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget",
+      "RoomVoiceNativeTest#unknownTypedTurnKeepsRoomAndReceiptAcrossServiceRestart",
+      "ClientReplyRecoveryNativeTest#providerMetadataLossDoesNotDuplicateUnknownSend",
+      "SessionCardNativeTest#workingIdleAndInputBlockedCardsRemainReadableAndCompact",
+      "SessionCardNativeTest#childBadgeExpandsInPlaceWithoutOpeningParentAndRetainsCompactHeader"
+    ],
+    "outcomes": "Retained duplicate-title room drafts, exactly one membership PUT, unknown membership reconciliation, native typed direct sends/reply targeting, preserved voice origin/receipt, native Codex Enter send without replay after uncertain delivery, readable session activity states and in-place child disclosure",
+    "failuresAndCorrections": [
+      "Intermediate room-actions bottom sheet lost native membership tap without a submission. Stable test bounds alone did not fix it. Replaced stacked modal transitions with the shared existing anchored session dropdown; both native membership journeys then passed.",
+      "A rerun against a reused transcript fixture counted the earlier run plus the current request. Grouped run failed its composer count assertion while both card methods passed. Restarted only the owned synthetic fixture; isolated Codex composer case then passed. No grouped-suite pass is claimed."
+    ],
+    "logs": [
+      {
+        "path": "/tmp/nextcomp-shared-rooms-final.log",
+        "sha256": "b473d629b9af70dbb21eeba1c7b38d5ee026c20f6bfbd2f960c159bf9f52454d",
+        "seconds": "10.2"
+      },
+      {
+        "path": "/tmp/nextcomp-shared-unknown-final.log",
+        "sha256": "5233e37f7e03840a84c615b34dcc1b4e7350dcf5e043706777134c61ee510f81",
+        "seconds": "12.215"
+      },
+      {
+        "path": "/tmp/nextcomp-shared-team-final.log",
+        "sha256": "45ee085b748410c35ebd2019957cc911c7e37d899b843f4d153c7ec482d6be70",
+        "seconds": "27.696"
+      },
+      {
+        "path": "/tmp/nextcomp-shared-voice-final.log",
+        "sha256": "91758fc628c98e503e402d4c7ab0db9e2d545add88b81bf759e74fd1c1a25d47",
+        "seconds": "3.523"
+      },
+      {
+        "path": "/tmp/nextcomp-shared-codex-composer-final.log",
+        "sha256": "5128cd223abe7a5fc25f56660e62ada7c7d89eb5e290664fdd3d47d2c349f410",
+        "seconds": "11.684"
+      },
+      {
+        "path": "/tmp/nextcomp-shared-codex-final.log",
+        "sha256": "bd2f86a2515e1ebc0f812292c9942ab41c7f14443fc22165f17534c288ca5ad7",
+        "seconds": "11.797"
+      }
+    ]
+  },
+  "visualReview": "Inspected actual synthetic room screenshot from final team native journey: existing mic and inline draft/send panel, plain agent message, existing usage/actions dock, compact context header. No motion or physical-device claim.",
+  "limits": [
+    "No deployment or phone install",
+    "Qualification variant only; release/debug shrinking and lint not run",
+    "Synthetic native methods do not qualify real-provider behavior or physical-phone UX",
+    "Room previews retain purpose data; no invented transcript/unread metadata",
+    "Room membership and recipient controls remain backend-specific menu slots"
+  ],
+  "supersededBy": "session-default-scoped-conversations-20261014.json"
+}

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha96-native-room-navigation-and-update-origin-isolation",
+  "qualification": "alpha98-native-room-routing-runs-and-wave-cache-and-source-bound-recovery",
   "requiredNativeCases": [
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#incompleteLiveIdentityAndHistoryConvergeWithoutDuplicateBubble",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#switchingWhileOldRefreshIsBlockedDoesNotLoseNewChatUpdates",
@@ -50,15 +50,19 @@
     "co.fallsoft.pocket.HistoryReadingNativeTest#partialOlderPageRepairsLateInputAgainstRetainedReply",
     "co.fallsoft.pocket.ConversationFilterNativeTest#filterKeepsVisibleAnswerWhenLeadingCommentaryIsRemoved",
     "co.fallsoft.pocket.ConversationFilterNativeTest#filterPreservesVisiblePassageAndReturnsWithoutJumping",
-    "co.fallsoft.pocket.TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget",
+    "co.fallsoft.pocket.TeamControlWorkflowNativeTest#existingAgentDisclosureOpensIndependentSessionAndKeepsPrivateRepliesScoped",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#coordinatorControlsKeepTheirTargetAndDraftInLargeTextImmersion",
     "co.fallsoft.pocket.ImmersionReadingWaveNaturalNativeTest#knownGrammarMeaningsAndUnalignedPhraseBothRevealInPlace",
     "co.fallsoft.pocket.HistoryReadingNativeTest#typingWithReadingWavePreservesDraftAndReportsDispatchLatency",
-    "co.fallsoft.pocket.RoomNavigationNativeTest#roomIdentityDraftsAndMembershipStayScoped",
-    "co.fallsoft.pocket.RoomNavigationNativeTest#unknownMembershipReconcilesWithoutAnotherSubmission",
+    "co.fallsoft.pocket.RoomNavigationNativeTest#sessionEntryAggregatesIndependentResultsAndKeepsDraftsScoped",
+    "co.fallsoft.pocket.RoomNavigationNativeTest#unknownBroadcastKeepsCapturedTargetsAcrossScopeChanges",
     "co.fallsoft.pocket.UpdateOriginNativeTest#inactiveProfilePushChecksCapturedPairingWithoutChangingSessionOrUnknownReceipts",
     "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin",
-    "co.fallsoft.pocket.RoomVoiceNativeTest#unknownTypedTurnKeepsRoomAndReceiptAcrossServiceRestart"
+    "co.fallsoft.pocket.RoomVoiceNativeTest#unknownTypedTurnKeepsRoomAndReceiptAcrossServiceRestart",
+    "co.fallsoft.pocket.RoomTranscriptNativeTest#operationUpdatesCondenseAndNamesFollowUninterruptedBlocks",
+    "co.fallsoft.pocket.RoomTranscriptNativeTest#roomEntryOpensLatestAndRefreshDoesNotMoveManualReading",
+    "co.fallsoft.pocket.RoomRoutingNativeTest#lobbyDefaultNeverInheritsWorkerReplyAcrossRooms",
+    "co.fallsoft.pocket.RoomRoutingNativeTest#visibleRoomListRefreshesAuthoritativeMembershipWithoutReopening"
   ],
   "limits": [
     "Synthetic qualification APK; physical phone interaction and production shrinker runtime remain separate evidence",

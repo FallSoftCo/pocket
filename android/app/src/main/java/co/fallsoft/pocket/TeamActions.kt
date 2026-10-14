@@ -41,8 +41,7 @@ import java.util.UUID
     var busy by remember{mutableStateOf(false)}
     var error by remember{mutableStateOf("")}
     val jobs=rememberCoroutineScope()
-    AlertDialog(onDismissRequest={if(!busy)dismiss()},title={BilingualLabel("New team task")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-        InterfaceTemplateText(InterfaceTemplate.TEAM_COORDINATOR,team)
+    AlertDialog(onDismissRequest={if(!busy)dismiss()},title={BilingualLabel("New task")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
         OutlinedTextField(title,{title=it;Pocket.prefs.edit().putString("$key:title",it).apply()},enabled=command==null&&!busy,label={BilingualLabel("Task name",centered=false)})
         OutlinedTextField(body,{body=it;Pocket.prefs.edit().putString("$key:body",it).apply()},enabled=command==null&&!busy,label={BilingualLabel("What should the team do?",centered=false)},maxLines=6)
         if(error.isNotBlank())Text(error,color=Coral)

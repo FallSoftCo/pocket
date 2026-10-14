@@ -12,14 +12,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 
-@Composable fun SessionGroupCard(group:SessionGroup,now:Long){
+@Composable fun SessionGroupCard(group:SessionGroup,now:Long,
+    onChild:(Task)->Unit={Pocket.open(it.id)},parentTitle:String?=null,
+    parentCard:(@Composable ((@Composable ()->Unit)?)->Unit)?=null){
     var expanded by remember(group.task.id,Pocket.environmentId){mutableStateOf(Pocket.prefs.getBoolean(Pocket.key("agentsExpanded:${group.task.id}"),false))}
     var childStart by remember(group.task.id,Pocket.environmentId){mutableIntStateOf(Pocket.prefs.getInt(Pocket.key("agentsPage:${group.task.id}"),0))}
     val start=childStart.coerceAtMost(((group.children.size-1).coerceAtLeast(0)/8)*8)
     val childIds=group.children.map{it.id}.toSet()
     val unread=maxOf(group.children.sumOf{it.unreadCount},Pocket.notifications.count{it.s("thread_id") in childIds&&!it.optBoolean("_read")&&!PocketAttention.dismissed(it.optLong("id"))})
     Column{
-        TaskCard(group.task,now,headerBadge=if(group.children.isEmpty())null else {{
+        val badge:(@Composable ()->Unit)?=if(group.children.isEmpty())null else {{
             val working=group.children.count{it.status in listOf("active","pending")}
             Surface(onClick={expanded=!expanded;Pocket.prefs.edit().putBoolean(Pocket.key("agentsExpanded:${group.task.id}"),expanded).apply()},
                 color=if(unread>0)Mint.copy(alpha=.16f)else Ink,
@@ -33,9 +35,10 @@ import androidx.compose.ui.unit.dp
                     if(working>0||unread>0)Box(Modifier.size(5.dp).background(if(unread>0)Mint else Coral,androidx.compose.foundation.shape.CircleShape))
                 }
             }
-        }})
+        }}
+        if(parentCard!=null)parentCard(badge)else TaskCard(group.task,now,headerBadge=badge)
         if(group.children.isNotEmpty()){
-            if(expanded){group.children.drop(start).take(8).forEach{AgentResultCard(it)}
+            if(expanded){group.children.drop(start).take(8).forEach{task->AgentResultCard(task,onOpen={onChild(task)},parentTitle=parentTitle)}
                 if(group.children.size>8)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
                     TextButton({childStart=(start-8).coerceAtLeast(0);Pocket.prefs.edit().putInt(Pocket.key("agentsPage:${group.task.id}"),childStart).apply()},enabled=start>0){BilingualLabel("Previous agents")}
                     Text("${start+1}–${minOf(start+8,group.children.size)} / ${group.children.size}",color=Muted,modifier=Modifier.padding(top=14.dp))
@@ -45,11 +48,11 @@ import androidx.compose.ui.unit.dp
         }
     }
 }
-@Composable fun AgentResultCard(task:Task){
-    Column(Modifier.fillMaxWidth().background(Panel).clickable{Pocket.open(task.id)}.padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+@Composable fun AgentResultCard(task:Task,onOpen:()->Unit={Pocket.open(task.id)},parentTitle:String?=null){
+    Column(Modifier.fillMaxWidth().background(Panel).clickable(onClick=onOpen).padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         Text(listOf(task.agentNickname.ifBlank{task.title},task.agentRole,if(task.status=="notLoaded")"Status not yet checked" else task.status,if(task.unreadCount>0)"${task.unreadCount} unread" else "").filter{it.isNotBlank()}.joinToString(" · "),color=Mint,minLines=2,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         val parent=Pocket.tasks.firstOrNull{it.id==task.parentThreadId}
-        Text(parent?.let{"Parent: "+it.agentNickname.ifBlank{it.title}}?:if(task.parentThreadId!=null)"Parent task outside this page" else "Parent identity unavailable",color=Muted,minLines=1,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(parentTitle?:parent?.let{"Parent: "+it.agentNickname.ifBlank{it.title}}?:if(task.parentThreadId!=null)"Parent task outside this page" else "Parent identity unavailable",color=Muted,minLines=1,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Text(task.preview.ifBlank{"Open to review this agent’s available work."},color=Paper,minLines=3,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Text(if(task.canAcceptDirectInput)"Open agent · direct guidance available" else "Review results · guide through parent task",color=Muted,minLines=2,maxLines=2)
     }

@@ -28,8 +28,8 @@ internal fun commandRunProjection(source:List<JSONObject>,expanded:Set<String>):
   val first=source[index]
   if(!isCommandRun(first)){display+=first;ids[first.s("id")]=first.s("id");index++;continue}
   val start=index
-  val turn=first.s("turnId")
-  do{index++}while(index<source.size&&isCommandRun(source[index])&&source[index].s("turnId")==turn)
+  val turn=first.s("groupBoundary",first.s("turnId"))
+  do{index++}while(index<source.size&&isCommandRun(source[index])&&source[index].s("groupBoundary",source[index].s("turnId"))==turn)
   val group=source.subList(start,index).toList()
   val key="ui:run-group:"+first.s("id")
   val open=group.any{it.s("id") in expanded}

@@ -28,15 +28,19 @@ Activate the registration with the normal NextComp backend rollout after its bri
 
 This remains one owner and trusted paired devices. Losangelex currently executes with full access and approval policy `never`; the interface labels that contract. Codex's review preference does not change team execution permissions.
 
-## Direct work and review results
+## Rooms and ongoing work
 
-Choose the team and task, then a recipient. An unaddressed room message goes to the team's coordinator. Addressing a teammate in **Room** keeps the contribution public. **Direct** requires an explicit recipient and reads only that recipient's direct history. Reply binds the original message ID and author; replying to your own or a system message in Direct retains the selected recipient. Enter and the keyboard Send action submit; Shift+Enter inserts a newline. clearing it restores the separate root draft.
+Rooms remain shared communication areas over independent sessions. Their list and shared conversation reuse the existing NextComp Codex list and conversation patterns. Open a card through Chat, Keyboard or supported voice entry. Each card represents a Hollywood room with stable identity. Its public contributions and linked artifacts appear together in the shared conversation; the existing group disclosure reveals independent session contexts. Expand the existing agents disclosure to enter an independent session. Private histories and drafts stay separate from the aggregate view. The group is presentation only: existing sessions receive no fabricated execution parent or new thread association.
 
-**New task** creates fresh team task contexts. Assign work conversationally to the coordinator or selected agent; Hollywood's own tools perform delegation and peer messaging. **Agent** chooses an existing task participant for direct Stop/Pause/Resume controls. Stop requests interruption and pauses subsequent automatic work according to the team service's contract. A confirmed control receipt is distinct from a completed assignment.
+An ordinary typed send captures the named destinations of the selected work scope. Replies and independent-session guidance retain their original recipient, task, visibility and reply ID. Enter and the keyboard Send action submit; Shift+Enter inserts a newline. Canceling or completing an addressed public reply returns to the collective destination and restores its draft, without dropping the aggregate timeline. A saved unconfirmed command retains its exact ID and targets across navigation and membership changes. Retry uses that saved payload, without adding destinations or automatically replaying it.
 
-Drafts and pending submissions are scoped by pairing, backend registration, team, task, visibility, recipient and reply. Saved submissions retain the command ID and exact payload after uncertainty. Retry the saved command rather than creating another copy. Acknowledgment means accepted, not completed. Switching profiles or backends never changes an in-flight request's credentials or target.
+The default view has no room/member/recipient selectors, Room/Direct chips or backend control header. The existing actions menu provides Back, Settings and actionable attention. Full-access execution is disclosed there because the team service has no per-session permission preference. New room creates shared-area metadata in the existing catalog tools/form pattern; it does not create one merged execution session, start an agent or grant execution. Listing or opening a room also starts no work. Teams are selectable in catalog tools only when multiple teams require distinguishing work destinations within one environment.
 
-The room refreshes while visible without creating model turns. Earlier history remains available, and loaded older messages survive refresh. Agent contributions use the existing Markdown/image renderer. Needs you opens a paginated team inbox and checks the authoritative request state before answering. Approval acceptance is available only with supported concrete approval data. An uncertain approval is not automatically replayed.
+The native Stop control applies to an individual active session, retaining its exact control journal and receipt. Enter an independent session through the agent disclosure to stop it; the aggregate view does not offer a selector that might interrupt several unrelated contexts. Native voice retains the supported origin-bound single-actor destination; multi-actor voice broadcasts are not claimed.
+
+Drafts and pending submissions remain scoped by pairing, backend registration, team, task, visibility, recipient and reply. Acknowledgment means accepted, not completed. Switching profiles or backends never changes an in-flight request's credentials or target. Legacy membership receipts reconcile only from observed matching membership; unobserved receipts remain retained, without replay. Saved message actions in the existing menu recover earlier recipient-bound drafts and pending payloads in their original visibility and destination. Opening a saved message sends nothing; pending text is shown for review, and retry uses its original payload.
+
+The conversation refreshes while visible without creating model turns. Earlier history remains available, and loaded older messages survive refresh. Contributions use the existing Markdown/image renderer. Needs you checks authoritative request state before answering. Approval acceptance requires supported concrete approval data; uncertain approvals are not automatically replayed.
 
 ## Background attention
 
@@ -57,3 +61,11 @@ Answers use originating team routes and stable command IDs. Native Skip dismisse
 - [Android qualification](qualification/losangelex-android-backend.json) records native synthetic interactions. Its fixture checks do not establish physical-phone push delivery or general agent performance.
 
 Existing stock-session adoption, team voice, per-task team permission configuration and actuator fencing are separate capabilities. The external-thread association API is metadata-only; this release never acquires a stock session's writer or copies its rollout. Shared computer-use ownership remains at the host broker/actuator, independently of team admission limits.
+
+## Rooms using native conversation patterns (source candidate, 2026-10-14)
+
+Losangelex now consumes the actual `TaskCard`, `SessionGroupCard` and `AgentResultCard` through backend callbacks. Contributions adapt into the actual `TranscriptRow` renderer with author attribution. The catalog, composer and actions menu also use the components extracted from Codex in `WorkSurfaces.kt`. `VoiceLaunchButton`, `UsageDock`, `ProfileSwitcher` and `BilingualMessage` remain shared.
+
+Backend IDs are presentation adapters, never stock Codex destinations. Unsupported per-session rename and notification-follow toggles are omitted because the adapter exposes no corresponding capability. Independent authors remain attributed so findings and artifacts can be understood together without merging their execution contexts.
+
+Focused source verification and its synthetic/physical boundaries are recorded in [the session-default receipt](qualification/session-default-scoped-conversations-20261014.json). This candidate has not been deployed or installed on a phone.

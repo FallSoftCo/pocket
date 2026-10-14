@@ -375,9 +375,9 @@ class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntState
     val shown=groups.filter{filter==4||query.isNotBlank()||meaningfulCatalogTask(it.task)||it.children.any(::meaningfulCatalogTask)}.sortedBy{rank[it.task.id]?:Int.MAX_VALUE}.filter{group->val t=group.task;(filter!=1||t.status in listOf("active","pending")||group.children.any{it.status=="active"})&&(filter!=2||t.watched||group.children.any{it.watched})&&(matches(t)||group.children.any(::matches))}
     val orphans=if(filter==4||query.isNotBlank())ungroupedChildren(displayed).filter(::matches).sortedByDescending{taskWorkTime(it)} else emptyList()
     Column(Modifier.fillMaxSize()){
-    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp).pointerInput(Unit){
+    WorkCatalogList(Modifier.weight(1f).pointerInput(Unit){
         awaitPointerEventScope{try{while(true){touching=awaitPointerEvent(PointerEventPass.Initial).changes.any{it.pressed}}}finally{touching=false}}
-    },state=listState,reverseLayout=true,verticalArrangement=Arrangement.spacedBy(8.dp,Alignment.Bottom),contentPadding=PaddingValues(top=12.dp,bottom=12.dp)){
+    },state=listState){
 
         item{ErrorBanner()}
         if(showCoordinator)item(key="nextcomp-coordinator"){CoordinatorCard()}
@@ -420,7 +420,11 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     val p=if(days<=1)days*0.35 else 0.35+0.65*(kotlin.math.ln(days)/kotlin.math.ln(90.0)).coerceIn(0.0,1.0)
     return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
 }
-@Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis(),headerBadge:(@Composable ()->Unit)?=null){
+@Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis(),headerBadge:(@Composable ()->Unit)?=null,
+    modifier:Modifier=Modifier,onOpen:(Boolean)->Unit={Pocket.open(t.id,keyboard=it)},
+    voice:(@Composable (Modifier)->Unit)?={VoiceLaunchButton(modifier=it,threadId=t.id,cardRegion=true)},
+    onRename:((String,()->Unit)->Unit)?={name,done->Pocket.renameTask(t.id,name,done)},
+    onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)}){
     val active=t.status in listOf("active","pending");val activityTime=taskWorkTime(t);val ageColor=sessionAgeColor(activityTime,now)
     LaunchedEffect(Pocket.environmentId,t.id,t.preview,PocketImmersion.enabled){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
@@ -429,43 +433,35 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     val revision=Triple(t.preview,t.status,t.activityAt)
     var observed by remember(Pocket.environmentId,t.id){mutableStateOf(revision)}
     LaunchedEffect(Pocket.environmentId,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
-    val shape=RoundedCornerShape(8.dp)
-    val stateAccent=if(t.needsInput&&!active)Coral else ageColor
-    val stateGlow=if(active||t.needsInput)1f else 0f
-    // Runtime activity and age are independent: idle cards stay neutral even when recent.
-    // Keep text opaque for readability rather than dimming the entire touch surface.
     val quiet=!active&&!t.needsInput
     val cardText=if(quiet)Color(0xffb8bdc7) else Paper
-    val stateSurface=if(quiet)Color(0xff080b10) else Panel
-    Box(Modifier.fillMaxWidth().clip(shape).background(stateSurface).drawBehind{
-        drawRoundRect(Brush.radialGradient(colors=listOf(stateAccent.copy(alpha=.26f*stateGlow),stateAccent.copy(alpha=.06f*stateGlow),Color.Transparent),center=Offset(size.width*.85f,0f),radius=size.width*.95f),cornerRadius=CornerRadius(8.dp.toPx()))
-    }.border(1.dp,if(quiet)Color(0xff252b34)else Line.copy(alpha=.7f),shape).border(2.dp,Mint.copy(alpha=highlight.value),shape)){
+    WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,modifier){
         if(!t.archived)Row(Modifier.matchParentSize()){
-            VoiceLaunchButton(modifier=Modifier.weight(.22f).fillMaxHeight(),threadId=t.id,cardRegion=true)
-            CardInteractionRegion("Chat",Modifier.weight(.56f).fillMaxHeight(),t.title){Pocket.open(t.id)}
-            CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight(),t.title){Pocket.open(t.id,keyboard=true)}
+            voice?.invoke(Modifier.weight(.22f).fillMaxHeight())
+            CardInteractionRegion("Chat",Modifier.weight(if(voice==null).78f else .56f).fillMaxHeight(),t.title){onOpen(false)}
+            CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight(),t.title){onOpen(true)}
         }
         Column(Modifier.padding(start=12.dp,end=12.dp,top=2.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+        Row(Modifier.heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
             if(rename){
                 val focus=remember{androidx.compose.ui.focus.FocusRequester()}
                 LaunchedEffect(Unit){focus.requestFocus()}
-                OutlinedTextField(name,{name=it.take(120)},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.trim().isNotEmpty())Pocket.renameTask(t.id,name.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.trim().isNotEmpty())Pocket.renameTask(t.id,name.trim()){rename=false}}))
+                OutlinedTextField(name,{name=it.take(120)},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.trim().isNotEmpty())onRename?.invoke(name.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.trim().isNotEmpty())onRename?.invoke(name.trim()){rename=false}}))
             }else Box(Modifier.weight(1f),contentAlignment=Alignment.CenterStart){
                 LaunchedEffect(Pocket.environmentId,t.id,t.title,PocketImmersion.enabled){PocketImmersion.offer("session-title:"+t.id,t.title,"session title")}
                 val titleConfiguration=androidx.compose.ui.platform.LocalViewConfiguration.current
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalViewConfiguration provides object:androidx.compose.ui.platform.ViewConfiguration by titleConfiguration {
                     override val minimumTouchTargetSize=androidx.compose.ui.unit.DpSize.Zero
                 }){
-                    BilingualLabel(t.title,color=cardText,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,centered=false,onActivate={name=t.title;rename=true})
+                    BilingualLabel(t.title,color=cardText,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,centered=false,onActivate=if(onRename==null)null else {{name=t.title;rename=true}})
                 }
             }
             if(!rename)headerBadge?.invoke()
             val age=now-activityTime
             val ageLabel=if(age in 20_000..59_999)"${age/1000}s" else lastActivity(activityTime)
-            if(age>=20_000)Text(ageLabel,color=Muted,fontSize=11.sp,modifier=Modifier.semantics{contentDescription="Last active "+ageLabel}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
+            if(activityTime>0&&age>=20_000)Text(ageLabel,color=Muted,fontSize=11.sp,modifier=Modifier.semantics{contentDescription="Last active "+ageLabel}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
             Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true) else SymbolIcon(if(t.needsInput)Icons.Rounded.ErrorOutline else Icons.Rounded.Pause,if(t.needsInput)"Needs your input" else "Idle",tint=if(t.needsInput)Coral else Muted,modifier=Modifier.size(18.dp))}
-            Surface(onClick={Pocket.watchTask(t.id,!t.watched)},modifier=Modifier.width(48.dp).heightIn(min=48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
+            if(onWatch!=null)Surface(onClick={onWatch(!t.watched)},modifier=Modifier.width(48.dp).heightIn(min=48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
                 Column(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(vertical=4.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
                     SymbolIcon(if(t.watched)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,null,modifier=Modifier.size(24.dp),tint=if(t.watched)Paper else Muted.copy(alpha=.65f))
                     BilingualLabel(if(t.watched)"On" else "Off",fontSize=10.sp,color=if(t.watched)Mint else Muted)

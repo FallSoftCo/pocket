@@ -8,8 +8,8 @@ import {createHash} from 'node:crypto';
 import express from 'express';
 import {AppUpdates,mountAppUpdates} from '../server/app-updates.mjs';
 const signer='a'.repeat(64),other='b'.repeat(64),unknown='c'.repeat(64);
-function setup(t){
- const dir=mkdtempSync(resolve(tmpdir(),'nextcomp-updates-')),root=resolve(dir,'app-updates');mkdirSync(root);
+function setup(t,hidden=false){
+ const dir=mkdtempSync(resolve(tmpdir(),hidden?'.nextcomp-updates-':'nextcomp-updates-')),root=resolve(dir,'app-updates');mkdirSync(root);
  const db=new DatabaseSync(':memory:');db.exec(`CREATE TABLE devices(id TEXT PRIMARY KEY);CREATE TABLE notifications(id INTEGER PRIMARY KEY AUTOINCREMENT,thread_id TEXT,title TEXT,body TEXT,kind TEXT,attachments TEXT,created_at INTEGER);CREATE TABLE push_tokens(device_id TEXT PRIMARY KEY,project_id TEXT);CREATE TABLE push_deliveries(notification_id INTEGER,device_id TEXT,state TEXT,updated_at INTEGER,PRIMARY KEY(notification_id,device_id));INSERT INTO devices VALUES('phone'),('phone2');INSERT INTO push_tokens VALUES('phone','test'),('phone2','other-project');`);
  const push={enabled:true,config:{projectId:'test'},calls:0,async flush(){this.calls++;}},updates=new AppUpdates({dir,db,push});
  const variants=[signer,other].map((s,i)=>{const bytes=Buffer.from('apk-'+i),path='build-'+i+'.apk';writeFileSync(resolve(root,path),bytes);return {signerSha256:s,path,sha256:createHash('sha256').update(bytes).digest('hex'),size:bytes.length};});
@@ -26,3 +26,17 @@ test('push announcement persists once per build and paired device, including new
 test('unconfigured push and corrupt artifact never announce',async t=>{const {updates,push,db,root,manifest}=setup(t);push.enabled=false;assert.deepEqual(await updates.announce(),{announced:0,pushEnabled:false});assert.equal(db.prepare('SELECT COUNT(*) n FROM notifications').get().n,0);push.enabled=true;writeFileSync(resolve(root,manifest.variants[0].path),'bad');await assert.rejects(updates.announce(),/size/);assert.equal(db.prepare('SELECT COUNT(*) n FROM notifications').get().n,0);});
 test('HTTP routes require paired authentication, owner-only announce and matching signer download',async t=>{const {updates}=setup(t),app=express();app.use('/api',(req,res,next)=>{const token=req.headers.authorization;if(!['Bearer paired','Bearer owner'].includes(token))return res.status(401).end();req.device={id:token==='Bearer owner'?'owner':'phone'};next();});const owner=(req,res,next)=>req.device.id==='owner'?next():res.status(403).end(),route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);mountAppUpdates(app,{updates,owner,route});app.use((e,_req,res,_next)=>res.status(e.status||500).json({error:e.message}));const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>server.close());const base='http://127.0.0.1:'+server.address().port,path='/api/app/update?signer='+signer+'&versionCode=24';assert.equal((await fetch(base+path)).status,401);assert.equal((await fetch(base+'/api/app/update/apk?signer='+signer)).status,401);const headers={Authorization:'Bearer paired'};assert.equal((await fetch(base+path,{headers})).status,200);const apk=await fetch(base+'/api/app/update/apk?signer='+signer,{headers});assert.equal(apk.status,200);assert.equal(await apk.text(),'apk-0');assert.equal((await fetch(base+'/api/app/update/apk?signer='+unknown,{headers})).status,404);assert.equal((await fetch(base+'/api/app/update/announce',{method:'POST',headers})).status,403);assert.equal((await fetch(base+'/api/app/update/announce',{method:'POST',headers:{Authorization:'Bearer owner'}})).status,200);});
 test('broken manifests and missing artifacts return sanitized errors without local paths',t=>{const {updates,root,manifest,save}=setup(t);writeFileSync(resolve(root,'manifest.json'),'{bad');assert.throws(()=>updates.metadata(signer,'24'),{status:400,message:'Invalid app update manifest.'});save();rmSync(resolve(root,manifest.variants[0].path));assert.throws(()=>updates.artifact(signer),{status:503,message:'The update artifact is unavailable.'});});
+test('authenticated APK download works beneath a private hidden directory',async t=>{
+ const {updates}=setup(t,true),app=express();
+ app.use('/api',(req,res,next)=>req.get('Authorization')==='Bearer paired'?next():res.status(401).end());
+ const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
+ mountAppUpdates(app,{updates,owner:(_req,res)=>res.status(403).end(),route});
+ app.use((error,_req,res,_next)=>res.status(error.status||500).json({error:error.message}));
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>server.close());
+ const url='http://127.0.0.1:'+server.address().port+'/api/app/update/apk?signer=';
+ assert.equal((await fetch(url+signer)).status,401);
+ const response=await fetch(url+signer,{headers:{Authorization:'Bearer paired'}});
+ assert.equal(response.status,200);assert.equal(await response.text(),'apk-0');
+ assert.equal(response.headers.get('X-APK-SHA256'),updates.artifact(signer).sha256);
+ assert.equal((await fetch(url+unknown,{headers:{Authorization:'Bearer paired'}})).status,404);
+});

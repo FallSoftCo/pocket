@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "date": "2026-10-14",
+  "status": "superseded-source-candidate",
+  "scope": "Native rooms/session UX parity authorized in enterprise-nextcomp brief 157",
+  "changes": [
+    "RoomBrowser.kt: bottom-anchored compact cards, stable room IDs, room search/team/profile/new-room tools sheet",
+    "LosangelexScreen.kt: routing, members, controls and settings in conversation actions; room title from room identity; plain agent replies and panel for user messages",
+    "BackendApp.kt: profile switcher moved into room menus"
+  ],
+  "preservation": "No changes to pairing, registration, drafts, command journals, receipt reconciliation, voice targeting, package/version/signing configuration or account state.",
+  "build": {
+    "host": "ozzz-aosp",
+    "variant": "qualification",
+    "result": "assembleQualification and assembleQualificationAndroidTest passed",
+    "apkSha256": "558b419c3eeadb0cb3ffa79011eafbec703f77f7555f34dcd7fc8bc4a54fa46e",
+    "testApkSha256": "d3d4afff1b2af9e101b189ed438415921cfffa8cfa846f83b443e6789db49ae8"
+  },
+  "unit": {
+    "result": "18 passed, no failures",
+    "classes": [
+      "TeamScopeTest",
+      "TeamComposerTest",
+      "EnvironmentProfilesTest",
+      "ClientReplyJournalTest"
+    ]
+  },
+  "native": {
+    "serial": "emulator-5640",
+    "avd": "nextcomp_env_qa",
+    "ownership": "Separately launched read-only disposable emulator; original AVD state not persisted",
+    "provider": "Synthetic immersion-cycle-team-ui fixture; no model, push or audio provider",
+    "passed": [
+      {
+        "case": "RoomNavigationNativeTest#roomIdentityDraftsAndMembershipStayScoped",
+        "seconds": 6.676
+      },
+      {
+        "case": "RoomNavigationNativeTest#unknownMembershipReconcilesWithoutAnotherSubmission",
+        "seconds": 7.156
+      },
+      {
+        "case": "TeamControlWorkflowNativeTest#cyclingSelectorsPreserveScopedDraftsReplyContextAndExactDirectTarget",
+        "seconds": 25.729
+      },
+      {
+        "case": "RoomVoiceNativeTest#unknownTypedTurnKeepsRoomAndReceiptAcrossServiceRestart",
+        "seconds": 3.727
+      }
+    ],
+    "artifactBoundary": "Room navigation passed before the final room-tools testTagsAsResourceId fix. Team selector and voice receipt passed on the final APK hash above.",
+    "initialFailures": [
+      "Copied AVD package had incompatible signer; clean installed only in disposable read-only emulator",
+      "Permission overlay invalidated initial native navigation observations; granted fixture permissions before rerun",
+      "Grouped navigation methods shared mutable membership fixture; each method passed with a fresh fixture",
+      "Team selector journey found inaccessible tags in room-tools sheet; added semantics propagation and final journey passed"
+    ]
+  },
+  "visualReview": "Synthetic tools sheet and conversation screenshots inspected for compact controls, visible composer and removal of profile header. No motion or physical-phone usability qualification.",
+  "limits": [
+    "No release/debug shrink or lint qualification",
+    "No deployment, phone installation, production service restart or real-provider validation",
+    "Room purpose is retained as preview; no invented last-message or unread metadata"
+  ],
+  "supersededBy": "session-default-scoped-conversations-20261014.json"
+}

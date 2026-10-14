@@ -264,9 +264,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         // Accessibility scroll actions do not emit pointer-drag interactions.
         snapshotFlow{list.isScrollInProgress&&!follow&&!pagingViewport}.distinctUntilChanged().filter{it}.collect{historyGesture++}
     }
-    LaunchedEffect(PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)}){if(follow&&!dragged){
-        delay(32)
-        if(!follow||dragged||list.isScrollInProgress)return@LaunchedEffect
+    LaunchedEffect(Pocket.environmentId,Pocket.selected,PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)}){if(follow&&!dragged){
+        // A delta can arrive while the preceding programmatic follow is still
+        // measuring. Keep that request until its new rows exist and scrolling
+        // settles; a real reader gesture still cancels following immediately.
+        val expected=shownRows.size+1 // includes the explicit end anchor
+        snapshotFlow{!follow||dragged||(!list.isScrollInProgress&&list.layoutInfo.totalItemsCount>=expected)}.first{it}
+        if(!follow||dragged)return@LaunchedEffect
         val count=list.layoutInfo.totalItemsCount
         // Keep the question heading and its one-tap Skip visible even when a
         // multi-question form is taller than the conversation viewport.
@@ -443,11 +447,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         if(keyboardInput)DraftComposerScope{
         val draft=editor.text
         Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically){
+            ConversationComposerRow{
                 VoiceLaunchButton(modifier=Modifier.size(64.dp),threadId=Pocket.selected,compact=true)
                 if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
-                BasicTextField(editor,{if(editor.text!=it.text)saveReplyDraft(draftKey,it.text);editor=it},
-                    modifier=Modifier.weight(1f).focusRequester(inputFocus).heightIn(min=46.dp).padding(top=12.dp,bottom=12.dp,end=8.dp).onPreviewKeyEvent{event->
+                ConversationDraftField(editor,{if(editor.text!=it.text)saveReplyDraft(draftKey,it.text);editor=it},
+                    modifier=Modifier.weight(1f).focusRequester(inputFocus).onPreviewKeyEvent{event->
                         if(event.key==Key.Enter||event.key==Key.NumPadEnter){
                             if(event.type==KeyEventType.KeyDown){
                                 if(event.isShiftPressed){
@@ -458,20 +462,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                             }
                             true
                         }else false
-                    },maxLines=3,
-                    keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={if(editor.text.isNotBlank()&&!Pocket.sending)submit("steer")}),
-                    textStyle=LocalTextStyle.current.copy(color=Paper,fontSize=15.sp,lineHeight=22.sp),cursorBrush=SolidColor(Mint),
-                    decorationBox={inner->Box(contentAlignment=Alignment.CenterStart){if(draft.isEmpty())BilingualLabel(if(active)"Steer this task…" else "Message Codex…",centered=false,color=Muted,fontSize=15.sp);inner()}})
+                    },onSend={if(editor.text.isNotBlank()&&!Pocket.sending)submit("steer")},
+                    placeholder={BilingualLabel(if(active)"Steer this task…" else "Message Codex…",centered=false,color=Muted,fontSize=15.sp)})
                 val hasDraft=draft.isNotBlank()
                 val enabled=!Pocket.sending&&hasDraft
                 val label=if(active)"Steer running turn" else "Send message"
-                Box(Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(Ink).border(1.dp,if(hasDraft&&enabled)Mint else Muted.copy(alpha=.4f),RoundedCornerShape(12.dp))
-                    .combinedClickable(enabled=enabled,onClickLabel=label,onLongClickLabel=if(hasDraft)"Queue for next turn" else label,
-                        onLongClick={if(hasDraft)submit("queue")},onClick={submit("steer")})
-                    .semantics{role=androidx.compose.ui.semantics.Role.Button;contentDescription=label;if(hasDraft)customActions=listOf(CustomAccessibilityAction("Queue for next turn"){if(enabled){submit("queue");true}else false})},contentAlignment=Alignment.Center){
-                    if(Pocket.sending)CircularProgressIndicator(Modifier.size(18.dp),color=Mint,strokeWidth=2.dp)
-                    else SymbolIcon(Icons.Rounded.ArrowUpward,null,tint=Paper,modifier=Modifier.size(44.dp))
-                }
+                ConversationSendButton(hasDraft,enabled,Pocket.sending,label,onQueue={if(hasDraft)submit("queue")}){submit("steer")}
+
             }
         }
         }
@@ -484,13 +481,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp) ){
             InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
             ConversationNotesControls(important,toggleImportant,hasVisibleSpeech,visibleSpeech)
-            Box{
-                UsageDock(Modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true,statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning,onOpen={actionsOpen=true})
-                DropdownMenu(actionsOpen,{actionsOpen=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp),properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
-                    TextButton({actionsOpen=false;keyboard?.hide();Pocket.closeTask()}){BilingualLabel("Back")}
-                    if(PocketSpeech.count>0)TextButton({PocketSpeech.clear();actionsOpen=false}){BilingualLabel("Clear speech from active session")}
-                    ConversationActivityControls()
-                }
+            ConversationActionsMenu(actionsOpen,{actionsOpen=it},statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning){
+                TextButton({actionsOpen=false;keyboard?.hide();Pocket.closeTask()}){BilingualLabel("Back")}
+                if(PocketSpeech.count>0)TextButton({PocketSpeech.clear();actionsOpen=false}){BilingualLabel("Clear speech from active session")}
+                ConversationActivityControls()
             }
             key(important){ReaderPagingButtons(list,hasEarlier=PocketTranscript.earlier&&!important,
                 onPrepare={up->
@@ -548,7 +542,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 
 }
 
-@Composable fun TranscriptRow(row:JSONObject,onDisplayedText:((String)->Unit)?=null){
+@Composable fun TranscriptRow(row:JSONObject,speaker:String?=null,showSpeaker:Boolean=true,onDisplayedText:((String)->Unit)?=null){
     when(row.s("kind")){
         "turn"->Row(Modifier.fillMaxWidth().padding(top=15.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){HorizontalDivider(Modifier.weight(1f),color=Line);Text(turnTime(row.optLong("startedAt")),fontSize=10.sp,color=Muted);HorizontalDivider(Modifier.weight(1f),color=Line)}
         "turnEnd"->{val seconds=row.optLong("durationMs")/1000
@@ -564,8 +558,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
         "request"->row.optJSONObject("request")?.let{RequestCard(it)}
         "attachments"->Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Label("SHARED FILES · ${row.s("title")}",Mint);row.optJSONArray("attachments")?.objects()?.forEach{Attachment(it)}}
-        "user","message"->{val you=row.s("kind")=="user";Column(Modifier.fillMaxWidth().then(if(you)Modifier.clip(RoundedCornerShape(6.dp)).background(Panel).padding(14.dp)else Modifier.padding(vertical=5.dp)),verticalArrangement=Arrangement.spacedBy(7.dp)){
-            SymbolIcon(if(you)"User" else "Codex",if(you)"Your message" else "Codex message",Modifier.size(20.dp))
+        "user","message"->{val you=row.s("kind")=="user";ConversationMessageSurface(you){
+            if(showSpeaker){
+                if(speaker!=null&&!you)BilingualLabel(speaker,color=Mint,centered=false)
+                else SymbolIcon(if(you)"User" else "Codex",if(you)"Your message" else "Codex message",Modifier.size(20.dp))
+            }
             val sourceId="row:"+row.s("id")
             LaunchedEffect(row.s("text"),PocketImmersion.enabled){PocketImmersion.offer(sourceId,row.s("text"),if(you)"user message" else "Codex response")}
             ImmersionSelection(row.s("text")){BilingualMessage(sourceId,row.s("text"),onDisplayedText=onDisplayedText)}
@@ -577,23 +574,25 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 }
 @Composable fun ActivityRow(row:JSONObject,fullyExpanded:Boolean=false){
     val sourceId="activity:"+row.s("id")
-    LaunchedEffect(row.s("text"),PocketImmersion.enabled){if(row.s("type")!="commandExecution")PocketImmersion.offer(sourceId,row.s("text"),"public thought or activity")}
+    val rawOperation=row.s("type") in listOf("commandExecution","roomOperation")
+    LaunchedEffect(row.s("text"),PocketImmersion.enabled){if(!rawOperation)PocketImmersion.offer(sourceId,row.s("text"),"public thought or activity")}
     var locallyExpanded by remember(row.s("id")){mutableStateOf(false)}
     val expanded=fullyExpanded||locallyExpanded
-    val running=row.s("status")=="inProgress";val failed=row.s("status") in listOf("failed","declined")||(!row.isNull("exitCode")&&row.optInt("exitCode")!=0)
+    val running=row.s("status")=="inProgress";val unknown=row.s("status")=="unknown";val failed=row.s("status") in listOf("failed","declined")||(!row.isNull("exitCode")&&row.optInt("exitCode")!=0)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Panel.copy(alpha=.6f)).then(if(fullyExpanded)Modifier else Modifier.clickable{locallyExpanded=!locallyExpanded}).padding(horizontal=11.dp,vertical=9.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
             Box(Modifier.size(24.dp),contentAlignment=Alignment.Center){
                 if(running)SymbolIcon(if(row.s("type")=="reasoning")"Psychology" else "Codex","Working",Modifier.size(24.dp),spinning=true)
-                else SymbolIcon(if(failed)Icons.Rounded.ErrorOutline else Icons.Rounded.Check,null,tint=if(failed)Coral else Muted,modifier=Modifier.size(18.dp))
+                else SymbolIcon(if(failed||unknown)Icons.Rounded.ErrorOutline else Icons.Rounded.Check,if(unknown)"Outcome unconfirmed" else null,tint=if(failed)Coral else Muted,modifier=Modifier.size(18.dp))
             }
             BilingualLabel(row.s("title"),fontSize=12.sp,color=if(running)Mint else Muted,modifier=Modifier.weight(1f),centered=false)
+            if(unknown)BilingualLabel("Unconfirmed",fontSize=10.sp,color=Muted)
             if(row.optLong("durationMs")>0)Text("${row.optLong("durationMs")/1000}s",fontSize=10.sp,color=Muted)
             if(!fullyExpanded)SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse activity" else "Expand activity",tint=Muted,modifier=Modifier.size(16.dp))
         }
         if(row.s("text").isNotBlank()){
             val text=PocketImmersion.target(sourceId,row.s("text"))
-            if(row.s("type")=="commandExecution"){
+            if(rawOperation){
                 Text(row.s("text"),fontSize=11.sp,lineHeight=17.sp,color=Paper.copy(alpha=.82f),fontFamily=FontFamily.Monospace,maxLines=if(expanded)Int.MAX_VALUE else 2,overflow=TextOverflow.Ellipsis)
             }else if(expanded)BilingualMessage(sourceId,row.s("text"))
             else MarkdownPreview(text,fontSize=11.sp,lineHeight=17.sp,color=Paper.copy(alpha=.82f),maxLines=2,overflow=TextOverflow.Ellipsis)
@@ -659,6 +658,7 @@ internal fun conversationFilterAnchor(before:List<String>,after:List<String>,vis
 /** Compact command history; failures remain evident even when details are folded. */
 @Composable internal fun CommandRunsHeader(runs:List<JSONObject>,expanded:Boolean,onToggle:()->Unit) {
     val working=runs.any{it.s("status")=="inProgress"}
+    val unknown=runs.count{it.s("status")=="unknown"}
     val failed=runs.count{it.s("status") in listOf("failed","declined")||(!it.isNull("exitCode")&&it.optInt("exitCode")!=0)}
     Row(Modifier.fillMaxWidth().heightIn(min=48.dp).clickable(
         onClickLabel=if(expanded)"Collapse command runs" else "Expand command runs",onClick=onToggle
@@ -668,6 +668,7 @@ internal fun conversationFilterAnchor(before:List<String>,after:List<String>,vis
         BilingualLabel("Runs",fontSize=13.sp,color=Muted)
         if(working)BilingualLabel("Working",fontSize=12.sp,color=Mint)
         if(failed>0){Text(failed.toString(),fontSize=12.sp,color=Coral);BilingualLabel("Failed",fontSize=12.sp,color=Coral)}
+        if(unknown>0){Text(unknown.toString(),fontSize=12.sp,color=Muted);BilingualLabel("Unconfirmed",fontSize=12.sp,color=Muted)}
         Spacer(Modifier.weight(1f))
         SymbolIcon(if(expanded)Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,if(expanded)"Collapse command runs" else "Expand command runs",Modifier.size(20.dp),tint=Muted)
     }

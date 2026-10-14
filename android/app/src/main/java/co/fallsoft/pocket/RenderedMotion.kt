@@ -29,7 +29,10 @@ private object RenderedPageCache {
     private val decodeLock = Mutex()
     private val pages = LinkedHashMap<Int, ImageBitmap>(16, .75f, true)
     private var bytes = 0L
-    private const val budget = 32L * 1024 * 1024
+    // Several visible four-page symbol atlases exceed32MiB. Retain their
+    // complete loops so each pass does not decode new bitmaps and reupload
+    // them while the immersion frontier is drawing. The LRU stays bounded.
+    private const val budget = 64L * 1024 * 1024
     suspend fun load(context: Context, id: Int): ImageBitmap? = withContext(Dispatchers.IO) {
         if (id == 0) return@withContext null
         decodeLock.withLock {

@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,54 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "hollywood-native-room-execution-feed-20261014",
+      "request": "Use the existing session condensed Runs display in Hollywood rooms, showing human/agent communication and expandable native execution with durable agent/host/context attribution. No separate per-agent labels are required in the collapsed header.",
+      "status": "canonical-v3-projection-implemented-and-qualified-with-actual-native-room-feed; gateway-and-phone-cutover-pending",
+      "evidence": "docs/HOLLYWOOD-EXECUTION-FEED.md"
+    },
+    {
+      "id": "global-default-and-live-room-list-20261014",
+      "request": "Ordinary Global message goes only to Global coordinator, never a hidden worker from notification/reply/room switch; explicit reply/direct and unknown receipts retained. Room list updates real room metadata/membership without reopen.",
+      "status": "implemented-signed116r04-building",
+      "evidence": "docs/qualification/immersion-pacing-and-room-transcript-20261014.json"
+    },
+    {
+      "id": "room-condensed-runs-and-author-blocks-20261014",
+      "request": "Restore native condensed Runs UX and show agent name once for uninterrupted messages. Open room consistently at latest/bottom, preserving manual reading during refresh.",
+      "status": "implemented-final116r03-release-gate-running",
+      "evidence": "docs/qualification/immersion-pacing-and-room-transcript-20261014.json"
+    },
+    {
+      "id": "immersion-pacing-audit-20261014",
+      "request": "Bounded native audit and measured improvement for stuttering immersion waves.",
+      "status": "bounded-atlas-cache-fix-measured-modest-emulator-improvement-final116r03-gate-running",
+      "evidence": "docs/qualification/immersion-pacing-and-room-transcript-20261014.json"
+    },
+    {
+      "id": "direct-room-dispatch-audit-20261014",
+      "request": "Direct room instructions must capture their exact destination and stable command identity without a required Global relay. Distinguish agent-authored relay from duplicate client dispatch using actual event and receipt evidence.",
+      "status": "source-routing-verified-persistence-hardened-live-event-evidence-pending",
+      "evidence": "docs/QUESTION-MIGRATION-CONTRACT.md"
+    },
+    {
+      "id": "actionable-question-push-20261014",
+      "request": "Answer an agent question through Android notification inline input without opening the app. Persist the answer identity before sending, retain captured environment/authority/team/room/question/agent, reconcile unknown receipts and distinguish approvals.",
+      "status": "provenance-and-approval-separation-implemented-inline-answer-awaiting-owner-contract",
+      "evidence": "docs/QUESTION-MIGRATION-CONTRACT.md"
+    },
+    {
+      "id": "multihost-session-continuity-20261014",
+      "request": "Observe and direct source/destination sessions through existing native surfaces with stable captured host/authority/room/context identities, preserved pairings/drafts/unknown receipts and truthful transfer availability.",
+      "status": "interface-requirements-recorded-awaiting-lax-hollywood-contracts",
+      "evidence": "docs/QUESTION-MIGRATION-CONTRACT.md"
+    },
+    {
+      "id": "native-room-session-parity-20261014",
+      "request": "Retain rooms as shared communication areas over independent sessions. Reuse Codex list-to-conversation components and layouts; preserve room identity, scoped broadcasts, peer/human communication, separate underlying contexts, drafts and receipts. Additional controls need concrete justification within existing patterns.",
+      "status": "115-reactivated-live-download-verified-offer-deduplicated-install-unobserved",
+      "evidence": "docs/qualification/native-enterprise-release-readiness-20261014.json"
+    },
     {
       "id": "visible-catalog-startup-20261012",
       "request": "Initial loading must visibly communicate progress and actionable failure without hiding existing sessions during refresh",

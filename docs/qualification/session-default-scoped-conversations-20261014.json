@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "date": "2026-10-14",
+  "status": "source-candidate-not-deployed",
+  "host": "ozzz-aosp",
+  "authorizedScope": "enterprise-nextcomp human briefs 157, 252 and superseding correction 299",
+  "result": "Default session list -> session view. Collective scopes capture broadcasts to independent sessions; authorized public findings and linked artifacts render together. Backend controls and execution identities stay internal.",
+  "actualReuse": {
+    "TaskCard": "Same card and Chat/Keyboard/voice entry, with backend callbacks instead of Pocket thread actions",
+    "SessionGroupCard and AgentResultCard": "Same disclosure and result cards for existing independent contexts; no invented execution parent/thread association",
+    "TranscriptRow": "Same session Markdown/image/message renderer; actor attribution identifies contributions from several sessions",
+    "WorkSurfaces.kt": "Shared existing catalog geometry, card surface, composer row/field/send control and UsageDock/anchored actions menu",
+    "existingControls": "VoiceLaunchButton, ChatActionButton, ProfileSwitcher, BilingualMessage and native Stop control patterns"
+  },
+  "removed": "Room/Direct headers and chips, member/recipient selectors, room controls and separate member dialog; top profile/usage header",
+  "scoping": [
+    "New collective sends capture only selected-scope destinations. Pending payloads retain original IDs/targets across membership changes, including an empty current membership.",
+    "Public reply cancel/completion restores collective delivery and its draft. Public reply addressing does not reset aggregate history; private histories remain recipient-specific.",
+    "Rendered history is gated by its captured visibility/context, so stale private data is not rendered as aggregate content.",
+    "Saved message recovery preserves legacy destination, visibility, reference and payload, shows captured text before retry, and never sends on opening.",
+    "Observed legacy membership receipts reconcile internally; unobserved receipts remain without replay.",
+    "Individual Stop uses its captured control journal. Existing pairing, package/version/signing configuration, account and voice origin remain unchanged."
+  ],
+  "justifiedDepartures": [
+    {
+      "need": "Distinguish simultaneous findings and artifacts",
+      "pattern": "Actor attribution within the existing TranscriptRow message layout"
+    },
+    {
+      "need": "Preserve earlier addressed drafts/unknown commands after removing the selector",
+      "pattern": "Known Saved message entries in the existing actions menu and composer; no arbitrary recipient/visibility selector"
+    },
+    {
+      "need": "Disambiguate work in multiple teams within one environment",
+      "pattern": "Scope selection in existing catalog tools only when more than one team exists"
+    },
+    {
+      "need": "Avoid unsupported or misleading actions across independent contexts",
+      "pattern": "Omit adapter-unsupported rename/follow/folder/model/permission controls; expose actual full-access contract in Settings/actions and Stop individual active sessions"
+    },
+    {
+      "need": "Keep supported voice origin exact",
+      "pattern": "Existing actor-bound native voice; no claim of multi-actor voice broadcasts"
+    }
+  ],
+  "paths": [
+    "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/SessionGroupCard.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/RoomBrowser.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/LosangelexScreen.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/LosangelexClient.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/BackendApp.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/TeamActions.kt",
+    "android/app/src/main/java/co/fallsoft/pocket/WorkSurfaces.kt"
+  ],
+  "build": {
+    "variant": "qualification",
+    "tasks": [
+      "assembleQualification",
+      "assembleQualificationAndroidTest"
+    ],
+    "passed": true,
+    "apkSha256": "48c71d2bc8391c3fdb988c7ddcf4944f6be03fecca6dd6c6a707db386040f9ff",
+    "testApkSha256": "7c989f2f297d0b5cff6e6e207d63806d87f9224211a66efbfc01750d564884ef"
+  },
+  "unit": {
+    "passed": 24,
+    "failed": 0,
+    "classes": [
+      "co.fallsoft.pocket.TeamScopeTest",
+      "co.fallsoft.pocket.TeamComposerTest",
+      "co.fallsoft.pocket.EnvironmentProfilesTest",
+      "co.fallsoft.pocket.ClientReplyJournalTest",
+      "co.fallsoft.pocket.SessionCatalogTest"
+    ]
+  },
+  "adapterAndReleasePolicyTests": {
+    "passed": 12,
+    "failed": 0,
+    "files": [
+      "tests/losangelex.test.mjs",
+      "tests/release-qualification.test.mjs"
+    ]
+  },
+  "native": {
+    "passedMethods": 7,
+    "failedFinalMethods": 0,
+    "serial": "emulator-5640",
+    "avd": "nextcomp_env_qa",
+    "ownership": "Separately launched read-only disposable emulator; original AVD not persisted",
+    "groups": [
+      {
+        "methods": 4,
+        "seconds": 40.463,
+        "log": "/tmp/nextcomp-session-default-scopes-final.log",
+        "sha256": "7b341d376796de2b2df05806d6c20eb47123405c1ba52311e584c15a3c859524"
+      },
+      {
+        "methods": 3,
+        "seconds": 15.481,
+        "log": "/tmp/nextcomp-session-default-codex-final.log",
+        "sha256": "3ad04ba2b9a68d6b01c6364f2a0dc6f9962da6e815ec9501dc9b864a4566604d"
+      }
+    ],
+    "cases": [
+      "RoomNavigationNativeTest#sessionEntryAggregatesIndependentResultsAndKeepsDraftsScoped",
+      "RoomNavigationNativeTest#unknownBroadcastKeepsCapturedTargetsAcrossScopeChanges",
+      "TeamControlWorkflowNativeTest#existingAgentDisclosureOpensIndependentSessionAndKeepsPrivateRepliesScoped",
+      "RoomVoiceNativeTest#unknownTypedTurnKeepsRoomAndReceiptAcrossServiceRestart",
+      "ClientReplyRecoveryNativeTest#providerMetadataLossDoesNotDuplicateUnknownSend",
+      "SessionCardNativeTest#workingIdleAndInputBlockedCardsRemainReadableAndCompact",
+      "SessionCardNativeTest#childBadgeExpandsInPlaceWithoutOpeningParentAndRetainsCompactHeader"
+    ],
+    "coverage": "Native aggregate artifact/drafts/broadcast; public reply cancel/ack/next collective send; frozen unknown retry after all current destinations disappear; legacy addressed pending restoration with exact payload and no added reply reference; independent private replies and targeted Stop; voice receipt lifecycle; original Codex Enter/unknown-send and card/disclosure/rename isolation regressions.",
+    "substitutions": "Synthetic HTTP/WS team and transcript services, no model/audio provider/push. Voice receipt scenario uses direct service setup; no physical microphone qualification.",
+    "setupAndCorrections": "Disclosure tap initially missed a row in a grouped rerun. Added stable-bounds native gesture synchronization and failure screenshot/hierarchy capture. Final two groups pass. Synthetic setup now resets its own membership/request state per journey; no internal navigation shortcuts or duplicate taps."
+  },
+  "testMigration": "Retired UI-selector/membership journeys map to scoped-session/delivery/legacy-receipt journeys after the controls were removed. Required native case IDs and fixture classification updated; existing original Codex regression cases retained.",
+  "limits": [
+    "Source remains uncommitted and undeployed",
+    "Qualification variant only: release/debug shrinking and lint not run",
+    "Synthetic source evidence does not establish real-provider execution, physical-phone UX, push delivery, exact-once execution or permanent network recovery",
+    "No final motion review or current phone installation claim"
+  ]
+}

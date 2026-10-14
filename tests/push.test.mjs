@@ -5,11 +5,33 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {openStore} from '../server/store.mjs';
 import {PushDelivery,pushData} from '../server/push.mjs';
+import {TeamAttention} from '../server/losangelex-attention.mjs';
 
 test('FCM payload stays bounded and retains task routing',()=>{
  const data=pushData({id:9,thread_id:'original-thread',title:'🌿'.repeat(1000),body:'🌿'.repeat(10000),created_at:100});
  assert.ok(Buffer.byteLength(JSON.stringify(data))<4096);
  assert.equal(data.thread_id,'original-thread');assert.equal(data.id,'9');assert.ok(!data.body.includes('\uFFFD'));
+});
+test('FCM question payload retains original authority, room and waiting agent',()=>{
+ const provenance={question_provider:'losangelex',question_authority:'source',question_team:'team',question_task:'room',question_agent:'waiting-agent',question_event:'61'};
+ const data=pushData({id:9,thread_id:'lx-source',kind:'question',body:'Answer '.repeat(2000),...provenance});
+ for(const [key,value] of Object.entries(provenance))assert.equal(data[key],value);
+ assert.ok(Buffer.byteLength(JSON.stringify(data))<4096);
+});
+test('queued questions recover their original authority after sender and registration changes',async t=>{
+ const dir=mkdtempSync(join(tmpdir(),'question-push-')),{db}=openStore(dir);t.after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});
+ const at=Date.now(),config={projectId:'test-project'};
+ db.prepare('INSERT INTO devices VALUES(?,?,?,?,?)').run('phone','Phone','paired',at,0);
+ db.prepare('INSERT INTO push_tokens VALUES(?,?,?,?)').run('phone','token-phone',config.projectId,at);
+ const queue=new PushDelivery(db,{config,send:async()=>assert.fail('Publication should not flush yet')});queue.busy=true;
+ const client={config:{environmentId:'original-authority'},call:async()=>({data:[{id:81,team_id:'team',task_id:'room',author:'waiting-agent',kind:'attention'}]})};
+ const observer=new TeamAttention({db,client,resolve:()=>{},publish:(thread,commit)=>{
+   const id=Number(db.prepare('INSERT INTO notifications(thread_id,title,body,kind,created_at) VALUES(?,?,?,?,?)').run(thread,'Question','Which option?','question',at).lastInsertRowid);
+   commit({id});queue.enqueue(id,{flush:false});
+ }});
+ await observer.poll();client.config.environmentId='new-authority';let sent;
+ await new PushDelivery(db,{config,send:async message=>{sent=message;return 'fcm-receipt';}}).flush();
+ assert.equal(sent.data.question_authority,'original-authority');assert.equal(sent.data.question_event,'81');assert.equal(sent.data.question_agent,'waiting-agent');assert.equal(sent.data.device_id,'phone');
 });
 test('FCM queues persist, retry transient errors, invalidate tokens, and honor device revocation',async t=>{
  const dir=mkdtempSync(join(tmpdir(),'pocket-push-')),{db}=openStore(dir);t.after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});

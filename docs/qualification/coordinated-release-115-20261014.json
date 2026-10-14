@@ -1,0 +1,195 @@
+{
+  "schema": 1,
+  "date": "2026-10-14",
+  "state": "r02-preserved-not-published-predates-question-and-migration-source",
+  "sequencingOwner": "global-steward / team-enterprise",
+  "candidate": {
+    "versionCode": 115,
+    "versionName": "0.5.0-alpha.97",
+    "stage": "/home/aosp/.local/share/nextcomp-backend/staging/20261014-native-room-115-r02/app-updates",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "path": "nextcomp-115-b28f55b44c93.apk",
+        "sha256": "383d41e1fb5d2f5c0664f4f5267e34d096b74c79ef2658fa38b50ec611ba16bd",
+        "size": 52185767
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "path": "nextcomp-115-22ecabe28e15.apk",
+        "sha256": "ea37c0ccbe83c1b080dfe1f51b97f35cbeea749d44bdfc483233ec2ec3798271",
+        "size": 62194734
+      }
+    ],
+    "productionSourceSha": "deb1474c3a95a5ed2e218d0e2f0b6256b812acb5a65f0dedd998469c2368462d",
+    "qualificationInputSha": "af70250e2d1d939d212a31ee10337252f499f87b0296b0216b44d501cfd43b48",
+    "qualificationApkSha": "08b7ae587ffa07e9a7d08b40e1e8513e7e953effa02ea42a9b586a4f56d5977b",
+    "testApkSha": "a774965e92d1369cc33023d697a6e3c20eeac014fb1df57c1e03d49ee58a241b",
+    "baseCommit": "2968682ab94a502cb885d3c8baac632a9d76e533",
+    "sourceArchiveSha256": "5a4fefc17aa62c3091b9451841ac368ecb80ee2fbaf1212193c9b8eaf830aa36"
+  },
+  "verifiedBuild": {
+    "state": "complete",
+    "unit": {
+      "debug": {
+        "tests": 369,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "release": {
+        "tests": 369,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "tasks": [
+      "testDebugUnitTest",
+      "testReleaseUnitTest",
+      "lintDebug",
+      "lintRelease",
+      "assembleDebug",
+      "assembleRelease",
+      "assembleQualification",
+      "assembleQualificationAndroidTest"
+    ],
+    "optimizedDexMarkersPresent": "Prior r01 marker check; r02 signed package/signers/hashes verified by builder, runtime review remains pending"
+  },
+  "focusedEvidence": {
+    "receipt": "session-default-scoped-conversations-20261014.json",
+    "nativeMethodsPassed": 7,
+    "artifactBoundary": "Earlier code114 qualification UX candidate. These receipts are not code115 native qualification; code115 native/optimized/full-policy gates remain pending.",
+    "adapterTestsPassed": 12
+  },
+  "installedBaseline": {
+    "versionCode": 114,
+    "evidenceLevel": "Human-supplied requirement; current phone signer/hash and deployment not independently inspected"
+  },
+  "liveBaseline": {
+    "nextcompGateway": {
+      "service": "nextcomp-ozzz.service",
+      "mainPID": 861885,
+      "active": true,
+      "health": {
+        "ok": true,
+        "codex": true,
+        "version": "0.5.0-alpha.96"
+      },
+      "port": 18885,
+      "serverModulesEqualCandidate": true,
+      "restartRequiredForNativeUX": false
+    },
+    "globalRuntime": {
+      "service": "lax-architecture.service",
+      "mainPID": 861703,
+      "active": true,
+      "noActionTaken": true
+    },
+    "expectedUpdateManifest": "Not found in configured gateway data/app-updates; actual channel must be established before publication"
+  },
+  "dependencies": {
+    "nextcompGateway": "Active alpha96 existing wire API suffices; no server module change. Keep it live for native UX staging.",
+    "hollywood": {
+      "minimumContract": "Existing Hollywood v2 rooms/actors/overview/history/messages/control/attention; stable actor/room authority UUIDs and legacy task aliases; numeric candidate/schema pin pending owner evidence",
+      "owningRoom": "enterprise-hollywood",
+      "owner": "hollywood-owner",
+      "confirmation": "HTTP/schema compatibility reported; exact artifact pin pending",
+      "reportedContract": "Owner reports additive native hollywood_provision(task,agent,role,source,request_id); HTTP API v2 and DB user_version unchanged. Registration/join admit no model or grants.",
+      "evidenceLevel": "Hollywood-owner room message360; exact candidate commit/digest and focused backend evidence still pending",
+      "nextcompCapabilityDependency": "None: code114/115 do not enumerate/call native provisioning tools; existing HTTP fields/routes remain required"
+    },
+    "lax": {
+      "minimumContract": "Existing independent task execution and actor-bound voice. Exact binary/version and live Global tool-upgrade path pending owner evidence",
+      "owningRoom": "enterprise-lax",
+      "owner": "lax-owner",
+      "confirmation": "requested, pending",
+      "consumerRequirements": {
+        "installedPhone": 114,
+        "stagedNative": "115 / 0.5.0-alpha.97 r02",
+        "gateway": "active 0.5.0-alpha.96, unchanged server modules",
+        "nativeToolSchemaDependency": "None for phone UI; existing HTTPv2 retained",
+        "globalRefresh": "Same persisted thread/history at safe turn boundary; retain active work and admitted/queued/unknown commands. Hold rollout if unsupported.",
+        "overlappingFiles": "None: NextComp does not edit codex-rs/app-server or app-server-protocol",
+        "exchange": "LAX-owner message409; requirements sent in owning enterprise-lax conversation"
+      }
+    }
+  },
+  "code114Invariants": [
+    "Keep old API shapes/optional fields, rooms task aliases, member agent/thread/status and authority IDs compatible",
+    "targets=[] retains coordinator behavior; explicit targets/visibility/replyTo retain their original semantics",
+    "Preserve commandId dedup/lookup, accepted commands/outbox and unknown receipts; no DB rewind or blind replay",
+    "Do not rotate configured endpoint/token/environment identity as incidental release work",
+    "Keep existing pairing, package/signer, drafts and account; no phone uninstall/reset"
+  ],
+  "continuitySequence": [
+    "Global reviews this plan and exact backend owner pins. No restart/install is authorized by this staging receipt.",
+    "Retain existing Global thread/history, active services, admitted work, tokens and accepted DB; create a recovery inventory/checkpoint without replaying commands.",
+    "Qualify code115 and compatible upgrade only in an explicitly owned disposable QA environment after continuity review; complete policy/native/optimized review gates.",
+    "Backend owners prove additive schema/old114 and new115 client compatibility. Any active Global ability upgrade must retain its history and use a verified live-safe path; if unavailable, keep Global on old compatible tools and hold that backend transition.",
+    "Global chooses a bounded rollout window only if needed. Native UX itself needs no gateway restart; keep code114 usable until replacement is qualified.",
+    "After all gates, establish actual update channel and expected current code, verify phone signer, then Global authorizes publication/phone delivery. Recheck health/accepted and unknown counts without replay.",
+    "Rollback code/config pointers only; retain accepted DB/outbox/journals and inspect uncertain admissions/publication rather than rerun. Do not downgrade/uninstall phone or replace Global history."
+  ],
+  "userVisible": {
+    "before": "Separate room directory, backend headers and member/recipient/mode controls; separate composer.",
+    "after": "Rooms list -> shared room conversation using actual Codex cards/TranscriptRow/composer/dock. Public contributions/artifacts stay shared; broadcasts stay room-scoped; underlying contexts remain independent.",
+    "justifiedDeviations": [
+      "Author attribution for several independent sessions",
+      "Known Saved message recovery in existing menu preserves old recipient-bound journals",
+      "Multiple-team choice only where needed to disambiguate work scopes",
+      "Unsupported backend rename/follow/folder/model/permission controls omitted; full-access contract disclosed in menu",
+      "Existing single-actor voice kept; no multi-actor voice claim"
+    ]
+  },
+  "heldGates": [
+    "Reviewed Global continuity sequence",
+    "Exact Hollywood/LAX candidate and compatibility evidence",
+    "Native code115 and compatible upgrade qualification",
+    "Optimized runtime/visual and full release-policy receipts",
+    "Actual channel/current version and installed phone signer verification"
+  ],
+  "actionsNotTaken": [
+    "No service restart, Global interruption, phone or emulator install this turn",
+    "No live channel/public release/announcement mutation",
+    "No backend DB migration, credential rotation or accepted-message replay"
+  ],
+  "globalToolUpgradeConstraint": {
+    "reportedBy": "hollywood-owner, message360",
+    "finding": "Hollywood resume cannot currently inject new schema into persisted Global tools",
+    "requiredNextStep": "LAX owner must provide and verify a history-preserving ability upgrade path; do not restart/replace Global or claim its capabilities upgraded"
+  },
+  "clarification392": {
+    "requirement": "Retain rooms as central shared areas over independent sessions; reuse existing Codex list-to-conversation patterns without flattening execution contexts",
+    "audit": "Room UUID/task identity, public room history, named scoped broadcasts, peer/human contributions and independent private/session contexts already retained; Task/SessionGroup are presentation only",
+    "changes": "Rooms/Find rooms/New room labels; existing metadata-only RoomCreateDialog restored in catalog tools. No header/mode/member selectors added.",
+    "justification": "New room creates the shared communication area, not an execution session or work admission; its metadata form stays in the existing creation/tools pattern.",
+    "verification": "24 focused units, native-test compilation and 12 adapter/gate tests passed; both full369-unit variants/lints/signed builds passed. No native install/run for r02."
+  },
+  "supersedingStage": "/home/aosp/.local/share/nextcomp-backend/staging/20261014-native-room-115-r02/app-updates",
+  "previousCandidate": {
+    "versionCode": 115,
+    "versionName": "0.5.0-alpha.97",
+    "stage": "/home/aosp/.local/share/nextcomp-backend/staging/20261014-native-room-115-r02/app-updates",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "path": "nextcomp-115-b28f55b44c93.apk",
+        "sha256": "383d41e1fb5d2f5c0664f4f5267e34d096b74c79ef2658fa38b50ec611ba16bd",
+        "size": 52185767
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "path": "nextcomp-115-22ecabe28e15.apk",
+        "sha256": "ea37c0ccbe83c1b080dfe1f51b97f35cbeea749d44bdfc483233ec2ec3798271",
+        "size": 62194734
+      }
+    ],
+    "productionSourceSha": "deb1474c3a95a5ed2e218d0e2f0b6256b812acb5a65f0dedd998469c2368462d",
+    "qualificationInputSha": "af70250e2d1d939d212a31ee10337252f499f87b0296b0216b44d501cfd43b48",
+    "qualificationApkSha": "08b7ae587ffa07e9a7d08b40e1e8513e7e953effa02ea42a9b586a4f56d5977b",
+    "testApkSha": "a774965e92d1369cc33023d697a6e3c20eeac014fb1df57c1e03d49ee58a241b",
+    "baseCommit": "2968682ab94a502cb885d3c8baac632a9d76e533",
+    "sourceArchiveSha256": "5a4fefc17aa62c3091b9451841ac368ecb80ee2fbaf1212193c9b8eaf830aa36"
+  }
+}
