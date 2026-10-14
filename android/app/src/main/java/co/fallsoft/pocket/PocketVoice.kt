@@ -300,7 +300,7 @@ class PocketVoiceService:Service(){
             val id=UUID.randomUUID().toString();val origin=PocketVoice.targetThread?:"coordinator";val generation=++captureGeneration
             captureTurnId=id;captureConnection=null;captureStreaming=false;captureStreamFailed=false
             captureStreamJob=scope.launch{try{
-                if(!coordinatorReady){api("/api/voice/start",JSONObject().put("fullPermissions",Pocket.fullPermissions).put("threadId",origin.takeIf{it!="coordinator"}));coordinatorReady=true}
+                if(!coordinatorReady){api("/api/voice/start",PocketVoice.startRequest().put("threadId",origin.takeIf{it!="coordinator"}));coordinatorReady=true}
                 if(nativeTransportNeedsConnection(nativeId,nativeAudio!=null))connectNative()
                 if(generation!=captureGeneration)return@launch
                 api("/api/voice/native/input",JSONObject().put("connectionId",nativeId).put("turnId",id))

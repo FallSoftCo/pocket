@@ -128,6 +128,12 @@ import org.json.JSONObject
             ConversationSendButton(input.text.isNotBlank(),scope!=null&&!busy&&pending==null&&input.text.isNotBlank()&&
                 detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true,busy,"Send message"){send()}
         }
+        if(binding.optBoolean("voice")&&scope!=null&&!postOnly&&detail.optJSONObject("permissions")?.optBoolean("can_request")==true){
+            val voiceDestination=JSONObject().put("backend","lax").put("bindingId",client.bindingId).put("authorityId",client.authorityId)
+                .put("roomId",room).put("recipientId",scope.recipient).put("audience",scope.audience)
+                .apply{scope.sourceEvent?.let{put("sourceEventId",it)}}
+            VoiceLaunchButton(modifier=Modifier.fillMaxWidth(),bar=true,roomDestination=voiceDestination)
+        }
         ConversationActionsMenu(menu,{menu=it},statusLabel="Room"){
             TextButton({menu=false;browsing=true}){BilingualLabel("Rooms")}
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}

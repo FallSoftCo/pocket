@@ -2629,6 +2629,13 @@
       "status": "implementation-candidate",
       "evidence": "Native catalog tests and typed gateway tests; Android build and physical delivery pending.",
       "scope": "Current owner OZZZ-OS workstation; multi-human and cross-authority membership remain future qualification."
+    },
+    {
+      "id": "hollywood-native-room-condensed-execution-20261014",
+      "request": "Display executed commands and other operations in Hollywood rooms using the same condensed Runs presentation as sessions. Keep communication visible and record individual agent attribution even when omitted from the collapsed view.",
+      "status": "candidate-qualified-disposable-Android-native-execution-physical-delivery-pending",
+      "implementation": "Hollywood immutable executionActivity events drive the shared session CommandRunsHeader and ActivityRow. Native item start/completion update a single display row; authority, author, delivery generation, host, native thread/turn/item remain recorded and available in expanded details. Messages, questions and approvals remain separate. Room authorization governs the feed; membership in several rooms does not broadcast all actions into every room.",
+      "evidence": "RoomTranscriptProjection.kt; Android HollywoodRoomNativeTest actual question/reply and command expansion; local coordinator evidence android-canonical-room-integration-result.json. No physical phone qualification or release claim."
     }
   ],
   "current_state": {
