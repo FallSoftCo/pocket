@@ -74,9 +74,9 @@ function checkedQuery(resource,query){
   return query;
 }
 
-export function mountLosangelex(app,{dir,codex,client=new Losangelex(loadLosangelex(dir)),db,publish,resolve:resolveAttention,workRecord}){
+export function mountLosangelex(app,{dir,codex,client=new Losangelex(loadLosangelex(dir)),db,publish,resolve:resolveAttention,workRecord,hollywood}){
   app.get('/api/backends',async(req,res,next)=>{
-    try{res.json({backends:[{id:'codex',name:'Codex',configured:true,available:codex.ready,modes:['session','coordinator'],voice:true},await client.status()]});}catch(e){next(e);}
+    try{res.json({backends:[{id:'codex',name:'Codex',configured:true,available:codex.ready,modes:['session','coordinator'],voice:true},await client.status(),...(hollywood?[await hollywood.status(req.device.id)]:[])]});}catch(e){next(e);}
   });
   if(db&&publish){
     const attention=new TeamAttention({client,db,publish,resolve:resolveAttention});attention.mount(app);
