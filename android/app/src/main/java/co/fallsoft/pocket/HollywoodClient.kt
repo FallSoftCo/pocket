@@ -1,0 +1,108 @@
+package co.fallsoft.pocket
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.util.UUID
+
+/** Captured source profile and human binding. A pending action never follows navigation. */
+internal class HollywoodClient(val owner:String,source:JSONObject,
+    private val base:String=Pocket.base.trimEnd('/'),private val token:String=Pocket.token) {
+    private val identity=JSONObject(source.toString())
+    private val http=Pocket.http.newBuilder().followRedirects(false).followSslRedirects(false).build()
+    val bindingId=identity.s("bindingId")
+    val authorityId=identity.s("authorityId")
+    val principalId=identity.s("principalId")
+    val defaultRoomId=identity.s("defaultRoomId")
+    init { require(bindingId.matches(Regex("[0-9a-f]{64}")));require(listOf(authorityId,principalId,defaultRoomId).all(::hollywoodUuid)) }
+    suspend fun call(path:String,body:JSONObject?=null):JSONObject=withContext(Dispatchers.IO){
+        val request=Request.Builder().url("$base/api/hollywood/v3/$path")
+            .header("Authorization","Bearer $token").header("X-Hollywood-Binding",bindingId)
+        if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
+        http.newCall(request.build()).execute().use{response->
+            val value=runCatching{JSONObject(response.body?.string().orEmpty())}.getOrElse{
+                throw HollywoodFailure(response.code,"Hollywood reply is unconfirmed.","HOLLYWOOD_OUTCOME_UNCONFIRMED")}
+            if(!response.isSuccessful)throw HollywoodFailure(response.code,value.s("error","Hollywood is unavailable."),value.s("code"))
+            val binding=value.optJSONObject("binding")?:throw HollywoodFailure(502,"Hollywood binding is unconfirmed.","HOLLYWOOD_OUTCOME_UNCONFIRMED")
+            require(hollywoodBindingMatches(identity,binding)){"Reply belongs to another environment or human identity"}
+            value
+        }
+    }
+    fun key(scope:HollywoodScope)="hollywood:$owner:$bindingId:${scope.room}:${scope.recipient}:${scope.audience}:${scope.sourceEvent?:"root"}:${scope.kind}"
+    fun draft(scope:HollywoodScope)=Pocket.prefs.getString("draft:"+key(scope),"").orEmpty()
+    fun saveDraft(scope:HollywoodScope,text:String){Pocket.prefs.edit().putString("draft:"+key(scope),text).putString("scope:"+key(scope),scope.json().toString()).apply()}
+    fun savedScopes(room:String):List<HollywoodScope> = Pocket.prefs.all.filterKeys{it.startsWith("scope:hollywood:$owner:$bindingId:")}.values
+        .mapNotNull{value->runCatching{HollywoodScope.from(JSONObject(value as String))}.getOrNull()}
+        .distinct().filter{it.room==room&&(draft(it).isNotBlank()||pending(it)!=null)}
+    fun pending(scope:HollywoodScope)=Pocket.prefs.getString("pending:"+key(scope),null)?.let{JSONObject(it)}
+    private fun persist(key:String,value:JSONObject?){
+        val edit=Pocket.prefs.edit();if(value==null)edit.remove(key)else edit.putString(key,value.toString())
+        if(!edit.commit())throw java.io.IOException("Could not save the original delivery state. Your draft is retained.")
+    }
+    fun capture(scope:HollywoodScope,text:String):JSONObject {
+        require(pending(scope)==null){"Inspect the original pending delivery first"}
+        val body=scope.message("phone-room:"+UUID.randomUUID(),text)
+        val intent=JSONObject().put("binding",JSONObject(identity.toString())).put("scope",scope.json()).put("body",body).put("state","saved")
+        persist("pending:"+key(scope),intent);return intent
+    }
+    suspend fun submit(scope:HollywoodScope,intent:JSONObject):JSONObject {
+        require(hollywoodBindingMatches(identity,intent.getJSONObject("binding")))
+        val receipt=call("rooms/${scope.room}/messages",intent.getJSONObject("body"))
+        require(hollywoodMessageMatches(identity,scope,intent.getJSONObject("body"),receipt)){"Original message receipt is unconfirmed"}
+        persist("pending:"+key(scope),null);return receipt
+    }
+    suspend fun inspect(scope:HollywoodScope,intent:JSONObject):JSONObject {
+        require(hollywoodBindingMatches(identity,intent.getJSONObject("binding")))
+        val receipt=call("commands/"+intent.getJSONObject("body").s("operationId"))
+        require(hollywoodMessageMatches(identity,scope,intent.getJSONObject("body"),receipt)){"Original message receipt is unconfirmed"}
+        persist("pending:"+key(scope),null);return receipt
+    }
+    fun attentionPending(id:String)=Pocket.prefs.getString("attention:$owner:$bindingId:$id",null)?.let{JSONObject(it)}
+    fun captureAttention(value:JSONObject,response:JSONObject):JSONObject {
+        val attention=value.getJSONObject("attention");val scope=value.getJSONObject("scope");val id=attention.s("id")
+        require(attentionPending(id)==null){"Inspect the original pending response first"}
+        require(scope.s("authorityId")==authorityId&&scope.s("attentionId")==id)
+        val body=JSONObject().put("operationId","phone-attention:"+UUID.randomUUID()).put("scope",JSONObject(scope.toString())).put("response",JSONObject(response.toString()))
+        val intent=JSONObject().put("binding",JSONObject(identity.toString())).put("body",body).put("state","saved")
+        persist("attention:$owner:$bindingId:$id",intent);return intent
+    }
+    suspend fun respond(id:String,intent:JSONObject,inspect:Boolean=false):JSONObject {
+        require(hollywoodBindingMatches(identity,intent.getJSONObject("binding")))
+        val body=intent.getJSONObject("body")
+        val receipt=if(inspect)call("attention/$id/commands/"+body.s("operationId"))else call("attention/$id/response",body)
+        require(hollywoodJsonEqual(receipt.getJSONObject("scope"),body.getJSONObject("scope")))
+        val attention=receipt.getJSONObject("attention")
+        require(attention.s("response_author")==principalId&&hollywoodJsonEqual(attention.getJSONObject("response"),body.getJSONObject("response")))
+        persist("attention:$owner:$bindingId:$id",null);return receipt
+    }
+}
+
+internal class HollywoodFailure(val status:Int,message:String,val code:String):Exception(message)
+internal fun hollywoodUuid(value:String)=value.matches(Regex("[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}"))
+internal fun hollywoodBindingMatches(expected:JSONObject,actual:JSONObject)=
+    listOf("bindingId","installationId","authorityId","principalId").all{expected.s(it).isNotBlank()&&expected.s(it)==actual.s(it)}
+internal fun hollywoodJsonEqual(a:JSONObject,b:JSONObject):Boolean {
+    val keys=a.keys().asSequence().toSet()
+    if(keys!=b.keys().asSequence().toSet())return false
+    return keys.all{key->val x=a.opt(key);val y=b.opt(key)
+        when {x is JSONObject&&y is JSONObject->hollywoodJsonEqual(x,y)
+              x is org.json.JSONArray&&y is org.json.JSONArray->x.toString()==y.toString()
+              else->x==y}}
+}
+internal data class HollywoodScope(val room:String,val recipient:String,val audience:String="room",val sourceEvent:String?=null,val kind:String="request") {
+    companion object { fun from(value:JSONObject)=HollywoodScope(value.s("room"),value.s("recipient"),value.s("audience"),value.s("sourceEvent").takeIf{it.isNotBlank()},value.s("kind")) }
+    init {require(hollywoodUuid(room));require(hollywoodUuid(recipient));require(audience in listOf("room","direct"));require(sourceEvent==null||hollywoodUuid(sourceEvent));require(kind in listOf("message","request"))}
+    fun json()=JSONObject().put("room",room).put("recipient",recipient).put("audience",audience).put("sourceEvent",sourceEvent).put("kind",kind)
+    fun message(id:String,text:String)=JSONObject().put("operationId",id).put("kind",kind).put("body",text).put("audience",audience).put("recipientId",recipient).apply{sourceEvent?.let{put("sourceEventId",it)}}
+}
+internal fun hollywoodMessageMatches(identity:JSONObject,scope:HollywoodScope,body:JSONObject,receipt:JSONObject):Boolean {
+    val event=receipt.optJSONObject("event")?:return false
+    if(!receipt.optBoolean("accepted")||event.s("authority")!=identity.s("authorityId")||event.s("author")!=identity.s("principalId")||
+        event.s("room")!=scope.room||event.s("kind")!=scope.kind||event.s("body")!=body.s("body")||event.s("audience")!=scope.audience||
+        event.s("recipient")!=scope.recipient||event.s("source")!=scope.sourceEvent.orEmpty())return false
+    val deliveries=receipt.optJSONArray("deliveries")?.objects()?:return false
+    return if(scope.kind=="message")deliveries.isEmpty()else deliveries.size==1&&deliveries.single().s("agent")==scope.recipient
+}

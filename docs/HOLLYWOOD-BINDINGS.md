@@ -52,3 +52,37 @@ UI, native voice/immersion/push adapters, physical-phone qualification, legacy
 identity/state import, host enrollment and production cutover remain release
 gates. Native mode deliberately does not expose unsafe old routes to fill these
 gaps. No current production defaults, phone pairing or APK were changed.
+
+
+## Canonical Android room controls
+
+`HollywoodClient` captures the paired endpoint, credential and installation/human
+binding before dispatch. Drafts and pending intents include the room, explicit
+recipient, audience, source event and communication kind. Navigation cannot
+retarget an in-flight action. Saved unknown messages and attention answers use
+read-only lookup of their original operation receipt. Questions and approvals
+remain tied to their original scope/action digest; accepted submission is not
+shown as proof of native consumption or completed work.
+
+The native room screen reuses session cards, conversation surfaces, composer and
+condensed Runs renderer. It defaults to the installation's authorized room,
+exposes explicit recipients/private scope and publication without work admission,
+and cancels exact authorized delivery IDs. Room actor names, permissions and
+active visible work come from Hollywood's room-detail endpoint; no client-owned
+membership graph or guessed shared filesystem is introduced.
+
+History initially loads the latest bounded page, then advances the authoritative
+forward cursor. Earlier pages load separately. Private filtering happens at the
+service for both directions. Manual reading disables automatic following. The
+Android projection preserves UUID identities and native execution attribution.
+Native mode avoids the old stock catalog/reply readers and uses Hollywood status
+for its authenticated transport handshake.
+
+A fresh bounded Android 35 emulator on OZZZ-OS ran against actual NextComp and
+PostgreSQL/Hollywood. It loaded a 125-message history, retained independent room
+drafts, submitted an explicit request, answered a real native LAX question, and
+expanded the resulting command. The same native turn wrote the exact answer to
+the workspace proof file. First-run notification setup, loopback routing and
+accessibility-tag failures were reconciled before the request was admitted.
+The worker, gateway and emulator were stopped after the finite proof. This is
+emulator evidence, not physical-phone, native voice/push or production cutover.

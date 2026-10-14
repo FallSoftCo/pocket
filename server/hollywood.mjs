@@ -106,8 +106,9 @@ export function hollywoodRequest(method,tail,query,body){
   const p=tail.split('/').filter(Boolean);
   let allowed=[];
   if(method==='GET'&&p.length===1&&p[0]==='rooms')allowed=[];
+  else if(method==='GET'&&p.length===2&&p[0]==='rooms'&&uuid(p[1]))allowed=[];
   else if(method==='GET'&&p.length===4&&p[0]==='attention'&&uuid(p[1])&&p[2]==='commands'&&operation(p[3]))allowed=[];
-  else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['history','attention'].includes(p[2]))allowed=['after','limit'];
+  else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['history','attention'].includes(p[2]))allowed=p[2]==='history'?['after','before','limit']:['after','limit'];
   else if(method==='GET'&&p.length===2&&((p[0]==='commands'&&operation(p[1]))||(['attention','deliveries'].includes(p[0])&&uuid(p[1]))))allowed=[];
   else if(method==='POST'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&p[2]==='messages'){
     if(!fields(body,['operationId','kind','body','audience','recipientId','sourceEventId'])||!operation(body.operationId)||
@@ -127,6 +128,7 @@ export function hollywoodRequest(method,tail,query,body){
     if(!fields(body,[])||Object.keys(body).length)throw fail(400,'Cancellation uses the exact original delivery.','HOLLYWOOD_REQUEST_REJECTED');
   }else throw fail(404,'Unknown Hollywood human operation.','HOLLYWOOD_REQUEST_REJECTED');
   if(Object.keys(query).some(key=>!allowed.includes(key))||Object.values(query).some(value=>typeof value!=='string'||!/^[0-9]{1,16}$/.test(value)||!Number.isSafeInteger(Number(value))))throw fail(400,'Invalid Hollywood query.','HOLLYWOOD_REQUEST_REJECTED');
+  if(query.before!==undefined&&query.after!==undefined)throw fail(400,'Choose one history direction.','HOLLYWOOD_REQUEST_REJECTED');
   if(query.limit!==undefined&&(Number(query.limit)<1||Number(query.limit)>100))throw fail(400,'Invalid room page size.','HOLLYWOOD_REQUEST_REJECTED');
   if(body!==undefined&&Buffer.byteLength(JSON.stringify(body))>14000)throw fail(400,'Hollywood operation exceeds the limit.','HOLLYWOOD_REQUEST_REJECTED');
   return {path:p.join('/'),method,query,...(method==='POST'?{body}:{})};

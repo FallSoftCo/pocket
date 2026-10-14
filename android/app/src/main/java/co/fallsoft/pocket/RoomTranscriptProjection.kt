@@ -22,7 +22,7 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String):List<JSON
         val eventId=event.opt("id")
         val row=JSONObject().put("id",if(activity)"$prefix:operation:$identity" else "$prefix:$eventId")
             .put("roomEventId",eventId).put("roomAuthor",event.s("authorName",author))
-            .put("kind",if(activity)"activity" else if(author=="you")"user" else "message")
+            .put("kind",if(activity)"activity" else if(author=="you"||event.optBoolean("isSelf"))"user" else "message")
             .put("text",if(native&&data?.s("nativeType") in listOf("agentMessage","plan"))data?.s("output")else event.s("body"))
         if(activity){
             row.put("type","roomOperation").put("title",if(native)data!!.s("title","Run")else "Run").put("status",data!!.s("status"))

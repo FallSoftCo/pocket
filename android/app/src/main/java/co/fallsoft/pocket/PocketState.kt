@@ -207,6 +207,7 @@ object Pocket {
             val freshnessThread=selected?.takeIf{PocketVoice.foreground&&!PocketCoordinator.visible&&!BackendNavigation.teamSelected()&&!newTask}
             val freshnessBaseline=PocketTranscript.freshnessBaseline()
             val r=api("/api/status"+(freshnessThread?.let{"?threadId="+android.net.Uri.encode(it)}?:""));if(!environmentRequestCurrent()||local!=profileLocal||token!=profileToken)return@launchEnvironment
+            if(r.s("backend")=="lax"){prefs.edit().putString("backend:"+backendOwner(base,token),"lax").apply();pauseConversationReads()}
             freshnessThread?.let{PocketTranscript.checkFreshness(it,r.optJSONObject("historyHead"),freshnessBaseline)}
             acceptUsage(r.optJSONObject("usage"));if(statusRevision==revision){codexOnline=r.optBoolean("connected");codexConnectionMessage=ConnectionMessages.server(r.optJSONObject("problem")?.s("message")?:"")};host=r.s("host");defaultCwd=r.s("defaultCwd")
             val deviceChanged=prefs.getString(key("deviceId"),"")!=r.s("deviceId")
@@ -215,7 +216,7 @@ object Pocket {
             }catch(e:CancellationException){throw e}catch(e:Exception){if(environmentRequestCurrent())refreshError=PocketNetwork.error(e)}
         }
     }
-    fun refresh(){refreshStatus();if(backgroundRefreshJob?.isActive==true)return;if(catalogLoad is CatalogLoadState.Failed)catalogLoad=CatalogLoadState.Loading;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launchEnvironment{
+    fun refresh(){refreshStatus();if(BackendNavigation.nativeSelected())return;if(backgroundRefreshJob?.isActive==true)return;if(catalogLoad is CatalogLoadState.Failed)catalogLoad=CatalogLoadState.Loading;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launchEnvironment{
         try{
             val taskBaseline=tasks.associateBy{it.id}
             val taskResult=api(if(profileArchived)"/api/threads?archived=true" else "/api/threads")

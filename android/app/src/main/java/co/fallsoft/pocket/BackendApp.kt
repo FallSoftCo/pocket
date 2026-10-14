@@ -30,15 +30,16 @@ object BackendNavigation {
         return team
     }
     fun select(backend:String){
-        if(PocketVoice.active||backend !in listOf("codex","losangelex"))return
+        if(PocketVoice.active||backend !in listOf("codex","losangelex","lax"))return
         val owner=backendOwner(Pocket.base,Pocket.token)
         desired=owner to backend
         notification=null
         Pocket.prefs.edit().putString("backend:$owner",backend).apply()
-        if(backend=="losangelex")Pocket.pauseConversationReads()else Pocket.refreshDetail()
+        if(backend in listOf("losangelex","lax"))Pocket.pauseConversationReads()else Pocket.refreshDetail()
     }
     fun consumed(){notification=null}
-    fun teamSelected()=Pocket.prefs.getString("backend:"+backendOwner(Pocket.base,Pocket.token),"codex")=="losangelex"
+    fun nativeSelected()=Pocket.prefs.getString("backend:"+backendOwner(Pocket.base,Pocket.token),"codex")=="lax"
+    fun teamSelected()=Pocket.prefs.getString("backend:"+backendOwner(Pocket.base,Pocket.token),"codex") in listOf("losangelex","lax")
 }
 
 internal fun sameTeamHistoryScope(current:TeamScope,destination:TeamScope)=
@@ -46,7 +47,7 @@ internal fun sameTeamHistoryScope(current:TeamScope,destination:TeamScope)=
 internal fun teamReplyRecipient(scope:TeamScope,author:String)=if(author in listOf("you","system"))if(scope.direct)scope.recipient else "" else author
 internal fun teamEnterSends(enter:Boolean,shift:Boolean)=enter&&!shift
 
-private data class BackendSetting(val selected:String,val select:(String)->Unit,val workRecord:()->Unit)
+private data class BackendSetting(val selected:String,val choices:List<Pair<String,String>>,val select:(String)->Unit,val workRecord:()->Unit)
 private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
 
 @Composable fun BackendSettingsControl(){
@@ -55,7 +56,7 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
         OutlinedButton(setting.workRecord,Modifier.fillMaxWidth(),enabled=!PocketVoice.active){InterfaceText("Work record")}
         BilingualLabel("Backend",centered=false)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            listOf("codex" to "Codex","losangelex" to "Losangelex").forEach{(id,label)->
+            setting.choices.forEach{(id,label)->
                 FilterChip(selected=setting.selected==id,onClick={setting.select(id)},label={BilingualLabel(label)},enabled=!PocketVoice.active,modifier=Modifier.weight(1f).heightIn(min=48.dp))
             }
         }
@@ -66,13 +67,23 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
     val owner=backendOwner(Pocket.base,Pocket.token)
     var backend by remember(owner){mutableStateOf(Pocket.prefs.getString("backend:$owner","codex")?:"codex")}
     var losangelex by remember(owner){mutableStateOf(JSONObject())}
+    var lax by remember(owner){mutableStateOf(JSONObject())}
+    var choices by remember(owner){mutableStateOf(listOf("codex" to "Codex","losangelex" to "Losangelex"))}
     var discovering by remember(owner){mutableStateOf(true)}
     var teamSettings by remember(owner){mutableStateOf(false)}
     var workRecord by remember(owner){mutableStateOf(false)}
     val scope=rememberCoroutineScope()
     suspend fun discover(){
         discovering=true
-        try{val status=Pocket.api("/api/backends");losangelex=status.optJSONArray("backends")?.objects()?.firstOrNull{it.s("id")=="losangelex"}?:JSONObject()}
+        try{
+            val status=Pocket.api("/api/backends");val available=status.optJSONArray("backends")?.objects().orEmpty()
+            losangelex=available.firstOrNull{it.s("id")=="losangelex"}?:JSONObject()
+            lax=available.firstOrNull{it.s("id")=="lax"}?:JSONObject()
+            choices=available.filter{it.optBoolean("configured")}.map{it.s("id") to it.s("name")}
+            if(status.optBoolean("canonical")&&status.s("defaultBackend")=="lax"){
+                backend="lax";Pocket.prefs.edit().putString("backend:$owner","lax").apply();Pocket.pauseConversationReads()
+            }
+        }
         catch(_:Exception){losangelex=JSONObject()}
         finally{discovering=false}
     }
@@ -81,13 +92,19 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
     LaunchedEffect(owner,BackendNavigation.desired){BackendNavigation.desired?.takeIf{it.first==owner}?.let{backend=it.second;teamSettings=false}}
     val requestedNotification=BackendNavigation.notification
     LaunchedEffect(owner,requestedNotification){if(requestedNotification?.first==owner)teamSettings=false}
-    CompositionLocalProvider(LocalBackendSetting provides BackendSetting(backend,{chosen->
+    CompositionLocalProvider(LocalBackendSetting provides BackendSetting(backend,choices,{chosen->
         BackendNavigation.select(chosen);backend=chosen;teamSettings=false
     },{workRecord=true})){
     Box(Modifier.fillMaxSize()){
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f)){
-            if(backend=="codex")PocketApp()
+            if(backend=="lax"){
+                if(discovering)Column(Modifier.padding(24.dp)){CircularProgressIndicator();InterfaceText("Connecting to Hollywood…")}
+                else if(!lax.optBoolean("available"))Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                    InterfaceText("Hollywood connection unavailable");TextButton({scope.launch{discover()}}){BilingualLabel("Reconnect")};TextButton({teamSettings=true}){BilingualLabel("Settings")}
+                }else key(owner,lax.s("bindingId")){HollywoodScreen(owner,lax,onSettings={teamSettings=true})}
+            }
+            else if(backend=="codex")PocketApp()
             else if(discovering)Column(Modifier.padding(24.dp)){CircularProgressIndicator();InterfaceText("Checking Losangelex…")}
             else if(!losangelex.optBoolean("configured"))Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
                 InterfaceText("Connect Losangelex",style=MaterialTheme.typography.titleLarge)
@@ -99,8 +116,8 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
             else key(owner,losangelex.s("environmentId")){LosangelexScreen(owner+losangelex.s("environmentId"),onSettings={teamSettings=true})}
         }
     }
-    BackHandler(enabled=backend=="losangelex"&&teamSettings&&!workRecord){teamSettings=false}
-    if(backend=="losangelex"&&teamSettings)Surface(Modifier.fillMaxSize()){
+    BackHandler(enabled=backend in listOf("losangelex","lax")&&teamSettings&&!workRecord){teamSettings=false}
+    if(backend in listOf("losangelex","lax")&&teamSettings)Surface(Modifier.fillMaxSize()){
         Column{TextButton({teamSettings=false}){BilingualLabel("Back")};Box(Modifier.weight(1f)){SettingsScreen()}}
     }
     if(workRecord)Surface(Modifier.fillMaxSize()){WorkRecordScreen{workRecord=false}}

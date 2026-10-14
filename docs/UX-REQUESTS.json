@@ -14,6 +14,12 @@
   },
   "requests": [
     {
+      "id": "canonical-hollywood-android-controls-20261014",
+      "request": "Native Hollywood rooms, scoped saved text and attention controls, exact cancellation, session-style condensed execution and independent environment/room drafts.",
+      "status": "candidate-real-gateway-PG-native-LAX-Android-emulator-integration-passed; voice-push-physical-phone-and-production-pending",
+      "evidence": "docs/HOLLYWOOD-BINDINGS.md"
+    },
+    {
       "id": "hollywood-native-room-execution-feed-20261014",
       "request": "Use the existing session condensed Runs display in Hollywood rooms, showing human/agent communication and expandable native execution with durable agent/host/context attribution. No separate per-agent labels are required in the collapsed header.",
       "status": "canonical-v3-projection-implemented-and-qualified-with-actual-native-room-feed; gateway-and-phone-cutover-pending",
