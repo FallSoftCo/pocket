@@ -337,3 +337,14 @@ original receipt/message identity, independently accepted the actual artifact,
 and cancelled separate explicit work. The new Android Guide dialog has not yet
 had native UI qualification; neither production nor the physical phone changed.
 See [the versioned evidence](qualification/native-guidance-alpha100.json).
+
+
+## Alpha101 native guidance after connector stop
+
+The actual Android/native integration passes with one real xhigh task, a guided
+artifact, controlled connector stop and original-message recovery. Native
+history independently retains exactly one matching guidance message; recovery
+adds no model turn. Ordinary room/viewer drafts, cross-binding rejection,
+ended-work send rejection and canonical unknown-receipt inspection passed.
+This qualification updates the owned emulator only; production and the physical
+phone remain unchanged. See [the versioned evidence](qualification/native-guidance-recovery-alpha101.json).

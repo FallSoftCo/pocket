@@ -69,7 +69,14 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
         .filter{it.optJSONObject("body")?.optJSONObject("scope")?.s("roomId")==room}
         .distinctBy{it.getJSONObject("body").s("id")}
     fun guidanceDraft(scope:JSONObject)=Pocket.prefs.getString("draft:"+guidanceKey(scope),"").orEmpty()
-    fun saveGuidanceDraft(scope:JSONObject,text:String){Pocket.prefs.edit().putString("draft:"+guidanceKey(scope),text).apply()}
+    fun saveGuidanceDraft(scope:JSONObject,text:String){Pocket.prefs.edit().putString("draft:"+guidanceKey(scope),text).putString("guidance-scope:"+guidanceKey(scope),scope.toString()).apply()}
+    fun savedGuidanceScopes(room:String):List<JSONObject> {
+        val records=savedGuidance(room).map{it.getJSONObject("body").getJSONObject("scope")}
+            .filter{scope->guidancePending(scope)?.s("state")?.let{it !in listOf("native_recorded","rejected")}==true}
+        val drafts=Pocket.prefs.all.filterKeys{it.startsWith("guidance-scope:guidance:"+owner+":"+bindingId+":")}.values
+            .mapNotNull{runCatching{JSONObject(it as String)}.getOrNull()}.filter{it.s("roomId")==room&&guidanceDraft(it).isNotBlank()}
+        return (records+drafts).distinctBy{it.s("deliveryId")+":"+it.s("nativeTurn")}
+    }
     fun captureGuidance(scope:JSONObject,text:String):JSONObject = synchronized(HollywoodAttentionIntents) {
         require(scope.s("authorityId")==authorityId&&text.isNotBlank())
         val previous=guidancePending(scope)

@@ -42,6 +42,7 @@ import org.json.JSONObject
     var workflow by remember(client.bindingId,room){mutableStateOf(false)}
     var inspecting by remember{mutableStateOf<JSONObject?>(null)}
     var guidance by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
+    var guidanceReceipt by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
     val destination=recipient.ifBlank{detail.optJSONObject("room")?.s("owner").orEmpty()}
     val scope=if(hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source,if(postOnly)"message" else "request")else null
     val currentScope by rememberUpdatedState(scope)
@@ -127,6 +128,15 @@ import org.json.JSONObject
                         val event=visible.firstOrNull{it.s("id")==row.s("roomEventId")}
                         val request=attention.firstOrNull{it.getJSONObject("attention").s("event")==event?.s("id")}
                         if(request!=null)TextButton({inspecting=request}){BilingualLabel(if(request.getJSONObject("attention").s("state")=="pending")"Needs you" else "Review response")}
+                        event?.optJSONObject("data")?.s("nativeControlId")?.takeIf(::hollywoodUuid)?.let{id->
+                            TextButton({
+                                val selected=room;jobs.launch{try{
+                                    val receipt=client.call("native-controls/"+id)
+                                    require(receipt.getJSONObject("control").s("id")==id&&receipt.getJSONObject("scope").s("roomId")==selected)
+                                    if(room==selected)guidanceReceipt=receipt
+                                }catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}
+                            },modifier=Modifier.testTag("native-guidance-review:"+id)){BilingualLabel("Review guidance")}
+                        }
                         if(event!=null&&event.s("kind") in listOf("message","result","request")&&
                             (event.s("audience")!="direct"||client.principalId in setOf(event.s("author"),event.s("recipient")))){
                             TextButton({source=event.s("id");direct=event.s("audience")=="direct";recipient=if(event.s("author")==client.principalId)event.s("recipient")else event.s("author");postOnly=actors.firstOrNull{it.s("id")==recipient}?.s("kind")=="human"}){BilingualLabel("Reply")}
@@ -168,8 +178,8 @@ import org.json.JSONObject
             TextButton({menu=false;browsing=true}){BilingualLabel("Rooms")}
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             ProfileSwitcher{menu=false}
-            client.savedGuidance(room).filter{it.s("state") !in listOf("native_recorded","rejected")}.forEach{saved->
-                TextButton({guidance=saved.getJSONObject("body").getJSONObject("scope");menu=false}){Text("Saved guidance · "+saved.s("state"))}
+            client.savedGuidanceScopes(room).forEach{saved->
+                TextButton({guidance=saved;menu=false},modifier=Modifier.testTag("native-guidance-saved:"+saved.s("deliveryId")+":"+saved.s("nativeTurn"))){Text("Saved guidance · "+(client.guidancePending(saved)?.s("state")?:"draft"))}
             }
 
             Row{TextButton({recipient="";source=null;direct=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null});BilingualLabel("Private")}
@@ -182,6 +192,16 @@ import org.json.JSONObject
     guidance?.let{target->
         val accepts=detail.optJSONArray("deliveries")?.objects().orEmpty().any{it.optBoolean("can_steer")&&it.optJSONObject("control_scope")?.let{scope->hollywoodJsonEqual(scope,target)}==true}
         HollywoodGuidanceDialog(client,target,agentNames[target.s("agentId")]?:"Agent",accepts){guidance=null}
+    }
+    guidanceReceipt?.let{value->
+        AlertDialog(onDismissRequest={guidanceReceipt=null},title={Text("Guidance receipt")},text={
+            val control=value.getJSONObject("control")
+            Column(Modifier.heightIn(max=440.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
+                Text(control.s("state")+" · work "+value.s("deliveryState"),color=Muted)
+                Text(control.s("body"))
+                Text("Recorded input does not by itself prove that the work was completed or accepted.",color=Muted)
+            }
+        },confirmButton={TextButton({guidanceReceipt=null}){BilingualLabel("Close")}})
     }
     if(workflow)HollywoodWorkDialog(client,room){workflow=false}
     inspecting?.let{value->HollywoodAttentionDialog(client,value,{inspecting=null}){jobs.launch{refresh(room)}}}
@@ -236,6 +256,7 @@ import org.json.JSONObject
 }
 
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable private fun HollywoodGuidanceDialog(client:HollywoodClient,scope:JSONObject,name:String,accepts:Boolean,dismiss:()->Unit){
     val key=scope.s("deliveryId")+":"+scope.s("nativeTurn")
     var text by remember(key){mutableStateOf(client.guidanceDraft(scope))}
@@ -254,7 +275,7 @@ import org.json.JSONObject
         }catch(e:Exception){if(e is CancellationException)throw e;pending=client.guidancePending(scope);error=e.message.orEmpty()}finally{busy=false}}
     }
     AlertDialog(onDismissRequest={if(!busy)dismiss()},title={Text("Guide "+name)},text={
-        Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+        Column(Modifier.semantics{testTagsAsResourceId=true},verticalArrangement=Arrangement.spacedBy(8.dp)){
             Text(if(accepts)"Guidance goes to this active work and may wait for its current command to finish." else "This work is no longer accepting guidance. Its original receipt remains available.",color=Muted)
             if(state.isNotBlank())Text(when(state){
                 "saved"->"Saved on this device"
@@ -266,9 +287,9 @@ import org.json.JSONObject
                 else->state
             },color=Muted)
             if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
-            OutlinedTextField(text,{text=it;client.saveGuidanceDraft(scope,it)},enabled=!busy&&canCreate,label={BilingualLabel("Your guidance",centered=false)},modifier=Modifier.testTag("native-guidance-text"))
+            OutlinedTextField(text,{text=it;client.saveGuidanceDraft(scope,it)},enabled=!busy,readOnly=!canCreate,label={BilingualLabel("Your guidance",centered=false)},modifier=Modifier.testTag("native-guidance-text"))
             if(error.isNotBlank())Text(error,color=Coral)
         }
-    },confirmButton={TextButton({send(false)},enabled=!busy&&canCreate&&text.isNotBlank(),modifier=Modifier.testTag("native-guidance-send")){BilingualLabel("Send guidance")}},
+    },confirmButton={TextButton({send(false)},enabled=!busy&&canCreate&&text.isNotBlank(),modifier=Modifier.semantics{testTagsAsResourceId=true}.testTag("native-guidance-send")){BilingualLabel("Send guidance")}},
         dismissButton={TextButton(dismiss,enabled=!busy){BilingualLabel("Close")}})
 }

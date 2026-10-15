@@ -99,3 +99,22 @@ metadata-only read against the original native store found exactly one matching
 clientId message in the original completed turn. A fresh alternate native SQLite
 store returned metadata with no turns; that is not proof of missing work.
 Preserve actual native storage and its identity during backup/migration.
+
+
+## Alpha101 guidance recovery qualification
+
+An actual native Android Guide journey reopened a typed guidance draft, sent
+it to the original active turn, preserved room/viewer drafts and rejected a
+foreign-profile intent. After the owned connector stopped, metadata recovery
+retained the original native message and artifact with zero additional model
+turns. Android read the original receipt after work ended and could not send
+new guidance to that ended execution. Canonical room control events also open
+a read-only current receipt, including an explicitly unknown outcome, without
+requiring a local outgoing intent.
+
+Unsent guidance drafts now retain their scope and remain discoverable after
+work ends; ended drafts remain readable/selectable without becoming new work.
+The native journey exercised reopening the draft while active and opening a
+saved pending receipt after completion. Physical phone, native voice, genuine
+FCM and the wider enterprise release gates remain unqualified. Read the exact
+[versioned evidence](qualification/native-guidance-recovery-alpha101.json).

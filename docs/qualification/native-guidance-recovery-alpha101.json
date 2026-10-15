@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "version": "0.5.0-alpha.101",
+  "versionCode": 119,
+  "androidQualificationBuildPassed": true,
+  "apkSha256": "82f2db4b10aa96d7f9fa4bb17e632091313eb34acc7f0592fe23ad67ee85dd1f",
+  "actualAndroidGuideUiPassed": true,
+  "nativeModel": "gpt-6.1-sol/xhigh",
+  "actualNativeTurns": 1,
+  "guidedArtifactVerified": true,
+  "originalGuidanceRecoveredAfterConnectorStop": true,
+  "metadataRecoveryAdditionalModelTurns": 0,
+  "sameNativeThreadTurnAndMessageRetained": true,
+  "ordinaryRoomAndViewerDraftsPreserved": true,
+  "guidanceDraftReopened": true,
+  "crossBindingIntentRejected": true,
+  "endedWorkCannotReceiveNewGuidance": true,
+  "canonicalUnknownGuidanceReceiptVisible": true,
+  "physicalPhoneChanged": false,
+  "productionChanged": false,
+  "realFcmVerified": false,
+  "nativeVoiceQualified": false,
+  "limits": [
+    "One host and fresh finite owned task",
+    "Unsent ended-work draft discovery implemented; native run directly exercised a pending saved receipt after work ended",
+    "No general MCP/admin uncertain-effect reconciliation, all-context availability or multi-host claim",
+    "No physical-phone update or production cutover",
+    "Full cooperation continuity, credential separation, installer/restore/import/writer transfer remain"
+  ]
+}
