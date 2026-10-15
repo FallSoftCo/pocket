@@ -16,7 +16,7 @@ internal data class CommandRunProjection(
 // Canonical activity is the operation boundary, not a brittle tool-name whitelist.
 // Public reasoning remains readable; messages, requests and turn boundaries are
 // different kinds and cannot disappear into an operational group.
-internal fun isCommandRun(row:JSONObject)=row.s("kind")=="activity"&&row.s("type")!="reasoning"
+internal fun isCommandRun(row:JSONObject)=row.s("kind")=="activity"&&row.s("type") !in listOf("reasoning","planUpdate","goalState")
 
 /** Outputs, questions, user inputs and turn boundaries never disappear into a run group. */
 internal fun commandRunProjection(source:List<JSONObject>,expanded:Set<String>):CommandRunProjection {

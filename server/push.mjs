@@ -41,8 +41,11 @@ export class PushDelivery {
   async flush(){
     if(!this.enabled||this.busy)return;this.busy=true;
     try{
-      const rows=this.db.prepare("SELECT p.*,t.token,n.thread_id,n.title,n.body,n.kind,n.created_at,n.spoken_summary,n.spoken_text FROM push_deliveries p JOIN push_tokens t ON t.device_id=p.device_id JOIN notifications n ON n.id=p.notification_id WHERE p.state IN ('queued','retry') AND p.next_attempt_at<=? AND t.project_id=? ORDER BY p.notification_id LIMIT 100").all(this.clock(),this.config.projectId);
+      const kinds=this.allowedKinds?[...this.allowedKinds]:null;if(kinds&&!kinds.length)return;
+      const filter=kinds?` AND n.kind IN (${kinds.map(()=>'?').join(',')})`:'';
+      const rows=this.db.prepare("SELECT p.*,t.token,n.thread_id,n.title,n.body,n.kind,n.created_at,n.spoken_summary,n.spoken_text FROM push_deliveries p JOIN push_tokens t ON t.device_id=p.device_id JOIN notifications n ON n.id=p.notification_id WHERE p.state IN ('queued','retry') AND p.next_attempt_at<=? AND t.project_id=?"+filter+" ORDER BY p.notification_id LIMIT 100").all(this.clock(),this.config.projectId,...(kinds||[]));
       for(const row of rows){
+        if(this.allowedKinds&&!this.allowedKinds.has(row.kind))continue;
         // Recheck revocation immediately before handing the token to Firebase.
         if(!this.db.prepare('SELECT 1 FROM push_tokens WHERE device_id=? AND token=?').get(row.device_id,row.token))continue;
         const at=this.clock(),attempts=row.attempts+1;

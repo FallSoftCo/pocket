@@ -79,6 +79,7 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
             val status=Pocket.api("/api/backends");val available=status.optJSONArray("backends")?.objects().orEmpty()
             losangelex=available.firstOrNull{it.s("id")=="losangelex"}?:JSONObject()
             lax=available.firstOrNull{it.s("id")=="lax"}?:JSONObject()
+            if(lax.optBoolean("available"))Pocket.captureEnvironment(Pocket.environmentId)?.let{HollywoodNotifications.rememberBinding(it,lax);HollywoodNotifications.catchUp(it,lax)}
             choices=available.filter{it.optBoolean("configured")}.map{it.s("id") to it.s("name")}
             if(status.optBoolean("canonical")&&status.s("defaultBackend")=="lax"){
                 backend="lax";Pocket.prefs.edit().putString("backend:$owner","lax").apply();Pocket.pauseConversationReads()

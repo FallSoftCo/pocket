@@ -30,3 +30,23 @@ Keep service-account keys, `data/`, signing keys, owner tokens, and phone-local 
 ## Release review
 
 The initial release review covers authentication, code replay, owner/device separation, revocation, WebSocket access, native request routing, credential packaging, and signing. Automated fixtures test these paths; physical testing covers a narrower set described in [verification](docs/VERIFICATION.md). Passing tests and dependency scans are not proof that the application is free of vulnerabilities.
+
+
+## Enterprise room candidate
+
+The canonical v3 candidate uses installation-owned device-to-human bindings,
+protected service credentials and a fixed private Hollywood endpoint. Each
+request retains the binding/enterprise identity and current Hollywood grants;
+phone JSON cannot select a principal, token or alternate endpoint. The gateway
+allows explicit human conversation, attention, cancellation and workflow reads,
+not arbitrary connector/admin RPC. A mismatched saved binding is rejected.
+Room work discovery does not grant access to the parent goal's room or source.
+
+Hollywood and LAX enforce separate communication and execution boundaries.
+The qualified one-host installer uses a fully empowered Global Linux UID and a
+separate non-sudo worker UID, private state and native workspace sandboxing.
+Global is intentionally an enterprise administrator. This is not isolation from
+a compromised Global/root; hostile enterprises require separate VM/host security
+boundaries. Physical phone, second-host enrollment and production migration are
+still release gates. Historical stock/team guarantees above apply only to their
+named backend, not every enterprise candidate path.

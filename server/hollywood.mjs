@@ -105,8 +105,15 @@ export class HollywoodGateway {
 export function hollywoodRequest(method,tail,query,body){
   const p=tail.split('/').filter(Boolean);
   let allowed=[];
-  if(method==='GET'&&p.length===1&&p[0]==='rooms')allowed=[];
+  let uuidCursor=false;
+  if(method==='GET'&&p.length===1&&p[0]==='inbox')allowed=['after','limit'];
+  else if(method==='GET'&&p.length===2&&p[0]==='inbox'&&p[1]==='pending')allowed=['after','limit'];
+  else if(method==='GET'&&p.length===3&&p[0]==='inbox'&&p[1]==='events'&&uuid(p[2]))allowed=[];
+  else if(method==='GET'&&p.length===1&&p[0]==='rooms')allowed=[];
   else if(method==='GET'&&p.length===2&&p[0]==='rooms'&&uuid(p[1]))allowed=[];
+  else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['goals','work'].includes(p[2])){allowed=['after','limit'];uuidCursor=true;}
+  else if(method==='GET'&&p.length===2&&['goals','work'].includes(p[0])&&uuid(p[1]))allowed=[];
+  else if(method==='GET'&&p.length===3&&p[0]==='goals'&&uuid(p[1])&&p[2]==='work'){allowed=['after','limit'];uuidCursor=true;}
   else if(method==='GET'&&p.length===4&&p[0]==='attention'&&uuid(p[1])&&p[2]==='commands'&&operation(p[3]))allowed=[];
   else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['history','attention'].includes(p[2]))allowed=p[2]==='history'?['after','before','limit']:['after','limit'];
   else if(method==='GET'&&p.length===2&&((p[0]==='commands'&&operation(p[1]))||(['attention','deliveries'].includes(p[0])&&uuid(p[1]))))allowed=[];
@@ -127,7 +134,7 @@ export function hollywoodRequest(method,tail,query,body){
   }else if(method==='POST'&&p.length===3&&p[0]==='deliveries'&&uuid(p[1])&&p[2]==='cancel'){
     if(!fields(body,[])||Object.keys(body).length)throw fail(400,'Cancellation uses the exact original delivery.','HOLLYWOOD_REQUEST_REJECTED');
   }else throw fail(404,'Unknown Hollywood human operation.','HOLLYWOOD_REQUEST_REJECTED');
-  if(Object.keys(query).some(key=>!allowed.includes(key))||Object.values(query).some(value=>typeof value!=='string'||!/^[0-9]{1,16}$/.test(value)||!Number.isSafeInteger(Number(value))))throw fail(400,'Invalid Hollywood query.','HOLLYWOOD_REQUEST_REJECTED');
+  if(Object.keys(query).some(key=>!allowed.includes(key))||Object.entries(query).some(([key,value])=>key==='after'&&uuidCursor?!uuid(value):typeof value!=='string'||!/^[0-9]{1,16}$/.test(value)||!Number.isSafeInteger(Number(value))))throw fail(400,'Invalid Hollywood query.','HOLLYWOOD_REQUEST_REJECTED');
   if(query.before!==undefined&&query.after!==undefined)throw fail(400,'Choose one history direction.','HOLLYWOOD_REQUEST_REJECTED');
   if(query.limit!==undefined&&(Number(query.limit)<1||Number(query.limit)>100))throw fail(400,'Invalid room page size.','HOLLYWOOD_REQUEST_REJECTED');
   if(body!==undefined&&Buffer.byteLength(JSON.stringify(body))>14000)throw fail(400,'Hollywood operation exceeds the limit.','HOLLYWOOD_REQUEST_REJECTED');

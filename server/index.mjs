@@ -24,6 +24,7 @@ import {ActivityBoard} from './activity-board.mjs';
 import {NativeVoice} from './native-voice.mjs';
 import {RoomVoice} from './room-voice.mjs';
 import {HollywoodVoice} from './hollywood-voice.mjs';
+import {HollywoodPush} from './hollywood-push.mjs';
 import {RoomProgress} from './room-progress.mjs';
 import {Losangelex,loadLosangelex} from './losangelex.mjs';
 import {ThreadPreviews,sessionInteraction} from './thread-previews.mjs';
@@ -79,10 +80,15 @@ const automation=localMode?(existsSync(automationPath)?JSON.parse(readFileSync(a
 if(automation&&!existsSync(automationPath))writeFileSync(automationPath,JSON.stringify(automation),{mode:0o600});
 if(automation)chmodSync(automationPath,0o600);
 const push=loadPush(db,dir);
+if(nativeHollywood)push.allowedKinds=new Set(['app_update']);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex();
 const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
 const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
+const hollywoodPush=nativeHollywood?new HollywoodPush({db,gateway:hollywood,push,publish:(device,event)=>{
+ for(const ws of sockets.clients)if(ws.deviceId===device&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(event));
+}}):null;
+if(hollywoodPush)setInterval(()=>void hollywoodPush.tick().catch(error=>console.error('Hollywood inbox',error.code||error.name)),5000).unref();
 const attached=new Set(), pending=new Map(), syncing=new Set();
 db.exec('CREATE TABLE IF NOT EXISTS immersion_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
 const immersionCwd=resolve(dir,'immersion');mkdirSync(immersionCwd,{recursive:true,mode:0o700});

@@ -1,6 +1,6 @@
 # NextComp documentation
 
-NextComp connects a person on Android to ongoing work in their own computing environments. Its default backend uses stock Codex; an optional Losangelex backend exposes Hollywood team interaction. Start with the briefing to understand the intended experience, then use the capability map to inspect mechanisms, evidence and limits. Installation instructions alone do not describe the product's scope.
+NextComp connects a person on Android to ongoing work in their own computing environments. The enterprise candidate presents canonical Hollywood rooms and LAX execution; the retained stock Codex backend supports existing profiles. Read [the canonical room contract](HOLLYWOOD-ROOMS.md) for its current evidence and release limits. Start with the briefing for the broader interaction goals, then distinguish historical stock/team behavior from the candidate architecture.
 
 ## Understand and evaluate
 

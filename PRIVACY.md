@@ -37,3 +37,21 @@ Optional periodic coordinator reports retain device-scoped cadence preferences, 
 Stock direct typed replies retain message text, original UUID, environment/thread, draft generation and receipt state in private Android preferences before dispatch. A credential digest binds recovery to its original pairing without copying tokens into the journal. Accepted entries are pruned after safe draft reconciliation; unresolved entries are retained for explicit recovery. Android app backup is disabled.
 
 Already-presented notification watermarks and catch-up capture tokens may be retained in a separate private read-acknowledgement journal until accepted or expired. Records include environment, credential-bound digest, thread and presentation time; they contain no account or pairing credentials. Background recovery acknowledges only the captured view and never starts an agent. Notification receipts expire after seven days; catch-up captures currently expire after ten minutes on the backend, so longer outages leave that work unseen.
+
+
+## Canonical Hollywood candidate
+
+The v3 candidate binds a paired device to a Hollywood human within one enterprise.
+Room goals, work, native plans and bounded execution excerpts are fetched through
+that authenticated binding with current room/audience permissions. Goals and work
+remain Hollywood records; the phone does not own their coordination state.
+Full native tool payloads and local execution intent remain protected on the
+execution host. Artifact references include host/workspace identity and digest;
+showing one is not unrestricted filesystem access or an automatic download.
+
+Canonical push uses generic metadata hints rather than room text or native
+commands. Android fetches and authorizes the exact original event before showing
+or acting on it; an environment switch cannot retarget a saved reply. This
+candidate transport is separate from the historical stock notification previews
+above. Metadata transport qualification does not certify current physical FCM,
+background delivery, native reply completion or canonical voice quality.

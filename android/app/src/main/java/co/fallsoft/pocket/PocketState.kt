@@ -350,6 +350,7 @@ object Pocket {
     fun test(){scope.launchEnvironment{try{api("/api/test-notification",JSONObject())}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Test failed"}}}
     fun event(json:JSONObject){scope.launchEnvironment{
         when(json.s("type")){
+            "hollywoodInbox" -> {coroutineContext[EnvironmentRequestContext]?.destination?.let{HollywoodNotifications.socket(it,json)}}
             "threadRenamed" -> {val applied=PocketNotificationTitles.rename(json.s("threadId"),json.s("name"),json.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=json.optLong("revision"));if(applied)tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(title=json.s("name"))else it}}
             "rateLimits" -> acceptUsage(json.optJSONObject("usage"))
             "sessionInteraction" -> {rememberSessionInteraction(json.s("threadId"),"item:"+json.s("interactionId"));discoverSession(json.s("threadId"))}

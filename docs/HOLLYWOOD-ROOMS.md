@@ -27,3 +27,30 @@ Actual gateway/PostgreSQL/native-LAX integration and an owned Android emulator e
 `HollywoodRoomAudioLiveTest` retains the initial inaccurate transcription failure. `HollywoodRoomFinalAudioLiveTest` records the strict finalization failure. `HollywoodRoomAudioTraceLiveTest` observes a finite audio-only input and contains no task commit. Do not replay their saved recording IDs or run all live probes indiscriminately.
 
 Physical phone delivery, canonical audio finalization/TTS, device-scoped push/actions, immersion, cross-host acceptance and production migration remain separate gates. Candidate source or emulator installation is not a production cutover.
+
+
+## Goals, work and native plans
+
+The candidate room view reads canonical Hollywood goals and assigned work.
+A room's work index includes assignments owned there even when their parent goal
+belongs to another room; it does not grant access to that parent's private
+objective or source. Lists and large goal plans page by stable UUID. The human
+binding and current room grants apply to every read.
+
+Goals & work shows acceptance criteria, goal/work state and revisions, the
+original execution state, and host/workspace/content-hash evidence. Execution
+completion is separate from accepted work and the accepted goal. This inspection
+surface submits no work; conversation and captured existing controls remain the
+way to direct agents. Read-only inspection does not change pairing, drafts or
+saved unknown receipts. Reopen or Refresh the list for an authoritative snapshot.
+
+Native structured plans remain distinct from the business dependency plan.
+They render as expandable Plan activity using the session ActivityRow, outside
+collapsed command Runs. Verified native goal status/accounting is also a separate
+activity, retaining agent, host, delivery and native context attribution. A local
+native goal marked complete does not change Hollywood business acceptance.
+
+Qualification uses actual completed Global/Engineering native history through
+PostgreSQL and the authenticated NextComp gateway. Its original workflow is not
+resubmitted by the read-only Android probe. Current physical-phone delivery and
+all voice/push release limitations above still apply.

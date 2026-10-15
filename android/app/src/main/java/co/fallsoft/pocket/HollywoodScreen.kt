@@ -39,6 +39,7 @@ import org.json.JSONObject
     var busy by remember(client.bindingId,room){mutableStateOf(false)}
     var expanded by remember(client.bindingId,room,direct,recipient){mutableStateOf(emptySet<String>())}
     var menu by remember{mutableStateOf(false)}
+    var workflow by remember(client.bindingId,room){mutableStateOf(false)}
     var inspecting by remember{mutableStateOf<JSONObject?>(null)}
     val destination=recipient.ifBlank{detail.optJSONObject("room")?.s("owner").orEmpty()}
     val scope=if(hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source,if(postOnly)"message" else "request")else null
@@ -83,6 +84,15 @@ import org.json.JSONObject
             if(currentScope==captured){pending=null;if(input.text==intent.getJSONObject("body").s("body")){input=TextFieldValue();client.saveDraft(captured,"")};notice="Accepted by Hollywood";refresh(captured.room)}
         }catch(e:Exception){if(e is CancellationException)throw e;if(currentScope==captured)error="Delivery remains saved. ${e.message.orEmpty()}"}finally{if(currentScope==captured)busy=false}}
     }
+    val requested=HollywoodNotifications.target
+    LaunchedEffect(client.bindingId,requested){
+        requested?.takeIf{it.owner==owner&&it.binding==client.bindingId}?.let{target->
+            choose(target.room)
+            target.reply?.let{reply->recipient=reply.recipient;direct=reply.audience=="direct";source=reply.sourceEvent;postOnly=reply.kind=="message"}
+            inspecting=target.attention
+            HollywoodNotifications.consumed(target)
+        }
+    }
     BackHandler(enabled=browsing){browsing=false}
     if(browsing){
         Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
@@ -97,7 +107,10 @@ import org.json.JSONObject
         };return
     }
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-        Text(detail.optJSONObject("room")?.s("name").orEmpty(),style=MaterialTheme.typography.titleMedium)
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+            Text(detail.optJSONObject("room")?.s("name").orEmpty(),style=MaterialTheme.typography.titleMedium)
+            TextButton({workflow=true},modifier=Modifier.testTag("native-room-work")){BilingualLabel("Goals & work")}
+        }
         if(error.isNotBlank())Text(error,color=Coral)
         if(notice.isNotBlank())Text(notice,color=Muted)
         LazyColumn(Modifier.weight(1f).testTag("native-room-history"),state=list,verticalArrangement=Arrangement.spacedBy(10.dp)){
@@ -148,6 +161,7 @@ import org.json.JSONObject
             }
         }
     }
+    if(workflow)HollywoodWorkDialog(client,room){workflow=false}
     inspecting?.let{value->HollywoodAttentionDialog(client,value,{inspecting=null}){jobs.launch{refresh(room)}}}
 }
 
@@ -163,7 +177,7 @@ import org.json.JSONObject
     val request=attention.getJSONObject("request")
     val questions=request.optJSONArray("questions")?.objects().orEmpty()
     val approval=attention.s("method") !in listOf("hollywood/question","item/tool/requestUserInput")
-    val open=attention.s("state")=="pending"&&pending==null
+    val open=attention.s("state")=="pending"&&current.s("deliveryState") in listOf("claimed","running")&&pending==null
     fun answer(decision:String?=null,inspect:Boolean=false){
         busy=true;jobs.launch{try{
             val fresh=client.call("attention/$id")
@@ -177,7 +191,7 @@ import org.json.JSONObject
     }
     AlertDialog(onDismissRequest={if(!busy)dismiss()},title={Text(if(approval)"Review approval" else "Answer question")},text={
         Column(Modifier.heightIn(max=440.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
-            Text(attention.s("state"),color=Muted)
+            Text(attention.s("state")+" · native delivery "+current.s("deliveryState"),color=Muted)
             if(approval){Text(request.s("command",request.optJSONArray("changes")?.toString().orEmpty()));if(request.s("cwd").isNotBlank())Text(request.s("cwd"));Text(request.optJSONObject("nativeContext")?.toString().orEmpty())}
             else questions.forEach{question->
                 Text(question.s("question"))

@@ -13,14 +13,15 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String):List<JSON
         val item=data?.s("itemId").orEmpty()
         val thread=data?.s("thread").orEmpty()
         val native=data?.s("type")=="executionActivity"
+        val structured=native&&data?.s("nativeType") in listOf("planUpdate","goalState")
         val activity=(event.s("kind")=="artifact"||native)&&item.isNotBlank()&&thread.isNotBlank()&&
-            data?.s("nativeType") !in listOf("agentMessage","plan")&&
+            data?.s("nativeType") !in listOf("agentMessage","plan","planUpdate","goalState")&&
             data?.s("status") in listOf("inProgress","completed","failed","declined","unknown")
-        val identity=JSONArray(if(native)listOf(event.s("authority"),author,data?.s("deliveryId"),
+        val identity=JSONArray(if(structured)listOf(event.s("authority"),author,data?.s("deliveryId"),data?.optLong("generation"),thread,data?.s("turn"),data?.s("nativeType"),data?.optJSONObject("nativeGoal")?.s("goalId"))else if(native)listOf(event.s("authority"),author,data?.s("deliveryId"),
             data?.optLong("generation"),thread,data?.s("turn"),item)else listOf(author,thread,item)).toString()
-        val previous=if(activity)operations[identity]else null
+        val previous=if(activity||structured)operations[identity]else null
         val eventId=event.opt("id")
-        val row=JSONObject().put("id",if(activity)"$prefix:operation:$identity" else "$prefix:$eventId")
+        val row=JSONObject().put("id",if(activity||structured)"$prefix:operation:$identity" else "$prefix:$eventId")
             .put("roomEventId",eventId).put("roomAuthor",event.s("authorName",author))
             .put("kind",if(activity)"activity" else if(author=="you"||event.optBoolean("isSelf"))"user" else "message")
             .put("text",if(native&&data?.s("nativeType") in listOf("agentMessage","plan"))data?.s("output")else event.s("body"))
@@ -42,7 +43,21 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String):List<JSON
                 if(!data.isNull("durationMs"))row.put("durationMs",data.optLong("durationMs"))
             }
             if(previous==null){operations[identity]=rows.size;rows+=row}else rows[previous]=row
-        }else rows+=row
+        }else {
+            if(native&&data?.s("nativeType") in listOf("planUpdate","goalState")){
+                val plan=data?.optJSONArray("plan")?.objects().orEmpty()
+                val goal=data?.optJSONObject("nativeGoal")
+                val text=if(goal!=null)"${goal.s("status")} · ${goal.optLong("tokensUsed")} tokens · ${goal.optLong("timeUsedSeconds")}s"
+                    else plan.joinToString("\n"){step->"${when(step.s("status")){"completed"->"✓";"inProgress"->"→";else->"○"}} ${step.s("step")}"}
+                row.put("kind","activity").put("type",data!!.s("nativeType"))
+                    .put("title",if(goal!=null)"Native goal · ${goal.s("status")}" else "Plan")
+                    .put("status","completed").put("text",text)
+                    .put("detail","Agent: $author\nHost: ${data.s("hostId")}\nExecution: ${data.s("deliveryId")}\nThread: $thread\nTurn: ${data.s("turn")}"+
+                        (goal?.let{"\nNative goal: ${it.s("goalId")}"}.orEmpty()))
+                    .put("truncated",data.optBoolean("detailsTruncated"))
+            }
+            if(structured){if(previous==null){operations[identity]=rows.size;rows+=row}else rows[previous]=row}else rows+=row
+        }
     }
     return rows
 }

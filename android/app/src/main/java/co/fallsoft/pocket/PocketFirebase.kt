@@ -85,6 +85,7 @@ class PocketFirebaseService:FirebaseMessagingService(){
     override fun onMessageReceived(message:RemoteMessage){
         val origin=Pocket.environmentProfiles.capturePush(message.data["device_id"].orEmpty())?:return
         val environment=origin.environment.id
+        if(message.data["hollywood_inbox"]=="1"){HollywoodNotifications.receive(origin,message.data);return}
         if(message.data["thread_renamed"]=="1"){
             val ids=runCatching{org.json.JSONArray(message.data["notification_ids"]?:"[]")}.getOrNull()
             PocketNotificationTitles.rename(message.data["thread_id"].orEmpty(),message.data["thread_title"].orEmpty(),ids?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),false,message.data["title_revision"]?.toLongOrNull()?:0,environment);return
