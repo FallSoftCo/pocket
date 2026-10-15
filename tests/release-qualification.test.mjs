@@ -60,3 +60,13 @@ test('green native logs cannot publish a missing or rejected optimized visual re
   }finally{rmSync(f.root,{recursive:true,force:true});}
  }
 });
+
+test('optimized catalog/input review requires its actual observations',()=>{
+ const f=fixture();try{
+  f.policy.requiredOptimizedReview='native-room-catalog-and-typing';f.build.policySha=digest(f.policy);
+  const data=Buffer.from('Synthetic binding only');for(const name of ['input.json','room.png'])writeFileSync(join(f.directory,name),data);
+  const review={schema:1,state:'complete',kind:f.policy.requiredOptimizedReview,versionCode:2,productionSourceSha:f.build.productionSourceSha,qualificationInputSha:f.build.qualificationInputSha,apkSha256:f.manifest.variants[0].sha256,reviewedAt:5,observations:{typingDrawn:true,canonicalRoomSnapshot:true,originalAcceptedMessageSingle:true,optimizedPayloadVerified:true},artifacts:['input.json','room.png'].map(path=>({path,sha256:sha256(data)}))};
+  assert.equal(validateReleaseQualification({...f,optimizedReview:review}).nativeCases,1);
+  review.observations.optimizedPayloadVerified=false;assert.throws(()=>validateReleaseQualification({...f,optimizedReview:review}),/review did not pass/);
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});
