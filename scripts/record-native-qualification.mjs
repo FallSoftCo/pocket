@@ -50,6 +50,14 @@ try{
  const fd=openSync(join(directory,'fixture-'+id+'.log'),'wx',0o600);
  const fixture=spawn(process.execPath,[fixtureScript],{cwd:root,env:{...childEnv,PORT:fixturePort,NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},stdio:['ignore',fd,fd],detached:true});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);fixture.unref();owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
+ // This case asserts that expanding runs does not alter its existing rows.
+ // Give it the already-supported complete fixture so delayed older-page arrival
+ // cannot masquerade as expansion mutating history. Pagination has its own cases.
+ if(name==='co.fallsoft.pocket.CommandHistoryNativeTest#groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory'){
+  const prepared=await fetch('http://127.0.0.1:'+fixturePort+'/_qa/visibility',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(1000)});
+  if(!prepared.ok||(await prepared.json()).ok!==true)throw Error('Stationary command-history fixture unavailable.');
+  receipt.fixtureSetup={path:'/_qa/visibility',completeHistory:true,reason:'Separate command-row immutability from independently qualified older-page arrival.'};persist();
+ }
  run(['reverse','tcp:18880','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#')){run(['reverse','tcp:18881','tcp:'+String(portValue+1)]);run(['reverse','tcp:18882','tcp:'+String(portValue+2)]);}
  else if(environmentCase){run(['reverse','tcp:18882','tcp:'+String(portValue+1)]);run(['reverse','tcp:18883','tcp:'+String(portValue+2)]);}
