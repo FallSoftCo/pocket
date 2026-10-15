@@ -1,6 +1,7 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
-const profiles=[{port:19995,host:'System76',token:'synthetic-system76',device:'synthetic-device-a'},{port:19996,host:'OZZZ',token:'synthetic-ozzz',device:'synthetic-device-b'},{port:19997,host:'Phone',token:'synthetic-phone',device:'synthetic-device-phone'}];
+const qaBase=Number(process.env.PORT||19995);
+const profiles=[{port:qaBase,host:'System76',token:'synthetic-system76',device:'synthetic-device-a'},{port:qaBase+1,host:'OZZZ',token:'synthetic-ozzz',device:'synthetic-device-b'},{port:qaBase+2,host:'Phone',token:'synthetic-phone',device:'synthetic-device-phone'}];
 const sent=[],notes=[],updateChecks=[];let holdVoiceHistory=false;const voiceReads=[],voiceReturns=[];
 function event(socket,value){const b=Buffer.from(JSON.stringify(value));socket.write(Buffer.concat([b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]),b]));}
 for(const profile of profiles){

@@ -12,18 +12,19 @@ const current=()=>build.state==='complete'&&productionSourceSha(root)===build.pr
 if(!current())throw Error('Build/source qualification is stale.');
 const ownerPath=process.env.NEXTCOMP_QA_OWNER_RECEIPT,actor=process.env.NEXTCOMP_QA_OWNER;
 if(!ownerPath||!actor)throw Error('Provide the private owned-emulator receipt and actor.');
-const owner=read(ownerPath),serial='emulator-5620',sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT;
+const owner=read(ownerPath),serial=owner.serial||'emulator-5620',avdName=owner.avdName||'nextcomp_env_qa',sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT;
+if(!/^emulator-[0-9]{4,5}$/.test(serial)||!/^(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)$/.test(avdName))throw Error('An explicitly owned NextComp emulator is required.');
 if(!sdk||owner.owner!==actor||!Number.isSafeInteger(owner.emulatorPid))throw Error('Wrong QA owner or SDK.');
 const command=readFileSync('/proc/'+owner.emulatorPid+'/cmdline','utf8');
 const ticks=readFileSync('/proc/'+owner.emulatorPid+'/stat','utf8').split(') ').at(-1).split(' ')[19];
-if(owner.emulatorStartTicks!==ticks||!command.includes('nextcomp_env_qa')||!command.includes('5620'))throw Error('Owned emulator process is not current.');
+if(owner.emulatorStartTicks!==ticks||!command.split('\0').includes(avdName)||!command.split('\0').includes(serial.slice('emulator-'.length)))throw Error('Owned emulator process is not current.');
 const adb=join(sdk,'platform-tools/adb');
 const childEnv={PATH:process.env.PATH,HOME:process.env.HOME,LANG:'C.UTF-8'};
 const run=(args,timeout=120000)=>{const r=spawnSync(adb,['-s',serial,...args],{encoding:'utf8',env:childEnv,timeout,maxBuffer:4*1024*1024});if(r.status!==0)throw Error('Owned emulator command failed: '+args[0]);return r.stdout;};
-if(run(['shell','getprop','ro.boot.qemu.avd_name']).trim()!=='nextcomp_env_qa')throw Error('Wrong native target.');
+if(run(['shell','getprop','ro.boot.qemu.avd_name']).trim()!==avdName)throw Error('Wrong native target.');
 const id=sha256(Buffer.from(name)).slice(0,20),receiptPath=join(directory,'native-'+id+'.json'),log='native-'+id+'.log';
 if(existsSync(receiptPath))throw Error('Native intent already exists; observe it instead of replaying.');
-const receipt={schema:1,state:'running',case:name,actor,startedAt:Date.now(),versionCode:manifest.versionCode,productionSourceSha:build.productionSourceSha,qualificationInputSha:build.qualificationInputSha,qualificationApkSha:build.qualificationApkSha,testApkSha:build.testApkSha,avdName:'nextcomp_env_qa',serial,log};
+const receipt={schema:1,state:'running',case:name,actor,startedAt:Date.now(),versionCode:manifest.versionCode,productionSourceSha:build.productionSourceSha,qualificationInputSha:build.qualificationInputSha,qualificationApkSha:build.qualificationApkSha,testApkSha:build.testApkSha,avdName,serial,log};
 writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{flag:'wx',mode:0o600});
 const persist=()=>writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{mode:0o600});
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -31,10 +32,13 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#existingAgentDisclosureOpensIndependentSessionAndKeepsPrivateRepliesScoped'||name.startsWith('co.fallsoft.pocket.RoomNavigationNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomRoutingNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomVoiceNativeTest#');
 const environmentCase=name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
 const fixtureScript=environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
-const fixturePort=environmentCase?'19995':teamCase?'19992':'19998';
+const portKey=environmentCase?'environment':teamCase?'team':'transcript';
+const portValue=owner.fixturePorts?.[portKey]??(environmentCase?19995:teamCase?19992:19998);
+if(!Number.isSafeInteger(portValue)||portValue<1024||portValue>65532)throw Error('Invalid owned fixture port.');
+const fixturePort=String(portValue);
 const fixtureToken=teamCase?'synthetic-alpha24-only':'synthetic-system76';
 const fixtureHost=environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
-const fixtureReadyMessage=environmentCase?'Synthetic environment ready System76 19995':teamCase?'Synthetic alpha24 fixture19992':'Owned transcript fixture ready';
+const fixtureReadyMessage=environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
 const ownedFixtures=['tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
 try{
  if(owner.fixturePid&&existsSync('/proc/'+owner.fixturePid)){
@@ -47,8 +51,8 @@ try{
  const fixture=spawn(process.execPath,[fixtureScript],{cwd:root,env:{...childEnv,PORT:fixturePort,NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},stdio:['ignore',fd,fd],detached:true});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);fixture.unref();owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
  run(['reverse','tcp:18880','tcp:'+fixturePort]);
- if(name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#')){run(['reverse','tcp:18881','tcp:19996']);run(['reverse','tcp:18882','tcp:19997']);}
- else if(environmentCase){run(['reverse','tcp:18882','tcp:19996']);run(['reverse','tcp:18883','tcp:19997']);}
+ if(name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#')){run(['reverse','tcp:18881','tcp:'+String(portValue+1)]);run(['reverse','tcp:18882','tcp:'+String(portValue+2)]);}
+ else if(environmentCase){run(['reverse','tcp:18882','tcp:'+String(portValue+1)]);run(['reverse','tcp:18883','tcp:'+String(portValue+2)]);}
  const installedPackageSha=packageName=>{
   const result=spawnSync(adb,['-s',serial,'shell','pm','path',packageName],{encoding:'utf8',env:childEnv,timeout:30000});
   if(result.status!==0)return null;

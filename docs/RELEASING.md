@@ -129,3 +129,9 @@ controls which hide their destination. The review records the exact optimized
 APK, source/test fingerprints and capture digests; missing, rejected, stale or
 changed evidence blocks both the check and publication paths. This is a trusted
 operator attestation, not an automated aesthetic score or proof of handset use.
+
+Qualification may use the explicit emulator serial and AVD name in its owner
+receipt. The runner verifies the exact live emulator PID/start ticks, AVD and
+console port; physical phone identifiers are rejected. Use a dedicated owned AVD
+when a historical service owns the old test serial. Preserve its original
+receipt and processes.

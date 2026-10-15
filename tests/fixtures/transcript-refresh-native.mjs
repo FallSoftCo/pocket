@@ -148,4 +148,4 @@ const server=http.createServer(async(req,res)=>{
  res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));
 });
 server.on('upgrade',(req,socket)=>{if(rejectLive){socket.destroy();return;}if(req.headers.authorization!=='Bearer synthetic-system76'){socket.destroy();return;}socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+crypto.createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n\r\n');connections++;sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));if(!quietReconnect)send(socket,{type:'status',connected:!runtimeOffline});});
-server.listen(19998,'127.0.0.1',()=>console.log('Owned transcript fixture ready'));
+server.listen(Number(process.env.PORT||19998),'127.0.0.1',()=>console.log('Owned transcript fixture ready'));
