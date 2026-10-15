@@ -9,12 +9,13 @@ import org.json.JSONObject
 import java.util.UUID
 
 private object HollywoodAttentionIntents
+internal class HollywoodAcceptedReceiptNotSaved(val receipt:JSONObject):java.io.IOException("Accepted by Hollywood; the device receipt could not be saved. Check the original delivery.")
 
 /** Captured source profile and human binding. A pending action never follows navigation. */
 internal class HollywoodClient(val owner:String,source:JSONObject,
     private val base:String=Pocket.base.trimEnd('/'),private val token:String=Pocket.token) {
     private val identity=JSONObject(source.toString())
-    private val http=Pocket.http.newBuilder().followRedirects(false).followSslRedirects(false).build()
+    private val http=Pocket.http.newBuilder().retryOnConnectionFailure(false).followRedirects(false).followSslRedirects(false).build()
     val bindingId=identity.s("bindingId")
     val authorityId=identity.s("authorityId")
     val principalId=identity.s("principalId")
@@ -50,17 +51,28 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
         val intent=JSONObject().put("binding",JSONObject(identity.toString())).put("scope",scope.json()).put("body",body).put("state","saved")
         persist("pending:"+key(scope),intent);return intent
     }
+    fun messageReceipt(scope:HollywoodScope,operation:String)=Pocket.prefs.getString("receipt:"+key(scope)+":"+operation,null)?.let(::JSONObject)
+    private fun settleMessage(scope:HollywoodScope,intent:JSONObject,receipt:JSONObject):JSONObject {
+        val operation=intent.getJSONObject("body").s("operationId")
+        synchronized(HollywoodAttentionIntents){
+            val edit=Pocket.prefs.edit().putString("receipt:"+key(scope)+":"+operation,
+                JSONObject().put("binding",identity).put("scope",scope.json()).put("operationId",operation).put("receipt",receipt).toString())
+            if(pending(scope)?.optJSONObject("body")?.s("operationId")==operation)edit.remove("pending:"+key(scope))
+            if(!edit.commit())throw HollywoodAcceptedReceiptNotSaved(receipt)
+        }
+        return receipt
+    }
     suspend fun submit(scope:HollywoodScope,intent:JSONObject):JSONObject {
         require(hollywoodBindingMatches(identity,intent.getJSONObject("binding")))
         val receipt=call("rooms/${scope.room}/messages",intent.getJSONObject("body"))
         require(hollywoodMessageMatches(identity,scope,intent.getJSONObject("body"),receipt)){"Original message receipt is unconfirmed"}
-        persist("pending:"+key(scope),null);return receipt
+        return settleMessage(scope,intent,receipt)
     }
     suspend fun inspect(scope:HollywoodScope,intent:JSONObject):JSONObject {
         require(hollywoodBindingMatches(identity,intent.getJSONObject("binding")))
         val receipt=call("commands/"+intent.getJSONObject("body").s("operationId"))
         require(hollywoodMessageMatches(identity,scope,intent.getJSONObject("body"),receipt)){"Original message receipt is unconfirmed"}
-        persist("pending:"+key(scope),null);return receipt
+        return settleMessage(scope,intent,receipt)
     }
     private fun guidanceKey(scope:JSONObject)="guidance:"+owner+":"+bindingId+":"+scope.s("deliveryId")+":"+scope.s("nativeTurn")
     fun guidancePending(scope:JSONObject)=Pocket.prefs.getString(guidanceKey(scope),null)?.let{JSONObject(it)}

@@ -172,7 +172,18 @@ const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery
 const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);recordWork(()=>workRecord.enroll(known));attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);});
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...payload}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
-const rateLimits=new AccountRateLimits(codex,usage=>emit('rateLimits',{usage}),{observations:new CreditObservations(db,secrets.adminToken),creditAuthorization:creditContinuation});
+const rateLimits=new AccountRateLimits(nativeHollywood?nativeVoiceCodex:codex,usage=>emit('rateLimits',{usage}),{observations:new CreditObservations(db,secrets.adminToken),creditAuthorization:creditContinuation});
+if(nativeHollywood){
+  // Observe an already-connected account audio transport; quota reads never
+  // launch an agent or open audio just to refresh a number.
+  rateLimits.disconnected();
+  nativeVoiceCodex.on('connected',()=>void rateLimits.refresh({force:true}));
+  nativeVoiceCodex.on('disconnected',()=>rateLimits.disconnected());
+  nativeVoiceCodex.on('event',m=>{
+    if(m.method==='account/rateLimits/updated')rateLimits.liveUpdate(m.params);
+    if(m.method==='account/updated'){rateLimits.clear();void rateLimits.refresh({force:true});}
+  });
+}
 setInterval(()=>{if(!nativeHollywood&&sockets.clients.size)void rateLimits.refresh();},60000).unref();
 const safeEqual=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const getToken=req=>(req.headers.authorization||'').replace(/^Bearer /,'');
@@ -452,9 +463,9 @@ app.use('/api',(req,res,next)=>{
   const safe=req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
     req.method==='DELETE'&&/^\/devices\/[0-9a-f-]{36}$/.test(req.path);
   if(!safe)return res.status(403).json({error:'Use the original Hollywood room and identity for this environment.',code:'HOLLYWOOD_NATIVE_ROUTE_REQUIRED'});
-  if(req.path==='/status')return void hollywood.status(req.device.id).then(status=>res.json({connected:status.available,backend:'lax',binding:status,
+  if(req.path==='/status'){void rateLimits.refresh();return void hollywood.status(req.device.id).then(status=>res.json({connected:status.available,backend:'lax',binding:status,usage:rateLimits.snapshot(),
     host:hostName,local:localMode,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,
-    push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}})).catch(next);
+    push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}})).catch(next);}
   next();
 });
 

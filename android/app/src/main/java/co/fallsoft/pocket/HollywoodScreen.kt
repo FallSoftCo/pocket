@@ -15,21 +15,24 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import org.json.JSONObject
 
 /** Native Hollywood conversation; existing session surfaces, canonical room identities. */
-@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class,ExperimentalLayoutApi::class)
 @Composable internal fun HollywoodScreen(owner:String,binding:JSONObject,onSettings:()->Unit){
     val client=remember(owner,binding.s("bindingId")){HollywoodClient(owner,binding)}
     val jobs=rememberCoroutineScope()
     var room by remember(client.bindingId){mutableStateOf(Pocket.prefs.getString("hollywood-room:$owner:${client.bindingId}",client.defaultRoomId)?:client.defaultRoomId)}
     var browsing by remember(client.bindingId){mutableStateOf(false)}
     var rooms by remember(client.bindingId){mutableStateOf(emptyList<JSONObject>())}
-    var detail by remember(client.bindingId,room){mutableStateOf(JSONObject())}
-    var events by remember(client.bindingId,room){mutableStateOf(emptyList<JSONObject>())}
-    var attention by remember(client.bindingId,room){mutableStateOf(emptyList<JSONObject>())}
-    var cursor by remember(client.bindingId,room){mutableStateOf<Long?>(null)}
-    var older by remember(client.bindingId,room){mutableStateOf<Long?>(null)}
+    var headRefreshRevision by remember(client.bindingId){mutableIntStateOf(0)}
+    val feeds=remember(client.bindingId){mutableMapOf<String,HollywoodRoomFeed>()}
+    val feed=feeds.getOrPut(room){HollywoodRoomFeed(room){path->client.call(path)}}
+    val detail=feed.detail
+    val events=feed.events
+    val attention=feed.attention
+    val older=feed.older
     var recipient by remember(client.bindingId,room){mutableStateOf("")}
     var direct by remember(client.bindingId,room){mutableStateOf(false)}
     var source by remember(client.bindingId,room){mutableStateOf<String?>(null)}
@@ -46,45 +49,67 @@ import org.json.JSONObject
     val destination=recipient.ifBlank{detail.optJSONObject("room")?.s("owner").orEmpty()}
     val scope=if(hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source,if(postOnly)"message" else "request")else null
     val currentScope by rememberUpdatedState(scope)
-    var input by remember(scope){mutableStateOf(TextFieldValue(scope?.let(client::draft).orEmpty()))}
+    val inputState=remember(scope){mutableStateOf(TextFieldValue(scope?.let(client::draft).orEmpty()))}
+    var input by inputState
+    val hasDraft by remember(inputState){derivedStateOf{inputState.value.text.isNotBlank()}}
     var pending by remember(scope){mutableStateOf(scope?.let(client::pending))}
     val list=rememberLazyListState()
     var following by remember(client.bindingId,room,direct,recipient){mutableStateOf(true)}
     val actors=detail.optJSONArray("actors")?.objects().orEmpty()
     val agentNames=actors.associate{it.s("id") to it.s("name")}
-    val visible=events.filter{!direct||it.s("audience")=="direct"&&setOf(it.s("author"),it.s("recipient"))==setOf(client.principalId,destination)}
-        .map{JSONObject(it.toString()).put("isSelf",it.s("author")==client.principalId).put("authorName",if(it.s("author")==client.principalId)"You" else agentNames[it.s("author")]?:it.s("author"))}
+    val visible=remember(events,direct,destination,client.principalId,agentNames){events.filter{!direct||it.s("audience")=="direct"&&setOf(it.s("author"),it.s("recipient"))==setOf(client.principalId,destination)}
+        .map{JSONObject(it.toString()).put("isSelf",it.s("author")==client.principalId).put("authorName",if(it.s("author")==client.principalId)"You" else agentNames[it.s("author")]?:it.s("author"))}}
     val transcript=remember(visible,expanded){commandRunProjection(roomTranscriptRows(visible,"hollywood:$owner:${client.bindingId}:$room"),expanded)}
     LaunchedEffect(list){snapshotFlow{list.isScrollInProgress to list.canScrollForward}.collect{(scrolling,forward)->if(scrolling)following=!forward}}
-    LaunchedEffect(transcript.rows.size,room){if(following&&transcript.rows.isNotEmpty())list.scrollToItem(transcript.rows.lastIndex+if(older!=null)1 else 0)}
+    val latestContent=transcript.rows.lastOrNull()?.let{listOf(it.s("id"),it.s("text"),it.s("status"))}
+    LaunchedEffect(latestContent,transcript.rows.size,room){if(following&&transcript.rows.isNotEmpty()){
+        withFrameNanos{};if(list.layoutInfo.totalItemsCount>0)list.scrollToItem(list.layoutInfo.totalItemsCount-1)
+    }}
     suspend fun refresh(selected:String){
-        val catalog=client.call("rooms").getJSONArray("rooms").objects()
-        val metadata=client.call("rooms/$selected")
-        val previous=cursor
-        var page=client.call("rooms/$selected/history?"+(previous?.let{"after=$it"}?:"before=9007199254740991")+"&limit=100")
-        val batch=page.getJSONArray("events").objects().toMutableList()
-        var next=page.getLong("nextCursor")
-        if(previous!=null){
-            repeat(4){if(page.getJSONArray("events").length()==100){page=client.call("rooms/$selected/history?after=$next&limit=100");batch+=page.getJSONArray("events").objects();next=page.getLong("nextCursor")}}
-        }
-        val requests=client.call("rooms/$selected/attention?after=0&limit=100").getJSONArray("attention").objects()
-        if(room!=selected)return
-        rooms=catalog;detail=metadata;events=(events+batch).associateBy{it.s("id")}.values.sortedBy{it.optLong("seq")};cursor=next
-        if(previous==null)older=page.takeUnless{it.isNull("olderCursor")}?.optLong("olderCursor")
-        attention=requests;error=""
+        if(room!=selected||feed.room!=selected)return
+        coroutineScope{launch{feed.refreshHistory()};launch{feed.refreshDetail()};launch{feed.refreshAttention()}}
     }
-    LaunchedEffect(client.bindingId,room){
-        while(isActive){try{refresh(room)}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()};delay(3000)}
+    LaunchedEffect(feed,headRefreshRevision,PocketLive.connectionRevision){
+        // Each read lane publishes independently. A status/attention outage must
+        // never hold back successfully fetched messages or their live cursor.
+        coroutineScope{
+            launch{feed.refreshHistory(preferTail=true);while(isActive){delay(3000);feed.refreshHistory()}}
+            launch{while(isActive){
+                snapshotFlow{feed.catchingUp}.first{it}
+                repeat(4){if(feed.catchingUp)feed.fillGapPage()}
+                delay(750)
+            }}
+            launch{while(isActive){feed.refreshDetail();delay(3000)}}
+            launch{while(isActive){feed.refreshAttention();delay(5000)}}
+        }
+    }
+    LaunchedEffect(client.bindingId){
+        while(isActive){try{rooms=client.call("rooms").getJSONArray("rooms").objects()}catch(e:CancellationException){throw e}catch(_:Exception){};delay(15000)}
+    }
+    LaunchedEffect(feed,list){
+        snapshotFlow{Triple(list.isScrollInProgress,list.firstVisibleItemIndex,following)}.collect{(scrolling,index,follow)->
+            if(scrolling&&!follow&&index<3&&!feed.loading&&!feed.loadingOlder&&feed.older!=null)feed.loadOlder()
+        }
     }
     fun choose(value:String){room=value;recipient="";direct=false;source=null;browsing=false;Pocket.prefs.edit().putString("hollywood-room:$owner:${client.bindingId}",value).apply()}
     fun send(inspect:Boolean=false){
         val captured=scope?:return;if(busy)return
         val intent=pending?:runCatching{client.capture(captured,input.text)}.getOrElse{error=it.message.orEmpty();return}
         pending=intent;busy=true
-        jobs.launch{try{
-            if(inspect)client.inspect(captured,intent)else client.submit(captured,intent)
-            if(currentScope==captured){pending=null;if(input.text==intent.getJSONObject("body").s("body")){input=TextFieldValue();client.saveDraft(captured,"")};notice="Accepted by Hollywood";refresh(captured.room)}
-        }catch(e:Exception){if(e is CancellationException)throw e;if(currentScope==captured)error="Delivery remains saved. ${e.message.orEmpty()}"}finally{if(currentScope==captured)busy=false}}
+        jobs.launch{
+            var accepted=false
+            try{
+                if(inspect)client.inspect(captured,intent)else client.submit(captured,intent)
+                accepted=true
+                if(currentScope==captured){pending=null;if(input.text==intent.getJSONObject("body").s("body")){input=TextFieldValue();client.saveDraft(captured,"")};notice="Accepted by Hollywood";error=""}
+            }catch(e:CancellationException){throw e}
+            catch(e:HollywoodAcceptedReceiptNotSaved){if(currentScope==captured){notice="Accepted by Hollywood";error=e.message.orEmpty()}}
+            catch(e:Exception){if(currentScope==captured)error="Delivery remains saved. ${e.message.orEmpty()}"}
+            finally{if(currentScope==captured)busy=false}
+            // A validated send receipt is final for transport, even if the next
+            // history/status read fails. Never relabel it unknown or submit again.
+            if(accepted&&currentScope==captured)refresh(captured.room)
+        }
     }
     val requested=HollywoodNotifications.target
     LaunchedEffect(client.bindingId,requested){
@@ -92,10 +117,20 @@ import org.json.JSONObject
             choose(target.room)
             target.reply?.let{reply->recipient=reply.recipient;direct=reply.audience=="direct";source=reply.sourceEvent;postOnly=reply.kind=="message"}
             inspecting=target.attention
+            headRefreshRevision++
             HollywoodNotifications.consumed(target)
         }
     }
-    BackHandler(enabled=browsing){browsing=false}
+    if(!browsing)ConversationBack(hideKeyboard=!menu&&guidance==null&&guidanceReceipt==null&&inspecting==null&&!workflow){
+        when{
+            menu->menu=false
+            guidance!=null->guidance=null
+            guidanceReceipt!=null->guidanceReceipt=null
+            inspecting!=null->inspecting=null
+            workflow->workflow=false
+            else->browsing=true
+        }
+    }
     if(browsing){
         Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
             WorkCatalogList(Modifier.weight(1f),reverseLayout=false){
@@ -111,13 +146,22 @@ import org.json.JSONObject
     }
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-            Text(detail.optJSONObject("room")?.s("name").orEmpty(),style=MaterialTheme.typography.titleMedium)
+            TextButton({menu=true},Modifier.weight(1f).testTag("native-room-address")){
+                val address=detail.optJSONObject("room")?.s("name").orEmpty()+" · "+(if(direct)"Private " else "")+(if(postOnly)"Message" else "Request")+" → "+(agentNames[destination]?:"Choose recipient")
+                Text(address,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
             TextButton({workflow=true},modifier=Modifier.testTag("native-room-work")){BilingualLabel("Goals & work")}
         }
         if(error.isNotBlank())Text(error,color=Coral)
+        if(feed.historyError.isNotBlank())Text("Messages need refreshing · "+feed.historyError,color=Coral,modifier=Modifier.testTag("native-room-read-error"))
+        if(feed.loading&&events.isEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().testTag("native-room-loading"))
         if(notice.isNotBlank())Text(notice,color=Muted)
+        if(feed.catchingUp)Text("Loading missed messages…",color=Muted,modifier=Modifier.testTag("native-room-gap"))
         LazyColumn(Modifier.weight(1f).testTag("native-room-history"),state=list,verticalArrangement=Arrangement.spacedBy(10.dp)){
-            older?.let{before->item{TextButton({following=false;val selected=room;jobs.launch{try{val page=client.call("rooms/$selected/history?before=$before&limit=100");if(room==selected){events=(page.getJSONArray("events").objects()+events).associateBy{it.s("id")}.values.sortedBy{it.optLong("seq")};older=page.takeUnless{it.isNull("olderCursor")}?.optLong("olderCursor")}}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}}){BilingualLabel("Earlier messages")}}}
+            if(older!=null)item(key="room-history-edge"){
+                if(feed.loadingOlder)Text("Loading earlier messages…",color=Muted)
+                else TextButton({following=false;jobs.launch{feed.loadOlder()}}){BilingualLabel("Earlier messages")}
+            }
             itemsIndexed(transcript.rows,key={_,row->row.s("id")}){index,row->
                 Column(verticalArrangement=Arrangement.spacedBy(7.dp)){
                     if(roomAuthorStartsBlock(transcript.rows,index))Text(row.s("roomAuthor"),color=Mint,style=MaterialTheme.typography.labelMedium)
@@ -146,11 +190,13 @@ import org.json.JSONObject
                 }
             }
         }
-        val active=detail.optJSONArray("deliveries")?.objects().orEmpty()
+        val active=detail.optJSONArray("deliveries")?.objects().orEmpty().sortedBy{when(it.s("state")){"running"->0;"claimed"->1;"pending"->2;else->3}}
+        if(feed.detailError.isNotBlank())Text("Work status unavailable · "+feed.detailError,color=Muted)
+        else if(!feed.loading&&detail.has("room")&&active.isEmpty())Text("Idle in this room",color=Muted,modifier=Modifier.testTag("native-room-idle"))
         if(active.isNotEmpty())Column(Modifier.heightIn(max=120.dp).verticalScroll(rememberScrollState())){
             active.forEach{delivery->
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                    Text((agentNames[delivery.s("agent")]?:"Agent")+" · "+delivery.s("state"),modifier=Modifier.weight(1f),color=Muted)
+                    Text((agentNames[delivery.s("agent")]?:"Agent")+" · "+roomDeliveryLabel(delivery),modifier=Modifier.weight(1f),color=if(delivery.s("state")=="running")Mint else Muted)
                     if(delivery.optBoolean("can_steer"))TextButton({guidance=delivery.getJSONObject("control_scope")},modifier=Modifier.testTag("native-guide:"+delivery.s("id"))){BilingualLabel("Guide")}
                     if(delivery.optBoolean("can_cancel"))TextButton({
                         val selected=room;jobs.launch{try{
@@ -158,15 +204,17 @@ import org.json.JSONObject
                             if(room==selected)notice="Stop requested"
                             refresh(selected)
                         }catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}
-                    }){BilingualLabel("Stop")}
+                    },Modifier.testTag("native-stop:"+delivery.s("id"))){BilingualLabel("Stop")}
                 }
             }
         }
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
         ConversationComposerRow{
-            ConversationDraftField(input,{input=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f),enabled=!busy,
-                onSend={if(pending==null&&input.text.isNotBlank())send()},placeholder={BilingualLabel("Message…",centered=false)})
-            ConversationSendButton(input.text.isNotBlank(),scope!=null&&!busy&&pending==null&&input.text.isNotBlank()&&
+            RoomDraftComposerScope{
+            ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f),enabled=!busy,
+                onSend={if(pending==null&&inputState.value.text.isNotBlank())send()},placeholder={BilingualLabel("Message…",centered=false)})
+            }
+            ConversationSendButton(hasDraft,scope!=null&&!busy&&pending==null&&hasDraft&&
                 detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true,busy,"Send message"){send()}
         }
         if(binding.optBoolean("voice")&&scope!=null&&!postOnly&&detail.optJSONObject("permissions")?.optBoolean("can_request")==true){
@@ -175,20 +223,29 @@ import org.json.JSONObject
                 .apply{scope.sourceEvent?.let{put("sourceEventId",it)}}
             VoiceLaunchButton(modifier=Modifier.fillMaxWidth(),bar=true,roomDestination=voiceDestination)
         }
-        ConversationActionsMenu(menu,{menu=it},statusLabel="Room"){
-            TextButton({menu=false;browsing=true}){BilingualLabel("Rooms")}
+        FlowRow(Modifier.fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.SpaceEvenly){
+        InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
+        ConversationActionsMenu(menu,{menu=it},statusLabel=if(feed.detailError.isNotBlank())"Status unavailable" else if(detail.optJSONArray("deliveries")?.objects().orEmpty().any{it.s("state")=="running"})"Running" else "Room"){
+            AccountUsageDetails()
+            TextButton({menu=false;browsing=true},Modifier.testTag("native-room-catalog")){BilingualLabel("Rooms")}
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             ProfileSwitcher{menu=false}
             client.savedGuidanceScopes(room).forEach{saved->
                 TextButton({guidance=saved;menu=false},modifier=Modifier.testTag("native-guidance-saved:"+saved.s("deliveryId")+":"+saved.s("nativeTurn"))){Text("Saved guidance · "+(client.guidancePending(saved)?.s("state")?:"draft"))}
             }
 
-            Row{TextButton({recipient="";source=null;direct=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null});BilingualLabel("Private")}
-            actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";menu=false}){Text(actor.s("name"))}}
-            Row{Checkbox(postOnly,{postOnly=it});BilingualLabel("Post without requesting work")}
+            Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
+            actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";menu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(actor.s("name"))}}
+            Row{Checkbox(postOnly,{postOnly=it},Modifier.testTag("native-post-only"));BilingualLabel("Post without requesting work")}
             if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}
             scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->TextButton({recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";menu=false}){BilingualLabel("Saved message",centered=false);Text(" · "+(agentNames[saved.recipient]?:saved.recipient))}}}
         }
+        if(!following||list.canScrollForward)TextButton({following=true;jobs.launch{feed.refreshHistory(preferTail=true);withFrameNanos{};if(list.layoutInfo.totalItemsCount>0)list.scrollToItem(list.layoutInfo.totalItemsCount-1)}},Modifier.heightIn(min=48.dp).testTag("native-room-latest")){BilingualLabel("Latest")}
+        ReaderPagingButtons(list,hasEarlier=feed.older!=null,onPrepare={up->
+            following=false
+            if(up&&!list.canScrollBackward)feed.loadOlder()
+        },onSettled={up,done->if(done&&!up&&!list.canScrollForward)following=true},onError={error=it.message.orEmpty()})
+    }
     }
     guidance?.let{target->
         val accepts=detail.optJSONArray("deliveries")?.objects().orEmpty().any{it.optBoolean("can_steer")&&it.optJSONObject("control_scope")?.let{scope->hollywoodJsonEqual(scope,target)}==true}
@@ -293,4 +350,22 @@ import org.json.JSONObject
         }
     },confirmButton={TextButton({send(false)},enabled=!busy&&canCreate&&text.isNotBlank(),modifier=Modifier.semantics{testTagsAsResourceId=true}.testTag("native-guidance-send")){BilingualLabel("Send guidance")}},
         dismissButton={TextButton(dismiss,enabled=!busy){BilingualLabel("Close")}})
+}
+
+@Composable private fun RoomDraftComposerScope(content:@Composable ()->Unit){content()}
+
+internal fun roomDeliveryLabel(delivery:JSONObject):String {
+    val state=when(delivery.s("state")){
+        "pending"->"Queued"
+        "claimed"->"Starting"
+        "running"->if(delivery.optBoolean("cancellation_requested"))"Stop requested" else "Running"
+        "blocked"->"Blocked"
+        "unknown"->"Outcome unknown"
+        "completed"->"Execution completed"
+        "failed"->"Failed"
+        "cancelled"->"Stopped"
+        else->"Status unavailable"
+    }
+    val reason=delivery.s("reason",delivery.s("error")).take(180)
+    return state+if(reason.isNotBlank())" · $reason" else ""
 }

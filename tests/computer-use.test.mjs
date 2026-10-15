@@ -2,19 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {COMPUTER_USE_INSTRUCTIONS,newThreadComputerUseOptions,computerUseStatus} from '../server/computer-use.mjs';
 
-test('computer-use instructions append existing app instructions and scope ownership to actions',()=>{
+test('new browser guidance preserves other instructions and uses the single managed entry',()=>{
   const result=newThreadComputerUseOptions('Existing voice policy');
   assert.equal(result.developerInstructions,'Existing voice policy\n\n'+COMPUTER_USE_INSTRUCTIONS);
-  assert.match(result.developerInstructions,/withLease/);
-  assert.match(result.developerInstructions,/withAction/);
-  assert.match(result.developerInstructions,/COMPUTER_USE_DESKTOP_RESOURCE/);
-  assert.match(result.developerInstructions,/COMPUTER_USE_BROWSER_PROFILE_RESOURCE plus :page:<target>/);
-  assert.match(result.developerInstructions,/worker.env/);
-  assert.match(result.developerInstructions,/COMPUTER_USE_CLIENT_PATH/);
-  assert.match(result.developerInstructions,/\$HOME\/.config/);
-  assert.match(result.developerInstructions,/Never guess resource aliases/);
-  assert.match(result.developerInstructions,/capped at 30 seconds/);
-  assert.match(result.developerInstructions,/not automatically fenced/);
+  for(const tool of ['browser_discover','browser_command','browser_status','browser_control'])assert.ok(result.developerInstructions.includes(tool));
+  assert.match(COMPUTER_USE_INSTRUCTIONS,/Never add an outer manual lease/);
+  assert.match(COMPUTER_USE_INSTRUCTIONS,/Existing accepted legacy tickets/);
+  assert.match(COMPUTER_USE_INSTRUCTIONS,/BLD retains/);
+  assert.doesNotMatch(COMPUTER_USE_INSTRUCTIONS,/client\.withLease|COMPUTER_USE_BROKER_TOKEN|worker\.env/);
 });
 test('unconfigured broker does not make a request; unavailable status cannot disclose secrets',async()=>{
   let calls=0;

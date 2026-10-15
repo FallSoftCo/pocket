@@ -46,6 +46,11 @@ import java.util.Locale
     TextButton({onNavigate();PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask();if(Pocket.tab==1){Pocket.requestSessionOrder();Pocket.tab=0}else Pocket.tab=1}){BilingualLabel(if(Pocket.tab==1)"Work" else "Settings")}
     PocketUpdateControl()
     TextButton({onNavigate();context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}
+    AccountUsageDetails()
+}
+
+/** Account facts only; each backend retains its own navigation and controls. */
+@Composable internal fun AccountUsageDetails(){
     val usage=Pocket.weeklyUsage
     val now=System.currentTimeMillis()
     Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)

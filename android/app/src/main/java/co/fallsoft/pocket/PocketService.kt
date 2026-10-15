@@ -95,6 +95,7 @@ object PocketNotifications {
 
 /** Live conversation events only; Firebase handles notifications while the app is closed. */
 object PocketLive {
+    var connectionRevision by androidx.compose.runtime.mutableIntStateOf(0);private set
     var outageVisible by androidx.compose.runtime.mutableStateOf(false);private set
     private val client=Pocket.http.newBuilder().pingInterval(25,TimeUnit.SECONDS).readTimeout(0,TimeUnit.SECONDS).build()
     private var ws:WebSocket?=null
