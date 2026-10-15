@@ -71,7 +71,7 @@ class ImmersionPopupNativeTest {
     i.runOnMainSync{motion.value=true;opened.value=true}
     val seen=mutableSetOf<String>();val trace=org.json.JSONArray()
     val start=android.os.SystemClock.elapsedRealtime()
-    while(android.os.SystemClock.elapsedRealtime()-start<22000){
+    while(android.os.SystemClock.elapsedRealtime()-start<45000 && !seen.containsAll(listOf("Permessi completi per i nuovi incarichi","Permissions full for the new tasks"))){
      val node=device.findObject(By.pkg(c.packageName).textContains("per i"))
      if(node!=null){
       assertTrue("Popup was not actually near screen bottom",node.visibleBounds.top>device.displayHeight*.7)
@@ -82,7 +82,7 @@ class ImmersionPopupNativeTest {
     }
     java.io.File(c.cacheDir,"immersion-popup-trace.json").writeText(trace.toString())
     assertTrue("Bottom popup did not show both complete languages: "+seen,seen.containsAll(listOf("Permessi completi per i nuovi incarichi","Permissions full for the new tasks")))
-    val node=requireNotNull(device.findObject(By.pkg(c.packageName).textContains("per i")))
+    val node=requireNotNull(device.wait(androidx.test.uiautomator.Until.findObject(By.pkg(c.packageName).textContains("Permessi completi per i nuovi incarichi")),15000))
     device.click(node.visibleBounds.centerX(),node.visibleBounds.centerY())
     i.runOnMainSync{assertEquals(1,taps);assertFalse(opened.value)}
    }

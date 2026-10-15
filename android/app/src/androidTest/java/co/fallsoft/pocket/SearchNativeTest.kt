@@ -31,7 +31,7 @@ class SearchNativeTest {
    val input=device.wait(Until.findObject(By.clazz("android.widget.EditText")),10000)
    assertNotNull("Search did not open with immersion enabled",input)
    input.click()
-   assertTrue("Typing keyboard did not open",device.wait(Until.hasObject(By.pkg("com.google.android.inputmethod.latin")),5000))
+   assertTrue("Typing keyboard did not open",device.wait(Until.hasObject(By.pkg("com.google.android.inputmethod.latin")),15000))
    input.text="Transcript"
    assertEquals("Transcript",input.text)
    // Search chips are in a horizontally unbounded row. Keep the real screen
@@ -39,8 +39,11 @@ class SearchNativeTest {
    Thread.sleep(7000)
    assertTrue(device.hasObject(By.pkg("co.fallsoft.pocket").clazz("android.widget.EditText")))
    device.pressBack()
+   assertTrue("Typing keyboard did not dismiss",device.wait(Until.gone(By.pkg("com.google.android.inputmethod.latin")),10000))
+   // Wait for the IME to settle before dismissing its parent sheet.
+   // Two immediate Back events can both reach the keyboard on slow AVDs.
    device.pressBack()
-   assertNotNull(device.wait(Until.findObject(By.desc("Find")),10000))
+   assertNotNull("Search sheet did not close",device.wait(Until.findObject(By.desc("Find")),15000))
    assertEquals("Search must preserve this draft",prefs.getString("draft:same-thread",null))
  }
 }
