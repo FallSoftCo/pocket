@@ -17,6 +17,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import org.json.JSONObject
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 
 /** Native Hollywood conversation; existing session surfaces, canonical room identities. */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class,ExperimentalLayoutApi::class)
@@ -25,8 +27,9 @@ import org.json.JSONObject
     val jobs=rememberCoroutineScope()
     var room by remember(client.bindingId){mutableStateOf(Pocket.prefs.getString("hollywood-room:$owner:${client.bindingId}",client.defaultRoomId)?:client.defaultRoomId)}
     var browsing by remember(client.bindingId){mutableStateOf(false)}
-    var rooms by remember(client.bindingId){mutableStateOf(emptyList<JSONObject>())}
-    var catalogAvailable by remember(client.bindingId){mutableStateOf(false)}
+    val catalog=remember(client){HollywoodRoomCatalog{client.call("rooms")}}
+    val rooms=catalog.rooms
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     var headRefreshRevision by remember(client.bindingId){mutableIntStateOf(0)}
     val feeds=remember(client.bindingId){mutableMapOf<String,HollywoodRoomFeed>()}
     val feed=feeds.getOrPut(room){HollywoodRoomFeed(room){path->client.call(path)}}
@@ -73,7 +76,9 @@ import org.json.JSONObject
         if(room!=selected||feed.room!=selected)return
         coroutineScope{launch{feed.refreshHistory()};launch{feed.refreshDetail()};launch{feed.refreshAttention()}}
     }
-    LaunchedEffect(feed,headRefreshRevision,PocketLive.connectionRevision){
+    LaunchedEffect(feed,headRefreshRevision,PocketLive.connectionRevision,browsing,lifecycle){
+        if(browsing)return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
         // Each read lane publishes independently. A status/attention outage must
         // never hold back successfully fetched messages or their live cursor.
         coroutineScope{
@@ -86,9 +91,10 @@ import org.json.JSONObject
             launch{while(isActive){feed.refreshDetail();delay(3000)}}
             launch{while(isActive){feed.refreshAttention();delay(5000)}}
         }
+        }
     }
-    LaunchedEffect(client.bindingId,browsing,PocketLive.connectionRevision){
-        while(isActive){try{rooms=client.call("rooms").getJSONArray("rooms").objects();catalogAvailable=true}catch(e:CancellationException){throw e}catch(_:Exception){catalogAvailable=false};delay(15000)}
+    LaunchedEffect(catalog,browsing,PocketLive.connectionRevision,lifecycle){
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){while(isActive){catalog.refresh();delay(15000)}}
     }
     LaunchedEffect(feed,list){
         snapshotFlow{Triple(list.isScrollInProgress,list.firstVisibleItemIndex,following)}.collect{(scrolling,index,follow)->
@@ -138,10 +144,16 @@ import org.json.JSONObject
     }
     if(browsing){
         Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
+            if(catalog.loading&&rooms.isEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().testTag("native-room-catalog-loading"))
+            if(!catalog.available&&!catalog.loading){
+                BilingualLabel("Rooms could not refresh",Modifier.padding(horizontal=16.dp),color=Coral)
+                TextButton({jobs.launch{catalog.refresh()}},Modifier.testTag("native-room-catalog-retry")){BilingualLabel("Retry")}
+            }
+            if(catalog.available&&rooms.isEmpty())BilingualLabel("No rooms available",Modifier.padding(16.dp),color=Muted)
             WorkCatalogList(Modifier.weight(1f),reverseLayout=false){
                 val ordered=rooms.sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
                 items(ordered,key={it.s("id")}){item->
-                    HollywoodRoomCard(item,catalogAvailable){choose(item.s("id"))}
+                    HollywoodRoomCard(item,catalog.available){choose(item.s("id"))}
                 }
             }
             Row(Modifier.padding(16.dp)){TextButton({browsing=false}){BilingualLabel("Back")};ProfileSwitcher{};TextButton(onSettings){BilingualLabel("Settings")}}

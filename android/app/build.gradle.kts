@@ -4,7 +4,7 @@ android {
     compileSdk = 36
     testBuildType = "qualification"
     defaultConfig { applicationId = "co.fallsoft.pocket"; minSdk = 28; targetSdk = 36; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 120; versionName = "0.5.0-alpha.102" }
+        versionCode = 121; versionName = "0.5.0-alpha.103" }
     signingConfigs {
         if (System.getenv("POCKET_SIGNING_STORE") != null) {
             create("release") {
