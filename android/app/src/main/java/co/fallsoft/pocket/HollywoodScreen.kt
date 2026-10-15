@@ -64,9 +64,10 @@ import org.json.JSONObject
     }}
     LaunchedEffect(list){snapshotFlow{list.isScrollInProgress to list.canScrollForward}.collect{(scrolling,forward)->if(scrolling)following=!forward}}
     val latestContent=transcript.rows.lastOrNull()?.let{listOf(it.s("id"),it.s("text"),it.s("status"))}
-    LaunchedEffect(latestContent,transcript.rows.size,room){if(following&&transcript.rows.isNotEmpty()){
+    LaunchedEffect(latestContent,transcript.rows.size,room,browsing){if(!browsing&&following&&transcript.rows.isNotEmpty()){
         withFrameNanos{};if(list.layoutInfo.totalItemsCount>0)list.scrollToItem(list.layoutInfo.totalItemsCount-1)
     }}
+    LaunchedEffect(list,browsing,room){if(!browsing)snapshotFlow{list.layoutInfo.totalItemsCount to list.layoutInfo.viewportEndOffset}.collect{(count,_)->if(following&&count>0)list.scrollToItem(count-1)}}
     suspend fun refresh(selected:String){
         if(room!=selected||feed.room!=selected)return
         coroutineScope{launch{feed.refreshHistory()};launch{feed.refreshDetail()};launch{feed.refreshAttention()}}
@@ -93,7 +94,7 @@ import org.json.JSONObject
             if(scrolling&&!follow&&index<3&&!feed.loading&&!feed.loadingOlder&&feed.older!=null)feed.loadOlder()
         }
     }
-    fun choose(value:String){room=value;recipient="";direct=false;source=null;browsing=false;Pocket.prefs.edit().putString("hollywood-room:$owner:${client.bindingId}",value).apply()}
+    fun choose(value:String){following=true;room=value;recipient="";direct=false;source=null;browsing=false;Pocket.prefs.edit().putString("hollywood-room:$owner:${client.bindingId}",value).apply()}
     fun send(inspect:Boolean=false){
         val captured=scope?:return;if(busy)return
         val intent=pending?:runCatching{client.capture(captured,input.text)}.getOrElse{error=it.message.orEmpty();return}

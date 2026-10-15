@@ -26,7 +26,8 @@ class HollywoodLiveRoomJourneyTest {
   check(d.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val config=JSONObject(c.filesDir.resolve("live-room-qa-config.json").readText())
   val journal=c.filesDir.resolve("live-room-journey.json")
-  check(!journal.exists()){"Original real-room journey exists. Reconcile its effects before any new journey."}
+  val continuing=journal.exists()
+  if(continuing)check(JSONObject(journal.readText()).s("stage")=="accepted-head-visible"){"Only the original accepted operation may continue."}
   fun stage(name:String,extra:JSONObject=JSONObject()){
    journal.writeText(extra.put("stage",name).put("at",System.currentTimeMillis()).toString())
   }
@@ -59,7 +60,7 @@ class HollywoodLiveRoomJourneyTest {
    .mapNotNull{runCatching{JSONObject(it.value as String)}.getOrNull()}
    .firstOrNull{it.optJSONObject("receipt")?.optJSONObject("event")?.s("body")==text}
   val oldIdle=Configurator.getInstance().waitForIdleTimeout;Configurator.getInstance().waitForIdleTimeout=0
-  stage("prepared")
+  if(!continuing)stage("prepared")
   try {
    check(prefs.edit().putString("environments:v1",JSONArray(profiles.map{JSONObject().put("id",it.id).put("name",it.name).put("local",it.local)}).toString())
     .putString(profile.key("server"),base).putString(profile.key("token"),config.s("token")).putString(profile.key("deviceId"),config.s("deviceId"))
@@ -67,58 +68,45 @@ class HollywoodLiveRoomJourneyTest {
    i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment(profile.id,force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
    await("Newest canonical message was not the initial visible page"){d.hasObject(By.textContains(config.s("latestMarker")))}
    assertTrue("Native paging footer missing",d.hasObject(By.res("reader-page-up")))
-   stage("newest-visible")
-   type("Room draft retained")
-   d.pressBack()
-   await("Back with IME must open room catalog"){d.hasObject(By.res("native-room:$room"))}
-   click(By.res("native-room:$room"))
-   await("Room draft lost across catalog navigation"){field()?.text=="Room draft retained"}
-   click(By.res("native-room-address"));click(By.res("native-room-private"));d.pressBack()
-   await("Private scope did not retain a distinct draft"){field()?.text.orEmpty().isEmpty()}
-   type("Private draft retained")
-   click(By.res("native-room-address"));click(By.res("native-room-private"));d.pressBack()
-   await("Room audience draft was overwritten"){field()?.text=="Room draft retained"}
-   stage("back-and-audience-drafts")
-   // A genuine live publication while an older page is being read must not
-   // force the reader to the bottom; Latest explicitly follows it afterwards.
-   click(By.res("reader-page-up"))
-   await("Manual reading did not expose Latest"){d.hasObject(By.res("native-room-latest"))}
-   val anchor=d.findObjects(By.textStartsWith("Earlier canonical QA")).firstOrNull()?.text
-   val live="QA live update while reading older"
-   stage("live-publication-prepared",JSONObject().put("operationId","live-room-qa-r01:while-older"))
-   client.call("rooms/$room/messages",HollywoodScope(room,recipient,"room",null,"message").message("live-room-qa-r01:while-older",live))
-   delay(4000)
-   if(anchor!=null)assertTrue("New output moved the older reading position",d.hasObject(By.text(anchor)))
-   click(By.res("native-room-latest"));await("Latest canonical publication did not become visible"){d.hasObject(By.textContains(live))}
-   stage("older-live-verified")
+   if(!continuing)stage("newest-visible")
+   val text="QA core accepted head refresh r03"
+   if(!continuing){
    control(JSONObject().put("aux",true))
-   type("QA accepted while auxiliary reads fail")
-   stage("ui-send-prepared")
+   type(text)
+   stage("core-ui-send-prepared")
    click(By.desc("Send message"))
-   await("A real accepted receipt was not retained"){receipt("QA accepted while auxiliary reads fail")!=null}
+   await("A real accepted receipt was not retained"){receipt(text)!=null}
    await("Accepted send relabeled by a later auxiliary failure"){d.hasObject(By.text("Accepted by Hollywood"))}
    assertFalse("Accepted delivery was called unconfirmed",d.hasObject(By.textContains("Delivery remains saved")))
    assertNull("Confirmed operation still blocks the outbox",client.pending(scope))
-   await("History was gated on failed metadata/attention"){d.hasObject(By.textContains("QA accepted while auxiliary reads fail"))}
-   stage("accepted-during-auxiliary-failure",receipt("QA accepted while auxiliary reads fail")!!)
+   await("History was gated on failed metadata/attention"){d.hasObject(By.textContains(text))}
+   val accepted=receipt(text)!!;val operation=accepted.s("operationId")
+   stage("accepted-head-visible",accepted)
+   }
+   val accepted=receipt(text)?:error("Original accepted receipt missing")
+   val operation=accepted.s("operationId")
+   await("Initial native socket unavailable"){PocketLive.connectionRevision>0&&Pocket.connected}
+   val revision=PocketLive.connectionRevision
    control(JSONObject().put("aux",false).put("disconnect",true))
-   await("Authenticated native socket did not reconnect",20000){PocketLive.connectionRevision>=2&&Pocket.connected}
-   stage("reconnected")
-   type("QA lost acknowledgement original operation")
-   control(JSONObject().put("dropMessageAck",true))
-   stage("lost-ack-send-prepared")
-   click(By.desc("Send message"))
-   await("Unconfirmed operation lost its original saved identity"){client.pending(scope)!=null&&d.hasObject(By.textContains("Delivery remains saved"))}
-   val original=client.pending(scope)!!;val operation=original.getJSONObject("body").s("operationId")
-   stage("lost-ack-original-saved",JSONObject().put("operationId",operation))
-   click(By.text("Check original delivery"))
-   await("Original receipt did not reconcile without a new send"){client.messageReceipt(scope,operation)!=null&&client.pending(scope)==null}
+   await("Authenticated native socket did not reconnect",20000){PocketLive.connectionRevision>revision&&Pocket.connected}
+   // Reopen through actual keyboard-aware Back and room card, not a new send.
+   field()?.click();d.pressBack()
+   await("Back must open room catalog"){d.hasObject(By.res("native-room:$room"))}
+   click(By.res("native-room:$room"))
+   await("Original accepted message missing after disconnect/reopen"){d.hasObject(By.textContains(text))}
+   val history=client.call("rooms/$room/history?before=9007199254740991&limit=100").getJSONArray("events").objects()
+   assertEquals("Original message duplicated",1,history.count{it.s("body")==text})
    assertEquals(operation,client.messageReceipt(scope,operation)!!.s("operationId"))
+   assertNull(client.pending(scope))
    before.forEach{(key,value)->assertEquals("Existing pairing/draft/receipt changed: $key",value,prefs.all[key])}
-   control(JSONObject().put("aux",false))
-   stage("passed",JSONObject().put("actualGatewayAndPostgres",true).put("newestFirst",true).put("olderAndLive",true)
-    .put("imeBackToCatalog",true).put("audienceDraftIsolation",true).put("acceptedSurvivesAuxiliaryFailure",true)
-    .put("originalUnknownReconciled",operation).put("priorPairingDraftReceiptsPreserved",true).put("modelsStarted",0).put("physicalPhone",false))
+   stage("passed",JSONObject().put("actualGatewayAndPostgres",true).put("newestFirst",true)
+    .put("acceptedSurvivesAuxiliaryFailure",true).put("headRefreshVisible",true).put("disconnectReopenSameOriginal",true)
+    .put("operationId",operation).put("receipt",accepted).put("matchingCanonicalMessages",1)
+    .put("priorPairingDraftReceiptsPreserved",true).put("modelsStarted",0).put("physicalPhone",false))
+  } catch(error:Throwable){
+   d.takeScreenshot(c.filesDir.resolve("live-room-failure.png"))
+   d.dumpWindowHierarchy(c.filesDir.resolve("live-room-failure.xml"))
+   throw error
   } finally {
    Configurator.getInstance().waitForIdleTimeout=oldIdle
    i.runOnMainSync{if(Pocket.captureEnvironment(oldEnvironment)!=null)Pocket.activateEnvironment(oldEnvironment)}

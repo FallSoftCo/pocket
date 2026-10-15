@@ -117,7 +117,7 @@ object PocketLive {
                 // An authenticated transport handshake is live even while the
                 // server is quiet. Codex execution health remains a separate status.
                 disconnectNotice?.cancel();disconnectNotice=null
-                outageVisible=false;Pocket.connected=true;Pocket.connectionError=""
+                outageVisible=false;attempt=0;connectionRevision++;Pocket.connected=true;Pocket.connectionError=""
                 Pocket.refresh();if(!BackendNavigation.nativeSelected()){Pocket.catchUp();Pocket.refreshDetail();Pocket.selected?.let{PocketReplies.reconcile(it)}}
             }}
             override fun onMessage(webSocket:WebSocket,text:String){Pocket.scope.launch{if(webSocket!==ws)return@launch;try{val event=JSONObject(text);disconnectNotice?.cancel();outageVisible=false;attempt=0;Pocket.connected=true;Pocket.connectionError="";Pocket.event(event)}catch(_:Exception){}}}
