@@ -42,6 +42,7 @@ import org.json.JSONObject
     var busy by remember(client.bindingId,room){mutableStateOf(false)}
     var expanded by remember(client.bindingId,room,direct,recipient){mutableStateOf(emptySet<String>())}
     var menu by remember{mutableStateOf(false)}
+    var addressMenu by remember(client.bindingId,room){mutableStateOf(false)}
     var workflow by remember(client.bindingId,room){mutableStateOf(false)}
     var inspecting by remember{mutableStateOf<JSONObject?>(null)}
     var guidance by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
@@ -57,9 +58,10 @@ import org.json.JSONObject
     var following by remember(client.bindingId,room,direct,recipient){mutableStateOf(true)}
     val actors=detail.optJSONArray("actors")?.objects().orEmpty()
     val agentNames=actors.associate{it.s("id") to it.s("name")}
-    val visible=remember(events,direct,destination,client.principalId,agentNames){events.filter{!direct||it.s("audience")=="direct"&&setOf(it.s("author"),it.s("recipient"))==setOf(client.principalId,destination)}
-        .map{JSONObject(it.toString()).put("isSelf",it.s("author")==client.principalId).put("authorName",if(it.s("author")==client.principalId)"You" else agentNames[it.s("author")]?:it.s("author"))}}
-    val transcript=remember(visible,expanded){commandRunProjection(roomTranscriptRows(visible,"hollywood:$owner:${client.bindingId}:$room"),expanded)}
+    val visible=remember(events,direct,destination,client.principalId){events.filter{!direct||it.s("audience")=="direct"&&setOf(it.s("author"),it.s("recipient"))==setOf(client.principalId,destination)}}
+    val transcript by key(owner,client.bindingId,room){produceState(commandRunProjection(emptyList(),expanded),visible,expanded,agentNames,client.principalId){
+        value=withContext(Dispatchers.Default){commandRunProjection(roomTranscriptRows(visible,"hollywood:$owner:${client.bindingId}:$room",client.principalId,agentNames),expanded)}
+    }}
     LaunchedEffect(list){snapshotFlow{list.isScrollInProgress to list.canScrollForward}.collect{(scrolling,forward)->if(scrolling)following=!forward}}
     val latestContent=transcript.rows.lastOrNull()?.let{listOf(it.s("id"),it.s("text"),it.s("status"))}
     LaunchedEffect(latestContent,transcript.rows.size,room){if(following&&transcript.rows.isNotEmpty()){
@@ -121,8 +123,9 @@ import org.json.JSONObject
             HollywoodNotifications.consumed(target)
         }
     }
-    if(!browsing)ConversationBack(hideKeyboard=!menu&&guidance==null&&guidanceReceipt==null&&inspecting==null&&!workflow){
+    if(!browsing)ConversationBack(hideKeyboard=!menu&&!addressMenu&&guidance==null&&guidanceReceipt==null&&inspecting==null&&!workflow){
         when{
+            addressMenu->addressMenu=false
             menu->menu=false
             guidance!=null->guidance=null
             guidanceReceipt!=null->guidanceReceipt=null
@@ -146,9 +149,19 @@ import org.json.JSONObject
     }
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-            TextButton({menu=true},Modifier.weight(1f).testTag("native-room-address")){
+            Box(Modifier.weight(1f)){
+            TextButton({addressMenu=true},Modifier.fillMaxWidth().testTag("native-room-address")){
                 val address=detail.optJSONObject("room")?.s("name").orEmpty()+" · "+(if(direct)"Private " else "")+(if(postOnly)"Message" else "Request")+" → "+(agentNames[destination]?:"Choose recipient")
                 Text(address,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
+            DropdownMenu(addressMenu,{addressMenu=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp).semantics{testTagsAsResourceId=true},
+                properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
+            Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
+            actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";addressMenu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(actor.s("name"))}}
+            Row{Checkbox(postOnly,{postOnly=it},Modifier.testTag("native-post-only"));BilingualLabel("Post without requesting work")}
+            if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}
+            scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->TextButton({recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";addressMenu=false}){BilingualLabel("Saved message",centered=false);Text(" · "+(agentNames[saved.recipient]?:saved.recipient))}}}
+            }
             }
             TextButton({workflow=true},modifier=Modifier.testTag("native-room-work")){BilingualLabel("Goals & work")}
         }
@@ -234,11 +247,7 @@ import org.json.JSONObject
                 TextButton({guidance=saved;menu=false},modifier=Modifier.testTag("native-guidance-saved:"+saved.s("deliveryId")+":"+saved.s("nativeTurn"))){Text("Saved guidance · "+(client.guidancePending(saved)?.s("state")?:"draft"))}
             }
 
-            Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
-            actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";menu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(actor.s("name"))}}
-            Row{Checkbox(postOnly,{postOnly=it},Modifier.testTag("native-post-only"));BilingualLabel("Post without requesting work")}
-            if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}
-            scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->TextButton({recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";menu=false}){BilingualLabel("Saved message",centered=false);Text(" · "+(agentNames[saved.recipient]?:saved.recipient))}}}
+
         }
         if(!following||list.canScrollForward)TextButton({following=true;jobs.launch{feed.refreshHistory(preferTail=true);withFrameNanos{};if(list.layoutInfo.totalItemsCount>0)list.scrollToItem(list.layoutInfo.totalItemsCount-1)}},Modifier.heightIn(min=48.dp).testTag("native-room-latest")){BilingualLabel("Latest")}
         ReaderPagingButtons(list,hasEarlier=feed.older!=null,onPrepare={up->

@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** Public room events remain immutable; operation updates share one display row. */
-internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String):List<JSONObject> {
+internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalId:String="",agentNames:Map<String,String> = emptyMap()):List<JSONObject> {
     val rows=mutableListOf<JSONObject>()
     val operations=mutableMapOf<String,Int>()
     events.forEach{event->
@@ -22,8 +22,8 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String):List<JSON
         val previous=if(activity||structured)operations[identity]else null
         val eventId=event.opt("id")
         val row=JSONObject().put("id",if(activity||structured)"$prefix:operation:$identity" else "$prefix:$eventId")
-            .put("roomEventId",eventId).put("roomAuthor",event.s("authorName",author))
-            .put("kind",if(activity)"activity" else if(author=="you"||event.optBoolean("isSelf"))"user" else "message")
+            .put("roomEventId",eventId).put("roomAuthor",if(author==principalId)"You"else event.s("authorName",agentNames[author]?:author))
+            .put("kind",if(activity)"activity" else if(author=="you"||event.optBoolean("isSelf")||author==principalId)"user" else "message")
             .put("text",if(native&&data?.s("nativeType") in listOf("agentMessage","plan"))data?.s("output")else event.s("body"))
         if(activity){
             row.put("type","roomOperation").put("title",if(native)data!!.s("title","Run")else "Run").put("status",data!!.s("status"))

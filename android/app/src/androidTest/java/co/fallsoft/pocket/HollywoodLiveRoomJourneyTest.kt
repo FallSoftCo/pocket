@@ -31,6 +31,9 @@ class HollywoodLiveRoomJourneyTest {
    journal.writeText(extra.put("stage",name).put("at",System.currentTimeMillis()).toString())
   }
   val prefs=c.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  // Synthetic existing-profile canaries, never a copied handset credential.
+  check(prefs.edit().putString("server","http://127.0.0.1:9").putString("token","synthetic-never-a-real-credential")
+   .putString("deviceId","00000000-0000-4000-8000-000000000099").putString("draft:prior-session","Keep this unrelated draft").commit())
   val before=prefs.all.filterKeys{it=="server"||it=="token"||it=="deviceId"||it.startsWith("local:")||it.startsWith("draft:")||it.startsWith("pending:")||it.startsWith("attention:")}
   val oldEnvironment=prefs.getString("activeEnvironment","workstation")!!
   val profile=EnvironmentIdentity("live_room_qa_20261015","Real room QA")
