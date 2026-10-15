@@ -54,3 +54,12 @@ Qualification uses actual completed Global/Engineering native history through
 PostgreSQL and the authenticated NextComp gateway. Its original workflow is not
 resubmitted by the read-only Android probe. Current physical-phone delivery and
 all voice/push release limitations above still apply.
+
+
+
+The latest candidate renders canonical workflow transactions and service-derived
+facts as Hollywood activity outside command Runs. Initiating principal, goal,
+work and causal event references remain in details. A service acknowledgement
+does not become an apparent human message even when its initiating principal is
+the current human. The actual native cancellation feed qualified this projection
+with no skipped checks; it adds no physical-phone delivery claim.

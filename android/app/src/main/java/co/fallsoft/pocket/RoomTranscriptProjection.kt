@@ -44,6 +44,21 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String):List<JSON
             }
             if(previous==null){operations[identity]=rows.size;rows+=row}else rows[previous]=row
         }else {
+            if(data!=null&&(data.s("type")=="workflowState"||data.s("workflowAction").isNotBlank())){
+                val receipt=data.optJSONObject("workflowReceipt")
+                val action=data.s("workflowAction")
+                val state=receipt?.s("state")?:data.s("state")
+                val stateLabel=state.replace("cancel_requested","stop requested")
+                val title=when(action){
+                    "goal.create"->"Goal created"
+                    "goal.work"->"Work planned"
+                    "work.assign"->"Work assigned"
+                    else->(if(action.startsWith("work."))"Work" else "Goal")+" · "+stateLabel
+                }
+                row.put("kind","activity").put("type","workflowState").put("roomAuthor","Hollywood")
+                    .put("title",title).put("status","completed").put("text",event.s("body"))
+                    .put("detail","Initiated by: $author\nGoal: ${data.s("goalId")}\nWork: ${data.s("workId")}\nEvent: $eventId\nControl: ${data.s("causalControlEventId",receipt?.s("eventId").orEmpty())}")
+            }
             if(native&&data?.s("nativeType") in listOf("planUpdate","goalState")){
                 val plan=data?.optJSONArray("plan")?.objects().orEmpty()
                 val goal=data?.optJSONObject("nativeGoal")
