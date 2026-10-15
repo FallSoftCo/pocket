@@ -480,7 +480,18 @@ class TranscriptRefreshNativeTest {
   fun openCard(title:String){
    val selector=By.desc("Open Chat for "+title)
    assertTrue("Conversation card missing: "+title,device.wait(Until.hasObject(selector),3000))
-   device.findObject(selector).click()
+   // Catalog recomposition may invalidate an accessibility node between lookup
+   // and a reversible navigation click. Reacquire that exact card; never retry
+   // sends or other effectful controls here.
+   var opened=false
+   repeat(3){
+    if(!opened){
+     device.waitForIdle(1000)
+     try { val card=device.findObject(selector); if(card!=null){card.click(); opened=true} }
+     catch(_:androidx.test.uiautomator.StaleObjectException) { }
+    }
+   }
+   assertTrue("Conversation card could not be opened: "+title,opened)
   }
   openCard("Synthetic freshness work");await{has(1)&&!PocketTranscript.loading}
   qa("advance");await{qa("state").getJSONArray("reads").objects().any{it.s("threadId")!="second-thread"&&it.optInt("revision")==2}}
@@ -512,12 +523,10 @@ class TranscriptRefreshNativeTest {
   main{Pocket.closeTask();Pocket.open("same-thread")};await{has(2)&&!PocketTranscript.updating}
   assertTrue("New chat rows leaked on reopen",PocketTranscript.rows.none{it.s("id")=="other/message"})
   main{Pocket.closeTask()}
-  assertTrue("Second chat touch region not identifiable",device.wait(Until.hasObject(By.desc("Open Chat for Other synthetic work")),3000))
-  device.findObject(By.desc("Open Chat for Other synthetic work")).click()
+  openCard("Other synthetic work")
   await{Pocket.selected=="second-thread"&&PocketTranscript.rows.any{it.s("text")=="Other response 2"}&&!PocketTranscript.updating}
   device.pressBack();await{Pocket.selected==null}
-  assertTrue("First chat touch region not identifiable",device.wait(Until.hasObject(By.desc("Open Chat for Synthetic freshness work")),3000))
-  device.findObject(By.desc("Open Chat for Synthetic freshness work")).click()
+  openCard("Synthetic freshness work")
   await{Pocket.selected=="same-thread"&&has(2)&&!PocketTranscript.updating}
   assertEquals("Card navigation lost saved draft","First saved draft",prefs.getString("draft:same-thread",null))
  }

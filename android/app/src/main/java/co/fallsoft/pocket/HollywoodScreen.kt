@@ -98,8 +98,9 @@ import org.json.JSONObject
     BackHandler(enabled=browsing){browsing=false}
     if(browsing){
         Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
-            WorkCatalogList(Modifier.weight(1f)){
-                items(rooms.sortedBy{it.s("name")},key={it.s("id")}){item->
+            WorkCatalogList(Modifier.weight(1f),reverseLayout=false){
+                val ordered=rooms.sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
+                items(ordered,key={it.s("id")}){item->
                     val task=Task("hollywood-room:"+item.s("id"),item.s("name"),"","idle",0,false,preview=item.s("purpose"))
                     TaskCard(task,modifier=Modifier.testTag("native-room:"+item.s("id")),onOpen={choose(item.s("id"))},
                         voice={modifier->CardInteractionRegion("Chat",modifier,item.s("name")){choose(item.s("id"))}},onRename=null,onWatch=null)
