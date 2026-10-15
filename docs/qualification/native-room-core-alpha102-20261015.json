@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "candidate": "7dbc2f1",
+  "versionCode": 120,
+  "state": "qualified-candidate-handed-to-coordinator-not-deployed",
+  "nativeCore": {
+    "realHollywoodAuthority": true,
+    "newestFirst": true,
+    "acceptedReceiptSurvivesAuxiliaryFailure": true,
+    "reconnectAndReopenOriginalExactlyOnce": true,
+    "canonicalSeq": 126,
+    "canonicalEvent": "4564d27f-0fd2-4365-8d8b-69022e098fb7",
+    "noDuplicatePost": true,
+    "pairingDraftCanariesPreserved": true,
+    "modelsStarted": 0,
+    "physicalPhone": false
+  },
+  "deliveryOwner": "01a12c58-d21a-79b0-a512-0c3bc6dc0ee4",
+  "artifact": {
+    "versionName": "0.5.0-alpha.102",
+    "sha256": "fa23edb1ffa4eee8cb2d906521a1dccb66a205c3963bbf5c325eb5c65427abe1",
+    "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+    "size": 62702666
+  },
+  "limits": [
+    "No physical voice/push/frame pacing proof from isolated QA authority",
+    "Native journey ran same product code before version-only bump; version120 packaging passed separately",
+    "Current included-account quota remains honestly unavailable without active native audio account transport",
+    "Deployment and phone install owned by coordinator; no production restart performed here"
+  ],
+  "remaining": [
+    "Coordinator-controlled update and real receive/voice/push checks",
+    "Native room catalog currently lacks authoritative per-room activity aggregation; must not infer active work from refresh timestamps"
+  ]
+}

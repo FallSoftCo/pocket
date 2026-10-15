@@ -2640,7 +2640,7 @@
     {
       "id": "canonical-room-head-receipts-native-parity-20261015",
       "request": "Newest canonical room messages immediately, live head while reading older pages, long-backlog tail-first catch-up, honest scoped work states, keyboard-aware Back to rooms, source-bound audience drafts and original outgoing receipts, native footer and account freshness. Preserve voice/local execution/pairings and release boundary.",
-      "status": "implementation-and-native-qualification-in-progress",
+      "status": "native-core-qualified-delivery-coordinated",
       "owner": "original NextComp owner",
       "base": "08972e6fda76be79c57b3ff55cf4cba5fcb37d7c",
       "implemented": [
@@ -2650,7 +2650,8 @@
         "Shared keyboard-aware Back, paging, volume and account detail surface",
         "New-thread browser guidance uses discovered managed tools"
       ],
-      "verification": "Initial focused reader tests and candidate compilation passed; real separate-authority native journey pending. No production release, phone installation or migration."
+      "verification": "Real separate-authority native core journey passed: newest-first, accepted despite auxiliary read failure, reconnect and keyboard-aware Back/reopen original message exactly once. Signed alpha102 compatible APK and immutable gateway/update manifests handed to source coordinator; no production restart or physical installation by this owner. Native voice/push/phone remain separate qualification.",
+      "qualification": "docs/qualification/native-room-core-alpha102-20261015.json"
     }
   ],
   "current_state": {
