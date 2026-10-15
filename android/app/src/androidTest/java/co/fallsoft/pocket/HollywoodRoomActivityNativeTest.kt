@@ -36,23 +36,23 @@ class HollywoodRoomActivityNativeTest {
    }}}
    compose.onNodeWithTag("native-room-activity:"+room.s("id"),useUnmergedTree=true).assertContentDescriptionEquals("3 Queued; 1 Claimed; 2 Running; 1 Stopping; 1 Unknown; 2 Needs you")
    assertTrue(d.takeScreenshot(i.targetContext.filesDir.resolve("room-activity-mixed.png")))
-   for(label in HollywoodRoomActivity.labels)compose.onNodeWithText(label,useUnmergedTree=true).assertIsDisplayed()
-   compose.onNodeWithText("Idle",useUnmergedTree=true).assertDoesNotExist()
+   for(label in HollywoodRoomActivity.labels)compose.onNodeWithText(PocketImmersion.label(label),useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText(PocketImmersion.label("Idle"),useUnmergedTree=true).assertDoesNotExist()
    compose.onNodeWithTag("native-room:"+room.s("id")).performClick();assertEquals(room.s("id"),opened)
    compose.runOnIdle{available.value=false}
-   compose.onNodeWithText("Status unavailable",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText(PocketImmersion.label("Status unavailable"),useUnmergedTree=true).assertIsDisplayed()
    assertTrue(d.takeScreenshot(i.targetContext.filesDir.resolve("room-activity-unavailable.png")))
-   compose.onNodeWithText("Idle",useUnmergedTree=true).assertDoesNotExist()
+   compose.onNodeWithText(PocketImmersion.label("Idle"),useUnmergedTree=true).assertDoesNotExist()
    compose.onNodeWithTag("native-room:"+room.s("id")).performClick();assertEquals(room.s("id"),opened)
    compose.runOnIdle{shown.value=JSONObject(room.toString())}
-   compose.onNodeWithText("Status unavailable",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText(PocketImmersion.label("Status unavailable"),useUnmergedTree=true).assertIsDisplayed()
    compose.runOnIdle{
     shown.value=JSONObject(room.toString()).put("activity",JSONObject(activity.toString()).apply{HollywoodRoomActivity.keys.forEach{put(it,0)}})
     available.value=true
    }
-   compose.onNodeWithText("Idle",useUnmergedTree=true).assertIsDisplayed()
-   compose.onNodeWithText("Running",useUnmergedTree=true).assertDoesNotExist()
-   compose.onNodeWithText("Status unavailable",useUnmergedTree=true).assertDoesNotExist()
+   compose.onNodeWithText(PocketImmersion.label("Idle"),useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText(PocketImmersion.label("Running"),useUnmergedTree=true).assertDoesNotExist()
+   compose.onNodeWithText(PocketImmersion.label("Status unavailable"),useUnmergedTree=true).assertDoesNotExist()
    assertTrue(d.takeScreenshot(i.targetContext.filesDir.resolve("room-activity-quiet.png")))
   }
  }
