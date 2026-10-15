@@ -41,6 +41,7 @@ import org.json.JSONObject
     var menu by remember{mutableStateOf(false)}
     var workflow by remember(client.bindingId,room){mutableStateOf(false)}
     var inspecting by remember{mutableStateOf<JSONObject?>(null)}
+    var guidance by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
     val destination=recipient.ifBlank{detail.optJSONObject("room")?.s("owner").orEmpty()}
     val scope=if(hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source,if(postOnly)"message" else "request")else null
     val currentScope by rememberUpdatedState(scope)
@@ -134,6 +135,22 @@ import org.json.JSONObject
                 }
             }
         }
+        val active=detail.optJSONArray("deliveries")?.objects().orEmpty()
+        if(active.isNotEmpty())Column(Modifier.heightIn(max=120.dp).verticalScroll(rememberScrollState())){
+            active.forEach{delivery->
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                    Text((agentNames[delivery.s("agent")]?:"Agent")+" · "+delivery.s("state"),modifier=Modifier.weight(1f),color=Muted)
+                    if(delivery.optBoolean("can_steer"))TextButton({guidance=delivery.getJSONObject("control_scope")},modifier=Modifier.testTag("native-guide:"+delivery.s("id"))){BilingualLabel("Guide")}
+                    if(delivery.optBoolean("can_cancel"))TextButton({
+                        val selected=room;jobs.launch{try{
+                            client.call("deliveries/"+delivery.s("id")+"/cancel",JSONObject())
+                            if(room==selected)notice="Stop requested"
+                            refresh(selected)
+                        }catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}
+                    }){BilingualLabel("Stop")}
+                }
+            }
+        }
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
         ConversationComposerRow{
             ConversationDraftField(input,{input=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f),enabled=!busy,
@@ -151,15 +168,20 @@ import org.json.JSONObject
             TextButton({menu=false;browsing=true}){BilingualLabel("Rooms")}
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             ProfileSwitcher{menu=false}
+            client.savedGuidance(room).filter{it.s("state") !in listOf("native_recorded","rejected")}.forEach{saved->
+                TextButton({guidance=saved.getJSONObject("body").getJSONObject("scope");menu=false}){Text("Saved guidance · "+saved.s("state"))}
+            }
+
             Row{TextButton({recipient="";source=null;direct=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null});BilingualLabel("Private")}
             actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";menu=false}){Text(actor.s("name"))}}
             Row{Checkbox(postOnly,{postOnly=it});BilingualLabel("Post without requesting work")}
             if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}
             scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->TextButton({recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";menu=false}){BilingualLabel("Saved message",centered=false);Text(" · "+(agentNames[saved.recipient]?:saved.recipient))}}}
-            detail.optJSONArray("deliveries")?.objects().orEmpty().filter{it.optBoolean("can_cancel")}.forEach{delivery->
-                TextButton({val selected=room;jobs.launch{try{client.call("deliveries/${delivery.s("id")}/cancel",JSONObject());if(room==selected)notice="Stop requested";refresh(selected)}catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}}){Text("Stop · "+(agentNames[delivery.s("agent")]?:delivery.s("agent"))+" · "+delivery.s("state"))}
-            }
         }
+    }
+    guidance?.let{target->
+        val accepts=detail.optJSONArray("deliveries")?.objects().orEmpty().any{it.optBoolean("can_steer")&&it.optJSONObject("control_scope")?.let{scope->hollywoodJsonEqual(scope,target)}==true}
+        HollywoodGuidanceDialog(client,target,agentNames[target.s("agentId")]?:"Agent",accepts){guidance=null}
     }
     if(workflow)HollywoodWorkDialog(client,room){workflow=false}
     inspecting?.let{value->HollywoodAttentionDialog(client,value,{inspecting=null}){jobs.launch{refresh(room)}}}
@@ -211,4 +233,42 @@ import org.json.JSONObject
         else if(approval)Row{TextButton({answer("decline")},enabled=open&&!busy){BilingualLabel("Decline")};TextButton({answer("accept")},enabled=open&&!busy){BilingualLabel("Approve once")}}
         else TextButton({answer()},enabled=open&&!busy&&questions.all{answers[it.s("id")].orEmpty().isNotBlank()}){BilingualLabel("Send answer")}
     },dismissButton={TextButton(dismiss,enabled=!busy){BilingualLabel("Close")}})
+}
+
+
+@Composable private fun HollywoodGuidanceDialog(client:HollywoodClient,scope:JSONObject,name:String,accepts:Boolean,dismiss:()->Unit){
+    val key=scope.s("deliveryId")+":"+scope.s("nativeTurn")
+    var text by remember(key){mutableStateOf(client.guidanceDraft(scope))}
+    var pending by remember(key){mutableStateOf(client.guidancePending(scope))}
+    var busy by remember(key){mutableStateOf(false)}
+    var error by remember(key){mutableStateOf("")}
+    val jobs=rememberCoroutineScope()
+    val state=pending?.s("state").orEmpty()
+    val canCreate=accepts&&(pending==null||state in listOf("native_admitted","native_recorded","rejected"))
+    fun send(inspect:Boolean){
+        busy=true;jobs.launch{try{
+            val intent=if(inspect)pending?:return@launch else client.captureGuidance(scope,text).also{pending=it}
+            client.guide(intent,inspect)
+            pending=client.guidancePending(scope);error=""
+            if(!inspect&&text==intent.getJSONObject("body").s("body")){text="";client.saveGuidanceDraft(scope,"")}
+        }catch(e:Exception){if(e is CancellationException)throw e;pending=client.guidancePending(scope);error=e.message.orEmpty()}finally{busy=false}}
+    }
+    AlertDialog(onDismissRequest={if(!busy)dismiss()},title={Text("Guide "+name)},text={
+        Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+            Text(if(accepts)"Guidance goes to this active work and may wait for its current command to finish." else "This work is no longer accepting guidance. Its original receipt remains available.",color=Muted)
+            if(state.isNotBlank())Text(when(state){
+                "saved"->"Saved on this device"
+                "sending","unknown"->"Delivery unconfirmed · check the original"
+                "pending","dispatching"->"Saved by Hollywood · awaiting the agent"
+                "native_admitted"->"Admitted to the active work · awaiting history"
+                "native_recorded"->"Recorded in the active conversation"
+                "rejected"->"Guidance was not accepted"
+                else->state
+            },color=Muted)
+            if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
+            OutlinedTextField(text,{text=it;client.saveGuidanceDraft(scope,it)},enabled=!busy&&canCreate,label={BilingualLabel("Your guidance",centered=false)},modifier=Modifier.testTag("native-guidance-text"))
+            if(error.isNotBlank())Text(error,color=Coral)
+        }
+    },confirmButton={TextButton({send(false)},enabled=!busy&&canCreate&&text.isNotBlank(),modifier=Modifier.testTag("native-guidance-send")){BilingualLabel("Send guidance")}},
+        dismissButton={TextButton(dismiss,enabled=!busy){BilingualLabel("Close")}})
 }

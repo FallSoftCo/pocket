@@ -60,3 +60,16 @@ remain directly in the conversation instead of being hidden behind pagination.
 File serialization/parsing runs on IO workers; settled position checkpoints are
 coalesced and unchanged positions do not write again. This is a presentation cache,
 not proof of current worker state, an outgoing delivery journal or an archive.
+
+
+## Canonical guidance retains the active execution
+
+Human guidance for a busy LAX agent is a Hollywood-owned control bound to the
+original native thread and turn. It creates neither a new room nor a parallel
+coordinator. NextComp saves a separate source-bound intent and draft, reads the
+original receipt after an unknown acknowledgement, and keeps unresolved
+guidance available when execution ends. Guide, ordinary Send and Stop retain
+different actions. Human identity, room/request permission and native ownership
+are server checked; native message recording is distinct from model consumption
+and accepted work. Alpha100 implementation and build are not physical-phone
+or general multi-host certification.

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "version": "0.5.0-alpha.100",
+  "versionCode": 118,
+  "scope": "Native Hollywood room guidance candidate; no deployed release",
+  "androidBuildPassed": true,
+  "apkSha256": "98f37b6f2d2af51d774e89f2e8a3dc78a2c5a2691008badd4992e552469e970c",
+  "androidGuideUiExercised": false,
+  "actualPostgresAuthenticatedHttpPassed": true,
+  "httpBoundaryNativePointersSynthetic": true,
+  "realNativeGlobalWorkerGatewayPassed": true,
+  "actualNativeTurns": 4,
+  "originalBusyTurnGuidance": true,
+  "actualArtifactIndependentlyAccepted": true,
+  "lostHumanAndNativeAcknowledgementsRecovered": true,
+  "humanGuidancePostsObserved": 1,
+  "separateExplicitStopLatencySeconds": 1.0562073234468699,
+  "nativeModelSettings": "gpt-6.1-sol/xhigh",
+  "physicalPhoneChanged": false,
+  "productionChanged": false,
+  "realFcmVerified": false,
+  "nativeVoiceQualified": false,
+  "limits": [
+    "One host, finite owned work only",
+    "Guide Android UI and physical phone not yet exercised",
+    "General control crash/read recovery and all-context/multi-host cancellation remain open",
+    "No broad multi-human administrative provenance or model/tool credential separation claim",
+    "Original native/sqlite store must be preserved for durable history restoration"
+  ],
+  "priorEvidence": "Alpha99 actual Android question/notification/offline reply evidence remains a separate qualified journey"
+}

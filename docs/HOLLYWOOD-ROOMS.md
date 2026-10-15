@@ -63,3 +63,39 @@ work and causal event references remain in details. A service acknowledgement
 does not become an apparent human message even when its initiating principal is
 the current human. The actual native cancellation feed qualified this projection
 with no skipped checks; it adds no physical-phone delivery claim.
+
+
+## Guide and Stop active work
+
+Alpha100/code118 adds explicit Guide and Stop actions alongside active room
+execution. Ordinary Send continues to create the explicitly addressed room
+request; Guide targets the captured active work. The human does not create a
+competing Global merely to redirect its current task. A running command may
+finish before the model handles guidance.
+
+Guidance has a separate saved draft and original operation, bound to the source
+profile/human, room, audience, delivery, host generation and native turn. Saved
+or uncertain actions never follow navigation or silently become a new task.
+After an unconfirmed submission the client reads the original control receipt.
+Unresolved guidance remains reachable after its active execution leaves the
+room list. Ended work cannot accept new guidance through the dialog.
+
+The UI distinguishes locally saved, saved by Hollywood, native admission and
+recorded native history. None means that an artifact was accepted or that a
+human saw a response. Authorization is enforced by Hollywood again at native
+dispatch; the Android control is not an administrative permission grant.
+
+The alpha100 Android candidate compiles. Its Guide dialog has not yet had native
+Android UI qualification or physical-phone delivery. Actual native/gateway
+execution and failure recovery are recorded separately in the versioned
+qualification. Alpha99's prior actual emulator question/notification/offline
+reply proof remains specific to that journey and WebSocket notification
+transport; genuine FCM and native voice remain release gates.
+
+The finite actual native/gateway guidance run passed: one original control,
+four real native turns including a separate explicit cancellation, worker artifact
+and independent Global acceptance. After the owned processes stopped, a
+metadata-only read against the original native store found exactly one matching
+clientId message in the original completed turn. A fresh alternate native SQLite
+store returned metadata with no turns; that is not proof of missing work.
+Preserve actual native storage and its identity during backup/migration.

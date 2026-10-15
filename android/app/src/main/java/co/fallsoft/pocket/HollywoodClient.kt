@@ -62,6 +62,59 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
         require(hollywoodMessageMatches(identity,scope,intent.getJSONObject("body"),receipt)){"Original message receipt is unconfirmed"}
         persist("pending:"+key(scope),null);return receipt
     }
+    private fun guidanceKey(scope:JSONObject)="guidance:"+owner+":"+bindingId+":"+scope.s("deliveryId")+":"+scope.s("nativeTurn")
+    fun guidancePending(scope:JSONObject)=Pocket.prefs.getString(guidanceKey(scope),null)?.let{JSONObject(it)}
+    fun savedGuidance(room:String):List<JSONObject> = Pocket.prefs.all.filterKeys{it.startsWith("guidance:"+owner+":"+bindingId+":")}.values
+        .mapNotNull{runCatching{JSONObject(it as String)}.getOrNull()}
+        .filter{it.optJSONObject("body")?.optJSONObject("scope")?.s("roomId")==room}
+        .distinctBy{it.getJSONObject("body").s("id")}
+    fun guidanceDraft(scope:JSONObject)=Pocket.prefs.getString("draft:"+guidanceKey(scope),"").orEmpty()
+    fun saveGuidanceDraft(scope:JSONObject,text:String){Pocket.prefs.edit().putString("draft:"+guidanceKey(scope),text).apply()}
+    fun captureGuidance(scope:JSONObject,text:String):JSONObject = synchronized(HollywoodAttentionIntents) {
+        require(scope.s("authorityId")==authorityId&&text.isNotBlank())
+        val previous=guidancePending(scope)
+        require(previous==null||previous.s("state") in listOf("native_admitted","native_recorded","rejected")){"Inspect the original guidance first"}
+        previous?.let{persist(guidanceKey(scope)+":"+it.getJSONObject("body").s("id"),it)}
+        val id=UUID.randomUUID().toString()
+        val body=JSONObject().put("id",id).put("operationId","phone-guidance:"+id).put("scope",JSONObject(scope.toString())).put("body",text)
+        val intent=JSONObject().put("binding",JSONObject(identity.toString())).put("body",body).put("state","saved")
+        persist(guidanceKey(scope),intent);intent
+    }
+    suspend fun guide(intent:JSONObject,inspect:Boolean=false):JSONObject {
+        require(hollywoodBindingMatches(identity,intent.getJSONObject("binding")))
+        val body=intent.getJSONObject("body");val scope=body.getJSONObject("scope");val key=guidanceKey(scope)
+        val reading=synchronized(HollywoodAttentionIntents){
+            val current=guidancePending(scope)?:throw IllegalStateException("Original guidance is missing")
+            require(hollywoodJsonEqual(current.getJSONObject("body"),body))
+            val read=inspect||current.s("state")!="saved"
+            if(!read){current.put("state","sending");persist(key,current)}
+            read
+        }
+        try {
+            val receipt=if(reading)call("native-controls/"+body.s("id"))else call("deliveries/"+scope.s("deliveryId")+"/guidance",body)
+            val control=receipt.getJSONObject("control")
+            require(hollywoodJsonEqual(receipt.getJSONObject("scope"),scope)&&
+                hollywoodJsonEqual(control.getJSONObject("captured_scope"),scope)&&
+                control.s("id")==body.s("id")&&control.s("operation")==body.s("operationId")&&
+                control.s("human")==principalId&&control.s("body")==body.s("body")){"Original guidance receipt is unconfirmed"}
+            synchronized(HollywoodAttentionIntents){
+                val current=guidancePending(scope)?:throw IllegalStateException("Original guidance is missing")
+                require(hollywoodJsonEqual(current.getJSONObject("body"),body))
+                current.put("state",control.s("state")).put("receipt",receipt);persist(key,current)
+            }
+            return receipt
+        } catch(error:Exception) {
+            synchronized(HollywoodAttentionIntents){
+                val current=guidancePending(scope)
+                if(current!=null&&hollywoodJsonEqual(current.getJSONObject("body"),body)){
+                    val rejected=!reading&&error is HollywoodFailure&&error.code=="HOLLYWOOD_REQUEST_REJECTED"
+                    current.put("state",if(rejected)"rejected" else "unknown").put("error",error.message.orEmpty().take(500))
+                    persist(key,current)
+                }
+            }
+            throw error
+        }
+    }
     fun attentionPending(id:String)=Pocket.prefs.getString("attention:$owner:$bindingId:$id",null)?.let{JSONObject(it)}
     fun captureAttention(value:JSONObject,response:JSONObject):JSONObject = synchronized(HollywoodAttentionIntents) {
         val attention=value.getJSONObject("attention");val scope=value.getJSONObject("scope");val id=attention.s("id")

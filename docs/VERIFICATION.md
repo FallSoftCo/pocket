@@ -326,3 +326,14 @@ After SSH recovered, a fresh package path and installed base APK hash independen
 The coordinator now uses compact direct playback controls instead of duplicating the latest reply or entire saved speech below its history. Exact reader ownership and current chunk identity govern the bounded caption. Both signed builds, both lints and159 unit tests per variant pass; all168 motion pages and names remain unchanged in both APKs. Native and phone evidence are recorded separately in [qualification](qualification/coordinator-compact-speech-alpha31.json).
 
 Alpha31 source5406c24 passes clean-checkout CI37511030357. Exact debug normal/2x and optimized native coordinator checks pass, including50k saved speech, growing history, mapped source navigation, direct controls, draft and IME retention. Root inspected the optimized native image at original resolution. Main gallery clean build and1854-card checker pass after unrelated concurrent metadata settled. Public download hash matches the qualified release; compatible49 is offered, announcement566 once. Phone49 is fully staged and verified, but installed48 remains the last independently confirmed package: the existing accessibility controller refuses connections, so no blind installer was launched. See the versioned qualification for separate evidence levels.
+
+
+## Alpha100 native room guidance candidate
+
+The Android qualification build passes. A separate actual native Global/worker
+workflow through the authenticated NextComp gateway delivered human guidance
+to the original busy turn, recovered lost HTTP and native acknowledgements by
+original receipt/message identity, independently accepted the actual artifact,
+and cancelled separate explicit work. The new Android Guide dialog has not yet
+had native UI qualification; neither production nor the physical phone changed.
+See [the versioned evidence](qualification/native-guidance-alpha100.json).

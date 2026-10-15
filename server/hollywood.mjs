@@ -116,7 +116,7 @@ export function hollywoodRequest(method,tail,query,body){
   else if(method==='GET'&&p.length===3&&p[0]==='goals'&&uuid(p[1])&&p[2]==='work'){allowed=['after','limit'];uuidCursor=true;}
   else if(method==='GET'&&p.length===4&&p[0]==='attention'&&uuid(p[1])&&p[2]==='commands'&&operation(p[3]))allowed=[];
   else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['history','attention'].includes(p[2]))allowed=p[2]==='history'?['after','before','limit']:['after','limit'];
-  else if(method==='GET'&&p.length===2&&((p[0]==='commands'&&operation(p[1]))||(['attention','deliveries'].includes(p[0])&&uuid(p[1]))))allowed=[];
+  else if(method==='GET'&&p.length===2&&((p[0]==='commands'&&operation(p[1]))||(['attention','deliveries','native-controls'].includes(p[0])&&uuid(p[1]))))allowed=[];
   else if(method==='POST'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&p[2]==='messages'){
     if(!fields(body,['operationId','kind','body','audience','recipientId','sourceEventId'])||!operation(body.operationId)||
       !['message','request'].includes(body.kind)||typeof body.body!=='string'||!body.body.trim()||Buffer.byteLength(body.body)>6000||
@@ -131,6 +131,13 @@ export function hollywoodRequest(method,tail,query,body){
     const approval=fields(response,['decision'])&&['accept','decline'].includes(response.decision);
     const question=fields(response,['answers'])&&response.answers&&typeof response.answers==='object'&&!Array.isArray(response.answers)&&Object.values(response.answers).every(answer=>fields(answer,['answers'])&&Array.isArray(answer.answers)&&answer.answers.length>0&&answer.answers.length<=12&&answer.answers.every(text=>typeof text==='string'));
     if(!approval&&!question)throw fail(400,'Choose an explicit answer or approval decision.','HOLLYWOOD_REQUEST_REJECTED');
+  }else if(method==='POST'&&p.length===3&&p[0]==='deliveries'&&uuid(p[1])&&p[2]==='guidance'){
+    const keys=['authorityId','deliveryId','agentId','roomId','hostId','generation','nativeThread','nativeTurn','sourceRequestId','audience'];
+    if(!fields(body,['id','operationId','scope','body'])||!uuid(body.id)||!operation(body.operationId)||!fields(body.scope,keys)||Object.keys(body.scope).length!==keys.length||
+      body.scope.deliveryId!==p[1]||!['authorityId','deliveryId','agentId','roomId','hostId','sourceRequestId'].every(key=>uuid(body.scope[key]))||
+      !Number.isSafeInteger(body.scope.generation)||body.scope.generation<1||!['nativeThread','nativeTurn'].every(key=>typeof body.scope[key]==='string'&&body.scope[key].length>0&&body.scope[key].length<=128)||
+      !['room','direct'].includes(body.scope.audience)||typeof body.body!=='string'||!body.body.trim()||Buffer.byteLength(body.body)>6000)
+      throw fail(400,'Guide the exact captured active work.','HOLLYWOOD_REQUEST_REJECTED');
   }else if(method==='POST'&&p.length===3&&p[0]==='deliveries'&&uuid(p[1])&&p[2]==='cancel'){
     if(!fields(body,[])||Object.keys(body).length)throw fail(400,'Cancellation uses the exact original delivery.','HOLLYWOOD_REQUEST_REJECTED');
   }else throw fail(404,'Unknown Hollywood human operation.','HOLLYWOOD_REQUEST_REJECTED');
