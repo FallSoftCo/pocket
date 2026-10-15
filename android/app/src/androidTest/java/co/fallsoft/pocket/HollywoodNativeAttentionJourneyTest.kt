@@ -73,6 +73,7 @@ class HollywoodNativeAttentionJourneyTest {
             phase("admitted",JSONObject().put("requestId",receipt.getJSONObject("event").s("id")))
             val manager=context.getSystemService(NotificationManager::class.java)
             var key=""
+            var nativeQuestion=""
             await(420000){
                 manager.activeNotifications.any{notification->
                     val candidate=notification.tag?.takeIf{it.startsWith("hollywood:")}?.removePrefix("hollywood:")?:return@any false
@@ -82,9 +83,13 @@ class HollywoodNativeAttentionJourneyTest {
                     val questions=attention.optJSONObject("request")?.optJSONArray("questions")?:return@any false
                     val exact=record.s("bindingId")==binding.s("bindingId")&&record.s("authorityId")==binding.s("authorityId")&&record.s("state")=="verified"&&
                         attention.s("human")==binding.s("principalId")&&attention.s("state")=="pending"&&value.s("deliveryState") in listOf("claimed","running")&&
-                        questions.length()==1&&questions.getJSONObject(0).s("id")=="attention_marker"&&questions.getJSONObject(0).s("question")==settings.s("question")&&
+                        questions.length()==1&&questions.getJSONObject(0).s("id")=="attention_marker"&&questions.getJSONObject(0).optBoolean("isOther",true)&&
                         value.getJSONObject("scope").s("deliveryId")==record.getJSONObject("event").getJSONObject("data").s("deliveryId")
-                    if(exact&&notification.notification.actions?.any{!it.remoteInputs.isNullOrEmpty()}==true){key=candidate;true}else false
+                    if(exact&&notification.notification.actions?.any{!it.remoteInputs.isNullOrEmpty()}==true){
+                        // Scope and callback identity select the native question;
+                        // model punctuation is not a routing or authority boundary.
+                        key=candidate;nativeQuestion=questions.getJSONObject(0).s("question");true
+                    }else false
                 }
             }
             val notification=manager.activeNotifications.single{it.tag=="hollywood:$key"}.notification
@@ -102,12 +107,20 @@ class HollywoodNativeAttentionJourneyTest {
             instrumentation.runOnMainSync{Pocket.activateEnvironment(viewerProfile.id)}
             await{Pocket.environmentId==viewerProfile.id}
             notification.contentIntent.send()
-            await{Pocket.environmentId==ownerProfile.id&&device.hasObject(By.text(settings.s("question")))}
+            await{Pocket.environmentId==ownerProfile.id&&device.hasObject(By.text(nativeQuestion))}
             device.findObject(By.text("Close")).click()
             instrumentation.runOnMainSync{Pocket.activateEnvironment(viewerProfile.id)}
             await{Pocket.environmentId==viewerProfile.id}
             phase("ready-for-offline",JSONObject().put("scope",capturedScope).put("notificationKey",key))
             await(60000){file("gateway-offline").exists()}
+            // Exercise the actual refresh/reply race while the origin is offline.
+            HollywoodNotifications.receive(origin,mapOf(
+                "binding_id" to record.s("bindingId"),"authority_id" to record.s("authorityId"),
+                "principal_id" to record.s("principalId"),"event_id" to record.s("eventId"),
+                "room_id" to record.s("roomId"),"revision" to record.getLong("revision").toString(),
+                "action" to "notify"),forceRefresh=true)
+            assertEquals("verified",HollywoodNotifications.record(key)!!.s("state"))
+            assertTrue(hollywoodJsonEqual(capturedScope,HollywoodNotifications.replySnapshot(key,record.getLong("revision"))!!.getJSONObject("attention").getJSONObject("scope")))
             val answer=Intent()
             RemoteInput.addResultsToIntent(reply.remoteInputs,answer,Bundle().apply{putCharSequence("reply",settings.s("marker"))})
             reply.actionIntent.send(context,0,answer)

@@ -17,6 +17,7 @@ from uuid import uuid4
 from hollywood_backbone.bootstrap import initialize
 from hollywood_backbone.store import Store
 from lax_connector.journal import saved
+from lax_connector.host import enroll as enroll_host, resources as host_resources
 from lax_connector.linux_admin import provision
 
 PROXY = """
@@ -55,7 +56,7 @@ def main(spec):
     saved(
         root / "intent.json",
         {
-            "scope": "One fresh native Global/worker, one phone request, one authorized material review; synthetic marker only",
+            "scope": "One fresh native Global/worker, one owned emulator request, one authorized material review; synthetic marker only",
             "productionChanged": False,
             "physicalPhone": False,
             "runtime": spec["runtime"],
@@ -63,6 +64,7 @@ def main(spec):
     )
     for port in (18772, 18773, 18888):
         with socket.socket() as check:
+            check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             check.bind(("127.0.0.1", port))
     runtime = Path(spec["runtime"])
     python = str(runtime / "venv/bin/python")
@@ -382,6 +384,33 @@ def main(spec):
             owner["token"],
             "placement",
         )
+        enrollment = enroll_host({
+            "authorityId": authority,
+            "hostId": host,
+            "hollywoodUrl": "http://127.0.0.1:18772",
+            "administratorCredential": owner,
+            "policy": {
+                "maxConcurrent": host_resources()["cpuSlots"],
+                "reservedInteractive": 1 if host_resources()["cpuSlots"] > 1 else 0,
+                "controlAgentIds": [global_id],
+                "memoryPerTurnBytes": 2 * 1024**3,
+                "reserveMemoryBytes": 4 * 1024**3,
+                "sampleMaxAgeSeconds": 20,
+                "connectorMaxAgeSeconds": 20,
+            },
+        })
+        saved(root / "host-enrollment.json", enrollment)
+        # Sample once before any agent can admit a native request; the owned
+        # deterministic controller keeps that original host policy fresh.
+        controller_config = enrollment["configPath"]
+        sampled = subprocess.run(
+            [python, "-m", "lax_connector.host", "--once", controller_config],
+            capture_output=True, text=True, check=False,
+        )
+        (root / "host-preflight.stderr").write_text(sampled.stderr)
+        sampled.check_returncode()
+        saved(root / "host-initial-sample.json", json.loads(sampled.stdout))
+        launch("host-controller", [python, "-m", "lax_connector.host", "--serve", controller_config])
         global_unit = "lax-attention-global-" + authority.replace("-", "")[:12]
         saved(root / "global-service-intent.json", {"unit": global_unit})
         subprocess.run(
@@ -408,8 +437,8 @@ def main(spec):
         question = "Which marker should this attention proof contain? " + prefix
         worker_instruction = (
             "First ask a Hollywood question using id attention_marker, header Marker, and question exactly "
-            + question
-            + ". Wait for the attributable human response. Do not infer a marker or poll models. After the answer, write exactly the supplied marker followed by a newline to attention-proof.txt in your workspace with a single shell command, verify its bytes, complete the bounded native goal using update_goal, and submit this exact work with connector-hashed artifactPaths attention-proof.txt and current revision. Report only the artifact/reference needed for review. Do not start other work."
+            + json.dumps(question)
+            + ". Allow a free-form answer. Wait for the attributable human response. Do not infer a marker or poll models. After the answer, write exactly the supplied marker followed by a newline to attention-proof.txt in your workspace with a single shell command, verify its bytes, complete the bounded native goal using update_goal, and submit this exact work with connector-hashed artifactPaths attention-proof.txt and current revision. Report only the artifact/reference needed for review. Do not start other work."
         )
         request = (
             "Run one finite native Android attention deliverable. Create a fresh engineer, its Engineering room and home role, and provision separate non-sudo Linux execution. Create one goal titled Native Android attention, objective Obtain an attributable human marker through native Hollywood attention and verify the resulting artifact, acceptance The original worker receives the exact authorized human answer, its file contains that answer followed by a newline, and Global independently verifies the canonical response, artifact and connector hash before explicitly accepting work and goal. Authorize reviewBudget=1, one material completion review. Add and assign exactly one work to the engineer with these instructions: "
@@ -542,12 +571,25 @@ def main(spec):
             assert value == (marker + "\n").encode()
             assert work["evidence"][0]["sha256"] == hashlib.sha256(value).hexdigest()
             with store.pool.connection() as c:
-                deliveries = c.execute(
-                    "SELECT * FROM hb_delivery WHERE authority=%s", (authority,)
-                ).fetchall()
-                assert len(deliveries) == 3 and all(
-                    d["state"] == "completed" for d in deliveries
-                )
+                # Business acceptance precedes the review turn's final output.
+                # Observe its original delivery to terminal before cleanup.
+                settle_deadline = time.monotonic() + 120
+                while True:
+                    deliveries = c.execute(
+                        "SELECT * FROM hb_delivery WHERE authority=%s", (authority,)
+                    ).fetchall()
+                    if len(deliveries) == 3 and all(
+                        d["state"] == "completed" for d in deliveries
+                    ):
+                        break
+                    if len(deliveries) > 3 or any(
+                        d["state"] in ("failed", "cancelled", "unknown")
+                        for d in deliveries
+                    ):
+                        raise RuntimeError("Original native workflow did not complete cleanly")
+                    if time.monotonic() >= settle_deadline:
+                        raise RuntimeError("Original review still unsettled; inspect without replay")
+                    time.sleep(0.5)
                 contexts = c.execute(
                     "SELECT DISTINCT native_thread FROM hb_delivery WHERE authority=%s",
                     (authority,),

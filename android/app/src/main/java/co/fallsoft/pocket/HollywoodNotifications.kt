@@ -22,6 +22,29 @@ internal object HollywoodNotifications {
     private fun tag(key:String)="hollywood:$key"
     fun record(key:String)=Pocket.prefs.getString("hollywood-notification:$key",null)?.let{JSONObject(it)}
     fun save(key:String,value:JSONObject){check(Pocket.prefs.edit().putString("hollywood-notification:$key",value.toString()).commit()){"Could not save room notification"}}
+    private fun replySnapshotKey(key:String,revision:Long)="hollywood-reply-snapshot:$key:$revision"
+    fun replySnapshot(key:String,revision:Long)=Pocket.prefs.getString(replySnapshotKey(key,revision),null)?.let{JSONObject(it)}
+    private fun captureReplyAction(key:String,value:JSONObject):Long{
+        require(value.s("state")=="verified")
+        val revision=value.getLong("revision")
+        val field=replySnapshotKey(key,revision)
+        synchronized(this){
+            val prior=Pocket.prefs.getString(field,null)?.let{JSONObject(it)}
+            // A published Android action retains one immutable original scope.
+            if(prior==null)check(Pocket.prefs.edit().putString(field,value.toString()).commit())
+            else {
+                require(listOf("owner","bindingId","authorityId","principalId","eventId","roomId").all{prior.s(it)==value.s(it)})
+                for(field in listOf("attention","reply")){
+                    val a=prior.optJSONObject(field);val b=value.optJSONObject(field)
+                    require((a==null)==(b==null))
+                    if(a!=null&&b!=null)require(hollywoodJsonEqual(
+                        if(field=="attention")a.getJSONObject("scope")else a,
+                        if(field=="attention")b.getJSONObject("scope")else b))
+                }
+            }
+        }
+        return revision
+    }
     fun rememberBinding(origin:EnvironmentRequest,binding:JSONObject){Pocket.prefs.edit().putString("hollywood-binding:"+owner(origin),binding.toString()).apply()}
     fun receive(origin:EnvironmentRequest,data:Map<String,String>,forceRefresh:Boolean=false){
         val binding=data["binding_id"].orEmpty();val event=data["event_id"].orEmpty();val room=data["room_id"].orEmpty()
@@ -32,7 +55,12 @@ internal object HollywoodNotifications {
         synchronized(this){
             val old=record(key)
             if(old!=null&&old.optLong("revision")>revision)return
-            if(!forceRefresh&&old!=null&&old.optLong("revision")==revision&&old.s("action")==action&&old.s("state") in listOf("verified","resolved","revoked"))return
+            if(old!=null&&old.optLong("revision")==revision&&old.s("action")==action&&old.s("state") in listOf("verified","resolved","revoked")){
+                // Refresh authorization without downgrading the last verified
+                // payload. A metadata hint is not a replacement question.
+                if(forceRefresh)HollywoodInboxWorker.enqueue(key)
+                return
+            }
             val value=JSONObject().put("environment",origin.environment.id).put("owner",owner(origin)).put("bindingId",binding)
                 .put("authorityId",authority).put("principalId",principal).put("eventId",event).put("roomId",room).put("revision",revision).put("action",action).put("state","hint")
             old?.optJSONObject("binding")?.let{value.put("binding",it)}
@@ -66,8 +94,10 @@ internal object HollywoodNotifications {
             val questions=attention?.optJSONObject("request")?.optJSONArray("questions")
             val inline=attention?.s("state")=="pending"&&value.optJSONObject("attention")?.s("deliveryState") in listOf("claimed","running")&&questions?.length()==1&&questions.getJSONObject(0).optBoolean("isOther",true)
             if(value.optJSONObject("reply")!=null||inline){
+                val revision=captureReplyAction(key,value)
                 val action=PendingIntent.getBroadcast(c,0,Intent(c,HollywoodReplyReceiver::class.java)
-                    .setData(Uri.Builder().scheme("pocket").authority("hollywood-reply").appendPath(key).build()).putExtra("key",key),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                    .setData(Uri.Builder().scheme("pocket").authority("hollywood-reply").appendPath(key).appendPath(revision.toString()).build())
+                    .putExtra("key",key).putExtra("revision",revision),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
                 b.addAction(NotificationCompat.Action.Builder(R.drawable.ic_notification,if(inline)"Answer" else "Reply",action)
                     .addRemoteInput(RemoteInput.Builder("reply").setLabel("Your reply…").build()).setAllowGeneratedReplies(false).build())
             }
@@ -171,8 +201,14 @@ class HollywoodInboxWorker(c:Context,p:WorkerParameters):Worker(c,p){
 class HollywoodReplyReceiver:BroadcastReceiver(){
     override fun onReceive(c:Context,i:Intent){
         val text=RemoteInput.getResultsFromIntent(i)?.getCharSequence("reply")?.toString()?.trim()?.takeIf{it.isNotBlank()}?:return
-        val key=i.getStringExtra("key")?:return;val record=HollywoodNotifications.record(key)?:return
-        if(record.s("state")!="verified")return
+        val key=i.getStringExtra("key")?:return
+        val revision=i.getLongExtra("revision",-1)
+        // New actions retain their verified payload even if a refresh or
+        // resolution replaces the current notification. Older installed actions
+        // may use their still-verified current record; no scope is guessed.
+        val record=if(revision>=1)HollywoodNotifications.replySnapshot(key,revision)
+            else HollywoodNotifications.record(key)?.takeIf{it.s("state")=="verified"}
+        if(record==null)return
         val origin=Pocket.captureEnvironment(record.s("environment"))?:return
         if(backendOwner(origin.endpoint,origin.token)!=record.s("owner"))return
         val binding=record.optJSONObject("binding")?:return;val client=HollywoodClient(record.s("owner"),binding,origin.endpoint.trimEnd('/'),origin.token)

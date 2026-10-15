@@ -86,3 +86,33 @@ the workspace proof file. First-run notification setup, loopback routing and
 accessibility-tag failures were reconciled before the request was admitted.
 The worker, gateway and emulator were stopped after the finite proof. This is
 emulator evidence, not physical-phone, native voice/push or production cutover.
+
+## Native notification reply qualification in alpha99
+
+A real installed Global/worker workflow now passes through the Android
+notification PendingIntent and RemoteInput, with the origin profile inactive,
+a viewer draft retained, a gateway outage and one deliberately lost accepted
+answer acknowledgement. The same native worker turn writes the supplied marker;
+Global independently checks the canonical human response and actual artifact,
+then accepts work and goal. All three native turns complete in two contexts.
+
+The qualification forces a same-revision hint refresh while offline before the
+reply. The earlier implementation replaced the verified question with a bare
+hint and silently dropped the reply. Alpha99 retains the verified payload while
+refreshing authorization and captures immutable per-revision reply action scope.
+The actual installed emulator APK matches the built candidate. Receipt recovery
+observes the original answer operation; exactly one response POST was observed
+in this finite test. This is not an exactly-once guarantee.
+
+Earlier failed runs remain recorded separately: setup failed before any model
+start, a question-punctuation assertion rejected valid model output, and a test
+cleanup race interrupted a final review after business acceptance. Another run
+exposed the actual notification refresh defect above. No original task or
+uncertain response was replayed. The harness now observes the original review
+to terminal before cleanup. Qualification processes and emulator are stopped.
+
+This is one-host, real-provider and Android-emulator evidence over authenticated
+device WebSocket delivery. It does not certify real FCM/background or physical
+phone delivery, voice quality, cross-host execution, active-Global steering,
+general crash recovery or production migration. The physical-phone and
+production update hold remains in place.
