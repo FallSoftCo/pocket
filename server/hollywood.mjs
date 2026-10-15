@@ -113,6 +113,7 @@ export function hollywoodRequest(method,tail,query,body){
   else if(method==='GET'&&p.length===2&&p[0]==='rooms'&&uuid(p[1]))allowed=[];
   else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['goals','work'].includes(p[2])){allowed=['after','limit'];uuidCursor=true;}
   else if(method==='GET'&&p.length===2&&['goals','work'].includes(p[0])&&uuid(p[1]))allowed=[];
+  else if(method==='GET'&&p.length===3&&p[0]==='work'&&uuid(p[1])&&p[2]==='attempts')allowed=['after','limit'];
   else if(method==='GET'&&p.length===3&&p[0]==='goals'&&uuid(p[1])&&p[2]==='work'){allowed=['after','limit'];uuidCursor=true;}
   else if(method==='GET'&&p.length===4&&p[0]==='attention'&&uuid(p[1])&&p[2]==='commands'&&operation(p[3]))allowed=[];
   else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['history','attention'].includes(p[2]))allowed=p[2]==='history'?['after','before','limit']:['after','limit'];
