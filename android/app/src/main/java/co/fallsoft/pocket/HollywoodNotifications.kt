@@ -184,6 +184,7 @@ class HollywoodReplyReceiver:BroadcastReceiver(){
         }
         try{
             val attention=record.optJSONObject("attention")
+            if(attention!=null)require(attention.getJSONObject("attention").s("state")=="pending"&&attention.s("deliveryState") in listOf("claimed","running")){"This native question is no longer accepting answers"}
             val body=JSONObject(record.toString()).put("state","saved").put("text",text)
             val intent=if(attention!=null){
                 val questions=attention.getJSONObject("attention").getJSONObject("request").getJSONArray("questions");require(questions.length()==1)
@@ -202,6 +203,7 @@ class HollywoodReplyWorker(c:Context,p:WorkerParameters):Worker(c,p){
     override fun doWork():Result {
         val id=inputData.getString("id")?:return Result.success();val raw=Pocket.prefs.getString("hollywood-reply:$id",null)?:return Result.success()
         val saved=JSONObject(raw);if(saved.s("state")=="accepted")return Result.success()
+        if(saved.s("state")=="rejected")return Result.failure()
         val origin=Pocket.captureEnvironment(saved.s("environment"))?:return Result.failure()
         if(backendOwner(origin.endpoint,origin.token)!=saved.s("owner"))return Result.failure()
         return try{runBlocking{
@@ -217,10 +219,16 @@ class HollywoodReplyWorker(c:Context,p:WorkerParameters):Worker(c,p){
             else{val scope=HollywoodScope.from(saved.getJSONObject("reply"));if(inspect)client.inspect(scope,intent)else client.submit(scope,intent)}
             saved.put("state","accepted");check(Pocket.prefs.edit().putString("hollywood-reply:$id",saved.toString()).commit())
             HollywoodNotifications.cancel(backendOwner(saved.s("owner"),saved.s("bindingId")+":"+saved.s("eventId")))
-        };Result.success()}catch(_:Exception){
-            saved.put("state",if(saved.s("state")=="saved")"saved" else "unknown");Pocket.prefs.edit().putString("hollywood-reply:$id",saved.toString()).commit()
+        };Result.success()}catch(error:Exception){
+            val attention=saved.optJSONObject("attention")
+            val shared=attention?.let{a->Pocket.prefs.getString("attention:"+saved.s("owner")+":"+saved.s("bindingId")+":"+a.getJSONObject("attention").s("id"),null)?.let(::JSONObject)}
+            val rejected=shared?.s("state")=="rejected"||(saved.s("state")=="saved"&&error is HollywoodFailure&&error.code=="HOLLYWOOD_REQUEST_REJECTED")
+            saved.put("state",if(rejected)"rejected" else if(saved.s("state")=="saved")"saved" else "unknown")
+                .put("error",error.message.orEmpty().take(500))
+            Pocket.prefs.edit().putString("hollywood-reply:$id",saved.toString()).commit()
             HollywoodNotifications.record(backendOwner(saved.s("owner"),saved.s("bindingId")+":"+saved.s("eventId")))?.let{record->HollywoodNotifications.show(backendOwner(saved.s("owner"),saved.s("bindingId")+":"+saved.s("eventId")),record,status="Reply needs checking · open the room")}
-            if(saved.s("state")=="saved"&&runAttemptCount<8)Result.retry()else Result.failure()
+            // Unknown delivery retries GET of the original receipt, never the POST.
+            if(saved.s("state") in listOf("saved","unknown")&&runAttemptCount<8)Result.retry()else Result.failure()
         }
     }
     companion object{fun enqueue(context:Context,id:String){

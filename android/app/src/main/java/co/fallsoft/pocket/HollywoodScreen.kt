@@ -151,7 +151,7 @@ import org.json.JSONObject
             TextButton({menu=false;browsing=true}){BilingualLabel("Rooms")}
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             ProfileSwitcher{menu=false}
-            Row{TextButton({recipient="";source=null;direct=false}){BilingualLabel("Room owner")};Switch(direct,{direct=it;source=null});BilingualLabel("Private")}
+            Row{TextButton({recipient="";source=null;direct=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null});BilingualLabel("Private")}
             actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";menu=false}){Text(actor.s("name"))}}
             Row{Checkbox(postOnly,{postOnly=it});BilingualLabel("Post without requesting work")}
             if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}
@@ -187,7 +187,7 @@ import org.json.JSONObject
             val response=if(approval)JSONObject().put("decision",decision)else JSONObject().put("answers",JSONObject().apply{questions.forEach{q->put(q.s("id"),JSONObject().put("answers",org.json.JSONArray(listOf(answers[q.s("id")].orEmpty()))))}})
             val intent=pending?:client.captureAttention(fresh,response).also{pending=it}
             client.respond(id,intent,inspect);pending=null;changed();dismiss()
-        }catch(e:Exception){if(e is CancellationException)throw e;error="Response remains saved. ${e.message.orEmpty()}"}finally{busy=false}}
+        }catch(e:Exception){if(e is CancellationException)throw e;pending=client.attentionPending(id);error=if(pending?.s("state")=="rejected")"Response was not accepted. ${e.message.orEmpty()}" else "Response remains saved. ${e.message.orEmpty()}"}finally{busy=false}}
     }
     AlertDialog(onDismissRequest={if(!busy)dismiss()},title={Text(if(approval)"Review approval" else "Answer question")},text={
         Column(Modifier.heightIn(max=440.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
@@ -201,7 +201,13 @@ import org.json.JSONObject
             if(error.isNotBlank())Text(error,color=Coral)
         }
     },confirmButton={
-        if(pending!=null)TextButton({answer(inspect=true)},enabled=!busy){BilingualLabel("Check original response")}
+        if(pending?.s("state")=="rejected"&&attention.s("state")=="pending"&&current.s("deliveryState") in listOf("claimed","running"))
+            TextButton({
+                val saved=client.editRejectedAttention(id).optJSONObject("answers")
+                answers=questions.associate{q->q.s("id") to saved?.optJSONObject(q.s("id"))?.optJSONArray("answers")?.optString(0).orEmpty()}
+                pending=null;error=""
+            },enabled=!busy){BilingualLabel("Edit answer")}
+        else if(pending!=null)TextButton({answer(inspect=true)},enabled=!busy){BilingualLabel("Check original response")}
         else if(approval)Row{TextButton({answer("decline")},enabled=open&&!busy){BilingualLabel("Decline")};TextButton({answer("accept")},enabled=open&&!busy){BilingualLabel("Approve once")}}
         else TextButton({answer()},enabled=open&&!busy&&questions.all{answers[it.s("id")].orEmpty().isNotBlank()}){BilingualLabel("Send answer")}
     },dismissButton={TextButton(dismiss,enabled=!busy){BilingualLabel("Close")}})

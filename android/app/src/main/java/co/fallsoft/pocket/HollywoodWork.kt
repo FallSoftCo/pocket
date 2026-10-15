@@ -65,6 +65,10 @@ import org.json.JSONObject
                     val goal=value.getJSONObject("goal")
                     Text(goal.s("title"),style=MaterialTheme.typography.titleSmall)
                     Text("Outcome · ${goal.s("state")} · revision ${goal.optLong("revision")}",color=Mint)
+                    value.optJSONObject("cooperation")?.let{team->
+                        Text(if(team.s("policy")=="kanban_pull")"Work allocation · team claims ready work" else "Work allocation · assigned work",color=Muted)
+                        Text(if(team.isNull("reviewerId"))"Review · goal manager" else "Review · independent verifier",color=Muted)
+                    }
                     HollywoodCriteria(goal)
                     Text(goal.s("objective"),maxLines=if(fullObjective)Int.MAX_VALUE else 3,overflow=TextOverflow.Ellipsis)
                     TextButton({fullObjective=!fullObjective}){Text(if(fullObjective)"Condense objective" else "Full objective")}
@@ -83,7 +87,7 @@ import org.json.JSONObject
                         Text("${e.s("relativePath")} · ${e.optLong("size")} bytes")
                         Text("Host: ${e.s("hostId")}\nWorkspace: ${e.s("workspaceId")}\nSHA-256: ${e.s("sha256")}",color=Muted,style=MaterialTheme.typography.bodySmall)
                     }
-                    Text("Owner: ${item.s("owner")}\nGoal: ${item.s("goal")}",color=Muted,style=MaterialTheme.typography.bodySmall)
+                    Text("Owner: ${if(item.isNull("owner"))"Unclaimed" else item.s("owner")}\nGoal: ${item.s("goal")}",color=Muted,style=MaterialTheme.typography.bodySmall)
                 }
             }
         }

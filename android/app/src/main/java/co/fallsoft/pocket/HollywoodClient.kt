@@ -8,6 +8,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.UUID
 
+private object HollywoodAttentionIntents
+
 /** Captured source profile and human binding. A pending action never follows navigation. */
 internal class HollywoodClient(val owner:String,source:JSONObject,
     private val base:String=Pocket.base.trimEnd('/'),private val token:String=Pocket.token) {
@@ -61,22 +63,62 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
         persist("pending:"+key(scope),null);return receipt
     }
     fun attentionPending(id:String)=Pocket.prefs.getString("attention:$owner:$bindingId:$id",null)?.let{JSONObject(it)}
-    fun captureAttention(value:JSONObject,response:JSONObject):JSONObject {
+    fun captureAttention(value:JSONObject,response:JSONObject):JSONObject = synchronized(HollywoodAttentionIntents) {
         val attention=value.getJSONObject("attention");val scope=value.getJSONObject("scope");val id=attention.s("id")
         require(attentionPending(id)==null){"Inspect the original pending response first"}
         require(scope.s("authorityId")==authorityId&&scope.s("attentionId")==id)
+        require(attention.s("state")=="pending"&&value.s("deliveryState") in listOf("claimed","running")){"This native request is no longer accepting answers"}
         val body=JSONObject().put("operationId","phone-attention:"+UUID.randomUUID()).put("scope",JSONObject(scope.toString())).put("response",JSONObject(response.toString()))
         val intent=JSONObject().put("binding",JSONObject(identity.toString())).put("body",body).put("state","saved")
-        persist("attention:$owner:$bindingId:$id",intent);return intent
+        persist("attention:$owner:$bindingId:$id",intent);intent
+    }
+    fun editRejectedAttention(id:String):JSONObject = synchronized(HollywoodAttentionIntents) {
+        val current=attentionPending(id)?:throw IllegalStateException("No rejected answer is saved")
+        require(current.s("state")=="rejected"){"Unknown delivery must be inspected first"}
+        val archive="attention-rejected:$owner:$bindingId:$id:"+current.getJSONObject("body").s("operationId")
+        persist(archive,current)
+        persist("attention:$owner:$bindingId:$id",null)
+        current.getJSONObject("body").getJSONObject("response")
     }
     suspend fun respond(id:String,intent:JSONObject,inspect:Boolean=false):JSONObject {
         require(hollywoodBindingMatches(identity,intent.getJSONObject("binding")))
         val body=intent.getJSONObject("body")
-        val receipt=if(inspect)call("attention/$id/commands/"+body.s("operationId"))else call("attention/$id/response",body)
-        require(hollywoodJsonEqual(receipt.getJSONObject("scope"),body.getJSONObject("scope")))
-        val attention=receipt.getJSONObject("attention")
-        require(attention.s("response_author")==principalId&&hollywoodJsonEqual(attention.getJSONObject("response"),body.getJSONObject("response")))
-        persist("attention:$owner:$bindingId:$id",null);return receipt
+        val inspecting=synchronized(HollywoodAttentionIntents){
+            val current=attentionPending(id)
+            if(current!=null)require(hollywoodJsonEqual(current.getJSONObject("body"),body)){"Another saved response owns this question"}
+            if(current?.s("state")=="rejected")throw HollywoodFailure(current.optInt("errorStatus",409),current.s("error","The original response was rejected."),"HOLLYWOOD_REQUEST_REJECTED")
+            val readOnly=inspect||current==null||current.s("state")!="saved"
+            if(!readOnly){
+                // Persist before dispatch. A process loss can only inspect this exact operation.
+                current!!.put("state","sending")
+                persist("attention:$owner:$bindingId:$id",current)
+            }
+            readOnly
+        }
+        try{
+            val receipt=if(inspecting)call("attention/$id/commands/"+body.s("operationId"))else call("attention/$id/response",body)
+            require(hollywoodJsonEqual(receipt.getJSONObject("scope"),body.getJSONObject("scope")))
+            val attention=receipt.getJSONObject("attention")
+            require(attention.s("response_author")==principalId&&hollywoodJsonEqual(attention.getJSONObject("response"),body.getJSONObject("response")))
+            synchronized(HollywoodAttentionIntents){
+                val current=attentionPending(id)
+                require(current==null||hollywoodJsonEqual(current.getJSONObject("body"),body))
+                persist("attention:$owner:$bindingId:$id",null)
+            }
+            return receipt
+        }catch(error:Exception){
+            synchronized(HollywoodAttentionIntents){
+                val current=attentionPending(id)
+                if(current!=null&&hollywoodJsonEqual(current.getJSONObject("body"),body)){
+                    val rejected=!inspecting&&error is HollywoodFailure&&error.code=="HOLLYWOOD_REQUEST_REJECTED"
+                    current.put("state",if(rejected)"rejected" else "unknown")
+                        .put("error",error.message.orEmpty().take(500))
+                    if(error is HollywoodFailure)current.put("errorStatus",error.status)
+                    persist("attention:$owner:$bindingId:$id",current)
+                }
+            }
+            throw error
+        }
     }
 }
 
