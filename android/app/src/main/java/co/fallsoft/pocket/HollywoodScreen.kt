@@ -26,6 +26,7 @@ import org.json.JSONObject
     var room by remember(client.bindingId){mutableStateOf(Pocket.prefs.getString("hollywood-room:$owner:${client.bindingId}",client.defaultRoomId)?:client.defaultRoomId)}
     var browsing by remember(client.bindingId){mutableStateOf(false)}
     var rooms by remember(client.bindingId){mutableStateOf(emptyList<JSONObject>())}
+    var catalogAvailable by remember(client.bindingId){mutableStateOf(false)}
     var headRefreshRevision by remember(client.bindingId){mutableIntStateOf(0)}
     val feeds=remember(client.bindingId){mutableMapOf<String,HollywoodRoomFeed>()}
     val feed=feeds.getOrPut(room){HollywoodRoomFeed(room){path->client.call(path)}}
@@ -86,8 +87,8 @@ import org.json.JSONObject
             launch{while(isActive){feed.refreshAttention();delay(5000)}}
         }
     }
-    LaunchedEffect(client.bindingId){
-        while(isActive){try{rooms=client.call("rooms").getJSONArray("rooms").objects()}catch(e:CancellationException){throw e}catch(_:Exception){};delay(15000)}
+    LaunchedEffect(client.bindingId,browsing,PocketLive.connectionRevision){
+        while(isActive){try{rooms=client.call("rooms").getJSONArray("rooms").objects();catalogAvailable=true}catch(e:CancellationException){throw e}catch(_:Exception){catalogAvailable=false};delay(15000)}
     }
     LaunchedEffect(feed,list){
         snapshotFlow{Triple(list.isScrollInProgress,list.firstVisibleItemIndex,following)}.collect{(scrolling,index,follow)->
@@ -140,9 +141,7 @@ import org.json.JSONObject
             WorkCatalogList(Modifier.weight(1f),reverseLayout=false){
                 val ordered=rooms.sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
                 items(ordered,key={it.s("id")}){item->
-                    val task=Task("hollywood-room:"+item.s("id"),item.s("name"),"","idle",0,false,preview=item.s("purpose"))
-                    TaskCard(task,modifier=Modifier.testTag("native-room:"+item.s("id")),onOpen={choose(item.s("id"))},
-                        voice={modifier->CardInteractionRegion("Chat",modifier,item.s("name")){choose(item.s("id"))}},onRename=null,onWatch=null)
+                    HollywoodRoomCard(item,catalogAvailable){choose(item.s("id"))}
                 }
             }
             Row(Modifier.padding(16.dp)){TextButton({browsing=false}){BilingualLabel("Back")};ProfileSwitcher{};TextButton(onSettings){BilingualLabel("Settings")}}

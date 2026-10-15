@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "state": "ui-qualified-pending-canonical-projection",
+  "base": "b968268",
+  "branch": "nextcomp/room-activity-20261015-r01",
+  "contract": {
+    "version": 1,
+    "observedAt": "database statement timestamp, epoch milliseconds, never work recency",
+    "counts": [
+      "pending",
+      "claimed",
+      "running",
+      "cancelRequested",
+      "unknown",
+      "waitingForHuman"
+    ],
+    "overlap": "display separately; never total",
+    "authority": "Hollywood Store.catalog viewer room/direct/current attention scope"
+  },
+  "native": {
+    "test": "HollywoodRoomActivityNativeTest#aggregateFailureAndQuietSnapshotNeverInventIdleOrLoseRoomTarget",
+    "result": "passed",
+    "data": "synthetic aggregate in actual native room card",
+    "covers": [
+      "all six categories readable together",
+      "overlapping attention separate",
+      "failed refresh and missing field unavailable",
+      "no idle before valid allzero",
+      "exact room target remains tappable"
+    ],
+    "physicalPhone": false,
+    "realProviderInference": false
+  },
+  "boundaryTests": {
+    "tests": 2,
+    "failures": 0,
+    "errors": 0
+  },
+  "canonicalReadback": {
+    "ownQaRoomVisible": true,
+    "activityPresent": false,
+    "effects": 0,
+    "meaning": "Backend projection not yet installed at inspected QA authority; no canonical aggregate correctness claim"
+  },
+  "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-room-activity-mixed",
+  "limits": [
+    "Follow-up source only; no publication/restart/install/announcement",
+    "Alpha102 immutable staged artifacts unchanged",
+    "Actual viewer filtering/count aggregation belongs to coordinator backend qualification",
+    "Physical voice and FCM remain separate evidence"
+  ],
+  "qualificationApkSha256": "0df6a77f4ecc73ee45223a163db33acd6687712d2205c9d44e49c023ba27982e"
+}

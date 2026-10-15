@@ -2652,6 +2652,14 @@
       ],
       "verification": "Real separate-authority native core journey passed: newest-first, accepted despite auxiliary read failure, reconnect and keyboard-aware Back/reopen original message exactly once. Signed alpha102 compatible APK and immutable gateway/update manifests handed to source coordinator; no production restart or physical installation by this owner. Native voice/push/phone remain separate qualification.",
       "qualification": "docs/qualification/native-room-core-alpha102-20261015.json"
+    },
+    {
+      "id": "canonical-room-catalog-activity-20261015",
+      "request": "Show canonical viewer-visible queued, claimed, running, stopping, unknown and needs-you counts for multiagent rooms. Idle only from complete valid all-zero snapshot; failed/missing/malformed activity is unavailable. Do not infer agent presence or use observation timestamp as work recency.",
+      "status": "ui-native-qualified-awaiting-canonical-projection-integration",
+      "owner": "NextComp UI; source coordinator owns Hollywood Store.catalog",
+      "contract": "room.activity version1 epoch-millisecond observedAt and six nonnegative safe integer counts, same room/direct/attention viewer scope",
+      "verification": "Focused native aggregate-to-failure-to-missing-to-allzero journey passed; no production publish/restart/announcement or physical phone claim. Real projection integration pending owning backend receipt."
     }
   ],
   "current_state": {

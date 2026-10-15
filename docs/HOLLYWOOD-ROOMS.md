@@ -118,3 +118,25 @@ The native journey exercised reopening the draft while active and opening a
 saved pending receipt after completion. Physical phone, native voice, genuine
 FCM and the wider enterprise release gates remain unqualified. Read the exact
 [versioned evidence](qualification/native-guidance-recovery-alpha101.json).
+
+## Room catalog activity (follow-up candidate)
+
+The additive `room.activity` contract is a viewer-authorized snapshot from one
+batched Hollywood catalog query. Version 1 requires `version: 1`, `observedAt`
+(Unix epoch milliseconds), and nonnegative safe-integer counts for `pending`,
+`claimed`, `running`, `cancelRequested`, `unknown`, and `waitingForHuman`.
+Attention counts use viewer-visible pending requests from the current delivery
+generation/claim; direct-audience permissions match room detail. Counts overlap,
+so NextComp displays categories separately and never adds them into a total.
+
+A validated all-zero snapshot shows Idle: no visible unsettled work at that
+observation. This says nothing about host connectivity, agent health or completed
+work. Missing, unsupported, malformed or unavailable data shows Status unavailable.
+A failed catalog refresh retains navigable rooms while withdrawing their status
+assertion. `observedAt` is not work recency and never changes ordering.
+
+The Android follow-up uses the existing catalog lane (15 seconds plus room-list
+entry/reconnect). It performs no per-room history scans or model calls to derive
+presence. Native room cards keep inline immersion for common labels and room
+purpose, and expose all counts in accessibility text. Alpha102 stays immutable;
+this follow-up has not been published or installed on the phone.
