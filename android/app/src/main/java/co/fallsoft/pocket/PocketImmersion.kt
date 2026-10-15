@@ -37,7 +37,7 @@ object PocketImmersion {
     private fun version(text:String)=immersionSourceHash(text)
     private fun cacheKey()="immersion-display-cache-v4:"+profileKey()
     private fun eligible(row:JSONObject)=row.s("planVersion")=="inline-replacement-v3"&&row.s("density")==density
-    private fun cached(id:String,text:String):JSONObject? {val hash=version(text);return translations[id]?.takeIf{it.s("version")==hash&&eligible(it)}?:byContent[hash]?.takeIf{eligible(it)}}
+    private fun cached(id:String,text:String):JSONObject? {if(translations.isEmpty()&&byContent.isEmpty())return null;val hash=version(text);return translations[id]?.takeIf{it.s("version")==hash&&eligible(it)}?:byContent[hash]?.takeIf{eligible(it)}}
     private var cacheSave:Job?=null
     private fun persistCache(){
         cacheSave?.cancel();val captured=profileKey();val key=cacheKey()

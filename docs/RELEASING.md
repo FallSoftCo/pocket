@@ -135,3 +135,16 @@ receipt. The runner verifies the exact live emulator PID/start ticks, AVD and
 console port; physical phone identifiers are rejected. Use a dedicated owned AVD
 when a historical service owns the old test serial. Preserve its original
 receipt and processes.
+
+### Maintained phone-compatible signing
+
+Phone-compatible updates must also use the optimized `release` build type. Set
+`POCKET_PHONE_SIGNING_STORE`, `POCKET_PHONE_SIGNING_PASSWORD`, and
+`POCKET_PHONE_SIGNING_ALIAS` privately alongside the public release identity.
+The builder preserves the public signed APK, then signs the same release
+configuration with the installed phone identity and prepares both variants.
+Supplying `POCKET_DEBUG_STORE` without these release credentials fails closed;
+the debug build must never be substituted merely to retain an installed signer.
+Changing debuggability does not require uninstalling or re-pairing when package,
+signing identity and monotonic version are retained. Qualify the optimized
+artifact separately; a non-shrunk instrumentation build is not its runtime proof.

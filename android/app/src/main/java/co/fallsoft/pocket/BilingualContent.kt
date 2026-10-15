@@ -21,12 +21,18 @@ class ImmersionReadingChoices(private val limit:Int=200){
         while(choices.size>limit)choices.remove(choices.keys.first())
     }
     fun selected(key:ImmersionReadingKey,plan:ImmersionPresentation):ImmersionSpan? {
-        if(key.owner!=owner||key.sourceHash!=immersionSourceHash(plan.source)||key.targetHash!=immersionSourceHash(plan.text)||contextualHybridText(plan.source,plan.spans)!=plan.text)return null
         val choice=choices[key]?:return null
+        if(key.owner!=owner||key.sourceHash!=immersionSourceHash(plan.source)||key.targetHash!=immersionSourceHash(plan.text)||contextualHybridText(plan.source,plan.spans)!=plan.text)return null
         return plan.spans.singleOrNull{it.start==choice.start&&it.end==choice.end&&it.source==choice.source&&it.target==choice.target}
     }
 }
-fun immersionSourceHash(text:String)=java.security.MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it.toInt() and 255)}
+/** Fixed SHA-256 hex encoding: no locale formatter/allocation per digest byte on the UI thread. */
+fun immersionSourceHash(text:String):String {
+    val digest=java.security.MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
+    val hex="0123456789abcdef";val result=CharArray(digest.size*2)
+    digest.forEachIndexed{index,byte->val value=byte.toInt() and 255;result[index*2]=hex[value ushr 4];result[index*2+1]=hex[value and 15]}
+    return String(result)
+}
 /** Never splice a previous plan into a new source or infer word-level alignment. */
 fun contextualHybridText(original:String,spans:List<ImmersionSpan>):String? {
     var cursor=0;val result=StringBuilder()

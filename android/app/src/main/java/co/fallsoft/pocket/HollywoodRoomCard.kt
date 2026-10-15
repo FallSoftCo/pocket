@@ -35,9 +35,9 @@ import org.json.JSONObject
                 Box(Modifier.size(24.dp)) {
                     if(activity?.executing==true)SymbolIcon("Codex",spoken,Modifier.fillMaxSize(),spinning=true)
                     else SymbolIcon(when {
-                        activity==null||activity.uncertain->Icons.Rounded.HelpOutline
+                        activity==null||activity.uncertain->Icons.Rounded.ErrorOutline
                         activity.needsHuman->Icons.Rounded.ErrorOutline
-                        activity.scheduled->Icons.Rounded.HourglassTop
+                        activity.scheduled->Icons.Rounded.MoreHoriz
                         else->Icons.Rounded.Pause
                     },spoken,tint=if(activity?.uncertain==true||activity?.needsHuman==true)Coral else Muted,modifier=Modifier.size(20.dp))
                 }

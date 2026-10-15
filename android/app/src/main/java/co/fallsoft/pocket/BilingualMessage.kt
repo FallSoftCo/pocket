@@ -41,7 +41,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
     LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offer(id,original)}
     if(!PocketImmersion.enabled){ReportDisplayedImmersion(id,original,onDisplayedText);Column(modifier){RichText(original)};return}
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
-    val readingKey=PocketImmersion.readingKey(id,plan)
+    val readingKey=remember(id,plan.source,plan.text,Pocket.environmentId,Pocket.base,Pocket.token,Pocket.selected,PocketVoice.targetThread,PocketImmersion.density){PocketImmersion.readingKey(id,plan)}
     val selected=PocketImmersion.readingSelection(readingKey,plan)
     val originalOnly=PocketImmersion.supportEnabled&&PocketImmersion.originalShown(id)
     val cycle=rememberImmersionCycle(plan,readingKey,selected.takeIf{PocketImmersion.supportEnabled},PocketImmersion.supportEnabled&&!originalOnly)
@@ -77,7 +77,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 @Composable fun ImmersionText(id:String,original:String,modifier:Modifier=Modifier,color:Color=Paper,fontSize:TextUnit=16.sp,lineHeight:TextUnit=24.sp,maxLines:Int=Int.MAX_VALUE,fontWeight:FontWeight?=null,kind:String="public display",rescue:Boolean=true,overflow:TextOverflow=TextOverflow.Ellipsis,phraseRescue:Boolean=rescue,links:Boolean=true,onDisplayedText:((String)->Unit)?=null){
     LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offer(id,original,kind)}
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
-    val readingKey=PocketImmersion.readingKey(id,plan)
+    val readingKey=remember(id,plan.source,plan.text,Pocket.environmentId,Pocket.base,Pocket.token,Pocket.selected,PocketVoice.targetThread,PocketImmersion.density){PocketImmersion.readingKey(id,plan)}
     val selected=PocketImmersion.readingSelection(readingKey,plan)
     val cycle=rememberImmersionCycle(plan,readingKey,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},PocketImmersion.enabled&&PocketImmersion.supportEnabled)
     val shownText=cycle.plan.text

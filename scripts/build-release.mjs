@@ -9,6 +9,10 @@ for(const key of ['POCKET_SIGNING_STORE','POCKET_SIGNING_PASSWORD','POCKET_RELEA
 if(hostname()!==process.env.NEXTCOMP_BUILD_HOST)throw Error('Not the explicitly configured build host.');
 const outside=path=>{if(!isAbsolute(path))throw Error('Private build paths must be absolute.');const rel=relative(root,resolve(path));if(rel!== '..'&&!rel.startsWith('../'))throw Error('Private build paths must stay outside the checkout.');return resolve(path);};
 outside(process.env.POCKET_SIGNING_STORE);
+const phoneStore=process.env.POCKET_PHONE_SIGNING_STORE;
+if(process.env.POCKET_DEBUG_STORE&&!phoneStore)throw Error('Phone-compatible delivery requires optimized release signing credentials; do not publish the debug APK.');
+if(phoneStore){outside(phoneStore);for(const key of ['POCKET_PHONE_SIGNING_PASSWORD','POCKET_PHONE_SIGNING_ALIAS'])if(!process.env[key])throw Error(`${key} is required for the optimized compatible release.`);}
+
 const stage=outside(process.env.POCKET_RELEASE_STAGE);if(existsSync(stage))throw Error('Use a new staging directory; inspect an existing build instead of overwriting its receipt.');
 const sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT;if(!sdk)throw Error('Set ANDROID_HOME.');
 mkdirSync(stage,{recursive:true,mode:0o700});const directory=join(stage,'app-updates');mkdirSync(directory,{mode:0o700});
@@ -36,11 +40,23 @@ try{
  writeFileSync(join(directory,'build-intent.json'),JSON.stringify(record,null,2)+'\n',{mode:0o600});
  const signed=['testDebugUnitTest','testReleaseUnitTest','lintDebug','lintRelease','assembleDebug','assembleRelease'];
  run('./gradlew',['--no-daemon','--max-workers=2','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8',...signed],process.env,join(root,'android'));record.tasks.push(...signed);record.unit={debug:unit('Debug'),release:unit('Release')};
+ const primaryRelease=join(stage,'primary-release.apk');
+ copyFileSync(join(root,'android/app/build/outputs/apk/release/app-release.apk'),primaryRelease);
+ let compatibleRelease=join(root,'android/app/build/outputs/apk/debug/app-debug.apk');
+ if(phoneStore){
+  const phoneEnv={...process.env,POCKET_SIGNING_STORE:phoneStore,POCKET_SIGNING_PASSWORD:process.env.POCKET_PHONE_SIGNING_PASSWORD,POCKET_SIGNING_ALIAS:process.env.POCKET_PHONE_SIGNING_ALIAS};
+  delete phoneEnv.POCKET_SIGNING_KEY_PASSWORD;
+  run('./gradlew',['--no-daemon','--max-workers=2','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8','assembleRelease'],phoneEnv,join(root,'android'));
+  compatibleRelease=join(stage,'phone-compatible-release.apk');
+  copyFileSync(join(root,'android/app/build/outputs/apk/release/app-release.apk'),compatibleRelease);
+  record.tasks.push('assembleRelease(phone-compatible-optimized)');
+  record.phoneCompatible={optimized:true,apkSha256:fileSha(compatibleRelease)};
+ }
  const qaEnv={...process.env};delete qaEnv.POCKET_DEBUG_STORE;
  const qa=['assembleQualification','assembleQualificationAndroidTest'];run('./gradlew',['--no-daemon','--max-workers=2','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8',...qa],qaEnv,join(root,'android'));record.tasks.push(...qa);
  const env={...process.env,POCKET_DATA:stage};delete env.POCKET_SIGNING_PASSWORD;delete env.POCKET_SIGNING_KEY_PASSWORD;
- const release=join(root,'android/app/build/outputs/apk/release/app-release.apk');
- run(process.execPath,[join(root,'scripts/prepare-app-update.mjs'),release,join(root,'android/app/build/outputs/apk/debug/app-debug.apk')],env);
+ const release=primaryRelease;
+ run(process.execPath,[join(root,'scripts/prepare-app-update.mjs'),release,compatibleRelease],env);
  const manifest=JSON.parse(readFileSync(join(directory,'manifest.json'),'utf8'));
  record.productionSourceSha=productionSourceSha(root);if(record.productionSourceSha!==record.productionSourceBefore||qualificationInputSha(root)!==record.qualificationInputSha)throw Error('Source changed during build.');
  if(!/^[a-zA-Z0-9._-]+$/.test(manifest.versionName))throw Error('Invalid APK version name.');
