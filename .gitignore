@@ -22,3 +22,5 @@ __pycache__/
 *.pyc
 
 node_modules
+
+/android/app/build

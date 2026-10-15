@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "versionCode": 121,
+  "versionName": "0.5.0-alpha.103",
+  "state": "published-awaiting-handset-install",
+  "phoneVersionObserved": 120,
+  "phoneApkSha256": "258d8c68c674f7d972e77f52098b36a2ff95648ea503422d8bbbb24bc1099ba0",
+  "phoneSignerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+  "phoneApkBytes": 52349627,
+  "phoneBuild": "optimized release; debuggable=false",
+  "implementation": [
+    "Exact SHA-256 hex without per-byte locale formatting",
+    "No redundant reading-plan hash verification when no selection exists",
+    "Reading identities remembered across unchanged composition",
+    "Compatible updates use release optimization with the existing installed signer",
+    "Canonical activity snapshots and foreground-scoped room refresh with retained loading/retry"
+  ],
+  "verification": {
+    "debugAndReleaseUnitAndLint": "passed",
+    "nativeCases": "changed room-card, real canonical catalog/reopen, production stock typing all passed through checked release recorder",
+    "optimizedCodePayload": "code/resources/manifest byte-identical under QA-only test signer; native framework-only black-box test passed",
+    "keyToDrawCallbackMs": {
+      "samples": 40,
+      "median": 29.4521005,
+      "max": 45.178006
+    },
+    "modelsStarted": 0,
+    "messagesSubmitted": 0
+  },
+  "delivery": {
+    "system76": "checked CAS120->121 published",
+    "ozzz": "checked CAS120->121 published",
+    "notification": 1730,
+    "source": "system76 only",
+    "fcm": "accepted first attempt",
+    "serviceRestarts": 0,
+    "pairingChanges": 0
+  },
+  "limits": [
+    "Software-emulator draw callback timings are not physical optical latency or frame pacing",
+    "The full severity of the reported phone lag has not been reproduced; no claim that hashing was its sole cause",
+    "Actual installed phone version was still120 at last SSH inspection",
+    "Physical voice, rendered FCM and handset typing remain unqualified until actual updated-device evidence"
+  ],
+  "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-alpha103-optimized-room"
+}

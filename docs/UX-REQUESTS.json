@@ -2656,10 +2656,17 @@
     {
       "id": "canonical-room-catalog-activity-20261015",
       "request": "Show canonical viewer-visible queued, claimed, running, stopping, unknown and needs-you counts for multiagent rooms. Idle only from complete valid all-zero snapshot; failed/missing/malformed activity is unavailable. Do not infer agent presence or use observation timestamp as work recency.",
-      "status": "ui-native-qualified-awaiting-canonical-projection-integration",
+      "status": "published-alpha103-awaiting-handset-install",
       "owner": "NextComp UI; source coordinator owns Hollywood Store.catalog",
       "contract": "room.activity version1 epoch-millisecond observedAt and six nonnegative safe integer counts, same room/direct/attention viewer scope",
-      "verification": "Focused native aggregate-to-failure-to-missing-to-allzero journey passed; no production publish/restart/announcement or physical phone claim. Real projection integration pending owning backend receipt."
+      "verification": "Real canonical catalog/reopen journey passed against live v1 projection; optimized release input/native navigation passed. Published121, phone still120 at last check."
+    },
+    {
+      "id": "severe-typing-lag-20261015",
+      "request": "Fix severe typing and conversation performance; do not hide behind unit counts or ship unverified animation changes.",
+      "status": "confirmed-hotpath-and-release-packaging-fixes-published-awaiting-phone-verification",
+      "qualification": "docs/qualification/typing-optimized-alpha103-20261015.json",
+      "remaining": "Handset121 installation and actual typing/voice/rendered-push verification; full handset lag severity not yet reproduced."
     }
   ],
   "current_state": {
