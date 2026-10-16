@@ -46,6 +46,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -298,22 +300,42 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun ConnectionPill(){val ok=Pocket.connected&&Pocket.codexOnline;Row(Modifier.clip(CircleShape).background(Panel).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){Box(Modifier.size(6.dp).background(if(ok)Mint else Coral,CircleShape));BilingualLabel(if(ok)"Connected" else if(Pocket.connected)"Codex offline" else "Reconnecting",fontSize=11.sp,color=if(ok)Mint else Coral)}}
-@Composable fun ProfileSwitcher(onSelected:()->Unit={}){
+/** Embedded menus render environment choices in their existing anchored surface. */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable fun ProfileSwitcher(inlineOptions:Boolean=false,onSelected:()->Unit={}){
     val c=LocalContext.current
     val profiles=Pocket.environmentProfiles.all();if(profiles.isEmpty())return
     var expanded by remember{mutableStateOf(false)}
+    val select:(EnvironmentIdentity)->Unit={profile->
+        expanded=false;Pocket.activateEnvironment(profile.id)
+        if(Pocket.environmentId==profile.id)onSelected()
+    }
+    val add:()->Unit={expanded=false;c.nextCompActivity()?.beginPairing();onSelected()}
+    val choices:@Composable ColumnScope.()->Unit={
+        profiles.forEach{profile->DropdownMenuItem(
+            text={Text(profile.name,maxLines=2,overflow=TextOverflow.Ellipsis)},
+            leadingIcon={RadioButton(profile.id==Pocket.environmentId,onClick=null)},
+            modifier=Modifier.testTag("environment-choice:"+profile.id),
+            onClick={select(profile)})}
+        DropdownMenuItem(text={BilingualLabel("Add environment")},onClick=add)
+    }
+    if(inlineOptions){
+        Column(Modifier.fillMaxWidth().semantics{testTagsAsResourceId=true}.testTag("environment-picker-inline")){
+            BilingualLabel("Environment",Modifier.padding(horizontal=12.dp,vertical=6.dp),color=Muted,centered=false)
+            choices()
+        }
+        return
+    }
     Box(Modifier.fillMaxWidth()){
         OutlinedButton({expanded=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).semantics{contentDescription="Development environment: "+(profiles.firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host)}){
             SymbolIcon(if(Pocket.local)Icons.Rounded.PhoneAndroid else Icons.Rounded.Computer,null,Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp));Text(profiles.firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,modifier=Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
             SymbolIcon(Icons.Rounded.ExpandMore,null,Modifier.size(20.dp))
         }
-        DropdownMenu(expanded=expanded,onDismissRequest={expanded=false}){
-            profiles.forEach{profile->DropdownMenuItem(text={Text((if(profile.id==Pocket.environmentId)"• " else "")+profile.name)},onClick={expanded=false;Pocket.activateEnvironment(profile.id);if(Pocket.environmentId==profile.id)onSelected()})}
-            DropdownMenuItem(text={BilingualLabel("Add environment")},onClick={expanded=false;c.nextCompActivity()?.beginPairing();onSelected()})
-        }
+        DropdownMenu(expanded=expanded,onDismissRequest={expanded=false},content=choices)
     }
 }
+
 class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntStateOf(if(archived)3 else 0);val query=mutableStateOf("")}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={},listState:androidx.compose.foundation.lazy.LazyListState=rememberLazyListState(),view:SessionCatalogViewState=remember{SessionCatalogViewState(Pocket.showArchived)}){
@@ -435,8 +457,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     val revision=Triple(t.preview,t.status,t.activityAt)
     var observed by remember(Pocket.environmentId,t.id){mutableStateOf(revision)}
     LaunchedEffect(Pocket.environmentId,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
-    val quiet=!active&&!t.needsInput
-    val cardText=if(quiet)Color(0xffb8bdc7) else Paper
+    val cardText=Paper
     WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,modifier){
         if(!t.archived)Row(Modifier.matchParentSize()){
             voice?.invoke(Modifier.weight(.22f).fillMaxHeight())

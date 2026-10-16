@@ -41,7 +41,7 @@ import java.util.Locale
 }
 
 @Composable fun UsageDetails(onNavigate:()->Unit={}){
-    ProfileSwitcher(onSelected=onNavigate)
+    ProfileSwitcher(inlineOptions=true,onSelected=onNavigate)
     val context=androidx.compose.ui.platform.LocalContext.current
     TextButton({onNavigate();PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask();if(Pocket.tab==1){Pocket.requestSessionOrder();Pocket.tab=0}else Pocket.tab=1}){BilingualLabel(if(Pocket.tab==1)"Work" else "Settings")}
     PocketUpdateControl()
@@ -78,7 +78,7 @@ import java.util.Locale
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun UsageDock(modifier:Modifier=Modifier,conversationOnly:Boolean=false,compact:Boolean=false,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,onOpen:(()->Unit)?=null){
+@Composable fun UsageDock(modifier:Modifier=Modifier,conversationOnly:Boolean=false,compact:Boolean=false,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,contextLabel:String?=null,onOpen:(()->Unit)?=null){
     var open by remember{mutableStateOf(false)}
     var now by remember{mutableLongStateOf(System.currentTimeMillis())}
     LaunchedEffect(Unit){while(true){delay(30_000);now=System.currentTimeMillis()}}
@@ -91,17 +91,17 @@ import java.util.Locale
     val time=usage.resetsAt?.let{SimpleDateFormat("HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     val hasUsage=creditPrimary||remaining!=null
     val hasReset=day.isNotBlank()
-    val hasProfiles=Pocket.environmentProfiles.all().size>1
+    val hasProfiles=contextLabel!=null||Pocket.environmentProfiles.all().size>1
     val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*((if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+1)+10.dp}.coerceAtLeast(58.dp)
     Box(if(compact)modifier.heightIn(min=compactHeight)else modifier.height(usageDockHeight())) {
-    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=listOfNotNull(statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label()).joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
+    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=listOfNotNull(contextLabel,statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label()).joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
         if(compact)Column(Modifier.fillMaxWidth().heightIn(min=compactHeight).padding(vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
                 SymbolIcon(statusIcon?:"Tune",null,Modifier.size(20.dp),spinning=statusSpinning)
                 if(hasUsage)Text(if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=16.sp,lineHeight=20.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
             }
             if(hasReset)Text("$day $time",color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
-            if(Pocket.environmentProfiles.all().size>1)Text(Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if(hasProfiles)Text(contextLabel?:Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             BilingualLabel(statusLabel?:"Settings",color=Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
         }else Column(Modifier.fillMaxSize().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){

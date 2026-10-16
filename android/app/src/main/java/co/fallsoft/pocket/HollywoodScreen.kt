@@ -33,14 +33,15 @@ import androidx.lifecycle.repeatOnLifecycle
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     var headRefreshRevision by remember(client.bindingId){mutableIntStateOf(0)}
     val feeds=remember(client.bindingId){mutableMapOf<String,HollywoodRoomFeed>()}
-    val feed=feeds.getOrPut(room){HollywoodRoomFeed(room){path->client.call(path)}}
-    val coordinatorFeed=feeds.getOrPut(client.defaultRoomId){HollywoodRoomFeed(client.defaultRoomId){path->client.call(path)}}
+    val feed=feeds.getOrPut("conversation:$room"){HollywoodRoomFeed(room,"conversation"){path->client.call(path)}}
+    val coordinatorFeed=feeds.getOrPut("conversation:"+client.defaultRoomId){HollywoodRoomFeed(client.defaultRoomId,"conversation"){path->client.call(path)}}
+    val activityFeed=feeds.getOrPut("activity:$room"){HollywoodRoomFeed(room,"activity"){path->client.call(path)}}
     val detail=feed.detail
-    val events=feed.events
+    val events=remember(feed.events,activityFeed.events){(feed.events+activityFeed.events).distinctBy{it.s("id")}.sortedBy{it.optLong("seq")}}
     val attention=feed.attention
     val work=remember(detail,feed.detailError,attention,feed.justAccepted){hollywoodRoomWork(detail,feed.detailError,attention,feed.justAccepted)}
     var stopping by remember(client.bindingId,room){mutableStateOf(emptySet<String>())}
-    val older=feed.older
+    val older=feed.older?:activityFeed.older
     var recipient by remember(client.bindingId,room){mutableStateOf("")}
     var direct by remember(client.bindingId,room){mutableStateOf(false)}
     var source by remember(client.bindingId,room){mutableStateOf<String?>(null)}
@@ -117,7 +118,7 @@ import androidx.lifecycle.repeatOnLifecycle
     }
     val visible=remember(events,direct,destination,client.principalId){events.filter{!direct||it.s("audience")=="direct"&&setOf(it.s("author"),it.s("recipient"))==setOf(client.principalId,destination)}}
     val transcript by key(owner,client.bindingId,room){produceState(commandRunProjection(emptyList(),expanded),visible,expanded,agentNames,client.principalId){
-        value=withContext(Dispatchers.Default){commandRunProjection(roomTranscriptRows(visible,"hollywood:$owner:${client.bindingId}:$room",client.principalId,agentNames),expanded)}
+        value=withContext(Dispatchers.Default){commandRunProjection(roomTranscriptRows(visible,"hollywood:$owner:${client.bindingId}:$room",client.principalId,agentNames),expanded,mergeRoomActivity=true)}
     }}
     LaunchedEffect(list){snapshotFlow{list.isScrollInProgress to list.canScrollForward}.collect{(scrolling,forward)->if(scrolling)following=!forward}}
     val latestContent=transcript.rows.lastOrNull()?.let{listOf(it.s("id"),it.s("text"),it.s("status"))}
@@ -127,7 +128,7 @@ import androidx.lifecycle.repeatOnLifecycle
     LaunchedEffect(list,browsing,room){if(!browsing)snapshotFlow{list.layoutInfo.totalItemsCount to list.layoutInfo.viewportEndOffset}.collect{(count,_)->if(following&&count>0)list.scrollToItem(count-1)}}
     suspend fun refresh(selected:String){
         if(room!=selected||feed.room!=selected)return
-        coroutineScope{launch{feed.refreshHistory()};launch{feed.refreshDetail()};launch{feed.refreshAttention()}}
+        coroutineScope{launch{feed.refreshHistory()};launch{activityFeed.refreshHistory()};launch{feed.refreshDetail()};launch{feed.refreshAttention()}}
     }
     LaunchedEffect(feed,headRefreshRevision,PocketLive.connectionRevision,browsing,lifecycle){
         if(browsing)return@LaunchedEffect
@@ -136,9 +137,15 @@ import androidx.lifecycle.repeatOnLifecycle
         // never hold back successfully fetched messages or their live cursor.
         coroutineScope{
             launch{feed.refreshHistory(preferTail=true);while(isActive){delay(3000);feed.refreshHistory()}}
+            launch{activityFeed.refreshHistory(preferTail=true);while(isActive){delay(3000);activityFeed.refreshHistory()}}
             launch{while(isActive){
                 snapshotFlow{feed.catchingUp}.first{it}
                 repeat(4){if(feed.catchingUp)feed.fillGapPage()}
+                delay(750)
+            }}
+            launch{while(isActive){
+                snapshotFlow{activityFeed.catchingUp}.first{it}
+                repeat(4){if(activityFeed.catchingUp)activityFeed.fillGapPage()}
                 delay(750)
             }}
             launch{while(isActive){feed.refreshDetail();delay(3000)}}
@@ -157,7 +164,12 @@ import androidx.lifecycle.repeatOnLifecycle
     }
     LaunchedEffect(feed,list){
         snapshotFlow{Triple(list.isScrollInProgress,list.firstVisibleItemIndex,following)}.collect{(scrolling,index,follow)->
-            if(scrolling&&!follow&&index<3&&!feed.loading&&!feed.loadingOlder&&feed.older!=null)feed.loadOlder()
+            if(scrolling&&!follow&&index<3){
+                coroutineScope{
+                    if(!feed.loading&&!feed.loadingOlder&&feed.older!=null)launch{feed.loadOlder()}
+                    if(!activityFeed.loading&&!activityFeed.loadingOlder&&activityFeed.older!=null)launch{activityFeed.loadOlder()}
+                }
+            }
         }
     }
     fun choose(value:String){following=true;room=value;recipient="";direct=false;source=null;browsing=false;Pocket.prefs.edit().putString("hollywood-room:$owner:${client.bindingId}",value).apply()}
@@ -218,8 +230,25 @@ import androidx.lifecycle.repeatOnLifecycle
             else->browsing=true
         }
     }
+    val addressControl:@Composable ()->Unit={
+        Column(Modifier.fillMaxWidth()){
+            TextButton({addressMenu=!addressMenu},Modifier.fillMaxWidth().testTag("native-room-address")){
+                val roomLabel=detail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
+                val recipientLabel=agentNames[destination].orEmpty().ifBlank{"Choose recipient"}
+                Text(roomLabel+" · "+(if(direct)"Private" else "Room")+" → "+recipientLabel,
+                    maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
+            if(addressMenu)Column{
+            Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
+            actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";addressMenu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(actor.s("name"))}}
+            Row{Checkbox(postOnly,{postOnly=it},Modifier.testTag("native-post-only"));BilingualLabel("Post without requesting work")}
+            if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}
+            scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->TextButton({recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";addressMenu=false}){BilingualLabel("Saved message",centered=false);Text(" · "+(agentNames[saved.recipient]?:saved.recipient))}}}
+            }
+        }
+    }
     if(browsing){
-        Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
+    Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
             if(catalog.loading&&rooms.isEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().testTag("native-room-catalog-loading"))
             if(!catalog.available&&!catalog.loading){
                 BilingualLabel("Rooms could not refresh",Modifier.padding(horizontal=16.dp),color=Coral)
@@ -247,40 +276,18 @@ import androidx.lifecycle.repeatOnLifecycle
             }
         };return
     }
-    Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-            Box(Modifier.weight(1f)){
-            TextButton({addressMenu=true},Modifier.fillMaxWidth().testTag("native-room-address")){
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                    Text(detail.optJSONObject("room")?.s("name").orEmpty(),Modifier.weight(1f),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    BilingualLabel(if(direct)"Private" else "Room")
-                    BilingualLabel(if(postOnly)"Message" else "Request")
-                    Text("→")
-                    if(agentNames[destination]!=null)Text(agentNames.getValue(destination),Modifier.weight(1f),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    else BilingualLabel("Choose recipient")
-                }
-            }
-            DropdownMenu(addressMenu,{addressMenu=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp).semantics{testTagsAsResourceId=true},
-                properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
-            Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
-            actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";addressMenu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(actor.s("name"))}}
-            Row{Checkbox(postOnly,{postOnly=it},Modifier.testTag("native-post-only"));BilingualLabel("Post without requesting work")}
-            if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}
-            scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->TextButton({recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";addressMenu=false}){BilingualLabel("Saved message",centered=false);Text(" · "+(agentNames[saved.recipient]?:saved.recipient))}}}
-            }
-            }
-        }
+    Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding(),verticalArrangement=Arrangement.spacedBy(6.dp)){
         if(error.isNotBlank())Text(error,color=Coral)
         if(feed.historyError.isNotBlank())Text("Messages need refreshing · "+feed.historyError,color=Coral,modifier=Modifier.testTag("native-room-read-error"))
         if(notice.isNotBlank())BilingualLabel(notice,centered=false,color=Muted)
         if(feed.catchingUp)Text("Loading missed messages…",color=Muted,modifier=Modifier.testTag("native-room-gap"))
-        Box(Modifier.weight(1f).fillMaxWidth()){
+        Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp)){
         LazyColumn(Modifier.fillMaxSize().testTag("native-room-history"),state=list,
             contentPadding=PaddingValues(bottom=if(visibleMicDestination!=null&&!showTextInput)80.dp else 0.dp),
             verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(older!=null)item(key="room-history-edge"){
                 if(feed.loadingOlder)Text("Loading earlier messages…",color=Muted)
-                else TextButton({following=false;jobs.launch{feed.loadOlder()}}){BilingualLabel("Earlier messages")}
+                else TextButton({following=false;jobs.launch{coroutineScope{launch{feed.loadOlder()};launch{activityFeed.loadOlder()}}}}){BilingualLabel("Earlier messages")}
             }
             itemsIndexed(transcript.rows,key={_,row->row.s("id")}){index,row->
                 Column(verticalArrangement=Arrangement.spacedBy(7.dp)){
@@ -328,7 +335,9 @@ import androidx.lifecycle.repeatOnLifecycle
         }
         InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
-        if(showTextInput)ConversationComposerRow{
+        if(showTextInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){ConversationComposerRow{
+            if(visibleMicDestination!=null)VoiceLaunchButton(Modifier.size(64.dp).testTag("native-room-microphone"),
+                compact=true,roomDestination=visibleMicDestination,sourceLabel=visibleMicLabel)
             RoomDraftComposerScope{
             ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f).focusRequester(keyboardFocus),enabled=scope!=null&&!busy,
                 onSend={if(!busy&&pending==null&&inputState.value.text.isNotBlank()&&detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true)send()},placeholder={BilingualLabel("Message…",centered=false)})
@@ -336,14 +345,17 @@ import androidx.lifecycle.repeatOnLifecycle
             ConversationSendButton(hasDraft,scope!=null&&!busy&&pending==null&&hasDraft&&
                 detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true,busy,"Send message"){send()}
         }
-        FlowRow(Modifier.fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.SpaceEvenly){
+        }
+        ConversationFooter{
         InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
         if(!showTextInput)IconButton({
             keyboardInput=true;requestKeyboard=true
         },enabled=scope!=null,modifier=Modifier.size(48.dp).testTag("native-room-keyboard")){
             SymbolIcon("Keyboard",PocketImmersion.label("Keyboard"),Modifier.size(32.dp),tint=Paper)
         }
-        ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,bottomActions=true){
+        ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,contextLabel=detail.optJSONObject("room")?.s("name")){
+            addressControl()
+            if(activityFeed.historyError.isNotBlank())BilingualLabel("Activity unavailable",color=Coral,centered=false)
             val account=Pocket.weeklyUsage
             if(account.remainingPercent!=null)Text(account.remainingLabel(),color=Muted)
             account.credits.compact()?.let{Text(it,color=Muted)}
@@ -351,7 +363,7 @@ import androidx.lifecycle.repeatOnLifecycle
             PocketUpdateControl()
             TextButton({menu=false;browsing=true},Modifier.testTag("native-room-catalog")){BilingualLabel("Rooms")}
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
-            ProfileSwitcher{menu=false}
+            ProfileSwitcher(inlineOptions=true){menu=false}
             val context=androidx.compose.ui.platform.LocalContext.current
             TextButton({menu=false;context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}
             client.savedGuidanceScopes(room).forEach{saved->
@@ -362,13 +374,10 @@ import androidx.lifecycle.repeatOnLifecycle
                 onAttention={menu=false;inspecting=it},onGuidance={menu=false;guidance=it},onStop={target,inspect->stop(target,inspect)})
         }
         if(!following||list.canScrollForward)TextButton({following=true;jobs.launch{feed.refreshHistory(preferTail=true);withFrameNanos{};if(list.layoutInfo.totalItemsCount>0)list.scrollToItem(list.layoutInfo.totalItemsCount-1)}},Modifier.heightIn(min=48.dp).testTag("native-room-latest")){BilingualLabel("Latest")}
-        ReaderPagingButtons(list,hasEarlier=feed.older!=null,onPrepare={up->
+        ReaderPagingButtons(list,hasEarlier=older!=null,onPrepare={up->
             following=false
-            if(up&&!list.canScrollBackward)feed.loadOlder()
+            if(up&&!list.canScrollBackward)coroutineScope{launch{feed.loadOlder()};launch{activityFeed.loadOlder()}}
         },onSettled={up,done->if(done&&!up&&!list.canScrollForward)following=true},onError={error=it.message.orEmpty()})
-        if(visibleMicDestination!=null&&showTextInput)
-            VoiceLaunchButton(Modifier.size(64.dp).testTag("native-room-microphone"),compact=true,
-                roomDestination=visibleMicDestination,sourceLabel=visibleMicLabel)
     }
     }
     guidance?.let{target->

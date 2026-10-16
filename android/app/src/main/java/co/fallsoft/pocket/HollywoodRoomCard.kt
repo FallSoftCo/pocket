@@ -27,8 +27,8 @@ import org.json.JSONObject
         else->activity.categories().joinToString("; "){(label,count)->"$count $label"}
     }
     WorkCardSurface(activity?.scheduled==true,activity?.needsHuman==true,
-        if(activity?.uncertain==true)Coral else Mint,modifier=Modifier
-            .testTag("native-room:"+room.s("id")).clickable(onClick=onOpen)) {
+        if(activity?.uncertain==true||activity?.needsHuman==true)Coral else Mint,modifier=Modifier
+            .testTag("native-room:"+room.s("id")).clickable(onClick=onOpen),knownIdle=activity?.idle==true) {
         Column(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 BilingualLabel(room.s("name"),Modifier.weight(1f),color=Paper,fontSize=16.sp,fontWeight=FontWeight.Medium,centered=false)

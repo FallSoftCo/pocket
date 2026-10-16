@@ -73,8 +73,8 @@ export function validateTargetSegments(target,segments){
 }
 
 /** Teacher sends phrase replacements once; deterministic source reconstruction belongs here. */
-export function deriveImmersionText(source,row){
- if(!row||row.version!==immersionHash(source)||!Array.isArray(row.spans)||row.spans.length>12)return null;
+export function deriveImmersionText(source,row,{complete=false}={}){
+ if(!row||row.version!==immersionHash(source)||!Array.isArray(row.spans)||row.spans.length>(complete?64:12))return null;
  const spans=[];for(const anchor of row.spans){if(!anchor||typeof anchor.source!=='string'||!anchor.source.length||typeof anchor.target!=='string'||!Number.isInteger(anchor.occurrence)||anchor.occurrence<0||anchor.occurrence>100)return null;const resolved=resolveImmersionAnchor(source,anchor.source,anchor.occurrence);if(!resolved)return null;spans.push({...resolved,target:anchor.target});}
  spans.sort((a,b)=>a.start-b.start);let text='',cursor=0;for(const span of spans){if(span.start<cursor)return null;text+=source.slice(cursor,span.start)+span.target;cursor=span.end;}return text+source.slice(cursor);
 }
@@ -95,8 +95,8 @@ export function validInlineSelection(source,spans){
  return true;
 }
 /** Resolve quoted anchors locally into UTF-16 offsets; never trust model-estimated offsets. */
-export function validateImmersionPlan(source,row){
- if(!row||typeof row!=='object'||row.version!==immersionHash(source)||!Array.isArray(row.spans)||row.spans.length>12||typeof row.text!=='string')return null;
+export function validateImmersionPlan(source,row,{complete=false}={}){
+ if(!row||typeof row!=='object'||row.version!==immersionHash(source)||!Array.isArray(row.spans)||row.spans.length>(complete?64:12)||typeof row.text!=='string')return null;
  const protectedRanges=protectedImmersionRanges(source),spans=[];
  const boundaries=new Set([0,source.length]);for(const part of new Intl.Segmenter('en',{granularity:'grapheme'}).segment(source))boundaries.add(part.index);
  for(const anchor of row.spans){
@@ -108,10 +108,15 @@ export function validateImmersionPlan(source,row){
   if(joins(source.slice(Math.max(0,start-4),start),source.slice(start,start+4))||joins(source.slice(Math.max(0,end-4),end),source.slice(end,end+4)))return null;
   // Grammar teaching evidence is optional; never discard a source-safe replacement or invent cues.
   const targetSegments=validateTargetSegments(anchor.target,anchor.targetSegments)||[];
+  if(complete&&!targetSegments.length)return null;
   spans.push({start,end,targetSegments,source:anchor.source,target:anchor.target,note:typeof anchor.note==='string'?anchor.note.slice(0,240):'',unit:typeof anchor.unit==='string'?anchor.unit:'phrase'});
  }
  spans.sort((a,b)=>a.start-b.start);if(spans.some((s,i)=>i>0&&s.start<spans[i-1].end))return null;
  let text='',cursor=0;for(const span of spans){text+=source.slice(cursor,span.start)+span.target;cursor=span.end;}text+=source.slice(cursor);
- if(text!==row.text||!validInlineSelection(source,spans))return null;
+ if(text!==row.text)return null;
+ if(complete){
+  const eligible=lexicalWords(source).filter(w=>!protectedRanges.some(p=>w.start<p.end&&w.end>p.start));
+  if(eligible.some(w=>!spans.some(span=>span.start<=w.start&&span.end>=w.end)))return null;
+ }else if(!validInlineSelection(source,spans))return null;
  return {text,spans,planVersion:IMMERSION_PLAN_VERSION,version:row.version,original:source};
 }

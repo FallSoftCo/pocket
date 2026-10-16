@@ -19,7 +19,9 @@ internal data class CommandRunProjection(
 internal fun isCommandRun(row:JSONObject)=row.s("kind")=="activity"&&row.s("type") !in listOf("reasoning","planUpdate","goalState","workflowState")
 
 /** Outputs, questions, user inputs and turn boundaries never disappear into a run group. */
-internal fun commandRunProjection(source:List<JSONObject>,expanded:Set<String>):CommandRunProjection {
+internal fun commandRunProjection(source:List<JSONObject>,expanded:Set<String>,mergeRoomActivity:Boolean=false):CommandRunProjection {
+ fun boundary(row:JSONObject)=if(mergeRoomActivity&&row.s("actionId").isNotBlank()&&row.s("roomActivityScope").isNotBlank())
+     row.s("roomActivityScope") else row.s("groupBoundary",row.s("turnId"))
  val display=ArrayList<JSONObject>(source.size)
  val groups=linkedMapOf<String,List<JSONObject>>()
  val ids=HashMap<String,String>(source.size)
@@ -28,15 +30,17 @@ internal fun commandRunProjection(source:List<JSONObject>,expanded:Set<String>):
   val first=source[index]
   if(!isCommandRun(first)){display+=first;ids[first.s("id")]=first.s("id");index++;continue}
   val start=index
-  val turn=first.s("groupBoundary",first.s("turnId"))
-  do{index++}while(index<source.size&&isCommandRun(source[index])&&source[index].s("groupBoundary",source[index].s("turnId"))==turn)
+  val turn=boundary(first)
+  do{index++}while(index<source.size&&isCommandRun(source[index])&&boundary(source[index])==turn)
   val group=source.subList(start,index).toList()
   val key="ui:run-group:"+first.s("id")
   val open=group.any{it.s("id") in expanded}
   groups[key]=group
   // Headers are presentation identities. Every expanded provider row keeps
   // its own unchanged lazy key, including when an older member is prepended.
-  display+=JSONObject(first.toString()).put("id",key).put("kind","commandRuns")
+  display+=JSONObject(first.toString()).put("id",key).put("kind","commandRuns").apply{
+   if(group.map{it.s("agentId")}.filter{it.isNotBlank()}.distinct().size>1)put("roomAuthor","")
+  }
   group.forEach{row->
    ids[row.s("id")]=if(open)row.s("id")else key
    if(open)display+=row

@@ -25,6 +25,19 @@ class HollywoodCatalogLiveNativeTest {
   try {
    i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment("live_room_qa_20261015",force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
    await("Original accepted message missing"){d.hasObject(By.textContains(latest))}
+   val controls=d.findObject(By.res("native-room-controls")).visibleBounds
+   val history=d.findObject(By.res("native-room-history")).visibleBounds
+   assertTrue("Room controls remained in a top header",controls.top>=history.bottom)
+   d.findObject(By.res("native-room-controls")).click()
+   await("Room address must be available at anchored footer menu"){d.hasObject(By.res("native-room-address"))}
+   d.findObject(By.res("native-room-address")).click()
+   await("Footer address lost private recipient controls"){d.hasObject(By.res("native-room-private"))}
+   d.pressBack()
+   await("Address section did not close in place"){!d.hasObject(By.res("native-room-private"))}
+   d.pressBack()
+   await("Footer menu did not close"){!d.hasObject(By.res("native-room-address"))}
+   d.takeScreenshot(c.filesDir.resolve("room-footer-live.png"))
+
    d.pressBack()
    await("Actual room catalog missing"){d.hasObject(By.res("native-room:"+target))}
    await("Actual canonical counts not shown"){d.findObject(By.res("native-room-activity:"+target))?.contentDescription==expected}

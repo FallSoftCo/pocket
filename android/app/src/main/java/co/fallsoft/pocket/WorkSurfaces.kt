@@ -28,14 +28,25 @@ import androidx.compose.ui.unit.sp
         verticalArrangement=Arrangement.spacedBy(8.dp,if(reverseLayout)Alignment.Bottom else Alignment.Top),contentPadding=contentPadding,content=content)
 }
 
-/** The Codex card surface, including quiet state, activity glow and update highlight. */
-@Composable internal fun WorkCardSurface(active:Boolean,needsInput:Boolean=false,accent:Color=Mint,highlight:Float=0f,modifier:Modifier=Modifier,content:@Composable BoxScope.()->Unit){
-    val quiet=!active&&!needsInput
+/** All work stays readable and interactive; activity adds emphasis without dimming idle work. */
+@Composable internal fun WorkCardSurface(active:Boolean,needsInput:Boolean=false,accent:Color=Mint,highlight:Float=0f,modifier:Modifier=Modifier,knownIdle:Boolean=!active&&!needsInput,content:@Composable BoxScope.()->Unit){
+    // Cool chroma identifies idle work without reducing legibility or implying disabled.
+    // Unknown room state must opt out: absence of activity is not proof of idle.
+    val idle=knownIdle&&!active&&!needsInput
+    val surface=if(idle)Color(0xff152137)else Panel
+    val outline=if(idle)Color(0xff526e98)else Line.copy(alpha=.7f)
     val shape=RoundedCornerShape(8.dp)
-    Box(modifier.fillMaxWidth().clip(shape).background(if(quiet)Color(0xff080b10)else Panel).drawBehind{
+    Box(modifier.fillMaxWidth().clip(shape).background(surface).drawBehind{
         val glow=if(active||needsInput)1f else 0f
         drawRoundRect(Brush.radialGradient(listOf(accent.copy(alpha=.26f*glow),accent.copy(alpha=.06f*glow),Color.Transparent),Offset(size.width*.85f,0f),size.width*.95f),cornerRadius=CornerRadius(8.dp.toPx()))
-    }.border(1.dp,if(quiet)Color(0xff252b34)else Line.copy(alpha=.7f),shape).border(2.dp,Mint.copy(alpha=highlight),shape),content=content)
+    }.border(1.dp,outline,shape).border(2.dp,Mint.copy(alpha=highlight),shape),content=content)
+}
+
+/** Identical bottom control geometry for stock sessions and enterprise rooms. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable internal fun ConversationFooter(content:@Composable FlowRowScope.()->Unit){
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),
+        horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp),content=content)
 }
 
 @Composable internal fun ConversationMessageSurface(you:Boolean,content:@Composable ColumnScope.()->Unit){
@@ -71,13 +82,13 @@ import androidx.compose.ui.unit.sp
 /** The existing session dock/menu, with caller-owned backend actions. */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable internal fun ConversationActionsMenu(expanded:Boolean,onExpandedChange:(Boolean)->Unit,
-    modifier:Modifier=Modifier,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,bottomActions:Boolean=false,
+    modifier:Modifier=Modifier,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,bottomActions:Boolean=false,contextLabel:String?=null,
     content:@Composable ColumnScope.()->Unit){
     val context=androidx.compose.ui.platform.LocalContext.current
     // A fresh opening starts with current work before the popup is measured.
     val menuScroll=androidx.compose.runtime.remember(expanded,bottomActions){androidx.compose.foundation.ScrollState(if(bottomActions)Int.MAX_VALUE else 0)}
     Box{
-        UsageDock(modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,onOpen={onExpandedChange(true)})
+        UsageDock(modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)})
         DropdownMenu(expanded,{onExpandedChange(false)},scrollState=menuScroll,modifier=Modifier.width(300.dp).heightIn(max=if(bottomActions)280.dp else 420.dp).semantics{testTagsAsResourceId=true},
             properties=androidx.compose.ui.window.PopupProperties(focusable=false),content={
                 val report:@Composable ()->Unit={

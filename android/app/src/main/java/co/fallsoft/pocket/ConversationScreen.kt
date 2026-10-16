@@ -478,7 +478,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
         }
         val pageEnvironment=Pocket.environmentId
-        FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp) ){
+        ConversationFooter{
             InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
             ConversationNotesControls(important,toggleImportant,hasVisibleSpeech,visibleSpeech)
             ConversationActionsMenu(actionsOpen,{actionsOpen=it},statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning){
@@ -658,6 +658,7 @@ internal fun conversationFilterAnchor(before:List<String>,after:List<String>,vis
 /** Compact command history; failures remain evident even when details are folded. */
 @Composable internal fun CommandRunsHeader(runs:List<JSONObject>,expanded:Boolean,onToggle:()->Unit) {
     val operations=runs.any{it.s("type")=="roomOperation"}
+    val agents=runs.map{it.s("agentId")}.filter{it.isNotBlank()}.distinct().size
     val working=runs.any{it.s("status")=="inProgress"}
     val unknown=runs.count{it.s("status")=="unknown"}
     val failed=runs.count{it.s("status") in listOf("failed","declined")||(!it.isNull("exitCode")&&it.optInt("exitCode")!=0)}
@@ -667,6 +668,7 @@ internal fun conversationFilterAnchor(before:List<String>,after:List<String>,vis
         SymbolIcon(if(working)"Codex" else if(failed>0)"Stop" else "Terminal",if(working)"Working" else if(failed>0)"Failed" else "Command runs",Modifier.size(20.dp),spinning=working)
         Text(runs.size.toString(),fontSize=13.sp,color=Muted)
         BilingualLabel(if(operations)"Operations" else "Runs",fontSize=13.sp,color=Muted)
+        if(agents>1){Text(agents.toString(),fontSize=12.sp,color=Muted);BilingualLabel("Agents",fontSize=12.sp,color=Muted)}
         if(working)BilingualLabel("Working",fontSize=12.sp,color=Mint)
         if(failed>0){Text(failed.toString(),fontSize=12.sp,color=Coral);BilingualLabel("Failed",fontSize=12.sp,color=Coral)}
         if(unknown>0){Text(unknown.toString(),fontSize=12.sp,color=Muted);BilingualLabel("Unconfirmed",fontSize=12.sp,color=Muted)}

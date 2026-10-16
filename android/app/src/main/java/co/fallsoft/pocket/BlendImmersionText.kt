@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.BlendMode
@@ -35,7 +36,9 @@ import androidx.compose.ui.unit.*
     onNativeTextLayout:((TextLayoutResult)->Unit)?=null,
     sharedWipeMask:((Float,Float)->ImmersionSharedWipeMask)?=null,
     nativeLinkInteractions:Boolean=true,
-    continuousWipe:Boolean=false,incomingOverride:Boolean?=null
+    continuousWipe:Boolean=false,incomingOverride:Boolean?=null,
+    onShapedLines:((List<Rect>)->Unit)?=null,
+    onShapedLayouts:((TextLayoutResult,TextLayoutResult)->Unit)?=null
 ){
     val measurer=rememberTextMeasurer()
     val density=androidx.compose.ui.platform.LocalDensity.current
@@ -70,8 +73,14 @@ import androidx.compose.ui.unit.*
         val width=if(fillWidth&&available!=Constraints.Infinity)available else natural.maxOf{it.size.width}.coerceAtLeast(1)
         val height=forms.maxOf{measure(it,width,true).size.height}.coerceAtLeast(1)
         Box(Modifier.size(with(density){width.toDp()},with(density){height.toDp()})){
-            val outgoingLayout=measure(from,width,true)
-            val incomingLayout=measure(to,width,true)
+            val outgoingLayout=remember(from,width,style,maxLines,overflow){measure(from,width,true)}
+            val incomingLayout=remember(to,width,style,maxLines,overflow){measure(to,width,true)}
+            val shapedLines=remember(outgoingLayout,incomingLayout){
+                listOf(outgoingLayout,incomingLayout).flatMap{result->
+                    (0 until result.lineCount).map{line->Rect(result.getLineLeft(line),result.getLineTop(line),result.getLineRight(line),result.getLineBottom(line))}
+                }.distinct()
+            }
+            SideEffect{onShapedLines?.invoke(shapedLines);onShapedLayouts?.invoke(outgoingLayout,incomingLayout)}
             Text(nativeVisible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
                 onTextLayout={layout=it;onNativeTextLayout?.invoke(it);reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithCache{
                     // Geometry and shaders live for the draw cache, not one display frame.
@@ -83,6 +92,8 @@ import androidx.compose.ui.unit.*
                     val incomingPaint=Paint().apply{blendMode=BlendMode.Plus}
                     val firstChangedLine=(changed.first.map{outgoingLayout.getLineForOffset(it.start.coerceIn(0,(from.length-1).coerceAtLeast(0)))}+changed.second.map{incomingLayout.getLineForOffset(it.start.coerceIn(0,(to.length-1).coerceAtLeast(0)))}).minOrNull()?:0
                     val lines=(maxOf(outgoingLayout.lineCount,incomingLayout.lineCount)-firstChangedLine).coerceAtLeast(1)
+                    val bandEdges=(shapedLines.flatMap{listOf(it.top,it.bottom)}+listOf(0f,size.height)).distinct().sorted()
+                    val bands=bandEdges.zipWithNext().filter{(a,b)->b>a}.map{(a,b)->Rect(0f,a,size.width,b)}
                     var cachedFeather=Float.NaN
                     var startOpaque:Brush?=null
                     var endOpaque:Brush?=null
@@ -127,6 +138,38 @@ import androidx.compose.ui.unit.*
                             drawText(if(heldForm==1)incomingLayout else outgoingLayout)
                             return@onDrawWithContent
                         }
+                    }
+                    if(continuousWipe&&sharedWipeMask!=null){
+                        // Stable rows need one clipped text draw. Only the row at the
+                        // moving frontier uses complementary offscreen layers.
+                        for(band in bands){
+                            val shared=sharedWipeMask.invoke(p,band.top)
+                            val startCoverage=if(rtl){
+                                if(shared.center+shared.feather<=0f)1 else if(shared.center-shared.feather>=size.width)0 else -1
+                            }else{
+                                if(shared.center-shared.feather>=size.width)1 else if(shared.center+shared.feather<=0f)0 else -1
+                            }
+                            if(startCoverage>=0){
+                                val form=if(shared.incomingAtReadingStart)startCoverage else 1-startCoverage
+                                clipRect(0f,band.top,size.width,band.bottom){drawText(if(form==1)incomingLayout else outgoingLayout)}
+                                continue
+                            }
+                            val canvas=drawContext.canvas
+                            canvas.saveLayer(band,isolationPaint)
+                            fun ink(result:TextLayoutResult,incomingLayer:Boolean){
+                                canvas.saveLayer(band,if(incomingLayer)incomingPaint else outgoingPaint)
+                                clipRect(0f,band.top,size.width,band.bottom){drawText(result)}
+                                val brush=mask(shared.feather,incomingLayer==shared.incomingAtReadingStart)
+                                withTransform({translate(left=shared.center)}){
+                                    drawRect(brush,topLeft=Offset(-shared.center,band.top),
+                                        size=Size(size.width,band.height),blendMode=BlendMode.DstIn)
+                                }
+                                canvas.restore()
+                            }
+                            ink(outgoingLayout,false);ink(incomingLayout,true)
+                            canvas.restore()
+                        }
+                        return@onDrawWithContent
                     }
                     fun layer(result:TextLayoutResult,incomingLayer:Boolean){
                         val canvas=drawContext.canvas

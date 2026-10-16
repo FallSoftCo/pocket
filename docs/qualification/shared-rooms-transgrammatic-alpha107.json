@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "versionCode": 125,
+  "versionName": "0.5.0-alpha.107",
+  "state": "candidate-not-published",
+  "productionChanged": false,
+  "physicalPhoneVerified": false,
+  "implemented": [
+    "Shared stock-session/enterprise-room footer geometry; room header removed",
+    "Footer-anchored inline recipient/privacy controls; environment options inline",
+    "Same cool idle card hue without dimming or disabled semantics; independent attention cue",
+    "Independent conversation/activity room cursors; reject mismatched projection responses",
+    "Stable action lifecycle; completed wins over late started; original event references retained",
+    "Adjacent multiagent native operations condense across agents within same room/audience, preserving expanded attribution",
+    "Natural paragraph shaping, no lexical width placeholders, complementary global reading waterfall",
+    "Versioned full Italian/transgrammatic English teacher and cache; original canonical content remains current",
+    "Bounded parsed grammar cache; cache JSON serialization off main thread"
+  ],
+  "evidence": {
+    "nativeCases": [
+      "actualCatalogCountsAndOriginalAcceptedMessageSurviveListAndRoomReopening",
+      "naturalParagraphsKeepNativeSpacingAndGlobalWaveRunsWhileTyping",
+      "idleIsChromaticNotDisabledAndStillOpens"
+    ],
+    "realQaGateway": {
+      "conversationView": 200,
+      "activityView": 200,
+      "cachedActualTeacherReuse": true,
+      "anonymousImmersion": 401,
+      "qaImmersionDisabledAfterCheck": true,
+      "newModelTurnsForHttpCacheCheck": 0
+    },
+    "actualTeacherInference": {
+      "seconds": 13.223,
+      "source": "Your connection is available.",
+      "italian": "La tua connessione \u00e8 disponibile.",
+      "englishSupport": "the your connection is available.",
+      "apiKeyUsed": false
+    },
+    "nativeIdle": {
+      "sameHue": true,
+      "normalWhiteTextContrast": 16.096942383569164,
+      "opensExactlyOncePerBackend": true
+    },
+    "softwareEmulatorInput": {
+      "samples": 12,
+      "p50KeyToDrawMs": 37.406279,
+      "p95KeyToDrawMs": 42.145348,
+      "maxKeyToDrawMs": 590.746354,
+      "overallFrameP95Ms": 36.829265,
+      "overallFrameMaxMs": 758.419503
+    }
+  },
+  "limits": [
+    "Not qualified as physical phone smoothness or 60fps; first/occasional long emulator frames remain",
+    "Actual handset provider speech and hardware volume-key capture remain separate from emulator evidence",
+    "Room-list latest meaningful preview/work-recency requires additive audience-filtered catalog projection; observedAt is not work time",
+    "Release-builder and final optimized native qualification pending; no update announcement or installation from this candidate",
+    "Human-ingress admin/provenance guard remains separate reserved gateway work; historical accepted/unknown receipts unchanged"
+  ]
+}

@@ -23,3 +23,15 @@ Measure typing and scrolling under active incoming updates. Emulator timing does
 Catalog meaningful preview/work-recency projection requires the canonical backend contract owned by the source coordinator. Progress independent client work without fabricating fields or scanning every room history. Record the exact dependency when needed.
 
 Finish means integrated, qualified, compatible delivery with explicit remaining limits, not a handoff or patch-specific pass. Maintain checkpoints and resume this authorized work after interruptions by reconciling files/artifacts/external effects. Do not create recurring model polling, blanket agent wakeups, or resume unrelated stopped work. User has provided sufficient guidance; request only a genuinely necessary unresolved decision or unavoidable OS action.
+
+## Actions are a separate work projection
+
+User clarification 2026-10-16: action/tool activity must appear on room cards just as it does on session cards, but must not become synthetic room chat messages. Provide a dedicated inspectable activity view/folded operations inside the room. Chat remains human/agent communications and useful results/questions.
+
+Canonical backend activity needs responsible agent and delivery identity, actual work sequence/time, kind, bounded meaningful summary, truthful state and audience-scoped visibility. List summaries must be batched; activity pagination/stream cursors and unread semantics stay separate from message history. Never use catalog observation time as action recency, leak direct/private activity, infer unseen model work or make each action trigger a chat unread count, notification or speech. Coalesce rapid activity without obscuring material results, failures or pending human questions.
+
+## Idle is interactive — user correction 2026-10-16
+
+Idle sessions and rooms retain the same card surface, border and title contrast as other available work. Never use disabled-style dimming to encode idle or waiting state. Explicit status labels/icons distinguish idle, active, unavailable and needs-input; waiting for the user remains actionable. Activity may add emphasis without lowering baseline readability.
+
+User refinement: retain a clear idle hue/saturation distinction. Use a cool chromatic surface/outline with full readable text, not disabled-style darkening. Unknown activity stays neutral; waiting-for-input uses its own attention cue.

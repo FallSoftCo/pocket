@@ -19,13 +19,26 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
             data?.s("status") in listOf("inProgress","completed","failed","declined","unknown")
         val identity=JSONArray(if(structured)listOf(event.s("authority"),author,data?.s("deliveryId"),data?.optLong("generation"),thread,data?.s("turn"),data?.s("nativeType"),data?.optJSONObject("nativeGoal")?.s("goalId"))else if(native)listOf(event.s("authority"),author,data?.s("deliveryId"),
             data?.optLong("generation"),thread,data?.s("turn"),item)else listOf(author,thread,item)).toString()
-        val previous=if(activity||structured)operations[identity]else null
+        val actionIdentity=if(native&&data?.optInt("activityVersion")==1&&data.s("actionId").isNotBlank())
+            JSONArray(listOf(event.s("authority"),data.s("actionId"))).toString()else identity
+        val previous=if(activity||structured)operations[actionIdentity]else null
+        val observations=if(previous!=null)rows[previous].optJSONArray("actionObservations")?:JSONArray()else JSONArray()
+        if(native)observations.put(JSONObject().put("eventId",event.opt("id")).put("seq",event.opt("seq"))
+            .put("phase",data?.s("phase")).put("status",data?.s("status")))
+        // A delayed start observation cannot erase completion; its original
+        // immutable reference remains inspectable with the reduced action.
+        if(activity&&previous!=null&&rows[previous].s("status") in listOf("completed","failed","declined")&&
+            data?.s("status") in listOf("inProgress","unknown")){
+            rows[previous].put("actionObservations",observations);return@forEach
+        }
         val eventId=event.opt("id")
-        val row=JSONObject().put("id",if(activity||structured)"$prefix:operation:$identity" else "$prefix:$eventId")
+        val row=JSONObject().put("id",if(activity||structured)"$prefix:operation:$actionIdentity" else "$prefix:$eventId")
             .put("roomEventId",eventId).put("roomAuthor",if(author==principalId)"You"else event.s("authorName",agentNames[author]?:author))
             .put("roomAudience",event.s("audience")).put("roomRecipient",event.s("recipient"))
             .put("kind",if(activity)"activity" else if(author=="you"||event.optBoolean("isSelf")||author==principalId)"user" else "message")
             .put("text",if(native&&data?.s("nativeType") in listOf("agentMessage","plan"))data?.s("output")else event.s("body"))
+        if(native)row.put("actionId",data?.s("actionId")).put("actionObservations",observations)
+            .put("roomActivityScope",JSONArray(listOf(prefix,event.s("audience"),event.s("recipient"))).toString())
         if(activity){
             row.put("type","roomOperation").put("title",if(native)data!!.s("title","Run")else "Run").put("status",data!!.s("status"))
                 // This is a presentation boundary, never a native turn or parent.
@@ -43,7 +56,7 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
                 if(!data.isNull("exitCode"))row.put("exitCode",data.optInt("exitCode"))
                 if(!data.isNull("durationMs"))row.put("durationMs",data.optLong("durationMs"))
             }
-            if(previous==null){operations[identity]=rows.size;rows+=row}else rows[previous]=row
+            if(previous==null){operations[actionIdentity]=rows.size;rows+=row}else rows[previous]=row
         }else {
             // A canonical stop receipt is operation history, not another agent
             // response. Keep the original event/body available when expanded.
@@ -82,7 +95,7 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
                         (goal?.let{"\nNative goal: ${it.s("goalId")}"}.orEmpty()))
                     .put("truncated",data.optBoolean("detailsTruncated"))
             }
-            if(structured){if(previous==null){operations[identity]=rows.size;rows+=row}else rows[previous]=row}else rows+=row
+            if(structured){if(previous==null){operations[actionIdentity]=rows.size;rows+=row}else rows[previous]=row}else rows+=row
         }
     }
     return rows

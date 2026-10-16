@@ -92,4 +92,18 @@ class HollywoodRoomFeedTest {
         delivery.put("state","completed");feed.accepted(receipt);assertTrue(feed.justAccepted.isEmpty())
     }
 
+    @Test fun projectionsKeepIndependentCursorsAndRejectAnUnfilteredResponse()=runBlocking{
+        val paths=mutableListOf<String>()
+        val chat=HollywoodRoomFeed(room,"conversation"){path->paths+=path;page(7,next=400).put("view","conversation")}
+        val actions=HollywoodRoomFeed(room,"activity"){path->paths+=path;page(390,391,next=401).put("view","activity")}
+        coroutineScope{launch{chat.refreshHistory()};launch{actions.refreshHistory()}}
+        assertEquals(400L,chat.cursor);assertEquals(401L,actions.cursor)
+        assertEquals(listOf(7L),chat.events.map{it.optLong("seq")})
+        assertTrue(paths.any{"view=conversation" in it});assertTrue(paths.any{"view=activity" in it})
+        val unfiltered=HollywoodRoomFeed(room,"conversation"){page(50).put("view","all")}
+        unfiltered.refreshHistory()
+        assertTrue(unfiltered.events.isEmpty());assertNull(unfiltered.cursor)
+        assertTrue(unfiltered.historyError.contains("projection"))
+    }
+
 }

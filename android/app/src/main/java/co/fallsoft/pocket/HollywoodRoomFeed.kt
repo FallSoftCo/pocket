@@ -10,7 +10,9 @@ import org.json.JSONObject
  * No read can submit, retry, resume or retarget work. The composition owns lifetime.
  */
 @Stable
-internal class HollywoodRoomFeed(val room:String,private val read:suspend (String)->JSONObject) {
+internal class HollywoodRoomFeed(val room:String,val view:String?=null,private val read:suspend (String)->JSONObject) {
+    init{require(view==null||view in listOf("conversation","activity","all"))}
+    private fun history(direction:String)="rooms/$room/history?$direction&limit=100"+(view?.let{"&view=$it"}.orEmpty())
     var events by mutableStateOf(emptyList<JSONObject>());private set
     var detail by mutableStateOf(JSONObject());private set
     var justAccepted by mutableStateOf(emptyList<JSONObject>());private set
@@ -33,6 +35,7 @@ internal class HollywoodRoomFeed(val room:String,private val read:suspend (Strin
     private val detailMutex=Mutex()
     private val attentionMutex=Mutex()
     private fun checked(page:JSONObject):List<JSONObject> {
+        require(view==null||page.s("view")==view){"Room history projection changed"}
         require(page.s("roomId")==room){"History belongs to another room"}
         val incoming=page.getJSONArray("events").objects()
         require(incoming.all{hollywoodUuid(it.s("id"))&&it.optLong("seq")>0}&&incoming.zipWithNext().all{(a,b)->a.optLong("seq")<b.optLong("seq")}){"Room history order could not be verified"}
@@ -51,7 +54,7 @@ internal class HollywoodRoomFeed(val room:String,private val read:suspend (Strin
         try {
             val previous=cursor
             val tail=previous==null||preferTail
-            val page=read("rooms/$room/history?"+(if(tail)"before=9007199254740991" else "after=$previous")+"&limit=100")
+            val page=read(history(if(tail)"before=9007199254740991" else "after=$previous"))
             val incoming=checked(page);val next=page.getLong("nextCursor")
             require(previous==null||next>=previous){"Room history cursor moved backwards"}
             merge(incoming)
@@ -62,7 +65,7 @@ internal class HollywoodRoomFeed(val room:String,private val read:suspend (Strin
             if(!tail&&incoming.size==100&&next!=previous){
                 // An overnight backlog must not delay the newest human answer.
                 // Jump to its canonical tail, retaining a separate gap to fill.
-                val latest=read("rooms/$room/history?before=9007199254740991&limit=100")
+                val latest=read(history("before=9007199254740991"))
                 val recent=checked(latest);val head=latest.getLong("nextCursor")
                 require(head>=next){"Room history head moved backwards"}
                 merge(recent)
@@ -76,7 +79,7 @@ internal class HollywoodRoomFeed(val room:String,private val read:suspend (Strin
     suspend fun fillGapPage()=gapMutex.withLock {
         val gap=gaps.firstOrNull()?:return@withLock
         try{
-            val page=read("rooms/$room/history?after=${gap.after}&limit=100")
+            val page=read(history("after=${gap.after}"))
             val incoming=checked(page);val next=page.getLong("nextCursor")
             require(next>=gap.after){"Missed history cursor moved backwards"}
             merge(incoming)
@@ -89,7 +92,7 @@ internal class HollywoodRoomFeed(val room:String,private val read:suspend (Strin
         val before=older?:return@withLock
         loadingOlder=true
         try {
-            val page=read("rooms/$room/history?before=$before&limit=100")
+            val page=read(history("before=$before"))
             val incoming=checked(page)
             require(incoming.all{it.optLong("seq")<before}){"Earlier history did not move backwards"}
             val next=page.takeUnless{it.isNull("olderCursor")}?.optLong("olderCursor")
