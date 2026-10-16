@@ -1,6 +1,6 @@
 {
   "versionCode": 124,
-  "state": "qualified; OZZZ update channel published; original source channel transfer in progress",
+  "state": "published-on-both-existing-update-channels; handset-last-verified122",
   "native": {
     "hardwareStartStop": true,
     "heldKeysDoNotDoubleToggle": true,
@@ -17,7 +17,7 @@
   "limits": [
     "Synthetic loopback fixture explicitly has no audio provider or business workers. No transcription/send/TTS claim.",
     "Phone responsiveness remains unverified; await optional user-created local trace.",
-    "Original source update channel copy/publication and physical phone installation tracked separately; no service restart."
+    "Both authenticated update routes return124 with exact compatible hash; OS-confirmed handset installation and physical/provider verification remain separate. No production service restart or duplicate update push."
   ],
   "release": {
     "versionCode": 124,

@@ -2706,7 +2706,7 @@
     {
       "id": "native-room-source-bound-voice-20261016",
       "request": "Direct touch and physical-volume recording in native rooms, catalog and work-context settings, including IME typing; retain original environment/recipient and drafts across navigation with visible capture errors.",
-      "status": "124-candidate; native no-provider AudioRecord/IME/navigation/touch/catalog/settings passed; signed optimized qualification and physical/provider delivery pending",
+      "status": "124-published-both-channels; six native cases and optimized input/voice passed; physical handset install/provider qualification pending",
       "evidence": "docs/qualification/native-room-voice-alpha106.json"
     }
   ],
