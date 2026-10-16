@@ -9,8 +9,17 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.security.MessageDigest
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 
-fun backendOwner(base:String,token:String)=MessageDigest.getInstance("SHA-256").digest((base+"\u0000"+token).toByteArray()).joinToString(""){"%02x".format(it.toInt() and 255)}
+fun backendOwner(base:String,token:String):String {
+    // Persisted namespaces must retain their exact historical digest. Avoid
+    // locale formatters in the navigation/composition hot path.
+    val bytes=MessageDigest.getInstance("SHA-256").digest((base+"\u0000"+token).toByteArray(Charsets.UTF_8))
+    val alphabet="0123456789abcdef";val result=CharArray(bytes.size*2)
+    bytes.forEachIndexed{index,byte->val value=byte.toInt() and 255;result[index*2]=alphabet[value ushr 4];result[index*2+1]=alphabet[value and 15]}
+    return String(result)
+}
 data class TeamScope(val team:String,val task:String,val recipient:String="",val direct:Boolean=false,val replyTo:Long?=null) {
     fun draftKey(owner:String)="team-draft:$owner:$team:$task:${if(direct)"direct" else "room"}:$recipient:${replyTo?:"root"}"
     fun message(id:String,text:String)=JSONObject().put("commandId",id).put("task",task).put("body",text)
@@ -64,19 +73,21 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
 }
 
 @Composable fun BackendApp(){
-    val owner=backendOwner(Pocket.base,Pocket.token)
+    val owner=remember(Pocket.base,Pocket.token){backendOwner(Pocket.base,Pocket.token)}
     var backend by remember(owner){mutableStateOf(Pocket.prefs.getString("backend:$owner","codex")?:"codex")}
     var losangelex by remember(owner){mutableStateOf(JSONObject())}
     var lax by remember(owner){mutableStateOf(JSONObject())}
     var choices by remember(owner){mutableStateOf(listOf("codex" to "Codex","losangelex" to "Losangelex"))}
     var discovering by remember(owner){mutableStateOf(true)}
+    var discoveryError by remember(owner){mutableStateOf("")}
+    var discoveryRetryable by remember(owner){mutableStateOf(false)}
     var teamSettings by remember(owner){mutableStateOf(false)}
     var workRecord by remember(owner){mutableStateOf(false)}
     val scope=rememberCoroutineScope()
-    suspend fun discover(){
+    suspend fun discover():Boolean {
         discovering=true
-        try{
-            val status=Pocket.api("/api/backends");val available=status.optJSONArray("backends")?.objects().orEmpty()
+        return try{
+            val status=Pocket.api("/api/backends");discoveryError="";val available=status.optJSONArray("backends")?.objects().orEmpty()
             losangelex=available.firstOrNull{it.s("id")=="losangelex"}?:JSONObject()
             lax=available.firstOrNull{it.s("id")=="lax"}?:JSONObject()
             if(lax.optBoolean("available"))Pocket.captureEnvironment(Pocket.environmentId)?.let{HollywoodNotifications.rememberBinding(it,lax);HollywoodNotifications.catchUp(it,lax)}
@@ -84,12 +95,30 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
             if(status.optBoolean("canonical")&&status.s("defaultBackend")=="lax"){
                 backend="lax";Pocket.prefs.edit().putString("backend:$owner","lax").apply();Pocket.pauseConversationReads()
             }
+            true
         }
-        catch(_:Exception){losangelex=JSONObject()}
+        catch(e:CancellationException){throw e}
+        catch(e:Exception){
+            discoveryError=PocketNetwork.error(e)
+            discoveryRetryable=e is java.io.IOException||(e is PocketApiException&&(e.status in listOf(408,429)||e.status>=500))
+            false
+        }
         finally{discovering=false}
     }
     LaunchedEffect(PocketVoice.active){if(PocketVoice.active)workRecord=false}
-    LaunchedEffect(owner){discover()}
+    // Revalidate capabilities after an authenticated reconnect. Retain the
+    // mounted room, scope and draft while metadata is being checked again.
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(owner,PocketLive.connectionRevision,lifecycle){
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
+            var backoff=2_000L
+            while(!discover()&&discoveryRetryable){
+                // Cheap capability reads only, while foreground. No worker/model
+                // activation or message retry; successful discovery ends retries.
+                delay(backoff);backoff=(backoff*2).coerceAtMost(60_000L)
+            }
+        }
+    }
     LaunchedEffect(owner,BackendNavigation.desired){BackendNavigation.desired?.takeIf{it.first==owner}?.let{backend=it.second;teamSettings=false}}
     val requestedNotification=BackendNavigation.notification
     LaunchedEffect(owner,requestedNotification){if(requestedNotification?.first==owner)teamSettings=false}
@@ -98,9 +127,14 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
     },{workRecord=true})){
     Box(Modifier.fillMaxSize()){
     Column(Modifier.fillMaxSize().imePadding()){
+        if(discoveryError.isNotBlank()&&lax.optBoolean("available")&&backend=="lax")
+            Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.SpaceBetween){
+                Text(discoveryError,Modifier.weight(1f),color=Muted,maxLines=2)
+                TextButton({scope.launch{discover()}},enabled=!discovering){BilingualLabel("Reconnect")}
+            }
         Box(Modifier.weight(1f)){
             if(backend=="lax"){
-                if(discovering)Column(Modifier.padding(24.dp)){CircularProgressIndicator();InterfaceText("Connecting to Hollywood…")}
+                if(discovering&&!lax.optBoolean("available"))Column(Modifier.padding(24.dp)){CircularProgressIndicator();InterfaceText("Connecting to Hollywood…")}
                 else if(!lax.optBoolean("available"))Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
                     InterfaceText("Hollywood connection unavailable");TextButton({scope.launch{discover()}}){BilingualLabel("Reconnect")};TextButton({teamSettings=true}){BilingualLabel("Settings")}
                 }else key(owner,lax.s("bindingId")){HollywoodScreen(owner,lax,onSettings={teamSettings=true})}

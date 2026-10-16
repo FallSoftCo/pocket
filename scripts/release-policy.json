@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "qualification": "alpha103-canonical-catalog-and-optimized-typing",
+  "qualification": "alpha104-native-room-reconnect-and-typing",
   "requiredNativeCases": [
     "co.fallsoft.pocket.HollywoodRoomActivityNativeTest#aggregateFailureAndQuietSnapshotNeverInventIdleOrLoseRoomTarget",
     "co.fallsoft.pocket.HollywoodCatalogLiveNativeTest#actualCatalogCountsAndOriginalAcceptedMessageSurviveListAndRoomReopening",
-    "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending"
+    "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending",
+    "co.fallsoft.pocket.HollywoodReconnectNativeTest#capabilityOutageRecoversWithoutLosingOpenRoomOrDraft"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",

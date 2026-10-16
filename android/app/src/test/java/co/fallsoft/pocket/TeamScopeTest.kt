@@ -40,6 +40,8 @@ class TeamScopeTest {
         assertEquals(key,scope.copy().draftKey("environment"))
     }
     @Test fun repairingOrChangingAPairingCannotReadThePreviousBackendDrafts(){
+        // A performance repair must retain previously saved environment/draft namespaces.
+        assertEquals("72b3728b1d47c39e0b25289f392c842ba04d8fa5d8454bc753fd6ac09640b3ea",backendOwner("https://host","first-token"))
         assertNotEquals(backendOwner("https://host","first-token"),backendOwner("https://host","second-token"))
         assertNotEquals(backendOwner("https://first-host","token"),backendOwner("https://second-host","token"))
     }

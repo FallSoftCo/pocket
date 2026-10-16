@@ -2667,6 +2667,18 @@
       "status": "confirmed-hotpath-and-release-packaging-fixes-published-awaiting-phone-verification",
       "qualification": "docs/qualification/typing-optimized-alpha103-20261015.json",
       "remaining": "Handset121 installation and actual typing/voice/rendered-push verification; full handset lag severity not yet reproduced."
+    },
+    {
+      "id": "native-backend-reconnect-20261016",
+      "request": "Native rooms must recover automatically after transient connection/capability failures, keeping the open room, original receipts and unsent drafts. Continue enterprise control goal; do not infer that recovered transport explains the original outage.",
+      "status": "implemented-native-journey-passed-release-qualification-pending",
+      "implementation": [
+        "Foreground-scoped capability discovery revalidates on authenticated connection revision and foreground return.",
+        "Transient capability failures retry with capped backoff; no message retry or worker/model activation.",
+        "An existing room remains mounted while capabilities revalidate; binding/profile scopes preserved.",
+        "Navigation identity digest retains historical namespaces without per-byte locale formatting."
+      ],
+      "evidence": "docs/qualification/native-backend-reconnect-alpha104-20261016.json"
     }
   ],
   "current_state": {

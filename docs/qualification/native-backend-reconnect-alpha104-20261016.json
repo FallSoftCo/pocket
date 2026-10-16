@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "state": "candidate-native-journey-passed-release-pending",
+  "versionCode": 122,
+  "previousInstalledPhoneVersion": 121,
+  "incident": {
+    "userEnvironment": "This workstation",
+    "userError": "cannot connect",
+    "returnedWithoutPairingOrServerRestart": true,
+    "cause": "unproven",
+    "phoneHttpsBothHealth": 200,
+    "sourceAuthenticatedStatus": 200
+  },
+  "verified": {
+    "actualCanonicalQaRoom": true,
+    "initialCapabilityFailureRecoversOnSameSocket": true,
+    "openRoomRetainedDuringReconnect": true,
+    "draftPreserved": true,
+    "originalMessageCount": 1,
+    "capabilityReads": 4,
+    "connections": 2,
+    "commandWrites": 0,
+    "modelsStarted": 0,
+    "nativeJourneySeconds": 10.343
+  },
+  "limits": [
+    "Native journey is emulator evidence, not physical phone interaction",
+    "Original phone outage has not been causally explained",
+    "Physical voice and rendered push still require independent phone qualification"
+  ],
+  "scope": "NextComp client only; no production runtime restart or pairing/draft/history migration"
+}
