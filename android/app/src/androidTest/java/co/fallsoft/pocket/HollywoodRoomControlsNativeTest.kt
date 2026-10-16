@@ -125,6 +125,8 @@ class HollywoodRoomControlsNativeTest {
    await("Room did not retain its single footer"){d.hasObject(By.res("native-room-controls"))}
    assertFalse("Obsolete permanent idle strip remains",d.hasObject(By.res("native-room-idle")))
    assertTrue("Canonical controls are not folded",d.hasObject(By.text("Operations")))
+   if(!d.hasObject(By.clazz("android.widget.EditText")))tap("native-room-keyboard")
+   await("Keyboard control did not restore input"){d.hasObject(By.clazz("android.widget.EditText"))}
    d.findObject(By.clazz("android.widget.EditText")).text=originalDraft
    await("Bounded report did not finish/export"){!ResponsivenessReport.measuring&&ResponsivenessReport.savedName.isNotBlank()}
    val body=c.filesDir.resolve("diagnostics/responsiveness-latest.json").readText();val report=JSONObject(body)
