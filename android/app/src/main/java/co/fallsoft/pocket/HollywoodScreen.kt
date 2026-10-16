@@ -348,6 +348,12 @@ import androidx.lifecycle.repeatOnLifecycle
         }
         ConversationFooter{
         InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
+        val singleStop=work.deliveries.filter{it.optBoolean("can_cancel")&&!it.optBoolean("cancellation_requested")&&
+            it.s("state")!="cancel_requested"&&client.stopRecord(it.s("id"))==null}.singleOrNull().takeIf{work.verified}
+        if(singleStop!=null)key(singleStop.s("id")){
+            TextButton({stop(singleStop,false)},enabled=singleStop.s("id") !in stopping,
+                modifier=Modifier.heightIn(min=48.dp).testTag("native-quick-stop:"+singleStop.s("id"))){BilingualLabel("Stop",color=Coral)}
+        }
         if(!showTextInput)IconButton({
             keyboardInput=true;requestKeyboard=true
         },enabled=scope!=null,modifier=Modifier.size(48.dp).testTag("native-room-keyboard")){

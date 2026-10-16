@@ -73,20 +73,35 @@ class HollywoodRoomControlsNativeTest {
    control(false)
    i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment("live_room_qa_20261015",force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
    await("Native room unavailable"){d.hasObject(By.res("native-room-controls"))&&d.hasObject(By.clazz("android.widget.EditText"))}
-   if(journal.exists()){
-    val original=JSONObject(journal.readText());check(original.s("stage")=="complete"&&original.s("codeResourcesManifestSha256")==payloadSha){"Inspect the preserved original journey before any new request"}
-    val request=client.call("commands/"+original.s("operationId"));assertEquals(original.s("eventId"),request.getJSONObject("event").s("id"))
-    val existing=client.call("deliveries/"+original.s("deliveryId"));assertEquals("cancelled",existing.getJSONObject("delivery").s("state"))
+   val priorPrepared=if(journal.exists())JSONObject(journal.readText())else null
+   if(priorPrepared!=null&&priorPrepared.s("stage")=="complete"){
+    check(priorPrepared.s("codeResourcesManifestSha256")==payloadSha){"Inspect the original completed qualification; do not replay it"}
+    val request=client.call("commands/"+priorPrepared.s("operationId"));assertEquals(priorPrepared.s("eventId"),request.getJSONObject("event").s("id"))
+    val existing=client.call("deliveries/"+priorPrepared.s("deliveryId"));assertEquals("cancelled",existing.getJSONObject("delivery").s("state"))
     tap("native-room-controls")
     assertFalse(show("native-workflow").visibleBounds.isEmpty)
     return@runBlocking
    }
+   if(priorPrepared!=null){
+    check(priorPrepared.s("stage")=="prepared"&&!priorPrepared.has("operationId")&&!priorPrepared.has("deliveryId")){"Reconcile original delivery; do not submit again"}
+    var cursor=0L;var exhausted=false
+    repeat(30){
+     if(!exhausted){
+      val page=client.call("rooms/$room/history?view=conversation&after=$cursor&limit=100")
+      val rows=page.getJSONArray("events").objects()
+      check(rows.none{it.s("body")==text}){"Original text already exists canonically; reconcile without another send"}
+      val next=page.getLong("nextCursor");check(next>=cursor)
+      exhausted=rows.size<100;cursor=next
+     }
+    }
+    check(exhausted){"Cannot establish original submission absence within bounded history"}
+   }
    check(client.pending(scope)==null){"An existing original delivery must be inspected, not overwritten"}
-   journal.writeText(JSONObject().put("stage","prepared").put("qualificationApkSha256",apkSha).put("codeResourcesManifestSha256",payloadSha).put("originalDraft",originalDraft).toString())
+   journal.writeText(JSONObject().put("stage","prepared").put("qualificationApkSha256",apkSha).put("codeResourcesManifestSha256",payloadSha).put("originalDraft",originalDraft).apply{priorPrepared?.let{put("priorPrepared",it)}}.toString())
    d.findObject(By.clazz("android.widget.EditText")).apply{click();this.text=text}
    await("IME did not open"){d.hasObject(By.pkg("com.google.android.inputmethod.latin"))}
    tap("native-room-controls")
-   show("native-measure-responsiveness",up=true).click()
+   show("native-measure-responsiveness").click()
    await("Bounded report did not start"){ResponsivenessReport.measuring}
    assertTrue("Opening the footer controls dismissed typing",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
    d.findObject(By.desc("Send message")).click()
@@ -99,16 +114,14 @@ class HollywoodRoomControlsNativeTest {
    journal.writeText(JSONObject().put("stage","accepted").put("qualificationApkSha256",apkSha).put("codeResourcesManifestSha256",payloadSha).put("originalDraft",originalDraft)
     .put("operationId",envelope.s("operationId")).put("eventId",accepted.getJSONObject("event").s("id")).put("deliveryId",id).toString())
    control(true)
-   tap("native-room-controls")
-   await("Native stop permission did not arrive"){d.hasObject(By.res("native-stop:"+id))}
+   await("Exact delivery quick-stop did not arrive"){d.hasObject(By.res("native-quick-stop:"+id))}
    d.dumpWindowHierarchy(c.filesDir.resolve("room-controls-before-stop.xml"));d.takeScreenshot(c.filesDir.resolve("room-controls-before-stop.png"))
    c.filesDir.resolve("room-controls-before-stop-detail.json").writeText(client.call("rooms/$room").toString())
-   show("native-stop:"+id).click()
+   tap("native-quick-stop:"+id)
    await("Lost stop acknowledgement did not reconcile"){client.stopRecord(id)?.s("state")=="cancelled"}
    val cancelled=client.call("deliveries/$id").getJSONObject("delivery")
    assertEquals("cancelled",cancelled.s("state"));assertTrue(cancelled.optBoolean("cancellation_requested"))
    assertTrue("QA unexpectedly started native execution",cancelled.isNull("host")&&cancelled.isNull("native_thread"))
-   d.pressBack()
    await("Room did not retain its single footer"){d.hasObject(By.res("native-room-controls"))}
    assertFalse("Obsolete permanent idle strip remains",d.hasObject(By.res("native-room-idle")))
    assertTrue("Canonical controls are not folded",d.hasObject(By.text("Operations")))
