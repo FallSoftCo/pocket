@@ -46,6 +46,25 @@ class TypingResponsivenessNativeTest {
    await("Synthetic catalog not ready"){Pocket.tasks.isNotEmpty()&&Pocket.environmentId==profile.id}
    main{Pocket.open("same-thread",keyboard=true);PocketImmersion.setEnabled(true);PocketImmersion.setSupportEnabled(true)}
    await("Synthetic history not ready"){PocketTranscript.rows.isNotEmpty()&&!PocketTranscript.loading}
+   // Exercise a real delayed history read without allowing read freshness to erase work evidence.
+   kotlinx.coroutines.runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/hold-history",JSONObject())}
+   try{
+    main{
+     PocketImmersion.setEnabled(false)
+     PocketTranscript.apply(JSONObject().put("threadId","same-thread").put("turnId","toolbar-live").put("version",900).put("turn",JSONObject().put("status","inProgress")))
+     Pocket.refreshDetail()
+    }
+    await("Delayed refresh did not start"){PocketTranscript.loading}
+    assertTrue("Refresh discarded verified work state",PocketTranscript.currentWorkVerified)
+    await("Working toolbar disappeared during history refresh"){d.hasObject(By.text("Working"))}
+    for(kind in listOf("thinking","command","message","thinking")){
+     main{Pocket.tasks=Pocket.tasks.map{if(it.id=="same-thread")it.copy(status="active",previewKind=kind)else it}}
+     Thread.sleep(120)
+     assertTrue("Activity phase changed toolbar lifecycle",d.hasObject(By.text("Working")))
+    }
+   }finally{kotlinx.coroutines.runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/release-history",JSONObject())}}
+   await("History refresh did not settle"){!PocketTranscript.loading}
+   main{PocketImmersion.setEnabled(true)}
    val stress=InstrumentationRegistry.getArguments().getString("stress")=="true"
    val phrase="Full permissions for new tasks. ";val text=phrase.repeat(if(stress)100 else 20)
    main{

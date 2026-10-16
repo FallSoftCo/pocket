@@ -1,0 +1,24 @@
+{
+  "state": "native-verified-not-phone-delivered",
+  "change": "Stable lifecycle Working independent of transient preview kind; distinct work/read snapshot verification",
+  "focusedStateTests": "pass",
+  "nativeJourney": {
+    "case": "TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending",
+    "elapsedSeconds": 18.453,
+    "realHistoryRefreshHeld": true,
+    "phases": [
+      "thinking",
+      "command",
+      "message",
+      "thinking"
+    ],
+    "toolbarWorkingThroughout": true,
+    "typingWithImmersion": true,
+    "modelOrExternalCommandsSent": false
+  },
+  "limits": [
+    "Owned software emulator, not physical phone performance",
+    "Current installed126 is unchanged"
+  ],
+  "privateReceipt": "toolbar-status-native-r01.json"
+}

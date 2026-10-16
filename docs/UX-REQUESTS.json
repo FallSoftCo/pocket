@@ -2757,11 +2757,12 @@
     {
       "id": "toolbar-stable-work-status-20261016",
       "request": "Stop toolbar Thinking/not-thinking flicker. Present stable turn lifecycle while detailed activity changes; retain verified work during history refresh without falsely marking fetched data read.",
-      "status": "implemented-pending-native-verification",
+      "status": "native-delayed-refresh-and-activity-phase-check-passed-pending-signed-release",
       "changes": [
         "Toolbar active turn consistently Working; detail stays in activity",
         "Separate work snapshot verification from read freshness; clear on environment/thread reset"
-      ]
+      ],
+      "evidence": "docs/qualification/toolbar-stable-work-status-20261016.json"
     }
   ],
   "current_state": {
