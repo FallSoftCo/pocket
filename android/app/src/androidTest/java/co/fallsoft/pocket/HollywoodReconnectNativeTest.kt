@@ -48,7 +48,7 @@ class HollywoodReconnectNativeTest {
    control("fail");control("disconnect")
    await("Transport did not reconnect"){runBlocking{control("state")}.getInt("connections")>after.getInt("connections")}
    await("Failed revalidation was not visible"){d.hasObject(By.textContains("QA capability discovery temporarily unavailable"))}
-   assertTrue("Revalidation hid the mounted room",d.hasObject(By.res("native-room-address")))
+   assertTrue("Revalidation hid mounted history and footer controls",d.hasObject(By.res("native-room-history"))&&d.hasObject(By.res("native-room-controls")))
    assertTrue("Revalidation hid unsent input",d.hasObject(By.text(draft)))
    control("recover")
    await("Recovery warning did not clear"){!d.hasObject(By.textContains("QA capability discovery temporarily unavailable"))}

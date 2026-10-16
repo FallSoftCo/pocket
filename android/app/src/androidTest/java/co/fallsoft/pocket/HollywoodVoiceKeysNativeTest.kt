@@ -71,7 +71,7 @@ class HollywoodVoiceKeysNativeTest{
    assertTrue("Catalog hid active capture feedback",d.hasObject(By.res("native-room-capture-status")))
    assertTrue("Catalog hid the stop control",d.hasObject(By.res("native-catalog-microphone")))
    tap("native-room:"+roomB)
-   await("Other room did not open"){d.hasObject(By.res("native-room-address"))&&d.hasObject(By.text("Synthetic voice room B"))}
+   await("Other room did not open"){d.hasObject(By.res("native-room-controls"))&&d.hasObject(By.text("Synthetic voice room B"))}
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_UP)
    await("Hardware stop did not complete"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
    assertEquals("Navigation retargeted captured recording",roomA,PocketVoice.targetRoom?.s("roomId"))
