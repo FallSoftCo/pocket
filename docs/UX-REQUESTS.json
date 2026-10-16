@@ -2715,6 +2715,13 @@
       "status": "open; user-confirmed gaps in released implementation",
       "acceptance": "docs/ROOMS-SESSIONS-UX-ACCEPTANCE.md",
       "guidance": "User has supplied sufficient design direction. Ask only for a concrete unresolved decision or unavoidable phone OS action; no recurring model wakeups or blanket worker continuation."
+    },
+    {
+      "id": "immersion-transgrammatic-english-pure-italian-20261016",
+      "request": "Alternate transgrammatic English (English vocabulary in Italian grammatical structure) and pure Italian within the single existing content flow. No intentionally mixed-language intermediate presentation. Eliminate jarring per-word longest-form space reservation. Preserve useful correspondence without conspicuous gaps, oversized boxes or jagged spacing; continuous global reading-direction waterfall, equal local transition speed, no tap interruption, normal-size inline help, all controls and content covered.",
+      "status": "open; supersedes prior intentional mixed-language/partial replacement direction",
+      "acceptance": "docs/IMMERSION-TRANSGRAMMATIC-ACCEPTANCE.md",
+      "delivery": "Qualified incremental updates authorized; announce update readiness and distinguish actual installation. Preserve all existing paired environments/drafts/receipts and concurrent room/session UX work."
     }
   ],
   "current_state": {
