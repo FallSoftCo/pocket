@@ -57,10 +57,21 @@ class HollywoodVoiceKeysNativeTest{
    d.findObject(By.clazz("android.widget.EditText")).text=draft
    await("Typed draft not saved"){client.draft(HollywoodScope(roomA,agentA))==draft}
    assertFalse("Keyboard action remains after opening the editor",d.hasObject(By.res("native-room-keyboard")))
+   val strandedId=java.util.UUID.randomUUID().toString()
+   val strandedAudio=VoiceRecording.wav(ByteArray(32000){(it%127).toByte()})
+   assertNull("Unreconciled prior fixture recording",p.getString("voicePendingId",null))
+   c.filesDir.resolve("voice-pending.wav").writeBytes(strandedAudio)
+   p.edit().putString("voicePendingId",strandedId).putString("voicePendingEnvironment",id)
+    .putString("voicePendingOwner",backendOwner(base,token)).putString("voicePendingTarget","coordinator")
+    .putString("voicePendingSourceLabel","Owned stranded fixture recording").commit()
    val downAt=SystemClock.uptimeMillis()
    fun key(action:Int,repeat:Int=0){assertTrue(i.uiAutomation.injectInputEvent(KeyEvent(downAt,SystemClock.uptimeMillis(),action,KeyEvent.KEYCODE_VOLUME_DOWN,repeat),true))}
    key(KeyEvent.ACTION_DOWN)
    await("Hardware did not start actual microphone"){PocketVoice.state=="Listening"&&PocketVoice.recordingStartedAt>0}
+   val preserved=SavedVoiceRecordings.list(c).single{it.s("id")==strandedId}
+   assertEquals("Stranded request was automatically retried", "Status not checked",preserved.s("state"))
+   val savedFolder=java.io.File(c.noBackupFilesDir,"saved-voice-recordings").listFiles()!!.single{folder->runCatching{JSONObject(java.io.File(folder,"record.json").readText()).s("id")==strandedId}.getOrDefault(false)}
+   assertArrayEquals("Original stranded audio changed",strandedAudio,java.io.File(savedFolder,"recording.wav").readBytes())
    assertTrue("Starting capture closed the IME",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
    assertEquals(roomA,PocketVoice.targetRoom?.s("roomId"))
    assertEquals(agentA,PocketVoice.targetRoom?.s("recipientId"))

@@ -87,7 +87,15 @@ object PocketVoice {
         if(checkSaved&&Pocket.prefs.getString("voicePendingId",null)!=null&&Pocket.prefs.getString("voicePendingEnvironment",null).isNullOrBlank()){resolveLegacySavedOwner(inPlace);return}
         if(checkSaved&&!savedTurnMatchesCurrentEnvironment()){captureFailure("Switch to the recording’s original environment and pairing before checking it. Legacy recordings without verified ownership remain saved; they have not been resent.",inPlace);return}
         if(active&&captureControl(true,state,Pocket.prefs.getString("voicePendingId",null)!=null)==CaptureControl.PROCESSING)return
-        if(Pocket.prefs.getString("voicePendingId",null)!=null&&!checkSaved&&!(active&&state in setOf("Listening","Starting microphone"))){captureFailure("A saved voice turn needs checking. Tap Check saved turn; it has not been resent.",inPlace);return}
+        if(Pocket.prefs.getString("voicePendingId",null)!=null&&!checkSaved&&!(active&&state in setOf("Listening","Starting microphone"))){
+            if(launching)return
+            launching=true;this.inPlace=inPlace;state="Saving previous recording"
+            Pocket.scope.launch{
+                try{withContext(Dispatchers.IO){SavedVoiceRecordings.preserve(c,Pocket.prefs)};launching=false;state="Ready";start(c,threadId,recordImmediately,inPlace,false,roomDestination,sourceLabel)}
+                catch(e:Exception){launching=false;state="Ready";captureFailure("Could not preserve the previous recording. It remains saved; recording has not started.",inPlace)}
+            }
+            return
+        }
         if(active){
             val stopping=captureControl(true,state,false)==CaptureControl.STOP_SEND
             if(!stopping&&service?.matchesSelectedCaptureEnvironment()!=true){

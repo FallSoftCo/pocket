@@ -1,6 +1,7 @@
 package co.fallsoft.pocket
 
 import org.json.JSONObject
+import kotlinx.coroutines.launch
 
 import android.Manifest
 import android.content.Intent
@@ -38,7 +39,7 @@ import androidx.lifecycle.repeatOnLifecycle
 @Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false,cardRegion:Boolean=false,smallDock:Boolean=false,roomDestination:JSONObject?=null,sourceLabel:String?=null,largeFloating:Boolean=false){
     val c=LocalContext.current
     val here=compact||bar||dock
-    val control=captureControl(PocketVoice.active||PocketVoice.launching,PocketVoice.state,Pocket.prefs.getString("voicePendingId",null)!=null)
+    val control=captureControl(PocketVoice.active||PocketVoice.launching,PocketVoice.state,false)
     var permissionTarget by remember{mutableStateOf<CaptureDestination?>(null)}
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ok->
         val original=permissionTarget;permissionTarget=null
@@ -227,3 +228,35 @@ import androidx.lifecycle.repeatOnLifecycle
 }
 
 internal fun coordinatorItemFullyVisible(offset:Int,size:Int,start:Int,end:Int)=size>0&&offset>=start&&offset+size<=end
+
+@Composable internal fun SavedVoiceRecordingControls(){
+    val c=androidx.compose.ui.platform.LocalContext.current
+    val scope=rememberCoroutineScope()
+    var entries by remember{mutableStateOf(emptyList<JSONObject>())}
+    var expanded by remember{mutableStateOf(false)}
+    var error by remember{mutableStateOf("")}
+    var checking by remember{mutableStateOf<String?>(null)}
+    LaunchedEffect(PocketVoice.launching,PocketVoice.state){entries=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){SavedVoiceRecordings.list(c)}}
+    if(entries.isEmpty())return
+    Column(Modifier.fillMaxWidth().padding(horizontal=16.dp)){
+        TextButton({expanded=!expanded}){BilingualLabel("Saved recordings");Text(" · "+entries.size)}
+        if(expanded)entries.forEach{entry->
+            val id=entry.s("id")
+            Column(Modifier.fillMaxWidth()){
+                Text(entry.s("voicePendingSourceLabel","Recording")+" · "+entry.s("state"),maxLines=2)
+                TextButton({checking=id;error="";scope.launch{
+                    try{
+                        val source=requireNotNull(Pocket.captureEnvironment(entry.s("voicePendingEnvironment"))){"Original environment unavailable"}
+                        check(backendOwner(source.endpoint,source.token)==entry.s("voicePendingOwner")){"Original pairing changed; recording retained"}
+                        val result=Pocket.apiEnvironment(source,"/api/voice/turns/"+android.net.Uri.encode(id))
+                        check(result.s("id")==id){"Receipt did not match this recording"}
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){SavedVoiceRecordings.update(c,id,result)}
+                        entries=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){SavedVoiceRecordings.list(c)}
+                    }catch(e:Exception){error="Could not confirm this recording. It remains saved and has not been resent."}finally{checking=null}
+                }},enabled=checking==null){BilingualLabel(if(checking==id)"Checking" else "Check status")}
+                entry.optJSONObject("result")?.s("response")?.takeIf{it.isNotBlank()}?.let{WorkflowText(it,maxLines=8)}
+            }
+        }
+        if(error.isNotBlank())WorkflowText(error,color=Coral,maxLines=3)
+    }
+}

@@ -457,6 +457,8 @@ internal object InterfaceGrammarScaffolds {
         "Find rooms" to "Trova|Find stanze|rooms",
         "No matching rooms" to "Nessuna|No stanza|room corrispondente|matching",
         "Close search" to "Chiudi|Close la|the ricerca|search",
+        "Saved recordings" to "Le|The registrazioni|recordings salvate|saved",
+        "Check status" to "Controlla|Check lo|the stato|status",
         "Attention" to "Attenzione|Attention"
     )
     private fun target(row:String)=row.split(" ").joinToString(" "){it.substringBefore("|").replace("~"," ")}

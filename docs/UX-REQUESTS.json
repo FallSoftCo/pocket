@@ -2763,6 +2763,17 @@
         "Separate work snapshot verification from read freshness; clear on environment/thread reset"
       ],
       "evidence": "docs/qualification/toolbar-stable-work-status-20261016.json"
+    },
+    {
+      "id": "voice-stranded-recording-blocks-capture-20261016",
+      "request": "Mic and hardware keys must start capture even with a saved failed/unknown recording. Preserve its audio, identity and captured ownership; never silently retry it.",
+      "status": "native-stranded-recording-preservation-hardware-touch-ime-drafts-pass-pending-release",
+      "evidence": "voice-saved-start-native-r01.json",
+      "changes": [
+        "Fsync audio and metadata into separate no-backup per-turn store before releasing capture slot",
+        "Keep saved status and response inspectable inline; read-only receipt checks against original pairing",
+        "Explicit errors leave original data and slot intact if preservation fails"
+      ]
     }
   ],
   "current_state": {

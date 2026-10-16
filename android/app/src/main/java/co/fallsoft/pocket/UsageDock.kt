@@ -51,6 +51,7 @@ import java.util.Locale
 
 /** Account facts only; each backend retains its own navigation and controls. */
 @Composable internal fun AccountUsageDetails(){
+    SavedVoiceRecordingControls()
     val usage=Pocket.weeklyUsage
     val now=System.currentTimeMillis()
     Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)

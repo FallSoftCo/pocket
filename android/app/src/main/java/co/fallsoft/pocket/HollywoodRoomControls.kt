@@ -40,6 +40,7 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
 /** Work stays closest to the anchor; keyed rows cannot retarget a press during live updates. */
 @Composable internal fun RoomWorkControls(work:HollywoodRoomWork,names:Map<String,String>,client:HollywoodClient,room:String,
     stopping:Set<String>,detailError:String,attentionError:String,onAttention:(JSONObject)->Unit,onGuidance:(JSONObject)->Unit,onStop:(JSONObject,Boolean)->Unit){
+    SavedVoiceRecordingControls()
     BilingualLabel(work.label,centered=false,color=if(work.label in listOf("Needs you","Outcome unknown","Blocked"))Coral else Muted)
     if(detailError.isNotBlank())Text(detailError.take(180),color=Coral,maxLines=3)
     if(attentionError.isNotBlank())BilingualLabel("Questions could not refresh",centered=false,color=Coral)
