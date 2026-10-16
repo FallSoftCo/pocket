@@ -2753,6 +2753,15 @@
       "request": "Prevent shared admin/agent credentials from submitting peer coordination as human tasks/replies/retries. Preserve paired-device human input and authenticated original-device/voice-turn delegation. Retain durable original admission and retry provenance; never rewrite old accepted receipts or replay unknown sends.",
       "status": "Implemented in maintained source and exact stock candidate;31 focused integration/regression cases and6 actual stock HTTP cases pass. Not activated; requires coordinated owning backend cutover.",
       "design": "docs/HUMAN-INGRESS.md"
+    },
+    {
+      "id": "toolbar-stable-work-status-20261016",
+      "request": "Stop toolbar Thinking/not-thinking flicker. Present stable turn lifecycle while detailed activity changes; retain verified work during history refresh without falsely marking fetched data read.",
+      "status": "implemented-pending-native-verification",
+      "changes": [
+        "Toolbar active turn consistently Working; detail stays in activity",
+        "Separate work snapshot verification from read freshness; clear on environment/thread reset"
+      ]
     }
   ],
   "current_state": {
