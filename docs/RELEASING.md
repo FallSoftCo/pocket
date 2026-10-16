@@ -148,3 +148,23 @@ the debug build must never be substituted merely to retain an installed signer.
 Changing debuggability does not require uninstalling or re-pairing when package,
 signing identity and monotonic version are retained. Qualify the optimized
 artifact separately; a non-shrunk instrumentation build is not its runtime proof.
+
+## Native preflight before immutable signing
+
+Run the complete finite set of affected native journeys against one qualification
+APK before starting the immutable signed builder. A footer/navigation change
+affects reconnect, recording, drafts and controls, even when its focused screen
+check passes. Do not discover each stale selector in a new signed release build.
+After correcting a journey, rerun that journey, then the affected set together.
+
+Retain pairing and unrelated drafts. Synthetic fixtures must explicitly save,
+initialize and restore only their own scoped data; they cannot assume retained
+app data is empty. Assert user concepts (mounted conversation, source identity,
+footer controls and saved draft), not a header that the product intentionally
+removed. Real QA operations retain journals and stable identities. Read a settled
+original operation rather than resend it; a new finite QA operation requires its
+own identity and proof earlier work is terminal.
+
+A failed immutable qualification stays failed. Test-only corrections require new
+test-input attestation; do not edit old receipts or publish with stale evidence.
+The signed build, final native gate and optimized APK review remain required.
