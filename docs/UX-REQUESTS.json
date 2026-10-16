@@ -64,7 +64,7 @@
     {
       "id": "native-room-session-parity-20261014",
       "request": "Retain rooms as shared communication areas over independent sessions. Reuse Codex list-to-conversation components and layouts; preserve room identity, scoped broadcasts, peer/human communication, separate underlying contexts, drafts and receipts. Additional controls need concrete justification within existing patterns.",
-      "status": "115-reactivated-live-download-verified-offer-deduplicated-install-unobserved",
+      "status": "INCOMPLETE: shared primitives shipped, whole-screen/list/interaction parity not achieved; superseded acceptance contract below",
       "evidence": "docs/qualification/native-enterprise-release-readiness-20261014.json"
     },
     {
@@ -2708,6 +2708,13 @@
       "request": "Direct touch and physical-volume recording in native rooms, catalog and work-context settings, including IME typing; retain original environment/recipient and drafts across navigation with visible capture errors.",
       "status": "124-published-both-channels; six native cases and optimized input/voice passed; physical handset install/provider qualification pending",
       "evidence": "docs/qualification/native-room-voice-alpha106.json"
+    },
+    {
+      "id": "rooms-sessions-shared-ux-completion-20261016",
+      "request": "Complete shared rooms/sessions UX architecture and live lists; eliminate separate room header/footer/menu behavior, detached environment menus, and partial parity claims. Continue autonomously through implementation, native journeys, performance measurement and usable delivery.",
+      "status": "open; user-confirmed gaps in released implementation",
+      "acceptance": "docs/ROOMS-SESSIONS-UX-ACCEPTANCE.md",
+      "guidance": "User has supplied sufficient design direction. Ask only for a concrete unresolved decision or unavoidable phone OS action; no recurring model wakeups or blanket worker continuation."
     }
   ],
   "current_state": {
