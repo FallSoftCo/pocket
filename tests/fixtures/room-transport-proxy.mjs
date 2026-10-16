@@ -6,6 +6,7 @@ import fs from 'node:fs';
 const config=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
 if(!Number.isInteger(config.port)||!Number.isInteger(config.upstreamPort)||!config.controlToken)throw Error('Private QA configuration required');
 let fault={aux:false,dropMessageAck:false,dropCancelAck:false};
+let failBackends=false,backendsReads=0,connections=0,blockedWrites=0,readOnly=false;
 const sockets=new Set();
 const record=value=>fs.appendFileSync(config.journal,JSON.stringify({at:Date.now(),...value})+'\n',{mode:0o600});
 const server=http.createServer(async(req,res)=>{
@@ -13,10 +14,25 @@ const server=http.createServer(async(req,res)=>{
   const chunks=[];let bytes=0;
   for await(const chunk of req){bytes+=chunk.length;if(bytes>32000)throw Error('QA body limit');chunks.push(chunk)}
   const body=Buffer.concat(chunks);
+  if(req.url==='/_qa/reconnect'){
+   const command=JSON.parse(body.toString()||'{}');
+   if(command.controlToken!==config.controlToken){res.writeHead(403).end();return}
+   readOnly=true;
+   if(command.action==='fail')failBackends=true;
+   if(command.action==='recover')failBackends=false;
+   if(command.action==='disconnect')for(const socket of sockets)socket.destroy();
+   res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({failBackends,backendsReads,connections,blockedWrites}));return;
+  }
   if(req.url==='/__qa/control'){
    if(req.headers.authorization!=='Bearer '+config.controlToken){res.writeHead(403).end();return}
+   readOnly=false;
    if(req.method==='POST'){const next=JSON.parse(body.toString());if(next.disconnect)for(const socket of sockets)socket.destroy();delete next.disconnect;fault={...fault,...next};record({control:fault})}
    res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify(fault));return;
+  }
+  if(readOnly&&req.method!=='GET'){blockedWrites++;res.writeHead(405).end();return}
+  if(req.url==='/api/backends'){
+   backendsReads++;
+   if(failBackends){res.writeHead(503,{'Content-Type':'application/json'}).end(JSON.stringify({error:'QA capability discovery temporarily unavailable'}));return}
   }
   const auxiliary=/\/api\/hollywood\/v3\/rooms\/[0-9a-f-]+(?:\?|$|\/attention)/.test(req.url)&&!req.url.includes('/history');
   if(fault.aux&&req.method==='GET'&&auxiliary){
@@ -42,7 +58,7 @@ server.on('upgrade',(req,socket,head)=>{
   const lines=[`${req.method} ${req.url} HTTP/${req.httpVersion}`];
   for(let i=0;i<req.rawHeaders.length;i+=2)lines.push(req.rawHeaders[i]+': '+req.rawHeaders[i+1]);
   upstream.write(lines.join('\r\n')+'\r\n\r\n');if(head.length)upstream.write(head);
-  socket.pipe(upstream);upstream.pipe(socket);record({websocket:'connected'});
+  connections++;socket.pipe(upstream);upstream.pipe(socket);record({websocket:'connected'});
  });
  upstream.on('error',()=>socket.destroy());socket.on('error',()=>upstream.destroy());socket.on('close',()=>upstream.destroy());
 });

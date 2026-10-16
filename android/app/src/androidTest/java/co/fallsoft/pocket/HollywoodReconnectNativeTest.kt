@@ -24,6 +24,9 @@ class HollywoodReconnectNativeTest {
   val destination=EnvironmentRequest(EnvironmentIdentity(id,"Real room QA"),base,token)
   suspend fun control(action:String)=Pocket.apiEnvironment(destination,"/_qa/reconnect",JSONObject().put("controlToken",config.s("controlToken")).put("action",action))
   fun await(label:String,test:()->Boolean){val end=SystemClock.elapsedRealtime()+30000;while(SystemClock.elapsedRealtime()<end){i.uiAutomation.clearCache();if(test())return;Thread.sleep(100)};assertTrue(label,test())}
+  val client=HollywoodClient(backendOwner(base,token),config.getJSONObject("identity"),base,token)
+  val latest=client.call("rooms/"+config.s("roomId")+"/history?before=9007199254740991&limit=100").getJSONArray("events").objects()
+   .last{it.s("kind") in setOf("message","request","result")&&it.s("body").isNotBlank()}.s("body").take(70)
   control("fail")
   val p=c.getSharedPreferences("pocket",0)
   val profiles=JSONArray(p.getString("environments:v1","[]")).objects().filter{it.s("id")!=id}
@@ -36,7 +39,7 @@ class HollywoodReconnectNativeTest {
    await("Actual live socket did not open"){Pocket.connected}
    val before=control("state")
    control("recover")
-   await("Room did not recover automatically on an unchanged live socket"){d.hasObject(By.textContains("QA core accepted head refresh r03"))}
+   await("Room did not recover automatically on an unchanged live socket"){d.hasObject(By.textContains(latest))}
    val after=control("state")
    assertEquals("Metadata recovery unexpectedly needed another live connection",before.getInt("connections"),after.getInt("connections"))
    val draft="Keep this unsent native room draft"
@@ -50,7 +53,6 @@ class HollywoodReconnectNativeTest {
    control("recover")
    await("Recovery warning did not clear"){!d.hasObject(By.textContains("QA capability discovery temporarily unavailable"))}
    assertTrue("Recovery lost draft",d.hasObject(By.text(draft)))
-   val client=HollywoodClient(backendOwner(base,token),config.getJSONObject("identity"),base,token)
    val events=client.call("rooms/"+config.s("roomId")+"/history?before=9007199254740991&limit=100").getJSONArray("events").objects()
    assertEquals("Original accepted message was duplicated",1,events.count{it.s("id")=="4564d27f-0fd2-4365-8d8b-69022e098fb7"})
    val report=control("state").put("originalMessageCount",1).put("draftPreserved",true).put("actualCanonicalRoom",true).put("physicalPhone",false)
