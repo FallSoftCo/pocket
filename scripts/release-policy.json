@@ -1,18 +1,20 @@
 {
   "schema": 1,
-  "qualification": "alpha105-native-room-controls-and-local-responsiveness",
+  "qualification": "alpha106-native-room-voice-and-source-bound-input",
   "requiredNativeCases": [
     "co.fallsoft.pocket.HollywoodRoomActivityNativeTest#aggregateFailureAndQuietSnapshotNeverInventIdleOrLoseRoomTarget",
     "co.fallsoft.pocket.HollywoodCatalogLiveNativeTest#actualCatalogCountsAndOriginalAcceptedMessageSurviveListAndRoomReopening",
     "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending",
     "co.fallsoft.pocket.HollywoodReconnectNativeTest#capabilityOutageRecoversWithoutLosingOpenRoomOrDraft",
-    "co.fallsoft.pocket.HollywoodRoomControlsNativeTest#stopLostAcknowledgementAndLocalSlowdownReportKeepOriginalIdentity"
+    "co.fallsoft.pocket.HollywoodRoomControlsNativeTest#stopLostAcknowledgementAndLocalSlowdownReportKeepOriginalIdentity",
+    "co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
     "Optimized code/resource/manifest payload is qualified with a separate test-only signature; phone signer and actual published APK hashes verified separately",
     "Software emulator key-to-draw timing does not establish handset optical latency, physical voice or FCM display",
-    "Existing account/voice/profile/question/receipt code is retained; physical-phone validation remains separate"
+    "Existing account/voice/profile/question/receipt code is retained; physical-phone validation remains separate",
+    "Native volume/IME/AudioRecord is checked against an explicit no-provider fixture; physical phone/provider transcript and TTS remain unqualified."
   ],
   "requiredOptimizedReview": "native-room-catalog-and-typing"
 }

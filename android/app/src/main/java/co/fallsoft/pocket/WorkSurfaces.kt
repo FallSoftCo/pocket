@@ -23,9 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** Shared catalog geometry; each backend owns identities, ordering and pagination. */
-@Composable internal fun WorkCatalogList(modifier:Modifier,state:LazyListState=rememberLazyListState(),reverseLayout:Boolean=true,content:LazyListScope.()->Unit){
+@Composable internal fun WorkCatalogList(modifier:Modifier,state:LazyListState=rememberLazyListState(),reverseLayout:Boolean=true,contentPadding:PaddingValues=PaddingValues(vertical=12.dp),content:LazyListScope.()->Unit){
     LazyColumn(modifier.fillMaxWidth().padding(horizontal=16.dp),state=state,reverseLayout=reverseLayout,
-        verticalArrangement=Arrangement.spacedBy(8.dp,if(reverseLayout)Alignment.Bottom else Alignment.Top),contentPadding=PaddingValues(vertical=12.dp),content=content)
+        verticalArrangement=Arrangement.spacedBy(8.dp,if(reverseLayout)Alignment.Bottom else Alignment.Top),contentPadding=contentPadding,content=content)
 }
 
 /** The Codex card surface, including quiet state, activity glow and update highlight. */

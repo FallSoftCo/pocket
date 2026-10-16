@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.*
 import org.json.JSONObject
@@ -83,6 +86,10 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
     var discoveryRetryable by remember(owner){mutableStateOf(false)}
     var teamSettings by remember(owner){mutableStateOf(false)}
     var workRecord by remember(owner){mutableStateOf(false)}
+    val inputFocus=androidx.compose.ui.platform.LocalFocusManager.current
+    val inputKeyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    fun openBackendSettings(){inputFocus.clearFocus(force=true);inputKeyboard?.hide();teamSettings=true}
+    fun openWorkRecord(){inputFocus.clearFocus(force=true);inputKeyboard?.hide();workRecord=true}
     val scope=rememberCoroutineScope()
     suspend fun discover():Boolean {
         discovering=true
@@ -124,7 +131,7 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
     LaunchedEffect(owner,requestedNotification){if(requestedNotification?.first==owner)teamSettings=false}
     CompositionLocalProvider(LocalBackendSetting provides BackendSetting(backend,choices,{chosen->
         BackendNavigation.select(chosen);backend=chosen;teamSettings=false
-    },{workRecord=true})){
+    },{openWorkRecord()})){
     Box(Modifier.fillMaxSize()){
     Column(Modifier.fillMaxSize().imePadding()){
         if(discoveryError.isNotBlank()&&lax.optBoolean("available")&&backend=="lax")
@@ -136,27 +143,50 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
             if(backend=="lax"){
                 if(discovering&&!lax.optBoolean("available"))Column(Modifier.padding(24.dp)){CircularProgressIndicator();InterfaceText("Connecting to Hollywood…")}
                 else if(!lax.optBoolean("available"))Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-                    InterfaceText("Hollywood connection unavailable");TextButton({scope.launch{discover()}}){BilingualLabel("Reconnect")};TextButton({teamSettings=true}){BilingualLabel("Settings")}
-                }else key(owner,lax.s("bindingId")){HollywoodScreen(owner,lax,onSettings={teamSettings=true})}
+                    InterfaceText("Hollywood connection unavailable");TextButton({scope.launch{discover()}}){BilingualLabel("Reconnect")};TextButton({openBackendSettings()}){BilingualLabel("Settings")}
+                }else key(owner,lax.s("bindingId")){HollywoodScreen(owner,lax,onSettings={openBackendSettings()})}
             }
             else if(backend=="codex")PocketApp()
             else if(discovering)Column(Modifier.padding(24.dp)){CircularProgressIndicator();InterfaceText("Checking Losangelex…")}
             else if(!losangelex.optBoolean("configured"))Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
                 InterfaceText("Connect Losangelex",style=MaterialTheme.typography.titleLarge)
-                TextButton({teamSettings=true}){BilingualLabel("Settings")}
+                TextButton({openBackendSettings()}){BilingualLabel("Settings")}
                 InterfaceText("Your NextComp host needs a Losangelex backend connection. Register its private endpoint and token file on the host, then reload.")
                 Button({scope.launch{discover()}}){BilingualLabel("Reload backends")}
                 TextButton({BackendNavigation.select("codex");backend="codex"}){BilingualLabel("Use Codex")}
             }
-            else key(owner,losangelex.s("environmentId")){LosangelexScreen(owner+losangelex.s("environmentId"),onSettings={teamSettings=true})}
+            else key(owner,losangelex.s("environmentId")){LosangelexScreen(owner+losangelex.s("environmentId"),onSettings={openBackendSettings()})}
         }
     }
     BackHandler(enabled=backend in listOf("losangelex","lax")&&teamSettings&&!workRecord){teamSettings=false}
     if(backend in listOf("losangelex","lax")&&teamSettings)Surface(Modifier.fillMaxSize()){
-        Column{TextButton({teamSettings=false}){BilingualLabel("Back")};Box(Modifier.weight(1f)){SettingsScreen()}}
+        Column(Modifier.fillMaxSize().imePadding().semantics{testTagsAsResourceId=true}){
+            Box(Modifier.weight(1f)){SettingsScreen()}
+            BackendOverlayControls({teamSettings=false})
+        }
     }
-    if(workRecord)Surface(Modifier.fillMaxSize()){WorkRecordScreen{workRecord=false}}
+    if(workRecord)Surface(Modifier.fillMaxSize()){
+        Column(Modifier.fillMaxSize().imePadding().semantics{testTagsAsResourceId=true}){
+            Box(Modifier.weight(1f)){WorkRecordScreen{workRecord=false}}
+            BackendOverlayControls({workRecord=false})
+        }
     }
+    }
+    }
+}
+
+/** Visible controls for the retained work context while settings/records cover the chat. */
+@Composable private fun BackendOverlayControls(onBack:()->Unit){
+    val target=currentForegroundCaptureTarget()
+    val recording=captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND
+    InlineCaptureStatus(modifier=Modifier.testTag("native-settings-capture-status"))
+    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),
+        horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
+        TextButton(onBack,Modifier.heightIn(min=48.dp).testTag("native-settings-back")){BilingualLabel("Back")}
+        InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
+        if(target.eligible&&(!BackendNavigation.teamSelected()||target.roomDestination!=null||recording))
+            VoiceLaunchButton(Modifier.size(64.dp).testTag("native-settings-microphone"),threadId=target.threadId,
+                compact=true,roomDestination=target.roomDestination?.let(::JSONObject),sourceLabel=target.sourceLabel)
     }
 }
 

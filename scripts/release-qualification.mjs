@@ -46,6 +46,7 @@ export function validateReleaseQualification({directory,manifest,build,native,po
   const review=optimizedReview;
   if(!review||review.schema!==1||review.state!=='complete'||review.kind!==policy.requiredOptimizedReview||review.versionCode!==manifest.versionCode||review.productionSourceSha!==build.productionSourceSha||review.qualificationInputSha!==build.qualificationInputSha||!manifest.variants.some(v=>v.sha256===review.apkSha256)||!Number.isFinite(review.reviewedAt)||review.reviewedAt<build.finishedAt)fail('Optimized review is missing, failed, stale or for another APK.');
   const observations=policy.requiredOptimizedReview==='native-room-catalog-and-typing'?['typingDrawn','canonicalRoomSnapshot','originalAcceptedMessageSingle','optimizedPayloadVerified']:['searchSurvived','selectedIdentitiesReadable','recipientDraftsPreserved','correctSingleSend'];
+  if(policy.requiredNativeCases.some(name=>typeof name==='string'&&name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#')))observations.push('nativeVoiceHardwareKeys','nativeVoiceTouch','nativeVoiceDraftAndOrigin');
   if(observations.some(key=>review.observations?.[key]!==true))fail('Required optimized interaction/visual review did not pass.');
   if(!Array.isArray(review.artifacts)||review.artifacts.length!==2||new Set(review.artifacts.map(a=>a.path)).size!==2)fail('Optimized review artifacts missing.');
   for(const artifact of review.artifacts)if(!hex.test(artifact.sha256)||fileSha(confinedFile(directory,artifact.path))!==artifact.sha256)fail('Optimized review artifact changed.');

@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
@@ -33,6 +34,7 @@ import androidx.lifecycle.repeatOnLifecycle
     var headRefreshRevision by remember(client.bindingId){mutableIntStateOf(0)}
     val feeds=remember(client.bindingId){mutableMapOf<String,HollywoodRoomFeed>()}
     val feed=feeds.getOrPut(room){HollywoodRoomFeed(room){path->client.call(path)}}
+    val coordinatorFeed=feeds.getOrPut(client.defaultRoomId){HollywoodRoomFeed(client.defaultRoomId){path->client.call(path)}}
     val detail=feed.detail
     val events=feed.events
     val attention=feed.attention
@@ -58,12 +60,61 @@ import androidx.lifecycle.repeatOnLifecycle
     val currentScope by rememberUpdatedState(scope)
     val inputState=remember(scope){mutableStateOf(TextFieldValue(scope?.let(client::draft).orEmpty()))}
     var input by inputState
+    var keyboardInput by remember(client.bindingId,room){mutableStateOf(!binding.optBoolean("voice"))}
+    var requestKeyboard by remember(client.bindingId,room){mutableStateOf(false)}
+    val keyboardFocus=remember{androidx.compose.ui.focus.FocusRequester()}
+    val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val hasDraft by remember(inputState){derivedStateOf{inputState.value.text.isNotBlank()}}
+    val showTextInput=keyboardInput||!binding.optBoolean("voice")||postOnly||hasDraft
+    val imeVisible=WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current)>0
+    LaunchedEffect(imeVisible){
+        if(!imeVisible&&!hasDraft&&binding.optBoolean("voice"))keyboardInput=false
+    }
+    LaunchedEffect(requestKeyboard,scope){
+        if(requestKeyboard&&scope!=null){
+            withFrameNanos{};keyboardFocus.requestFocus();keyboard?.show();requestKeyboard=false
+        }
+    }
     var pending by remember(scope){mutableStateOf(scope?.let(client::pending))}
     val list=rememberLazyListState()
     var following by remember(client.bindingId,room,direct,recipient){mutableStateOf(true)}
     val actors=detail.optJSONArray("actors")?.objects().orEmpty()
     val agentNames=actors.associate{it.s("id") to it.s("name")}
+    val voiceAllowed=!browsing&&binding.optBoolean("voice")&&scope!=null&&!postOnly&&
+        detail.optJSONObject("permissions")?.optBoolean("can_request")==true&&
+        inspecting==null&&guidance==null&&guidanceReceipt==null&&!workflow
+    val roomVoiceDestination=remember(voiceAllowed,scope,client.bindingId,room){
+        if(!voiceAllowed)null else JSONObject().put("backend","lax").put("bindingId",client.bindingId).put("authorityId",client.authorityId)
+            .put("roomId",room).put("recipientId",scope!!.recipient).put("audience",scope.audience)
+            .apply{scope.sourceEvent?.let{put("sourceEventId",it)}}
+    }
+    val roomVoiceName=detail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
+    val roomVoiceRecipient=scope?.recipient?.let{agentNames[it]}
+    val roomVoiceLabel=roomVoiceName+(roomVoiceRecipient?.takeIf{it!=roomVoiceName}?.let{" → "+it}.orEmpty())
+    val stoppingRoomCapture=PocketVoice.active&&captureControl(true,PocketVoice.state,false)==CaptureControl.STOP_SEND&&PocketVoice.targetRoom!=null
+    val visibleMicDestination=roomVoiceDestination?:PocketVoice.targetRoom?.takeIf{stoppingRoomCapture}
+    val visibleMicLabel=if(roomVoiceDestination==null)PocketVoice.targetSourceLabel else roomVoiceLabel
+    val coordinatorDetail=coordinatorFeed.detail
+    val coordinatorOwner=coordinatorDetail.optJSONObject("room")?.s("owner").orEmpty()
+    val coordinatorVoiceDestination=remember(browsing,binding.optBoolean("voice"),coordinatorDetail,coordinatorFeed.detailError){
+        if(!browsing||!binding.optBoolean("voice")||coordinatorFeed.detailError.isNotBlank()||
+            coordinatorDetail.optJSONObject("permissions")?.optBoolean("can_request")!=true||
+            !hollywoodUuid(coordinatorOwner)||
+            coordinatorDetail.optJSONArray("actors")?.objects().orEmpty().none{it.s("id")==coordinatorOwner&&it.s("kind")=="agent"})null
+        else JSONObject().put("backend","lax").put("bindingId",client.bindingId).put("authorityId",client.authorityId)
+            .put("roomId",client.defaultRoomId).put("recipientId",coordinatorOwner).put("audience","room")
+    }
+    val coordinatorVoiceLabel=coordinatorDetail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
+    val foregroundVoiceDestination=if(browsing)coordinatorVoiceDestination else roomVoiceDestination
+    val foregroundVoiceLabel=if(browsing)coordinatorVoiceLabel else roomVoiceLabel
+    val catalogMicDestination=if(stoppingRoomCapture)PocketVoice.targetRoom else coordinatorVoiceDestination
+    val catalogMicLabel=if(stoppingRoomCapture)PocketVoice.targetSourceLabel else coordinatorVoiceLabel
+    val roomVoiceOrigin=Pocket.captureEnvironment(Pocket.environmentId)
+    DisposableEffect(roomVoiceOrigin,foregroundVoiceDestination?.toString(),foregroundVoiceLabel){
+        val detach=if(roomVoiceOrigin!=null&&foregroundVoiceDestination!=null)
+            ForegroundRoomInput.attach(CaptureDestination(roomVoiceOrigin,null,foregroundVoiceDestination.toString(),foregroundVoiceLabel,true)) else null
+        onDispose{detach?.invoke()}
+    }
     val visible=remember(events,direct,destination,client.principalId){events.filter{!direct||it.s("audience")=="direct"&&setOf(it.s("author"),it.s("recipient"))==setOf(client.principalId,destination)}}
     val transcript by key(owner,client.bindingId,room){produceState(commandRunProjection(emptyList(),expanded),visible,expanded,agentNames,client.principalId){
         value=withContext(Dispatchers.Default){commandRunProjection(roomTranscriptRows(visible,"hollywood:$owner:${client.bindingId}:$room",client.principalId,agentNames),expanded)}
@@ -93,6 +144,12 @@ import androidx.lifecycle.repeatOnLifecycle
             launch{while(isActive){feed.refreshDetail();delay(3000)}}
             launch{while(isActive){feed.refreshAttention();delay(5000)}}
         }
+        }
+    }
+    LaunchedEffect(coordinatorFeed,browsing,binding.optBoolean("voice"),PocketLive.connectionRevision,lifecycle){
+        if(!browsing||!binding.optBoolean("voice"))return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
+            while(isActive){coordinatorFeed.refreshDetail();delay(15000)}
         }
     }
     LaunchedEffect(catalog,browsing,PocketLive.connectionRevision,lifecycle){
@@ -169,13 +226,25 @@ import androidx.lifecycle.repeatOnLifecycle
                 TextButton({jobs.launch{catalog.refresh()}},Modifier.testTag("native-room-catalog-retry")){BilingualLabel("Retry")}
             }
             if(catalog.available&&rooms.isEmpty())BilingualLabel("No rooms available",Modifier.padding(16.dp),color=Muted)
-            WorkCatalogList(Modifier.weight(1f),reverseLayout=true){
+            Box(Modifier.weight(1f).fillMaxWidth()){
+            WorkCatalogList(Modifier.fillMaxSize(),reverseLayout=true,contentPadding=PaddingValues(top=12.dp,bottom=if(catalogMicDestination!=null)112.dp else 12.dp)){
                 val ordered=rooms.sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
                 items(ordered,key={it.s("id")}){item->
                     HollywoodRoomCard(item,catalog.available){choose(item.s("id"))}
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){TextButton({browsing=false},Modifier.weight(1f)){BilingualLabel("Back")};Box(Modifier.weight(2f)){ProfileSwitcher{}};TextButton(onSettings,Modifier.weight(1f)){BilingualLabel("Settings")}}
+            if(catalogMicDestination!=null)Column(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end=16.dp,bottom=8.dp),horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally){
+                VoiceLaunchButton(Modifier.size(80.dp).testTag("native-catalog-microphone"),compact=true,largeFloating=true,
+                    roomDestination=catalogMicDestination,sourceLabel=catalogMicLabel)
+                Text(catalogMicLabel.orEmpty(),Modifier.widthIn(max=144.dp),color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
+            }
+            InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
+            Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                TextButton({browsing=false},Modifier.weight(1f)){BilingualLabel("Back")}
+                Box(Modifier.weight(2f)){ProfileSwitcher{}}
+                TextButton(onSettings,Modifier.weight(1f).testTag("native-catalog-settings")){BilingualLabel("Settings")}
+            }
         };return
     }
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
@@ -203,10 +272,12 @@ import androidx.lifecycle.repeatOnLifecycle
         }
         if(error.isNotBlank())Text(error,color=Coral)
         if(feed.historyError.isNotBlank())Text("Messages need refreshing · "+feed.historyError,color=Coral,modifier=Modifier.testTag("native-room-read-error"))
-        if(feed.loading&&events.isEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().testTag("native-room-loading"))
         if(notice.isNotBlank())BilingualLabel(notice,centered=false,color=Muted)
         if(feed.catchingUp)Text("Loading missed messages…",color=Muted,modifier=Modifier.testTag("native-room-gap"))
-        LazyColumn(Modifier.weight(1f).testTag("native-room-history"),state=list,verticalArrangement=Arrangement.spacedBy(10.dp)){
+        Box(Modifier.weight(1f).fillMaxWidth()){
+        LazyColumn(Modifier.fillMaxSize().testTag("native-room-history"),state=list,
+            contentPadding=PaddingValues(bottom=if(visibleMicDestination!=null&&!showTextInput)80.dp else 0.dp),
+            verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(older!=null)item(key="room-history-edge"){
                 if(feed.loadingOlder)Text("Loading earlier messages…",color=Muted)
                 else TextButton({following=false;jobs.launch{feed.loadOlder()}}){BilingualLabel("Earlier messages")}
@@ -240,29 +311,38 @@ import androidx.lifecycle.repeatOnLifecycle
                         }
                         if(event!=null&&event.s("kind") in listOf("message","result","request")&&
                             (event.s("audience")!="direct"||client.principalId in setOf(event.s("author"),event.s("recipient")))){
-                            TextButton({source=event.s("id");direct=event.s("audience")=="direct";recipient=if(event.s("author")==client.principalId)event.s("recipient")else event.s("author");postOnly=actors.firstOrNull{it.s("id")==recipient}?.s("kind")=="human"}){BilingualLabel("Reply")}
+                            TextButton({keyboardInput=true;requestKeyboard=true;source=event.s("id");direct=event.s("audience")=="direct";recipient=if(event.s("author")==client.principalId)event.s("recipient")else event.s("author");postOnly=actors.firstOrNull{it.s("id")==recipient}?.s("kind")=="human"}){BilingualLabel("Reply")}
                         }
                     }
                 }
             }
         }
+        if(events.isEmpty()&&feed.loading&&feed.historyError.isBlank())
+            SymbolIcon("Codex",PocketImmersion.label("Loading messages"),Modifier.align(androidx.compose.ui.Alignment.Center).size(96.dp).testTag("native-room-loading"),spinning=true)
+        if(visible.isEmpty()&&!feed.loading&&feed.historyError.isBlank())
+            BilingualLabel("No messages yet",Modifier.align(androidx.compose.ui.Alignment.Center).testTag("native-room-empty"),color=Muted)
+        if(visibleMicDestination!=null&&!showTextInput){
+            VoiceLaunchButton(modifier=Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end=4.dp,bottom=8.dp).testTag("native-room-microphone"),
+                compact=true,roomDestination=visibleMicDestination,sourceLabel=visibleMicLabel)
+        }
+        }
+        InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
-        ConversationComposerRow{
+        if(showTextInput)ConversationComposerRow{
             RoomDraftComposerScope{
-            ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f),enabled=!busy,
+            ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f).focusRequester(keyboardFocus),enabled=scope!=null&&!busy,
                 onSend={if(!busy&&pending==null&&inputState.value.text.isNotBlank()&&detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true)send()},placeholder={BilingualLabel("Message…",centered=false)})
             }
             ConversationSendButton(hasDraft,scope!=null&&!busy&&pending==null&&hasDraft&&
                 detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true,busy,"Send message"){send()}
         }
-        if(binding.optBoolean("voice")&&scope!=null&&!postOnly&&detail.optJSONObject("permissions")?.optBoolean("can_request")==true){
-            val voiceDestination=JSONObject().put("backend","lax").put("bindingId",client.bindingId).put("authorityId",client.authorityId)
-                .put("roomId",room).put("recipientId",scope.recipient).put("audience",scope.audience)
-                .apply{scope.sourceEvent?.let{put("sourceEventId",it)}}
-            VoiceLaunchButton(modifier=Modifier.fillMaxWidth(),bar=true,roomDestination=voiceDestination)
-        }
         FlowRow(Modifier.fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.SpaceEvenly){
         InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
+        if(!showTextInput)IconButton({
+            keyboardInput=true;requestKeyboard=true
+        },enabled=scope!=null,modifier=Modifier.size(48.dp).testTag("native-room-keyboard")){
+            SymbolIcon("Keyboard",PocketImmersion.label("Keyboard"),Modifier.size(32.dp),tint=Paper)
+        }
         ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,bottomActions=true){
             val account=Pocket.weeklyUsage
             if(account.remainingPercent!=null)Text(account.remainingLabel(),color=Muted)
@@ -286,6 +366,9 @@ import androidx.lifecycle.repeatOnLifecycle
             following=false
             if(up&&!list.canScrollBackward)feed.loadOlder()
         },onSettled={up,done->if(done&&!up&&!list.canScrollForward)following=true},onError={error=it.message.orEmpty()})
+        if(visibleMicDestination!=null&&showTextInput)
+            VoiceLaunchButton(Modifier.size(64.dp).testTag("native-room-microphone"),compact=true,
+                roomDestination=visibleMicDestination,sourceLabel=visibleMicLabel)
     }
     }
     guidance?.let{target->

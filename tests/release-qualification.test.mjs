@@ -70,3 +70,18 @@ test('optimized catalog/input review requires its actual observations',()=>{
   review.observations.optimizedPayloadVerified=false;assert.throws(()=>validateReleaseQualification({...f,optimizedReview:review}),/review did not pass/);
  }finally{rmSync(f.root,{recursive:true,force:true});}
 });
+
+test('native room voice requires optimized key, touch and captured-origin evidence',()=>{
+ const f=fixture();try{
+  const name='co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable';
+  f.policy.requiredNativeCases=[name];f.native[0].case=name;f.policy.requiredOptimizedReview='native-room-catalog-and-typing';f.build.policySha=digest(f.policy);
+  const sample=Buffer.from('Synthetic review artifact');
+  for(const file of ['input.json','native.png'])writeFileSync(join(f.directory,file),sample);
+  const review={schema:1,state:'complete',kind:f.policy.requiredOptimizedReview,versionCode:2,productionSourceSha:f.build.productionSourceSha,qualificationInputSha:f.build.qualificationInputSha,apkSha256:f.manifest.variants[0].sha256,reviewedAt:5,
+   observations:{typingDrawn:true,canonicalRoomSnapshot:true,originalAcceptedMessageSingle:true,optimizedPayloadVerified:true},
+   artifacts:['input.json','native.png'].map(path=>({path,sha256:sha256(sample)}))};
+  assert.throws(()=>validateReleaseQualification({...f,optimizedReview:review}),/optimized interaction/);
+  for(const name of ['nativeVoiceHardwareKeys','nativeVoiceTouch','nativeVoiceDraftAndOrigin'])review.observations[name]=true;
+  assert.equal(validateReleaseQualification({...f,optimizedReview:review}).nativeCases,1);
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});

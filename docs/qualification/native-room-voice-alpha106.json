@@ -1,0 +1,22 @@
+{
+  "versionCode": 124,
+  "state": "candidate-not-published",
+  "native": {
+    "hardwareStartStop": true,
+    "heldKeysDoNotDoubleToggle": true,
+    "imeRemainsOpen": true,
+    "originalRoomAndRecipientAcrossNavigation": true,
+    "draftsPreserved": true,
+    "touchStartStop": true,
+    "catalogDefaultRoom": true,
+    "settingsVisibleFeedback": true,
+    "actualAndroidAudioRecord": true,
+    "provider": false,
+    "physicalPhone": false
+  },
+  "limits": [
+    "Synthetic loopback fixture explicitly has no audio provider or business workers. No transcription/send/TTS claim.",
+    "Phone responsiveness remains unverified; await optional user-created local trace.",
+    "Signed optimized release and current native gate must complete before publication."
+  ]
+}

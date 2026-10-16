@@ -1,12 +1,15 @@
 package co.fallsoft.pocket
 
-internal data class ForegroundCaptureTarget(val threadId:String?,val eligible:Boolean)
+internal data class ForegroundCaptureTarget(val threadId:String?,val eligible:Boolean,val roomDestination:String?=null,val sourceLabel:String?=null)
 internal fun foregroundCaptureTarget(inbox:Boolean,coordinator:Boolean,selected:String?,identityKnown:Boolean,directInput:Boolean,recording:Boolean=false,recordingThread:String?=null):ForegroundCaptureTarget {
     if(recording)return ForegroundCaptureTarget(recordingThread,true)
     if(inbox||coordinator||selected==null)return ForegroundCaptureTarget(null,true)
     return ForegroundCaptureTarget(selected,identityKnown&&directInput)
 }
 internal fun currentForegroundCaptureTarget():ForegroundCaptureTarget {
+    if(captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND)
+        return ForegroundCaptureTarget(PocketVoice.targetThread,true,PocketVoice.targetRoom?.toString(),PocketVoice.targetSourceLabel)
+    if(BackendNavigation.nativeSelected())return ForegroundRoomInput.current()?:ForegroundCaptureTarget(null,false)
     val selected=if(PocketVoice.active&&!PocketVoice.inPlace)PocketVoice.targetThread else Pocket.selected
     val task=Pocket.tasks.firstOrNull{it.id==selected}
     val thread=Pocket.detail?.optJSONObject("thread")?.takeIf{it.s("id")==selected}

@@ -140,24 +140,25 @@ class MainActivity:ComponentActivity(){
     override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
     override fun onStop(){AppWindowVisibility.focus(this,false);captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!PocketVoice.active)PocketLive.stop();super.onStop()}
     private val captureKeys get()=PocketVoice.captureKeys
-    private var permissionCaptureThread:String?=null
-    private var permissionCaptureInPlace=false
-    private var permissionCaptureProfile=""
+    private var permissionCapture:CaptureDestination?=null
     private val capturePermission=registerForActivityResult(ActivityResultContracts.RequestPermission()){allowed->
-        if(allowed&&PocketVoice.foreground&&permissionCaptureProfile=="${Pocket.local}:${Pocket.base}:${Pocket.token}")PocketVoice.start(this,permissionCaptureThread,inPlace=permissionCaptureInPlace)
-        else if(!allowed)PocketVoice.captureFailure("Allow microphone access to record. Your draft is kept.")
+        val original=permissionCapture;permissionCapture=null
+        if(allowed)original?.start(this)
+        else PocketVoice.captureFailure("Allow microphone access to record. Your draft is kept.")
     }
     // Public platform Activity hook; AndroidX core redeclares it with a library restriction.
     @android.annotation.SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event:android.view.KeyEvent):Boolean{
-        val volume=event.keyCode in setOf(android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_UP)
+        // Normal typing must not perform session/profile discovery for voice.
+        if(event.keyCode!=android.view.KeyEvent.KEYCODE_VOLUME_DOWN&&event.keyCode!=android.view.KeyEvent.KEYCODE_VOLUME_UP)
+            return super.dispatchKeyEvent(event)
         val destination=currentForegroundCaptureTarget()
-        if(volume&&foregroundCaptureKeys(PocketVoice.foreground,Pocket.token.isNotBlank()&&!Pocket.pairingMode,BackendNavigation.teamSelected(),destination.eligible)){
+        if(foregroundCaptureKeys(PocketVoice.foreground,Pocket.token.isNotBlank()&&!Pocket.pairingMode,BackendNavigation.teamSelected(),destination.eligible,nativeRoom=destination.roomDestination!=null,recording=captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND)){
             if(event.action==android.view.KeyEvent.ACTION_DOWN&&captureKeys.down(event.keyCode,event.repeatCount)){
-                val target=destination.threadId
-                val here=true
-                if(androidx.core.content.ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)==android.content.pm.PackageManager.PERMISSION_GRANTED)PocketVoice.start(this,target,inPlace=here)
-                else{permissionCaptureThread=target;permissionCaptureInPlace=here;permissionCaptureProfile="${Pocket.local}:${Pocket.base}:${Pocket.token}";capturePermission.launch(Manifest.permission.RECORD_AUDIO)}
+                val target=CaptureDestination.capture(destination.threadId,destination.roomDestination,destination.sourceLabel)
+                if(target==null)PocketVoice.captureFailure("Connect to an environment before recording. Your draft is kept.")
+                else if(androidx.core.content.ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)==android.content.pm.PackageManager.PERMISSION_GRANTED)target.start(this)
+                else{permissionCapture=target;capturePermission.launch(Manifest.permission.RECORD_AUDIO)}
             }else if(event.action==android.view.KeyEvent.ACTION_UP)captureKeys.up(event.keyCode)
             return true
         }
