@@ -1,27 +1,37 @@
-// Computer ownership belongs to the host broker, never to a Codex turn.
-export const COMPUTER_USE_INSTRUCTIONS=`Shared computer-use ownership: For NEW system76-pc browser jobs use the registered computer-use MCP tools browser_discover, browser_command, browser_status and browser_control. Discover supported commands and session readiness first; use opaque owned page handles. These tools provide host queue admission, durable operation identities and private page capabilities internally. Never add an outer manual lease, import historical SDKs, use raw bridge JavaScript or choose service release paths for new jobs. Queued work is accepted work: observe the same operation ID with browser_status, including after a lost reply; never repeat an uncertain posting, submission or other external effect. Existing accepted legacy tickets, protected drafts and uncertain operations retain their original identities until owner migration and reconciliation; do not replace them by matching a URL. Close only your own temporary pages after operations settle. Preserve account state, drafts, business authorization, deliberate stops, usage and release holds. Missing iframe, rich-editor, upload or native capabilities require owning adapter work, not a legacy fallback. Mac remains unqualified. BLD retains its explicit direct-development exemption and user game/desktop protections. Native desktop work outside this browser surface retains its existing configured host queue requirements. Never expose credentials or private page capabilities. Browser readiness does not authorize business actions or prove their success.`;
+import http from 'node:http';
+import path from 'node:path';
+
+export const COMPUTER_USE_INSTRUCTIONS=`For shared computer use, use the registered computer-use MCP tools discover, resources, run, status and control. This is trusted cooperative automation: scripts have full Node and mature Playwright with the existing main Chrome browser/context/page and can use desktop tools. Resource and owner labels coordinate work; they are not permissions or a page/action whitelist. Use an owner identifying NextComp and the current thread/task. Discover the existing tabs and resource examples, reuse the main profile and task-owned tabs, and preserve unrelated pages, login state and drafts.
+
+For independent DOM work, declare the exact shared page resource when sharing a tab; disjoint resources run concurrently. Declare the actual shared resource consistently for browser/account global changes. For an adaptive visual/input loop, acquire desktop:main once with resources, retain that lease across multiple run submit calls, renew when needed, and release when finished. Waiting owns no input. A screenshot alone need not reserve the desktop. runJob joins its declared resources automatically; do not add another lease around it. Keep native pressed-key/button cleanup in the script finally block. Use status wait/events for completion rather than model polling. Cancel, renew or release original IDs with control. Preserve original owner/ID and immutable request body after lost replies; observe their status rather than replaying uncertain external writes. The broker releases resources after its executor stops; interruptions do not prove browser-side effects absent. Resources being available do not prove business success. Do not use the retired ComputerUseClient, worker credentials, manual withLease adapters or old broker endpoints. BLD remains explicitly exempt; preserve all business authorization, deliberate-stop and task-ownership constraints.`;
 
 export function newThreadComputerUseOptions(existing='') {
-  return {developerInstructions:[existing,COMPUTER_USE_INSTRUCTIONS].filter(Boolean).join('\n\n')};
+ return {developerInstructions:[existing,COMPUTER_USE_INSTRUCTIONS].filter(Boolean).join('\n\n')};
 }
 
-export async function computerUseStatus({env=process.env,fetchImpl=fetch}={}) {
-  const token=env.COMPUTER_USE_BROKER_TOKEN;
-  if(!token)return {configured:false,available:false,enforcement:'cooperative',reason:'not_configured'};
-  try {
-    const url=new URL(env.COMPUTER_USE_BROKER_URL||'http://127.0.0.1:9340');
-    if(url.protocol!=='http:'||!['127.0.0.1','localhost','[::1]'].includes(url.hostname))throw Error('Invalid broker URL');
-    const response=await fetchImpl(new URL('/v1/status',url),{headers:{Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(2000)});
-    if(!response.ok)throw Error('Broker unavailable');
-    const value=await response.json();
-    // Never forward upstream bodies, owner identifiers, resource names or capabilities.
-    const status={configured:true,available:true,enforcement:'cooperative'};
-    for(const [key,upstream] of Object.entries({activeLeases:'leases',queuedRequests:'queued',quarantinedResources:'quarantined'})) {
-      const count=value.counts?.[upstream];
-      if(Number.isSafeInteger(count)&&count>=0)status[key]=count;
-    }
-    return status;
-  } catch {
-    return {configured:true,available:false,enforcement:'cooperative',reason:'broker_unavailable'};
-  }
+export async function computerUseStatus({env=process.env,requestImpl=http.request,timeoutMs=2000}={}) {
+ const socket=env.TRUSTED_BROKER_SOCKET;
+ if(!socket)return {configured:false,available:false,enforcement:'cooperative',reason:'not_configured'};
+ if(typeof socket!=='string'||!path.isAbsolute(socket)||path.normalize(socket)!==socket)
+  return {configured:true,available:false,enforcement:'cooperative',reason:'invalid_socket_configuration'};
+ try {
+  const rows=await new Promise((resolve,reject)=>{
+   let settled=false;
+   const done=(err,value)=>{if(settled)return;settled=true;clearTimeout(timer);err?reject(err):resolve(value);};
+   const request=requestImpl({socketPath:socket,path:'/',method:'POST',headers:{'Content-Type':'application/json'}},response=>{
+    let bytes=0,chunks=[];
+    response.on('data',chunk=>{bytes+=chunk.length;if(bytes>65536){response.destroy();done(Error('Bounded health response exceeded'));return;}chunks.push(Buffer.from(chunk));});
+    response.on('error',error=>done(error));
+    response.on('aborted',()=>done(Error('Health response interrupted')));
+    response.on('end',()=>{try{const value=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(response.statusCode!==200||!Array.isArray(value.result))throw Error('Unexpected broker health contract');done(null,value.result);}catch(error){done(error);}});
+   });
+   const timer=setTimeout(()=>{request.destroy();done(Error('Broker health timeout'));},timeoutMs);
+   request.on('error',error=>done(error));
+   request.end(JSON.stringify({method:'events',input:{owner:'nextcomp:health',after:0}}));
+  });
+  // Successful read-only control-plane call is not a browser/account readiness claim.
+  return {configured:true,available:true,enforcement:'cooperative',transport:'private-unix-socket',availabilityScope:'broker-control-plane',browserAccess:'not_checked'};
+ } catch {
+  return {configured:true,available:false,enforcement:'cooperative',reason:'broker_unavailable'};
+ }
 }
