@@ -1,25 +1,111 @@
 {
-  "status": "candidate-native-journey-passed-not-published",
+  "status": "published-compatible-update-phone-install-pending",
   "versionCode": 123,
   "versionName": "0.5.0-alpha.105",
-  "nativeJourney": {
-    "runId": "r04",
-    "log": "/home/aosp/.local/state/nextcomp/live-rooms-qa-20261015-r01/alpha105-controls-native-final-r04.log",
-    "durationSeconds": 25.475,
-    "result": "OK (1 test)",
-    "scope": "isolated real Hollywood authority, nonexecuting QA agent",
-    "verified": [
-      "single original message accepted",
-      "lost stop acknowledgement reconciled using original delivery",
-      "bounded local responsiveness export",
-      "IME remains open when reporting"
-    ]
+  "sourceCommit": "9b35c72",
+  "productionSourceSha": "8f6fa40dc27e0e9ad1bf95847c2c292b6410153edcd3ee80266289bd05a7b400",
+  "phoneArtifact": {
+    "sha256": "c773b15f22c292b8ee9a25f5da1900c2e81f3410a55be3e70053978061fb43dd",
+    "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+    "bytes": 52382395,
+    "optimized": true
   },
-  "phonePerformance": "Not established; physical phone typing lag not reproduced or declared fixed",
-  "remaining": [
-    "optimized signed release qualification",
-    "actual compatible update delivery",
-    "physical handset frame/input measurement",
-    "native room physical volume-key voice parity"
+  "nativeCases": [
+    {
+      "case": "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending",
+      "elapsedMs": 21207,
+      "state": "complete"
+    },
+    {
+      "case": "co.fallsoft.pocket.HollywoodReconnectNativeTest#capabilityOutageRecoversWithoutLosingOpenRoomOrDraft",
+      "elapsedMs": 14559,
+      "state": "complete"
+    },
+    {
+      "case": "co.fallsoft.pocket.HollywoodRoomActivityNativeTest#aggregateFailureAndQuietSnapshotNeverInventIdleOrLoseRoomTarget",
+      "elapsedMs": 8635,
+      "state": "complete"
+    },
+    {
+      "case": "co.fallsoft.pocket.HollywoodRoomControlsNativeTest#stopLostAcknowledgementAndLocalSlowdownReportKeepOriginalIdentity",
+      "elapsedMs": 31872,
+      "state": "complete"
+    },
+    {
+      "case": "co.fallsoft.pocket.HollywoodCatalogLiveNativeTest#actualCatalogCountsAndOriginalAcceptedMessageSurviveListAndRoomReopening",
+      "elapsedMs": 10105,
+      "state": "complete"
+    }
+  ],
+  "units": {
+    "debug": {
+      "tests": 388,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "release": {
+      "tests": 388,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    }
+  },
+  "lints": "debug and release passed",
+  "realTransport": {
+    "operationId": "phone-room:5e4cae0e-fd05-475a-ad3f-9e14e5c4f964",
+    "eventId": "95bac1ed-96cc-4d07-94df-22a9345a5544",
+    "deliveryId": "85ba2db1-1814-451e-b778-3295045c34c4",
+    "requestPosts": 1,
+    "stopPosts": 1,
+    "lostStopReplies": 1,
+    "authoritativeDeliveryReads": 4,
+    "canonicalState": "cancelled",
+    "nativeThread": null,
+    "host": null,
+    "noInferenceClaim": true
+  },
+  "optimizedPayload": {
+    "nonSignatureEntries": 296,
+    "allEntriesByteEqual": true,
+    "qaOnlySignatureNotDistributed": true
+  },
+  "emulatorInput": {
+    "stock": {
+      "samples": 40,
+      "medianMs": 75.2757425,
+      "p95Ms": 99.876007,
+      "maxMs": 100.537969
+    },
+    "nativeRoom": {
+      "samples": 96,
+      "medianMs": 29.428725999999997,
+      "p95Ms": 33.943063,
+      "maxMs": 113.309814
+    }
+  },
+  "publication": {
+    "channels": [
+      "existing workstation updater",
+      "existing OZZZ updater"
+    ],
+    "announcement": {
+      "notificationId": 1757,
+      "channels": 1,
+      "fcm": "accepted_by_fcm",
+      "attempts": 1
+    },
+    "serviceRestarts": 0,
+    "pairingChanges": 0,
+    "lastObservedPhoneVersion": 122
+  },
+  "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-alpha105-room-controls",
+  "galleryQualification": "Native image visually inspected and exact HTTP media hash verified; registered rendered gallery checker unavailable, same admission identity retained",
+  "limits": [
+    "Physical phone typing lag remains unverified; no claim it is fixed",
+    "Cold stock emulator input was slower than native room input; do not attribute to handset or provider",
+    "Physical native-room volume keys, microphone/TTS and rendered FCM remain separate qualifications",
+    "Catalog material preview/recency needs the Hollywood owning projection; refresh timestamps are not work activity",
+    "Native room hardware voice follow-up is not delivered in123"
   ]
 }

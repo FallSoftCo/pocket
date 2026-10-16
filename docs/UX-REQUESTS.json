@@ -2699,7 +2699,9 @@
         "Native hardware-volume capture parity is still a real gap: legacy team exclusion currently includes native rooms; track separately rather than claim complete.",
         "Native catalog needs viewer-filtered latest material context from the backend owner; no client per-room history scans or synthetic recency."
       ],
-      "read_recovery": "Native lost-ack test exposed stale pooled socket on immediate confirmation GET. Candidate retries GET once using an isolated fresh connection; never retries POST, changes the model, or clears shared voice/live connections."
+      "read_recovery": "Native lost-ack test exposed stale pooled socket on immediate confirmation GET. Candidate retries GET once using an isolated fresh connection; never retries POST, changes the model, or clears shared voice/live connections.",
+      "delivery": "Code123/alpha105 published both existing channels; one source FCM1757 accepted once. Phone last observed122; no forced install/re-pair.",
+      "verification": "Five exact-build native cases and optimized real-room input/reopen pass; actual lost Stop acknowledgement recovered with one POST. Phone lag remains open."
     }
   ],
   "current_state": {
