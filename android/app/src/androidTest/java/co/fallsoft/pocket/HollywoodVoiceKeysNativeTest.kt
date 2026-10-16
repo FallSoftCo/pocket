@@ -42,6 +42,10 @@ class HollywoodVoiceKeysNativeTest{
   val originalDraft=client.draft(HollywoodScope(roomA,agentA))
   val originalDraftB=client.draft(HollywoodScope(roomB,agentB))
   try{
+   // Retained app data is intentional. Only the synthetic fixture's two scopes
+   // begin empty for the voice-primary assertion; finally restores both drafts.
+   client.saveDraft(HollywoodScope(roomA,agentA),"")
+   client.saveDraft(HollywoodScope(roomB,agentB),"")
    i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment(id,force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
    await("Floating native mic unavailable"){d.hasObject(By.res("native-room-microphone"))}
    await("Synthetic room history failed"){d.hasObject(By.res("native-room-empty"))&&!d.hasObject(By.res("native-room-read-error"))}
