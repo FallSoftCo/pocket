@@ -106,6 +106,7 @@ class HollywoodVoiceKeysNativeTest{
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
    await("Catalog hardware stop failed"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
    i.runOnMainSync{PocketVoice.stop()}
+   tap("native-catalog-controls")
    tap("native-catalog-settings")
    await("Settings hid the work-context mic"){d.hasObject(By.res("native-settings-microphone"))}
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_UP)
