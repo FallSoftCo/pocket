@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-14",
+  "updated": "2026-10-16",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -2698,7 +2698,8 @@
         "Physical native voice and rendered native push remain separately unqualified.",
         "Native hardware-volume capture parity is still a real gap: legacy team exclusion currently includes native rooms; track separately rather than claim complete.",
         "Native catalog needs viewer-filtered latest material context from the backend owner; no client per-room history scans or synthetic recency."
-      ]
+      ],
+      "read_recovery": "Native lost-ack test exposed stale pooled socket on immediate confirmation GET. Candidate retries GET once using an isolated fresh connection; never retries POST, changes the model, or clears shared voice/live connections."
     }
   ],
   "current_state": {

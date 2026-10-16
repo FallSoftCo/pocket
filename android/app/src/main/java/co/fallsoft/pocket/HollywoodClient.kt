@@ -1,5 +1,7 @@
 package co.fallsoft.pocket
 
+import kotlinx.coroutines.ensureActive
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -26,14 +28,31 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
         val request=Request.Builder().url("$base/api/hollywood/v3/$path")
             .header("Authorization","Bearer $token").header("X-Hollywood-Binding",bindingId)
         if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
-        http.newCall(request.build()).execute().use{response->
-            val value=runCatching{JSONObject(response.body?.string().orEmpty())}.getOrElse{
-                throw HollywoodFailure(response.code,"Hollywood reply is unconfirmed.","HOLLYWOOD_OUTCOME_UNCONFIRMED")}
-            if(!response.isSuccessful)throw HollywoodFailure(response.code,value.s("error","Hollywood is unavailable."),value.s("code"))
-            val binding=value.optJSONObject("binding")?:throw HollywoodFailure(502,"Hollywood binding is unconfirmed.","HOLLYWOOD_OUTCOME_UNCONFIRMED")
-            require(hollywoodBindingMatches(identity,binding)){"Reply belongs to another environment or human identity"}
-            value
+        val built=request.build()
+        // A lost write acknowledgement can leave its pooled socket stale.
+        // Retry only GET, once, on an isolated fresh connection. Never replay a write
+        // or evict the shared pool used by live transport/audio.
+        var attempt=0
+        while(true){
+            val transport=if(attempt==0)http else http.newBuilder()
+                .connectionPool(okhttp3.ConnectionPool(0,1,java.util.concurrent.TimeUnit.MILLISECONDS)).build()
+            try{
+                return@withContext transport.newCall(built).execute().use{response->
+                    val raw=response.body?.string().orEmpty()
+                    val value=runCatching{JSONObject(raw)}.getOrElse{
+                        throw HollywoodFailure(response.code,"Hollywood reply is unconfirmed.","HOLLYWOOD_OUTCOME_UNCONFIRMED")}
+                    if(!response.isSuccessful)throw HollywoodFailure(response.code,value.s("error","Hollywood is unavailable."),value.s("code"))
+                    val binding=value.optJSONObject("binding")?:throw HollywoodFailure(502,"Hollywood binding is unconfirmed.","HOLLYWOOD_OUTCOME_UNCONFIRMED")
+                    require(hollywoodBindingMatches(identity,binding)){"Reply belongs to another environment or human identity"}
+                    value
+                }
+            }catch(e:java.io.IOException){
+                if(body!=null||attempt++>0)throw e
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            }
         }
+        @Suppress("UNREACHABLE_CODE")
+        error("Read attempt ended without a result")
     }
     fun key(scope:HollywoodScope)="hollywood:$owner:$bindingId:${scope.room}:${scope.recipient}:${scope.audience}:${scope.sourceEvent?:"root"}:${scope.kind}"
     fun draft(scope:HollywoodScope)=Pocket.prefs.getString("draft:"+key(scope),"").orEmpty()

@@ -55,3 +55,9 @@ or acting on it; an environment switch cannot retarget a saved reply. This
 candidate transport is separate from the historical stock notification previews
 above. Metadata transport qualification does not certify current physical FCM,
 background delivery, native reply completion or canonical voice quality.
+
+## Optional responsiveness report
+
+Report a slowdown starts a foreground-only measurement for at most 15 seconds. It records bounded frame timings, main-thread scheduling delays and a small number of stack samples, plus app/Android version, device model and display configuration. It does not record conversation text, account identifiers, credentials, screenshots or audio. Leaving the activity ends measurement.
+
+The report stays on the device: an app-private latest copy and a timestamped JSON file under Downloads/NextComp on Android 10 or later. NextComp does not upload it automatically. The owner can inspect or delete the exported file, or explicitly share it for diagnosis. This measurement is separate from voice recording and does not start a model or agent.
