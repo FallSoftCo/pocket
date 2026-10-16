@@ -45,6 +45,9 @@ class HollywoodRoomControlsNativeTest {
   }}
   val payloadSha=digest.digest().joinToString(""){"%02x".format(it.toInt() and 255)}
   fun await(label:String,test:()->Boolean){val end=SystemClock.elapsedRealtime()+35000;while(SystemClock.elapsedRealtime()<end){i.uiAutomation.clearCache();if(test())return;Thread.sleep(100)};assertTrue(label,test())}
+  fun tap(tag:String){
+   await("Native control unavailable: "+tag){runCatching{d.findObject(By.res(tag))?.let{it.click();true}?:false}.getOrDefault(false)}
+  }
   fun show(tag:String,up:Boolean=false):UiObject2 {
    repeat(12){
     i.uiAutomation.clearCache()
@@ -67,13 +70,14 @@ class HollywoodRoomControlsNativeTest {
   val oldIdle=Configurator.getInstance().waitForIdleTimeout;Configurator.getInstance().waitForIdleTimeout=0
   var originalDraft=client.draft(scope);var target:JSONObject?=null
   try{
+   control(false)
    i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment("live_room_qa_20261015",force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
    await("Native room unavailable"){d.hasObject(By.res("native-room-controls"))&&d.hasObject(By.clazz("android.widget.EditText"))}
    if(journal.exists()){
     val original=JSONObject(journal.readText());check(original.s("stage")=="complete"&&original.s("codeResourcesManifestSha256")==payloadSha){"Inspect the preserved original journey before any new request"}
     val request=client.call("commands/"+original.s("operationId"));assertEquals(original.s("eventId"),request.getJSONObject("event").s("id"))
     val existing=client.call("deliveries/"+original.s("deliveryId"));assertEquals("cancelled",existing.getJSONObject("delivery").s("state"))
-    d.findObject(By.res("native-room-controls")).click()
+    tap("native-room-controls")
     assertFalse(show("native-workflow").visibleBounds.isEmpty)
     return@runBlocking
    }
@@ -81,7 +85,7 @@ class HollywoodRoomControlsNativeTest {
    journal.writeText(JSONObject().put("stage","prepared").put("qualificationApkSha256",apkSha).put("codeResourcesManifestSha256",payloadSha).put("originalDraft",originalDraft).toString())
    d.findObject(By.clazz("android.widget.EditText")).apply{click();this.text=text}
    await("IME did not open"){d.hasObject(By.pkg("com.google.android.inputmethod.latin"))}
-   d.findObject(By.res("native-room-controls")).click()
+   tap("native-room-controls")
    show("native-measure-responsiveness",up=true).click()
    await("Bounded report did not start"){ResponsivenessReport.measuring}
    assertTrue("Opening the footer controls dismissed typing",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
@@ -95,7 +99,7 @@ class HollywoodRoomControlsNativeTest {
    journal.writeText(JSONObject().put("stage","accepted").put("qualificationApkSha256",apkSha).put("codeResourcesManifestSha256",payloadSha).put("originalDraft",originalDraft)
     .put("operationId",envelope.s("operationId")).put("eventId",accepted.getJSONObject("event").s("id")).put("deliveryId",id).toString())
    control(true)
-   d.findObject(By.res("native-room-controls")).click()
+   tap("native-room-controls")
    await("Native stop permission did not arrive"){d.hasObject(By.res("native-stop:"+id))}
    d.dumpWindowHierarchy(c.filesDir.resolve("room-controls-before-stop.xml"));d.takeScreenshot(c.filesDir.resolve("room-controls-before-stop.png"))
    c.filesDir.resolve("room-controls-before-stop-detail.json").writeText(client.call("rooms/$room").toString())
