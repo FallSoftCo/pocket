@@ -1,3 +1,4 @@
+import {admissionTransaction} from './human-ingress.mjs';
 import {isAbsolute,basename} from 'node:path';
 import {realpathSync,statSync} from 'node:fs';
 import {newThreadComputerUseOptions} from './computer-use.mjs';
@@ -14,18 +15,18 @@ export function permissionOptions(permissions){
   throw invalid('Choose full or review permissions.');
 }
 export class SessionStarts {
-  constructor(db,codex,onCreated){this.db=db;this.codex=codex;this.onCreated=onCreated;this.running=new Set();
+  constructor(db,codex,onCreated,admissions=null){this.db=db;this.codex=codex;this.onCreated=onCreated;this.admissions=admissions;this.running=new Set();
     db.exec("UPDATE session_starts SET state='unknown',error='The bridge restarted during creation. Check recent tasks before starting again.' WHERE state='creating'");
   }
   get(id){return this.db.prepare('SELECT * FROM session_starts WHERE id=?').get(id);}
-  enqueue({id,cwd,prompt,permissions='full'}={}){
+  enqueue({id,cwd,prompt,permissions='full'}={},principal){
     if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id))throw invalid('Invalid task request identifier.');
     if(typeof prompt!=='string'||!prompt.trim()||prompt.length>32000)throw invalid('Enter a task of 1–32000 characters.');
     permissionOptions(permissions);
     cwd=projectPath(cwd);prompt=prompt.trim();
     const old=this.get(id);
     if(old){if(old.cwd!==cwd||old.prompt!==prompt||(old.permissions||'full')!==permissions)throw Object.assign(Error('This request already belongs to another task.'),{status:409});return old;}
-    const at=Date.now();this.db.prepare('INSERT INTO session_starts(id,cwd,prompt,permissions,state,created_at,updated_at) VALUES(?,?,?,?,\'queued\',?,?)').run(id,cwd,prompt,permissions,at,at);
+    const at=Date.now();admissionTransaction(this.db,()=>{this.admissions?.record('task',id,principal);this.db.prepare('INSERT INTO session_starts(id,cwd,prompt,permissions,state,created_at,updated_at) VALUES(?,?,?,?,\'queued\',?,?)').run(id,cwd,prompt,permissions,at,at);});
     void this.flush();return this.get(id);
   }
   async flush(){
@@ -40,6 +41,7 @@ export class SessionStarts {
           this.db.prepare("UPDATE session_starts SET state='started',thread_id=?,updated_at=? WHERE id=?").run(thread.id,Date.now(),row.id);
           this.db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1)').run(thread.id,row.prompt.slice(0,80));
           this.db.prepare("INSERT INTO outgoing(id,thread_id,text,state,created_at,updated_at) VALUES(?,?,?,'queued',?,?)").run(`start-${row.id}`,thread.id,row.prompt,Date.now(),Date.now());
+          this.admissions?.inherit('task',row.id,'reply',`start-${row.id}`);
           this.db.exec('COMMIT');
         }catch(e){this.db.exec('ROLLBACK');throw e;}
         this.onCreated(thread,this.db.prepare('SELECT * FROM outgoing WHERE id=?').get(`start-${row.id}`));

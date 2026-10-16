@@ -163,7 +163,7 @@ export class VoiceController {
     if(!VOICE_OPERATIONS.includes(operation)||!a||typeof a!=='object'||Array.isArray(a))throw fail('Invalid NextComp control.');
     const s=this.session(active.device),id=a.threadId||((active.focus??s.focus)!=='coordinator'?(Object.hasOwn(active,'selected')?active.selected:s.selected):null);
     const thread=()=>{if(!id||!/^[a-zA-Z0-9_-]{5,100}$/.test(id)||this.owns(id)||this.hidden(id))throw fail('Select a work session first.');return encodeURIComponent(id);};
-    const get=path=>this.api(path),post=(path,body)=>this.api(path,body);
+    const get=path=>this.api(path),post=(path,body)=>this.api(path,body,{deviceId:active.device,voiceTurnId:active.id});
     switch(operation){
       case 'discover':{active.discovery=await this.discovery.discover({query:a.query||this.get(active.device,active.id)?.transcript||'',threadIds:a.threadIds||[],limit:a.limit,cursor:a.cursor});return active.discovery;}
       case 'catchup':{if(!this.catchup)return {sessions:[],attention:[],available:false};

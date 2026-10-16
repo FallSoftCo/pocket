@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-16T16:18:27.442796+00:00",
+  "updated": "2026-10-16T16:54:37.788045+00:00",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -2747,6 +2747,12 @@
         "Missing room activity remains neutral unavailable, never inferred idle",
         "Retain explicit idle/running/needs-input indicators and accessible descriptions"
       ]
+    },
+    {
+      "id": "authenticated-human-ingress-not-agent-peer-20261016",
+      "request": "Prevent shared admin/agent credentials from submitting peer coordination as human tasks/replies/retries. Preserve paired-device human input and authenticated original-device/voice-turn delegation. Retain durable original admission and retry provenance; never rewrite old accepted receipts or replay unknown sends.",
+      "status": "Implemented in maintained source and exact stock candidate;31 focused integration/regression cases and6 actual stock HTTP cases pass. Not activated; requires coordinated owning backend cutover.",
+      "design": "docs/HUMAN-INGRESS.md"
     }
   ],
   "current_state": {

@@ -1,3 +1,4 @@
+import {HumanIngress,admissionTransaction} from './human-ingress.mjs';
 import {CreditObservations} from './credit-observations.mjs';
 import {CatalogContext} from './catalog-context.mjs';
 import {WorkObservations} from './work-observations.mjs';
@@ -95,8 +96,9 @@ db.exec('CREATE TABLE IF NOT EXISTS immersion_profiles(device_id TEXT PRIMARY KE
 const immersionCwd=resolve(dir,'immersion');mkdirSync(immersionCwd,{recursive:true,mode:0o700});
 const internalSessions=new InternalSessions(db,[{cwd:immersionCwd,kind:'immersion'}]);
 const voiceCodex=new Codex();
+const humanIngress=new HumanIngress(db);
 const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,host:hostName,
-  api:async(path,body)=>{const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`,'Content-Type':'application/json'},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:AbortSignal.timeout(35000)});const data=await r.json();if(!r.ok)throw Error(data.error||'Pocket control failed.');return data;},
+  api:async(path,body,actor)=>{const delegation=humanIngress.delegate(actor,body===undefined?'GET':'POST',path,body);try{const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`,'Content-Type':'application/json',...delegation.headers},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:AbortSignal.timeout(35000)});const data=await r.json();if(!r.ok)throw Error(data.error||'Pocket control failed.');return data;}finally{delegation.release();}},
   transcribe:async audio=>{
     if(!voiceSpeech.apiKey)throw Object.assign(Error('Voice is not configured on this server.'),{status:503});
     const form=new FormData();form.append('model','gpt-transcribe');form.append('file',new Blob([audio],{type:'audio/wav'}),'turn.wav');form.append('response_format','json');form.append('prompt','Pocket, Codex, steer, queue, workstation, session, full permissions.');
@@ -180,7 +182,7 @@ setInterval(async()=>{
 const activityBoard=new ActivityBoard();
 const liveDelivery=new LiveActivityDelivery((type,payload)=>emit(type,payload));
 const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery.preview(threadId,preview));
-const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);recordWork(()=>workRecord.enroll(known));attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);});
+const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);recordWork(()=>workRecord.enroll(known));attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);},humanIngress);
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...payload}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
 const rateLimits=new AccountRateLimits(nativeHollywood?nativeVoiceCodex:codex,usage=>emit('rateLimits',{usage}),{observations:new CreditObservations(db,secrets.adminToken),creditAuthorization:creditContinuation});
@@ -467,6 +469,7 @@ app.post('/api/pair',(req,res)=>{
   res.json({token,id,host:hostName,firebase:push.config,local:localMode,...(automation?{automationSecret:automation.secret}:{})});
 });
 app.use('/api',requireAuth);
+app.use('/api',(req,res,next)=>humanIngress.middleware(req,res,next));
 // An enterprise room gateway cannot expose the old single-owner session lanes.
 // Retained work stays in the database; native mode never starts its schedulers.
 app.use('/api',(req,res,next)=>{
@@ -573,7 +576,7 @@ app.get('/api/projects',route(async(_req,res)=>{
   res.json({projects:recentProjects(r.data||[])});
 }));
 app.post('/api/threads',(req,res)=>{
-  try{const row=sessionStarts.enqueue(req.body);res.status(row.state==='started'?200:202).json(row);}
+  try{const row=sessionStarts.enqueue(req.body,req.humanPrincipal);res.status(row.state==='started'?200:202).json(row);}
   catch(e){res.status(e.status||500).json({error:e.message});}
 });
 app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.params.id);if(!row)return res.status(404).json({error:'Task request not found.'});res.json(row);});
@@ -720,7 +723,7 @@ app.post('/api/threads/:id/reply',route(async(req,res)=>{
   const cachedDestination=db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(threadId);
   if(cachedDestination){const known=JSON.parse(cachedDestination.metadata);if(sessionIdentity(known).isChild){const destination=codex.ready?(await codex.call('thread/read',{threadId,includeTurns:false})).thread:known;requireDirectSessionInput(destination);}else requireDirectSessionInput(known);}
   turnRecovery.cancel(threadId);
-  db.prepare('INSERT INTO outgoing(id,thread_id,text,mode,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run(id,threadId,text,mode,'queued',now(),now());
+  admissionTransaction(db,()=>{humanIngress.record('reply',id,req.humanPrincipal);db.prepare('INSERT INTO outgoing(id,thread_id,text,mode,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run(id,threadId,text,mode,'queued',now(),now());});
   const wasFollowing=!!db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId);
   // A phone reply explicitly opts this task into a completion notification.
   db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1) ON CONFLICT(thread_id) DO UPDATE SET enabled=1').run(threadId,'Codex replied');
@@ -732,12 +735,13 @@ app.post('/api/threads/:id/reply',route(async(req,res)=>{
 }));
 app.post('/api/threads/:id/queue/resume',route(async(req,res)=>{
   const threadId=requireId(req.params.id);
+  humanIngress.action('queue',threadId,'resume',req.humanPrincipal);
   db.prepare("UPDATE outgoing SET state='queued',updated_at=? WHERE thread_id=? AND mode='queue' AND state='held'").run(now(),threadId);
   emit('reply',{threadId,state:'queued'});res.json({ok:true});void flush();
 }));
 app.post('/api/threads/:id/replies/:replyId',route(async(req,res)=>{
   const threadId=requireId(req.params.id),id=req.params.replyId;
-  const outcome=recoverReply(db,threadId,id,req.body,now());
+  const outcome=admissionTransaction(db,()=>{const value=recoverReply(db,threadId,id,req.body,now());if(!value.error)humanIngress.action('reply',id,req.body.action,req.humanPrincipal);return value;});
   if(outcome.error)return res.status(outcome.status).json({error:outcome.error});
   emit('reply',{threadId,id,state:outcome.state});res.json({id,state:outcome.state});if(outcome.dispatch)void sendOutgoing({id,thread_id:threadId});
 }));

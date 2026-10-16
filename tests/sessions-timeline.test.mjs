@@ -1,3 +1,5 @@
+import {HumanIngress} from '../server/human-ingress.mjs';
+import {rmSync} from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync} from 'node:fs';
@@ -123,4 +125,19 @@ test('failed turn preserves bounded structured cause in live and fetched timelin
  assert.equal(page.rows.find(r=>r.kind==='message').text,'Useful progress');assert.deepEqual(page.rows.at(-1).error,event.turn.error);
  const capacity=live.ingest({method:'turn/completed',params:{threadId:'thread',turn:{...turn,id:'capacity',error:{message:'Selected model is at capacity.',codexErrorInfo:'serverOverloaded'}}}});
  assert.equal(capacity.turn.error.codexErrorInfo,'serverOverloaded');
+});
+
+test('paired task admission transfers immutable origin to its first outbox row without replaying creation',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'paired-task-origin-'));const {db}=openStore(dir);const ingress=new HumanIngress(db);let starts=0;
+ const codex={ready:false,call:async method=>{assert.equal(method,'thread/start');starts++;return {thread:{id:'new-paired-thread'}};}};
+ const work=new SessionStarts(db,codex,()=>{},ingress);
+ const body={id:'paired-task-create',cwd:dir,prompt:'Synthetic paired work',permissions:'full'};
+ const principal={version:1,kind:'paired-device',deviceId:'paired-phone'};
+ try{
+  work.enqueue(body,principal);assert.equal(starts,0);
+  codex.ready=true;await work.flush();assert.equal(starts,1);
+  assert.deepEqual(JSON.parse(db.prepare("SELECT principal FROM human_admissions WHERE kind='reply' AND request_id='start-paired-task-create'").get().principal),principal);
+  work.enqueue(body,{...principal,deviceId:'another-phone'});await work.flush();assert.equal(starts,1);
+  assert.deepEqual(JSON.parse(db.prepare("SELECT principal FROM human_admissions WHERE kind='task' AND request_id='paired-task-create'").get().principal),principal);
+ }finally{db.close();rmSync(dir,{recursive:true,force:true});}
 });

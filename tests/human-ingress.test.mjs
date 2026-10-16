@@ -1,0 +1,27 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import express from 'express';
+import {DatabaseSync} from 'node:sqlite';
+import {HumanIngress,admissionTransaction} from '../server/human-ingress.mjs';
+test('voice delegation is device/turn/request-bound, one-use, expiring and cannot be replaced by admin body claims',async t=>{
+ const db=new DatabaseSync(':memory:');t.after(()=>db.close());
+ db.exec("CREATE TABLE devices(id TEXT PRIMARY KEY,name TEXT);CREATE TABLE voice_turns(device TEXT,id TEXT,state TEXT);INSERT INTO devices VALUES('phone','Paired phone');INSERT INTO voice_turns VALUES('phone','voice-turn','thinking');");
+ let now=1000;const ingress=new HumanIngress(db,{now:()=>now});
+ const app=express();app.use(express.json());app.use((req,res,next)=>{req.device={id:'owner'};next();});app.use((req,res,next)=>ingress.middleware(req,res,next));
+ app.post('/api/threads/:id/reply',(req,res)=>{admissionTransaction(db,()=>ingress.record('reply',req.body.id,req.humanPrincipal));res.json({device:req.device.id,principal:req.humanPrincipal});});
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
+ const path='/api/threads/task-one/reply',body={id:'voice-request',text:'Original spoken request'};
+ const call=async(payload,headers={})=>fetch('http://127.0.0.1:'+server.address().port+path,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(payload)});
+ assert.equal((await call({...body,principal:{kind:'voice',deviceId:'phone',voiceTurnId:'voice-turn'}})).status,403);
+ assert.throws(()=>ingress.delegate({deviceId:'owner',voiceTurnId:'voice-turn'},'POST',path,body),/original paired device/);
+ const actor={deviceId:'phone',voiceTurnId:'voice-turn'};
+ const grant=ingress.delegate(actor,'POST',path,body);
+ const accepted=await call(body,grant.headers);assert.equal(accepted.status,200);assert.deepEqual((await accepted.json()).principal,{version:1,kind:'voice',deviceId:'phone',voiceTurnId:'voice-turn'});
+ assert.equal((await call(body,grant.headers)).status,403);
+ assert.equal(db.prepare('SELECT count(*) n FROM human_admissions').get().n,1);
+ const altered=ingress.delegate(actor,'POST',path,body);assert.equal((await call({...body,text:'Changed'},altered.headers)).status,403);
+ const stale=ingress.delegate(actor,'POST',path,body);now+=35001;assert.equal((await call(body,stale.headers)).status,403);
+ const revoked=ingress.delegate(actor,'POST',path,body);db.exec("UPDATE voice_turns SET state='completed'");assert.equal((await call(body,revoked.headers)).status,403);
+ const saved=db.prepare('SELECT principal FROM human_admissions').get().principal;
+ const reopened=new HumanIngress(db);assert.equal(db.prepare('SELECT principal FROM human_admissions').get().principal,saved);assert.equal(reopened.delegations.size,0);
+});

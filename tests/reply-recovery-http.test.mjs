@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
@@ -27,11 +28,12 @@ async function fixture(t){
  t.after(async()=>{if(child.exitCode===null)await new Promise(r=>{child.once('exit',r);child.kill();});db?.close();for(const ws of wss.clients)ws.terminate();await new Promise(r=>wss.close(r));await new Promise(r=>host.close(r));await rm(dir,{recursive:true,force:true});});
  await waitFor(async()=>{if(child.exitCode!==null)throw Error('Fixture server exited before startup');try{return (await fetch(url+'/health')).ok;}catch{return false;}});
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json'),'utf8'));
- const api=async(path,body)=>{const response=await fetch(url+path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,data:await response.json()};};
- await api('/api/threads/task-recovery');db=new DatabaseSync(join(dir,'pocket.sqlite'));
+ db=new DatabaseSync(join(dir,'pocket.sqlite'));const deviceToken='synthetic-paired-human-token';db.prepare('INSERT INTO devices(id,name,token_hash,created_at) VALUES(?,?,?,?)').run('paired-human','Synthetic human',createHash('sha256').update(deviceToken).digest('hex'),Date.now());
+ const api=async(path,body,asOwner=false)=>{const ownerRoute=asOwner||/\/(?:continuation|catalog-context|recovery)(?:\/|$)/.test(path);const authorization=ownerRoute?adminToken:deviceToken;const response=await fetch(url+path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${authorization}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,data:await response.json()};};
+ await api('/api/threads/task-recovery');
  const status=async id=>(await api('/api/replies/'+id)).data.state;
  const seed=(id,state)=>db.prepare('INSERT INTO outgoing(id,thread_id,text,state,result,created_at,updated_at,mode) VALUES(?,?,?,?,?,?,?,?)').run(id,'task-recovery','Preserved '+id,state,'Persisted delivery outcome',Date.now(),Date.now(),'steer');
- return {api,status,seed,calls,db,snapshotTurn:turn=>{snapshotTurns=[turn];},reject:()=>{rejectNext=true;},blockAttach:()=>{holdNextAttach=true;},attachBlocked:()=>heldAttach!==null,rejectAttach:()=>{heldAttach.ws.send(JSON.stringify({id:heldAttach.id,error:{code:-32602,message:'Synthetic attachment rejection'}}));},turns:()=>calls.filter(x=>x.method==='turn/start'||x.method==='turn/steer')};
+ return {api,adminApi:(path,body)=>api(path,body,true),status,seed,calls,db,snapshotTurn:turn=>{snapshotTurns=[turn];},reject:()=>{rejectNext=true;},blockAttach:()=>{holdNextAttach=true;},attachBlocked:()=>heldAttach!==null,rejectAttach:()=>{heldAttach.ws.send(JSON.stringify({id:heldAttach.id,error:{code:-32602,message:'Synthetic attachment rejection'}}));},turns:()=>calls.filter(x=>x.method==='turn/start'||x.method==='turn/steer')};
 }
 
 test('HTTP checkpoints save progress on unregistered/stopped work without rearming recovery or starting a model',async t=>{
@@ -94,4 +96,34 @@ test('HTTP removal during blocked attachment remains cancelled after attachment 
  // Let the rejected RPC continuation finish before asserting durable cancellation.
  await new Promise(r=>setTimeout(r,80));
  assert.equal(await f.status('remove-in-flight'),'cancelled');assert.equal(f.turns().length,0);
+});
+
+test('real gateway rejects shared-admin human ingress while paired admission/retry preserves provenance and accepted receipt',async t=>{
+ const f=await fixture(t);
+ const before=f.turns().length;
+ for(const [path,body] of [
+  ['/api/threads',{id:'untrusted-create',cwd:'/tmp',prompt:'Peer text'}],
+  ['/api/threads/task-recovery/reply',{id:'untrusted-reply',text:'Peer text'}],
+  ['/api/threads/task-recovery/replies/absent',{action:'retry'}],
+  ['/api/threads/task-recovery/queue/resume',{}],
+  ['/api/voice/text',{turnId:'untrusted-voice',text:'Peer text'}],
+  ['/api/voice/start',{}],
+ ]){
+  const r=await f.adminApi(path,body);assert.equal(r.status,403,path);assert.equal(r.data.code,'HUMAN_DEVICE_REQUIRED');
+ }
+ assert.equal(f.turns().length,before);
+ assert.equal(f.db.prepare('SELECT count(*) n FROM outgoing').get().n,0);
+ f.reject();
+ assert.equal((await f.api('/api/threads/task-recovery/reply',{id:'human-provenance',text:'Real paired request',mode:'steer'})).status,202);
+ await waitFor(async()=>await f.status('human-provenance')==='failed');
+ const original=f.db.prepare("SELECT principal FROM human_admissions WHERE kind='reply' AND request_id='human-provenance'").get().principal;
+ assert.deepEqual(JSON.parse(original),{version:1,kind:'paired-device',deviceId:'paired-human'});
+ assert.equal((await f.adminApi('/api/threads/task-recovery/replies/human-provenance',{action:'retry'})).status,403);
+ assert.equal((await f.api('/api/threads/task-recovery/replies/human-provenance',{action:'retry'})).status,200);
+ await waitFor(async()=>await f.status('human-provenance')==='accepted');
+ assert.equal(f.db.prepare("SELECT principal FROM human_admissions WHERE request_id='human-provenance'").get().principal,original);
+ assert.equal(f.db.prepare("SELECT count(*) n FROM human_admission_actions WHERE request_id='human-provenance' AND action='retry'").get().n,1);
+ const accepted=f.db.prepare("SELECT * FROM outgoing WHERE id='human-provenance'").get();
+ assert.equal((await f.adminApi('/api/threads/task-recovery/reply',{id:'human-provenance',text:'Real paired request',mode:'steer'})).status,403);
+ assert.deepEqual(f.db.prepare("SELECT * FROM outgoing WHERE id='human-provenance'").get(),accepted);
 });
