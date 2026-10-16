@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "state": "candidate-native-journey-passed-release-pending",
+  "state": "published-awaiting-phone-install",
   "versionCode": 122,
   "previousInstalledPhoneVersion": 121,
   "incident": {
@@ -28,5 +28,31 @@
     "Original phone outage has not been causally explained",
     "Physical voice and rendered push still require independent phone qualification"
   ],
-  "scope": "NextComp client only; no production runtime restart or pairing/draft/history migration"
+  "scope": "NextComp client only; no production runtime restart or pairing/draft/history migration",
+  "sourceCommit": "01a39b3",
+  "phoneApkSha256": "1fce8787ea7481ebda70f87739a2265e63cb263506401f1f54aba6fef7fba663",
+  "delivery": {
+    "system76": "checked CAS121->122",
+    "ozzz": "checked CAS121->122",
+    "sourceNotification": 1737,
+    "automaticInstall": false,
+    "productionServiceRestarts": 0,
+    "pairingChanges": 0
+  },
+  "optimizedInput": {
+    "stock": {
+      "medianMs": 29.5776855,
+      "p95Ms": 32.324938,
+      "maxMs": 45.791096,
+      "samples": 40
+    },
+    "liveRoom": {
+      "medianMs": 29.45201,
+      "p95Ms": 32.817603,
+      "maxMs": 144.580184,
+      "samples": 96,
+      "earlyEntrySpikesPreserved": true
+    }
+  },
+  "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-alpha104-live-room-input"
 }
