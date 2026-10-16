@@ -14,9 +14,17 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
         val thread=data?.s("thread").orEmpty()
         val native=data?.s("type")=="executionActivity"
         val structured=native&&data?.s("nativeType") in listOf("planUpdate","goalState")
-        val activity=(event.s("kind")=="artifact"||native)&&item.isNotBlank()&&thread.isNotBlank()&&
-            data?.s("nativeType") !in listOf("agentMessage","plan","planUpdate","goalState")&&
-            data?.s("status") in listOf("inProgress","completed","failed","declined","unknown")
+        val rawStatus=data?.s("status").orEmpty()
+        val status=when{
+            native&&data?.s("phase")=="completed"->rawStatus.takeIf{it in listOf("failed","declined")}?: "completed"
+            rawStatus in listOf("inProgress","completed","failed","declined","unknown")->rawStatus
+            native&&data?.s("phase")=="started"->"inProgress"
+            else->"unknown"
+        }
+        // Execution observations never acquire chat semantics, including native
+        // commentary. Deliberate room messages come only from conversation events.
+        val activity=if(native)!structured else event.s("kind")=="artifact"&&item.isNotBlank()&&thread.isNotBlank()&&
+            rawStatus in listOf("inProgress","completed","failed","declined","unknown")
         val identity=JSONArray(if(structured)listOf(event.s("authority"),author,data?.s("deliveryId"),data?.optLong("generation"),thread,data?.s("turn"),data?.s("nativeType"),data?.optJSONObject("nativeGoal")?.s("goalId"))else if(native)listOf(event.s("authority"),author,data?.s("deliveryId"),
             data?.optLong("generation"),thread,data?.s("turn"),item)else listOf(author,thread,item)).toString()
         val actionIdentity=if(native&&data?.optInt("activityVersion")==1&&data.s("actionId").isNotBlank())
@@ -28,7 +36,7 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
         // A delayed start observation cannot erase completion; its original
         // immutable reference remains inspectable with the reduced action.
         if(activity&&previous!=null&&rows[previous].s("status") in listOf("completed","failed","declined")&&
-            data?.s("status") in listOf("inProgress","unknown")){
+            status in listOf("inProgress","unknown")){
             rows[previous].put("actionObservations",observations);return@forEach
         }
         val eventId=event.opt("id")
@@ -38,9 +46,9 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
             .put("kind",if(activity)"activity" else if(author=="you"||event.optBoolean("isSelf")||author==principalId)"user" else "message")
             .put("text",if(native&&data?.s("nativeType") in listOf("agentMessage","plan"))data?.s("output")else event.s("body"))
         if(native)row.put("actionId",data?.s("actionId")).put("actionObservations",observations)
-            .put("roomActivityScope",JSONArray(listOf(prefix,event.s("audience"),event.s("recipient"))).toString())
+            .put("roomActivityScope",JSONArray(listOf(prefix,event.s("audience"),if(event.s("audience")=="direct")listOf(author,event.s("recipient")).sorted()else emptyList<String>())).toString())
         if(activity){
-            row.put("type","roomOperation").put("title",if(native)data!!.s("title","Run")else "Run").put("status",data!!.s("status"))
+            row.put("type","roomOperation").put("title",if(native)data!!.s("title","Run")else "Run").put("status",status)
                 // This is a presentation boundary, never a native turn or parent.
                 .put("groupBoundary",JSONArray(if(native)listOf(event.s("authority"),author,data.s("deliveryId"),
                     data.optLong("generation"),thread,data.s("turn"))else listOf(author,thread,data.s("turn"))).toString())
@@ -48,7 +56,7 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
                 val attribution="Agent: $author\nHost: ${data.s("hostId")}\nExecution: ${data.s("deliveryId")}\nThread: $thread\nTurn: ${data.s("turn")}\nItem: $item"
                 val changes=data.optJSONArray("changes")?.let{array->(0 until array.length()).map{array.getJSONObject(it)}
                     .joinToString("\n\n"){"${it.s("path")}\n${it.s("diff")}"}}.orEmpty()
-                row.put("text",data.s("command",event.s("body")))
+                row.put("text",if(data.s("nativeType") in listOf("agentMessage","plan"))data.s("output",event.s("body"))else data.s("command",event.s("body")))
                     .put("detail",listOf(data.s("output"),changes,data.s("cwd").takeIf{it.isNotBlank()}?.let{"Directory: $it"}.orEmpty(),attribution).filter{it.isNotBlank()}.joinToString("\n\n"))
                     .put("truncated",data.optBoolean("outputTruncated")||data.optBoolean("detailsTruncated"))
                     .put("agentId",author).put("hostId",data.s("hostId")).put("deliveryId",data.s("deliveryId"))

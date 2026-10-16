@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.CompositingStrategy
 
 /** Native hit testing with a draw-only complementary reading-direction wipe. */
 @Composable internal fun BlendImmersionText(
@@ -82,7 +84,10 @@ import androidx.compose.ui.unit.*
             }
             SideEffect{onShapedLines?.invoke(shapedLines);onShapedLayouts?.invoke(outgoingLayout,incomingLayout)}
             Text(nativeVisible,color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign,maxLines=maxLines,overflow=overflow,
-                onTextLayout={layout=it;onNativeTextLayout?.invoke(it);reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}.drawWithCache{
+                onTextLayout={layout=it;onNativeTextLayout?.invoke(it);reportVisibility()},modifier=Modifier.fillMaxSize().onGloballyPositioned{coordinates=it;reportVisibility()}
+                // DstIn/Plus must never operate on the window backing surface.
+                // A bounded render layer also confines damage during IME resize.
+                .graphicsLayer{compositingStrategy=CompositingStrategy.Offscreen;clip=true}.drawWithCache{
                     // Geometry and shaders live for the draw cache, not one display frame.
                     // Progress remains a draw-only read; changing language/layout invalidates
                     // this cache while ordinary clock ticks only redraw its masks.

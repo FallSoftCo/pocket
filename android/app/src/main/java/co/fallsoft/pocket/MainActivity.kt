@@ -458,7 +458,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     var observed by remember(Pocket.environmentId,t.id){mutableStateOf(revision)}
     LaunchedEffect(Pocket.environmentId,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
     val cardText=Paper
-    WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,modifier){
+    val stateLabel=when{active->if(t.status=="pending")"Starting" else "Working";t.needsInput->"Needs your input";t.status=="idle"->"Idle";t.status=="blocked"->"Blocked";t.status=="failed"->"Failed";else->"Status unavailable"}
+    WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,modifier,knownIdle=t.status=="idle"&&!t.needsInput){
         if(!t.archived)Row(Modifier.matchParentSize()){
             voice?.invoke(Modifier.weight(.22f).fillMaxHeight())
             CardInteractionRegion("Chat",Modifier.weight(if(voice==null).78f else .56f).fillMaxHeight(),t.title){onOpen(false)}
@@ -483,7 +484,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             val age=now-activityTime
             val ageLabel=if(age in 20_000..59_999)"${age/1000}s" else lastActivity(activityTime)
             if(activityTime>0&&age>=20_000)Text(ageLabel,color=Muted,fontSize=11.sp,modifier=Modifier.semantics{contentDescription="Last active "+ageLabel}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
-            Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true) else SymbolIcon(if(t.needsInput)Icons.Rounded.ErrorOutline else Icons.Rounded.Pause,if(t.needsInput)"Needs your input" else "Idle",tint=if(t.needsInput)Coral else Muted,modifier=Modifier.size(18.dp))}
+            Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true) else SymbolIcon(if(stateLabel=="Idle")Icons.Rounded.Pause else Icons.Rounded.ErrorOutline,stateLabel,tint=if(t.needsInput||t.status in listOf("blocked","failed"))Coral else Muted,modifier=Modifier.size(18.dp))}
             if(onWatch!=null)Surface(onClick={onWatch(!t.watched)},modifier=Modifier.width(48.dp).heightIn(min=48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
                 Column(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(vertical=4.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
                     SymbolIcon(if(t.watched)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,null,modifier=Modifier.size(24.dp),tint=if(t.watched)Paper else Muted.copy(alpha=.65f))
@@ -498,7 +499,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            ImmersionText("card:"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(if(t.needsInput)"Needs your input · " else "Idle · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
+            ImmersionText("card:"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(stateLabel+" · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
         }
 
     }

@@ -34,6 +34,25 @@ class NaturalImmersionNativeTest {
   val bottom=AtomicReference<Rect?>()
   val paragraphOrigin=AtomicReference(Offset.Zero)
   val actions=java.util.concurrent.atomic.AtomicInteger()
+  val marker=AtomicReference<Rect?>()
+  var visualArmed=false
+  var visualSamples=0
+  var lastVisualAt=0L
+  fun markerIntact():Boolean{
+   val box=marker.get()?:return false
+   val bitmap=i.uiAutomation.takeScreenshot()?:return false
+   try{
+    visualSamples++
+    val y=((box.top+box.bottom)/2).toInt().coerceIn(0,bitmap.height-1)
+    val xs=listOf(box.left+box.width*.25f,box.left+box.width*.75f)
+    val intact=xs.all{x->bitmap.getPixel(x.toInt().coerceIn(0,bitmap.width-1),y)==0xff00cc88.toInt()}
+    if(!intact&&visualArmed)c.filesDir.resolve("natural-immersion-outside-ink-failure.png").outputStream().use{
+     bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)
+    }
+    return intact
+   }finally{bitmap.recycle()}
+  }
+
   val typedLength=java.util.concurrent.atomic.AtomicInteger()
   val expectedLength=java.util.concurrent.atomic.AtomicInteger(Int.MAX_VALUE)
   val submittedKey=java.util.concurrent.atomic.AtomicLong()
@@ -66,6 +85,8 @@ class NaturalImmersionNativeTest {
       SideEffect{typedLength.set(typed.length)}
       Column(Modifier.fillMaxSize().background(Ink).statusBarsPadding().imePadding().padding(20.dp),
        verticalArrangement=Arrangement.spacedBy(20.dp)){
+       Box(Modifier.fillMaxWidth().height(4.dp).background(androidx.compose.ui.graphics.Color(0xff00cc88))
+        .onGloballyPositioned{layout->val origin=layout.localToScreen(Offset.Zero);marker.set(Rect(origin,androidx.compose.ui.geometry.Size(layout.size.width.toFloat(),layout.size.height.toFloat())))})
        BasicTextField(typed,{typed=it},Modifier.fillMaxWidth().heightIn(min=48.dp),
         textStyle=androidx.compose.ui.text.TextStyle(color=Paper,fontSize=20.sp))
        SharedInlineImmersionText(support,italian,{1f},Modifier.width(280.dp).onGloballyPositioned{paragraphOrigin.set(it.localToScreen(Offset.Zero))},
@@ -93,7 +114,13 @@ class NaturalImmersionNativeTest {
    }}}
    fun await(message:String,timeout:Long=20000,test:()->Boolean){
     val end=SystemClock.elapsedRealtime()+timeout
-    while(SystemClock.elapsedRealtime()<end){if(test())return;Thread.sleep(50)}
+    while(SystemClock.elapsedRealtime()<end){
+     if(visualArmed&&SystemClock.elapsedRealtime()-lastVisualAt>=250){
+      lastVisualAt=SystemClock.elapsedRealtime()
+      assertTrue("Animated text clipped independent native content",markerIntact())
+     }
+     if(test())return;Thread.sleep(50)
+    }
     assertTrue(message+" [layout="+(nativeLayout.get()!=null)+", expected="+(expected.get()!=null)+", lower="+(bottom.get()!=null)+", visible="+clock.get()?.hasVisible+"]",test())
    }
    await("Natural native text did not layout"){nativeLayout.get()!=null&&expected.get()!=null&&bottom.get()!=null&&clock.get()?.hasVisible==true}
@@ -106,6 +133,8 @@ class NaturalImmersionNativeTest {
      assertEquals("Glyph spacing differs from normal paragraph at "+n,normal.getBoundingBox(n).left,actual.getBoundingBox(n).left,.1f)
    }
    i.runOnMainSync{checkNatural()}
+   await("Independent marker did not draw"){markerIntact()}
+   visualArmed=true
    device.takeScreenshot(c.filesDir.resolve("natural-immersion-english.png"))
    device.findObject(By.clazz("android.widget.EditText")).click()
    device.findObject(By.clazz("android.widget.EditText")).text="Owned typing stays responsive"
@@ -147,6 +176,7 @@ class NaturalImmersionNativeTest {
    c.filesDir.resolve("natural-immersion-receipt.json").writeText(org.json.JSONObject()
     .put("naturalGlyphSpacing",true).put("lexicalPlaceholders",0)
     .put("globalWaveReachedLowerContainer",true).put("keyboardDoesNotPauseWave",true)
+    .put("outsideInkSamples",visualSamples).put("independentContentIntact",true)
     .put("returnedToEnglish",true).put("visibleLinkActionCount",actions.get()).put("windowFrames",measured)
     .put("sourceForm",support.text).put("targetForm",italian.text)
     .put("keyToDrawMs",org.json.JSONObject().put("samples",keyToDraw.size)

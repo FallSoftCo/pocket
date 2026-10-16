@@ -85,3 +85,14 @@ test('native room voice requires optimized key, touch and captured-origin eviden
   assert.equal(validateReleaseQualification({...f,optimizedReview:review}).nativeCases,1);
  }finally{rmSync(f.root,{recursive:true,force:true});}
 });
+
+test('a visually rejected candidate cannot publish even with prior green checks',()=>{
+ const f=fixture();
+ try{
+  assert.equal(validateReleaseQualification(f).nativeCases,1);
+  writeFileSync(join(f.directory,'visual-rejection.json'),JSON.stringify({state:'rejected',reason:'Observed native clipping'}));
+  assert.throws(()=>validateReleaseQualification(f),/visually rejected/);
+  assert.throws(()=>publishQualifiedUpdate({...f,expectedVersion:1,checkOnly:true}),/visually rejected/);
+  assert.equal(JSON.parse(readFileSync(join(f.destination,'manifest.json'))).versionCode,1);
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});

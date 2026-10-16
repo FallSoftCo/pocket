@@ -79,18 +79,23 @@ class RoomTranscriptProjectionTest {
                 getJSONObject("data").put("type","executionActivity").put("nativeType","commandExecution")
                     .put("activityVersion",1).put("actionId","action-stable").put("phase",if(status=="completed")"completed" else "started")
             }
-        val done=native(1,"completed");val late=native(2,"inProgress")
+        val done=native(1,"completed").put("audience","room").put("recipient","Violet");val late=native(2,"inProgress").put("audience","room").put("recipient","Violet")
         val rows=roomTranscriptRows(listOf(done,late),"scope")
         assertEquals(1,rows.size);assertEquals("completed",rows.single().s("status"))
         assertEquals("action-stable",rows.single().s("actionId"))
         assertEquals(2,rows.single().getJSONArray("actionObservations").length())
         assertEquals(1L,rows.single().getJSONArray("actionObservations").getJSONObject(0).getLong("eventId"))
         assertEquals(2L,rows.single().getJSONArray("actionObservations").getJSONObject(1).getLong("eventId"))
-        val peer=native(3,"inProgress").put("author","Amber").apply{getJSONObject("data").put("actionId","action-peer")}
+        val peer=native(3,"inProgress").put("author","Amber").put("audience","room").put("recipient","Amber").apply{getJSONObject("data").put("actionId","action-peer")}
         val source=roomTranscriptRows(listOf(done,late,peer),"scope")
         val folded=commandRunProjection(source,emptySet(),mergeRoomActivity=true)
         assertEquals(1,folded.groups.size);assertEquals(2,folded.groups.values.single().size)
         assertEquals("",folded.rows.single().s("roomAuthor"))
+        val commentary=native(4,"inProgress").apply{getJSONObject("data").put("actionId","action-commentary").put("nativeType","agentMessage").put("phase","completed").put("output","Public execution update")}
+        val observation=roomTranscriptRows(listOf(commentary),"scope").single()
+        assertEquals("activity",observation.s("kind"));assertEquals("completed",observation.s("status"))
+        assertEquals("Public execution update",observation.s("text"))
+
         val opened=commandRunProjection(source,source.map{it.s("id")}.toSet(),mergeRoomActivity=true)
         assertEquals(setOf("Violet","Amber"),opened.rows.filter{it.s("kind")=="activity"}.map{it.s("roomAuthor")}.toSet())
     }

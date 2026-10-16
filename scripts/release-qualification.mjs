@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {readFileSync,readdirSync,lstatSync,realpathSync,statSync} from 'node:fs';
+import {readFileSync,readdirSync,lstatSync,realpathSync,statSync,existsSync} from 'node:fs';
 import {resolve,relative,isAbsolute,join} from 'node:path';
 const hex=/^[a-f0-9]{64}$/;
 const fail=message=>{throw Error(message);};
@@ -25,6 +25,7 @@ export function confinedFile(directory,name){
  if((rel==='..'||rel.startsWith('../'))||isAbsolute(rel)||!statSync(path).isFile())fail('Qualification file escapes artifact directory.');return path;
 }
 export function validateReleaseQualification({directory,manifest,build,native,policy,optimizedReview}){
+ if(existsSync(join(directory,'visual-rejection.json')))fail('This candidate was visually rejected; preserve it and qualify a new candidate.');
  if(manifest.packageName!=='co.fallsoft.pocket'||!Number.isSafeInteger(manifest.versionCode)||manifest.versionCode<1||!Array.isArray(manifest.variants)||!manifest.variants.length)fail('Invalid prepared manifest.');
  if(build.schema!==1||build.state!=='complete'||!hex.test(build.productionSourceSha)||build.productionSourceBefore!==build.productionSourceSha||build.manifestSha!==sha256(Buffer.from(JSON.stringify(manifest))))fail('Missing, stale or incomplete build qualification.');
  const tasks=['testDebugUnitTest','testReleaseUnitTest','lintDebug','lintRelease','assembleDebug','assembleRelease','assembleQualification','assembleQualificationAndroidTest'];
