@@ -231,9 +231,12 @@ class MainActivity:ComponentActivity(){
         if(Pocket.newTask)NewTaskScreen()
         else if(Pocket.selected!=null)key(Pocket.selected){if(conversationIdentityPending())LoadingSessionIdentity()else if(readOnlyChildSelected())ChildConversationScreen()else ConversationScreen()}
         else{
-            AnimatedContent(targetState=Pocket.tab,modifier=Modifier.weight(1f).fillMaxWidth(),label="tab",transitionSpec={
+            Box(Modifier.weight(1f).fillMaxWidth()){
+            AnimatedContent(targetState=Pocket.tab,modifier=Modifier.fillMaxSize(),label="tab",transitionSpec={
                 (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
             }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it},workListState,workCatalogView);else->SettingsScreen()}}
+            if(Pocket.tab==0&&!workToolsOpen)WorkCatalogCapture(Modifier.align(Alignment.BottomEnd).padding(end=16.dp,bottom=8.dp).testTag("session-catalog-microphone"))
+            }
             ConversationSpeechDock()
             InlineCaptureStatus()
             PocketDock(onFind={Pocket.tab=0;workToolsOpen=true},onTab={workToolsOpen=false},listState=workListState)
@@ -242,9 +245,8 @@ class MainActivity:ComponentActivity(){
 }
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun PocketDock(onFind:()->Unit,onTab:()->Unit,listState:androidx.compose.foundation.lazy.LazyListState?=null){
-    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)),horizontalArrangement=Arrangement.spacedBy(2.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
+    WorkCatalogDock{
         IconButton({Pocket.tab=0;onFind()},modifier=Modifier.size(48.dp)){SymbolIcon("Search","Find",Modifier.size(32.dp),tint=Mint)}
-        VoiceLaunchButton(modifier=Modifier.width(48.dp),compact=true,smallDock=true)
         if(Pocket.tab==0&&listState!=null)ReaderPagingButtons(listState,hasEarlier=Pocket.sessionCursor!=null,onPrepare={up->
             if(up&&!listState.canScrollForward&&Pocket.sessionCursor!=null&&!Pocket.loadingSessions){
                 Pocket.moreSessions()
@@ -321,8 +323,12 @@ class MainActivity:ComponentActivity(){
     }
     if(inlineOptions){
         Column(Modifier.fillMaxWidth().semantics{testTagsAsResourceId=true}.testTag("environment-picker-inline")){
-            BilingualLabel("Environment",Modifier.padding(horizontal=12.dp,vertical=6.dp),color=Muted,centered=false)
-            choices()
+            DropdownMenuItem(text={Text(profiles.firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,maxLines=1,overflow=TextOverflow.Ellipsis)},
+                leadingIcon={SymbolIcon(if(Pocket.local)"PhoneAndroid" else "Computer",null,Modifier.size(24.dp))},
+                trailingIcon={SymbolIcon(if(expanded)"ExpandLess" else "ExpandMore",null,Modifier.size(20.dp))},
+                modifier=Modifier.testTag("environment-picker-toggle").semantics{contentDescription="Development environment: "+(profiles.firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host)},
+                onClick={expanded=!expanded})
+            if(expanded)choices()
         }
         return
     }
@@ -401,7 +407,7 @@ class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntState
     Column(Modifier.fillMaxSize()){
     WorkCatalogList(Modifier.weight(1f).pointerInput(Unit){
         awaitPointerEventScope{try{while(true){touching=awaitPointerEvent(PointerEventPass.Initial).changes.any{it.pressed}}}finally{touching=false}}
-    },state=listState){
+    },state=listState,contentPadding=PaddingValues(top=12.dp,bottom=104.dp)){
 
         item{ErrorBanner()}
         if(showCoordinator)item(key="nextcomp-coordinator"){CoordinatorCard()}

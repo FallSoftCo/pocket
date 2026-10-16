@@ -453,6 +453,10 @@ internal object InterfaceGrammarScaffolds {
         "Workstation" to "Computer|Workstation",
         "History" to "Cronologia|History",
         "Questions" to "Domande|Questions",
+        "Rooms" to "Stanze|Rooms",
+        "Find rooms" to "Trova|Find stanze|rooms",
+        "No matching rooms" to "Nessuna|No stanza|room corrispondente|matching",
+        "Close search" to "Chiudi|Close la|the ricerca|search",
         "Attention" to "Attenzione|Attention"
     )
     private fun target(row:String)=row.split(" ").joinToString(" "){it.substringBefore("|").replace("~"," ")}

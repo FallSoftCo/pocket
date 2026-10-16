@@ -42,6 +42,15 @@ import androidx.compose.ui.unit.sp
     }.border(1.dp,outline,shape).border(2.dp,Mint.copy(alpha=highlight),shape),content=content)
 }
 
+
+/** One catalog dock surface for stock sessions and enterprise rooms. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable internal fun WorkCatalogDock(content:@Composable FlowRowScope.()->Unit){
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp))
+        .background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)),
+        horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp),content=content)
+}
+
 /** Identical bottom control geometry for stock sessions and enterprise rooms. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun ConversationFooter(content:@Composable FlowRowScope.()->Unit){
@@ -102,4 +111,9 @@ import androidx.compose.ui.unit.sp
                 if(!bottomActions){HorizontalDivider();report()}
             })
     }
+}
+
+/** The same primary capture control floats above either catalog dock. */
+@Composable internal fun WorkCatalogCapture(modifier:Modifier=Modifier,roomDestination:org.json.JSONObject?=null,sourceLabel:String?=null){
+    VoiceLaunchButton(modifier.size(80.dp).semantics{testTagsAsResourceId=true},compact=true,largeFloating=true,roomDestination=roomDestination,sourceLabel=sourceLabel)
 }

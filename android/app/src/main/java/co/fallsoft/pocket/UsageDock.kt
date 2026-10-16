@@ -41,9 +41,9 @@ import java.util.Locale
 }
 
 @Composable fun UsageDetails(onNavigate:()->Unit={}){
-    ProfileSwitcher(inlineOptions=true,onSelected=onNavigate)
     val context=androidx.compose.ui.platform.LocalContext.current
     TextButton({onNavigate();PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask();if(Pocket.tab==1){Pocket.requestSessionOrder();Pocket.tab=0}else Pocket.tab=1}){BilingualLabel(if(Pocket.tab==1)"Work" else "Settings")}
+    ProfileSwitcher(inlineOptions=true,onSelected=onNavigate)
     PocketUpdateControl()
     TextButton({onNavigate();context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}
     AccountUsageDetails()
@@ -101,7 +101,7 @@ import java.util.Locale
                 if(hasUsage)Text(if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=16.sp,lineHeight=20.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
             }
             if(hasReset)Text("$day $time",color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
-            if(hasProfiles)Text(contextLabel?:Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if(hasProfiles)BilingualLabel(contextLabel?:Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             BilingualLabel(statusLabel?:"Settings",color=Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
         }else Column(Modifier.fillMaxSize().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){

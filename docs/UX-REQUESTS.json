@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-16T16:54:37.788045+00:00",
+  "updated": "2026-10-16T17:50:29.588481+00:00",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -2712,7 +2712,7 @@
     {
       "id": "rooms-sessions-shared-ux-completion-20261016",
       "request": "Complete shared rooms/sessions UX architecture and live lists; eliminate separate room header/footer/menu behavior, detached environment menus, and partial parity claims. Continue autonomously through implementation, native journeys, performance measurement and usable delivery.",
-      "status": "Signed125 candidate qualified: shared footer, no room header, anchored inline menus, real room reopening/accepted receipt/reconnect, optimized typing/voice passed; not published or phone-installed. Batched list preview/work recency still open.",
+      "status": "Followup native-qualified: shared list dock/paging/volume/floating capture, rooms bottom search and anchored compact environment/settings controls; real room/stock native journeys pass. Separate immutable125 retained. Live room preview/actual-work recency and signed followup delivery remain.",
       "acceptance": "docs/ROOMS-SESSIONS-UX-ACCEPTANCE.md",
       "guidance": "User has supplied sufficient design direction. Ask only for a concrete unresolved decision or unavoidable phone OS action; no recurring model wakeups or blanket worker continuation."
     },

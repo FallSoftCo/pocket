@@ -30,6 +30,13 @@ import androidx.lifecycle.repeatOnLifecycle
     var browsing by remember(client.bindingId){mutableStateOf(false)}
     val catalog=remember(client){HollywoodRoomCatalog{client.call("rooms")}}
     val rooms=catalog.rooms
+    val catalogList=remember(client.bindingId){androidx.compose.foundation.lazy.LazyListState()}
+    var catalogSearchOpen by remember(client.bindingId){mutableStateOf(false)}
+    var catalogQuery by remember(client.bindingId){mutableStateOf("")}
+    var catalogMenu by remember(client.bindingId){mutableStateOf(false)}
+    val catalogSearchFocus=remember(client.bindingId){androidx.compose.ui.focus.FocusRequester()}
+    LaunchedEffect(browsing,catalogSearchOpen){if(browsing&&catalogSearchOpen){withFrameNanos{};catalogSearchFocus.requestFocus()}}
+
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     var headRefreshRevision by remember(client.bindingId){mutableIntStateOf(0)}
     val feeds=remember(client.bindingId){mutableMapOf<String,HollywoodRoomFeed>()}
@@ -160,7 +167,7 @@ import androidx.lifecycle.repeatOnLifecycle
         }
     }
     LaunchedEffect(catalog,browsing,PocketLive.connectionRevision,lifecycle){
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){while(isActive){catalog.refresh();delay(15000)}}
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){while(isActive){catalog.refresh();delay(if(browsing)5000 else 15000)}}
     }
     LaunchedEffect(feed,list){
         snapshotFlow{Triple(list.isScrollInProgress,list.firstVisibleItemIndex,following)}.collect{(scrolling,index,follow)->
@@ -247,6 +254,8 @@ import androidx.lifecycle.repeatOnLifecycle
             }
         }
     }
+    BackHandler(browsing&&catalogSearchOpen){catalogSearchOpen=false;catalogQuery="";keyboard?.hide()}
+    BackHandler(browsing&&catalogMenu){catalogMenu=false}
     if(browsing){
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
             if(catalog.loading&&rooms.isEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().testTag("native-room-catalog-loading"))
@@ -256,23 +265,44 @@ import androidx.lifecycle.repeatOnLifecycle
             }
             if(catalog.available&&rooms.isEmpty())BilingualLabel("No rooms available",Modifier.padding(16.dp),color=Muted)
             Box(Modifier.weight(1f).fillMaxWidth()){
-            WorkCatalogList(Modifier.fillMaxSize(),reverseLayout=true,contentPadding=PaddingValues(top=12.dp,bottom=if(catalogMicDestination!=null)112.dp else 12.dp)){
-                val ordered=rooms.sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
+            WorkCatalogList(Modifier.fillMaxSize(),state=catalogList,reverseLayout=true,contentPadding=PaddingValues(top=12.dp,bottom=if(catalogMicDestination!=null&&!catalogSearchOpen)104.dp else 12.dp)){
+                val terms=catalogQuery.trim().split(Regex("\\s+")).filter{it.isNotBlank()}
+                val ordered=rooms.filter{item->terms.all{term->(item.s("name")+" "+item.s("purpose")).contains(term,ignoreCase=true)}}
+                    .sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
+                if(ordered.isEmpty()&&terms.isNotEmpty())item{BilingualLabel("No matching rooms",Modifier.fillMaxWidth().padding(16.dp),color=Muted)}
                 items(ordered,key={it.s("id")}){item->
                     HollywoodRoomCard(item,catalog.available){choose(item.s("id"))}
                 }
             }
-            if(catalogMicDestination!=null)Column(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end=16.dp,bottom=8.dp),horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally){
-                VoiceLaunchButton(Modifier.size(80.dp).testTag("native-catalog-microphone"),compact=true,largeFloating=true,
-                    roomDestination=catalogMicDestination,sourceLabel=catalogMicLabel)
-                Text(catalogMicLabel.orEmpty(),Modifier.widthIn(max=144.dp),color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if(catalogMicDestination!=null&&!catalogSearchOpen)WorkCatalogCapture(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end=16.dp,bottom=8.dp).testTag("native-catalog-microphone"),
+                roomDestination=catalogMicDestination,sourceLabel=catalogMicLabel)
             }
-            }
+            ConversationSpeechDock()
             InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
-            Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                TextButton({browsing=false},Modifier.weight(1f)){BilingualLabel("Back")}
-                Box(Modifier.weight(2f)){ProfileSwitcher{}}
-                TextButton(onSettings,Modifier.weight(1f).testTag("native-catalog-settings")){BilingualLabel("Settings")}
+            if(catalogSearchOpen){
+                Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
+                    androidx.compose.material3.OutlinedTextField(catalogQuery,{catalogQuery=it},singleLine=true,
+                        modifier=Modifier.weight(1f).testTag("native-room-search").focusRequester(catalogSearchFocus),
+                        placeholder={BilingualLabel("Find rooms")},
+                        keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Search),
+                        keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSearch={keyboard?.hide()}))
+                    IconButton({catalogSearchOpen=false;catalogQuery="";keyboard?.hide()},Modifier.size(48.dp).testTag("native-room-search-close")){
+                        SymbolIcon("Check",PocketImmersion.label("Close search"),Modifier.size(28.dp),tint=Paper)
+                    }
+                }
+            }
+            WorkCatalogDock{
+                IconButton({catalogSearchOpen=!catalogSearchOpen;if(!catalogSearchOpen){catalogQuery="";keyboard?.hide()}},
+                    Modifier.size(48.dp).testTag("native-catalog-find")){SymbolIcon("Search",PocketImmersion.label("Find"),Modifier.size(32.dp),tint=Mint)}
+                ReaderPagingButtons(catalogList)
+                InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
+                ConversationActionsMenu(catalogMenu,{catalogMenu=it},modifier=Modifier.testTag("native-catalog-controls"),contextLabel="Rooms"){
+                    TextButton({catalogMenu=false;onSettings()},Modifier.testTag("native-catalog-settings")){BilingualLabel("Settings")}
+                    ProfileSwitcher(inlineOptions=true){catalogMenu=false}
+                    PocketUpdateControl()
+                    TextButton({catalogMenu=false;browsing=false}){BilingualLabel("Back")}
+                    AccountUsageDetails()
+                }
             }
         };return
     }
@@ -361,6 +391,7 @@ import androidx.lifecycle.repeatOnLifecycle
         }
         ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,contextLabel=detail.optJSONObject("room")?.s("name")){
             addressControl()
+            TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             if(activityFeed.historyError.isNotBlank())BilingualLabel("Activity unavailable",color=Coral,centered=false)
             val account=Pocket.weeklyUsage
             if(account.remainingPercent!=null)Text(account.remainingLabel(),color=Muted)
@@ -368,7 +399,6 @@ import androidx.lifecycle.repeatOnLifecycle
             if(account.remainingPercent==null&&account.credits.compact()==null)BilingualLabel("Account usage unavailable",centered=false,color=Muted)
             PocketUpdateControl()
             TextButton({menu=false;browsing=true},Modifier.testTag("native-room-catalog")){BilingualLabel("Rooms")}
-            TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             ProfileSwitcher(inlineOptions=true){menu=false}
             val context=androidx.compose.ui.platform.LocalContext.current
             TextButton({menu=false;context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}

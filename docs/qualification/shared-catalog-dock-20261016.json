@@ -1,0 +1,29 @@
+{
+  "state": "native-development-qualified-not-phone-delivered",
+  "branch": "nextcomp/catalog-shared-dock-20261016-r01",
+  "base": "072a37c",
+  "changes": [
+    "Shared catalog dock geometry and primary floating capture control",
+    "Rooms list bottom search/filter/clear, native paging and playback volume",
+    "Inline environment expansion/collapse inside current anchored menu",
+    "Immediately reachable Settings, no separate room-list footer form",
+    "Rooms batched catalog5s while browsing15s otherwise; no per-room scans/model polling",
+    "Cached grammatical forms for new controls; global wave reused"
+  ],
+  "nativeJourneys": [
+    "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending",
+    "co.fallsoft.pocket.HollywoodCatalogLiveNativeTest#actualCatalogCountsAndOriginalAcceptedMessageSurviveListAndRoomReopening"
+  ],
+  "nativePassed": true,
+  "messagesSubmitted": 0,
+  "canonicalOriginalMessageCount": 1,
+  "existingAuthoredGrammarCatalogCheck": "passed",
+  "phoneInstalled": false,
+  "newSignedRelease": false,
+  "immutable125Changed": false,
+  "remaining": [
+    "Batched latest meaningful room action/message and canonical actual-work recency projection remains owned backend dependency; alphabetical catalog ordering is not recency parity",
+    "Physical-phone input/voice/provider qualification remains separate",
+    "Signed release and coordinated update delivery still required"
+  ]
+}
