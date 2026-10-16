@@ -31,7 +31,7 @@ const server=http.createServer(async(req,res)=>{
  }else if(path.startsWith('/api/hollywood/v3/rooms/')&&req.method==='GET'){
   const id=path.split('/')[5],room=rooms.find(r=>r.id===id);
   if(!room){status=404;body={error:'Unknown synthetic room'};}
-  else if(path.endsWith('/history'))body={binding,roomId:id,events:[],nextCursor:0,hasMore:false,before:null};
+  else if(path.endsWith('/history'))body={binding,roomId:id,view:new URL(req.url,"http://127.0.0.1").searchParams.get("view")||"all",events:[],nextCursor:0,hasMore:false,before:null};
   else if(path.endsWith('/attention'))body={binding,attention:[],nextCursor:0};
   else body={binding,room,permissions:{can_post:true,can_request:true},actors:[{id:room.owner,name:'Synthetic agent '+(id===roomA?'A':'B'),kind:'agent'},{id:human,name:'Synthetic owner',kind:'human'}],deliveries:[]};
  }else if(req.method==='POST'){blockedTaskWrites++;status=503;body={error:'Owned fixture has no task/provider execution'};}

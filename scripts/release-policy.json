@@ -1,13 +1,15 @@
 {
   "schema": 1,
-  "qualification": "alpha106-native-room-voice-and-source-bound-input",
+  "qualification": "alpha107-shared-room-feeds-natural-grammar-idle-chroma",
   "requiredNativeCases": [
     "co.fallsoft.pocket.HollywoodRoomActivityNativeTest#aggregateFailureAndQuietSnapshotNeverInventIdleOrLoseRoomTarget",
     "co.fallsoft.pocket.HollywoodCatalogLiveNativeTest#actualCatalogCountsAndOriginalAcceptedMessageSurviveListAndRoomReopening",
     "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending",
     "co.fallsoft.pocket.HollywoodReconnectNativeTest#capabilityOutageRecoversWithoutLosingOpenRoomOrDraft",
     "co.fallsoft.pocket.HollywoodRoomControlsNativeTest#stopLostAcknowledgementAndLocalSlowdownReportKeepOriginalIdentity",
-    "co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable"
+    "co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable",
+    "co.fallsoft.pocket.NaturalImmersionNativeTest#naturalParagraphsKeepNativeSpacingAndGlobalWaveRunsWhileTyping",
+    "co.fallsoft.pocket.WorkCardReadabilityNativeTest#idleIsChromaticNotDisabledAndStillOpens"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
