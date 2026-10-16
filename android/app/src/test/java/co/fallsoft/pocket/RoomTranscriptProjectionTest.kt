@@ -49,4 +49,28 @@ class RoomTranscriptProjectionTest {
         assertEquals(cold.s("id"),warm.single().s("id"))
         assertTrue(commandRunProjection(warm,setOf(cold.s("id"))).rows.any{it.s("id")==cold.s("id")})
     }
+
+    @Test fun stoppedOperationsStayCompactWithoutHidingPrivacyGuidanceOrHealthyWork(){
+        val id="00000000-0000-4000-8000-000000000001"
+        fun stop(n:Long)=event(n,"Violet","control").put("audience","room").put("recipient","Amber")
+            .put("data",JSONObject().put("deliveryId",id).put("state","cancelled"))
+        val first=stop(1);val second=stop(2)
+        val private=event(3,"Violet").put("audience","direct").put("recipient","Amber")
+        val guidance=stop(4).put("data",JSONObject().put("deliveryId",id).put("state","cancelled").put("nativeControlId",id))
+        val source=listOf(first,second,private,guidance);val original=source.map{it.toString()}
+        val rows=roomTranscriptRows(source,"scope")
+        val folded=commandRunProjection(rows,emptySet())
+        assertEquals(2,folded.groups.values.single().size)
+        assertEquals("direct",rows[2].s("roomAudience"));assertEquals("Amber",rows[2].s("roomRecipient"))
+        assertTrue(roomAuthorStartsBlock(rows,2));assertEquals("message",rows[3].s("kind"))
+        assertEquals(original,source.map{it.toString()})
+        val detail=JSONObject().put("room",JSONObject().put("id",id)).put("deliveries",org.json.JSONArray()
+            .put(JSONObject().put("id","old").put("state","unknown"))
+            .put(JSONObject().put("id","new").put("state","running")))
+        assertEquals("Running",hollywoodRoomWork(detail,"",emptyList()).label)
+        assertEquals("Status unavailable",hollywoodRoomWork(detail,"Read failed",emptyList()).label)
+        detail.getJSONArray("deliveries").remove(0);detail.getJSONArray("deliveries").getJSONObject(0).put("state","cancel_requested")
+        assertEquals("Stop requested",hollywoodRoomWork(detail,"",emptyList()).label)
+    }
+
 }

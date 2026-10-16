@@ -1,0 +1,25 @@
+{
+  "status": "candidate-native-journey-passed-not-published",
+  "versionCode": 123,
+  "versionName": "0.5.0-alpha.105",
+  "nativeJourney": {
+    "runId": "r04",
+    "log": "/home/aosp/.local/state/nextcomp/live-rooms-qa-20261015-r01/alpha105-controls-native-final-r04.log",
+    "durationSeconds": 25.475,
+    "result": "OK (1 test)",
+    "scope": "isolated real Hollywood authority, nonexecuting QA agent",
+    "verified": [
+      "single original message accepted",
+      "lost stop acknowledgement reconciled using original delivery",
+      "bounded local responsiveness export",
+      "IME remains open when reporting"
+    ]
+  },
+  "phonePerformance": "Not established; physical phone typing lag not reproduced or declared fixed",
+  "remaining": [
+    "optimized signed release qualification",
+    "actual compatible update delivery",
+    "physical handset frame/input measurement",
+    "native room physical volume-key voice parity"
+  ]
+}

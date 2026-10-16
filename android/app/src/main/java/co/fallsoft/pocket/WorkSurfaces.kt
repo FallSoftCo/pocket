@@ -1,5 +1,7 @@
 package co.fallsoft.pocket
 
+import androidx.compose.ui.platform.testTag
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -69,11 +71,24 @@ import androidx.compose.ui.unit.sp
 /** The existing session dock/menu, with caller-owned backend actions. */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable internal fun ConversationActionsMenu(expanded:Boolean,onExpandedChange:(Boolean)->Unit,
-    modifier:Modifier=Modifier,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,
+    modifier:Modifier=Modifier,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,bottomActions:Boolean=false,
     content:@Composable ColumnScope.()->Unit){
+    val context=androidx.compose.ui.platform.LocalContext.current
+    // A fresh opening starts with current work before the popup is measured.
+    val menuScroll=androidx.compose.runtime.remember(expanded,bottomActions){androidx.compose.foundation.ScrollState(if(bottomActions)Int.MAX_VALUE else 0)}
     Box{
         UsageDock(modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,onOpen={onExpandedChange(true)})
-        DropdownMenu(expanded,{onExpandedChange(false)},modifier=Modifier.width(300.dp).heightIn(max=420.dp).semantics{testTagsAsResourceId=true},
-            properties=androidx.compose.ui.window.PopupProperties(focusable=false),content=content)
+        DropdownMenu(expanded,{onExpandedChange(false)},scrollState=menuScroll,modifier=Modifier.width(300.dp).heightIn(max=if(bottomActions)280.dp else 420.dp).semantics{testTagsAsResourceId=true},
+            properties=androidx.compose.ui.window.PopupProperties(focusable=false),content={
+                val report:@Composable ()->Unit={
+                    TextButton({onExpandedChange(false);context.nextCompActivity()?.let{ResponsivenessReport.toggle(it)}},
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-measure-responsiveness")){
+                        BilingualLabel(if(ResponsivenessReport.measuring)"Finish responsiveness report" else "Report a slowdown")
+                    }
+                }
+                if(bottomActions){report();HorizontalDivider()}
+                content()
+                if(!bottomActions){HorizontalDivider();report()}
+            })
     }
 }

@@ -20,16 +20,17 @@ class HollywoodCatalogLiveNativeTest {
   val activity=HollywoodRoomActivity.read(canonical,true)?:error("Actual canonical activity snapshot unavailable")
   val expected=if(activity.idle)"Idle; no visible unsettled work at observation" else activity.categories().joinToString("; "){(label,count)->"$count $label"}
   fun await(label:String,test:()->Boolean){val end=SystemClock.elapsedRealtime()+30000;while(SystemClock.elapsedRealtime()<end){i.uiAutomation.clearCache();if(test())return;Thread.sleep(120)};assertTrue(label,test())}
+  val latest=client.call("rooms/$target/history?before=9007199254740991&limit=100").getJSONArray("events").objects().last{it.s("kind") in listOf("message","result","request")&&it.s("body").isNotBlank()}.s("body").take(80)
   val original=Pocket.environmentId;val oldIdle=Configurator.getInstance().waitForIdleTimeout;Configurator.getInstance().waitForIdleTimeout=0
   try {
    i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment("live_room_qa_20261015",force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
-   await("Original accepted message missing"){d.hasObject(By.textContains("QA core accepted head refresh r03"))}
+   await("Original accepted message missing"){d.hasObject(By.textContains(latest))}
    d.pressBack()
    await("Actual room catalog missing"){d.hasObject(By.res("native-room:"+target))}
    await("Actual canonical counts not shown"){d.findObject(By.res("native-room-activity:"+target))?.contentDescription==expected}
    d.takeScreenshot(c.filesDir.resolve("room-catalog-live.png"))
    d.findObject(By.res("native-room:"+target)).click()
-   await("Original message missing on return"){d.hasObject(By.textContains("QA core accepted head refresh r03"))}
+   await("Original message missing on return"){d.hasObject(By.textContains(latest))}
    val page=client.call("rooms/$target/history?before=9007199254740991&limit=100").getJSONArray("events").objects()
    assertEquals(1,page.count{it.s("id")=="4564d27f-0fd2-4365-8d8b-69022e098fb7"})
    c.filesDir.resolve("room-catalog-live-receipt.json").writeText(JSONObject().put("passed",true).put("actualCanonicalActivity",canonical.getJSONObject("activity")).put("originalMessageCount",1).put("submittedMessages",0).put("physicalPhone",false).toString())

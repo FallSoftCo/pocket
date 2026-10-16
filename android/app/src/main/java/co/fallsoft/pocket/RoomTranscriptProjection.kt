@@ -23,6 +23,7 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
         val eventId=event.opt("id")
         val row=JSONObject().put("id",if(activity||structured)"$prefix:operation:$identity" else "$prefix:$eventId")
             .put("roomEventId",eventId).put("roomAuthor",if(author==principalId)"You"else event.s("authorName",agentNames[author]?:author))
+            .put("roomAudience",event.s("audience")).put("roomRecipient",event.s("recipient"))
             .put("kind",if(activity)"activity" else if(author=="you"||event.optBoolean("isSelf")||author==principalId)"user" else "message")
             .put("text",if(native&&data?.s("nativeType") in listOf("agentMessage","plan"))data?.s("output")else event.s("body"))
         if(activity){
@@ -44,6 +45,16 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
             }
             if(previous==null){operations[identity]=rows.size;rows+=row}else rows[previous]=row
         }else {
+            // A canonical stop receipt is operation history, not another agent
+            // response. Keep the original event/body available when expanded.
+            if(event.s("kind")=="control"&&data!=null&&hollywoodUuid(data.s("deliveryId"))&&
+                data.s("state") in listOf("cancel_requested","cancelled")&&data.s("nativeControlId").isBlank()&&data.s("attentionId").isBlank()){
+                row.put("kind","activity").put("type","roomOperation")
+                    .put("title",if(data.s("state")=="cancelled")"Stopped" else "Stop requested")
+                    .put("status",if(data.s("state")=="cancelled")"completed" else "inProgress")
+                    .put("groupBoundary",JSONArray(listOf(prefix,"stop",author,event.s("audience"),event.s("recipient"))).toString())
+                    .put("detail",event.s("body")+"\nDelivery: "+data.s("deliveryId")+"\nEvent: "+event.s("id"))
+            }
             if(data!=null&&(data.s("type")=="workflowState"||data.s("workflowAction").isNotBlank())){
                 val receipt=data.optJSONObject("workflowReceipt")
                 val action=data.s("workflowAction")
@@ -79,4 +90,6 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
 
 internal fun roomAuthorStartsBlock(rows:List<JSONObject>,index:Int)=
     rows[index].s("roomAuthor").isNotBlank()&&
-        (index==0||rows[index-1].s("roomAuthor")!=rows[index].s("roomAuthor"))
+        (index==0||rows[index-1].s("roomAuthor")!=rows[index].s("roomAuthor")||
+            rows[index-1].s("roomAudience")!=rows[index].s("roomAudience")||
+            rows[index].s("roomAudience")=="direct"&&rows[index-1].s("roomRecipient")!=rows[index].s("roomRecipient"))

@@ -13,6 +13,8 @@ import org.json.JSONObject
 internal class HollywoodRoomFeed(val room:String,private val read:suspend (String)->JSONObject) {
     var events by mutableStateOf(emptyList<JSONObject>());private set
     var detail by mutableStateOf(JSONObject());private set
+    var justAccepted by mutableStateOf(emptyList<JSONObject>());private set
+    private var acceptanceRevision=0L
     var attention by mutableStateOf(emptyList<JSONObject>());private set
     var cursor:Long? by mutableStateOf(null);private set
     var older:Long? by mutableStateOf(null);private set
@@ -98,9 +100,23 @@ internal class HollywoodRoomFeed(val room:String,private val read:suspend (Strin
         catch(e:Exception){historyError=e.message?:"Earlier messages could not load"}
         finally{loadingOlder=false}
     }
+    /** Fresh submit receipts may assert queued delivery, never permissions or execution. */
+    fun accepted(receipt:JSONObject){
+        val event=receipt.optJSONObject("event")?:return
+        if(!receipt.optBoolean("accepted")||event.s("room")!=room||event.s("kind")!="request")return
+        val rows=receipt.optJSONArray("deliveries")?.objects().orEmpty()
+        if(!rows.all{hollywoodUuid(it.s("id"))&&it.s("event")==event.s("id")&&it.s("state")=="pending"})return
+        if(rows.isNotEmpty()){
+            acceptanceRevision++
+            justAccepted=(justAccepted+rows).associateBy{it.s("id")}.values.toList()
+        }
+    }
     suspend fun refreshDetail()=detailMutex.withLock{try{
+        val before=acceptanceRevision
         val value=read("rooms/$room");require(value.optJSONObject("room")?.s("id")==room){"Room identity changed"}
         if(detail.toString()!=value.toString())detail=value
+        // Only a read started after the latest acceptance can supersede it.
+        if(before==acceptanceRevision)justAccepted=emptyList()
         detailError=""
     }catch(e:CancellationException){throw e}catch(e:Exception){detailError=e.message?:"Work status could not refresh"}}
     suspend fun refreshAttention()=attentionMutex.withLock{try{

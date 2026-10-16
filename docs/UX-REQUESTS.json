@@ -2679,6 +2679,26 @@
         "Navigation identity digest retains historical namespaces without per-byte locale formatting."
       ],
       "evidence": "docs/qualification/native-backend-reconnect-alpha104-20261016.json"
+    },
+    {
+      "id": "native-room-controls-and-handset-lag-20261016",
+      "request": "Finish the native room control UX and diagnose actual handset lag rather than declaring emulator timing a phone fix.",
+      "status": "implemented-final-native-qualification-in-progress",
+      "changes": [
+        "One compact footer work menu, no permanently stacked delivery strip; current actions nearest its anchor, immutable action identities and stable ordering while open.",
+        "Canonical stop intent is durable before dispatch; lost acknowledgement is reconciled by reading the original delivery without re-posting.",
+        "Private room messages identify their audience and recipient; operational stop receipts fold without hiding questions or guidance.",
+        "Fresh validated acceptance shows queued work until a status read started afterward supersedes it; it cannot invent control permissions.",
+        "User-initiated bounded local responsiveness report exports frame/main-thread measurements to Downloads, with no content/credentials/audio/screen or automatic upload.",
+        "Unavailable quota placeholders no longer consume footer rows; native catalog retains usable profile/settings widths and places Global at the reachable bottom."
+      ],
+      "evidence": "docs/qualification/native-room-controls-alpha105-20261016.json",
+      "remaining": [
+        "Actual phone typing/scrolling evidence after compatible installation, using the local report if ADB remains unavailable.",
+        "Physical native voice and rendered native push remain separately unqualified.",
+        "Native hardware-volume capture parity is still a real gap: legacy team exclusion currently includes native rooms; track separately rather than claim complete.",
+        "Native catalog needs viewer-filtered latest material context from the backend owner; no client per-room history scans or synthetic recency."
+      ]
     }
   ],
   "current_state": {

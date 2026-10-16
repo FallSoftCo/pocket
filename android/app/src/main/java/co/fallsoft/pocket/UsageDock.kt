@@ -89,15 +89,18 @@ import java.util.Locale
     val color=when{creditPrimary&&!usage.credits.isStale(now,Pocket.connected&&Pocket.codexOnline)&&usage.continuationState=="existing-credits-available"->NextGreen;remaining==null||stale->Muted;remaining<=20->Coral;remaining<=50->Mint;else->NextGreen}
     val day=usage.resetsAt?.let{SimpleDateFormat("EEE",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     val time=usage.resetsAt?.let{SimpleDateFormat("HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
-    val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*(if(Pocket.environmentProfiles.all().size>1)3 else 2)+10.dp}.coerceAtLeast(58.dp)
+    val hasUsage=creditPrimary||remaining!=null
+    val hasReset=day.isNotBlank()
+    val hasProfiles=Pocket.environmentProfiles.all().size>1
+    val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*((if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+1)+10.dp}.coerceAtLeast(58.dp)
     Box(if(compact)modifier.heightIn(min=compactHeight)else modifier.height(usageDockHeight())) {
     Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=listOfNotNull(statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label()).joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
         if(compact)Column(Modifier.fillMaxWidth().heightIn(min=compactHeight).padding(vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
                 SymbolIcon(statusIcon?:"Tune",null,Modifier.size(20.dp),spinning=statusSpinning)
-                Text(if(creditPrimary)usage.credits.compact()!! else if(remaining==null)"—" else usage.remainingLabel().replace(" left",""),color=color,fontSize=16.sp,lineHeight=20.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
+                if(hasUsage)Text(if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=16.sp,lineHeight=20.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
             }
-            Text(if(day.isBlank())"↻ —" else "$day $time",color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
+            if(hasReset)Text("$day $time",color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
             if(Pocket.environmentProfiles.all().size>1)Text(Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             BilingualLabel(statusLabel?:"Settings",color=Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
         }else Column(Modifier.fillMaxSize().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){

@@ -9,6 +9,7 @@ import org.json.JSONObject
 import java.util.UUID
 
 private object HollywoodAttentionIntents
+internal class HollywoodStopReceiptNotSaved(val receipt:JSONObject,val confirmation:String):java.io.IOException("Stop confirmed by Hollywood; the device receipt could not be saved.")
 internal class HollywoodAcceptedReceiptNotSaved(val receipt:JSONObject):java.io.IOException("Accepted by Hollywood; the device receipt could not be saved. Check the original delivery.")
 
 /** Captured source profile and human binding. A pending action never follows navigation. */
@@ -46,6 +47,7 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
         if(!edit.commit())throw java.io.IOException("Could not save the original delivery state. Your draft is retained.")
     }
     fun capture(scope:HollywoodScope,text:String):JSONObject {
+        require(text.isNotBlank()&&text.toByteArray(Charsets.UTF_8).size<=6000){"Message is too long. Shorten it before sending; your draft is kept."}
         require(pending(scope)==null){"Inspect the original pending delivery first"}
         val body=scope.message("phone-room:"+UUID.randomUUID(),text)
         val intent=JSONObject().put("binding",JSONObject(identity.toString())).put("scope",scope.json()).put("body",body).put("state","saved")
@@ -74,6 +76,63 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
         require(hollywoodMessageMatches(identity,scope,intent.getJSONObject("body"),receipt)){"Original message receipt is unconfirmed"}
         return settleMessage(scope,intent,receipt)
     }
+    private fun stopKey(id:String)="stop:$owner:$bindingId:$id"
+    fun stopRecord(id:String)=Pocket.prefs.getString(stopKey(id),null)?.let(::JSONObject)
+    fun unresolvedStops(room:String)=Pocket.prefs.all.filterKeys{it.startsWith("stop:$owner:$bindingId:")}.values
+        .mapNotNull{runCatching{JSONObject(it as String)}.getOrNull()}
+        .filter{it.optJSONObject("scope")?.s("roomId")==room&&it.s("state") in listOf("saved","sending","unknown")}
+
+    /** One durable stop for the original delivery. Lost acknowledgements only read it back. */
+    suspend fun stopDelivery(room:String,target:JSONObject,inspect:Boolean=false):JSONObject {
+        val id=target.s("id")
+        require(hollywoodUuid(room)&&hollywoodUuid(id)&&hollywoodUuid(target.s("agent"))&&hollywoodUuid(target.s("event")))
+        val scope=JSONObject().put("authorityId",authorityId).put("roomId",room).put("deliveryId",id)
+            .put("agentId",target.s("agent")).put("requestId",target.s("event"))
+        val dispatch=synchronized(HollywoodAttentionIntents){
+            val current=stopRecord(id)?:JSONObject().put("binding",JSONObject(identity.toString())).put("scope",scope).put("state","saved")
+            require(hollywoodBindingMatches(identity,current.getJSONObject("binding"))&&hollywoodJsonEqual(scope,current.getJSONObject("scope"))){"Stop belongs to another original delivery"}
+            val send=!inspect&&current.s("state")=="saved"
+            if(send)current.put("state","sending")
+            persist(stopKey(id),current)
+            send
+        }
+        var submissionError:Exception?=null
+        if(dispatch)try{call("deliveries/$id/cancel",JSONObject())}
+        catch(e:kotlinx.coroutines.CancellationException){throw e}
+        catch(e:Exception){submissionError=e}
+        try {
+            // The authoritative read is required even after a successful HTTP
+            // response. It also recovers a lost reply without a second stop.
+            val observed=call("deliveries/$id")
+            val delivery=observed.getJSONObject("delivery");val request=observed.getJSONObject("request")
+            require(delivery.s("id")==id&&delivery.s("authority")==authorityId&&delivery.s("agent")==scope.s("agentId")&&
+                delivery.s("event")==scope.s("requestId")&&request.s("id")==scope.s("requestId")&&
+                request.s("authority")==authorityId&&request.s("room")==room){"Original stop identity could not be verified"}
+            val confirmed=when {
+                delivery.s("state")=="cancelled"->"cancelled"
+                delivery.optBoolean("cancellation_requested")||delivery.s("state")=="cancel_requested"->"requested"
+                delivery.s("state") in listOf("completed","failed")->"finished"
+                else->"unknown"
+            }
+            synchronized(HollywoodAttentionIntents){
+                val current=requireNotNull(stopRecord(id));current.put("state",confirmed).put("receipt",observed)
+                try{persist(stopKey(id),current)}catch(e:java.io.IOException){
+                    if(confirmed!="unknown")throw HollywoodStopReceiptNotSaved(observed,confirmed)
+                    throw e
+                }
+            }
+            if(confirmed=="unknown")throw java.io.IOException("Stop is not confirmed. "+submissionError?.message.orEmpty().take(160))
+            return observed.put("stopConfirmation",confirmed)
+        }catch(e:kotlinx.coroutines.CancellationException){throw e}
+        catch(e:HollywoodStopReceiptNotSaved){throw e}
+        catch(e:Exception){
+            synchronized(HollywoodAttentionIntents){stopRecord(id)?.let{current->
+                current.put("state","unknown").put("error",e.message.orEmpty().take(300));persist(stopKey(id),current)
+            }}
+            throw e
+        }
+    }
+
     private fun guidanceKey(scope:JSONObject)="guidance:"+owner+":"+bindingId+":"+scope.s("deliveryId")+":"+scope.s("nativeTurn")
     fun guidancePending(scope:JSONObject)=Pocket.prefs.getString(guidanceKey(scope),null)?.let{JSONObject(it)}
     fun savedGuidance(room:String):List<JSONObject> = Pocket.prefs.all.filterKeys{it.startsWith("guidance:"+owner+":"+bindingId+":")}.values

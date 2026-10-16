@@ -348,3 +348,12 @@ adds no model turn. Ordinary room/viewer drafts, cross-binding rejection,
 ended-work send rejection and canonical unknown-receipt inspection passed.
 This qualification updates the owned emulator only; production and the physical
 phone remain unchanged. See [the versioned evidence](qualification/native-guidance-recovery-alpha101.json).
+
+
+## Native room recovery and handset responsiveness
+
+Use the production frame clock and UiAutomator for full network/IME journeys. Compose test-clock rules belong to isolated component checks; mixing their virtual clock with real network and manual waits can prevent the full screen from advancing. Observe readiness instead of fixed sleeps.
+
+Real-room qualification uses only the separate nonexecuting QA authority and retained pairing. Every request has a private journal; reconcile its original command/delivery before another run. Lost Stop acknowledgements must result in GET of that same delivery, never another POST. A completed journey can be observed again only when its code/resources/manifest payload is identical; retain both actual APK hashes. Assert the latest current material message rather than an old fixture message staying in the viewport. Verify the original accepted event once by canonical identity.
+
+The user-operated Report a slowdown action collects at most 15 foreground seconds, stops on backgrounding, and exports bounded frame durations, main-queue delays and stack frames locally. It records no conversations, credentials, account IDs, screenshots or audio and performs no upload/model call. Private latest JSON is under app files/diagnostics; Android29+ also exports to Downloads/NextComp. On older Android it uses the app external diagnostics directory. Software-emulator draw callback timings remain distinct from physical phone/optical latency.

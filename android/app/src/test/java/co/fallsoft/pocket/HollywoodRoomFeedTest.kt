@@ -73,4 +73,23 @@ class HollywoodRoomFeedTest {
         assertEquals(699L,feed.cursor)
     }
 
+
+    @Test fun anOlderStatusReadCannotEraseANewValidatedQueueReceipt()=runBlocking {
+        val started=CompletableDeferred<Unit>();val old=CompletableDeferred<JSONObject>();var reads=0
+        fun quiet()=JSONObject().put("room",JSONObject().put("id",room)).put("deliveries",JSONArray())
+        val feed=HollywoodRoomFeed(room){if(reads++==0){started.complete(Unit);old.await()}else quiet()}
+        val waiting=async{feed.refreshDetail()};started.await()
+        val accepted=event(200).put("room",room).put("kind","request")
+        val delivery=JSONObject().put("id","00000000-0000-4000-8000-000000000201").put("event",accepted.s("id"))
+            .put("agent","00000000-0000-4000-8000-000000000202").put("state","pending")
+        val receipt=JSONObject().put("accepted",true).put("event",accepted).put("deliveries",JSONArray().put(delivery))
+        feed.accepted(receipt);old.complete(quiet());waiting.await()
+        assertEquals("Queued",hollywoodRoomWork(feed.detail,"",emptyList(),feed.justAccepted).label)
+        assertFalse(feed.justAccepted.single().has("can_cancel"))
+        feed.refreshDetail()
+        assertTrue(feed.justAccepted.isEmpty());assertEquals("Idle",hollywoodRoomWork(feed.detail,"",emptyList()).label)
+        // An optional presentation hint may never turn a validated acceptance into an exception.
+        delivery.put("state","completed");feed.accepted(receipt);assertTrue(feed.justAccepted.isEmpty())
+    }
+
 }

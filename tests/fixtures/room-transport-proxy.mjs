@@ -5,7 +5,7 @@ import net from 'node:net';
 import fs from 'node:fs';
 const config=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
 if(!Number.isInteger(config.port)||!Number.isInteger(config.upstreamPort)||!config.controlToken)throw Error('Private QA configuration required');
-let fault={aux:false,dropMessageAck:false};
+let fault={aux:false,dropMessageAck:false,dropCancelAck:false};
 const sockets=new Set();
 const record=value=>fs.appendFileSync(config.journal,JSON.stringify({at:Date.now(),...value})+'\n',{mode:0o600});
 const server=http.createServer(async(req,res)=>{
@@ -30,6 +30,7 @@ const server=http.createServer(async(req,res)=>{
   let metadata={};try{const d=JSON.parse(value);metadata={events:d.events?.length,nextCursor:d.nextCursor,lastSeq:d.events?.at(-1)?.seq,eventId:d.event?.id,operationId:body.length?JSON.parse(body).operationId:undefined}}catch{}
   record({method:req.method,path:req.url,status:response.status,...metadata});
   if(fault.dropMessageAck&&req.method==='POST'&&/\/rooms\/[0-9a-f-]+\/messages$/.test(req.url)&&response.ok){fault.dropMessageAck=false;record({droppedAcknowledgement:true,operationId:metadata.operationId});res.destroy();return}
+  if(fault.dropCancelAck&&req.method==="POST"&&/\/deliveries\/[0-9a-f-]+\/cancel$/.test(req.url)&&response.ok){fault.dropCancelAck=false;record({droppedCancelAcknowledgement:true,path:req.url});res.destroy();return}
   const out=Object.fromEntries([...response.headers].filter(([key])=>!['content-length','content-encoding','transfer-encoding','connection'].includes(key)));
   res.writeHead(response.status,out).end(value);
  }catch(error){record({method:req.method,path:req.url,error:error.name});if(!res.headersSent)res.writeHead(502,{'Content-Type':'application/json'}).end(JSON.stringify({error:'QA upstream unavailable'}));else res.destroy()}

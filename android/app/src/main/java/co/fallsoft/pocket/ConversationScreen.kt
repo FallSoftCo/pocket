@@ -657,6 +657,7 @@ internal fun conversationFilterAnchor(before:List<String>,after:List<String>,vis
 
 /** Compact command history; failures remain evident even when details are folded. */
 @Composable internal fun CommandRunsHeader(runs:List<JSONObject>,expanded:Boolean,onToggle:()->Unit) {
+    val operations=runs.any{it.s("type")=="roomOperation"}
     val working=runs.any{it.s("status")=="inProgress"}
     val unknown=runs.count{it.s("status")=="unknown"}
     val failed=runs.count{it.s("status") in listOf("failed","declined")||(!it.isNull("exitCode")&&it.optInt("exitCode")!=0)}
@@ -665,7 +666,7 @@ internal fun conversationFilterAnchor(before:List<String>,after:List<String>,vis
     ).padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
         SymbolIcon(if(working)"Codex" else if(failed>0)"Stop" else "Terminal",if(working)"Working" else if(failed>0)"Failed" else "Command runs",Modifier.size(20.dp),spinning=working)
         Text(runs.size.toString(),fontSize=13.sp,color=Muted)
-        BilingualLabel("Runs",fontSize=13.sp,color=Muted)
+        BilingualLabel(if(operations)"Operations" else "Runs",fontSize=13.sp,color=Muted)
         if(working)BilingualLabel("Working",fontSize=12.sp,color=Mint)
         if(failed>0){Text(failed.toString(),fontSize=12.sp,color=Coral);BilingualLabel("Failed",fontSize=12.sp,color=Coral)}
         if(unknown>0){Text(unknown.toString(),fontSize=12.sp,color=Muted);BilingualLabel("Unconfirmed",fontSize=12.sp,color=Muted)}

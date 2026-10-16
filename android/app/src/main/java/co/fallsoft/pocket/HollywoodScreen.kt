@@ -36,6 +36,8 @@ import androidx.lifecycle.repeatOnLifecycle
     val detail=feed.detail
     val events=feed.events
     val attention=feed.attention
+    val work=remember(detail,feed.detailError,attention,feed.justAccepted){hollywoodRoomWork(detail,feed.detailError,attention,feed.justAccepted)}
+    var stopping by remember(client.bindingId,room){mutableStateOf(emptySet<String>())}
     val older=feed.older
     var recipient by remember(client.bindingId,room){mutableStateOf("")}
     var direct by remember(client.bindingId,room){mutableStateOf(false)}
@@ -109,16 +111,33 @@ import androidx.lifecycle.repeatOnLifecycle
         jobs.launch{
             var accepted=false
             try{
-                if(inspect)client.inspect(captured,intent)else client.submit(captured,intent)
+                val receipt=if(inspect)client.inspect(captured,intent)else client.submit(captured,intent)
+                if(!inspect)feed.accepted(receipt)
                 accepted=true
                 if(currentScope==captured){pending=null;if(input.text==intent.getJSONObject("body").s("body")){input=TextFieldValue();client.saveDraft(captured,"")};notice="Accepted by Hollywood";error=""}
             }catch(e:CancellationException){throw e}
-            catch(e:HollywoodAcceptedReceiptNotSaved){if(currentScope==captured){notice="Accepted by Hollywood";error=e.message.orEmpty()}}
+            catch(e:HollywoodAcceptedReceiptNotSaved){if(!inspect)feed.accepted(e.receipt);if(currentScope==captured){notice="Accepted by Hollywood";error=e.message.orEmpty()}}
             catch(e:Exception){if(currentScope==captured)error="Delivery remains saved. ${e.message.orEmpty()}"}
             finally{if(currentScope==captured)busy=false}
             // A validated send receipt is final for transport, even if the next
             // history/status read fails. Never relabel it unknown or submit again.
             if(accepted&&currentScope==captured)refresh(captured.room)
+        }
+    }
+    fun stop(target:JSONObject,inspect:Boolean=false){
+        val selected=room;val id=target.s("id");if(id in stopping)return
+        stopping=stopping+id
+        jobs.launch{
+            var confirmed=false
+            try{
+                val result=client.stopDelivery(selected,target,inspect)
+                if(room==selected){notice=when(result.s("stopConfirmation")){"cancelled"->"Stopped";"finished"->"Work finished before stop was confirmed";else->"Stop requested"};error=""}
+                confirmed=true
+            }catch(e:CancellationException){throw e}
+            catch(e:HollywoodStopReceiptNotSaved){if(room==selected){notice=if(e.confirmation=="cancelled")"Stopped" else if(e.confirmation=="finished")"Work finished before stop was confirmed" else "Stop requested";error=e.message.orEmpty()}}
+            catch(e:Exception){if(room==selected)error="Stop remains unconfirmed. Check the original delivery. "+e.message.orEmpty()}
+            finally{if(room==selected)stopping=stopping-id}
+            if(confirmed&&room==selected)refresh(selected)
         }
     }
     val requested=HollywoodNotifications.target
@@ -150,21 +169,27 @@ import androidx.lifecycle.repeatOnLifecycle
                 TextButton({jobs.launch{catalog.refresh()}},Modifier.testTag("native-room-catalog-retry")){BilingualLabel("Retry")}
             }
             if(catalog.available&&rooms.isEmpty())BilingualLabel("No rooms available",Modifier.padding(16.dp),color=Muted)
-            WorkCatalogList(Modifier.weight(1f),reverseLayout=false){
+            WorkCatalogList(Modifier.weight(1f),reverseLayout=true){
                 val ordered=rooms.sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
                 items(ordered,key={it.s("id")}){item->
                     HollywoodRoomCard(item,catalog.available){choose(item.s("id"))}
                 }
             }
-            Row(Modifier.padding(16.dp)){TextButton({browsing=false}){BilingualLabel("Back")};ProfileSwitcher{};TextButton(onSettings){BilingualLabel("Settings")}}
+            Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){TextButton({browsing=false},Modifier.weight(1f)){BilingualLabel("Back")};Box(Modifier.weight(2f)){ProfileSwitcher{}};TextButton(onSettings,Modifier.weight(1f)){BilingualLabel("Settings")}}
         };return
     }
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding().padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
             Box(Modifier.weight(1f)){
             TextButton({addressMenu=true},Modifier.fillMaxWidth().testTag("native-room-address")){
-                val address=detail.optJSONObject("room")?.s("name").orEmpty()+" · "+(if(direct)"Private " else "")+(if(postOnly)"Message" else "Request")+" → "+(agentNames[destination]?:"Choose recipient")
-                Text(address,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                    Text(detail.optJSONObject("room")?.s("name").orEmpty(),Modifier.weight(1f),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    BilingualLabel(if(direct)"Private" else "Room")
+                    BilingualLabel(if(postOnly)"Message" else "Request")
+                    Text("→")
+                    if(agentNames[destination]!=null)Text(agentNames.getValue(destination),Modifier.weight(1f),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    else BilingualLabel("Choose recipient")
+                }
             }
             DropdownMenu(addressMenu,{addressMenu=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp).semantics{testTagsAsResourceId=true},
                 properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
@@ -175,12 +200,11 @@ import androidx.lifecycle.repeatOnLifecycle
             scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->TextButton({recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";addressMenu=false}){BilingualLabel("Saved message",centered=false);Text(" · "+(agentNames[saved.recipient]?:saved.recipient))}}}
             }
             }
-            TextButton({workflow=true},modifier=Modifier.testTag("native-room-work")){BilingualLabel("Goals & work")}
         }
         if(error.isNotBlank())Text(error,color=Coral)
         if(feed.historyError.isNotBlank())Text("Messages need refreshing · "+feed.historyError,color=Coral,modifier=Modifier.testTag("native-room-read-error"))
         if(feed.loading&&events.isEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().testTag("native-room-loading"))
-        if(notice.isNotBlank())Text(notice,color=Muted)
+        if(notice.isNotBlank())BilingualLabel(notice,centered=false,color=Muted)
         if(feed.catchingUp)Text("Loading missed messages…",color=Muted,modifier=Modifier.testTag("native-room-gap"))
         LazyColumn(Modifier.weight(1f).testTag("native-room-history"),state=list,verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(older!=null)item(key="room-history-edge"){
@@ -189,7 +213,14 @@ import androidx.lifecycle.repeatOnLifecycle
             }
             itemsIndexed(transcript.rows,key={_,row->row.s("id")}){index,row->
                 Column(verticalArrangement=Arrangement.spacedBy(7.dp)){
-                    if(roomAuthorStartsBlock(transcript.rows,index))Text(row.s("roomAuthor"),color=Mint,style=MaterialTheme.typography.labelMedium)
+                    if(roomAuthorStartsBlock(transcript.rows,index))Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        if(row.s("roomAuthor")=="You")BilingualLabel("You",color=Mint)else Text(row.s("roomAuthor"),color=Mint,style=MaterialTheme.typography.labelMedium)
+                        if(row.s("roomAudience")=="direct"){
+                            BilingualLabel("Private",Modifier.testTag("native-room-private-context"),color=Muted)
+                            if(row.s("roomRecipient")==client.principalId)BilingualLabel("To you",color=Muted)
+                            else agentNames[row.s("roomRecipient")]?.let{Text("→ "+it,color=Muted,style=MaterialTheme.typography.labelMedium)}
+                        }
+                    }
                     val group=transcript.groups[row.s("id")]
                     if(group!=null){val opened=group.any{it.s("id") in expanded};CommandRunsHeader(group,opened){val keys=group.map{it.s("id")}.toSet();expanded=if(opened)expanded-keys else expanded+keys}}
                     else if(isCommandRun(row))ActivityRow(row,fullyExpanded=true)
@@ -215,29 +246,11 @@ import androidx.lifecycle.repeatOnLifecycle
                 }
             }
         }
-        val active=detail.optJSONArray("deliveries")?.objects().orEmpty().sortedBy{when(it.s("state")){"running"->0;"claimed"->1;"pending"->2;else->3}}
-        if(feed.detailError.isNotBlank())Text("Work status unavailable · "+feed.detailError,color=Muted)
-        else if(!feed.loading&&detail.has("room")&&active.isEmpty())Text("Idle in this room",color=Muted,modifier=Modifier.testTag("native-room-idle"))
-        if(active.isNotEmpty())Column(Modifier.heightIn(max=120.dp).verticalScroll(rememberScrollState())){
-            active.forEach{delivery->
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                    Text((agentNames[delivery.s("agent")]?:"Agent")+" · "+roomDeliveryLabel(delivery),modifier=Modifier.weight(1f),color=if(delivery.s("state")=="running")Mint else Muted)
-                    if(delivery.optBoolean("can_steer"))TextButton({guidance=delivery.getJSONObject("control_scope")},modifier=Modifier.testTag("native-guide:"+delivery.s("id"))){BilingualLabel("Guide")}
-                    if(delivery.optBoolean("can_cancel"))TextButton({
-                        val selected=room;jobs.launch{try{
-                            client.call("deliveries/"+delivery.s("id")+"/cancel",JSONObject())
-                            if(room==selected)notice="Stop requested"
-                            refresh(selected)
-                        }catch(e:Exception){if(e is CancellationException)throw e;error=e.message.orEmpty()}}
-                    },Modifier.testTag("native-stop:"+delivery.s("id"))){BilingualLabel("Stop")}
-                }
-            }
-        }
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
         ConversationComposerRow{
             RoomDraftComposerScope{
             ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f),enabled=!busy,
-                onSend={if(pending==null&&inputState.value.text.isNotBlank())send()},placeholder={BilingualLabel("Message…",centered=false)})
+                onSend={if(!busy&&pending==null&&inputState.value.text.isNotBlank()&&detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true)send()},placeholder={BilingualLabel("Message…",centered=false)})
             }
             ConversationSendButton(hasDraft,scope!=null&&!busy&&pending==null&&hasDraft&&
                 detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true,busy,"Send message"){send()}
@@ -250,16 +263,23 @@ import androidx.lifecycle.repeatOnLifecycle
         }
         FlowRow(Modifier.fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.SpaceEvenly){
         InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-        ConversationActionsMenu(menu,{menu=it},statusLabel=if(feed.detailError.isNotBlank())"Status unavailable" else if(detail.optJSONArray("deliveries")?.objects().orEmpty().any{it.s("state")=="running"})"Running" else "Room"){
-            AccountUsageDetails()
+        ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,bottomActions=true){
+            val account=Pocket.weeklyUsage
+            if(account.remainingPercent!=null)Text(account.remainingLabel(),color=Muted)
+            account.credits.compact()?.let{Text(it,color=Muted)}
+            if(account.remainingPercent==null&&account.credits.compact()==null)BilingualLabel("Account usage unavailable",centered=false,color=Muted)
+            PocketUpdateControl()
             TextButton({menu=false;browsing=true},Modifier.testTag("native-room-catalog")){BilingualLabel("Rooms")}
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             ProfileSwitcher{menu=false}
+            val context=androidx.compose.ui.platform.LocalContext.current
+            TextButton({menu=false;context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}
             client.savedGuidanceScopes(room).forEach{saved->
                 TextButton({guidance=saved;menu=false},modifier=Modifier.testTag("native-guidance-saved:"+saved.s("deliveryId")+":"+saved.s("nativeTurn"))){Text("Saved guidance · "+(client.guidancePending(saved)?.s("state")?:"draft"))}
             }
-
-
+            TextButton({menu=false;workflow=true},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-workflow")){BilingualLabel("Goals & work")}
+            RoomWorkControls(work,agentNames,client,room,stopping,feed.detailError,feed.attentionError,
+                onAttention={menu=false;inspecting=it},onGuidance={menu=false;guidance=it},onStop={target,inspect->stop(target,inspect)})
         }
         if(!following||list.canScrollForward)TextButton({following=true;jobs.launch{feed.refreshHistory(preferTail=true);withFrameNanos{};if(list.layoutInfo.totalItemsCount>0)list.scrollToItem(list.layoutInfo.totalItemsCount-1)}},Modifier.heightIn(min=48.dp).testTag("native-room-latest")){BilingualLabel("Latest")}
         ReaderPagingButtons(list,hasEarlier=feed.older!=null,onPrepare={up->
@@ -380,6 +400,7 @@ internal fun roomDeliveryLabel(delivery:JSONObject):String {
         "pending"->"Queued"
         "claimed"->"Starting"
         "running"->if(delivery.optBoolean("cancellation_requested"))"Stop requested" else "Running"
+        "cancel_requested"->"Stop requested"
         "blocked"->"Blocked"
         "unknown"->"Outcome unknown"
         "completed"->"Execution completed"
