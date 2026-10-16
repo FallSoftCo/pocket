@@ -1,8 +1,9 @@
 import {spawnSync} from 'node:child_process';
-import {copyFileSync,mkdirSync,readFileSync,writeFileSync,readdirSync,existsSync,statfsSync,rmSync} from 'node:fs';
+import {copyFileSync,mkdirSync,readFileSync,writeFileSync,readdirSync,existsSync,rmSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {join,resolve,isAbsolute,relative} from 'node:path';
 import {hostname} from 'node:os';
+import {checkBuildStorage} from './build-storage.mjs';
 import {productionSourceSha,qualificationInputSha,fileSha,sha256} from './release-qualification.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url));
 for(const key of ['POCKET_SIGNING_STORE','POCKET_SIGNING_PASSWORD','POCKET_RELEASE_STAGE','NEXTCOMP_BUILD_HOST'])if(!process.env[key])throw Error(`${key} is required; see docs/RELEASING.md.`);
@@ -19,7 +20,7 @@ mkdirSync(stage,{recursive:true,mode:0o700});const directory=join(stage,'app-upd
 const policy=JSON.parse(readFileSync(join(root,'scripts/release-policy.json'),'utf8'));
 const record={schema:1,state:'building',startedAt:Date.now(),productionSourceBefore:productionSourceSha(root),qualificationInputSha:qualificationInputSha(root),policySha:sha256(Buffer.from(JSON.stringify(policy))),tasks:[]};
 writeFileSync(join(directory,'build-intent.json'),JSON.stringify(record,null,2)+'\n',{flag:'wx',mode:0o600});
-const run=(command,args,env=process.env,cwd=root)=>{const disk=statfsSync(stage);if(disk.bavail*disk.bsize<80*1024**3+512*1024**2)throw Error('Build recovery reserve unavailable.');const r=spawnSync(command,args,{cwd,env,stdio:'inherit'});if(r.status!==0)throw Error(`Release command did not complete: ${command} (${r.status??r.signal})`);};
+const run=(command,args,env=process.env,cwd=root)=>{const storage=checkBuildStorage(stage);(record.storageChecks??=[]).push({at:Date.now(),...storage});const r=spawnSync(command,args,{cwd,env,stdio:'inherit'});if(r.status!==0)throw Error(`Release command did not complete: ${command} (${r.status??r.signal})`);};
 const unit=variant=>{const directory=join(root,'android/app/build/test-results/test'+variant+'UnitTest');const result={tests:0,failures:0,errors:0,skipped:0};for(const name of readdirSync(directory).filter(n=>/^TEST-.+\.xml$/.test(n))){const xml=readFileSync(join(directory,name),'utf8'),header=xml.match(/<testsuite\s[^>]+>/)?.[0];if(!header)throw Error('Invalid JUnit output.');for(const key of Object.keys(result)){const value=header.match(new RegExp('\\b'+key+'="(\\d+)"'))?.[1];if(value===undefined)throw Error('Incomplete JUnit output.');result[key]+=Number(value);}}if(!result.tests||result.failures||result.errors||result.skipped>=result.tests)throw Error('Unit checks failed or unavailable.');return result;};
 try{
  // Incremental ZIP packaging can retain large dead gaps after input changes.
