@@ -1,6 +1,6 @@
 {
   "versionCode": 124,
-  "state": "candidate-not-published",
+  "state": "qualified; OZZZ update channel published; original source channel transfer in progress",
   "native": {
     "hardwareStartStop": true,
     "heldKeysDoNotDoubleToggle": true,
@@ -17,6 +17,16 @@
   "limits": [
     "Synthetic loopback fixture explicitly has no audio provider or business workers. No transcription/send/TTS claim.",
     "Phone responsiveness remains unverified; await optional user-created local trace.",
-    "Signed optimized release and current native gate must complete before publication."
-  ]
+    "Original source update channel copy/publication and physical phone installation tracked separately; no service restart."
+  ],
+  "release": {
+    "versionCode": 124,
+    "versionName": "0.5.0-alpha.106",
+    "source": "670eab4",
+    "phoneCompatibleApkSha256": "112a3f6ac36b2d222bb0c17d8e7c8145efc32ff45cef03b46d8b41938f3c96dd",
+    "nativeCases": 6,
+    "optimizedRelease": true,
+    "nonSignaturePayloadEntriesVerified": 296,
+    "physicalPhoneInstalled": false
+  }
 }
