@@ -23,15 +23,17 @@ NextComp is a self-hosted Android interface for working with agents on your own 
 
 
 
+The native enterprise path connects authenticated human rooms in **Hollywood** to **LAX native workers**. Accepting a message, executing work and accepting a result are separate states. Existing stock Codex and phone-local profiles remain available; selecting an environment preserves its pairing and source-bound drafts. [Canonical rooms and current limits](docs/HOLLYWOOD-ROOMS.md).
+
 **Experimental alpha.** NextComp is an independent [FallSoft](https://github.com/fallsoftco) project. It uses Codex's experimental app-server; compatibility and native voice depend on the CLI and account. See the [tested environments and limitations](docs/CAPABILITIES.md) before installing.
 
 ## Native interface
 
-The published **alpha91** compatible signed APK passed 48 native regression journeys, including search, conversation freshness and ordering, retained history, voice/keyboard drafts, and inline immersion. Its signed search capture is below. The adjacent **alpha92 candidate** shows the stronger idle treatment: cool, glow-free idle cards; brighter working cards; coral when your answer is needed. That candidate passed the native card interaction check and is undergoing its complete release gate. These are synthetic emulator captures. Alpha91's compatible APK reached the phone's Downloads folder and was hash-verified; installation and physical interaction remain unverified. [Alpha91 evidence](docs/qualification/alpha91-20261012.json) · [Idle candidate evidence](docs/qualification/idle-emphasis-20261012.json).
+The **alpha105 / code123** native-room release shows newest canonical Hollywood messages while preserving accepted receipts, unsent drafts and older history. Room work has explicit queued, running, waiting and unavailable states; Guide, Stop and original-receipt checks share the footer menu. A lost Stop reply is recovered by reading the original delivery, never by repeating the write.
 
-<p align="center"><img src="docs/images/list-alpha93.png" width="240" alt="Published alpha93: compact footer, direct voice, volume cycling and session paging"><img src="docs/images/conversation-alpha93.png" width="240" alt="Published alpha93: conversation updating state and consolidated reading controls"></p>
+<p align="center"><img src="docs/images/native-room-alpha105.png" width="300" alt="Alpha105 optimized Android room: newest canonical request, folded Operations, retained draft, send and bottom reading/work controls"></p>
 
-These are synthetic native-emulator captures of the shipped signed APK. They show the current controls; they are not physical-phone performance evidence.
+This is an actual optimized Android capture against an isolated real Hollywood authority with QA content. No business agent or model was activated. Five focused native journeys qualified room state, reopening, typing, reconnect and lost-acknowledgement recovery; the exact signed APK and evidence are recorded in [alpha105 qualification](docs/qualification/native-room-controls-alpha105-20261016.json). This is not a physical-phone latency or native voice certification. The reported handset lag remains under investigation; an explicit 15-second local responsiveness report is available for diagnosis.
 
 The earlier [normal and large-text bottom-control qualification](docs/qualification/bottom-controls-large-text-20261011.json) remains available as historical evidence.
 
