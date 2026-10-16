@@ -1,31 +1,10 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {COMPUTER_USE_INSTRUCTIONS,newThreadComputerUseOptions,computerUseStatus} from '../server/computer-use.mjs';
-
-test('new browser guidance preserves other instructions and uses the single managed entry',()=>{
-  const result=newThreadComputerUseOptions('Existing voice policy');
-  assert.equal(result.developerInstructions,'Existing voice policy\n\n'+COMPUTER_USE_INSTRUCTIONS);
-  for(const tool of ['browser_discover','browser_command','browser_status','browser_control'])assert.ok(result.developerInstructions.includes(tool));
-  assert.match(COMPUTER_USE_INSTRUCTIONS,/Never add an outer manual lease/);
-  assert.match(COMPUTER_USE_INSTRUCTIONS,/Existing accepted legacy tickets/);
-  assert.match(COMPUTER_USE_INSTRUCTIONS,/BLD retains/);
-  assert.doesNotMatch(COMPUTER_USE_INSTRUCTIONS,/client\.withLease|COMPUTER_USE_BROKER_TOKEN|worker\.env/);
-});
-test('unconfigured broker does not make a request; unavailable status cannot disclose secrets',async()=>{
-  let calls=0;
-  assert.deepEqual(await computerUseStatus({env:{},fetchImpl:()=>{calls++;}}),{configured:false,available:false,enforcement:'cooperative',reason:'not_configured'});
-  assert.equal(calls,0);
-  const env={COMPUTER_USE_BROKER_TOKEN:'private-token'};
-  const status=await computerUseStatus({env,fetchImpl:()=>{throw Error('private-token and upstream details');}});
-  assert.equal(status.available,false);assert.equal(JSON.stringify(status).includes('private-token'),false);
-});
-test('broker status forwards only safe aggregate counts',async()=>{
-  let sent;
-  const status=await computerUseStatus({env:{COMPUTER_USE_BROKER_TOKEN:'private-token'},fetchImpl:async(url,options)=>{
-    sent={url:String(url),options};
-    return new Response(JSON.stringify({counts:{leases:2,queued:3,quarantined:-1},token:'private-token',leases:[{owner:'private-owner'}]}));
-  }});
-  assert.equal(sent.url,'http://127.0.0.1:9340/v1/status');
-  assert.equal(sent.options.headers.Authorization,'Bearer private-token');
-  assert.deepEqual(status,{configured:true,available:true,enforcement:'cooperative',activeLeases:2,queuedRequests:3});
-});
+import test from 'node:test';import assert from 'node:assert/strict';import http from 'node:http';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {computerUseStatus,newThreadComputerUseOptions,COMPUTER_USE_INSTRUCTIONS}from'../server/computer-use.mjs';
+test('preserves existing developer prefix and only supplies developer instructions',()=>{const r=newThreadComputerUseOptions('Existing voice/developer prefix');assert.deepEqual(Object.keys(r),['developerInstructions']);assert.equal(r.developerInstructions,'Existing voice/developer prefix\n\n'+COMPUTER_USE_INSTRUCTIONS);assert.equal(newThreadComputerUseOptions().developerInstructions,COMPUTER_USE_INSTRUCTIONS);});
+test('new entry describes unrestricted scripts, retained visual work and exact original IDs',()=>{for(const word of ['discover','resources','run','status','control','full Node','mature Playwright','desktop:main','multiple run submit','original owner/ID'])assert(COMPUTER_USE_INSTRUCTIONS.includes(word));assert(!COMPUTER_USE_INSTRUCTIONS.includes('9340'));assert(!COMPUTER_USE_INSTRUCTIONS.includes('Exceptions quarantine'));assert(!COMPUTER_USE_INSTRUCTIONS.includes('withLease({'));});
+test('missing socket does not contact retired HTTP broker even when old credentials exist',async()=>{let calls=0;const r=await computerUseStatus({env:{COMPUTER_USE_BROKER_TOKEN:'old-secret',COMPUTER_USE_BROKER_URL:'http://127.0.0.1:9340'},requestImpl:()=>{calls++;throw Error();}});assert.equal(r.configured,false);assert.equal(calls,0);});
+test('invalid socket cannot silently become TCP fallback',async()=>{const r=await computerUseStatus({env:{TRUSTED_BROKER_SOCKET:'http://127.0.0.1:9340'}});assert.equal(r.reason,'invalid_socket_configuration');});
+async function fixture(handler,fn){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'nextcomp-health-')),socket=path.join(dir,'broker.sock'),server=http.createServer(handler);await new Promise(r=>server.listen(socket,r));try{return await fn(socket);}finally{await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}}
+test('real private Unix socket health issues exactly one read-only events call and redacts results',async()=>{const bodies=[];await fixture(async(req,res)=>{let body='';for await(const c of req)body+=c;bodies.push(JSON.parse(body));res.end(JSON.stringify({result:[{seq:1,owner:'private-owner',id:'private-id',script:'private body',token:'secret'}]}));},async socket=>{const r=await computerUseStatus({env:{TRUSTED_BROKER_SOCKET:socket}});assert.equal(r.available,true);assert.equal(r.browserAccess,'not_checked');assert.equal(r.availabilityScope,'broker-control-plane');assert(!JSON.stringify(r).includes('private-owner'));assert(!JSON.stringify(r).includes('secret'));assert.deepEqual(bodies,[{method:'events',input:{owner:'nextcomp:health',after:0}}]);});});
+test('malformed or old broker response is unavailable, not healthy process liveness',async()=>{for(const value of [{counts:{}},{result:{}},'not-json'])await fixture((q,s)=>s.end(typeof value==='string'?value:JSON.stringify(value)),async socket=>assert.equal((await computerUseStatus({env:{TRUSTED_BROKER_SOCKET:socket}})).available,false));});
+test('socket refusal is actionable and credential-free',async()=>{const r=await computerUseStatus({env:{TRUSTED_BROKER_SOCKET:'/tmp/nonexistent-nextcomp-health.sock',COMPUTER_USE_BROKER_TOKEN:'private-token'}});assert.equal(r.reason,'broker_unavailable');assert(!JSON.stringify(r).includes('private-token'));});
+test('health wait is bounded and submits no execution request',async()=>{await fixture((q,s)=>{q.resume();},async socket=>{const start=Date.now();const r=await computerUseStatus({env:{TRUSTED_BROKER_SOCKET:socket},timeoutMs:30});assert.equal(r.available,false);assert(Date.now()-start<1000);});});
