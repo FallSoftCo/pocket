@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha107-shared-room-feeds-natural-grammar-idle-chroma",
+  "qualification": "alpha110-durable-independent-recording-intake",
   "requiredNativeCases": [
     "co.fallsoft.pocket.HollywoodRoomActivityNativeTest#aggregateFailureAndQuietSnapshotNeverInventIdleOrLoseRoomTarget",
     "co.fallsoft.pocket.HollywoodCatalogLiveNativeTest#actualCatalogCountsAndOriginalAcceptedMessageSurviveListAndRoomReopening",
@@ -9,14 +9,17 @@
     "co.fallsoft.pocket.HollywoodRoomControlsNativeTest#stopLostAcknowledgementAndLocalSlowdownReportKeepOriginalIdentity",
     "co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable",
     "co.fallsoft.pocket.NaturalImmersionNativeTest#naturalParagraphsKeepNativeSpacingAndGlobalWaveRunsWhileTyping",
-    "co.fallsoft.pocket.WorkCardReadabilityNativeTest#idleIsChromaticNotDisabledAndStillOpens"
+    "co.fallsoft.pocket.WorkCardReadabilityNativeTest#idleIsChromaticNotDisabledAndStillOpens",
+    "co.fallsoft.pocket.VoiceTurnStoreNativeTest#independentCaptureDeliveryAndPlaybackSurviveReopen",
+    "co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#captureStartsAndStopsIndependentlyOfPresentationState"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
     "Optimized code/resource/manifest payload is qualified with a separate test-only signature; phone signer and actual published APK hashes verified separately",
     "Software emulator key-to-draw timing does not establish handset optical latency, physical voice or FCM display",
     "Existing account/voice/profile/question/receipt code is retained; physical-phone validation remains separate",
-    "Native volume/IME/AudioRecord is checked against an explicit no-provider fixture; physical phone/provider transcript and TTS remain unqualified."
+    "Native volume/IME/AudioRecord is checked against an explicit no-provider fixture; physical phone/provider transcript and TTS remain unqualified.",
+    "Incremental recording delivery: existing installed speech renderer/cache policy retained. Experimental rendered speech path is not enabled or qualified. No paid API or model switch."
   ],
   "requiredOptimizedReview": "native-room-catalog-and-typing"
 }

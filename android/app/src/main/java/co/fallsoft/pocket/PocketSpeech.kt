@@ -347,7 +347,7 @@ class PocketSpeechService:Service(){
     }
     private fun armTimeout(){handler.removeCallbacks(timeout);handler.postDelayed(timeout,90000)}
     private fun audioFile():File?=spokenChunk?.let{chunk->
-        val hash=MessageDigest.getInstance("SHA-256").digest(("native-account-file-v1:"+renderedLanguage+":"+chunk).toByteArray()).joinToString(""){"%02x".format(it)}
+        val hash=MessageDigest.getInstance("SHA-256").digest(("native-account-v1:"+renderedLanguage+":"+chunk).toByteArray()).joinToString(""){"%02x".format(it)}
         File(PocketSpeech.directory,"$hash.wav")
     }
     private val checkedAttention=mutableSetOf<Long>()

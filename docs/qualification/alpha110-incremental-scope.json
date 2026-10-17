@@ -1,0 +1,6 @@
+{
+  "scope": "Independent durable recording intake and source-bound recovery controls",
+  "preserved": "Existing installed native speech renderer, native-account speech prompt/append call and audio-cache policy retained verbatim for compatibility. New backend asset renderer disabled by default and unused by this Android release.",
+  "notClaimed": "Reliable replacement TTS, physical phone voice or full autonomous enterprise completion.",
+  "pending": "Versioned compatible build and controlled publication; no new production restart/install."
+}

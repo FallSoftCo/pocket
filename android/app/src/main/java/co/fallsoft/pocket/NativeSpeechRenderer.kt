@@ -1,72 +1,64 @@
 package co.fallsoft.pocket
 
 import android.content.Context
+import android.util.Base64
 import kotlinx.coroutines.*
 import okhttp3.*
+import java.io.IOException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.security.MessageDigest
-import java.util.UUID
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
-/** Source-bound verified audio assets. No microphone, WebView, task submission or API-key fallback. */
+/** Account-authenticated rendering only: no microphone permission, coordinator or paid API. */
 internal class NativeSpeechRenderer(private val context:Context,private val endpoint:String,private val credential:String){
-    private suspend fun read(path:String,body:JSONObject?=null,audio:Boolean=false):ByteArray=suspendCancellableCoroutine{continuation->
+    private suspend fun api(path:String,body:JSONObject):JSONObject=suspendCancellableCoroutine{continuation->
         val request=Request.Builder().url(endpoint.trimEnd('/')+path).header("Authorization","Bearer $credential")
-        if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
-        val call=Pocket.http.newCall(request.build());continuation.invokeOnCancellation{call.cancel()}
+            .post(body.toString().toRequestBody("application/json".toMediaType())).build()
+        val call=Pocket.http.newCall(request)
+        continuation.invokeOnCancellation{call.cancel()}
         call.enqueue(object:Callback{
             override fun onFailure(call:Call,e:IOException){if(continuation.isActive)continuation.resumeWithException(e)}
             override fun onResponse(call:Call,response:Response){response.use{
-                try{
-                    val limit=if(audio&&it.isSuccessful)16*1024*1024 else 65536
-                    val bytes=ByteArrayOutputStream()
-                    requireNotNull(it.body).byteStream().use{input->val buffer=ByteArray(8192);while(true){val n=input.read(buffer);if(n<0)break;require(bytes.size()+n<=limit){"Speech response exceeded its bounded size"};bytes.write(buffer,0,n)}}
-                    val value=bytes.toByteArray()
-                    if(!it.isSuccessful){val message=runCatching{JSONObject(value.toString(Charsets.UTF_8)).s("error")}.getOrNull();throw PocketApiException(it.code,(message?:"Speech server returned ${it.code}").replace(credential,"[credential]").take(300))}
-                    if(continuation.isActive)continuation.resume(value)
-                }catch(e:Exception){if(continuation.isActive)continuation.resumeWithException(e)}
+                try{val json=JSONObject(it.body?.string()?:"{}");if(!it.isSuccessful)throw IllegalStateException(json.s("error","Native speech unavailable"));if(continuation.isActive)continuation.resume(json)}
+                catch(e:Exception){if(continuation.isActive)continuation.resumeWithException(e)}
             }}
         })
     }
-    private suspend fun api(path:String,body:JSONObject?=null)=JSONObject(read(path,body).toString(Charsets.UTF_8))
-    private fun digest(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){"%02x".format(it)}
-    suspend fun render(text:String):ByteArray=withContext(Dispatchers.IO){
-        require(text.isNotBlank()&&text.length<=2000){"Speech passage must be split into bounded chunks"}
+    suspend fun render(text:String):ByteArray=withContext(Dispatchers.Main.immediate){
+        val connected=CompletableDeferred<Unit>();val audio=CompletableDeferred<ByteArray>()
+        var connection:String?=null;var transport:NativeVoiceAudio?=null
         val began=android.os.SystemClock.elapsedRealtime();SpeechUsage.add("attempts")
-        var id:String?=null;var attempt:String?=null;var completed=false
+        val jobs=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
         try{
-            val capability=api("/api/voice/native/capabilities")
-            check(capability.optInt("renderedSpeechVersion")>=1){"This environment needs its native audio asset update. Your text is kept."}
-            val key=digest((capability.getString("speechPolicy")+":"+text).toByteArray(Charsets.UTF_8));id=key
-            attempt=UUID.randomUUID().toString()
-            var receipt=api("/api/voice/renderings/$key",JSONObject().put("text",text).put("attemptId",attempt))
-            attempt=receipt.getString("attemptId");val cached=receipt.optBoolean("cacheHit")
-            val deadline=android.os.SystemClock.elapsedRealtime()+180000
-            while(receipt.s("phase")!="completed"){
-                check(receipt.s("id")==key){"Speech receipt belongs to another passage"}
-                check(receipt.s("phase") in setOf("queued","rendering")){receipt.s("error","Speech generation stopped; your text is kept")}
-                check(android.os.SystemClock.elapsedRealtime()<deadline){"Speech generation exceeded its deadline; your text is kept"}
-                delay(1000);receipt=api("/api/voice/renderings/$key")
+            transport=NativeVoiceAudio(context,explicitCompletion=true){kind,data->
+                when(kind){
+                    "offer"->jobs.launch{try{val answer=api("/api/voice/native/start",JSONObject().put("sdp",data).put("purpose","speech"));connection=answer.s("id");transport?.answer(answer.s("sdp"))}catch(e:Exception){connected.completeExceptionally(e)}}
+                    "connected"->connected.complete(Unit)
+                    "error"->{val error=IllegalStateException(data);connected.completeExceptionally(error);audio.completeExceptionally(error)}
+                    "audio"->try{val payload=JSONObject(data);if(payload.optLong("token")==1L){val encoded=payload.s("data");require(encoded.length<=24*1024*1024){"Native speech exceeded its size limit"};val bytes=Base64.decode(encoded,Base64.DEFAULT);require(validNativeSpeechAudio(bytes)){"Native speech returned invalid audio"};audio.complete(bytes)}}catch(e:Exception){audio.completeExceptionally(e)}
+                }
             }
-            check(receipt.s("id")==key){"Speech receipt belongs to another passage"}
-            val bytes=read("/api/voice/renderings/$key/audio",audio=true)
-            check(bytes.size.toLong()==receipt.getLong("bytes")&&digest(bytes)==receipt.getString("audioSha256")&&validNativeSpeechAudio(bytes)){"Saved speech failed integrity verification; your text is kept"}
-            completed=true
-            if(cached)SpeechUsage.add("cacheHits")else{
-                SpeechUsage.add("generated");val duration=receipt.optLong("durationMs")
-                if(duration>0)SpeechUsage.add("generatedMs",duration)else SpeechUsage.add("unknownDuration")
+            withTimeout(35000){connected.await()}
+            requireNotNull(transport).speak(1L,text)
+            api("/api/voice/native/speak",JSONObject().put("connectionId",connection).put("text",text))
+            val bytes=withTimeout(90000){audio.await()}
+            SpeechUsage.add("generated");SpeechUsage.add("bytes",bytes.size.toLong())
+            withContext(Dispatchers.IO){
+                val file=java.io.File.createTempFile("speech-duration-",".webm",context.cacheDir)
+                val metadata=android.media.MediaMetadataRetriever()
+                try{file.writeBytes(bytes);metadata.setDataSource(file.path);val duration=metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull();if(duration!=null&&duration>0)SpeechUsage.add("generatedMs",duration) else SpeechUsage.add("unknownDuration")}
+                catch(_:Exception){SpeechUsage.add("unknownDuration")}
+                finally{metadata.release();file.delete()}
             }
-            SpeechUsage.add("bytes",bytes.size.toLong());bytes
+            bytes
         }catch(e:CancellationException){SpeechUsage.add("cancelled");throw e}
         catch(e:Exception){SpeechUsage.add("failed");throw e}
         finally{
             SpeechUsage.add("renderMs",android.os.SystemClock.elapsedRealtime()-began)
-            if(!completed&&id!=null&&attempt!=null)withContext(NonCancellable){withTimeoutOrNull(5000){runCatching{api("/api/voice/renderings/$id/cancel",JSONObject().put("attemptId",attempt))}}}
+            transport?.close();jobs.cancel()
+            withContext(NonCancellable){connection?.let{id->withTimeoutOrNull(5000){try{api("/api/voice/native/stop",JSONObject().put("connectionId",id))}catch(_:Exception){}}}}
         }
     }
 }

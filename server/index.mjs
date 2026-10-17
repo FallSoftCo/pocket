@@ -163,6 +163,7 @@ const nativeAudioPython=process.env.POCKET_NATIVE_AUDIO_PYTHON||null;
 const remoteAudioCommand=process.env.POCKET_NATIVE_AUDIO_REMOTE?JSON.parse(process.env.POCKET_NATIVE_AUDIO_REMOTE):null;
 const nativeAudioIntake=!!(nativeAudioPython||remoteAudioCommand);
 const nativeTranscriber=remoteAudioCommand?new RemoteAudioTranscriber(remoteAudioCommand):new NativeAudioTranscriber({voice:nativeVoice,python:nativeAudioPython});
+const nativeSpeechEnabled=!!nativeAudioPython&&process.env.POCKET_NATIVE_SPEECH_ASSETS==='1';
 const nativeSpeechMedia=new NativeSpeechMedia({voice:nativeVoice,python:nativeAudioPython});
 const voiceRenderings=new VoiceRenderings({db,root:resolve(dir,'voice-renderings'),render:request=>nativeSpeechMedia.render(request)});
 const voiceRecordings=new VoiceRecordings({
@@ -578,9 +579,9 @@ app.post('/api/voice/start',route(async(req,res)=>{
   if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);
   res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),native:true});
 }));
-app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,immutableDestination:true,recordingDigest:true,durableAudioAdmission:nativeAudioIntake,renderedSpeechVersion:nativeAudioPython?1:0,speechPolicy:SPEECH_POLICY}));
+app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,immutableDestination:true,recordingDigest:true,durableAudioAdmission:nativeAudioIntake,renderedSpeechVersion:nativeSpeechEnabled?1:0,speechPolicy:SPEECH_POLICY}));
 app.post('/api/voice/renderings/:id',route(async(req,res)=>{
- if(!nativeAudioPython)throw Object.assign(Error('Native rendered speech is not installed on this environment. Text remains available.'),{status:503});
+ if(!nativeSpeechEnabled)throw Object.assign(Error('Native rendered speech is not installed on this environment. Text remains available.'),{status:503});
  res.status(202).json(await voiceRenderings.create(req.device.id,req.params.id,req.body));
 }));
 app.get('/api/voice/renderings/:id',route(async(req,res)=>{
