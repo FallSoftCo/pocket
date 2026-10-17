@@ -10,6 +10,14 @@ const canonical=value=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!A
 const phases={receiving:'uploading',sealing:'uploading',ready:'queued',transcribing:'transcribing',transcribed:'transcribing',dispatching:'submitting',accepted:'thinking',unknown:'unknown',failed:'failed',cancelled:'cancelled',blocked:'blocked'};
 const token=v=>typeof v==='string'&&/^[a-zA-Z0-9_-]{8,100}$/.test(v);
 
+function admissionHash(device,{id,destination,audioSha256,bytes},principal){
+ if(!token(id)||!token(device)||!/^[a-f0-9]{64}$/.test(audioSha256)||!Number.isSafeInteger(bytes)||bytes<3244||bytes>3840044||!destination||typeof destination!=='object'||Array.isArray(destination))
+  throw fail('Invalid recorded turn identity, destination, digest or size.');
+ if(!principal||principal.deviceId!==device||!['paired-device','voice'].includes(principal.kind))
+  throw fail('A recording requires its original authenticated human device.',403);
+ return hash(canonical({destination,audioSha256,bytes}));
+}
+
 /** Durable authenticated audio admission. Media processing cannot dispatch tasks. */
 export class VoiceRecordings {
  constructor({db,root,resolveDestination,transcribe,submit,getReceipt,authorize,cancelTask=null,minFreeBytes=80*1024**3}){
@@ -35,11 +43,7 @@ export class VoiceRecordings {
    response:result?.response||'',actions:result?.actions||[],error:row.error||result?.error||null};
  }
  async create(device,{id,destination,audioSha256,bytes},principal){
-  if(!token(id)||!token(device)||!/^[a-f0-9]{64}$/.test(audioSha256)||!Number.isSafeInteger(bytes)||bytes<3244||bytes>3840044)
-   throw fail('Invalid recorded turn identity, digest or size.');
-  if(!principal||principal.deviceId!==device||!['paired-device','voice'].includes(principal.kind))
-   throw fail('A recording requires its original authenticated human device.',403);
-  const requestHash=hash(canonical({destination,audioSha256,bytes}));
+  const requestHash=admissionHash(device,{id,destination,audioSha256,bytes},principal);
   const old=this.row(device,id);
   if(old){if(old.request_hash!==requestHash)throw fail('This turn ID belongs to another recording or destination.',409);return this.projection(old);}
   if(this.db.prepare("SELECT count(*) AS n FROM voice_recordings WHERE device=? AND phase NOT IN ('accepted','failed','cancelled')").get(device).n>=64)
@@ -170,8 +174,21 @@ export class VoiceRecordings {
   if(!changed.changes)throw fail('Recording state changed. Inspect its original receipt.',409);
   this.kick();return this.projection(this.row(device,id));
  }
- cancel(device,id){
-  const changed=this.db.prepare("UPDATE voice_recordings SET phase='cancelled',error=NULL WHERE device=? AND id=? AND phase IN ('receiving','sealing','ready','transcribing','transcribed')").run(device,id);
+ async cancel(device,id,metadata=null,principal=null){
+  let row=this.row(device,id);
+  const fingerprint=metadata?.audioSha256?admissionHash(device,{...metadata,id},principal):null;
+  if(!row){
+   if(!fingerprint)throw fail('Original recording admission not found. Preserve its identity before cancelling.',404);
+   if(await this.getReceipt(device,id))throw fail('This ID already belongs to work. Use its original controls.',409);
+   // Cancellation races admission through the same unique key. No destination
+   // resolution, transcription or task dispatch is needed to reject future upload.
+   this.db.prepare("INSERT OR IGNORE INTO voice_recordings(device,id,request_hash,destination,principal,audio_sha256,bytes,phase,created_at) VALUES(?,?,?,?,?,?,?,'cancelled',?)")
+    .run(device,id,fingerprint,JSON.stringify(metadata.destination),JSON.stringify(principal),metadata.audioSha256,metadata.bytes,Date.now());
+   row=this.row(device,id);
+  }
+  if(fingerprint&&row.request_hash!==fingerprint)throw fail('Cancellation belongs to another recording or destination.',409);
+  if(row.phase==='cancelled')return this.projection(row);
+  const changed=this.db.prepare("UPDATE voice_recordings SET phase='cancelled',error=NULL WHERE device=? AND id=? AND phase IN ('receiving','sealing','ready','transcribing','transcribed','failed','blocked')").run(device,id);
   if(!changed.changes)throw fail('This recording already reached task dispatch. Use the original work controls.',409);
   this.cancels.get(this.key(device,id))?.abort();
   return this.projection(this.row(device,id));

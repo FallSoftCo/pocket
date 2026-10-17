@@ -18,17 +18,17 @@ internal object DurableVoiceWork {
             if(!initialized){VoiceTurnStore(context,JOURNAL).use{it.recoverInterruptedOwner()};initialized=true}
         }
     }
-    fun enqueue(context:Context,key:String) {
+    fun enqueue(context:Context,key:String,cancellationIntent:Boolean=false) {
         val request=OneTimeWorkRequestBuilder<DurableVoiceWorker>()
             .setInputData(workDataOf("turnKey" to key))
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,30,TimeUnit.SECONDS).build()
-        WorkManager.getInstance(context).enqueueUniqueWork("durable-recording-"+key,ExistingWorkPolicy.KEEP,request)
+        WorkManager.getInstance(context).enqueueUniqueWork("durable-recording-"+key,if(cancellationIntent)ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.KEEP,request)
     }
     suspend fun restore(context:Context)=withContext(Dispatchers.IO) {
         initialize(context)
         VoiceTurnStore(context,JOURNAL).use { store ->
-            store.list().filter { it.capture==VoiceTurnStore.Capture.SEALED && it.delivery !in terminal }.forEach { enqueue(context,it.key) }
+            store.list().filter { it.cancellation==VoiceTurnStore.Cancellation.REQUESTED || it.capture==VoiceTurnStore.Capture.SEALED && it.delivery !in terminal }.forEach { enqueue(context,it.key) }
         }
     }
     val terminal=setOf(VoiceTurnStore.Delivery.COMPLETED,VoiceTurnStore.Delivery.FAILED,VoiceTurnStore.Delivery.CANCELLED)
@@ -41,26 +41,44 @@ class DurableVoiceWorker(context:Context,params:WorkerParameters):CoroutineWorke
         DurableVoiceWork.initialize(applicationContext)
         VoiceTurnStore(applicationContext,DurableVoiceWork.JOURNAL).use { store ->
             var turn=store.get(key)?:return@use Result.success()
-            if(turn.capture!=VoiceTurnStore.Capture.SEALED || turn.delivery in DurableVoiceWork.terminal)return@use Result.success()
+            if(turn.cancellation!=VoiceTurnStore.Cancellation.REQUESTED && (turn.capture!=VoiceTurnStore.Capture.SEALED || turn.delivery in DurableVoiceWork.terminal))return@use Result.success()
             val requests=VoiceTurnRequests(applicationContext)
             try {
                 val capability=requests.call(turn,"/api/voice/native/capabilities")
                 check(capability.optBoolean("durableAudioAdmission")) { "This environment needs its durable audio adapter. Recording remains saved." }
                 if(turn.delivery==VoiceTurnStore.Delivery.UNSUBMITTED) {
-                    store.claim(key);turn=requireNotNull(store.get(key))
+                    if(!store.claim(key))return@use Result.retry()
+                    turn=requireNotNull(store.get(key))
                 }
                 val path="/api/voice/recordings/"+turn.id
+                suspend fun cancelIfRequested():JSONObject? {
+                    turn=requireNotNull(store.get(key))
+                    if(turn.delivery==VoiceTurnStore.Delivery.CANCELLED)return JSONObject().put("id",turn.id).put("audioSha256",turn.sha256).put("state","cancelled")
+                    if(turn.cancellation!=VoiceTurnStore.Cancellation.REQUESTED)return null
+                    check(capability.optBoolean("cancellationTombstones")){"Cancellation saved; waiting for this environment's cancellation support."}
+                    val suffix=if(turn.cancelTarget==VoiceTurnStore.CancelTarget.QUEUED_REQUEST)"/cancel-request" else "/cancel"
+                    val metadata=JSONObject().put("destination",JSONObject(turn.origin.destination)).put("audioSha256",turn.sha256).put("bytes",turn.bytes)
+                    return try { requests.call(turn,path+suffix,metadata) }
+                    catch(e:PocketApiException) {
+                        if(e.status in setOf(400,403,409)){store.rejectCancellation(key,e.message?:"Cancellation was not accepted");throw e}
+                        throw e
+                    }
+                }
+                cancelIfRequested()?.let{store.cancelled(key,it);return@use Result.success()}
+                // A rejected cancellation can inspect an existing receipt, but cannot create or upload one.
+                val admissionAllowed={store.get(key)?.cancellation==VoiceTurnStore.Cancellation.NONE}
                 var receipt=try { requests.call(turn,path) }
                     catch(e:PocketApiException) {
-                        if(e.status!=404)throw e
+                        if(e.status!=404 || !admissionAllowed())throw e
                         // Retrying this admission ID cannot submit a task; the server rejects changed audio/destination.
                         requests.call(turn,"/api/voice/recordings",JSONObject().put("id",turn.id)
                             .put("destination",JSONObject(turn.origin.destination)).put("audioSha256",turn.sha256).put("bytes",turn.bytes))
                     }
-                if(receipt.optString("phase") in setOf("receiving","sealing"))
+                if(admissionAllowed() && receipt.optString("phase") in setOf("receiving","sealing"))
                     receipt=requests.call(turn,path+"/audio",audio=store.audio(turn))
                 // Keep the interactive path responsive; longer outages use WorkManager's durable bounded backoff.
                 repeat(40) {
+                    cancelIfRequested()?.let{store.cancelled(key,it);return@use Result.success()}
                     check(receipt.optString("id")==turn.id && receipt.optString("audioSha256")==turn.sha256) {
                         "Audio receipt does not belong to the original recording"
                     }

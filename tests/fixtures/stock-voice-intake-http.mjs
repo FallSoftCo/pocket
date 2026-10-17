@@ -23,7 +23,7 @@ wss.on('connection',ws=>ws.on('message',raw=>{
 await new Promise((resolve,reject)=>{host.once('error',reject);host.listen(socket,resolve)});
 const environment={PATH:process.env.PATH,HOME:process.env.HOME,PORT:String(port),POCKET_DATA:root+'/data',CODEX_SOCKET:socket,POCKET_CWD:root+'/work',POCKET_NATIVE_AUDIO_REMOTE:command};
 const probe=http.createServer();await new Promise((resolve,reject)=>{probe.once('error',reject);probe.listen(port,'127.0.0.1',resolve)});await new Promise(resolve=>probe.close(resolve));
-const output=await open(root+'/gateway.log','wx',0o600);gateway=spawn('/opt/node-v24.21.0-linux-x64/bin/node',[source+'/server/index.mjs'],{cwd:source,env:environment,stdio:['ignore',output.fd,output.fd],detached:true});await output.close();
+const output=await open(root+'/gateway.log','wx',0o600);gateway=spawn(process.execPath,[source+'/server/index.mjs'],{cwd:source,env:environment,stdio:['ignore',output.fd,output.fd],detached:true});await output.close();
 await writeFile(root+'/owner.json',JSON.stringify({owner:process.env.NEXTCOMP_QA_OWNER||'owned-stock-http-qualification',gatewayPid:gateway.pid,port,source,scope:'temporary isolated stock gateway; private synthetic runtime responses, cached native audio only; no business/model worker',productionChanged:false}),{mode:0o600});
 const report={scope:'actual HTTP/auth/durable audio -> explicit installation-owned media command -> stock coordinator queue, synthetic task runtime; NOT task model inference proof',productionChanged:false,phoneChanged:false,taskModelInferences:0};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -57,6 +57,7 @@ try {
  const last=starts[1];last.ws.send(JSON.stringify({method:'item/completed',params:{threadId:last.threadId,item:{type:'agentMessage',phase:'final_answer',text:'Synthetic third result'}}}));last.ws.send(JSON.stringify({method:'turn/completed',params:{threadId:last.threadId,turn:{id:last.turnId,status:'completed'}}}));
  let completed;await wait(async()=>{completed=await api('/api/voice/recordings/'+first);return completed.body.state==='completed'});
  const rejected=await api('/api/voice/recordings/'+first+'/retry-audio',{});assert(rejected.status===409,'Accepted request was replayable');
+ const {DatabaseSync}=await import('node:sqlite');const journal=new DatabaseSync(root+'/data/pocket.sqlite',{readOnly:true});const mediaReceipts=journal.prepare('SELECT proof FROM voice_recordings').all().map(row=>JSON.parse(row.proof));journal.close();report.cachedMediaReceipts=mediaReceipts.filter(row=>row.mediaCacheHit===true).length;report.totalMediaReceipts=mediaReceipts.length;
  report.passed=true;report.pairedHumanAdmission=true;report.independentQueuedRecording=true;report.queuedCancellation=true;report.recordingAudioSha256=sha;report.syntheticTaskStarts=starts.map(s=>s.requestId);report.acceptedAudioRetryStatus=rejected.status;report.originalCompletedResponse=completed.body.response;
 }catch(error){report.passed=false;report.error=error.message;process.exitCode=1;}
 finally {

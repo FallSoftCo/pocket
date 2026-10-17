@@ -56,7 +56,7 @@ test('cancelled transcription cannot dispatch even when a media callback returns
  try{
   await f.server.create(device,request('cancelled-turn-0001'),principal);await f.server.upload(device,'cancelled-turn-0001',audio);
   await f.server.start();while(!finish)await new Promise(r=>setTimeout(r,5));
-  f.server.cancel(device,'cancelled-turn-0001');finish();await settle(f.server);
+  await f.server.cancel(device,'cancelled-turn-0001');finish();await settle(f.server);
   assert.equal(f.server.row(device,'cancelled-turn-0001').phase,'cancelled');assert.equal(f.calls.submit,0);
  }finally{await f.close();}
 });
@@ -109,5 +109,23 @@ test('definite coordinator refusal preserves a final transcript for retry withou
   assert.equal(f.server.row(device,'definite-refusal-0001').phase,'failed');assert.equal(f.calls.transcribe,1);assert.equal(f.calls.submit,0);
   refuse=false;await f.server.retryAudio(device,'definite-refusal-0001');await settle(f.server);
   assert.equal(f.calls.transcribe,1);assert.equal(f.calls.submit,1);assert.equal((await f.server.inspect(device,'definite-refusal-0001')).state,'completed');
+ }finally{await f.close();}
+});
+
+test('cancel-before-admission is durable and fences an admission already awaiting resolution',async()=>{
+ let release,entered;
+ const reached=new Promise(resolve=>{entered=resolve});
+ const f=fixture({resolveDestination:async(_device,d)=>{entered();await new Promise(resolve=>{release=resolve});return d;}});
+ const id='cancel-admission-race-0001',input=request(id);
+ try {
+  const admission=f.server.create(device,input,principal);await reached;
+  assert.equal((await f.server.cancel(device,id,input,principal)).state,'cancelled');
+  release();assert.equal((await admission).state,'cancelled');
+  assert.equal((await f.server.upload(device,id,audio)).state,'cancelled');
+  await f.server.start();await settle(f.server);await f.reopen();
+  assert.equal((await f.server.cancel(device,id,input,principal)).state,'cancelled');
+  assert.equal((await f.server.create(device,input,principal)).state,'cancelled');
+  await assert.rejects(f.server.cancel(device,id,{...input,bytes:input.bytes+2},principal),/another recording/);
+  assert.equal(f.calls.transcribe,0);assert.equal(f.calls.submit,0);
  }finally{await f.close();}
 });

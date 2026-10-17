@@ -19,7 +19,7 @@ export function mountStockVoiceIntake(app,{db,dir,controller,humanIngress,resolv
    return controller.submitText(device,id,text,null,destination);
   }
  });
- app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,immutableDestination:true,recordingDigest:true,durableAudioAdmission:!!transcriber,renderedSpeechVersion:0}));
+ app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,immutableDestination:true,recordingDigest:true,durableAudioAdmission:!!transcriber,cancellationTombstones:true,renderedSpeechVersion:0}));
  app.post('/api/voice/recordings',route(async(req,res)=>{
   if(!transcriber)throw Object.assign(Error('This environment needs its native audio worker. Audio remains saved on your device.'),{status:503});
   res.status(202).json(await recordings.create(req.device.id,req.body,req.humanPrincipal));
@@ -32,7 +32,7 @@ export function mountStockVoiceIntake(app,{db,dir,controller,humanIngress,resolv
   const receipt=await recordings.inspect(req.device.id,req.params.id);
   if(!receipt)return res.status(404).json({error:'Recording admission not found.'});res.json(receipt);
  }));
- app.post('/api/voice/recordings/:id/cancel',route(async(req,res)=>res.json(recordings.cancel(req.device.id,req.params.id))));
+ app.post('/api/voice/recordings/:id/cancel',route(async(req,res)=>res.json(await recordings.cancel(req.device.id,req.params.id,req.body,req.humanPrincipal))));
  app.post('/api/voice/recordings/:id/cancel-request',route(async(req,res)=>res.json(await recordings.cancelRequest(req.device.id,req.params.id))));
  app.post('/api/voice/recordings/:id/retry-audio',route(async(req,res)=>{
   const receipt=await recordings.retryAudio(req.device.id,req.params.id);

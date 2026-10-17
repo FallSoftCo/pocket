@@ -23,12 +23,15 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
     }
     enum class Capture { RECORDING, SEALING, SEALED, INTERRUPTED }
     enum class Delivery { UNSUBMITTED, SUBMITTING, STORED, ACCEPTED, UNKNOWN, COMPLETED, FAILED, CANCELLED }
+    enum class Cancellation { NONE, REQUESTED, REJECTED, CONFIRMED }
+    enum class CancelTarget { RECORDING, QUEUED_REQUEST }
     enum class Playback { UNAVAILABLE, READY, PLAYING, PAUSED, COMPLETED, FAILED }
     data class Turn(
         val key: String, val id: String, val origin: Origin, val capture: Capture,
         val delivery: Delivery, val playback: Playback, val sha256: String?,
         val bytes: Long, val receipt: String?, val problem: String?, val createdAt: Long,
-        val revision: Long
+        val revision: Long, val cancellation: Cancellation = Cancellation.NONE,
+        val cancelTarget: CancelTarget = CancelTarget.RECORDING
     )
     private val root = File(context.noBackupFilesDir, name)
     private val helper: SQLiteOpenHelper
@@ -36,7 +39,7 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
         ioOnly()
         require(name.matches(Regex("[a-zA-Z0-9_-]+")))
         check(root.isDirectory || root.mkdirs())
-        helper = object : SQLiteOpenHelper(context, File(root, "journal.db").absolutePath, null, 1) {
+        helper = object : SQLiteOpenHelper(context, File(root, "journal.db").absolutePath, null, 2) {
             override fun onConfigure(db: SQLiteDatabase) {
                 db.setForeignKeyConstraintsEnabled(true)
                 db.execSQL("PRAGMA synchronous=FULL")
@@ -48,11 +51,14 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
                     capture TEXT NOT NULL, delivery TEXT NOT NULL, playback TEXT NOT NULL,
                     sha256 TEXT, bytes INTEGER NOT NULL DEFAULT 0, receipt TEXT, problem TEXT,
                     created_at INTEGER NOT NULL, revision INTEGER NOT NULL DEFAULT 0,
+                    cancellation TEXT NOT NULL DEFAULT 'NONE',cancel_target TEXT NOT NULL DEFAULT 'RECORDING',
                     UNIQUE(environment,pairing,id))""")
                 db.execSQL("CREATE INDEX voice_delivery ON turns(delivery,created_at)")
             }
             override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-                error("Unsupported voice journal upgrade: $oldVersion to $newVersion")
+                check(oldVersion==1 && newVersion==2){"Unsupported voice journal upgrade: $oldVersion to $newVersion"}
+                db.execSQL("ALTER TABLE turns ADD COLUMN cancellation TEXT NOT NULL DEFAULT 'NONE'")
+                db.execSQL("ALTER TABLE turns ADD COLUMN cancel_target TEXT NOT NULL DEFAULT 'RECORDING'")
             }
         }
         helper.writableDatabase
@@ -79,7 +85,7 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
         fun n(name: String) = cursor.getLong(cursor.getColumnIndexOrThrow(name))
         return Turn(s("turn_key"), s("id"), Origin(s("environment"),s("pairing"),s("endpoint"),s("destination")),
             Capture.valueOf(s("capture")), Delivery.valueOf(s("delivery")), Playback.valueOf(s("playback")),
-            s("sha256"), n("bytes"), s("receipt"), s("problem"), n("created_at"), n("revision"))
+            s("sha256"), n("bytes"), s("receipt"), s("problem"), n("created_at"), n("revision"), Cancellation.valueOf(s("cancellation")), CancelTarget.valueOf(s("cancel_target")))
     }
     fun get(key: String): Turn? = db.query("turns", null, "turn_key=?", arrayOf(key),null,null,null).use { if(it.moveToFirst()) row(it) else null }
     fun list(): List<Turn> = db.query("turns",null,null,null,null,null,"created_at,turn_key").use { cursor -> buildList { while(cursor.moveToNext()) add(row(cursor)) } }
@@ -131,7 +137,7 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
         return file
     }
     /** CAS prevents two schedulers from admitting the same local turn. Unknown is never eligible. */
-    fun claim(key: String): Boolean = db.compileStatement("UPDATE turns SET delivery='SUBMITTING',revision=revision+1 WHERE turn_key=? AND capture='SEALED' AND delivery='UNSUBMITTED'").use {
+    fun claim(key: String): Boolean = db.compileStatement("UPDATE turns SET delivery='SUBMITTING',revision=revision+1 WHERE turn_key=? AND capture='SEALED' AND delivery='UNSUBMITTED' AND cancellation='NONE'").use {
         it.bindString(1,key);it.executeUpdateDelete() == 1
     }
     /** Only definite pre-admission failures may release a claim for another attempt. */
@@ -144,6 +150,7 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
     fun retryAdmittedAudio(key:String,receipt:JSONObject):Turn {
         val old=requireNotNull(get(key))
         check(receipt.optString("audioSha256")==old.sha256 && receipt.optString("phase") in setOf("ready","transcribing","transcribed","dispatching","accepted")) { "Original audio retry was not confirmed" }
+        db.execSQL("UPDATE turns SET cancellation='NONE' WHERE turn_key=?",arrayOf(key))
         return transition(key,setOf(Delivery.FAILED,Delivery.STORED,Delivery.UNKNOWN),Delivery.SUBMITTING,receipt,null)
     }
     fun cancelled(key:String,receipt:JSONObject):Turn {
@@ -151,7 +158,29 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
         check(receipt.optString("state")=="cancelled" && receipt.optString("audioSha256")==old.sha256) { "Original recording cancellation was not confirmed" }
         return transition(key,setOf(Delivery.UNSUBMITTED,Delivery.SUBMITTING,Delivery.STORED,Delivery.ACCEPTED,Delivery.UNKNOWN,Delivery.FAILED),Delivery.CANCELLED,receipt,null)
     }
-    fun cancelUnsubmitted(key: String) = transition(key,setOf(Delivery.UNSUBMITTED),Delivery.CANCELLED,null,null)
+    /** An offline cancellation is an intent, never a fabricated server outcome. */
+    fun requestCancellation(key:String,target:CancelTarget):Turn {
+        val database=db;database.beginTransaction()
+        try {
+            val old=requireNotNull(get(key))
+            check(old.capture in setOf(Capture.SEALED,Capture.INTERRUPTED)){"Finish recording before cancelling"}
+            if(old.delivery !in setOf(Delivery.COMPLETED,Delivery.CANCELLED)) {
+                val local=old.delivery==Delivery.UNSUBMITTED
+                val values=ContentValues().apply {
+                    put("cancellation",if(local)Cancellation.CONFIRMED.name else Cancellation.REQUESTED.name)
+                    put("cancel_target",target.name);put("revision",old.revision+1)
+                    if(local)put("delivery",Delivery.CANCELLED.name)
+                    putNull("problem")
+                }
+                check(database.update("turns",values,"turn_key=? AND revision=?",arrayOf(key,old.revision.toString()))==1)
+            }
+            database.setTransactionSuccessful()
+        }finally{database.endTransaction()}
+        return requireNotNull(get(key))
+    }
+    fun rejectCancellation(key:String,reason:String) {
+        db.execSQL("UPDATE turns SET cancellation='REJECTED',problem=?,revision=revision+1 WHERE turn_key=? AND cancellation='REQUESTED'",arrayOf(reason,key))
+    }
     private fun transition(key: String, from: Set<Delivery>, to: Delivery, receipt: JSONObject?, problem: String?): Turn {
         val database = db;database.beginTransaction()
         try {
@@ -161,6 +190,7 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
                 check(old.delivery == to || old.delivery in from) { "Invalid voice delivery transition ${old.delivery} to $to" }
                 val values = ContentValues().apply {
                     put("delivery",to.name);put("revision",old.revision+1)
+                    if(to==Delivery.CANCELLED)put("cancellation",Cancellation.CONFIRMED.name)
                     if(receipt != null)put("receipt",receipt.toString())
                     if(problem != null)put("problem",problem)else putNull("problem")
                 }

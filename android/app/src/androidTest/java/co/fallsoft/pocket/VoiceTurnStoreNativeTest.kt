@@ -24,6 +24,15 @@ class VoiceTurnStoreNativeTest {
         var store = VoiceTurnStore(context,name)
         try {
             val first = store.seal(store.begin("original-turn-0001",origin).key,wav)
+            store.close()
+            android.database.sqlite.SQLiteDatabase.openDatabase(File(context.noBackupFilesDir,"$name/journal.db").absolutePath,null,0).use { db ->
+                db.execSQL("ALTER TABLE turns DROP COLUMN cancellation")
+                db.execSQL("ALTER TABLE turns DROP COLUMN cancel_target")
+                db.version=1
+            }
+            store=VoiceTurnStore(context,name)
+            assertEquals(VoiceTurnStore.Cancellation.NONE,store.get(first.key)!!.cancellation)
+            assertArrayEquals(wav,store.audio(store.get(first.key)!!).readBytes())
             assertTrue(store.claim(first.key))
             assertFalse(store.claim(first.key))
             // A second recording has independent storage even while the first send has no ACK.
@@ -78,6 +87,20 @@ class VoiceTurnStoreNativeTest {
             assertEquals(VoiceTurnStore.Capture.INTERRUPTED,store.get(interrupted.key)!!.capture)
             assertFalse(store.claim(interrupted.key))
             assertTrue(File(folder,"${interrupted.key}.capturing.pcm").exists())
+            // Offline cancellation persists independently of capture and delivery ownership.
+            val localCancelled=store.seal(store.begin("local-cancel-race-0006",origin).key,wav)
+            store.requestCancellation(localCancelled.key,VoiceTurnStore.CancelTarget.RECORDING)
+            assertFalse(store.claim(localCancelled.key))
+            assertEquals(VoiceTurnStore.Delivery.CANCELLED,store.get(localCancelled.key)!!.delivery)
+            val remoteCancelled=store.seal(store.begin("remote-cancel-race-0007",origin).key,wav)
+            assertTrue(store.claim(remoteCancelled.key))
+            store.requestCancellation(remoteCancelled.key,VoiceTurnStore.CancelTarget.RECORDING)
+            store.close();store=VoiceTurnStore(context,name);store.recoverInterruptedOwner()
+            assertEquals(VoiceTurnStore.Cancellation.REQUESTED,store.get(remoteCancelled.key)!!.cancellation)
+            assertEquals(VoiceTurnStore.Delivery.UNKNOWN,store.get(remoteCancelled.key)!!.delivery)
+            assertFalse(store.claim(remoteCancelled.key))
+            store.cancelled(remoteCancelled.key,JSONObject().put("id",remoteCancelled.id).put("audioSha256",remoteCancelled.sha256).put("state","cancelled"))
+            assertEquals(VoiceTurnStore.Cancellation.CONFIRMED,store.get(remoteCancelled.key)!!.cancellation)
             val failed=store.seal(store.begin("failed-audio-retry-0005",origin).key,wav)
             assertTrue(store.claim(failed.key))
             store.failed(failed.key,JSONObject().put("id",failed.id).put("error","Audio transport failed"))

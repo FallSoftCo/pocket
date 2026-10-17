@@ -49,10 +49,9 @@ import org.json.JSONObject
                                 store.retryAdmittedAudio(current.key,receipt)
                                 DurableVoiceWork.enqueue(context,current.key)
                             }
-                            "cancel-request"->store.cancelled(current.key,requests.call(current,path+"/cancel-request",JSONObject()))
-                            "cancel"->{
-                                if(current.delivery==VoiceTurnStore.Delivery.UNSUBMITTED)store.cancelUnsubmitted(current.key)
-                                else store.cancelled(current.key,requests.call(current,path+"/cancel",JSONObject()))
+                            "cancel-request","cancel"->{
+                                store.requestCancellation(current.key,if(operation=="cancel-request")VoiceTurnStore.CancelTarget.QUEUED_REQUEST else VoiceTurnStore.CancelTarget.RECORDING)
+                                DurableVoiceWork.enqueue(context,current.key,cancellationIntent=true)
                             }
                         }
                     }
@@ -72,6 +71,8 @@ import org.json.JSONObject
             val label=if(room!=null)room.optString("name").ifBlank{"Room"}
                 else if(destination?.optString("threadId").isNullOrBlank())"Coordinator" else "Direct conversation"
             val status=when {
+                turn.cancellation==VoiceTurnStore.Cancellation.REQUESTED->"Cancellation saved · waiting for confirmation"
+                turn.cancellation==VoiceTurnStore.Cancellation.REJECTED->turn.problem?:"Cancellation was not accepted"
                 turn.capture==VoiceTurnStore.Capture.INTERRUPTED->"Interrupted · not sent"
                 turn.capture==VoiceTurnStore.Capture.RECORDING->"Recording"
                 turn.capture==VoiceTurnStore.Capture.SEALING->"Saving recording"
@@ -90,9 +91,9 @@ import org.json.JSONObject
                         TextButton({act(turn,"check")},enabled=busy==null,modifier=Modifier.heightIn(min=48.dp)){BilingualLabel("Check status")}
                     if(turn.delivery==VoiceTurnStore.Delivery.FAILED && receipt?.optBoolean("canRetryAudio")==true)
                         TextButton({act(turn,"retry")},enabled=busy==null,modifier=Modifier.heightIn(min=48.dp)){BilingualLabel("Retry audio")}
-                    if(turn.delivery==VoiceTurnStore.Delivery.ACCEPTED && receipt?.optString("state")=="queued")
+                    if(turn.cancellation!=VoiceTurnStore.Cancellation.REQUESTED && turn.delivery==VoiceTurnStore.Delivery.ACCEPTED && receipt?.optString("state")=="queued")
                         TextButton({act(turn,"cancel-request")},enabled=busy==null,modifier=Modifier.heightIn(min=48.dp)){BilingualLabel("Cancel request")}
-                    if(turn.capture!=VoiceTurnStore.Capture.RECORDING && turn.delivery !in setOf(VoiceTurnStore.Delivery.ACCEPTED,VoiceTurnStore.Delivery.COMPLETED))
+                    if(turn.capture in setOf(VoiceTurnStore.Capture.SEALED,VoiceTurnStore.Capture.INTERRUPTED) && turn.cancellation!=VoiceTurnStore.Cancellation.REQUESTED && turn.delivery !in setOf(VoiceTurnStore.Delivery.ACCEPTED,VoiceTurnStore.Delivery.COMPLETED))
                         TextButton({act(turn,"cancel")},enabled=busy==null,modifier=Modifier.heightIn(min=48.dp)){BilingualLabel("Cancel recording")}
                 }
             }
