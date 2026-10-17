@@ -67,12 +67,8 @@ import org.json.JSONObject
                             Text(if(count>999)"999+" else count.toString(),color=tint,fontSize=14.sp,maxLines=1)
                         }
                     }
-                    if(states.size>shown.size) {
-                        Row(horizontalArrangement=Arrangement.spacedBy(3.dp),verticalAlignment=Alignment.CenterVertically){
-                            Text("+${states.size-shown.size}",color=Muted,fontSize=13.sp,maxLines=1)
-                            BilingualLabel("More",color=Muted,fontSize=13.sp)
-                        }
-                    }
+                    if(states.size>shown.size)
+                        SymbolIcon(Icons.Rounded.MoreHoriz,null,Modifier.size(18.dp),tint=Muted)
                 }
             }
             // Reserve exactly one context line even when a room has no purpose yet.
