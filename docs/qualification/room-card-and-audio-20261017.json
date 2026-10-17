@@ -11,9 +11,10 @@
   "nativeEvidence": {
     "roomCard": {
       "passed": true,
-      "seconds": 4.883,
+      "seconds": 4.991,
       "actualPointerTap": true,
-      "largeText": true
+      "largeText": true,
+      "screenshotBoundary": "Normal capture taken after real pointer routing and UI idle; earlier pre-draw capture rejected"
     },
     "capture": {
       "passed": true,
@@ -45,5 +46,6 @@
     "emulatorPort": 5660,
     "businessModelsStarted": 0,
     "speechGenerationOnly": true
-  }
+  },
+  "review": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-room-density-20261017-normal"
 }

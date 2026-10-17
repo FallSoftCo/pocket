@@ -38,7 +38,6 @@ class HollywoodRoomActivityNativeTest {
     MaterialTheme{Column(Modifier.statusBarsPadding()){HollywoodRoomCard(shown.value,available.value){opened=shown.value.s("id")}}}
    }}}
    compose.onNodeWithTag("native-room-activity:"+room.s("id"),useUnmergedTree=true).assertContentDescriptionEquals("3 Queued; 1 Claimed; 2 Running; 1 Stopping; 1 Unknown; 2 Needs you")
-   assertTrue(d.takeScreenshot(i.targetContext.filesDir.resolve("room-activity-mixed.png")))
    compose.onNodeWithText(PocketImmersion.label("Needs you"),useUnmergedTree=true).assertIsDisplayed()
    val cardTag="native-room:"+room.s("id")
    fun height()=compose.onNodeWithTag(cardTag).fetchSemanticsNode().boundsInRoot.height
@@ -50,6 +49,8 @@ class HollywoodRoomActivityNativeTest {
    val iconBounds=compose.onNodeWithTag("native-room-state:"+room.s("id")+":unknown",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
    assertTrue(d.click((iconBounds.left+9*i.targetContext.resources.displayMetrics.density).toInt(),iconBounds.center.y.toInt()))
    compose.waitUntil(3000){opened==room.s("id")}
+   d.waitForIdle()
+   assertTrue(d.takeScreenshot(i.targetContext.filesDir.resolve("room-activity-mixed.png")))
    compose.onNodeWithTag("native-room:"+room.s("id")).performClick();assertEquals(room.s("id"),opened)
    compose.runOnIdle{available.value=false}
    compose.onNodeWithText(PocketImmersion.label("Status unavailable"),useUnmergedTree=true).assertIsDisplayed()
