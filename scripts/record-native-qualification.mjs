@@ -52,6 +52,7 @@ try{
  const fixture=spawn(process.execPath,[fixtureScript],{cwd:root,env:{...childEnv,PORT:fixturePort,NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},stdio:['ignore',fd,fd],detached:true});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);fixture.unref();owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
  run(['reverse','tcp:18880','tcp:'+fixturePort]);
+ if(name.startsWith('co.fallsoft.pocket.TypingResponsivenessNativeTest#'))run(['reverse','tcp:18891','tcp:'+fixturePort]);
  if(voiceCase)run(['reverse','tcp:18893','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#')){run(['reverse','tcp:18881','tcp:'+String(portValue+1)]);run(['reverse','tcp:18882','tcp:'+String(portValue+2)]);}
  else if(environmentCase){run(['reverse','tcp:18882','tcp:'+String(portValue+1)]);run(['reverse','tcp:18883','tcp:'+String(portValue+2)]);}
