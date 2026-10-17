@@ -18,15 +18,16 @@
     "speech": "One actual native-account render produced verified 2.481s WAV in 8754ms. However actual Android asset playback journey r08 failed: provider connected but emitted no audio. Separate user-role startup probe also failed. Startup-history speech is probabilistic, not a qualified deterministic TTS contract; no automatic regeneration or paid API fallback enabled.",
     "nativeKeys": "Actual retained emulator HollywoodVoiceKeysNativeTest passed in 16.782s: touch/volume start-stop with IME, held repeats, draft retention, navigation preserving original room, no unrelated coordinator initialization, original unresolved WAV/ID unchanged. Provider unavailable fixture, not phone proof.",
     "remoteAudio": "Installed private OZZZ audio-only CLI source/venv, no listener/service changes. Actual system76 SSH to native account final transcript 14054ms; same digest returned durable cached result 2494ms without another generation. Exact source final cleanup changes are staged separately before production use.",
-    "recoveryControls": "Disk-backed coordinator queue qualification passed: serial starts, captured destinations, queued cancellation, SQLite reopen, safe pre-start recovery, unknown native-intent non-replay and revoked-device rejection. Existing focused voice/custody/auth tests pass. Final Android journal/capture native tests passed (4.89s); qualification lint passed."
+    "recoveryControls": "Disk-backed coordinator queue qualification passed: serial starts, captured destinations, queued cancellation, SQLite reopen, safe pre-start recovery, unknown native-intent non-replay and revoked-device rejection. Existing focused voice/custody/auth tests pass. Final Android journal/capture native tests passed (4.89s); qualification lint passed.",
+    "alpha110": "Version128 compatible signed APK built; ten required native cases passed, reusing four exact source/APK passed cases and using a new version-scoped real QA control intent only after 13 prior journals were independently reconciled terminal. Optimized release payload and actual touch/volume/IME/draft/typing journeys passed. Real original accepted event remains exactly once. No phone install or production cutover.",
+    "stockHttp": "Actual staged stock gateway pairing/auth/upload/queue/cancellation journey passed using explicit existing native final-result cache and private synthetic task runtime. Admin human input403, accepted audio retry409, only original and third synthetic task intents executed; cancelled second never executed. Test cleanup error in first run was reconciled and fixed; retained original journal completed/cancelled/completed before separate fixture qualification."
   },
   "notVerified": [
-    "Reliable spoken-response rendering and actual Android playback completion: blocked by intermittent native no-audio session",
-    "Remote media worker durable installation/transport for original workstation backend",
-    "Actionable legacy/new recording inventory, source-bound explicit recovery controls and full routing presentation integration",
-    "Physical phone voice, IME/volume, interruption/process-death journey",
-    "Compatible production APK and gateway release; this candidate is not published or installed on phone"
+    "Reliable replacement speech: native startup-history session can return no audio; experimental renderer disabled and installed speech preserved in alpha110",
+    "Coordinated stock/native production backend activation and app update delivery",
+    "Physical phone voice/IME/keys/process interruption and actual FCM-rendered update",
+    "Legacy recording inventory migration and complete routing/presentation follow-through"
   ],
-  "updatedAt": "2026-10-17T06:02:55.806695+00:00",
+  "updatedAt": "2026-10-17T06:38:34.945305+00:00",
   "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-durable-capture-20261017-native-room-volume-ime"
 }

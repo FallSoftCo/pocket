@@ -615,7 +615,7 @@ app.get('/api/voice/recordings/:id',route(async(req,res)=>{
 app.post('/api/voice/recordings/:id/cancel-request',route(async(req,res)=>res.json(await voiceRecordings.cancelRequest(req.device.id,req.params.id))));
 app.post('/api/voice/recordings/:id/retry-audio',route(async(req,res)=>{
  const receipt=await voiceRecordings.retryAudio(req.device.id,req.params.id);
- humanIngress.action('voice-recording',req.params.id,'retry-audio',req.humanPrincipal);
+ humanIngress.action('voice-recording',voiceRecordings.key(req.device.id,req.params.id),'retry-audio',req.humanPrincipal);
  res.status(202).json(receipt);
 }));
 app.post('/api/voice/recordings/:id/cancel',route(async(req,res)=>res.json(voiceRecordings.cancel(req.device.id,req.params.id))));

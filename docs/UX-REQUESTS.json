@@ -2820,10 +2820,10 @@
     "Review public launch separately when sufficiently qualified"
   ],
   "voice_production_architecture_20261016": {
-    "status": "durable-audio-intake-and-microphone-cutover-candidate-native-qualification-in-progress-not-deployed",
+    "status": "alpha110-signed-native-qualified-backend-rollout-preparation-not-published",
     "requirement": "Replace singleton pending voice slot with durable per-turn ownership, independent capture/delivery/playback and safe receipt reconciliation; no archive-only workaround as final architecture",
     "contract": "docs/VOICE-TURN-LIFECYCLE.md",
-    "deployment": "Not deployed; alpha109 containment remains distinct",
-    "latest_progress": "Independent AudioRecord start/stop qualified in retained emulator; real native final transcript and clean media peer closure qualified. Durable audio uploads and task dispatch are separate. Full response/playback, legacy inventory and production installation remain release gates."
+    "deployment": "Phone readback remains version126. Version128/alpha110 built and native-qualified, not published or installed. No production service changed.",
+    "latest_progress": "Independent capture, source-bound recording journal/uploads and coordinator task queue implemented; real Android WorkManager/native ASR/canonical room admission, durable queue/restart/cancellation tests and actual HTTP paired/owner separation qualified. Ten native cases and optimized release input/voice review passed. Existing installed speech path retained; experimental asset speech stays disabled after no-audio failure. Legacy inventory migration and reliable speech replacement remain outstanding."
   }
 }

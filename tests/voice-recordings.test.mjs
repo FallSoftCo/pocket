@@ -100,3 +100,14 @@ test('explicit audio retry retains original destination and never retries accept
   assert.equal(f.calls.submit,1);
  }finally{await f.close();}
 });
+test('definite coordinator refusal preserves a final transcript for retry without another transcription',async()=>{
+ const f=fixture();let refuse=true;
+ f.server.submit=(...args)=>{if(refuse)throw Object.assign(Error('Coordinator queue is full'),{notAdmitted:true,status:429});return f.adapters.submit(...args);};
+ try {
+  await f.server.create(device,request('definite-refusal-0001'),principal);await f.server.upload(device,'definite-refusal-0001',audio);
+  await f.server.start();await settle(f.server);
+  assert.equal(f.server.row(device,'definite-refusal-0001').phase,'failed');assert.equal(f.calls.transcribe,1);assert.equal(f.calls.submit,0);
+  refuse=false;await f.server.retryAudio(device,'definite-refusal-0001');await settle(f.server);
+  assert.equal(f.calls.transcribe,1);assert.equal(f.calls.submit,1);assert.equal((await f.server.inspect(device,'definite-refusal-0001')).state,'completed');
+ }finally{await f.close();}
+});

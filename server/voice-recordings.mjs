@@ -113,6 +113,7 @@ export class VoiceRecordings {
    if(row.phase==='ready'){
     const changed=this.db.prepare("UPDATE voice_recordings SET phase='transcribing',worker=? WHERE device=? AND id=? AND phase='ready'").run(this.owner,row.device,row.id);
     if(!changed.changes)return;
+    await this.authorize(row.device,JSON.parse(row.principal),JSON.parse(row.destination));
     const audio=await readFile(this.path(row));validateVoiceAudio(audio);
     if(hash(audio)!==row.audio_sha256)throw fail('Saved server audio failed integrity verification.',409);
     const cancellation=new AbortController();this.cancels.set(this.key(row.device,row.id),cancellation);
@@ -120,7 +121,7 @@ export class VoiceRecordings {
     if(typeof result.text!=='string'||!result.text.trim()||result.text.length>24000||result.proof?.confirmed!==true||result.proof.version!==1||result.proof.boundary!=='session.closed'||!['client_request','close_requested'].includes(result.proof.reason)||result.proof.audioSha256!==row.audio_sha256)
      throw fail('Audio did not return a confirmed, source-bound transcript. Recording retained.',503);
     const committed=this.db.prepare("UPDATE voice_recordings SET phase='transcribed',transcript=?,proof=? WHERE device=? AND id=? AND phase='transcribing' AND worker=?")
-     .run(result.text,JSON.stringify(result.proof),row.device,row.id,this.owner);
+     .run(result.text,JSON.stringify({...result.proof,mediaCacheHit:result.mediaCacheHit===true}),row.device,row.id,this.owner);
     if(!committed.changes)return;
     row=this.row(row.device,row.id);
    }
