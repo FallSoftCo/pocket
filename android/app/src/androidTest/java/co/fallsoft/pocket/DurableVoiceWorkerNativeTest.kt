@@ -85,4 +85,34 @@ class DurableVoiceWorkerNativeTest {
    WorkManager.getInstance(c).cancelUniqueWork(workName).result.get()
   }
  }
+ @Test fun cancellationBeforeAdmissionUsesRealWorkerWithoutSendingAudio():Unit=runBlocking {
+  val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
+  check(UiDevice.getInstance(i).executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val profiles=EnvironmentProfiles(c.getSharedPreferences("pocket",0))
+  val profile=profiles.all().mapNotNull{profiles.capture(it.id)}.first{it.endpoint.startsWith("http://127.0.0.1:18889")||it.endpoint.startsWith("http://127.0.0.1:18890")}
+  val id="android-cancel-before-admit-20261017-r01"
+  DurableVoiceWork.initialize(c)
+  val turn=VoiceTurnStore(c,DurableVoiceWork.JOURNAL).use{store->
+   val origin=VoiceTurnStore.Origin(profile.environment.id,backendOwner(profile.endpoint,profile.token),profile.endpoint,JSONObject().put("threadId","never-resolve-cancel-qa").toString())
+   var original=store.get(store.begin(id,origin).key)!!
+   if(original.capture==VoiceTurnStore.Capture.RECORDING)original=store.seal(original.key,i.context.assets.open("voice-durable-input.wav").use{it.readBytes()})
+   if(original.delivery==VoiceTurnStore.Delivery.UNSUBMITTED)assertTrue(store.claim(original.key))
+   store.requestCancellation(original.key,VoiceTurnStore.CancelTarget.RECORDING)
+  }
+  DurableVoiceWork.enqueue(c,turn.key,cancellationIntent=true)
+  val deadline=android.os.SystemClock.elapsedRealtime()+45000
+  while(android.os.SystemClock.elapsedRealtime()<deadline){
+   if(VoiceTurnStore(c,DurableVoiceWork.JOURNAL).use{it.get(turn.key)!!.delivery}==VoiceTurnStore.Delivery.CANCELLED)break
+   Thread.sleep(200)
+  }
+  val final=VoiceTurnStore(c,DurableVoiceWork.JOURNAL).use{it.get(turn.key)!!}
+  assertEquals(final.problem,VoiceTurnStore.Delivery.CANCELLED,final.delivery)
+  assertEquals(VoiceTurnStore.Cancellation.CONFIRMED,final.cancellation)
+  val req=Request.Builder().url(profile.endpoint.trimEnd('/')+"/api/voice/recordings/"+id).header("Authorization","Bearer "+profile.token).build()
+  val receipt=Pocket.http.newCall(req).execute().use{response->check(response.isSuccessful);JSONObject(requireNotNull(response.body).string())}
+  assertEquals("cancelled",receipt.getString("phase"));assertEquals("",receipt.getString("transcript"))
+  assertEquals(turn.sha256,receipt.getString("audioSha256"))
+  File(c.filesDir,"durable-cancellation-qa-result.json").writeText(JSONObject().put("id",id).put("state",final.delivery.name).put("audioSha256",turn.sha256).put("transcript","").toString())
+ }
+
 }
