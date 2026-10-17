@@ -39,6 +39,7 @@ class HollywoodRoomActivityNativeTest {
    }}}
    compose.onNodeWithTag("native-room-activity:"+room.s("id"),useUnmergedTree=true).assertContentDescriptionEquals("3 Queued; 1 Claimed; 2 Running; 1 Stopping; 1 Unknown; 2 Needs you")
    assertTrue(d.takeScreenshot(i.targetContext.filesDir.resolve("room-activity-mixed.png")))
+   compose.onNodeWithText(PocketImmersion.label("Needs you"),useUnmergedTree=true).assertIsDisplayed()
    val cardTag="native-room:"+room.s("id")
    fun height()=compose.onNodeWithTag(cardTag).fetchSemanticsNode().boundsInRoot.height
    val mixedHeight=height()

@@ -56,14 +56,16 @@ import org.json.JSONObject
                     val order=listOf(5,4,2,0,3,1)
                     val states=order.filter{activity.counts[it]>0}
                     val shown=states.take(if(density.fontScale>1.3f)2 else 3)
-                    shown.forEach { index ->
+                    shown.forEachIndexed { position,index ->
                         val count=activity.counts[index]
                         val tint=if(index in listOf(4,5))Coral else Paper
-                        Row(Modifier.testTag("native-room-state:"+room.s("id")+":"+HollywoodRoomActivity.keys[index]),
+                        Row((if(position==0)Modifier.weight(1f) else Modifier).testTag("native-room-state:"+room.s("id")+":"+HollywoodRoomActivity.keys[index]),
                             horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
-                            val icon=when(index){0->Icons.Rounded.Schedule;1->Icons.Rounded.Person;2->Icons.Rounded.PlayArrow;3->Icons.Rounded.Stop;4->Icons.Rounded.Warning;else->Icons.Rounded.HelpOutline}
-                            if(index==2)SymbolIcon("Codex",null,Modifier.size(20.dp))
-                            else SymbolIcon(icon,null,Modifier.size(18.dp),tint=tint)
+                            if(position==0)BilingualLabel(HollywoodRoomActivity.labels[index],Modifier.weight(1f,fill=false),color=tint,centered=false)
+                            else {
+                                val name=when(index){0->"Inbox";1->"Computer";2->"Codex";3->"Stop";4->"ErrorOutline";else->"User"}
+                                SymbolIcon(name,null,Modifier.size(18.dp),tint=tint)
+                            }
                             Text(if(count>999)"999+" else count.toString(),color=tint,fontSize=14.sp,maxLines=1)
                         }
                     }
