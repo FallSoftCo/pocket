@@ -37,13 +37,20 @@ internal class NativeSpeechRenderer(private val context:Context,private val endp
                     "offer"->jobs.launch{try{val answer=api("/api/voice/native/start",JSONObject().put("sdp",data).put("purpose","speech"));connection=answer.s("id");transport?.answer(answer.s("sdp"))}catch(e:Exception){connected.completeExceptionally(e)}}
                     "connected"->connected.complete(Unit)
                     "error"->{val error=IllegalStateException(data);connected.completeExceptionally(error);audio.completeExceptionally(error)}
-                    "audio"->try{val payload=JSONObject(data);if(payload.optLong("token")==1L){val encoded=payload.s("data");require(encoded.length<=24*1024*1024){"Native speech exceeded its size limit"};val bytes=Base64.decode(encoded,Base64.DEFAULT);require(validNativeSpeechAudio(bytes)){"Native speech returned invalid audio"};audio.complete(bytes)}}catch(e:Exception){audio.completeExceptionally(e)}
+                    "audio"->jobs.launch(Dispatchers.Default){try{val payload=JSONObject(data);if(payload.optLong("token")==1L){val encoded=payload.s("data");require(encoded.length<=24*1024*1024){"Native speech exceeded its size limit"};val bytes=Base64.decode(encoded,Base64.DEFAULT);require(validNativeSpeechAudio(bytes)){"Native speech returned invalid audio"};audio.complete(bytes)}}catch(e:Exception){audio.completeExceptionally(e)}}
                 }
             }
             withTimeout(35000){connected.await()}
+            val connectedAt=android.os.SystemClock.elapsedRealtime()
+            SpeechUsage.add("connectionSetupMs",connectedAt-began)
+            android.util.Log.i("PocketSpeechTiming","Connected after ${connectedAt-began} ms")
             requireNotNull(transport).speak(1L,text)
+            val requestedAt=android.os.SystemClock.elapsedRealtime()
             api("/api/voice/native/speak",JSONObject().put("connectionId",connection).put("text",text))
             val bytes=withTimeout(90000){audio.await()}
+            val receivedAt=android.os.SystemClock.elapsedRealtime()
+            SpeechUsage.add("audioWaitMs",receivedAt-requestedAt)
+            android.util.Log.i("PocketSpeechTiming","Audio ready after ${receivedAt-began} ms; render wait ${receivedAt-requestedAt} ms")
             SpeechUsage.add("generated");SpeechUsage.add("bytes",bytes.size.toLong())
             withContext(Dispatchers.IO){
                 val file=java.io.File.createTempFile("speech-duration-",".webm",context.cacheDir)

@@ -1,0 +1,49 @@
+{
+  "status": "native-qualified-candidate-not-published",
+  "recordedAt": "2026-10-17T13:07:54.690379+00:00",
+  "base": "4f060598b98a71f91be5e26a89f87fc9133f2010",
+  "implementation": [
+    "Stable room-card context/status height at normal and doubled text",
+    "Primary state label retained; overlapping category counts never summed",
+    "Audio payload decoding and validation moved off Android main thread",
+    "Content-free connection/render stage timing"
+  ],
+  "nativeEvidence": {
+    "roomCard": {
+      "passed": true,
+      "seconds": 4.883,
+      "actualPointerTap": true,
+      "largeText": true
+    },
+    "capture": {
+      "passed": true,
+      "seconds": 3.519,
+      "actualAudioRecord": true,
+      "volumeKeyStop": true,
+      "taskDispatch": false
+    },
+    "speech": {
+      "passed": true,
+      "elapsedMs": 18230,
+      "connectionSetupMs": 3369,
+      "audioWaitMs": 6586,
+      "generatedChunks": 1,
+      "cached": 0,
+      "playedMs": 6691,
+      "idleVoiceModeRetained": true
+    }
+  },
+  "limits": [
+    "Emulator evidence, not physical handset capture/acoustic quality",
+    "Current renderer buffers complete audio before Android playback; stage measurements do not establish first-audio latency",
+    "Production phone installed128 unchanged; no candidate install or announcement",
+    "Room catalog live preview/work recency needs reviewed canonical batched projection; observedAt is not work recency"
+  ],
+  "ownedQa": {
+    "gatewayPort": 18889,
+    "gatewayPid": 3755815,
+    "emulatorPort": 5660,
+    "businessModelsStarted": 0,
+    "speechGenerationOnly": true
+  }
+}

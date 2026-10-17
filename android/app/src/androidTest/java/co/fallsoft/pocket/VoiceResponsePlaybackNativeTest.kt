@@ -23,6 +23,8 @@ class VoiceResponsePlaybackNativeTest {
   val audio=c.getSystemService(AudioManager::class.java);val originalVolume=audio.getStreamVolume(AudioManager.STREAM_MUSIC)
   val usage=c.getSharedPreferences("native-speech-usage",0)
   val generated=usage.getLong("generated",0);val played=usage.getLong("playedMs",0);val cached=usage.getLong("cacheHits",0)
+  val setup=usage.getLong("connectionSetupMs",0);val waiting=usage.getLong("audioWaitMs",0)
+  val began=SystemClock.elapsedRealtime()
   val owner="native-voice-response-qa-20261017-r01"
   fun await(label:String,limit:Long,predicate:()->Boolean){val end=SystemClock.elapsedRealtime()+limit;while(SystemClock.elapsedRealtime()<end){if(predicate())return;if(PocketSpeech.displayedProblem.isNotBlank())fail(PocketSpeech.displayedProblem);Thread.sleep(100)};assertTrue(label+" · "+PocketSpeech.status+" · "+PocketSpeech.displayedProblem,predicate())}
   try {
@@ -32,7 +34,7 @@ class VoiceResponsePlaybackNativeTest {
     PocketVoice.start(c,recordImmediately=false,inPlace=true)
    }
    await("Idle voice mode did not start",10000){PocketVoice.active&&PocketVoice.state=="Ready"}
-   i.runOnMainSync{PocketSpeech.speakDisplayed(owner,"Recording controls are ready.","Voice response qualification")}
+   i.runOnMainSync{PocketSpeech.speakDisplayed(owner,"Native room voice controls are ready.","Voice response qualification")}
    await("Native renderer/player did not complete",90000){
     (usage.getLong("generated",0)>generated||usage.getLong("cacheHits",0)>cached)&&
      usage.getLong("playedMs",0)>played+250&&PocketSpeech.displayedOwner==null
@@ -40,6 +42,7 @@ class VoiceResponsePlaybackNativeTest {
    assertTrue("Playback unexpectedly closed voice mode",PocketVoice.active)
    assertFalse(PocketVoice.captureBusy)
    File(c.filesDir,"voice-response-playback-qa-result.json").writeText(JSONObject()
+    .put("elapsedMs",SystemClock.elapsedRealtime()-began).put("connectionSetupMs",usage.getLong("connectionSetupMs",0)-setup).put("audioWaitMs",usage.getLong("audioWaitMs",0)-waiting)
     .put("generatedChunks",usage.getLong("generated",0)-generated).put("cached",usage.getLong("cacheHits",0)-cached)
     .put("playedMs",usage.getLong("playedMs",0)-played).put("idleVoiceModeRetained",PocketVoice.active).toString())
   }finally{
