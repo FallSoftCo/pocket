@@ -45,6 +45,11 @@ class HollywoodRoomActivityNativeTest {
    val mixedHeight=height()
    for(key in listOf("waitingForHuman","unknown","running"))compose.onNodeWithTag("native-room-state:"+room.s("id")+":"+key,useUnmergedTree=true).assertIsDisplayed()
    compose.onNodeWithText(PocketImmersion.label("Idle"),useUnmergedTree=true).assertDoesNotExist()
+   // Inject a physical pointer into the rendered status icon. Semantics performClick
+   // alone would miss a child drawing/press modifier stealing the parent tap.
+   val iconBounds=compose.onNodeWithTag("native-room-state:"+room.s("id")+":unknown",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+   assertTrue(d.click((iconBounds.left+9*i.targetContext.resources.displayMetrics.density).toInt(),iconBounds.center.y.toInt()))
+   compose.waitUntil(3000){opened==room.s("id")}
    compose.onNodeWithTag("native-room:"+room.s("id")).performClick();assertEquals(room.s("id"),opened)
    compose.runOnIdle{available.value=false}
    compose.onNodeWithText(PocketImmersion.label("Status unavailable"),useUnmergedTree=true).assertIsDisplayed()
