@@ -15,7 +15,7 @@
         "Actual native recent-message arrival and disconnect/reopen retain original identities without resubmission",
         "No unseen new answer hidden behind historical pagination"
       ],
-      "status": "active-investigation"
+      "status": "two-freshness-causes-repaired-published-alpha112-integrity-audit-continues"
     },
     {
       "priority": 2,
@@ -56,9 +56,9 @@
     }
   ],
   "releaseState": {
-    "publishedVersionCode": 129,
-    "phoneLastObservedVersionCode": 128,
-    "announcement1853": "accepted_by_fcm once",
+    "publishedVersionCode": 130,
+    "phoneLastObservedVersionCode": 129,
+    "announcement1891": "accepted_by_fcm once",
     "backendRestarted": false
   },
   "verificationPolicy": "Use focused service/native journeys and original receipts. A build or unit count is not proof of phone usability. Do not replay unknown deliveries or wake business workers.",

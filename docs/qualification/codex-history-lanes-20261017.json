@@ -1,5 +1,5 @@
 {
-  "state": "candidate-native-qualified-release-pending",
+  "state": "published-alpha112",
   "scope": "stock Codex recent/history independence",
   "baseline": {
     "native": "failed at intended held-history freshness assertion",
@@ -18,8 +18,8 @@
     "workDispatched": 0,
     "draftPreserved": true,
     "limits": [
-      "Qualification APK emulator; not physical phone proof",
-      "Five-second probe deadline added after this sample; final signed candidate requires requalification"
+      "Native emulator and optimized payload qualification; physical phone controls/voice/push presentation not newly verified",
+      "This repairs two confirmed freshness failures, not the entire remaining Codex UX backlog"
     ]
   },
   "productionReadSample": {
@@ -34,5 +34,32 @@
     "candidateInstalledOnPhone": false,
     "productionRestarted": false
   },
-  "testsAreNotPhysicalPhoneProof": true
+  "testsAreNotPhysicalPhoneProof": true,
+  "release": {
+    "versionCode": 130,
+    "versionName": "0.5.0-alpha.112",
+    "sourceCommit": "d48c3c5",
+    "compatibleApkSha256": "cbb6d041986cd2f805631bd18dbb87a87e6f0ab91df093b423c557ff334effb5",
+    "productionSourceSha": "64301d1f97c8702f65a8cef0e67c4240cfd0434d0c661397d63b6a5d7a26f21e",
+    "optimizedSilentHeadVisibleMs": 3172,
+    "nativeJourneysPassed": 13,
+    "channelsPublished": [
+      "existing-workstation",
+      "existing-native"
+    ],
+    "announcement": {
+      "notificationId": 1891,
+      "state": "accepted_by_fcm",
+      "attempts": 1,
+      "channel": "existing-workstation-only"
+    },
+    "phoneLastObservedVersionCode": 129,
+    "productionRestarted": false,
+    "pairingChanged": false
+  },
+  "stagingNotes": [
+    "Initial reproduction failed before the concurrency boundary; corrected initial lifecycle settling and reproduced the intended failure",
+    "Optimized assertions passed; restoring debug access required reinstalling the same-version QA-signed qualification package. Saved emulator preferences were restored byte-exact; no product journey repeated",
+    "Optimized review metadata initially listed three artifacts against the existing two-artifact contract; extra screenshot retained separately without weakening validation"
+  ]
 }

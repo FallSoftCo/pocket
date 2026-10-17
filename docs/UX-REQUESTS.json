@@ -2789,7 +2789,7 @@
     {
       "id": "codex-reliability-primary-20261017",
       "request": "Make existing Codex conversations and session list dependable first; LAX-specific work is deferred. Review architecture, repair actual receive/order/navigation/input paths and verify optimized native journeys against stock Codex.",
-      "status": "first-codex-freshness-candidate-native-qualified-release-pending",
+      "status": "first-codex-freshness-repair-published-alpha112-broader-work-open",
       "evidence": [
         "docs/architecture-review/SYSTEM-REVIEW-20261017.md",
         "docs/CODEX-CONVERSATION-STATE.md",
@@ -2797,6 +2797,11 @@
       ],
       "preserve": [
         "Pairings, drafts, pending/unknown receipts, voice and existing rooms"
+      ],
+      "remaining": [
+        "Session-list state, discovery and ordering end-to-end",
+        "Loaded-conversation input/render performance",
+        "Voice and ergonomic completion under latest user requirements"
       ]
     }
   ],
