@@ -6,8 +6,8 @@ import {createInterface} from 'node:readline';
 import {codexConnectionError,isServerDraining,isHistoryLineageError,historyLineageError} from './connection-errors.mjs';
 
 export class Codex extends EventEmitter {
-  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null}={}) {
-    super(); this.socket = socket; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;
+  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined}={}) {
+    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;
   }
   executionOptions(){
     const sandbox=process.env.POCKET_CODEX_SANDBOX,approvalPolicy=process.env.POCKET_CODEX_APPROVAL_POLICY;
@@ -51,7 +51,7 @@ export class Codex extends EventEmitter {
       let transport;
       if(this.command){
         const [file,...args]=this.command;
-        const child=spawn(file,args,{stdio:['pipe','pipe','pipe'],env:process.env});transport=child;this.transport=child;this.child=child;
+        const child=spawn(file,args,{stdio:['pipe','pipe','pipe'],env:process.env,...(this.processCwd?{cwd:this.processCwd}:{})});transport=child;this.transport=child;this.child=child;
         createInterface({input:child.stdout}).on('line',receive);
         createInterface({input:child.stderr}).on('line',line=>console.error('Codex app-server',line));
         child.once('error',failed);child.once('exit',closed);queueMicrotask(opened);

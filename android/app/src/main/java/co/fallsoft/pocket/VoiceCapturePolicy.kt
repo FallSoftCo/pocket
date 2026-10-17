@@ -7,7 +7,7 @@ internal fun captureControl(active:Boolean,state:String,pending:Boolean):Capture
     pending->CaptureControl.CHECK_SAVED
     else->CaptureControl.START
 }
-internal fun foregroundCaptureKeys(foreground:Boolean,paired:Boolean,team:Boolean,eligible:Boolean,nativeRoom:Boolean=false,recording:Boolean=false)=foreground&&paired&&(!team||nativeRoom||recording)&&eligible
+internal fun foregroundCaptureKeys(foreground:Boolean,paired:Boolean,team:Boolean,eligible:Boolean,nativeRoom:Boolean=false,recording:Boolean=false)=foreground&&(recording||paired&&(!team||nativeRoom)&&eligible)
 internal class CaptureKeyGesture {
     private val held=mutableSetOf<Int>()
     fun down(code:Int,repeat:Int):Boolean=repeat==0&&held.add(code)

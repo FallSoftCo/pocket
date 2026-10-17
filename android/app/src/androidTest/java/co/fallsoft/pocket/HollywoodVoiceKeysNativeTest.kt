@@ -68,10 +68,8 @@ class HollywoodVoiceKeysNativeTest{
    fun key(action:Int,repeat:Int=0){assertTrue(i.uiAutomation.injectInputEvent(KeyEvent(downAt,SystemClock.uptimeMillis(),action,KeyEvent.KEYCODE_VOLUME_DOWN,repeat),true))}
    key(KeyEvent.ACTION_DOWN)
    await("Hardware did not start actual microphone"){PocketVoice.state=="Listening"&&PocketVoice.recordingStartedAt>0}
-   val preserved=SavedVoiceRecordings.list(c).single{it.s("id")==strandedId}
-   assertEquals("Stranded request was automatically retried", "Status not checked",preserved.s("state"))
-   val savedFolder=java.io.File(c.noBackupFilesDir,"saved-voice-recordings").listFiles()!!.single{folder->runCatching{JSONObject(java.io.File(folder,"record.json").readText()).s("id")==strandedId}.getOrDefault(false)}
-   assertArrayEquals("Original stranded audio changed",strandedAudio,java.io.File(savedFolder,"recording.wav").readBytes())
+   assertEquals("Old receipt was overwritten",strandedId,p.getString("voicePendingId",null))
+   assertArrayEquals("Original unresolved audio changed",strandedAudio,c.filesDir.resolve("voice-pending.wav").readBytes())
    assertTrue("Starting capture closed the IME",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
    assertEquals(roomA,PocketVoice.targetRoom?.s("roomId"))
    assertEquals(agentA,PocketVoice.targetRoom?.s("recipientId"))
@@ -129,8 +127,11 @@ class HollywoodVoiceKeysNativeTest{
    tap("native-settings-back")
    val status=Pocket.apiEnvironment(source,"/_qa/status")
    val starts=status.getJSONArray("starts").objects().drop(priorStarts)
-   assertTrue("Native capture lost its explicit room",starts.any{it.optJSONObject("room")?.s("roomId")==roomA})
-   assertTrue(starts.any{it.optJSONObject("room")?.s("roomId")==roomB})
+   assertTrue("Capture initialized an unrelated coordinator",starts.isEmpty())
+   val captured=VoiceTurnStore(c,DurableVoiceWork.JOURNAL).use{it.list().filter{turn->turn.origin.environment==id}}
+   val rooms=captured.map{JSONObject(it.origin.destination).getJSONObject("room").s("roomId")}
+   assertTrue("Capture lost original room A",rooms.contains(roomA))
+   assertTrue("Capture lost original room B",rooms.contains(roomB))
    assertEquals(0,status.getInt("blockedTaskWrites"))
    assertTrue(status.getBoolean("noProvider"))
    c.filesDir.resolve("native-room-volume-ime-receipt.json").writeText(status.put("hardwareStartStop",true).put("touchStartStop",true)

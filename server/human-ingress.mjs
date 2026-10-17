@@ -2,6 +2,9 @@ import {randomBytes,createHash} from 'node:crypto';
 const fail=message=>Object.assign(Error(message),{status:403,code:'HUMAN_DEVICE_REQUIRED'});
 const digest=value=>createHash('sha256').update(JSON.stringify(value??{})).digest('hex');
 export function humanInputRoute(method,path){
+ if(method==='POST'&&/^\/api\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/cancel)?$/.test(path))return true;
+ if(method==='PUT'&&/^\/api\/voice\/recordings\/[^/]+\/audio$/.test(path))return true;
+ if(method==='POST'&&/^\/api\/voice\/recordings(?:\/[^/]+\/cancel)?$/.test(path))return true;
  return method==='POST'&&(path==='/api/threads'||/^\/api\/threads\/[^/]+\/(?:reply|queue\/resume|replies\/[^/]+)$/.test(path)||/^\/api\/voice\/(?:start|text|native\/(?:start|input|commit)|turns\/[^/]+)$/.test(path));
 }
 export class HumanIngress{

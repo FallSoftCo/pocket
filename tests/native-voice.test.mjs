@@ -13,7 +13,7 @@ test('speech-only rendering does not replace active coordinator audio and cannot
  assert.throws(()=>s.voice.begin('device',speech.id,'speech-turn-001'),/cannot receive task/);
  await assert.rejects(s.voice.commit('device',speech.id,'speech-turn-001'),/cannot commit task/);assert.equal(s.sends,0);
  await s.voice.speak('device',speech.id,'Read only this supplied sentence.');
- assert.match(s.calls.at(-1).params.text,/POCKET_SPEAK/);assert.equal(s.calls.at(-1).params.threadId,'audio-thread-2');
+ assert.equal(s.calls.at(-1).method,'thread/realtime/appendSpeech');assert.equal(s.calls.at(-1).params.text,'Read only this supplied sentence.');assert.equal(s.calls.at(-1).params.threadId,'audio-thread-2');
  await s.voice.stop('device',speech.id);assert.equal(s.voice.session('device',live.id).id,live.id);
 }finally{await s.cleanup()}});
 test('speech purpose is validated and exact owner/id stops cannot affect another lane',async()=>{const s=setup();try{

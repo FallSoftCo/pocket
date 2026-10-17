@@ -139,7 +139,7 @@ class MainActivity:ComponentActivity(){
         }
     }
     override fun onWindowFocusChanged(hasFocus:Boolean){super.onWindowFocusChanged(hasFocus);AppWindowVisibility.focus(this,hasFocus)}
-    override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
+    override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;Pocket.scope.launch{DurableVoiceWork.restore(this@MainActivity)};if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
     override fun onStop(){AppWindowVisibility.focus(this,false);captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;if(!PocketVoice.active)PocketLive.stop();super.onStop()}
     private val captureKeys get()=PocketVoice.captureKeys
     private var permissionCapture:CaptureDestination?=null
@@ -155,8 +155,9 @@ class MainActivity:ComponentActivity(){
         if(event.keyCode!=android.view.KeyEvent.KEYCODE_VOLUME_DOWN&&event.keyCode!=android.view.KeyEvent.KEYCODE_VOLUME_UP)
             return super.dispatchKeyEvent(event)
         val destination=currentForegroundCaptureTarget()
-        if(foregroundCaptureKeys(PocketVoice.foreground,Pocket.token.isNotBlank()&&!Pocket.pairingMode,BackendNavigation.teamSelected(),destination.eligible,nativeRoom=destination.roomDestination!=null,recording=captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND)){
+        if(foregroundCaptureKeys(PocketVoice.foreground,Pocket.token.isNotBlank()&&!Pocket.pairingMode,BackendNavigation.teamSelected(),destination.eligible,nativeRoom=destination.roomDestination!=null,recording=PocketVoice.captureBusy)){
             if(event.action==android.view.KeyEvent.ACTION_DOWN&&captureKeys.down(event.keyCode,event.repeatCount)){
+                if(PocketVoice.captureBusy){PocketVoice.record();return true}
                 val target=CaptureDestination.capture(destination.threadId,destination.roomDestination,destination.sourceLabel)
                 if(target==null)PocketVoice.captureFailure("Connect to an environment before recording. Your draft is kept.")
                 else if(androidx.core.content.ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)==android.content.pm.PackageManager.PERMISSION_GRANTED)target.start(this)

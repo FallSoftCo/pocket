@@ -38,8 +38,8 @@ import androidx.lifecycle.repeatOnLifecycle
 
 @Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false,cardRegion:Boolean=false,smallDock:Boolean=false,roomDestination:JSONObject?=null,sourceLabel:String?=null,largeFloating:Boolean=false){
     val c=LocalContext.current
-    val here=compact||bar||dock
-    val control=captureControl(PocketVoice.active||PocketVoice.launching,PocketVoice.state,false)
+    val here=true
+    val control=if(PocketVoice.captureBusy)CaptureControl.STOP_SEND else if(PocketVoice.launching)CaptureControl.PROCESSING else CaptureControl.START
     var permissionTarget by remember{mutableStateOf<CaptureDestination?>(null)}
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ok->
         val original=permissionTarget;permissionTarget=null
@@ -56,6 +56,9 @@ import androidx.lifecycle.repeatOnLifecycle
         if(control==CaptureControl.CHECK_SAVED&&PocketVoice.active)PocketVoice.retry()
         else {
             val original=CaptureDestination.capture(threadId,roomDestination?.toString(),sourceLabel,here,control==CaptureControl.CHECK_SAVED)
+            if(cardRegion&&control==CaptureControl.START&&roomDestination==null&&original!=null){
+                if(threadId==null)PocketCoordinator.open()else Pocket.open(threadId)
+            }
             if(original==null)PocketVoice.captureFailure("Connect to an environment before recording. Your draft is kept.",here)
             else if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)original.start(c)
             else{permissionTarget=original;permission.launch(Manifest.permission.RECORD_AUDIO)}
@@ -162,7 +165,7 @@ import androidx.lifecycle.repeatOnLifecycle
     var expandedError by remember(PocketVoice.problem){mutableStateOf(false)}
     val help=if(PocketVoice.problem.isNotBlank())Modifier.clickable(onClickLabel=if(expandedError)"Collapse capture error" else "Show full capture error"){expandedError=!expandedError}else Modifier
     Row(modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=4.dp).heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-        WorkflowText(if(PocketVoice.problem.isNotBlank())target+" · "+PocketVoice.problem else "${if(PocketVoice.state=="Listening")"Recording %02d:%02d".format(elapsed/60,elapsed%60) else PocketVoice.state} · $target",Modifier.weight(1f).then(help),color=if(PocketVoice.problem.isNotBlank())Coral else Mint,fontSize=14.sp,maxLines=if(expandedError)Int.MAX_VALUE else 2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        WorkflowText(if(PocketVoice.problem.isNotBlank())target+" · "+PocketVoice.problem else "${if(PocketVoice.state=="Listening")"Recording %02d:%02d".format(elapsed/60,elapsed%60) else PocketVoice.deliveryStatus.ifBlank{PocketVoice.state}} · $target",Modifier.weight(1f).then(help),color=if(PocketVoice.problem.isNotBlank())Coral else Mint,fontSize=14.sp,maxLines=if(expandedError)Int.MAX_VALUE else 2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         if(PocketVoice.state=="Listening")LinearProgressIndicator(progress={PocketVoice.captureLevel},modifier=Modifier.width(48.dp),color=Coral)
         TextButton({PocketVoice.stop()},modifier=Modifier.widthIn(min=64.dp).heightIn(min=48.dp)){BilingualLabel("End voice",fontSize=14.sp,maxLines=2)}
     }

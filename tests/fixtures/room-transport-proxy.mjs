@@ -11,8 +11,10 @@ const sockets=new Set();
 const record=value=>fs.appendFileSync(config.journal,JSON.stringify({at:Date.now(),...value})+'\n',{mode:0o600});
 const server=http.createServer(async(req,res)=>{
  try{
+  const audioUpload=req.method==='PUT'&&/^\/api\/voice\/recordings\/[a-zA-Z0-9_-]{8,100}\/audio$/.test(req.url);
+  const bodyLimit=audioUpload?4*1024*1024:32000;
   const chunks=[];let bytes=0;
-  for await(const chunk of req){bytes+=chunk.length;if(bytes>32000)throw Error('QA body limit');chunks.push(chunk)}
+  for await(const chunk of req){bytes+=chunk.length;if(bytes>bodyLimit)throw Error('QA body limit');chunks.push(chunk)}
   const body=Buffer.concat(chunks);
   if(req.url==='/_qa/reconnect'){
    const command=JSON.parse(body.toString()||'{}');

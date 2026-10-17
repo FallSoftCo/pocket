@@ -22,7 +22,7 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
         }
     }
     enum class Capture { RECORDING, SEALING, SEALED, INTERRUPTED }
-    enum class Delivery { UNSUBMITTED, SUBMITTING, ACCEPTED, UNKNOWN, COMPLETED, FAILED, CANCELLED }
+    enum class Delivery { UNSUBMITTED, SUBMITTING, STORED, ACCEPTED, UNKNOWN, COMPLETED, FAILED, CANCELLED }
     enum class Playback { UNAVAILABLE, READY, PLAYING, PAUSED, COMPLETED, FAILED }
     data class Turn(
         val key: String, val id: String, val origin: Origin, val capture: Capture,
@@ -96,6 +96,11 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
         db.insertWithOnConflict("turns",null,values,SQLiteDatabase.CONFLICT_IGNORE)
         return requireNotNull(get(key)).also { check(it.origin == origin) { "Voice identity belongs to a different destination" } }
     }
+    /** Interrupted PCM stays private and inspectable; it is never eligible for automatic submission. */
+    fun captureFile(key:String):File {
+        check(requireNotNull(get(key)).capture==Capture.RECORDING)
+        return File(root,"$key.capturing.pcm")
+    }
     /** File is durable before the row can become eligible for delivery. Repeating identical sealing is safe. */
     fun seal(key: String, wav: ByteArray): Turn {
         require(validAudio(wav)) { "Expected complete mono 16 kHz PCM16 WAV" }
@@ -116,6 +121,7 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
             it.bindString(1,key);it.bindString(2,digest);it.executeUpdateDelete()
         }
         check(changed == 1) { "Capture changed before sealing" }
+        File(root,"$key.capturing.pcm").delete()
         return requireNotNull(get(key))
     }
     fun audio(turn: Turn): File {
@@ -130,18 +136,19 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
     }
     /** Only definite pre-admission failures may release a claim for another attempt. */
     fun notAdmitted(key: String, reason: String) = transition(key,setOf(Delivery.SUBMITTING),Delivery.UNSUBMITTED,null,reason)
-    fun uncertain(key: String, reason: String) = transition(key,setOf(Delivery.SUBMITTING,Delivery.ACCEPTED),Delivery.UNKNOWN,null,reason)
-    fun accepted(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.UNKNOWN),Delivery.ACCEPTED,receipt,null)
-    fun completed(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.ACCEPTED,Delivery.UNKNOWN),Delivery.COMPLETED,receipt,null)
-    fun failed(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.ACCEPTED,Delivery.UNKNOWN),Delivery.FAILED,receipt,receipt.optString("error"))
+    fun uncertain(key: String, reason: String) = transition(key,setOf(Delivery.SUBMITTING,Delivery.STORED,Delivery.ACCEPTED),Delivery.UNKNOWN,null,reason)
+    fun stored(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.STORED),Delivery.STORED,receipt,null)
+    fun accepted(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.STORED,Delivery.UNKNOWN),Delivery.ACCEPTED,receipt,null)
+    fun completed(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.STORED,Delivery.ACCEPTED,Delivery.UNKNOWN),Delivery.COMPLETED,receipt,null)
+    fun failed(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.STORED,Delivery.ACCEPTED,Delivery.UNKNOWN),Delivery.FAILED,receipt,receipt.optString("error"))
     fun cancelUnsubmitted(key: String) = transition(key,setOf(Delivery.UNSUBMITTED),Delivery.CANCELLED,null,null)
     private fun transition(key: String, from: Set<Delivery>, to: Delivery, receipt: JSONObject?, problem: String?): Turn {
         val database = db;database.beginTransaction()
         try {
             val old = requireNotNull(get(key))
             if(receipt != null) check(receipt.optString("id") == old.id) { "Receipt belongs to another turn" }
-            if(old.delivery != to) {
-                check(old.delivery in from) { "Invalid voice delivery transition ${old.delivery} to $to" }
+            if(old.delivery != to || receipt != null && receipt.toString()!=old.receipt || old.problem!=problem) {
+                check(old.delivery == to || old.delivery in from) { "Invalid voice delivery transition ${old.delivery} to $to" }
                 val values = ContentValues().apply {
                     put("delivery",to.name);put("revision",old.revision+1)
                     if(receipt != null)put("receipt",receipt.toString())
@@ -179,6 +186,10 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
             database.execSQL("UPDATE turns SET playback='PAUSED',revision=revision+1 WHERE playback='PLAYING'")
             database.setTransactionSuccessful()
         } finally { database.endTransaction() }
+    }
+    /** Failed capture is never uploadable; retain its private PCM for inspection. */
+    fun interruptCapture(key: String, message: String) {
+        db.execSQL("UPDATE turns SET capture='INTERRUPTED',problem=?,revision=revision+1 WHERE turn_key=? AND capture='RECORDING' AND delivery='UNSUBMITTED'",arrayOf(message,key))
     }
     fun problem(key: String, message: String) {
         db.execSQL("UPDATE turns SET problem=?,revision=revision+1 WHERE turn_key=?",arrayOf(message,key))

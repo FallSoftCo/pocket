@@ -1,0 +1,86 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {readFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
+import {createHash} from 'node:crypto';
+import {VoiceRecordings} from '../server/voice-recordings.mjs';
+
+function wav(){
+ const b=Buffer.alloc(3244);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);
+ b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(16000,24);
+ b.writeUInt32LE(32000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(b.length-44,40);return b;
+}
+const audio=wav(),digest=createHash('sha256').update(audio).digest('hex'),device='qa-device-one';
+const request=id=>({id,destination:{room:{roomId:'original-room',recipientId:'original-agent'}},audioSha256:digest,bytes:audio.length});
+const principal={version:1,kind:'paired-device',deviceId:device};
+const proof=sha=>({version:1,boundary:'session.closed',reason:'client_request',confirmed:true,audioSha256:sha});
+async function settle(server){for(let n=0;n<200;n++){if(!server.running.size)return;await new Promise(r=>setTimeout(r,5))}throw Error('Owned deterministic job did not settle');}
+function fixture(overrides={}){
+ const root=mkdtempSync(join(tmpdir(),'nextcomp-recording-')),database=join(root,'data.db'),external=new Map(),calls={transcribe:0,submit:0};
+ let db=new DatabaseSync(database);
+ const adapters={
+  root:join(root,'audio'),resolveDestination:async(_device,d)=>structuredClone(d),authorize:async()=>{},minFreeBytes:0,
+  transcribe:async input=>{calls.transcribe++;assert.deepEqual(await readFile(input.file),audio);return {text:'Original request',proof:proof(input.sha256)};},
+  submit:async(_device,id,text,destination,source)=>{calls.submit++;assert.equal(destination.room.roomId,'original-room');assert.deepEqual(source,principal);const receipt={id,state:'completed',transcript:text,response:'Original result',actions:[]};external.set(id,receipt);return receipt;},
+  getReceipt:async(_device,id)=>external.get(id)||null,...overrides
+ };
+ let server=new VoiceRecordings({db,...adapters});
+ return {root,calls,external,adapters,get db(){return db},get server(){return server},
+  async reopen(){await server.stop();db.close();db=new DatabaseSync(database);server=new VoiceRecordings({db,...adapters});},
+  async close(){await server.stop();db.close();rmSync(root,{recursive:true,force:true})}
+ };
+}
+test('durable audio and lost task acknowledgement survive SQLite reopen without duplicate dispatch',async()=>{
+ const f=fixture();
+ f.server.submit=async(...args)=>{await f.adapters.submit(...args);throw Error('Acknowledgement lost after task submission');};
+ try{
+  await f.server.create(device,request('original-turn-0001'),principal);
+  await assert.rejects(f.server.create(device,{...request('original-turn-0001'),destination:{room:{roomId:'wrong-room'}}},principal),/another recording or destination/);
+  await Promise.all([f.server.upload(device,'original-turn-0001',audio),f.server.upload(device,'original-turn-0001',audio)]);
+  await f.server.start();await settle(f.server);
+  assert.equal(f.server.row(device,'original-turn-0001').phase,'unknown');assert.equal(f.calls.submit,1);
+  await f.reopen();await f.server.start();await settle(f.server);
+  assert.equal(f.calls.submit,1);assert.equal(f.server.row('different-device','original-turn-0001'),undefined);
+  const receipt=await f.server.inspect(device,'original-turn-0001');assert.equal(receipt.state,'completed');
+  assert.equal(receipt.audioSha256,digest);assert.equal(f.calls.submit,1);
+  await f.server.upload(device,'original-turn-0001',audio);await settle(f.server);assert.equal(f.calls.submit,1);
+  assert.deepEqual(JSON.parse(f.server.row(device,'original-turn-0001').destination),request('x').destination);
+ }finally{await f.close();}
+});
+test('cancelled transcription cannot dispatch even when a media callback returns late',async()=>{
+ let finish;
+ const f=fixture({transcribe:input=>new Promise(resolve=>{finish=()=>resolve({text:'Too late',proof:proof(input.sha256)});})});
+ try{
+  await f.server.create(device,request('cancelled-turn-0001'),principal);await f.server.upload(device,'cancelled-turn-0001',audio);
+  await f.server.start();while(!finish)await new Promise(r=>setTimeout(r,5));
+  f.server.cancel(device,'cancelled-turn-0001');finish();await settle(f.server);
+  assert.equal(f.server.row(device,'cancelled-turn-0001').phase,'cancelled');assert.equal(f.calls.submit,0);
+ }finally{await f.close();}
+});
+test('interrupted upload is resumable and a completed file recovers the rename-to-row boundary',async()=>{
+ const f=fixture();
+ try{
+  await f.server.create(device,request('upload-boundary-0001'),principal);
+  f.db.prepare("UPDATE voice_recordings SET phase='sealing' WHERE id=?").run('upload-boundary-0001');
+  await f.server.upload(device,'upload-boundary-0001',audio);
+  f.db.prepare("UPDATE voice_recordings SET phase='sealing' WHERE id=?").run('upload-boundary-0001');
+  await f.reopen();await f.server.start();await settle(f.server);
+  assert.equal(f.calls.submit,1);assert.equal((await f.server.inspect(device,'upload-boundary-0001')).state,'completed');
+ }finally{await f.close();}
+});
+test('restart after final transcript revalidates revoked human authority once without dispatch or a busy loop',async()=>{
+ let checks=0;
+ const f=fixture({authorize:async()=>{checks++;throw Object.assign(Error('Original device revoked'),{status:403});}});
+ try {
+  await f.server.create(device,request('prepared-restart-0001'),principal);
+  await f.server.upload(device,'prepared-restart-0001',audio);
+  f.db.prepare("UPDATE voice_recordings SET phase='transcribed',transcript='Preserved transcript',proof=?,worker='stopped-process' WHERE id=?")
+    .run(JSON.stringify(proof(digest)),'prepared-restart-0001');
+  await f.reopen();await f.server.start();await settle(f.server);
+  assert.equal(f.server.row(device,'prepared-restart-0001').phase,'blocked');
+  assert.equal(checks,1);assert.equal(f.calls.submit,0);
+ }finally{await f.close();}
+});

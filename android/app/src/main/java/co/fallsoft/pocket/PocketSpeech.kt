@@ -223,13 +223,15 @@ object PocketSpeech {
         if(service==null&&c.getSystemService(AudioManager::class.java).isMusicActive){hold("Waiting while other audio plays");return@launch}
         service?.next()?:start(c,"play")
     }}
+    internal fun voiceOwnsAudio()=PocketVoice.captureBusy ||
+        PocketVoice.active&&(displayedOwner==null||PocketVoice.state !in setOf("Ready","Paused"))
     fun control(action:String){
         if(displayedOwner==null)sessions.explicitFocus=true
-        if(action=="pause"){service?.pause("Paused by you")?:hold("Paused by you");return}
+        if(action=="pause"){++displayedGeneration;displayedRunning=false;service?.pause("Paused by you")?:hold("Paused by you");return}
         if(queue.current!=null)start(Pocket.context,"resume")
     }
     private fun start(c:Context,action:String){
-        notificationSpeechHoldReason(PocketVoice.active)?.let{hold(it);return}
+        notificationSpeechHoldReason(PocketSpeech.voiceOwnsAudio())?.let{hold(it);return}
         try{ContextCompat.startForegroundService(c,Intent(c,PocketSpeechService::class.java).setAction(action))}
         catch(_:RuntimeException){hold("Ready when you are")}
     }
@@ -335,7 +337,7 @@ class PocketSpeechService:Service(){
     }
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
         if(finished)return START_NOT_STICKY
-        notificationSpeechHoldReason(PocketVoice.active)?.let{pause(it);return START_NOT_STICKY}
+        notificationSpeechHoldReason(PocketSpeech.voiceOwnsAudio())?.let{pause(it);return START_NOT_STICKY}
         if(intent?.action=="pause"){pause("Paused by you");return START_NOT_STICKY}
         if(queue.current==null){finish();return START_NOT_STICKY}
         if(intent?.action in listOf("resume","displayed")){explicitPlayback=true;queue.resume()}
@@ -345,7 +347,7 @@ class PocketSpeechService:Service(){
     }
     private fun armTimeout(){handler.removeCallbacks(timeout);handler.postDelayed(timeout,90000)}
     private fun audioFile():File?=spokenChunk?.let{chunk->
-        val hash=MessageDigest.getInstance("SHA-256").digest(("native-account-v1:"+renderedLanguage+":"+chunk).toByteArray()).joinToString(""){"%02x".format(it)}
+        val hash=MessageDigest.getInstance("SHA-256").digest(("native-account-file-v1:"+renderedLanguage+":"+chunk).toByteArray()).joinToString(""){"%02x".format(it)}
         File(PocketSpeech.directory,"$hash.wav")
     }
     private val checkedAttention=mutableSetOf<Long>()
@@ -358,7 +360,7 @@ class PocketSpeechService:Service(){
     }
     internal fun next(){
         if(closed||finished||queue.paused)return
-        notificationSpeechHoldReason(PocketVoice.active)?.let{pause(it);return}
+        notificationSpeechHoldReason(PocketSpeech.voiceOwnsAudio())?.let{pause(it);return}
         if(speechProfile()!=speakingProfile){if(PocketSpeech.displayedOwner!=null)PocketSpeech.displayedCompleted() else pause("Profile changed · Your place is saved");return}
         if(player!=null){if(prepared)updateControls(PlaybackState.STATE_PLAYING);return}
         if(loading||synthesizing!=null)return
@@ -431,7 +433,11 @@ class PocketSpeechService:Service(){
                 withContext(Dispatchers.IO){val temp=File(PocketSpeech.directory,"pending-native");temp.writeBytes(bytes);check(temp.renameTo(target)){"Could not save native speech"}}
                 freshlyGeneratedFile=target.path
                 synthesizing=null;handler.removeCallbacks(timeout);next()
-            }catch(e:CancellationException){throw e}catch(_:Exception){if(!closed&&!finished)pause("Native speech unavailable · Tap Resume to retry")}
+            }catch(e:CancellationException){throw e}catch(e:Exception){if(!closed&&!finished){
+                val detail=PocketNetwork.error(e).let{if(speechCredential.isBlank())it else it.replace(speechCredential,"[credential]")}.replace('\n',' ').take(220)
+                android.util.Log.w("PocketSpeech","Native output failed: "+e.javaClass.simpleName)
+                pause("Speech unavailable: "+detail)
+            }}
         }
     }
     private fun acquireSpeechFocus():Boolean {
@@ -476,7 +482,7 @@ class PocketSpeechService:Service(){
         }catch(_:Exception){file.delete();pause("Playback interrupted · Tap Resume to retry")}
     }
     private fun startPlayer(media:MediaPlayer,id:Long,index:Int){
-        notificationSpeechHoldReason(PocketVoice.active)?.let{pause(it);return}
+        notificationSpeechHoldReason(PocketSpeech.voiceOwnsAudio())?.let{pause(it);return}
         handler.removeCallbacks(timeout);media.start();started=true;playbackMeter.start(SystemClock.elapsedRealtime())
         queue.current?.let{PocketSpeechCaptions.update(it.id,it.title,spokenChunk,queue.chunkIndex,renderedChunks.size,speakingProfile)}
         handler.postDelayed(timeout,(media.duration-media.currentPosition).toLong().coerceAtLeast(0)+15000)
@@ -491,7 +497,7 @@ class PocketSpeechService:Service(){
     }
     private fun resumeTransient(){
         if(!transientPaused)return
-        notificationSpeechHoldReason(PocketVoice.active)?.let{pause(it);return}
+        notificationSpeechHoldReason(PocketSpeech.voiceOwnsAudio())?.let{pause(it);return}
         val media=player?:return
         try{
             media.start();transientPaused=false;playbackMeter.start(SystemClock.elapsedRealtime())

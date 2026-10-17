@@ -1,6 +1,6 @@
 # Voice turn lifecycle replacement
 
-Status: foundation implemented and qualified in the owning candidate; microphone/service cutover and migration are still required. Not deployed. See qualification/voice-turn-lifecycle-foundation-20261016.json.
+Status: durable audio intake and microphone cutover implemented in the owning candidate; focused native qualification is underway. Not deployed. See qualification/voice-turn-lifecycle-foundation-20261016.json.
 
 The existing singleton pending slot couples capture, task delivery, receipt inspection and response playback. A turn can remain pending after the server accepted it solely because speech failed. Archiving that slot permits another recording but does not replace its ownership or recovery model. Alpha109 is containment, not qualification of this design.
 
@@ -10,7 +10,7 @@ A capture owns an immutable turn ID, environment ID, original backend/pairing fi
 
 Android owns microphone capture and durable audio. A transactional per-turn journal owns admission intent and receipt reconciliation. A delivery worker owns bounded network attempts. The backend owns durable admission and dispatch. Playback owns independent per-session response queues. Compose observes projections and issues commands; neither rendering nor playback decides whether task work was delivered.
 
-Capture phases: recording, sealed, interrupted. Submission phases: unsubmitted, submitting, accepted, unknown, completed, failed, cancelled. Playback phases: unavailable, ready, playing, paused, completed, failed. These are independent dimensions, not a single state string. Only an actual recording owns the microphone. Pending, unknown or completed deliveries do not prevent a new capture. One foreground capture and one audible output remain the resource constraints; multiple durable turns are supported.
+Capture phases: recording, sealed, interrupted. Submission phases: unsubmitted, submitting, stored, accepted, unknown, completed, failed, cancelled. Stored confirms server audio custody, not task dispatch. Playback phases: unavailable, ready, playing, paused, completed, failed. These are independent dimensions, not a single state string. Only an actual recording owns the microphone. Pending, unknown or completed deliveries do not prevent a new capture. One foreground capture and one audible output remain the resource constraints; multiple durable turns are supported.
 
 ## Durable admission
 
@@ -20,7 +20,7 @@ The server admission key is authenticated device plus turn ID, bound to a digest
 
 Native Codex audio remains on the existing signed-in account path. Do not introduce an API-key fallback or new billing/model choice. The installed experimental protocol exposes both WebRTC and websocket audio transport, but protocol shape alone is not runtime qualification. Select the transport only after a bounded actual audio-only round trip confirms final transcript/manual turn handling. No task dispatch may use a partial transcript. Preserve the audio interface prohibition on tools and delegated work.
 
-Stock direct/coordinator execution currently reads mutable focus during controller run; room execution already has destination validation. Both must consume the persisted original destination before concurrent delivery is enabled. A per-device serial coordinator execution policy belongs in the server queue, not in microphone availability. Room task concurrency follows the canonical room backend contract.
+Stock direct/coordinator execution persists the captured origin before controller startup; room execution validates its original binding and recipient. Both consume the original persisted destination. A per-device serial coordinator execution policy belongs in the server queue, not in microphone availability. Room task concurrency follows the canonical room backend contract.
 
 ## Recovery and cancellation
 
@@ -40,8 +40,23 @@ Keep the compatible current APK and rollback closure available. Do not label an 
 
 ## Current transport qualification boundary
 
-The candidate journal, immutable stock routing and native dispatch admission guard have implementation and focused verification. The source-bound Android delivery adapter and read-only WorkManager receipt worker compile but are not connected to the live microphone. They are not a completed cutover.
+The microphone now captures to an independent per-turn journal and enqueues a WorkManager upload. It does not start a phone-owned transcription connection or consult an older pending task slot. Partial PCM is private and retained on interruption; only a verified sealed WAV becomes uploadable. The new recording-v1 journal is separate from legacy unknown sends, so a missing legacy receipt never authorizes a v1 upload. Explicit old saved-turn inspection remains separate.
 
-Actual audio-only probes against the installed signed-in-account runtime rejected websocket audio as requiring API-key authentication. That route is excluded: there was no credential or billing fallback. A disposable native server WebRTC peer connected and received user transcript deltas, but never a final transcript; teardown also crashed on both tested Node runtimes. That adapter is rejected and its dependency has not been added to the product. Partial hypotheses must not be treated as finalized commands to get a passing test.
+Server admission durably seals the original WAV before acknowledging upload. A media-only worker returns a confirmed transcript; only the task admission component may submit it using the persisted original destination and principal. Queue processing is event-driven and receipt recovery uses metadata reads, not model polling. The Android projection distinguishes audio stored/transcribing from task acceptance. Completion commits before optional foreground response speech; mute and navigation are respected.
 
-Server-owned durable audio intake remains necessary to complete delivery after the phone process dies. A client-only WebRTC fallback cannot establish that guarantee. Resolve final transcription and native peer lifecycle before enabling the replacement; retain the current release and all source-bound pending work meanwhile.
+The selected peer is Python aiortc in an isolated pinned installation, communicating over bounded private JSON/media pipes. It waits for provider session.started before playing, drains the recording and silence tail, requests session.close, and keeps both channels open through session.closed. The pinned native Codex runtime then emits its canonical transcript/done notification. Both closure and that final transcript are required. Partial deltas and quiet-time heuristics cannot dispatch work. The rejected Node native addon is not a product dependency.
+
+Actual audio-only native qualification returned a confirmed transcript and clean peer exit for the seven-second bundled synthetic sample (11.5 seconds direct; 11.9 seconds through the structured worker). No task turn, tool or external business action was available to that worker. The account remains the existing signed-in native Codex profile, without an API-key fallback. The command-backed adapter permits media processing on the authorized development host while task execution stays on the recording's original backend; that remote installation path still requires deployment qualification.
+
+Actual emulator AudioRecord start/stop twice while the prior presentation state was Thinking passed without clearing pairing or preferences. Real Android SQLite/file reopen and unknown-delivery isolation also passed. These are not physical phone proof. Real canonical room admission and Android WorkManager/native ASR/room acceptance now passed using the retained isolated QA authority. The exact QA task was cancelled after verification; no business worker was created. Complete reliable response playback remains a release gate. No architecture APK has been published or installed on the phone.
+
+The first real recording-admission HTTP journey retained its ID but stopped at the storage guard (507): the host was below its 80 GiB reserve. No audio processing or task started. Keep the reserve; do not label this as end-to-end delivery qualification.
+
+
+## 2026-10-17 actual playback boundary
+
+The candidate speech path produces source-attributed, integrity-verified WAV assets on the backend and plays them with Android's native player. Content/policy IDs and attempt receipts deduplicate listening; a lost asset download cannot replay task input. Completed clips remain reusable after listening stops. No background speech model retry is enabled.
+
+This path is **not release-qualified**: a real render returned a confirmed 2.481-second clip in 8.754 seconds, but the subsequent actual Android journey failed when the native provider returned no audio. Both developer and user startup-history variants have shown silence. Startup context and append acknowledgements are not a deterministic TTS trigger. Do not present one successful render or the absence of a WebView as proof of reliable speech. Preserve the installed playback path until a supported, repeatably verified replacement exists; do not silently switch billing or audio models.
+
+Capture limit/interruption is distinct from user stop: only an explicit stop sends the turn. At the two-minute safety limit private audio is retained without submission. Failure to acquire audio focus releases the capture wake lock immediately.

@@ -24,6 +24,11 @@ import {ConversationNotes} from "./conversation-notes.mjs";
 import {LiveActivityDelivery} from "./live-activity-delivery.mjs";
 import {ActivityBoard} from './activity-board.mjs';
 import {NativeVoice} from './native-voice.mjs';
+import {NativeSpeechMedia} from './native-speech-media.mjs';
+import {VoiceRenderings,SPEECH_POLICY} from './voice-renderings.mjs';
+import {NativeAudioTranscriber} from './native-audio-transcriber.mjs';
+import {VoiceRecordings} from './voice-recordings.mjs';
+import {RemoteAudioTranscriber} from './remote-audio-transcriber.mjs';
 import {RoomVoice} from './room-voice.mjs';
 import {HollywoodVoice} from './hollywood-voice.mjs';
 import {HollywoodPush} from './hollywood-push.mjs';
@@ -108,7 +113,10 @@ const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,ho
 
 const audioCommand=process.env.POCKET_LAX_AUDIO_COMMAND?JSON.parse(process.env.POCKET_LAX_AUDIO_COMMAND):null;
 if(audioCommand&&(!Array.isArray(audioCommand)||!audioCommand.length||audioCommand.some(v=>typeof v!=='string'||!v)))throw Error('Invalid installation-owned native audio command.');
-const nativeVoiceCodex=new Codex(undefined,{command:audioCommand});
+// Audio transport has no project workspace. Never inherit the backend checkout's local config or instructions.
+const nativeAudioWorkspace=resolve(dir,'native-audio-workspace');
+mkdirSync(nativeAudioWorkspace,{recursive:true,mode:0o700});
+const nativeVoiceCodex=new Codex(undefined,{command:audioCommand,processCwd:nativeAudioWorkspace});
 const immersion=new ImmersionWorker({codex:nativeHollywood?nativeVoiceCodex:new Codex(),cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
 // Existing devices retain their old endpoint/cache; reuse native authenticated transport.
 db.exec('CREATE TABLE IF NOT EXISTS immersion_transgrammatic_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
@@ -125,11 +133,11 @@ const roomVoice=new RoomVoice({db,client:new Losangelex(loadLosangelex(dir))});
 const roomVoiceFocus=new Map();
 const audioController={db,
  capture:device=>roomVoiceFocus.get(device)?JSON.parse(JSON.stringify(roomVoiceFocus.get(device))):voiceController.capture(device),
- get:(device,id)=>nativeHollywood?hollywoodVoice.refresh(device,id):roomVoice.get(device,id)||voiceController.get(device,id),
+ get:(device,id)=>nativeHollywood?hollywoodVoice.refresh(device,id):roomVoice.get(device,id)?roomVoice.refresh(device,id):voiceController.get(device,id),
  submitText:(device,id,text,destination)=>nativeHollywood?hollywoodVoice.submitText(device,id,text,destination):destination?.backend==='stock-codex-voice'?voiceController.submitText(device,id,text,null,destination):destination?roomVoice.submitText(device,id,text,destination):voiceController.submitText(device,id,text),
  mark:(device,id,...args)=>{if(nativeHollywood)return;if(!roomVoice.get(device,id))voiceController.mark(device,id,...args);}
 };
-const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:audioController,cwd:defaultCwd,requireFinalTranscript:nativeHollywood});
+const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:audioController,cwd:nativeAudioWorkspace,requireFinalTranscript:nativeHollywood,observe:process.env.POCKET_NATIVE_AUDIO_TRACE?event=>import('node:fs/promises').then(fs=>fs.appendFile(process.env.POCKET_NATIVE_AUDIO_TRACE,JSON.stringify(event)+'\n',{mode:0o600})):null});
 // Validate a per-turn destination without consulting or changing mutable device focus.
 // Missing destination retains compatibility with already installed clients only.
 async function voiceDestination(device,value){
@@ -151,6 +159,26 @@ async function voiceDestination(device,value){
   full:typeof value.fullPermissions==='boolean'?value.fullPermissions:current.full});
 }
 
+const nativeAudioPython=process.env.POCKET_NATIVE_AUDIO_PYTHON||null;
+const remoteAudioCommand=process.env.POCKET_NATIVE_AUDIO_REMOTE?JSON.parse(process.env.POCKET_NATIVE_AUDIO_REMOTE):null;
+const nativeAudioIntake=!!(nativeAudioPython||remoteAudioCommand);
+const nativeTranscriber=remoteAudioCommand?new RemoteAudioTranscriber(remoteAudioCommand):new NativeAudioTranscriber({voice:nativeVoice,python:nativeAudioPython});
+const nativeSpeechMedia=new NativeSpeechMedia({voice:nativeVoice,python:nativeAudioPython});
+const voiceRenderings=new VoiceRenderings({db,root:resolve(dir,'voice-renderings'),render:request=>nativeSpeechMedia.render(request)});
+const voiceRecordings=new VoiceRecordings({
+ db,root:resolve(dir,'voice-recordings'),
+ resolveDestination:voiceDestination,
+ transcribe:request=>nativeTranscriber.transcribe(request),
+ submit:(device,id,text,destination,principal)=>{
+  humanIngress.record('voice-recording',voiceRecordings.key(device,id),principal);
+  return audioController.submitText(device,id,text,destination);
+ },
+ getReceipt:(device,id)=>audioController.get(device,id),
+ authorize:async(device,principal)=>{
+  if(principal.deviceId!==device||!db.prepare('SELECT 1 FROM devices WHERE id=?').get(device))
+   throw Object.assign(Error('The original human device is no longer authorized. Recording retained.'),{status:403});
+ }
+});
 const sessionDiscovery=new SessionDiscovery({db,codex,hidden:(id,thread)=>internalSessions.owns(id,thread)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)});
 const catchupHidden=id=>internalSessions.owns(id)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)||!!db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived;
 const sessionCatchup=new SessionCatchup({db,hidden:catchupHidden,resolvePending:(requestId,threadId)=>{
@@ -495,7 +523,7 @@ app.use('/api',(req,res,next)=>humanIngress.middleware(req,res,next));
 // Retained work stays in the database; native mode never starts its schedulers.
 app.use('/api',(req,res,next)=>{
   if(!nativeHollywood)return next();
-  const safe=/^\/immersion(?:\/v2)?(?:\/translate)?$/.test(req.path)||req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat|capabilities)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
+  const safe=/^\/immersion(?:\/v2)?(?:\/translate)?$/.test(req.path)||req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat|capabilities)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||/^\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel))?$/.test(req.path)||/^\/voice\/recordings(?:\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel))?)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
     req.method==='DELETE'&&/^\/devices\/[0-9a-f-]{36}$/.test(req.path);
   if(!safe)return res.status(403).json({error:'Use the original Hollywood room and identity for this environment.',code:'HOLLYWOOD_NATIVE_ROUTE_REQUIRED'});
   if(req.path==='/status'){void rateLimits.refresh();return void hollywood.status(req.device.id).then(status=>res.json({connected:status.available,backend:'lax',binding:status,usage:rateLimits.snapshot(),
@@ -550,8 +578,33 @@ app.post('/api/voice/start',route(async(req,res)=>{
   if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);
   res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),native:true});
 }));
-app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,immutableDestination:true,recordingDigest:true}));
-app.post('/api/voice/native/start',route(async(req,res)=>{if(nativeHollywood&&!audioCommand)throw Object.assign(Error('Native room audio is not configured on this environment.'),{status:503});res.json(await nativeVoice.start(req.device.id,req.body.sdp,req.body.purpose));}));
+app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,immutableDestination:true,recordingDigest:true,durableAudioAdmission:nativeAudioIntake,renderedSpeechVersion:nativeAudioPython?1:0,speechPolicy:SPEECH_POLICY}));
+app.post('/api/voice/renderings/:id',route(async(req,res)=>{
+ if(!nativeAudioPython)throw Object.assign(Error('Native rendered speech is not installed on this environment. Text remains available.'),{status:503});
+ res.status(202).json(await voiceRenderings.create(req.device.id,req.params.id,req.body));
+}));
+app.get('/api/voice/renderings/:id',route(async(req,res)=>{
+ const row=voiceRenderings.get(req.device.id,req.params.id);if(!row)return res.status(404).json({error:'Speech request not found.'});res.json(row);
+}));
+app.get('/api/voice/renderings/:id/audio',route(async(req,res)=>{
+ const result=await voiceRenderings.audio(req.device.id,req.params.id);res.set('Cache-Control','private, no-store').set('X-NextComp-Audio-SHA256',result.sha256).type('audio/wav').send(result.audio);
+}));
+app.post('/api/voice/renderings/:id/cancel',route(async(req,res)=>res.json(voiceRenderings.cancel(req.device.id,req.params.id,req.body.attemptId))));
+app.post('/api/voice/recordings',route(async(req,res)=>{
+ if(!nativeAudioIntake)throw Object.assign(Error('Durable native audio intake is not installed on this environment. Recording remains on the device.'),{status:503});
+ res.status(202).json(await voiceRecordings.create(req.device.id,req.body,req.humanPrincipal));
+}));
+app.put('/api/voice/recordings/:id/audio',express.raw({type:'audio/wav',limit:'4mb'}),route(async(req,res)=>{
+ if(!Buffer.isBuffer(req.body))throw Object.assign(Error('Expected recorded WAV audio.'),{status:415});
+ res.status(202).json(await voiceRecordings.upload(req.device.id,req.params.id,req.body));
+}));
+app.get('/api/voice/recordings/:id',route(async(req,res)=>{
+ const receipt=await voiceRecordings.inspect(req.device.id,req.params.id);
+ if(!receipt)return res.status(404).json({error:'Recording admission not found.'});
+ res.json(receipt);
+}));
+app.post('/api/voice/recordings/:id/cancel',route(async(req,res)=>res.json(voiceRecordings.cancel(req.device.id,req.params.id))));
+app.post('/api/voice/native/start',route(async(req,res)=>{if(req.body.purpose!==undefined&&!['voice','speech'].includes(req.body.purpose))throw Object.assign(Error('Invalid audio purpose.'),{status:400});if(nativeHollywood&&!audioCommand)throw Object.assign(Error('Native room audio is not configured on this environment.'),{status:503});res.json(await nativeVoice.start(req.device.id,req.body.sdp,req.body.purpose,req.body.text??null));}));
 app.post('/api/voice/native/stop',route(async(req,res)=>{await nativeVoice.stop(req.device.id,req.body.connectionId);res.json({ok:true});}));
 app.post('/api/voice/native/input',route(async(req,res)=>{
  const destination=Object.hasOwn(req.body,'destination')?await voiceDestination(req.device.id,req.body.destination):undefined;
@@ -821,4 +874,7 @@ server.on('upgrade',(req,socket,head)=>{
 setInterval(()=>{for(const ws of sockets.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000).unref();
 app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.message);if(res.destroyed||res.headersSent)return;res.status(err.status||400).json({error:err.message,...(err.code?{code:err.code}:{})});});
 const port=Number(process.env.PORT||18880);
-server.listen(port,'127.0.0.1',()=>console.log(`NextComp listening on 127.0.0.1:${port}`));
+server.listen(port,'127.0.0.1',()=>{
+ console.log(`NextComp listening on 127.0.0.1:${port}`);
+ if(nativeAudioIntake)void voiceRecordings.start().catch(error=>console.error('Voice recording recovery unavailable',error.message));
+});
