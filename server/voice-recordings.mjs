@@ -156,6 +156,8 @@ export class VoiceRecordings {
   return this.projection(row);
  }
  async cancelRequest(device,id){
+  // Reconcile a lost cancellation ACK before attempting the original control again.
+  const current=await this.inspect(device,id);if(current?.state==='cancelled')return current;
   const row=this.row(device,id);if(!row||row.phase!=='accepted'||!this.cancelTask)throw fail('Use the original work controls for this request.',409);
   const result=await this.cancelTask(device,id);
   if(result?.id!==id||result.state!=='cancelled')throw fail('Original request cancellation was not confirmed.',409);

@@ -59,6 +59,7 @@ try {
  await create(first);await wait(()=>starts.length===1);
  const queued=await create(second);assert(queued.body.state==='queued'&&starts.length===1,'Second recording was not queued independently');
  const cancelled=await api('/api/voice/recordings/'+second+'/cancel-request',{});assert(cancelled.body.state==='cancelled'&&cancelled.body.audioSha256===sha,'Queued cancellation was not source-bound');
+ const cancelledAgain=await api('/api/voice/recordings/'+second+'/cancel-request',{});assert(cancelledAgain.status===200&&cancelledAgain.body.state==='cancelled','Lost queued cancellation ACK was not idempotent');
  const text=await api('/api/voice/text',{turnId:third,text:'Synthetic third queued command'});assert(text.status===202&&text.body.state==='queued','Text request not queued');
  const current=starts[0];current.ws.send(JSON.stringify({method:'item/completed',params:{threadId:current.threadId,item:{type:'agentMessage',phase:'final_answer',text:'Synthetic first result'}}}));current.ws.send(JSON.stringify({method:'turn/completed',params:{threadId:current.threadId,turn:{id:current.turnId,status:'completed'}}}));
  await wait(()=>starts.length===2);assert(starts[1].requestId==='voice-'+third,'Cancelled request ran or order changed');
