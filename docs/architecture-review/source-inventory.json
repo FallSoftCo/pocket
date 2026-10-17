@@ -1,0 +1,2468 @@
+{
+  "at": "2026-10-17T14:15:42.406307+00:00",
+  "base": "7a78a1c646a56588595f213cf075559b5d934206",
+  "workingChangesRetained": true,
+  "files": [
+    {
+      "path": "android/app/src/main/AndroidManifest.xml",
+      "lines": 37,
+      "sha256": "848986435baa217db5bc1f061897e513a385180daef848fca1195399649d21ed"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ActivityPopup.kt",
+      "lines": 101,
+      "sha256": "ecca38bc744fd18e1471248b14d85a83a05d324a7ecfdbf552d4da22667c8536"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/AnimatedMark.kt",
+      "lines": 67,
+      "sha256": "c89ea0ebf139f513ee4794b2842db9a366eaf08a3caacf243c1882a58c9f498c"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/AppWindowVisibility.kt",
+      "lines": 13,
+      "sha256": "e08ebb5616c17d8a077fa926f8cad9e4d5c55d8d78b7b61b0ebedde795f199cd"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/BackendApp.kt",
+      "lines": 220,
+      "sha256": "8342d48354c3877bab6565ce60989d333015efc4226e414dcc0b57f090e92e9c"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/BilingualContent.kt",
+      "lines": 92,
+      "sha256": "e953e44ac7eb3ea349f8240ba9d5a2824e79f50f8d5c35b941c9e7b1abdc8e5c"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/BilingualLabel.kt",
+      "lines": 160,
+      "sha256": "d61a8c40ddf0a7a49fae32a7e9e39f28b68242e57fffd86f48ccb7e15a308b65"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/BilingualMessage.kt",
+      "lines": 97,
+      "sha256": "f7d21942ed420d25d448bb0a1e3e24e7c3ee5848f243a1385e74293a5ffce745"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/BlendImmersionText.kt",
+      "lines": 244,
+      "sha256": "53cd1c38f7d3c6e507a176dcb57a12d3d133c250b581ddb449a3d33ad24977e5"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/CaptureDestination.kt",
+      "lines": 54,
+      "sha256": "09a49f01e8d3e5e312a3530867e225f70549da1bc16ca35d9cbea12d55ac3b98"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/CardInteractionRegion.kt",
+      "lines": 34,
+      "sha256": "ed2d765773caf6566391f51fb57e0a0f236791d9e908732a63dddafcdaa7e072"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/CatalogLoadState.kt",
+      "lines": 9,
+      "sha256": "fa623b87c34105a1a255a26db207021ba3bf1a1f9a55456c99536b934917af57"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ClientReplyJournal.kt",
+      "lines": 27,
+      "sha256": "076a10b8caee5df6284129d5fde864ea023c3cc88c1392cfb4124304a927db8e"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ClientReplyRecovery.kt",
+      "lines": 31,
+      "sha256": "a1d61400635903537ec0be2be0742e46f809035e195ce55af6428283d8d81fd4"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/CommandRunProjection.kt",
+      "lines": 50,
+      "sha256": "46c6975a29028d39336a2fb97c35d46dc67a68b35c006e6c28b2489a01ae3d3c"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ConnectionMessages.kt",
+      "lines": 26,
+      "sha256": "888916234a4594683871e71fc4585056094271264710d6a793fabfb72c89f172"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationBack.kt",
+      "lines": 26,
+      "sha256": "c89ae8e52a8b647770f64ca4ebc3e0c00c0aedb2daf0dd80b767025e96be6bec"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationNotesCard.kt",
+      "lines": 140,
+      "sha256": "e35767ab0e7c401dd301a5b28593fc4c9baa2bd72b7aeb75d46dbd4a6010b051"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationRunState.kt",
+      "lines": 17,
+      "sha256": "079afef191e3fb557b6bf425320b4844dc7caf534486f3efc96dc5b3903c74c6"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ConversationScreen.kt",
+      "lines": 682,
+      "sha256": "ac09d2da2662bf409bdadaaa1c5762ae62f03e39960851c612908f16a87f0818"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/CoordinatorReading.kt",
+      "lines": 27,
+      "sha256": "e2bc02b07b170ac6442ea03304a2889a37ae64bffbe7b878c4d2ff3bafb8cf52"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/CoordinatorReporting.kt",
+      "lines": 30,
+      "sha256": "0d9c107225508e6e5c078a92cac616fea4816f55555789d5998083f20cf21499"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/CoordinatorRoute.kt",
+      "lines": 22,
+      "sha256": "7ba99431d6e3fc6c755d9d8ac9315d27e649eeac905f7569412b35f35a097304"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/CoordinatorScreen.kt",
+      "lines": 176,
+      "sha256": "f51460411ccbe298be41916fd174667c660cd8f1386c6c8a16c073d1270bae65"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/DeviceCorners.kt",
+      "lines": 40,
+      "sha256": "b554e48aedeb299d4c61aa16944c925102bf895deb02c8a88a93fdb1a84b6c35"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/DurableVoiceWork.kt",
+      "lines": 111,
+      "sha256": "1e19dbeef1edc9e756ae9b284c3536966167f966b7e81b39bf0b8ea354eb64bd"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/EnvironmentIdentity.kt",
+      "lines": 17,
+      "sha256": "053d210043b3d5c3272e2f513e57a370cafe286be0cac59c5628a5fa434a26c2"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/EnvironmentProfiles.kt",
+      "lines": 50,
+      "sha256": "f43dff30565a0b82c204e2473bf3040df910dfd3105f2449a97b6de3c1292d09"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/EnvironmentRequestContext.kt",
+      "lines": 17,
+      "sha256": "0df7ab67d2b422567715a9a69de8098e0a01b67cebb1e1cc0ce1a7b8b5fb23c0"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ForegroundCaptureTarget.kt",
+      "lines": 18,
+      "sha256": "6a46ca7c4495de993903b23cb2508efd16dce2abeef29140fc4550fbb05453b1"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/HollywoodClient.kt",
+      "lines": 300,
+      "sha256": "f8676174111888f5b52e9317a9b5156dd6c39aa6637edaeb38a9823c4506de16"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/HollywoodNotifications.kt",
+      "lines": 275,
+      "sha256": "6ff0f2c6eb606187dc040a13c87aa636f3e87fb847b71776f0e1a5d8859b4ae9"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/HollywoodRoomActivity.kt",
+      "lines": 31,
+      "sha256": "87d5c7b8f70ce44ae78037c49653de259ec49f6e23d3bd0921d28cdc1d74c6b2"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/HollywoodRoomCard.kt",
+      "lines": 83,
+      "sha256": "10bf77c5fabf0e68b21fe0febefec88d5eb8e8fd7e9fed814177cd898ccdc485"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/HollywoodRoomCatalog.kt",
+      "lines": 26,
+      "sha256": "653be1653c59110fa3794469dd3e7227c6bca2f4c0338f5d5428b80264fa92ea"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/HollywoodRoomControls.kt",
+      "lines": 85,
+      "sha256": "6764c9ff376c113f89b1d68c3de7611d99160799d4c8d6c71656cce670fe9bca"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/HollywoodRoomFeed.kt",
+      "lines": 130,
+      "sha256": "af683bc0cdc35519ab94d414204b5d3d8d6d65d7f3147305608f10b118d0acaa"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/HollywoodScreen.kt",
+      "lines": 541,
+      "sha256": "f46a520d1c7a55f7f89a058f2b01b3a5490dbca4d7feded85e733e9cf7b2bef5"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/HollywoodWork.kt",
+      "lines": 105,
+      "sha256": "a3336061a00604835d1a432ebaaef34834ba865df35ff00e54f41079bed08eb4"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCueCoordinator.kt",
+      "lines": 80,
+      "sha256": "d308ec98a2809444946ab5718008123a3da1cede4040567181dbb294050ac1c0"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycle.kt",
+      "lines": 113,
+      "sha256": "b1a2fd6100eb8953de8b7bfb17968bb3417f2da777f764334ff0b7f13213cae4"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionCycleText.kt",
+      "lines": 136,
+      "sha256": "38b51d4805c713ac56dc20b92562051a6955af0fb722e230bea4623fcce05738"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionGrammarScaffold.kt",
+      "lines": 496,
+      "sha256": "b604890c97deccbab31fedc322d828e1d080b4b944534b2ee5b4eacf910bfa3c"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionIntrinsicLayout.kt",
+      "lines": 30,
+      "sha256": "c932f8b3feeb67cb19ba42d76b2c9b4f5436ce99efc01fd08916f04cc6f39a46"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionLexicon.kt",
+      "lines": 9,
+      "sha256": "3641f65570c1ed8a54250fd3c1c2acd6479dfc080b455a762e1ae90ad3fb182b"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionMotionEnvironment.kt",
+      "lines": 58,
+      "sha256": "c2e20a6bf2da69930e822c3fed129c48aea53b4591444df5e46065ac22974ece"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionReadingWave.kt",
+      "lines": 66,
+      "sha256": "67b3b693fa8e5cb246598ff83d0f36c1e965b0470e7fa3f9a8fba68e11950583"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionReadingWaveHost.kt",
+      "lines": 134,
+      "sha256": "7b74b175f035bf1fecbdc9db61ba0240364fc9a9dea44e17759fec4365e352ea"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionSelection.kt",
+      "lines": 77,
+      "sha256": "2cfd152ea15c27855f0628a63e3ccefcf3729be99f9d74f8a80d8493e4dd3826"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionSharedRuns.kt",
+      "lines": 45,
+      "sha256": "a01e916f4f0297de31e68a3baaf133bdc418348d7231616c29f2e7392f0f67dd"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionSharedWipe.kt",
+      "lines": 28,
+      "sha256": "47af91e33b1fec080e7bdf0827431a6acd87feb7335405b11717aa664798e577"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionTextVisibility.kt",
+      "lines": 55,
+      "sha256": "148944d3683270eeaed0a08cf53e4b8d3e9b5ed05edf07659e9cc885e77c5ad2"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ImmersionTransitionPolicy.kt",
+      "lines": 16,
+      "sha256": "c5f7b9469b6a9b7d312f78f53ecd49899d004d479d623e4322d92546d8252940"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/InterfaceTemplateText.kt",
+      "lines": 84,
+      "sha256": "432721c8a393e288ebc4f938bb41039ac2c587cc0075846a90ebb52ad4ce17ea"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/LinkedImage.kt",
+      "lines": 154,
+      "sha256": "f3a8978efdb84605b44886f13c170532052dcfac0f80f6bb80d54c05494a314a"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/LocalMonitorService.kt",
+      "lines": 50,
+      "sha256": "97ecea34a7baa04a3c773b3f42975e89bee417ad91a8af81fbc463f92991c93f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/LosangelexClient.kt",
+      "lines": 44,
+      "sha256": "b2846b47eb3932154a3aa37504d20c97f74f11b4bc3a12ebbd4d69d602230ee9"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/LosangelexScreen.kt",
+      "lines": 322,
+      "sha256": "7e370b3f7b1838d7d517cab8c3a161d8c60381483a9abecd78a9dd4deb87fb15"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/MainActivity.kt",
+      "lines": 696,
+      "sha256": "259767878c3d517a3472f6d780eec99523d3afac7de8ec31f670897fbfbe9d20"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/MarkdownContent.kt",
+      "lines": 137,
+      "sha256": "50f10178e0bc6474a17ccb1bae6f18ba0c809e2584edd05b2b0dbaaddc47b91a"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/MarkdownRenderer.kt",
+      "lines": 78,
+      "sha256": "c7934567418da8700ffcf52f5571915b59409a9ba567e2d709d53a417120f379"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/MarkdownTableContent.kt",
+      "lines": 94,
+      "sha256": "a42af5e0ba341c1ad341cdcd4a42dbdaabe27f289ab4cf421be122de308ba339"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/NativeImmersionParagraphView.kt",
+      "lines": 387,
+      "sha256": "c82a48aa50656b296474e622e1d5e12ad5bd05910e0c39979ea2f15774de8ebb"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/NativeSpeechPolicy.kt",
+      "lines": 10,
+      "sha256": "776ab496b0503b4d87a854984a6f594766d8c8172ef1e0eab7bbcc614b05928a"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/NativeSpeechRenderer.kt",
+      "lines": 71,
+      "sha256": "6bc411084b1b823b76783bf3fa93a92a2bae3613c30117fdf637034c953c16e3"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/NativeVoiceAudio.kt",
+      "lines": 48,
+      "sha256": "84a202ee1bf3a0b87b991165c5a31fa0488181409fe006ed07e2994aaf162966"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/NativeVoiceTransportPolicy.kt",
+      "lines": 8,
+      "sha256": "aefd5b6b5be6f33a6dd65f62ea17bfa1d8731a9a4cbab9ba3ddcdab318f41a4f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/NotificationReadPolicy.kt",
+      "lines": 5,
+      "sha256": "2f80619557217e5a1eba148dd38c4c01eef73ea77b156f1bdc61f87a7272538b"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/OutgoingRecovery.kt",
+      "lines": 26,
+      "sha256": "364f72d86ca7245719858ab56bd4f281369aa8c60eb3a00c6172e9f39fa23290"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PhoneEventMonitor.kt",
+      "lines": 49,
+      "sha256": "c3c6bb9251c7b2e3984afc888c98e642cf9ff6bcdd25f2b01cdd273a3d66c4dd"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketAttention.kt",
+      "lines": 68,
+      "sha256": "3af55b09f06569d9bb074968c2d4ff84e1ef2b9c2303f09e1ca7e4c3b664e015"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketAudio.kt",
+      "lines": 140,
+      "sha256": "28d0cb59307ec997444b2067f63073bbf4486300b1b7419cd3e113f492fe265b"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketAutomationService.kt",
+      "lines": 146,
+      "sha256": "c5fbd1cd578e0b16a26b64aea5e012d25dc5971b9b5a48385bbfbc16a47c3df3"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketBootReceiver.kt",
+      "lines": 11,
+      "sha256": "7eea7c3d2995e9fb8ce62568cb457f18271e805b4faeedbb7b503df0a4fe264b"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketCoordinator.kt",
+      "lines": 183,
+      "sha256": "1b3565f3758087cabeeba78e9afa94f6773784b2a44c5f4eba135e1831034297"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketFirebase.kt",
+      "lines": 163,
+      "sha256": "c5591502066af159d78924133645cfe656669fd4d7e8fcbe9dc86668aca9d13c"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketImmersion.kt",
+      "lines": 160,
+      "sha256": "7526c762d225cec96caa2bef77b3c9dbcb9090010743816cbd4055209a670382"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketNetwork.kt",
+      "lines": 25,
+      "sha256": "84a783a9f555e77b2e9ac7dc7baf3a130a4bf6a97ee9b44047db29dc9292da95"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketNotificationReads.kt",
+      "lines": 39,
+      "sha256": "31bdbd229821bf267f60f693248dfa7744ffec07c3a77527d14ac4895cef8a04"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketNotificationTitles.kt",
+      "lines": 67,
+      "sha256": "2895905f07df60517982f665e47c94ab5729c503976c51d813da28076dec252f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketQuestionActions.kt",
+      "lines": 62,
+      "sha256": "c50110fc5d130d13e9ccb65c2c535641408559a40e2c96945ea8030d66d12fc6"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketReplies.kt",
+      "lines": 114,
+      "sha256": "d4f8b9297de3d56f38f978b97e82fc51926e101c925be8e32a9547e8dd06361f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketService.kt",
+      "lines": 154,
+      "sha256": "32f3821b78b26ee9cecd1f5d31a2ac01be19f26dd87c1debb2f425275baa9fe4"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketSpeech.kt",
+      "lines": 539,
+      "sha256": "d1287ce04dee86ef3df9a5d9aa18fe4005d0197f3ffe8667ca87fb80d55537f5"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketSpeechCaptions.kt",
+      "lines": 94,
+      "sha256": "4136fd282c353d4fac8cd05b7a7bc0356c7cd53661e9a3e16d551f783413493f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketState.kt",
+      "lines": 456,
+      "sha256": "1959e1ca513b1ba26e28c0831b19bac52f08e002a4ab5bcfb092ada16b4362ea"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketTranscript.kt",
+      "lines": 499,
+      "sha256": "8c9a4779ac6cd0cf0916ff7675d77aa7e8cdf46d99689f43dc9788422f306abb"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketUpdates.kt",
+      "lines": 157,
+      "sha256": "6416c35d25e1736c2498d57c0634e75fb5b8910c01f2c880eb0502d803ecd0ac"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketVoice.kt",
+      "lines": 513,
+      "sha256": "df5d0d882703da341f62e1a8e8203d8bc2788a912447798652d6ae4916aac479"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PocketWorkUpdates.kt",
+      "lines": 63,
+      "sha256": "c3b3586976648fd714a9a569259a90639e04c0345d88218b09104518c9bab94b"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PresentedReadWorker.kt",
+      "lines": 72,
+      "sha256": "08a5b3eb02f99a4ba392dce8ce279587ec81a5ce17d8be5cc6ae5b2ac1f22ff8"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/PressMotion.kt",
+      "lines": 29,
+      "sha256": "176888eb0006b5c1735d833ff0107b1d9830460fd82a978da886d61801481cc2"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ReaderPaging.kt",
+      "lines": 73,
+      "sha256": "0b9c8ceab2d8ab6bf559e7692f856e975abc001c8596cf408bf95d3c4a41fa52"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/RecordingQueueControls.kt",
+      "lines": 103,
+      "sha256": "eeaaa853713ec5bac82cc7a26ec04e494b255bd0f41722cb22ba1000d7349bc8"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/RenderedMotion.kt",
+      "lines": 113,
+      "sha256": "b0df3d9b5262747474ba0437be11404858d1781b8190083554e0e016e6b753f8"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ReplyDraft.kt",
+      "lines": 7,
+      "sha256": "99a21e922e0185b61d223da5808a8b10a0bd9cfbaccad732e25c7176c9792d2c"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ReservedImmersionText.kt",
+      "lines": 87,
+      "sha256": "4b231189f947e0a76a212391c0099f46f044e87412528c726c2f504f67137d5f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ResponsivenessReport.kt",
+      "lines": 124,
+      "sha256": "27f0a91712678e47b0b372e515e6ac1cc066ca3374852d85b4e3a0226447c81f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/RoomBrowser.kt",
+      "lines": 54,
+      "sha256": "f2866b628878615ac4ee037d70a76c8da144eba8521642134901e04309e1f0cb"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/RoomCreateDialog.kt",
+      "lines": 75,
+      "sha256": "d43c3823464007fa3951d3c4061dde9718ccb2740e78f91205b06c2bcd4d5a31"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/RoomTranscriptProjection.kt",
+      "lines": 116,
+      "sha256": "ba519c9daa3d0559b7d7a4bbe5b04eccdecfd4abbf6e5a3e890c91628ddbba13"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SavedVoiceRecordings.kt",
+      "lines": 47,
+      "sha256": "f0dd2882d37f809b220f89f6b0c478d4ab6866627a4deb676b25893a209c6626"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/ScreenBlackout.kt",
+      "lines": 119,
+      "sha256": "894d1ab4d7128ea25a038d987f3794cd2d6036a64300aaa3980de979a2dd228b"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SessionCatalog.kt",
+      "lines": 19,
+      "sha256": "cb0cae3a1b8fb63d012086ef16907ead7e50d53825d749866bc3b8bd39b127f6"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SessionGroupCard.kt",
+      "lines": 89,
+      "sha256": "41502235702501f7d9ca0e8b65853910f21c39539186bf50d871c53b1a16a97c"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SessionListPacing.kt",
+      "lines": 87,
+      "sha256": "217a80250551fa4b66e3fa73239207479a122f90e7d94f4448e6fd0fc71c03ca"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SharedInlineImmersionText.kt",
+      "lines": 158,
+      "sha256": "fed384d2a6b7f2a862b3d6df58fcf5f57228c5c20587e605dc37b7a811bcd85d"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SpeechCaptionState.kt",
+      "lines": 11,
+      "sha256": "d148bb6733e62e7415e4a6b1ce6abae1f6d21ed0dbe52b2ac42dbe4b46e61ee8"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SpeechQueue.kt",
+      "lines": 69,
+      "sha256": "de234d68a6ec1a099c3260f64a6ff3392b3710b46bacfcf23f4975a69cf485c7"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SpeechText.kt",
+      "lines": 47,
+      "sha256": "cf1bdd84d8a24948abce8b761ca4d8f4e8c7b4aeee7e410afd2f3dfd9270a734"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SpeechUsage.kt",
+      "lines": 26,
+      "sha256": "e2f91b8a3874b5b94f0ddb1513ae8fdb612672d48cf3772d87e31cbb9ea6239b"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/SymbolIcon.kt",
+      "lines": 94,
+      "sha256": "b4f405dda577c9d5f8c0a6824587b5a07c56c8d904e5af824888115035a202da"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/TeamActions.kt",
+      "lines": 119,
+      "sha256": "afa8973b059d66e532a01e5c95e811a18a611c65c0864e2181f2a7561be7ae6f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/TeamComposer.kt",
+      "lines": 11,
+      "sha256": "3b69ccf0523e8e8e36644b785cd2d23182cd32af261e2e0b54283443ef3e56b3"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/TranscriptDiskCache.kt",
+      "lines": 75,
+      "sha256": "077f3d2a5c485fc9f771eba5fd1cd010a8ab96c454f5ec78f3703832c3f51271"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/TranscriptFreshness.kt",
+      "lines": 20,
+      "sha256": "35697ee604112f35df9b668bfa5da766b395ee56f93eaf49387e2231d5c3e39f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/TranscriptHead.kt",
+      "lines": 15,
+      "sha256": "baf22fd1561a9fec4e9edeb4997bd18f60fbdee76fc9b156fe5d292a7c95256d"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/TranscriptHistory.kt",
+      "lines": 101,
+      "sha256": "3da526b751792a4330a0dbc5241005b3217f3bfc80faf94f29554ad6a1ee1107"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/TranscriptMessageIdentity.kt",
+      "lines": 130,
+      "sha256": "dc474acbb8e89f555b9a99cd7a1079bcb5bd4736013c8c0bdef18ff906140d4f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/TranslationBatchDrain.kt",
+      "lines": 17,
+      "sha256": "779c29e87c0a8702549d6ba21585bac2f0d5c19e25d17b440935e06c9ccd6460"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/TurnFailure.kt",
+      "lines": 23,
+      "sha256": "3fd4e13383e3507f7d84972a4c8bc35efe7a9210d989040341324e8e192feff6"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/UpdateDownloadWorker.kt",
+      "lines": 51,
+      "sha256": "d74e148607028735bec11d235722cf3b961e1f53269e657830fa5f22963b1467"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/UpdatePackagePolicy.kt",
+      "lines": 16,
+      "sha256": "bcdeb3800998287d4a4c91ccd261bc1e217c729d87734bba5dc6654785a5e62f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/UpdateStagePolicy.kt",
+      "lines": 8,
+      "sha256": "21055342b8e008b66f248b2ed3cc7560ce83a45eae0ecc3b86a2698bda64c4b2"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/UsageDock.kt",
+      "lines": 135,
+      "sha256": "702d4cfd4f1eebb46b0dc897e2c276d3eff1908c70bb2b9800d36d6756d37993"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/UsageForecast.kt",
+      "lines": 29,
+      "sha256": "671c14fde792c73f2777904d734e637135f909890237955f35fd3e03a5a90513"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/VoiceCapturePolicy.kt",
+      "lines": 34,
+      "sha256": "e5bcf59e3bc9202c1299a8d7c38cb7f52c11ec6708b21f762462449932b8df90"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/VoiceRecordIntent.kt",
+      "lines": 18,
+      "sha256": "fee4ff660eb89d0474763fe89c43b69f7b018a5744e32124dbb4416ae8078001"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/VoiceRecording.kt",
+      "lines": 23,
+      "sha256": "e4afc61a07f082bb92695b72ff1fe80ba90f84ee9e4000ae68919e822d4f3f5f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt",
+      "lines": 266,
+      "sha256": "29c02cf40b3533e02898bd052184b4ec20f28ae9c5fea69e9f1118e563876a4f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/VoiceTurnRequests.kt",
+      "lines": 39,
+      "sha256": "543e618eedc19f720faee34ba544b193fadfac30982ba965b1c992ec5b736956"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/VoiceTurnStore.kt",
+      "lines": 242,
+      "sha256": "174c480c36336aa2a7fa657295adcbc38e57f2628e05c32abe58d338aaefe23c"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/WeeklyLimitBar.kt",
+      "lines": 45,
+      "sha256": "a416b2fd64cae17df6f3286603e543f3e5c88dd1f09383bdab7bc42f8ae9521f"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/WeeklyUsage.kt",
+      "lines": 59,
+      "sha256": "8cf86ce2c60390aa98ee5ed3306352b80e61dadb199f915bf08f507d380971fc"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/WorkInboxCursor.kt",
+      "lines": 15,
+      "sha256": "17ce862b11840d891b48f63ce3c77352c8351682c46cd9e44ecfbcb8d77ee7c8"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/WorkRecord.kt",
+      "lines": 104,
+      "sha256": "1fb20e45185b4dd19a75b7242abf085acc0a8ce2d56e83921be70d5ca1236577"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/WorkSurfaces.kt",
+      "lines": 129,
+      "sha256": "158beb71da6e5613c5e9ada3e1863e4f12f01cb460f0f0f1fcf2f1868c7be0eb"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/WorkUpdatesScreen.kt",
+      "lines": 63,
+      "sha256": "4d7e0782baedff3b89b743a45a74c3cc4fc5c5191f8a6f4433398b71c5fcdcb0"
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/WorkstationDns.kt",
+      "lines": 83,
+      "sha256": "dae93b9d3444dccf049539138ad94e0224379b6df4849b8a9b99580c97233ee6"
+    },
+    {
+      "path": "android/app/src/main/res/drawable/ic_launcher.xml",
+      "lines": 13,
+      "sha256": "f4cadc102c0400ab9cabd2616f710668ad32953909da4bdbd2ed13378d5d1445"
+    },
+    {
+      "path": "android/app/src/main/res/drawable/ic_notification.xml",
+      "lines": 1,
+      "sha256": "76022e4a57a848bc694897a4f8f91f2a7a414a338821f7a44650f857ee60ed7f"
+    },
+    {
+      "path": "android/app/src/main/res/drawable/ic_pocket_foreground.xml",
+      "lines": 3,
+      "sha256": "d32b7ac63914b17b09362e00b970e11913ee449774ab29577097552b1396910d"
+    },
+    {
+      "path": "android/app/src/main/res/drawable/ic_pocket_mark.xml",
+      "lines": 10,
+      "sha256": "0baf6d0a6e907d466433ada921fb3a5a2670d16668b223e96fd9bdcfd4cb62a1"
+    },
+    {
+      "path": "android/app/src/main/res/drawable/ic_pocket_monochrome.xml",
+      "lines": 3,
+      "sha256": "fc2719a665d5eac58d899eb56d594885955a0402450336cc8749daf5f2f33eb2"
+    },
+    {
+      "path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "lines": 5,
+      "sha256": "9a0c0200017440b5b91acb267ec67db06a533ea97494b634ad1f5c742d031637"
+    },
+    {
+      "path": "android/app/src/main/res/raw/keep_symbol_motion.xml",
+      "lines": 1,
+      "sha256": "fd3c9a4b83fa3514506ac48ca75ce9f376026e7958e1c689092b77fd7b0533bf"
+    },
+    {
+      "path": "android/app/src/main/res/values/colors.xml",
+      "lines": 1,
+      "sha256": "e4f7a2ece6a269d1629526255646eabca7426124314adfcb6625b2731546596d"
+    },
+    {
+      "path": "android/app/src/main/res/values/strings.xml",
+      "lines": 4,
+      "sha256": "3e1d19419eafc996a52217b2096b12ecc3a93539fc3eb8cc15c5293e93e8a722"
+    },
+    {
+      "path": "android/app/src/main/res/values/styles.xml",
+      "lines": 1,
+      "sha256": "bf483d6e7028d52a5b68e3322d0035f4f9d8e148f229aeaa08929795afcffd5d"
+    },
+    {
+      "path": "android/app/src/main/res/values-v31/styles.xml",
+      "lines": 12,
+      "sha256": "5880b3703ec613bcc77b0bf61a7f22631c3af903d1bf6ab562e6f798c5f768c8"
+    },
+    {
+      "path": "android/app/src/main/res/xml/accessibility_service_config.xml",
+      "lines": 11,
+      "sha256": "a62ddf5bbe581251253766fa4e9e561fb189f51830d66ce63229f575e60ac8c1"
+    },
+    {
+      "path": "android/app/src/main/res/xml/data_extraction_rules.xml",
+      "lines": 24,
+      "sha256": "fae06345d9da27121a7a4dd19f2cf9dececd0874ac8a495d496c9d5204ed96b7"
+    },
+    {
+      "path": "android/app/src/main/res/xml/file_paths.xml",
+      "lines": 1,
+      "sha256": "6e0b654c439d36704f4ffe3995c8d25a88ddd31d623af0545beeaeef3eb9a680"
+    },
+    {
+      "path": "android/app/src/main/res/xml/network_security_config.xml",
+      "lines": 8,
+      "sha256": "9187f485f22fde712aea8de5243664710440a9ee08e9f1b172978eef96a15001"
+    },
+    {
+      "path": "server/account-reset.mjs",
+      "lines": 53,
+      "sha256": "70492cf0f1c382daafc758b63a1e61d1c07c6d847f083bbd99e7fbaedf320e5e"
+    },
+    {
+      "path": "server/activity-board.mjs",
+      "lines": 25,
+      "sha256": "60a8f4b9e72b0d1856f8c4fcf04c9de6385a55408ddecebaca7176594f1bc072"
+    },
+    {
+      "path": "server/app-updates.mjs",
+      "lines": 50,
+      "sha256": "d039ed8e1f6c04d57c77c1a3aad67ea7532a665156865575cf5de62e05b57499"
+    },
+    {
+      "path": "server/catalog-context.mjs",
+      "lines": 7,
+      "sha256": "fe8983a136bb12ddb462614690c002d2ec94d13d9f413e23fce164c7dce79084"
+    },
+    {
+      "path": "server/codex.mjs",
+      "lines": 88,
+      "sha256": "977340a7637bb2174d308cc7f097685c1b0d5ea8669a95519eb1e7c9a5ba2334"
+    },
+    {
+      "path": "server/completions.mjs",
+      "lines": 44,
+      "sha256": "17ea61c59d65e57e548b01b10818db82df6ce839bcbef2152f98cf505ca6624a"
+    },
+    {
+      "path": "server/computer-use.mjs",
+      "lines": 37,
+      "sha256": "f01133fd5d2ef2b96b36461d9c39a31d108c9a6d8d4b6c9ff01ec7b955c8022f"
+    },
+    {
+      "path": "server/connection-errors.mjs",
+      "lines": 15,
+      "sha256": "78eff3f2af14358b96ef14d2868e348b31a2fca071138b7899405b67155eb92f"
+    },
+    {
+      "path": "server/conversation-notes.mjs",
+      "lines": 44,
+      "sha256": "01d23047d27ab3fd1176daf615ffb6e5dff50825349c0426514289aa408323b8"
+    },
+    {
+      "path": "server/coordinator-discovery.mjs",
+      "lines": 163,
+      "sha256": "f08bb6e7130ead018426c81d031d9d887cbd9deccc23d15d226aa9b00f758b99"
+    },
+    {
+      "path": "server/coordinator-reports.mjs",
+      "lines": 143,
+      "sha256": "27bdadb7077a8547189544e18c289991a08286fb5735534d0b70531da18a0666"
+    },
+    {
+      "path": "server/credit-observations.mjs",
+      "lines": 33,
+      "sha256": "223e69aeec786a3bb6324dd053da5bb5633b71ad6399d7185cda815da742673a"
+    },
+    {
+      "path": "server/history-heads.mjs",
+      "lines": 13,
+      "sha256": "20f797ee69220e0cb377abc87f05020e86a0aa2f653973457b27d13fb46e4e53"
+    },
+    {
+      "path": "server/history-position-index.mjs",
+      "lines": 25,
+      "sha256": "8c9dcfe4a9301f307eb4decdc676816c470614863e8fdc46d2112dd45183f435"
+    },
+    {
+      "path": "server/history.mjs",
+      "lines": 191,
+      "sha256": "38396f9bec79c945411200d4c8ac524208911bb022130eb5340cc9da0be4d77b"
+    },
+    {
+      "path": "server/hollywood-push.mjs",
+      "lines": 132,
+      "sha256": "3b83dc29c4edde55e687ef87d7c1d95c9260b40d7fef29764caae904a087fbd7"
+    },
+    {
+      "path": "server/hollywood-voice.mjs",
+      "lines": 111,
+      "sha256": "485512630d570548bf8c267ae83e42ca7c9b38f99bdc22f1689439d434fa59fa"
+    },
+    {
+      "path": "server/hollywood.mjs",
+      "lines": 168,
+      "sha256": "540aeed7843a56129fc4dc34a27a1c0ffca818c8d65e32a3da49e9d50dfc5a9f"
+    },
+    {
+      "path": "server/human-ingress.mjs",
+      "lines": 48,
+      "sha256": "9f7d91b110fc1fa118785e3f58816531763372c050684cf81388efc418266bba"
+    },
+    {
+      "path": "server/immersion-plan.mjs",
+      "lines": 122,
+      "sha256": "68963942b7335896a246393780108fafec1ee4b137295da79b70b2e83b9d58dc"
+    },
+    {
+      "path": "server/immersion-transgrammatic.mjs",
+      "lines": 16,
+      "sha256": "3d0f6398a8b7c62321908927fa9c4f61301758ee634dee01d0e0a4e4ada949de"
+    },
+    {
+      "path": "server/immersion-worker.mjs",
+      "lines": 36,
+      "sha256": "21a321b1f419f1b9f66f0fee0bb08d25119c1bdf35df85e44b652ab64a9effd6"
+    },
+    {
+      "path": "server/index.mjs",
+      "lines": 896,
+      "sha256": "83ceefe8ab5b41da719d8d90ae42279455b935249c3dd22bbd85adf4dc7728e5"
+    },
+    {
+      "path": "server/internal-sessions.mjs",
+      "lines": 17,
+      "sha256": "7b4c8f8f4b1424abc60f9e128eefa69102ef15c23e8eff1eed04a5e641ecda9d"
+    },
+    {
+      "path": "server/live-activity-delivery.mjs",
+      "lines": 17,
+      "sha256": "26be5521709fb82c5f11e32dbb2f5ea55c47a040151c13540ae251166afda4b4"
+    },
+    {
+      "path": "server/losangelex-attention.mjs",
+      "lines": 64,
+      "sha256": "762fb1c6cf8a448c2383e5f18924126074b2bf23099dfe6a8e194902e1c5687b"
+    },
+    {
+      "path": "server/losangelex.mjs",
+      "lines": 96,
+      "sha256": "626176241ad8747bfc860888ac29f40ba7e34ce7cd54959ea7070a56ab0dbcbe"
+    },
+    {
+      "path": "server/mcp.mjs",
+      "lines": 37,
+      "sha256": "f076bef2f52bba1021ebbf15037f983ffb93181db1ced5e89a96998ffb0fb77d"
+    },
+    {
+      "path": "server/native-audio-cli.mjs",
+      "lines": 64,
+      "sha256": "486c071e290cf1d1be0a1edadae9723c6a864e303b49118fa7fdbfbf7852fb60"
+    },
+    {
+      "path": "server/native-audio-peer.py",
+      "lines": 146,
+      "sha256": "2d8302c15e607e97521cdab607a886edc9f75c3b6fa2adc11b1276cc3abc45c2"
+    },
+    {
+      "path": "server/native-audio-transcriber.mjs",
+      "lines": 81,
+      "sha256": "a5fb5bddf9782331ed3c8b198b313c6411889c1c6989b961dd969ef570e29b54"
+    },
+    {
+      "path": "server/native-fork-bundle.mjs",
+      "lines": 94,
+      "sha256": "fd6b995b71e7f7a0a6826592e1820f9943c49ee008a0fadfa982c8ada02d79bf"
+    },
+    {
+      "path": "server/native-speech-media.mjs",
+      "lines": 85,
+      "sha256": "74bc2c5818d3273c63a2605045155ee05605ff346d7a7a4fc13ffe9fc40fb140"
+    },
+    {
+      "path": "server/native-speech-peer.py",
+      "lines": 97,
+      "sha256": "52c41698945be7c3ec32c2de0481dd3afdcbbed9738618b017b911ac21ed327b"
+    },
+    {
+      "path": "server/native-voice.mjs",
+      "lines": 146,
+      "sha256": "af59a0d461f38b74d407eaaa5770491237c653a399bbb02d9022dfb73d28f644"
+    },
+    {
+      "path": "server/native_audio_media.py",
+      "lines": 42,
+      "sha256": "fd32179c7816fe9f76e1ac21ba63029413d684a54cdf9aa855704d45e2dfb4fa"
+    },
+    {
+      "path": "server/notification-reads.mjs",
+      "lines": 16,
+      "sha256": "40e945f428022be4aae0181cd695329998cf76c16d88b9f127ea0a6ed2f6c71b"
+    },
+    {
+      "path": "server/notification-titles.mjs",
+      "lines": 39,
+      "sha256": "9c49e44ac9984acdf7dc644ddd2e66c9fad0f3efb9d895e191cfa7b525d59750"
+    },
+    {
+      "path": "server/permissions.mjs",
+      "lines": 16,
+      "sha256": "e4f600d3124c04e2ba53cc3d8cc9d134f82d8181284526d1410a95654f4372b6"
+    },
+    {
+      "path": "server/phone-mcp.mjs",
+      "lines": 25,
+      "sha256": "d5244d87042d596537ae5cd88b1708a484c96a936578c8d1afca7f8e43320c73"
+    },
+    {
+      "path": "server/push.mjs",
+      "lines": 80,
+      "sha256": "84b582e37daf5de3ed1c587be5358c14d6a9229de16caaca8535c3e8e7c002c8"
+    },
+    {
+      "path": "server/question-actions.mjs",
+      "lines": 39,
+      "sha256": "1a3f98324c57dad1e3b47a700a67ca74b5a88cb701e384070305f99de8b08178"
+    },
+    {
+      "path": "server/rate-limits.mjs",
+      "lines": 88,
+      "sha256": "78ce73ceb680ebc181223d22d764ce8293f60588bf0009c43c7a9547a7eae9b3"
+    },
+    {
+      "path": "server/recovery-health.mjs",
+      "lines": 31,
+      "sha256": "409aacd99445f16ee2986f954812b09b2769bfe9088173801505a992ac1cf95c"
+    },
+    {
+      "path": "server/recovery-queue.mjs",
+      "lines": 8,
+      "sha256": "3c45ed015eb2dadfdbec315c0acff65530cb314bd46cae2a2d5b8156de0c758a"
+    },
+    {
+      "path": "server/remote-audio-transcriber.mjs",
+      "lines": 37,
+      "sha256": "d4bc1eef0201d9faf246aec06c169a6610bc71796bcfb7d26e8b5299a24ae39b"
+    },
+    {
+      "path": "server/reply-recovery.mjs",
+      "lines": 22,
+      "sha256": "f48ca69ea4a71dd8accd3e6c1e30ca4cc1576a8920d25c0ddce87d08c349eeb7"
+    },
+    {
+      "path": "server/room-progress.mjs",
+      "lines": 48,
+      "sha256": "19e5f0244b09c300fb152ea45a47cc888c211378b11690556fe9ef70780bb84e"
+    },
+    {
+      "path": "server/room-voice.mjs",
+      "lines": 76,
+      "sha256": "3e913546e27d70908a665334926793572a98506eb373881643c92f15eca3a5f4"
+    },
+    {
+      "path": "server/send-identity.mjs",
+      "lines": 38,
+      "sha256": "ee415bf85ce19d7c62b5142874a41701074baacd50dceed42ef19ab28cd5a97e"
+    },
+    {
+      "path": "server/session-catalog.mjs",
+      "lines": 31,
+      "sha256": "9b6ec0774bfc78eb4235258c1b22a777c485642ba881de7860d9c16b7e24aa91"
+    },
+    {
+      "path": "server/session-catchup.mjs",
+      "lines": 243,
+      "sha256": "2a194765cf411fa5a18603e470042bd45c72895c4763038bf141169b1865316a"
+    },
+    {
+      "path": "server/session-discovery.mjs",
+      "lines": 89,
+      "sha256": "0ebf13faa666302b3af867811a0eb9fe51cae1da2a6fcdd7831bea516e4b6169"
+    },
+    {
+      "path": "server/sessions.mjs",
+      "lines": 60,
+      "sha256": "c532c2e286065039d3d2687df4dc9738bb24604d5f49fdeaaa052624816099f9"
+    },
+    {
+      "path": "server/speech.mjs",
+      "lines": 52,
+      "sha256": "0a5ab92e1e61a8c43c9d324e167c75e79b8203c89a37f7fe3cb49972cac0e22d"
+    },
+    {
+      "path": "server/stock-voice-intake.mjs",
+      "lines": 42,
+      "sha256": "092cc26a22007c74a0a37ed8e5166335e9b1390c3fc92605fc03e0a6170dd651"
+    },
+    {
+      "path": "server/store.mjs",
+      "lines": 39,
+      "sha256": "6b46755155cf85be6647a7b38ced1e86182d193247cbc5c57ddb10f4d00211ed"
+    },
+    {
+      "path": "server/terminal-fork-transport.mjs",
+      "lines": 52,
+      "sha256": "cdbeed8d6068203d0909859051a9e13fca1ebde123d2fc06f1f84250c93723d3"
+    },
+    {
+      "path": "server/terminal-forks.mjs",
+      "lines": 166,
+      "sha256": "b8fa56149ae458822e58d20f4721c115397e0ec8d56ce0ca8e7cbaeb89d6d7e7"
+    },
+    {
+      "path": "server/thread-previews.mjs",
+      "lines": 83,
+      "sha256": "1d6fa7013f72b6e9d5adee1bfeae110a2841f86ecb85b86166c7b6bfe323ceb3"
+    },
+    {
+      "path": "server/timeline.mjs",
+      "lines": 160,
+      "sha256": "1de89774dfb4404d7003f5b8afc3716fb885d7d235131869040a37d6072ab0ef"
+    },
+    {
+      "path": "server/turn-recovery.mjs",
+      "lines": 205,
+      "sha256": "3d47f914a7ca93d0ec35f57d6f8e3f07a8b195472d17564b2a4d6ee4c88bde12"
+    },
+    {
+      "path": "server/turn-settings.mjs",
+      "lines": 23,
+      "sha256": "744848e232ee10449fe8ca3d2796ce2f6ad525287470eade827fc05c8a4d128d"
+    },
+    {
+      "path": "server/voice-controller.mjs",
+      "lines": 288,
+      "sha256": "6382dede1a6abee2869a4971415e00740addec9b757a7ea831d5678c4a4894e6"
+    },
+    {
+      "path": "server/voice-recordings.mjs",
+      "lines": 199,
+      "sha256": "646dbe930986ab8f67fc354462be29cba844bec6ebdd93a6d9c43921fd2cee22"
+    },
+    {
+      "path": "server/voice-renderings.mjs",
+      "lines": 111,
+      "sha256": "5212764b83ed2b2a842fb5efa21ec644e5ee87a43c3ed381545557c8eb18f4d7"
+    },
+    {
+      "path": "server/voice-speech.mjs",
+      "lines": 82,
+      "sha256": "e4df100b454e3e226cd04d16c48ad025fcb0d27463db6f651f68b1f9e08b18c8"
+    },
+    {
+      "path": "server/web-client.mjs",
+      "lines": 90,
+      "sha256": "0bc772ff0999516b0fa288d61cdfd7f6070569be2937ed2659f29b3ea19b2806"
+    },
+    {
+      "path": "server/work-admission.mjs",
+      "lines": 155,
+      "sha256": "66fe30fac68d8aa25eb749b84e8d81f855ce0c42398a4c604adc4d05fdab1ddb"
+    },
+    {
+      "path": "server/work-observations.mjs",
+      "lines": 11,
+      "sha256": "27418eafdfd4ff75ad8ed2775e3c29cb3cc3167a217dc01404ba036e1034860c"
+    },
+    {
+      "path": "server/work-record.mjs",
+      "lines": 98,
+      "sha256": "46f673b65b4999fbe479a3e0b6dca8124b6b3b5f85164d38ea181e0b212bbda7"
+    },
+    {
+      "path": "server/work-runtime-adapter.mjs",
+      "lines": 50,
+      "sha256": "631e15219fc70b59d5ed6a0d961da905d2a3083308494a31f049795fa2d79cdd"
+    },
+    {
+      "path": "web/app.mjs",
+      "lines": 76,
+      "sha256": "4b5c78508a114fc6f98dcf40466f3118c88af6ff7916075450c138602e81e2df"
+    },
+    {
+      "path": "web/index.html",
+      "lines": 13,
+      "sha256": "1ff71a0775eaac82d2521d8e0a6baebfa2489e31745ef1784c2166a23e4d88f9"
+    },
+    {
+      "path": "web/migration-frame.mjs",
+      "lines": 10,
+      "sha256": "9b59c5e801aeeccdb0956d696f1fc519e27da9639bda81f5fe56ffc56cfd61ca"
+    },
+    {
+      "path": "web/migration.mjs",
+      "lines": 30,
+      "sha256": "e753318c573522820e972a909d23b9b21208351316f0db2a17aceca633c217cb"
+    },
+    {
+      "path": "web/model.mjs",
+      "lines": 14,
+      "sha256": "1d3a5a074beb2e13a8baacf4af18e540b2c7e7f6e55a787a80c584fdc6d54307"
+    },
+    {
+      "path": "web/paths.mjs",
+      "lines": 3,
+      "sha256": "865c204ff009e0eb114da9480c843c1667433b520ec0759009924218cad895b7"
+    },
+    {
+      "path": "web/storage.mjs",
+      "lines": 5,
+      "sha256": "86b6a580490df15a7c2abb489037ad3ea50789ae8cae1751f76700a35e88807e"
+    },
+    {
+      "path": "web/style.css",
+      "lines": 12,
+      "sha256": "843f0b1ce6c550506454fe748efa3b7fc43bf01d8a48748a972b85527717c3ce"
+    },
+    {
+      "path": "web/sw.js",
+      "lines": 5,
+      "sha256": "9a3cfc7bd03c1fbca11bc11a2c08c0de33e1e6adfdd313ff1e655030aef938f0"
+    },
+    {
+      "path": "web/theme.js",
+      "lines": 16,
+      "sha256": "469f4e0afdf01c46e8c7b0ff19df155bdcb6fb2b279d53df51f9eb9e20521f36"
+    },
+    {
+      "path": "web/voice.mjs",
+      "lines": 34,
+      "sha256": "37b0f07707968ffc42ab11c71fac9f431670510320946d957329871537226758"
+    },
+    {
+      "path": "scripts/account-reset.mjs",
+      "lines": 19,
+      "sha256": "4d4cfbe5268061cb5c28e7ba6f8e8e0fbade2aaa8c396385c5378bfb5569486c"
+    },
+    {
+      "path": "scripts/android-local.mjs",
+      "lines": 65,
+      "sha256": "958392efddab171d3e06902444c7e45442d5e202fffbb82dd860ce56527ed09d"
+    },
+    {
+      "path": "scripts/android-ui.py",
+      "lines": 13,
+      "sha256": "a98136df3c5455ca30cf6bb3ce07a9d3d3498165a07b29b801763b34eb1ad23b"
+    },
+    {
+      "path": "scripts/announce-app-update.mjs",
+      "lines": 3,
+      "sha256": "738bde05bb7f973bbd6b56ffbc22a589e05421466b80cfdc0080bb09030c5904"
+    },
+    {
+      "path": "scripts/build-release.mjs",
+      "lines": 71,
+      "sha256": "be3ac113af9ea4aaac8ef69c10358cec6a7be8b4e5392dd9003c5aa4673d783b"
+    },
+    {
+      "path": "scripts/build-storage.mjs",
+      "lines": 14,
+      "sha256": "6bba7d9d7d3e2c1b85bbafb85dda91744acb0be4352323406bea2ddb261f499b"
+    },
+    {
+      "path": "scripts/build-storage.test.mjs",
+      "lines": 18,
+      "sha256": "c670ad6d9001f8ceb75e5a96c7e4312f4a15fcb7328a00a6110bf7332daecc7a"
+    },
+    {
+      "path": "scripts/check-public-source.mjs",
+      "lines": 16,
+      "sha256": "d9685ee42ec5e5b73dce25a5c3de2f8d10b6106773ed170703127ecea27043d9"
+    },
+    {
+      "path": "scripts/configure-firebase.mjs",
+      "lines": 53,
+      "sha256": "1e85d7c62f21c5f9bc91be01933a15294e645018feb15ee3472b7bb26fe74b4e"
+    },
+    {
+      "path": "scripts/configure-voice.mjs",
+      "lines": 11,
+      "sha256": "85311d030785c78ba6c79e54686db8909ffb9647efbc353090b4fe8557082a81"
+    },
+    {
+      "path": "scripts/devices.mjs",
+      "lines": 8,
+      "sha256": "f827f09fe5f5d327aefa7494c4ab241aadc49ce25615a7206b9d8ff490ebe25b"
+    },
+    {
+      "path": "scripts/doctor.mjs",
+      "lines": 31,
+      "sha256": "e7870b8c0982126e24572a5ce8172088d51b78d85fad10875fcc13223e402ca5"
+    },
+    {
+      "path": "scripts/install-codex-android.sh",
+      "lines": 22,
+      "sha256": "c971bfdd94d9463879c9bf46a119368d0922cf7325b608c0d58b303813a09ed8"
+    },
+    {
+      "path": "scripts/lifecycle-ui-review.py",
+      "lines": 90,
+      "sha256": "c844c10b8e3afbe0c602c6eace0c2e509218072e0972bf60611fb65a975ff046"
+    },
+    {
+      "path": "scripts/local-client.mjs",
+      "lines": 15,
+      "sha256": "5aae193672386250da460485e400dcaa98cf056724b3285df194d354145cd62d"
+    },
+    {
+      "path": "scripts/pair-device.mjs",
+      "lines": 15,
+      "sha256": "36885c36a8de3bc1dc981482e340c420bbbb4236cbce45bd563864ae9cad82a6"
+    },
+    {
+      "path": "scripts/prepare-app-update.mjs",
+      "lines": 31,
+      "sha256": "ae624b9a0a59390831e1035544edd499573dd72279a2a6d8792146623363d13f"
+    },
+    {
+      "path": "scripts/probe.mjs",
+      "lines": 8,
+      "sha256": "aef86b1bf2a0a386b7f9199efd948dc749961e2e9b861acea20c85af187d31f5"
+    },
+    {
+      "path": "scripts/publish-qualified-update.mjs",
+      "lines": 47,
+      "sha256": "9b473dae95c39c00503c64210fe1b6581b07d9ece6676185723acac701daf1ce"
+    },
+    {
+      "path": "scripts/qualify-terminal-fork.mjs",
+      "lines": 28,
+      "sha256": "b3c18608cb39d22f162f445520f8b9b31f79a61b38ef39e494605d7fc66acd76"
+    },
+    {
+      "path": "scripts/record-native-qualification.mjs",
+      "lines": 93,
+      "sha256": "fce06114c91939ace81092e6bf82dedc65999a69351fe6618af6e6fe76534184"
+    },
+    {
+      "path": "scripts/release-qualification.mjs",
+      "lines": 56,
+      "sha256": "8b01f651ce40695e40f35073d1e0f9881a2ec2886d7ba20fd9ac87767eaf10ee"
+    },
+    {
+      "path": "scripts/seed-switching-speech.py",
+      "lines": 46,
+      "sha256": "61716cc4008aae4aaa527e7e253ca7ae7e254a967208ded3ca4d2697827af3b6"
+    },
+    {
+      "path": "scripts/task-checkpoint.mjs",
+      "lines": 8,
+      "sha256": "8839398601e684b0cbd0bd919cec4cfeb827ddc647c32023489368e77619ef52"
+    },
+    {
+      "path": "scripts/terminal-fork-target.mjs",
+      "lines": 15,
+      "sha256": "74bd47ce0b2c88d887a4b0df0b10cf8705aac88bee87527a799700dadbb02238"
+    },
+    {
+      "path": "scripts/terminal-fork.mjs",
+      "lines": 18,
+      "sha256": "d4af3db11843bb9cf92cf2f0a2f328bdb7bd4b5ca9ddd143ba1ed23932ae66cb"
+    },
+    {
+      "path": "scripts/web-browser-check.mjs",
+      "lines": 26,
+      "sha256": "5f855c2301756db5167ee47bb8eb08ebe28df51881d32575007e630cddfd728a"
+    },
+    {
+      "path": "scripts/web-dom-check.mjs",
+      "lines": 28,
+      "sha256": "6a26db0b1ac60a40b48dee4f2d4815551f2d9d78cb5cdaa2be2809a689fbe889"
+    },
+    {
+      "path": "tests/account-reset.test.mjs",
+      "lines": 32,
+      "sha256": "7cc43dfc079a91e0cc68a09e06bf4f9e181b033890fd7bbaa7f8326f8bd67f38"
+    },
+    {
+      "path": "tests/activity-board.test.mjs",
+      "lines": 21,
+      "sha256": "7d30ef3b314b2d4b9611d99eea2d82bce90aad61052b15799734f7b9d9c17dcd"
+    },
+    {
+      "path": "tests/app-updates.test.mjs",
+      "lines": 42,
+      "sha256": "994e93ea3bddcd5991cdc1bf30d64c9b393be558adb01d4d9a6a7831d64b0d4d"
+    },
+    {
+      "path": "tests/cache-limits.test.mjs",
+      "lines": 43,
+      "sha256": "bdaa4773a214f1adbb27e4a23923e8830e2101db02f8f968c365b7aa3076a9b2"
+    },
+    {
+      "path": "tests/catalog-server.test.mjs",
+      "lines": 26,
+      "sha256": "29789cf5c591d8b5c018b3df18fdd5d6ffe4b19c91ae5b7f6f97b041aaa3143a"
+    },
+    {
+      "path": "tests/codex-connection.test.mjs",
+      "lines": 59,
+      "sha256": "cc660f44ba9d3bdb2c2a3ec140e90ae5cd19e9d0339e2434668e4c3eabcbc714"
+    },
+    {
+      "path": "tests/codex-routing.test.mjs",
+      "lines": 85,
+      "sha256": "8b0f8a713eb8ab8bc931b671498da2861ba7f2eff802cd9d3d353fb9bf7aae6d"
+    },
+    {
+      "path": "tests/codex-stdio.test.mjs",
+      "lines": 32,
+      "sha256": "096f96ce11554557995d0df7f7a5adde48e9f18efc7cb6edd3e7f17ce84cb6af"
+    },
+    {
+      "path": "tests/completions.test.mjs",
+      "lines": 61,
+      "sha256": "465bd330c99ffb829dd119a1c3dc16fe1fc0bff79091147b0f4c7922b7b9a5ad"
+    },
+    {
+      "path": "tests/computer-use.test.mjs",
+      "lines": 10,
+      "sha256": "8809797f432be6f17a8c42570c1c9f2e095c19467b766faedb79e389e13026cd"
+    },
+    {
+      "path": "tests/conversation-notes.test.mjs",
+      "lines": 38,
+      "sha256": "e1cddabc865359c64eb32c5f100dfe828bb9d59be2e92a145a04847972cc55fa"
+    },
+    {
+      "path": "tests/coordinator-discovery.test.mjs",
+      "lines": 196,
+      "sha256": "6cd120b7f54e66c9caf86fd915e2663774536e92d4feb5000d6f4d1f43d0a19c"
+    },
+    {
+      "path": "tests/coordinator-migration.test.mjs",
+      "lines": 114,
+      "sha256": "11f8e61030bb5ec2e8b4c54b279fafb098c2db4358ab83f15950589001433da3"
+    },
+    {
+      "path": "tests/coordinator-reports.test.mjs",
+      "lines": 113,
+      "sha256": "0a20ce19e686c924abefd5aac9dc53429a2c46062f9c606bee459e9695b0b6ee"
+    },
+    {
+      "path": "tests/coordinator-routing.test.mjs",
+      "lines": 288,
+      "sha256": "bfbde0ca79b0a9d95fc7877de834910892428c881dbf0c23adf67ef359614c74"
+    },
+    {
+      "path": "tests/credit-observations.test.mjs",
+      "lines": 8,
+      "sha256": "63a9f9797f869c6941578353919d3aced6e55dbbd7d20e7b0fd8a8e9a12ac0e0"
+    },
+    {
+      "path": "tests/fixtures/app-server-stdio.mjs",
+      "lines": 13,
+      "sha256": "ffd65894c5b3b7d369851ee20b337b30c7c482c3d410044fbe9c33d47bd9c918"
+    },
+    {
+      "path": "tests/fixtures/catalog-ui.mjs",
+      "lines": 26,
+      "sha256": "45bc4a50294a3d2376f1a0c24ef2acd3b172c33c01e5aec88f5ce1e5deea2484"
+    },
+    {
+      "path": "tests/fixtures/environment-isolation-native.mjs",
+      "lines": 37,
+      "sha256": "33ef8122ed1eeafa58b7a7945dc8eedf6a74cd3c0d723cad0e8b13b4e1d25962"
+    },
+    {
+      "path": "tests/fixtures/immersion-cycle-team-ui.mjs",
+      "lines": 68,
+      "sha256": "d8effcbf6cd01b1df62ac6141150535f64737fd6d780695cf962cf9f2f48f6c4"
+    },
+    {
+      "path": "tests/fixtures/immersion-cycle-ui.mjs",
+      "lines": 66,
+      "sha256": "f805a24355c2e9c25433de4c3c253fc73f1645ab6d0826634416a45f72a2b7f3"
+    },
+    {
+      "path": "tests/fixtures/lifecycle-ui.mjs",
+      "lines": 87,
+      "sha256": "dddf027f3d8d2f3f7c660519d559be11b9c8d5bfa236cc6d0d064772e86878eb"
+    },
+    {
+      "path": "tests/fixtures/losangelex-ui.mjs",
+      "lines": 35,
+      "sha256": "a53969db257b94fac19ff478d9c6f8b1d3b8395a32cdc0dc245953ceb2fe99d9"
+    },
+    {
+      "path": "tests/fixtures/native-fork.mjs",
+      "lines": 14,
+      "sha256": "df3ad9014e1ca652a045b9ba564e7a1e171220c7f6db2988a52f589732454315"
+    },
+    {
+      "path": "tests/fixtures/native-room-voice-ui.mjs",
+      "lines": 51,
+      "sha256": "d8b1fa109743f6095b761c4a3b5b04fbae3e1dfea99fed1abfb3d41c9ed7fd69"
+    },
+    {
+      "path": "tests/fixtures/real-backend-provider.mjs",
+      "lines": 61,
+      "sha256": "1adc98b3c713304149849b240fadd71d49b5ef025c34ea478086b7613571d74b"
+    },
+    {
+      "path": "tests/fixtures/real-backend-smoke.mjs",
+      "lines": 103,
+      "sha256": "96f660bf704bd2eccb87ea39d2d1adf39f5c54c21a2f71326da9a3c5357897db"
+    },
+    {
+      "path": "tests/fixtures/recovery-important-ui.mjs",
+      "lines": 17,
+      "sha256": "07cf2e563146f8390fbae27d5fda4baaccfb80a30f999fc97ba88ba58196fbd3"
+    },
+    {
+      "path": "tests/fixtures/room-transport-proxy.mjs",
+      "lines": 67,
+      "sha256": "c3ac0c7fd0a6870947baa5722d94266293b6aad5ae1fae8068e590a5acd2912a"
+    },
+    {
+      "path": "tests/fixtures/stock-voice-intake-http.mjs",
+      "lines": 78,
+      "sha256": "a1c6ad1e4e4a604ac2dd931a49d9826ed5a86be446c1bd5ce9e87ee547ab3846"
+    },
+    {
+      "path": "tests/fixtures/transcript-refresh-native.mjs",
+      "lines": 151,
+      "sha256": "ff5cd4b1c7437795336db72b8a61091bdf5a04be339e0b31d0fd63991a4aa492"
+    },
+    {
+      "path": "tests/history-heads.test.mjs",
+      "lines": 5,
+      "sha256": "72fe69660371c77f403a577725618e9a81e95fb6112b820e6bca43f5065ebea6"
+    },
+    {
+      "path": "tests/history-position-index.test.mjs",
+      "lines": 32,
+      "sha256": "ce7a382a1d7777a4a2d07130c1491bada9098403c3bc82050201e263f3cdb933"
+    },
+    {
+      "path": "tests/history-server.test.mjs",
+      "lines": 78,
+      "sha256": "a0b964e31797a9bf445b45e4881eb33e6914352367bb40aaf588c8b5ef14b78d"
+    },
+    {
+      "path": "tests/history.test.mjs",
+      "lines": 204,
+      "sha256": "95e28f2f79f362e47d50ba58d270bb1725e980cfa2604534ed99466fc27eca20"
+    },
+    {
+      "path": "tests/human-ingress.test.mjs",
+      "lines": 27,
+      "sha256": "87c60d2570995bb47beb9392c4a2a412f4de2a89c83eec14741e8ab37cf5c7c4"
+    },
+    {
+      "path": "tests/immersion-plan.test.mjs",
+      "lines": 105,
+      "sha256": "2f0c662ffaf826c14c0f8cf907eb4437168f8fd5e72bf90a35a10cb11f6461cd"
+    },
+    {
+      "path": "tests/immersion-transgrammatic.test.mjs",
+      "lines": 53,
+      "sha256": "a530a726eb2081cbf1cdcab8a79b7e9ce32751915a0816861ee7754a865c485f"
+    },
+    {
+      "path": "tests/immersion-worker.test.mjs",
+      "lines": 20,
+      "sha256": "f2dd810db8749d77b06ad8df92225cf781f9dc3d0cca48c233de458f709b2146"
+    },
+    {
+      "path": "tests/integrate-hollywood-native.mjs",
+      "lines": 134,
+      "sha256": "a2072774fe3c1049278893510a0d492ef6bb6dddc0fb0d456092e329cc4a1162"
+    },
+    {
+      "path": "tests/integrate-hollywood-workflow.mjs",
+      "lines": 78,
+      "sha256": "cbf39d4e81ef3de2aad1efdbd4b657df183a5506eefd08b6abb43525433a5bcb"
+    },
+    {
+      "path": "tests/internal-sessions.test.mjs",
+      "lines": 18,
+      "sha256": "c9bfdac5195853b48fe98bc1edfd8dc8de9f773d3c086e1727d91323696b6113"
+    },
+    {
+      "path": "tests/live-activity-delivery.test.mjs",
+      "lines": 20,
+      "sha256": "5e04ff6b71b37a24d54c5156a4e53e8d3a4b632cb2c5072b95c0bbba706413a7"
+    },
+    {
+      "path": "tests/local-mode.test.mjs",
+      "lines": 31,
+      "sha256": "838b6f460870f4993b59b19819ec0764be76c76bb74fcd42c55202b83fc5c5dc"
+    },
+    {
+      "path": "tests/losangelex.test.mjs",
+      "lines": 99,
+      "sha256": "e35eb0412875aa1961afe38f3e3c70d89779418f3b2a94c5b7a8e7af1bc05aa8"
+    },
+    {
+      "path": "tests/maintainer-auth.test.mjs",
+      "lines": 30,
+      "sha256": "ba701fe73371f9079dc15253abf87fbcec5b45cb5dd1eb69283bfcea51976917"
+    },
+    {
+      "path": "tests/maintainer-events.test.mjs",
+      "lines": 65,
+      "sha256": "0471a4186b0bab75aca9ddcd7b9d327972903cae1ab3dbf4c669dbfb8b971e90"
+    },
+    {
+      "path": "tests/maintainer-pagination.test.mjs",
+      "lines": 56,
+      "sha256": "5d979ed957023696e7e3e3b3bccd0af40cad4596a653c2b933fb15722c094a8d"
+    },
+    {
+      "path": "tests/maintainer-reliability.test.mjs",
+      "lines": 102,
+      "sha256": "f284bcc7358394658b7e16fba21294ecdc0dcfdd205b24c9ad5be3691bc76dfb"
+    },
+    {
+      "path": "tests/maintainer.test.mjs",
+      "lines": 141,
+      "sha256": "0757ca5f437269bef0ecd4cd19330380cf48810e300e7f6a62929622ea2df388"
+    },
+    {
+      "path": "tests/native-fork-bundle.test.mjs",
+      "lines": 34,
+      "sha256": "4eff4028016c01e8837789cbc647ea2ebf0404cb2faf35a0810ea4add6dfaf7f"
+    },
+    {
+      "path": "tests/native-live-input.test.mjs",
+      "lines": 9,
+      "sha256": "227fa8fe2c0229e68f1665f2ae640b6cbb49cdb39d720bce59c1197fcf417531"
+    },
+    {
+      "path": "tests/native-live-playback.test.mjs",
+      "lines": 9,
+      "sha256": "c752bf8bce16416a4248c4dc88ba8be15c778e7d826c889281d66f84b36d110b"
+    },
+    {
+      "path": "tests/native-speech-capture.test.mjs",
+      "lines": 11,
+      "sha256": "f39f09fca0abe81ec0e209e2cfba77a2efee097a2a1b3be7bb4f1db20b652b9a"
+    },
+    {
+      "path": "tests/native-voice.test.mjs",
+      "lines": 72,
+      "sha256": "411c1cd1c7cc81483753d674e3106614acb9def5fd1066175a084b3d1459c7c7"
+    },
+    {
+      "path": "tests/notification-reads.test.mjs",
+      "lines": 7,
+      "sha256": "18d76645959efef86007f466a2efe083956d7f1295d86f1d28c803e8e5a6e996"
+    },
+    {
+      "path": "tests/notification-titles.test.mjs",
+      "lines": 11,
+      "sha256": "b94a204bb9481ba1d672fe9b089108f75260ed284bb89fd55d0fac9342090829"
+    },
+    {
+      "path": "tests/permissions.test.mjs",
+      "lines": 53,
+      "sha256": "37d6449256d876705b50175870ea97f6dd7b43d1fb1ec1e94145adaa5546a38f"
+    },
+    {
+      "path": "tests/prepare-hollywood-android.mjs",
+      "lines": 41,
+      "sha256": "d8178f1662d9d95672fee4757612b4412afcb7161a2bd69bbceb24f2adffe702"
+    },
+    {
+      "path": "tests/push-registration.test.mjs",
+      "lines": 25,
+      "sha256": "3f943d08d1198b999d54935bb9fdfbff05b3c1a70a7b2ded8e619bf8b6f3807b"
+    },
+    {
+      "path": "tests/push.test.mjs",
+      "lines": 64,
+      "sha256": "fa566f9ae4bad02150f5fd31aadbe2ab5533be0aea76115de28d54580d74da57"
+    },
+    {
+      "path": "tests/qualify-hollywood-native-boundary.mjs",
+      "lines": 64,
+      "sha256": "6097f3d2475378aba8c147f5f69a27027e37287928877bf0f8fdf6b6c2a730d6"
+    },
+    {
+      "path": "tests/question-actions.test.mjs",
+      "lines": 25,
+      "sha256": "9c15c1e6fee01a60d175288c4e111ac70a8bf1670923e9d7e8f9f6fbe5377225"
+    },
+    {
+      "path": "tests/rate-limits-server.test.mjs",
+      "lines": 38,
+      "sha256": "f26bf66da9cd7c08953a6acc0966979190a16e03215439e768f4c3809c9dd169"
+    },
+    {
+      "path": "tests/rate-limits.test.mjs",
+      "lines": 60,
+      "sha256": "796725b33a6736ce6fb4d06ea294f9484e83343307daefec1ed05bd60cb41c58"
+    },
+    {
+      "path": "tests/reconnect.test.mjs",
+      "lines": 47,
+      "sha256": "999acbe2a588cc30e6b1d8cf202640a704baf189a23d24ff26c8fd890bdc8ef7"
+    },
+    {
+      "path": "tests/recovery-health.test.mjs",
+      "lines": 34,
+      "sha256": "8b5d60eb3297ea7c90e80951fecaa7d428e010a35787ab015fe13dcd237383d0"
+    },
+    {
+      "path": "tests/recovery-queue.test.mjs",
+      "lines": 4,
+      "sha256": "59c06f5368491e605f240d6941432059fa33c6c5119a0ac947231aca07a80df8"
+    },
+    {
+      "path": "tests/release-qualification.test.mjs",
+      "lines": 98,
+      "sha256": "315ec1c11eec596aeb833f3d3033f714a02d9b123298b5044bab9e706cb3898d"
+    },
+    {
+      "path": "tests/reply-recovery-http.test.mjs",
+      "lines": 129,
+      "sha256": "a089ce02cb4cf7055efbf8d72da5aafb62e64b6bf0a8b4945c4adb8f5e69cfeb"
+    },
+    {
+      "path": "tests/reply-recovery.test.mjs",
+      "lines": 69,
+      "sha256": "ed57428e33b34da763ca7c8552c94a0a58db9551ed227d8cba6bc4147068a83b"
+    },
+    {
+      "path": "tests/room-progress.test.mjs",
+      "lines": 38,
+      "sha256": "fed79feebea1350a607bd1b097836c6447197134b607102f3c8c3d1d07c79c1e"
+    },
+    {
+      "path": "tests/room-voice.test.mjs",
+      "lines": 48,
+      "sha256": "2ce1630c396615d9d8b406eddaccbd73e5272ba0be6a693a7f96fec70f7f0f87"
+    },
+    {
+      "path": "tests/rooms-client.test.mjs",
+      "lines": 38,
+      "sha256": "ffebdf645ef8b7d30672e45691338ec4768a90a28b073173c0e4fec68d19b968"
+    },
+    {
+      "path": "tests/send-identity-durable.test.mjs",
+      "lines": 53,
+      "sha256": "e29cd7f70a16c05ed2652739462686683255456d68d3662e2aa148b0ae481cf6"
+    },
+    {
+      "path": "tests/send-identity-evidence.test.mjs",
+      "lines": 24,
+      "sha256": "5c1ebd49514ada5bdea882e9fb0e1d6f067df3377e3f8f6c51f28609483446c5"
+    },
+    {
+      "path": "tests/server.test.mjs",
+      "lines": 54,
+      "sha256": "2cb0d8b2c2b662336eb4285fa2a215bef73063277031d0f186f2fa657941b86c"
+    },
+    {
+      "path": "tests/session-catalog.test.mjs",
+      "lines": 23,
+      "sha256": "93a04dbb504cd39a372a762a2052617085e2e1e3bd3cd3b1fdcb144250e3aff7"
+    },
+    {
+      "path": "tests/session-catchup.test.mjs",
+      "lines": 187,
+      "sha256": "a77b1957e6a6b18cca031bed082fd8e4f5a57fa0aba32726ee29911d1dd0255c"
+    },
+    {
+      "path": "tests/session-discovery.test.mjs",
+      "lines": 88,
+      "sha256": "970f36c25420d8966ff63f98b67447e4a5d6c46598e1381723c83d2da60cb2b7"
+    },
+    {
+      "path": "tests/sessions-timeline.test.mjs",
+      "lines": 143,
+      "sha256": "614666de117a825f1709f16a006ffb8aea562bdf6ce226e7abd79bf05f71039e"
+    },
+    {
+      "path": "tests/setup.test.mjs",
+      "lines": 35,
+      "sha256": "ac9369cd32ef60b93105419c1262a17c6f41701c9016c450a8ba656a766764e3"
+    },
+    {
+      "path": "tests/speech.test.mjs",
+      "lines": 56,
+      "sha256": "bf99cbd8dbf69bfab3e0fb5291cf763feb49a490a5e249902098049d9dac9204"
+    },
+    {
+      "path": "tests/store-contention.test.mjs",
+      "lines": 2,
+      "sha256": "e01ca10a64bc992746c2f3e545a24aedc18906f5d1fc86de21836376da962f62"
+    },
+    {
+      "path": "tests/terminal-fork-mcp.test.mjs",
+      "lines": 5,
+      "sha256": "e7398e8190417ceefed05ec7acdc6800bc5c7dc3897a6818878543b02693924e"
+    },
+    {
+      "path": "tests/terminal-fork-server.test.mjs",
+      "lines": 9,
+      "sha256": "088656496d976ae49c259e85a7c4481977dfce8924f1191b37f5d334a2504066"
+    },
+    {
+      "path": "tests/terminal-fork-transport.test.mjs",
+      "lines": 12,
+      "sha256": "37dd6732ca09aa423c3da354c1f7481539b90f7f6051cd570606fdfb9f524743"
+    },
+    {
+      "path": "tests/terminal-forks.test.mjs",
+      "lines": 62,
+      "sha256": "bcd0f5ef39ca29ed10e7bfc45ff4fd2d801a8643ba4f97bfe4387ddfd7b8a76f"
+    },
+    {
+      "path": "tests/thread-previews.test.mjs",
+      "lines": 69,
+      "sha256": "259e7bf73edcd7217e8158cfee67626aa734b0a6a0fb1ae2df9487c3e3875b0e"
+    },
+    {
+      "path": "tests/timeline-event-filter.test.mjs",
+      "lines": 17,
+      "sha256": "64e4a41e445f71bc43c68e6e7283286073c20cf7fbeb795fe28622c9bd125035"
+    },
+    {
+      "path": "tests/turn-controls.test.mjs",
+      "lines": 126,
+      "sha256": "bba4ee5c0c697246fc35abce8ebf02b17acf78909eaf8c33101589da78185037"
+    },
+    {
+      "path": "tests/turn-recovery.test.mjs",
+      "lines": 167,
+      "sha256": "b7ff87714031f1ef2f36bb785dff8877321bd109ad397b63a177bc69510ec22b"
+    },
+    {
+      "path": "tests/voice-queue.integration.test.mjs",
+      "lines": 49,
+      "sha256": "14ab008d458093cd13ebe0e2043ef3f507ba3056ef178dce2a9d541dbf885d87"
+    },
+    {
+      "path": "tests/voice-recordings.test.mjs",
+      "lines": 131,
+      "sha256": "a2261c8c70cd123a39a657433da4320a1c7adf94b24dfcbd69053ecca6482256"
+    },
+    {
+      "path": "tests/voice-renderings.test.mjs",
+      "lines": 30,
+      "sha256": "c8fb9846eb6e0e9bb5efdff6c49fa84fffc90671c144c679791103000aa48dc4"
+    },
+    {
+      "path": "tests/voice.test.mjs",
+      "lines": 109,
+      "sha256": "870313fb069f14dc83634a0cb289badf0711348175ffbbd6f68e1b95e5e391ed"
+    },
+    {
+      "path": "tests/web-browser-fixture.mjs",
+      "lines": 33,
+      "sha256": "7e63030bafc104081c6ff6ede1cb2ec40242f86d8ad24b6a420386d1614d84f1"
+    },
+    {
+      "path": "tests/web-client.test.mjs",
+      "lines": 91,
+      "sha256": "2418a6b101c0a7626e05fe6c8200558a18c11b779583f180060639c8a8376767"
+    },
+    {
+      "path": "tests/web-theme-access.test.mjs",
+      "lines": 57,
+      "sha256": "0d7c26e2fa9971f0a3b32db31e3d1b447402f6dbddc016627d3dfce912834d0e"
+    },
+    {
+      "path": "tests/work-admission.test.mjs",
+      "lines": 106,
+      "sha256": "af352361593089ad840dd34d4b632ab6c9ea5d212d503f3c762e03539b2fd48c"
+    },
+    {
+      "path": "tests/work-observations.test.mjs",
+      "lines": 16,
+      "sha256": "e4fab5e9f5d343f2fd23f46dba07c93b204e57be9e81a22e394b48e3d203d8af"
+    },
+    {
+      "path": "tests/work-record.test.mjs",
+      "lines": 50,
+      "sha256": "a01b684c2490802795ffee95991d31a9d4d8491393a2e0efad7aacb56930faac"
+    },
+    {
+      "path": "tests/work-runtime-adapter.test.mjs",
+      "lines": 54,
+      "sha256": "ec2a0a311f2e64cc06b3272e2e9e2f86243724c0e6fb38caa226a5d77b56917c"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/CatalogStartupNativeTest.kt",
+      "lines": 68,
+      "sha256": "3975657bbc3baefb3dd73994f11346c2eddfb8ddf9e9b18f41922adc4137b799"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/ClientReplyRecoveryNativeTest.kt",
+      "lines": 202,
+      "sha256": "f525441d742827a1e71100c3a5309a2c501e17bc38b72df70e93556140d9775d"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/CommandHistoryNativeTest.kt",
+      "lines": 67,
+      "sha256": "925a7b7c27f914c428214a23881eb780de1065b8466ccef61167844052d06f44"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/ConversationFilterComposeNativeTest.kt",
+      "lines": 80,
+      "sha256": "0bf17e2950d1b3ef58f03d1364853fa26825b7dc73c0cb3655094afab0e23baf"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/ConversationFilterNativeTest.kt",
+      "lines": 123,
+      "sha256": "114b5de2fb40c0ab0b78e2bd64fc2326498a8c974bf1152133b198ee8e78af76"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/DurableVoiceWorkerNativeTest.kt",
+      "lines": 118,
+      "sha256": "703dcc8f0b9416a52b5c021c01b967c7478cfe38a97a6388a16e84894027ba4d"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/EnvironmentIsolationNativeTest.kt",
+      "lines": 110,
+      "sha256": "9fde8401c2dc742ea0995a9f59be932108a7ee4399253bcd3b8479f329efb476"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HistoryComposeNativeTest.kt",
+      "lines": 98,
+      "sha256": "9362f281ce6ac06c3ee18388dabbab70be4fdd5c5347e9a215ecb010030b2da0"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HistoryReadingNativeTest.kt",
+      "lines": 294,
+      "sha256": "c2ea0ddc33b6fac6ae706c34ecea3f75557def934d118d2fc0372217d88d9f62"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodCatalogLiveNativeTest.kt",
+      "lines": 81,
+      "sha256": "499f42bda89aaa80ea9bd181ca28673091fad9fa006231506507139e52ea3527"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodGuidanceRecoveryJourneyTest.kt",
+      "lines": 132,
+      "sha256": "741da95b69f5ab1ffac17e015c3a767e665bf73ec2b7a663af3b97eee23fedba"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodLiveRoomJourneyTest.kt",
+      "lines": 115,
+      "sha256": "6c9258c8eb5198e1556430605811865fe56b512a7190b294eb2d22c55e3a3479"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodNativeAttentionJourneyTest.kt",
+      "lines": 162,
+      "sha256": "259543c6bdce7735459850ead1e1cb0b695afcaf526a5e535f634a2f222f30c8"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodNotificationNativeTest.kt",
+      "lines": 73,
+      "sha256": "a7c479a331d3da9f0ba6e4d95ceb0aad72174019879c7449dde90dcc2a6fedbc"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodNotificationRecoveryNativeTest.kt",
+      "lines": 77,
+      "sha256": "8845f3a49f36c964f87cfc6656ea07b7af191758b986aebfc394186fdd5618e7"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodProductionReadNativeTest.kt",
+      "lines": 94,
+      "sha256": "1180b7791ded9586b651c5431d1836bdb5e5d4783e9ecd63d4fe3a807f586c4c"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodReconnectNativeTest.kt",
+      "lines": 62,
+      "sha256": "912872b78a982c2a6e7e5593a579291302b29ece4a6ca5c96df4f7d527e3a68d"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodRoomActivityNativeTest.kt",
+      "lines": 81,
+      "sha256": "dd26cda73bef46b156af87c5201125b7bcf75e90d26562809078f22c03887e00"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodRoomAudioLiveTest.kt",
+      "lines": 75,
+      "sha256": "53e470b1bf8c965295b99a109aec508d225b61a3705545a064fa9bdb90451e4a"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodRoomAudioTraceLiveTest.kt",
+      "lines": 67,
+      "sha256": "160386cd4cd738e3102fb101afcd25ecf9f8f1f5bc58a0cce3c7e29ca54d4ea6"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodRoomControlsNativeTest.kt",
+      "lines": 158,
+      "sha256": "6f59051e1b3fcb72811d079a5759480a4b0dd1d871594c2873620d0d5d735985"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodRoomFinalAudioLiveTest.kt",
+      "lines": 75,
+      "sha256": "b34b3c21b40f3f979d8d8a96ace8812fd223289616fe87914ebf97b2ddc41d3b"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodRoomNativeTest.kt",
+      "lines": 59,
+      "sha256": "13a0bb7ca4ef40a05edb3c45219a398240b2fd72c392020d827e2930ee4e9aa7"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodVoiceKeysNativeTest.kt",
+      "lines": 159,
+      "sha256": "f5d1ea826c287cb0504cc8355f5faedfdebb9c3d92cab05797c43bc5c69450ed"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodWorkflowNativeTest.kt",
+      "lines": 74,
+      "sha256": "ecac7c40420ed9dcc4972dab6dcc71a992e8fe831231c0db608bcb5e51675c19"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/ImmersionInkNativeTest.kt",
+      "lines": 59,
+      "sha256": "945df3bd8afe76c5e8fdd53eb2a4a60bd9779b02005331145158682167373c4b"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/ImmersionPopupNativeTest.kt",
+      "lines": 91,
+      "sha256": "8f6ba058f027a348a2753c57ccc188d24c61460e6cd0770cd2a7e8d696c6d271"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/ImmersionReadingWaveNativeTest.kt",
+      "lines": 157,
+      "sha256": "e4a9c76dcc88d08cc6da8f44a7a502cac77b9a35f8cd56fbd182c77d3bca9bea"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/ImmersionReadingWaveNaturalNativeTest.kt",
+      "lines": 299,
+      "sha256": "bccb18f8075ad44e5283860b4c5e0acd53a780807c7308bbe91db9932684bf68"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/IndependentVoiceCaptureNativeTest.kt",
+      "lines": 33,
+      "sha256": "4e4384dffdf994fc8e728ea66c41edc249537309ef958f31f6c592d3ebafe4ff"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/MarkdownTableNativeTest.kt",
+      "lines": 117,
+      "sha256": "8f36c46b38ed516b18ecabf8976b1158c5f2c6d447a6b3b9107e51a300867402"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/NativePairingTransportTest.kt",
+      "lines": 39,
+      "sha256": "4d5c191a3e2ceb8d7025c70b98c42ef71b2b62a5e8b87c86713cf90d4f1100d9"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/NativeReservedWordSelectionTest.kt",
+      "lines": 300,
+      "sha256": "84c1f1216129113ff75d7ace39287b4229719f28acd127820e5d8158f4c6e573"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/NaturalImmersionNativeTest.kt",
+      "lines": 188,
+      "sha256": "3a42d772743dae95c812f5de094396e91b1cd7213a74e2b572f268cf89b55184"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/PairingNavigationNativeTest.kt",
+      "lines": 71,
+      "sha256": "cf6ffc54925a4ddc8c65ee5d417dc532df525e451ef9cbd95104830bd0405594"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/ParallelTranscriptNativeTest.kt",
+      "lines": 82,
+      "sha256": "8d70c498f6ef6c4066c011890c40ea2aa7f823f42f5a7ee296a9b27889f314f4"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/PresentedReadRecoveryNativeTest.kt",
+      "lines": 65,
+      "sha256": "40f3b11cffdfdab1d464ae57838363c4042ebcf86f7c6083d748aca9af51997d"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/RealBackendJourneyNativeTest.kt",
+      "lines": 108,
+      "sha256": "4644fb2dbde15978e788931ac17d335e997b71d24f263e0ffba9cc47ccafe92b"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/RoomNavigationNativeTest.kt",
+      "lines": 95,
+      "sha256": "65d6a77a792003d5771f1885a4c6605f2e8da054f3a57943c86fc47c024f2ff8"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/RoomRoutingNativeTest.kt",
+      "lines": 40,
+      "sha256": "0dedbfe73c8bb6553d857a1072333bca4bd8dc4df2fa9838e55f45a25acfc01d"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/RoomTranscriptNativeTest.kt",
+      "lines": 44,
+      "sha256": "10e8d10d3bf72e9c88074c9033a1d2e9e034cba4e005fa274aa43893be146eca"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/RoomVoiceNativeTest.kt",
+      "lines": 48,
+      "sha256": "444c1da3b9ac12bd440d53503a6976e81250aeaf8e36ad5a33c5f4d69a77892c"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/SearchNativeTest.kt",
+      "lines": 49,
+      "sha256": "c6ea03dd3dc9d7be676c52d4bc8cbd9d9787a27083e95811d5b11773f73ad9ed"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/SessionCardNativeTest.kt",
+      "lines": 113,
+      "sha256": "899f962b5a1393f6206c4bb6a41d4bde3f12d92d8797e6c758c154199d9cb5ca"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/SharedInlineLayoutNativeTest.kt",
+      "lines": 705,
+      "sha256": "f19cb53911d9a841c060c8c654cd6ea2d2fb63eda92ff9d04d1f20339fe344f6"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/SpokenNotificationNativeTest.kt",
+      "lines": 50,
+      "sha256": "e6966480e678db6e42cfb2e9efe7702606376cdc454f31b9b7e8d2c8e895693a"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/TeamControlWorkflowNativeTest.kt",
+      "lines": 30,
+      "sha256": "39babfc3545e42c4f3db9b8c46069d539f2e3221393471a70d46479438d9e426"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/TranscriptRefreshNativeTest.kt",
+      "lines": 797,
+      "sha256": "9a14d75f8e31cbd68fba9c19888e36f9c80b5d40969b8b4a7ed932cf0b31fd5e"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/TypingResponsivenessNativeTest.kt",
+      "lines": 121,
+      "sha256": "23834ea9dfe6d11fcf1f2e342251f5d8a4e191a939db7557b7468c34dd6a04d4"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/UpdateOriginNativeTest.kt",
+      "lines": 54,
+      "sha256": "ceec0b5bb07483bcf3e3bad257d8d0d8ff9b0b526b1ecbbf71c66f1f796f3e83"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/VoiceResponsePlaybackNativeTest.kt",
+      "lines": 53,
+      "sha256": "1b284e38371a30b9a667438ab504bf30a9f8056bcc3de813d8da151a2759948e"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/VoiceTurnStoreNativeTest.kt",
+      "lines": 121,
+      "sha256": "922859b4e7444a008a2eec828857ae36296665a06269106e84594dadd746ad1d"
+    },
+    {
+      "path": "android/app/src/androidTest/java/co/fallsoft/pocket/WorkCardReadabilityNativeTest.kt",
+      "lines": 80,
+      "sha256": "06bca58b4cd9ed5817709ef34a9cfecb04d9ec3166eb3eb130a39895439dff5a"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ActivityPopupPositionTest.kt",
+      "lines": 23,
+      "sha256": "395546fb0213af3b7f3a71791ff3952b3f2cf9635aee842616e1cae49ad82d0a"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/BilingualContentTest.kt",
+      "lines": 107,
+      "sha256": "b2858bd0b8a4b045ca7787eea7dff630df8b7c771fc3e64ae8d36aecbd16b29d"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/BlackoutWindowSessionTest.kt",
+      "lines": 21,
+      "sha256": "a53af893e19feba02e1a16fdadaa2087f9c7c83b7ce5f8207fc2d38fa693c170"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ClientReplyJournalTest.kt",
+      "lines": 30,
+      "sha256": "0a2d7cd49cd2af73932299d79e8d7e53c71dff7af434635d0e5c39487a2749a6"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/CommandRunProjectionTest.kt",
+      "lines": 34,
+      "sha256": "4fed68c40107446eafa8de5fe4339379af0151fadfbce143932270d0bbd0932f"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ConnectionMessagesTest.kt",
+      "lines": 29,
+      "sha256": "4cc71acacf15f26b75f5773428ad987bf0c72a02e240c775a59bd15df299ae3d"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ConversationContextTest.kt",
+      "lines": 73,
+      "sha256": "eca8f156f5c7d75a3074ed8d8cc382db41028eaf17b35642451d11691d74e56b"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ConversationFilterWipeTest.kt",
+      "lines": 24,
+      "sha256": "cc71c2056093b8454c6eeadc21c019f30b93c3692417ced4ac980d44efd80a2d"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ConversationRunStateTest.kt",
+      "lines": 14,
+      "sha256": "a527ac339b002e4219c8f77ebc40f07184edd6c4ae8ad6835c5fc9192b654221"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/CoordinatorHistoryTest.kt",
+      "lines": 23,
+      "sha256": "5b8fe7570810d6fe4f219dd1620013f09d206c14f6fa5bff0a4978468408d711"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/CoordinatorReadingTest.kt",
+      "lines": 31,
+      "sha256": "7aa94f3d7906dc125844547341c04bbdd56faaa78ef2bacd9105b598e7d35a71"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/CoordinatorRouteTest.kt",
+      "lines": 33,
+      "sha256": "d827b89634afc222358740b6e6d662dbce74e09d02c0b6687b62c7693e5b7cad"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/CoordinatorSpeechTest.kt",
+      "lines": 26,
+      "sha256": "a68e8f84fa7155a2b677ebf4b3b9520a111dc398f23661e188607504d4f812a8"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/DisplayedSpeechSessionTest.kt",
+      "lines": 8,
+      "sha256": "f371b5809a943a960bc86d77e02ac228857611f35640fb589f921e210e06f0f2"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/EnvironmentIdentityTest.kt",
+      "lines": 11,
+      "sha256": "dfe7921d9b56c0ea89d72efd890ee1a0d6ae257e344cf299e6c3f81e759c2588"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/EnvironmentProfilesTest.kt",
+      "lines": 58,
+      "sha256": "551c95ef7240c37655436454400b8e36a8c87ffd7c1c9cfa3abca06bbea7d3cb"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ForegroundCaptureTargetTest.kt",
+      "lines": 21,
+      "sha256": "68880ec12b177feb5100383e78787cab0331cbeb441325e63609778095865d22"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/HollywoodRoomActivityTest.kt",
+      "lines": 26,
+      "sha256": "5a1c828aa2a6799ed4e1bfdce1d587754aabf7a1cb5c4fec152ea5d9179661c8"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/HollywoodRoomCatalogTest.kt",
+      "lines": 17,
+      "sha256": "742c33f7d2026af5a5ffb485c7d3ac81e2cea12822b7e1dc534ad3963496d3b0"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/HollywoodRoomFeedTest.kt",
+      "lines": 109,
+      "sha256": "9b68c4904ee7e4b2bf8c23b6c370be86638bc2e8ef70505033c6091c713b524a"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionControlPhaseTest.kt",
+      "lines": 41,
+      "sha256": "77774b6b923e6244ce12cb8408a8b4e9131eb3443409bd393b79b2e7838b667e"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionCueCoordinatorTest.kt",
+      "lines": 151,
+      "sha256": "37a8557e288035752a4c35fa78cdbdbc58272a965ab0c8f99e93b31cf32ecee7"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionCueRangeTest.kt",
+      "lines": 33,
+      "sha256": "5eadba95e99c5d0a9af9d9c1e5c5ac67d267e5715d8ea3f615dc69c7c25c99ca"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionCycleTest.kt",
+      "lines": 170,
+      "sha256": "1ce1900fd20c21a6e4bae2328d1e0a0c1eb9d5106b790421e968ff15acb33766"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionParagraphStyleTest.kt",
+      "lines": 44,
+      "sha256": "e29be0777c3607e0fb17f7fe3dbece4c1a9f87ff34b4e410ecfeca5407c2b8dd"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionProjectionMarkersTest.kt",
+      "lines": 28,
+      "sha256": "d2a3d7f2805cb7a76e9f82bd58f3367618c008707d80b64b98db541629fc1113"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionReadingChoicesTest.kt",
+      "lines": 61,
+      "sha256": "e58328b8cda9babc6ecbbeb31d93b55158207e922388088ccd770ffe1dc51290"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionReadingWaveTest.kt",
+      "lines": 72,
+      "sha256": "73abbdbe3f83d003f24526043a8c9ebc97d0212123b8c8f2e0f7ff2abe95b67d"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionSharedRunsTest.kt",
+      "lines": 64,
+      "sha256": "c805c9ccfcb6997ed2082a7f4a62220509375efa2ba0a7e7b2d7f85561ce2feb"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionSharedWipeTest.kt",
+      "lines": 35,
+      "sha256": "4c2c1e2108e3c3842e5b2a34cc6ac977ddb5b8aa6d2e06bebc6d885bbfc8275f"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/ImmersionVisibilityTest.kt",
+      "lines": 43,
+      "sha256": "88f8bc1c433bfcbad739244ad0656f4bfe72ee85281853c4a74234429e18472f"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/LinkedImageTest.kt",
+      "lines": 43,
+      "sha256": "115807bef17f5294b894263228e60e1703908f04910175d33bc045a3e4353176"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/MarkdownContentTest.kt",
+      "lines": 90,
+      "sha256": "1935caff8f757b25f5552d211aacace7e93039488b598186543ea7aceda928a3"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/NativeSpeechPolicyTest.kt",
+      "lines": 21,
+      "sha256": "e8bd732a7b416ca50e04f903512ff640d8d09c804c2da9ab636fe433fd4eff4f"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/NativeVoiceTransportPolicyTest.kt",
+      "lines": 30,
+      "sha256": "b1dcbafd9f866bd73b17ed645311a01d3a1bbaeccc5ca2f81c6cada6d0e7a76c"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/NotificationReadPolicyTest.kt",
+      "lines": 7,
+      "sha256": "102a7ac34f60fa01d33e3f75df4cacbcf24bf01edbcd488cd331766e724cad91"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/OutgoingRecoveryTest.kt",
+      "lines": 26,
+      "sha256": "fdb2838a0650929938e41ffb9d99d437bf5ec23d541d38e6d90db5c04bbb60b9"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/PocketSpeechRenderingTest.kt",
+      "lines": 41,
+      "sha256": "b07bf5f07c20736852c58643b9a27912d27103ea12df5804075343be44bee728"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/PresentedReadReceiptTest.kt",
+      "lines": 11,
+      "sha256": "2df385ec483b078135aadfda0a0c9722fa184424ec950baae8ab84e97d0d0981"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/RecentTranscriptCacheTest.kt",
+      "lines": 52,
+      "sha256": "3210949c7a25a4b9ea0bbc79a70b6c1c8566f5c18b8032df671b20f033036c7c"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/RenderedMotionTest.kt",
+      "lines": 32,
+      "sha256": "5ac5a41bdb54fdd0bc99d5b37e2d75950b28d845633185d92946892316dbbad5"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/RoomActivityNativeFeedTest.kt",
+      "lines": 51,
+      "sha256": "11e2841fd81c95f21243bcc29c04847382ead4e2cd6cf66f9f13f63b558de682"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/RoomTranscriptProjectionTest.kt",
+      "lines": 103,
+      "sha256": "bc5e25c8317152505fbe25d0219e6752eb734a229afb77af63ec5377e30a8d69"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/RoomWorkflowNativeFeedTest.kt",
+      "lines": 32,
+      "sha256": "90c53fa17e9f125bf7fc31a23b5e6cb18676ca501e78a95ab576e810c5f952f4"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/SessionCatalogTest.kt",
+      "lines": 46,
+      "sha256": "71813be3cadaa99119ecb6e53e3b6f44cc0ae24681ef17b8bd4e17f4c6166ca9"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/SessionListPacingTest.kt",
+      "lines": 169,
+      "sha256": "3d33fbbccf1b77b7490beb346f98fa6ea08a90e12f7cb08230ed92d04b4d2a45"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/SessionSpeechQueueTest.kt",
+      "lines": 21,
+      "sha256": "a2b739d34909bf9253704e77d230507cfb05b9f8c8397c973fe8ab91bcdb4a5b"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/SpeechCaptionStateTest.kt",
+      "lines": 16,
+      "sha256": "24dd7200708b305c03864031612c35cd309002c1ddaf6b6e01742fe69ffff9c7"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/SpeechPlaybackMeterTest.kt",
+      "lines": 17,
+      "sha256": "60b71e0ea638eee21c4c08dee846555f2be5fb79afa1f3a0916b36ccb27dc8ae"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/SpeechQueueTest.kt",
+      "lines": 34,
+      "sha256": "a65bf03c8ae88b0edc256ad38aeeaffc0567bcdcefe85f75ff04dc1f2289f7ac"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/SpeechTextTest.kt",
+      "lines": 33,
+      "sha256": "5ed51b937975c237c7d8be4763c504e869ba3d61358998004cb62a9e5c2cf7de"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TeamComposerTest.kt",
+      "lines": 20,
+      "sha256": "49402546ac3f889e0b2b78a761afce06016210ae125efc213f9e738c078e8d2c"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TeamScopeTest.kt",
+      "lines": 82,
+      "sha256": "f84ab67f1da8c5a2b20810318d615b8c2b9a89c23e04f4b0618b773b54545d59"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TranscriptDiskCacheTest.kt",
+      "lines": 95,
+      "sha256": "79225ccb1d8d30a01ee65af029c74ae6da346f829406f78ecfcef16d6aca2f4a"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TranscriptFreshnessTest.kt",
+      "lines": 42,
+      "sha256": "ee42356d8aadefff2b2b6a86642307253c26f2e477ce81ad8f2f8b3db92e63a0"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TranscriptHeadTest.kt",
+      "lines": 13,
+      "sha256": "96772d2a05eb4908ca26e6c25b99dd21e89d94b00e01fe38f1c0e186cb63dbfb"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TranscriptHistoryTest.kt",
+      "lines": 169,
+      "sha256": "1358f6207d23ad8f9a444ab4879d6eba7cda69b7786af4e47814f755d2fbd96f"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TranscriptMessageIdentityTest.kt",
+      "lines": 196,
+      "sha256": "06631c398637eb73552eb573f9a44652c2d53b5a257f7dadacb5fefdea68a6ef"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TranscriptReadRetryTest.kt",
+      "lines": 21,
+      "sha256": "37f6ad3b9cf60762a06824e0016e955382274e473d55ac5a1225ee98798d0616"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TranslationBatchDrainTest.kt",
+      "lines": 40,
+      "sha256": "f9f1e990803b321d18553b51348084dedcc4d43e43b6bcf1468a2101a21516f1"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/TurnFailureTest.kt",
+      "lines": 24,
+      "sha256": "d0de0dddd93c2863a31dd7e887ba29b6c9da0fe1c168f284bfcd56288b3f1be8"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/UpdatePackagePolicyTest.kt",
+      "lines": 30,
+      "sha256": "57dc19b8fd099005648c63f6914fe965f5de27efc9aec67e8308f2f231ea376c"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/UpdateStagePolicyTest.kt",
+      "lines": 20,
+      "sha256": "38f73f9483aea556d2342d355acc0bbd495b949f1ba15fa3a4eaf96e0fd7cd0a"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/UsageForecastTest.kt",
+      "lines": 25,
+      "sha256": "a2c97731f65b35e26426aa64e0e3f64775392aad6690dbc51eb7a50c14f5ad72"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/VoiceCapturePolicyTest.kt",
+      "lines": 40,
+      "sha256": "2d400259798c16faee106295ca8c01345b372aae09a4522388b19d7f6e0c1ad2"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/VoiceRecordIntentTest.kt",
+      "lines": 27,
+      "sha256": "02dbfc1e96e849853dc113ae64360bd851cc62ca977b87794c3f970cbf14c70b"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/VoiceRecordingTest.kt",
+      "lines": 10,
+      "sha256": "b37d0c5a1bffe18a2115fa4869f7e884fa0234827db6aa8e8d606a341faca4bf"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/VoiceSymbolContractTest.kt",
+      "lines": 21,
+      "sha256": "14f2539923530257c70765c155af1976d86e33419776535eec59c54df0bdab3f"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/WeeklyUsageTest.kt",
+      "lines": 33,
+      "sha256": "b4440cccacda648148695415f3358a611ba7e955acbfc69e24ff18ab2380ef62"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/WorkUpdatesPolicyTest.kt",
+      "lines": 8,
+      "sha256": "5c7f031c371f8e8e045226ce33e21e6a84e8d2ba966d8640a7d968d634db5f0c"
+    },
+    {
+      "path": "android/app/src/test/java/co/fallsoft/pocket/WorkstationDnsTest.kt",
+      "lines": 99,
+      "sha256": "e166b798cea7daf5e752b52b1eaa15c2b218a2e870e133fd314aec843d7746fc"
+    }
+  ],
+  "note": "Inventory and ownership coverage, not a claim of line-by-line review or runtime certification."
+}

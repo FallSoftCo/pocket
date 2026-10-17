@@ -1,0 +1,71 @@
+{
+  "updated": "2026-10-17T13:52:49.113921+00:00",
+  "orderingRule": "New reports enter this backlog. Reorder only for an evidenced data-loss, routing, security or unusable-core-path blocker; explain the reason. Finish a coherent verified fix before starting another feature release.",
+  "phases": [
+    {
+      "priority": 1,
+      "name": "Message integrity and freshness",
+      "work": [
+        "Chronological user/assistant order and deduplication",
+        "Open session catches up when list, notifications or canonical head advance",
+        "Recent history loads independently of older pagination; preserve read position and local messages"
+      ],
+      "acceptance": [
+        "Reproduce current stale-session path with timestamped canonical head/history and client observations",
+        "Actual native recent-message arrival and disconnect/reopen retain original identities without resubmission",
+        "No unseen new answer hidden behind historical pagination"
+      ],
+      "status": "active-investigation"
+    },
+    {
+      "priority": 2,
+      "name": "Input reliability",
+      "work": [
+        "Measure room typing render/input delay before changing architecture",
+        "Volume-button recording and stop/send with source/profile/draft preservation",
+        "Central session-aware playback and validated output; reduce latency"
+      ],
+      "evidence": [
+        "Alpha111 real capture and native account rendering/player passed in emulator",
+        "Readiness-isolated speech experiment produced verified4.239s audio in10.059s; not deployed",
+        "Physical handset capture/buttons/acoustic output unverified"
+      ],
+      "status": "preserved-follow-up"
+    },
+    {
+      "priority": 3,
+      "name": "Consistent rooms and sessions UX",
+      "work": [
+        "Move updating indicator inline below message viewport",
+        "Remove visible microphone FABs/buttons; retain recording status/timer/errors and physical keys",
+        "Shared footer, anchored environment controls, live attributable room activity and truthful idle/waiting states"
+      ],
+      "status": "partly-implemented-not-released",
+      "limits": [
+        "Inline status native placement check failed; must reproduce and fix its visibility before claiming success",
+        "Catalog needs canonical batched meaningful preview/true activity time; never use observation timestamp as work recency"
+      ]
+    },
+    {
+      "priority": 4,
+      "name": "Immersion and visual refinement",
+      "work": [
+        "Continuous grammatical English-to-Italian reading wave, legible controls and performant rendering"
+      ],
+      "status": "after-core-paths"
+    }
+  ],
+  "releaseState": {
+    "publishedVersionCode": 129,
+    "phoneLastObservedVersionCode": 128,
+    "announcement1853": "accepted_by_fcm once",
+    "backendRestarted": false
+  },
+  "verificationPolicy": "Use focused service/native journeys and original receipts. A build or unit count is not proof of phone usability. Do not replay unknown deliveries or wake business workers.",
+  "architectureReview": {
+    "path": "architecture-review/SYSTEM-REVIEW-20261017.md",
+    "status": "initial-system-assessment-recorded",
+    "userDirection": "Review whole codebase and determine integrated delivery architecture before further isolated fixes",
+    "implementationRule": "Repository-owned synchronization and shared conversation state/shell; preserve backend authority, original identities and delivery journals; no broad rewrite or production change inferred."
+  }
+}
