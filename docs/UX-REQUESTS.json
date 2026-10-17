@@ -2807,7 +2807,7 @@
     {
       "id": "codex-catalog-live-read-20261017",
       "request": "Keep stock Codex session status and previews current while searching/paging; prioritize actual Codex session UX and measured typing performance.",
-      "status": "candidate-native-passed-release-qualification-pending",
+      "status": "qualified-published-alpha113",
       "versionCode": 131,
       "evidence": "qualification/codex-catalog-live-read-20261017.json"
     }

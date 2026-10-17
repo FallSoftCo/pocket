@@ -15,7 +15,12 @@
         "Actual native recent-message arrival and disconnect/reopen retain original identities without resubmission",
         "No unseen new answer hidden behind historical pagination"
       ],
-      "status": "two-freshness-causes-repaired-published-alpha112-integrity-audit-continues"
+      "status": "two-freshness-causes-repaired-published-alpha112-integrity-audit-continues",
+      "evidence": [
+        "Alpha112 installed130 confirmed by phone SSH",
+        "Alpha113 published131: delayed search/page HTTP response cannot overwrite newer live catalog evidence; baseline failed and candidate passed in native test",
+        "Broader session ordering, chronology and physical responsiveness review remains open"
+      ]
     },
     {
       "priority": 2,
@@ -57,10 +62,11 @@
     }
   ],
   "releaseState": {
-    "publishedVersionCode": 130,
+    "publishedVersionCode": 131,
     "phoneLastObservedVersionCode": 130,
     "announcement1891": "accepted_by_fcm once",
-    "backendRestarted": false
+    "backendRestarted": false,
+    "alpha113Announcement": "none; in-app channel published and user informed"
   },
   "verificationPolicy": "Use focused service/native journeys and original receipts. A build or unit count is not proof of phone usability. Do not replay unknown deliveries or wake business workers.",
   "architectureReview": {

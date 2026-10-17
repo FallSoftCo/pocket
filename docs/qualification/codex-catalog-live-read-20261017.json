@@ -1,5 +1,5 @@
 {
-  "state": "candidate-native-passed-not-published",
+  "state": "qualified-published",
   "versionCode": 131,
   "cause": "Search and older catalog pages used an unconditional partial merge, unlike foreground refresh; delayed observations overwrote newer live previews/status/recency.",
   "repair": "Reuse captured-baseline live-task reconciliation for all catalog read lanes; verify exact source environment and propagate cancellation.",
@@ -30,6 +30,20 @@
   "limits": [
     "Physical typing still unverified",
     "Catalog ordering and long-lived runtime review continues",
-    "No gateway/service restart or worker continuation"
-  ]
+    "No gateway/service restart or worker continuation",
+    "Optimized silent-event fallback took6489ms; not a sub2second response guarantee."
+  ],
+  "publishedAt": "2026-10-17T22:41:53.276329+00:00",
+  "compatibleApkSha256": "155bba3e9b2a0b634c9263ddb7077c223ef5ade9332000c6f70ffc8c527da093",
+  "productionSourceSha": "11d07e7b61b9a855dff46929a03ebd9d48208db16c3a2e604e1b0f124e12a599",
+  "requiredNativeCasesPassed": 14,
+  "optimizedPayloadEntriesIdentical": 296,
+  "silentHeadFallbackVisibleMs": 6489,
+  "channels": [
+    "existing-stock",
+    "existing-native"
+  ],
+  "backendRestarted": false,
+  "phoneInstalledByThisWork": false,
+  "updateAnnouncementSent": false
 }
