@@ -41,6 +41,14 @@ try {
  await writeFile(root+'/paired.json',JSON.stringify(paired),{mode:0o600});
  const denied=await api('/api/voice/text',{turnId:'owner-must-not-send-0001',text:'Not human input'},admin);assert(denied.status===403,'Admin incorrectly admitted human input');report.adminHumanInputStatus=denied.status;
  const audio=await readFile(audioFile),sha=createHash('sha256').update(audio).digest('hex');
+ const tombstoneId='stock-cancel-before-admission-0004';
+ const original={id:tombstoneId,destination:{fullPermissions:false},audioSha256:sha,bytes:audio.length};
+ const tombstone=await api('/api/voice/recordings/'+tombstoneId+'/cancel',original);
+ assert(tombstone.status===200&&tombstone.body.state==='cancelled','Cancellation intent was not admitted');
+ const lateCreate=await api('/api/voice/recordings',original);
+ const lateUpload=await api('/api/voice/recordings/'+tombstoneId+'/audio',audio,paired.token,'PUT');
+ assert(lateCreate.body.state==='cancelled'&&lateUpload.body.state==='cancelled'&&starts.length===0,'Late upload escaped cancellation');
+ report.cancelBeforeAdmission=true;
  const create=async id=>{
   const admission=await api('/api/voice/recordings',{id,destination:{fullPermissions:false},audioSha256:sha,bytes:audio.length});assert(admission.status===202,'Recording admission failed');
   const upload=await api('/api/voice/recordings/'+id+'/audio',audio,paired.token,'PUT');assert(upload.status===202,'Recording upload failed');
@@ -57,7 +65,7 @@ try {
  const last=starts[1];last.ws.send(JSON.stringify({method:'item/completed',params:{threadId:last.threadId,item:{type:'agentMessage',phase:'final_answer',text:'Synthetic third result'}}}));last.ws.send(JSON.stringify({method:'turn/completed',params:{threadId:last.threadId,turn:{id:last.turnId,status:'completed'}}}));
  let completed;await wait(async()=>{completed=await api('/api/voice/recordings/'+first);return completed.body.state==='completed'});
  const rejected=await api('/api/voice/recordings/'+first+'/retry-audio',{});assert(rejected.status===409,'Accepted request was replayable');
- const {DatabaseSync}=await import('node:sqlite');const journal=new DatabaseSync(root+'/data/pocket.sqlite',{readOnly:true});const mediaReceipts=journal.prepare('SELECT proof FROM voice_recordings').all().map(row=>JSON.parse(row.proof));journal.close();report.cachedMediaReceipts=mediaReceipts.filter(row=>row.mediaCacheHit===true).length;report.totalMediaReceipts=mediaReceipts.length;
+ const {DatabaseSync}=await import('node:sqlite');const journal=new DatabaseSync(root+'/data/pocket.sqlite',{readOnly:true});const mediaReceipts=journal.prepare('SELECT proof FROM voice_recordings WHERE proof IS NOT NULL').all().map(row=>JSON.parse(row.proof));journal.close();report.cachedMediaReceipts=mediaReceipts.filter(row=>row.mediaCacheHit===true).length;report.totalMediaReceipts=mediaReceipts.length;
  report.passed=true;report.pairedHumanAdmission=true;report.independentQueuedRecording=true;report.queuedCancellation=true;report.recordingAudioSha256=sha;report.syntheticTaskStarts=starts.map(s=>s.requestId);report.acceptedAudioRetryStatus=rejected.status;report.originalCompletedResponse=completed.body.response;
 }catch(error){report.passed=false;report.error=error.message;process.exitCode=1;}
 finally {
