@@ -28,7 +28,8 @@
       "evidence": [
         "Alpha111 real capture and native account rendering/player passed in emulator",
         "Readiness-isolated speech experiment produced verified4.239s audio in10.059s; not deployed",
-        "Physical handset capture/buttons/acoustic output unverified"
+        "Physical handset capture/buttons/acoustic output unverified",
+        "Alpha112 200-row immersion stress: native injected-key draw medians30\u201368ms, worst sampled100.56ms on software emulator. Motion-on was not slower; physical handset responsiveness remains unverified."
       ],
       "status": "preserved-follow-up"
     },
@@ -57,7 +58,7 @@
   ],
   "releaseState": {
     "publishedVersionCode": 130,
-    "phoneLastObservedVersionCode": 129,
+    "phoneLastObservedVersionCode": 130,
     "announcement1891": "accepted_by_fcm once",
     "backendRestarted": false
   },

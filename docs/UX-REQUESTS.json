@@ -2803,6 +2803,13 @@
         "Loaded-conversation input/render performance",
         "Voice and ergonomic completion under latest user requirements"
       ]
+    },
+    {
+      "id": "codex-catalog-live-read-20261017",
+      "request": "Keep stock Codex session status and previews current while searching/paging; prioritize actual Codex session UX and measured typing performance.",
+      "status": "candidate-native-passed-release-qualification-pending",
+      "versionCode": 131,
+      "evidence": "qualification/codex-catalog-live-read-20261017.json"
     }
   ],
   "current_state": {

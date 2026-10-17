@@ -269,9 +269,20 @@ object Pocket {
     var loadingSessions by mutableStateOf(false);private set
     fun moreSessions(search:String=""){if(loadingSessions)return;val cursor=if(search.isBlank())sessionCursor else null;if(search.isBlank()&&cursor==null)return
         val profile=local;val sourceEnvironment=environmentId;val endpoint=base;val credential=token;val archived=showArchived;loadingSessions=true
-        scope.launchEnvironment{try{val result=api("/api/threads?archived=$archived"+(cursor?.let{"&cursor="+android.net.Uri.encode(it)}?:"")+(if(search.isNotBlank())"&search="+android.net.Uri.encode(search) else ""))
-            if(local==profile&&base==endpoint&&token==credential&&showArchived==archived){val incoming=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList();tasks=mergeSessionSnapshot(tasks,incoming,true){it.id};if(search.isBlank())sessionCursor=result.s("nextCursor").takeIf{it.isNotBlank()}}
-        }catch(e:Exception){if(local==profile&&base==endpoint)refreshError=PocketNetwork.error(e)}finally{if(environmentId==sourceEnvironment)loadingSessions=false}}
+        scope.launchEnvironment{
+            // Paging/search is an older catalog observation, not authority to
+            // roll back events received while its network read was in flight.
+            val baseline=tasks.associateBy{it.id}
+            try{val result=api("/api/threads?archived=$archived"+(cursor?.let{"&cursor="+android.net.Uri.encode(it)}?:"")+(if(search.isNotBlank())"&search="+android.net.Uri.encode(search) else ""))
+                if(environmentId==sourceEnvironment&&local==profile&&base==endpoint&&token==credential&&showArchived==archived){
+                    val incoming=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}?:emptyList()
+                    tasks=mergeLiveTaskSnapshot(tasks,incoming,baseline,true)
+                    if(search.isBlank())sessionCursor=result.s("nextCursor").takeIf{it.isNotBlank()}
+                }
+            }catch(e:CancellationException){throw e}
+            catch(e:Exception){if(environmentId==sourceEnvironment&&local==profile&&base==endpoint&&token==credential&&showArchived==archived)refreshError=PocketNetwork.error(e)}
+            finally{if(environmentId==sourceEnvironment)loadingSessions=false}
+        }
     }
     internal fun pauseConversationReads(){refreshJob?.cancel();refreshJob=null;PocketTranscript.pauseReading()}
     fun open(id:String,keyboard:Boolean=false){refreshJob?.cancel();refreshJob=null;if(BackendNavigation.open(id)){PocketTranscript.pauseReading();return};openWithKeyboard=keyboard;selected=id;newTask=false;detail=null;error="";tab=0;PocketTranscript.reset(id);refreshDetail();PocketReplies.reconcile(id)}

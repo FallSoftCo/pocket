@@ -14,7 +14,8 @@
     "co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#captureStartsAndStopsIndependentlyOfPresentationState",
     "co.fallsoft.pocket.VoiceResponsePlaybackNativeTest#idleVoiceModeDoesNotBlockAttributedResponsePlayback",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#newestMessagePaintsWhileOlderReadIsHeld",
-    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#openConversationRepairsMissedEventWithoutCatalogOrModelPolling"
+    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#openConversationRepairsMissedEventWithoutCatalogOrModelPolling",
+    "co.fallsoft.pocket.CatalogStartupNativeTest#delayedSearchCannotRollBackLiveCatalogEvidence"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",

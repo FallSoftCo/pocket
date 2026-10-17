@@ -65,4 +65,26 @@ class CatalogStartupNativeTest{
 
   }finally{qa("release-catalog");qa("release-activity");qa("runtime-online")}
  }
+ @Test fun delayedSearchCannotRollBackLiveCatalogEvidence(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  main{Pocket.init(context);PocketLive.stop();Pocket.refresh()}
+  await{Pocket.tasks.any{it.id=="same-thread"}&&!Pocket.loadingSessions}
+  qa("hold-catalog")
+  try{
+   main{Pocket.moreSessions("Synthetic")}
+   await{qa("state").optBoolean("catalogBlocked")}
+   main{Pocket.event(JSONObject().put("type","sessionPreview").put("threadId","same-thread").put("preview","Newest live command").put("previewKind","command").put("previewRole","activity").put("activityAt",1900000000000L))}
+   await{Pocket.tasks.first{it.id=="same-thread"}.preview=="Newest live command"}
+   qa("release-catalog")
+   await{!Pocket.loadingSessions}
+   val task=Pocket.tasks.first{it.id=="same-thread"}
+   assertEquals("Delayed search overwrote newer live preview","Newest live command",task.preview)
+   assertEquals("command",task.previewKind)
+   assertEquals(1900000000000L,task.activityAt)
+   assertEquals("Catalog read started work",0,qa("state").getJSONArray("replies").length())
+  }finally{qa("release-catalog")}
+ }
+
 }

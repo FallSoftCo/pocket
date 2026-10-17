@@ -1,0 +1,35 @@
+{
+  "state": "candidate-native-passed-not-published",
+  "versionCode": 131,
+  "cause": "Search and older catalog pages used an unconditional partial merge, unlike foreground refresh; delayed observations overwrote newer live previews/status/recency.",
+  "repair": "Reuse captured-baseline live-task reconciliation for all catalog read lanes; verify exact source environment and propagate cancellation.",
+  "baseline": {
+    "nativeLog": "catalog-live-race-baseline-r01.log",
+    "failure": "Delayed search overwrote newer live preview; expected Newest live command, got Fresh response 1"
+  },
+  "candidate": {
+    "nativeLog": "catalog-live-race-candidate-r01.log",
+    "passed": true,
+    "workerSubmissions": 0,
+    "originalEmulatorPreferencesRestoredExactly": true
+  },
+  "typing": {
+    "log": "alpha112-typing-stress-baseline-r01.log",
+    "rows": 200,
+    "keystrokes": 96,
+    "drawMedianMs": [
+      30.535,
+      30.474,
+      68.22,
+      30.852
+    ],
+    "maxSampleMs": 100.559,
+    "motionOnNotSlowerInThisSample": true,
+    "physicalPhoneLatencyQualified": false
+  },
+  "limits": [
+    "Physical typing still unverified",
+    "Catalog ordering and long-lived runtime review continues",
+    "No gateway/service restart or worker continuation"
+  ]
+}
