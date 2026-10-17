@@ -72,6 +72,23 @@ class VoiceTurnStoreNativeTest {
             assertEquals(VoiceTurnStore.Capture.SEALED,store.get(third.key)!!.capture)
             assertArrayEquals(wav,store.audio(store.get(third.key)!!).readBytes())
             assertEquals(VoiceTurnStore.Capture.INTERRUPTED,store.get(elsewhere.key)!!.capture)
+            val interrupted=store.begin("capture-interrupted-0004",origin)
+            store.captureFile(interrupted.key).writeBytes(byteArrayOf(1,2,3,4))
+            store.interruptCapture(interrupted.key,"Recording limit · not sent")
+            assertEquals(VoiceTurnStore.Capture.INTERRUPTED,store.get(interrupted.key)!!.capture)
+            assertFalse(store.claim(interrupted.key))
+            assertTrue(File(folder,"${interrupted.key}.capturing.pcm").exists())
+            val failed=store.seal(store.begin("failed-audio-retry-0005",origin).key,wav)
+            assertTrue(store.claim(failed.key))
+            store.failed(failed.key,JSONObject().put("id",failed.id).put("error","Audio transport failed"))
+            val retry=JSONObject().put("id",failed.id).put("audioSha256",failed.sha256).put("phase","ready")
+            store.retryAdmittedAudio(failed.key,retry)
+            assertEquals(VoiceTurnStore.Delivery.SUBMITTING,store.get(failed.key)!!.delivery)
+            assertEquals(origin,store.get(failed.key)!!.origin)
+            store.cancelled(failed.key,JSONObject().put("id",failed.id).put("audioSha256",failed.sha256).put("state","cancelled"))
+            assertEquals(VoiceTurnStore.Delivery.CANCELLED,store.get(failed.key)!!.delivery)
+            assertArrayEquals(wav,store.audio(store.get(failed.key)!!).readBytes())
+
         } finally {
             store.close()
             // Only this test's random private journal, never app state or accepted deliveries.

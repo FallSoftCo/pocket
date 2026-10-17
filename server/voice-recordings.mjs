@@ -31,7 +31,7 @@ export class VoiceRecordings {
   if(!row)return null;
   const result=row.result?JSON.parse(row.result):null;
   return {...(result||{}),id:row.id,phase:row.phase,state:result?.state||phases[row.phase]||'unknown',
-   audioSha256:row.audio_sha256,bytes:row.bytes,transcript:result?.transcript||row.transcript||'',
+   audioSha256:row.audio_sha256,bytes:row.bytes,canRetryAudio:row.phase==='failed'&&!row.result,transcript:result?.transcript||row.transcript||'',
    response:result?.response||'',actions:result?.actions||[],error:row.error||result?.error||null};
  }
  async create(device,{id,destination,audioSha256,bytes},principal){
@@ -149,6 +149,18 @@ export class VoiceRecordings {
    }
   }
   return this.projection(row);
+ }
+ async retryAudio(device,id){
+  const row=this.row(device,id);if(!row)throw fail('Original recording not found.',404);
+  // Task failures, unknown dispatch and revoked authority are not audio retries.
+  if(row.phase!=='failed'||row.result)throw fail('Only a confirmed pre-dispatch audio failure may be retried. Inspect the original work receipt.',409);
+  await this.authorize(device,JSON.parse(row.principal),JSON.parse(row.destination));
+  const audio=await readFile(this.path(row));validateVoiceAudio(audio);
+  if(audio.length!==row.bytes||hash(audio)!==row.audio_sha256)throw fail('Saved audio failed verification. The request was not sent.',409);
+  const changed=this.db.prepare("UPDATE voice_recordings SET phase=?,error=NULL,worker=? WHERE device=? AND id=? AND phase='failed' AND result IS NULL")
+   .run(row.proof&&row.transcript?'transcribed':'ready',this.owner,device,id);
+  if(!changed.changes)throw fail('Recording state changed. Inspect its original receipt.',409);
+  this.kick();return this.projection(this.row(device,id));
  }
  cancel(device,id){
   const changed=this.db.prepare("UPDATE voice_recordings SET phase='cancelled',error=NULL WHERE device=? AND id=? AND phase IN ('receiving','sealing','ready','transcribing','transcribed')").run(device,id);

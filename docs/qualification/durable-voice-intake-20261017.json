@@ -5,13 +5,19 @@
     "source-bound durable WorkManager recording uploads, separate stored-audio/task/playback states",
     "server authenticated immutable audio admission, media-only native transcriber, guarded task dispatch and read-only unknown receipt reconciliation",
     "legacy missing receipts cannot resend input",
-    "foreground displayed response speech may play while microphone is idle; capture invalidates deferred playback starts"
+    "foreground displayed response speech may play while microphone is idle; capture invalidates deferred playback starts",
+    "Source-bound recording queue controls in existing controls surface: status check, confirmed pre-dispatch audio-only retry and cancellation",
+    "Explicit microphone stop required before sending; safety limit/interruption retains PCM without dispatch",
+    "Audio-only worker final-result cache avoids repeated transcription after lost SSH reply; native ephemeral threads unsubscribed on stop"
   ],
   "verification": {
     "nativeAudio": "Actual existing signed-in native account: confirmed final transcript after graceful session.close; clean peer exit. Seven-second synthetic sample took 11518ms direct and 11905ms through structured worker. No task authority in audio worker.",
     "android": "Retained isolated emulator: repeated real AudioRecord start/stop independent of Thinking passed; disk-backed journal reopen/identity preservation passed. Actual WorkManager upload through paired QA gateway, native account ASR and canonical room delivery passed in 14.57s. Exact nonexecuting QA delivery cancelled after acceptance; no business/model worker started.",
     "server": "13 focused custody/protocol cases passed on current source: durable lost ACK/restart, immutable upload, cancellation with late callback, revoked-authority restart, speech asset dedup/cancellation/integrity. Actual gateway originally refused upload at reserve boundary; same original ID subsequently accepted when reserve recovered, canonical receipt in 12064ms. No duplicate submission.",
-    "speech": "One actual native-account render produced verified 2.481s WAV in 8754ms. However actual Android asset playback journey r08 failed: provider connected but emitted no audio. Separate user-role startup probe also failed. Startup-history speech is probabilistic, not a qualified deterministic TTS contract; no automatic regeneration or paid API fallback enabled."
+    "speech": "One actual native-account render produced verified 2.481s WAV in 8754ms. However actual Android asset playback journey r08 failed: provider connected but emitted no audio. Separate user-role startup probe also failed. Startup-history speech is probabilistic, not a qualified deterministic TTS contract; no automatic regeneration or paid API fallback enabled.",
+    "nativeKeys": "Actual retained emulator HollywoodVoiceKeysNativeTest passed in 16.782s: touch/volume start-stop with IME, held repeats, draft retention, navigation preserving original room, no unrelated coordinator initialization, original unresolved WAV/ID unchanged. Provider unavailable fixture, not phone proof.",
+    "remoteAudio": "Installed private OZZZ audio-only CLI source/venv, no listener/service changes. Actual system76 SSH to native account final transcript 14054ms; same digest returned durable cached result 2494ms without another generation. Exact source final cleanup changes are staged separately before production use.",
+    "recoveryControls": "15 focused protocol/disk-backed custody/auth checks passed; explicit audio retry accepted once after media failure and rejected for accepted/unknown task states. Android qualification APK and tests built; final native journal/capture and lint in progress."
   },
   "notVerified": [
     "Reliable spoken-response rendering and actual Android playback completion: blocked by intermittent native no-audio session",
@@ -20,5 +26,6 @@
     "Physical phone voice, IME/volume, interruption/process-death journey",
     "Compatible production APK and gateway release; this candidate is not published or installed on phone"
   ],
-  "updatedAt": "2026-10-17T05:54:00.094092+00:00"
+  "updatedAt": "2026-10-17T06:02:55.806695+00:00",
+  "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-durable-capture-20261017-native-room-volume-ime"
 }

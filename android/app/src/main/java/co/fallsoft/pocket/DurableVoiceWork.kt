@@ -68,7 +68,7 @@ class DurableVoiceWorker(context:Context,params:WorkerParameters):CoroutineWorke
                     when(receipt.optString("state")) {
                         "completed"->{store.completed(key,receipt);store.playback(key,VoiceTurnStore.Playback.READY);withContext(Dispatchers.Main){PocketVoice.deliveredRecording(turn,receipt)};return@use Result.success()}
                         "failed","blocked"->{store.failed(key,receipt);return@use Result.success()}
-                        "cancelled"->{store.failed(key,receipt.put("error","Recording cancelled"));return@use Result.success()}
+                        "cancelled"->{store.cancelled(key,receipt);return@use Result.success()}
                         "unknown"->store.uncertain(key,receipt.optString("error","Original task delivery is unconfirmed"))
                         else->if(receipt.optString("phase") in setOf("ready","transcribing","transcribed")) {
                             if(store.get(key)?.delivery in setOf(VoiceTurnStore.Delivery.SUBMITTING,VoiceTurnStore.Delivery.STORED))store.stored(key,receipt)

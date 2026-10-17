@@ -13,7 +13,7 @@ export class NativeAudioTranscriber {
   if(signal?.aborted)throw failure('Recording cancelled before transcription');
   if(!this.python)throw failure('Native server audio peer is not installed. Recording retained.');
   const child=spawn(this.python,[this.worker,'--audio',file,'--sha256',sha256],{stdio:['pipe','pipe','pipe']});
-  let offered=false,connection=null,peerClosed=false,peerExit=null,finalization=null,complete,failed,watchdog,heartbeat,settled=false;
+  let offered=false,connection=null,peerClosed=false,peerExit=null,finalization=null,closing=false,complete,failed,watchdog,heartbeat,settled=false;
   const result=new Promise((resolve,reject)=>{complete=resolve;failed=reject});result.catch(()=>{});
   const exited=new Promise(resolve=>{
    child.once('exit',(code,signal)=>{peerExit={code,signal};if(!settled)failed(failure('Audio peer exited before finalization'))});
@@ -32,12 +32,12 @@ export class NativeAudioTranscriber {
      if(offered)throw failure('Audio peer repeated its offer');offered=true;
      const answer=await this.voice.start(device,event.sdp,'transcription');
      connection=answer.id;
-     heartbeat=setInterval(()=>{if(!finalization)try{this.voice.session(device,connection)}catch(error){failed(error)}},30000);
+     heartbeat=setInterval(()=>{if(!closing)try{this.voice.session(device,connection)}catch(error){failed(error)}},30000);
      send({type:'answer',sdp:answer.sdp});
     }else if(event.type==='connected'){
      this.voice.listen(device,connection,id);send({type:'play'});
     }else if(event.type==='drained'){
-     send({type:'finalize'});
+     closing=true;send({type:'finalize'});
     }else if(event.type==='finalized'){
      if(finalization)throw failure('Audio peer repeated finalization');
      if(event.confirmed!==true)throw failure(event.error||'Audio session did not finalize cleanly');

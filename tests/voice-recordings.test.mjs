@@ -84,3 +84,19 @@ test('restart after final transcript revalidates revoked human authority once wi
   assert.equal(checks,1);assert.equal(f.calls.submit,0);
  }finally{await f.close();}
 });
+test('explicit audio retry retains original destination and never retries accepted or unknown work',async()=>{
+ const f=fixture();let attempts=0;
+ f.server.transcribe=async input=>{if(++attempts===1)throw Error('Media connection lost before transcript');return f.adapters.transcribe(input);};
+ try {
+  await f.server.create(device,request('audio-retry-original-0001'),principal);
+  await f.server.upload(device,'audio-retry-original-0001',audio);await f.server.start();await settle(f.server);
+  assert.equal((await f.server.inspect(device,'audio-retry-original-0001')).canRetryAudio,true);
+  assert.equal(f.calls.submit,0);
+  await f.server.retryAudio(device,'audio-retry-original-0001');await settle(f.server);
+  assert.equal(f.calls.submit,1);assert.equal(attempts,2);
+  await assert.rejects(f.server.retryAudio(device,'audio-retry-original-0001'),/pre-dispatch/);
+  f.db.prepare("UPDATE voice_recordings SET phase='unknown',result=NULL WHERE id=?").run('audio-retry-original-0001');
+  await assert.rejects(f.server.retryAudio(device,'audio-retry-original-0001'),/pre-dispatch/);
+  assert.equal(f.calls.submit,1);
+ }finally{await f.close();}
+});

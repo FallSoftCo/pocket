@@ -60,3 +60,10 @@ The candidate speech path produces source-attributed, integrity-verified WAV ass
 This path is **not release-qualified**: a real render returned a confirmed 2.481-second clip in 8.754 seconds, but the subsequent actual Android journey failed when the native provider returned no audio. Both developer and user startup-history variants have shown silence. Startup context and append acknowledgements are not a deterministic TTS trigger. Do not present one successful render or the absence of a WebView as proof of reliable speech. Preserve the installed playback path until a supported, repeatably verified replacement exists; do not silently switch billing or audio models.
 
 Capture limit/interruption is distinct from user stop: only an explicit stop sends the turn. At the two-minute safety limit private audio is retained without submission. Failure to acquire audio focus releases the capture wake lock immediately.
+
+
+## Explicit saved-recording controls
+
+The existing controls surface now lists this environment's independent recordings with original destination, age and state. Checking uses the original receipt worker. Cancellation retains custody and requires a canonical pre-dispatch cancellation when audio was admitted. Retry audio is offered only when the server proves a failed pre-dispatch media attempt; it retains the same audio hash, principal, destination and ID. Accepted task failure, unknown dispatch and revoked permission are not audio retry eligibility. Background refresh does not create a new task or start a speech model.
+
+The installation-owned SSH audio worker has no task adapter or bearer token. Its private, digest-bound final-transcript cache makes a lost worker reply recoverable without another model generation. Actual initial remote transcription took 14.054 seconds; the repeated same recording returned the cached final result in 2.494 seconds. This qualifies the private CLI transport, not a production backend activation or physical-phone round trip.

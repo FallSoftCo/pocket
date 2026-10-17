@@ -141,6 +141,16 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
     fun accepted(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.STORED,Delivery.UNKNOWN),Delivery.ACCEPTED,receipt,null)
     fun completed(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.STORED,Delivery.ACCEPTED,Delivery.UNKNOWN),Delivery.COMPLETED,receipt,null)
     fun failed(key: String, receipt: JSONObject) = transition(key,setOf(Delivery.SUBMITTING,Delivery.STORED,Delivery.ACCEPTED,Delivery.UNKNOWN),Delivery.FAILED,receipt,receipt.optString("error"))
+    fun retryAdmittedAudio(key:String,receipt:JSONObject):Turn {
+        val old=requireNotNull(get(key))
+        check(receipt.optString("audioSha256")==old.sha256 && receipt.optString("phase") in setOf("ready","transcribing","transcribed","dispatching","accepted")) { "Original audio retry was not confirmed" }
+        return transition(key,setOf(Delivery.FAILED,Delivery.STORED,Delivery.UNKNOWN),Delivery.SUBMITTING,receipt,null)
+    }
+    fun cancelled(key:String,receipt:JSONObject):Turn {
+        val old=requireNotNull(get(key))
+        check(receipt.optString("state")=="cancelled" && receipt.optString("audioSha256")==old.sha256) { "Original recording cancellation was not confirmed" }
+        return transition(key,setOf(Delivery.UNSUBMITTED,Delivery.SUBMITTING,Delivery.STORED,Delivery.UNKNOWN,Delivery.FAILED),Delivery.CANCELLED,receipt,null)
+    }
     fun cancelUnsubmitted(key: String) = transition(key,setOf(Delivery.UNSUBMITTED),Delivery.CANCELLED,null,null)
     private fun transition(key: String, from: Set<Delivery>, to: Delivery, receipt: JSONObject?, problem: String?): Turn {
         val database = db;database.beginTransaction()

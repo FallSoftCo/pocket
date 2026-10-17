@@ -233,6 +233,7 @@ import androidx.lifecycle.repeatOnLifecycle
 internal fun coordinatorItemFullyVisible(offset:Int,size:Int,start:Int,end:Int)=size>0&&offset>=start&&offset+size<=end
 
 @Composable internal fun SavedVoiceRecordingControls(){
+    RecordingQueueControls()
     val c=androidx.compose.ui.platform.LocalContext.current
     val scope=rememberCoroutineScope()
     var entries by remember{mutableStateOf(emptyList<JSONObject>())}
@@ -242,7 +243,7 @@ internal fun coordinatorItemFullyVisible(offset:Int,size:Int,start:Int,end:Int)=
     LaunchedEffect(PocketVoice.launching,PocketVoice.state){entries=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){SavedVoiceRecordings.list(c)}}
     if(entries.isEmpty())return
     Column(Modifier.fillMaxWidth().padding(horizontal=16.dp)){
-        TextButton({expanded=!expanded}){BilingualLabel("Saved recordings");Text(" · "+entries.size)}
+        TextButton({expanded=!expanded}){BilingualLabel("Earlier recordings");Text(" · "+entries.size)}
         if(expanded)entries.forEach{entry->
             val id=entry.s("id")
             Column(Modifier.fillMaxWidth()){
