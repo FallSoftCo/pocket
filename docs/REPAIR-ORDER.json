@@ -67,5 +67,11 @@
     "status": "initial-system-assessment-recorded",
     "userDirection": "Review whole codebase and determine integrated delivery architecture before further isolated fixes",
     "implementationRule": "Repository-owned synchronization and shared conversation state/shell; preserve backend authority, original identities and delivery journals; no broad rewrite or production change inferred."
+  },
+  "productPriority": {
+    "primary": "Existing stock Codex sessions and session list",
+    "deferred": "LAX-specific client development; preserve existing behavior",
+    "request": "User depends on Codex while LAX/Hollywood are under separate development",
+    "at": "2026-10-17T16:42:10.086277+00:00"
   }
 }

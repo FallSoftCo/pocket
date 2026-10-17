@@ -30,6 +30,7 @@ object Pocket {
     lateinit var context:Context
     val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main)
     val http=PocketNetwork.client()
+    private val historyProbeHttp by lazy{http.newBuilder().callTimeout(5,TimeUnit.SECONDS).build()}
     var base by mutableStateOf(""); var token by mutableStateOf("")
     var local by mutableStateOf(false); private set
     var environmentId by mutableStateOf("workstation"); private set
@@ -215,6 +216,28 @@ object Pocket {
             PocketPush.configure(r.optJSONObject("firebase"),r.optJSONObject("push")?.optBoolean("registered")==true)
             }catch(e:CancellationException){throw e}catch(e:Exception){if(environmentRequestCurrent())refreshError=PocketNetwork.error(e)}
         }
+    }
+    /** Foreground owner awaits this cheap probe; stopping it cancels the read's publication.
+     * No catalog, push registration, usage/UI rewrite, worker admission or message submission.
+     */
+    internal suspend fun refreshSelectedConversationStatus(){
+        if(!PocketVoice.foreground||newTask||PocketCoordinator.visible||BackendNavigation.teamSelected())return
+        val thread=selected?:return
+        val destination=captureEnvironment()?:return
+        val baseline=PocketTranscript.freshnessBaseline()
+        try{
+            val result=withContext(Dispatchers.IO){
+                val request=Request.Builder().url(destination.endpoint.trimEnd('/')+"/api/status?threadId="+android.net.Uri.encode(thread))
+                    .header("Authorization","Bearer ${destination.token}").build()
+                historyProbeHttp.newCall(request).execute().use{response->
+                    if(!response.isSuccessful)throw PocketApiException(response.code,"History status is unavailable")
+                    JSONObject(response.body?.string().orEmpty())
+                }
+            }
+            if(PocketVoice.foreground&&selected==thread&&captureEnvironment()?.matches(destination)==true)
+                PocketTranscript.checkFreshness(thread,result.optJSONObject("historyHead"),baseline)
+        }catch(e:CancellationException){throw e}
+        catch(_:Exception){/* A failed probe cannot certify freshness or invalidate an accepted send. */}
     }
     fun refresh(){refreshStatus();if(BackendNavigation.nativeSelected())return;if(backgroundRefreshJob?.isActive==true)return;if(catalogLoad is CatalogLoadState.Failed)catalogLoad=CatalogLoadState.Loading;val profileLocal=local;val profileToken=token;val profileArchived=showArchived;backgroundRefreshJob=scope.launchEnvironment{
         try{

@@ -6,19 +6,22 @@ import org.json.JSONObject
 
 object PocketTranscript {
     var rows by mutableStateOf(listOf<JSONObject>());private set
-    var loading by mutableStateOf(false);private set
-    var readError by mutableStateOf("");private set
+    private val reads=TranscriptReadState()
+    val loading get()=reads.loading
+    private var latestReadError by mutableStateOf("")
+    private var historicalReadError by mutableStateOf("")
+    private var positionReadError by mutableStateOf("")
+    val readError get()=latestReadError.ifBlank{historicalReadError}.ifBlank{positionReadError}
     private var readFailureSince=0L
     var refreshPending by mutableStateOf(false);private set
-    private var loadingEarlier by mutableStateOf(false)
     private var positioning by mutableStateOf(false)
-    val updating get()=positionRestorePending||cacheRestoring||refreshPending||(loading&&!loadingEarlier)||positioning||(bridgeBefore!=null&&automaticRetryAllowed)
+    val updating get()=positionRestorePending||cacheRestoring||refreshPending||reads.latestLoading||reads.gapLoading||positioning||(bridgeBefore!=null&&automaticRetryAllowed)
     fun markRefreshPending(){
         if(owner==Pocket.selected&&ownerScope==scopeKey()){
             refreshPending=true
             // The scheduler coalesces requests while its read is active. Retain
             // an update arriving after that read began for one follow-up read.
-            if(loading)missedUpdates=true
+            if(reads.latestLoading)missedUpdates=true
         }
     }
     var automaticRetryAllowed by mutableStateOf(true);private set
@@ -146,7 +149,7 @@ object PocketTranscript {
         if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey()||!automaticRetryAllowed||headSnapshotsSupported==false)return
         val head=parseHead(value,id)?:return
         if(transcriptHeadAdvanced(observedHead,baseline,head)){
-            if(loading||refreshPending){pendingHead=PendingHead(head,baseline);refreshPending=true}
+            if(reads.latestLoading||refreshPending){pendingHead=PendingHead(head,baseline);refreshPending=true}
             else Pocket.scheduleRefresh()
         }
     }
@@ -162,10 +165,10 @@ object PocketTranscript {
     internal fun pauseReading(){
         rememberRecent(persist=true);generation++;cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false
         positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false
-        loading=false;refreshPending=false;loadingEarlier=false;missedUpdates=false;pendingHead=null;buffered.clear()
+        reads.reset();refreshPending=false;missedUpdates=false;pendingHead=null;buffered.clear()
     }
     fun reset(id:String){
-        readError="";readFailureSince=0L
+        latestReadError="";historicalReadError="";positionReadError="";readFailureSince=0L
         cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false
         positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false
         cacheRestoreIntent=readerIntentRevision
@@ -174,10 +177,10 @@ object PocketTranscript {
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         needsDiskRestore=cached?.diskPending?: (cached==null)
         rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
-        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;bridgeKnown=cached?.bridgeKnown.orEmpty();bridgeBoundary=cached?.bridgeBoundary;coverageVerified=cached?.coverageVerified?:false;loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
+        earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;bridgeKnown=cached?.bridgeKnown.orEmpty();bridgeBoundary=cached?.bridgeBoundary;coverageVerified=cached?.coverageVerified?:false;reads.reset();refreshPending=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
-    fun clear(){readError="";readFailureSince=0L;cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false;needsDiskRestore=true;positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;currentWorkVerified=false;generation++;owner=null;ownerScope=null;observedHead=null;pendingHead=null;headSnapshotsSupported=null;readPosition=null;rows=emptyList();buffered.clear();loading=false;refreshPending=false;loadingEarlier=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;bridgeKnown=emptySet();bridgeBoundary=null;coverageVerified=false;earlier=false;browsingEarlier=false;revision++;trace()}
+    fun clear(){latestReadError="";historicalReadError="";positionReadError="";readFailureSince=0L;cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false;needsDiskRestore=true;positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;currentWorkVerified=false;generation++;owner=null;ownerScope=null;observedHead=null;pendingHead=null;headSnapshotsSupported=null;readPosition=null;rows=emptyList();buffered.clear();reads.reset();refreshPending=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;bridgeBefore=null;bridgeKnown=emptySet();bridgeBoundary=null;coverageVerified=false;earlier=false;browsingEarlier=false;revision++;trace()}
     /** Called only by the resumed, unfiltered viewport after settling at latest. */
     internal fun presentedLatest(){
         val id=Pocket.selected?:return
@@ -237,7 +240,7 @@ object PocketTranscript {
                         // repeatedly retrying an unchanged dependency.
                         if(current()&&!(e is PocketApiException&&e.status==404)){
                             positionFailures[request.target]="Could not confirm message order. "+PocketNetwork.error(e)
-                            if(readError.isBlank())readError=positionFailures.values.first()
+                            positionReadError=positionFailures.values.first()
                         }
                     }finally{if(current()&&positionQueue[request.target]===request)positionQueue.remove(request.target)}
                 }
@@ -252,15 +255,18 @@ object PocketTranscript {
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return
         if(owner!=id||(older&&(!earlier||before==null)))return
-        if(loading){if(!older&&bridgeCursor==null){missedUpdates=true;refreshPending=true};return}
-        if((older||bridgeCursor!=null)&&refreshPending)return
+        val kind=when{older->TranscriptReadState.Kind.OLDER;bridgeCursor!=null->TranscriptReadState.Kind.GAP;else->TranscriptReadState.Kind.LATEST}
+        val latest=kind==TranscriptReadState.Kind.LATEST
+        if(latest&&reads.latestLoading){missedUpdates=true;refreshPending=true;return}
+        if(!latest&&(reads.historyLoading||refreshPending))return
+        val destination=Pocket.captureEnvironment()?:return
+        val read=reads.begin(kind)?:return
         val headBaseline=observedHead
-        val ticket=generation;val scope=scopeKey();val profileLocal=Pocket.local;val destination=Pocket.captureEnvironment()?:return
+        val ticket=generation;val scope=scopeKey();val profileLocal=Pocket.local
         fun current()=Pocket.selected==id&&owner==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
         val cursor=bridgeCursor?:if(older)before else null
-        loadingEarlier=older
-        if(!loadingEarlier){refreshPending=false;freshForRead=false}
-        automaticRetryAllowed=true;loading=true;buffered.clear();var baselineRows=rows.associateBy{it.s("id")};var succeeded=false
+        if(latest){refreshPending=false;freshForRead=false;automaticRetryAllowed=true;buffered.clear()}
+        var baselineRows=rows.associateBy{it.s("id")};var succeeded=false
         try{
             // Cache IO and the authoritative read have independent lifetimes.
             // A slow disk cannot delay starting or painting current history.
@@ -317,7 +323,9 @@ object PocketTranscript {
             val d=Pocket.apiEnvironment(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
             validateTranscriptSnapshot(d,id)
             if(older)beforeApply()
-            if(!current())return
+            if(!current()||!reads.active(read))return
+            // A current-head read may have replaced the gap while this page was in flight.
+            if(bridgeCursor!=null&&bridgeCursor!=bridgeBefore)return
             val page=d.optJSONObject("timeline")?:JSONObject();var incoming=normalizeTranscriptMessages(page.optJSONArray("rows")?.objects()?:emptyList())
             incoming.forEach{it.put("version",maxOf(it.optLong("version"),d.optLong("revision")))}
             // Promote incomplete live/cache identities before the snapshot diff.
@@ -372,9 +380,11 @@ object PocketTranscript {
                 rows=rows.filter{it.s("kind")!="request"||it.optJSONObject("request")?.s("id") in pendingIds}
             }
             if(!older&&bridgeCursor==null){currentWorkVerified=true;freshForRead=true;val head=parseHead(d.optJSONObject("historyHead"),id);headSnapshotsSupported=head!=null;head?.let{observedHead=snapshotTranscriptHead(observedHead,headBaseline,it)}}
-            val updates=buffered.values.toList();buffered.clear()
+            val updates=if(latest)buffered.values.toList().also{buffered.clear()}else emptyList()
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
-            rememberRecent(persist=true);revision++;readError=positionFailures.values.firstOrNull().orEmpty();readFailureSince=0L;succeeded=true;trace()
+            rememberRecent(persist=true);revision++;positionReadError=positionFailures.values.firstOrNull().orEmpty()
+            if(latest){latestReadError="";readFailureSince=0L}else historicalReadError=""
+            succeeded=true;trace()
             if(!older&&bridgeCursor==null){
                 // Retry only after a successful independent snapshot supplied new ordering evidence.
                 val deferredTargets=awaitingPositionHistory.mapTo(hashSetOf()){it.target}
@@ -387,38 +397,48 @@ object PocketTranscript {
                 rows.filterIndexed{index,row->row.s("kind")=="user"&&row.s("id") !in incomingIds&&firstReplies[row.s("turnId")]?.let{it>=0&&index>it}==true}.forEach{reconcileInputPosition(it)}
             }
         }catch(e:CancellationException){throw e}catch(e:Exception){if(current()){
-            automaticRetryAllowed=retryableTranscriptRead(e)
-            val now=android.os.SystemClock.elapsedRealtime()
-            if(readFailureSince==0L)readFailureSince=now
-            // A failed history refresh is not a failed send. Keep its state
-            // separate, retain the visible transcript, and allow the existing
-            // Updating messages indicator to cover a brief reconnect.
-            if(!automaticRetryAllowed||older||now-readFailureSince>=5000L)
-                readError=PocketNetwork.error(e)
+            if(latest){
+                automaticRetryAllowed=retryableTranscriptRead(e)
+                val now=android.os.SystemClock.elapsedRealtime()
+                if(readFailureSince==0L)readFailureSince=now
+                // Current-read failures and historical-page failures are independent.
+                if(!automaticRetryAllowed||now-readFailureSince>=5000L)latestReadError=PocketNetwork.error(e)
+            }else historicalReadError=PocketNetwork.error(e)
         }}
         finally {
-            if(current()) {
-                if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
-                loading=false;loadingEarlier=false
-                pendingHead?.let{pending->if(automaticRetryAllowed&&headSnapshotsSupported!=false&&transcriptHeadAdvanced(observedHead,pending.baseline,pending.head))missedUpdates=true}
-                pendingHead=null
-                if(succeeded&&!missedUpdates)refreshPending=false
-                if(!succeeded&&!automaticRetryAllowed)refreshPending=false
-                if(!succeeded&&automaticRetryAllowed&&!older){
-                    missedUpdates=false;refreshPending=true
-                    Pocket.scope.launch{
-                        // History reads do not start workers. A prolonged outage
-                        // must not leave the visible cached conversation frozen
-                        // after the initial quick retry budget.
-                        delay((1000L shl retryAttempt.coerceAtMost(5)).coerceAtMost(30_000L))
-                        if(current()&&PocketVoice.foreground&&refreshPending&&!loading)
-                            PocketTranscript.load(retryAttempt=(retryAttempt+1).coerceAtMost(5))
+            if(current()&&reads.active(read)) {
+                reads.finish(read)
+                if(!latest){
+                    // Historical reads cannot clear current refresh intent, buffers or freshness.
+                    if(!loading&&!refreshPending&&automaticRetryAllowed)bridgeBefore?.let{next->
+                        Pocket.scope.launch{
+                            if(!succeeded)delay((1000L shl retryAttempt.coerceAtMost(5)).coerceAtMost(30_000L))
+                            if(current()&&!loading&&!refreshPending&&bridgeBefore==next)
+                                load(bridgeCursor=next,retryAttempt=if(succeeded)0 else (retryAttempt+1).coerceAtMost(5))
+                        }
                     }
-                }else if(missedUpdates) {
-                    missedUpdates=false
-                    if(succeeded||automaticRetryAllowed)Pocket.scope.launch{if(!succeeded)delay(450);if(current())PocketTranscript.load()}
-                } else if(succeeded) {
-                    bridgeBefore?.let{next->Pocket.scope.launch{load(bridgeCursor=next)}}
+                }else{
+                    if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
+                    pendingHead?.let{pending->if(automaticRetryAllowed&&headSnapshotsSupported!=false&&transcriptHeadAdvanced(observedHead,pending.baseline,pending.head))missedUpdates=true}
+                    pendingHead=null
+                    if(succeeded&&!missedUpdates)refreshPending=false
+                    if(!succeeded&&!automaticRetryAllowed)refreshPending=false
+                    if(!succeeded&&automaticRetryAllowed&&!older){
+                        missedUpdates=false;refreshPending=true
+                        Pocket.scope.launch{
+                            // History reads do not start workers. A prolonged outage
+                            // must not leave the visible cached conversation frozen
+                            // after the initial quick retry budget.
+                            delay((1000L shl retryAttempt.coerceAtMost(5)).coerceAtMost(30_000L))
+                            if(current()&&PocketVoice.foreground&&refreshPending&&!reads.latestLoading)
+                                PocketTranscript.load(retryAttempt=(retryAttempt+1).coerceAtMost(5))
+                        }
+                    }else if(missedUpdates) {
+                        missedUpdates=false
+                        if(succeeded||automaticRetryAllowed)Pocket.scope.launch{if(!succeeded)delay(450);if(current())PocketTranscript.load()}
+                    } else if(succeeded) {
+                        bridgeBefore?.let{next->Pocket.scope.launch{load(bridgeCursor=next)}}
+                    }
                 }
             }
         }
@@ -430,8 +450,8 @@ object PocketTranscript {
             observedHead=observeTranscriptHead(observedHead,head)
             if(changedRuntime)Pocket.scheduleRefresh()
         }
-        if(update.optBoolean("reload")){if(loading)missedUpdates=true else Pocket.scheduleRefresh();return}
-        if(loading&&buffer){
+        if(update.optBoolean("reload")){if(reads.latestLoading)missedUpdates=true else Pocket.scheduleRefresh();return}
+        if(reads.latestLoading&&buffer){
             val key=update.optJSONObject("row")?.s("id")?:update.s("turnId")
             buffered[key]=update
             // Live progress is readable immediately; replay still protects snapshot reconciliation.

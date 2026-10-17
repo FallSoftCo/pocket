@@ -1,0 +1,38 @@
+{
+  "state": "candidate-native-qualified-release-pending",
+  "scope": "stock Codex recent/history independence",
+  "baseline": {
+    "native": "failed at intended held-history freshness assertion",
+    "setupFailureRetained": true
+  },
+  "candidate": {
+    "heldOlderRead": "passed",
+    "sameTurnGapAnswer": "passed",
+    "navigationDuringBlockedOldRead": "passed",
+    "reopenAuthoritativeHistory": "passed",
+    "silentHeadRecovery": "passed",
+    "newestVisibleWhileOlderHeldMs": 1832,
+    "silentHeadVisibleMs": 3646,
+    "unchangedHeadHistoryReads": 0,
+    "catalogReadsDuringSilentRecovery": 0,
+    "workDispatched": 0,
+    "draftPreserved": true,
+    "limits": [
+      "Qualification APK emulator; not physical phone proof",
+      "Five-second probe deadline added after this sample; final signed candidate requires requalification"
+    ]
+  },
+  "productionReadSample": {
+    "statusMs": 16,
+    "recentHistoryMs": 77,
+    "sameRuntimeHead": true,
+    "modelTurnsStarted": 0,
+    "limitation": "one current owner conversation; not a blanket latency claim"
+  },
+  "deployment": {
+    "phoneVersionObserved": 129,
+    "candidateInstalledOnPhone": false,
+    "productionRestarted": false
+  },
+  "testsAreNotPhysicalPhoneProof": true
+}

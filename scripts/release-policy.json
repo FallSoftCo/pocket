@@ -12,7 +12,9 @@
     "co.fallsoft.pocket.WorkCardReadabilityNativeTest#idleIsChromaticNotDisabledAndStillOpens",
     "co.fallsoft.pocket.VoiceTurnStoreNativeTest#independentCaptureDeliveryAndPlaybackSurviveReopen",
     "co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#captureStartsAndStopsIndependentlyOfPresentationState",
-    "co.fallsoft.pocket.VoiceResponsePlaybackNativeTest#idleVoiceModeDoesNotBlockAttributedResponsePlayback"
+    "co.fallsoft.pocket.VoiceResponsePlaybackNativeTest#idleVoiceModeDoesNotBlockAttributedResponsePlayback",
+    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#newestMessagePaintsWhileOlderReadIsHeld",
+    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#openConversationRepairsMissedEventWithoutCatalogOrModelPolling"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
