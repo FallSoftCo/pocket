@@ -111,6 +111,10 @@ const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,ho
     if(!r.ok)throw Error(`Transcription provider returned HTTP ${r.status}.`);return (await r.json()).text||'';
   }});
 
+voiceController.authorizeQueued=async device=>{
+ if(!db.prepare('SELECT 1 FROM devices WHERE id=?').get(device))throw Object.assign(Error('The original device is no longer authorized.'),{status:403});
+};
+
 const audioCommand=process.env.POCKET_LAX_AUDIO_COMMAND?JSON.parse(process.env.POCKET_LAX_AUDIO_COMMAND):null;
 if(audioCommand&&(!Array.isArray(audioCommand)||!audioCommand.length||audioCommand.some(v=>typeof v!=='string'||!v)))throw Error('Invalid installation-owned native audio command.');
 // Audio transport has no project workspace. Never inherit the backend checkout's local config or instructions.
@@ -175,6 +179,10 @@ const voiceRecordings=new VoiceRecordings({
   return audioController.submitText(device,id,text,destination);
  },
  getReceipt:(device,id)=>audioController.get(device,id),
+ cancelTask:(device,id)=>{
+  if(nativeHollywood||roomVoice.get(device,id))throw Object.assign(Error('Use the original room work controls.'),{status:409});
+  return voiceController.cancelQueued(device,id);
+ },
  authorize:async(device,principal)=>{
   if(principal.deviceId!==device||!db.prepare('SELECT 1 FROM devices WHERE id=?').get(device))
    throw Object.assign(Error('The original human device is no longer authorized. Recording retained.'),{status:403});
@@ -524,7 +532,7 @@ app.use('/api',(req,res,next)=>humanIngress.middleware(req,res,next));
 // Retained work stays in the database; native mode never starts its schedulers.
 app.use('/api',(req,res,next)=>{
   if(!nativeHollywood)return next();
-  const safe=/^\/immersion(?:\/v2)?(?:\/translate)?$/.test(req.path)||req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat|capabilities)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||/^\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel))?$/.test(req.path)||/^\/voice\/recordings(?:\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel|retry-audio))?)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
+  const safe=/^\/immersion(?:\/v2)?(?:\/translate)?$/.test(req.path)||req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat|capabilities)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||/^\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel))?$/.test(req.path)||/^\/voice\/recordings(?:\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel|retry-audio|cancel-request))?)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
     req.method==='DELETE'&&/^\/devices\/[0-9a-f-]{36}$/.test(req.path);
   if(!safe)return res.status(403).json({error:'Use the original Hollywood room and identity for this environment.',code:'HOLLYWOOD_NATIVE_ROUTE_REQUIRED'});
   if(req.path==='/status'){void rateLimits.refresh();return void hollywood.status(req.device.id).then(status=>res.json({connected:status.available,backend:'lax',binding:status,usage:rateLimits.snapshot(),
@@ -604,6 +612,7 @@ app.get('/api/voice/recordings/:id',route(async(req,res)=>{
  if(!receipt)return res.status(404).json({error:'Recording admission not found.'});
  res.json(receipt);
 }));
+app.post('/api/voice/recordings/:id/cancel-request',route(async(req,res)=>res.json(await voiceRecordings.cancelRequest(req.device.id,req.params.id))));
 app.post('/api/voice/recordings/:id/retry-audio',route(async(req,res)=>{
  const receipt=await voiceRecordings.retryAudio(req.device.id,req.params.id);
  humanIngress.action('voice-recording',req.params.id,'retry-audio',req.humanPrincipal);
@@ -882,5 +891,6 @@ app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.
 const port=Number(process.env.PORT||18880);
 server.listen(port,'127.0.0.1',()=>{
  console.log(`NextComp listening on 127.0.0.1:${port}`);
+ if(!nativeHollywood)voiceController.restoreQueued();
  if(nativeAudioIntake)void voiceRecordings.start().catch(error=>console.error('Voice recording recovery unavailable',error.message));
 });

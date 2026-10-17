@@ -12,8 +12,8 @@ const token=v=>typeof v==='string'&&/^[a-zA-Z0-9_-]{8,100}$/.test(v);
 
 /** Durable authenticated audio admission. Media processing cannot dispatch tasks. */
 export class VoiceRecordings {
- constructor({db,root,resolveDestination,transcribe,submit,getReceipt,authorize,minFreeBytes=80*1024**3}){
-  Object.assign(this,{db,root,resolveDestination,transcribe,submit,getReceipt,authorize,minFreeBytes});
+ constructor({db,root,resolveDestination,transcribe,submit,getReceipt,authorize,cancelTask=null,minFreeBytes=80*1024**3}){
+  Object.assign(this,{db,root,resolveDestination,transcribe,submit,getReceipt,authorize,cancelTask,minFreeBytes});
   if([resolveDestination,transcribe,submit,getReceipt,authorize].some(value=>typeof value!=='function'))throw Error('Voice admission requires all authority and execution adapters');
   this.owner=randomUUID();this.cancels=new Map();
   mkdirSync(root,{recursive:true,mode:0o700});this.uploads=new Map();this.running=new Map();this.enabled=false;
@@ -135,7 +135,7 @@ export class VoiceRecordings {
    const current=this.row(row.device,row.id);
    if(current.phase==='cancelled')return;
    this.db.prepare('UPDATE voice_recordings SET phase=?,error=? WHERE device=? AND id=? AND worker=?')
-    .run(current.phase==='dispatching'?'unknown':error.status===403?'blocked':'failed',String(error.message).slice(0,500),row.device,row.id,this.owner);
+    .run(current.phase==='dispatching'&&error.notAdmitted!==true?'unknown':error.status===403?'blocked':'failed',String(error.message).slice(0,500),row.device,row.id,this.owner);
   }
  }
  async inspect(device,id){
@@ -149,6 +149,13 @@ export class VoiceRecordings {
    }
   }
   return this.projection(row);
+ }
+ async cancelRequest(device,id){
+  const row=this.row(device,id);if(!row||row.phase!=='accepted'||!this.cancelTask)throw fail('Use the original work controls for this request.',409);
+  const result=await this.cancelTask(device,id);
+  if(result?.id!==id||result.state!=='cancelled')throw fail('Original request cancellation was not confirmed.',409);
+  this.db.prepare("UPDATE voice_recordings SET result=?,error=NULL WHERE device=? AND id=? AND phase='accepted'").run(JSON.stringify(result),device,id);
+  return this.projection(this.row(device,id));
  }
  async retryAudio(device,id){
   const row=this.row(device,id);if(!row)throw fail('Original recording not found.',404);

@@ -8,7 +8,8 @@
     "foreground displayed response speech may play while microphone is idle; capture invalidates deferred playback starts",
     "Source-bound recording queue controls in existing controls surface: status check, confirmed pre-dispatch audio-only retry and cancellation",
     "Explicit microphone stop required before sending; safety limit/interruption retains PCM without dispatch",
-    "Audio-only worker final-result cache avoids repeated transcription after lost SSH reply; native ephemeral threads unsubscribed on stop"
+    "Audio-only worker final-result cache avoids repeated transcription after lost SSH reply; native ephemeral threads unsubscribed on stop",
+    "Durable coordinator command queue independent from capture/media; explicit queued request cancellation and native-intent restart fence"
   ],
   "verification": {
     "nativeAudio": "Actual existing signed-in native account: confirmed final transcript after graceful session.close; clean peer exit. Seven-second synthetic sample took 11518ms direct and 11905ms through structured worker. No task authority in audio worker.",
@@ -17,7 +18,7 @@
     "speech": "One actual native-account render produced verified 2.481s WAV in 8754ms. However actual Android asset playback journey r08 failed: provider connected but emitted no audio. Separate user-role startup probe also failed. Startup-history speech is probabilistic, not a qualified deterministic TTS contract; no automatic regeneration or paid API fallback enabled.",
     "nativeKeys": "Actual retained emulator HollywoodVoiceKeysNativeTest passed in 16.782s: touch/volume start-stop with IME, held repeats, draft retention, navigation preserving original room, no unrelated coordinator initialization, original unresolved WAV/ID unchanged. Provider unavailable fixture, not phone proof.",
     "remoteAudio": "Installed private OZZZ audio-only CLI source/venv, no listener/service changes. Actual system76 SSH to native account final transcript 14054ms; same digest returned durable cached result 2494ms without another generation. Exact source final cleanup changes are staged separately before production use.",
-    "recoveryControls": "15 focused protocol/disk-backed custody/auth checks passed; explicit audio retry accepted once after media failure and rejected for accepted/unknown task states. Android qualification APK and tests built; final native journal/capture and lint in progress."
+    "recoveryControls": "Disk-backed coordinator queue qualification passed: serial starts, captured destinations, queued cancellation, SQLite reopen, safe pre-start recovery, unknown native-intent non-replay and revoked-device rejection. Existing focused voice/custody/auth tests pass. Final Android journal/capture native tests passed (4.89s); qualification lint passed."
   },
   "notVerified": [
     "Reliable spoken-response rendering and actual Android playback completion: blocked by intermittent native no-audio session",

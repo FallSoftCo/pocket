@@ -34,7 +34,7 @@ export function validateVoiceAudio(audio){
 }
 export class VoiceController {
   constructor({db,codex,api,transcribe,cwd,host,catchup=null,hidden=()=>false,reports=null}){
-    Object.assign(this,{db,codex,api,transcribe,cwd,host,catchup,hidden,reports});this.starting=new Map();this.active=new Map();this.resumed=new Set();
+    Object.assign(this,{db,codex,api,transcribe,cwd,host,catchup,hidden,reports});this.starting=new Map();this.active=new Map();this.resumed=new Set();this.queueing=new Set();
     db.exec(`CREATE TABLE IF NOT EXISTS voice_sessions(device TEXT PRIMARY KEY,thread_id TEXT,selected TEXT,full INTEGER NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS voice_turns(device TEXT,id TEXT,hash TEXT,state TEXT,transcript TEXT,response TEXT,error TEXT,actions TEXT DEFAULT '[]',created_at INTEGER,PRIMARY KEY(device,id));
       CREATE TABLE IF NOT EXISTS voice_calls(device TEXT,turn_id TEXT,call_id TEXT,state TEXT,result TEXT,PRIMARY KEY(device,turn_id,call_id));
@@ -44,6 +44,10 @@ export class VoiceController {
     if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='origin'))db.exec('ALTER TABLE voice_turns ADD COLUMN origin TEXT');
     if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='correction'))db.exec('ALTER TABLE voice_turns ADD COLUMN correction TEXT');
     if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='timings'))db.exec("ALTER TABLE voice_turns ADD COLUMN timings TEXT NOT NULL DEFAULT '{}'");
+    db.exec('CREATE INDEX IF NOT EXISTS voice_task_queue ON voice_turns(device,state,created_at)');
+    // Preparing performs metadata/context work only. A native start intent is never replayed.
+    db.prepare("UPDATE voice_turns SET state='queued',error=NULL WHERE state='preparing' AND origin IS NOT NULL AND transcript IS NOT NULL AND json_extract(timings,'$.native_start_requested') IS NULL").run();
+    db.prepare("UPDATE voice_turns SET state='unknown',error='Native start intent requires reconciliation' WHERE state='preparing'").run();
     this.discovery=new CoordinatorDiscovery({api:path=>this.api(path),owns:id=>this.owns(id)||this.hidden(id)});
     db.prepare("UPDATE voice_turns SET state='unknown',error='The server restarted during this turn. Ask to check what happened before repeating the command.' WHERE state IN ('transcribing','thinking')").run();
     codex.on('event',m=>this.event(m));codex.on('disconnected',()=>{this.resumed.clear();for(const [thread,active] of this.active){this.finish(active,'unknown','Connection lost during this turn. Check the session before repeating the command.');this.active.delete(thread);}});
@@ -109,7 +113,7 @@ export class VoiceController {
     const rows=this.db.prepare('SELECT rowid AS cursor,id,state,transcript,response,error,actions,created_at FROM voice_turns WHERE device=? AND rowid<?'+filter+' ORDER BY rowid DESC LIMIT 101').all(device,before);
     const hasEarlier=rows.length>100;const turns=rows.slice(0,100).reverse();return {turns:turns.map(t=>({...t,actions:JSON.parse(t.actions||'[]')})),hasEarlier,before:turns[0]?.cursor??null};
   }
-  get(device,id){const row=this.db.prepare('SELECT id,state,transcript,response,error,actions,created_at,timings FROM voice_turns WHERE device=? AND id=?').get(device,id);return row?{...row,actions:JSON.parse(row.actions),timings:JSON.parse(row.timings||'{}')}:null;}
+  get(device,id){const row=this.db.prepare('SELECT id,state,transcript,response,error,actions,created_at,timings FROM voice_turns WHERE device=? AND id=?').get(device,id);return row?{...row,state:row.state==='preparing'?'queued':row.state,actions:JSON.parse(row.actions),timings:JSON.parse(row.timings||'{}')}:null;}
   mark(device,id,stage,at=Date.now()){
     const row=this.db.prepare('SELECT timings FROM voice_turns WHERE device=? AND id=?').get(device,id);if(!row)return;
     const timings=JSON.parse(row.timings||'{}');if(timings[stage]!==undefined)return;
@@ -119,11 +123,15 @@ export class VoiceController {
     if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id))throw fail('Invalid voice turn ID.');validateVoiceAudio(audio);
     const hash=createHash('sha256').update(audio).digest('hex');const old=this.db.prepare('SELECT hash FROM voice_turns WHERE device=? AND id=?').get(device,id);
     if(old){if(old.hash!==hash)throw fail('This ID belongs to a different recording.',409);return this.get(device,id);}
-    if(this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND state IN ('transcribing','thinking')").get(device))throw fail('Your previous voice turn is still running.',409);
+    if(this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND state IN ('transcribing','preparing','thinking','queued')").get(device))throw fail('Your previous voice turn is still running.',409);
     this.db.prepare("INSERT INTO voice_turns(device,id,hash,state,created_at,origin) VALUES(?,?,?,'transcribing',?,?)").run(device,id,hash,Date.now(),JSON.stringify(this.capture(device)));
     void this.run(device,id,audio);return this.get(device,id);
   }
   submitText(device,id,text,correctionOf=null,capturedOrigin=null){
+    try{return this.admitText(device,id,text,correctionOf,capturedOrigin);}
+    catch(error){try{if(!this.get(device,id))error.notAdmitted=true;}catch{}throw error;}
+  }
+  admitText(device,id,text,correctionOf=null,capturedOrigin=null){
     if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id))throw fail('Invalid voice turn ID.');
     const suppliedOrigin=capturedOrigin?this.validateOrigin(capturedOrigin):null;
     const previous=this.get(device,id);if(previous){
@@ -134,17 +142,38 @@ export class VoiceController {
     }
     const correction=this.validateCorrection(device,correctionOf);
     if(typeof text!=='string'||!text.trim()||text.length>24000)throw fail('Invalid voice transcript.');
-    if(this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND state IN ('transcribing','thinking')").get(device))throw fail('Your previous voice turn is still running.',409);
-    this.db.prepare("INSERT INTO voice_turns(device,id,hash,state,created_at,origin) VALUES(?,?,?,'transcribing',?,?)").run(device,id,createHash('sha256').update(text).digest('hex'),Date.now(),JSON.stringify(suppliedOrigin||this.capture(device)));
-    if(correction)this.db.prepare('UPDATE voice_turns SET correction=? WHERE device=? AND id=?').run(JSON.stringify(correction),device,id);
-    void this.run(device,id,null,text);return this.get(device,id);
+    if(this.db.prepare("SELECT count(*) AS n FROM voice_turns WHERE device=? AND state='queued'").get(device).n>=64)throw fail('This coordinator has 64 queued requests. The recording remains saved.',429);
+    this.db.prepare("INSERT INTO voice_turns(device,id,hash,state,created_at,origin,transcript,correction) VALUES(?,?,?,'queued',?,?,?,?)").run(device,id,createHash('sha256').update(text).digest('hex'),Date.now(),JSON.stringify(suppliedOrigin||this.capture(device)),text,correction?JSON.stringify(correction):null);
+    queueMicrotask(()=>this.kickQueued(device));return this.get(device,id);
   }
-  finish(active,state,error=null){this.mark(active.device,active.id,'response_completed');clearTimeout(active.timer);this.db.prepare('UPDATE voice_turns SET state=?,error=?,response=? WHERE device=? AND id=?').run(state,error,active.text?.trim()||null,active.device,active.id);}
+  cancelQueued(device,id){
+    if(!this.db.prepare("UPDATE voice_turns SET state='cancelled',error=NULL WHERE device=? AND id=? AND state='queued'").run(device,id).changes)
+      throw fail('This request is already preparing or running. Use its original work controls.',409);
+    queueMicrotask(()=>this.kickQueued(device));return this.get(device,id);
+  }
+  restoreQueued(){
+    // Only the installation's stock controller calls this at startup; native room mode does not.
+    for(const {device} of this.db.prepare("SELECT DISTINCT device FROM voice_turns WHERE state='queued'").all())this.kickQueued(device);
+  }
+  kickQueued(device){
+    if(this.db.isOpen===false)return;
+    if(this.queueing.has(device)||[...this.active.values()].some(value=>value.device===device)||
+       this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND state IN ('transcribing','preparing','thinking')").get(device))return;
+    const row=this.db.prepare("SELECT id,transcript FROM voice_turns WHERE device=? AND state='queued' ORDER BY created_at,rowid LIMIT 1").get(device);
+    if(!row)return;
+    if(!this.db.prepare("UPDATE voice_turns SET state='preparing' WHERE device=? AND id=? AND state='queued'").run(device,row.id).changes)return;
+    this.queueing.add(device);
+    void this.run(device,row.id,null,row.transcript).finally(()=>{
+      this.queueing.delete(device);queueMicrotask(()=>this.kickQueued(device));
+    }).catch(error=>console.error('Voice queue failed',error.code||'INTERNAL'));
+  }
+  finish(active,state,error=null){this.mark(active.device,active.id,'response_completed');clearTimeout(active.timer);this.db.prepare('UPDATE voice_turns SET state=?,error=?,response=? WHERE device=? AND id=?').run(state,error,active.text?.trim()||null,active.device,active.id);queueMicrotask(()=>this.kickQueued(active.device));}
   async run(device,id,audio,suppliedText=null){
     let active;try{
+      if(this.authorizeQueued)await this.authorizeQueued(device);
       const transcript=(suppliedText??await this.transcribe(audio)).trim();if(!transcript)throw fail('No speech was detected. Press volume down and try again.');
       this.mark(device,id,'transcript_ready');
-      this.db.prepare("UPDATE voice_turns SET transcript=?,state='thinking' WHERE device=? AND id=?").run(transcript,device,id);
+      this.db.prepare("UPDATE voice_turns SET transcript=?,state='preparing' WHERE device=? AND id=?").run(transcript,device,id);
       const live=await this.ensure(device);
       const savedOrigin=this.db.prepare('SELECT origin FROM voice_turns WHERE device=? AND id=?').get(device,id)?.origin;
       const origin=savedOrigin?this.validateOrigin(JSON.parse(savedOrigin)):null;
@@ -158,6 +187,7 @@ export class VoiceController {
       const recentReports=(this.reports?.context?.(device,{limit:3})||[]).map(report=>({...report,response:typeof report.response==='string'?report.response.slice(0,500):report.response,text:typeof report.text==='string'?report.text.slice(0,500):report.text}));
       const context=JSON.stringify({host:this.host,focus:s.focus,recentReports,selectedSession:s.focus==='coordinator'?null:s.selected,references,correctionOf:correction,proactiveCatchup:!!s.proactive,defaultPermissions:s.full?'full':'review',permissionControls:{threadId:'Explicit runtime change for one session',all:'Explicit runtime change for loaded sessions only; report verified and blocked identities truthfully',effect:'Subsequent turns; existing active work is not automatically restarted'},discovery:active.discovery});
       this.mark(device,id,'context_ready');this.mark(device,id,'context_bytes',Buffer.byteLength(context));this.mark(device,id,'native_start_requested');
+      this.db.prepare("UPDATE voice_turns SET state='thinking' WHERE device=? AND id=?").run(device,id);
       const {turn}=await this.codex.call('turn/start',{threadId:s.thread_id,sandboxPolicy:s.full?{type:'dangerFullAccess'}:{type:'readOnly',networkAccess:false},approvalPolicy:'never',input:[{type:'text',text:`Current NextComp context: ${context}\nUser turn: ${transcript}`}],clientUserMessageId:`voice-${id}`});active.nativeTurn=turn.id;this.mark(device,id,'native_started');
     }catch(e){if(active){this.active.delete(active.thread);this.finish(active,e.rpc?'failed':'unknown',e.message);}else this.db.prepare("UPDATE voice_turns SET state='failed',error=? WHERE device=? AND id=?").run(e.message,device,id);}
   }

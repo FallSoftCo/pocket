@@ -32,7 +32,7 @@ object PocketVoice {
         if(turn.key!=latestRecordingKey||Pocket.environmentId!=turn.origin.environment||
             backendOwner(Pocket.base.trimEnd('/'),Pocket.token)!=turn.origin.pairing)return
         deliveryStatus=when(receipt.optString("state")){
-            "uploading"->"Uploading recording";"queued"->"Recording queued";"transcribing"->"Transcribing"
+            "uploading"->"Uploading recording";"queued"->if(receipt.optString("phase")=="accepted")"Request queued" else "Recording queued";"transcribing"->"Transcribing"
             "submitting"->"Submitting request";"thinking","running"->"Working";"completed"->"Response ready"
             "unknown"->"Checking original delivery";"blocked","failed"->receipt.optString("error","Recording needs attention")
             else->"Recording saved"
