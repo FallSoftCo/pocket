@@ -20,15 +20,15 @@ internal object DurableVoiceWork {
     }
     fun enqueue(context:Context,key:String,cancellationIntent:Boolean=false) {
         val request=OneTimeWorkRequestBuilder<DurableVoiceWorker>()
-            .setInputData(workDataOf("turnKey" to key))
+            .setInputData(workDataOf("turnKey" to key,"cancellationOnly" to cancellationIntent))
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,30,TimeUnit.SECONDS).build()
-        WorkManager.getInstance(context).enqueueUniqueWork("durable-recording-"+key,if(cancellationIntent)ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.KEEP,request)
+        WorkManager.getInstance(context).enqueueUniqueWork((if(cancellationIntent)"cancel-recording-" else "durable-recording-")+key,ExistingWorkPolicy.KEEP,request)
     }
     suspend fun restore(context:Context)=withContext(Dispatchers.IO) {
         initialize(context)
         VoiceTurnStore(context,JOURNAL).use { store ->
-            store.list().filter { it.cancellation==VoiceTurnStore.Cancellation.REQUESTED || it.capture==VoiceTurnStore.Capture.SEALED && it.delivery !in terminal }.forEach { enqueue(context,it.key) }
+            store.list().filter { it.cancellation==VoiceTurnStore.Cancellation.REQUESTED || it.capture==VoiceTurnStore.Capture.SEALED && it.delivery !in terminal }.forEach { enqueue(context,it.key,cancellationIntent=it.cancellation==VoiceTurnStore.Cancellation.REQUESTED) }
         }
     }
     val terminal=setOf(VoiceTurnStore.Delivery.COMPLETED,VoiceTurnStore.Delivery.FAILED,VoiceTurnStore.Delivery.CANCELLED)
@@ -46,6 +46,7 @@ class DurableVoiceWorker(context:Context,params:WorkerParameters):CoroutineWorke
             try {
                 val capability=requests.call(turn,"/api/voice/native/capabilities")
                 check(capability.optBoolean("durableAudioAdmission")) { "This environment needs its durable audio adapter. Recording remains saved." }
+                if(inputData.getBoolean("cancellationOnly",false) && turn.cancellation!=VoiceTurnStore.Cancellation.REQUESTED)return@use Result.success()
                 if(turn.delivery==VoiceTurnStore.Delivery.UNSUBMITTED) {
                     if(!store.claim(key))return@use Result.retry()
                     turn=requireNotNull(store.get(key))
@@ -65,6 +66,7 @@ class DurableVoiceWorker(context:Context,params:WorkerParameters):CoroutineWorke
                     }
                 }
                 cancelIfRequested()?.let{store.cancelled(key,it);return@use Result.success()}
+                if(inputData.getBoolean("cancellationOnly",false))return@use Result.success()
                 // A rejected cancellation can inspect an existing receipt, but cannot create or upload one.
                 val admissionAllowed={store.get(key)?.cancellation==VoiceTurnStore.Cancellation.NONE}
                 var receipt=try { requests.call(turn,path) }
