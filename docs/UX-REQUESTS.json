@@ -2778,12 +2778,12 @@
     {
       "id": "native-room-audio-ux-20261017",
       "request": "Native-host rooms should match sessions UX; audio capture, delivery and playback must work reliably and responsively.",
-      "status": "in-progress-native-qualified-candidate",
+      "status": "partially-delivered-alpha111",
       "evidence": "docs/qualification/room-card-and-audio-20261017.json",
       "remaining": [
-        "Physical handset capture/keys/audio verification",
-        "Canonical room catalog live preview and actual work recency",
-        "Release-qualified compatible next APK; no production publication yet"
+        "Physical handset audio and keys verification",
+        "Canonical room catalog live preview and true work recency",
+        "Streaming output latency and further native-room input profiling"
       ]
     }
   ],

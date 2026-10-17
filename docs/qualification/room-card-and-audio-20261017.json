@@ -1,6 +1,6 @@
 {
-  "status": "native-qualified-candidate-not-published",
-  "recordedAt": "2026-10-17T13:07:54.690379+00:00",
+  "status": "partially-delivered-alpha111",
+  "recordedAt": "2026-10-17T13:30:58.063075+00:00",
   "base": "4f060598b98a71f91be5e26a89f87fc9133f2010",
   "implementation": [
     "Stable room-card context/status height at normal and doubled text",
@@ -37,7 +37,7 @@
   "limits": [
     "Emulator evidence, not physical handset capture/acoustic quality",
     "Current renderer buffers complete audio before Android playback; stage measurements do not establish first-audio latency",
-    "Production phone installed128 unchanged; no candidate install or announcement",
+    "129 published; phone last observed128; no automatic install/launch was performed",
     "Room catalog live preview/work recency needs reviewed canonical batched projection; observedAt is not work recency"
   ],
   "ownedQa": {
@@ -47,5 +47,32 @@
     "businessModelsStarted": 0,
     "speechGenerationOnly": true
   },
-  "review": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-room-density-20261017-normal"
+  "review": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-room-density-20261017-normal",
+  "release": {
+    "versionCode": 129,
+    "versionName": "0.5.0-alpha.111",
+    "compatibleApkSha256": "a674676efe9efb2e848ded430da64acd3a19d3c79cf905ab9b137d58ff30de8d",
+    "productionSourceSha": "a18296b5aff687fd7520f641c5714d4c398bd3f51a1e6a5fe7423f1c9141b021",
+    "nativeJourneysPassed": 11,
+    "optimizedPayloadAndControlsPassed": true,
+    "channels": [
+      "existing system76",
+      "existing OZZZ"
+    ],
+    "announcement": {
+      "notificationId": 1853,
+      "fcm": "accepted_by_fcm",
+      "attempts": 1
+    },
+    "lastPhysicalPackageObserved": 128,
+    "physicalAudioVerified": false,
+    "backendRestarts": 0
+  },
+  "remaining": [
+    "Canonical room catalog latest meaningful material and true activity ordering",
+    "Physical handset recording, buttons and audio verification",
+    "Streaming playback with consistent central controls; current complete-audio buffering remains",
+    "Profile native-room input cost with evidence before further performance edits"
+  ],
+  "galleryQualification": "Native captures visually reviewed; global gallery checker twice timed out at90s DOM load. No gallery layout pass claimed."
 }
