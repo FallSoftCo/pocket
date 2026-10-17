@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha110-durable-independent-recording-intake",
+  "qualification": "alpha111-native-room-density-and-responsive-audio",
   "requiredNativeCases": [
     "co.fallsoft.pocket.HollywoodRoomActivityNativeTest#aggregateFailureAndQuietSnapshotNeverInventIdleOrLoseRoomTarget",
     "co.fallsoft.pocket.HollywoodCatalogLiveNativeTest#actualCatalogCountsAndOriginalAcceptedMessageSurviveListAndRoomReopening",
@@ -11,7 +11,8 @@
     "co.fallsoft.pocket.NaturalImmersionNativeTest#naturalParagraphsKeepNativeSpacingAndGlobalWaveRunsWhileTyping",
     "co.fallsoft.pocket.WorkCardReadabilityNativeTest#idleIsChromaticNotDisabledAndStillOpens",
     "co.fallsoft.pocket.VoiceTurnStoreNativeTest#independentCaptureDeliveryAndPlaybackSurviveReopen",
-    "co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#captureStartsAndStopsIndependentlyOfPresentationState"
+    "co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#captureStartsAndStopsIndependentlyOfPresentationState",
+    "co.fallsoft.pocket.VoiceResponsePlaybackNativeTest#idleVoiceModeDoesNotBlockAttributedResponsePlayback"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
