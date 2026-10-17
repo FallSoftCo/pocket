@@ -124,12 +124,33 @@ const hollywoodVoice=new HollywoodVoice({db,gateway:hollywood});
 const roomVoice=new RoomVoice({db,client:new Losangelex(loadLosangelex(dir))});
 const roomVoiceFocus=new Map();
 const audioController={db,
- capture:device=>roomVoiceFocus.get(device)?JSON.parse(JSON.stringify(roomVoiceFocus.get(device))):null,
+ capture:device=>roomVoiceFocus.get(device)?JSON.parse(JSON.stringify(roomVoiceFocus.get(device))):voiceController.capture(device),
  get:(device,id)=>nativeHollywood?hollywoodVoice.refresh(device,id):roomVoice.get(device,id)||voiceController.get(device,id),
- submitText:(device,id,text,destination)=>nativeHollywood?hollywoodVoice.submitText(device,id,text,destination):destination?roomVoice.submitText(device,id,text,destination):voiceController.submitText(device,id,text),
+ submitText:(device,id,text,destination)=>nativeHollywood?hollywoodVoice.submitText(device,id,text,destination):destination?.backend==='stock-codex-voice'?voiceController.submitText(device,id,text,null,destination):destination?roomVoice.submitText(device,id,text,destination):voiceController.submitText(device,id,text),
  mark:(device,id,...args)=>{if(nativeHollywood)return;if(!roomVoice.get(device,id))voiceController.mark(device,id,...args);}
 };
 const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:audioController,cwd:defaultCwd,requireFinalTranscript:nativeHollywood});
+// Validate a per-turn destination without consulting or changing mutable device focus.
+// Missing destination retains compatibility with already installed clients only.
+async function voiceDestination(device,value){
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Object.assign(Error('Choose a voice destination.'),{status:400});
+ if(value.room){
+  if(value.threadId)throw Object.assign(Error('Choose one room or session destination.'),{status:400});
+  return nativeHollywood?hollywoodVoice.destination(device,value.room):roomVoice.destination(value.room);
+ }
+ if(nativeHollywood)throw Object.assign(Error('Choose an exact Hollywood room before recording.'),{status:400});
+ const threadId=value.threadId?requireId(value.threadId):null;
+ if(threadId){
+  if(catchupHidden(threadId))throw Object.assign(Error('Choose a work session.'),{status:400});
+  await codex.connect();const result=await codex.call('thread/read',{threadId,includeTurns:false});
+  if(result.thread?.id!==threadId)throw Object.assign(Error('Session identity changed.'),{status:409});
+  requireDirectSessionInput(result.thread);
+ }
+ const current=voiceController.capture(device);
+ return voiceController.validateOrigin({...current,focus:threadId?'direct':'coordinator',selected:threadId,
+  full:typeof value.fullPermissions==='boolean'?value.fullPermissions:current.full});
+}
+
 const sessionDiscovery=new SessionDiscovery({db,codex,hidden:(id,thread)=>internalSessions.owns(id,thread)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)});
 const catchupHidden=id=>internalSessions.owns(id)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)||!!db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived;
 const sessionCatchup=new SessionCatchup({db,hidden:catchupHidden,resolvePending:(requestId,threadId)=>{
@@ -531,13 +552,16 @@ app.post('/api/voice/start',route(async(req,res)=>{
 }));
 app.post('/api/voice/native/start',route(async(req,res)=>{if(nativeHollywood&&!audioCommand)throw Object.assign(Error('Native room audio is not configured on this environment.'),{status:503});res.json(await nativeVoice.start(req.device.id,req.body.sdp,req.body.purpose));}));
 app.post('/api/voice/native/stop',route(async(req,res)=>{await nativeVoice.stop(req.device.id,req.body.connectionId);res.json({ok:true});}));
-app.post('/api/voice/native/input',route(async(req,res)=>res.json(nativeVoice.begin(req.device.id,req.body.connectionId,req.body.turnId))));
-app.post('/api/voice/native/commit',route(async(req,res)=>res.json(await nativeVoice.commit(req.device.id,req.body.connectionId,req.body.turnId))));
+app.post('/api/voice/native/input',route(async(req,res)=>{
+ const destination=Object.hasOwn(req.body,'destination')?await voiceDestination(req.device.id,req.body.destination):undefined;
+ res.json(nativeVoice.begin(req.device.id,req.body.connectionId,req.body.turnId,destination));
+}));
+app.post('/api/voice/native/commit',route(async(req,res)=>res.json(await nativeVoice.commit(req.device.id,req.body.connectionId,req.body.turnId,req.body.audioSha256??null))));
 app.post('/api/voice/native/speak',route(async(req,res)=>res.json(await nativeVoice.speak(req.device.id,req.body.connectionId,req.body.text,req.body.voiceTurnId))));
 app.post('/api/voice/native/heartbeat',route(async(req,res)=>{nativeVoice.session(req.device.id,req.body.connectionId);res.json({ok:true});}));
 app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:'4mb'}),(req,res,next)=>{try{if(nativeHollywood)return res.status(400).json({error:'Use native recorded room input on this environment.'});if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
 app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(nativeHollywood?await hollywoodVoice.submitText(req.device.id,req.body.turnId,req.body.text,roomVoiceFocus.get(req.device.id)):roomVoiceFocus.has(req.device.id)?roomVoice.submitText(req.device.id,req.body.turnId,req.body.text,roomVoiceFocus.get(req.device.id)):voiceController.submitText(req.device.id,req.body.turnId,req.body.text,req.body.correctionOf));}));
-app.get('/api/voice/turns/:id',route(async(req,res)=>{const row=nativeHollywood?await hollywoodVoice.refresh(req.device.id,req.params.id):roomVoice.get(req.device.id,req.params.id)?await roomVoice.refresh(req.device.id,req.params.id):voiceController.get(req.device.id,req.params.id);if(!row)return res.status(404).json({error:'Voice turn not found.'});if(!nativeHollywood&&row.state==='completed')voiceController.mark(req.device.id,req.params.id,'response_first_fetched');res.json(row);}));
+app.get('/api/voice/turns/:id',route(async(req,res)=>{const row=nativeHollywood?await hollywoodVoice.refresh(req.device.id,req.params.id):roomVoice.get(req.device.id,req.params.id)?await roomVoice.refresh(req.device.id,req.params.id):voiceController.get(req.device.id,req.params.id);if(!row){const admission=nativeVoice.receipt(req.device.id,req.params.id);if(admission)return res.json(admission);return res.status(404).json({error:'Voice turn not found.'});}if(!nativeHollywood&&row.state==='completed')voiceController.mark(req.device.id,req.params.id,'response_first_fetched');const admission=nativeVoice.admission(req.device.id,req.params.id);res.json(admission?{...row,audioSha256:admission.audio_sha256||null}:row);}));
 app.post('/api/voice/turns/:id/presented',route(async(req,res)=>res.json(nativeHollywood?{ok:true}:roomVoice.get(req.device.id,req.params.id)?.state==='completed'?{ok:true}:voiceController.presented(req.device.id,req.params.id))));
 app.get('/api/voice/speech',(_req,res)=>res.json(voiceSpeech.status()));
 app.post('/api/voice/speech',route(async(req,res)=>{

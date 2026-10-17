@@ -41,6 +41,7 @@ export class VoiceController {
       CREATE TABLE IF NOT EXISTS voice_retired_controllers(thread_id TEXT PRIMARY KEY,device TEXT NOT NULL,reason TEXT NOT NULL,created_at INTEGER NOT NULL);`);
     const sessionColumns=db.prepare('PRAGMA table_info(voice_sessions)').all().map(c=>c.name);
     for(const [name,definition] of [['focus',"TEXT NOT NULL DEFAULT 'coordinator'"],['refs',"TEXT NOT NULL DEFAULT '[]'"],['proactive',"INTEGER NOT NULL DEFAULT 0"],['tool_revision','INTEGER NOT NULL DEFAULT 0']])if(!sessionColumns.includes(name))db.exec(`ALTER TABLE voice_sessions ADD COLUMN ${name} ${definition}`);
+    if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='origin'))db.exec('ALTER TABLE voice_turns ADD COLUMN origin TEXT');
     if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='correction'))db.exec('ALTER TABLE voice_turns ADD COLUMN correction TEXT');
     if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='timings'))db.exec("ALTER TABLE voice_turns ADD COLUMN timings TEXT NOT NULL DEFAULT '{}'");
     this.discovery=new CoordinatorDiscovery({api:path=>this.api(path),owns:id=>this.owns(id)||this.hidden(id)});
@@ -49,6 +50,18 @@ export class VoiceController {
   }
   owns(threadId){return !!this.db.prepare('SELECT 1 FROM voice_sessions WHERE thread_id=? UNION ALL SELECT 1 FROM voice_retired_controllers WHERE thread_id=? LIMIT 1').get(threadId,threadId);}
   session(device){return this.db.prepare('SELECT * FROM voice_sessions WHERE device=?').get(device);}
+  capture(device){
+    const s=this.session(device)||{focus:'coordinator',selected:null,full:1};
+    return {backend:'stock-codex-voice',version:1,focus:s.focus,selected:s.focus==='coordinator'?null:s.selected||null,full:!!s.full};
+  }
+  validateOrigin(value){
+    if(!value||value.backend!=='stock-codex-voice'||value.version!==1||!['coordinator','direct','selected'].includes(value.focus)||typeof value.full!=='boolean')
+      throw fail('Invalid captured voice destination.');
+    const selected=value.selected??null;
+    if(value.focus==='coordinator'&&selected!==null||value.focus!=='coordinator'&&(typeof selected!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(selected)||this.owns(selected)||this.hidden(selected)))
+      throw fail('Invalid captured work session.');
+    return {backend:'stock-codex-voice',version:1,focus:value.focus,selected,full:value.full};
+  }
   async ensure(device){
     if(this.starting.has(device))return this.starting.get(device);
     const work=(async()=>{await this.codex.connect();let s=this.session(device);
@@ -107,16 +120,22 @@ export class VoiceController {
     const hash=createHash('sha256').update(audio).digest('hex');const old=this.db.prepare('SELECT hash FROM voice_turns WHERE device=? AND id=?').get(device,id);
     if(old){if(old.hash!==hash)throw fail('This ID belongs to a different recording.',409);return this.get(device,id);}
     if(this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND state IN ('transcribing','thinking')").get(device))throw fail('Your previous voice turn is still running.',409);
-    this.db.prepare("INSERT INTO voice_turns(device,id,hash,state,created_at) VALUES(?,?,?,'transcribing',?)").run(device,id,hash,Date.now());
+    this.db.prepare("INSERT INTO voice_turns(device,id,hash,state,created_at,origin) VALUES(?,?,?,'transcribing',?,?)").run(device,id,hash,Date.now(),JSON.stringify(this.capture(device)));
     void this.run(device,id,audio);return this.get(device,id);
   }
-  submitText(device,id,text,correctionOf=null){
+  submitText(device,id,text,correctionOf=null,capturedOrigin=null){
     if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id))throw fail('Invalid voice turn ID.');
-    const previous=this.get(device,id);if(previous){if(this.db.prepare('SELECT hash FROM voice_turns WHERE device=? AND id=?').get(device,id).hash!==createHash('sha256').update(String(text)).digest('hex'))throw fail('This ID belongs to a different transcript.',409);return previous;}
+    const suppliedOrigin=capturedOrigin?this.validateOrigin(capturedOrigin):null;
+    const previous=this.get(device,id);if(previous){
+      const saved=this.db.prepare('SELECT hash,origin FROM voice_turns WHERE device=? AND id=?').get(device,id);
+      if(saved.hash!==createHash('sha256').update(String(text)).digest('hex'))throw fail('This ID belongs to a different transcript.',409);
+      if(suppliedOrigin&&saved.origin!==JSON.stringify(suppliedOrigin))throw fail('This ID belongs to a different voice destination.',409);
+      return previous;
+    }
     const correction=this.validateCorrection(device,correctionOf);
     if(typeof text!=='string'||!text.trim()||text.length>24000)throw fail('Invalid voice transcript.');
     if(this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND state IN ('transcribing','thinking')").get(device))throw fail('Your previous voice turn is still running.',409);
-    this.db.prepare("INSERT INTO voice_turns(device,id,hash,state,created_at) VALUES(?,?,?,'transcribing',?)").run(device,id,createHash('sha256').update(text).digest('hex'),Date.now());
+    this.db.prepare("INSERT INTO voice_turns(device,id,hash,state,created_at,origin) VALUES(?,?,?,'transcribing',?,?)").run(device,id,createHash('sha256').update(text).digest('hex'),Date.now(),JSON.stringify(suppliedOrigin||this.capture(device)));
     if(correction)this.db.prepare('UPDATE voice_turns SET correction=? WHERE device=? AND id=?').run(JSON.stringify(correction),device,id);
     void this.run(device,id,null,text);return this.get(device,id);
   }
@@ -126,7 +145,12 @@ export class VoiceController {
       const transcript=(suppliedText??await this.transcribe(audio)).trim();if(!transcript)throw fail('No speech was detected. Press volume down and try again.');
       this.mark(device,id,'transcript_ready');
       this.db.prepare("UPDATE voice_turns SET transcript=?,state='thinking' WHERE device=? AND id=?").run(transcript,device,id);
-      const s=await this.ensure(device);this.mark(device,id,'coordinator_ready');active={device,id,text:'',thread:s.thread_id,focus:s.focus,selected:s.selected};this.active.set(s.thread_id,active);
+      const live=await this.ensure(device);
+      const savedOrigin=this.db.prepare('SELECT origin FROM voice_turns WHERE device=? AND id=?').get(device,id)?.origin;
+      const origin=savedOrigin?this.validateOrigin(JSON.parse(savedOrigin)):null;
+      // Navigation cannot retarget admitted work. A later actual permission revocation still restricts it.
+      const s=origin?{...live,focus:origin.focus,selected:origin.selected,full:live.full&&origin.full?1:0}:live;
+      this.mark(device,id,'coordinator_ready');active={device,id,text:'',thread:s.thread_id,focus:s.focus,selected:s.selected};this.active.set(s.thread_id,active);
       active.timer=setTimeout(()=>{if(this.active.get(s.thread_id)!==active)return;this.finish(active,'unknown','Codex is taking longer than expected. The command may still finish. Check before repeating it.');this.active.delete(s.thread_id);if(active.nativeTurn)void this.codex.call('turn/interrupt',{threadId:s.thread_id,turnId:active.nativeTurn}).catch(()=>{});},180000);active.timer.unref?.();
       const references=JSON.parse(s.refs||'[]');
       active.discovery=await this.discovery.initialSnapshot({threadIds:[...(s.focus!=='coordinator'&&s.selected?[s.selected]:[]),...references.slice(-3).map(r=>r.threadId)]});

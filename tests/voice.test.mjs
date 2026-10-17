@@ -84,3 +84,26 @@ test('greeting starts without unrelated history; routing still explicitly discov
  assert.equal(controller.get('phone','hello-test-001').state,'completed');assert.ok(controller.get('phone','hello-test-001').timings.first_response);
  db.close();
 });
+
+test('admitted voice routing survives navigation before asynchronous startup and cannot be retargeted by retry',async()=>{
+ const {controller,codex,db}=setup();
+ try{
+  await controller.ensure('phone');
+  controller.setFocus('phone','original-task');
+  const origin=controller.capture('phone');
+  controller.submitText('phone','captured-turn-0001','Continue that work',null,origin);
+  controller.setFocus('phone','different-task');
+  await tick();await tick();
+  const active=controller.active.get('controller-123');
+  assert.equal(active.selected,'original-task');
+  const native=codex.calls.find(c=>c.method==='turn/start');
+  const text=native.params.input[0].text;
+  assert.match(text,/"selectedSession":"original-task"/);
+  assert.equal(JSON.parse(db.prepare('SELECT origin FROM voice_turns WHERE id=?').get('captured-turn-0001').origin).selected,'original-task');
+  const before=codex.calls.filter(c=>c.method==='turn/start').length;
+  controller.submitText('phone','captured-turn-0001','Continue that work');
+  assert.equal(codex.calls.filter(c=>c.method==='turn/start').length,before);
+  assert.throws(()=>controller.submitText('phone','captured-turn-0001','Continue that work',null,controller.capture('phone')),/different voice destination/);
+  codex.emit('event',{method:'turn/completed',params:{threadId:'controller-123',turn:{id:'turn-123',status:'completed'}}});
+ }finally{db.close();}
+});

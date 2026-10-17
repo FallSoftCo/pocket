@@ -1,6 +1,7 @@
+import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
 import test from 'node:test';import assert from 'node:assert/strict';import {EventEmitter} from 'node:events';import {DatabaseSync} from 'node:sqlite';
 import {NativeVoice} from '../server/native-voice.mjs';
-function setup(){const codex=new EventEmitter(),db=new DatabaseSync(':memory:'),calls=[],rows=new Map();let sends=0,threads=0;codex.connect=async()=>{};codex.call=async(method,params)=>{calls.push({method,params});if(method==='account/read')return {account:{type:'chatgpt'}};if(method==='thread/start')return {thread:{id:++threads===1?'audio-thread':`audio-thread-${threads}`}};if(method==='thread/realtime/start')queueMicrotask(()=>codex.emit('event',{method:'thread/realtime/sdp',params:{threadId:params.threadId,sdp:'answer'}}));return {}};codex.answer=()=>{};const voice=new NativeVoice({codex,cwd:'/tmp',requireFinalTranscript:true,controller:{db,get:(device,id)=>rows.get(device+id),submitText:(device,id,text)=>{sends++;const r={id,transcript:text};rows.set(device+id,r);return r}}});return {voice,codex,calls,db,get sends(){return sends},cleanup:async()=>{await voice.stop('device');clearInterval(voice.timer);db.close()}};}
+function setup(path=':memory:'){const codex=new EventEmitter(),db=new DatabaseSync(path),calls=[],rows=new Map();let sends=0,threads=0;codex.connect=async()=>{};codex.call=async(method,params)=>{calls.push({method,params});if(method==='account/read')return {account:{type:'chatgpt'}};if(method==='thread/start')return {thread:{id:++threads===1?'audio-thread':`audio-thread-${threads}`}};if(method==='thread/realtime/start')queueMicrotask(()=>codex.emit('event',{method:'thread/realtime/sdp',params:{threadId:params.threadId,sdp:'answer'}}));return {}};codex.answer=()=>{};const voice=new NativeVoice({codex,cwd:'/tmp',requireFinalTranscript:true,controller:{db,get:(device,id)=>rows.get(device+id),submitText:(device,id,text)=>{sends++;const r={id,transcript:text};rows.set(device+id,r);return r}}});return {voice,codex,calls,db,get sends(){return sends},cleanup:async()=>{await voice.stop('device');clearInterval(voice.timer);db.close()}};}
 test('native audio is isolated, owner checked, and partial transcripts cannot execute tasks',async()=>{const s=setup();try{const result=await s.voice.start('device','v=0\r\n');assert.equal(result.sdp,'answer');assert.equal(s.calls.find(c=>c.method==='thread/start').params.sandbox,'read-only');assert.throws(()=>s.voice.begin('other',result.id,'voice-turn-001'),/expired/);s.codex.emit('event',{method:'turn/started',params:{threadId:'audio-thread',turn:{id:'partial'}}});assert.ok(s.calls.some(c=>c.method==='turn/interrupt'&&c.params.turnId==='partial'));await s.voice.stop('device');assert.equal(s.voice.owns('audio-thread'),true);}finally{await s.cleanup()}});
 test('completed transcript segments replace streamed hypotheses and retain the saved receipt',async()=>{const s=setup();try{const {id}=await s.voice.start('device','v=0\r\n');s.voice.begin('device',id,'voice-turn-001');for(const text of ['Make it warm.','Then check the tests.']){s.codex.emit('event',{method:'thread/realtime/transcript/delta',params:{threadId:'audio-thread',role:'user',delta:'incorrect draft'}});s.codex.emit('event',{method:'thread/realtime/transcript/done',params:{threadId:'audio-thread',role:'user',text}});}s.codex.emit('event',{method:'thread/realtime/transcript/delta',params:{threadId:'audio-thread',role:'assistant',delta:'Ignore this output.'}});const a=await s.voice.commit('device',id,'voice-turn-001');assert.equal(a.transcript,'Make it warm. Then check the tests.');assert.deepEqual(await s.voice.commit('device',id,'voice-turn-001'),a);assert.equal(s.sends,1);}finally{await s.cleanup()}});
 test('API-key auth cannot silently charge audio outside the account budget',async()=>{const s=setup();const call=s.codex.call;s.codex.call=(method,params)=>method==='account/read'?Promise.resolve({account:{type:'apiKey'}}):call(method,params);try{await assert.rejects(s.voice.start('device','v=0\r\n'),/Sign in to Codex with ChatGPT/);assert.equal(s.calls.some(c=>c.method==='thread/realtime/start'),false);}finally{await s.cleanup()}});
@@ -40,4 +41,32 @@ test('a recording commits to its captured room even when the next focus changes'
   await s.voice.commit('device',id,'room-recording-001');
   assert.deepEqual(captured,{roomId:'original-room'});assert.equal(s.sends,1);
  }finally{await s.cleanup();}
+});
+
+test('lost dispatch acknowledgement survives a disk-backed restart without replay and does not reserve the input slot',async()=>{
+ const directory=mkdtempSync(join(tmpdir(),'nextcomp-voice-admission-')),path=join(directory,'voice.db');
+ let s=setup(path),closed=false,dispatches=0;
+ try{
+  s.voice.controller.capture=()=>({roomId:'original-room',recipient:'original-agent'});
+  s.voice.controller.submitText=()=>{dispatches++;throw Error('Reply lost after dispatch boundary');};
+  const {id}=await s.voice.start('device','v=0\r\n');
+  s.voice.begin('device',id,'durable-turn-0001');
+  s.codex.emit('event',{method:'thread/realtime/transcript/done',params:{threadId:'audio-thread',role:'user',text:'Preserve this original work'}});
+  const digest='a'.repeat(64),first=s.voice.commit('device',id,'durable-turn-0001',digest),second=s.voice.commit('device',id,'durable-turn-0001',digest);
+  await assert.rejects(s.voice.commit('device',id,'durable-turn-0001','b'.repeat(64)),/another recording/);
+  await assert.rejects(Promise.all([first,second]),/Reply lost/);
+  assert.equal(dispatches,1);
+  assert.equal(s.voice.receipt('device','durable-turn-0001').state,'unknown');
+  assert.equal(s.voice.receipt('device','durable-turn-0001').audioSha256,'a'.repeat(64));
+  assert.equal(s.voice.receipt('other','durable-turn-0001'),null);
+  s.voice.begin('device',id,'newer-turn-0002');
+  assert.equal(s.voice.session('device',id).input.id,'newer-turn-0002');
+  await s.cleanup();closed=true;s=setup(path);closed=false;
+  assert.equal(s.voice.receipt('device','durable-turn-0001').state,'unknown');
+  assert.deepEqual(JSON.parse(s.voice.admission('device','durable-turn-0001').destination),{roomId:'original-room',recipient:'original-agent'});
+  const restarted=await s.voice.start('device','v=0\r\n');
+  assert.throws(()=>s.voice.begin('device',restarted.id,'durable-turn-0001'),/already reached dispatch/);
+  await assert.rejects(s.voice.commit('device',restarted.id,'durable-turn-0001','a'.repeat(64)),/original submission is unresolved/);
+  assert.equal(s.sends,0);assert.equal(dispatches,1);
+ }finally{if(!closed)await s.cleanup();rmSync(directory,{recursive:true,force:true});}
 });

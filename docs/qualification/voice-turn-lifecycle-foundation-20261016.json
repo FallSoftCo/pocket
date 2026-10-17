@@ -1,0 +1,30 @@
+{
+  "status": "candidate-foundation-not-released",
+  "baseCommit": "73d4487",
+  "implemented": [
+    "Android IO-only per-turn SQLite journal with immutable environment/pairing/destination",
+    "fsynced per-turn WAV sealing with persisted digest and recoverable rename boundary",
+    "independent delivery and playback states with compare-and-set submission claiming",
+    "stock controller destination snapshot persisted before asynchronous startup",
+    "server native audio dispatch journal with duplicate-call coalescing, recording digest binding and unknown receipt projection",
+    "per-turn validated destination on native/input, compatible with existing clients"
+  ],
+  "verification": {
+    "android": "Same-signer update of owned nextcomp_env_qa emulator only. Actual SQLite/files close/reopen, unresolved send plus newer turn, playback failure retaining completion, wrong receipt and destination rejection, environment isolation, interrupted seal recovery; native instrumentation passed.",
+    "backend": "27 focused existing/new voice and room tests passed. Disk-backed lost-ACK/restart boundary dispatched once; same-ID/different-digest rejected; unknown blocks replay but releases audio input. These are protocol test doubles, not native model/task execution proof.",
+    "build": "Qualification application and instrumentation APKs compile. No signed production candidate produced from this foundation."
+  },
+  "remaining": [
+    "Replace live singleton microphone/service orchestration with journal-backed capture and delivery",
+    "Migrate legacy pending/saved turns without unknown replay",
+    "Connect durable background receipt reconciliation and session-aware playback",
+    "Qualify actual native audio capture/transcription and phone lifecycle before release"
+  ],
+  "externalEffects": {
+    "phoneInstall": false,
+    "backendRestart": false,
+    "publication": false,
+    "taskSubmission": false
+  },
+  "recordedAt": "2026-10-17T03:26:13.811008+00:00"
+}

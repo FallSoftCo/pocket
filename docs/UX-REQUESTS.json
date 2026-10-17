@@ -2818,5 +2818,11 @@
     "Implement and qualify strongItalianvirtualimmersion acrossallworkflow/publicthought/speech surfaces",
     "Physical secure-keyguard captions and real-provider voice language quality remain distinct qualifications",
     "Review public launch separately when sufficiently qualified"
-  ]
+  ],
+  "voice_production_architecture_20261016": {
+    "status": "foundation-implemented-native-journal-qualified-live-cutover-pending",
+    "requirement": "Replace singleton pending voice slot with durable per-turn ownership, independent capture/delivery/playback and safe receipt reconciliation; no archive-only workaround as final architecture",
+    "contract": "docs/VOICE-TURN-LIFECYCLE.md",
+    "deployment": "Not deployed; alpha109 containment remains distinct"
+  }
 }
