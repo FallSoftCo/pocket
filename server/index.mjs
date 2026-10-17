@@ -495,7 +495,7 @@ app.use('/api',(req,res,next)=>humanIngress.middleware(req,res,next));
 // Retained work stays in the database; native mode never starts its schedulers.
 app.use('/api',(req,res,next)=>{
   if(!nativeHollywood)return next();
-  const safe=/^\/immersion(?:\/v2)?(?:\/translate)?$/.test(req.path)||req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
+  const safe=/^\/immersion(?:\/v2)?(?:\/translate)?$/.test(req.path)||req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat|capabilities)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
     req.method==='DELETE'&&/^\/devices\/[0-9a-f-]{36}$/.test(req.path);
   if(!safe)return res.status(403).json({error:'Use the original Hollywood room and identity for this environment.',code:'HOLLYWOOD_NATIVE_ROUTE_REQUIRED'});
   if(req.path==='/status'){void rateLimits.refresh();return void hollywood.status(req.device.id).then(status=>res.json({connected:status.available,backend:'lax',binding:status,usage:rateLimits.snapshot(),
@@ -550,6 +550,7 @@ app.post('/api/voice/start',route(async(req,res)=>{
   if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);
   res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),native:true});
 }));
+app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,immutableDestination:true,recordingDigest:true}));
 app.post('/api/voice/native/start',route(async(req,res)=>{if(nativeHollywood&&!audioCommand)throw Object.assign(Error('Native room audio is not configured on this environment.'),{status:503});res.json(await nativeVoice.start(req.device.id,req.body.sdp,req.body.purpose));}));
 app.post('/api/voice/native/stop',route(async(req,res)=>{await nativeVoice.stop(req.device.id,req.body.connectionId);res.json({ok:true});}));
 app.post('/api/voice/native/input',route(async(req,res)=>{

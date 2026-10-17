@@ -12,9 +12,11 @@
   "verification": {
     "android": "Same-signer update of owned nextcomp_env_qa emulator only. Actual SQLite/files close/reopen, unresolved send plus newer turn, playback failure retaining completion, wrong receipt and destination rejection, environment isolation, interrupted seal recovery; native instrumentation passed.",
     "backend": "27 focused existing/new voice and room tests passed. Disk-backed lost-ACK/restart boundary dispatched once; same-ID/different-digest rejected; unknown blocks replay but releases audio input. These are protocol test doubles, not native model/task execution proof.",
-    "build": "Qualification application and instrumentation APKs compile. No signed production candidate produced from this foundation."
+    "build": "Qualification application and instrumentation APKs compile. No signed production candidate produced from this foundation.",
+    "deliveryAdapter": "Compiles in qualification application. Not connected to live microphone, not runtime-qualified."
   },
   "remaining": [
+    "Resolve proven final-transcript and native server transport failures; no partial transcript execution workaround",
     "Replace live singleton microphone/service orchestration with journal-backed capture and delivery",
     "Migrate legacy pending/saved turns without unknown replay",
     "Connect durable background receipt reconciliation and session-aware playback",
@@ -26,5 +28,13 @@
     "publication": false,
     "taskSubmission": false
   },
-  "recordedAt": "2026-10-17T03:26:13.811008+00:00"
+  "recordedAt": "2026-10-17T03:26:13.811008+00:00",
+  "additionalCandidateImplementation": [
+    "source-bound native delivery adapter with declared-digest receipt validation",
+    "WorkManager read-only receipt recovery with exponential backoff; no task uploads/replays in background receipt worker"
+  ],
+  "transportQualification": {
+    "websocket": "Installed signed-in-account runtime rejected websocket audio with API-key-required error. No credential/billing fallback was made.",
+    "nativeServerWebRTC": "Connected on current account and produced partial transcript text, but no final transcript; teardown crashed on Node 24 and Node 22. Adapter rejected; product dependency unchanged."
+  }
 }

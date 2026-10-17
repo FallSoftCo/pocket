@@ -37,3 +37,11 @@ Import the legacy pending WAV/preferences and alpha109 preserved recordings into
 Required integration journeys use actual Android SQLite/files and process/service restart boundaries, plus the real isolated gateway: new capture while an older turn is unknown; TTS failure after accepted/completed work; lost admission acknowledgement; killed client before/after seal; gateway restart before/after dispatch; navigation and profile changes during capture; same ID with different payload rejected; cancellation; paired-voice provenance. Assert original request identities and no duplicate dispatch, rather than just counts of unit tests. Qualify the current native audio path and microphone hardware separately from synthetic HTTP fixtures.
 
 Keep the compatible current APK and rollback closure available. Do not label an archive-only fix as the replacement, silently migrate pairings, or install an unqualified transport rewrite on the phone.
+
+## Current transport qualification boundary
+
+The candidate journal, immutable stock routing and native dispatch admission guard have implementation and focused verification. The source-bound Android delivery adapter and read-only WorkManager receipt worker compile but are not connected to the live microphone. They are not a completed cutover.
+
+Actual audio-only probes against the installed signed-in-account runtime rejected websocket audio as requiring API-key authentication. That route is excluded: there was no credential or billing fallback. A disposable native server WebRTC peer connected and received user transcript deltas, but never a final transcript; teardown also crashed on both tested Node runtimes. That adapter is rejected and its dependency has not been added to the product. Partial hypotheses must not be treated as finalized commands to get a passing test.
+
+Server-owned durable audio intake remains necessary to complete delivery after the phone process dies. A client-only WebRTC fallback cannot establish that guarantee. Resolve final transcription and native peer lifecycle before enabling the replacement; retain the current release and all source-bound pending work meanwhile.

@@ -85,7 +85,7 @@ export class NativeVoice {
    this.controller.db.prepare('UPDATE native_voice_admissions SET audio_sha256=? WHERE device=? AND id=? AND audio_sha256 IS NULL').run(audioSha256,device,turnId);
   }
   const existing=await this.controller.get(device,turnId);
-  if(existing)return existing;
+  if(existing)return {...existing,audioSha256:original?.audio_sha256||null};
   const admission=this.admission(device,turnId);
   if(admission&&['dispatching','unknown','accepted'].includes(admission.state))throw failure('The original submission is unresolved. Check its receipt; it has not been repeated.',409);
   const s=this.session(device,id);
@@ -107,7 +107,7 @@ export class NativeVoice {
    this.controller.db.prepare("UPDATE native_voice_admissions SET state='accepted',error=NULL WHERE device=? AND id=?").run(device,turnId);
    this.controller.mark?.(device,turnId,'native_input_started',input.startedAt);this.controller.mark?.(device,turnId,'native_commit_requested',commitAt);
    if(input.firstTextAt)this.controller.mark?.(device,turnId,'first_transcript',input.firstTextAt);this.controller.mark?.(device,turnId,'last_transcript',input.changed);
-   return result;
+   return {...result,audioSha256:audioSha256||null};
   }catch(e){
    this.controller.db.prepare("UPDATE native_voice_admissions SET state='unknown',error=? WHERE device=? AND id=?").run('Dispatch did not return a confirmed receipt; inspect before repeating',device,turnId);
    throw e;

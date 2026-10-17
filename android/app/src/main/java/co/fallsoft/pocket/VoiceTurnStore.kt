@@ -180,6 +180,9 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
             database.setTransactionSuccessful()
         } finally { database.endTransaction() }
     }
+    fun problem(key: String, message: String) {
+        db.execSQL("UPDATE turns SET problem=?,revision=revision+1 WHERE turn_key=?",arrayOf(message,key))
+    }
     override fun close() { ioOnly();helper.close() }
 }
 
