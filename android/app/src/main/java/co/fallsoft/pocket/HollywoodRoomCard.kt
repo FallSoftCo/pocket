@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -18,9 +19,12 @@ import androidx.compose.ui.unit.sp
 import org.json.JSONObject
 
 /** No generic session Idle fallback; only the canonical catalog can assert quiet work. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun HollywoodRoomCard(room:JSONObject,available:Boolean,onOpen:()->Unit) {
     val activity=HollywoodRoomActivity.read(room,available)
+    val density=LocalDensity.current
+    val lineHeight=with(density){20.sp.toDp()}.coerceAtLeast(24.dp)
+    val previewHeight=with(density){18.sp.toDp()}.coerceAtLeast(18.dp)
+
     val spoken=when {
         activity==null->"Status unavailable"
         activity.idle->"Idle; no visible unsettled work at observation"
@@ -42,18 +46,40 @@ import org.json.JSONObject
                     },spoken,tint=if(activity?.uncertain==true||activity?.needsHuman==true)Coral else Muted,modifier=Modifier.size(20.dp))
                 }
             }
-            FlowRow(Modifier.fillMaxWidth().heightIn(min=24.dp).testTag("native-room-activity:"+room.s("id")).semantics{contentDescription=spoken},
-                horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+            Row(Modifier.fillMaxWidth().height(lineHeight).testTag("native-room-activity:"+room.s("id")).semantics{contentDescription=spoken},
+                horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
                 if(activity==null)BilingualLabel("Status unavailable",color=Muted)
                 else if(activity.idle)BilingualLabel("Idle",color=Muted)
-                else activity.categories().forEach{(label,count)->
-                    Row(horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
-                        Text(count.toString(),color=if(label=="Unknown"||label=="Needs you")Coral else Paper,fontSize=14.sp)
-                        BilingualLabel(label,color=if(label=="Unknown"||label=="Needs you")Coral else Muted)
+                else {
+                    // Surface attention before ordinary execution. These categories overlap;
+                    // never add them into a misleading total or resort the catalog here.
+                    val order=listOf(5,4,2,0,3,1)
+                    val states=order.filter{activity.counts[it]>0}
+                    val shown=states.take(if(density.fontScale>1.3f)2 else 3)
+                    shown.forEach { index ->
+                        val count=activity.counts[index]
+                        val tint=if(index in listOf(4,5))Coral else Paper
+                        Row(Modifier.testTag("native-room-state:"+room.s("id")+":"+HollywoodRoomActivity.keys[index]),
+                            horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
+                            val icon=when(index){0->Icons.Rounded.Schedule;1->Icons.Rounded.Person;2->Icons.Rounded.PlayArrow;3->Icons.Rounded.Stop;4->Icons.Rounded.Warning;else->Icons.Rounded.HelpOutline}
+                            if(index==2)SymbolIcon("Codex",null,Modifier.size(20.dp))
+                            else SymbolIcon(icon,null,Modifier.size(18.dp),tint=tint)
+                            Text(if(count>999)"999+" else count.toString(),color=tint,fontSize=14.sp,maxLines=1)
+                        }
+                    }
+                    if(states.size>shown.size) {
+                        Row(horizontalArrangement=Arrangement.spacedBy(3.dp),verticalAlignment=Alignment.CenterVertically){
+                            Text("+${states.size-shown.size}",color=Muted,fontSize=13.sp,maxLines=1)
+                            BilingualLabel("More",color=Muted,fontSize=13.sp)
+                        }
                     }
                 }
             }
-            if(room.s("purpose").isNotBlank())ImmersionText("room-purpose:"+Pocket.environmentId+":"+room.s("id"),room.s("purpose"),color=Muted,fontSize=13.sp,lineHeight=18.sp,maxLines=1,overflow=TextOverflow.Ellipsis,rescue=false,phraseRescue=false,links=false)
+            // Reserve exactly one context line even when a room has no purpose yet.
+            // Activity bursts and missing context must not move the next touch target.
+            Box(Modifier.fillMaxWidth().height(previewHeight)) {
+                if(room.s("purpose").isNotBlank())ImmersionText("room-purpose:"+Pocket.environmentId+":"+room.s("id"),room.s("purpose"),color=Muted,fontSize=13.sp,lineHeight=18.sp,maxLines=1,overflow=TextOverflow.Ellipsis,rescue=false,phraseRescue=false,links=false)
+            }
         }
     }
 }
