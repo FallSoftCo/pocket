@@ -7,7 +7,7 @@ import {join} from 'node:path';
 import http from 'node:http';
 import {once} from 'node:events';
 import {DatabaseSync} from 'node:sqlite';
-import {WebSocketServer} from 'ws';
+import {WebSocketServer,WebSocket} from 'ws';
 
 test('HTTP conversation loading uses metadata-only resume and opaque history pages; outages identify the failed connection',async t=>{
  const dir=await mkdtemp(join(tmpdir(),'pocket-history-http-')),socket=join(dir,'codex.sock');
@@ -35,6 +35,21 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json')));
  const watchDb=new DatabaseSync(join(dir,'pocket.sqlite'));watchDb.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1)').run(metadata.id,'Synthetic watched conversation');watchDb.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1)').run('cold-thread','Synthetic watched cold conversation');watchDb.close();
  const api=async path=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{headers:{Authorization:`Bearer ${adminToken}`}});return {status:r.status,data:await r.json()};};
+ const phone=new WebSocket('ws://127.0.0.1:'+port+'/events',{headers:{Authorization:'Bearer '+adminToken}});
+ const live=[];phone.on('message',raw=>live.push({at:Date.now(),value:JSON.parse(raw)}));await once(phone,'open');t.after(()=>phone.terminate());
+ // No HTTP open/resume: raw app-server output must reach the phone immediately.
+ const beforeUnopened=calls.filter(c=>['thread/resume','thread/turns/list','thread/items/list','turn/start'].includes(c.method)).length;
+ const sentAt=Date.now();
+ for(const ws of wss.clients){
+  ws.send(JSON.stringify({method:'item/started',params:{threadId:'unopened-thread',turnId:'live-turn',item:{id:'live-answer',type:'agentMessage',text:'Fast'}}}));
+  ws.send(JSON.stringify({method:'item/agentMessage/delta',params:{threadId:'unopened-thread',turnId:'live-turn',itemId:'live-answer',delta:' response'}}));
+ }
+ for(let n=0;n<100&&!live.some(e=>e.value.type==='timeline'&&e.value.threadId==='unopened-thread');n++)await new Promise(r=>setTimeout(r,10));
+ const forwarded=live.find(e=>e.value.type==='timeline'&&e.value.threadId==='unopened-thread');
+ assert.ok(forwarded,'Unopened session output was gated on an attached viewport');
+ assert.equal(forwarded.value.row.text,'Fast response');
+ assert.ok(forwarded.at-sentAt<1000,'Forwarding waited for history/runtime reads');
+ assert.equal(calls.filter(c=>['thread/resume','thread/turns/list','thread/items/list','turn/start'].includes(c.method)).length,beforeUnopened,'Public forwarding started history or model work');
  const recent=await api('/api/threads/large-thread?view=timeline');assert.equal(recent.status,200);assert.equal(recent.data.timeline.rows[0].turnId,'turn-15');assert.ok(recent.data.timeline.hasEarlier);
  assert.equal(blockedRecovery.length,1,'recent HTTP response must finish while missed-history recovery is still blocked');
  const historyCount=()=>calls.filter(c=>/^thread\/(read|resume|turns\/list|items\/list)$/.test(c.method)).length;

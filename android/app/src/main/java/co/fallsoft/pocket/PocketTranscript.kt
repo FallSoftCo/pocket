@@ -159,6 +159,17 @@ object PocketTranscript {
     private var historyLoaded=false
     private var checkedThisOpen=false
     private var freshForRead=false
+    private var cachedNeedsConfirmation by mutableStateOf(true)
+    private var preferLatestOnOpen=false
+    internal val presentationReady get()=!cachedNeedsConfirmation||latestReadError.isNotBlank()
+    internal fun repositoryUpdated(id:String,value:JSONObject){
+        if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey()||CodexSessionRepository.isDirty(id))return
+        val incoming=value.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
+        if(incoming.isEmpty())return
+        rows=mergeRestoredTranscriptRows(rows,incoming)
+        if(cachedNeedsConfirmation){readPosition=null;cacheRestoreRevision++}
+        cachedNeedsConfirmation=false;revision++
+    }
     // Work evidence survives an in-flight history refresh; read acknowledgements do not.
     internal var currentWorkVerified by mutableStateOf(false);private set
     internal val currentHistoryVerified get()=freshForRead&&!cacheRestoring&&!positionRestorePending
@@ -181,7 +192,11 @@ object PocketTranscript {
         generation++;owner=id;ownerScope=scopeKey();observedHead=null;pendingHead=null;headSnapshotsSupported=null;automaticRetryAllowed=true
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         needsDiskRestore=cached?.diskPending?: (cached==null)
-        rows=cached?.rows?:emptyList();Pocket.detail=cached?.detail;readPosition=cached?.position
+        val shared=CodexSessionRepository.peek(id)
+        val sharedRows=shared?.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
+        preferLatestOnOpen=sharedRows.isNotEmpty()&&sharedRows.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")!=cached?.rows?.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
+        cachedNeedsConfirmation=shared==null||CodexSessionRepository.isDirty(id)
+        rows=mergeRestoredTranscriptRows(cached?.rows.orEmpty(),sharedRows);Pocket.detail=cached?.detail;readPosition=cached?.position?.takeUnless{preferLatestOnOpen}
         earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;bridgeKnown=cached?.bridgeKnown.orEmpty();bridgeBoundary=cached?.bridgeBoundary;coverageVerified=cached?.coverageVerified?:false;reads.reset();refreshPending=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
@@ -312,7 +327,7 @@ object PocketTranscript {
                                 }
                             }
                             historyLoaded=true
-                            if(readerIntentRevision==intentAtStart){
+                            if(readerIntentRevision==intentAtStart&&!preferLatestOnOpen){
                                 val position=memoryPosition?:cached.position
                                 if(position!=null)readPosition=resolveTranscriptReadPosition(rows,position)
                                 cacheRestoreIntent=intentAtStart
@@ -330,7 +345,7 @@ object PocketTranscript {
                     }
                 }
             }
-            val d=CodexReadTransport.read(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
+            val d=if(latest)CodexSessionRepository.readCurrent(destination,id)else CodexReadTransport.read(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
             validateTranscriptSnapshot(d,id)
             if(older)beforeApply()
             if(!current()||!reads.active(read))return
@@ -384,12 +399,13 @@ object PocketTranscript {
             }
             browsingEarlier=browsingEarlier||older
             historyLoaded=true
+            if(!older&&bridgeCursor==null)CodexSessionRepository.accepted(destination,id,d)
             d.remove("timeline");if((!older&&bridgeCursor==null)||Pocket.detail==null){
                 Pocket.detail=d
                 val pendingIds=d.optJSONArray("pending")?.objects()?.map{it.s("id")}.orEmpty().toSet()
                 rows=rows.filter{it.s("kind")!="request"||it.optJSONObject("request")?.s("id") in pendingIds}
             }
-            if(!older&&bridgeCursor==null){currentWorkVerified=true;freshForRead=true;val head=parseHead(d.optJSONObject("historyHead"),id);headSnapshotsSupported=head!=null;head?.let{observedHead=snapshotTranscriptHead(observedHead,headBaseline,it)}}
+            if(!older&&bridgeCursor==null){cachedNeedsConfirmation=false;currentWorkVerified=true;freshForRead=true;val head=parseHead(d.optJSONObject("historyHead"),id);headSnapshotsSupported=head!=null;head?.let{observedHead=snapshotTranscriptHead(observedHead,headBaseline,it)}}
             val updates=if(latest)buffered.values.toList().also{buffered.clear()}else emptyList()
             updates.filter{older||bridgeCursor!=null||it.optLong("version")>d.optLong("revision")}.forEach{apply(it,false)}
             rememberRecent(persist=true);revision++;positionReadError=positionFailures.values.firstOrNull().orEmpty()
@@ -462,28 +478,11 @@ object PocketTranscript {
             if(buffered.size>100||buffered.values.sumOf{it.toString().length}>512000){buffered.clear();missedUpdates=true}
             return
         }
-        val turnId=update.s("turnId")
-        if(turnId.isBlank()){return}
-        val next=rows.toMutableList()
-        fun put(row:JSONObject){
-            val at=next.indexOfFirst{it.s("id")==row.s("id")}
-            if(at>=0){if(row.optLong("version")>=next[at].optLong("version"))next[at]=mergeTranscriptMessageEvidence(next[at],row)}
-            else{
-                val end=next.indexOfFirst{it.s("turnId")==turnId&&it.s("kind")=="turnEnd"}
-                val last=next.indexOfLast{it.s("turnId")==turnId}
-                next.add(if(end>=0)end else if(last>=0)last+1 else next.size,row)
-            }
-        }
-        if(next.none{it.s("turnId")==turnId})next.add(JSONObject().put("id","$turnId/header").put("turnId",turnId).put("kind","turn").put("status","inProgress"))
-        update.optJSONObject("row")?.let{put(normalizeTranscriptMessage(it))}
+        rows=reduceTranscriptUpdate(rows,update)
         update.optJSONObject("turn")?.let{turn->
-            put(JSONObject(turn.toString()).put("id","$turnId/header").put("turnId",turnId).put("kind","turn").put("version",update.optLong("version")))
-            val active=turn.s("status")=="inProgress"
-            Pocket.detail?.optJSONObject("thread")?.put("status",JSONObject().put("type",if(active)"active" else "idle"))
-            if(!active)put(JSONObject().put("id","$turnId/end").put("turnId",turnId).put("kind","turnEnd").put("status",turn.s("status")).put("durationMs",turn.optLong("durationMs")).put("error",turn.optJSONObject("error")).put("text",turn.optJSONObject("error")?.s("message")?:""))
+            Pocket.detail?.optJSONObject("thread")?.put("status",JSONObject().put("type",if(turn.s("status")=="inProgress")"active" else "idle"))
         }
-        // Streaming output cannot enrich user identity; avoid rescanning history per token.
-        rows=if(update.optJSONObject("row")?.s("kind")=="user")normalizeTranscriptMessages(next)else next;rememberRecent();revision++
+        rememberRecent();revision++
         if(missedUpdates&&!loading){missedUpdates=false;Pocket.scheduleRefresh()}
     }
 }
@@ -520,3 +519,27 @@ internal class RecentTranscriptCache<T>(private val capacity:Int,private val lif
 
 /** Reads may recover automatically; rejected credentials/cursors need changed state. */
 internal fun retryableTranscriptRead(error:Throwable)=error is java.io.IOException||error is PocketApiException&&(error.status in listOf(408,429)||error.status in 500..599)
+
+/** The same canonical event reducer serves selected and inactive session caches. */
+internal fun reduceTranscriptUpdate(rows:List<JSONObject>,update:JSONObject):List<JSONObject>{
+        val turnId=update.s("turnId")
+        if(turnId.isBlank()){return rows}
+        val next=rows.toMutableList()
+        fun put(row:JSONObject){
+            val at=next.indexOfFirst{it.s("id")==row.s("id")}
+            if(at>=0){if(row.optLong("version")>=next[at].optLong("version"))next[at]=mergeTranscriptMessageEvidence(next[at],row)}
+            else{
+                val end=next.indexOfFirst{it.s("turnId")==turnId&&it.s("kind")=="turnEnd"}
+                val last=next.indexOfLast{it.s("turnId")==turnId}
+                next.add(if(end>=0)end else if(last>=0)last+1 else next.size,row)
+            }
+        }
+        if(next.none{it.s("turnId")==turnId})next.add(JSONObject().put("id","$turnId/header").put("turnId",turnId).put("kind","turn").put("status","inProgress"))
+        update.optJSONObject("row")?.let{put(normalizeTranscriptMessage(it))}
+        update.optJSONObject("turn")?.let{turn->
+            put(JSONObject(turn.toString()).put("id","$turnId/header").put("turnId",turnId).put("kind","turn").put("version",update.optLong("version")))
+            val active=turn.s("status")=="inProgress"
+            if(!active)put(JSONObject().put("id","$turnId/end").put("turnId",turnId).put("kind","turnEnd").put("status",turn.s("status")).put("durationMs",turn.optLong("durationMs")).put("error",turn.optJSONObject("error")).put("text",turn.optJSONObject("error")?.s("message")?:""))
+        }
+        return if(update.optJSONObject("row")?.s("kind")=="user")normalizeTranscriptMessages(next)else next
+}

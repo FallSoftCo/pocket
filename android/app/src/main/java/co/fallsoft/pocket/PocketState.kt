@@ -118,6 +118,7 @@ object Pocket {
         PocketSpeech.init()
         PocketAttention.init()
         PresentedReads.restore()
+        CodexSessionRepository.activate()
         PocketImmersion.restore()
         if(token.isNotBlank())try{PocketPush.initialize()}catch(_:Exception){}
         if(local)pushStatus="Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))pushStatus="Firebase push is ready"
@@ -176,7 +177,7 @@ object Pocket {
         fullPermissions=prefs.getBoolean(key("fullPermissions"),prefs.getBoolean("fullPermissions",true))
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))"Firebase push is ready" else "Setting up notifications…"
         if(savedToken(true).isNotBlank())LocalMonitorService.start(context) else LocalMonitorService.stop(context)
-        restoreUsage();PocketImmersion.restore();PocketSpeech.init();PocketReplies.profileChanged();PocketLive.start();refresh()
+        restoreUsage();CodexSessionRepository.activate();PocketImmersion.restore();PocketSpeech.init();PocketReplies.profileChanged();PocketLive.start();refresh()
     }
     fun disconnect(){
         val wasLocal=local;val oldBase=base;val oldToken=token
@@ -308,14 +309,17 @@ object Pocket {
             "reply" -> {val thread=json.s("threadId");val receipt=json.s("id");PocketReplies.event(thread,receipt,json.s("state"),json.s("error"));if(json.s("state")=="accepted"){rememberSessionInteraction(thread,"reply:"+receipt);dismissReplyFailure(thread,receipt)};if(json.s("state") in listOf("failed","unknown"))recordReplyFailure(thread,receipt,json.s("error","Reply could not be confirmed"));if(thread==selected)scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));CodexCatalog.refresh();scheduleRefresh()}
             "turnRecovery" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("recovery",json.optJSONObject("recovery"))}}
-            "timeline" -> CodexConversations.timeline(json)
+            "timeline" -> {
+                coroutineContext[EnvironmentRequestContext]?.destination?.let{CodexSessionRepository.timeline(it,json)}
+                CodexConversations.timeline(json)
+            }
             "immersion" -> PocketImmersion.accept(json)
             "contextNotes" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("notes",json.optJSONArray("notes"))}}
             "activity" -> {activities=json.optJSONArray("items")?.objects()?:emptyList()}
-            "sessionPreview" -> {val id=json.s("threadId");val previous=tasks.firstOrNull{it.id==id};discoverSession(id);tasks=tasks.map{if(it.id==id)it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
+            "sessionPreview" -> {val id=json.s("threadId");val previous=tasks.firstOrNull{it.id==id};CodexSessionRepository.preview(id);discoverSession(id);tasks=tasks.map{if(it.id==id)it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
                 if(id==selected&&(transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,json.s("preview"),json.s("previewKind","message"),previous?.status)||transcriptLiveActivityAdvanced(previous?.activityAt,json.optLong("activityAt"))))scheduleRefresh()}
             "sessionActivity" -> {
-                val id=json.s("threadId");discoverSession(id)
+                val id=json.s("threadId");discoverSession(id);CodexSessionRepository.invalidate(id)
                 val status=json.optJSONObject("status")?.s("type")
                 val previous=tasks.firstOrNull{it.id==id}
                 tasks=tasks.map{if(it.id==id)it.copy(status=status?.takeIf{it.isNotBlank()}?:it.status,activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
@@ -346,6 +350,7 @@ object Pocket {
         if(n.s("kind")=="app_update"){if(transport!="history")PocketUpdates.offer(n.optBoolean("_local",local));return}
         val id=n.optLong("id");if(id<=0)return
         val notificationLocal=n.optBoolean("_local",local);val notificationEnvironment=n.s("_environment",environment(notificationLocal));n.put("_environment",notificationEnvironment)
+        CodexSessionRepository.invalidate(n.s("thread_id"),captureEnvironment(notificationEnvironment),id)
         // Invalidate history before notification-display deduplication, on the UI scope.
         if(transport in listOf("fcm","fcm-normal","socket")){
             val thread=n.s("thread_id")

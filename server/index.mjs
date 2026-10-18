@@ -466,7 +466,7 @@ codex.on('event',m=>{
   if(threadId&&/^(item\/|turn\/completed)/.test(m.method))liveDelivery.activity(()=>activityBoard.snapshot());
   if(m.method==='account/rateLimits/updated')rateLimits.liveUpdate(p);
   if(m.method==='account/updated'){rateLimits.clear();void rateLimits.refresh({force:true});}
-  if(threadId&&attached.has(threadId)){const update=timeline.ingest(m);if(update){historyHeads.observe(threadId,update.version);emit('timeline',{...update,historyHead:historyHeads.snapshot(threadId)});}}
+  if(threadId){const update=timeline.ingest(m);if(update){historyHeads.observe(threadId,update.version);liveDelivery.timeline({...update,historyHead:historyHeads.snapshot(threadId)});}}
   if(m.method==='serverRequest/resolved'){pending.delete(String(p.requestId));resolveAttention('request_id=?',String(p.requestId));}
   if(threadId&&attached.has(threadId)&&m.method==='turn/started'){
     if(p.turn?.id)db.prepare('DELETE FROM speech_contexts WHERE thread_id=? AND turn_id IS NOT ?').run(threadId,p.turn.id);

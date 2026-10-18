@@ -100,7 +100,7 @@ internal object CodexCatalog {
             val baseline=notifications.map{it.s("thread_id") to it.optLong("id")}
             notifications=read(value,"/api/notifications").optJSONArray("notifications")?.objects()?.reversed().orEmpty()
             if(transcriptNotificationAdvanced(Pocket.selected,baseline,notifications.map{it.s("thread_id") to it.optLong("id")}))CodexConversations.invalidate()
-            notifications.forEach{PocketNotificationTitles.remember(it.put("_local",value.destination.environment.local))}
+            notifications.forEach{CodexSessionRepository.invalidate(it.s("thread_id"),value.destination,it.optLong("id"));PocketNotificationTitles.remember(it.put("_local",value.destination.environment.local))}
         }
         if(value.attention?.isActive!=true)value.attention=launch(value,CodexCatalogLane.ATTENTION){
             val latest=read(value,"/api/attention").optJSONArray("notifications")?.objects().orEmpty()
@@ -133,6 +133,11 @@ internal object CodexCatalog {
             val result=read(value,if(value.key.archived)"/api/threads?archived=true"else "/api/threads")
             val fetched=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}.orEmpty()
             val previous=tasks.firstOrNull{it.id==Pocket.selected}
+            fetched.forEach{next->
+                val old=baseline[next.id]
+                if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,next.preview,next.previewKind,next.status)||transcriptLiveActivityAdvanced(old.activityAt,next.activityAt))
+                    CodexSessionRepository.invalidate(next.id,value.destination)
+            }
             tasks=mergeLiveTaskSnapshot(tasks,fetched,baseline,result.optBoolean("refreshPending")||result.s("nextCursor").isNotBlank())
             tasks.firstOrNull{it.id==Pocket.selected}?.let{latest->
                 if(transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,latest.preview,latest.previewKind,latest.status)||

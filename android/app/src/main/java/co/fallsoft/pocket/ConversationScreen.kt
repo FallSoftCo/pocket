@@ -367,7 +367,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize().nestedScroll(historyScrollObserver).testTag("conversation-history"),state=list,contentPadding=PaddingValues(start=18.dp,end=18.dp,top=12.dp,bottom=12.dp+with(density){(if(important)filterTailPixels else 0).toDp()}),verticalArrangement=Arrangement.spacedBy(10.dp)){
-                if(d==null&&rows.isEmpty()&&PocketTranscript.loading)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
+                if(rows.isEmpty()&&PocketTranscript.updating)item{Box(Modifier.fillMaxWidth().padding(vertical=40.dp),contentAlignment=Alignment.Center){AnimatedMark(112)}}
                 items(shownRows,key={it.s("id")}){row->
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
                     if(row.optBoolean("retainedExcerpt"))BilingualLabel("Retained passage · source outside loaded history",color=Muted,fontSize=12.sp)
@@ -417,13 +417,15 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 clientReplies.forEach{intent->item(key="client-reply-"+intent.id){ClientReplyRecovery(intent,PocketReplies.matchesCurrent(intent)&&transcriptContainsReply(rows,intent.id)){value->editor=TextFieldValue(value,TextRange(value.length));saveReplyDraft(draftKey,value);keyboardInput=true}}}
                 // A row may grow taller than the viewport while streaming. Its
                 // start is not the transcript end: follow the explicit boundary.
+                if(PocketTranscript.updating)item(key="ui:messages-sync",contentType="sync-status"){
+                    Row(Modifier.fillMaxWidth().heightIn(min=32.dp).semantics{liveRegion=LiveRegionMode.Polite},
+                        horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
+                        AnimatedMark(24);Spacer(Modifier.width(6.dp));BilingualLabel("Updating messages",fontSize=12.sp,color=Mint)
+                    }
+                }
                 item(key="transcript-end-anchor",contentType="scroll-anchor"){Spacer(Modifier.height(1.dp))}
             }
-            if(PocketTranscript.updating&&(d!=null||rows.isNotEmpty()))
-                Surface(color=Panel,shape=RoundedCornerShape(16.dp),modifier=Modifier.align(Alignment.TopCenter).padding(top=8.dp).semantics{liveRegion=LiveRegionMode.Polite}){
-                    Row(Modifier.padding(horizontal=12.dp,vertical=5.dp),verticalAlignment=Alignment.CenterVertically){AnimatedMark(24);Spacer(Modifier.width(6.dp));BilingualLabel("Updating messages",fontSize=12.sp,color=Mint)}
-                }
-            else if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
+            if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
                 Box(Modifier.align(Alignment.TopCenter).padding(top=10.dp).size(36.dp).background(Panel,CircleShape),contentAlignment=Alignment.Center){AnimatedMark(28)}
             if(conversationError.isNotBlank())Box(Modifier.align(Alignment.BottomCenter).padding(horizontal=16.dp)){ErrorBanner(conversationError,if(Pocket.error.isBlank()&&replyFailure!=null){{Pocket.dismissReplyFailure(failureSource,replyFailure.id)}}else null)}
             if(conversationError.isBlank()&&runProjection.groups.values.any{group->group.any{it.s("id") in expandedRunIds}})

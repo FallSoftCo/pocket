@@ -122,7 +122,7 @@ object PocketLive {
                 // server is quiet. Codex execution health remains a separate status.
                 disconnectNotice?.cancel();disconnectNotice=null
                 outageVisible=false;attempt=0;connectionRevision++;Pocket.connected=true;Pocket.connectionError=""
-                CodexCatalog.refresh();if(!BackendNavigation.nativeSelected()){Pocket.catchUp();CodexConversations.reconnected();Pocket.selected?.let{PocketReplies.reconcile(it)}}
+                CodexCatalog.refresh(explicit=true);if(!BackendNavigation.nativeSelected()){Pocket.catchUp();CodexConversations.reconnected();Pocket.selected?.let{PocketReplies.reconcile(it)}}
             }}
             override fun onMessage(webSocket:WebSocket,text:String){Pocket.scope.launch{if(webSocket!==ws)return@launch;try{val event=JSONObject(text);disconnectNotice?.cancel();outageVisible=false;attempt=0;Pocket.connected=true;Pocket.connectionError="";Pocket.event(event)}catch(_:Exception){}}}
             override fun onFailure(webSocket:WebSocket,t:Throwable,response:Response?){reconnect(webSocket,PocketNetwork.error(t))}

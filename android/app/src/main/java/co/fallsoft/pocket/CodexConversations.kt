@@ -194,7 +194,10 @@ internal object CodexConversations {
         if(owns(key,incarnation))Pocket.interrupt()
     }
     fun retry(){PocketTranscript.prepareRetry();invalidate(immediate=true)}
-    fun reconnected(){invalidate()}
+    fun repositoryUpdated(id:String,value:JSONObject){
+        PocketTranscript.repositoryUpdated(id,value)
+    }
+    fun reconnected(){CodexSessionRepository.activate();invalidate()}
     private fun startProbe(value:Session){
         if(!foreground||value.probe?.isActive==true)return
         value.probe=value.scope.launch{while(isActive){delay(5_000);probe(value)}}
@@ -218,7 +221,7 @@ internal object CodexConversations {
         if(update.has("turn")||input.newInput)invalidate()
     }
     val snapshot:CodexConversationSnapshot get(){
-        val rows=PocketTranscript.rows;val d=detail
+        val rows=if(PocketTranscript.presentationReady)PocketTranscript.rows else emptyList();val d=detail
         val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
         val task=Pocket.tasks.firstOrNull{it.id==selected}
         val turn=rows.lastOrNull{it.s("kind")=="turn"}
