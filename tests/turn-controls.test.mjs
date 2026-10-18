@@ -1,3 +1,4 @@
+import {pairedTestClient} from './paired-human.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
@@ -31,7 +32,7 @@ async function fixture(t){
  const stop=async()=>{if(!child||child.exitCode!==null)return;await new Promise(r=>{child.once('exit',r);child.kill();});};
  t.after(async()=>{await stop();for(const ws of wss.clients)ws.terminate();await new Promise(r=>wss.close(r));await new Promise(r=>host.close(r));await rm(dir,{recursive:true,force:true});});
  await start();const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json'),'utf8'));
- const api=async(path,body)=>{const r=await fetch(url+path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};};
+ const api=await pairedTestClient(url,adminToken);
  await api('/api/threads/task-live');
  const reply=(id,text,mode='queue')=>api('/api/threads/task-live/reply',{id,text,mode});
  const status=async id=>(await api(`/api/replies/${id}`)).data.state;

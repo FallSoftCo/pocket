@@ -1,3 +1,4 @@
+import {pairedTestClient} from './paired-human.mjs';
 import {COMPUTER_USE_INSTRUCTIONS} from '../server/computer-use.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,11 +28,12 @@ test('same-thread steering, idle continuation, and exact pending request respons
  t.after(()=>{child.kill();for(const ws of wss.clients)ws.terminate();wss.close();h.close();});
  await waitFor(async()=>{try{return (await fetch(`http://127.0.0.1:${port}/health`)).ok;}catch{return false;}});
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json'),'utf8'));
- const api=async(path,body)=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};};
+ const ownerApi=async(path,body)=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};};
+ const api=await pairedTestClient('http://127.0.0.1:'+port,adminToken);
  await api('/api/threads/thread-live');
- const notice=await api('/api/notify',{thread_id:'thread-live',title:'Generic conversation title',message:'The update is installed.'});
+ const notice=await ownerApi('/api/notify',{thread_id:'thread-live',title:'Generic conversation title',message:'The update is installed.'});
  assert.equal(notice.status,200);assert.equal(notice.data.notification.spoken_text,'fix notification speech. The update is installed.');
- const modelNotice=await api('/api/notify',{thread_id:'thread-live',title:'Wrong context',message:'All tests pass.',spoken_context:'Improve spoken notifications',spoken_summary:'The fix is ready.'});
+ const modelNotice=await ownerApi('/api/notify',{thread_id:'thread-live',title:'Wrong context',message:'All tests pass.',spoken_context:'Improve spoken notifications',spoken_summary:'The fix is ready.'});
  assert.equal(modelNotice.data.notification.spoken_text,'Improve spoken notifications. The fix is ready.');
  const first=randomUUID();await api('/api/threads/thread-live/reply',{id:first,text:'Steer the same live task'});
  await waitFor(async()=>(await api(`/api/replies/${first}`)).data.state==='accepted');
