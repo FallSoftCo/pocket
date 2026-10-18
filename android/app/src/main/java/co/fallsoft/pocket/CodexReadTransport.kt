@@ -19,10 +19,15 @@ internal object CodexReadTransport {
     internal val historyClient by lazy{Pocket.http.newBuilder().dispatcher(Dispatcher().apply{
         maxRequests=4;maxRequestsPerHost=4
     }).build()}
+    // A delayed-input ordering query cannot wait behind background tail repairs,
+    // and cannot consume the selected transcript's read capacity.
+    private val positionClient by lazy{Pocket.http.newBuilder().dispatcher(Dispatcher().apply{
+        maxRequests=2;maxRequestsPerHost=2
+    }).build()}
     internal val catalogClient by lazy{Pocket.http.newBuilder().dispatcher(Dispatcher().apply{
         maxRequests=8;maxRequestsPerHost=8
     }).build()}
-    suspend fun read(destination:EnvironmentRequest,path:String,body:JSONObject?=null,client:OkHttpClient=historyClient):JSONObject {
+    suspend fun read(destination:EnvironmentRequest,path:String,body:JSONObject?=null,client:OkHttpClient=if(body==null)historyClient else positionClient):JSONObject {
         val resource=path.substringBefore('?')
         require(
             body==null&&(resource.matches(Regex("/api/threads/[^/]+"))||resource in setOf("/api/threads","/api/status","/api/activity","/api/notifications","/api/attention"))||

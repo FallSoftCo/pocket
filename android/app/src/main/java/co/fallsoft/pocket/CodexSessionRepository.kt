@@ -4,6 +4,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
@@ -16,6 +18,9 @@ internal object CodexSessionRepository {
         // A disposable cache failure must never take down input/voice or expose text.
         android.util.Log.w("NextCompSync","Message cache unavailable: "+error.javaClass.simpleName)
     })
+    // Network admission cannot queue behind startup SQLite restoration or parsing.
+    private val network=CoroutineScope(SupervisorJob()+Dispatchers.IO)
+    private val requestMutex=Mutex()
     private val requests=mutableMapOf<Pair<String,String>,Deferred<JSONObject>>()
     private val inFlight=hashSetOf<Pair<String,String>>()
     private val wake=Channel<Unit>(Channel.CONFLATED)
@@ -26,6 +31,8 @@ internal object CodexSessionRepository {
     private val livePending=ConcurrentHashMap<Triple<String,String,String>,Pair<Source,JSONObject>>()
     private val liveScheduled=java.util.concurrent.atomic.AtomicBoolean()
     private val lastLive=ConcurrentHashMap<Pair<String,String>,Long>()
+    private val liveSequence=java.util.concurrent.atomic.AtomicLong()
+    private val liveGenerations=ConcurrentHashMap<Pair<String,String>,Long>()
     private val writes=linkedMapOf<Pair<String,String>,Triple<Source,JSONObject?,Boolean>>()
     private var writeJob:Job?=null
     private var started=false
@@ -37,19 +44,21 @@ internal object CodexSessionRepository {
     /** Shared current read, independent of viewport lifetime. Consumers own private JSON copies. */
     suspend fun readCurrent(destination:EnvironmentRequest,id:String):JSONObject {
         val source=source(destination);val key=source.scope to id
-        val request=withContext(lane){
-            requests[key]?.takeIf{it.isActive}?:io.async{
+        val request=requestMutex.withLock{
+            requests[key]?.takeIf{it.isActive}?:network.async{
                 if(!current(source))throw CancellationException("Pairing changed")
                 val baseline=latest[key]?.optJSONObject("historyHead")?.s("epoch")
                 val notificationAtStart=known[key]?:0
+                val liveAtStart=liveGenerations[key]?:0
                 val response=CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"?view=timeline")
                 val currentEpoch=latest[key]?.optJSONObject("historyHead")?.s("epoch")
                 if(!baseline.isNullOrBlank()&&currentEpoch!=baseline&&response.optJSONObject("historyHead")?.s("epoch")==baseline)
                     throw java.io.IOException("Message runtime changed during the read")
                 response.put("_notificationObserved",notificationAtStart)
+                response.put("_liveGenerationAtReadStart",liveAtStart)
             }.also{created->
                 requests[key]=created
-                created.invokeOnCompletion{io.launch{if(requests[key]===created)requests.remove(key)}}
+                created.invokeOnCompletion{network.launch{requestMutex.withLock{if(requests[key]===created)requests.remove(key)}}}
             }
         }
         val response=request.await()
@@ -104,6 +113,7 @@ internal object CodexSessionRepository {
     fun timeline(destination:EnvironmentRequest,update:JSONObject){
         val id=update.s("threadId");if(id.isBlank())return
         val source=source(destination)
+        liveGenerations[source.scope to id]=liveSequence.incrementAndGet()
         val item=update.optJSONObject("row")?.s("id")?:update.s("turnId","head")
         livePending[Triple(source.scope,id,item)]=source to update
         flushLiveSoon()
@@ -163,7 +173,7 @@ internal object CodexSessionRepository {
             val page=JSONObject(safe.getJSONObject("timeline").toString())
             page.put("rows",org.json.JSONArray(page.getJSONArray("rows").objects().takeLast(64)))
             safe.put("timeline",page)
-            retainNewerLiveHead(source.scope to id,safe)
+            retainNewerLiveHead(source.scope to id,safe,value.optLong("_liveGenerationAtReadStart"))
             latest[source.scope to id]=safe
             val high=safe.optLong("throughNotification")
             known[source.scope to id]=maxOf(known[source.scope to id]?:0,high)
@@ -172,7 +182,10 @@ internal object CodexSessionRepository {
             save(source,id,safe,key in dirty)
         }
     }
-    private fun retainNewerLiveHead(key:Pair<String,String>,safe:JSONObject){
+    private fun retainNewerLiveHead(key:Pair<String,String>,safe:JSONObject,readBaseline:Long){
+        // A persisted higher server counter is not a live event. Only output
+        // received after this read started may outrank its authoritative page.
+        if((liveGenerations[key]?:0)<=readBaseline)return
         val previous=latest[key]?:return
         val oldHead=previous.optJSONObject("historyHead")?:return
         val newHead=safe.optJSONObject("historyHead")?:return
@@ -245,7 +258,7 @@ internal object CodexSessionRepository {
                         val page=JSONObject(safe.getJSONObject("timeline").toString())
                         page.put("rows",org.json.JSONArray(page.getJSONArray("rows").objects().takeLast(64)))
                         safe.put("timeline",page)
-                        retainNewerLiveHead(key,safe)
+                        retainNewerLiveHead(key,safe,response.optLong("_liveGenerationAtReadStart"))
                         latest[key]=safe
                         if(!pending.containsKey(key))dirty.remove(key)
                         save(intent.source,intent.thread,safe,pending.containsKey(key))

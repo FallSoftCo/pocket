@@ -2952,5 +2952,20 @@
       "independent durable delivery",
       "Codex latest-first paginated history and native voice"
     ]
+  },
+  "codex_current_head_priority_20261018": {
+    "status": "candidate-native-qualification",
+    "user_request": "Fix user messages appearing after their replies and minute-long session opening; continue through update delivery.",
+    "architecture": [
+      "Current HTTP single-flight admission is independent of serial SQLite/cache restoration.",
+      "History-position queries have independent bounded transport capacity.",
+      "Only live ingress received after a snapshot read began can override that authoritative snapshot; cached counters alone cannot.",
+      "Following viewport is requested before measure; unseen current work supersedes an obsolete cached reading position unless the reader has interacted."
+    ],
+    "evidence_limits": [
+      "Live workstation current-page read measured 51-97ms; position lookup 21ms. These samples do not establish all handset roundtrips.",
+      "Actual phone still version133; ADB unavailable; candidate134 not yet published.",
+      "No task submissions or unknown deliveries replayed."
+    ]
   }
 }

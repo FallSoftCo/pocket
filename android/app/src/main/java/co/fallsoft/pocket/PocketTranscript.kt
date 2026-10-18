@@ -366,6 +366,20 @@ object PocketTranscript {
             baselineRows=promoteTranscriptIdentityEvidence(baselineRows.values.toList(),reconciled).associateBy{it.s("id")}
             incoming=promoteTranscriptIdentityEvidence(incoming,reconciled)
             if(!older&&bridgeCursor==null)rows=authoritativeSnapshotBase(rows,baselineRows,incoming.mapTo(hashSetOf()){it.s("id")},{it.s("id")}){JSONObject(it.toString()).put("version",0)}
+            // A stored reading position belongs to the cached head, not to
+            // unseen current work. Resolve that policy before cache restoration
+            // can move this opening back to an obsolete day. A gesture during
+            // the read remains authoritative.
+            if(latest&&readerIntentRevision==cacheRestoreIntent){
+                val previousTail=rows.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
+                val incomingTail=incoming.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
+                if(incomingTail!=null&&incomingTail!=previousTail){
+                    preferLatestOnOpen=true
+                    if(readPosition!=null||positionRestorePending){
+                        readPosition=null;positionRestorePending=false;cacheRestoreRevision++
+                    }
+                }
+            }
             val previousEvidence=rows.associateBy{it.s("id")}
             incoming=incoming.map{mergeTranscriptMessageEvidence(previousEvidence[it.s("id")],it)}
             if(!older&&bridgeCursor==null){latestPage=incoming;latestBefore=page.s("before").takeIf{it.isNotBlank()};latestHasEarlier=page.optBoolean("hasEarlier")}

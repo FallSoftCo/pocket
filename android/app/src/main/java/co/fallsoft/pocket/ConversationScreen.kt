@@ -274,19 +274,24 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         // Accessibility scroll actions do not emit pointer-drag interactions.
         snapshotFlow{list.isScrollInProgress&&!follow&&!pagingViewport}.distinctUntilChanged().filter{it}.collect{historyGesture++}
     }
-    LaunchedEffect(Pocket.environmentId,Pocket.selected,PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)},conversation.incarnation){if(follow&&!dragged){
-        // A delta can arrive while the preceding programmatic follow is still
-        // measuring. Keep that request until its new rows exist and scrolling
-        // settles; a real reader gesture still cancels following immediately.
-        val expected=shownRows.size+1 // includes the explicit end anchor
-        snapshotFlow{!follow||dragged||(!list.isScrollInProgress&&list.layoutInfo.totalItemsCount>=expected)}.first{it}
-        if(!follow||dragged)return@LaunchedEffect
-        val count=list.layoutInfo.totalItemsCount
-        // Keep the question heading and its one-tap Skip visible even when a
-        // multi-question form is taller than the conversation viewport.
-        val request=shownRows.indexOfLast{it.s("kind")=="request"}
-        if(count>0)list.scrollToItem(if(request>=0)request.coerceAtMost(count-1) else count-1)
-    }}
+    // Resolve following before measure; never paint the oldest retained page
+    // and only later jump to the current answer. Gate on transcript changes,
+    // leaving real gestures and unrelated composer recompositions alone.
+    val followRequest=remember(list){arrayOfNulls<Any>(1)}
+    val followIdentity=listOf(PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)},follow,important,restoreRevision,shownRows.size)
+    SideEffect{
+        if(followRequest[0]!=followIdentity){
+            followRequest[0]=followIdentity
+            if(follow&&!dragged&&!important&&restoredPosition){
+                val request=shownRows.indexOfLast{it.s("kind")=="request"}
+                val outgoingCount=d?.optJSONArray("outgoing")?.objects()?.count{it.s("state") !in listOf("accepted","cancelled")&&it !in waiting}?:0
+                val emptyLoading=if(rows.isEmpty()&&PocketTranscript.updating)1 else 0
+                val tail=emptyLoading+shownRows.size+outgoingCount+clientReplies.size+
+                    (if(conversationError.isNotBlank())1 else 0)+(if(PocketTranscript.updating)1 else 0)
+                list.requestScrollToItem(if(request>=0)emptyLoading+request else tail)
+            }
+        }
+    }
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
     LaunchedEffect(Pocket.environmentId,Pocket.selected,important,conversation.incarnation){
