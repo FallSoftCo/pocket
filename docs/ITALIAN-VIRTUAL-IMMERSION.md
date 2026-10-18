@@ -1,3 +1,23 @@
+# Italian grammatical immersion
+
+The current product requirement is one reading flow cycling between **pure Italian** and **English vocabulary in the same Italian grammatical order**. It does not cycle back to ordinary English grammar, mix selected Italian vocabulary into ordinary English, add duplicate lines or open a help modal. Code, identifiers and protected literals retain their exact source. The original remains canonical for commands, submission, copying and audit.
+
+The `transgrammatic-english-italian-v1` contract supplies complete Italian lexical segmentation and contextual English meanings. One validated plan supplies both forms. The Android viewport owns a continuous global reading-direction wipe; plans, parsing and text shaping are cached separately from the display clock. Generating another model answer on each language change is prohibited.
+
+## Delivery architecture candidate (2026-10-17)
+
+A versioned source job belongs to its authenticated device, environment, density and source hash. Pending jobs and attempts are persisted alongside that profile's validated plans. Two surfaces requesting the same content share inference and retain their own surface IDs. Only successfully validated sources leave the queue; missing/invalid results cannot be silently acknowledged as complete. Protected material, complete lexical coverage and grammatical alignment remain mandatory.
+
+One bounded scheduler performs display-only inference. The first failure waits30 seconds; the second waits120 seconds; a third failed attempt becomes explicitly unavailable. Ordinary reopening/recomposition cannot reset this budget. A newer source is a new version. Jobs expire after15 minutes, are capped at120 per profile, and disabling immersion clears pending work. No session continuation, browser action or paid API fallback is admitted by this queue. Recovery after a restart is safe to repeat only because translation is display-only, not external action execution.
+
+Android accepts socket notifications as accelerators. One profile-bound status observer reconciles pending jobs every2 seconds, backing off on transport failures; it never submits work or starts inference. Completed plans are cached by content and surface identity. Environment changes cancel the observer. Rejected or unavailable plans keep canonical content readable rather than inventing an English/Italian rendering.
+
+This candidate is not yet deployed. The versioned qualification receipt distinguishes actual synthetic provider inference, durable queue/restart checks, rendered native delivery and physical phone evidence. Older policies below are historical and do not define the current experience.
+
+---
+
+## Historical policies (superseded)
+
 # One-flow inline replacement immersion
 
 The latest user correction replaces the earlier interlinear presentation: immersion uses the single existing text flow. Selected words or short phrases become Italian in place. No translated lines, parallel original/target text, subtitles, appended explanations or duplicated content are part of this mode. Partial mixed-language grammar is explicitly accepted; grammatical purity must not cause a full-sentence translation fallback.

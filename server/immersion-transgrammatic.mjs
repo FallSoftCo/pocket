@@ -11,6 +11,6 @@ export function validateTransgrammaticPlan(source,row){
  return value?{...value,planVersion:TRANSGRAMMATIC_VERSION}:null;
 }
 export const transgrammaticContract={
- version:TRANSGRAMMATIC_VERSION,instructions:TRANSGRAMMATIC_INSTRUCTIONS,
+ version:TRANSGRAMMATIC_VERSION,durableJobs:true,retryDelays:[30000,120000],instructions:TRANSGRAMMATIC_INSTRUCTIONS,
  validate:validateTransgrammaticPlan,derive:(source,row)=>deriveImmersionText(source,row,{complete:true})
 };

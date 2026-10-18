@@ -18,3 +18,19 @@ test('bounded batches prioritize urgent sources across devices and retain unsele
 test('inline replacement semantic revision discards old whole-line policy caches',async()=>{
  const codex=new Fake(),w=new ImmersionWorker({codex,cwd:'/tmp',delay:100000,load:()=>({enabled:true,translations:[{id:'x',planVersion:'contextual-aligned-v2',original:'Hello',version:'old',text:'Vecchio'}]})});assert.equal(w.snapshot('a').planVersion,'inline-replacement-v3');assert.equal(w.snapshot('a').translations.length,0);w.submit('a',[{id:'x',text:'Hello'}]);await w.flush();assert.equal(codex.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(w.snapshot('a').translations[0].planVersion,'inline-replacement-v3');w.close();
 });
+
+
+test('partial batch retains rejected source without starving later work or automatic retry',async()=>{
+ const w=new ImmersionWorker({codex:new Fake(),cwd:'/tmp',delay:100000});
+ w.setEnabled('a',true);w.submit('a',[{id:'good',text:'Hello'},{id:'missing',text:'Second'},{id:'later',text:'Third'}]);
+ const batches=[];
+ w.translate=async batch=>{batches.push(batch.map(x=>x.text));return {translations:batch.filter(x=>x.text!=='Second').map(x=>({...x,spans:[{source:x.text,occurrence:0,target:'Ciao',unit:'phrase',note:'',targetSegments:[{target:'Ciao',occurrence:0,meaning:x.text,role:'other',features:[],relations:[]}]}]}))};};
+ try{
+  await w.flush();assert.equal(w.state('a').queue.has('missing'),true);
+  assert.equal(w.state('a').queue.get('missing').retryBlocked,true);
+  await w.flush();assert.deepEqual(batches,[['Hello','Second'],['Third']]);
+  await w.flush();assert.equal(batches.length,2);
+  assert.equal(w.snapshot('a').translations.length,2);
+  w.submit('a',[{id:'missing',text:'Second'}]);await w.flush();assert.equal(batches.length,3);
+ }finally{w.close();}
+});

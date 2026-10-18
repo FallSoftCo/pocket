@@ -2826,6 +2826,19 @@
         "Preserves existing canonical merge/cache and command journal",
         "No LAX/backend/schema/permission/continuation changes"
       ]
+    },
+    {
+      "id": "immersion-durable-paired-delivery-20261017",
+      "status": "native-and-real-provider-qualified-release-pending",
+      "request": "Immersion must work through a real performant architecture: English vocabulary in Italian grammar cycling into pure Italian. Do not treat queue retention alone as completion.",
+      "requirements": [
+        "Durable versioned profile-bound translation jobs and bounded independent retries",
+        "No silent lost/rejected source; same-content inference deduplication",
+        "Socket-independent single observer for pending-plan delivery",
+        "One cached aligned plan supplies both forms; shared draw clock independent of network/model work",
+        "Real provider and native missing-socket journey before coordinated release"
+      ],
+      "evidence": "docs/qualification/immersion-message-retention-20261017.json"
     }
   ],
   "current_state": {

@@ -51,3 +51,38 @@ test('protected commands stay byte-identical while all surrounding prose is tran
  row.spans.push({source:'/private/file.md',target:'file',occurrence:0,targetSegments:[{...segments[0],target:'file',meaning:'file'}]});row.text=transgrammaticContract.derive(original,row);
  assert.equal(validateTransgrammaticPlan(original,row),null);
 });
+
+test('durable grammar jobs survive restart, back off independently, and keep their attempt budget',async()=>{
+ let now=100000;const saved=new Map(),calls=[];
+ const make=()=>new ImmersionWorker({codex:new EventEmitter(),cwd:'/owned-qa',contract:transgrammaticContract,delay:100000,now:()=>now,load:id=>saved.get(id),save:(id,state)=>saved.set(id,structuredClone(state))});
+ let w=make();w.setEnabled('a',true);w.submit('a',[{id:'body',text:source}]);
+ w.translate=async()=>{calls.push(now);return {translations:[]};};
+ await w.flush();assert.equal(w.snapshot('a').jobs[0].state,'retryWaiting');
+ assert.equal(saved.get('a').jobs[0].attempts,1);w.close();
+ w=make();w.translate=async()=>{calls.push(now);return {translations:[]};};
+ assert.equal(w.snapshot('a').jobs[0].attempts,1);await w.flush();assert.equal(calls.length,1);
+ now+=30000;await w.flush();assert.equal(calls.length,2);
+ // Recomposition/reopening the same source must not reset its retry budget.
+ w.submit('a',[{id:'body',text:source}]);assert.equal(w.snapshot('a').jobs[0].attempts,2);
+ now+=120000;await w.flush();assert.equal(calls.length,3);assert.equal(w.snapshot('a').jobs[0].state,'unavailable');
+ w.close();w=make();assert.equal(w.snapshot('a').jobs[0].state,'unavailable');
+ w.submit('a',[{id:'body',text:source}]);w.translate=async()=>{throw Error('Must not retry exhausted content');};await w.flush();assert.equal(calls.length,3);
+ // A different version is independently eligible, not trapped behind old work.
+ w.submit('a',[{id:'body',text:source+' New.'}]);assert.equal(w.snapshot('a').jobs[0].attempts,0);w.setEnabled('a',false);assert.equal(saved.get('a').jobs.length,0);w.close();
+});
+
+test('restart after durable acceptance reuses grammar plans without inference',async()=>{
+ const saved=new Map(),make=()=>new ImmersionWorker({codex:new EventEmitter(),cwd:'/owned-qa',contract:transgrammaticContract,delay:100000,load:id=>saved.get(id),save:(id,state)=>saved.set(id,structuredClone(state))});
+ let w=make();w.setEnabled('a',true);w.submit('a',[{id:'body',text:source}]);
+ w.translate=async batch=>({translations:[{...plan(),id:batch[0].id}]});await w.flush();assert.equal(saved.get('a').jobs.length,0);w.close();
+ w=make();w.submit('a',[{id:'new-surface',text:source}]);w.translate=async()=>{throw Error('Cache must prevent inference');};await w.flush();
+ assert.equal(w.snapshot('a').translations.find(x=>x.id==='new-surface').text,target);assert.equal(w.snapshot('a').jobs.length,0);w.close();
+});
+
+test('simultaneous surfaces share one content job and receive separate canonical surface IDs',async()=>{
+ const w=new ImmersionWorker({codex:new EventEmitter(),cwd:'/owned-qa',contract:transgrammaticContract,delay:100000});
+ try{w.setEnabled('a',true);w.submit('a',[{id:'chat',text:source},{id:'card',text:source}]);let inputs=0;
+ w.translate=async batch=>{inputs+=batch.length;return {translations:batch.map(row=>({...plan(),id:row.id}))};};
+ await w.flush();assert.equal(inputs,1);assert.deepEqual(w.snapshot('a').translations.map(x=>x.id),['chat','card']);assert.equal(w.snapshot('a').jobs.length,0);
+ }finally{w.close();}
+});

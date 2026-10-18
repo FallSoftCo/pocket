@@ -1,0 +1,40 @@
+{
+  "status": "candidate-native-and-provider-qualified-not-deployed",
+  "userReport": "Typing lag gone; neither Italian messages nor English in Italian grammar visible",
+  "phoneObservedVersionCode": 130,
+  "accountProfileEnabled": true,
+  "cachedTransgrammaticPlansObserved": 17,
+  "confirmedDefect": "Partial translation success discarded unreturned or rejected same-batch sources",
+  "fix": "Only accepted versions leave queue. Rejected sources remain blocked until explicit visible resubmission; other sources continue. No model retry loop.",
+  "qualification": {
+    "modelCallsInRealSyntheticProviderJourney": 1,
+    "providerElapsedMs": 10149,
+    "providerFullItalianAndLexicalEnglishPlan": true,
+    "focusedWorkerAndGrammarCasesPassed": 18,
+    "nativeMissingSocketJourney": "passed10.74seconds",
+    "nativeHTTP": {
+      "reads": 2,
+      "submits": 1,
+      "modelCalls": 0
+    },
+    "nativeForms": [
+      "Your connection is available.",
+      "La tua connessione è disponibile.",
+      "The your connection is available."
+    ],
+    "earlierNativeFailures": "Two invalid harness observations omitted normal selection/accessibility wrapper. Screenshots proved target ink; strengthened normal-wrapper journey passed. Retained original logs.",
+    "phoneRestorationVerified": false
+  },
+  "remaining": [
+    "Integrated exact signed candidate qualification and coordinated backend/module delivery",
+    "Physical phone restoration readback",
+    "Existing12000character source admission limit remains; larger content needs safe protected-span segmentation, not silent claim of universal coverage"
+  ],
+  "architecture": [
+    "Versioned durable profile-bound source jobs with attempts and expiry",
+    "Bounded30/120second retry scheduler;3attempt ceiling survives restarts",
+    "Pending alias deduplication and accepted immutable cache fanout",
+    "Single profile-bound status observer recovers lost socket delivery",
+    "One cached grammatical plan and shared viewport renderer; no inference per animation cycle"
+  ]
+}

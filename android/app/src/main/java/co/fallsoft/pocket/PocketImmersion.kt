@@ -18,7 +18,7 @@ object PocketImmersion {
     fun setMotionEnabled(value:Boolean){motionState=value;Pocket.prefs.edit().putBoolean(profileKey()+":motion",value).apply()}
     private var densityState by mutableStateOf("strong")
     val density get()=densityState
-    fun setDensity(value:String){densityState=if(value in listOf("starter","balanced","strong"))value else "strong";Pocket.prefs.edit().putString(profileKey()+":density",densityState).apply();translations=emptyMap();byContent=emptyMap();originals=emptySet();clearReadingChoices();pending.clear();job?.cancel();sync()}
+    fun setDensity(value:String){densityState=if(value in listOf("starter","balanced","strong"))value else "strong";Pocket.prefs.edit().putString(profileKey()+":density",densityState).apply();translations=emptyMap();byContent=emptyMap();originals=emptySet();clearReadingChoices();pending.clear();job?.cancel();stopPlanSync();sync()}
     var unavailable by mutableStateOf(false); private set
     private var translations by mutableStateOf<Map<String,JSONObject>>(emptyMap())
     private var byContent by mutableStateOf<Map<String,JSONObject>>(emptyMap())
@@ -29,6 +29,29 @@ object PocketImmersion {
     }
     private val pending=linkedMapOf<String,JSONObject>()
     private var job:Job?=null
+    // One account/environment-bound delivery observer. It reads durable job
+    // metadata; it never submits a source or starts a model turn.
+    private var planSync:Job?=null
+    private var remotePending=false
+    private fun stopPlanSync(){planSync?.cancel();planSync=null;remotePending=false}
+    private fun observePlans(){
+        if(!enabled||!remotePending||planSync?.isActive==true)return
+        val captured=readingOwner()
+        planSync=Pocket.scope.launch {
+            var failures=0
+            while(isActive&&enabled&&captured==readingOwner()&&remotePending){
+                delay(if(failures==0)2000L else (2000L shl failures.coerceAtMost(4)))
+                try{
+                    val result=Pocket.api("/api/immersion/v2")
+                    if(captured!=readingOwner())return@launch
+                    accept(result);failures=0
+                }catch(e:Exception){
+                    if(e is CancellationException)throw e
+                    failures++;if(captured==readingOwner())unavailable=true
+                }
+            }
+        }
+    }
     private var originals by mutableStateOf(setOf<String>())
     private val readingChoices=ImmersionReadingChoices()
     private var readingRevision by mutableIntStateOf(0)
@@ -67,7 +90,7 @@ object PocketImmersion {
         motionState=Pocket.prefs.getBoolean(profileKey()+":motion",true)
         val oldDensity=densityState
         val ownerChanged=readingChoices.restore(readingOwner())
-        job?.cancel();cacheSave?.cancel();pending.clear();synchronized(parsedSpans){parsedSpans.clear()};enabledState=Pocket.prefs.getBoolean(profileKey(),false);supportState=Pocket.prefs.getBoolean(profileKey()+":englishSupport",true);densityState=Pocket.prefs.getString(profileKey()+":density","strong")?:"strong"
+        job?.cancel();stopPlanSync();cacheSave?.cancel();pending.clear();synchronized(parsedSpans){parsedSpans.clear()};enabledState=Pocket.prefs.getBoolean(profileKey(),false);supportState=Pocket.prefs.getBoolean(profileKey()+":englishSupport",true);densityState=Pocket.prefs.getString(profileKey()+":density","strong")?:"strong"
         val saved=try{JSONArray(Pocket.prefs.getString(cacheKey(),"[]"))}catch(_:Exception){JSONArray()}
         translations=saved.objects().asReversed().associateBy{it.s("id")};byContent=translations.values.associateBy{it.s("version")}
         if(ownerChanged||oldDensity!=densityState){originals=emptySet();clearReadingChoices()};unavailable=false;if(enabled)sync()
@@ -86,9 +109,22 @@ object PocketImmersion {
         return if(plan.isNotEmpty()&&plan.all(::alignedTargetValid)&&contextualHybridText(text,plan)==target)
             ImmersionPresentation(target,text,true,plan) else null
     }
-    fun setEnabled(value:Boolean){enabledState=value;Pocket.prefs.edit().putBoolean(profileKey(),value).apply();pending.clear();job?.cancel();originals=emptySet();clearReadingChoices();sync()}
+    fun setEnabled(value:Boolean){enabledState=value;Pocket.prefs.edit().putBoolean(profileKey(),value).apply();pending.clear();job?.cancel();stopPlanSync();originals=emptySet();clearReadingChoices();sync()}
     private fun sync(){val captured=profileKey();Pocket.scope.launch{try{val result=Pocket.api("/api/immersion/v2",JSONObject().put("enabled",enabled).put("density",density));if(captured==profileKey())accept(result)}catch(_:Exception){if(captured==profileKey())unavailable=enabled}}}
-    fun accept(event:JSONObject){if(!enabled||event.s("planVersion")!="transgrammatic-english-italian-v1")return;unavailable=event.optBoolean("unavailable",false);val list=event.optJSONArray("translations")?.objects()?.filter(::eligible)?:return;translations=(translations+list.associateBy{it.s("id")}).entries.toList().takeLast(600).associate{it.toPair()};byContent=translations.values.associateBy{it.s("version")};persistCache();if(list.isNotEmpty())PocketNotifications.refreshImmersion()}
+    fun accept(event:JSONObject){
+        if(!enabled||event.s("planVersion")!="transgrammatic-english-italian-v1")return
+        unavailable=event.optBoolean("unavailable",false)
+        event.optJSONArray("jobs")?.let{jobs->
+            remotePending=jobs.objects().any{it.s("state") in listOf("pending","running","retryWaiting")}
+        }
+        val list=event.optJSONArray("translations")?.objects()?.filter(::eligible).orEmpty()
+        if(list.isNotEmpty()){
+            translations=(translations+list.associateBy{it.s("id")}).entries.toList().takeLast(600).associate{it.toPair()}
+            byContent=translations.values.associateBy{it.s("version")}
+            persistCache();PocketNotifications.refreshImmersion()
+        }
+        observePlans()
+    }
     /** Bound speech preparation; use the existing native Codex audio transport for pronunciation. */
     suspend fun spoken(id:String,text:String,waitMs:Long=8000):String {
         if(!enabled)return text
