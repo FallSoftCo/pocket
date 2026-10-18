@@ -81,6 +81,7 @@ internal fun conversationInputUnavailable()=conversationIdentityPending()||readO
             if(PocketTranscript.loading)item{CircularProgressIndicator()}
             items(PocketTranscript.rows,key={it.s("id")}){row->TranscriptRow(row)}
         }
+        ForegroundWorkNotice()
         Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
             TextButton({Pocket.closeTask()}){BilingualLabel("Back")}
             if(parent!=null)Button({Pocket.open(parent,keyboard=true)}){BilingualLabel("Open parent task")}

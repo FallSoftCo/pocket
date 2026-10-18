@@ -117,6 +117,7 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
     }
 }
 @Composable internal fun ConversationLiveCaption(){
+    ForegroundWorkNotice()
     val queued=PocketSpeech.queue.current
     val caption=conversationLiveSpeechCaption(Pocket.selected,queued?.let{PocketNotificationTitles.threadForId(it.id)},queued?.id,PocketSpeech.paused,PocketSpeech.displayedOwner,PocketSpeechCaptions.state)
     if(caption.isNotBlank())Text(caption,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=2.dp),color=Muted,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis)

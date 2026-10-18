@@ -356,6 +356,7 @@ object Pocket {
             val thread=n.s("thread_id")
             scope.launchEnvironment{if(notificationEnvironment==environmentId&&thread.isNotBlank()&&thread==selected)refreshDetail()}
         }
+        ForegroundNotifications.observe(n)
         val seen=prefs.getStringSet(key("seenIds",notificationLocal,notificationEnvironment),emptySet())!!.toMutableSet()
         if(!seen.add(id.toString()))return
         val bounded=seen.sortedByDescending{it.toLongOrNull()?:0}.take(512).toSet()

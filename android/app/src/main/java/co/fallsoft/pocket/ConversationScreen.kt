@@ -89,7 +89,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class,FlowPreview::class)
+@OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class,FlowPreview::class,androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable fun ConversationScreen(){
     val conversation=CodexConversations.snapshot
     val d=conversation.detail;val t=d?.optJSONObject("thread");val rows=conversation.rows
@@ -419,7 +419,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 // start is not the transcript end: follow the explicit boundary.
                 if(conversationError.isNotBlank())item(key="ui:conversation-error",contentType="sync-status"){
                     if(Pocket.error.isBlank()&&replyFailure==null&&PocketTranscript.refreshDelayed)
-                        WorkflowText(conversationError,color=Muted,fontSize=13.sp,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp).testTag("conversation-refresh-delayed"))
+                        WorkflowText(conversationError,color=Muted,fontSize=13.sp,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp).semantics{testTagsAsResourceId=true}.testTag("conversation-refresh-delayed"))
                     else ErrorBanner(conversationError,if(Pocket.error.isBlank()&&replyFailure!=null){{Pocket.dismissReplyFailure(failureSource,replyFailure.id)}}else null)
                 }
                 if(PocketTranscript.updating)item(key="ui:messages-sync",contentType="sync-status"){

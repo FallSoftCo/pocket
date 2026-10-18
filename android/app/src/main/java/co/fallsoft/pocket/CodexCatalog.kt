@@ -100,7 +100,7 @@ internal object CodexCatalog {
             val baseline=notifications.map{it.s("thread_id") to it.optLong("id")}
             notifications=read(value,"/api/notifications").optJSONArray("notifications")?.objects()?.reversed().orEmpty()
             if(transcriptNotificationAdvanced(Pocket.selected,baseline,notifications.map{it.s("thread_id") to it.optLong("id")}))CodexConversations.invalidate()
-            notifications.forEach{CodexSessionRepository.invalidate(it.s("thread_id"),value.destination,it.optLong("id"));PocketNotificationTitles.remember(it.put("_local",value.destination.environment.local))}
+            notifications.forEach{it.put("_environment",value.destination.environment.id);CodexSessionRepository.invalidate(it.s("thread_id"),value.destination,it.optLong("id"));PocketNotificationTitles.remember(it.put("_local",value.destination.environment.local));ForegroundNotifications.observe(it)}
         }
         if(value.attention?.isActive!=true)value.attention=launch(value,CodexCatalogLane.ATTENTION){
             val latest=read(value,"/api/attention").optJSONArray("notifications")?.objects().orEmpty()

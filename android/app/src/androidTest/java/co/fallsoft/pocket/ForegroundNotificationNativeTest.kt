@@ -38,6 +38,7 @@ class ForegroundNotificationNativeTest {
    assertFalse("Open conversation created a system notification",inTray(73001))
    assertNull("Open conversation duplicated its own content in a foreground banner",ForegroundNotifications.current())
    main{Pocket.acceptNotification(notice(73002,"second-thread","Other result 1"),"socket");Pocket.acceptNotification(notice(73003,"second-thread","Other result 2"),"fcm")}
+   assertEquals("Other source was not retained by notification policy",73003L,ForegroundNotifications.current()?.optLong("id"))
    await("Other work was not surfaced in place"){d.hasObject(By.res("foreground-work-notice"))}
    assertEquals("Same-source results did not coalesce",73003L,ForegroundNotifications.current()?.optLong("id"))
    assertFalse(inTray(73002));assertFalse(inTray(73003));assertEquals("Foreground updates unexpectedly queued speech",speechBefore,PocketSpeech.count)
@@ -53,19 +54,24 @@ class ForegroundNotificationNativeTest {
    c.cacheDir.resolve("foreground-refresh-delayed.png").let{d.takeScreenshot(it)}
    qa("fail-reads",JSONObject().put("count",0));main{Pocket.refreshDetail()}
    await("Healthy read did not clear delayed state"){!PocketTranscript.refreshDelayed&&PocketTranscript.currentHistoryVerified}
-   main{Pocket.acceptNotification(notice(73004,"second-thread","Please answer this question","question"),"socket")}
+   val question=notice(73004,"second-thread","Please answer this question","question")
+   qa("set-attention",JSONObject().put("notifications",org.json.JSONArray().put(question)))
+   main{Pocket.acceptNotification(question,"socket")}
    await("Question was not actionable in app"){ForegroundNotifications.current()?.optLong("id")==73004L}
    assertFalse(inTray(73004))
    d.pressHome()
    await("Unseen question was lost when leaving app"){!PocketVoice.foreground&&inTray(73004)}
    assertTrue("Background question lost its response actions",manager.activeNotifications.single{it.tag==tag&&it.id==74004}.notification.actions.any{it.title.toString().contains("Answer")})
    assertTrue("Latest unseen result was lost",inTray(73003));assertFalse("Coalesced stale result resurfaced",inTray(73002))
+   qa("set-attention",JSONObject().put("notifications",org.json.JSONArray()))
+   main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
+   await("Resolved canonical question remained in foreground/tray"){PocketAttention.dismissed(73004)&&!inTray(73004)&&ForegroundNotifications.current()?.optLong("id")!=73004L}
    assertEquals("Notification/refresh handling admitted model work",0,qa("state").getJSONArray("replies").length())
    c.cacheDir.resolve("foreground-notification-result.json").writeText(JSONObject().put("passed",true).put("foregroundSystemAlerts",0).put("socketFcmDeduplicated",true)
     .put("sameConversationDuplicated",false).put("otherSourceCoalesced",true).put("oneTapOriginalSource",true).put("draftPreserved",true)
-    .put("actualHttpFailureInline",true).put("backgroundQuestionRetained",true).put("modelSubmissions",0).put("physicalPhone",false).toString())
+    .put("actualHttpFailureInline",true).put("backgroundQuestionRetained",true).put("canonicalResolutionClearsStaleAttention",true).put("modelSubmissions",0).put("physicalPhone",false).toString())
   }finally{
-   runCatching{qa("fail-reads",JSONObject().put("count",0))}
+   runCatching{qa("fail-reads",JSONObject().put("count",0));qa("set-attention",JSONObject().put("notifications",org.json.JSONArray()))}
    main{Pocket.closeTask();PocketVoice.foreground=false;ForegroundNotifications.background()}
    (73001L..73004L).forEach{manager.cancel(tag,(it+1000).toInt())}
   }

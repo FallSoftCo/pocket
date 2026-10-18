@@ -9,6 +9,7 @@ let coordinatorPaging=false;const coordinatorHistoryReads=[];let catalogPagingCo
 const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+(clippedPreview?1:revision),previewKind:'message',previewRole:'codex',activityAt:(notificationOnly?1:revision)*1000,updatedAt:(notificationOnly?1:revision)*1000,recencyAt:(notificationOnly?1:revision)*1000});
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
+let notificationAttention=[];
 const server=http.createServer(async(req,res)=>{
  let raw='';for await(const b of req)raw+=b;
  if(req.headers.authorization!=='Bearer synthetic-system76'){res.writeHead(401);res.end('{}');return;}
@@ -149,7 +150,8 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/fail-acks'){failedAckReads=2;body={ok:true};}
  else if(path==='/_qa/state')body={heldAncillaries,searchBlocked,abortedReads,statusReads,catalogReads,revision,catalogBlocked,coordinatorHistoryReads,connections,reads,replies,positions,voiceReceiptReads,acknowledgements,ackAttempts,receiptReads,recoveries};
  else if(path==='/api/notifications')body={notifications:notificationOnly&&!notificationOverflow?[{id:revision,thread_id:'same-thread',kind:'complete'}]:[]};
- else if(path==='/api/attention')body={notifications:[]};
+ else if(path==='/_qa/set-attention'){const values=JSON.parse(raw||'{}').notifications;notificationAttention=Array.isArray(values)?values.slice(0,10):[];body={count:notificationAttention.length};}
+ else if(path==='/api/attention')body={notifications:notificationAttention};
  else if(path==='/_qa/runtime-offline'){runtimeOffline=true;body={ok:true};}
  else if(path==='/_qa/runtime-online'){runtimeOffline=false;body={ok:true};}
  else if(path==='/_qa/fail-catalog'){failCatalog=true;body={ok:true};}
