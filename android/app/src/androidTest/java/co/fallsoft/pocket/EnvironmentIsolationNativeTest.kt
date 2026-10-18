@@ -68,7 +68,10 @@ class EnvironmentIsolationNativeTest {
   assertFalse(PocketTranscript.rows.any{it.s("text").contains("System76 answer only")})
   await{PhoneEventMonitor.connected}
   runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment("phone")),"/_qa/notify",JSONObject())}
-  await{context.getSystemService(NotificationManager::class.java).activeNotifications.any{it.notification.extras.getCharSequence("android.title")?.toString()=="Phone result only"}}
+  // While the app is visible, another environment's outcome stays actionable
+  // inside the app rather than creating a duplicate Android heads-up notification.
+  await{ForegroundNotifications.current()?.let{it.s("title")=="Phone result only"&&it.s("_environment")=="phone"}==true}
+  assertFalse(context.getSystemService(NotificationManager::class.java).activeNotifications.any{it.notification.extras.getCharSequence("android.title")?.toString()=="Phone result only"})
   assertEquals("remote_qa",Pocket.environmentId);assertTrue(PocketTranscript.rows.any{it.s("text").contains("OZZZ answer only")})
   assertEquals("System76 draft retained",prefs.getString("draft:same-thread",null));assertEquals("OZZZ draft retained",prefs.getString("environment:remote_qa:draft:same-thread",null))
   // Origin captured before scheduling: worker must submit A while B remains selected.
