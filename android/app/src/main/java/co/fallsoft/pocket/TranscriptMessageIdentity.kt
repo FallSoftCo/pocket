@@ -126,5 +126,27 @@ internal fun mergeRestoredTranscriptRows(cached:List<JSONObject>,current:List<JS
     val old=promoteTranscriptIdentityEvidence(cached,evidence)
     val previous=old.associateBy{it.s("id")}
     val fresh=promoteTranscriptIdentityEvidence(current,evidence).map{mergeTranscriptMessageEvidence(previous[it.s("id")],it,preferIncoming=true)}
-    return mergeTranscriptPage(old,fresh,false,{it.s("id")},{it.optLong("version")},keepPosition={it.s("kind")=="turn"},preferIncoming=true)
+    return groupTranscriptTurns(mergeTranscriptPage(old,fresh,false,{it.s("id")},{it.optLong("version")},keepPosition={it.s("kind")=="turn"},preferIncoming=true))
+}
+
+
+/** A canonical turn is one contiguous block even when its last row arrives
+ * after a newer turn. Association comes only from provider turn IDs. This does
+ * not guess the order of inputs/output inside a turn, or sort by arrival time.
+ * First-seen block order is retained; page ordering owns shared row order. */
+internal fun groupTranscriptTurns(rows:List<JSONObject>):List<JSONObject>{
+    var previous:String?=null
+    val seen=hashSetOf<String>()
+    var split=false
+    for(row in rows){
+        val turn=row.s("turnId").ifBlank{"unscoped:"+row.s("id")}
+        if(turn!=previous){if(!seen.add(turn))split=true;previous=turn}
+    }
+    if(!split)return rows
+    val groups=linkedMapOf<String,MutableList<JSONObject>>()
+    for(row in rows){
+        val turn=row.s("turnId").ifBlank{"unscoped:"+row.s("id")}
+        groups.getOrPut(turn){mutableListOf()}.add(row)
+    }
+    return groups.values.flatten()
 }

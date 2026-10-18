@@ -188,7 +188,7 @@ internal object CodexSessionRepository {
     // Proof may precede the coalesced live projection. Retain it independently
     // of row presence; arrival timing cannot erase a confirmed same-thread edge.
     private fun ordered(scope:String,id:String,rows:List<JSONObject>):List<JSONObject>{
-        var result=rows
+        var result=groupTranscriptTurns(rows)
         for((key,successor) in positionEvidence)if(key.first==scope&&key.second==id){
             val target=transcriptDisplayAnchor(result,key.third)?:continue
             val before=transcriptDisplayAnchor(result,successor)?:continue
