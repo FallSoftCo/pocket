@@ -16,7 +16,10 @@ class IndependentVoiceCaptureNativeTest {
   val i=InstrumentationRegistry.getInstrumentation();val device=UiDevice.getInstance(i);val c=i.targetContext
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
-  fun await(label:String,predicate:()->Boolean){val end=SystemClock.elapsedRealtime()+12000;while(SystemClock.elapsedRealtime()<end){if(predicate())return;Thread.sleep(50)};assertTrue(label,predicate())}
+  fun await(label:String,predicate:()->Boolean){val end=SystemClock.elapsedRealtime()+12000;while(SystemClock.elapsedRealtime()<end){if(predicate())return;Thread.sleep(50)};assertTrue(label+"; active="+PocketVoice.active+"; service="+(PocketVoice.service!=null)+"; state="+PocketVoice.state+"; problem="+PocketVoice.problem,predicate())}
+  c.getSharedPreferences("pocket",0).edit().clear()
+   .putString("server","http://127.0.0.1:18907").putString("token","synthetic-system76")
+   .putString("deviceId","synthetic-capture-device").commit()
   i.runOnMainSync { Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
   try {
    i.runOnMainSync { PocketVoice.start(c,recordImmediately=false,inPlace=true) }

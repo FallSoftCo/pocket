@@ -373,11 +373,11 @@ class PocketVoiceService:Service(){
                     capture.startRecording()
                     check(capture.recordingState==AudioRecord.RECORDSTATE_RECORDING){"Android could not start the microphone. Check microphone privacy."}
                     withContext(Dispatchers.Main){state("Listening")}
-                    while(isActive&&!stopRecording&&bytes.size()<3840000) {
+                    while(isActive&&!stopRecording&&bytes.size()<VoiceRecording.MAX_BYTES) {
                         val n=capture.read(buf,0,buf.size,AudioRecord.READ_NON_BLOCKING)
                         check(n>=0){"Android microphone capture failed ($n)."}
                         if(n>0){
-                            val accepted=n.coerceAtMost(3840000-bytes.size())
+                            val accepted=n.coerceAtMost(VoiceRecording.MAX_BYTES-bytes.size())
                             bytes.write(buf,0,accepted);durable.write(buf,0,accepted)
                             val now=SystemClock.elapsedRealtime()
                             if(now-lastSync>=1000){durable.fd.sync();lastSync=now}
@@ -385,7 +385,7 @@ class PocketVoiceService:Service(){
                         }else delay(10)
                     }
                     currentCoroutineContext().ensureActive()
-                    check(stopRecording){"Recording reached its two-minute limit. Audio is retained locally; nothing was sent."}
+                    check(stopRecording){"Recording reached its ten-minute limit. Audio is retained locally; nothing was sent."}
                     bytes.toByteArray()
                     }finally{try{durable.fd.sync()}finally{durable.close()}}
                 }

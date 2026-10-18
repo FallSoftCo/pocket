@@ -66,7 +66,7 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
     private fun ioOnly() { check(Looper.myLooper() != Looper.getMainLooper()) { "Voice persistence must run off the UI thread" } }
     private val db get(): SQLiteDatabase { ioOnly(); return helper.writableDatabase }
     private fun validAudio(wav: ByteArray): Boolean {
-        if(wav.size !in 3244..3840044 || wav.size % 2 != 0)return false
+        if(wav.size !in 3244..VoiceRecording.MAX_WAV_BYTES || wav.size % 2 != 0)return false
         val b=java.nio.ByteBuffer.wrap(wav).order(java.nio.ByteOrder.LITTLE_ENDIAN)
         fun text(at:Int,length:Int)=wav.copyOfRange(at,at+length).toString(Charsets.US_ASCII)
         return text(0,4)=="RIFF" && text(8,8)=="WAVEfmt " && b.getInt(4)==wav.size-8 &&

@@ -1,3 +1,4 @@
+import {NATIVE_AUDIO_DEADLINE_MS} from './audio-limits.mjs';
 import {spawn} from 'node:child_process';
 import {createInterface} from 'node:readline';
 import {fileURLToPath} from 'node:url';
@@ -56,7 +57,7 @@ export class NativeAudioTranscriber {
   const abort=()=>failed(failure('Recording cancelled during transcription'));signal?.addEventListener('abort',abort,{once:true});
   let value,error;
   try{
-   watchdog=setTimeout(()=>failed(failure('Native audio processing exceeded its bounded deadline')),180000);
+   watchdog=setTimeout(()=>failed(failure('Native audio processing exceeded its bounded deadline')),NATIVE_AUDIO_DEADLINE_MS);
    value=await result;
   }catch(e){error=e}
   finally{

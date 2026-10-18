@@ -15,6 +15,8 @@ internal class VoiceTurnRequests(private val context: Context) {
     companion object {
         private val http=OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS)
             .readTimeout(45,TimeUnit.SECONDS).callTimeout(60,TimeUnit.SECONDS).build()
+        private val uploadHttp=http.newBuilder().writeTimeout(45,TimeUnit.SECONDS)
+            .callTimeout(5,TimeUnit.MINUTES).build()
     }
     suspend fun call(turn: VoiceTurnStore.Turn,path:String,body:JSONObject?=null,audio:java.io.File?=null):JSONObject = withContext(Dispatchers.IO) {
         val profiles=EnvironmentProfiles(context.getSharedPreferences("pocket",Context.MODE_PRIVATE))
@@ -28,7 +30,7 @@ internal class VoiceTurnRequests(private val context: Context) {
             .header("Authorization","Bearer "+destination.token)
         if(audio!=null)request.put(audio.asRequestBody("audio/wav".toMediaType()))
         else if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
-        http.newCall(request.build()).execute().use { response ->
+        (if(audio!=null)uploadHttp else http).newCall(request.build()).execute().use { response ->
             val result=runCatching { JSONObject(response.body?.string().orEmpty()) }.getOrElse { JSONObject() }
             if(!response.isSuccessful)throw PocketApiException(response.code,
                 result.optString("error","Server returned "+response.code).replace(destination.token,"[credential]").take(300))

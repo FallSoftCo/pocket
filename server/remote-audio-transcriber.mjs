@@ -1,3 +1,4 @@
+import {MAX_RECORDING_WAV_BYTES,REMOTE_AUDIO_DEADLINE_MS} from './audio-limits.mjs';
 import {spawn} from 'node:child_process';
 import {createReadStream} from 'node:fs';
 import {stat} from 'node:fs/promises';
@@ -8,7 +9,7 @@ export class RemoteAudioTranscriber {
  async transcribe({id,file,sha256,signal}){
   if(signal?.aborted)throw Error('Recording cancelled');
   const info=await stat(file);
-  if(info.size>3840044||info.size<3244)throw Error('Invalid admitted recording size');
+  if(info.size>MAX_RECORDING_WAV_BYTES||info.size<3244)throw Error('Invalid admitted recording size');
   const [program,...args]=this.command,child=spawn(program,args,{stdio:['pipe','pipe','pipe']});
   let output='',timer,closed=false;
   const exited=new Promise(resolve=>child.once('close',()=>{closed=true;resolve()}));
@@ -20,7 +21,7 @@ export class RemoteAudioTranscriber {
     if(code!==0)return reject(Error('Remote audio worker did not complete; recording retained'));
     try{const value=JSON.parse(output);if(value.error)throw Error(value.error);resolve(value)}catch(e){reject(e)}
    });
-   timer=setTimeout(()=>{child.kill('SIGTERM');reject(Error('Remote audio processing exceeded its deadline'))},200000);
+   timer=setTimeout(()=>{child.kill('SIGTERM');reject(Error('Remote audio processing exceeded its deadline'))},REMOTE_AUDIO_DEADLINE_MS);
   });
   child.stdin.on('error',()=>{});
   child.stdin.write(JSON.stringify({version:1,id,audioSha256:sha256,bytes:info.size})+'\n');

@@ -27,6 +27,12 @@ if(existsSync(receiptPath))throw Error('Native intent already exists; observe it
 const receipt={schema:1,state:'running',case:name,actor,startedAt:Date.now(),versionCode:manifest.versionCode,productionSourceSha:build.productionSourceSha,qualificationInputSha:build.qualificationInputSha,qualificationApkSha:build.qualificationApkSha,testApkSha:build.testApkSha,avdName,serial,log};
 writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{flag:'wx',mode:0o600});
 const persist=()=>writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{mode:0o600});
+// Each native journey owns its synthetic preferences. Preserve the retained QA
+// pairings between cases; a prior fixture must not erase a later real-room target.
+run(['shell','am','force-stop','co.fallsoft.pocket']);
+const originalPreferences=run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml']);
+receipt.originalPreferencesSha=sha256(Buffer.from(originalPreferences));persist();
+
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 // Only reviewed synthetic services can run inside release qualification.
 const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#existingAgentDisclosureOpensIndependentSessionAndKeepsPrivateRepliesScoped'||name.startsWith('co.fallsoft.pocket.RoomNavigationNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomRoutingNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomVoiceNativeTest#');
@@ -53,7 +59,7 @@ try{
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
  run(['reverse','tcp:18880','tcp:'+fixturePort]);
  for(const [from,to] of Object.entries(owner.reversePorts||{})){if(!/^\d{4,5}$/.test(from)||!Number.isSafeInteger(to)||to<1024||to>65535)throw Error('Invalid owned QA reverse mapping');run(['reverse','tcp:'+from,'tcp:'+to]);}
- if(name.startsWith('co.fallsoft.pocket.ForegroundNotificationNativeTest#'))run(['reverse','tcp:18907','tcp:'+fixturePort]);
+ if(name.startsWith('co.fallsoft.pocket.ForegroundNotificationNativeTest#')||name.startsWith('co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#'))run(['reverse','tcp:18907','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.CodexClosedSessionSyncNativeTest#'))run(['reverse','tcp:18903','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.TypingResponsivenessNativeTest#'))run(['reverse','tcp:18891','tcp:'+fixturePort]);
  if(voiceCase)run(['reverse','tcp:18893','tcp:'+fixturePort]);
@@ -94,3 +100,11 @@ try{
  if(r.status!==0||!nativeOutputPassed(output)||!current()||installed()!==build.qualificationApkSha)throw Error('Native qualification failed; channel must not be published.');
  receipt.state='complete';receipt.finishedAt=Date.now();persist();console.log(JSON.stringify({state:'complete',case:name,elapsedMs:receipt.finishedAt-receipt.startedAt}));
 }catch(error){receipt.state='failed';receipt.finishedAt=Date.now();receipt.error=error.message;persist();throw error;}
+finally{
+ run(['shell','am','force-stop','co.fallsoft.pocket']);
+ const restored=spawnSync(adb,['-s',serial,'shell',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'"],{input:originalPreferences,encoding:'utf8',env:childEnv,timeout:30000});
+ const after=run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml']);
+ receipt.retainedProfilesRestoredByteExact=restored.status===0&&after===originalPreferences;
+ if(!receipt.retainedProfilesRestoredByteExact){receipt.state='failed';persist();throw Error('QA preferences were not restored.');}
+ persist();
+}

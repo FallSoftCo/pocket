@@ -20,13 +20,16 @@ from native_audio_media import RecordedAudio, emit
 
 
 async def run(args):
+    limits = json.loads(Path(__file__).with_name("audio-limits.json").read_text())
+    max_frames = limits["sampleRate"] * limits["maxSeconds"]
+    max_bytes = max_frames * limits["channels"] * limits["bytesPerSample"] + 44
     raw = Path(args.audio).read_bytes()
-    if len(raw) > 3840044 or hashlib.sha256(raw).hexdigest() != args.sha256:
+    if len(raw) > max_bytes or hashlib.sha256(raw).hexdigest() != args.sha256:
         raise ValueError("Recording identity or size does not match admission")
     with wave.open(io.BytesIO(raw)) as recording:
         if (recording.getnchannels(), recording.getsampwidth(), recording.getframerate()) != (1, 2, 16000):
             raise ValueError("Expected mono 16 kHz PCM16")
-        if not 1600 <= recording.getnframes() <= 1920000:
+        if not 1600 <= recording.getnframes() <= max_frames:
             raise ValueError("Recording duration outside bounds")
         pcm = recording.readframes(recording.getnframes())
 

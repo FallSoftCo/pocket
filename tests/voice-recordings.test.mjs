@@ -8,8 +8,8 @@ import {DatabaseSync} from 'node:sqlite';
 import {createHash} from 'node:crypto';
 import {VoiceRecordings} from '../server/voice-recordings.mjs';
 
-function wav(){
- const b=Buffer.alloc(3244);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);
+function wav(bytes=3244){
+ const b=Buffer.alloc(bytes);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);
  b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(16000,24);
  b.writeUInt32LE(32000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(b.length-44,40);return b;
 }
@@ -128,4 +128,19 @@ test('cancel-before-admission is durable and fences an admission already awaitin
   await assert.rejects(f.server.cancel(device,id,{...input,bytes:input.bytes+2},principal),/another recording/);
   assert.equal(f.calls.transcribe,0);assert.equal(f.calls.submit,0);
  }finally{await f.close();}
+});
+
+test('ten-minute recording survives durable admission and upload; excess is rejected before dispatch',async()=>{
+ const {MAX_RECORDING_WAV_BYTES}=await import('../server/audio-limits.mjs');
+ const long=wav(MAX_RECORDING_WAV_BYTES),sha=createHash('sha256').update(long).digest('hex');
+ const f=fixture({transcribe:async input=>{assert.deepEqual(await readFile(input.file),long);return {text:'Ten-minute request',proof:proof(input.sha256)}}});
+ const input={...request('long-recording-0001'),audioSha256:sha,bytes:long.length};
+ try {
+  await f.server.create(device,input,principal);
+  await f.server.upload(device,input.id,long);
+  await f.reopen();await f.server.start();await settle(f.server);
+  assert.equal(f.calls.submit,1);assert.equal((await f.server.inspect(device,input.id)).state,'completed');
+  await assert.rejects(f.server.create(device,{...input,id:'oversized-recording-0001',bytes:long.length+2},principal),/size/);
+  assert.equal(f.calls.submit,1);
+ }finally{await f.close()}
 });

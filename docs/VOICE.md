@@ -41,3 +41,13 @@ Dark typography refinement uses bundled Inter by Rasmus Andersson (SIL Open Font
 Cards use a radial recency-colored glow over charcoal rather than a left rail. A compact timestamp and animated working indicator share the title row; latest text and Talk/Keyboard are the remaining two rows. Actual preview, status or activity changes illuminate a yellow outline that fades after 2.5 seconds, with no slide animation or initial-load flash. The bottom-first ordering is retained.
 
 Alpha 10 replaces the initial NC monogram with an original faceted N mark, carrying the NeXT palette in green/yellow stems and cerise/vermilion diagonal accents. Launcher, header, notification silhouette and repository SVG share the same geometry.
+
+
+Manual recordings support up to ten minutes (19,200,000 PCM bytes, mono 16 kHz
+PCM16), with one stop gesture sending the turn to its captured destination.
+Cancellation invalidates queued Android service launches and fences local audio
+from upload, including the capture/seal boundary. Backend admission, WAV storage,
+HTTP upload and the isolated native audio peer share that duration bound. Native
+media is paced in real time; its deadline includes the full recording duration
+plus negotiation/finalization time. These are candidate implementation details;
+consult the versioned release receipt for deployment and provider qualification.

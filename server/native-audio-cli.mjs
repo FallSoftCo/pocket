@@ -1,3 +1,4 @@
+import {MAX_RECORDING_WAV_BYTES} from './audio-limits.mjs';
 import {mkdtempSync,writeFileSync,rmSync,mkdirSync,readFileSync,existsSync,renameSync,openSync,fsyncSync,closeSync,readdirSync,statSync,unlinkSync,statfsSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -14,11 +15,11 @@ process.once('SIGTERM',cancelled);process.once('SIGINT',cancelled);process.once(
 async function run(){
  if(!process.env.POCKET_LAX_AUDIO_COMMAND||!process.env.CODEX_HOME||!process.env.POCKET_NATIVE_AUDIO_PYTHON)throw Error('Installed native audio runtime configuration is missing');
  const chunks=[];let length=0;
- for await(const chunk of process.stdin){length+=chunk.length;if(length>3845000)throw Error('Audio RPC exceeds size limit');chunks.push(chunk)}
+ for await(const chunk of process.stdin){length+=chunk.length;if(length>(MAX_RECORDING_WAV_BYTES+4097))throw Error('Audio RPC exceeds size limit');chunks.push(chunk)}
  const input=Buffer.concat(chunks),boundary=input.indexOf(10);
  if(boundary<1||boundary>4096)throw Error('Invalid audio RPC header');
  const header=JSON.parse(input.subarray(0,boundary).toString('utf8')),audio=input.subarray(boundary+1);
- if(header.version!==1||audio.length!==header.bytes||!Number.isSafeInteger(header.bytes)||audio.length>3840044||
+ if(header.version!==1||audio.length!==header.bytes||!Number.isSafeInteger(header.bytes)||audio.length>MAX_RECORDING_WAV_BYTES||
   typeof header.audioSha256!=='string'||createHash('sha256').update(audio).digest('hex')!==header.audioSha256||
   typeof header.id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(header.id))throw Error('Audio RPC identity or payload mismatch');
  const cache=process.env.POCKET_NATIVE_AUDIO_CACHE;

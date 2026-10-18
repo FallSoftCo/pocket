@@ -1,3 +1,4 @@
+import {MAX_RECORDING_WAV_BYTES} from './audio-limits.mjs';
 import {createHash,randomUUID} from 'node:crypto';
 import {mkdirSync} from 'node:fs';
 import {open,rename,readFile,stat,statfs} from 'node:fs/promises';
@@ -11,7 +12,7 @@ const phases={receiving:'uploading',sealing:'uploading',ready:'queued',transcrib
 const token=v=>typeof v==='string'&&/^[a-zA-Z0-9_-]{8,100}$/.test(v);
 
 function admissionHash(device,{id,destination,audioSha256,bytes},principal){
- if(!token(id)||!token(device)||!/^[a-f0-9]{64}$/.test(audioSha256)||!Number.isSafeInteger(bytes)||bytes<3244||bytes>3840044||!destination||typeof destination!=='object'||Array.isArray(destination))
+ if(!token(id)||!token(device)||!/^[a-f0-9]{64}$/.test(audioSha256)||!Number.isSafeInteger(bytes)||bytes<3244||bytes>MAX_RECORDING_WAV_BYTES||!destination||typeof destination!=='object'||Array.isArray(destination))
   throw fail('Invalid recorded turn identity, destination, digest or size.');
  if(!principal||principal.deviceId!==device||!['paired-device','voice'].includes(principal.kind))
   throw fail('A recording requires its original authenticated human device.',403);

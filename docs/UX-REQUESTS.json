@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-17",
+  "updated": "2026-10-18",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -2940,5 +2940,17 @@
       "VoiceScreen.kt"
     ],
     "next": "Native FCM/socket dedup, open vs other source, background handover, question visibility, voice/draft preservation and actual delayed HTTP refresh placement; then compatible incremental release."
+  },
+  "voice_ten_minute_capture_20261018": {
+    "request": "Support ten-minute manual recordings, cancel capture immediately including queued Android service starts, and keep improving the stock Codex UX.",
+    "implementation": "Candidate: 600 seconds mono PCM16/16kHz; shared backend limits and duration-aware processing deadlines; larger upload timeout only for audio; launch identity and cancellation admission fences.",
+    "verification": "Pending actual microphone cancellation and exact duration boundary integration. No phone deployment claimed.",
+    "preserve": [
+      "original recording destination and pairing",
+      "one tap stops and sends",
+      "cancelled audio never admitted",
+      "independent durable delivery",
+      "Codex latest-first paginated history and native voice"
+    ]
   }
 }

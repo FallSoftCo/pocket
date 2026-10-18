@@ -1,3 +1,4 @@
+import {MAX_RECORDING_WAV_BYTES,MAX_RECORDING_SECONDS} from './audio-limits.mjs';
 import {HumanIngress,admissionTransaction} from './human-ingress.mjs';
 import {CreditObservations} from './credit-observations.mjs';
 import {CatalogContext} from './catalog-context.mjs';
@@ -587,7 +588,7 @@ app.post('/api/voice/start',route(async(req,res)=>{
   if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);
   res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),native:true});
 }));
-app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,immutableDestination:true,recordingDigest:true,durableAudioAdmission:nativeAudioIntake,cancellationTombstones:true,renderedSpeechVersion:nativeSpeechEnabled?1:0,speechPolicy:SPEECH_POLICY}));
+app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,maxRecordingSeconds:MAX_RECORDING_SECONDS,maxRecordingBytes:MAX_RECORDING_WAV_BYTES,immutableDestination:true,recordingDigest:true,durableAudioAdmission:nativeAudioIntake,cancellationTombstones:true,renderedSpeechVersion:nativeSpeechEnabled?1:0,speechPolicy:SPEECH_POLICY}));
 app.post('/api/voice/renderings/:id',route(async(req,res)=>{
  if(!nativeSpeechEnabled)throw Object.assign(Error('Native rendered speech is not installed on this environment. Text remains available.'),{status:503});
  res.status(202).json(await voiceRenderings.create(req.device.id,req.params.id,req.body));
@@ -603,7 +604,7 @@ app.post('/api/voice/recordings',route(async(req,res)=>{
  if(!nativeAudioIntake)throw Object.assign(Error('Durable native audio intake is not installed on this environment. Recording remains on the device.'),{status:503});
  res.status(202).json(await voiceRecordings.create(req.device.id,req.body,req.humanPrincipal));
 }));
-app.put('/api/voice/recordings/:id/audio',express.raw({type:'audio/wav',limit:'4mb'}),route(async(req,res)=>{
+app.put('/api/voice/recordings/:id/audio',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),route(async(req,res)=>{
  if(!Buffer.isBuffer(req.body))throw Object.assign(Error('Expected recorded WAV audio.'),{status:415});
  res.status(202).json(await voiceRecordings.upload(req.device.id,req.params.id,req.body));
 }));
@@ -628,7 +629,7 @@ app.post('/api/voice/native/input',route(async(req,res)=>{
 app.post('/api/voice/native/commit',route(async(req,res)=>res.json(await nativeVoice.commit(req.device.id,req.body.connectionId,req.body.turnId,req.body.audioSha256??null))));
 app.post('/api/voice/native/speak',route(async(req,res)=>res.json(await nativeVoice.speak(req.device.id,req.body.connectionId,req.body.text,req.body.voiceTurnId))));
 app.post('/api/voice/native/heartbeat',route(async(req,res)=>{nativeVoice.session(req.device.id,req.body.connectionId);res.json({ok:true});}));
-app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:'4mb'}),(req,res,next)=>{try{if(nativeHollywood)return res.status(400).json({error:'Use native recorded room input on this environment.'});if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
+app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),(req,res,next)=>{try{if(nativeHollywood)return res.status(400).json({error:'Use native recorded room input on this environment.'});if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
 app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(nativeHollywood?await hollywoodVoice.submitText(req.device.id,req.body.turnId,req.body.text,roomVoiceFocus.get(req.device.id)):roomVoiceFocus.has(req.device.id)?roomVoice.submitText(req.device.id,req.body.turnId,req.body.text,roomVoiceFocus.get(req.device.id)):voiceController.submitText(req.device.id,req.body.turnId,req.body.text,req.body.correctionOf));}));
 app.get('/api/voice/turns/:id',route(async(req,res)=>{const row=nativeHollywood?await hollywoodVoice.refresh(req.device.id,req.params.id):roomVoice.get(req.device.id,req.params.id)?await roomVoice.refresh(req.device.id,req.params.id):voiceController.get(req.device.id,req.params.id);if(!row){const admission=nativeVoice.receipt(req.device.id,req.params.id);if(admission)return res.json(admission);return res.status(404).json({error:'Voice turn not found.'});}if(!nativeHollywood&&row.state==='completed')voiceController.mark(req.device.id,req.params.id,'response_first_fetched');const admission=nativeVoice.admission(req.device.id,req.params.id);res.json(admission?{...row,audioSha256:admission.audio_sha256||null}:row);}));
 app.post('/api/voice/turns/:id/presented',route(async(req,res)=>res.json(nativeHollywood?{ok:true}:roomVoice.get(req.device.id,req.params.id)?.state==='completed'?{ok:true}:voiceController.presented(req.device.id,req.params.id))));

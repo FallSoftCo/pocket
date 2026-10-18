@@ -5,7 +5,9 @@ import java.nio.ByteOrder
 import kotlin.math.abs
 
 object VoiceRecording {
-    const val MAX_BYTES=3840000
+    const val MAX_SECONDS=600
+    const val MAX_BYTES=MAX_SECONDS*16000*2
+    const val MAX_WAV_BYTES=MAX_BYTES+44
     fun hasSpeech(pcm:ByteArray):Boolean {
         if(pcm.size<3200||pcm.size%2!=0)return false
         var energy=0L;var sum=0L;var peak=0
