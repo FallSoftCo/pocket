@@ -34,7 +34,7 @@
         "Alpha111 real capture and native account rendering/player passed in emulator",
         "Readiness-isolated speech experiment produced verified4.239s audio in10.059s; not deployed",
         "Physical handset capture/buttons/acoustic output unverified",
-        "Alpha112 200-row immersion stress: native injected-key draw medians30\u201368ms, worst sampled100.56ms on software emulator. Motion-on was not slower; physical handset responsiveness remains unverified."
+        "Alpha112 200-row immersion stress: native injected-key draw medians30–68ms, worst sampled100.56ms on software emulator. Motion-on was not slower; physical handset responsiveness remains unverified."
       ],
       "status": "preserved-follow-up"
     },
@@ -87,9 +87,22 @@
       "Source-bound selection and cancellable conversation reads",
       "Typed independent content/freshness/execution/attention/delivery snapshot",
       "Environment-owned catalog and independent ancillary updates",
-      "Native mixed lifecycle and optimized artifact qualification"
+      "Native mixed lifecycle and optimized artifact qualification",
+      "Durable grammatical immersion jobs and source-bound cached delivery"
     ],
-    "releaseRule": "No next release for another isolated symptom fix. Qualify the integrated ownership boundary while retaining published alpha113.",
-    "status": "conversation-and-catalog-owners-implemented; integrated-native-and-optimized-release-qualification-required"
+    "releaseRule": "No next release for another isolated symptom fix. Qualify the integrated ownership boundary while retaining published alpha114.",
+    "status": "delivered-alpha114-version132; exact-native20-and-optimized-qualified;phone-last-observed131",
+    "release": {
+      "versionCode": 132,
+      "versionName": "0.5.0-alpha.114",
+      "compatibleSha256": "3624dbca2f16860b2681da053dddc9187490554c19383a3060cf2679473b3e6e",
+      "productionSourceSha": "293d4401c281deecac53167904a466075d201521991159ba6350ad1ac8e19ae8",
+      "physicalPhoneInstalled": false
+    }
+  },
+  "latestUserObservation": {
+    "typing": "User reports lag has gone away; do not represent as physical measurement or attributed fix",
+    "immersion": "Missing both Italian and Italian-grammar English; backend and132 app repair delivered",
+    "nextCoverage": "Safe source segmentation beyond12000character admission remains open; preserve existing canonical content"
   }
 }
