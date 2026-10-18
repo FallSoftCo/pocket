@@ -23,7 +23,9 @@ class ForegroundNotificationNativeTest {
   val prefs=c.getSharedPreferences("pocket",0)
   prefs.edit().clear().putString("server","http://127.0.0.1:18907").putString("token","synthetic-system76").putString("deviceId","synthetic-notification-device")
    .putString("draft:same-thread","Keep the foreground draft").commit()
+  val activityMonitor=i.addMonitor(MainActivity::class.java.name,null,false)
   main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread",keyboard=true)}
+  val firstActivity=i.waitForMonitorWithTimeout(activityMonitor,15000)?:error("Owned activity unavailable")
   await("Initial source did not load"){PocketTranscript.currentHistoryVerified&&PocketVoice.foreground}
   val manager=c.getSystemService(NotificationManager::class.java);val tag=Pocket.notificationTag(Pocket.environmentId)
   fun inTray(id:Long)=manager.activeNotifications.any{it.tag==tag&&it.id==(id+1000).toInt()}
@@ -42,6 +44,11 @@ class ForegroundNotificationNativeTest {
    await("Other work was not surfaced in place"){d.hasObject(By.res("foreground-work-notice"))}
    assertEquals("Same-source results did not coalesce",73003L,ForegroundNotifications.current()?.optLong("id"))
    assertFalse(inTray(73002));assertFalse(inTray(73003));assertEquals("Foreground updates unexpectedly queued speech",speechBefore,PocketSpeech.count)
+   main{firstActivity.recreate()}
+   val recreated=i.waitForMonitorWithTimeout(activityMonitor,15000)
+   assertNotNull("Configuration recreation did not finish",recreated)
+   await("Foreground alert lost during recreation"){PocketVoice.foreground&&d.hasObject(By.res("foreground-work-notice"))}
+   assertFalse("Configuration change flushed foreground alerts into Android tray",inTray(73003))
    d.findObject(By.res("foreground-work-notice")).click()
    await("One tap did not open original source"){Pocket.selected=="second-thread"&&PocketTranscript.currentHistoryVerified}
    assertEquals("Foreground navigation erased the first draft","Keep the foreground draft",prefs.getString("draft:same-thread",null))
@@ -67,13 +74,14 @@ class ForegroundNotificationNativeTest {
    main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
    await("Resolved canonical question remained in foreground/tray"){PocketAttention.dismissed(73004)&&!inTray(73004)&&ForegroundNotifications.current()?.optLong("id")!=73004L}
    assertEquals("Notification/refresh handling admitted model work",0,qa("state").getJSONArray("replies").length())
-   c.cacheDir.resolve("foreground-notification-result.json").writeText(JSONObject().put("passed",true).put("foregroundSystemAlerts",0).put("socketFcmDeduplicated",true)
+   c.cacheDir.resolve("foreground-notification-result.json").writeText(JSONObject().put("passed",true).put("foregroundSystemAlerts",0).put("socketFcmDeduplicated",true).put("configurationChangeKeptInApp",true)
     .put("sameConversationDuplicated",false).put("otherSourceCoalesced",true).put("oneTapOriginalSource",true).put("draftPreserved",true)
     .put("actualHttpFailureInline",true).put("backgroundQuestionRetained",true).put("canonicalResolutionClearsStaleAttention",true).put("modelSubmissions",0).put("physicalPhone",false).toString())
   }finally{
    runCatching{qa("fail-reads",JSONObject().put("count",0));qa("set-attention",JSONObject().put("notifications",org.json.JSONArray()))}
    main{Pocket.closeTask();PocketVoice.foreground=false;ForegroundNotifications.background()}
    (73001L..73004L).forEach{manager.cancel(tag,(it+1000).toInt())}
+   i.removeMonitor(activityMonitor)
   }
  }
 }
