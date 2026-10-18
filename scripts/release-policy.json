@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "alpha111-native-room-density-and-responsive-audio",
+  "qualification": "codex-repositories-lifecycle-and-origin",
   "requiredNativeCases": [
     "co.fallsoft.pocket.HollywoodRoomActivityNativeTest#aggregateFailureAndQuietSnapshotNeverInventIdleOrLoseRoomTarget",
     "co.fallsoft.pocket.HollywoodCatalogLiveNativeTest#actualCatalogCountsAndOriginalAcceptedMessageSurviveListAndRoomReopening",
@@ -15,7 +15,10 @@
     "co.fallsoft.pocket.VoiceResponsePlaybackNativeTest#idleVoiceModeDoesNotBlockAttributedResponsePlayback",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#newestMessagePaintsWhileOlderReadIsHeld",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#openConversationRepairsMissedEventWithoutCatalogOrModelPolling",
-    "co.fallsoft.pocket.CatalogStartupNativeTest#delayedSearchCannotRollBackLiveCatalogEvidence"
+    "co.fallsoft.pocket.CatalogStartupNativeTest#delayedSearchCannotRollBackLiveCatalogEvidence",
+    "co.fallsoft.pocket.CodexConversationLifecycleNativeTest#navigationBackgroundAndReconnectShareOneRetirableReadOwner",
+    "co.fallsoft.pocket.CatalogStartupNativeTest#coldStartShowsLoadingAndRetryThenPaintsCatalogBeforeActivity",
+    "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",

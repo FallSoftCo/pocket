@@ -37,6 +37,10 @@ class CatalogStartupNativeTest{
    await{Pocket.catalogLoad==CatalogLoadState.Ready&&Pocket.tasks.any{it.id=="same-thread"}}
    await{!device.hasObject(By.text("Loading conversations"))&&!device.hasObject(By.text("Conversations unavailable"))}
    await{!Pocket.codexOnline&&device.hasObject(By.text(Pocket.tasks.first{it.id=="same-thread"}.title))}
+   val readsWhileActivityHeld=qa("state").optInt("catalogReads")
+   qa("silent");main{Pocket.refresh()}
+   await{qa("state").optInt("catalogReads")>readsWhileActivityHeld&&Pocket.tasks.any{it.id=="same-thread"&&it.preview=="Fresh response 2"}}
+   assertTrue("Activity hold hid the independently refreshed catalog",Pocket.catalogLoad==CatalogLoadState.Ready)
    qa("release-activity");await{Pocket.refreshError.isBlank()}
    qa("hold-catalog");main{Pocket.refresh()}
    await{qa("state").optBoolean("catalogBlocked")}

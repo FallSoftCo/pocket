@@ -101,19 +101,15 @@ object PocketLive {
     private var ws:WebSocket?=null
     private var retry:Job?=null
     private var disconnectNotice:Job?=null
-    private var selectedStatusProbe:Job?=null
     private var active=false
     private var attempt=0
     fun start(){
         if(active)return
         active=true
-        selectedStatusProbe=Pocket.scope.launch{
-            while(isActive){delay(5_000);if(active)Pocket.refreshSelectedConversationStatus()}
-        }
         connect()
     }
     fun retryNow(){stop();start()}
-    fun stop(){active=false;selectedStatusProbe?.cancel();selectedStatusProbe=null;retry?.cancel();disconnectNotice?.cancel();outageVisible=false;val old=ws;ws=null;old?.close(1000,"App in background")}
+    fun stop(){active=false;retry?.cancel();disconnectNotice?.cancel();outageVisible=false;val old=ws;ws=null;old?.close(1000,"App in background")}
     private fun connect(){
         if(!active||Pocket.token.isBlank())return
         retry?.cancel()
@@ -126,7 +122,7 @@ object PocketLive {
                 // server is quiet. Codex execution health remains a separate status.
                 disconnectNotice?.cancel();disconnectNotice=null
                 outageVisible=false;attempt=0;connectionRevision++;Pocket.connected=true;Pocket.connectionError=""
-                Pocket.refresh();if(!BackendNavigation.nativeSelected()){Pocket.catchUp();Pocket.refreshDetail();Pocket.selected?.let{PocketReplies.reconcile(it)}}
+                CodexCatalog.refresh();if(!BackendNavigation.nativeSelected()){Pocket.catchUp();CodexConversations.reconnected();Pocket.selected?.let{PocketReplies.reconcile(it)}}
             }}
             override fun onMessage(webSocket:WebSocket,text:String){Pocket.scope.launch{if(webSocket!==ws)return@launch;try{val event=JSONObject(text);disconnectNotice?.cancel();outageVisible=false;attempt=0;Pocket.connected=true;Pocket.connectionError="";Pocket.event(event)}catch(_:Exception){}}}
             override fun onFailure(webSocket:WebSocket,t:Throwable,response:Response?){reconnect(webSocket,PocketNetwork.error(t))}

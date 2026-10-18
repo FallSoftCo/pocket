@@ -2810,6 +2810,22 @@
       "status": "qualified-published-alpha113",
       "versionCode": 131,
       "evidence": "qualification/codex-catalog-live-read-20261017.json"
+    },
+    {
+      "id": "codex-repository-completeness-20261017",
+      "request": "Finish the architectural ownership boundary instead of releasing isolated fixes: stock Codex conversation and catalog lifetimes, source-bound navigation, independent read lanes and integrated native qualification.",
+      "status": "implemented-candidate-qualification-pending",
+      "versionCode": 132,
+      "design": "CODEX-REPOSITORIES.md",
+      "evidence": [
+        "Native selected-owner journey cancelled2 actual HTTP requests and preserved draft; no worker input",
+        "Held activity starves alpha113 catalog refresh, while the candidate updates the list independently"
+      ],
+      "limits": [
+        "Physical handset performance not qualified",
+        "Preserves existing canonical merge/cache and command journal",
+        "No LAX/backend/schema/permission/continuation changes"
+      ]
     }
   ],
   "current_state": {

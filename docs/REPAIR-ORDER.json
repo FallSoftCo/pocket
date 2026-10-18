@@ -80,5 +80,16 @@
     "deferred": "LAX-specific client development; preserve existing behavior",
     "request": "User depends on Codex while LAX/Hollywood are under separate development",
     "at": "2026-10-17T16:42:10.086277+00:00"
+  },
+  "currentDeliverable": {
+    "name": "Integrated stock Codex repository lifecycle",
+    "scope": [
+      "Source-bound selection and cancellable conversation reads",
+      "Typed independent content/freshness/execution/attention/delivery snapshot",
+      "Environment-owned catalog and independent ancillary updates",
+      "Native mixed lifecycle and optimized artifact qualification"
+    ],
+    "releaseRule": "No next release for another isolated symptom fix. Qualify the integrated ownership boundary while retaining published alpha113.",
+    "status": "conversation-and-catalog-owners-implemented; integrated-native-and-optimized-release-qualification-required"
   }
 }

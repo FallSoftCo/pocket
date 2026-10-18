@@ -91,18 +91,28 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 
 @OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class,FlowPreview::class)
 @Composable fun ConversationScreen(){
-    val d=Pocket.detail;val t=d?.optJSONObject("thread");val rows=PocketTranscript.rows
+    val conversation=CodexConversations.snapshot
+    val d=conversation.detail;val t=d?.optJSONObject("thread");val rows=conversation.rows
     val task=Pocket.tasks.firstOrNull{it.id==Pocket.selected}
     val failureSource=Pocket.selected;val replyFailure=Pocket.replyFailure()
-    val clientReplies=PocketReplies.visible(Pocket.selected.orEmpty())
+    val clientReplies=conversation.deliveries
     val recoveryAlreadyShown=clientReplies.any{it.id==replyFailure?.id}||d?.optJSONArray("outgoing")?.objects()?.any{it.s("id")==replyFailure?.id}==true
     val conversationError=Pocket.error.ifBlank{if(recoveryAlreadyShown)"" else replyFailure?.message.orEmpty()}.ifBlank{PocketTranscript.readError}
-    val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
+    val pending=conversation.pending
     val latestTurn=rows.lastOrNull{it.s("kind")=="turn"}
-    val status=conversationRunState(pending,task?.status.orEmpty(),t?.optJSONObject("status")?.s("type").orEmpty(),if(PocketTranscript.currentWorkVerified)latestTurn?.s("status").orEmpty() else "",d!=null&&PocketTranscript.currentWorkVerified,PocketTranscript.loading)
+    val status=conversation.execution
     val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
     val latestFailure=rows.lastOrNull{it.s("kind")=="turnEnd"}?.takeIf{it.s("status")=="failed"&&(latestTurn==null||it.s("turnId")==latestTurn.s("turnId"))}
     val list=key(Pocket.environmentId,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
+    DisposableEffect(Pocket.environmentId,Pocket.selected,conversation.incarnation){
+        val environment=Pocket.environmentId;val id=Pocket.selected;val key=conversation.key;val incarnation=conversation.incarnation
+        if(id!=null)CodexConversations.viewportMounted(environment,id)
+        onDispose{CodexConversations.viewportDisposed(key,incarnation)}
+    }
+    LaunchedEffect(list,conversation.key,conversation.incarnation){
+        snapshotFlow{list.isScrollInProgress}.collect{CodexConversations.readerMotion(conversation.key,conversation.incarnation,it)}
+    }
+
     val restoreRevision=PocketTranscript.cacheRestoreRevision
     val readPosition=remember(Pocket.environmentId,Pocket.selected,restoreRevision){PocketTranscript.readPosition}
     var restoredPosition by remember(Pocket.environmentId,Pocket.selected,restoreRevision){mutableStateOf(readPosition==null||readPosition.follow)}
@@ -212,7 +222,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 val eligible=AppWindowVisibility.focused&&!actionsOpen&&!important&&!BlackoutVisibility.active&&!PocketVoice.active&&!PocketTranscript.loading&&!PocketTranscript.updating&&!list.isScrollInProgress&&!list.canScrollForward&&visible
                 eligible to PocketTranscript.revision
             }.collectLatest{(eligible,_)->
-                if(eligible){delay(500);PocketTranscript.presentedLatest()}
+                if(eligible){delay(500);CodexConversations.presented(conversation.key,conversation.incarnation)}
             }
         }
     }
@@ -233,7 +243,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     LaunchedEffect(keyboardInput){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
     ConversationBack{Pocket.closeTask()}
     val hasDraft by remember(editorState){derivedStateOf{editorState.value.text.isNotBlank()}}
-    val submit:(String)->Unit={mode->val submitted=editor.text;val submittedGeneration=replyDraftGeneration(draftKey);follow=true;Pocket.reply(submitted,mode=mode){if(editor.text==submitted&&replyDraftGeneration(draftKey)==submittedGeneration){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
+    val submit:(String)->Unit={mode->val submitted=editor.text;val submittedGeneration=replyDraftGeneration(draftKey);follow=true;CodexConversations.submit(conversation.key,conversation.incarnation,submitted,mode,draftKey){if(editor.text==submitted&&replyDraftGeneration(draftKey)==submittedGeneration){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
     val waiting=d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") in listOf("queued","held")&&it.s("mode")=="queue"}?:emptyList()
     LaunchedEffect(list){
         if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))snapshotFlow{Triple(list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,list.isScrollInProgress)}.collect{position->
@@ -254,7 +264,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
     }}
     LaunchedEffect(dragged){
-        if(dragged){PocketTranscript.readerInteraction();follow=false;filterPassage=null}
+        if(dragged){CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false;filterPassage=null}
         else{
             if(shouldResumeTranscriptFollowing(list.canScrollForward,list.canScrollBackward,PocketTranscript.earlier,shortHistoryPull))follow=true
             shortHistoryPull=false
@@ -289,9 +299,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     if(pagingViewport||list.isScrollInProgress||!shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading))break
                     val cursor=PocketTranscript.before
                     val gesture=historyGesture
-                    PocketTranscript.load(true,beforeApply={
-                        snapshotFlow{list.isScrollInProgress}.debounce(180).first{!it}
-                    })
+                    CodexConversations.readFrom(conversation.key,conversation.incarnation,older=true)
                     androidx.compose.runtime.withFrameNanos{}
                     androidx.compose.runtime.withFrameNanos{}
                     if(PocketTranscript.before==cursor&&PocketTranscript.earlier){
@@ -307,7 +315,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
             if(pending>0)TextButton({
-                actionsOpen=false;important=false;follow=false;PocketTranscript.readerInteraction()
+                actionsOpen=false;important=false;follow=false;CodexConversations.readerInteraction(conversation.key,conversation.incarnation)
                 filterPassage=null;filterPaddingRequest=null;filterTailPixels=0
                 val request=rows.firstOrNull{it.s("kind")=="request"}
                 if(request!=null)filterRequest=FilterReadingRequest(Pocket.environmentId,Pocket.selected,request.s("id"),0,false)
@@ -349,7 +357,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 android.util.Log.d("PocketFilter","next=$nextImportant retained=$retained passage=${afterIds.getOrNull(anchor)} visible="+list.layoutInfo.visibleItemsInfo.map{it.key to it.offset})
             filterPassage=if(nextImportant)afterIds.getOrNull(anchor)else null
             filterTailPixels=if(nextImportant)list.layoutInfo.viewportSize.height else 0
-            PocketTranscript.readerInteraction();follow=false;important=nextImportant
+            CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false;important=nextImportant
             afterIds.getOrNull(anchor)?.let{
                 val request=FilterReadingRequest(Pocket.environmentId,Pocket.selected,it,targetOffset,nextImportant)
                 filterRequest=request;filterPaddingRequest=if(nextImportant)request else null
@@ -367,7 +375,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     if(row.s("kind")=="commandRuns"&&commandGroup!=null) {
                         val expanded=commandGroup.any{it.s("id") in expandedRunIds}
                         CommandRunsHeader(commandGroup,expanded){
-                            PocketTranscript.readerInteraction();follow=false
+                            CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false
                             val members=commandGroup.map{it.s("id")}.toSet()
                             setRunExpansion(if(expanded)expandedRunIds-members else expandedRunIds+members)
                         }
@@ -379,11 +387,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                         TextButton({
                             val sourceThread=Pocket.selected;val sourceDestination=Pocket.captureEnvironment()
                             val owns={Pocket.selected==sourceThread&&sourceDestination!=null&&Pocket.captureEnvironment()?.matches(sourceDestination)==true}
-                            important=false;follow=false;PocketTranscript.readerInteraction()
+                            important=false;follow=false;CodexConversations.readerInteraction(conversation.key,conversation.incarnation)
                             scope.launch{
                                 val found=locateTranscriptSource(owns,{PocketTranscript.loading},{PocketTranscript.earlier},{PocketTranscript.before},
                                     {PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}},
-                                    {PocketTranscript.load(true)})
+                                    {CodexConversations.readFrom(conversation.key,conversation.incarnation,older=true)})
                                 if(owns()&&found>=0){
                                     val target=PocketTranscript.rows.indexOfFirst{it.s("itemId",it.s("id"))==note.s("id")||it.s("id")==note.s("id")}
                                     if(target>=0)filterRequest=FilterReadingRequest(requireNotNull(sourceDestination).environment.id,sourceThread,PocketTranscript.rows[target].s("id"),0,false)
@@ -420,7 +428,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(conversationError.isNotBlank())Box(Modifier.align(Alignment.BottomCenter).padding(horizontal=16.dp)){ErrorBanner(conversationError,if(Pocket.error.isBlank()&&replyFailure!=null){{Pocket.dismissReplyFailure(failureSource,replyFailure.id)}}else null)}
             if(conversationError.isBlank()&&runProjection.groups.values.any{group->group.any{it.s("id") in expandedRunIds}})
                 FilledTonalButton({
-                    PocketTranscript.readerInteraction();follow=false
+                    CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false
                     val key=list.layoutInfo.visibleItemsInfo.firstOrNull{it.index==list.firstVisibleItemIndex}?.key as? String
                     val collapsed=commandRunProjection(filteredRows,emptySet())
                     val target=key?.let(collapsed::displayId)
@@ -449,7 +457,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
             ConversationComposerRow{
                 VoiceLaunchButton(modifier=Modifier.size(64.dp),threadId=Pocket.selected,compact=true)
-                if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
+                if(active)IconButton({CodexConversations.interrupt(conversation.key,conversation.incarnation)},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
                 ConversationDraftField(editor,{if(editor.text!=it.text)saveReplyDraft(draftKey,it.text);editor=it},
                     modifier=Modifier.weight(1f).focusRequester(inputFocus).onPreviewKeyEvent{event->
                         if(event.key==Key.Enter||event.key==Key.NumPadEnter){
@@ -474,7 +482,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
         if(!keyboardInput)Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
             VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=Pocket.selected,bar=true)
-            if(active)IconButton({Pocket.interrupt()},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
+            if(active)IconButton({CodexConversations.interrupt(conversation.key,conversation.incarnation)},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
             ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
         }
         val pageEnvironment=Pocket.environmentId
@@ -489,13 +497,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             key(important){ReaderPagingButtons(list,hasEarlier=PocketTranscript.earlier&&!important,
                 onPrepare={up->
                     pagingViewport=true;pageHydrated=true
-                    PocketTranscript.readerInteraction();follow=false;filterPassage=null
+                    CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false;filterPassage=null
                     if(up){
                         historyGesture++;pageGesture=historyGesture
                         if(!important&&!list.canScrollBackward&&PocketTranscript.earlier){
                             if(PocketTranscript.loading)snapshotFlow{PocketTranscript.loading}.first{!it}
                             val cursor=PocketTranscript.before
-                            if(PocketTranscript.earlier)PocketTranscript.load(true)
+                            if(PocketTranscript.earlier)CodexConversations.readFrom(conversation.key,conversation.incarnation,older=true)
                             pageHydrated=!PocketTranscript.earlier||PocketTranscript.before!=cursor
                         }
                     }
