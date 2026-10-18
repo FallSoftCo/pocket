@@ -230,7 +230,7 @@ class MainActivity:ComponentActivity(){
         ConnectionNotice()
         PhoneControlNotice()
         if(Pocket.newTask)NewTaskScreen()
-        else if(Pocket.selected!=null)key(Pocket.selected){if(conversationIdentityPending())LoadingSessionIdentity()else if(readOnlyChildSelected())ChildConversationScreen()else ConversationScreen()}
+        else if(Pocket.selected!=null)key(CodexConversations.displayKey){if(conversationIdentityPending())LoadingSessionIdentity()else if(readOnlyChildSelected())ChildConversationScreen()else ConversationScreen()}
         else{
             Box(Modifier.weight(1f).fillMaxWidth()){
             AnimatedContent(targetState=Pocket.tab,modifier=Modifier.fillMaxSize(),label="tab",transitionSpec={

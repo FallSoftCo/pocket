@@ -44,7 +44,22 @@ class EnvironmentIsolationNativeTest {
   assertTrue(device.wait(Until.hasObject(By.textContains("System76 answer only")),5000))
   device.findObject(By.textContains("System76 answer only")).click()
   await{Pocket.selected=="same-thread"&&PocketTranscript.rows.any{it.s("text")=="System76 answer only"}}
+  assertTrue(device.wait(Until.hasObject(By.desc("Settings, app updates, usage and activity")),5000))
+  device.findObject(By.desc("Settings, app updates, usage and activity")).click()
+  if(!device.wait(Until.hasObject(By.text("Rename")),1000)){
+   repeat(3){if(!device.hasObject(By.text("Rename")))device.swipe(device.displayWidth*2/3,device.displayHeight*4/5,device.displayWidth*2/3,device.displayHeight*2/5,25)}
+  }
+  assertTrue("Rename action missing",device.wait(Until.hasObject(By.text("Rename")),5000));device.findObject(By.text("Rename")).click()
+  assertTrue(device.wait(Until.hasObject(By.text("Rename conversation")),5000))
+  device.findObject(By.clazz("android.widget.EditText")).text="Unsent title from System76"
+  main{Pocket.activateEnvironment("remote_qa");Pocket.open("same-thread")}
+  await{PocketTranscript.rows.any{it.s("text")=="OZZZ answer only"}}
+  assertFalse("An old-environment rename control survived the source change",device.hasObject(By.text("Rename conversation")))
+  assertFalse("An old-environment control value leaked",device.hasObject(By.clazz("android.widget.EditText").text("Unsent title from System76")))
+  main{Pocket.activateEnvironment("workstation");Pocket.open("same-thread")}
+  await{PocketTranscript.rows.any{it.s("text")=="System76 answer only"}}
   main{Pocket.closeTask()}
+  assertTrue("Catalog scene not mounted",device.wait(Until.hasObject(By.res("session-catalog-microphone")),5000))
   assertTrue(device.wait(Until.hasObject(By.desc("Settings, app updates, usage and activity")),5000));device.findObject(By.desc("Settings, app updates, usage and activity")).click()
   assertTrue(device.wait(Until.hasObject(By.desc("Development environment: System76")),5000));device.findObject(By.desc("Development environment: System76")).click()
   assertTrue(device.wait(Until.hasObject(By.text("OZZZ")),5000));device.findObject(By.text("OZZZ")).click()

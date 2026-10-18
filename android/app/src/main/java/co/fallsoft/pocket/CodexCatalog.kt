@@ -47,7 +47,7 @@ internal object CodexCatalog {
     private fun active():Session?{
         val destination=Pocket.captureEnvironment()?:return null
         val key=CodexCatalogKey(destination.environment.id,backendOwner(destination.endpoint,destination.token),Pocket.showArchived)
-        session?.takeIf{it.key==key&&current(it)}?.let{return it}
+        session?.takeIf{it.key==key&&current(it)}?.let{startTicker(it);return it}
         retire()
         if(retainedKey!=key){tasks=emptyList();load=CatalogLoadState.Loading;complete=false;cursor=null;cursorInitialized=false;errors.clear();retainedKey=key}
         val value=Session(key,++serial,destination,CoroutineScope(SupervisorJob(Pocket.scope.coroutineContext[Job])+Dispatchers.Main.immediate+EnvironmentRequestContext(destination)))

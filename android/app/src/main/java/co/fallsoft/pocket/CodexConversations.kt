@@ -39,6 +39,8 @@ internal object CodexConversations {
         val readerBusy:MutableStateFlow<Boolean> = MutableStateFlow(false)
     )
     var selected by mutableStateOf<String?>(null);private set
+    private var selectionKey by mutableStateOf<CodexConversationKey?>(null)
+    internal val displayKey get()=selectionKey
     var detail by mutableStateOf<JSONObject?>(null)
     private var session by mutableStateOf<Session?>(null,referentialEqualityPolicy())
     private var serial=0L
@@ -57,16 +59,16 @@ internal object CodexConversations {
     }
     /** Selection is owned here even through legacy/test adapters; no read is implied. */
     fun select(id:String?,force:Boolean=false){
-        if(!force&&selected==id&&session!=null)return
+        if(!force&&selected==id&&session?.let{current(it)}==true)return
         retire();selected=id;detail=null;viewport=id!=null
-        if(id==null){serial++;PocketTranscript.clearState();return}
+        if(id==null){selectionKey=null;serial++;PocketTranscript.clearState();return}
         attach(id)
     }
     private fun attach(id:String):Session? {
         val destination=Pocket.captureEnvironment()?:return null
         val scope=CoroutineScope(SupervisorJob(Pocket.scope.coroutineContext[Job])+Dispatchers.Main.immediate+EnvironmentRequestContext(destination))
         val value=Session(key(destination,id),++serial,destination,scope)
-        session=value
+        selectionKey=value.key;session=value
         PocketTranscript.resetState(id,scope)
         startLatestPump(value)
         startProbe(value)
@@ -76,7 +78,7 @@ internal object CodexConversations {
         if(BackendNavigation.teamSelected())return null
         val id=selected?:return null
         val value=session
-        if(value!=null&&current(value))return value
+        if(value!=null&&current(value)){startProbe(value);return value}
         retire()
         return attach(id)
     }
@@ -153,6 +155,7 @@ internal object CodexConversations {
         }.await()
     }
     fun viewportMounted(environment:String,id:String){
+        if(!foreground&&!PocketVoice.foreground)return
         if(Pocket.environmentId!=environment||selected!=id)return
         viewport=true
         if(session==null)invalidate(immediate=true)
@@ -230,7 +233,7 @@ internal object CodexConversations {
             rows.isNotEmpty()->CodexReadPhase.CACHED
             else->CodexReadPhase.EMPTY
         }
-        return CodexConversationSnapshot(session?.key,incarnation,rows,d,
+        return CodexConversationSnapshot(selectionKey,incarnation,rows,d,
             CodexFreshness(phase,current,PocketTranscript.loading,error),
             CodexCoverage(PocketTranscript.earlier,PocketTranscript.before,PocketTranscript.browsingEarlier),
             conversationRunState(pending,task?.status.orEmpty(),d?.optJSONObject("thread")?.optJSONObject("status")?.s("type").orEmpty(),
