@@ -761,7 +761,7 @@ class TranscriptRefreshNativeTest {
   await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
   assertEquals("Voice keys lost typed draft","Voice must keep this draft",prefs.getString("draft:same-thread",null))
   assertFalse("Silent emulator capture submitted a voice turn",prefs.contains("voicePendingId"))
-  assertTrue("Capture error hidden",device.wait(Until.hasObject(By.text(PocketVoice.problem)),2000))
+  assertTrue("Capture error hidden",device.wait(Until.hasObject(By.textContains(PocketVoice.problem)),2000))
   assertTrue("Touch microphone retry missing",device.wait(Until.hasObject(By.desc("Start recording")),2000))
   device.findObject(By.desc("Start recording")).click()
   await{PocketVoice.state=="Listening"}

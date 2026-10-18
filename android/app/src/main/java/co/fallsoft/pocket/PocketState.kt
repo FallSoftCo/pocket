@@ -316,14 +316,22 @@ object Pocket {
             "immersion" -> PocketImmersion.accept(json)
             "contextNotes" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("notes",json.optJSONArray("notes"))}}
             "activity" -> {activities=json.optJSONArray("items")?.objects()?:emptyList()}
-            "sessionPreview" -> {val id=json.s("threadId");val previous=tasks.firstOrNull{it.id==id};CodexSessionRepository.preview(id);discoverSession(id);tasks=tasks.map{if(it.id==id)it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
-                if(id==selected&&(transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,json.s("preview"),json.s("previewKind","message"),previous?.status)||transcriptLiveActivityAdvanced(previous?.activityAt,json.optLong("activityAt"))))scheduleRefresh()}
+            "sessionPreview" -> {
+                val id=json.s("threadId");val previous=tasks.firstOrNull{it.id==id}
+                val changed=transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,json.s("preview"),json.s("previewKind","message"),previous?.status)||
+                    transcriptLiveActivityAdvanced(previous?.activityAt,json.optLong("activityAt"))
+                discoverSession(id)
+                tasks=tasks.map{if(it.id==id)it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
+                if(changed){CodexSessionRepository.preview(id);if(id==selected)scheduleRefresh()}
+            }
             "sessionActivity" -> {
-                val id=json.s("threadId");discoverSession(id);CodexSessionRepository.invalidate(id)
+                val id=json.s("threadId");val previous=tasks.firstOrNull{it.id==id}
                 val status=json.optJSONObject("status")?.s("type")
-                val previous=tasks.firstOrNull{it.id==id}
+                val changed=previous==null||(!status.isNullOrBlank()&&status!=previous.status)||
+                    transcriptLiveActivityAdvanced(previous?.activityAt,json.optLong("activityAt"))
+                discoverSession(id)
                 tasks=tasks.map{if(it.id==id)it.copy(status=status?.takeIf{it.isNotBlank()}?:it.status,activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
-                if(id==selected&&((!status.isNullOrBlank()&&status!=previous?.status)||transcriptLiveActivityAdvanced(previous?.activityAt,json.optLong("activityAt"))))scheduleRefresh()
+                if(changed){CodexSessionRepository.invalidate(id);if(id==selected)scheduleRefresh()}
             }
             "sessionStarted" -> {
                 val thread=json.optJSONObject("thread")

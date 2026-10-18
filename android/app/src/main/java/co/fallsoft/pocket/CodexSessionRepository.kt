@@ -163,6 +163,25 @@ internal object CodexSessionRepository {
             queue(Intent(source,id,notification))
         }
     }
+    /** Persist server-proven ordering in the shared tail as well as the open
+     * viewport. Reopening cannot replay the arrival order from another cache.
+     * This is a read-result application; it never submits or acknowledges work. */
+    fun positioned(destination:EnvironmentRequest,id:String,target:String,successor:String){
+        val source=source(destination)
+        io.launch{
+            if(!current(source))return@launch
+            val previous=load(source,id)?:return@launch
+            val old=previous.optJSONObject("timeline")?.optJSONArray("rows")?.objects()?:return@launch
+            val before=transcriptDisplayAnchor(old,successor)?:return@launch
+            val repaired=placeTranscriptRowBefore(old,target,before){it.s("id")}
+            if(repaired===old)return@launch
+            val next=JSONObject(previous.toString())
+            next.getJSONObject("timeline").put("rows",org.json.JSONArray(repaired))
+            val key=source.scope to id
+            latest[key]=next
+            save(source,id,next,key in dirty)
+        }
+    }
     /** Save an authoritative recent page without retaining pending requests/command authority. */
     fun accepted(destination:EnvironmentRequest,id:String,value:JSONObject){
         validateTranscriptSnapshot(value,id)

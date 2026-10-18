@@ -247,7 +247,8 @@ object PocketTranscript {
                             if(successor.isNotBlank()){
                                 if(successor.startsWith("${request.turn}/")){
                                     val repaired=placeTranscriptRowBefore(rows,request.target,successor){it.s("id")}
-                                    if(repaired!==rows){rows=repaired;rememberRecent();revision++}
+                                    if(repaired!==rows){rows=repaired;rememberRecent(persist=true);revision++}
+                                    CodexSessionRepository.positioned(destination,id,request.target,successor)
                                 }
                                 break
                             }
