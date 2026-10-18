@@ -86,6 +86,10 @@ class TranscriptRefreshNativeTest {
   val inputs=qa("state").getJSONArray("positions");assertEquals("same-send",inputs.getJSONObject(1).getString("clientId"))
   main{Pocket.refreshDetail()};await{!PocketTranscript.loading};Thread.sleep(600)
   assertEquals("Successful evidence was needlessly re-requested",2,qa("state").getJSONArray("positions").length())
+  main{Pocket.event(JSONObject(event.toString()).put("version",1001).put("row",JSONObject(event.getJSONObject("row").toString()).put("version",1001)))}
+  await{CodexSessionRepository.peek("same-thread")?.optJSONObject("timeline")?.optJSONArray("rows")?.objects()?.any{it.s("clientId")=="same-send"}==true}
+  val cached=CodexSessionRepository.peek("same-thread")!!.getJSONObject("timeline").getJSONArray("rows").objects().map{it.s("id")}
+  assertTrue("Coalesced shared cache replayed input after its answer",cached.indexOf("order/client-user/same-send")<cached.indexOf("order/answer"))
   assertEquals(0,qa("state").getJSONArray("replies").length())
  }
  @Test fun canonicalInputPositionSurvivesProviderChangeDuringLookup(){
@@ -694,7 +698,7 @@ class TranscriptRefreshNativeTest {
   Thread.sleep(2400)
   assertFalse("Older page inserted before reader settled",PocketTranscript.rows.any{it.s("text")=="Older synthetic history"})
   readerSettled.complete(Unit)
-  await{has(3)&&!PocketTranscript.updating}
+  await{has(3)&&!PocketTranscript.loading&&!PocketTranscript.updating}
   assertTrue("Older loaded rows lost",PocketTranscript.rows.any{it.s("text")=="Older synthetic history"})
   qa("silent");main{Pocket.refresh()};await{has(4)&&!PocketTranscript.updating}
   main{Pocket.closeTask();Pocket.open("same-thread")}

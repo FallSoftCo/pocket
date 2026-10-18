@@ -33,6 +33,7 @@ internal object CodexSessionRepository {
     private val lastLive=ConcurrentHashMap<Pair<String,String>,Long>()
     private val liveSequence=java.util.concurrent.atomic.AtomicLong()
     private val liveGenerations=ConcurrentHashMap<Pair<String,String>,Long>()
+    private val positionEvidence=linkedMapOf<Triple<String,String,String>,String>()
     private val writes=linkedMapOf<Pair<String,String>,Triple<Source,JSONObject?,Boolean>>()
     private var writeJob:Job?=null
     private var started=false
@@ -138,7 +139,7 @@ internal object CodexSessionRepository {
                             rows=reduceTranscriptUpdate(rows,update)
                             update.optJSONObject("historyHead")?.let{next.put("historyHead",it)}
                         }
-                        page.put("rows",org.json.JSONArray(rows.takeLast(64)))
+                        page.put("rows",org.json.JSONArray(ordered(source.scope,id,rows).takeLast(64)))
                         latest[key]=next;save(source,id,next,key in dirty)
                     }
                     val epoch=previous?.optJSONObject("historyHead")?.s("epoch")
@@ -170,10 +171,12 @@ internal object CodexSessionRepository {
         val source=source(destination)
         io.launch{
             if(!current(source))return@launch
+            val evidenceKey=Triple(source.scope,id,target)
+            positionEvidence.remove(evidenceKey);positionEvidence[evidenceKey]=successor
+            while(positionEvidence.size>512)positionEvidence.remove(positionEvidence.keys.first())
             val previous=load(source,id)?:return@launch
             val old=previous.optJSONObject("timeline")?.optJSONArray("rows")?.objects()?:return@launch
-            val before=transcriptDisplayAnchor(old,successor)?:return@launch
-            val repaired=placeTranscriptRowBefore(old,target,before){it.s("id")}
+            val repaired=ordered(source.scope,id,old)
             if(repaired===old)return@launch
             val next=JSONObject(previous.toString())
             next.getJSONObject("timeline").put("rows",org.json.JSONArray(repaired))
@@ -181,6 +184,22 @@ internal object CodexSessionRepository {
             latest[key]=next
             save(source,id,next,key in dirty)
         }
+    }
+    // Proof may precede the coalesced live projection. Retain it independently
+    // of row presence; arrival timing cannot erase a confirmed same-thread edge.
+    private fun ordered(scope:String,id:String,rows:List<JSONObject>):List<JSONObject>{
+        var result=rows
+        for((key,successor) in positionEvidence)if(key.first==scope&&key.second==id){
+            val target=transcriptDisplayAnchor(result,key.third)?:continue
+            val before=transcriptDisplayAnchor(result,successor)?:continue
+            result=placeTranscriptRowBefore(result,target,before){it.s("id")}
+        }
+        return result
+    }
+    private fun enforcePositions(scope:String,id:String,value:JSONObject){
+        val page=value.optJSONObject("timeline")?:return
+        val rows=page.optJSONArray("rows")?.objects()?:return
+        page.put("rows",org.json.JSONArray(ordered(scope,id,rows)))
     }
     /** Save an authoritative recent page without retaining pending requests/command authority. */
     fun accepted(destination:EnvironmentRequest,id:String,value:JSONObject){
@@ -193,6 +212,7 @@ internal object CodexSessionRepository {
             page.put("rows",org.json.JSONArray(page.getJSONArray("rows").objects().takeLast(64)))
             safe.put("timeline",page)
             retainNewerLiveHead(source.scope to id,safe,value.optLong("_liveGenerationAtReadStart"))
+            enforcePositions(source.scope,id,safe)
             latest[source.scope to id]=safe
             val high=safe.optLong("throughNotification")
             known[source.scope to id]=maxOf(known[source.scope to id]?:0,high)
@@ -278,6 +298,7 @@ internal object CodexSessionRepository {
                         page.put("rows",org.json.JSONArray(page.getJSONArray("rows").objects().takeLast(64)))
                         safe.put("timeline",page)
                         retainNewerLiveHead(key,safe,response.optLong("_liveGenerationAtReadStart"))
+                        enforcePositions(intent.source.scope,intent.thread,safe)
                         latest[key]=safe
                         if(!pending.containsKey(key))dirty.remove(key)
                         save(intent.source,intent.thread,safe,pending.containsKey(key))
