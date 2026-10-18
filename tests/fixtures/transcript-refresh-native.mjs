@@ -73,6 +73,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/pacing'){pacing=true;body={ok:true};}
  else if(path==='/_qa/malformed-read'){malformedRead=true;body={ok:true};}
  else if(path==='/_qa/fail-read-burst'){failedReadsRemaining=4;failStatus=503;body={ok:true};}
+ else if(path==='/_qa/fail-reads'){const count=JSON.parse(raw||'{}').count;failedReadsRemaining=Number.isSafeInteger(count)?Math.max(0,Math.min(20,count)):0;failStatus=503;body={remaining:failedReadsRemaining};}
  else if(path==='/_qa/fail-read'){failRead=true;failStatus=503;body={ok:true};}
  else if(path==='/_qa/fail-read-permanent'){failRead=true;failStatus=401;body={ok:true};}
  else if(path==='/_qa/hold-history'){holdHistory=true;body={ok:true};}

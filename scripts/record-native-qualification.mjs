@@ -52,6 +52,8 @@ try{
  const fixture=spawn(process.execPath,[fixtureScript],{cwd:root,env:{...childEnv,PORT:fixturePort,NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},stdio:['ignore',fd,fd],detached:true});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);fixture.unref();owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
  run(['reverse','tcp:18880','tcp:'+fixturePort]);
+ for(const [from,to] of Object.entries(owner.reversePorts||{})){if(!/^\d{4,5}$/.test(from)||!Number.isSafeInteger(to)||to<1024||to>65535)throw Error('Invalid owned QA reverse mapping');run(['reverse','tcp:'+from,'tcp:'+to]);}
+ if(name.startsWith('co.fallsoft.pocket.ForegroundNotificationNativeTest#'))run(['reverse','tcp:18907','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.CodexClosedSessionSyncNativeTest#'))run(['reverse','tcp:18903','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.TypingResponsivenessNativeTest#'))run(['reverse','tcp:18891','tcp:'+fixturePort]);
  if(voiceCase)run(['reverse','tcp:18893','tcp:'+fixturePort]);
@@ -87,7 +89,7 @@ try{
  if(voiceCase&&!/android\.permission\.RECORD_AUDIO:\s*granted=true/.test(permissions))throw Error('Native setup failed: microphone permission unavailable.');
  if(!/android\.permission\.POST_NOTIFICATIONS:\s*granted=true/.test(permissions))throw Error('Native setup failed: notification permission unavailable.');
  receipt.preflight={state:'complete',notificationPermissionGranted:true,fixtureReady:true,installedApkVerified:true,emulatorStartTicks:ticks};persist();
- const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:180000,maxBuffer:4*1024*1024});
+ const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaRunId','release'+manifest.versionCode+'_'+build.productionSourceSha.slice(0,8),'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:180000,maxBuffer:4*1024*1024});
  const output=(r.stdout||'')+(r.stderr||'');writeFileSync(join(directory,log),output,{flag:'wx',mode:0o600});receipt.logSha=fileSha(join(directory,log));receipt.exitCode=r.status;
  if(r.status!==0||!nativeOutputPassed(output)||!current()||installed()!==build.qualificationApkSha)throw Error('Native qualification failed; channel must not be published.');
  receipt.state='complete';receipt.finishedAt=Date.now();persist();console.log(JSON.stringify({state:'complete',case:name,elapsedMs:receipt.finishedAt-receipt.startedAt}));

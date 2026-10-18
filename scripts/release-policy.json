@@ -22,7 +22,8 @@
     "co.fallsoft.pocket.CatalogStartupNativeTest#concurrentAncillariesAndSearchCannotBlockLatestCatalog",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#prolongedHistoryRecoveryCannotFreezeOrFollowNavigation",
     "co.fallsoft.pocket.HistoryReadingNativeTest#pullingAShortRecentPageLoadsEarlierHistoryWithoutATap",
-    "co.fallsoft.pocket.ImmersionWaterfallScrollNativeTest#waterfallRemainsSpatialAndScrollDoesNotReassignLanguage"
+    "co.fallsoft.pocket.ImmersionWaterfallScrollNativeTest#waterfallRemainsSpatialAndScrollDoesNotReassignLanguage",
+    "co.fallsoft.pocket.ForegroundNotificationNativeTest#activeAppCoalescesAlertsPreservesQuestionsAndKeepsDelayedRefreshInline"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",

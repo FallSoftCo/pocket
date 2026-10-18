@@ -62,6 +62,7 @@ internal object ForegroundNotifications {
         synchronized(pending){
             val old=pending[key]
             if(old!=null&&old.value.optLong("id")>n.optLong("id"))return
+            pending.remove(key)
             pending[key]=Notice(source,JSONObject(n.toString()))
             while(pending.size>64)pending.remove(pending.keys.first())
         }
@@ -78,7 +79,7 @@ internal object ForegroundNotifications {
     fun current():JSONObject?{
         revision
         return available().asReversed().firstOrNull{
-            ForegroundNotificationPolicy.material(it.value.s("kind"))&&
+            ForegroundNotificationPolicy.material(it.value.s("kind"))&&(it.value.has("_hollywoodKey")||it.value.s("thread_id").isNotBlank())&&
                 (if(it.value.has("_hollywoodKey"))visibleRoom!=Triple(backendOwner(it.source.endpoint,it.source.token),it.value.s("_binding"),it.value.s("_room"))
                 else !ForegroundNotificationPolicy.sameConversation(it.source.environment.id,it.value.s("thread_id"),Pocket.environmentId,Pocket.selected))
         }?.value
@@ -117,8 +118,8 @@ internal object ForegroundNotifications {
     if(!ForegroundNotifications.active())return
     TextButton({ForegroundNotifications.open(n)},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("foreground-work-notice"),contentPadding=PaddingValues(horizontal=16.dp,vertical=6.dp)){
         Column(Modifier.weight(1f)){
-            Text(n.s("title","Work update"),color=Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-            Text(n.s("body"),color=Paper,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            ImmersionText("foreground:title:"+n.s("_environment")+":"+n.optLong("id"),n.s("title","Work update"),rescue=false,color=Mint,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            ImmersionText("foreground:body:"+n.s("_environment")+":"+n.optLong("id"),n.s("body"),rescue=false,color=Paper,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(8.dp));BilingualLabel("Open",color=Mint,fontSize=14.sp)
     }
