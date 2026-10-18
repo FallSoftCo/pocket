@@ -2951,10 +2951,16 @@
       "cancelled audio never admitted",
       "independent durable delivery",
       "Codex latest-first paginated history and native voice"
-    ]
+    ],
+    "delivery": {
+      "androidVersionCode": 134,
+      "status": "update-available",
+      "workstationAdmissionSeconds": 600,
+      "physicalTenMinuteProviderCapture": "not-qualified"
+    }
   },
   "codex_current_head_priority_20261018": {
-    "status": "candidate-native-qualification",
+    "status": "update-available",
     "user_request": "Fix user messages appearing after their replies and minute-long session opening; continue through update delivery.",
     "architecture": [
       "Current HTTP single-flight admission is independent of serial SQLite/cache restoration.",
@@ -2966,6 +2972,12 @@
       "Live workstation current-page read measured 51-97ms; position lookup 21ms. These samples do not establish all handset roundtrips.",
       "Actual phone still version133; ADB unavailable; candidate134 not yet published.",
       "No task submissions or unknown deliveries replayed."
-    ]
+    ],
+    "versionCode": 134,
+    "versionName": "0.5.0-alpha.116",
+    "productionSourceSha": "7b3d2a4e7ab693a3217c296b1a64a5054777b6df7f2a3d16f570dfa9f45b9e92",
+    "actualNativeJourneys": "Provider turn grouping, late input/provider reconstruction, retained coalesced position proof, independent old/latest pages, cached reopening; all25 required native cases passed.",
+    "phoneInstallation": "Last observed133 after publication;134 installation not claimed.",
+    "delivery": "Published on both existing channels; one workstation update announcement accepted by FCM on its first attempt."
   }
 }

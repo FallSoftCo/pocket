@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "versionCode": 134,
+  "versionName": "0.5.0-alpha.116",
+  "state": "update-available",
+  "binarySourceCommit": "648c662b6e911bf97526e5839c623fc98e3a8e9d",
+  "productionSourceSha": "7b3d2a4e7ab693a3217c296b1a64a5054777b6df7f2a3d16f570dfa9f45b9e92",
+  "qualificationInputSha": "e380dbfb5a8e29e96a4032db1af56a748be7eef9ee829eb1875428619fdd68a0",
+  "phoneCompatibleApkSha256": "be7f96a066fb6cca9c7b1c4ac1bc0f1f223a360bf3244c81296173c972cf71f6",
+  "architecture": [
+    "Foreground request admission is independent of serial SQLite hydration.",
+    "Canonical provider turn IDs keep older-turn rows out of newer turn blocks.",
+    "Server-proven within-turn position edges survive coalesced event delivery and both caches.",
+    "Only live ingress newer than the snapshot read baseline can outrank a current snapshot.",
+    "Unchanged preview/activity events do not request additional history repair.",
+    "Following resolves before measurement; an unseen head supersedes an obsolete stored viewport unless the reader has interacted."
+  ],
+  "nativeCases": 25,
+  "targetedJourneys": [
+    "currentHeadsAndDelayedInputRemainOrderedAcrossCachedReopen",
+    "canonicalInputPositionSurvivesProviderChangeDuringLookup",
+    "historyEvidenceRepairsDeferredPositionOnce",
+    "newestMessagePaintsWhileOlderReadIsHeld",
+    "closedSessionRefreshesBeforeOpeningAndLiveRowsDoNotWaitForHistory"
+  ],
+  "optimizedPayloadEntriesVerified": 296,
+  "normalLiveReadSamplesMs": [
+    51,
+    97
+  ],
+  "livePositionReadMs": 21,
+  "phoneUnauthenticatedTransportProbeMs": 421,
+  "optimizedSilentFeedLossFallbackMs": 6970,
+  "deliberateFixtureHistoryResponseMs": 1700,
+  "voiceCaptureLimitSeconds": 600,
+  "delivery": {
+    "existingChannelsPublished": 2,
+    "workstationAnnouncements": 1,
+    "fcmAttempts": 1,
+    "fcmAccepted": true,
+    "phoneObservedVersionAfterPublication": 133
+  },
+  "limits": [
+    "Read samples are workstation reads, not physical Android render/first-open measurements.",
+    "Unauthenticated phone probe measured DNS/TLS/reachability, not authenticated message rendering.",
+    "Silent all-feed-loss fallback includes5second metadata probe cadence plus deliberate1700ms fixture latency.",
+    "Physical Android134 installation, optical pacing, FCM rendering and full ten-minute provider recording remain unqualified.",
+    "A real short native audio adapter transcription succeeded; it does not qualify ten-minute latency.",
+    "No business submissions, worker wakeups or unknown delivery replays."
+  ],
+  "publicEvidence": "Operator receipts and actual screenshots retained privately; no credentials/account IDs copied to this report."
+}
