@@ -1,5 +1,5 @@
 {
-  "status": "candidate-native-and-provider-qualified-not-deployed",
+  "status": "published-alpha114-version132-backend-active-phone-install-pending",
   "userReport": "Typing lag gone; neither Italian messages nor English in Italian grammar visible",
   "phoneObservedVersionCode": 130,
   "accountProfileEnabled": true,
@@ -29,12 +29,14 @@
     "nativeAPKHashes": {
       "co.fallsoft.pocket": "7e25b4016c38c46861630dbcc86f196d1d5d9404e1e413c8b781d512fdd50619",
       "co.fallsoft.pocket.test": "7c70f40dcbba147db42dca46fe895d87a84a401bf4f699935d7693aec5ff0aed"
-    }
+    },
+    "exactFinalNativeAppAndOptimizedQualification": true,
+    "finalNativeLog": "immersion-delivery-native-r06.log",
+    "earlierNativeAPKHashesArePreReleaseBuildEvidence": true
   },
   "remaining": [
-    "Integrated exact signed candidate qualification and coordinated backend/module delivery",
-    "Physical phone restoration readback",
-    "Existing12000character source admission limit remains; larger content needs safe protected-span segmentation, not silent claim of universal coverage"
+    "Physical phone install/render verification;installed131,available132",
+    "Safe long-source segmentation beyond existing12000character limit"
   ],
   "architecture": [
     "Versioned durable profile-bound source jobs with attempts and expiry",
@@ -43,5 +45,7 @@
     "Single profile-bound status observer recovers lost socket delivery",
     "One cached grammatical plan and shared viewport renderer; no inference per animation cycle",
     "Repeated status snapshots retain immutable accepted objects; parsed grammar/layout is not invalidated"
-  ]
+  ],
+  "compatibleApkSha256": "3624dbca2f16860b2681da053dddc9187490554c19383a3060cf2679473b3e6e",
+  "productionSourceSha256": "293d4401c281deecac53167904a466075d201521991159ba6350ad1ac8e19ae8"
 }

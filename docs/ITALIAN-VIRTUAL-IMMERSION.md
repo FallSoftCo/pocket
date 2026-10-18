@@ -12,7 +12,7 @@ One bounded scheduler performs display-only inference. The first failure waits30
 
 Android accepts socket notifications as accelerators. One profile-bound status observer reconciles pending jobs every2 seconds, backing off on transport failures; it never submits work or starts inference. Completed plans are cached by content and surface identity. Environment changes cancel the observer. Rejected or unavailable plans keep canonical content readable rather than inventing an English/Italian rendering.
 
-This candidate is not yet deployed. The versioned qualification receipt distinguishes actual synthetic provider inference, durable queue/restart checks, rendered native delivery and physical phone evidence. Older policies below are historical and do not define the current experience.
+The two-module workstation backend repair is deployed and the compatible alpha114/version132 APK is published through both existing updater channels. The phone was independently read as131 before installation; physical immersion is not yet verified. The versioned qualification receipt distinguishes actual synthetic provider inference, durable queue/restart checks, rendered native delivery and physical phone evidence. Admitted sources retain the existing12000character limit; safe protected-span segmentation for larger messages remains open. Older policies below are historical and do not define the current experience.
 
 ---
 

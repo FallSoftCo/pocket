@@ -35,7 +35,11 @@ class ImmersionDeliveryNativeTest {
    }
    val end=android.os.SystemClock.elapsedRealtime()+28000
    while(android.os.SystemClock.elapsedRealtime()<end){
-    d.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile(".*(connection|connessione).*"))).forEach{seen+=it.text}
+    d.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile(".*(connection|connessione).*"))).forEach{node->
+     // A native language handoff replaces its accessibility node. Collect a
+     // fresh snapshot on the next bounded iteration; never retain UiObject2.
+     try{seen+=node.text}catch(_:androidx.test.uiautomator.StaleObjectException){}
+    }
     if(seen.containsAll(listOf("La tua connessione è disponibile.","The your connection is available.")))break
     Thread.sleep(150)
    }

@@ -2814,7 +2814,7 @@
     {
       "id": "codex-repository-completeness-20261017",
       "request": "Finish the architectural ownership boundary instead of releasing isolated fixes: stock Codex conversation and catalog lifetimes, source-bound navigation, independent read lanes and integrated native qualification.",
-      "status": "implemented-candidate-qualification-pending",
+      "status": "published-alpha114-version132-lifecycle-and-source-qualification-pass",
       "versionCode": 132,
       "design": "CODEX-REPOSITORIES.md",
       "evidence": [
@@ -2829,7 +2829,7 @@
     },
     {
       "id": "immersion-durable-paired-delivery-20261017",
-      "status": "native-and-real-provider-qualified-release-pending",
+      "status": "published-alpha114-version132-backend-active-phone-install-pending",
       "request": "Immersion must work through a real performant architecture: English vocabulary in Italian grammar cycling into pure Italian. Do not treat queue retention alone as completion.",
       "requirements": [
         "Durable versioned profile-bound translation jobs and bounded independent retries",
@@ -2838,7 +2838,16 @@
         "One cached aligned plan supplies both forms; shared draw clock independent of network/model work",
         "Real provider and native missing-socket journey before coordinated release"
       ],
-      "evidence": "docs/qualification/immersion-message-retention-20261017.json"
+      "evidence": "docs/qualification/immersion-message-retention-20261017.json",
+      "qualified": [
+        "Actual ChatGPT-authenticated teacher10.149seconds/one turn",
+        "Exact staged application native missing-socket recovery,one submission,both forms,and stable parsed objects",
+        "20 integrated native cases and optimized actual-APK-payload journey"
+      ],
+      "limits": [
+        "Phone last observed131;132 offered by existing updater;physical immersion not yet observed",
+        "Admitted text limit12000characters;safe source segmentation remains open"
+      ]
     }
   ],
   "current_state": {
