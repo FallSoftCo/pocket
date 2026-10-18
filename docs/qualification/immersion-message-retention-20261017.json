@@ -23,7 +23,13 @@
       "The your connection is available."
     ],
     "earlierNativeFailures": "Two invalid harness observations omitted normal selection/accessibility wrapper. Screenshots proved target ink; strengthened normal-wrapper journey passed. Retained original logs.",
-    "phoneRestorationVerified": false
+    "phoneRestorationVerified": false,
+    "nativeCacheObjectIdentityPreserved": true,
+    "nativeFinalJourney": "immersion-delivery-native-r04.log",
+    "nativeAPKHashes": {
+      "co.fallsoft.pocket": "7e25b4016c38c46861630dbcc86f196d1d5d9404e1e413c8b781d512fdd50619",
+      "co.fallsoft.pocket.test": "7c70f40dcbba147db42dca46fe895d87a84a401bf4f699935d7693aec5ff0aed"
+    }
   },
   "remaining": [
     "Integrated exact signed candidate qualification and coordinated backend/module delivery",
@@ -35,6 +41,7 @@
     "Bounded30/120second retry scheduler;3attempt ceiling survives restarts",
     "Pending alias deduplication and accepted immutable cache fanout",
     "Single profile-bound status observer recovers lost socket delivery",
-    "One cached grammatical plan and shared viewport renderer; no inference per animation cycle"
+    "One cached grammatical plan and shared viewport renderer; no inference per animation cycle",
+    "Repeated status snapshots retain immutable accepted objects; parsed grammar/layout is not invalidated"
   ]
 }

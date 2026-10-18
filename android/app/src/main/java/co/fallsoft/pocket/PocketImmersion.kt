@@ -117,7 +117,13 @@ object PocketImmersion {
         event.optJSONArray("jobs")?.let{jobs->
             remotePending=jobs.objects().any{it.s("state") in listOf("pending","running","retryWaiting")}
         }
-        val list=event.optJSONArray("translations")?.objects()?.filter(::eligible).orEmpty()
+        // Accepted plans are immutable for a semantic revision/content/density.
+        // Status reconciliation may carry the same cache repeatedly; retain the
+        // original objects so polling never invalidates parsed spans or layout.
+        val list=event.optJSONArray("translations")?.objects()?.filter(::eligible).orEmpty().filter{row->
+            val old=translations[row.s("id")]
+            old==null||old.s("version")!=row.s("version")||old.s("planVersion")!=row.s("planVersion")||old.s("density")!=row.s("density")
+        }
         if(list.isNotEmpty()){
             translations=(translations+list.associateBy{it.s("id")}).entries.toList().takeLast(600).associate{it.toPair()}
             byContent=translations.values.associateBy{it.s("version")}

@@ -64,11 +64,12 @@ test('durable grammar jobs survive restart, back off independently, and keep the
  now+=30000;await w.flush();assert.equal(calls.length,2);
  // Recomposition/reopening the same source must not reset its retry budget.
  w.submit('a',[{id:'body',text:source}]);assert.equal(w.snapshot('a').jobs[0].attempts,2);
+ w.submit('a',[{id:'same-content-new-surface',text:source}]);assert.equal(w.snapshot('a').jobs.find(x=>x.id==='same-content-new-surface').attempts,2);
  now+=120000;await w.flush();assert.equal(calls.length,3);assert.equal(w.snapshot('a').jobs[0].state,'unavailable');
  w.close();w=make();assert.equal(w.snapshot('a').jobs[0].state,'unavailable');
  w.submit('a',[{id:'body',text:source}]);w.translate=async()=>{throw Error('Must not retry exhausted content');};await w.flush();assert.equal(calls.length,3);
  // A different version is independently eligible, not trapped behind old work.
- w.submit('a',[{id:'body',text:source+' New.'}]);assert.equal(w.snapshot('a').jobs[0].attempts,0);w.setEnabled('a',false);assert.equal(saved.get('a').jobs.length,0);w.close();
+ w.submit('a',[{id:'body',text:source+' New.'}]);assert.equal(w.snapshot('a').jobs.find(x=>x.id==='body').attempts,0);w.setEnabled('a',false);assert.equal(saved.get('a').jobs.length,0);w.close();
 });
 
 test('restart after durable acceptance reuses grammar plans without inference',async()=>{

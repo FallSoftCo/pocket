@@ -44,6 +44,11 @@ class ImmersionDeliveryNativeTest {
    assertTrue("Italian never rendered: $seen",seen.contains("La tua connessione è disponibile."))
    assertTrue("Italian-order English never rendered: $seen",seen.contains("The your connection is available."))
    assertTrue(PocketImmersion.hasTranslation("delivery-body","Your connection is available."))
+   val before=PocketImmersion.presentation("delivery-body","Your connection is available.").spans
+   val repeated=kotlinx.coroutines.runBlocking{Pocket.api("/api/immersion/v2")}
+   i.runOnMainSync{PocketImmersion.accept(repeated)}
+   assertSame("Repeated cache delivery rebuilt parsed grammar",before,PocketImmersion.presentation("delivery-body","Your connection is available.").spans)
+
   }
  }
 }
