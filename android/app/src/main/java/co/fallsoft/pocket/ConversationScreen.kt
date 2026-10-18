@@ -417,6 +417,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 clientReplies.forEach{intent->item(key="client-reply-"+intent.id){ClientReplyRecovery(intent,PocketReplies.matchesCurrent(intent)&&transcriptContainsReply(rows,intent.id)){value->editor=TextFieldValue(value,TextRange(value.length));saveReplyDraft(draftKey,value);keyboardInput=true}}}
                 // A row may grow taller than the viewport while streaming. Its
                 // start is not the transcript end: follow the explicit boundary.
+                if(conversationError.isNotBlank())item(key="ui:conversation-error",contentType="sync-status"){
+                    if(Pocket.error.isBlank()&&replyFailure==null&&PocketTranscript.refreshDelayed)
+                        WorkflowText(conversationError,color=Muted,fontSize=13.sp,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp))
+                    else ErrorBanner(conversationError,if(Pocket.error.isBlank()&&replyFailure!=null){{Pocket.dismissReplyFailure(failureSource,replyFailure.id)}}else null)
+                }
                 if(PocketTranscript.updating)item(key="ui:messages-sync",contentType="sync-status"){
                     Row(Modifier.fillMaxWidth().heightIn(min=32.dp).semantics{liveRegion=LiveRegionMode.Polite},
                         horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
@@ -427,7 +432,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             }
             if(PocketTranscript.earlier&&PocketTranscript.loading&&!follow)
                 Box(Modifier.align(Alignment.TopCenter).padding(top=10.dp).size(36.dp).background(Panel,CircleShape),contentAlignment=Alignment.Center){AnimatedMark(28)}
-            if(conversationError.isNotBlank())Box(Modifier.align(Alignment.BottomCenter).padding(horizontal=16.dp)){ErrorBanner(conversationError,if(Pocket.error.isBlank()&&replyFailure!=null){{Pocket.dismissReplyFailure(failureSource,replyFailure.id)}}else null)}
             if(conversationError.isBlank()&&runProjection.groups.values.any{group->group.any{it.s("id") in expandedRunIds}})
                 FilledTonalButton({
                     CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false

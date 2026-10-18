@@ -2916,5 +2916,29 @@
     "qualification": "21 exact native cases and optimized payload review pass. Closed-session latest first snapshot paints182ms with held subsequent history; inactive live rows cause zero history reads/worker admissions. Native scrolling preserves8 common line phases across634ms scroll. Natural paragraph spacing/typing, voice keys, paging and environment isolation pass.",
     "delivery": "Version133 published through existing update channels; one notification1982 accepted_by_fcm attempt1. Phone SSH readback remains132; no install or pairing changes claimed.",
     "limits": "Software emulator is not physical handset frame-pacing/audio qualification. Silent missed-event fallback in optimized delayed-history fixture6404ms; provider immersion-generation validation still has separate unresolved failures."
+  },
+  "foreground_notification_strategy_20261018": {
+    "status": "implementation-candidate-not-built-or-delivered",
+    "requirements": [
+      "While app is active, no duplicate Android heads-up/sound for work updates; current conversation updates inline",
+      "Other source outcomes/questions use one compact tappable in-app footer entry; retain original environment and room/direct scope",
+      "Suppress notification speech while reading unless it belongs to explicitly selected voice target; do not change background audio preference",
+      "Foreground suppression does not acknowledge reads or resolve questions; durable source-bound deferred notices follow app background quietly",
+      "Remove timeout overlay; distinguish delayed message synchronization from lost transport or genuinely blocked execution; retryable loading status is inline and neutral"
+    ],
+    "ownedFiles": [
+      "ForegroundNotifications.kt",
+      "PocketService.kt",
+      "PocketState.kt",
+      "MainActivity.kt",
+      "PocketTranscript.kt",
+      "ConversationScreen.kt",
+      "ConnectionMessages.kt",
+      "HollywoodNotifications.kt",
+      "HollywoodScreen.kt",
+      "CoordinatorScreen.kt",
+      "VoiceScreen.kt"
+    ],
+    "next": "Native FCM/socket dedup, open vs other source, background handover, question visibility, voice/draft preservation and actual delayed HTTP refresh placement; then compatible incremental release."
   }
 }

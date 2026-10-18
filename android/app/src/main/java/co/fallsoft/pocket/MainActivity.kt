@@ -140,7 +140,7 @@ class MainActivity:ComponentActivity(){
     }
     override fun onWindowFocusChanged(hasFocus:Boolean){super.onWindowFocusChanged(hasFocus);AppWindowVisibility.focus(this,hasFocus)}
     override fun onStart(){super.onStart();if(Pocket.token.isNotBlank())PocketUpdates.check();PocketVoice.foreground=true;CodexConversations.onForeground(true);CodexCatalog.onForeground(true);Pocket.scope.launch{DurableVoiceWork.restore(this@MainActivity)};if(Pocket.local&&Pocket.token.isNotBlank())LocalMonitorService.start(this);if(Pocket.token.isNotBlank())PocketLive.start()}
-    override fun onStop(){AppWindowVisibility.focus(this,false);captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;CodexConversations.onForeground(false);CodexCatalog.onForeground(false);if(!PocketVoice.active)PocketLive.stop();super.onStop()}
+    override fun onStop(){AppWindowVisibility.focus(this,false);captureKeys.reset();blackout.exit(restoreInput=false);PocketVoice.foreground=false;ForegroundNotifications.background();CodexConversations.onForeground(false);CodexCatalog.onForeground(false);if(!PocketVoice.active)PocketLive.stop();super.onStop()}
     private val captureKeys get()=PocketVoice.captureKeys
     private var permissionCapture:CaptureDestination?=null
     private val capturePermission=registerForActivityResult(ActivityResultContracts.RequestPermission()){allowed->
@@ -694,6 +694,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 
 /** Captions supply the playback context, so conversations need only one speech surface. */
 @Composable fun ConversationSpeechDock(containerColor:androidx.compose.ui.graphics.Color=Panel){
+    ForegroundWorkNotice()
     if(PocketVoice.captureFeedbackVisible)return
     if(PocketSpeechCaptions.state.visible)SpeechCaptionBanner(playbackControls=PocketSpeech.count>0,containerColor=containerColor)
     else SpeechPlayer(containerColor)

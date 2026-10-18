@@ -126,6 +126,7 @@ import androidx.lifecycle.repeatOnLifecycle
             }
             if(PocketVoice.heard.isNotBlank()&&PocketVoice.messages.lastOrNull()?.first!=PocketVoice.heard)item{VoiceChatMessage("You",PocketVoice.heard,true)}
         }
+        ForegroundWorkNotice()
         if(!PocketVoice.captureFeedbackVisible){SpeechCaptionBanner();SpeechPlayer()}
         InlineCaptureStatus(always=true)
         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){

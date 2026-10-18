@@ -14,6 +14,7 @@ object PocketTranscript {
     private var historicalReadError by mutableStateOf("")
     private var positionReadError by mutableStateOf("")
     val readError get()=latestReadError.ifBlank{historicalReadError}.ifBlank{positionReadError}
+    val refreshDelayed get()=latestReadError.isNotBlank()&&automaticRetryAllowed
     private var readFailureSince=0L
     var refreshPending by mutableStateOf(false);private set
     private var positioning by mutableStateOf(false)
@@ -428,7 +429,7 @@ object PocketTranscript {
                 val now=android.os.SystemClock.elapsedRealtime()
                 if(readFailureSince==0L)readFailureSince=now
                 // Current-read failures and historical-page failures are independent.
-                if(!automaticRetryAllowed||now-readFailureSince>=5000L)latestReadError=PocketNetwork.error(e)
+                if(!automaticRetryAllowed||now-readFailureSince>=5000L)latestReadError=if(automaticRetryAllowed)"Message refresh delayed. Retrying automatically." else PocketNetwork.error(e)
             }else historicalReadError=PocketNetwork.error(e)
         }}
         finally {

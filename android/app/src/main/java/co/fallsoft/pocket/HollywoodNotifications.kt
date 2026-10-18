@@ -81,13 +81,14 @@ internal object HollywoodNotifications {
     private fun open(key:String)=PendingIntent.getActivity(Pocket.context,0,Intent(Pocket.context,MainActivity::class.java)
         .setData(Uri.Builder().scheme("pocket").authority("hollywood").appendPath(key).build())
         .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("hollywoodNotification",key),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-    fun show(key:String,value:JSONObject,generic:Boolean=false,status:String?=null){
+    fun show(key:String,value:JSONObject,generic:Boolean=false,status:String?=null,quiet:Boolean=false){
+        if(ForegroundNotifications.active()){ForegroundNotifications.offerRoom(key,value,generic,status);return}
         val c=Pocket.context;val manager=c.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel("hollywood", "Hollywood rooms",NotificationManager.IMPORTANCE_HIGH))
         val b=NotificationCompat.Builder(c,"hollywood").setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(status?:if(generic)"Hollywood update" else value.optJSONObject("hint")?.s("roomName","Hollywood").orEmpty())
             .setContentText(if(generic)"Open the room to review" else value.optJSONObject("event")?.s("body")?.take(2000).orEmpty())
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setOnlyAlertOnce(true).setAutoCancel(false).setContentIntent(open(key))
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setSilent(quiet).setOnlyAlertOnce(true).setAutoCancel(false).setContentIntent(open(key))
             .addExtras(Bundle().apply{putString("hollywoodEvent",value.s("eventId"));putString("hollywoodBinding",value.s("bindingId"));putString("hollywoodEnvironment",value.s("environment"));putLong("hollywoodRevision",value.optLong("revision"))})
         if(!generic&&status==null){
             val attention=value.optJSONObject("attention")?.optJSONObject("attention")

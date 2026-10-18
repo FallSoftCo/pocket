@@ -19,7 +19,7 @@ object ConnectionMessages {
             causes.any{it is UnknownHostException}->"Could not resolve your workstation’s name. Check that Tailscale is connected and using Tailscale DNS, then retry. Your pairing is saved."
             causes.any{it is SSLException}->"NextComp could not establish a secure HTTPS connection. Check the workstation’s HTTPS setup and the phone’s date and time, then retry."
             causes.any{it is ConnectException||it is NoRouteToHostException}->"NextComp cannot reach your workstation. Check that it is awake and Tailscale is connected on both devices, then retry."
-            causes.any{it is SocketTimeoutException}->"Your workstation is taking too long to respond. Check its connection, then reload the conversation."
+            causes.any{it is SocketTimeoutException}->"This request timed out. Live updates may still be connected. Check its status before trying again."
             else->server(e.message?:"Could not reach your workstation. Check Tailscale on both devices, then retry.")
         }
     }

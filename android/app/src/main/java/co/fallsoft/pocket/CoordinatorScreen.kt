@@ -142,6 +142,7 @@ import kotlinx.coroutines.flow.*
 
 /** Playback controls never repeat a coordinator reply or saved notification passage. */
 @Composable internal fun CoordinatorSpeechControls(){
+    ForegroundWorkNotice()
     if(PocketVoice.captureFeedbackVisible)return
     val owner="speech-coordinator:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}"
     DisposableEffect(owner){onDispose{if(PocketSpeech.displayedOwner==owner)PocketSpeech.stopDisplayed(owner)}}

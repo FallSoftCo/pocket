@@ -363,7 +363,7 @@ object Pocket {
         prefs.edit().putStringSet(key("seenIds",notificationLocal,notificationEnvironment),bounded).putString(key("lastDeliveryTransport",notificationLocal,notificationEnvironment),transport).putLong(key("lastDeliveryId",notificationLocal,notificationEnvironment),id).putLong(key("lastDeliveryAt",notificationLocal,notificationEnvironment),System.currentTimeMillis()).apply()
         PocketNotifications.show(context,n)
         val age=System.currentTimeMillis()-n.optLong("created_at")
-        if(!PocketNotificationReads.isRead(n)&&transport in listOf("fcm","socket")&&age in 0..120000)PocketSpeech.request(context,n)
+        if(!PocketNotificationReads.isRead(n)&&transport in listOf("fcm","socket")&&age in 0..120000&&(!ForegroundNotifications.active()||(PocketVoice.active&&notificationEnvironment==environmentId&&PocketVoice.targetThread==n.s("thread_id"))))PocketSpeech.request(context,n)
     }
     fun catchUp(){scope.launchEnvironment{try{
         val after=if(prefs.getBoolean(key("needsHistorySync"),false))0 else lastNotification

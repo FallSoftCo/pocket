@@ -41,9 +41,14 @@ object PocketNotifications {
         m.createNotificationChannel(NotificationChannel("work",PocketImmersion.label("Codex updates & replies"),NotificationManager.IMPORTANCE_HIGH).apply{description=PocketImmersion.label("Updates you request from Codex, questions, and replies to your phone messages.")})
     }
     fun open(c:Context,thread:String?,code:Int,local:Boolean=Pocket.local,coordinator:Boolean=false,environment:String=Pocket.environment(local)):PendingIntent=PendingIntent.getActivity(c,code,Intent(c,MainActivity::class.java).apply{flags=Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP;data=Pocket.notificationIntent(environment,"open",code);putExtra("thread",thread);putExtra("local",local);putExtra("environment",environment);if(coordinator){putExtra("coordinatorReport",true);putExtra("reportNotificationId",code)}},PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-    fun show(c:Context,n:JSONObject,reminder:Boolean=false,translationRefresh:Boolean=false){
+    fun show(c:Context,n:JSONObject,reminder:Boolean=false,translationRefresh:Boolean=false,quiet:Boolean=false){
         PocketNotificationTitles.remember(n)
         if(PocketNotificationReads.isRead(n))return
+        if(ForegroundNotifications.active()){
+            if(PocketAttention.needs(n))PocketAttention.remember(n)
+            if(!translationRefresh)ForegroundNotifications.offer(n)
+            return
+        }
         channels(c)
         val local=n.optBoolean("_local",Pocket.local);val environment=n.s("_environment",Pocket.environment(local));val id=(if(n.s("kind")=="coordinator_report")499998 else n.optLong("id").toInt())+(if(local)500000 else 1000); val thread=n.s("thread_id").takeIf{it.isNotBlank()}
         if(n.s("kind")=="coordinator_report"){
@@ -65,7 +70,7 @@ object PocketNotifications {
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setColor(0xffffc600.toInt()).setAutoCancel(!attention&&n.s("kind")!="coordinator_report").setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setContentIntent(open(c,thread,id,local,n.s("kind")=="coordinator_report",environment))
-        if(n.s("kind")=="coordinator_report"||translationRefresh||PocketSpeech.count>0&&!PocketSpeech.paused)b.setSilent(true)
+        if(quiet||n.s("kind")=="coordinator_report"||translationRefresh||PocketSpeech.count>0&&!PocketSpeech.paused)b.setSilent(true)
         b.setOnlyAlertOnce(true)
         if(reminder)b.setSubText(PocketImmersion.label("Still needs your attention"))
         if(attention){PocketAttention.remember(n);b.setDeleteIntent(PocketAttention.action(c,n.optLong("id"),"dismiss",local,environment))}

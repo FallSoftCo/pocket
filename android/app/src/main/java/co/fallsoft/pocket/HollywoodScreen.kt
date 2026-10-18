@@ -28,6 +28,11 @@ import androidx.lifecycle.repeatOnLifecycle
     val jobs=rememberCoroutineScope()
     var room by remember(client.bindingId){mutableStateOf(Pocket.prefs.getString("hollywood-room:$owner:${client.bindingId}",client.defaultRoomId)?:client.defaultRoomId)}
     var browsing by remember(client.bindingId){mutableStateOf(false)}
+    DisposableEffect(owner,client.bindingId,room,browsing){
+        val visible=if(browsing)null else Triple(owner,client.bindingId,room)
+        ForegroundNotifications.visibleRoom=visible
+        onDispose{if(ForegroundNotifications.visibleRoom==visible)ForegroundNotifications.visibleRoom=null}
+    }
     val catalog=remember(client){HollywoodRoomCatalog{client.call("rooms")}}
     val rooms=catalog.rooms
     val catalogList=remember(client.bindingId){androidx.compose.foundation.lazy.LazyListState()}
@@ -363,6 +368,7 @@ import androidx.lifecycle.repeatOnLifecycle
                 compact=true,roomDestination=visibleMicDestination,sourceLabel=visibleMicLabel)
         }
         }
+        ForegroundWorkNotice()
         InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
         if(showTextInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){ConversationComposerRow{
