@@ -45,8 +45,11 @@ class ForegroundNotificationNativeTest {
    assertEquals("Same-source results did not coalesce",73003L,ForegroundNotifications.current()?.optLong("id"))
    assertFalse(inTray(73002));assertFalse(inTray(73003));assertEquals("Foreground updates unexpectedly queued speech",speechBefore,PocketSpeech.count)
    main{firstActivity.recreate()}
-   val recreated=i.waitForMonitorWithTimeout(activityMonitor,15000)
-   assertNotNull("Configuration recreation did not finish",recreated)
+   await("Configuration recreation did not finish"){
+    var resumed=false
+    main{resumed=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().any{it!==firstActivity}}
+    resumed
+   }
    await("Foreground alert lost during recreation"){PocketVoice.foreground&&d.hasObject(By.res("foreground-work-notice"))}
    assertFalse("Configuration change flushed foreground alerts into Android tray",inTray(73003))
    d.findObject(By.res("foreground-work-notice")).click()

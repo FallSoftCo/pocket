@@ -67,6 +67,8 @@ internal object ForegroundNotifications {
         synchronized(pending){
             val old=pending[key]
             if(old!=null&&old.value.optLong("id")>n.optLong("id"))return
+            val roomEvent=n.s("_hollywoodKey")
+            if(roomEvent.isNotBlank())pending.entries.removeAll{it.value.value.s("_hollywoodKey")==roomEvent}
             pending.remove(key)
             pending[key]=Notice(source,JSONObject(n.toString()))
             while(pending.size>64)pending.remove(pending.keys.first())
@@ -103,11 +105,16 @@ internal object ForegroundNotifications {
         }
         return (candidates.firstOrNull{NotificationReadPolicy.preserve(it.value.s("kind"),if(it.value.has("_needsAttention"))it.value.optBoolean("_needsAttention")else null)}?:candidates.firstOrNull())?.value
     }
+    fun cancelRoom(key:String){
+        restore()
+        val changed=synchronized(pending){pending.entries.removeAll{it.value.value.s("_hollywoodKey")==key}}
+        if(changed){persist();Pocket.scope.launch{revision++}}
+    }
     fun offerRoom(key:String,value:JSONObject,generic:Boolean,status:String?){
         val origin=Pocket.captureEnvironment(value.s("environment"))?:return
         if(backendOwner(origin.endpoint,origin.token)!=value.s("owner"))return
         val n=JSONObject().put("_environment",origin.environment.id).put("_hollywoodKey",key).put("_binding",value.s("bindingId")).put("_room",value.s("roomId"))
-            .put("id",value.optLong("revision")).put("kind",if(value.has("attention"))"question"else "update")
+            .put("id",value.optLong("revision")).put("kind",if(status==null&&value.has("attention"))"question"else "update").put("_hollywoodGeneric",generic).put("_hollywoodStatus",status)
             .put("title",status?:if(generic)"Room update" else value.optJSONObject("hint")?.s("roomName","Room update"))
             .put("body",if(generic)"Open the room to review"else value.optJSONObject("event")?.s("body").orEmpty())
         offer(n)
@@ -128,7 +135,7 @@ internal object ForegroundNotifications {
         retained.forEach{notice->
             try{
                 val key=notice.value.s("_hollywoodKey")
-                if(key.isNotBlank())HollywoodNotifications.record(key)?.let{HollywoodNotifications.show(key,it,generic=it.s("state")!="verified",quiet=true)}
+                if(key.isNotBlank())HollywoodNotifications.record(key)?.let{HollywoodNotifications.show(key,it,generic=it.s("state")!="verified"||notice.value.optBoolean("_hollywoodGeneric"),status=notice.value.s("_hollywoodStatus").takeIf{it.isNotBlank()},quiet=true)}
                 else PocketNotifications.show(Pocket.context,notice.value,quiet=true)
             }catch(_:Exception){synchronized(pending){pending[noticeKey(notice.value)]=notice}}
         }

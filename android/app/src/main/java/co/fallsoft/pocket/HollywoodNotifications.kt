@@ -77,7 +77,7 @@ internal object HollywoodNotifications {
         receive(origin,mapOf("binding_id" to b.s("bindingId"),"authority_id" to b.s("authorityId"),"principal_id" to b.s("principalId"),
             "event_id" to h.s("eventId"),"room_id" to h.s("roomId"),"revision" to h.optLong("revision").toString(),"action" to if(h.optBoolean("notify"))"notify" else "resolve"))
     }
-    fun cancel(key:String){Pocket.context.getSystemService(NotificationManager::class.java).cancel(tag(key),1)}
+    fun cancel(key:String){ForegroundNotifications.cancelRoom(key);Pocket.context.getSystemService(NotificationManager::class.java).cancel(tag(key),1)}
     private fun open(key:String)=PendingIntent.getActivity(Pocket.context,0,Intent(Pocket.context,MainActivity::class.java)
         .setData(Uri.Builder().scheme("pocket").authority("hollywood").appendPath(key).build())
         .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("hollywoodNotification",key),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
