@@ -1,0 +1,39 @@
+{
+  "versionCode": 133,
+  "versionName": "0.5.0-alpha.115",
+  "sourceCommit": "4bc7d24",
+  "productionSourceSha": "86762f8d686c8d8605a0fbea408c34f633e23beeacfb9b5e5bcb48acca788307",
+  "phoneCompatibleApkSha256": "5211c5c16287bb74a6aebd048591b38ca2cdd0b20fc3b3cfa44251803d104a1f",
+  "state": "published-not-phone-installed",
+  "nativeCases": 21,
+  "firstSynchronizedSnapshotNativePaintMs": 182,
+  "inactiveLiveHistoryReads": 0,
+  "workerSubmissions": 0,
+  "draftPreserved": true,
+  "stableScrollingCommonLines": 8,
+  "optimizedPayloadEntriesVerified": 296,
+  "architecture": [
+    "Environment-owned persisted recent-message repository independent of viewport; source-bound shared single-flight reads, coalesced IO and notification/reconnect repair",
+    "Public transcript relay independent of attached viewport, internal sessions excluded,100ms complete-row batching",
+    "Stable saved owner/local-line mask keys; display-clock global waterfall; local selection hold; no nearest-line scan or per-frame text layout"
+  ],
+  "verification": [
+    "Exact native background notification -> open while history held -> live closed-session update",
+    "Native rendered Italian/English waterfall, stable IDs through scroll, actual IME typing",
+    "Natural paragraph layout, environment isolation, history paging, reconnect and voice input regressions",
+    "Optimized APK same296 payload entries; real QA room read/navigation; native voice synthetic no-provider boundary"
+  ],
+  "limits": [
+    "Actual phone remains132 at last readback; installation/user physical interaction not claimed",
+    "Software emulator timings do not qualify physical handset pacing or optical input latency",
+    "Optimized silent missed-event recovery6404ms includes deliberate history fixture delay",
+    "Immersion provider generation still has separate plan-validation failures; this release repairs synchronization and wave presentation"
+  ],
+  "delivery": {
+    "existingChannels": 2,
+    "updateNotification": 1982,
+    "pushState": "accepted_by_fcm",
+    "pushAttempts": 1,
+    "pairingPreserved": true
+  }
+}

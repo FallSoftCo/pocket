@@ -2906,13 +2906,15 @@
     "latest_progress": "Independent capture, source-bound recording journal/uploads and coordinator task queue implemented; real Android WorkManager/native ASR/canonical room admission, durable queue/restart/cancellation tests and actual HTTP paired/owner separation qualified. Ten native cases and optimized release input/voice review passed. Existing installed speech path retained; experimental asset speech stays disabled after no-audio failure. Cancellation now persists as an orthogonal intent, uses an independent cancellation-only WorkManager job, and fences late create/upload through an idempotent server tombstone. Actual authenticated stock HTTP cancellation/queue flow passed on production Node22 without new task model inference. Updated Android migration/cancellation qualification and signed publication pending. Legacy inventory migration and reliable speech replacement remain outstanding."
   },
   "session_sync_and_stable_wave_20261018": {
-    "status": "candidate-alpha115-native-qualification-in-progress-not-delivered",
+    "status": "published-version133-alpha115-phone-install-pending",
     "requirements": [
       "Closed sessions synchronize public live rows and notifications without viewport attachment; opening paints latest synchronized tail without old-history flash",
       "Scrolling must not reassign a line language phase; stable saved line owner identity and local line coordinates",
       "One continuous spatial top-to-bottom wave; local selection does not freeze unrelated content; no frame-driven layout or nearest-line scans"
     ],
     "architecture": "Environment-bound durable recent-message repository; shared single-flight current reads; background repairs have no command authority. Display-clock wave assigns onset once per half-wave and uses O(1) stable line lookup.",
-    "qualification": "Real native first-paint/background journey and scrolling/IME rendered waterfall required; emulator timing is not physical handset performance. Obsolete viewport-HTTP-cancellation release case replaced because background reads must now survive navigation; stale composer mutation fencing retained in source."
+    "qualification": "21 exact native cases and optimized payload review pass. Closed-session latest first snapshot paints182ms with held subsequent history; inactive live rows cause zero history reads/worker admissions. Native scrolling preserves8 common line phases across634ms scroll. Natural paragraph spacing/typing, voice keys, paging and environment isolation pass.",
+    "delivery": "Version133 published through existing update channels; one notification1982 accepted_by_fcm attempt1. Phone SSH readback remains132; no install or pairing changes claimed.",
+    "limits": "Software emulator is not physical handset frame-pacing/audio qualification. Silent missed-event fallback in optimized delayed-history fixture6404ms; provider immersion-generation validation still has separate unresolved failures."
   }
 }
