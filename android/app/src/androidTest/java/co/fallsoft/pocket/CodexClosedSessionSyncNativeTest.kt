@@ -48,7 +48,7 @@ class CodexClosedSessionSyncNativeTest {
    val before=qa("state").getJSONArray("reads").length()
    main{Pocket.event(JSONObject().put("type","timeline").put("threadId","same-thread").put("turnId","synthetic-turn").put("version",300)
     .put("row",JSONObject().put("id","synthetic-turn/live").put("turnId","synthetic-turn").put("kind","message").put("version",300).put("text","Newest streamed answer"))
-    .put("historyHead",JSONObject().put("threadId","same-thread").put("epoch","synthetic-runtime").put("version",300)))}
+    .put("historyHead",JSONObject().put("threadId","same-thread").put("epoch",requireNotNull(CodexSessionRepository.peek("same-thread")).getJSONObject("historyHead").s("epoch")).put("version",300)))}
    await("Inactive session ignored public live row"){CodexSessionRepository.peek("same-thread")?.getJSONObject("timeline")?.getJSONArray("rows")?.objects()?.any{it.s("text")=="Newest streamed answer"}==true}
    Thread.sleep(500)
    assertEquals("Live text caused a redundant history round trip",before,qa("state").getJSONArray("reads").length())
