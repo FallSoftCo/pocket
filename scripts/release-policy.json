@@ -18,7 +18,9 @@
     "co.fallsoft.pocket.CatalogStartupNativeTest#delayedSearchCannotRollBackLiveCatalogEvidence",
     "co.fallsoft.pocket.CodexConversationLifecycleNativeTest#navigationBackgroundAndReconnectShareOneRetirableReadOwner",
     "co.fallsoft.pocket.CatalogStartupNativeTest#coldStartShowsLoadingAndRetryThenPaintsCatalogBeforeActivity",
-    "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin"
+    "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin",
+    "co.fallsoft.pocket.CatalogStartupNativeTest#concurrentAncillariesAndSearchCannotBlockLatestCatalog",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#prolongedHistoryRecoveryCannotFreezeOrFollowNavigation"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",

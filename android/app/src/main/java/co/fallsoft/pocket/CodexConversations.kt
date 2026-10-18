@@ -2,6 +2,7 @@ package co.fallsoft.pocket
 
 import androidx.compose.runtime.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -29,9 +30,12 @@ internal data class CodexConversationSnapshot(
  * PocketTranscript is the retained merge/cache reducer; it cannot own a free-floating retry.
  */
 internal object CodexConversations {
+    private data class LatestHooks(val beforeApply:suspend ()->Unit,val beforeCacheRead:suspend ()->Unit)
+    private data class LatestIntent(val due:Long,val attempt:Int,val hooks:LatestHooks?=null,val waiters:List<CompletableDeferred<Unit>> = emptyList())
     private data class Session(
         val key:CodexConversationKey,val incarnation:Long,val destination:EnvironmentRequest,
-        val scope:CoroutineScope,var refresh:Job?=null,var probe:Job?=null,
+        val scope:CoroutineScope,var probe:Job?=null,var historicalTimer:Job?=null,
+        val latestWake:Channel<Unit> = Channel(Channel.CONFLATED),var latestIntent:LatestIntent?=null,
         val readerBusy:MutableStateFlow<Boolean> = MutableStateFlow(false)
     )
     var selected by mutableStateOf<String?>(null);private set
@@ -41,7 +45,7 @@ internal object CodexConversations {
     private var foreground=false
     private var viewport=true
     internal val storageScope by lazy{CoroutineScope(SupervisorJob(Pocket.scope.coroutineContext[Job])+Dispatchers.IO)}
-    private val probeClient by lazy{Pocket.http.newBuilder().callTimeout(5,TimeUnit.SECONDS).build()}
+    private val probeClient by lazy{CodexReadTransport.historyClient.newBuilder().callTimeout(5,TimeUnit.SECONDS).build()}
     private fun key(destination:EnvironmentRequest,id:String)=CodexConversationKey(destination.environment.id,backendOwner(destination.endpoint,destination.token),id)
     private fun current(value:Session)=session===value&&selected==value.key.thread&&Pocket.captureEnvironment()?.matches(value.destination)==true
     internal val incarnation get()=session?.incarnation?:serial
@@ -64,6 +68,7 @@ internal object CodexConversations {
         val value=Session(key(destination,id),++serial,destination,scope)
         session=value
         PocketTranscript.resetState(id,scope)
+        startLatestPump(value)
         startProbe(value)
         return value
     }
@@ -89,18 +94,60 @@ internal object CodexConversations {
         if(!immediate&&!foreground&&!PocketVoice.foreground)return
         val value=active()?:return
         PocketTranscript.markRefreshPending()
-        if(value.refresh?.isActive==true)return
-        value.refresh=value.scope.launch{
-            if(!immediate)delay(400)
-            if(current(value))PocketTranscript.readPage()
+        enqueueLatest(value,if(immediate)0 else 400,0)
+    }
+    private fun enqueueLatest(value:Session,delayMs:Long,attempt:Int,hooks:LatestHooks?=null,waiter:CompletableDeferred<Unit>?=null){
+        if(!current(value)){waiter?.cancel();return}
+        val previous=value.latestIntent
+        val due=android.os.SystemClock.elapsedRealtime()+delayMs
+        val earlier=previous?.takeIf{it.due<=due}
+        value.latestIntent=LatestIntent(earlier?.due?:due,earlier?.attempt?:attempt,previous?.hooks?:hooks,
+            previous?.waiters.orEmpty()+listOfNotNull(waiter))
+        value.latestWake.trySend(Unit)
+    }
+    /** One conflated pump owns immediate refresh AND delayed recovery; no retry timer fan-out. */
+    private fun startLatestPump(value:Session){
+        value.scope.launch{
+            while(isActive&&current(value)){
+                val intent=value.latestIntent
+                if(intent==null){value.latestWake.receive();continue}
+                val wait=intent.due-android.os.SystemClock.elapsedRealtime()
+                if(wait>0){withTimeoutOrNull(wait){value.latestWake.receive()};continue}
+                value.latestIntent=null
+                if(intent.attempt>0&&!PocketVoice.foreground){intent.waiters.forEach{it.cancel()};continue}
+                try{
+                    PocketTranscript.readPage(retryAttempt=intent.attempt,
+                        beforeApply=intent.hooks?.beforeApply?:{},
+                        beforeCacheRead=intent.hooks?.beforeCacheRead?:{})
+                    intent.waiters.forEach{it.complete(Unit)}
+                }catch(error:CancellationException){intent.waiters.forEach{it.cancel(error)};throw error}
+            }
+        }
+    }
+    internal fun continueLatest(delayMs:Long=0,retryAttempt:Int=0){
+        val value=session?:return
+        enqueueLatest(value,delayMs,retryAttempt)
+    }
+    internal fun continueHistory(cursor:String,delayMs:Long=0,retryAttempt:Int=0){
+        val value=session?:return
+        if(!current(value))return
+        value.historicalTimer?.cancel()
+        value.historicalTimer=value.scope.launch{
+            if(delayMs>0)delay(delayMs)
+            value.historicalTimer=null
+            if(current(value))PocketTranscript.readPage(bridgeCursor=cursor,retryAttempt=retryAttempt)
         }
     }
     @OptIn(FlowPreview::class)
     suspend fun read(older:Boolean=false,bridgeCursor:String?=null,retryAttempt:Int=0,
         beforeApply:suspend ()->Unit={},beforeCacheRead:suspend ()->Unit={}){
         val value=active()?:return
-        // The viewport waits for its intent, but does not own/cancel repository work.
-        value.scope.async{
+        if(!older&&bridgeCursor==null){
+            PocketTranscript.markRefreshPending()
+            val done=CompletableDeferred<Unit>(value.scope.coroutineContext[Job])
+            enqueueLatest(value,0,retryAttempt,LatestHooks(beforeApply,beforeCacheRead),done)
+            done.await()
+        }else value.scope.async{
             if(older)value.readerBusy.debounce(180).first{!it}
             if(current(value))PocketTranscript.readPage(older,bridgeCursor,retryAttempt,beforeApply,beforeCacheRead)
         }.await()

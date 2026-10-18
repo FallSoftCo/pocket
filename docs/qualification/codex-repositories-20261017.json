@@ -1,0 +1,63 @@
+{
+  "state": "integrated-candidate-focused-native-passed-full-release-pending",
+  "versionCode": 132,
+  "architecture": "../CODEX-REPOSITORIES.md",
+  "negativeControls": [
+    {
+      "artifact": "alpha113 installed-compatible QA closure",
+      "log": "codex-catalog-owner-baseline-r01.log",
+      "boundary": "Held activity prevents next catalog refresh"
+    },
+    {
+      "artifact": "unpublished alpha114-signed-r01 QA closure",
+      "log": "codex-transport-capacity-baseline-r01.log",
+      "boundary": "Four held ancillary reads and held search block fresh catalog under shared default HTTP queue"
+    }
+  ],
+  "positiveFocusedJourneys": [
+    {
+      "log": "codex-transport-capacity-candidate-r02.log",
+      "assertions": [
+        "Fresh catalog updates while all5 slower reads remain held",
+        "No worker input"
+      ]
+    },
+    {
+      "log": "codex-owner-lifecycle-candidate-r02.log",
+      "assertions": [
+        "Two actual HTTP calls cancelled",
+        "A-B-A incarnations distinct",
+        "Stale composer/read source rejected",
+        "Draft preserved",
+        "Foreground silently advanced head recovered",
+        "20 reconnect invalidations coalesced into1read",
+        "No worker input"
+      ]
+    },
+    {
+      "log": "codex-owner-recovery-candidate-r02.log",
+      "assertions": [
+        "Prolonged failed reads retain cache and recover",
+        "Navigation retires previous retries",
+        "No worker input"
+      ]
+    }
+  ],
+  "retainedAuthorities": [
+    "canonical timeline IDs/order/head",
+    "existing typed and voice command journals",
+    "source-bound pairing and drafts",
+    "backend work/attention status"
+  ],
+  "notChanged": [
+    "backend services",
+    "LAX/Hollywood runtime",
+    "account/model/permission settings",
+    "worker enrollment/continuation"
+  ],
+  "limits": [
+    "Physical handset input/voice/display not newly qualified",
+    "Architecture boundary does not claim all UI/performance defects eliminated",
+    "Foreground read-only head fallback retained"
+  ]
+}

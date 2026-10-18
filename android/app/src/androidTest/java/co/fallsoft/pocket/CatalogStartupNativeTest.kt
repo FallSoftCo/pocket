@@ -91,4 +91,27 @@ class CatalogStartupNativeTest{
   }finally{qa("release-catalog")}
  }
 
+ @Test fun concurrentAncillariesAndSearchCannotBlockLatestCatalog(){
+  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").commit()
+  main{Pocket.init(context);Pocket.refresh()}
+  await{Pocket.catalogLoad==CatalogLoadState.Ready&&Pocket.tasks.any{it.id=="same-thread"}}
+  Thread.sleep(500)
+  qa("hold-concurrent-reads")
+  try{
+   main{Pocket.refresh()}
+   await{qa("state").optInt("heldAncillaries")==4}
+   main{Pocket.moreSessions("Held synthetic search")}
+   await{qa("state").optBoolean("searchBlocked")}
+   val before=qa("state").optInt("catalogReads")
+   qa("silent")
+   main{Pocket.refresh()}
+   await{qa("state").optInt("catalogReads")>before&&Pocket.tasks.any{it.id=="same-thread"&&it.preview=="Fresh response 2"}}
+   assertEquals("Search must remain independently held",true,qa("state").optBoolean("searchBlocked"))
+   assertEquals(4,qa("state").optInt("heldAncillaries"))
+   assertEquals("Read pressure admitted worker input",0,qa("state").getJSONArray("replies").length())
+  }finally{qa("release-concurrent-reads")}
+ }
+
 }

@@ -8,7 +8,7 @@ internal enum class CodexCatalogLane { CATALOG, METADATA, ACTIVITY, NOTIFICATION
 internal data class CodexCatalogKey(val environment:String,val backend:String,val archived:Boolean)
 internal data class CodexCatalogSnapshot(
     val key:CodexCatalogKey?,val incarnation:Long,val tasks:List<Task>,val load:CatalogLoadState,
-    val complete:Boolean,val paging:Boolean,val errors:Map<CodexCatalogLane,String>
+    val complete:Boolean,val paging:Boolean,val errors:Map<CodexCatalogLane,String>,val reading:Set<CodexCatalogLane>
 )
 
 /** Environment-owned read admission. Slow ancillary lanes never serialize catalog freshness.
@@ -27,6 +27,8 @@ internal object CodexCatalog {
     var cursor by mutableStateOf<String?>(null);private set
     var paging by mutableStateOf(false);private set
     private val errors=mutableStateMapOf<CodexCatalogLane,String>()
+    private val inFlight=mutableStateMapOf<CodexCatalogLane,Long>()
+    private var readSerial=0L
     val error get()=CodexCatalogLane.entries.firstNotNullOfOrNull{errors[it]}.orEmpty()
     private var session:Session?=null
     private var retainedKey:CodexCatalogKey?=null
@@ -37,7 +39,7 @@ internal object CodexCatalog {
     private var foreground=false
     private var listVisible=false
     private fun current(value:Session)=session===value&&Pocket.captureEnvironment()?.matches(value.destination)==true&&Pocket.showArchived==value.key.archived
-    private fun retire(){val old=session;session=null;old?.scope?.cancel();paging=false;pageSerial++}
+    private fun retire(){val old=session;session=null;old?.scope?.cancel();inFlight.clear();paging=false;pageSerial++}
     fun reset(){
         retire();retainedKey=null;tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList()
         load=CatalogLoadState.Loading;complete=false;cursor=null;cursorInitialized=false;errors.clear()
@@ -68,17 +70,21 @@ internal object CodexCatalog {
     }
     private suspend fun read(value:Session,path:String):JSONObject{
         if(!current(value))throw CancellationException("Retired catalog")
-        val result=CodexReadTransport.read(value.destination,path)
+        val result=CodexReadTransport.read(value.destination,path,client=CodexReadTransport.catalogClient)
         if(!current(value))throw CancellationException("Retired catalog")
         return result
     }
-    private fun launch(value:Session,lane:CodexCatalogLane,block:suspend ()->Unit)=value.scope.launch{
-        try{block();if(current(value))errors.remove(lane)}
-        catch(error:CancellationException){throw error}
-        catch(error:Exception){if(current(value)){
-            val message=PocketNetwork.error(error);errors[lane]=message
-            if(lane==CodexCatalogLane.CATALOG&&load!=CatalogLoadState.Ready)load=CatalogLoadState.Failed(message)
-        }}
+    private fun launch(value:Session,lane:CodexCatalogLane,block:suspend ()->Unit):Job {
+        val ticket=++readSerial;inFlight[lane]=ticket
+        return value.scope.launch{
+            try{block();if(current(value)&&inFlight[lane]==ticket)errors.remove(lane)}
+            catch(error:CancellationException){throw error}
+            catch(error:Exception){if(current(value)&&inFlight[lane]==ticket){
+                val message=PocketNetwork.error(error);errors[lane]=message
+                if(lane==CodexCatalogLane.CATALOG&&load!=CatalogLoadState.Ready)load=CatalogLoadState.Failed(message)
+            }}
+            finally{if(current(value)&&inFlight[lane]==ticket)inFlight.remove(lane)}
+        }
     }
     /** Explicit UI/initialization refresh remains supported without a mounted list. */
     fun refresh(explicit:Boolean=false){
@@ -165,5 +171,5 @@ internal object CodexCatalog {
             value.lastDiscovery=android.os.SystemClock.elapsedRealtime();refresh()
         }
     }
-    val snapshot get()=CodexCatalogSnapshot(session?.key,session?.incarnation?:serial,tasks,load,complete,paging,errors.toMap())
+    val snapshot get()=CodexCatalogSnapshot(session?.key,session?.incarnation?:serial,tasks,load,complete,paging,errors.toMap(),inFlight.keys.toSet())
 }

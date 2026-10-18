@@ -264,6 +264,7 @@ object PocketTranscript {
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return
         if(owner!=id||(older&&(!earlier||before==null)))return
+        if(bridgeCursor!=null&&bridgeCursor!=bridgeBefore)return
         val kind=when{older->TranscriptReadState.Kind.OLDER;bridgeCursor!=null->TranscriptReadState.Kind.GAP;else->TranscriptReadState.Kind.LATEST}
         val latest=kind==TranscriptReadState.Kind.LATEST
         if(latest&&reads.latestLoading){missedUpdates=true;refreshPending=true;return}
@@ -324,7 +325,7 @@ object PocketTranscript {
                         if(current()){
                             needsDiskRestore=false;cacheRestoring=false;cacheRestoreJob=null
                             if(freshForRead)rememberRecent(persist=true)
-                            if(!loading&&!refreshPending&&automaticRetryAllowed)bridgeBefore?.let{next->readScope.launch{readPage(bridgeCursor=next)}}
+                            if(!loading&&!refreshPending&&automaticRetryAllowed)bridgeBefore?.let{next->CodexConversations.continueHistory(next)}
                         }
                     }
                 }
@@ -420,11 +421,9 @@ object PocketTranscript {
                 if(!latest){
                     // Historical reads cannot clear current refresh intent, buffers or freshness.
                     if(!loading&&!refreshPending&&automaticRetryAllowed)bridgeBefore?.let{next->
-                        readScope.launch{
-                            if(!succeeded)delay((1000L shl retryAttempt.coerceAtMost(5)).coerceAtMost(30_000L))
-                            if(current()&&!loading&&!refreshPending&&bridgeBefore==next)
-                                readPage(bridgeCursor=next,retryAttempt=if(succeeded)0 else (retryAttempt+1).coerceAtMost(5))
-                        }
+                        CodexConversations.continueHistory(next,
+                            delayMs=if(succeeded)0 else (1000L shl retryAttempt.coerceAtMost(5)).coerceAtMost(30_000L),
+                            retryAttempt=if(succeeded)0 else (retryAttempt+1).coerceAtMost(5))
                     }
                 }else{
                     if(!succeeded&&buffered.isNotEmpty()){buffered.clear();missedUpdates=true}
@@ -434,19 +433,14 @@ object PocketTranscript {
                     if(!succeeded&&!automaticRetryAllowed)refreshPending=false
                     if(!succeeded&&automaticRetryAllowed&&!older){
                         missedUpdates=false;refreshPending=true
-                        readScope.launch{
-                            // History reads do not start workers. A prolonged outage
-                            // must not leave the visible cached conversation frozen
-                            // after the initial quick retry budget.
-                            delay((1000L shl retryAttempt.coerceAtMost(5)).coerceAtMost(30_000L))
-                            if(current()&&PocketVoice.foreground&&refreshPending&&!reads.latestLoading)
-                                readPage(retryAttempt=(retryAttempt+1).coerceAtMost(5))
-                        }
+                        CodexConversations.continueLatest(
+                            delayMs=(1000L shl retryAttempt.coerceAtMost(5)).coerceAtMost(30_000L),
+                            retryAttempt=(retryAttempt+1).coerceAtMost(5))
                     }else if(missedUpdates) {
                         missedUpdates=false
-                        if(succeeded||automaticRetryAllowed)readScope.launch{if(!succeeded)delay(450);if(current())readPage()}
+                        if(succeeded||automaticRetryAllowed)CodexConversations.continueLatest(if(succeeded)0 else 450)
                     } else if(succeeded) {
-                        bridgeBefore?.let{next->readScope.launch{readPage(bridgeCursor=next)}}
+                        bridgeBefore?.let{next->CodexConversations.continueHistory(next)}
                     }
                 }
             }

@@ -14,7 +14,15 @@ import kotlin.coroutines.resumeWithException
  * Position POST is a canonical history query, never a command admission.
  */
 internal object CodexReadTransport {
-    suspend fun read(destination:EnvironmentRequest,path:String,body:JSONObject?=null,client:OkHttpClient=Pocket.http):JSONObject {
+    // Shared TLS connection pool, separate bounded admission. Slow public-update
+    // lanes cannot consume current-history or command/voice dispatch capacity.
+    internal val historyClient by lazy{Pocket.http.newBuilder().dispatcher(Dispatcher().apply{
+        maxRequests=4;maxRequestsPerHost=4
+    }).build()}
+    internal val catalogClient by lazy{Pocket.http.newBuilder().dispatcher(Dispatcher().apply{
+        maxRequests=8;maxRequestsPerHost=8
+    }).build()}
+    suspend fun read(destination:EnvironmentRequest,path:String,body:JSONObject?=null,client:OkHttpClient=historyClient):JSONObject {
         val resource=path.substringBefore('?')
         require(
             body==null&&(resource.matches(Regex("/api/threads/[^/]+"))||resource in setOf("/api/threads","/api/status","/api/activity","/api/notifications","/api/attention"))||
