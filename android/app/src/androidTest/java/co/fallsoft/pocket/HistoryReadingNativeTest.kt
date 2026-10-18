@@ -110,6 +110,10 @@ class HistoryReadingNativeTest {
   main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()};main{Pocket.open("same-thread")}
   await{PocketTranscript.rows.any{it.s("text")=="Fresh response 1"}&&!PocketTranscript.updating}
+  val beforeHome=CodexConversations.incarnation
+  device.pressHome();await{!PocketVoice.foreground}
+  main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))}
+  await{PocketVoice.foreground&&CodexConversations.incarnation>beforeHome&&PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
   Thread.sleep(400)
   assertTrue(device.swipe(device.displayWidth/2,device.displayHeight/2,device.displayWidth/2,device.displayHeight/4,35))
   Thread.sleep(3500)

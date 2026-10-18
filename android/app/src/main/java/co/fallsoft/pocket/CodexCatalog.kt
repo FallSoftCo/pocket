@@ -30,7 +30,7 @@ internal object CodexCatalog {
     private val inFlight=mutableStateMapOf<CodexCatalogLane,Long>()
     private var readSerial=0L
     val error get()=CodexCatalogLane.entries.firstNotNullOfOrNull{errors[it]}.orEmpty()
-    private var session:Session?=null
+    private var session by mutableStateOf<Session?>(null,referentialEqualityPolicy())
     private var retainedKey:CodexCatalogKey?=null
     private var serial=0L
     private var pageSerial=0L

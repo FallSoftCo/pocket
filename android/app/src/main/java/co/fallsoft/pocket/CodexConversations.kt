@@ -40,7 +40,7 @@ internal object CodexConversations {
     )
     var selected by mutableStateOf<String?>(null);private set
     var detail by mutableStateOf<JSONObject?>(null)
-    private var session:Session?=null
+    private var session by mutableStateOf<Session?>(null,referentialEqualityPolicy())
     private var serial=0L
     private var foreground=false
     private var viewport=true
@@ -177,6 +177,9 @@ internal object CodexConversations {
     }
     fun presented(key:CodexConversationKey?,incarnation:Long){
         if(owns(key,incarnation))PocketTranscript.presentedLatest()
+    }
+    fun positionRestored(key:CodexConversationKey?,incarnation:Long,revision:Int){
+        if(owns(key,incarnation))PocketTranscript.positionRestored(key!!.thread,revision)
     }
     /** Preserve the original journal; only a still-current source may admit UI input. */
     fun submit(key:CodexConversationKey?,incarnation:Long,text:String,mode:String,draftKey:String,onDone:()->Unit):Boolean{

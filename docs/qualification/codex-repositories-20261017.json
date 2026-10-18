@@ -12,6 +12,11 @@
       "artifact": "unpublished alpha114-signed-r01 QA closure",
       "log": "codex-transport-capacity-baseline-r01.log",
       "boundary": "Four held ancillary reads and held search block fresh catalog under shared default HTTP queue"
+    },
+    {
+      "artifact": "unpublished alpha114-signed-r02 QA closure",
+      "log": "codex-viewport-resume-baseline-r01.log",
+      "boundary": "Home/return retains old Compose paging effect; a thumb pull does not load older history"
     }
   ],
   "positiveFocusedJourneys": [
@@ -39,6 +44,15 @@
       "assertions": [
         "Prolonged failed reads retain cache and recover",
         "Navigation retires previous retries",
+        "No worker input"
+      ]
+    },
+    {
+      "log": "codex-viewport-resume-candidate-r03.log",
+      "assertions": [
+        "Actual Android Home/return creates new incarnation",
+        "A thumb pull loads earlier history exactly once",
+        "Retains recent reply and unsent draft",
         "No worker input"
       ]
     }

@@ -166,7 +166,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
     }
     val shownIds=shownRows.map{it.s("id")}
-    LaunchedEffect(important,filterPaddingRequest,shownIds){
+    LaunchedEffect(important,filterPaddingRequest,shownIds,conversation.incarnation){
         if(!important){filterTailPixels=0;filterPaddingRequest=null;return@LaunchedEffect}
         val request=filterPaddingRequest?:return@LaunchedEffect
         val index=shownIds.indexOf(request.row);if(index<0)return@LaunchedEffect
@@ -182,7 +182,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     val latestFollow by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(follow)}
     val latestRowIds by key(Pocket.environmentId,Pocket.selected){rememberUpdatedState(shownRows.map{it.s("id")})}
-    DisposableEffect(Pocket.environmentId,Pocket.selected){
+    DisposableEffect(Pocket.environmentId,Pocket.selected,conversation.incarnation){
         val source=Pocket.selected;val owner=PocketTranscript.scopeKey()
         onDispose{
             // visibleItemsInfo also includes a preceding row inside content padding.
@@ -192,7 +192,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position.copy(rowId=latestRunProjection.canonicalId(position.rowId),offset=if(position.rowId.startsWith("ui:run-group:"))0 else position.offset))
         }
     }
-    LaunchedEffect(list,Pocket.environmentId,Pocket.selected){
+    LaunchedEffect(list,Pocket.environmentId,Pocket.selected,conversation.incarnation){
         val source=Pocket.selected;val owner=PocketTranscript.scopeKey()
         snapshotFlow{
             if(!restoredPosition||PocketTranscript.loading||list.isScrollInProgress||important)null else
@@ -201,7 +201,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(source!=null)PocketTranscript.rememberPosition(owner,source,position.copy(rowId=latestRunProjection.canonicalId(position.rowId),offset=if(position.rowId.startsWith("ui:run-group:"))0 else position.offset))
         }
     }
-    LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size,restoreRevision){
+    LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size,restoreRevision,conversation.incarnation){
         if(!restoredPosition&&readPosition!=null&&rows.isNotEmpty()){
             val resolved=resolveTranscriptReadPosition(rows,readPosition)?:readPosition
             val index=transcriptAnchorIndex(shownIds,resolved.copy(rowId=runProjection.displayId(resolved.rowId)))
@@ -209,12 +209,12 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 if(index>=0)list.scrollToItem(index,if(shownIds[index].startsWith("ui:run-group:"))0 else readPosition.offset.coerceAtLeast(0))else follow=true
             }
             restoredPosition=true
-            PocketTranscript.positionRestored(Pocket.selected,restoreRevision)
+            CodexConversations.positionRestored(conversation.key,conversation.incarnation,restoreRevision)
         }
     }
     var actionsOpen by remember(Pocket.selected){mutableStateOf(false)}
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(list,lifecycle,Pocket.environmentId,Pocket.selected){
+    LaunchedEffect(list,lifecycle,Pocket.environmentId,Pocket.selected,conversation.incarnation){
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
             snapshotFlow{
                 val latest=PocketTranscript.rows.lastOrNull{it.s("kind") !in listOf("turn","turnEnd")&&it.s("text").isNotBlank()}?.s("id")
@@ -236,16 +236,16 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var queuedText by remember(Pocket.selected){mutableStateOf("")}
     var queueOpen by remember(Pocket.selected){mutableStateOf(false)}
     val draftKey=Pocket.key("draft:${Pocket.selected}");val editorState=remember(Pocket.environmentId,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})};var editor by editorState
-    LaunchedEffect(PocketReplies.revision,draftKey){if(PocketReplies.clearedDrafts[draftKey]?.let{it.text==editor.text&&it.generation==replyDraftGeneration(draftKey)}==true&&!Pocket.prefs.contains(draftKey))editor=TextFieldValue("")}
+    LaunchedEffect(PocketReplies.revision,draftKey,conversation.incarnation){if(PocketReplies.clearedDrafts[draftKey]?.let{it.text==editor.text&&it.generation==replyDraftGeneration(draftKey)}==true&&!Pocket.prefs.contains(draftKey))editor=TextFieldValue("")}
     var keyboardInput by remember(Pocket.selected){mutableStateOf(Pocket.openWithKeyboard)}
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
-    LaunchedEffect(keyboardInput){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
+    LaunchedEffect(keyboardInput,conversation.incarnation){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
     ConversationBack{Pocket.closeTask()}
     val hasDraft by remember(editorState){derivedStateOf{editorState.value.text.isNotBlank()}}
     val submit:(String)->Unit={mode->val submitted=editor.text;val submittedGeneration=replyDraftGeneration(draftKey);follow=true;CodexConversations.submit(conversation.key,conversation.incarnation,submitted,mode,draftKey){if(editor.text==submitted&&replyDraftGeneration(draftKey)==submittedGeneration){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
     val waiting=d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") in listOf("queued","held")&&it.s("mode")=="queue"}?:emptyList()
-    LaunchedEffect(list){
+    LaunchedEffect(list,conversation.incarnation){
         if(BuildConfig.DEBUG&&Pocket.prefs.getBoolean("diagnostic:scroll",false))snapshotFlow{Triple(list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,list.isScrollInProgress)}.collect{position->
             android.util.Log.d("PocketScroll","index=${position.first} offset=${position.second} moving=${position.third} follow=$follow dragged=$dragged rows=${shownRows.size}")
         }
@@ -263,18 +263,18 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             return Offset.Zero
         }
     }}
-    LaunchedEffect(dragged){
+    LaunchedEffect(dragged,conversation.incarnation){
         if(dragged){CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false;filterPassage=null}
         else{
             if(shouldResumeTranscriptFollowing(list.canScrollForward,list.canScrollBackward,PocketTranscript.earlier,shortHistoryPull))follow=true
             shortHistoryPull=false
         }
     }
-    LaunchedEffect(list){
+    LaunchedEffect(list,conversation.incarnation){
         // Accessibility scroll actions do not emit pointer-drag interactions.
         snapshotFlow{list.isScrollInProgress&&!follow&&!pagingViewport}.distinctUntilChanged().filter{it}.collect{historyGesture++}
     }
-    LaunchedEffect(Pocket.environmentId,Pocket.selected,PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)}){if(follow&&!dragged){
+    LaunchedEffect(Pocket.environmentId,Pocket.selected,PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)},conversation.incarnation){if(follow&&!dragged){
         // A delta can arrive while the preceding programmatic follow is still
         // measuring. Keep that request until its new rows exist and scrolling
         // settles; a real reader gesture still cancels following immediately.
@@ -289,7 +289,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }}
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
-    LaunchedEffect(Pocket.environmentId,Pocket.selected,important){
+    LaunchedEffect(Pocket.environmentId,Pocket.selected,important,conversation.incarnation){
         snapshotFlow{!pagingViewport&&restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
             .distinctUntilChanged().filter{it}.collect{
                 var retryMs=1000L

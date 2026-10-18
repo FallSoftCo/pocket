@@ -13,6 +13,7 @@ This is the integrated architecture candidate after alpha113. It is not yet a pu
 - A separately scoped storage writer preserves captured presentation checkpoints after navigation. It cannot submit commands.
 - The read transport admits only explicitly listed catalog/history/status/public-update GET resources and the canonical position query. It has no command endpoint fallback.
 - Durable typed/voice commands, their original identities, uncertain receipts, drafts, capture and playback retain their existing independent ownership. Closing a viewport must not cancel or replay them.
+- The session identity is observable; source-bound screen effects restart for each incarnation, including Home/return, without resetting local editor/filter state. Paging, presentation acknowledgements and composer admission reject callbacks from retired incarnations.
 - The UI consumes one typed snapshot with separate content, read freshness, historical coverage, execution, attention count and original client deliveries. Cached content and failed reads do not become failed commands or idle work.
 - Reading motion is an intent to the repository. A screen no longer holds an authoritative history request behind a composable-owned settling callback.
 
@@ -24,7 +25,7 @@ Foreground stop retires presentation reads even if voice keeps its own transport
 
 ## Required integrated evidence
 
-One native journey must show actual server-observed HTTP cancellation when navigating away and backgrounding, distinct A→B→A incarnations, cached reading/draft preservation, foreground recovery of a silently advanced source head, coalescing of twenty reconnect invalidations into one history read, and zero worker submissions. Existing independent-current/history, missed-event, chronology, command/receipt, keyboard/voice and environment journeys remain applicable.
+One native journey must show actual server-observed HTTP cancellation when navigating away and backgrounding, distinct A→B→A incarnations, cached reading/draft preservation, foreground recovery of a silently advanced source head, coalescing of twenty reconnect invalidations into one history read, and zero worker submissions. An actual emulator Home→return→thumb-paging journey must retain the draft and recent reply while loading older history exactly once. This failed in the second unpublished candidate because a retained Compose effect captured the retired incarnation; observable session identity and incarnation-bound effects correct that boundary. Existing independent-current/history, missed-event, chronology, command/receipt, keyboard/voice and environment journeys remain applicable.
 
 ## Work still required before architectural completion
 
