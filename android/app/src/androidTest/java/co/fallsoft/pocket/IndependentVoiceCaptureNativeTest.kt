@@ -21,12 +21,36 @@ class IndependentVoiceCaptureNativeTest {
   try {
    i.runOnMainSync { PocketVoice.start(c,recordImmediately=false,inPlace=true) }
    await("Voice service ready"){PocketVoice.active}
+   // A cancelled Android service launch must not start later when its queued
+   // start command finally reaches onStartCommand.
+   i.runOnMainSync { PocketVoice.stop() }
+   await("Previous voice service stopped"){PocketVoice.service==null}
+   i.runOnMainSync {
+    PocketVoice.start(c,recordImmediately=true,inPlace=true)
+    PocketVoice.stop()
+   }
+   Thread.sleep(750)
+   assertFalse("Cancelled launch did not acquire microphone",PocketVoice.captureBusy)
+   assertFalse("Cancelled launch did not become active",PocketVoice.active)
+   i.runOnMainSync { PocketVoice.start(c,recordImmediately=false,inPlace=true) }
+   await("Fresh voice service ready"){PocketVoice.active}
    repeat(2) {
     i.runOnMainSync { PocketVoice.state="Thinking";PocketVoice.record() }
     await("Actual microphone recording visible"){PocketVoice.captureBusy&&PocketVoice.state=="Listening"}
     Thread.sleep(300)
     if(it==0)i.runOnMainSync { PocketVoice.record() } else device.pressKeyCode(android.view.KeyEvent.KEYCODE_VOLUME_DOWN)
     await("Microphone released"){!PocketVoice.captureBusy&&PocketVoice.state=="Ready"}
+   }
+   i.runOnMainSync { PocketVoice.record() }
+   await("Capture started before cancel"){PocketVoice.captureBusy&&PocketVoice.state=="Listening"}
+   val cancelledKey=PocketVoice.latestRecordingKey
+   i.runOnMainSync { PocketVoice.stop() }
+   await("Cancelled microphone released"){!PocketVoice.captureBusy&&PocketVoice.service==null}
+   assertNotNull(cancelledKey)
+   VoiceTurnStore(c,DurableVoiceWork.JOURNAL).use { store ->
+    val cancelled=store.get(cancelledKey!!)!!
+    assertEquals(VoiceTurnStore.Capture.INTERRUPTED,cancelled.capture)
+    assertEquals(VoiceTurnStore.Delivery.CANCELLED,cancelled.delivery)
    }
   }finally{i.runOnMainSync{PocketVoice.stop()};await("Own service stopped"){PocketVoice.service==null}}
  }

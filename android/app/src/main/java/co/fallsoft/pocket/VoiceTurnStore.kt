@@ -228,6 +228,14 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
         } finally { database.endTransaction() }
     }
     /** Failed capture is never uploadable; retain its private PCM for inspection. */
+    /** Cancellation fences local admission even if file sealing just completed.
+     * No server outcome is asserted: only never-submitted local audio is cancelled. */
+    fun cancelUnsubmittedCapture(key:String,message:String) {
+        db.execSQL("""UPDATE turns SET
+            capture=CASE WHEN capture IN ('RECORDING','SEALING') THEN 'INTERRUPTED' ELSE capture END,
+            delivery='CANCELLED',cancellation='CONFIRMED',problem=?,revision=revision+1
+            WHERE turn_key=? AND delivery='UNSUBMITTED'""",arrayOf(message,key))
+    }
     fun interruptCapture(key: String, message: String) {
         db.execSQL("UPDATE turns SET capture='INTERRUPTED',problem=?,revision=revision+1 WHERE turn_key=? AND capture='RECORDING' AND delivery='UNSUBMITTED'",arrayOf(message,key))
     }

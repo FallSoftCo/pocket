@@ -116,6 +116,7 @@ object PocketVoice {
             }finally{resolvingSavedOwner=false;if(Pocket.prefs.getString("voicePendingId",null)==id)state="Ready"}
         }
     }
+    internal var pendingLaunchId:String?=null;private set
     fun start(c:Context,threadId:String?=null,recordImmediately:Boolean=true,inPlace:Boolean=false,checkSaved:Boolean=false,roomDestination:JSONObject?=null,sourceLabel:String?=null){
         if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){problem="Allow microphone access to use voice.";return}
         if(checkSaved&&Pocket.prefs.getString("voicePendingId",null)!=null&&Pocket.prefs.getString("voicePendingEnvironment",null).isNullOrBlank()){resolveLegacySavedOwner(inPlace);return}
@@ -125,9 +126,10 @@ object PocketVoice {
             service?.beginCapture(threadId,roomDestination,sourceLabel);return
         }
         if(launching)return
-        this.inPlace=inPlace;targetSourceLabel=if(checkSaved)Pocket.prefs.getString("voicePendingSourceLabel",null)?:Pocket.prefs.getString("voicePendingRoomLabel",null)?:"Saved recording" else captureSourceLabel(threadId,roomDestination?.toString(),sourceLabel);targetRoom=(if(checkSaved)Pocket.prefs.getString("voicePendingRoom",null)?.let{JSONObject(it)} else roomDestination)?.let{JSONObject(it.toString())};launching=true;state="Starting voice";targetThread=if(checkSaved)Pocket.prefs.getString("voicePendingTarget",null)?.takeUnless{it=="coordinator"} else threadId;problem="";try{ContextCompat.startForegroundService(c,Intent(c,PocketVoiceService::class.java).setAction("start").putExtra("recordImmediately",recordImmediately).putExtra("checkSaved",checkSaved).putExtra("captureEnvironment",Pocket.environmentId).putExtra("captureEndpoint",Pocket.base.trimEnd('/')).putExtra("capturePairing",backendOwner(Pocket.base.trimEnd('/'),Pocket.token)))}catch(e:RuntimeException){launching=false;state="Ready";val reason=(e.message?:e.javaClass.simpleName).replace('\n',' ').let{if(Pocket.token.isNotBlank())it.replace(Pocket.token,"[credential]")else it}.take(180);captureFailure("Android could not start recording: $reason",inPlace)}
+        val launchId=UUID.randomUUID().toString();pendingLaunchId=launchId
+        this.inPlace=inPlace;targetSourceLabel=if(checkSaved)Pocket.prefs.getString("voicePendingSourceLabel",null)?:Pocket.prefs.getString("voicePendingRoomLabel",null)?:"Saved recording" else captureSourceLabel(threadId,roomDestination?.toString(),sourceLabel);targetRoom=(if(checkSaved)Pocket.prefs.getString("voicePendingRoom",null)?.let{JSONObject(it)} else roomDestination)?.let{JSONObject(it.toString())};launching=true;state="Starting voice";targetThread=if(checkSaved)Pocket.prefs.getString("voicePendingTarget",null)?.takeUnless{it=="coordinator"} else threadId;problem="";try{ContextCompat.startForegroundService(c,Intent(c,PocketVoiceService::class.java).setAction("start").putExtra("launchId",launchId).putExtra("recordImmediately",recordImmediately).putExtra("checkSaved",checkSaved).putExtra("captureEnvironment",Pocket.environmentId).putExtra("captureEndpoint",Pocket.base.trimEnd('/')).putExtra("capturePairing",backendOwner(Pocket.base.trimEnd('/'),Pocket.token)))}catch(e:RuntimeException){launching=false;state="Ready";val reason=(e.message?:e.javaClass.simpleName).replace('\n',' ').let{if(Pocket.token.isNotBlank())it.replace(Pocket.token,"[credential]")else it}.take(180);captureFailure("Android could not start recording: $reason",inPlace)}
     }
-    fun stop(){service?.leave();launching=false;problem=""}
+    fun stop(){pendingLaunchId=null;service?.leave();launching=false;problem=""}
     fun record(){service?.toggleRecord()}
     fun playback(){service?.togglePlayback()}
     fun sendText(text:String):Boolean=service?.sendText(text)?:false.also{problem="Voice is not ready to send text. Your draft is kept."}
@@ -218,6 +220,12 @@ class PocketVoiceService:Service(){
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{
         if(intent==null){stopSelf();return START_NOT_STICKY}
         if(intent.action=="stop"){leave();return START_NOT_STICKY}
+        // Service delivery may arrive after the user cancelled the launch. A stale
+        // Android start command must never reacquire the microphone.
+        if(intent.action=="start" && (intent.getStringExtra("launchId")==null || intent.getStringExtra("launchId")!=PocketVoice.pendingLaunchId)){
+            if(!PocketVoice.active)stopSelf(startId)
+            return START_NOT_STICKY
+        }
         if(intent?.action=="start"&&intent.getBooleanExtra("recordImmediately",true)&&!intent.getBooleanExtra("checkSaved",false)&&
             (intent.getStringExtra("captureEnvironment")!=Pocket.environmentId || intent.getStringExtra("captureEndpoint")!=Pocket.base.trimEnd('/') ||
              intent.getStringExtra("capturePairing")!=backendOwner(Pocket.base.trimEnd('/'),Pocket.token))){
@@ -355,12 +363,13 @@ class PocketVoiceService:Service(){
                     if(created.state!=AudioRecord.STATE_INITIALIZED){created.release();error("Microphone is unavailable.")}
                     created
                 }
-                audio=capture;recorder=capture
+                audio=capture;currentCoroutineContext().ensureActive();recorder=capture
                 val pcm=withContext(Dispatchers.IO) {
                     val bytes=ByteArrayOutputStream();val buf=ByteArray(4096);var lastLevel=0L;var lastSync=0L
                     val partial=VoiceTurnStore(this@PocketVoiceService,DurableVoiceWork.JOURNAL).use{it.captureFile(requireNotNull(key))}
                     val durable=java.io.FileOutputStream(partial)
                     try {
+                    currentCoroutineContext().ensureActive()
                     capture.startRecording()
                     check(capture.recordingState==AudioRecord.RECORDSTATE_RECORDING){"Android could not start the microphone. Check microphone privacy."}
                     withContext(Dispatchers.Main){state("Listening")}
@@ -375,20 +384,23 @@ class PocketVoiceService:Service(){
                             if(now-lastLevel>=100){lastLevel=now;val level=capturePcmLevel(buf,n);withContext(Dispatchers.Main){PocketVoice.captureLevel=level}}
                         }else delay(10)
                     }
+                    currentCoroutineContext().ensureActive()
                     check(stopRecording){"Recording reached its two-minute limit. Audio is retained locally; nothing was sent."}
                     bytes.toByteArray()
                     }finally{try{durable.fd.sync()}finally{durable.close()}}
                 }
                 withContext(Dispatchers.IO){voiceRecordingProblem(VoiceRecording.hasSpeech(pcm),recordingProblem)}?.let{throw IllegalStateException(it)}
                 // Finishing the file is local IO only; no task or speech job holds capture ownership.
-                withContext(NonCancellable+Dispatchers.IO) {
+                currentCoroutineContext().ensureActive()
+                withContext(Dispatchers.IO) {
+                    currentCoroutineContext().ensureActive()
                     val sealed=VoiceTurnStore(this@PocketVoiceService,DurableVoiceWork.JOURNAL).use{it.seal(requireNotNull(key),VoiceRecording.wav(pcm))}
                     withContext(Dispatchers.Main){PocketVoice.captureQueued(sealed.key)}
                     DurableVoiceWork.enqueue(this@PocketVoiceService,sealed.key)
                 }
                 beep()
             }catch(e:CancellationException){
-                key?.let{saved->withContext(NonCancellable+Dispatchers.IO){VoiceTurnStore(this@PocketVoiceService,DurableVoiceWork.JOURNAL).use{it.interruptCapture(saved,"Capture interrupted before sending")}}}
+                key?.let{saved->withContext(NonCancellable+Dispatchers.IO){VoiceTurnStore(this@PocketVoiceService,DurableVoiceWork.JOURNAL).use{it.cancelUnsubmittedCapture(saved,"Capture cancelled before sending")}}}
                 throw e
             }catch(e:Exception){
                 val message=e.message?:"Recording failed. No task was submitted."
@@ -504,7 +516,7 @@ class PocketVoiceService:Service(){
     private fun nextUpdate(){if(!PocketVoice.active||recorder!=null||playing||nativeRendering||nativePaused||nativeSpeaking||work?.isActive==true||turnId!=null||updates.isEmpty())return;val n=updates.removeFirst();work=scope.launch{try{val full=if(n.s("speech_pending")=="1")api("/api/notifications/${n.optLong("id")}").optJSONObject("notification")?:n else n;speak(full.s("spoken_text",full.s("body")),full){scope.launch{delay(50);nextUpdate()}}}catch(e:Exception){if(e is CancellationException)throw e;fail(e)}}}
     private fun stopNativeRemote(){if(nativeId!=null){val request=Request.Builder().url("$endpoint/api/voice/native/stop").header("Authorization","Bearer $credential").post(JSONObject().put("connectionId",nativeId).toString().toRequestBody("application/json".toMediaType())).build();http.newCall(request).enqueue(object:Callback{override fun onFailure(call:Call,e:java.io.IOException){};override fun onResponse(call:Call,response:Response){response.close()}})}}
     private fun disconnectNative(){captureStreamFailed=true;captureStreaming=false;captureStreamJob?.cancel();capturePrefix.clear();nativeAudio?.cancelInput();checkpointNativeUsage(stop=true);transportGeneration++;stopNativeRemote();nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeReady?.cancel();nativeReady=null}
-    fun leave(){PocketVoice.launching=false;PocketVoice.active=false;disconnectNative();recording?.cancel();work?.cancel();stopPlayer();state("Ready");stopSelf()}
+    fun leave(){stopRecording=true;PocketVoice.launching=false;PocketVoice.active=false;disconnectNative();recording?.cancel();work?.cancel();stopPlayer();state("Ready");stopSelf()}
     override fun onDestroy(){checkpointNativeUsage(stop=true);transportGeneration++;nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;PocketVoice.active=false;PocketVoice.captureBusy=false;PocketVoice.service=null;recording?.cancel();scope.cancel();stopPlayer();tones.release();if(lock?.isHeld==true)lock?.release();if(!PocketVoice.foreground&&!Pocket.local)PocketLive.stop();stopForeground(STOP_FOREGROUND_REMOVE);if(caption!=null&&PocketSpeechCaptions.state.phase=="Speaking")PocketSpeechCaptions.pause(captionProfile);PocketSpeechCaptions.retain();super.onDestroy()}
 }
 
