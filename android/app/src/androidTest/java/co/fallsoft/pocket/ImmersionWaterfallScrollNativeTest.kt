@@ -13,7 +13,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.*
 import androidx.compose.ui.unit.*
-import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.*
@@ -41,9 +40,12 @@ class ImmersionWaterfallScrollNativeTest {
    var result=0L to emptyList<ImmersionReadingWaveClock.Observation>()
    i.runOnMainSync{result=clock.get()!!.elapsedMs to clock.get()!!.observeLines()};return result
   }
-  ActivityScenario.launch(MainActivity::class.java).use{scenario->
-   scenario.onActivity{activity->
-    active.set(activity)
+  val monitor=i.addMonitor(MainActivity::class.java.name,null,false)
+  c.startActivity(android.content.Intent(c,MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+  val activity=i.waitForMonitorWithTimeout(monitor,15000) as? MainActivity?:error("Owned native activity unavailable")
+  active.set(activity)
+  try{
+   i.runOnMainSync{
     activity.window.addOnFrameMetricsAvailableListener(metrics,android.os.Handler(android.os.Looper.getMainLooper()))
     activity.setContent{MaterialTheme{
      ImmersionReadingWaveHost{
@@ -115,7 +117,9 @@ class ImmersionWaterfallScrollNativeTest {
    c.cacheDir.resolve("waterfall-result.json").writeText(JSONObject().put("passed",true).put("clock","actual-native-display")
     .put("scrollCommonLines",common.size).put("scrollElapsedMs",after.first-before.first).put("mixedItalianEnglishInk",true)
     .put("frames",durations.size).put("p50FrameMs",durations[durations.size/2]/1e6).put("p95FrameMs",durations[((durations.size-1)*.95).toInt()]/1e6).toString())
-   i.runOnMainSync{active.get().window.removeOnFrameMetricsAvailableListener(metrics);active.get().setContent{}}
+  }finally{
+   i.runOnMainSync{activity.window.removeOnFrameMetricsAvailableListener(metrics);activity.setContent{};activity.finish()}
+   i.removeMonitor(monitor)
   }
  }
 }
