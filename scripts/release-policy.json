@@ -26,7 +26,7 @@
     "co.fallsoft.pocket.ForegroundNotificationNativeTest#activeAppCoalescesAlertsPreservesQuestionsAndKeepsDelayedRefreshInline",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#historyEvidenceRepairsDeferredPositionOnce",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#canonicalInputPositionSurvivesProviderChangeDuringLookup",
-    "co.fallsoft.pocket.TranscriptRefreshNativeTest#cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory"
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#currentHeadsAndDelayedInputRemainOrderedAcrossCachedReopen"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",

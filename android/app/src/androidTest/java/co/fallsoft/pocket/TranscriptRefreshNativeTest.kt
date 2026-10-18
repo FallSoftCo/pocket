@@ -677,7 +677,10 @@ class TranscriptRefreshNativeTest {
   assertEquals("Catch-up submitted work",0,qa("state").getJSONArray("replies").length())
   assertEquals("Catch-up erased draft","First saved draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
  }
- @Test fun cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory(){
+ @Test fun currentHeadsAndDelayedInputRemainOrderedAcrossCachedReopen(){
+  exerciseCurrentHeadsAndInputOrder()
+ }
+ private fun exerciseCurrentHeadsAndInputOrder():android.content.SharedPreferences{
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Unsaved draft preserved").commit()
@@ -720,6 +723,10 @@ class TranscriptRefreshNativeTest {
   assertEquals("Newer answer during fetch",PocketTranscript.rows.single{it.s("id")=="order/answer"}.s("text"))
   assertTrue("Newer answer absent from native view",device.wait(Until.hasObject(By.text("Newer answer during fetch")),2000))
   assertEquals("Draft changed during ordering repair","Unsaved draft preserved",prefs.getString("draft:same-thread",null))
+  return prefs
+ }
+ @Test fun cachedPreviewRefreshIsVisibleAndLatestWinsOverOlderHistory(){
+  val prefs=exerciseCurrentHeadsAndInputOrder()
   main{
    Pocket.detail=JSONObject(requireNotNull(Pocket.detail).toString()).put("outgoing",org.json.JSONArray().put(JSONObject().put("id","failed-ui").put("state","failed").put("mode","auto").put("text","Synthetic failed draft").put("result","Synthetic transport failure")))
   }
