@@ -48,5 +48,12 @@
   "warmWorkstationCurrentReadSamplesMs": [
     51,
     97
-  ]
+  ],
+  "backendFollowup": {
+    "testsPassed": 539,
+    "testsFailed": 0,
+    "productionDependencyVulnerabilities": 0,
+    "authContract": "HTTP human-input integration clients use the real owner-issued pairing flow; operator /api/notify retains operator authorization. No production guard was weakened.",
+    "androidPayloadChanged": false
+  }
 }
