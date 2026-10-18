@@ -68,7 +68,12 @@ internal object ForegroundNotifications {
             val old=pending[key]
             if(old!=null&&old.value.optLong("id")>n.optLong("id"))return
             val roomEvent=n.s("_hollywoodKey")
-            if(roomEvent.isNotBlank())pending.entries.removeAll{it.value.value.s("_hollywoodKey")==roomEvent}
+            if(roomEvent.isNotBlank()){
+                val previous=pending.values.firstOrNull{it.value.s("_hollywoodKey")==roomEvent}?.value
+                if(previous!=null&&(previous.optLong("id")>n.optLong("id")||previous.optLong("id")==n.optLong("id")&&
+                    ((!previous.optBoolean("_hollywoodGeneric")&&n.optBoolean("_hollywoodGeneric"))||(previous.s("_hollywoodStatus").isNotBlank()&&n.s("_hollywoodStatus").isBlank()))))return
+                pending.entries.removeAll{it.value.value.s("_hollywoodKey")==roomEvent}
+            }
             pending.remove(key)
             pending[key]=Notice(source,JSONObject(n.toString()))
             while(pending.size>64)pending.remove(pending.keys.first())
