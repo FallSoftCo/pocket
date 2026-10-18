@@ -1,3 +1,4 @@
+import {MAX_RECORDING_WAV_BYTES,MAX_RECORDING_SECONDS} from './audio-limits.mjs';
 import express from 'express';
 import {resolve} from 'node:path';
 import {VoiceRecordings} from './voice-recordings.mjs';
@@ -19,12 +20,12 @@ export function mountStockVoiceIntake(app,{db,dir,controller,humanIngress,resolv
    return controller.submitText(device,id,text,null,destination);
   }
  });
- app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,immutableDestination:true,recordingDigest:true,durableAudioAdmission:!!transcriber,cancellationTombstones:true,renderedSpeechVersion:0}));
+ app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,maxRecordingSeconds:MAX_RECORDING_SECONDS,maxRecordingBytes:MAX_RECORDING_WAV_BYTES,immutableDestination:true,recordingDigest:true,durableAudioAdmission:!!transcriber,cancellationTombstones:true,renderedSpeechVersion:0}));
  app.post('/api/voice/recordings',route(async(req,res)=>{
   if(!transcriber)throw Object.assign(Error('This environment needs its native audio worker. Audio remains saved on your device.'),{status:503});
   res.status(202).json(await recordings.create(req.device.id,req.body,req.humanPrincipal));
  }));
- app.put('/api/voice/recordings/:id/audio',express.raw({type:'audio/wav',limit:'4mb'}),route(async(req,res)=>{
+ app.put('/api/voice/recordings/:id/audio',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),route(async(req,res)=>{
   if(!Buffer.isBuffer(req.body))throw Object.assign(Error('Expected recorded WAV audio.'),{status:415});
   res.status(202).json(await recordings.upload(req.device.id,req.params.id,req.body));
  }));
