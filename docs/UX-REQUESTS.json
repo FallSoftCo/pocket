@@ -2904,5 +2904,15 @@
     "contract": "docs/VOICE-TURN-LIFECYCLE.md",
     "deployment": "Phone readback remains version126. Version128/alpha110 built and native-qualified, not published or installed. No production service changed.",
     "latest_progress": "Independent capture, source-bound recording journal/uploads and coordinator task queue implemented; real Android WorkManager/native ASR/canonical room admission, durable queue/restart/cancellation tests and actual HTTP paired/owner separation qualified. Ten native cases and optimized release input/voice review passed. Existing installed speech path retained; experimental asset speech stays disabled after no-audio failure. Cancellation now persists as an orthogonal intent, uses an independent cancellation-only WorkManager job, and fences late create/upload through an idempotent server tombstone. Actual authenticated stock HTTP cancellation/queue flow passed on production Node22 without new task model inference. Updated Android migration/cancellation qualification and signed publication pending. Legacy inventory migration and reliable speech replacement remain outstanding."
+  },
+  "session_sync_and_stable_wave_20261018": {
+    "status": "candidate-alpha115-native-qualification-in-progress-not-delivered",
+    "requirements": [
+      "Closed sessions synchronize public live rows and notifications without viewport attachment; opening paints latest synchronized tail without old-history flash",
+      "Scrolling must not reassign a line language phase; stable saved line owner identity and local line coordinates",
+      "One continuous spatial top-to-bottom wave; local selection does not freeze unrelated content; no frame-driven layout or nearest-line scans"
+    ],
+    "architecture": "Environment-bound durable recent-message repository; shared single-flight current reads; background repairs have no command authority. Display-clock wave assigns onset once per half-wave and uses O(1) stable line lookup.",
+    "qualification": "Real native first-paint/background journey and scrolling/IME rendered waterfall required; emulator timing is not physical handset performance. Obsolete viewport-HTTP-cancellation release case replaced because background reads must now survive navigation; stale composer mutation fencing retained in source."
   }
 }

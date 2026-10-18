@@ -41,11 +41,12 @@ internal object CodexSessionRepository {
             requests[key]?.takeIf{it.isActive}?:io.async{
                 if(!current(source))throw CancellationException("Pairing changed")
                 val baseline=latest[key]?.optJSONObject("historyHead")?.s("epoch")
+                val notificationAtStart=known[key]?:0
                 val response=CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"?view=timeline")
                 val currentEpoch=latest[key]?.optJSONObject("historyHead")?.s("epoch")
                 if(!baseline.isNullOrBlank()&&currentEpoch!=baseline&&response.optJSONObject("historyHead")?.s("epoch")==baseline)
                     throw java.io.IOException("Message runtime changed during the read")
-                response
+                response.put("_notificationObserved",notificationAtStart)
             }.also{created->
                 requests[key]=created
                 created.invokeOnCompletion{io.launch{if(requests[key]===created)requests.remove(key)}}
@@ -59,6 +60,7 @@ internal object CodexSessionRepository {
         val destination=Pocket.captureEnvironment()?:return null
         return latest[source(destination).scope to id]
     }
+    fun canPresent(id:String,value:JSONObject):Boolean=notificationWatermark(id)<=value.optLong("throughNotification")
     fun isDirty(id:String):Boolean {
         val destination=Pocket.captureEnvironment()?:return true
         return (source(destination).scope to id) in dirty
@@ -82,13 +84,14 @@ internal object CodexSessionRepository {
             db.rawQuery("SELECT thread,body,notification,dirty FROM recent WHERE scope=? ORDER BY updated DESC LIMIT 256",arrayOf(source.scope)).use{cursor->
                 while(cursor.moveToNext()){
                     val thread=cursor.getString(0);val key=source.scope to thread
+                    val alreadyLoaded=latest.containsKey(key)
                     known[key]=maxOf(known[key]?:0,cursor.getLong(2))
                     if(!cursor.isNull(1))runCatching{JSONObject(cursor.getString(1))}.getOrNull()?.let{latest.putIfAbsent(key,it)}
-                    if(cursor.getInt(3)!=0){dirty.add(key);pending[key]=Intent(source,thread,cursor.getLong(2))}
+                    if(cursor.getInt(3)!=0&&(!alreadyLoaded||key in dirty)){dirty.add(key);pending[key]=Intent(source,thread,cursor.getLong(2))}
                 }
             }
             val selected=Pocket.selected
-            if(selected!=null&&(source.scope to selected) !in dirty)latest[source.scope to selected]?.let{value->
+            if(selected!=null)latest[source.scope to selected]?.takeIf{canPresent(selected,it)}?.let{value->
                 withContext(Dispatchers.Main.immediate){
                     if(Pocket.captureEnvironment()?.matches(source.destination)==true)CodexConversations.repositoryUpdated(selected,value)
                 }
@@ -139,11 +142,14 @@ internal object CodexSessionRepository {
     }
     fun invalidate(id:String,destination:EnvironmentRequest?=Pocket.captureEnvironment(),notification:Long=0){
         if(id.isBlank()||destination==null)return
-        val source=source(destination)
+        val source=source(destination);val key=source.scope to id
+        if(notification>0){
+            if(notification<=(known[key]?:0))return
+            known.merge(key,notification){a,b->maxOf(a,b)}
+        }
         io.launch{
             ensurePump();if(!current(source))return@launch
             load(source,id)
-            if(notification>0&&notification<=(known[source.scope to id]?:0))return@launch
             queue(Intent(source,id,notification))
         }
     }
@@ -157,6 +163,7 @@ internal object CodexSessionRepository {
             val page=JSONObject(safe.getJSONObject("timeline").toString())
             page.put("rows",org.json.JSONArray(page.getJSONArray("rows").objects().takeLast(64)))
             safe.put("timeline",page)
+            retainNewerLiveHead(source.scope to id,safe)
             latest[source.scope to id]=safe
             val high=safe.optLong("throughNotification")
             known[source.scope to id]=maxOf(known[source.scope to id]?:0,high)
@@ -165,13 +172,22 @@ internal object CodexSessionRepository {
             save(source,id,safe,key in dirty)
         }
     }
+    private fun retainNewerLiveHead(key:Pair<String,String>,safe:JSONObject){
+        val previous=latest[key]?:return
+        val oldHead=previous.optJSONObject("historyHead")?:return
+        val newHead=safe.optJSONObject("historyHead")?:return
+        if(oldHead.s("epoch")!=newHead.s("epoch")||oldHead.optLong("version")<=newHead.optLong("version"))return
+        val rows=mergeRestoredTranscriptRows(safe.getJSONObject("timeline").getJSONArray("rows").objects(),previous.getJSONObject("timeline").getJSONArray("rows").objects())
+        safe.getJSONObject("timeline").put("rows",org.json.JSONArray(rows.takeLast(64)))
+        safe.put("historyHead",oldHead)
+    }
     private fun presentation(value:JSONObject):JSONObject =
         JSONObject().put("thread",transcriptPresentationDetail(value.getJSONObject("thread").s("id"),value).getJSONObject("thread"))
             .put("timeline",JSONObject(value.getJSONObject("timeline"),value.getJSONObject("timeline").keys().asSequence().toList().toTypedArray())
                 .put("rows",org.json.JSONArray(value.getJSONObject("timeline").getJSONArray("rows").objects().filter{it.s("kind")!="request"})))
             .put("revision",value.optLong("revision"))
             .put("historyHead",value.optJSONObject("historyHead"))
-            .put("throughNotification",value.optJSONArray("notifications")?.objects()?.maxOfOrNull{it.optLong("id")}?:value.optLong("throughNotification"))
+            .put("throughNotification",maxOf(value.optJSONArray("notifications")?.objects()?.maxOfOrNull{it.optLong("id")}?:0,value.optLong("throughNotification"),value.optLong("_notificationObserved")))
     private fun load(source:Source,id:String):JSONObject? {
         val key=source.scope to id
         latest[key]?.let{return it}
@@ -229,15 +245,7 @@ internal object CodexSessionRepository {
                         val page=JSONObject(safe.getJSONObject("timeline").toString())
                         page.put("rows",org.json.JSONArray(page.getJSONArray("rows").objects().takeLast(64)))
                         safe.put("timeline",page)
-                        val previous=latest[key]
-                        if(previous!=null){
-                            val oldHead=previous.optJSONObject("historyHead");val newHead=safe.optJSONObject("historyHead")
-                            if(oldHead?.s("epoch")==newHead?.s("epoch")&&oldHead!=null&&oldHead.optLong("version")>(newHead?.optLong("version")?:0)){
-                                val merged=mergeRestoredTranscriptRows(safe.getJSONObject("timeline").getJSONArray("rows").objects(),previous.getJSONObject("timeline").getJSONArray("rows").objects())
-                                safe.getJSONObject("timeline").put("rows",org.json.JSONArray(merged))
-                                safe.put("historyHead",oldHead)
-                            }
-                        }
+                        retainNewerLiveHead(key,safe)
                         latest[key]=safe
                         if(!pending.containsKey(key))dirty.remove(key)
                         save(intent.source,intent.thread,safe,pending.containsKey(key))

@@ -26,6 +26,7 @@ internal class ImmersionProjectionMarkers(private val original:String,private va
     }
     @Synchronized fun snapshot():Set<String> = owned.toSet()
 }
+internal val LocalImmersionSelectionScope=staticCompositionLocalOf<Any?>{null}
 internal val LocalImmersionProjectionMarkers=staticCompositionLocalOf<ImmersionProjectionMarkers?>{null}
 internal fun immersionOwnedProjectionRanges(text:String,owned:Set<String>):List<IntRange>{
     val ranges=mutableListOf<IntRange>()
@@ -71,7 +72,7 @@ internal fun immersionOwnedProjectionRanges(text:String,owned:Set<String>):List<
             delegate.setClipEntry(ClipEntry(ClipData(ClipDescription(data.description),ClipData.Item(clean))))
         }
     }}
-    CompositionLocalProvider(LocalClipboard provides clipboard,LocalImmersionProjectionMarkers provides markers,LocalTextToolbar provides toolbar){
+    CompositionLocalProvider(LocalImmersionSelectionScope provides owner,LocalClipboard provides clipboard,LocalImmersionProjectionMarkers provides markers,LocalTextToolbar provides toolbar){
         SelectionContainer(content=content)
     }
 }

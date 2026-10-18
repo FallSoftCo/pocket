@@ -1,6 +1,7 @@
 package co.fallsoft.pocket
 
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -39,7 +40,8 @@ import androidx.compose.ui.unit.*
     trackWholeTextVisibility:Boolean=false,
     readingWave:ImmersionReadingWaveClock?=null
 ){
-    val owner=remember{Any()}
+    val owner=rememberSaveable{java.util.UUID.randomUUID().toString()}
+    val selectionScope=LocalImmersionSelectionScope.current
     val uriHandler=LocalUriHandler.current
     var layouts by remember{mutableStateOf<Pair<TextLayoutResult,TextLayoutResult>?>(null)}
     val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
@@ -52,26 +54,23 @@ import androidx.compose.ui.unit.*
     fun publishLines(){
         val clock=readingWave?:return
         val point=origin?.minus(clock.viewportOrigin)?:return
-        clock.lines(owner,lines.map{it.translate(point)}.filter{
-            it.bottom>0f&&it.top<clock.viewportHeightPx&&it.right>0f&&it.left<clock.viewportWidthPx
-        })
+        clock.lines(owner,point,lines)
     }
-    DisposableEffect(readingWave,owner,visible){
-        readingWave?.visible(owner,visible)
-        onDispose{readingWave?.visible(owner,false)}
+    DisposableEffect(readingWave,owner){
+        onDispose{readingWave?.remove(owner)}
     }
     SideEffect{publishLines()}
     // Equality-clamped masks keep opaque holds identical across clock ticks.
-    val masks=remember(readingWave,rtl){mutableMapOf<Float,State<ImmersionSharedWipeMask>>()}
+    val masks=remember(readingWave,rtl,selectionScope){mutableMapOf<Float,State<ImmersionSharedWipeMask>>()}
     fun mask(top:Float):ImmersionSharedWipeMask =
         masks.getOrPut(top){derivedStateOf(structuralEqualityPolicy()){
             val point=origin?.minus(readingWave?.viewportOrigin?:Offset.Zero)
             val width=coordinates?.size?.width?.toFloat()?:0f
-            val global=if(point!=null)readingWave?.lineMask(point.y+top,rtl)else null
+            val global=if(point!=null)readingWave?.lineMask(owner,top,rtl,selectionScope)else null
             if(global==null||point==null)ImmersionSharedWipeMask(if(rtl)width+48f else -48f,48f,true)
             else global.copy(center=(global.center-point.x).coerceIn(-global.feather,width+global.feather))
         }}.value
-    val incoming by remember(readingWave,rtl){derivedStateOf{
+    val incoming by remember(readingWave,rtl,selectionScope){derivedStateOf{
         val width=coordinates?.size?.width?.toFloat()?:0f
         val first=lines.minByOrNull{it.top}
         val m=mask(first?.top?:0f)
@@ -128,6 +127,11 @@ import androidx.compose.ui.unit.*
         trackWholeTextVisibility=trackWholeTextVisibility,
         onNativeTextLayout={layout->onTextLayout(layout);onFragmentLayout(layout)},
         sharedWipeMask=if(readingWave!=null){{_,top->mask(top)}}else null,
+        visibleVerticalRange=if(readingWave==null)null else {{
+            val point=origin?.minus(readingWave.viewportOrigin)
+            val height=coordinates?.size?.height?.toFloat()?:0f
+            if(point==null)0f..height else (-point.y).coerceAtLeast(0f)..(readingWave.viewportHeightPx-point.y).coerceAtMost(height)
+        }},
         continuousWipe=readingWave!=null,incomingOverride=if(readingWave!=null)incoming else null,
         onShapedLayouts={a,b->
             if(layouts?.first!==a||layouts?.second!==b)layouts=a to b

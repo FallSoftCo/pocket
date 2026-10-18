@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
     sharedWipeMask:((Float,Float)->ImmersionSharedWipeMask)?=null,
     nativeLinkInteractions:Boolean=true,
     continuousWipe:Boolean=false,incomingOverride:Boolean?=null,
+    visibleVerticalRange:(()->ClosedFloatingPointRange<Float>)?=null,
     onShapedLines:((List<Rect>)->Unit)?=null,
     onShapedLayouts:((TextLayoutResult,TextLayoutResult)->Unit)?=null
 ){
@@ -113,6 +114,9 @@ import androidx.compose.ui.graphics.CompositingStrategy
                     }
                     onDrawWithContent{
                     val p=progress().coerceIn(0f,1f)
+                    val viewport=visibleVerticalRange?.invoke()
+                    val visibleTop=viewport?.start?:0f
+                    val visibleBottom=viewport?.endInclusive?:size.height
                     if(from.text==to.text||(!continuousWipe&&(p<=0f||p>=1f))){drawContent();return@onDrawWithContent}
                     if(continuousWipe&&sharedWipeMask!=null){
                         // Most slots are holding one form while the screen-wide
@@ -123,7 +127,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
                         for(line in 0 until maxOf(outgoingLayout.lineCount,incomingLayout.lineCount)){
                             for(formIndex in 0..1){
                                 val result=if(formIndex==0)outgoingLayout else incomingLayout
-                                if(line>=result.lineCount)continue
+                                if(line>=result.lineCount||result.getLineBottom(line)<=visibleTop||result.getLineTop(line)>=visibleBottom)continue
                                 val shared=sharedWipeMask.invoke(p,result.getLineTop(line))
                                 val startCoverage=if(rtl){
                                     if(shared.center+shared.feather<=0f)1
@@ -148,6 +152,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
                         // Stable rows need one clipped text draw. Only the row at the
                         // moving frontier uses complementary offscreen layers.
                         for(band in bands){
+                            if(band.bottom<=visibleTop||band.top>=visibleBottom)continue
                             val shared=sharedWipeMask.invoke(p,band.top)
                             val startCoverage=if(rtl){
                                 if(shared.center+shared.feather<=0f)1 else if(shared.center-shared.feather>=size.width)0 else -1

@@ -70,3 +70,26 @@ class ImmersionReadingWaveTest {
   }
  }
 }
+
+class ImmersionStableLineIdentityTest {
+ @org.junit.Test fun scrollingRecyclingAndLocalSelectionDoNotRemapOrPauseTheGlobalWave(){
+  val clock=ImmersionReadingWaveClock()
+  clock.viewport(androidx.compose.ui.geometry.Offset.Zero,400f,800f,1f)
+  val a="row-a";val b="row-b"
+  val rect=androidx.compose.ui.geometry.Rect(0f,0f,300f,24f)
+  clock.lines(a,androidx.compose.ui.geometry.Offset(0f,100f),listOf(rect))
+  clock.lines(b,androidx.compose.ui.geometry.Offset(0f,600f),listOf(rect))
+  clock.advanceNanos(0);clock.advanceNanos(1800_000_000)
+  val before=clock.lineMask(b,0f,false)
+  clock.lines(b,androidx.compose.ui.geometry.Offset(0f,200f),listOf(rect))
+  org.junit.Assert.assertEquals("Scroll changed language without elapsed time",before,clock.lineMask(b,0f,false))
+  clock.remove(b);clock.lines(b,androidx.compose.ui.geometry.Offset(0f,250f),listOf(rect))
+  org.junit.Assert.assertEquals("Recycling borrowed another line phase",before,clock.lineMask(b,0f,false))
+  val group=Any();clock.selecting(group,true)
+  val frozen=clock.lineMask(a,0f,false,group)
+  val elapsed=clock.elapsedMs;clock.advanceNanos(100_000_000)
+  org.junit.Assert.assertEquals(elapsed+100,clock.elapsedMs)
+  org.junit.Assert.assertEquals(frozen,clock.lineMask(a,0f,false,group))
+  org.junit.Assert.assertTrue(clock.lineMask(a,0f,false).center>clock.lineMask(b,0f,false).center)
+ }
+}

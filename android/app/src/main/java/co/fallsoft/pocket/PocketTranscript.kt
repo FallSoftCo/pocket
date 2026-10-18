@@ -163,7 +163,7 @@ object PocketTranscript {
     private var preferLatestOnOpen=false
     internal val presentationReady get()=!cachedNeedsConfirmation||latestReadError.isNotBlank()
     internal fun repositoryUpdated(id:String,value:JSONObject){
-        if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey()||CodexSessionRepository.isDirty(id))return
+        if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey()||!CodexSessionRepository.canPresent(id,value))return
         val incoming=value.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
         if(incoming.isEmpty())return
         rows=mergeRestoredTranscriptRows(rows,incoming)
@@ -195,8 +195,8 @@ object PocketTranscript {
         val shared=CodexSessionRepository.peek(id)
         val sharedRows=shared?.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
         preferLatestOnOpen=sharedRows.isNotEmpty()&&sharedRows.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")!=cached?.rows?.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
-        cachedNeedsConfirmation=shared==null||CodexSessionRepository.isDirty(id)
-        rows=mergeRestoredTranscriptRows(cached?.rows.orEmpty(),sharedRows);Pocket.detail=cached?.detail;readPosition=cached?.position?.takeUnless{preferLatestOnOpen}
+        cachedNeedsConfirmation=shared==null||!CodexSessionRepository.canPresent(id,shared)
+        rows=if(sharedRows.isEmpty())cached?.rows.orEmpty()else mergeRestoredTranscriptRows(cached?.rows.orEmpty(),sharedRows);Pocket.detail=cached?.detail;readPosition=cached?.position?.takeUnless{preferLatestOnOpen}
         earlier=cached?.earlier?:false;before=cached?.before;bridgeBefore=cached?.bridgeBefore;bridgeKnown=cached?.bridgeKnown.orEmpty();bridgeBoundary=cached?.bridgeBoundary;coverageVerified=cached?.coverageVerified?:false;reads.reset();refreshPending=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }

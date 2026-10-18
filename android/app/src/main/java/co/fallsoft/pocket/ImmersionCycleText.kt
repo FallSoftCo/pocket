@@ -31,10 +31,9 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
         // Production uses fixed paired forms and native viewport geometry. The
         // old phrase queue must not run alongside the continuous screen wave.
         val selectedIndex=plan.spans.indexOf(selected)
-        val frozen=if(PocketSpeech.displayedOwner==null)null else immersionCapturedOriginals(plan,PocketSpeech.displayedText)
-        val shown=immersionCyclePlan(plan,frozen?:if(enabled&&selectedIndex>=0)setOf(selectedIndex)else emptySet())
+        val shown=immersionCyclePlan(plan,if(enabled&&selectedIndex>=0)setOf(selectedIndex)else emptySet())
         return ImmersionCycleRender(shown,readingWave=sharedWave.takeIf{
-            enabled&&selectedIndex<0&&PocketSpeech.displayedOwner==null&&PocketImmersion.motionEnabled&&waveAnimation
+            enabled&&selectedIndex<0&&PocketImmersion.motionEnabled&&waveAnimation
         })
     }
     val ready=immersionMotionReady()

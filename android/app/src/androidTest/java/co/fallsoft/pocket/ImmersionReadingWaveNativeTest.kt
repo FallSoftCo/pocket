@@ -140,7 +140,7 @@ class ImmersionReadingWaveNativeTest {
             val paused=clock!!.elapsedMs
             compose.mainClock.advanceTimeBy(750)
             Thread.sleep(100)
-            i.runOnMainSync{assertEquals("Selection advanced the display clock",paused,clock!!.elapsedMs);clock!!.selecting(owner,false)}
+            i.runOnMainSync{assertTrue("Local selection stopped the global display clock",clock!!.elapsedMs>paused);clock!!.selecting(owner,false)}
             compose.mainClock.advanceTimeBy(100)
             compose.waitUntil(3000){clock!!.elapsedMs!=paused}
             i.runOnMainSync{animation.value=false}
