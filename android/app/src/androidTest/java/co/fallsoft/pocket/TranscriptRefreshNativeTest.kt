@@ -337,7 +337,9 @@ class TranscriptRefreshNativeTest {
   val baseline=qa("state").getJSONArray("reads").length()
   qa("silent");qa("fail-read-burst");main{Pocket.refreshDetail()}
   await{qa("state").getJSONArray("reads").length()==baseline+4&&PocketTranscript.updating&&!PocketTranscript.loading&&PocketTranscript.readError.isNotBlank()}
-  assertTrue("Outage lost cached history",has(1));assertTrue("Outage hid actionable error",PocketTranscript.readError.isNotBlank())
+  // Another synchronized read may already have delivered revision2. An outage
+  // must preserve usable history; it must not force the viewport back to revision1.
+  assertTrue("Outage lost cached/current history; rows="+PocketTranscript.rows.size+"; current="+has(2),has(1)||has(2));assertTrue("Outage hid refresh status",PocketTranscript.readError.isNotBlank())
   await{qa("state").getJSONArray("reads").length()>=baseline+5&&has(2)&&!PocketTranscript.updating}
   qa("fail-read");main{Pocket.refreshDetail()};await{!PocketTranscript.loading&&PocketTranscript.updating};assertTrue("Brief refresh failed the send surface",Pocket.error.isBlank()&&PocketTranscript.readError.isBlank())
   main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}&&!PocketTranscript.updating}
