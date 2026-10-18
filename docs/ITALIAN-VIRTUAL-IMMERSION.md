@@ -1,3 +1,9 @@
+## Required-unit generation repair (2026-10-18 candidate)
+
+A real 508-character response exposed incomplete source coverage and invalid lexical alignment in the teacher-generated anchors. The server now owns bounded source units and requires every unit in the structured output. Protected material and Markdown delimiters remain canonical. The teacher supplies fluent Italian and complete contextual English word meanings; optional grammatical feature/relationship annotations are not requested on this path. Existing strict coverage, source-version and lexical-alignment validation still applies. Visible message bodies precede labels/previews in the bounded single-worker queue. This is wire-compatible with Android132 and retains cached paired forms and durable attempt budgets.
+
+See [qualification and limits](qualification/immersion-required-units-20261018.json). Provider generation is asynchronous; the real candidate took20.319seconds. This does not claim physical phone rendering or support for sources above12,000characters.
+
 # Italian grammatical immersion
 
 The current product requirement is one reading flow cycling between **pure Italian** and **English vocabulary in the same Italian grammatical order**. It does not cycle back to ordinary English grammar, mix selected Italian vocabulary into ordinary English, add duplicate lines or open a help modal. Code, identifiers and protected literals retain their exact source. The original remains canonical for commands, submission, copying and audit.

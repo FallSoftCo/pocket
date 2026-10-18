@@ -1,4 +1,4 @@
-import {validateImmersionPlan,deriveImmersionText} from './immersion-plan.mjs';
+import {validateImmersionPlan,deriveImmersionText,protectedImmersionRanges,resolveImmersionAnchor} from './immersion-plan.mjs';
 export const TRANSGRAMMATIC_VERSION='transgrammatic-english-italian-v1';
 export const TRANSGRAMMATIC_INSTRUCTIONS=`You are NextComp's Italian grammatical immersion teacher.
 Produce TWO coherent forms of the same display content: pure fluent Italian, and English vocabulary in that Italian grammatical structure. The server derives the English form from the contextual English meanings of your Italian lexical segments IN ITALIAN ORDER. Do not generate a third mixed-language teaching form, ordinary English reorderings, added explanations, duplicate lines, subtitles or parallel paragraphs.
@@ -11,6 +11,49 @@ export function validateTransgrammaticPlan(source,row){
  return value?{...value,planVersion:TRANSGRAMMATIC_VERSION}:null;
 }
 export const transgrammaticContract={
- version:TRANSGRAMMATIC_VERSION,durableJobs:true,retryDelays:[30000,120000],instructions:TRANSGRAMMATIC_INSTRUCTIONS,
- validate:validateTransgrammaticPlan,derive:(source,row)=>deriveImmersionText(source,row,{complete:true})
+ version:TRANSGRAMMATIC_VERSION,jobVersion:'required-units-v1',durableJobs:true,retryDelays:[30000,120000],instructions:TRANSGRAMMATIC_INSTRUCTIONS,
+ prepareBatch:prepareTransgrammaticBatch,validate:validateTransgrammaticPlan,derive:(source,row)=>deriveImmersionText(source,row,{complete:true})
 };
+
+// Server-owned source boundaries and required output keys prevent omitted prose.
+export function transgrammaticUnits(text){
+ const protectedRanges=protectedImmersionRanges(text);
+ for(const m of text.matchAll(/[*_~#|]+|^\s*[-+>]\s|^\s*\d+[.)]\s/gm))protectedRanges.push({start:m.index,end:m.index+m[0].length});
+ protectedRanges.sort((a,b)=>a.start-b.start||a.end-b.end);
+ const ranges=[];let cursor=0;
+ for(const p of protectedRanges){if(p.start>cursor)ranges.push({start:cursor,end:p.start});cursor=Math.max(cursor,p.end);}
+ if(cursor<text.length)ranges.push({start:cursor,end:text.length});
+ const units=[];
+ for(const range of ranges){
+  let offset=range.start;
+  for(const line of text.slice(range.start,range.end).split('\n')){
+   for(const sentence of new Intl.Segmenter('en',{granularity:'sentence'}).segment(line)){
+    const words=[...sentence.segment.matchAll(/[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*/gu)];
+    let first=0;
+    while(first<words.length){
+     let last=first;while(last+1<words.length&&words[last+1].index+words[last+1][0].length-words[first].index<=350)last++;
+     const start=offset+sentence.index+words[first].index,end=offset+sentence.index+words[last].index+words[last][0].length;
+     const source=text.slice(start,end);let occurrence=0,anchor;
+     while((anchor=resolveImmersionAnchor(text,source,occurrence))&&anchor.start<start)occurrence++;
+     if(!anchor||anchor.start!==start)throw Error('Unresolvable immersion unit');
+     units.push({source,occurrence});first=last+1;
+    }
+   }
+   offset+=line.length+1;
+  }
+ }
+ return units;
+}
+const lexicalSchema={type:'object',additionalProperties:false,required:['target','occurrence','meaning'],properties:{target:{type:'string'},occurrence:{type:'integer'},meaning:{type:'string'}}};
+const unitSchema={type:'object',additionalProperties:false,required:['target','words'],properties:{target:{type:'string'},words:{type:'array',items:lexicalSchema}}};
+export function prepareTransgrammaticBatch(batch){
+ const units=batch.map(row=>transgrammaticUnits(row.text));
+ const properties=Object.fromEntries(units.map((rows,i)=>[String(i),{type:'object',additionalProperties:false,required:rows.map((_,j)=>String(j)),properties:Object.fromEntries(rows.map((_,j)=>[String(j),unitSchema]))}]));
+ return {
+  input:{instruction:'Translate each numbered unit completely into fluent Italian, using its full source as context. Return EVERY numbered unit. Keep lexical words/contractions intact in target order; give every word its contextual English meaning. Do not translate surrounding protected source or add explanations. Source punctuation is reconstructed separately. Each occurrence counts exact complete words within this unit target, starting at zero.',sources:batch.map((row,i)=>({key:String(i),context:row.text,units:Object.fromEntries(units[i].map((u,j)=>[String(j),u.source]))}))},
+  schema:{type:'object',additionalProperties:false,required:Object.keys(properties),properties},
+  decode:result=>({translations:batch.map((row,i)=>({id:row.id,version:row.version,spans:units[i].map((unit,j)=>{
+   const value=result?.[i]?.[j];return {...unit,target:value?.target,unit:'phrase',note:'',targetSegments:value?.words?.map(word=>({...word,role:'other',features:[],relations:[]}))};
+  })}))})
+ };
+}

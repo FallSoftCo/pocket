@@ -1,9 +1,13 @@
 import http from 'node:http';
+import {transgrammaticContract} from '../../server/immersion-transgrammatic.mjs';
 import {immersionHash} from '../../server/immersion-plan.mjs';
 const source='Your connection is available.',target='La tua connessione è disponibile.';
 const words=[['La','The'],['tua','your'],['connessione','connection'],['è','is'],['disponibile','available']];
-let at=0;const segments=words.flatMap(([target,meaning],i)=>{const out=[];if(i){out.push({start:at,end:at+1,target:' ',meaning:'',role:'separator',features:[],relations:[]});at++;}out.push({start:at,end:at+target.length,target,meaning,role:'other',features:[],relations:[]});at+=target.length;return out;});segments.push({start:at,end:at+1,target:'.',meaning:'',role:'punctuation',features:[],relations:[]});
-const row={id:'delivery-body',original:source,text:target,version:immersionHash(source),planVersion:'transgrammatic-english-italian-v1',density:'strong',spans:[{start:0,end:source.length,source,target,unit:'clause',note:'',targetSegments:segments}]};
+const prepared=transgrammaticContract.prepareBatch([{id:'delivery-body',text:source,version:immersionHash(source)}]);
+const raw=prepared.decode({'0':{'0':{target:target.slice(0,-1),words:words.map(([target,meaning])=>({target,meaning,occurrence:0}))}}}).translations[0];
+const plan=transgrammaticContract.validate(source,{...raw,text:transgrammaticContract.derive(source,raw)});
+if(!plan)throw Error('Invalid candidate delivery plan');
+const row={...plan,id:'delivery-body',density:'strong'};
 let submitted=false,reads=0,submits=0;
 const snapshot=()=>({enabled:true,language:'it',density:'strong',planVersion:row.planVersion,translations:submitted&&reads>=2?[row]:[],jobs:submitted&&reads<2?[{id:row.id,version:row.version,state:'pending',attempts:1}]:[]});
 http.createServer(async(req,res)=>{let raw='';for await(const part of req)raw+=part;res.setHeader('Content-Type','application/json');if(req.url==='/_qa/state')return res.end(JSON.stringify({reads,submits,modelCalls:0}));if(req.url==='/api/immersion/v2/translate'){const body=JSON.parse(raw);if(body.sources?.some(s=>s.id===row.id)){submits++;submitted=true;}return res.end(JSON.stringify(snapshot()));}if(req.url==='/api/immersion/v2'){if(req.method==='GET'&&submitted)reads++;return res.end(JSON.stringify(snapshot()));}res.end('{}');}).listen(Number(process.env.PORT||19902),'127.0.0.1');

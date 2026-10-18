@@ -18,7 +18,7 @@ test('complete Italian and Italian-order English survive worker request/cache/pe
    if(method==='model/list')return {data:[]};
    if(method==='thread/start')return {thread:{id:'grammar-qa'}};
    if(method==='turn/start'){const batch=JSON.parse(args.input[0].text).sources;queueMicrotask(()=>{
-    this.emit('event',{method:'item/completed',params:{threadId:'grammar-qa',item:{type:'agentMessage',text:JSON.stringify({translations:batch.map(row=>({...plan(),id:row.id}))})}}});
+    this.emit('event',{method:'item/completed',params:{threadId:'grammar-qa',item:{type:'agentMessage',text:JSON.stringify(Object.fromEntries(batch.map(row=>[row.key,{'0':{target:target.slice(0,-1),words:segments}}])))}}});
     this.emit('event',{method:'turn/completed',params:{threadId:'grammar-qa',turn:{status:'completed'}}});
    });return {turn:{id:'grammar-turn'}};}
    throw Error('Unexpected transport call '+method);
@@ -29,7 +29,7 @@ test('complete Italian and Italian-order English survive worker request/cache/pe
   worker.setEnabled('device-a',true);worker.submit('device-a',[{id:'paragraph',text:source}]);await worker.flush();
   const result=worker.snapshot('device-a').translations[0];
   assert.equal(result.planVersion,TRANSGRAMMATIC_VERSION);assert.equal(result.text,target);
-  assert.equal(result.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'The your connection is available.');
+  assert.equal(result.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'The your connection is available');
   const instructions=codex.calls.find(c=>c.method==='thread/start').args.developerInstructions;
   assert.match(instructions,/Translate ALL eligible prose/);assert.doesNotMatch(instructions,/Partial mixed-language grammar is explicitly acceptable/);
   worker.submit('device-a',[{id:'second-surface',text:source}]);await worker.flush();
@@ -86,4 +86,39 @@ test('simultaneous surfaces share one content job and receive separate canonical
  w.translate=async batch=>{inputs+=batch.length;return {translations:batch.map(row=>({...plan(),id:row.id}))};};
  await w.flush();assert.equal(inputs,1);assert.deepEqual(w.snapshot('a').translations.map(x=>x.id),['chat','card']);assert.equal(w.snapshot('a').jobs.length,0);
  }finally{w.close();}
+});
+
+
+test('server-owned units cover Markdown without protected prose or duplicate source ambiguity',async()=>{
+ const {transgrammaticUnits,prepareTransgrammaticBatch}=await import('../server/immersion-transgrammatic.mjs');
+ const body='## Ready\n\nOpen '+String.fromCharCode(96)+'file.md'+String.fromCharCode(96)+' now. Read https://example.com/path and wait 20 seconds.\n\nReady again. Ready again.';
+ const units=transgrammaticUnits(body);
+ assert.ok(units.length>5);assert.ok(units.every(x=>!x.source.includes(String.fromCharCode(96))&&!/[#]|https:|20/.test(x.source)));
+ const covered=units.map(x=>x.source).join(' ');
+ for(const word of ['Ready','Open','now','Read','and','wait','seconds','again'])assert.ok(covered.includes(word));
+ const prepared=prepareTransgrammaticBatch([{id:'original-id',version:immersionHash(body),text:body}]);
+ assert.deepEqual(prepared.schema.properties['0'].required,units.map((_,i)=>String(i)));
+ const result={'0':Object.fromEntries(units.map((u,i)=>[String(i),{target:u.source,words:[{target:u.source,occurrence:0,meaning:u.source}]}]))};
+ const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(body,row);
+ assert.equal(row.id,'original-id');assert.equal(row.text,body);assert.ok(validateTransgrammaticPlan(body,row));
+});
+
+test('visible conversation bodies outrank labels and cards',async()=>{
+ const w=new ImmersionWorker({codex:new EventEmitter(),cwd:'/owned-qa',contract:transgrammaticContract,delay:100000});
+ try{
+  w.setEnabled('a',true);
+  w.submit('a',[{id:'label:first',text:'Settings',kind:'interface label'},{id:'card:second',text:'Preview',kind:'preview'},{id:'row:body',text:source,kind:'message'}]);
+  let admitted;
+  w.translate=async batch=>{admitted=batch;return {translations:[]};};await w.flush();
+  assert.equal(admitted[0].text,source);
+  assert.equal(w.snapshot('a').jobs.find(j=>j.id==='row:body').reason,'PLAN_NOT_RETURNED');
+ }finally{w.close();}
+});
+
+test('generator revision gives rejected legacy display work one new bounded budget, not a reset on each restart',async()=>{
+ const saved=new Map([['a',{enabled:true,density:'strong',translations:[],jobs:[{id:'row:old',text:source,version:immersionHash(source),planVersion:TRANSGRAMMATIC_VERSION,density:'strong',attempts:3,retryBlocked:true,expiresAt:Date.now()+60000}]}]]);
+ const make=()=>new ImmersionWorker({codex:new EventEmitter(),cwd:'/owned-qa',contract:transgrammaticContract,delay:100000,load:id=>saved.get(id),save:(id,state)=>saved.set(id,structuredClone(state))});
+ let w=make();assert.equal(w.snapshot('a').jobs[0].attempts,0);
+ w.translate=async()=>({translations:[]});await w.flush();assert.equal(w.snapshot('a').jobs[0].attempts,1);w.close();
+ w=make();assert.equal(w.snapshot('a').jobs[0].attempts,1);w.close();
 });

@@ -2847,7 +2847,12 @@
       "limits": [
         "Phone last observed131;132 offered by existing updater;physical immersion not yet observed",
         "Admitted text limit12000characters;safe source segmentation remains open"
-      ]
+      ],
+      "followup20261018": {
+        "request": "Installed132 model responses still not immersed",
+        "status": "required-unit-candidate-qualified",
+        "evidence": "docs/qualification/immersion-required-units-20261018.json"
+      }
     }
   ],
   "current_state": {
