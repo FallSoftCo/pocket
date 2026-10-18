@@ -16,7 +16,7 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 /** Presentation policy only: never acknowledges reads, resolves questions, or starts work. */
 internal object ForegroundNotificationPolicy {
     fun inApp(visible:Boolean,blackout:Boolean)=visible&&!blackout
-    fun material(kind:String)=kind in setOf("complete","completed","message","question","approval","error","failure","update","answer","heads_up","note")
+    fun material(kind:String)=kind in setOf("complete","completed","result","message","question","approval","error","failure","update","answer","heads_up","note")
     fun sameConversation(environment:String,thread:String,currentEnvironment:String,currentThread:String?)=
         thread.isNotBlank()&&environment==currentEnvironment&&thread==currentThread
 }
