@@ -47,7 +47,7 @@
     "businessModelsStarted": 0,
     "speechGenerationOnly": true
   },
-  "review": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-room-density-20261017-normal",
+  "review": "https://system76-pc.<private-tailnet-host>/8bar/#nextcomp-room-density-20261017-normal",
   "release": {
     "versionCode": 129,
     "versionName": "0.5.0-alpha.111",
@@ -74,5 +74,6 @@
     "Streaming playback with consistent central controls; current complete-audio buffering remains",
     "Profile native-room input cost with evidence before further performance edits"
   ],
-  "galleryQualification": "Native captures visually reviewed; global gallery checker twice timed out at90s DOM load. No gallery layout pass claimed."
+  "galleryQualification": "Native captures visually reviewed; global gallery checker twice timed out at90s DOM load. No gallery layout pass claimed.",
+  "publication_note": "Public evidence copy: private absolute home paths and tailnet hostnames redacted; original operator receipts retained privately."
 }

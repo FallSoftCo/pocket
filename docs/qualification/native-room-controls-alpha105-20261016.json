@@ -99,7 +99,7 @@
     "pairingChanges": 0,
     "lastObservedPhoneVersion": 122
   },
-  "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-alpha105-room-controls",
+  "gallery": "https://system76-pc.<private-tailnet-host>/8bar/#nextcomp-alpha105-room-controls",
   "galleryQualification": "Native image visually inspected and exact HTTP media hash verified; registered rendered gallery checker unavailable, same admission identity retained",
   "limits": [
     "Physical phone typing lag remains unverified; no claim it is fixed",
@@ -107,5 +107,6 @@
     "Physical native-room volume keys, microphone/TTS and rendered FCM remain separate qualifications",
     "Catalog material preview/recency needs the Hollywood owning projection; refresh timestamps are not work activity",
     "Native room hardware voice follow-up is not delivered in123"
-  ]
+  ],
+  "publication_note": "Public evidence copy: private absolute home paths and tailnet hostnames redacted; original operator receipts retained privately."
 }

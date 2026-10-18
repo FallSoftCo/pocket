@@ -65,7 +65,7 @@ def main():
  assert os.geteuid()==0 and socket.gethostname()=="ozzz-aosp"
  root=Path(os.environ["GUIDANCE_EVIDENCE"]);root.mkdir(mode=0o711);root.chmod(0o711)
  runtime=Path(os.environ["GUIDANCE_RUNTIME"]);python=str(runtime/"venv/bin/python");repo=Path(os.environ["GUIDANCE_NEXTCOMP"]);dbpath=Path(os.environ["GUIDANCE_DATABASE_CONFIG"])
- adbpath="/home/ai/Android/Sdk/platform-tools/adb";a=pwd.getpwnam("aosp");children=[];unit=None;global_receipt=None;instrument=None
+ adbpath=os.environ.get("ADB") or str(Path(os.environ["ANDROID_HOME"])/"platform-tools/adb");a=pwd.getpwnam("aosp");children=[];unit=None;global_receipt=None;instrument=None
  for port in (18772,18773,18888):
   with socket.socket()as s:s.bind(("127.0.0.1",port))
  initialize(json.loads(dbpath.read_text()),root/"enterprise","Actual Android native guidance recovery")
