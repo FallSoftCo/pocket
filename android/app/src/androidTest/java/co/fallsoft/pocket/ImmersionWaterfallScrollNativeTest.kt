@@ -32,7 +32,7 @@ class ImmersionWaterfallScrollNativeTest {
   check(d.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   c.getSharedPreferences("pocket",0).edit().clear().commit()
   i.runOnMainSync{Pocket.init(c);PocketImmersion.setEnabled(true);PocketImmersion.setMotionEnabled(true);PocketImmersion.setSupportEnabled(true)}
-  val clock=AtomicReference<ImmersionReadingWaveClock?>();val list=AtomicReference<LazyListState?>();val bounds=AtomicReference<Rect?>()
+  val active=AtomicReference<MainActivity>();val clock=AtomicReference<ImmersionReadingWaveClock?>();val list=AtomicReference<LazyListState?>();val bounds=AtomicReference<Rect?>()
   val frames=java.util.Collections.synchronizedList(mutableListOf<Long>())
   val metrics=android.view.Window.OnFrameMetricsAvailableListener{_,frame,_->frames.add(frame.getMetric(android.view.FrameMetrics.TOTAL_DURATION))}
   fun await(label:String,predicate:()->Boolean){val end=android.os.SystemClock.elapsedRealtime()+25000
@@ -43,6 +43,7 @@ class ImmersionWaterfallScrollNativeTest {
   }
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
    scenario.onActivity{activity->
+    active.set(activity)
     activity.window.addOnFrameMetricsAvailableListener(metrics,android.os.Handler(android.os.Looper.getMainLooper()))
     activity.setContent{MaterialTheme{
      ImmersionReadingWaveHost{
@@ -114,7 +115,7 @@ class ImmersionWaterfallScrollNativeTest {
    c.cacheDir.resolve("waterfall-result.json").writeText(JSONObject().put("passed",true).put("clock","actual-native-display")
     .put("scrollCommonLines",common.size).put("scrollElapsedMs",after.first-before.first).put("mixedItalianEnglishInk",true)
     .put("frames",durations.size).put("p50FrameMs",durations[durations.size/2]/1e6).put("p95FrameMs",durations[((durations.size-1)*.95).toInt()]/1e6).toString())
-   scenario.onActivity{it.window.removeOnFrameMetricsAvailableListener(metrics);it.setContent{}}
+   i.runOnMainSync{active.get().window.removeOnFrameMetricsAvailableListener(metrics);active.get().setContent{}}
   }
  }
 }
