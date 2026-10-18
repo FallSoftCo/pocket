@@ -61,7 +61,7 @@ export class ImmersionWorker {
   if(this.closed||this.busy)return;
   this.busy=true;
   const now=this.now(),selected=[];let chars=0;
-  const candidates=[...this.devices].flatMap(([device,s])=>s.enabled?[...s.queue.values()].filter(source=>!source.retryBlocked&&source.expiresAt>now&&(source.nextAttemptAt||0)<=now).map(source=>({device,source})):[]).sort((a,b)=>(b.source.priority||0)-(a.source.priority||0));
+  const candidates=[...this.devices].flatMap(([device,s])=>s.enabled?(this.durableJobs?[...s.queue.values()].reverse():[...s.queue.values()]).filter(source=>!source.retryBlocked&&source.expiresAt>now&&(source.nextAttemptAt||0)<=now).map(source=>({device,source})):[]).sort((a,b)=>(b.source.priority||0)-(a.source.priority||0));
   const limit=(this.durableJobs?candidates[0]?.source.priority>=3:candidates[0]?.source.priority)?1:2;
   for(const entry of candidates){if(selected.length>=limit)break;if(this.durableJobs&&selected.some(x=>x.device===entry.device&&x.source.version===entry.source.version&&x.source.density===entry.source.density))continue;if(chars+entry.source.text.length>(this.durableJobs?2400:16000)&&selected.length)continue;selected.push(entry);chars+=entry.source.text.length;}
   if(!selected.length){this.busy=false;this.schedule();return;}

@@ -107,7 +107,7 @@ test('visible conversation bodies outrank labels and cards',async()=>{
  const w=new ImmersionWorker({codex:new EventEmitter(),cwd:'/owned-qa',contract:transgrammaticContract,delay:100000});
  try{
   w.setEnabled('a',true);
-  w.submit('a',[{id:'label:first',text:'Settings',kind:'interface label'},{id:'card:second',text:'Preview',kind:'preview'},{id:'row:body',text:source,kind:'message'}]);
+  w.submit('a',[{id:'label:first',text:'Settings',kind:'interface label'},{id:'card:second',text:'Preview',kind:'preview'},{id:'row:old',text:'Earlier answer',kind:'message'},{id:'row:body',text:source,kind:'message'}]);
   let admitted;
   w.translate=async batch=>{admitted=batch;return {translations:[]};};await w.flush();
   assert.equal(admitted[0].text,source);
