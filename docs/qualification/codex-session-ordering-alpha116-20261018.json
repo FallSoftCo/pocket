@@ -24,10 +24,6 @@
     "closedSessionRefreshesBeforeOpeningAndLiveRowsDoNotWaitForHistory"
   ],
   "optimizedPayloadEntriesVerified": 296,
-  "normalLiveReadSamplesMs": [
-    51,
-    97
-  ],
   "livePositionReadMs": 21,
   "phoneUnauthenticatedTransportProbeMs": 421,
   "optimizedSilentFeedLossFallbackMs": 6970,
@@ -48,5 +44,9 @@
     "A real short native audio adapter transcription succeeded; it does not qualify ten-minute latency.",
     "No business submissions, worker wakeups or unknown delivery replays."
   ],
-  "publicEvidence": "Operator receipts and actual screenshots retained privately; no credentials/account IDs copied to this report."
+  "publicEvidence": "Operator receipts and actual screenshots retained privately; no credentials/account IDs copied to this report.",
+  "warmWorkstationCurrentReadSamplesMs": [
+    51,
+    97
+  ]
 }

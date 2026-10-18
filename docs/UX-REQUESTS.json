@@ -2957,7 +2957,8 @@
       "status": "update-available",
       "workstationAdmissionSeconds": 600,
       "physicalTenMinuteProviderCapture": "not-qualified"
-    }
+    },
+    "status": "update-available"
   },
   "codex_current_head_priority_20261018": {
     "status": "update-available",
@@ -2969,9 +2970,9 @@
       "Following viewport is requested before measure; unseen current work supersedes an obsolete cached reading position unless the reader has interacted."
     ],
     "evidence_limits": [
-      "Live workstation current-page read measured 51-97ms; position lookup 21ms. These samples do not establish all handset roundtrips.",
-      "Actual phone still version133; ADB unavailable; candidate134 not yet published.",
-      "No task submissions or unknown deliveries replayed."
+      "Warm workstation current-page reads measured51-97ms; position lookup21ms. These are not physical handset opening measurements.",
+      "Phone133 observed after publication;134 is available and no installation claim is made. ADB unavailable.",
+      "No task submissions or uncertain deliveries replayed."
     ],
     "versionCode": 134,
     "versionName": "0.5.0-alpha.116",
