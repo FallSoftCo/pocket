@@ -1,5 +1,5 @@
 {
-  "state": "backend-live-web-qualified",
+  "state": "deployed-web-with-history-window-followup",
   "confirmedBug": "Flicker fix incorrectly classified all sessionPreview changes as display-only; preview-only new messages did not invalidate the transcript.",
   "observedProductionTiming": {
     "localBackendCatalogMs": 389,
@@ -7,21 +7,22 @@
     "privateBrowserSelectedFirstMessageMs": 342,
     "minuteLongDelayReproduced": false
   },
-  "browserEvidence": "/home/aosp/.local/state/nextcomp/web-session-state-20261019-r06/receipt.json",
+  "browserEvidence": "/home/aosp/.local/state/nextcomp/web-session-state-20261019-r07/receipt.json",
   "regressionEvidence": [
     "/home/aosp/.local/state/nextcomp/web-session-state-20261019-refresh/receipt.json",
     "/home/aosp/.local/state/nextcomp/web-session-state-20261019-desktop/desktop.json",
     "/home/aosp/.local/state/nextcomp/web-session-state-20261019-touch/touch.json"
   ],
   "testTiming": {
-    "previewOnlyCurrentMs": 224,
-    "prewarmedOpenWhileHeadHeldMs": 61
+    "previewOnlyCurrentMs": 188,
+    "prewarmedOpenWhileHeadHeldMs": 55
   },
   "readonlyBackendClosureSha256": "fe7c122aac3a856f27c2c1fd2143a2dc14cb8917282e981c41aec1186609a1ae",
   "backendScope": "Only actual deployed baseline index route/status and added read-only projection module; no broader candidate backend source.",
   "limits": [
     "The full minute-long production stall was not reproduced in the controlled read.",
-    "Native139 signed build is complete but a new native scrolling immersion journey timed out; APK remains unpublished."
+    "Native139 signed build is complete but a new native scrolling immersion journey timed out; APK remains unpublished.",
+    "Final live active-session read displayed operations only in the bounded latest window; first-message assertion failed although requests succeeded. Conversational context retention under long operation bursts and variable multi-second read latency remain open. No claim of complete loading resolution."
   ],
   "backendLive": {
     "sourceBaseline": "nextcomp-durable-intake-release-20261017-r02",
@@ -33,5 +34,18 @@
     "queuedSendingOrActiveVoiceAdmissionsAtCutover": 0,
     "unknownVoiceReceiptsPreserved": 3,
     "phoneInputNotObserved": true
-  }
+  },
+  "webLive": {
+    "sourceCommit": "82b39a9acffbf28b0ba4eb9fb4d356f076f75145",
+    "closureSha256": "e13a7d6229ed8b94dc2cd7856871ad8c3663ccc008f3b762442b4f221a1fe544",
+    "url": "https://system76-pc.tailb77f2a.ts.net/nextcomp/",
+    "sameCookieKeyAndPairing": true,
+    "firstRenderedRowMs": 3963,
+    "renderedKinds": [
+      "runs"
+    ],
+    "errors": [],
+    "disposableReadbackDevicesRevoked": true
+  },
+  "rollback": "Keep current data; restore previous private route and, at a safe transport boundary, remove only the readonly-projection backend drop-in. Old source closures retained. Prior 18893 gateway drained at zero connections; 18892 retained while connected."
 }
