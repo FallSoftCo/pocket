@@ -2877,6 +2877,15 @@
         "Native blackout remains opaque black; no icon modifications"
       ],
       "verification": []
+    },
+    {
+      "id": "voice-service-owned-late-presentation-20261019",
+      "request": "Old recording-service cleanup and audio-focus callbacks must not overwrite the replacement service capture state; cancellation remains durably fenced independently of service destruction.",
+      "status": "implemented in candidate; native requalification pending",
+      "implementation": [
+        "Only the current service owner publishes presentation state, capture release and recording errors",
+        "Native capture test observes the asynchronous durable cancellation result, not merely service destruction"
+      ]
     }
   ],
   "current_state": {
