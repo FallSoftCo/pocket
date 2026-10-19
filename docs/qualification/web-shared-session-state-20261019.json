@@ -1,0 +1,26 @@
+{
+  "state": "candidate",
+  "confirmedBug": "Flicker fix incorrectly classified all sessionPreview changes as display-only; preview-only new messages did not invalidate the transcript.",
+  "observedProductionTiming": {
+    "localBackendCatalogMs": 389,
+    "localBackendHeadMs": 49,
+    "privateBrowserSelectedFirstMessageMs": 342,
+    "minuteLongDelayReproduced": false
+  },
+  "browserEvidence": "/home/aosp/.local/state/nextcomp/web-session-state-20261019-r02/receipt.json",
+  "regressionEvidence": [
+    "/home/aosp/.local/state/nextcomp/web-session-state-20261019-refresh/receipt.json",
+    "/home/aosp/.local/state/nextcomp/web-session-state-20261019-desktop/desktop.json",
+    "/home/aosp/.local/state/nextcomp/web-session-state-20261019-touch/touch.json"
+  ],
+  "testTiming": {
+    "previewOnlyCurrentMs": 193,
+    "prewarmedOpenWhileHeadHeldMs": 55
+  },
+  "readonlyBackendClosureSha256": "2af7e73fd11a7184afa725bcb8c61b4bf5e0047e8a79181c478421ba174e5d9e",
+  "backendScope": "Only actual deployed baseline index route/status and added read-only projection module; no broader candidate backend source.",
+  "limits": [
+    "The full minute-long production stall was not reproduced in the controlled read.",
+    "Native139 signed build is complete but a new native scrolling immersion journey timed out; APK remains unpublished."
+  ]
+}

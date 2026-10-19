@@ -1,3 +1,4 @@
+import {SessionStore} from './session-store.mjs';
 import {animatedSymbol} from './symbol-motion.mjs';
 import {ReadFeedback} from './read-feedback.mjs';
 import {ImmersionLayer} from './immersion.mjs';
@@ -17,7 +18,7 @@ const lanes=new ReadLanes();
 const readFeedback=new ReadFeedback(state=>{const node=$('message-loading');node.hidden=!state.visible;if(state.visible)setLabel(node,state.initial?'Loading latest messages…':'Updating messages…');$('transcript').setAttribute('aria-busy',String(state.visible));});
 readFeedback.select(scope);
 
-const cache=new Map(),receipts=new Set(),notifySeen=new Set();let pending=read('pending',null),newPending=read('newPending',null);
+const cache=new SessionStore(),receipts=new Set(),notifySeen=new Set();let pending=read('pending',null),newPending=read('newPending',null);
 async function api(path,body,options={}){
  const method=options.method||(body===undefined?'GET':'POST'),binary=body instanceof Blob||body instanceof ArrayBuffer;
  const r=await fetch(clientURL(base,path),{method,credentials:'same-origin',headers:{'Content-Type':binary?'audio/wav':'application/json',...(options.headers||{})},...(body===undefined?{}:{body:binary?body:JSON.stringify(body)}),...(method==='GET'?{signal:AbortSignal.timeout(20000)}:{})});
@@ -64,7 +65,7 @@ function renderList(){
 }
 async function renameCard(thread,card){
  const input=el('input');input.value=thread.name||'';input.setAttribute('aria-label','Session name');input.onclick=e=>e.stopPropagation();card.children[0].replaceChildren(input);input.focus();input.select();let finished=false;
- const finish=async save=>{if(finished)return;finished=true;try{const name=input.value.trim();if(save&&name&&name!==thread.name){await api(`/api/threads/${thread.id}/rename`,{name});thread.name=name;}}catch(e){error(e);}finally{input.remove();renderList();}};
+ const finish=async save=>{if(finished)return;finished=true;try{const name=input.value.trim();if(save&&name&&name!==thread.name){await api(`/api/threads/${thread.id}/rename`,{name});cache.summary(thread.id,{name});threads=cache.list();}}catch(e){error(e);}finally{input.remove();renderList();}};
  input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();void finish(true);}else if(e.key==='Escape'){e.preventDefault();void finish(false);}};input.onblur=()=>void finish(true);
 }
 function renderHeader(){const t=scope==='coordinator'?null:current?.thread||threads.find(t=>t.id===scope),identity=sessionIdentity(t);setLabel($('title'),t?.name||t?.agentNickname||'Coordinator');$('context-label').textContent=t?identity.isChild?'DELEGATED WORK':'DIRECT SESSION':'DIRECT YOUR COMPUTING';setLabel($('session-state'),t?`${sessionState(t).label} · ${t.cwd||'Work environment'}${identity.isChild&&!identity.canAcceptDirectInput?' · Guide through the parent task':''}`:'Ask here, or open work to guide it directly.');$('coordinator').classList.toggle('active',scope==='coordinator');$('session-menu').hidden=!t||(identity.isChild&&!identity.canAcceptDirectInput);$('parent').hidden=!identity.parentThreadId;$('parent').onclick=run(()=>open(identity.parentThreadId));const enabled=scope==='coordinator'||!!current&&identity.canAcceptDirectInput;$('draft').disabled=!enabled;$('send').disabled=!enabled||!!deliveryFlight||!!pending;$('mic').disabled=!enabled||!voice.supported();$('draft').placeholder=!enabled?'Open the parent task to send guidance…':t?'Guide this session…':'Tell the coordinator what you need…';$('send-mode').hidden=!t;}
@@ -105,12 +106,12 @@ async function refreshConversation(before=null){
     const turns=[...known.values()].sort((a,b)=>(a.createdAt||a.created_at||0)-(b.createdAt||b.created_at||0));
     cache.set(selected,{...data,turns,...(!before&&old.hasEarlier?{hasEarlier:true,before:old.before}:{})});if(scope===selected)current=null;
    }else{
-    const notesVersion=notesVersions.get(selected)||0;
+    const notesVersion=notesVersions.get(selected)||0,metadataTicket=cache.ticket();
     const data=await api(`/api/threads/${encodeURIComponent(selected)}?view=timeline`+(before?'&before='+encodeURIComponent(before):''));
-    const old=cache.get(selected)||{},snapshot=before?old.snapshot||data:data;
-    if(!before&&notesVersion!==(notesVersions.get(selected)||0))snapshot.notes=old.snapshot?.notes||[];
-    cache.set(selected,{...data.timeline,rows:canonicalPage(old.rows||[],data.timeline.rows,{older:!!before}),snapshot,catchup:data.catchup,...(!before&&old.hasEarlier?{hasEarlier:true,before:old.before}:{})});
-    if(scope===selected)current=snapshot;
+    const old=cache.get(selected)||{};
+    if(!before&&notesVersion!==(notesVersions.get(selected)||0))data.notes=old.snapshot?.notes||[];
+    const page=cache.head(selected,data,{older:!!before,ticket:metadataTicket});
+    if(scope===selected)current=page.snapshot;
    }
    if(scope===selected){renderHeader();renderTranscript();renderRequests();renderOutbox();renderNotes();}
  });
@@ -126,7 +127,31 @@ async function loadEarlier(){
  earlierReads.add(selected);historyConsumed.set(selected,demand);
  try{await refreshConversation(data.before);}finally{earlierReads.delete(selected);if(scope===selected&&(historyDemand.get(selected)||0)>demand)scheduleEdge();}
 }
-async function refreshList(){const data=await api('/api/threads'+($('filter').value==='archived'?'?archived=true':''));threads=data.threads||[];$('catalog-note').textContent=data.catalogPartial?'Showing a bounded inventory. Search or open known work.':'';renderList();}
+const backgroundHeads=new Set(),backgroundFlights=new Set(),backgroundReadAt=new Map();
+let backgroundTimer;
+function queueBackgroundHead(id){
+ if(!id||id==='coordinator'||status?.capabilities?.readOnlyTimeline!==true)return;
+ backgroundHeads.delete(id);backgroundHeads.add(id);
+ while(backgroundHeads.size>32)backgroundHeads.delete(backgroundHeads.values().next().value);
+ if(!backgroundTimer)backgroundTimer=setTimeout(pumpBackgroundHeads,250);
+}
+function pumpBackgroundHeads(){
+ backgroundTimer=null;if(!authenticated||document.visibilityState!=='visible')return;
+ for(const id of [...backgroundHeads]){
+  if(backgroundFlights.size>=2)break;
+  if(backgroundFlights.has(id)||Date.now()-(backgroundReadAt.get(id)||0)<5000)continue;
+  backgroundHeads.delete(id);backgroundFlights.add(id);backgroundReadAt.set(id,Date.now());
+  void lanes.run(id,false,async()=>{
+   const ticket=cache.ticket(),notesVersion=notesVersions.get(id)||0;
+   const data=await api('/api/threads/'+encodeURIComponent(id)+'/head?view=timeline');
+   if(notesVersion!==(notesVersions.get(id)||0))data.notes=cache.get(id)?.snapshot?.notes||[];
+   const page=cache.head(id,data,{ticket});
+   if(scope===id){current=page.snapshot;renderHeader();renderTranscript();renderRequests();renderOutbox();renderNotes();}
+  }).catch(()=>{}).finally(()=>{backgroundFlights.delete(id);if(backgroundHeads.size&&!backgroundTimer)backgroundTimer=setTimeout(pumpBackgroundHeads,500);});
+ }
+ if(backgroundHeads.size&&!backgroundTimer)backgroundTimer=setTimeout(pumpBackgroundHeads,1000);
+}
+async function refreshList(){const metadataTicket=cache.ticket();const data=await api('/api/threads'+($('filter').value==='archived'?'?archived=true':''));threads=cache.catalog(data.threads||[],metadataTicket);$('catalog-note').textContent=data.catalogPartial?'Showing a bounded inventory. Search or open known work.':'';renderList();for(const id of cache.catalogChanges){if(id===scope)scheduleRefresh({head:true});else queueBackgroundHead(id);}}
 async function send(){const text=$('draft').value.trim();if(!text)return;if(deliveryFlight)await deliveryFlight;if(pending)throw Error('Check the saved message delivery before sending another.');saveDraft();const message={...pendingFor(scope,text,$('send-mode').value),deviceId};persistPending(message);await deliverPending();}
 function clearDelivered(message){if(message.scope===scope&&$('draft').value.trim()===message.text){$('draft').value='';saveDraft();}else if(read(draftKey(message.scope),'').trim()===message.text)write(draftKey(message.scope),'');persistPending(null);}
 async function deliverPending(){if(deliveryFlight)return deliveryFlight;deliveryFlight=performPending();try{return await deliveryFlight;}finally{deliveryFlight=null;renderHeader();}}
@@ -143,16 +168,18 @@ function handleEvent(m){
  }
  const threadId=m.threadId||m.notification?.thread_id||m.event?.params?.threadId;
  if(m.type==='timeline'){
-  if(threadId!==scope){if(scope==='coordinator'&&cache.get(scope)?.turns?.some(t=>!['completed','failed','cancelled'].includes(t.state)))scheduleRefresh({head:true});return;}
-  const data=cache.get(scope),known=data?.rows?.find(r=>r.id===m.row?.id);
-  if(known){if((m.row.version||0)>=(known.version||0)){data.rows=data.rows.map(r=>r===known?m.row:r);renderTranscript();}if(m.row.kind==='request')scheduleRefresh({head:true,attention:true});}
-  else scheduleRefresh({head:true});return;
+  const known=cache.timeline(threadId,m.row);
+  if(threadId===scope){if(known){renderTranscript();if(m.row.kind==='request')scheduleRefresh({head:true,attention:true});}else scheduleRefresh({head:true});}
+  else if(scope==='coordinator'&&cache.get(scope)?.turns?.some(t=>!['completed','failed','cancelled'].includes(t.state)))scheduleRefresh({head:true});
+  else if(!known&&cache.has(threadId))queueBackgroundHead(threadId);
+  return;
  }
  if(['threadPreview','sessionPreview','sessionActivity','sessionInteraction','threadRenamed','sessionStarted'].includes(m.type)){
-  let t=threads.find(t=>t.id===threadId);
-  if(t){const patch=m.thread||Object.fromEntries(Object.entries(m).filter(([key])=>['name','preview','previewRole','previewKind','activityAt','recencyAt','status','updatedAt','unreadCount','interactionId'].includes(key)));Object.assign(t,patch);if(current?.thread?.id===threadId&&(patch.name!==undefined||patch.status!==undefined)){if(patch.name!==undefined)current.thread.name=patch.name;if(patch.status!==undefined)current.thread.status=patch.status;renderHeader();}renderList();}
-  else if(m.thread){threads.push(m.thread);renderList();}
-  else scheduleRefresh({catalog:true});
+  if(!threadId){scheduleRefresh({catalog:true});return;}
+  const patch=m.thread||Object.fromEntries(Object.entries(m).filter(([key])=>['name','preview','previewRole','previewKind','activityAt','recencyAt','status','updatedAt','unreadCount','interactionId'].includes(key)));
+  const changed=cache.summary(threadId,patch);threads=cache.list();renderList();
+  if(threadId===scope){if(patch.name!==undefined||patch.status!==undefined)renderHeader();if(changed&&(['assistant','user'].includes(patch.previewRole)||m.type==='sessionInteraction'))scheduleRefresh({head:true});}
+  else if(changed&&(['assistant','user'].includes(patch.previewRole)||m.type==='sessionInteraction'))queueBackgroundHead(threadId);
   return;
  }
  if(m.type==='contextNotes'){if(!Array.isArray(m.notes))return;notesVersions.set(threadId,(notesVersions.get(threadId)||0)+1);const cached=cache.get(threadId);if(cached?.snapshot)cached.snapshot.notes=m.notes;if(threadId===scope&&current){current.notes=m.notes;renderTranscript();}return;}

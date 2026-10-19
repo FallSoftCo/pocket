@@ -1,3 +1,4 @@
+import {readThreadProjection} from './thread-projection.mjs';
 import {MAX_RECORDING_WAV_BYTES,MAX_RECORDING_SECONDS} from './audio-limits.mjs';
 import {HumanIngress,admissionTransaction} from './human-ingress.mjs';
 import {CreditObservations} from './credit-observations.mjs';
@@ -650,7 +651,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>{const threadId=req.query.threadId;if(threadId!==undefined&&(typeof threadId!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(threadId)))return res.status(400).json({error:'Invalid thread identifier'});void rateLimits.refresh();res.json({...codex.status(),...(threadId?{historyHead:historyHeads.snapshot(threadId)}:{}),usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
+app.get('/api/status',(req,res)=>{const threadId=req.query.threadId;if(threadId!==undefined&&(typeof threadId!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(threadId)))return res.status(400).json({error:'Invalid thread identifier'});void rateLimits.refresh();res.json({...codex.status(),...(threadId?{historyHead:historyHeads.snapshot(threadId)}:{}),capabilities:{readOnlyTimeline:true},usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -741,8 +742,9 @@ app.post('/api/threads/:id/timeline/position',route(async(req,res)=>{
   const id=requireId(req.params.id);await codex.connect();
   res.json(await history.locateItemSuccessor(id,req.body));
 }));
-app.get('/api/threads/:id',route(async(req,res)=>{
-  const raw=await attach(req.params.id,{before:req.query.before||null,recent:req.query.view==='timeline'});
+app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
+  const timelineView=req.query.view==='timeline'||req.path.endsWith('/head');
+  const raw=timelineView?await readThreadProjection(requireId(req.params.id),{codex,history,timeline,historyHeads,discovery:sessionDiscovery},{before:req.query.before||null}):await attach(req.params.id,{before:req.query.before||null});
   const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});
   const requests=[...pending.values()].filter(m=>m.params.threadId===t.id);
   const page=timelinePage(t,requests,{before:raw._pocketPage?null:req.query.before||null,limit:8,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=?').all(t.id).map(notificationRow)});
@@ -750,7 +752,7 @@ app.get('/api/threads/:id',route(async(req,res)=>{
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
   conversationNotes.remember(t);recordWork(()=>workRecord.remember(t));
-  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:req.query.view==='timeline'?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,historyHead:raw._pocketSnapshotHistoryHead,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:pendingOutgoing(db,t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
+  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:timelineView?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,historyHead:raw._pocketSnapshotHistoryHead,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),outgoing:pendingOutgoing(db,t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
   if(!req.query.before)response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
   res.json(response);
 }));

@@ -1,0 +1,43 @@
+import {createRequire} from 'node:module';import assert from 'node:assert/strict';import {mkdir,writeFile} from 'node:fs/promises';import {fixture} from '../tests/web-browser-fixture.mjs';
+const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const dir=process.env.WEB_EVIDENCE_DIR;await mkdir(dir,{recursive:true});const f=await fixture();let browser;const errors=[],evidence=[];
+try{
+ browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE});const page=await browser.newPage({viewport:{width:1440,height:900}});page.setDefaultTimeout(5000);page.on('pageerror',e=>errors.push(e.message));await page.goto(f.url);await page.locator('input[name=code]').fill('SYNTHETIC');await page.locator('#pair-form button[type=submit]').click();await page.locator('[data-id=parent-123]').click();await page.locator('#transcript .message').first().waitFor();
+ f.rows.get('parent-123').push({id:'preview-only-current',kind:'message',text:'Newest response learned from catalog evidence'});
+ const at=Date.now();f.broadcast({type:'sessionPreview',threadId:'parent-123',preview:'Newest response learned from catalog evidence',previewRole:'assistant'});
+ await page.waitForFunction(()=>[...document.querySelectorAll('#transcript .body')].some(n=>n.textContent==='Newest response learned from catalog evidence'));
+ const currentMs=Date.now()-at;assert.ok(currentMs<2500,'selected preview must invalidate before 10-second poll');
+ evidence.push('new selected message revealed by preview-only event paints without waiting for periodic reconciliation');
+ await page.locator('#draft').fill('Draft is retained while unopened work advances');
+ const unseenWrites=()=>f.writes.filter(w=>w.path==='/api/threads/other-123/catchup/read').length;
+ const baseline=unseenWrites();f.rows.get('other-123').push({id:'preview-only-closed',kind:'message',text:'Closed conversation latest answer'});
+ f.broadcast({type:'sessionPreview',threadId:'other-123',preview:'Closed conversation latest answer',previewRole:'assistant'});
+ for(let n=0;n<80&&!f.reads.some(r=>['/api/threads/other-123','/api/threads/other-123/head'].includes(r.path));n++)await page.waitForTimeout(50);
+ assert.ok(f.reads.some(r=>['/api/threads/other-123','/api/threads/other-123/head'].includes(r.path)),'unopened session must prewarm');await page.waitForTimeout(200);assert.equal(unseenWrites(),baseline);
+ f.holdHead('other-123');const openAt=Date.now();await page.locator('[data-id=other-123]').click();
+ await page.waitForFunction(()=>[...document.querySelectorAll('#transcript .body')].some(n=>n.textContent==='Closed conversation latest answer'));
+ const cachedMs=Date.now()-openAt;assert.ok(cachedMs<800,'opening cached latest content must not await the held transport');
+ evidence.push('unopened changed session prewarms shared state without a read acknowledgement; opening paints cached newest row while fresh request is held');
+ // A newer stream observation is retained even while another read is in flight.
+ f.broadcast({type:'timeline',threadId:'other-123',row:{id:'preview-only-closed',kind:'message',text:'Newer streamed answer while read is held',version:999}});
+ await page.getByText('Newer streamed answer while read is held',{exact:true}).waitFor();f.releaseHead('other-123');
+ await page.locator('[data-id=parent-123]').click();assert.equal(await page.locator('#draft').inputValue(),'Draft is retained while unopened work advances');
+ f.rows.get('parent-123').push({id:'catalog-only-current',kind:'message',text:'Canonical message discovered by catalog refresh alone'});
+ f.setSummary('parent-123',{preview:'Canonical message discovered by catalog refresh alone',previewRole:'assistant'});
+ const catalogAt=Date.now();await page.locator('#refresh').evaluate(n=>n.click());
+ await page.waitForFunction(()=>[...document.querySelectorAll('#transcript .body')].some(n=>n.textContent==='Canonical message discovered by catalog refresh alone'));
+ const catalogMs=Date.now()-catalogAt;assert.ok(catalogMs<2500);
+ evidence.push('HTTP catalog-only freshness updates the same open conversation without a transcript WebSocket event');
+ f.holdHead('parent-123');const count=f.reads.filter(r=>r.path==='/api/threads/parent-123').length;
+ f.broadcast({type:'reply',threadId:'parent-123',state:'accepted'});
+ for(let n=0;n<80&&f.reads.filter(r=>r.path==='/api/threads/parent-123').length===count;n++)await page.waitForTimeout(25);
+ assert.ok(f.reads.filter(r=>r.path==='/api/threads/parent-123').length>count);
+ f.broadcast({type:'threadRenamed',threadId:'parent-123',name:'Fresh name shared by list and chat'});
+ await page.waitForFunction(()=>document.querySelector('#title').textContent==='Fresh name shared by list and chat');
+ f.releaseHead('parent-123');await page.waitForTimeout(300);
+ assert.equal(await page.locator('#title').textContent(),'Fresh name shared by list and chat');
+ assert.equal(await page.locator('[data-id=parent-123] .card-title').textContent(),'Fresh name shared by list and chat');
+ evidence.push('late head response cannot roll back newer live metadata in either view');
+ assert.deepEqual(errors,[]);assert.equal(f.writes.filter(w=>w.path.endsWith('/reply')).length,0);
+ await writeFile(dir+'/receipt.json',JSON.stringify({passed:true,currentMs,cachedMs,catalogMs,evidence,pageErrors:errors},null,2));console.log(JSON.stringify({passed:true,currentMs,cachedMs,evidence}));
+}catch(e){await writeFile(dir+'/failure.json',JSON.stringify({error:e.message,errors,evidence},null,2));throw e;}finally{await browser?.close();await f.close();}
