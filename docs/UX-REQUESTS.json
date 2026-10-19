@@ -2943,7 +2943,7 @@
     {
       "id": "shared-web-session-state-and-readonly-projection-20261019",
       "request": "Web list shows latest messages while conversation loading lags; both views must share session state.",
-      "contract": "One session entity owns catalog metadata and timeline. Meaningful preview/interaction changes invalidate missing content; HTTP catalog changes also reconcile. Live known rows update closed cached sessions; bounded background prewarm requires a read-only timeline capability or a previously opened cache. Late responses cannot roll back live metadata. History reads never resume runtime work; explicit commands retain original IDs and control paths.",
+      "contract": "One session entity owns catalog metadata and timeline. Meaningful preview/interaction changes invalidate missing content; HTTP catalog changes also reconcile. Live known rows update closed cached sessions; bounded background prewarm requires a read-only timeline capability and its dedicated endpoint. Late responses cannot roll back live metadata. History reads never resume runtime work; explicit commands retain original IDs and control paths.",
       "state": "candidate-qualified"
     }
   ],

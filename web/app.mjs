@@ -18,7 +18,8 @@ const lanes=new ReadLanes();
 const readFeedback=new ReadFeedback(state=>{const node=$('message-loading');node.hidden=!state.visible;if(state.visible)setLabel(node,state.initial?'Loading latest messages…':'Updating messages…');$('transcript').setAttribute('aria-busy',String(state.visible));});
 readFeedback.select(scope);
 
-const cache=new SessionStore(),receipts=new Set(),notifySeen=new Set();let pending=read('pending',null),newPending=read('newPending',null);
+const cache=new SessionStore(),receipts=new Set(),notifySeen=new Set();
+cache.subscribeMetadata(id=>{if(id===scope)renderHeader();});let pending=read('pending',null),newPending=read('newPending',null);
 async function api(path,body,options={}){
  const method=options.method||(body===undefined?'GET':'POST'),binary=body instanceof Blob||body instanceof ArrayBuffer;
  const r=await fetch(clientURL(base,path),{method,credentials:'same-origin',headers:{'Content-Type':binary?'audio/wav':'application/json',...(options.headers||{})},...(body===undefined?{}:{body:binary?body:JSON.stringify(body)}),...(method==='GET'?{signal:AbortSignal.timeout(20000)}:{})});
@@ -178,7 +179,7 @@ function handleEvent(m){
   if(!threadId){scheduleRefresh({catalog:true});return;}
   const patch=m.thread||Object.fromEntries(Object.entries(m).filter(([key])=>['name','preview','previewRole','previewKind','activityAt','recencyAt','status','updatedAt','unreadCount','interactionId'].includes(key)));
   const changed=cache.summary(threadId,patch);threads=cache.list();renderList();
-  if(threadId===scope){if(patch.name!==undefined||patch.status!==undefined)renderHeader();if(changed&&(['assistant','user'].includes(patch.previewRole)||m.type==='sessionInteraction'))scheduleRefresh({head:true});}
+  if(threadId===scope){if(changed&&(['assistant','user'].includes(patch.previewRole)||m.type==='sessionInteraction'))scheduleRefresh({head:true});}
   else if(changed&&(['assistant','user'].includes(patch.previewRole)||m.type==='sessionInteraction'))queueBackgroundHead(threadId);
   return;
  }

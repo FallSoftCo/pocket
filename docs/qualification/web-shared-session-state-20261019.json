@@ -1,5 +1,5 @@
 {
-  "state": "candidate",
+  "state": "backend-live-web-qualified",
   "confirmedBug": "Flicker fix incorrectly classified all sessionPreview changes as display-only; preview-only new messages did not invalidate the transcript.",
   "observedProductionTiming": {
     "localBackendCatalogMs": 389,
@@ -7,20 +7,31 @@
     "privateBrowserSelectedFirstMessageMs": 342,
     "minuteLongDelayReproduced": false
   },
-  "browserEvidence": "/home/aosp/.local/state/nextcomp/web-session-state-20261019-r02/receipt.json",
+  "browserEvidence": "/home/aosp/.local/state/nextcomp/web-session-state-20261019-r06/receipt.json",
   "regressionEvidence": [
     "/home/aosp/.local/state/nextcomp/web-session-state-20261019-refresh/receipt.json",
     "/home/aosp/.local/state/nextcomp/web-session-state-20261019-desktop/desktop.json",
     "/home/aosp/.local/state/nextcomp/web-session-state-20261019-touch/touch.json"
   ],
   "testTiming": {
-    "previewOnlyCurrentMs": 193,
-    "prewarmedOpenWhileHeadHeldMs": 55
+    "previewOnlyCurrentMs": 224,
+    "prewarmedOpenWhileHeadHeldMs": 61
   },
-  "readonlyBackendClosureSha256": "2af7e73fd11a7184afa725bcb8c61b4bf5e0047e8a79181c478421ba174e5d9e",
+  "readonlyBackendClosureSha256": "fe7c122aac3a856f27c2c1fd2143a2dc14cb8917282e981c41aec1186609a1ae",
   "backendScope": "Only actual deployed baseline index route/status and added read-only projection module; no broader candidate backend source.",
   "limits": [
     "The full minute-long production stall was not reproduced in the controlled read.",
     "Native139 signed build is complete but a new native scrolling immersion journey timed out; APK remains unpublished."
-  ]
+  ],
+  "backendLive": {
+    "sourceBaseline": "nextcomp-durable-intake-release-20261017-r02",
+    "candidate": "nextcomp-readonly-head-release-20261019-r01",
+    "currentSessionLatestPageMs": 36,
+    "readOnlyCapability": true,
+    "runtimePidsPreserved": true,
+    "authUnchanged": true,
+    "queuedSendingOrActiveVoiceAdmissionsAtCutover": 0,
+    "unknownVoiceReceiptsPreserved": 3,
+    "phoneInputNotObserved": true
+  }
 }

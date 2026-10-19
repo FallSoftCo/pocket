@@ -38,6 +38,17 @@ try{
  assert.equal(await page.locator('#title').textContent(),'Fresh name shared by list and chat');
  assert.equal(await page.locator('[data-id=parent-123] .card-title').textContent(),'Fresh name shared by list and chat');
  evidence.push('late head response cannot roll back newer live metadata in either view');
+ f.rows.get('parent-123').push({id:'same-body-distinct-source',kind:'message',text:'Canonical message discovered by catalog refresh alone'});
+ f.setSummary('parent-123',{updatedAt:Math.floor(Date.now()/1000)});
+ await page.locator('#refresh').evaluate(n=>n.click());
+ await page.locator('#transcript [data-id=same-body-distinct-source]').waitFor();
+ assert.equal(await page.locator('#transcript [data-id=same-body-distinct-source]').count(),1);
+ evidence.push('genuine later activity with identical preview text still reconciles; identity is not inferred from text');
+ f.holdHead('parent-123');f.setSummary('parent-123',{name:'Catalog title updates both views'});
+ await page.locator('#refresh').evaluate(n=>n.click());
+ await page.waitForFunction(()=>document.querySelector('#title').textContent==='Catalog title updates both views');
+ assert.equal(await page.locator('[data-id=parent-123] .card-title').textContent(),'Catalog title updates both views');
+ f.releaseHead('parent-123');evidence.push('catalog metadata notifies both presenters without needing a transcript response');
  assert.deepEqual(errors,[]);assert.equal(f.writes.filter(w=>w.path.endsWith('/reply')).length,0);
  await writeFile(dir+'/receipt.json',JSON.stringify({passed:true,currentMs,cachedMs,catalogMs,evidence,pageErrors:errors},null,2));console.log(JSON.stringify({passed:true,currentMs,cachedMs,evidence}));
 }catch(e){await writeFile(dir+'/failure.json',JSON.stringify({error:e.message,errors,evidence},null,2));throw e;}finally{await browser?.close();await f.close();}
