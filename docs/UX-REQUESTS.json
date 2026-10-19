@@ -3035,5 +3035,11 @@
     "sharedStockRuntime": "Session, coordinator and legacy/new immersion use the same multiplexed stock Codex connection. Native audio retains its explicitly configured workspace/command. Integration verifies coordinator start then direct session routing with one initialization/connection.",
     "cleanupDelivered": "Retired six exact orphan QA processes across two cleanup passes, preserved private data and accepted receipts, moved three owned worktrees off RAM.",
     "androidCandidate": "v2 acceptance compiles in memory-capped transient service; phone observed134. Not a delivered v2 update."
+  },
+  "bottom_toolbar_inner_spacing_20261019": {
+    "status": "implemented; native visual qualification pending",
+    "requirement": "Bottom toolbar controls, including the focus/important control, must not collide with their container",
+    "implementation": "One shared dock/footer surface;8dp horizontal and6dp vertical interior clearances, minimum2dp sibling gap and6dp wrapped-row gap. Important filter uses explicit12dp horizontal/8dp vertical content padding, retaining48dp minimum targets. No control removal or behavior change.",
+    "qualification": "Verify normal and large text in native emulator before publication; physical phone not claimed."
   }
 }

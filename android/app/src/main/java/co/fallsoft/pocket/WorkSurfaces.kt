@@ -45,19 +45,26 @@ import androidx.compose.ui.unit.sp
 }
 
 
-/** One catalog dock surface for stock sessions and enterprise rooms. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun WorkCatalogDock(content:@Composable FlowRowScope.()->Unit){
-    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).depthSurface(Color(0xff15191f),RoundedCornerShape(24.dp),6.dp).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)),
-        horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp),content=content)
+/** One inset control surface for catalogs and conversations. The outer margin
+ * clears the device edge; inner padding keeps every touch target inside the rim.
+ * Flow wraps at larger font sizes instead of clipping or shrinking targets.
+ */
+@OptIn(ExperimentalLayoutApi::class,androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable private fun BottomControlBar(verticalMargin:androidx.compose.ui.unit.Dp,content:@Composable FlowRowScope.()->Unit){
+    val shape=RoundedCornerShape(24.dp)
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=verticalMargin)
+        .depthSurface(Color(0xff15191f),shape,6.dp).border(1.dp,Paper.copy(alpha=.10f),shape)
+        .semantics{testTagsAsResourceId=true}.testTag("bottom-control-bar")
+        .padding(horizontal=8.dp,vertical=6.dp),
+        horizontalArrangement=Arrangement.spacedBy(2.dp,Alignment.CenterHorizontally),
+        verticalArrangement=Arrangement.spacedBy(6.dp),content=content)
 }
 
-/** Identical bottom control geometry for stock sessions and enterprise rooms. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun ConversationFooter(content:@Composable FlowRowScope.()->Unit){
-    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp).depthSurface(Color(0xff15191f),RoundedCornerShape(24.dp),6.dp),
-        horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp),content=content)
-}
+@Composable internal fun WorkCatalogDock(content:@Composable FlowRowScope.()->Unit)=BottomControlBar(8.dp,content)
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable internal fun ConversationFooter(content:@Composable FlowRowScope.()->Unit)=BottomControlBar(6.dp,content)
 
 @Composable internal fun ConversationMessageSurface(you:Boolean,content:@Composable ColumnScope.()->Unit){
     Column(Modifier.fillMaxWidth().then(if(you)Modifier.depthSurface(Panel,RoundedCornerShape(6.dp),1.dp).padding(14.dp)else Modifier.padding(vertical=5.dp)),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
