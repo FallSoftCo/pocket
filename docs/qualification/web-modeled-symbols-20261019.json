@@ -1,5 +1,5 @@
 {
-  "state": "candidate",
+  "state": "deployed-web",
   "assetCount": 29,
   "authoredAssets": {
     "web/symbols/motion/nextcomp-0.webp": {
@@ -192,5 +192,21 @@
   "limits": [
     "Frame timings are bounded Linux headless Chromium evidence, not Pixelbook or physical Android frame pacing.",
     "No phone update, backend restart, provider request, task submission or model wake."
-  ]
+  ],
+  "source": "38e5cfafbbf869e6d527ff23e42c6763cf0de75c",
+  "desktopJourney": "/home/aosp/.local/state/nextcomp/web-symbol-motion-20261019-journeys/desktop/desktop.json",
+  "touchJourney": "/home/aosp/.local/state/nextcomp/web-symbol-motion-20261019-journeys/touch/touch.json",
+  "actualBrowserRecording": "/home/aosp/.local/state/nextcomp/web-symbol-motion-20261019-video/modeled-symbols.webm",
+  "release": {
+    "service": "nextcomp-web-motion.service",
+    "port": 18892,
+    "closureSha256": "0bd40e3abba1b43a365ae09a35b5d63e5e12483e03178b6f4e4e7a21fc4b83f1",
+    "privateRoute": "/nextcomp/",
+    "liveReadback": "Actual tailnet browser authenticated status200, visible N canvas pixels changed, zero page errors; exact disposable QA identity revoked",
+    "oldGateway": "answers gateway18891 retained for active connection; refresh gateway18890 stopped/disabled only after zero established connections",
+    "rollback": "Restore only /nextcomp/ to retained answers gateway18891; same existing cookie key/data/backend",
+    "backendRestarted": false,
+    "phoneUpdated": false
+  },
+  "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-web-modeled-motion"
 }
