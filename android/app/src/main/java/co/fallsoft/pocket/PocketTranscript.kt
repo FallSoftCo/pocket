@@ -62,9 +62,10 @@ object PocketTranscript {
     }
     private var coverageVerified=false
     private var missedUpdates=false
-    private data class InputPosition(val turn:String,val target:String,val item:String,val client:String,val known:List<String>)
+    private data class InputPosition(val turn:String,val target:String,val item:String,val client:String,val known:List<String>,val evidence:Long)
     private val positionQueue=linkedMapOf<String,InputPosition>()
     private var positionJob:Job?=null
+    private var positionHistoryRevision=0L
     private data class InputAttempt(val target:String,val item:String)
     private val attemptedPositions=hashSetOf<InputAttempt>()
     private val awaitingPositionHistory=hashSetOf<InputAttempt>()
@@ -248,7 +249,7 @@ object PocketTranscript {
         val known=transcriptPositionAnchors(rows.filter{it.s("turnId")==turn&&it.s("kind") !in listOf("turn","turnEnd","request","attachments")}).map{it.s("itemId").ifBlank{it.s("id").removePrefix("$turn/")}}
         if(known.none{it!=item})return
         attemptedPositions.add(attempt)
-        positionQueue[target]=InputPosition(turn,target,item,row.s("clientId"),known)
+        positionQueue[target]=InputPosition(turn,target,item,row.s("clientId"),known,positionHistoryRevision)
         if(positionJob?.isActive==true)return
         positioning=true
         positionJob=readScope.launch{
@@ -266,7 +267,19 @@ object PocketTranscript {
                             cursor?.let{body.put("cursor",it)}
                             val result=CodexReadTransport.read(destination,"/api/threads/$id/timeline/position",body)
                             if(!current())return@launch
-                            if(result.optBoolean("awaitingHistory"))awaitingPositionHistory.add(InputAttempt(request.target,request.item))
+                            if(result.optBoolean("awaitingHistory")){
+                                val deferred=InputAttempt(request.target,request.item)
+                                awaitingPositionHistory.add(deferred)
+                                // The independent head lane can finish before this metadata
+                                // reply. Consume that newer evidence exactly once; waiting
+                                // for another fetch would strand the input indefinitely.
+                                if(positionHistoryRevision>request.evidence){
+                                    awaitingPositionHistory.remove(deferred);attemptedPositions.remove(deferred)
+                                    rows.firstOrNull{it.s("id")==request.target||
+                                        (request.client.isNotBlank()&&it.s("clientId")==request.client&&it.s("turnId")==request.turn)}
+                                        ?.let{reconcileInputPosition(it)}
+                                }
+                            }
                             val successor=transcriptDisplayAnchor(rows,result.s("insertBefore")).orEmpty()
                             if(successor.isNotBlank()){
                                 if(successor.startsWith("${request.turn}/")){
@@ -466,6 +479,7 @@ object PocketTranscript {
             if(latest){latestReadError="";readFailureSince=0L}else if(gapTicket!=null)gapProblems=gapProblems-gapTicket.id else historicalReadError=""
             succeeded=true;trace()
             if(!older&&bridgeCursor==null){
+                positionHistoryRevision++
                 // Retry only after a successful independent snapshot supplied new ordering evidence.
                 val deferredTargets=awaitingPositionHistory.mapTo(hashSetOf()){it.target}
                 attemptedPositions.removeAll(awaitingPositionHistory);awaitingPositionHistory.clear()
