@@ -2921,6 +2921,12 @@
       "request": "Replace the wave with instant roughly 50/50 Italian/English. Every eligible unit must be assigned the opposite language on each flip, with no permanently untranslated ordinary content.",
       "contract": "Stable aligned lexical/phrase units in Italian grammar, complementary phase assignments, one shared ten-second foreground clock, no fade/wipe/frame loop, no tap-initiated phase or scroll reshuffle. Protected literals remain canonical. Missing plans are incomplete coverage, never successful immersion.",
       "state": "implementation"
+    },
+    {
+      "id": "web-reading-edge-refresh-flicker-20261019",
+      "request": "Stop the rapidly flickering Updating messages footer in the web client.",
+      "contract": "Route event invalidations by scope and projection; session previews and unrelated activity do not reread the selected conversation. Initial load remains immediate; cached fast refreshes stay quiet, slow logical head reads and queued follow-up share one stable reading-edge status, no reader resize, no stale-scope completion hiding current state, and real errors remain actionable.",
+      "state": "qualified-for-web-rollout"
     }
   ],
   "current_state": {

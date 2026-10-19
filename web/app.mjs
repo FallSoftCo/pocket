@@ -1,3 +1,4 @@
+import {ReadFeedback} from './read-feedback.mjs';
 import {ImmersionLayer} from './immersion.mjs';
 import {richText,foldRuns,usageSummary,sessionState,canonicalPage,ReadLanes} from './presentation.mjs';
 import {sessionIdentity,workTime,compareWork,mergeRows,pendingFor} from './model.mjs';
@@ -12,6 +13,9 @@ let scope=read('scope','coordinator'),deviceId='',threads=[],current=null,status
 let openedScope=null;const readerViews=new Map();
 let seatOrder=[],deliveryFlight=null,startFlight=null;
 const lanes=new ReadLanes();
+const readFeedback=new ReadFeedback(state=>{const node=$('message-loading');node.hidden=!state.visible;if(state.visible)setLabel(node,state.initial?'Loading latest messages…':'Updating messages…');$('transcript').setAttribute('aria-busy',String(state.visible));});
+readFeedback.select(scope);
+
 const cache=new Map(),receipts=new Set(),notifySeen=new Set();let pending=read('pending',null),newPending=read('newPending',null);
 async function api(path,body,options={}){
  const method=options.method||(body===undefined?'GET':'POST'),binary=body instanceof Blob||body instanceof ArrayBuffer;
@@ -88,15 +92,12 @@ async function ackVisible(){if(document.visibilityState!=='visible'||!authentica
 function saveView(){if(!openedScope)return;const list=$('transcript'),first=[...list.children].find(n=>n.getBoundingClientRect().bottom>list.getBoundingClientRect().top);readerViews.set(openedScope,{follow,important:$('important').checked,note:activeNote,anchor:first?.dataset.id,offset:first?first.getBoundingClientRect().top-list.getBoundingClientRect().top:0,top:list.scrollTop});}
 function restoreView(view){if(!view||view.follow)return;const list=$('transcript'),anchor=[...list.children].find(n=>n.dataset.id===view.anchor);if(anchor)list.scrollTop+=anchor.getBoundingClientRect().top-list.getBoundingClientRect().top-view.offset;else list.scrollTop=view.top;}
 async function open(id){
- saveDraft();saveView();for(const panel of document.querySelectorAll(':popover-open'))panel.hidePopover();scope=id;write('scope',scope);const view=readerViews.get(id);follow=view?.follow??true;$('important').checked=view?.important??false;activeNote=view?.note??null;filterPosition=null;
+ saveDraft();saveView();for(const panel of document.querySelectorAll(':popover-open'))panel.hidePopover();scope=id;readFeedback.select(scope);write('scope',scope);const view=readerViews.get(id);follow=view?.follow??true;$('important').checked=view?.important??false;activeNote=view?.note??null;filterPosition=null;
  current=id==='coordinator'?null:cache.get(id)?.snapshot||null;$('draft').value=read(draftKey(),'');openedScope=scope;$('requests').dataset.signature='';$('error').hidden=true;$('transcript').replaceChildren();$('attention-panel').hidden=true;$('reports-panel').hidden=true;document.body.classList.add('chat-open');renderHeader();renderList();renderTranscript();renderRequests();renderOutbox();renderNotes();restoreView(view);
  await refreshConversation();if(scope===id){if(follow)$('transcript').scrollTop=$('transcript').scrollHeight;else restoreView(view);}
 }
 async function refreshConversation(before=null){
- const selected=scope;return lanes.run(selected,!!before,async()=>{
-  const had=cache.get(selected)||{};
-  if(scope===selected&&!before){$('message-loading').hidden=false;$('message-loading').textContent=had.rows?.length||had.turns?.length?'Updating messages…':'Loading latest messages…';}
-  try{
+ const selected=scope,hasSnapshot=cache.has(selected);const request=lanes.run(selected,!!before,async()=>{
    if(selected==='coordinator'){
     const data=await api('/api/voice/history?conversationOnly=1'+(before?'&before='+encodeURIComponent(before):''));
     const old=cache.get(selected)||{},known=new Map((old.turns||[]).map(t=>[t.id,t]));for(const t of data.turns||[])known.set(t.id,t);
@@ -109,8 +110,9 @@ async function refreshConversation(before=null){
     if(scope===selected)current=snapshot;
    }
    if(scope===selected){renderHeader();renderTranscript();renderRequests();renderOutbox();renderNotes();}
-  }finally{if(scope===selected&&!before)$('message-loading').hidden=true;}
  });
+ try{return await (before?request:readFeedback.track(selected,request,{hasContent:hasSnapshot}));}
+ catch(error){if(scope===selected)throw error;}
 }
 const historyDemand=new Map(),historyConsumed=new Map(),earlierReads=new Set();let edgeTimer,lastWheel=0;
 function demandOlder(){historyDemand.set(scope,(historyDemand.get(scope)||0)+1);follow=false;scheduleEdge();}
@@ -127,8 +129,66 @@ function clearDelivered(message){if(message.scope===scope&&$('draft').value.trim
 async function deliverPending(){if(deliveryFlight)return deliveryFlight;deliveryFlight=performPending();try{return await deliveryFlight;}finally{deliveryFlight=null;renderHeader();}}
 async function performPending(){const p=pending;if(!p||p.deviceId!==deviceId)throw Error('Saved delivery belongs to another paired device.');$('send').disabled=true;try{if(p.scope==='coordinator'){await api('/api/voice/start',{threadId:null});await api('/api/voice/text',{turnId:p.id,text:p.text});}else await api(`/api/threads/${p.scope}/reply`,{id:p.id,text:p.text,mode:p.mode});clearDelivered(p);await refreshConversation();await refreshList();}catch(e){if(e.status&&e.status<500){persistPending(null);}throw e;}finally{renderHeader();}}
 async function reconcilePending(){if(deliveryFlight)return deliveryFlight;if(!pending)return;const p=pending;if(p.deviceId!==deviceId)throw Error('This saved send belongs to another browser pairing.');const path=p.scope==='coordinator'?`/api/voice/turns/${p.id}`:`/api/replies/${p.id}`;try{await api(path);clearDelivered(p);await refreshConversation();}catch(e){if(e.status!==404)throw e;if(pending?.id===p.id)await deliverPending();}}
-function connectEvents(){clearTimeout(reconnectTimer);if(!authenticated)return;ws?.close();ws=new WebSocket(clientURL(base,'events').replace(/^http/,'ws'));const own=ws;ws.onopen=()=>{$('connection').textContent='Connected';void run(async()=>{await refreshList();await refreshConversation();await reconcilePending();})()};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data);}catch{return;}if(immersion.handle(m))return;if(m.type==='rateLimits'){status={...status,usage:m.usage};renderUsage();}else if(m.type==='timeline'&&m.threadId===scope){const data=cache.get(scope);if(data&&m.row&&data.rows?.some(r=>r.id===m.row.id)){data.rows=data.rows.map(r=>r.id===m.row.id&&(m.row.version||0)>=(r.version||0)?m.row:r);renderTranscript();if(m.row.kind==='request')scheduleRefresh();}else scheduleRefresh();}else if(m.type==='threadPreview'){const t=threads.find(t=>t.id===m.threadId);if(t){Object.assign(t,m);renderList();}}else if(m.type==='notification'){if(document.visibilityState==='hidden'&&'Notification' in window&&Notification.permission==='granted'&&!notifySeen.has(m.notification.id)){notifySeen.add(m.notification.id);const n=new Notification('NextComp update',{body:'Work has an update. Open NextComp to review it.',tag:'nextcomp-'+m.notification.thread_id});n.onclick=()=>{window.focus();if(m.notification.thread_id)void run(()=>open(m.notification.thread_id))();n.close();};}scheduleRefresh();}else scheduleRefresh();};ws.onclose=()=>{if(ws!==own||!authenticated)return;$('connection').textContent='Reconnecting…';reconnectTimer=setTimeout(connectEvents,3000);};ws.onerror=()=>own.close();}
-let refreshTimer;function scheduleRefresh(){if(refreshTimer)return;refreshTimer=setTimeout(()=>{refreshTimer=null;if(authenticated&&document.visibilityState==='visible')void run(async()=>{await refreshConversation();await refreshAttention();})()},120);}
+let runtimeConnected=null;
+function handleEvent(m){
+ if(immersion.handle(m))return;
+ if(m.type==='rateLimits'){status={...status,usage:m.usage};renderUsage();return;}
+ if(m.type==='status'){
+  const recovered=runtimeConnected===false&&m.connected===true;runtimeConnected=m.connected;
+  setLabel($('connection'),m.connected===false?'Codex reconnecting…':'Connected');
+  if(recovered)scheduleRefresh({head:true,catalog:true,attention:true});return;
+ }
+ const threadId=m.threadId||m.notification?.thread_id||m.event?.params?.threadId;
+ if(m.type==='timeline'){
+  if(threadId!==scope){if(scope==='coordinator'&&cache.get(scope)?.turns?.some(t=>!['completed','failed','cancelled'].includes(t.state)))scheduleRefresh({head:true});return;}
+  const data=cache.get(scope),known=data?.rows?.find(r=>r.id===m.row?.id);
+  if(known){if((m.row.version||0)>=(known.version||0)){data.rows=data.rows.map(r=>r===known?m.row:r);renderTranscript();}if(m.row.kind==='request')scheduleRefresh({head:true,attention:true});}
+  else scheduleRefresh({head:true});return;
+ }
+ if(['threadPreview','sessionPreview','sessionActivity','sessionInteraction','threadRenamed','sessionStarted'].includes(m.type)){
+  let t=threads.find(t=>t.id===threadId);
+  if(t){const patch=m.thread||Object.fromEntries(Object.entries(m).filter(([key])=>['name','preview','previewRole','previewKind','activityAt','recencyAt','status','updatedAt','unreadCount','interactionId'].includes(key)));Object.assign(t,patch);if(current?.thread?.id===threadId&&(patch.name!==undefined||patch.status!==undefined)){if(patch.name!==undefined)current.thread.name=patch.name;if(patch.status!==undefined)current.thread.status=patch.status;renderHeader();}renderList();}
+  else if(m.thread){threads.push(m.thread);renderList();}
+  else scheduleRefresh({catalog:true});
+  return;
+ }
+ if(m.type==='contextNotes'&&threadId===scope){if(current){current.notes=m.notes;renderNotes();}return;}
+ if(m.type==='notification'){
+  if(document.visibilityState==='hidden'&&'Notification' in window&&Notification.permission==='granted'&&!notifySeen.has(m.notification.id)){
+   notifySeen.add(m.notification.id);const n=new Notification('NextComp update',{body:'Work has an update. Open NextComp to review it.',tag:'nextcomp-'+threadId});
+   n.onclick=()=>{window.focus();if(threadId)void run(()=>open(threadId))();n.close();};
+  }
+  scheduleRefresh({head:threadId===scope,attention:true,catalog:true});return;
+ }
+ if(['attention','attentionResolved','request'].includes(m.type)){scheduleRefresh({head:threadId===scope,attention:true});return;}
+ if(['reply','turnRecovery','message'].includes(m.type)){scheduleRefresh({head:threadId===scope,catalog:true});return;}
+ if(m.type==='codex'){
+  if(threadId===scope&&['turn/started','turn/completed','item/started','item/completed','thread/status/changed'].includes(m.event?.method))scheduleRefresh({head:true});
+  return;
+ }
+ // Unknown and aggregate activity events do not invalidate a conversation.
+ // The independent periodic reconciliation remains the compatibility fallback.
+}
+function connectEvents(){
+ clearTimeout(reconnectTimer);if(!authenticated)return;ws?.close();
+ ws=new WebSocket(clientURL(base,'events').replace(/^http/,'ws'));const own=ws;
+ ws.onopen=()=>{$('connection').textContent='Connected';void run(async()=>{await Promise.all([refreshList(),refreshConversation(),refreshAttention()]);await reconcilePending();})()};
+ ws.onmessage=e=>{let m;try{m=JSON.parse(e.data);}catch{return;}handleEvent(m);};
+ ws.onclose=()=>{if(ws!==own||!authenticated)return;$('connection').textContent='Reconnecting…';reconnectTimer=setTimeout(connectEvents,3000);};ws.onerror=()=>own.close();
+}
+let refreshTimer,lastHeadRefresh=0;const requestedHeads=new Set();let requestedCatalog=false,requestedAttention=false;
+function scheduleRefresh({head=true,catalog=false,attention=false}={}){
+ if(head)requestedHeads.add(scope);requestedCatalog||=catalog;requestedAttention||=attention;
+ if(refreshTimer)return;
+ refreshTimer=setTimeout(()=>{
+  refreshTimer=null;const refreshHead=requestedHeads.has(scope),catalog=requestedCatalog,attention=requestedAttention;
+  requestedHeads.clear();requestedCatalog=requestedAttention=false;
+  if(authenticated&&document.visibilityState==='visible'){
+   if(refreshHead)lastHeadRefresh=performance.now();
+   void run(()=>Promise.all([...(refreshHead?[refreshConversation()]:[]),...(catalog?[refreshList()]:[]),...(attention?[refreshAttention()]:[])]))();
+  }
+ },Math.max(120,head?(scope==='coordinator'?1000:500)-(performance.now()-lastHeadRefresh):120));
+}
 async function refreshAttention(){const data=await api('/api/attention');$('attention-count').textContent=data.notifications.length;$('reports-toggle').dataset.count=data.notifications.length||'';$('attention-panel').replaceChildren(el('h2','','Needs your attention'));for(const n of data.notifications){const box=el('div','inbox-item');box.append(el('p','',n.title),el('p','',n.body),button('Open original work',()=>open(n.thread_id)));$('attention-panel').append(box);}}
 async function showReports(before=null){const data=await api('/api/coordinator/reports'+(before?'?before='+before:''));if(!before)$('reports-panel').replaceChildren(el('h2','','Work updates'));for(const r of data.reports||data.items||[]){const box=el('div','inbox-item');box.append(el('p','',r.response||r.text||''),button('Mark this report read',async()=>{await api(`/api/voice/turns/${r.id}/presented`,{});}));for(const a of r.actions||[])if(a.threadId)box.append(button('Open work',()=>open(a.threadId)));$('reports-panel').append(box);}if($('reports-panel').children.length===1)$('reports-panel').append(el('p','muted','No scheduled reports yet. Enable scheduling in Settings for this browser.'));if(data.hasEarlier)$('reports-panel').append(button('Older reports',()=>showReports(data.before)));if(!before)$('reports-panel').hidden=false;}
 function readThemePreference(){try{return JSON.parse(localStorage.getItem('nextcomp.web.theme'));}catch{return null;}}
@@ -148,7 +208,7 @@ for(const [id,action,body] of [['watch','watch',()=>({enabled:!current?.watched}
 $('rename').onclick=run(async()=>{const name=prompt('Session name',current?.thread?.name||'');if(name){await api(`/api/threads/${scope}/rename`,{name});await refreshConversation();await refreshList();}});$('save-turn').onclick=run(async()=>{await api(`/api/threads/${scope}/settings`,{model:$('model').value,effort:$('effort').value,mode:$('turn-mode').value==='plan'?'plan':'default'});$('controls-dialog').hidePopover?.();$('controls-dialog').close();await refreshConversation();});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;$('install').hidden=false;});$('install').onclick=run(async()=>{await installEvent?.prompt();installEvent=null;$('install').hidden=true;});
 window.addEventListener('online',()=>{if(authenticated){connectEvents();scheduleRefresh();}});window.addEventListener('offline',()=>{$('connection').textContent='Offline · drafts saved';});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&authenticated){scheduleRefresh();if(ws?.readyState!==WebSocket.OPEN)connectEvents();}});window.addEventListener('pagehide',()=>{saveDraft();void voice.close();});window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();$('search-panel').hidden=false;$('search').focus();}if(e.key==='Escape'&&!document.querySelector('dialog[open],:popover-open')&&innerWidth<=760)document.body.classList.remove('chat-open');});
-setInterval(()=>{if(!authenticated||polling||document.visibilityState!=='visible')return;polling=true;void run(async()=>{await refreshConversation();await refreshList();await refreshAttention();if(newPending)await reconcileStart();})().finally(()=>polling=false);},10000);
+setInterval(()=>{if(!authenticated||polling||document.visibilityState!=='visible')return;polling=true;void run(async()=>{await Promise.all([refreshConversation(),refreshList(),refreshAttention()]);if(newPending)await reconcileStart();})().finally(()=>polling=false);},10000);
 if('serviceWorker' in navigator)navigator.serviceWorker.register(clientURL(base,'sw.js'),{scope:base.pathname}).catch(()=>{});
 const immersion=new ImmersionLayer(api,base,text=>{$('immersion-state').textContent=text;$('immersion-enabled').checked=immersion.enabled;});
 $('immersion-enabled').onchange=run(()=>immersion.setEnabled($('immersion-enabled').checked));
@@ -209,3 +269,5 @@ function anchorPanel(panel,control){panel.popover='auto';panel.classList.add('an
 $('reports-toggle').onclick=run(async()=>{if(inbox.matches(':popover-open')){inbox.hidePopover();return;}await Promise.all([refreshAttention(),showReports()]);$('attention-panel').hidden=false;$('reports-panel').hidden=false;anchorPanel(inbox,$('reports-toggle'));});
 $('settings').onclick=run(async()=>{renderUsage();anchorPanel($('settings-dialog'),$('settings'));const prefs=await api('/api/coordinator/reporting');$('report-enabled').checked=prefs.enabled;$('report-interval').value=prefs.intervalMinutes;$('report-stale').value=prefs.staleAfterMinutes;});
 document.querySelector('#settings-dialog .close').onclick=e=>{e.preventDefault();$('settings-dialog').hidePopover();};
+
+const transcriptNode=$('transcript'),readerFrame=el('div','transcript-frame');transcriptNode.replaceWith(readerFrame);readerFrame.append(transcriptNode,$('message-loading'));

@@ -73,3 +73,9 @@ different actions. Human identity, room/request permission and native ownership
 are server checked; native message recording is distinct from model consumption
 and accepted work. Alpha100 implementation and build are not physical-phone
 or general multi-host certification.
+
+### Browser read feedback (2026-10-19)
+
+Browser events invalidate their own projection and scope. Session previews update list entities; other sessions' timeline deltas, aggregate activity and repeated status observations do not reread the selected transcript. Known current rows apply by stable identity/version. Unknown current rows and semantic completion/receipt changes request the independent current-head lane; requests coalesce without concurrent duplicate reads. A quiet periodic reconciliation remains for missed events and older transports, with no worker/model activation.
+
+The reading-edge status observes the entire logical head promise, including its coalesced follow-up, rather than individual HTTP requests. First snapshots show loading immediately; cached reads must last 400 ms before appearing. Once shown, feedback holds at least 500 ms and settles for 160 ms across nearby work. Scope changes isolate feedback; stale completions cannot clear the selected reader. The indicator sits inside the reader frame without changing its dimensions. Errors retain existing messages and surface their actual failure.
