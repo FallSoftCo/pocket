@@ -122,4 +122,72 @@ class CodexHistoryConcurrencyNativeTest {
             check(edit.commit())
         }
     }
+    @Test fun longRetainedGapDoesNotDrainOrResetWhileCurrentMessagesAdvance(){
+        check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE);val original=prefs.all.toMap()
+        fun qa(name:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+name,JSONObject())}
+        fun olderReads()=qa("state").getJSONArray("reads").objects().filter{it.optBoolean("older")}
+        try{
+            prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Retained gap draft").commit()
+            main{Pocket.init(context)}
+            qa("long-retained-gap")
+            val scope=PocketTranscript.scopeKey()
+            val cached=org.json.JSONArray()
+            repeat(1000){n->cached.put(JSONObject().put("id","retained-old-"+n).put("kind","message").put("turnId","old-turn").put("text","Retained old message "+n))}
+            val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",cached).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+            assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+            main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
+            await("Current message never became independently fresh",20000){PocketTranscript.currentHistoryVerified&&PocketTranscript.rows.any{it.s("text")=="Fresh response 1"}}
+            await("Bounded initial overlap probe did not settle",20000){PocketTranscript.historyGap?.cursor=="long-gap-992"&&!PocketTranscript.loading}
+            assertFalse("A historical gap kept the current head updating",PocketTranscript.updating)
+            assertEquals(1000,PocketTranscript.rows.count{it.s("id").startsWith("retained-old-")})
+            val count=olderReads().size;assertEquals(1,count)
+            qa("silent");main{Pocket.refreshDetail()}
+            await("Current head was blocked by retained history",12000){PocketTranscript.rows.any{it.s("text")=="Fresh response 2"}&&!PocketTranscript.currentLoading}
+            Thread.sleep(3000)
+            assertEquals("A head refresh reset the historical cursor","long-gap-992",PocketTranscript.historyGap?.cursor)
+            assertEquals("Opening or refreshing eagerly drained historical pages",count,olderReads().size)
+            qa("hold-history")
+            val bounds=device.findObject(By.res("conversation-history")).visibleBounds
+            device.swipe(bounds.centerX(),(bounds.top+bounds.height()*.25).toInt(),bounds.centerX(),(bounds.top+bounds.height()*.78).toInt(),18)
+            await("Thumb scrolling did not request the visible gap",12000){olderReads().size==count+1}
+            assertEquals("long-gap-992",olderReads().last().s("cursor"))
+            qa("silent");main{Pocket.refreshDetail()}
+            await("A held historical interval blocked the next current head",12000){PocketTranscript.rows.any{it.s("text")=="Fresh response 3"}&&!PocketTranscript.currentLoading}
+            assertEquals("Current refresh rewound an in-flight interval","long-gap-992",PocketTranscript.historyGap?.cursor)
+            qa("release-history")
+            await("Requested interval did not advance",12000){PocketTranscript.historyGap?.cursor=="long-gap-984"&&!PocketTranscript.loading}
+            Thread.sleep(3000)
+            assertEquals("One gesture recursively drained more than one interval",count+1,olderReads().size)
+            qa("new-long-window");main{Pocket.refreshDetail()}
+            await("A second away interval was hidden or replaced the first",12000){PocketTranscript.rows.any{it.s("text")=="Fresh response 4"}&&PocketTranscript.historyGaps.size==2&&!PocketTranscript.currentLoading}
+            assertEquals(setOf("long-gap-984","next-gap-1000"),PocketTranscript.historyGaps.map{it.cursor}.toSet())
+            Thread.sleep(2500)
+            assertEquals("A second head window restarted automatic history draining",count+1,olderReads().size)
+            await("Multiple gap windows were not persisted",12000){
+                TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).read(scope,"same-thread")?.let{JSONObject(it).optJSONArray("historyGaps")?.length()==2}==true
+            }
+            main{
+                PocketTranscript.rememberPosition(scope,"same-thread",TranscriptReadPosition("long-head-new",0,true))
+                Pocket.closeTask();PocketTranscript.release();Pocket.open("same-thread")
+            }
+            await("Disk reopening lost a retained interval",20000){PocketTranscript.currentHistoryVerified&&PocketTranscript.historyGaps.size==2&&!PocketTranscript.loading}
+            assertEquals(setOf("long-gap-984","next-gap-1000"),PocketTranscript.historyGaps.map{it.cursor}.toSet())
+            assertEquals(1000,PocketTranscript.rows.count{it.s("id").startsWith("retained-old-")})
+            assertEquals("Retained gap draft",prefs.getString("draft:same-thread",null))
+            assertEquals(0,qa("state").getJSONArray("replies").length())
+            java.io.File(context.cacheDir,"long-retained-gap-result.json").writeText(JSONObject().put("retainedRows",1000).put("initialHistoricalReads",1).put("gestureHistoricalReads",1).put("headRefreshDidNotResetGap",true).put("currentAdvancedWhileGapHeld",true).put("twoIndependentGapsRestoredFromDisk",true).put("workSubmitted",0).toString())
+        }finally{
+            runCatching{qa("release-history")}
+            main{Pocket.closeTask();PocketLive.stop()}
+            val edit=prefs.edit().clear()
+            for((key,value)in original)when(value){
+                is String->edit.putString(key,value);is Boolean->edit.putBoolean(key,value);is Int->edit.putInt(key,value)
+                is Long->edit.putLong(key,value);is Float->edit.putFloat(key,value)
+                is Set<*>->edit.putStringSet(key,value.filterIsInstance<String>().toSet())
+            }
+            check(edit.commit())
+        }
+    }
+
 }

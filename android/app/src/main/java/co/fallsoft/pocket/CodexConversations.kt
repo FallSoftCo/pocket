@@ -172,6 +172,9 @@ internal object CodexConversations {
         val value=session?:return false
         return viewport&&value.key==key&&value.incarnation==incarnation&&current(value)
     }
+    suspend fun readGapFrom(key:CodexConversationKey?,incarnation:Long,cursor:String){
+        if(owns(key,incarnation))read(bridgeCursor=cursor)
+    }
     suspend fun readFrom(key:CodexConversationKey?,incarnation:Long,older:Boolean=false){
         if(owns(key,incarnation))read(older=older)
     }
@@ -227,17 +230,17 @@ internal object CodexConversations {
         val turn=rows.lastOrNull{it.s("kind")=="turn"}
         val verified=PocketTranscript.currentWorkVerified
         val current=session!=null&&PocketTranscript.currentHistoryVerified
-        val error=PocketTranscript.readError
+        val error=PocketTranscript.currentReadError
         val phase=when{
             session==null&&selected!=null->CodexReadPhase.PAUSED
             error.isNotBlank()->CodexReadPhase.FAILED
-            PocketTranscript.updating||PocketTranscript.loading->CodexReadPhase.UPDATING
+            PocketTranscript.updating->CodexReadPhase.UPDATING
             current->CodexReadPhase.CURRENT
             rows.isNotEmpty()->CodexReadPhase.CACHED
             else->CodexReadPhase.EMPTY
         }
         return CodexConversationSnapshot(selectionKey,incarnation,rows,d,
-            CodexFreshness(phase,current,PocketTranscript.loading,error),
+            CodexFreshness(phase,current,PocketTranscript.currentLoading,error),
             CodexCoverage(PocketTranscript.earlier,PocketTranscript.before,PocketTranscript.browsingEarlier),
             conversationRunState(pending,task?.status.orEmpty(),d?.optJSONObject("thread")?.optJSONObject("status")?.s("type").orEmpty(),
                 if(verified)turn?.s("status").orEmpty()else "",d!=null&&verified,PocketTranscript.loading),

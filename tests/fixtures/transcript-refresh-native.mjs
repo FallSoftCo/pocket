@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {LiveTimeline,timelinePage} from '../../server/timeline.mjs';
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
 let holdAncillaries=false,heldAncillaries=0,holdSearch=false,searchBlocked=false;const abortedReads=[];const statusReads=[];let catalogReads=0;const voiceReceiptReads=[];const replyReceipts=new Map(),receiptReads=[],recoveries=[];let replyAckState="accepted";let badReply=false,holdReceipt=false,wrongReceiptThread=false;let failedReadsRemaining=0;let malformedRead=false;let failReply=false,holdReply=false;let quietReading=false;let visibility=false;const acknowledgements=[],ackAttempts=[];let failedAckReads=0;let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let clippedPreview=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
-let coordinatorPaging=false;const coordinatorHistoryReads=[];let catalogPagingCount=0;let awaitingPosition=false,positionEvidence=false;let holdHistory=false;let messageIdentity=false;let sameTurnGap=false;let omitSnapshotHead=false;let headEpoch=process.env.NEXTCOMP_QA_EPOCH||"synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false,holdActivity=false,failCatalog=false,runtimeOffline=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
+let coordinatorPaging=false;const coordinatorHistoryReads=[];let catalogPagingCount=0;let awaitingPosition=false,positionEvidence=false;let holdHistory=false;let messageIdentity=false;let sameTurnGap=false;let longRetainedGap=false;let longWindow=1;let omitSnapshotHead=false;let headEpoch=process.env.NEXTCOMP_QA_EPOCH||"synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false,holdActivity=false,failCatalog=false,runtimeOffline=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
 const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+(clippedPreview?1:revision),previewKind:'message',previewRole:'codex',activityAt:(notificationOnly?1:revision)*1000,updatedAt:(notificationOnly?1:revision)*1000,recencyAt:(notificationOnly?1:revision)*1000});
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
@@ -80,6 +80,8 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/hold-history'){holdHistory=true;body={ok:true};}
  else if(path==='/_qa/release-history'){holdHistory=false;body={ok:true};}
  else if(path==='/_qa/message-identity'){messageIdentity=true;body={ok:true};}
+ else if(path==='/_qa/new-long-window'){longWindow++;revision++;body={ok:true};}
+ else if(path==='/_qa/long-retained-gap'){longRetainedGap=true;body={ok:true};}
  else if(path==='/_qa/same-turn-gap'){sameTurnGap=true;body={ok:true};}
  else if(path==='/_qa/show-second'){secondVisible=true;body={ok:true};}
  else if(path==='/_qa/advance-second'){secondRevision++;for(const s of sockets)send(s,{type:'sessionPreview',threadId:'second-thread',preview:secondThread().preview,previewKind:'message',activityAt:secondRevision*1000});body={revision:secondRevision};}
@@ -93,9 +95,9 @@ const server=http.createServer(async(req,res)=>{
   if(malformedRead){malformedRead=false;res.setHeader('Content-Type','application/json');res.end(JSON.stringify({error:'Synthetic invalid successful response'}));return;}
   if(failRead||failedReadsRemaining>0){if(failedReadsRemaining>0)failedReadsRemaining--;reads.push({at:Date.now(),older:req.url.includes("before="),revision,status:failStatus});failRead=false;res.writeHead(failStatus,{'Content-Type':'application/json'});res.end(JSON.stringify({error:failStatus===401?'Synthetic history permission rejected':'Synthetic history refresh unavailable'}));return;}
   if(awaitingPosition&&positions.length)positionEvidence=true;
-  const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev});const entry=reads.at(-1);res.once('close',()=>{if(!res.writableEnded)abortedReads.push(entry)});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
+  const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev,cursor:new URL(req.url,'http://localhost').searchParams.get('before')});const entry=reads.at(-1);res.once('close',()=>{if(!res.writableEnded)abortedReads.push(entry)});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
   await new Promise(r=>setTimeout(r,older?2200:1700));
-  while(holdHistory&&!res.destroyed)await new Promise(r=>setTimeout(r,30));
+  while(holdHistory&&(!longRetainedGap||older)&&!res.destroyed)await new Promise(r=>setTimeout(r,30));
   if(res.destroyed)return;
   while(!older&&rev===2&&holdRefresh&&!res.destroyed)await new Promise(r=>setTimeout(r,50));
   if(res.destroyed)return;
@@ -107,6 +109,18 @@ const server=http.createServer(async(req,res)=>{
    const answer={id:'gap-new-answer',kind:'message',turnId:'synthetic-turn',text:'Fresh response 2'};
    const tool={id:'gap-new-tool',kind:'activity',turnId:'synthetic-turn',text:'New tool action'};
    body.timeline=rev===1?{rows:[header,...old],hasEarlier:false,before:null}:cursor==='gap-answer'?{rows:[header,answer],hasEarlier:true,before:'gap-old',insertBefore:tool.id}:cursor==='gap-old'?{rows:[header,...old],hasEarlier:false,before:null,insertBefore:answer.id}:{rows:[header,tool],hasEarlier:true,before:'gap-answer'};
+  }
+  if(longRetainedGap){
+   const cursor=new URL(req.url,'http://localhost').searchParams.get('before');
+   const newer=cursor?.startsWith('next-gap-')||(!cursor&&longWindow>1);
+   const prefix=newer?'next-gap-':'long-gap-';const headId=newer?'long-head-new':'long-head';const itemPrefix=newer?'new-missing-':'long-missing-';
+   const end=cursor?Number(cursor.replace(prefix,'')):null;
+   if(end==null)body.timeline={rows:[{id:headId,kind:'message',turnId:'long-turn',text:'Fresh response '+rev}],hasEarlier:true,before:prefix+'1000'};
+   else{
+    const start=Math.max(1,end-7);
+    const rows=end>0?Array.from({length:end-start+1},(_,i)=>({id:itemPrefix+(start+i),kind:'message',turnId:'long-turn',text:'Missing interval message '+(start+i)})):[{id:newer?'long-head':'retained-old-999',kind:'message',turnId:newer?'long-turn':'old-turn',text:newer?'Fresh response 3':'Retained old message 999'}];
+    body.timeline={rows,hasEarlier:end>0,before:end>0?prefix+(start-1):null,insertBefore:end===1000?headId:itemPrefix+(end+1)};
+   }
   }
   if(messageIdentity)body.timeline={rows:[{id:'identity/header',kind:'turn',turnId:'identity'},
    {id:'identity/item-183',itemId:'item-183',kind:'user',turnId:'identity',clientId:'send-one',text:'Same deliberate text'},

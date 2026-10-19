@@ -2860,6 +2860,12 @@
       "status": "signed135 qualified and published to both existing channels; phone install and physical performance pending",
       "design": "Snapshot visible rows once per sweep; same-row fragments share a slot; 420ms constant row wipe followed by next row; 1800ms whole-form hold; no per-frame text layout or translation.",
       "evidence": "docs/qualification/line-reading-wave-alpha117.json"
+    },
+    {
+      "id": "bounded-current-head-and-demanded-history-gaps-20261019",
+      "request": "Long sessions must open the newest content promptly; retained old windows must not cause an unbounded eager gap walk or remain globally updating. Preserve all local text and make missing intervals load from thumb scrolling/paging without taps. Current reads remain independent of historical reads.",
+      "status": "implementation in progress; real native RPC1-2ms and local backend62ms/75KB; phone unauthenticated network0.9-6.4seconds; physical ADB unavailable",
+      "design": "Stable interval cursor independent of subsequent head refreshes, one bounded initial overlap probe, explicit inline gap and gesture-scoped historical demand; no background full-history drain."
     }
   ],
   "current_state": {

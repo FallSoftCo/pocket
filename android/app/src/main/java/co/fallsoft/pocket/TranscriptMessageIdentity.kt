@@ -52,7 +52,7 @@ internal fun transcriptDisplayAnchor(rows:List<JSONObject>,provider:String?):Str
  * Unknown or conflicting aliases remain unchanged rather than guessing a row.
  */
 internal fun migrateTranscriptAnchors(original:List<JSONObject>,requested:Set<String>):Map<String,String> {
-    require(requested.size<=1026)
+    // One linear pass resolves references from all retained interval windows.
     if(requested.isEmpty())return emptyMap()
     val matches=mutableMapOf<String,String>()
     val ambiguous=mutableSetOf<String>()

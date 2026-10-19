@@ -128,7 +128,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     fun noteFor(row:JSONObject)=notes.firstOrNull{it.s("id")==row.s("itemId",row.s("id"))||it.s("id")==row.s("id")}
     val latestAnswer=rows.lastOrNull{it.s("kind")=="message"}
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
-    val filteredRows=if(!important)rows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
+    val historyGaps=PocketTranscript.historyGaps
+    val windowRows=remember(rows,historyGaps.map{it.id to it.beforeRow}){transcriptRowsWithGaps(rows,historyGaps)}
+    val filteredRows=if(!important)windowRows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
     val runExpansionKey=Pocket.key("runExpansion:"+Pocket.selected)
     var expandedRunIds by remember(Pocket.environmentId,Pocket.selected){
         mutableStateOf(Pocket.prefs.getStringSet(runExpansionKey,emptySet()).orEmpty().toSet())
@@ -189,7 +191,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             // Its key must not be paired with the next viewport row's scroll offset.
             val visible=list.layoutInfo.visibleItemsInfo.filter{it.key.toString() in latestRowIds}.map{TranscriptVisibleRow(it.index,it.key.toString())}
             val position=transcriptReadPosition(visible,list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,latestFollow)
-            if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position.copy(rowId=latestRunProjection.canonicalId(position.rowId),offset=if(position.rowId.startsWith("ui:run-group:"))0 else position.offset))
+            if(source!=null&&position!=null)PocketTranscript.rememberPosition(owner,source,position.copy(rowId=transcriptReadingAnchor(latestRunProjection.canonicalId(position.rowId),PocketTranscript.historyGaps),offset=if(position.rowId.startsWith("ui:run-group:")||position.rowId.startsWith(TranscriptHistoryGap.ROW_PREFIX))0 else position.offset))
         }
     }
     LaunchedEffect(list,Pocket.environmentId,Pocket.selected,conversation.incarnation){
@@ -198,7 +200,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(!restoredPosition||PocketTranscript.loading||list.isScrollInProgress||important)null else
                 transcriptReadPosition(list.layoutInfo.visibleItemsInfo.map{TranscriptVisibleRow(it.index,it.key.toString())},list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset,follow)
         }.debounce(350).filterNotNull().distinctUntilChanged().collect{position->
-            if(source!=null)PocketTranscript.rememberPosition(owner,source,position.copy(rowId=latestRunProjection.canonicalId(position.rowId),offset=if(position.rowId.startsWith("ui:run-group:"))0 else position.offset))
+            if(source!=null)PocketTranscript.rememberPosition(owner,source,position.copy(rowId=transcriptReadingAnchor(latestRunProjection.canonicalId(position.rowId),PocketTranscript.historyGaps),offset=if(position.rowId.startsWith("ui:run-group:")||position.rowId.startsWith(TranscriptHistoryGap.ROW_PREFIX))0 else position.offset))
         }
     }
     LaunchedEffect(Pocket.environmentId,Pocket.selected,rows.size,restoreRevision,conversation.incarnation){
@@ -255,18 +257,39 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var pageGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
     var historyGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
     var satisfiedHistoryGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(-1)}
+    var satisfiedGapGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
+    fun viewportGap():TranscriptHistoryGap?{
+        val visible=list.layoutInfo.visibleItemsInfo.mapTo(hashSetOf()){it.key.toString()}
+        return PocketTranscript.historyGaps.lastOrNull{it.rowId in visible}
+    }
+    fun gapNearViewport():Boolean = viewportGap()!=null
+    suspend fun readViewportGap(gap:TranscriptHistoryGap,gesture:Long){
+        // Anchor content, not the moving interval marker. A user gesture during
+        // the request owns the viewport and must never be undone afterward.
+        val anchor=list.layoutInfo.visibleItemsInfo.firstOrNull{item->
+            item.key.toString() in latestRowIds&&!item.key.toString().startsWith(TranscriptHistoryGap.ROW_PREFIX)
+        }
+        val canonical=anchor?.let{latestRunProjection.canonicalId(it.key.toString())}
+        CodexConversations.readGapFrom(conversation.key,conversation.incarnation,gap.cursor)
+        androidx.compose.runtime.withFrameNanos{};androidx.compose.runtime.withFrameNanos{}
+        if(historyGesture==gesture&&!list.isScrollInProgress&&anchor!=null&&canonical!=null){
+            val index=latestRowIds.indexOf(latestRunProjection.displayId(canonical))
+            if(index>=0)list.requestScrollToItem(index,-anchor.offset)
+        }
+        satisfiedGapGesture=gesture
+    }
     var shortHistoryPull by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     val historyScrollObserver=remember(list,Pocket.environmentId,Pocket.selected){object:NestedScrollConnection{
         override fun onPreScroll(available:Offset,source:NestedScrollSource):Offset{
             // Observe only; LazyColumn retains all gesture consumption and inertia.
-            if(source==NestedScrollSource.UserInput&&available.y>0&&!list.canScrollBackward&&!list.canScrollForward&&PocketTranscript.earlier)shortHistoryPull=true
+            if(source==NestedScrollSource.UserInput&&available.y>0&&!list.canScrollBackward&&!list.canScrollForward&&(PocketTranscript.earlier||PocketTranscript.historyGap!=null))shortHistoryPull=true
             return Offset.Zero
         }
     }}
     LaunchedEffect(dragged,conversation.incarnation){
         if(dragged){CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false;filterPassage=null}
         else{
-            if(shouldResumeTranscriptFollowing(list.canScrollForward,list.canScrollBackward,PocketTranscript.earlier,shortHistoryPull))follow=true
+            if(shouldResumeTranscriptFollowing(list.canScrollForward,list.canScrollBackward,PocketTranscript.earlier||PocketTranscript.historyGap!=null,shortHistoryPull))follow=true
             shortHistoryPull=false
         }
     }
@@ -291,6 +314,21 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 list.requestScrollToItem(if(request>=0)emptyLoading+request else tail)
             }
         }
+    }
+    // Missing intervals have their own demand lane. A completed page never
+    // recursively downloads the rest of an old cache: another gesture is demand.
+    LaunchedEffect(list,Pocket.environmentId,Pocket.selected,important,conversation.incarnation){
+        snapshotFlow{!important&&!follow&&!pagingViewport&&restoredPosition&&
+            historyGesture!=satisfiedGapGesture&&!list.isScrollInProgress&&
+            !PocketTranscript.loading&&PocketTranscript.historyGap!=null&&gapNearViewport()}
+            .distinctUntilChanged().filter{it}.collect{
+                delay(180)
+                val gap=viewportGap()
+                if(gap!=null&&!list.isScrollInProgress&&!pagingViewport&&gapNearViewport()){
+                    val gesture=historyGesture
+                    readViewportGap(gap,gesture)
+                }
+            }
     }
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
@@ -377,7 +415,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     if(important&&noteFor(row)!=null&&!row.optBoolean("retainedExcerpt"))BilingualLabel("Saved answer",color=Mint,fontSize=12.sp)
                     if(row.optBoolean("retainedExcerpt"))BilingualLabel("Retained passage · source outside loaded history",color=Muted,fontSize=12.sp)
                     val commandGroup=runProjection.groups[row.s("id")]
-                    if(row.s("kind")=="commandRuns"&&commandGroup!=null) {
+                    if(row.s("kind")=="historyGap"){
+                        val historyGap=historyGaps.firstOrNull{it.rowId==row.s("id")}
+                        Row(Modifier.fillMaxWidth().heightIn(min=36.dp).testTag("conversation-history-gap"),
+                            verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                            if(historyGap?.loading==true)AnimatedMark(20)
+                            BilingualLabel(if(historyGap?.loading==true)"Loading earlier messages" else if(historyGap?.problem?.isNotBlank()==true)"Earlier messages unavailable" else "Earlier messages",color=Muted,fontSize=13.sp)
+                        }
+                    }else if(row.s("kind")=="commandRuns"&&commandGroup!=null) {
                         val expanded=commandGroup.any{it.s("id") in expandedRunIds}
                         CommandRunsHeader(commandGroup,expanded){
                             CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false
@@ -505,12 +550,17 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 if(PocketSpeech.count>0)TextButton({PocketSpeech.clear();actionsOpen=false}){BilingualLabel("Clear speech from active session")}
                 ConversationActivityControls()
             }
-            key(important){ReaderPagingButtons(list,hasEarlier=PocketTranscript.earlier&&!important,
+            key(important){ReaderPagingButtons(list,hasEarlier=(PocketTranscript.earlier||historyGaps.isNotEmpty())&&!important,
                 onPrepare={up->
                     pagingViewport=true;pageHydrated=true
                     CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false;filterPassage=null
                     if(up){
                         historyGesture++;pageGesture=historyGesture
+                        if(!important&&gapNearViewport()){
+                            viewportGap()?.let{gap->
+                                readViewportGap(gap,pageGesture)
+                            }
+                        }
                         if(!important&&!list.canScrollBackward&&PocketTranscript.earlier){
                             if(PocketTranscript.loading)snapshotFlow{PocketTranscript.loading}.first{!it}
                             val cursor=PocketTranscript.before
