@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.sp
 /** Identical bottom control geometry for stock sessions and enterprise rooms. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun ConversationFooter(content:@Composable FlowRowScope.()->Unit){
-    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp).depthSurface(Color(0xff15191f),RoundedCornerShape(24.dp),6.dp),
         horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp),content=content)
 }
 
