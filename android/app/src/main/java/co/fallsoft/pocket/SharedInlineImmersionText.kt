@@ -41,6 +41,22 @@ import androidx.compose.ui.unit.*
     readingWave:ImmersionReadingWaveClock?=null
 ){
     val owner=rememberSaveable{java.util.UUID.randomUUID().toString()}
+    val flipClock=LocalImmersionFlip.current
+    val paired=remember(from,to){immersionFlipForms(from,to)}
+    if(flipClock!=null&&paired!=null){
+        var heldPhase by rememberSaveable(owner){mutableIntStateOf(flipClock.phase)}
+        var observedPhase by remember{mutableIntStateOf(flipClock.phase)}
+        val tick=flipClock.phase
+        SideEffect{if(observedPhase!=tick){heldPhase=1-heldPhase;observedPhase=tick}}
+        val shown=paired[heldPhase]
+        androidx.compose.material3.Text(shown,modifier=modifier,color=color,fontSize=fontSize,
+            lineHeight=lineHeight,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,
+            textAlign=textAlign,onTextLayout={layout->
+                onTextLayout(layout);onFragmentLayout(layout)
+                onVisibleRanges?.invoke(shown.getStringAnnotations("immersion-reserve",0,shown.length).map{it.item}.toSet(),true)
+            })
+        return
+    }
     val selectionScope=LocalImmersionSelectionScope.current
     val uriHandler=LocalUriHandler.current
     var layouts by remember{mutableStateOf<Pair<TextLayoutResult,TextLayoutResult>?>(null)}

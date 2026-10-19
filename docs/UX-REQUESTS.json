@@ -2915,6 +2915,12 @@
         "closed-browser push",
         "native Android local execution"
       ]
+    },
+    {
+      "id": "complementary-flip-flop-all-units-20261019",
+      "request": "Replace the wave with instant roughly 50/50 Italian/English. Every eligible unit must be assigned the opposite language on each flip, with no permanently untranslated ordinary content.",
+      "contract": "Stable aligned lexical/phrase units in Italian grammar, complementary phase assignments, one shared ten-second foreground clock, no fade/wipe/frame loop, no tap-initiated phase or scroll reshuffle. Protected literals remain canonical. Missing plans are incomplete coverage, never successful immersion.",
+      "state": "implementation"
     }
   ],
   "current_state": {

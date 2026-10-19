@@ -149,22 +149,19 @@ internal class ImmersionReadingWaveClock {
 }
 internal val LocalImmersionReadingWave=staticCompositionLocalOf<ImmersionReadingWaveClock?>{null}
 
+internal class ImmersionFlipClock {
+    var phase by mutableIntStateOf(0); private set
+    fun flip(){phase=1-phase}
+}
+internal val LocalImmersionFlip=staticCompositionLocalOf<ImmersionFlipClock?>{null}
 @Composable internal fun ImmersionReadingWaveHost(content:@Composable ()->Unit){
-    val clock=remember{ImmersionReadingWaveClock()}
-    val running=immersionMotionReady()&&immersionTransitionAnimated()&&clock.hasVisible&&!BlackoutVisibility.active
-    LaunchedEffect(clock,running){
-        if(!running)return@LaunchedEffect
-        var previous=withFrameNanos{it}
-        while(isActive){
-            val now=withFrameNanos{it}
-            clock.advanceNanos(now-previous);previous=now
-        }
+    val legacy=remember{ImmersionReadingWaveClock()}
+    val flip=remember{ImmersionFlipClock()}
+    val running=PocketImmersion.enabled&&immersionMotionReady()&&!BlackoutVisibility.active
+    LaunchedEffect(flip,running){
+        if(running)while(isActive){kotlinx.coroutines.delay(10_000);flip.flip()}
     }
-    Box(Modifier.onGloballyPositioned{coordinates->
-        clock.viewport(coordinates.localToScreen(Offset.Zero),coordinates.size.width.toFloat(),coordinates.size.height.toFloat(),1f)
-    }){
-        CompositionLocalProvider(LocalImmersionReadingWave provides clock,content=content)
-    }
+    CompositionLocalProvider(LocalImmersionReadingWave provides legacy,LocalImmersionFlip provides flip,content=content)
 }
 internal data class ImmersionRendererStatus(val waveRequested:Boolean,val aligned:Boolean,val slots:Int,val markerCounts:List<Int>,val matchingIds:Boolean)
 internal val LocalImmersionRendererObserver=staticCompositionLocalOf<((ImmersionRendererStatus)->Unit)?>{null}

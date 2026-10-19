@@ -5,6 +5,23 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ImmersionSharedRunsTest {
+ @Test fun flipFlopReplacesEveryAlignedWordIncludingFunctionWords(){
+  fun sentence(words:List<String>)=buildAnnotatedString{
+   words.forEachIndexed{index,word->
+    if(index>0)append(' ')
+    val start=length;append(word)
+    addStringAnnotation("immersion-reserve","lexical:"+index,start,length)
+   }
+  }
+  val italian=listOf("Il","lavoro","continua")
+  val english=listOf("The","work","continues")
+  val forms=immersionFlipForms(sentence(italian),sentence(english))!!
+  val first=forms[0].text.split(' ');val second=forms[1].text.split(' ')
+  italian.indices.forEach{index->
+   assertEquals(setOf(italian[index],english[index]),setOf(first[index],second[index]))
+  }
+  assertEquals(3,forms[0].getStringAnnotations("immersion-reserve",0,forms[0].length).size)
+ }
  private fun form(word:String)=buildAnnotatedString{
   append("Please ");val start=length;append(word)
   addStringAnnotation("immersion-reserve","7:13",start,length)

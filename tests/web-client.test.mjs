@@ -89,3 +89,14 @@ test('canonical catalog passes through live identity, recency and pagination; ba
  for(const path of ['/api/threads/child-123/reply','/api/voice/start']){const response=await fetch(base+path,{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({threadId:'child-123',text:'Guidance'})});assert.equal(response.status,409);assert.deepEqual(await response.json(),{error:'Open parent task',parentThreadId:'parent-123'});}
  assert.deepEqual(calls.map(x=>x.url),[cursorPath,'/api/threads/child-123?view=timeline','/api/threads/child-123/reply','/api/voice/start']);assert.ok(calls.every(x=>x.authorization===`Bearer ${token}`));
 });
+
+test('paired browser audio upload preserves immutable bytes and room binding without proxying owner authority',async t=>{
+ const token='8'.repeat(64),binding='fixture-binding',payload=Buffer.alloc(4096,37),origin='https://private.example.test';let admitted=0;
+ const upstream=http.createServer(async(req,res)=>{res.setHeader('Content-Type','application/json');if(req.url==='/api/pair'){res.end(JSON.stringify({token,id:'audio-fixture'}));return;}
+  assert.equal(req.method,'PUT');assert.equal(req.headers.authorization,`Bearer ${token}`);assert.equal(req.headers['x-hollywood-binding'],binding);assert.equal(req.headers['content-type'],'audio/wav');const chunks=[];for await(const chunk of req)chunks.push(chunk);assert.deepEqual(Buffer.concat(chunks),payload);admitted++;res.end(JSON.stringify({id:'original-audio',phase:'ready'}));});
+ upstream.listen(0,'127.0.0.1');await once(upstream,'listening');t.after(()=>upstream.close());const gateway=createWebClient({origin,backend:`http://127.0.0.1:${upstream.address().port}`});gateway.server.listen(0,'127.0.0.1');await once(gateway.server,'listening');t.after(()=>gateway.server.close());const base=`http://127.0.0.1:${gateway.server.address().port}`;
+ const pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}),cookie=pair.headers.get('set-cookie').split(';')[0];
+ const headers={Origin:origin,Cookie:cookie,'Content-Type':'audio/wav','X-Hollywood-Binding':binding};
+ assert.equal((await fetch(base+'/api/voice/recordings/original-audio/audio',{method:'PUT',headers:{...headers,Origin:'https://foreign.test'},body:payload})).status,403);
+ const uploaded=await fetch(base+'/api/voice/recordings/original-audio/audio',{method:'PUT',headers,body:payload});assert.equal(uploaded.status,200);assert.equal((await uploaded.json()).id,'original-audio');assert.equal(admitted,1);
+});

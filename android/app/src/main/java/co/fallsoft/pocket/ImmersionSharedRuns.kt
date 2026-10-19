@@ -43,3 +43,19 @@ internal fun immersionSharedRuns(forms:List<AnnotatedString>):List<ImmersionShar
     }
     return runs.filter{it.forms.any{form->form.isNotEmpty()}}
 }
+
+/** Complementary lexical assignments; whitespace never consumes a language slot. */
+internal fun immersionFlipForms(target:AnnotatedString,meaning:AnnotatedString):List<AnnotatedString>? {
+    val runs=immersionSharedRuns(listOf(target,meaning))?:return null
+    val eligible=runs.filter{it.id!=null&&it.forms[0].any{c->c.isLetter()}}
+    if(eligible.isEmpty()||eligible.any{it.forms[1].isBlank()})return null
+    val seed=eligible.first().forms[0].text.hashCode()
+    return (0..1).map{phase->buildAnnotatedString{
+        var ordinal=0
+        for(run in runs){
+            val lexical=run.id!=null&&run.forms[0].any{it.isLetter()}
+            val form=if(lexical)((ordinal++ + seed) and 1) xor phase else 0
+            append(run.forms[form])
+        }
+    }}
+}

@@ -54,8 +54,8 @@ import androidx.compose.ui.unit.*
     }
     val readingWave=LocalImmersionReadingWave.current
     if(readingWave!=null&&plan!=null&&support!=target){
-        val waveAllowed=!expanded&&PocketImmersion.motionEnabled&&immersionTransitionAnimated()
-        val current=if(expanded)support else target
+        val waveAllowed=LocalImmersionFlip.current!=null||(!expanded&&PocketImmersion.motionEnabled&&immersionTransitionAnimated())
+        val current=if(expanded&&LocalImmersionFlip.current==null)support else target
         val rescue=Modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})}
         SharedInlineImmersionText(actionText(form(current)),actionText(form(if(waveAllowed)support else current)),{1f},
             modifier=modifier.then(rescue),color=color,fontSize=fontSize,fontWeight=fontWeight,maxLines=maxLines,
