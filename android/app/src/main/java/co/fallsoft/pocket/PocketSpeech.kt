@@ -341,7 +341,7 @@ class PocketSpeechService:Service(){
         if(player!=null){if(prepared)updateControls(PlaybackState.STATE_PLAYING);return}
         if(loading||synthesizing!=null)return
         val message=queue.current?:run{finish();return}
-        if(!explicitPlayback&&!PocketSpeech.allowed(this,message.kind)){pause("Waiting for sound to be enabled");return}
+        if(!explicitPlayback){pause("Choose Speak or Resume to listen");return}
         updateControls(PlaybackState.STATE_BUFFERING)
         if(message.kind in listOf("question","approval","input_required")&&message.id !in checkedAttention){
             loading=true;armTimeout()

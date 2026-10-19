@@ -18,12 +18,15 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @RunWith(AndroidJUnit4::class)
 class OnDemandSpeechNativeTest {
  @Test fun legacyBacklogRetiresWithoutAcknowledgementAndClearAllIsDirect(){
   val i=InstrumentationRegistry.getInstrumentation()
   val c=ApplicationProvider.getApplicationContext<Context>()
   val storage=c.getSharedPreferences("speech-playback",Context.MODE_PRIVATE)
+  val usage=c.getSharedPreferences("native-speech-usage",Context.MODE_PRIVATE)
+  val generatedBefore=usage.getLong("generated",0)
   val saved=storage.all.toMap()
   val immersion=PocketImmersion.enabled
   val device=UiDevice.getInstance(i)
@@ -46,6 +49,7 @@ class OnDemandSpeechNativeTest {
    val notice=JSONObject().put("id",999998L).put("kind","update").put("title","Incoming update").put("body","Text remains available").put("created_at",System.currentTimeMillis())
    main{Pocket.acceptNotification(notice,"socket")}
    assertEquals("Notification arrival admitted playback",0,PocketSpeech.count)
+   assertNull("Unrequested notification started playback service",PocketSpeech.service)
    assertFalse("Retirement marked the incoming update read",PocketNotificationReads.isRead(notice))
    main{
     PocketSpeech.sessions.enqueue(SpokenMessage(-1,"Requested preview A","preview","A"))
@@ -87,7 +91,8 @@ class OnDemandSpeechNativeTest {
     assertTrue("Focus escapes horizontal rim",focus.left>=bar.left+8*px-2&&focus.right<=bar.right-8*px+2)
     assertTrue(device.takeScreenshot(java.io.File(c.filesDir,"toolbar-insets-"+scale+".png")))
    }
-   java.io.File(c.filesDir,"on-demand-speech-result.json").writeText(JSONObject().put("retired",550).put("restoredAgain",0).put("notificationAdmitted",false).put("heardUnchanged",true).put("directClearAll",true).put("providerStarted",false).toString())
+   assertEquals("Unrequested audio was generated",generatedBefore,usage.getLong("generated",0))
+   java.io.File(c.filesDir,"on-demand-speech-result.json").writeText(JSONObject().put("retired",550).put("restoredAgain",0).put("notificationAdmitted",false).put("heardUnchanged",true).put("directClearAll",true).put("playbackServiceStarted",PocketSpeech.service!=null).put("generatedDelta",usage.getLong("generated",0)-generatedBefore).toString())
   }finally{
    main{PocketSpeech.clearAll()}
    val edit=storage.edit().clear()
