@@ -45,6 +45,10 @@ test('release storage refuses RAM-backed source, output, cache or stage without 
   assert.throws(()=>checkBuildStorage('/stage',path=>({...disk,type:path===ram?0x01021994:disk.type}),['/source','/outputs','/cache']),/RAM-backed build path/);
  }
  const result=checkBuildStorage('/stage',()=>disk,['/source','/outputs','/cache']);assert.ok(result.rootRequired>80*1024**3);
+ const missing=Object.assign(new Error('Not created yet'),{code:'ENOENT'});
+ assert.ok(checkBuildStorage('/stage',path=>{if(path==='/source/new/build')throw missing;return disk;},['/source/new/build']).rootRequired>80*1024**3);
+ assert.throws(()=>checkBuildStorage('/stage',path=>{if(path==='/source/new/build')throw missing;return {...disk,type:path==='/source/new'?0x01021994:disk.type};},['/source/new/build']),/RAM-backed build path/);
+ assert.throws(()=>checkBuildStorage('/stage',path=>{if(path==='/source/new/build')throw Object.assign(new Error('Access denied'),{code:'EACCES'});return disk;},['/source/new/build']),/Access denied/);
 });
 
 test('ADB exec-out success cannot turn shell errors into retained preferences',()=>{
