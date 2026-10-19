@@ -75,7 +75,7 @@ required case receipts. It rejects missing, failed, stale or altered evidence.
 and separate qualification/test APK builds. It binds receipts to the APK's actual
 version, rather than the package-manager metadata. Configure the authorized build
 host and a new private stage; the builder also checks the 80 GiB recovery reserve.
-Credentials stay outside source. Set the maintained compatible debug signing store
+Credentials stay outside source. For an already paired private QA emulator, set `POCKET_QA_SIGNING_STORE` to its existing debug-compatible signing store; do not erase its data to resolve a signer mismatch. Set the maintained compatible debug signing store
 when that installed identity is an intended update recipient.
 
 Create an explicitly owned `nextcomp_env_qa` emulator on serial `emulator-5620`.

@@ -58,6 +58,7 @@ try{
   record.phoneCompatible={optimized:true,apkSha256:fileSha(compatibleRelease)};
  }
  const qaEnv={...process.env};delete qaEnv.POCKET_DEBUG_STORE;
+ if(process.env.POCKET_QA_SIGNING_STORE){outside(process.env.POCKET_QA_SIGNING_STORE);qaEnv.POCKET_DEBUG_STORE=process.env.POCKET_QA_SIGNING_STORE;}
  const qa=['assembleQualification','assembleQualificationAndroidTest'];run('./gradlew',[...gradleArgs,...qa],qaEnv,join(root,'android'));record.tasks.push(...qa);
  const env={...process.env,POCKET_DATA:stage};delete env.POCKET_SIGNING_PASSWORD;delete env.POCKET_SIGNING_KEY_PASSWORD;
  const release=primaryRelease;

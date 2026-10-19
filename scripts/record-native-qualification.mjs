@@ -1,7 +1,8 @@
+import {homedir} from 'node:os';
 import {startOwnedFixture,stopOwnedFixture,acquireOwnedRunLock} from './owned-fixture.mjs';
 import {spawnSync} from 'node:child_process';
 import crypto from 'node:crypto';
-import {readFileSync,writeFileSync,existsSync,openSync,closeSync,realpathSync} from 'node:fs';
+import {readFileSync,writeFileSync,existsSync,openSync,closeSync,realpathSync,mkdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {fileSha,sha256,productionSourceSha,qualificationInputSha,nativeOutputPassed} from './release-qualification.mjs';
@@ -14,16 +15,20 @@ const current=()=>build.state==='complete'&&productionSourceSha(root)===build.pr
 if(!current())throw Error('Build/source qualification is stale.');
 const ownerPath=process.env.NEXTCOMP_QA_OWNER_RECEIPT,actor=process.env.NEXTCOMP_QA_OWNER;
 if(!ownerPath||!actor)throw Error('Provide the private owned-emulator receipt and actor.');
-const releaseOwnership=acquireOwnedRunLock(ownerPath+'.run.lock');
 const owner=read(ownerPath),serial=owner.serial||'emulator-5620',avdName=owner.avdName||'nextcomp_env_qa',sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT;
 if(!/^emulator-[0-9]{4,5}$/.test(serial)||!/^(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)$/.test(avdName))throw Error('An explicitly owned NextComp emulator is required.');
 if(!sdk||owner.owner!==actor||!Number.isSafeInteger(owner.emulatorPid))throw Error('Wrong QA owner or SDK.');
 const command=readFileSync('/proc/'+owner.emulatorPid+'/cmdline','utf8');
 const ticks=readFileSync('/proc/'+owner.emulatorPid+'/stat','utf8').split(') ').at(-1).split(' ')[19];
 if(owner.emulatorStartTicks!==ticks||!command.split('\0').includes(avdName)||!command.split('\0').includes(serial.slice('emulator-'.length)))throw Error('Owned emulator process is not current.');
+const lockDirectory=join(process.env.XDG_STATE_HOME||join(homedir(),'.local/state'),'nextcomp','qa-locks');
+mkdirSync(lockDirectory,{recursive:true,mode:0o700});
+const lockIdentity=sha256(Buffer.from(serial+'\0'+owner.emulatorPid+'\0'+ticks));
+const releaseOwnership=acquireOwnedRunLock(join(lockDirectory,lockIdentity+'.lock'));
+
 const adb=join(sdk,'platform-tools/adb');
 const childEnv={PATH:process.env.PATH,HOME:process.env.HOME,LANG:'C.UTF-8'};
-const run=(args,timeout=120000)=>{const r=spawnSync(adb,['-s',serial,...args],{encoding:'utf8',env:childEnv,timeout,maxBuffer:4*1024*1024});if(r.status!==0)throw Error('Owned emulator command failed: '+args[0]);return r.stdout;};
+const run=(args,timeout=120000)=>{const r=spawnSync(adb,['-s',serial,...args],{encoding:'utf8',env:childEnv,timeout,maxBuffer:4*1024*1024});if(r.status!==0){const failure=args[0]==='install'?((r.stderr||'')+(r.stdout||'')).match(/Failure\s*\[[^\]\r\n]{1,500}\]/)?.[0]:null;throw Error('Owned emulator command failed: '+args[0]+' ('+(r.error?.code||r.signal||r.status)+')'+(failure?': '+failure:''));}return r.stdout;};
 if(run(['shell','getprop','ro.boot.qemu.avd_name']).trim()!==avdName)throw Error('Wrong native target.');
 const id=sha256(Buffer.from(name)).slice(0,20),receiptPath=join(directory,'native-'+id+'.json'),log='native-'+id+'.log';
 if(existsSync(receiptPath))throw Error('Native intent already exists; observe it instead of replaying.');
