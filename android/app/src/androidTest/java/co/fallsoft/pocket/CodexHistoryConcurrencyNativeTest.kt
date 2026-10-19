@@ -148,7 +148,10 @@ class CodexHistoryConcurrencyNativeTest {
             assertEquals("A head refresh reset the historical cursor","long-gap-992",PocketTranscript.historyGap?.cursor)
             assertEquals("Opening or refreshing eagerly drained historical pages",count,olderReads().size)
             qa("hold-history")
-            val bounds=device.findObject(By.res("conversation-history")).visibleBounds
+            assertTrue("The current answer has not painted",device.wait(Until.hasObject(By.text("Fresh response 2")),10000))
+            val viewport=device.wait(Until.findObject(By.res("conversation-history")),5000)
+            assertNotNull("Conversation viewport is absent from native semantics",viewport)
+            val bounds=viewport!!.visibleBounds
             device.swipe(bounds.centerX(),(bounds.top+bounds.height()*.25).toInt(),bounds.centerX(),(bounds.top+bounds.height()*.78).toInt(),18)
             await("Thumb scrolling did not request the visible gap",12000){olderReads().size==count+1}
             assertEquals("long-gap-992",olderReads().last().s("cursor"))
