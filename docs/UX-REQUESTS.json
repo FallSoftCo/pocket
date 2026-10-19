@@ -2898,6 +2898,12 @@
         "Select existing title only on entering edit, never reset selection while typing",
         "Update native touch-specific qualification expectations to volume-only UX rather than fake old touch results"
       ]
+    },
+    {
+      "id": "web-tailnet-automatic-browser-signin-20261019",
+      "request": "Allow anyone on the tailnet to open the web client without manually exchanging a pairing code, including BLD.",
+      "implementation": "Opt-in Serve-source verification using local tailscale whois, exact-origin login, separate ordinary device cookie per browser, existing backend pair contract; no Android pairing changes.",
+      "verification": "Remote gateway integration and origin/source rejection checks passed. Live deployment/readback remains required."
     }
   ],
   "current_state": {

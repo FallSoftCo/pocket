@@ -1,4 +1,5 @@
 import express from 'express';
+import {createTailnetBrowserAuth} from './tailnet-browser-auth.mjs';
 import http from 'node:http';
 import {createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {resolve,dirname} from 'node:path';
@@ -12,7 +13,7 @@ import {Codex} from './codex.mjs';
 import {sessionIdentity,workTime} from '../web/model.mjs';
 
 // Separate loopback gateway: no owner credentials, database writes or backend restart.
-export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=true,metadata=null,key=randomBytes(32),basePath='/',migrationSourceOrigin=null,migrationTargetOrigin=null}={}) {
+export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=true,metadata=null,key=randomBytes(32),basePath='/',migrationSourceOrigin=null,migrationTargetOrigin=null,tailnetAuth=null}={}) {
  const target=new URL(backend);if(!['127.0.0.1','localhost','[::1]'].includes(target.hostname))throw Error('Web backend must be loopback.');
  if(!origin||new URL(origin).origin!==origin||(secure&&!origin.startsWith('https://')))throw Error('Set WEB_ORIGIN to the private HTTPS origin.');
  if(!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(basePath))throw Error('WEB_BASE_PATH must be a rooted directory path ending in /.');
@@ -27,6 +28,12 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
  const csrf=(req,res,next)=>req.headers.origin===origin?next():res.status(403).json({error:'Open NextComp at its configured private address.'});
  const forward=async(req,path,body,token)=>fetch(new URL(path,target),{method:req.method,redirect:'error',headers:{...(token?{Authorization:`Bearer ${token}`}:{ }),'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(45000)});
  app.post('/web/pair',csrf,async(req,res,next)=>{try{const r=await forward(req,'/api/pair',{code:req.body.code,name:String(req.body.name||'NextComp browser').slice(0,100)});const data=await r.json();if(r.ok){setCookie(res,data.token);res.json({id:data.id,host:data.host});}else res.status(r.status).json({error:data.error});}catch(e){next(e);}});
+ app.post('/web/tailnet-login',csrf,async(req,res)=>{
+  if(!tailnetAuth)return res.status(403).json({error:'Automatic tailnet sign-in is not enabled.'});
+  if(cookie(req))return res.json({ok:true});
+  try{const device=await tailnetAuth(req);setCookie(res,device.token);res.json({id:device.id,host:device.host});}
+  catch(e){res.status(403).json({error:e.message});}
+ });
  app.get('/web/config',(_req,res)=>res.json({basePath,migrationSourceOrigin,migrationTargetOrigin}));
  app.post('/web/logout',csrf,(req,res)=>{setCookie(res,null);res.json({ok:true});});
  app.use('/api',async(req,res,next)=>{
@@ -86,5 +93,6 @@ export function runtimeMetadata(codex=new Codex()){
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const folder=process.env.WEB_DATA||resolve(homedir(),'.local/share/nextcomp-web');mkdirSync(folder,{recursive:true,mode:0o700});const keyPath=resolve(folder,'cookie-key');if(!existsSync(keyPath))writeFileSync(keyPath,randomBytes(32),{mode:0o600,flag:'wx'});chmodSync(keyPath,0o600);
- const {server}=createWebClient({origin:process.env.WEB_ORIGIN,basePath:process.env.WEB_BASE_PATH||'/',migrationSourceOrigin:process.env.WEB_MIGRATION_SOURCE_ORIGIN||null,migrationTargetOrigin:process.env.WEB_MIGRATION_TARGET_ORIGIN||null,backend:process.env.POCKET_URL,metadata:process.env.WEB_LEGACY_METADATA==='1'?runtimeMetadata():null,key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
+ const tailnetAuth=process.env.WEB_TAILNET_AUTH_SECRETS?createTailnetBrowserAuth({backend:process.env.POCKET_URL||'http://127.0.0.1:18880',ownerToken:JSON.parse(readFileSync(process.env.WEB_TAILNET_AUTH_SECRETS,'utf8')).adminToken}):null;
+ const {server}=createWebClient({tailnetAuth,origin:process.env.WEB_ORIGIN,basePath:process.env.WEB_BASE_PATH||'/',migrationSourceOrigin:process.env.WEB_MIGRATION_SOURCE_ORIGIN||null,migrationTargetOrigin:process.env.WEB_MIGRATION_TARGET_ORIGIN||null,backend:process.env.POCKET_URL,metadata:process.env.WEB_LEGACY_METADATA==='1'?runtimeMetadata():null,key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
 }
