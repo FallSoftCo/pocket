@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalDensity
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -258,12 +259,16 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var historyGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
     var satisfiedHistoryGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(-1)}
     var satisfiedGapGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}
+    data class GapDemand(val gesture:Long,val rowId:String,val cursor:String)
+    var gapDemand by remember(conversation.incarnation){mutableStateOf<GapDemand?>(null)}
+    var pointerHistoryGesture by remember(conversation.incarnation){mutableStateOf(false)}
     fun viewportGap():TranscriptHistoryGap?{
         val visible=list.layoutInfo.visibleItemsInfo.mapTo(hashSetOf()){it.key.toString()}
         return PocketTranscript.historyGaps.lastOrNull{it.rowId in visible}
     }
     fun gapNearViewport():Boolean = viewportGap()!=null
     suspend fun readViewportGap(gap:TranscriptHistoryGap,gesture:Long){
+        if(PocketTranscript.loading||PocketTranscript.updating)return
         // Anchor content, not the moving interval marker. A user gesture during
         // the request owns the viewport and must never be undone afterward.
         val anchor=list.layoutInfo.visibleItemsInfo.firstOrNull{item->
@@ -276,7 +281,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val index=latestRowIds.indexOf(latestRunProjection.displayId(canonical))
             if(index>=0)list.requestScrollToItem(index,-anchor.offset)
         }
-        satisfiedGapGesture=gesture
+        satisfiedGapGesture=maxOf(satisfiedGapGesture,gesture)
     }
     var shortHistoryPull by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     val historyScrollObserver=remember(list,Pocket.environmentId,Pocket.selected){object:NestedScrollConnection{
@@ -294,8 +299,36 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
     }
     LaunchedEffect(list,conversation.incarnation){
+        var settled:Job?=null
+        list.interactionSource.interactions.collect{interaction->
+            when(interaction){
+                is DragInteraction.Start->{
+                    settled?.cancel();pointerHistoryGesture=true
+                    CodexConversations.readerInteraction(conversation.key,conversation.incarnation)
+                    follow=false;filterPassage=null;historyGesture++
+                    gapDemand=viewportGap()?.let{GapDemand(historyGesture,it.rowId,it.cursor)}
+                }
+                is DragInteraction.Stop,is DragInteraction.Cancel->{
+                    settled=launch{
+                        withFrameNanos{}
+                        snapshotFlow{list.isScrollInProgress}.first{!it}
+                        pointerHistoryGesture=false
+                    }
+                }
+            }
+        }
+    }
+    LaunchedEffect(list,conversation.incarnation){
         // Accessibility scroll actions do not emit pointer-drag interactions.
-        snapshotFlow{list.isScrollInProgress&&!follow&&!pagingViewport}.distinctUntilChanged().filter{it}.collect{historyGesture++}
+        snapshotFlow{list.isScrollInProgress&&!follow&&!pagingViewport&&!pointerHistoryGesture}
+            .distinctUntilChanged().filter{it}.collect{historyGesture++}
+    }
+    LaunchedEffect(list,conversation.incarnation){
+        // Remember a crossed interval even if the fling settles beyond its marker.
+        snapshotFlow{if(!follow&&!pagingViewport&&historyGesture>satisfiedGapGesture)viewportGap() else null}
+            .filterNotNull().collect{gap->
+                if(gapDemand?.gesture!=historyGesture)gapDemand=GapDemand(historyGesture,gap.rowId,gap.cursor)
+            }
     }
     // Resolve following before measure; never paint the oldest retained page
     // and only later jump to the current answer. Gate on transcript changes,
@@ -318,17 +351,19 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     // Missing intervals have their own demand lane. A completed page never
     // recursively downloads the rest of an old cache: another gesture is demand.
     LaunchedEffect(list,Pocket.environmentId,Pocket.selected,important,conversation.incarnation){
-        snapshotFlow{!important&&!follow&&!pagingViewport&&restoredPosition&&
-            historyGesture!=satisfiedGapGesture&&!list.isScrollInProgress&&
-            !PocketTranscript.loading&&PocketTranscript.historyGap!=null&&gapNearViewport()}
-            .distinctUntilChanged().filter{it}.collect{
-                delay(180)
-                val gap=viewportGap()
-                if(gap!=null&&!list.isScrollInProgress&&!pagingViewport&&gapNearViewport()){
-                    val gesture=historyGesture
-                    readViewportGap(gap,gesture)
-                }
-            }
+        snapshotFlow{
+            gapDemand?.takeIf{!important&&!follow&&!pagingViewport&&restoredPosition&&
+                it.gesture>satisfiedGapGesture&&!list.isScrollInProgress&&
+                !PocketTranscript.loading&&!PocketTranscript.updating}
+        }.distinctUntilChanged().filterNotNull().collect{demand->
+            delay(180)
+            if(list.isScrollInProgress||pagingViewport||PocketTranscript.loading||PocketTranscript.updating)return@collect
+            val gap=PocketTranscript.historyGaps.firstOrNull{it.rowId==demand.rowId}
+            if(gap==null||gap.cursor!=demand.cursor){
+                satisfiedGapGesture=maxOf(satisfiedGapGesture,demand.gesture)
+            }else readViewportGap(gap,demand.gesture)
+            if(satisfiedGapGesture>=demand.gesture&&gapDemand==demand)gapDemand=null
+        }
     }
     // Thumb scrolling is the pagination control. LazyColumn's stable row keys retain
     // the visible message and pixel offset when an older page is prepended.
