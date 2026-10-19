@@ -44,7 +44,7 @@ import kotlin.math.sqrt
     val image=remember(width,height,metrics.density,configuration.orientation){depthBackdropRaster(width,height,metrics.density).asImageBitmap().apply{prepareToDraw()}}
     Box(Modifier.fillMaxSize()){
         androidx.compose.foundation.Canvas(Modifier.matchParentSize()){
-            drawImage(image,dstSize=IntSize(width,height),filterQuality=FilterQuality.Low)
+            drawImage(image,dstSize=IntSize(width,height),filterQuality=if(image.width==width&&image.height==height)FilterQuality.None else FilterQuality.Low)
         }
         Surface(Modifier.fillMaxSize(),color=Color.Transparent,contentColor=Paper,content=content)
     }
