@@ -236,7 +236,6 @@ class MainActivity:ComponentActivity(){
             AnimatedContent(targetState=Pocket.tab,modifier=Modifier.fillMaxSize(),label="tab",transitionSpec={
                 (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
             }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it},workListState,workCatalogView);else->SettingsScreen()}}
-            if(Pocket.tab==0&&!workToolsOpen)WorkCatalogCapture(Modifier.align(Alignment.BottomEnd).padding(end=16.dp,bottom=8.dp).testTag("session-catalog-microphone"))
             }
             ConversationSpeechDock()
             InlineCaptureStatus()
@@ -412,7 +411,7 @@ class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntState
     Column(Modifier.fillMaxSize()){
     WorkCatalogList(Modifier.weight(1f).pointerInput(Unit){
         awaitPointerEventScope{try{while(true){touching=awaitPointerEvent(PointerEventPass.Initial).changes.any{it.pressed}}}finally{touching=false}}
-    },state=listState,contentPadding=PaddingValues(top=12.dp,bottom=104.dp)){
+    },state=listState,contentPadding=PaddingValues(top=12.dp,bottom=12.dp)){
 
         item{ErrorBanner()}
         if(showCoordinator)item(key="nextcomp-coordinator"){CoordinatorCard()}
@@ -457,13 +456,12 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 }
 @Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis(),headerBadge:(@Composable ()->Unit)?=null,
     modifier:Modifier=Modifier,onOpen:(Boolean)->Unit={Pocket.open(t.id,keyboard=it)},
-    voice:(@Composable (Modifier)->Unit)?={VoiceLaunchButton(modifier=it,threadId=t.id,cardRegion=true)},
     onRename:((String,()->Unit)->Unit)?={name,done->Pocket.renameTask(t.id,name,done)},
     onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)}){
     val active=t.status in listOf("active","pending");val activityTime=taskWorkTime(t);val ageColor=sessionAgeColor(activityTime,now)
     LaunchedEffect(Pocket.environmentId,t.id,t.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
-    var rename by remember(Pocket.environmentId,t.id){mutableStateOf(false)};var name by remember(Pocket.environmentId,t.id){mutableStateOf(t.title)}
+    var rename by remember(Pocket.environmentId,t.id){mutableStateOf(false)};var name by remember(Pocket.environmentId,t.id){mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(t.title))}
     val highlight=remember(Pocket.environmentId,t.id){Animatable(0f)}
     val revision=Triple(t.preview,t.status,t.activityAt)
     var observed by remember(Pocket.environmentId,t.id){mutableStateOf(revision)}
@@ -472,8 +470,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     val stateLabel=when{active->if(t.status=="pending")"Starting" else "Working";t.needsInput->"Needs your input";t.status=="idle"->"Idle";t.status=="blocked"->"Blocked";t.status=="failed"->"Failed";else->"Status unavailable"}
     WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,modifier,knownIdle=t.status=="idle"&&!t.needsInput){
         if(!t.archived)Row(Modifier.matchParentSize()){
-            voice?.invoke(Modifier.weight(.22f).fillMaxHeight())
-            CardInteractionRegion("Chat",Modifier.weight(if(voice==null).78f else .56f).fillMaxHeight(),t.title){onOpen(false)}
+            CardInteractionRegion("Chat",Modifier.weight(.78f).fillMaxHeight(),t.title){onOpen(false)}
             CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight(),t.title){onOpen(true)}
         }
         Column(Modifier.padding(start=12.dp,end=12.dp,top=2.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
@@ -481,14 +478,14 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(rename){
                 val focus=remember{androidx.compose.ui.focus.FocusRequester()}
                 LaunchedEffect(Unit){focus.requestFocus()}
-                OutlinedTextField(name,{name=it.take(120)},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.trim().isNotEmpty())onRename?.invoke(name.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.trim().isNotEmpty())onRename?.invoke(name.trim()){rename=false}}))
+                OutlinedTextField(name,{name=it.copy(text=it.text.take(120))},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.text.trim().isNotEmpty())onRename?.invoke(name.text.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.text.trim().isNotEmpty())onRename?.invoke(name.text.trim()){rename=false}}))
             }else Box(Modifier.weight(1f),contentAlignment=Alignment.CenterStart){
                 LaunchedEffect(Pocket.environmentId,t.id,t.title,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("session-title:"+t.id,t.title,"session title")}
                 val titleConfiguration=androidx.compose.ui.platform.LocalViewConfiguration.current
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalViewConfiguration provides object:androidx.compose.ui.platform.ViewConfiguration by titleConfiguration {
                     override val minimumTouchTargetSize=androidx.compose.ui.unit.DpSize.Zero
                 }){
-                    BilingualLabel(t.title,color=cardText,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,centered=false,onActivate=if(onRename==null)null else {{name=t.title;rename=true}})
+                    BilingualLabel(t.title,color=cardText,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,centered=false,onActivate=if(onRename==null)null else {{name=androidx.compose.ui.text.input.TextFieldValue(t.title,androidx.compose.ui.text.TextRange(0,t.title.length));rename=true}})
                 }
             }
             if(!rename)headerBadge?.invoke()

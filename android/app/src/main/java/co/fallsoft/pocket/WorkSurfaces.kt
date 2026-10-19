@@ -23,8 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** Shared catalog geometry; each backend owns identities, ordering and pagination. */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable internal fun WorkCatalogList(modifier:Modifier,state:LazyListState=rememberLazyListState(),reverseLayout:Boolean=true,contentPadding:PaddingValues=PaddingValues(vertical=12.dp),content:LazyListScope.()->Unit){
-    LazyColumn(modifier.fillMaxWidth().padding(horizontal=16.dp),state=state,reverseLayout=reverseLayout,
+    LazyColumn(modifier.fillMaxWidth().semantics{testTagsAsResourceId=true}.testTag("work-catalog").padding(horizontal=16.dp),state=state,reverseLayout=reverseLayout,
         verticalArrangement=Arrangement.spacedBy(8.dp,if(reverseLayout)Alignment.Bottom else Alignment.Top),contentPadding=contentPadding,content=content)
 }
 
@@ -111,9 +112,4 @@ import androidx.compose.ui.unit.sp
                 if(!bottomActions){HorizontalDivider();report()}
             })
     }
-}
-
-/** The same primary capture control floats above either catalog dock. */
-@Composable internal fun WorkCatalogCapture(modifier:Modifier=Modifier,roomDestination:org.json.JSONObject?=null,sourceLabel:String?=null){
-    VoiceLaunchButton(modifier.size(80.dp).semantics{testTagsAsResourceId=true},compact=true,largeFloating=true,roomDestination=roomDestination,sourceLabel=sourceLabel)
 }

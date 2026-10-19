@@ -37,8 +37,7 @@ import kotlinx.coroutines.flow.*
     LaunchedEffect(PocketCoordinator.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("coordinator:preview",PocketCoordinator.preview,"coordinator message")}
     Box(Modifier.fillMaxWidth().height(height).clip(shape).background(Panel).border(1.dp,Mint.copy(alpha=.55f),shape)){
         Row(Modifier.matchParentSize()){
-            VoiceLaunchButton(modifier=Modifier.weight(.22f).fillMaxHeight(),cardRegion=true)
-            CardInteractionRegion(PocketImmersion.label("Coordinator chat"),Modifier.weight(.56f).fillMaxHeight()){PocketCoordinator.open()}
+            CardInteractionRegion(PocketImmersion.label("Coordinator chat"),Modifier.weight(.78f).fillMaxHeight()){PocketCoordinator.open()}
             CardInteractionRegion(PocketImmersion.label("Coordinator keyboard"),Modifier.weight(.22f).fillMaxHeight()){PocketCoordinator.open(keyboard=true)}
         }
         Column(Modifier.padding(horizontal=12.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
@@ -112,7 +111,6 @@ import kotlinx.coroutines.flow.*
         InlineCaptureStatus()
         Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(typing)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                VoiceLaunchButton(modifier=Modifier.size(56.dp),compact=true)
                 OutlinedTextField(draft,{value->
                     val enter=value.length==draft.length+1&&value.contains('\n')&&value.replace("\n","")==draft
                     updateDraft(value.replace('\n',' '));if(enter)send()
@@ -121,7 +119,6 @@ import kotlinx.coroutines.flow.*
                 },keyboardOptions=KeyboardOptions(imeAction=ImeAction.Send),keyboardActions=KeyboardActions(onSend={send()}))
                 FilledTonalIconButton({send()},enabled=draft.isNotBlank()&&!sending,modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,PocketImmersion.label("Send coordinator message"),Modifier.size(40.dp),tint=Paper)}
             }else Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                VoiceLaunchButton(modifier=Modifier.weight(1f),bar=true)
                 ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{PocketCoordinator.keyboard(true)})
             }
             FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(2.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){

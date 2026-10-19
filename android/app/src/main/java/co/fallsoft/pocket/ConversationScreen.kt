@@ -232,7 +232,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val spokenRows=remember(Pocket.environmentId,Pocket.selected){mutableStateMapOf<String,Pair<String,String>>()}
     var settingsOpen by remember(Pocket.selected){mutableStateOf(false)}
     var renameOpen by remember(Pocket.selected){mutableStateOf(false)}
-    var taskName by remember(Pocket.selected){mutableStateOf("")}
+    var taskName by remember(Pocket.selected){mutableStateOf(TextFieldValue())}
     var confirmArchive by remember(Pocket.selected){mutableStateOf(false)}
     var editingQueue by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     var queuedText by remember(Pocket.selected){mutableStateOf("")}
@@ -370,7 +370,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue · ${waiting.size}")}
             TextButton({rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"},modifier=Modifier.fillMaxWidth()){BilingualLabel("Keep latest reply in notes")}
             TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Model, effort & mode")}
-            TextButton({actionsOpen=false;taskName=t?.s("name").orEmpty();renameOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Rename")}
+            TextButton({actionsOpen=false;taskName=t?.s("name").orEmpty().let{TextFieldValue(it,TextRange(0,it.length))};renameOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Rename")}
             TextButton({actionsOpen=false;confirmArchive=true},enabled=!active,modifier=Modifier.fillMaxWidth()){BilingualLabel("Archive")}
             TextButton({actionsOpen=false;submit("queue")},enabled=hasDraft&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue message")}
     }
@@ -512,7 +512,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         val draft=editor.text
         Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
             ConversationComposerRow{
-                VoiceLaunchButton(modifier=Modifier.size(64.dp),threadId=Pocket.selected,compact=true)
                 if(active)IconButton({CodexConversations.interrupt(conversation.key,conversation.incarnation)},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
                 ConversationDraftField(editor,{if(editor.text!=it.text)saveReplyDraft(draftKey,it.text);editor=it},
                     modifier=Modifier.weight(1f).focusRequester(inputFocus).onPreviewKeyEvent{event->
@@ -537,7 +536,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
         }
         if(!keyboardInput)Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
-            VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=Pocket.selected,bar=true)
             if(active)IconButton({CodexConversations.interrupt(conversation.key,conversation.incarnation)},modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
             ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
         }
@@ -599,7 +597,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
     }
     if(settingsOpen)TurnSettingsDialog{settingsOpen=false}
-    if(renameOpen)AlertDialog(onDismissRequest={renameOpen=false},title={BilingualLabel("Rename conversation")},text={OutlinedTextField(taskName,{taskName=it},singleLine=true)},confirmButton={TextButton({Pocket.renameTask(taskName){renameOpen=false}},enabled=taskName.isNotBlank()){BilingualLabel("Save")}},dismissButton={TextButton({renameOpen=false}){BilingualLabel("Cancel")}})
+    if(renameOpen)AlertDialog(onDismissRequest={renameOpen=false},title={BilingualLabel("Rename conversation")},text={val renameFocus=remember{androidx.compose.ui.focus.FocusRequester()};LaunchedEffect(Unit){renameFocus.requestFocus()};OutlinedTextField(taskName,{taskName=it},singleLine=true,modifier=Modifier.focusRequester(renameFocus))},confirmButton={TextButton({Pocket.renameTask(taskName.text){renameOpen=false}},enabled=taskName.text.isNotBlank()){BilingualLabel("Save")}},dismissButton={TextButton({renameOpen=false}){BilingualLabel("Cancel")}})
     if(confirmArchive)AlertDialog(onDismissRequest={confirmArchive=false},title={BilingualLabel("Archive conversation?")},text={WorkflowText("This hides the conversation from recent tasks, pauses queued messages, and stops its notifications. Its history stays on the Codex host.")},confirmButton={TextButton({confirmArchive=false;Pocket.archiveTask()}){BilingualLabel("Archive")}},dismissButton={TextButton({confirmArchive=false}){BilingualLabel("Cancel")}})
     confirmRetry?.let{outgoing->AlertDialog(onDismissRequest={confirmRetry=null},title={BilingualLabel("Send this message again?")},text={WorkflowText("Codex may already have received this message. Retrying can send it twice. Check the conversation first.")},confirmButton={TextButton({Pocket.queuedReply(outgoing.s("id"),"retry",confirmUnknown=true){confirmRetry=null}},enabled=!Pocket.isReplyActionBusy(outgoing.s("id"))){BilingualLabel("Retry anyway")}},dismissButton={TextButton({confirmRetry=null}){BilingualLabel("Cancel")}})}
     editingQueue?.let{queued->AlertDialog(

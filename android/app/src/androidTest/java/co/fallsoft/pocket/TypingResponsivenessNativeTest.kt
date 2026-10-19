@@ -104,7 +104,7 @@ class TypingResponsivenessNativeTest {
    }
    c.filesDir.resolve("typing-responsiveness.json").writeText(JSONObject().put("scope","Software emulator; hardware-key dispatch through production stock conversation to saved draft; not physical screen latency").put("runs",reports).put("mainStallStacks",JSONObject(stacks as Map<*,*>)).put("messagesSent",0).toString())
    assertTrue("Back swipe was not injected",d.swipe(1,d.displayHeight/3,d.displayWidth/2,d.displayHeight/3,30))
-   await("One Back swipe with IME open did not return to the session catalog"){d.hasObject(By.res("session-catalog-microphone"))}
+   await("One Back swipe with IME open did not return to the session catalog"){d.hasObject(By.res("work-catalog"))}
    assertTrue("Shared session catalog paging controls missing",d.hasObject(By.res("reader-page-up"))&&d.hasObject(By.res("reader-page-down")))
    assertTrue("Shared session catalog volume control missing",d.hasObject(By.desc("Speech volume")))
    d.takeScreenshot(c.filesDir.resolve("session-catalog-shared-dock.png"))

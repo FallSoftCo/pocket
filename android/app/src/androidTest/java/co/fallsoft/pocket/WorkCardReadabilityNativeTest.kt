@@ -36,7 +36,7 @@ class WorkCardReadabilityNativeTest {
        verticalArrangement=Arrangement.spacedBy(8.dp)){
       for((state,title,needs) in listOf(Triple("idle","Idle session",false),Triple("active","Running session",false),Triple("idle","Session needs you",true))){
        TaskCard(Task("qa-"+title,title,"",state,0,false,preview="Available to open and reply",needsInput=needs),
-        modifier=Modifier.testTag("qa-"+title),onOpen={openedSession.incrementAndGet()},voice=null,onRename=null,onWatch=null)
+        modifier=Modifier.testTag("qa-"+title),onOpen={openedSession.incrementAndGet()},onRename=null,onWatch=null)
       }
       for((state,title) in listOf("idle" to "Idle room","running" to "Running room","waiting" to "Room needs you")){
        val counts=JSONObject().put("version",1).put("observedAt",System.currentTimeMillis())

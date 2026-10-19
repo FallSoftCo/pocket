@@ -59,6 +59,8 @@ class EnvironmentIsolationNativeTest {
   }
   assertTrue("Rename action missing",renameVisible);device.findObject(By.text("Rename")).click()
   assertTrue(device.wait(Until.hasObject(By.text("Rename conversation")),5000))
+  device.pressKeyCode(android.view.KeyEvent.KEYCODE_Z)
+  await{device.findObject(By.clazz("android.widget.EditText"))?.text=="z"}
   device.findObject(By.clazz("android.widget.EditText")).text="Unsent title from System76"
   main{Pocket.activateEnvironment("remote_qa");Pocket.open("same-thread")}
   await{PocketTranscript.rows.any{it.s("text")=="OZZZ answer only"}}
@@ -67,7 +69,7 @@ class EnvironmentIsolationNativeTest {
   main{Pocket.activateEnvironment("workstation");Pocket.open("same-thread")}
   await{PocketTranscript.rows.any{it.s("text")=="System76 answer only"}}
   main{Pocket.closeTask()}
-  assertTrue("Catalog scene not mounted",device.wait(Until.hasObject(By.res("session-catalog-microphone")),5000))
+  assertTrue("Catalog scene not mounted",device.wait(Until.hasObject(By.res("work-catalog")),5000))
   assertTrue(device.wait(Until.hasObject(By.desc("Settings, app updates, usage and activity")),5000));device.findObject(By.desc("Settings, app updates, usage and activity")).click()
   assertTrue(device.wait(Until.hasObject(By.desc("Development environment: System76")),5000));device.findObject(By.desc("Development environment: System76")).click()
   assertTrue(device.wait(Until.hasObject(By.text("OZZZ")),5000));device.findObject(By.text("OZZZ")).click()

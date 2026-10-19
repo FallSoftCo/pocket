@@ -90,7 +90,8 @@ class SessionCardNativeTest {
     }
    }}
    compose.onNodeWithText("Idle session").performClick()
-   compose.onNode(hasSetTextAction()).performTextReplacement("Unsaved host A name")
+   compose.onNode(hasSetTextAction()).assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.TextSelectionRange,androidx.compose.ui.text.TextRange(0,"Idle session".length)))
+   compose.onNode(hasSetTextAction()).performTextInput("Unsaved host A name")
    compose.onNodeWithText("Unsaved host A name").assertExists()
    i.runOnMainSync{
     context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit()

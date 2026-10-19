@@ -75,7 +75,6 @@ internal fun conversationInputUnavailable()=conversationIdentityPending()||readO
         Text(task?.agentNickname?.ifBlank{task.title}?:t?.s("name","Delegated agent")?:"Delegated agent",modifier=Modifier.padding(16.dp),color=Paper,style=MaterialTheme.typography.titleLarge)
         InterfaceText("This agent reports to its parent task. Review its results here and open the parent to send guidance. Direct replies to this agent are unavailable.",modifier=Modifier.padding(horizontal=16.dp),color=Muted)
         InlineCaptureStatus()
-        if(captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND)VoiceLaunchButton(threadId=PocketVoice.targetThread,bar=true,modifier=Modifier.padding(horizontal=16.dp))
         ErrorBanner()
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(PocketTranscript.loading)item{CircularProgressIndicator()}

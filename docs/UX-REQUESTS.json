@@ -2886,6 +2886,18 @@
         "Only the current service owner publishes presentation state, capture release and recording errors",
         "Native capture test observes the asynchronous durable cancellation result, not merely service destruction"
       ]
+    },
+    {
+      "id": "volume-only-capture-and-selected-title-edit-20261019",
+      "request": "Remove Android microphone buttons/FABs and microphone card tap regions; use physical volume buttons for recording. Select the complete existing title when its editor opens.",
+      "status": "follow-up implementation in isolated actual-head worktree; current signed build preserved",
+      "constraints": [
+        "Retain visible recording state/timer/error and cancellation feedback",
+        "No dead card regions or hidden touch recording action; former mic area opens conversation",
+        "Keep volume-button operation with keyboard, coordinator and direct conversations, navigation/origin/drafts intact",
+        "Select existing title only on entering edit, never reset selection while typing",
+        "Update native touch-specific qualification expectations to volume-only UX rather than fake old touch results"
+      ]
     }
   ],
   "current_state": {

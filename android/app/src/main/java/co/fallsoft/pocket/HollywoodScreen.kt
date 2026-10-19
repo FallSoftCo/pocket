@@ -270,7 +270,7 @@ import androidx.lifecycle.repeatOnLifecycle
             }
             if(catalog.available&&rooms.isEmpty())BilingualLabel("No rooms available",Modifier.padding(16.dp),color=Muted)
             Box(Modifier.weight(1f).fillMaxWidth()){
-            WorkCatalogList(Modifier.fillMaxSize(),state=catalogList,reverseLayout=true,contentPadding=PaddingValues(top=12.dp,bottom=if(catalogMicDestination!=null&&!catalogSearchOpen)104.dp else 12.dp)){
+            WorkCatalogList(Modifier.fillMaxSize(),state=catalogList,reverseLayout=true,contentPadding=PaddingValues(top=12.dp,bottom=12.dp)){
                 val terms=catalogQuery.trim().split(Regex("\\s+")).filter{it.isNotBlank()}
                 val ordered=rooms.filter{item->terms.all{term->(item.s("name")+" "+item.s("purpose")).contains(term,ignoreCase=true)}}
                     .sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
@@ -279,8 +279,6 @@ import androidx.lifecycle.repeatOnLifecycle
                     HollywoodRoomCard(item,catalog.available){choose(item.s("id"))}
                 }
             }
-            if(catalogMicDestination!=null&&!catalogSearchOpen)WorkCatalogCapture(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end=16.dp,bottom=8.dp).testTag("native-catalog-microphone"),
-                roomDestination=catalogMicDestination,sourceLabel=catalogMicLabel)
             }
             ConversationSpeechDock()
             InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
@@ -363,17 +361,11 @@ import androidx.lifecycle.repeatOnLifecycle
             SymbolIcon("Codex",PocketImmersion.label("Loading messages"),Modifier.align(androidx.compose.ui.Alignment.Center).size(96.dp).testTag("native-room-loading"),spinning=true)
         if(visible.isEmpty()&&!feed.loading&&feed.historyError.isBlank())
             BilingualLabel("No messages yet",Modifier.align(androidx.compose.ui.Alignment.Center).testTag("native-room-empty"),color=Muted)
-        if(visibleMicDestination!=null&&!showTextInput){
-            VoiceLaunchButton(modifier=Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end=4.dp,bottom=8.dp).testTag("native-room-microphone"),
-                compact=true,roomDestination=visibleMicDestination,sourceLabel=visibleMicLabel)
-        }
         }
         ForegroundWorkNotice()
         InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
         if(showTextInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){ConversationComposerRow{
-            if(visibleMicDestination!=null)VoiceLaunchButton(Modifier.size(64.dp).testTag("native-room-microphone"),
-                compact=true,roomDestination=visibleMicDestination,sourceLabel=visibleMicLabel)
             RoomDraftComposerScope{
             ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f).focusRequester(keyboardFocus),enabled=scope!=null&&!busy,
                 onSend={if(!busy&&pending==null&&inputState.value.text.isNotBlank()&&detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true)send()},placeholder={BilingualLabel("Message…",centered=false)})

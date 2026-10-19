@@ -36,65 +36,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 
-@Composable fun VoiceLaunchButton(modifier:Modifier=Modifier,threadId:String?=null,compact:Boolean=false,bar:Boolean=false,dock:Boolean=false,cardRegion:Boolean=false,smallDock:Boolean=false,roomDestination:JSONObject?=null,sourceLabel:String?=null,largeFloating:Boolean=false){
-    val c=LocalContext.current
-    val here=true
-    val control=if(PocketVoice.captureBusy)CaptureControl.STOP_SEND else if(PocketVoice.launching)CaptureControl.PROCESSING else CaptureControl.START
-    var permissionTarget by remember{mutableStateOf<CaptureDestination?>(null)}
-    val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ok->
-        val original=permissionTarget;permissionTarget=null
-        if(ok)original?.start(c)else PocketVoice.captureFailure("Allow microphone access to record. Your draft is kept.",here)
-    }
-    val label=when(control){CaptureControl.START->"Start recording";CaptureControl.STOP_SEND->"Stop and send recording";CaptureControl.PROCESSING->PocketVoice.state;CaptureControl.CHECK_SAVED->"Check saved turn"}
-    val descriptionSource=when{
-        control==CaptureControl.CHECK_SAVED->Pocket.prefs.getString("voicePendingSourceLabel",null)
-        PocketVoice.active&&control!=CaptureControl.START->PocketVoice.targetSourceLabel
-        else->sourceLabel
-    }
-    val description=PocketImmersion.label(label)+descriptionSource?.let{" · "+it}.orEmpty()
-    val capture:()->Unit={
-        if(control==CaptureControl.CHECK_SAVED&&PocketVoice.active)PocketVoice.retry()
-        else {
-            val original=CaptureDestination.capture(threadId,roomDestination?.toString(),sourceLabel,here,control==CaptureControl.CHECK_SAVED)
-            if(cardRegion&&control==CaptureControl.START&&roomDestination==null&&original!=null){
-                if(threadId==null)PocketCoordinator.open()else Pocket.open(threadId)
-            }
-            if(original==null)PocketVoice.captureFailure("Connect to an environment before recording. Your draft is kept.",here)
-            else if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)original.start(c)
-            else{permissionTarget=original;permission.launch(Manifest.permission.RECORD_AUDIO)}
-        }
-    }
-    if(cardRegion)CardInteractionRegion(PocketImmersion.label("Mic"),modifier,capture)
-    else if(dock)Column(modifier.height(usageDockHeight()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-        CaptureMic(capture,control,description,compact=true,largeFloating=largeFloating)
-        Spacer(Modifier.height(4.dp))
-        BilingualLabel(when{PocketVoice.problem.isNotBlank()->"Retry";control==CaptureControl.STOP_SEND->"Send";control==CaptureControl.PROCESSING->"Wait";control==CaptureControl.CHECK_SAVED->"Check";else->"Talk"},fontSize=12.sp,lineHeight=16.sp,maxLines=2,color=if(PocketVoice.problem.isNotBlank())Coral else Paper)
-    }
-    else if(bar){
-        val shortLabel=when(control){CaptureControl.START->"Record";CaptureControl.STOP_SEND->"Stop and send";CaptureControl.PROCESSING->"Processing";CaptureControl.CHECK_SAVED->"Check turn"}
-        Surface(onClick=capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,
-            modifier=modifier.heightIn(min=88.dp).semantics{contentDescription=description;if(PocketVoice.problem.isNotBlank())stateDescription=PocketVoice.problem},
-            shape=androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-            border=androidx.compose.foundation.BorderStroke(1.dp,if(control==CaptureControl.STOP_SEND)Coral else Mint.copy(alpha=.5f)),
-            color=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.18f) else Mint.copy(alpha=.12f),contentColor=Paper){
-            Column(Modifier.pressMotion().padding(horizontal=8.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
-                SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",null,Modifier.size(44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
-                BilingualLabel(shortLabel,fontSize=14.sp,lineHeight=18.sp,maxLines=2,color=Paper)
-            }
-        }
-    }
-    else Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-        CaptureMic(capture,control,description,compact,smallDock,largeFloating)
-        if(!compact)Column(Modifier.weight(1f)){
-            BilingualLabel(label,centered=false,color=Mint,fontSize=14.sp,maxLines=2)
-        }
-    }
-}
-@Composable private fun CaptureMic(capture:()->Unit,control:CaptureControl,label:String,compact:Boolean,smallDock:Boolean=false,largeFloating:Boolean=false){
-    FilledTonalIconButton(capture,enabled=control!=CaptureControl.PROCESSING&&!PocketVoice.launching,modifier=Modifier.size(if(smallDock)48.dp else if(largeFloating)80.dp else if(compact)64.dp else 72.dp).pressMotion().focusProperties{canFocus=false}.semantics{contentDescription=label;if(PocketVoice.problem.isNotBlank())stateDescription=PocketVoice.problem},shape=CircleShape,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=if(control==CaptureControl.STOP_SEND)Coral.copy(alpha=.22f) else Mint.copy(alpha=.16f),contentColor=Paper)){
-        SymbolIcon(if(control==CaptureControl.PROCESSING)"Codex" else if(control==CaptureControl.STOP_SEND)"Stop" else if(control==CaptureControl.CHECK_SAVED)"Inbox" else "Mic",null,Modifier.size(if(largeFloating)56.dp else 44.dp),tint=if(PocketVoice.problem.isNotBlank())Coral else Paper,spinning=control==CaptureControl.PROCESSING)
-    }
-}
 @Composable fun VoiceScreen(){
     val c=LocalContext.current
     val draftKey=Pocket.key("voiceDraft:"+(PocketVoice.targetThread?:"coordinator"))
@@ -131,11 +72,9 @@ import androidx.lifecycle.repeatOnLifecycle
         InlineCaptureStatus(always=true)
         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             if(!keyboardInput)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                VoiceLaunchButton(Modifier.weight(1f),threadId=PocketVoice.targetThread,bar=true)
                 ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=!keyboardInput;if(!keyboardInput)keyboard?.hide()})
             }
             if(keyboardInput)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-                VoiceLaunchButton(Modifier.size(64.dp),threadId=PocketVoice.targetThread,compact=true)
                 OutlinedTextField(value=draft,onValueChange={value->if(value.contains('\n'))sendDraft(value)else draft=value},placeholder={BilingualLabel("Message coordinator",centered=false)},modifier=Modifier.weight(1f).focusRequester(inputFocus).onPreviewKeyEvent{event->if(event.key==Key.Enter||event.key==Key.NumPadEnter){if(event.type==KeyEventType.KeyDown)sendDraft();true}else false},singleLine=true,keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Send),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSend={sendDraft()}))
                 IconButton({sendDraft()},enabled=draft.isNotBlank(),modifier=Modifier.size(64.dp)){SymbolIcon(Icons.Rounded.Send,PocketImmersion.label("Send message"))}
             }

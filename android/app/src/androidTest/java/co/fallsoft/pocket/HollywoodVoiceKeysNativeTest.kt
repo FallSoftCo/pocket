@@ -16,7 +16,7 @@ import org.junit.runner.RunWith
 /** Actual foreground keys/IME/AudioRecord; synthetic loopback boundary has no provider. */
 @RunWith(AndroidJUnit4::class)
 class HollywoodVoiceKeysNativeTest{
- @Test fun nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable():Unit=runBlocking{
+ @Test fun nativeVolumeKeysKeepOriginalRoomAndDraftWhileProviderIsUnavailable():Unit=runBlocking{
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val d=UiDevice.getInstance(i)
   check(d.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val base="http://127.0.0.1:18893";val token="synthetic-native-voice-only";val id="synthetic_native_voice_20261016"
@@ -47,7 +47,8 @@ class HollywoodVoiceKeysNativeTest{
    client.saveDraft(HollywoodScope(roomA,agentA),"")
    client.saveDraft(HollywoodScope(roomB,agentB),"")
    i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment(id,force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
-   await("Floating native mic unavailable"){d.hasObject(By.res("native-room-microphone"))}
+   await("Native room controls unavailable"){d.hasObject(By.res("native-room-controls"))}
+   assertFalse("Removed room microphone returned",d.hasObject(By.res("native-room-microphone")))
    await("Synthetic room history failed"){d.hasObject(By.res("native-room-empty"))&&!d.hasObject(By.res("native-room-read-error"))}
    d.takeScreenshot(c.filesDir.resolve("native-room-mic-ready.png"))
    val priorStarts=Pocket.apiEnvironment(source,"/_qa/status").getJSONArray("starts").length()
@@ -82,7 +83,7 @@ class HollywoodVoiceKeysNativeTest{
    d.pressBack()
    await("Back with IME did not reach rooms"){d.hasObject(By.res("native-room:"+roomB))}
    assertTrue("Catalog hid active capture feedback",d.hasObject(By.res("native-room-capture-status")))
-   assertTrue("Catalog hid the stop control",d.hasObject(By.res("native-catalog-microphone")))
+   assertFalse("Removed catalog microphone returned",d.hasObject(By.res("native-catalog-microphone")))
    tap("native-room:"+roomB)
    await("Other room did not open"){d.hasObject(By.res("native-room-controls"))&&d.hasObject(By.text("Synthetic voice room B"))}
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_UP)
@@ -91,25 +92,26 @@ class HollywoodVoiceKeysNativeTest{
    assertEquals("Capture keys changed playback volume",initialVolume,audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))
    assertEquals(draft,client.draft(HollywoodScope(roomA,agentA)))
    assertTrue("Capture failure is only a sound",d.hasObject(By.res("native-room-capture-status")))
-   // A second explicitly requested turn exercises the touch alternative in room B.
+   // A second hardware turn in room B keeps the visible IME and its draft.
    i.runOnMainSync{PocketVoice.stop()}
    tap("native-room-keyboard")
    await("Room B keyboard did not open"){d.hasObject(By.clazz("android.widget.EditText"))&&d.hasObject(By.pkg("com.google.android.inputmethod.latin"))}
    val draftB="Owned draft stays in room B"
    d.findObject(By.clazz("android.widget.EditText")).text=draftB
    await("Room B draft not saved"){client.draft(HollywoodScope(roomB,agentB))==draftB}
-   tap("native-room-microphone")
-   await("Touch did not start actual microphone"){PocketVoice.state=="Listening"}
+   d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
+   await("Room B key did not start actual microphone"){PocketVoice.state=="Listening"}
    assertEquals(roomB,PocketVoice.targetRoom?.s("roomId"))
-   assertTrue("Touch mic closed the keyboard",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
+   assertTrue("Recording key closed the keyboard",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
    assertEquals(draftB,client.draft(HollywoodScope(roomB,agentB)))
-   d.takeScreenshot(c.filesDir.resolve("native-room-touch-recording-ime.png"))
-   tap("native-room-microphone")
-   await("Touch stop did not surface capture/provider outcome"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
+   d.takeScreenshot(c.filesDir.resolve("native-room-second-key-recording-ime.png"))
+   d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
+   await("Recording key stop did not surface capture/provider outcome"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
    i.runOnMainSync{PocketVoice.stop()}
    d.pressBack()
-   await("Catalog assistant unavailable"){d.hasObject(By.res("native-catalog-microphone"))}
-   tap("native-catalog-microphone")
+   await("Catalog unavailable"){d.hasObject(By.res("native-room:"+roomA))}
+   assertFalse("Catalog restored a recording button",d.hasObject(By.res("native-catalog-microphone")))
+   d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
    await("Catalog mic did not start default room capture"){PocketVoice.state=="Listening"}
    assertEquals("Catalog voice used a stale selected room",roomA,PocketVoice.targetRoom?.s("roomId"))
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
@@ -117,7 +119,8 @@ class HollywoodVoiceKeysNativeTest{
    i.runOnMainSync{PocketVoice.stop()}
    tap("native-catalog-controls")
    tap("native-catalog-settings")
-   await("Settings hid the work-context mic"){d.hasObject(By.res("native-settings-microphone"))}
+   await("Settings did not open"){d.hasObject(By.res("native-settings-back"))}
+   assertFalse("Settings restored a recording button",d.hasObject(By.res("native-settings-microphone")))
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_UP)
    await("Settings hardware capture did not start"){PocketVoice.state=="Listening"}
    assertEquals(roomA,PocketVoice.targetRoom?.s("roomId"))
@@ -134,7 +137,7 @@ class HollywoodVoiceKeysNativeTest{
    assertTrue("Capture lost original room B",rooms.contains(roomB))
    assertEquals(0,status.getInt("blockedTaskWrites"))
    assertTrue(status.getBoolean("noProvider"))
-   c.filesDir.resolve("native-room-volume-ime-receipt.json").writeText(status.put("hardwareStartStop",true).put("touchStartStop",true)
+   c.filesDir.resolve("native-room-volume-ime-receipt.json").writeText(status.put("hardwareStartStop",true).put("volumeOnlyControls",true)
     .put("draftPreserved",true).put("navigationKeptOriginalRoom",true).put("catalogDefaultRoom",true).put("settingsCapture",true).put("providerQualified",false).put("physicalPhone",false).toString())
    d.takeScreenshot(c.filesDir.resolve("native-room-volume-ime.png"))
   }finally{

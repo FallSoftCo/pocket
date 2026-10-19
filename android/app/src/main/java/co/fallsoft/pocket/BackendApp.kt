@@ -177,16 +177,11 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
 
 /** Visible controls for the retained work context while settings/records cover the chat. */
 @Composable private fun BackendOverlayControls(onBack:()->Unit){
-    val target=currentForegroundCaptureTarget()
-    val recording=captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND
     InlineCaptureStatus(modifier=Modifier.testTag("native-settings-capture-status"))
     Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),
         horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
         TextButton(onBack,Modifier.heightIn(min=48.dp).testTag("native-settings-back")){BilingualLabel("Back")}
         InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-        if(target.eligible&&(!BackendNavigation.teamSelected()||target.roomDestination!=null||recording))
-            VoiceLaunchButton(Modifier.size(64.dp).testTag("native-settings-microphone"),threadId=target.threadId,
-                compact=true,roomDestination=target.roomDestination?.let(::JSONObject),sourceLabel=target.sourceLabel)
     }
 }
 

@@ -32,7 +32,7 @@ internal fun Modifier.nextCompBackdrop():Modifier=drawWithCache {
     onDrawBehind{drawRect(ground);drawRect(dots);drawRect(light)}
 }
 
-/** A quiet raised plane shared by both backends. No blur, animated lights or
+/** A quiet raised plane shared by both backends. No backdrop blur, animated lights or
  * geometry changes: the existing content, touch targets and idle hue survive. */
 internal fun Modifier.depthSurface(base:Color,shape:Shape,elevation:Dp=3.dp):Modifier=
     shadow(elevation,shape,clip=false).clip(shape).drawWithCache {

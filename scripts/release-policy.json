@@ -7,7 +7,7 @@
     "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending",
     "co.fallsoft.pocket.HollywoodReconnectNativeTest#capabilityOutageRecoversWithoutLosingOpenRoomOrDraft",
     "co.fallsoft.pocket.HollywoodRoomControlsNativeTest#stopLostAcknowledgementAndLocalSlowdownReportKeepOriginalIdentity",
-    "co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable",
+    "co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#nativeVolumeKeysKeepOriginalRoomAndDraftWhileProviderIsUnavailable",
     "co.fallsoft.pocket.NaturalImmersionNativeTest#naturalParagraphsKeepNativeSpacingAndGlobalWaveRunsWhileTyping",
     "co.fallsoft.pocket.WorkCardReadabilityNativeTest#idleIsChromaticNotDisabledAndStillOpens",
     "co.fallsoft.pocket.VoiceTurnStoreNativeTest#independentCaptureDeliveryAndPlaybackSurviveReopen",
@@ -27,7 +27,8 @@
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#historyEvidenceRepairsDeferredPositionOnce",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#canonicalInputPositionSurvivesProviderChangeDuringLookup",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#currentHeadsAndDelayedInputRemainOrderedAcrossCachedReopen",
-    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#longRetainedGapDoesNotDrainOrResetWhileCurrentMessagesAdvance"
+    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#longRetainedGapDoesNotDrainOrResetWhileCurrentMessagesAdvance",
+    "co.fallsoft.pocket.SessionCardNativeTest#workingIdleAndInputBlockedCardsRemainReadableAndCompact"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
@@ -37,5 +38,6 @@
     "Native volume/IME/AudioRecord is checked against an explicit no-provider fixture; physical phone/provider transcript and TTS remain unqualified.",
     "Incremental recording delivery: existing installed speech renderer/cache policy retained. Experimental rendered speech path is not enabled or qualified. No paid API or model switch."
   ],
-  "requiredOptimizedReview": "native-room-catalog-and-typing"
+  "requiredOptimizedReview": "native-room-catalog-and-typing",
+  "captureInteraction": "volume-buttons"
 }
