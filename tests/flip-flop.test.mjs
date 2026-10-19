@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {flipFlopPlan} from '../web/flip-flop.mjs';
+import {flipFlopPlan,transgrammaticFlipPlan} from '../web/flip-flop.mjs';
 test('every lexical unit changes assignment and survives both complementary phases',()=>{
  const units=[{target:'Il',meaning:'The'},{target:' ',meaning:' ',literal:true},{target:'lavoro',meaning:'work'},{target:' ',meaning:' ',literal:true},{target:'continua',meaning:'continues'},{target:'.',meaning:'.',literal:true}];
  const plan=flipFlopPlan(units);assert.equal(plan.eligible,3);
@@ -11,4 +11,8 @@ test('every lexical unit changes assignment and survives both complementary phas
 });
 test('missing lexical equivalents cannot masquerade as completed immersion',()=>{
  assert.equal(flipFlopPlan([{target:'lavoro',meaning:''}]),null);
+});
+
+test('unpaired prose outside translated spans is incomplete rather than permanently English',()=>{
+ assert.equal(transgrammaticFlipPlan('Hello world',{original:'Hello world',planVersion:'transgrammatic-english-italian-v2',text:'Ciao world',spans:[{start:0,end:5,source:'Hello',target:'Ciao',targetSegments:[{start:0,end:4,target:'Ciao',meaning:'Hello'}]}]}),null);
 });
