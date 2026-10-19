@@ -16,7 +16,24 @@ export class Codex extends EventEmitter {
   async connect() {
     if (this.connecting) return this.connecting;
     if (this.ready) return;
-    this.connecting = new Promise((resolve, reject) => {
+    const attempt=(async()=>{
+      // A rejected initialization does not prove its owned OS process has exited.
+      // Do not replace that process until it has actually relinquished ownership.
+      const previous=this.child;
+      if(this.command&&previous?.pid&&previous.exitCode===null&&previous.signalCode===null){
+        await new Promise((resolve,reject)=>{
+          const done=()=>{clearTimeout(timer);resolve();};
+          const timer=setTimeout(()=>{previous.off('exit',done);reject(codexConnectionError('CODEX_UNAVAILABLE'));},2000);
+          previous.once('exit',done);previous.kill();
+        });
+      }
+      return this.openConnection();
+    })();
+    this.connecting=attempt;
+    try{return await attempt;}finally{if(this.connecting===attempt)this.connecting=null;}
+  }
+  openConnection(){
+    return new Promise((resolve, reject) => {
       let failure=null;
       const receive=data=>{
         let m; try { m = JSON.parse(data); } catch { return; }
@@ -35,7 +52,7 @@ export class Codex extends EventEmitter {
         try {
           await this.call('initialize', { clientInfo: { name: 'codex_pocket', title: 'NextComp', version: '0.5.0-alpha.10' }, capabilities: { experimentalApi: true } });
           this.send({method:'initialized'}); this.ready = true; this.problem=null;this.emit('connected'); resolve();
-        } catch(e) { reject(e); this.closeTransport(); }
+        } catch(e) { reject(e); this.closeTransport(transport); }
       };
       const failed=error=>{
         failure=codexConnectionError(error.code==='WS_ERR_UNSUPPORTED_MESSAGE_LENGTH'?'CODEX_HISTORY_TOO_LARGE':this.ready?'CODEX_DISCONNECTED':'CODEX_UNAVAILABLE',error);
@@ -43,7 +60,7 @@ export class Codex extends EventEmitter {
       };
       const closed=()=>{
         if(this.transport!==transport)return;
-        this.ready = false; this.connecting = null;
+        this.ready = false;
         failure||=codexConnectionError();this.problem=failure;
         for (const p of this.pending.values()) { clearTimeout(p.timer); p.reject(failure); }
         this.pending.clear(); this.emit('disconnected',failure); reject(failure);
@@ -60,7 +77,6 @@ export class Codex extends EventEmitter {
         ws.on('message',receive);ws.once('open',opened);ws.once('error',failed);ws.once('close',closed);
       }
     });
-    try { return await this.connecting; } finally { this.connecting = null; }
   }
   call(method, params = {}) {
     return new Promise((resolve, reject) => {
@@ -76,7 +92,7 @@ export class Codex extends EventEmitter {
   }
   canSend(){return this.command?!!this.child?.stdin?.writable:this.ws?.readyState===WebSocket.OPEN;}
   send(value){const raw=JSON.stringify(value);if(this.command)this.child.stdin.write(raw+'\n');else this.ws.send(raw);}
-  closeTransport(){if(this.command)this.child?.kill();else this.ws?.close();}
+  closeTransport(transport=this.transport){if(this.command)transport?.kill();else transport?.close();}
   status(){return {connected:this.ready&&this.problem?.code!=='CODEX_DRAINING',problem:this.problem?{code:this.problem.code,message:this.problem.message}:null};}
 }
 

@@ -122,3 +122,19 @@ test('generator revision gives rejected legacy display work one new bounded budg
  w.translate=async()=>({translations:[]});await w.flush();assert.equal(w.snapshot('a').jobs[0].attempts,1);w.close();
  w=make();assert.equal(w.snapshot('a').jobs[0].attempts,1);w.close();
 });
+
+test('phrase-owned scaffold links expansions once and rejects overlapping Italian ownership',async()=>{
+ const {prepareTransgrammaticBatch}=await import('../server/immersion-transgrammatic.mjs');
+ const text='I am going to the station';
+ const prepared=prepareTransgrammaticBatch([{id:'phrase',version:immersionHash(text),text}]);
+ const result={'0':{'0':{target:'Sto andando alla stazione',words:[
+  {target:'Sto andando',occurrence:0,meaning:'Am going'},
+  {target:'alla',occurrence:0,meaning:'to the'},
+  {target:'stazione',occurrence:0,meaning:'station'}
+ ]}}};
+ const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(text,row);
+ const validated=validateTransgrammaticPlan(text,row);assert.ok(validated);
+ assert.equal(validated.spans[0].targetSegments.map(x=>x.meaning||x.target).join(''),'Am-going to-the station');
+ const bad=structuredClone(row);bad.spans[0].targetSegments.push({...bad.spans[0].targetSegments[1]});
+ assert.equal(validateTransgrammaticPlan(text,bad),null);
+});

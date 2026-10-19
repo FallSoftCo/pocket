@@ -1,4 +1,5 @@
-import {spawn,spawnSync} from 'node:child_process';
+import {startOwnedFixture,stopOwnedFixture,acquireOwnedRunLock} from './owned-fixture.mjs';
+import {spawnSync} from 'node:child_process';
 import crypto from 'node:crypto';
 import {readFileSync,writeFileSync,existsSync,openSync,closeSync,realpathSync} from 'node:fs';
 import {join,resolve} from 'node:path';
@@ -13,6 +14,7 @@ const current=()=>build.state==='complete'&&productionSourceSha(root)===build.pr
 if(!current())throw Error('Build/source qualification is stale.');
 const ownerPath=process.env.NEXTCOMP_QA_OWNER_RECEIPT,actor=process.env.NEXTCOMP_QA_OWNER;
 if(!ownerPath||!actor)throw Error('Provide the private owned-emulator receipt and actor.');
+const releaseOwnership=acquireOwnedRunLock(ownerPath+'.run.lock');
 const owner=read(ownerPath),serial=owner.serial||'emulator-5620',avdName=owner.avdName||'nextcomp_env_qa',sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT;
 if(!/^emulator-[0-9]{4,5}$/.test(serial)||!/^(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)$/.test(avdName))throw Error('An explicitly owned NextComp emulator is required.');
 if(!sdk||owner.owner!==actor||!Number.isSafeInteger(owner.emulatorPid))throw Error('Wrong QA owner or SDK.');
@@ -47,6 +49,7 @@ const fixturePort=String(portValue);
 const fixtureToken=voiceCase?'synthetic-native-voice-only':teamCase?'synthetic-alpha24-only':'synthetic-system76';
 const fixtureHost=voiceCase?'Owned synthetic native voice':environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
 const fixtureReadyMessage=voiceCase?'Owned synthetic native voice fixture ready '+fixturePort:environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
+let fixture;
 const ownedFixtures=['tests/fixtures/native-room-voice-ui.mjs','tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
 try{
  if(owner.fixturePid&&existsSync('/proc/'+owner.fixturePid)){
@@ -56,7 +59,7 @@ try{
   if(existsSync('/proc/'+owner.fixturePid))throw Error('Old owned fixture has not stopped.');
  }
  const fd=openSync(join(directory,'fixture-'+id+'.log'),'wx',0o600);
- const fixture=spawn(process.execPath,[fixtureScript],{cwd:root,env:{...childEnv,PORT:fixturePort,NEXTCOMP_QA_EPOCH:crypto.randomUUID(),NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},stdio:['ignore',fd,fd],detached:true});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);fixture.unref();owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
+ fixture=startOwnedFixture(resolve(root,fixtureScript),{cwd:root,env:{...childEnv,PORT:fixturePort,NEXTCOMP_QA_EPOCH:crypto.randomUUID(),NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},fd});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
  run(['reverse','tcp:18880','tcp:'+fixturePort]);
  for(const [from,to] of Object.entries(owner.reversePorts||{})){if(!/^\d{4,5}$/.test(from)||!Number.isSafeInteger(to)||to<1024||to>65535)throw Error('Invalid owned QA reverse mapping');run(['reverse','tcp:'+from,'tcp:'+to]);}
@@ -102,10 +105,17 @@ try{
  receipt.state='complete';receipt.finishedAt=Date.now();persist();console.log(JSON.stringify({state:'complete',case:name,elapsedMs:receipt.finishedAt-receipt.startedAt}));
 }catch(error){receipt.state='failed';receipt.finishedAt=Date.now();receipt.error=error.message;persist();throw error;}
 finally{
+ try {
  run(['shell','am','force-stop','co.fallsoft.pocket']);
  const restored=spawnSync(adb,['-s',serial,'shell',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'"],{input:originalPreferences,encoding:'utf8',env:childEnv,timeout:30000});
  const after=run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml']);
  receipt.retainedProfilesRestoredByteExact=restored.status===0&&after===originalPreferences;
  if(!receipt.retainedProfilesRestoredByteExact){receipt.state='failed';persist();throw Error('QA preferences were not restored.');}
  persist();
+ } finally {
+  try{receipt.fixtureCleanup=await stopOwnedFixture(fixture);}finally{releaseOwnership();}
+  if(!receipt.fixtureCleanup.stopped)receipt.state='failed';
+  persist();
+  if(!receipt.fixtureCleanup.stopped)throw Error('Owned fixture process group did not stop.');
+ }
 }

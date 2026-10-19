@@ -2980,5 +2980,12 @@
     "actualNativeJourneys": "Provider turn grouping, late input/provider reconstruction, retained coalesced position proof, independent old/latest pages, cached reopening; all25 required native cases passed.",
     "phoneInstallation": "Last observed133 after publication;134 installation not claimed.",
     "delivery": "Published on both existing channels; one workstation update announcement accepted by FCM on its first attempt."
+  },
+  "worker_lifetime_and_phrase_alignment_20261018": {
+    "status": "source candidate; real subprocess/parent-death/reconnect/lock checks passed and backend regression checks passed; not deployed",
+    "workerLifetime": "Parent-bound QA IPC lifetime; normal cleanup retires process group even if preference restoration fails. Broader persistent worker ownership audit remains open. Kernel-held per-emulator lock excludes concurrent QA runners and releases on process death.",
+    "immersion": "Italian-order phrase ownership; multiword English scaffold hyphenation; overlapping Italian ranges rejected; v2 cache identity. Semantic accuracy still requires teacher output review, no heuristic deletion of repeated words.",
+    "runtimeReconnect": "Failed initialization retires its owned stdio child before replacement; concurrent reconnects share the same attempt. Real delayed-exit child journal qualification passed.",
+    "compatibility": "Android candidate accepts v1 and v2; do not deploy v2 backend to old clients before compatible Android delivery."
   }
 }
