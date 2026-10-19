@@ -15,10 +15,8 @@ import kotlin.math.roundToInt
  */
 internal class ImmersionReadingWaveClock {
     companion object {
-        const val TRAVEL_MS=2600L
-        const val WIPE_MS=1200L
+        const val WIPE_MS=420L
         const val HOLD_MS=1800L
-        const val HALF_MS=TRAVEL_MS+WIPE_MS+HOLD_MS
     }
     var viewportOrigin by mutableStateOf(Offset.Zero);private set
     var viewportWidthPx by mutableFloatStateOf(0f);private set
@@ -28,6 +26,10 @@ internal class ImmersionReadingWaveClock {
     private var visibleLines by mutableIntStateOf(0)
     private var nanos=0L
     private var half=-1L
+    private var halfStartMs=0L
+    private var halfDurationMs=WIPE_MS+HOLD_MS
+    internal val halfGeneration:Long get()=half
+    internal val phaseElapsedMs:Long get()=elapsedMs-halfStartMs
     private data class Key(val owner:Any,val top:Int)
     private data class Lane(val onset:Long,val fromSupport:Boolean,val toSupport:Boolean)
     private val geometry=linkedMapOf<Key,Rect>()
@@ -61,7 +63,7 @@ internal class ImmersionReadingWaveClock {
         visibleLines=geometry.size
         // A line enrolled after its frontier passed holds its previous form.
         // It never borrows a neighbour's phase or catches up on entry.
-        if(half>=0)for((key,rect) in next)if(key !in lanes)enroll(key,rect,late=true)
+        if(half>=0)for(key in next.keys)if(key !in lanes)enroll(key)
         geometryRevision++
     }
     fun remove(owner:Any){
@@ -72,18 +74,25 @@ internal class ImmersionReadingWaveClock {
         // Keep this wave's identity and held form through LazyColumn recycling.
     }
     private fun goal()=half%2L==0L
-    private fun enroll(key:Key,rect:Rect,late:Boolean){
-        val onset=(rect.top.coerceIn(0f,viewportHeightPx)/viewportHeightPx.coerceAtLeast(1f)*TRAVEL_MS).toLong()
-        val passed=late&&elapsedMs%HALF_MS>=onset
-        val target=goal()
-        val start=held[key]?:if(passed)target else !target
-        lanes[key]=if(passed)Lane(onset,start,start)else Lane(onset,start,target)
-        held[key]=start
+    private fun enroll(key:Key){
+        // Joining/scrolled-in text holds its own form until the next sweep.
+        val form=held[key]?:goal()
+        lanes[key]=Lane(0L,form,form)
+        held[key]=form
     }
     private fun beginHalf(next:Long){
         lanes.forEach{(key,lane)->held[key]=lane.toSupport}
         lanes.clear();half=next
-        geometry.forEach{(key,rect)->enroll(key,rect,late=false)}
+        // Snapshot visual rows once per sweep. Same-baseline fragments in separate
+        // containers share a slot; the next row cannot begin before this one ends.
+        var row=-1
+        var rowTop=Float.NEGATIVE_INFINITY
+        for((key,rect) in geometry.entries.sortedWith(compareBy({it.value.top},{it.value.left}))){
+            if(row<0 || rect.top-rowTop>2f){row++;rowTop=rect.top}
+            val target=goal()
+            lanes[key]=Lane(row*WIPE_MS,held[key]?:!target,target)
+        }
+        halfDurationMs=(row+1).coerceAtLeast(1)*WIPE_MS+HOLD_MS
         // Bounded presentation state, not a command/read-ack journal.
         while(held.size>4096){
             val old=held.keys.firstOrNull{it !in geometry}?:break
@@ -110,7 +119,7 @@ internal class ImmersionReadingWaveClock {
         else if(lane.fromSupport==lane.toSupport)hold(lane.toSupport,rtl)
         else{
             val feather=(viewportWidthPx*.055f).coerceAtLeast(12f)
-            val progress=((elapsedMs%HALF_MS-lane.onset).toFloat()/WIPE_MS).coerceIn(0f,1f)
+            val progress=((elapsedMs-halfStartMs-lane.onset).toFloat()/WIPE_MS).coerceIn(0f,1f)
             val distance=(viewportWidthPx+2*feather)*progress
             ImmersionSharedWipeMask(if(rtl)viewportWidthPx+feather-distance else -feather+distance,feather,lane.toSupport)
         }
@@ -131,8 +140,11 @@ internal class ImmersionReadingWaveClock {
         if(BlackoutVisibility.active)return
         nanos=(nanos+deltaNanos.coerceAtLeast(0L)).coerceAtLeast(0L)
         elapsedMs=nanos/1_000_000L
-        val next=elapsedMs/HALF_MS
-        if(next!=half)beginHalf(next)
+        if(half<0){halfStartMs=elapsedMs;beginHalf(0L)}
+        else if(elapsedMs-halfStartMs>=halfDurationMs){
+            halfStartMs=elapsedMs
+            beginHalf(half+1L)
+        }
     }
 }
 internal val LocalImmersionReadingWave=staticCompositionLocalOf<ImmersionReadingWaveClock?>{null}

@@ -72,6 +72,22 @@ class ImmersionReadingWaveTest {
 }
 
 class ImmersionStableLineIdentityTest {
+ @org.junit.Test fun separateContainersShareRowsWithoutOverlappingRowWipes(){
+  val clock=ImmersionReadingWaveClock()
+  clock.viewport(androidx.compose.ui.geometry.Offset.Zero,400f,800f,1f)
+  val rect=androidx.compose.ui.geometry.Rect(0f,0f,150f,24f)
+  clock.lines("first",androidx.compose.ui.geometry.Offset(0f,20f),listOf(rect))
+  clock.lines("same-row",androidx.compose.ui.geometry.Offset(180f,20f),listOf(rect))
+  clock.lines("next",androidx.compose.ui.geometry.Offset(0f,50f),listOf(rect))
+  clock.advanceNanos(0)
+  clock.advanceNanos(210_000_000)
+  assertEquals(clock.lineMask("first",0f,false),clock.lineMask("same-row",0f,false))
+  assertTrue(clock.lineMask("first",0f,false).center>clock.lineMask("next",0f,false).center)
+  clock.advanceNanos(420_000_000)
+  val completed=clock.lineMask("first",0f,false)
+  assertTrue(completed.center>400f)
+  assertTrue(clock.lineMask("next",0f,false).center in 0f..400f)
+ }
  @org.junit.Test fun scrollingRecyclingAndLocalSelectionDoNotRemapOrPauseTheGlobalWave(){
   val clock=ImmersionReadingWaveClock()
   clock.viewport(androidx.compose.ui.geometry.Offset.Zero,400f,800f,1f)
@@ -79,7 +95,7 @@ class ImmersionStableLineIdentityTest {
   val rect=androidx.compose.ui.geometry.Rect(0f,0f,300f,24f)
   clock.lines(a,androidx.compose.ui.geometry.Offset(0f,100f),listOf(rect))
   clock.lines(b,androidx.compose.ui.geometry.Offset(0f,600f),listOf(rect))
-  clock.advanceNanos(0);clock.advanceNanos(1800_000_000)
+  clock.advanceNanos(0);clock.advanceNanos(100_000_000)
   val before=clock.lineMask(b,0f,false)
   clock.lines(b,androidx.compose.ui.geometry.Offset(0f,200f),listOf(rect))
   org.junit.Assert.assertEquals("Scroll changed language without elapsed time",before,clock.lineMask(b,0f,false))

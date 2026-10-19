@@ -67,7 +67,7 @@ class ImmersionWaterfallScrollNativeTest {
     }}
    }
    await("No actual visible lines enrolled"){clock.get()?.hasVisible==true}
-   await("Natural display clock failed to reach a spatial handoff"){clock.get()!!.elapsedMs%ImmersionReadingWaveClock.HALF_MS in 1800L..2150L}
+   await("Natural display clock failed to reach a spatial handoff"){clock.get()!!.phaseElapsedMs in 1800L..2150L}
    val bitmap=i.uiAutomation.takeScreenshot()!!
    try{
     val area=bounds.get()!!;var italian=0;var english=0
@@ -82,13 +82,14 @@ class ImmersionWaterfallScrollNativeTest {
     assertTrue("Whole-page handoff: no English ink during waterfall",english>100)
    }finally{bitmap.recycle()}
    val before=observations()
+   val generation=clock.get()!!.halfGeneration
    val box=bounds.get()!!
    d.swipe(box.center.x.toInt(),(box.top+box.height*.65f).toInt(),box.center.x.toInt(),(box.top+box.height*.35f).toInt(),12)
    Thread.sleep(100)
    val after=observations()
    val old=before.second.associateBy{it.identity};val common=after.second.filter{it.identity in old}
    assertTrue("Scroll fixture retained no line identities",common.isNotEmpty())
-   assertEquals("Scroll crossed a half-wave boundary; cannot compare its onset",before.first/ImmersionReadingWaveClock.HALF_MS,after.first/ImmersionReadingWaveClock.HALF_MS)
+   assertEquals("Scroll crossed a half-wave boundary; cannot compare its onset",generation,clock.get()!!.halfGeneration)
    val velocity=(clock.get()!!.viewportWidthPx+2*(clock.get()!!.viewportWidthPx*.055f).coerceAtLeast(12f))/ImmersionReadingWaveClock.WIPE_MS
    val allowance=(after.first-before.first)*velocity+2f
    common.forEach{now->
