@@ -13,7 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -36,9 +36,10 @@ import androidx.compose.ui.unit.sp
     val surface=if(idle)Color(0xff152137)else Panel
     val outline=if(idle)Color(0xff526e98)else Line.copy(alpha=.7f)
     val shape=RoundedCornerShape(8.dp)
-    Box(modifier.fillMaxWidth().clip(shape).background(surface).drawBehind{
+    Box(modifier.fillMaxWidth().depthSurface(surface,shape).drawWithCache{
         val glow=if(active||needsInput)1f else 0f
-        drawRoundRect(Brush.radialGradient(listOf(accent.copy(alpha=.26f*glow),accent.copy(alpha=.06f*glow),Color.Transparent),Offset(size.width*.85f,0f),size.width*.95f),cornerRadius=CornerRadius(8.dp.toPx()))
+        val light=Brush.radialGradient(listOf(accent.copy(alpha=.26f*glow),accent.copy(alpha=.06f*glow),Color.Transparent),Offset(size.width*.85f,0f),(size.width*.95f).coerceAtLeast(1f))
+        onDrawBehind{drawRoundRect(light,cornerRadius=CornerRadius(8.dp.toPx()))}
     }.border(1.dp,outline,shape).border(2.dp,Mint.copy(alpha=highlight),shape),content=content)
 }
 
@@ -46,8 +47,7 @@ import androidx.compose.ui.unit.sp
 /** One catalog dock surface for stock sessions and enterprise rooms. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun WorkCatalogDock(content:@Composable FlowRowScope.()->Unit){
-    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp))
-        .background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)),
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).depthSurface(Color(0xff15191f),RoundedCornerShape(24.dp),6.dp).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)),
         horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp),content=content)
 }
 
@@ -59,11 +59,11 @@ import androidx.compose.ui.unit.sp
 }
 
 @Composable internal fun ConversationMessageSurface(you:Boolean,content:@Composable ColumnScope.()->Unit){
-    Column(Modifier.fillMaxWidth().then(if(you)Modifier.clip(RoundedCornerShape(6.dp)).background(Panel).padding(14.dp)else Modifier.padding(vertical=5.dp)),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
+    Column(Modifier.fillMaxWidth().then(if(you)Modifier.depthSurface(Panel,RoundedCornerShape(6.dp),1.dp).padding(14.dp)else Modifier.padding(vertical=5.dp)),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
 }
 
 @Composable internal fun ConversationComposerRow(content:@Composable RowScope.()->Unit){
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically,content=content)
+    Row(Modifier.fillMaxWidth().depthSurface(Panel,RoundedCornerShape(6.dp),2.dp).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically,content=content)
 }
 
 @OptIn(ExperimentalFoundationApi::class)

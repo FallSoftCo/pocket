@@ -2866,6 +2866,17 @@
       "request": "Long sessions must open the newest content promptly; retained old windows must not cause an unbounded eager gap walk or remain globally updating. Preserve all local text and make missing intervals load from thumb scrolling/paging without taps. Current reads remain independent of historical reads.",
       "status": "implementation in progress; real native RPC1-2ms and local backend62ms/75KB; phone unauthenticated network0.9-6.4seconds; physical ADB unavailable",
       "design": "Stable interval cursor independent of subsequent head refreshes, one bounded initial overlap probe, explicit inline gap and gesture-scoped historical demand; no background full-history drain."
+    },
+    {
+      "id": "cached-depth-and-classic-dot-grid-20261019",
+      "request": "Replace flat solid black with classic dot grid and coherent depth across shared session/room surfaces. Preserve completed 3D icons.",
+      "status": "implemented in isolated candidate; native visual/performance qualification and delivery pending",
+      "implementation": [
+        "Cached repeating raster tile in stationary root draw layer; no immersion or typing state reads",
+        "Shared raised card/dock/composer planes; idle blue hue and full contrast retained",
+        "Native blackout remains opaque black; no icon modifications"
+      ],
+      "verification": []
     }
   ],
   "current_state": {
