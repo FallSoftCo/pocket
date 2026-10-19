@@ -3,6 +3,8 @@ package co.fallsoft.pocket
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
@@ -17,6 +19,19 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+/** Retain decorative paint in its own render layer. Editor, list and immersion
+ * invalidations must not rerun full-window gradient/texture shaders. The layer
+ * contains no interactive content or animation state and follows window size. */
+@androidx.compose.runtime.Composable
+internal fun NextCompDepthRoot(content:@androidx.compose.runtime.Composable ()->Unit){
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()){
+        androidx.compose.foundation.layout.Box(Modifier.matchParentSize()
+            .graphicsLayer(compositingStrategy=androidx.compose.ui.graphics.CompositingStrategy.Offscreen)
+            .nextCompBackdrop())
+        androidx.compose.material3.Surface(Modifier.fillMaxSize(),color=Color.Transparent,contentColor=Paper,content=content)
+    }
+}
 
 /** Stationary screen-space texture. The small tile and brushes are rebuilt only
  * when the draw cache (size/density) changes, never from the immersion clock.
