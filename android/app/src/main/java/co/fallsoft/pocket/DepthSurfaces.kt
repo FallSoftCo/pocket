@@ -36,7 +36,7 @@ import kotlin.math.sqrt
                 val count=(columns.toLong()*rows).coerceAtMost(maxPoints.toLong()).toInt()
                 val points=FloatArray(count*2)
                 for(index in 0 until count){points[index*2]=(index%columns+.5f)*spacing;points[index*2+1]=(index/columns+.5f)*spacing}
-                val paint=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=android.graphics.Color.rgb(47,56,68);strokeWidth=1.2.dp.toPx();strokeCap=Paint.Cap.ROUND}
+                val paint=Paint().apply{color=android.graphics.Color.rgb(47,56,68);strokeWidth=1.dp.toPx().toInt().coerceAtLeast(1).toFloat();strokeCap=Paint.Cap.BUTT}
                 onDrawBehind{drawIntoCanvas{it.nativeCanvas.drawPoints(points,paint)}}
             })
             content()
