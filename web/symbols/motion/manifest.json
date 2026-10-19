@@ -1,0 +1,94 @@
+{
+  "nextcomp": {
+    "count": 160,
+    "cell": 128,
+    "columns": 8,
+    "pageFrames": 32,
+    "fps": 60,
+    "pages": [
+      "nextcomp-0.webp",
+      "nextcomp-1.webp",
+      "nextcomp-2.webp",
+      "nextcomp-3.webp",
+      "nextcomp-4.webp"
+    ]
+  },
+  "editnote": {
+    "count": 120,
+    "cell": 128,
+    "columns": 5,
+    "pageFrames": 30,
+    "fps": 60,
+    "pages": [
+      "editnote-0.webp",
+      "editnote-1.webp",
+      "editnote-2.webp",
+      "editnote-3.webp"
+    ]
+  },
+  "search": {
+    "count": 120,
+    "cell": 128,
+    "columns": 5,
+    "pageFrames": 30,
+    "fps": 60,
+    "pages": [
+      "search-0.webp",
+      "search-1.webp",
+      "search-2.webp",
+      "search-3.webp"
+    ]
+  },
+  "inbox": {
+    "count": 120,
+    "cell": 128,
+    "columns": 5,
+    "pageFrames": 30,
+    "fps": 60,
+    "pages": [
+      "inbox-0.webp",
+      "inbox-1.webp",
+      "inbox-2.webp",
+      "inbox-3.webp"
+    ]
+  },
+  "computer": {
+    "count": 120,
+    "cell": 128,
+    "columns": 5,
+    "pageFrames": 30,
+    "fps": 60,
+    "pages": [
+      "computer-0.webp",
+      "computer-1.webp",
+      "computer-2.webp",
+      "computer-3.webp"
+    ]
+  },
+  "codex": {
+    "count": 120,
+    "cell": 128,
+    "columns": 5,
+    "pageFrames": 30,
+    "fps": 60,
+    "pages": [
+      "codex-0.webp",
+      "codex-1.webp",
+      "codex-2.webp",
+      "codex-3.webp"
+    ]
+  },
+  "user": {
+    "count": 120,
+    "cell": 128,
+    "columns": 5,
+    "pageFrames": 30,
+    "fps": 60,
+    "pages": [
+      "user-0.webp",
+      "user-1.webp",
+      "user-2.webp",
+      "user-3.webp"
+    ]
+  }
+}

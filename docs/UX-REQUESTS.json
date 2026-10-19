@@ -2933,6 +2933,12 @@
       "request": "Remove confusing horizontal saved-message carousel, repair dismissal, polish spacing, borders and scroll areas.",
       "contract": "Saved answers remain optional in-place transcript filter with contextual dismissal. Apply canonical removal response immediately, fence older head reads against newer note observations, deduplicate pending removal by scope/id, retain saved data until explicit dismissal. No extra carousel or transcript deletion.",
       "state": "deployed-web"
+    },
+    {
+      "id": "web-modeled-symbol-animation-20261019",
+      "request": "Web modeled icons must animate like their existing native counterparts.",
+      "contract": "Reuse exact authored native atlas pages for the N, dock controls and message author marks. One display clock, draw-only canvas updates, viewport and page lifecycle gating, reduced-motion stills, bounded decoded/compressed caches, no per-icon timers or repeating asset downloads.",
+      "state": "candidate-browser-qualified"
     }
   ],
   "current_state": {

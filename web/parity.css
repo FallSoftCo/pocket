@@ -98,3 +98,7 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .run-block { border:0; background:color-mix(in srgb,var(--surface) 65%,transparent); }
 .run-entry pre,.message .body pre { max-height:none; }
 .saved-answer-actions { padding-top:4px; }
+
+.modeled-symbol { display:inline-block; position:relative; flex:0 0 auto; vertical-align:middle; }
+.modeled-symbol>img,.modeled-symbol>canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.modeled-symbol>[hidden] { display:none!important; }

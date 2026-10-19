@@ -1,0 +1,196 @@
+{
+  "state": "candidate",
+  "assetCount": 29,
+  "authoredAssets": {
+    "web/symbols/motion/nextcomp-0.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/nextcomp_motion_small_p0.webp",
+      "sha256": "16d6d11560e90e50ebee6157d3b38b156c192f198df7e55960aa625793c7aefe"
+    },
+    "web/symbols/motion/nextcomp-1.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/nextcomp_motion_small_p1.webp",
+      "sha256": "efd543c0266bcb54be1f60b4b6eb8d0ad2cc62553713d11d609222742b50dbec"
+    },
+    "web/symbols/motion/nextcomp-2.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/nextcomp_motion_small_p2.webp",
+      "sha256": "d23c38b6052fc89e141d197bd93a9bef1f66de8e13047a17ae1ebcda4b562116"
+    },
+    "web/symbols/motion/nextcomp-3.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/nextcomp_motion_small_p3.webp",
+      "sha256": "c925763c5a8b1e7317742997a1050d38400f136bfcf9cb904a5cb60d345ae2be"
+    },
+    "web/symbols/motion/nextcomp-4.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/nextcomp_motion_small_p4.webp",
+      "sha256": "088323517b406f75e8162a96b7c93b03b669351e25f15a63a4a7ac6216be7429"
+    },
+    "web/symbols/motion/editnote-0.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_editnote_p0.webp",
+      "sha256": "1c536d6672ebfb05464e1ab56ce28cd4299ded95da11e7ecd4f3362c763513d9"
+    },
+    "web/symbols/motion/editnote-1.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_editnote_p1.webp",
+      "sha256": "8bcb24e9abc300360b3faf3ef78677e201587db51b54097145b343dd47586907"
+    },
+    "web/symbols/motion/editnote-2.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_editnote_p2.webp",
+      "sha256": "a074d8c248d7ebded22fb89ba359ab2a14d7a9233c8c2596a49ed4a761d84dad"
+    },
+    "web/symbols/motion/editnote-3.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_editnote_p3.webp",
+      "sha256": "73a082bb3681e0d7ae6f888900098e93154bcf46259478c078a00c960553dd65"
+    },
+    "web/symbols/motion/search-0.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_search_p0.webp",
+      "sha256": "406777f1c73d1e601733ebafd524914719db50573ba28baebfa2960788a9b169"
+    },
+    "web/symbols/motion/search-1.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_search_p1.webp",
+      "sha256": "90c4c883ce79eb880d2c1cc12b577a8d7fbcf4112e0539df2f012c48df6f97c2"
+    },
+    "web/symbols/motion/search-2.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_search_p2.webp",
+      "sha256": "d8afa19574e65ac7e989e783d593f8d45ae2b9d3220b192bb7c8af93adef64d0"
+    },
+    "web/symbols/motion/search-3.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_search_p3.webp",
+      "sha256": "79c058e491472ac10ffc962bd44e6c155e9dca569dcabab6433ffd514f5be168"
+    },
+    "web/symbols/motion/inbox-0.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_inbox_p0.webp",
+      "sha256": "d091f9987c7fa2157a1ee7ea98315e20481c69c6071dd1b5c4bc77c9cc23f639"
+    },
+    "web/symbols/motion/inbox-1.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_inbox_p1.webp",
+      "sha256": "69432b85893f5d2bbf78e670c9a18882d6ba914553b7cf15cf2ee65621bf6713"
+    },
+    "web/symbols/motion/inbox-2.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_inbox_p2.webp",
+      "sha256": "5a68f6fd499f055b87836f5fe79a425b652ca128f1b5ba59897b1c6ecefb0c2a"
+    },
+    "web/symbols/motion/inbox-3.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_inbox_p3.webp",
+      "sha256": "ab310df9383ca8ab0a84ac20b1bfaa571ffb851109116d03380c4551e13cd873"
+    },
+    "web/symbols/motion/computer-0.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_computer_p0.webp",
+      "sha256": "29cd9185599c5a4bc318942f6e76bec1ed7812aa10e18a28827909b3c1059a02"
+    },
+    "web/symbols/motion/computer-1.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_computer_p1.webp",
+      "sha256": "1e008eb1bd18e4e52b0140391553e15a73936fba03c23f85e0d8be6f8a7eaed5"
+    },
+    "web/symbols/motion/computer-2.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_computer_p2.webp",
+      "sha256": "db9066f5eed611fb3a25aaf8b1a9c5f324d6a42c0849c2dd15d75f19fbb32562"
+    },
+    "web/symbols/motion/computer-3.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_computer_p3.webp",
+      "sha256": "715281f586f5925247ae1eeac0c47724748711eea61f664cb88c79a997dbb2f2"
+    },
+    "web/symbols/motion/codex-0.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_codex_p0.webp",
+      "sha256": "9fb0f75f62ec54a7c0feff4918d28d6658ed7d8f5e2f65002d6d14db7d407ac7"
+    },
+    "web/symbols/motion/codex-1.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_codex_p1.webp",
+      "sha256": "9734dacc041eb1811624941abf2e582bdcdd06e64578e21001f4c1d0ab3f03a3"
+    },
+    "web/symbols/motion/codex-2.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_codex_p2.webp",
+      "sha256": "eded1ec1c0b3e26afe61577da8028556b04c4dcc5df8096ec0a85245c7dce779"
+    },
+    "web/symbols/motion/codex-3.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_codex_p3.webp",
+      "sha256": "b58d4c1f5379373235c3a89786a32c342607b001d5b52c6872238be2b6afd7ef"
+    },
+    "web/symbols/motion/user-0.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_user_p0.webp",
+      "sha256": "daa6ebbccba6d1301b6f97cacb4b819f567d1f49de407bbb94a07d85df7aa5d6"
+    },
+    "web/symbols/motion/user-1.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_user_p1.webp",
+      "sha256": "bbaa354f85f9175178a66635ab45c4c3b91151f81cd25b57b5395fa4e944d3e3"
+    },
+    "web/symbols/motion/user-2.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_user_p2.webp",
+      "sha256": "2a0fac98f09066c4129bb951047ab9fa92d8f36f825e370fd067a387c7083f4f"
+    },
+    "web/symbols/motion/user-3.webp": {
+      "nativeSource": "android/app/src/main/res/drawable-nodpi/symbol_motion_user_p3.webp",
+      "sha256": "44be3854abd84141a9befb2e5d2b33f8706ed3a5e8222de8ad28a606e1408870"
+    }
+  },
+  "motion": "existing 60fps baked 120-frame swivels and 160-frame N spin; no regenerated CGI",
+  "implementation": "one shared display clock; canvas draw only; viewport/page lifecycle gating; reduced-motion fallback; decoded32MiB + compressed12MiB bounded caches; no per-instance listeners or timers",
+  "evidence": "/home/aosp/.local/state/nextcomp/web-symbol-motion-20261019-cache/receipt.json",
+  "metrics": {
+    "passed": true,
+    "evidence": [
+      "actual modeled N and visible dock/message symbols advance rendered pixels on shared display clock; decoded cache <=32MiB",
+      "300 offscreen history icons do not join animation work; drawing leaves transcript geometry and typing intact",
+      "compressed source pages remain bounded and avoid repeated network reads across loops",
+      "live reduced-motion preference stops the shared clock and shows static fallback, then resumes",
+      "browser freeze/resume retains rendered symbols without replaying requests"
+    ],
+    "first": {
+      "draws": 602,
+      "ticks": 99,
+      "active": 7,
+      "decodedBytes": 31850496,
+      "compressedBytes": 8609586,
+      "pending": 0,
+      "decodeFailures": 0,
+      "scheduled": true
+    },
+    "last": {
+      "draws": 756,
+      "ticks": 121,
+      "active": 7,
+      "decodedBytes": 31850496,
+      "compressedBytes": 8609586,
+      "pending": 0,
+      "decodeFailures": 0,
+      "scheduled": true
+    },
+    "pacing": {
+      "frames": 120,
+      "medianMs": 16.699999999999818,
+      "p95Ms": 16.700000000000273,
+      "over34Ms": 0
+    },
+    "afterOffscreen": {
+      "draws": 1974,
+      "ticks": 295,
+      "active": 7,
+      "decodedBytes": 31719424,
+      "compressedBytes": 8609586,
+      "pending": 0,
+      "decodeFailures": 0,
+      "scheduled": true
+    },
+    "reduced": {
+      "draws": 3157,
+      "ticks": 464,
+      "active": 7,
+      "decodedBytes": 31719424,
+      "compressedBytes": 8609586,
+      "pending": 0,
+      "decodeFailures": 0,
+      "scheduled": false
+    },
+    "restored": {
+      "draws": 3393,
+      "ticks": 500,
+      "active": 7,
+      "decodedBytes": 31719424,
+      "compressedBytes": 8609586,
+      "pending": 1,
+      "decodeFailures": 0,
+      "scheduled": true
+    },
+    "pageErrors": []
+  },
+  "limits": [
+    "Frame timings are bounded Linux headless Chromium evidence, not Pixelbook or physical Android frame pacing.",
+    "No phone update, backend restart, provider request, task submission or model wake."
+  ]
+}
