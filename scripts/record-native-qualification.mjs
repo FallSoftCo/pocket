@@ -1,5 +1,5 @@
 import {homedir} from 'node:os';
-import {startOwnedFixture,stopOwnedFixture,acquireOwnedRunLock} from './owned-fixture.mjs';
+import {startOwnedFixture,stopOwnedFixture,acquireOwnedRunLock,requireQaPreferences} from './owned-fixture.mjs';
 import {spawnSync} from 'node:child_process';
 import crypto from 'node:crypto';
 import {readFileSync,writeFileSync,existsSync,openSync,closeSync,realpathSync,mkdirSync} from 'node:fs';
@@ -37,8 +37,12 @@ writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{flag:'wx',mode:0o
 const persist=()=>writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{mode:0o600});
 // Each native journey owns its synthetic preferences. Preserve the retained QA
 // pairings between cases; a prior fixture must not erase a later real-room target.
-run(['shell','am','force-stop','co.fallsoft.pocket']);
-const originalPreferences=run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml']);
+let originalPreferences;
+try{
+ run(['shell','am','force-stop','co.fallsoft.pocket']);
+ originalPreferences=requireQaPreferences(run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml']));
+}catch(error){receipt.state='failed';receipt.error=error.message;receipt.finishedAt=Date.now();persist();releaseOwnership();throw error;}
+
 receipt.originalPreferencesSha=sha256(Buffer.from(originalPreferences));persist();
 
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));

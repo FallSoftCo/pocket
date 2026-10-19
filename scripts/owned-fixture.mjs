@@ -5,6 +5,12 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 
 // IPC ties the fixture lifetime to its caller even if the caller is SIGKILLed.
 // A separate process group lets normal cleanup retire descendants as well.
+export function requireQaPreferences(value){
+ const text=typeof value==='string'?value.trim():'';
+ if(!/^<\?xml\b[^?]*\?>\s*<map(?:\s[^>]*)?(?:\s*\/>|>[\s\S]*<\/map>)\s*$/u.test(text))
+  throw Error('Android did not return a SharedPreferences XML document; retained QA state was not captured.');
+ return value;
+}
 export function acquireOwnedRunLock(path){
  const fd=openSync(path,'a',0o600);
  const result=spawnSync('flock',['--nonblock','3'],{stdio:['ignore','ignore','pipe',fd]});

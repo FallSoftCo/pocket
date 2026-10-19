@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawn} from 'node:child_process';
 import {setTimeout as pause} from 'node:timers/promises';
-import {startOwnedFixture,stopOwnedFixture,acquireOwnedRunLock} from '../scripts/owned-fixture.mjs';
+import {startOwnedFixture,stopOwnedFixture,acquireOwnedRunLock,requireQaPreferences} from '../scripts/owned-fixture.mjs';
 const wait=async predicate=>{for(let i=0;i<120;i++){if(predicate())return;await pause(25);}throw Error('Lifecycle deadline exceeded');};
 const running=pid=>{try{return readFileSync('/proc/'+pid+'/stat','utf8').split(' ')[2]!=='Z';}catch{return false;}};
 test('owned fixture is stopped and reaped on normal cleanup',async()=>{
@@ -45,4 +45,11 @@ test('release storage refuses RAM-backed source, output, cache or stage without 
   assert.throws(()=>checkBuildStorage('/stage',path=>({...disk,type:path===ram?0x01021994:disk.type}),['/source','/outputs','/cache']),/RAM-backed build path/);
  }
  const result=checkBuildStorage('/stage',()=>disk,['/source','/outputs','/cache']);assert.ok(result.rootRequired>80*1024**3);
+});
+
+test('ADB exec-out success cannot turn shell errors into retained preferences',()=>{
+ const xml='<?xml version="1.0" encoding="utf-8"?>\n<map><string name="draft">Preserved</string></map>\n';
+ assert.equal(requireQaPreferences(xml),xml);
+ assert.throws(()=>requireQaPreferences('run-as: unknown package: co.fallsoft.pocket\n'),/SharedPreferences XML/);
+ assert.throws(()=>requireQaPreferences(''),/SharedPreferences XML/);
 });
