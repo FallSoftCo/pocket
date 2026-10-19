@@ -309,7 +309,7 @@ internal object InterfaceGrammarScaffolds {
         "Steer running turn" to "Orienta|Steer il|the turno|turn",
         "What would you like Codex to do?" to "Che|What cosa|what vuoi|want far|make fare|do a|to Codex?",
         "Original / Italiano" to "Originale|Original / Italiano|Italian",
-        "No speech was captured. Check microphone privacy, then tap the microphone to record again." to "Non|Not è|is stato|been registrato|recorded alcun|any parlato.|speech. Controlla|Check le|the impostazioni|settings di|of privacy del|of-the microfono,|microphone, poi|then tocca|tap il|the microfono|microphone per|for registrare|record di|of nuovo.|again.",
+        "No speech was captured. Check microphone privacy, then press a volume button to record again." to "Non|Not è|is stato|been registrato|recorded alcun|any parlato.|speech. Controlla|Check le|the impostazioni|settings di|of privacy del|of-the microfono,|microphone, poi|then premi|press un|a pulsante|button del|of-the volume|volume per|for registrare|record di|of nuovo.|again.",
         "Start voice" to "Avvia|Start la|the voce|voice",
         "Start voice in this conversation" to "Parla|Speak in questa|this conversazione|conversation",
         "Stop and send recording" to "Ferma|Stop e|and invia|send la|the registrazione|recording",
