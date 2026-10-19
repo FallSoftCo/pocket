@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -47,10 +46,20 @@ internal fun Modifier.nextCompBackdrop():Modifier=drawWithCache {
     onDrawBehind{drawRect(ground);drawRect(dots);drawRect(light)}
 }
 
-/** A quiet raised plane shared by both backends. No backdrop blur, animated lights or
- * geometry changes: the existing content, touch targets and idle hue survive. */
+/** Prelit bevels shared by both backends. No runtime drop-shadow or blur layer
+ * wraps editable content. Geometry, touch targets and idle hue stay unchanged. */
 internal fun Modifier.depthSurface(base:Color,shape:Shape,elevation:Dp=3.dp):Modifier=
-    shadow(elevation,shape,clip=false).clip(shape).drawWithCache {
+    clip(shape).drawWithCache {
         val finish=Brush.verticalGradient(listOf(Color.White.copy(alpha=.045f),Color.Transparent,Color.Black.copy(alpha=.12f)))
-        onDrawBehind{drawRect(base);drawRect(finish)}
+        val depth=(elevation.value/6f).coerceIn(0f,1f)
+        val edge=(.5f+.5f*depth).dp.toPx()
+        val high=Color.White.copy(alpha=.08f+.04f*depth)
+        val low=Color.Black.copy(alpha=.22f)
+        onDrawBehind{
+            drawRect(base);drawRect(finish)
+            drawLine(high,Offset(0f,edge/2),Offset(size.width,edge/2),edge)
+            drawLine(high,Offset(edge/2,0f),Offset(edge/2,size.height),edge)
+            drawLine(low,Offset(0f,size.height-edge/2),Offset(size.width,size.height-edge/2),edge)
+            drawLine(low,Offset(size.width-edge/2,0f),Offset(size.width-edge/2,size.height),edge)
+        }
     }
