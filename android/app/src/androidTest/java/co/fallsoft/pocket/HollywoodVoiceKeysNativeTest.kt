@@ -30,7 +30,7 @@ class HollywoodVoiceKeysNativeTest{
    .putString("backend:"+backendOwner(base,token),"lax")
    .putString("hollywood-room:"+backendOwner(base,token)+":"+bindingId,roomA).commit()
   val oldIdle=Configurator.getInstance().waitForIdleTimeout;Configurator.getInstance().waitForIdleTimeout=0
-  fun await(label:String,test:()->Boolean){val end=SystemClock.elapsedRealtime()+30000;while(SystemClock.elapsedRealtime()<end){i.uiAutomation.clearCache();if(test())return;Thread.sleep(100)};assertTrue(label,test())}
+  fun await(label:String,limit:Long=30000,test:()->Boolean){val end=SystemClock.elapsedRealtime()+limit;while(SystemClock.elapsedRealtime()<end){i.uiAutomation.clearCache();if(test())return;Thread.sleep(100)};assertTrue(label,test())}
   fun tap(tag:String){await("Missing "+tag){runCatching{d.findObject(By.res(tag))?.let{it.click();true}?:false}.getOrDefault(false)}}
   val source=EnvironmentRequest(EnvironmentIdentity(id,"Owned synthetic voice"),base,token)
   val binding=JSONObject().put("bindingId",bindingId).put("authorityId","aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
@@ -41,6 +41,7 @@ class HollywoodVoiceKeysNativeTest{
   val initialVolume=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
   val originalDraft=client.draft(HollywoodScope(roomA,agentA))
   val originalDraftB=client.draft(HollywoodScope(roomB,agentB))
+  var catalogFeedbackMs=-1L
   try{
    // Retained app data is intentional. Only the synthetic fixture's two scopes
    // begin empty for the voice-primary assertion; finally restores both drafts.
@@ -80,9 +81,16 @@ class HollywoodVoiceKeysNativeTest{
    Thread.sleep(1100);assertEquals("Held key toggled twice","Listening",PocketVoice.state)
    d.takeScreenshot(c.filesDir.resolve("native-room-recording-ime.png"))
    key(KeyEvent.ACTION_UP)
+   val catalogFeedbackBegan=SystemClock.elapsedRealtime()
    d.pressBack()
-   await("Back with IME did not reach rooms"){d.hasObject(By.res("native-room:"+roomB))}
-   assertTrue("Catalog hid active capture feedback",d.hasObject(By.res("native-room-capture-status")))
+   // The catalog's first accessibility tree can precede its status-row layout.
+   // Require the whole visible destination, clearing that cache on each check.
+   await("Back with IME did not reveal rooms and active capture feedback",2000){
+    d.hasObject(By.res("native-room:"+roomB))&&d.hasObject(By.res("native-room-capture-status"))
+   }
+   catalogFeedbackMs=SystemClock.elapsedRealtime()-catalogFeedbackBegan
+   assertEquals("Navigation cancelled active recording","Listening",PocketVoice.state)
+   android.util.Log.i("NextCompVoiceQA","catalogFeedbackMs="+catalogFeedbackMs)
    assertFalse("Removed catalog microphone returned",d.hasObject(By.res("native-catalog-microphone")))
    tap("native-room:"+roomB)
    await("Other room did not open"){d.hasObject(By.res("native-room-controls"))&&d.hasObject(By.text("Synthetic voice room B"))}
@@ -138,8 +146,12 @@ class HollywoodVoiceKeysNativeTest{
    assertEquals(0,status.getInt("blockedTaskWrites"))
    assertTrue(status.getBoolean("noProvider"))
    c.filesDir.resolve("native-room-volume-ime-receipt.json").writeText(status.put("hardwareStartStop",true).put("volumeOnlyControls",true)
-    .put("draftPreserved",true).put("navigationKeptOriginalRoom",true).put("catalogDefaultRoom",true).put("settingsCapture",true).put("providerQualified",false).put("physicalPhone",false).toString())
+    .put("draftPreserved",true).put("navigationKeptOriginalRoom",true).put("catalogDefaultRoom",true).put("catalogFeedbackMs",catalogFeedbackMs).put("settingsCapture",true).put("providerQualified",false).put("physicalPhone",false).toString())
    d.takeScreenshot(c.filesDir.resolve("native-room-volume-ime.png"))
+  }catch(failure:Throwable){
+   d.takeScreenshot(c.filesDir.resolve("native-room-capture-failure.png"))
+   d.dumpWindowHierarchy(c.filesDir.resolve("native-room-capture-failure.xml"))
+   throw failure
   }finally{
    i.runOnMainSync{PocketVoice.stop()}
    // Only this disposable fixture's recording can be cleared, and only after
