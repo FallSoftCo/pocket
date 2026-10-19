@@ -66,11 +66,14 @@ class NaturalImmersionNativeTest {
   val action=LinkAnnotation.Clickable("owned-grammar-action",linkInteractionListener=LinkInteractionListener{actions.incrementAndGet()})
   fun actionable(form:AnnotatedString)=buildAnnotatedString{append(form);addLink(action,0,length)}
   val source=authoredImmersionScaffold("I am not checking the latest changes.",listOf(
-   "Non" to "Not"," " to " ","sto" to "am"," " to " ","controllando" to "checking"," " to " ",
-   "le" to "the"," " to " ","ultime" to "latest"," " to " ","modifiche." to "changes."))
+   "Non sto" to "Not-am"," " to " ","controllando" to "checking"," " to " ",
+   "le ultime" to "the-latest"," " to " ","modifiche." to "changes."))
   val support=actionable(requireNotNull(immersionGrammarForm(source,true,"fixture")))
   val italian=actionable(requireNotNull(immersionGrammarForm(source,false,"fixture")))
-  assertEquals("Not am checking the latest changes.",support.text)
+  assertEquals("Not-am checking the-latest changes.",support.text)
+  assertTrue(supportedImmersionPlanVersion("transgrammatic-english-italian-v2"))
+  assertTrue(supportedImmersionPlanVersion("transgrammatic-english-italian-v1"))
+  assertFalse(supportedImmersionPlanVersion("unknown"))
   val monitor=i.addMonitor(MainActivity::class.java.name,null,false)
   c.startActivity(android.content.Intent(c,MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
   val activity=i.waitForMonitorWithTimeout(monitor,10000) as? MainActivity

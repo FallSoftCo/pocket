@@ -9,6 +9,9 @@ class ImmersionCycleTest {
             val span=requireNotNull(InterfaceGrammarScaffolds.find(source,target)) { source }
             assertTrue("Invalid authored alignment: "+source,alignedTargetValid(span))
             assertEquals(source,span.source)
+        val linkedSource="NextComp server address"
+        val linked=requireNotNull(InterfaceGrammarScaffolds.find(linkedSource,requireNotNull(InterfaceGrammarScaffolds.italian(linkedSource))))
+        assertTrue(immersionGrammarSupport(linked).contains("of-the"))
             assertEquals(target,span.targetSegments.joinToString(""){it.target})
             assertFalse("Leaked phrase delimiter: "+source,target.contains('~'))
             val support=requireNotNull(immersionGrammarForm(span,true,"catalog")) { source }
