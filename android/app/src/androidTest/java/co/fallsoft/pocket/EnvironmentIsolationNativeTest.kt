@@ -44,12 +44,20 @@ class EnvironmentIsolationNativeTest {
   assertTrue(device.wait(Until.hasObject(By.textContains("System76 answer only")),5000))
   device.findObject(By.textContains("System76 answer only")).click()
   await{Pocket.selected=="same-thread"&&PocketTranscript.rows.any{it.s("text")=="System76 answer only"}}
+  // The catalog and conversation intentionally share the same control label.
+  // Wait for the actual conversation window before touching its controls.
+  assertTrue("Conversation has not painted",device.wait(Until.hasObject(By.res("conversation-history")),10000))
   assertTrue(device.wait(Until.hasObject(By.desc("Settings, app updates, usage and activity")),5000))
   device.findObject(By.desc("Settings, app updates, usage and activity")).click()
   if(!device.wait(Until.hasObject(By.text("Rename")),1000)){
    repeat(3){if(!device.hasObject(By.text("Rename")))device.swipe(device.displayWidth*2/3,device.displayHeight*4/5,device.displayWidth*2/3,device.displayHeight*2/5,25)}
   }
-  assertTrue("Rename action missing",device.wait(Until.hasObject(By.text("Rename")),5000));device.findObject(By.text("Rename")).click()
+  val renameVisible=device.wait(Until.hasObject(By.text("Rename")),5000)
+  if(!renameVisible){
+   device.dumpWindowHierarchy(java.io.File(context.cacheDir,"environment-rename-failure.xml"))
+   device.takeScreenshot(java.io.File(context.cacheDir,"environment-rename-failure.png"))
+  }
+  assertTrue("Rename action missing",renameVisible);device.findObject(By.text("Rename")).click()
   assertTrue(device.wait(Until.hasObject(By.text("Rename conversation")),5000))
   device.findObject(By.clazz("android.widget.EditText")).text="Unsent title from System76"
   main{Pocket.activateEnvironment("remote_qa");Pocket.open("same-thread")}
