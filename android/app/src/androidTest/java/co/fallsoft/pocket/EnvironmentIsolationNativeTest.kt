@@ -8,7 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
-import androidx.test.uiautomator.Until
+import androidx.test.uiautomator.BySelector
 import androidx.work.WorkManager
 import androidx.work.WorkInfo
 import org.json.JSONArray
@@ -24,7 +24,9 @@ class EnvironmentIsolationNativeTest {
  private val context get()=instrumentation.targetContext
  private val device get()=UiDevice.getInstance(instrumentation)
  private fun main(block:()->Unit)=instrumentation.runOnMainSync(block)
- private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(condition())return;Thread.sleep(100)};assertTrue("Timed out waiting for isolated environment state",condition())}
+ private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){instrumentation.uiAutomation.clearCache();if(condition())return;Thread.sleep(100)};assertTrue("Timed out waiting for isolated environment state",condition())}
+ private fun present(selector:BySelector):Boolean{instrumentation.uiAutomation.clearCache();return device.hasObject(selector)}
+ private fun visible(selector:BySelector,timeoutMs:Long):Boolean{val end=android.os.SystemClock.elapsedRealtime()+timeoutMs;while(android.os.SystemClock.elapsedRealtime()<end){if(present(selector))return true;Thread.sleep(100)};return present(selector)}
  @Test fun sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa"){"Wrong emulator ownership"}
   check(android.os.Build.FINGERPRINT.contains("generic")||android.os.Build.FINGERPRINT.contains("emu")){"Synthetic test must never run on an owner's phone"}
@@ -36,43 +38,43 @@ class EnvironmentIsolationNativeTest {
    .putString("outbox:unknown-retained",JSONObject().put("thread","same-thread").put("text","uncertain prior delivery").put("local",false).put("environment","workstation").put("state","unknown").toString())
    .putString("environments:v1",JSONArray().put(JSONObject().put("id","workstation").put("name","System76")).put(JSONObject().put("id","remote_qa").put("name","OZZZ")).toString()).commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
-  assertTrue(device.wait(Until.hasObject(By.text("System76 synthetic work")),15000))
-  assertTrue(device.wait(Until.hasObject(By.textContains("System76 second answer only")),5000))
+  assertTrue(visible(By.text("System76 synthetic work"),15000))
+  assertTrue(visible(By.textContains("System76 second answer only"),5000))
   device.findObject(By.textContains("System76 second answer only")).click()
   await{Pocket.selected=="second-thread"&&PocketTranscript.rows.any{it.s("text")=="System76 second answer only"}}
   main{Pocket.closeTask()}
-  assertTrue(device.wait(Until.hasObject(By.textContains("System76 answer only")),5000))
+  assertTrue(visible(By.textContains("System76 answer only"),5000))
   device.findObject(By.textContains("System76 answer only")).click()
   await{Pocket.selected=="same-thread"&&PocketTranscript.rows.any{it.s("text")=="System76 answer only"}}
   // The catalog and conversation intentionally share the same control label.
   // Wait for the actual conversation window before touching its controls.
-  assertTrue("Conversation has not painted",device.wait(Until.hasObject(By.res("conversation-history")),10000))
-  assertTrue(device.wait(Until.hasObject(By.desc("Settings, app updates, usage and activity")),5000))
+  assertTrue("Conversation has not painted",visible(By.res("conversation-history"),10000))
+  assertTrue(visible(By.desc("Settings, app updates, usage and activity"),5000))
   device.findObject(By.desc("Settings, app updates, usage and activity")).click()
-  if(!device.wait(Until.hasObject(By.text("Rename")),1000)){
-   repeat(3){if(!device.hasObject(By.text("Rename")))device.swipe(device.displayWidth*2/3,device.displayHeight*4/5,device.displayWidth*2/3,device.displayHeight*2/5,25)}
+  if(!visible(By.text("Rename"),1000)){
+   repeat(3){if(!present(By.text("Rename")))device.swipe(device.displayWidth*2/3,device.displayHeight*4/5,device.displayWidth*2/3,device.displayHeight*2/5,25)}
   }
-  val renameVisible=device.wait(Until.hasObject(By.text("Rename")),5000)
+  val renameVisible=visible(By.text("Rename"),5000)
   if(!renameVisible){
-   device.dumpWindowHierarchy(java.io.File(context.cacheDir,"environment-rename-failure.xml"))
+   instrumentation.uiAutomation.clearCache();device.dumpWindowHierarchy(java.io.File(context.cacheDir,"environment-rename-failure.xml"))
    device.takeScreenshot(java.io.File(context.cacheDir,"environment-rename-failure.png"))
   }
   assertTrue("Rename action missing",renameVisible);device.findObject(By.text("Rename")).click()
-  assertTrue(device.wait(Until.hasObject(By.text("Rename conversation")),5000))
+  assertTrue(visible(By.text("Rename conversation"),5000))
   device.pressKeyCode(android.view.KeyEvent.KEYCODE_Z)
   await{device.findObject(By.clazz("android.widget.EditText"))?.text=="z"}
   device.findObject(By.clazz("android.widget.EditText")).text="Unsent title from System76"
   main{Pocket.activateEnvironment("remote_qa");Pocket.open("same-thread")}
   await{PocketTranscript.rows.any{it.s("text")=="OZZZ answer only"}}
-  assertFalse("An old-environment rename control survived the source change",device.hasObject(By.text("Rename conversation")))
-  assertFalse("An old-environment control value leaked",device.hasObject(By.clazz("android.widget.EditText").text("Unsent title from System76")))
+  assertFalse("An old-environment rename control survived the source change",present(By.text("Rename conversation")))
+  assertFalse("An old-environment control value leaked",present(By.clazz("android.widget.EditText").text("Unsent title from System76")))
   main{Pocket.activateEnvironment("workstation");Pocket.open("same-thread")}
   await{PocketTranscript.rows.any{it.s("text")=="System76 answer only"}}
   main{Pocket.closeTask()}
-  assertTrue("Catalog scene not mounted",device.wait(Until.hasObject(By.res("work-catalog")),5000))
-  assertTrue(device.wait(Until.hasObject(By.desc("Settings, app updates, usage and activity")),5000));device.findObject(By.desc("Settings, app updates, usage and activity")).click()
-  assertTrue(device.wait(Until.hasObject(By.desc("Development environment: System76")),5000));device.findObject(By.desc("Development environment: System76")).click()
-  assertTrue(device.wait(Until.hasObject(By.text("OZZZ")),5000));device.findObject(By.text("OZZZ")).click()
+  assertTrue("Catalog scene not mounted",visible(By.res("work-catalog"),5000))
+  assertTrue(visible(By.desc("Settings, app updates, usage and activity"),5000));device.findObject(By.desc("Settings, app updates, usage and activity")).click()
+  assertTrue(visible(By.desc("Development environment: System76"),5000));device.findObject(By.desc("Development environment: System76")).click()
+  assertTrue(visible(By.text("OZZZ"),5000));device.findObject(By.text("OZZZ")).click()
   await{Pocket.environmentId=="remote_qa"&&Pocket.tasks.any{it.title=="OZZZ synthetic work"}}
   main{Pocket.open("same-thread")};await{PocketTranscript.rows.any{it.s("text").contains("OZZZ answer only")}}
   assertFalse(PocketTranscript.rows.any{it.s("text").contains("System76 answer only")})
@@ -114,10 +116,10 @@ class EnvironmentIsolationNativeTest {
   prefs.edit().putString("newTaskPrompt","System76 new task draft")
    .putString("environment:remote_qa:newTaskPrompt","OZZZ new task draft").commit()
   main{Pocket.closeTask();Pocket.composeTask()}
-  assertTrue("OZZZ form draft missing",device.wait(Until.hasObject(By.clazz("android.widget.EditText").text("OZZZ new task draft")),5000))
+  assertTrue("OZZZ form draft missing",visible(By.clazz("android.widget.EditText").text("OZZZ new task draft"),5000))
   main{Pocket.activateEnvironment("workstation");Pocket.composeTask()}
-  assertTrue("Remote form retained the wrong environment draft",device.wait(Until.hasObject(By.clazz("android.widget.EditText").text("System76 new task draft")),5000))
-  assertFalse("Previous remote form leaked",device.hasObject(By.clazz("android.widget.EditText").text("OZZZ new task draft")))
+  assertTrue("Remote form retained the wrong environment draft",visible(By.clazz("android.widget.EditText").text("System76 new task draft"),5000))
+  assertFalse("Previous remote form leaked",present(By.clazz("android.widget.EditText").text("OZZZ new task draft")))
   assertEquals("OZZZ new task draft",prefs.getString("environment:remote_qa:newTaskPrompt",null))
   main{Pocket.newTask=false}
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
