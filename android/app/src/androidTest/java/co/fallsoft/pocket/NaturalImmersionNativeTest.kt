@@ -22,12 +22,18 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.atomic.AtomicReference
+import org.json.JSONObject
+import org.json.JSONArray
 
 @RunWith(AndroidJUnit4::class)
 class NaturalImmersionNativeTest {
  @Test(timeout=90000) fun naturalParagraphsKeepNativeSpacingAndGlobalWaveRunsWhileTyping(){
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  c.getSharedPreferences("pocket",0).edit().clear()
+   .putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76")
+   .putString("deviceId","synthetic-grammar-revision").commit()
+  i.runOnMainSync{Pocket.init(c)}
   val clock=AtomicReference<ImmersionReadingWaveClock?>()
   val nativeLayout=AtomicReference<TextLayoutResult?>()
   val expected=AtomicReference<TextLayoutResult?>()
@@ -78,6 +84,29 @@ class NaturalImmersionNativeTest {
   c.startActivity(android.content.Intent(c,MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
   val activity=i.waitForMonitorWithTimeout(monitor,10000) as? MainActivity
   assertNotNull("Native activity monitor unavailable",activity)
+  fun grammarEvent(revision:String,includeRow:Boolean):JSONObject {
+   val segments=JSONArray()
+   source.targetSegments.forEach { segment->segments.put(JSONObject().put("start",segment.start).put("end",segment.end)
+    .put("target",segment.target).put("meaning",segment.meaning).put("role",segment.role)) }
+   val span=JSONObject().put("start",0).put("end",source.source.length).put("source",source.source)
+    .put("target",source.target).put("targetSegments",segments)
+   val row=JSONObject().put("id","native-grammar-revision").put("version",immersionSourceHash(source.source))
+    .put("planVersion",revision).put("density","strong").put("text",source.target).put("spans",JSONArray().put(span))
+   return JSONObject().put("planVersion",revision).put("translations",if(includeRow)JSONArray().put(row)else JSONArray())
+  }
+  i.runOnMainSync{
+   PocketImmersion.setEnabled(true)
+   PocketImmersion.accept(grammarEvent("transgrammatic-english-italian-v1",true))
+   assertTrue(PocketImmersion.hasTranslation("native-grammar-revision",source.source))
+   PocketImmersion.accept(grammarEvent("transgrammatic-english-italian-v2",false))
+   assertFalse("Cached v1 plan suppressed the revision refresh",PocketImmersion.hasTranslation("native-grammar-revision",source.source))
+   PocketImmersion.accept(grammarEvent("transgrammatic-english-italian-v2",true))
+   assertTrue(PocketImmersion.hasTranslation("native-grammar-revision",source.source))
+   val accepted=PocketImmersion.presentation("native-grammar-revision",source.source)
+   assertEquals("Not-am checking the-latest changes.",immersionGrammarSupport(accepted.spans.single()))
+   assertEquals("I am not checking the latest changes.",accepted.source)
+  }
+
   try{
    i.runOnMainSync{activity!!.window.addOnFrameMetricsAvailableListener(metrics,android.os.Handler(android.os.Looper.getMainLooper()));activity.window.decorView.viewTreeObserver.addOnDrawListener(drawListener);activity.setContent{MaterialTheme{
     CompositionLocalProvider(LocalImmersionMotionState provides true,LocalImmersionTransitionAnimated provides true){
