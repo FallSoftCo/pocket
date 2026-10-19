@@ -208,5 +208,12 @@
     "backendRestarted": false,
     "phoneUpdated": false
   },
-  "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-web-modeled-motion"
+  "gallery": "https://system76-pc.tailb77f2a.ts.net/8bar/#nextcomp-web-modeled-motion",
+  "galleryCheck": {
+    "state": "not-qualified",
+    "unit": "nextcomp-symbol-gallery-20261019-r01",
+    "evidence": "/home/aosp/.local/state/nextcomp/web-symbol-motion-20261019-gallery/run-87Bqgm",
+    "reason": "Whole gallery checker hit its private1536MiB cgroup cap during layout evaluation; isolated browser stopped, no retry or cap increase. This is separate from passed NextComp synthetic and actual private-route browser journeys.",
+    "assetsHttp200": true
+  }
 }
