@@ -10,11 +10,17 @@
   ],
   "headReads": 7,
   "pageErrors": [],
-  "status": "qualified-for-web-rollout",
+  "status": "web-deployed",
   "scope": "web-only",
   "desktopParityPassed": true,
   "touchParityPassed": true,
   "authenticatedGatewayChecksPassed": true,
-  "productionDeployed": false,
-  "nativePhoneUpdated": false
+  "productionDeployed": true,
+  "nativePhoneUpdated": false,
+  "closureSha256": "85e25646527f5c9f46316ad1926f1e1b2b8c86ac0fd10f4abfc18aeb6121b296",
+  "livePairedLoginStatus": 200,
+  "liveAuthenticatedStatus": 200,
+  "disposableDeviceRevoked": true,
+  "existingBrowserConnectionsPreserved": true,
+  "backendRestarted": false
 }
