@@ -46,6 +46,35 @@ export function transgrammaticUnits(text){
 }
 const lexicalSchema={type:'object',additionalProperties:false,required:['target','occurrence','meaning'],properties:{target:{type:'string'},occurrence:{type:'integer'},meaning:{type:'string',description:'Contextual English scaffold for this unit only. Link multiword meanings with hyphens; never include a neighboring unit’s meaning.'}}};
 const unitSchema={type:'object',additionalProperties:false,required:['target','words'],properties:{target:{type:'string'},words:{type:'array',items:lexicalSchema}}};
+// Units own lexical prose; adjacent source punctuation is reconstructed once.
+// Re-anchor target quotes after trimming only duplicated, source-owned boundary ink.
+function contextualUnitOutput(source,unit,value){
+ if(typeof value?.target!=='string'||!Array.isArray(value.words))return value;
+ const anchor=resolveImmersionAnchor(source,unit.source,unit.occurrence);if(!anchor)return value;
+ const original=value.target;
+ let start=original.length-original.trimStart().length,end=original.trimEnd().length;
+ const prefix=source.slice(0,anchor.start).match(/[.!?,;:…]+$/u)?.[0];
+ const suffix=source.slice(anchor.end).match(/^[.!?,;:…]+/u)?.[0];
+ if(prefix&&original.slice(start,end).startsWith(prefix))start+=prefix.length;
+ if(suffix&&original.slice(start,end).endsWith(suffix))end-=suffix.length;
+ if(start===0&&end===original.length)return value;
+ const target=original.slice(start,end),words=[];
+ for(const word of value.words){
+  const resolved=resolveImmersionAnchor(original,word.target,word.occurrence);if(!resolved)return value;
+  const left=Math.max(start,resolved.start),right=Math.min(end,resolved.end);
+  if(left>=right){if(/[\p{L}\p{N}]/u.test(word.target))return value;continue;}
+  const quote=original.slice(left,right);let occurrence=0,match;
+  while((match=resolveImmersionAnchor(target,quote,occurrence))&&match.start<left-start)occurrence++;
+  if(!match||match.start!==left-start)return value;
+  let meaning=word.meaning;
+  if(typeof meaning==='string'){
+   if(resolved.start<start&&prefix&&meaning.startsWith(prefix))meaning=meaning.slice(prefix.length);
+   if(resolved.end>end&&suffix&&meaning.endsWith(suffix))meaning=meaning.slice(0,-suffix.length);
+  }
+  words.push({...word,target:quote,occurrence,meaning});
+ }
+ return {...value,target,words};
+}
 export function prepareTransgrammaticBatch(batch){
  const units=batch.map(row=>transgrammaticUnits(row.text));
  const properties=Object.fromEntries(units.map((rows,i)=>[String(i),{type:'object',additionalProperties:false,required:rows.map((_,j)=>String(j)),properties:Object.fromEntries(rows.map((_,j)=>[String(j),unitSchema]))}]));
@@ -53,7 +82,7 @@ export function prepareTransgrammaticBatch(batch){
   input:{instruction:'Translate each numbered unit completely into fluent Italian, using its full source as context. Return EVERY numbered unit. Keep complete words/contractions or indivisible grammatical phrases intact in target order. Cover each target word exactly once with nonoverlapping units. Give each unit only its own contextual English meaning, hyphenating linked English words; do not repeat an adjacent unit’s meaning. Group a multiword construction when separate glosses would duplicate words. Do not translate surrounding protected source or add explanations. Source punctuation is reconstructed separately. Each occurrence counts exact complete words within this unit target, starting at zero.',sources:batch.map((row,i)=>({key:String(i),context:row.text,units:Object.fromEntries(units[i].map((u,j)=>[String(j),u.source]))}))},
   schema:{type:'object',additionalProperties:false,required:Object.keys(properties),properties},
   decode:result=>({translations:batch.map((row,i)=>({id:row.id,version:row.version,spans:units[i].map((unit,j)=>{
-   const value=result?.[i]?.[j];return {...unit,target:value?.target,unit:'phrase',note:'',targetSegments:value?.words?.map(word=>({...word,meaning:typeof word.meaning==='string'?word.meaning.trim().replace(/\s+/gu,'-'):word.meaning,role:'other',features:[],relations:[]}))};
+   const value=contextualUnitOutput(row.text,unit,result?.[i]?.[j]);return {...unit,target:value?.target,unit:'phrase',note:'',targetSegments:value?.words?.map(word=>({...word,meaning:typeof word.meaning==='string'?word.meaning.trim().replace(/\s+/gu,'-'):word.meaning,role:'other',features:[],relations:[]}))};
   })}))})
  };
 }

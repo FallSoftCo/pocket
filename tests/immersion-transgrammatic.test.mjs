@@ -138,3 +138,22 @@ test('phrase-owned scaffold links expansions once and rejects overlapping Italia
  const bad=structuredClone(row);bad.spans[0].targetSegments.push({...bad.spans[0].targetSegments[1]});
  assert.equal(validateTransgrammaticPlan(text,bad),null);
 });
+
+test('source-owned sentence punctuation is emitted once for captured teacher phrase output',async()=>{
+ const {prepareTransgrammaticBatch}=await import('../server/immersion-transgrammatic.mjs');
+ const text='I am taking care of the account settings.';
+ const prepared=prepareTransgrammaticBatch([{id:'captured-phrase',version:immersionHash(text),text}]);
+ for(const lexicalPunctuation of [false,true]){
+  const result={'0':{'0':{target:'Mi sto occupando delle impostazioni dell’account.',words:[
+   {target:'Mi',occurrence:0,meaning:'myself'},
+   {target:'sto occupando',occurrence:0,meaning:'am taking care'},
+   {target:'delle',occurrence:0,meaning:'of the'},
+   {target:'impostazioni',occurrence:0,meaning:'settings'},
+   {target:'dell’account'+(lexicalPunctuation?'.':''),occurrence:0,meaning:'of the account'+(lexicalPunctuation?'.':'')}
+  ]}}};
+  const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(text,row);
+  const valid=validateTransgrammaticPlan(text,row);assert.ok(valid);
+  assert.equal(valid.text,'Mi sto occupando delle impostazioni dell’account.');
+  assert.equal(valid.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'myself am-taking-care of-the settings of-the-account');
+ }
+});
