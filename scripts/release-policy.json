@@ -8,7 +8,7 @@
     "co.fallsoft.pocket.HollywoodReconnectNativeTest#capabilityOutageRecoversWithoutLosingOpenRoomOrDraft",
     "co.fallsoft.pocket.HollywoodRoomControlsNativeTest#stopLostAcknowledgementAndLocalSlowdownReportKeepOriginalIdentity",
     "co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#nativeVolumeKeysKeepOriginalRoomAndDraftWhileProviderIsUnavailable",
-    "co.fallsoft.pocket.NaturalImmersionNativeTest#naturalParagraphsKeepNativeSpacingAndGlobalWaveRunsWhileTyping",
+    "co.fallsoft.pocket.ImmersionFlipFlopNativeTest#allUnitsFlipWithoutAnimationAndTouchDoesNotSuspendClock",
     "co.fallsoft.pocket.WorkCardReadabilityNativeTest#idleIsChromaticNotDisabledAndStillOpens",
     "co.fallsoft.pocket.VoiceTurnStoreNativeTest#independentCaptureDeliveryAndPlaybackSurviveReopen",
     "co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#captureStartsAndStopsIndependentlyOfPresentationState",
@@ -22,7 +22,7 @@
     "co.fallsoft.pocket.CatalogStartupNativeTest#concurrentAncillariesAndSearchCannotBlockLatestCatalog",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#prolongedHistoryRecoveryCannotFreezeOrFollowNavigation",
     "co.fallsoft.pocket.HistoryReadingNativeTest#pullingAShortRecentPageLoadsEarlierHistoryWithoutATap",
-    "co.fallsoft.pocket.ImmersionWaterfallScrollNativeTest#waterfallRemainsSpatialAndScrollDoesNotReassignLanguage",
+    "co.fallsoft.pocket.ImmersionFlipScrollNativeTest#keyedRecyclingKeepsComplementaryFormsAndNativeTextWhileTyping",
     "co.fallsoft.pocket.ForegroundNotificationNativeTest#activeAppCoalescesAlertsPreservesQuestionsAndKeepsDelayedRefreshInline",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#historyEvidenceRepairsDeferredPositionOnce",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#canonicalInputPositionSurvivesProviderChangeDuringLookup",
@@ -37,7 +37,8 @@
     "Software emulator key-to-draw timing does not establish handset optical latency, physical voice or FCM display",
     "Existing account/voice/profile/question/receipt code is retained; physical-phone validation remains separate",
     "Native volume/IME/AudioRecord is checked against an explicit no-provider fixture; physical phone/provider transcript and TTS remain unqualified.",
-    "Incremental recording delivery: existing installed speech renderer/cache policy retained. Experimental rendered speech path is not enabled or qualified. No paid API or model switch."
+    "Incremental recording delivery: existing installed speech renderer/cache policy retained. Experimental rendered speech path is not enabled or qualified. No paid API or model switch.",
+    "Complementary instant flip replaces the superseded waterfall visual contract; actual native coverage retains keyed recycling, normal glyph spacing, active keyboard/typing and link activation. Historical wave tests/evidence remain in source but are not current product acceptance."
   ],
   "requiredOptimizedReview": "native-room-catalog-and-typing",
   "captureInteraction": "volume-buttons"
