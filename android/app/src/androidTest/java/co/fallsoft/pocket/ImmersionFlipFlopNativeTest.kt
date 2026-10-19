@@ -27,6 +27,7 @@ class ImmersionFlipFlopNativeTest {
   }}
   val target=form(listOf("Il","lavoro","continua"));val meaning=form(listOf("The","work","continues"))
   val expected=immersionFlipForms(target,meaning)!!.map{it.text}.toSet()
+  androidx.test.uiautomator.Configurator.getInstance().setWaitForIdleTimeout(300)
   var taps=0
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
    scenario.onActivity{activity->PocketImmersion.setEnabled(true);activity.setContent{
