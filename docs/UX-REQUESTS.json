@@ -2904,6 +2904,17 @@
       "request": "Allow anyone on the tailnet to open the web client without manually exchanging a pairing code, including BLD.",
       "implementation": "Opt-in Serve-source verification using local tailscale whois, exact-origin login, separate ordinary device cookie per browser, existing backend pair contract; no Android pairing changes.",
       "verification": "Remote gateway integration and origin/source rejection checks passed. Live deployment/readback remains required."
+    },
+    {
+      "id": "web-mobile-functional-parity-20261019",
+      "request": "Bring the browser interface to parity with current mobile, preserving tailnet sign-in, pairing, drafts and outgoing identities.",
+      "plan": "docs/WEB-MOBILE-PARITY.md",
+      "state": "implementation",
+      "browser_limits": [
+        "OS volume interception",
+        "closed-browser push",
+        "native Android local execution"
+      ]
     }
   ],
   "current_state": {
