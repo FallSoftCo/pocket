@@ -19,7 +19,7 @@ class TypingResponsivenessNativeTest {
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val d=UiDevice.getInstance(i)
   check(d.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   fun main(f:()->Unit)=i.runOnMainSync(f)
-  fun await(label:String,f:()->Boolean){val end=SystemClock.elapsedRealtime()+20000;while(SystemClock.elapsedRealtime()<end){if(f())return;Thread.sleep(10)};assertTrue(label,f())}
+  fun await(label:String,limit:Long=20000,f:()->Boolean){val end=SystemClock.elapsedRealtime()+limit;while(SystemClock.elapsedRealtime()<end){i.uiAutomation.clearCache();if(f())return;Thread.sleep(25)};assertTrue(label,f())}
   main{Pocket.init(c)}
   val original=Pocket.environmentId;val p=c.getSharedPreferences("pocket",0);val profile=EnvironmentIdentity("typing_perf_20261015","Isolated typing diagnosis")
   val all=EnvironmentProfiles(p).all().filter{it.id!=profile.id}+profile
@@ -103,10 +103,18 @@ class TypingResponsivenessNativeTest {
     reports.put(JSONObject().put("motion",motion).put("dispatchToDraftMs",values).put("dispatchToDrawCallbackMs",draws))
    }
    c.filesDir.resolve("typing-responsiveness.json").writeText(JSONObject().put("scope","Software emulator; hardware-key dispatch through production stock conversation to saved draft; not physical screen latency").put("runs",reports).put("mainStallStacks",JSONObject(stacks as Map<*,*>)).put("messagesSent",0).toString())
+   val catalogBegan=SystemClock.elapsedRealtime()
    assertTrue("Back swipe was not injected",d.swipe(1,d.displayHeight/3,d.displayWidth/2,d.displayHeight/3,30))
-   await("One Back swipe with IME open did not return to the session catalog"){d.hasObject(By.res("work-catalog"))}
-   assertTrue("Shared session catalog paging controls missing",d.hasObject(By.res("reader-page-up"))&&d.hasObject(By.res("reader-page-down")))
-   assertTrue("Shared session catalog volume control missing",d.hasObject(By.desc("Speech volume")))
+   val touch=48*c.resources.displayMetrics.density-2
+   fun measured(selector:BySelector)=d.findObject(selector)?.visibleBounds?.let{it.width()>=touch&&it.height()>=touch}==true
+   await("One Back swipe did not reveal the session catalog and its complete measured dock",3000){
+    Pocket.selected==null&&Pocket.tab==0&&d.findObject(By.res("work-catalog"))?.visibleBounds?.height()?.let{it>0}==true&&
+     measured(By.res("reader-page-up"))&&measured(By.res("reader-page-down"))&&measured(By.desc("Speech volume"))
+   }
+   val observation=SystemClock.elapsedRealtime()-catalogBegan
+   val measurement=c.filesDir.resolve("typing-responsiveness.json")
+   measurement.writeText(JSONObject(measurement.readText()).put("catalogReadyObservationMs",observation).put("catalogControlsMeasured",true).toString())
+   android.util.Log.i("NextCompTypingQA","catalogReadyObservationMs="+observation)
    d.takeScreenshot(c.filesDir.resolve("session-catalog-shared-dock.png"))
   }catch(e:Throwable){
    d.takeScreenshot(c.filesDir.resolve("shared-stock-catalog-failure.png"));d.dumpWindowHierarchy(c.filesDir.resolve("shared-stock-catalog-failure.xml"));throw e
