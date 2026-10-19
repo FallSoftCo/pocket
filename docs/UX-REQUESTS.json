@@ -2932,7 +2932,7 @@
       "id": "web-saved-answers-single-reading-surface-20261019",
       "request": "Remove confusing horizontal saved-message carousel, repair dismissal, polish spacing, borders and scroll areas.",
       "contract": "Saved answers remain optional in-place transcript filter with contextual dismissal. Apply canonical removal response immediately, fence older head reads against newer note observations, deduplicate pending removal by scope/id, retain saved data until explicit dismissal. No extra carousel or transcript deletion.",
-      "state": "candidate-browser-qualified"
+      "state": "deployed-web"
     }
   ],
   "current_state": {

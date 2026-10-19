@@ -1,7 +1,7 @@
 {
-  "state": "candidate",
-  "desktop": "/home/aosp/.local/state/nextcomp/saved-answers-20261019/desktop/desktop.json",
-  "touch": "/home/aosp/.local/state/nextcomp/saved-answers-20261019/touch/touch.json",
+  "state": "deployed-web",
+  "desktop": "/home/aosp/.local/state/nextcomp/saved-answers-20261019/final/desktop.json",
+  "touch": "/home/aosp/.local/state/nextcomp/saved-answers-20261019/touch-final/touch.json",
   "scope": "web only; no Android update or pairing mutation",
   "checks": [
     "actual desktop browser filter/dismissal/drafts/reconnect/history",
@@ -11,5 +11,16 @@
   ],
   "limits": [
     "synthetic transport fixture; no provider inference or physical phone claim"
-  ]
+  ],
+  "source": "713030008713c2825b82fa990b382cb864a2ecea",
+  "release": {
+    "service": "nextcomp-web-answers.service",
+    "port": 18891,
+    "closureSha256": "c5044763e5c249c530bb19b5dae9bdc1ccd94e27c8a277dc3cd92cbee219c5ea",
+    "liveReadback": "tailnet login/status200; base mounted assets exact; no carousel in delivered HTML; disposable QA identity revoked",
+    "rollback": "nextcomp-web-refresh.service retained for active connection on18890; restore only443 /nextcomp route",
+    "backendRestarted": false,
+    "phoneUpdated": false
+  },
+  "qaNote": "Final touch capture first attempt collided with the still-finishing desktop fixture port; no production service affected. Sequential r02 passed."
 }
