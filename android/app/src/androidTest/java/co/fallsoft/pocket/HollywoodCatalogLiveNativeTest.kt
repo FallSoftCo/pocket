@@ -57,6 +57,13 @@ class HollywoodCatalogLiveNativeTest {
    val search=d.findObject(By.res("native-room-search"))
    search.setText("no-such-room-owned-native-check")
    await("Room search did not filter locally"){d.hasObject(By.text("No matching rooms"))&&!d.hasObject(By.res("native-room:"+target))}
+   // A stable pre-IME position is not the settled keyboard layout. Physical
+   // input must target the visible control after the keyboard has moved it.
+   await("Search keyboard has not settled above its first key row"){
+    val keyTop=d.findObject(By.res("com.google.android.inputmethod.latin:id/key_pos_0_0"))?.visibleBounds?.top
+    val close=d.findObject(By.res("native-room-search-close"))?.visibleBounds
+    keyTop!=null&&close!=null&&close.bottom<keyTop
+   }
    tapStable("native-room-search-close")
    await("Closing search lost room membership"){d.hasObject(By.res("native-room:"+target))&&!d.hasObject(By.res("native-room-search"))}
    tapStable("native-catalog-controls")
