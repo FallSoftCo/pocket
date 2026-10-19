@@ -28,6 +28,8 @@ class OnDemandSpeechNativeTest {
  @Test fun legacyBacklogRetiresWithoutAcknowledgementAndClearAllIsDirect(){
   val i=InstrumentationRegistry.getInstrumentation()
   val c=ApplicationProvider.getApplicationContext<Context>()
+  fun main(block:()->Unit)=i.runOnMainSync(block)
+  main{Pocket.init(c)}
   val storage=c.getSharedPreferences("speech-playback",Context.MODE_PRIVATE)
   val usage=c.getSharedPreferences("native-speech-usage",Context.MODE_PRIVATE)
   val generatedBefore=usage.getLong("generated",0)
@@ -35,7 +37,6 @@ class OnDemandSpeechNativeTest {
   val immersion=PocketImmersion.enabled
   val device=UiDevice.getInstance(i)
   assertEquals("Only the owned QA emulator is allowed","nextcomp_env_qa",device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim())
-  fun main(block:()->Unit)=i.runOnMainSync(block)
   fun withActivity(block:(MainActivity)->Unit){
    val end=System.currentTimeMillis()+10000
    while(System.currentTimeMillis()<end){
@@ -51,7 +52,7 @@ class OnDemandSpeechNativeTest {
   }
   fun step(value:String){android.util.Log.i("NextCompSpeechQA",value)}
   step("launch-request")
-  c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+  c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("environment",Pocket.environmentId))
   withActivity{}
   step("activity-resumed")
   val font=device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()?:1f
@@ -79,7 +80,13 @@ class OnDemandSpeechNativeTest {
     PocketSpeech.sessions.enqueue(SpokenMessage(-2,"Requested preview B","preview","B"))
     PocketSpeech.publish()
    }
-   withActivity{activity->activity.setContent{SpeechPlayer()}}
+   assertEquals("Explicit preview setup did not publish its two entries",2,PocketSpeech.count)
+   withActivity{activity->activity.setContent{
+    NextCompDepthRoot{Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
+     Spacer(Modifier.weight(1f));SpeechPlayer()
+    }}
+   }}
+   step("clear-player-mounted-count-"+PocketSpeech.count)
    assertTrue("Clear all requires a menu",device.wait(Until.hasObject(By.desc("Clear all saved speech")),5000))
    device.findObject(By.desc("Clear all saved speech")).click()
    val end=System.currentTimeMillis()+3000
@@ -121,6 +128,11 @@ class OnDemandSpeechNativeTest {
    }
    assertEquals("Unrequested audio was generated",generatedBefore,usage.getLong("generated",0))
    java.io.File(c.filesDir,"on-demand-speech-result.json").writeText(JSONObject().put("retired",550).put("restoredAgain",0).put("notificationAdmitted",false).put("heardUnchanged",true).put("directClearAll",true).put("playbackServiceStarted",PocketSpeech.service!=null).put("generatedDelta",usage.getLong("generated",0)-generatedBefore).toString())
+  }catch(failure:Throwable){
+   device.takeScreenshot(java.io.File(c.filesDir,"on-demand-speech-failure.png"))
+   device.dumpWindowHierarchy(java.io.File(c.filesDir,"on-demand-speech-failure.xml"))
+   step("failure-count-"+PocketSpeech.count)
+   throw failure
   }finally{
    main{PocketSpeech.clearAll()}
    val edit=storage.edit().clear()
