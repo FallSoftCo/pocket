@@ -83,7 +83,7 @@ function renderTranscript(){const data=cache.get(scope);if(!data)return;const li
  }
  const rows=foldRuns(visibleRows);
  const old=new Map([...list.children].map(n=>[n.dataset.id,n]));let cursor=list.firstChild;for(const row of rows){if(important&&!['message','user','request','attachments'].includes(row.kind))continue;let n=old.get(row.id);if(!samePresentation(n?._row,row)){const previous=n;n=rowNode(row);n.dataset.id=row.id;n._row=row;if(row.actions?.length){const actions=el('div','message-actions');for(const a of row.actions.filter(a=>a.threadId))actions.append(button(`Open ${a.name||'work'}`,()=>open(a.threadId)));n.append(actions);}if(previous){if(previous.open)n.open=true;previous.replaceWith(n);if(cursor===previous)cursor=n;}}old.delete(row.id);if(n!==cursor)list.insertBefore(n,cursor);cursor=n.nextSibling;}
- for(const n of old.values())n.remove();if(!rows.length){const empty=el('p','muted',important?'No saved answers in this conversation yet.':'No messages yet.');empty.dataset.id='empty';list.append(empty);}$('earlier').hidden=!data.hasEarlier;if(follow&&bottom)list.scrollTop=list.scrollHeight;else{const retained=anchorId&&[...list.children].find(n=>n.dataset.id===anchorId);if(retained)list.scrollTop+=retained.getBoundingClientRect().top-list.getBoundingClientRect().top-anchorOffset;else list.scrollTop=previousTop;}requestAnimationFrame(ackVisible);
+ for(const n of old.values())n.remove();if(!rows.length){const empty=el('p','muted',important?'No saved answers in this conversation yet.':'No messages yet.');empty.dataset.id='empty';list.append(empty);}$('earlier').hidden=!data.hasEarlier;if(follow&&bottom)list.scrollTop=list.scrollHeight;else{const retained=anchorId&&[...list.children].find(n=>n.dataset.id===anchorId);if(retained)list.scrollTop+=retained.getBoundingClientRect().top-list.getBoundingClientRect().top-anchorOffset;else list.scrollTop=previousTop;}renderNotes();requestAnimationFrame(ackVisible);
 }
 function renderRequests(){const holder=$('requests');if(scope==='coordinator'){holder.replaceChildren();return;}const requests=current?.pending||[],signature=JSON.stringify(requests);if(holder.dataset.signature===signature)return;holder.dataset.signature=signature;holder.replaceChildren();for(const r of requests){const box=el('div','request-card');box.append(el('p','',r.params?.message||r.params?.command||'This session needs your decision.'));if(/requestUserInput$/.test(r.method)){const answers={};for(const q of r.params?.questions||[]){const label=el('label','',q.question),input=el('input');input.placeholder='Your answer';input.setAttribute('aria-label',q.question);label.append(input);box.append(label);for(const o of q.options||[])box.append(button(o.label,()=>{input.value=o.label;}));answers[q.id]=input;}box.append(button('Submit answers',async()=>{await api(`/api/requests/${encodeURIComponent(r.id)}/answer`,{answers:Object.fromEntries(Object.entries(answers).map(([id,n])=>[id,n.value]))});await refreshConversation();}),button('Skip',async()=>{await api(`/api/requests/${encodeURIComponent(r.id)}/answer`,{skip:true});await refreshConversation();}));}
  else if(/item\/(commandExecution|fileChange)\/requestApproval$/.test(r.method)){for(const decision of r.params?.availableDecisions||['accept','decline','cancel'])if(['accept','decline','cancel'].includes(decision))box.append(button({accept:'Allow once',decline:'Decline',cancel:'Cancel'}[decision],async()=>{await api(`/api/requests/${encodeURIComponent(r.id)}/answer`,{decision});await refreshConversation();}));}else box.append(el('p','muted','This request type must be answered in the terminal.'));holder.append(box);}}
@@ -104,8 +104,10 @@ async function refreshConversation(before=null){
     const turns=[...known.values()].sort((a,b)=>(a.createdAt||a.created_at||0)-(b.createdAt||b.created_at||0));
     cache.set(selected,{...data,turns,...(!before&&old.hasEarlier?{hasEarlier:true,before:old.before}:{})});if(scope===selected)current=null;
    }else{
+    const notesVersion=notesVersions.get(selected)||0;
     const data=await api(`/api/threads/${encodeURIComponent(selected)}?view=timeline`+(before?'&before='+encodeURIComponent(before):''));
     const old=cache.get(selected)||{},snapshot=before?old.snapshot||data:data;
+    if(!before&&notesVersion!==(notesVersions.get(selected)||0))snapshot.notes=old.snapshot?.notes||[];
     cache.set(selected,{...data.timeline,rows:canonicalPage(old.rows||[],data.timeline.rows,{older:!!before}),snapshot,catchup:data.catchup,...(!before&&old.hasEarlier?{hasEarlier:true,before:old.before}:{})});
     if(scope===selected)current=snapshot;
    }
@@ -152,7 +154,7 @@ function handleEvent(m){
   else scheduleRefresh({catalog:true});
   return;
  }
- if(m.type==='contextNotes'&&threadId===scope){if(current){current.notes=m.notes;renderNotes();}return;}
+ if(m.type==='contextNotes'){if(!Array.isArray(m.notes))return;notesVersions.set(threadId,(notesVersions.get(threadId)||0)+1);const cached=cache.get(threadId);if(cached?.snapshot)cached.snapshot.notes=m.notes;if(threadId===scope&&current){current.notes=m.notes;renderTranscript();}return;}
  if(m.type==='notification'){
   if(document.visibilityState==='hidden'&&'Notification' in window&&Notification.permission==='granted'&&!notifySeen.has(m.notification.id)){
    notifySeen.add(m.notification.id);const n=new Notification('NextComp update',{body:'Work has an update. Open NextComp to review it.',tag:'nextcomp-'+threadId});
@@ -222,7 +224,32 @@ function toggleImportant(note=null){
  activeNote=$('important').checked?note:null;follow=false;renderTranscript();renderNotes();
  if(!$('important').checked&&filterPosition?.scope===scope){const saved=filterPosition,n=[...list.children].find(n=>n.dataset.id===saved.id);if(n)list.scrollTop+=n.getBoundingClientRect().top-list.getBoundingClientRect().top-saved.offset;else list.scrollTop=saved.top;follow=saved.follow;filterPosition=null;}
 }
-function renderNotes(){const notes=current?.notes||[],box=$('context-strip');box.hidden=!notes.length;box.replaceChildren();for(const note of notes){const chip=button(note.question||note.text.slice(0,110),()=>{$('important').checked=true;toggleImportant(note.id);});chip.className='context-answer';const remove=button('×',async()=>{await api(`/api/threads/${scope}/notes/remove`,{id:note.id});await refreshConversation();});remove.setAttribute('aria-label','Remove saved answer');const item=el('div','context-item');item.append(chip,remove);box.append(item);}}
+const removingNotes=new Set(),notesVersions=new Map();
+function renderNotes(){
+ const notes=current?.notes||[],label=$('answers-label');
+ label.textContent=notes.length?'Answers '+notes.length:'Answers';
+ $('answers-filter').hidden=scope==='coordinator';
+ for(const old of $('transcript').querySelectorAll('.saved-answer-actions'))old.remove();
+ if(!$('important').checked)return;
+ for(const note of notes){
+  const row=[...$('transcript').children].find(n=>n._row&&(n._row.id===note.id||n._row.itemId===note.id||n._row.id.endsWith('/'+note.id)));
+  if(!row)continue;
+  const selected=scope,key=selected+'/'+note.id,actions=el('div','message-actions saved-answer-actions');
+  const remove=button(removingNotes.has(key)?'Removing…':'Dismiss saved answer',async()=>{
+   if(removingNotes.has(key))return;
+   removingNotes.add(key);renderNotes();
+   try{
+    const result=await api('/api/threads/'+encodeURIComponent(selected)+'/notes/remove',{id:note.id});
+    if(!Array.isArray(result.notes))throw Error('Saved answer removal was not confirmed.');
+    notesVersions.set(selected,(notesVersions.get(selected)||0)+1);
+    const cached=cache.get(selected);if(cached?.snapshot)cached.snapshot.notes=result.notes;
+    if(scope===selected){current.notes=result.notes;if(activeNote===note.id)activeNote=null;renderTranscript();}
+   }catch(e){if(scope===selected)error(e);}
+   finally{removingNotes.delete(key);if(scope===selected)renderNotes();}
+  });
+  remove.disabled=removingNotes.has(key);actions.append(remove);row.append(actions);
+ }
+}
 $('collapse-runs').onclick=()=>{for(const run of document.querySelectorAll('.run-block[open]'))run.open=false;$('collapse-runs').hidden=true;};
 function page(direction){follow=false;const list=$('transcript');list.scrollBy({top:direction*list.clientHeight,behavior:'auto'});if(direction<0){demandOlder();if(list.scrollTop<100)void run(loadEarlier)();}}
 $('page-up').onclick=()=>page(-1);$('page-down').onclick=()=>page(1);

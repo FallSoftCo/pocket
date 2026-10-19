@@ -40,9 +40,6 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .transcript-toolbar { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px; padding:6px; border:1px solid var(--line); border-radius:20px; background:linear-gradient(var(--depth-top),var(--surface)); }
 .transcript-toolbar button { display:block; flex:1; min-width:44px; min-height:48px; padding:8px; border:0; background:none; font-size:12px; }.transcript-toolbar label { min-height:48px; padding:8px; font-size:12px; }.transcript-toolbar #latest { margin-left:0; }
 #back { display:block; }#earlier { display:none!important; }
-#context-strip { padding:6px max(20px,calc((100% - 900px)/2)); display:flex; overflow:auto; gap:6px; border-top:1px solid var(--line); }
-.context-item { display:flex; flex:0 0 auto; align-items:center; max-width:75%; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
-.context-item button { border:0; background:none; min-height:44px; font-size:12px; }.context-answer { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #message-loading { padding:6px 20px; color:var(--muted); font-size:12px; text-align:center; }
 .referenced { outline:2px solid var(--accent); outline-offset:6px; }
 #voice-status { padding-top:8px; padding-bottom:8px; }#error { font-size:13px; }
@@ -54,7 +51,7 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
  .transcript-toolbar { gap:2px; }.transcript-toolbar button { font-size:11px; min-width:42px; }.transcript-toolbar label { padding:6px; font-size:11px; }
  #draft { display:none; }#composer.keyboard-open #draft { display:block; }#toggle-keyboard { display:block; }#composer.keyboard-open #toggle-keyboard { display:none; }
  .message .body { font-size:15px; }.message.user { margin-left:4%; }.composer-actions { flex-wrap:nowrap; }#send-mode { max-width:110px; font-size:11px; }
- #context-strip { padding:6px 12px; }#sidebar footer button { min-height:52px; }
+ #sidebar footer button { min-height:52px; }
 }
 
 .immersion-stack { display:inline; }
@@ -88,3 +85,16 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .transcript-frame { position:relative; display:flex; flex-direction:column; flex:1; min-height:0; }
 .transcript-frame #transcript { min-height:0; padding-bottom:38px; }
 .transcript-frame #message-loading { position:absolute; bottom:6px; left:50%; transform:translateX(-50%); padding:4px 10px; max-width:calc(100% - 24px); border-radius:12px; background:var(--surface); color:var(--muted); pointer-events:none; font-size:12px; }
+
+/* One reading surface: saved answers are a transcript filter, not another scroller. */
+#main,#sidebar,.transcript-frame { min-width:0; }
+#transcript,#work-list { scrollbar-gutter:stable; scrollbar-width:thin; }
+.message-actions { display:flex; flex-wrap:wrap; gap:8px; opacity:1; margin-top:8px; }
+.message-actions button { min-height:44px; border:0; background:transparent; color:var(--muted); }
+.message.user { border:0; box-shadow:inset 0 1px 0 #ffffff08; }
+.transcript-toolbar { border:0; border-radius:14px; gap:6px; padding:6px 8px; }
+.transcript-toolbar label { display:flex; align-items:center; justify-content:center; gap:5px; }
+.catalog-dock { border-color:transparent; }
+.run-block { border:0; background:color-mix(in srgb,var(--surface) 65%,transparent); }
+.run-entry pre,.message .body pre { max-height:none; }
+.saved-answer-actions { padding-top:4px; }
