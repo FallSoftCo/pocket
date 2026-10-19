@@ -178,7 +178,8 @@ function handleEvent(m){
  if(['threadPreview','sessionPreview','sessionActivity','sessionInteraction','threadRenamed','sessionStarted'].includes(m.type)){
   if(!threadId){scheduleRefresh({catalog:true});return;}
   const patch=m.thread||Object.fromEntries(Object.entries(m).filter(([key])=>['name','preview','previewRole','previewKind','activityAt','recencyAt','status','updatedAt','unreadCount','interactionId'].includes(key)));
-  const changed=cache.summary(threadId,patch);threads=cache.list();renderList();
+  if(!cache.inventory.includes(threadId)&&!m.thread){scheduleRefresh({catalog:true});return;}
+  const changed=cache.summary(threadId,patch,{discover:!!m.thread});threads=cache.list();renderList();
   if(threadId===scope){if(changed&&(['assistant','user'].includes(patch.previewRole)||m.type==='sessionInteraction'))scheduleRefresh({head:true});}
   else if(changed&&(['assistant','user'].includes(patch.previewRole)||m.type==='sessionInteraction'))queueBackgroundHead(threadId);
   return;

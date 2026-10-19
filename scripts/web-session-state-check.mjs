@@ -49,6 +49,9 @@ try{
  await page.waitForFunction(()=>document.querySelector('#title').textContent==='Catalog title updates both views');
  assert.equal(await page.locator('[data-id=parent-123] .card-title').textContent(),'Catalog title updates both views');
  f.releaseHead('parent-123');evidence.push('catalog metadata notifies both presenters without needing a transcript response');
+ f.broadcast({type:'sessionActivity',threadId:'unclassified-agent',status:{type:'active'}});
+ await page.waitForTimeout(300);assert.equal(await page.locator('[data-id=unclassified-agent]').count(),0);
+ evidence.push('thin events cannot invent blank or unclassified session cards');
  assert.deepEqual(errors,[]);assert.equal(f.writes.filter(w=>w.path.endsWith('/reply')).length,0);
  await writeFile(dir+'/receipt.json',JSON.stringify({passed:true,currentMs,cachedMs,catalogMs,evidence,pageErrors:errors},null,2));console.log(JSON.stringify({passed:true,currentMs,cachedMs,evidence}));
 }catch(e){await writeFile(dir+'/failure.json',JSON.stringify({error:e.message,errors,evidence},null,2));throw e;}finally{await browser?.close();await f.close();}

@@ -32,10 +32,10 @@ export class SessionStore {
   return this.list();
  }
  list(){return this.inventory.map(id=>this.entity(id).thread);}
- summary(id,patch){
+ summary(id,patch,{discover=false}={}){
   const prior=this.entity(id),changed=['preview','previewRole','previewKind','interactionId'].some(key=>patch[key]!==undefined&&patch[key]!==prior.thread[key]);
   const ticket=this.ticket();this.metadata(id,patch,ticket,{summary:true});prior.membership=ticket;
-  if(!this.inventory.includes(id))this.inventory.push(id);
+  if(discover&&!this.inventory.includes(id))this.inventory.push(id);
   return changed;
  }
  has(id){return !!this.entities.get(id)?.page;}
