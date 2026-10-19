@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "source candidate with Android compile and backend checks; not released",
+  "status": "Version135 client qualified and published; prepared server runtime/grammar activation pending phone135 and quiet boundary",
   "host": "authorized disk-backed build host",
   "checks": {
     "focusedTests": 18,
@@ -32,21 +32,49 @@
       "tests": 545,
       "passed": 545,
       "concurrency": 2
+    },
+    "androidSignedBuild": {
+      "versionCode": 135,
+      "versionName": "0.5.0-alpha.117",
+      "debugTests": 395,
+      "releaseTests": 395,
+      "failures": 0,
+      "skippedPerVariant": 2,
+      "bothLints": true
+    },
+    "requiredNativeCases": 25,
+    "optimizedExactPhoneApk": true,
+    "nativeV1CacheInvalidatedByV2Revision": true,
+    "globalNonoverlappingRows": {
+      "samples": 72,
+      "movingSamples": 39,
+      "simultaneousDifferentRows": 0
+    },
+    "actualAudioPlayback": {
+      "generatedChunks": 1,
+      "playedMs": 6441,
+      "idleModeRetained": true
+    },
+    "capturedTeacherExamples": {
+      "textTurns": 2,
+      "validatedExamples": 2,
+      "boundedSyntheticOnly": true,
+      "postGenerationPunctuationReplayWithoutInference": true
     }
   },
   "limits": [
-    "No production service restart",
-    "No new model calls or agent delegation",
-    "Teacher semantic accuracy not established by structural validation",
-    "Persistent role ownership and fleet duplicates audit remains incomplete",
-    "Native emulator lock integration syntax checked; no emulator launched for this change",
-    "Android compiled only; v2 candidate has not been packaged, qualified on emulator, published or installed"
+    "Prepared server runtime/grammar modules are not yet activated; phone135 and fresh quiet boundary required",
+    "Physical Fold animation and typing performance not qualified by software-emulator results",
+    "Structural alignment and two teacher examples do not establish general semantic or learning accuracy",
+    "Persistent role ownership and unrelated fleet duplicates audit remains incomplete",
+    "One bounded short account-audio passage was generated; no business agent or task was started"
   ],
   "cleanup": {
     "retiredOldQaGatewayNativeChildProxyAndTwoTranscriptVoiceFixtures": true,
     "qaDataAndAcceptedReceiptsRetained": true,
     "productionServicesStopped": false,
     "oldQaSourceMovedToDisk": true,
-    "phoneObservedVersionCode": 134
+    "phoneObservedVersionCode": 134,
+    "temporaryNativeUnitsStopped": true
   }
 }

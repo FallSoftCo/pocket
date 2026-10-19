@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-19",
+  "versionCode": 135,
+  "versionName": "0.5.0-alpha.117",
+  "sourceCommit": "c4bef61f83126c3f7564843d3c65447df5137bf6",
+  "status": "Client published to both existing update channels; phone last observed134; backend activation pending",
+  "implementation": {
+    "rowWipeMs": 420,
+    "holdMs": 1800,
+    "ordering": "One shared visible-row snapshot per sweep; equal nonoverlapping row slots across containers",
+    "frameWork": "Cached text layouts, cached drawing masks and stable line identities; no frame-driven translation, text measurement or sorting"
+  },
+  "nativeEvidence": {
+    "requiredCases": 25,
+    "passed": 25,
+    "rowTraceSamples": 72,
+    "movingSamples": 39,
+    "simultaneouslyMovingDifferentRows": 0,
+    "keyboardDoesNotPauseWave": true,
+    "scrollDoesNotRemapLinePhase": true,
+    "normalGlyphSpacing": true,
+    "optimizedExactPhoneApkSha256": "9ebf565519cc1766f00faa066779354a299e21e48b9ddf4f4c112cf5ff2b1f1c"
+  },
+  "retainedFailures": [
+    "First focused capture obstructed by emulator System UI ANR; rerun same APK after system preflight passed",
+    "Release attempt lacked private QA room configuration; subsequent same-APK run restored fixture and passed",
+    "QA speech rendering was disabled; one bounded installed-account passage passed after explicit audio-only setup"
+  ],
+  "limits": [
+    "Synthetic native content is not physical-phone evidence",
+    "Software emulator frame times do not establish Fold smoothness",
+    "420ms is provisional visual tuning, not a human reading-speed claim",
+    "Server grammar activation remains separately gated on phone135 and quiet transport"
+  ],
+  "delivery": {
+    "channelsPublished": 2,
+    "workstationUpdateAnnouncement": {
+      "notificationId": 2039,
+      "state": "accepted_by_fcm",
+      "attempts": 1
+    },
+    "secondEnvironmentAnnouncement": false,
+    "phoneLastObservedVersionCode": 134,
+    "phoneInstallOrDisplayNotClaimed": true,
+    "pairingReset": false,
+    "productionRestart": false
+  }
+}

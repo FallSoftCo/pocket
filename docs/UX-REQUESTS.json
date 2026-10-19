@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-18",
+  "updated": "2026-10-19",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -2857,8 +2857,9 @@
     {
       "id": "serial-reading-row-immersion-20261018",
       "request": "Replace diagonal overlapping immersion wipes with a global line-by-line reading-order cascade. Keep cached layout, draw-only clock, stable scrolling identities and continuous cycling across containers.",
-      "status": "implemented-candidate; focused-checks-running; native-visual-review-and-phone-delivery-pending",
-      "design": "Snapshot visible rows once per sweep; same-row fragments share a slot; 420ms constant row wipe followed by next row; 1800ms whole-form hold; no per-frame text layout or translation."
+      "status": "signed135 qualified and published to both existing channels; phone install and physical performance pending",
+      "design": "Snapshot visible rows once per sweep; same-row fragments share a slot; 420ms constant row wipe followed by next row; 1800ms whole-form hold; no per-frame text layout or translation.",
+      "evidence": "docs/qualification/line-reading-wave-alpha117.json"
     }
   ],
   "current_state": {
