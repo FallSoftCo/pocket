@@ -5,6 +5,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Modifier
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -69,8 +71,10 @@ class OnDemandSpeechNativeTest {
     device.executeShellCommand("settings put system font_scale "+scale)
     val deadline=System.currentTimeMillis()+5000
     while(kotlin.math.abs(c.resources.configuration.fontScale-scale)>.05f&&System.currentTimeMillis()<deadline)Thread.sleep(50)
+    assertTrue("Requested text size never applied",kotlin.math.abs(c.resources.configuration.fontScale-scale)<.05f)
     scenario.onActivity{activity->activity.setContent{
-     NextCompDepthRoot{Column(Modifier.fillMaxSize()){
+     MaterialTheme(colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,surface=Panel,onSurface=Paper,secondaryContainer=Panel,onSecondaryContainer=Paper)){
+     NextCompDepthRoot{Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
       Spacer(Modifier.weight(1f))
       ConversationFooter{
        InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
@@ -79,6 +83,7 @@ class OnDemandSpeechNativeTest {
        ReaderPagingButtons(rememberLazyListState())
       }
      }}
+     }
     }}
     assertTrue("Shared footer missing",device.wait(Until.hasObject(By.res("bottom-control-bar")),5000))
     Thread.sleep(300)
