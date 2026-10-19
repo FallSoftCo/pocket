@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.*
     val shape=RoundedCornerShape(8.dp)
     val height=with(androidx.compose.ui.platform.LocalDensity.current){(if(PocketImmersion.enabled&&PocketImmersion.supportEnabled)84.sp else 64.sp).toDp()+32.dp}.coerceAtLeast(96.dp)
     LaunchedEffect(Pocket.environmentId,Pocket.token){PocketCoordinator.loadHistory()}
-    LaunchedEffect(PocketCoordinator.preview,PocketImmersion.enabled){PocketImmersion.offer("coordinator:preview",PocketCoordinator.preview,"coordinator message")}
+    LaunchedEffect(PocketCoordinator.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("coordinator:preview",PocketCoordinator.preview,"coordinator message")}
     Box(Modifier.fillMaxWidth().height(height).clip(shape).background(Panel).border(1.dp,Mint.copy(alpha=.55f),shape)){
         Row(Modifier.matchParentSize()){
             VoiceLaunchButton(modifier=Modifier.weight(.22f).fillMaxHeight(),cardRegion=true)

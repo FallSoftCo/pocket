@@ -461,7 +461,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     onRename:((String,()->Unit)->Unit)?={name,done->Pocket.renameTask(t.id,name,done)},
     onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)}){
     val active=t.status in listOf("active","pending");val activityTime=taskWorkTime(t);val ageColor=sessionAgeColor(activityTime,now)
-    LaunchedEffect(Pocket.environmentId,t.id,t.preview,PocketImmersion.enabled){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
+    LaunchedEffect(Pocket.environmentId,t.id,t.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
     var rename by remember(Pocket.environmentId,t.id){mutableStateOf(false)};var name by remember(Pocket.environmentId,t.id){mutableStateOf(t.title)}
     val highlight=remember(Pocket.environmentId,t.id){Animatable(0f)}
@@ -483,7 +483,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                 LaunchedEffect(Unit){focus.requestFocus()}
                 OutlinedTextField(name,{name=it.take(120)},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.trim().isNotEmpty())onRename?.invoke(name.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.trim().isNotEmpty())onRename?.invoke(name.trim()){rename=false}}))
             }else Box(Modifier.weight(1f),contentAlignment=Alignment.CenterStart){
-                LaunchedEffect(Pocket.environmentId,t.id,t.title,PocketImmersion.enabled){PocketImmersion.offer("session-title:"+t.id,t.title,"session title")}
+                LaunchedEffect(Pocket.environmentId,t.id,t.title,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("session-title:"+t.id,t.title,"session title")}
                 val titleConfiguration=androidx.compose.ui.platform.LocalViewConfiguration.current
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalViewConfiguration provides object:androidx.compose.ui.platform.ViewConfiguration by titleConfiguration {
                     override val minimumTouchTargetSize=androidx.compose.ui.unit.DpSize.Zero
@@ -651,12 +651,12 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         if(isQuestion){p.optJSONArray("questions")?.objects()?.forEach{q->
             val questionId="request:$id:"+q.s("id")
             val prompt=q.s("question")
-            LaunchedEffect(prompt,PocketImmersion.enabled){PocketImmersion.offer(questionId,prompt,"question")}
+            LaunchedEffect(prompt,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer(questionId,prompt,"question")}
             ImmersionText(questionId,prompt,fontSize=16.sp,lineHeight=23.sp,kind="question")
             q.optJSONArray("options")?.objects()?.forEachIndexed{index,o->
                 val label=o.s("label");val optionId="$questionId:option:$index"
                 val description=o.s("description")
-                LaunchedEffect(label,description,PocketImmersion.enabled){PocketImmersion.offer(optionId,label,"question option");PocketImmersion.offer("$optionId:description",description,"question option explanation")}
+                LaunchedEffect(label,description,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer(optionId,label,"question option");PocketImmersion.offer("$optionId:description",description,"question option explanation")}
                 OutlinedButton({answers[q.s("id")]=label},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){
                     Column(Modifier.fillMaxWidth()){
                         ImmersionText(optionId,label,color=Paper,kind="question option",rescue=false)

@@ -151,7 +151,7 @@ import androidx.lifecycle.repeatOnLifecycle
 @Composable internal fun VoiceChatMessage(speaker:String,text:String,user:Boolean){
     if(text.isBlank())return
     val sourceId="voice:"+text.hashCode()+":"+user
-    LaunchedEffect(text,PocketImmersion.enabled){PocketImmersion.offer(sourceId,text,if(user)"user message" else "Codex response")}
+    LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer(sourceId,text,if(user)"user message" else "Codex response")}
     Column(Modifier.fillMaxWidth(),horizontalAlignment=if(user)Alignment.End else Alignment.Start){
         SymbolIcon(if(user)"User" else "Codex",PocketImmersion.label(if(user)"Your message" else "Codex message"),Modifier.size(20.dp))
         Surface(color=if(user)Mint.copy(alpha=0.12f) else MaterialTheme.colorScheme.surfaceVariant,shape=androidx.compose.foundation.shape.RoundedCornerShape(6.dp),modifier=Modifier.padding(top=5.dp)){Column(Modifier.padding(14.dp)){BilingualMessage(sourceId,text)}}

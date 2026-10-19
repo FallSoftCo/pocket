@@ -583,7 +583,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 else SymbolIcon(if(you)"User" else "Codex",if(you)"Your message" else "Codex message",Modifier.size(20.dp))
             }
             val sourceId="row:"+row.s("id")
-            LaunchedEffect(row.s("text"),PocketImmersion.enabled){PocketImmersion.offer(sourceId,row.s("text"),if(you)"user message" else "Codex response")}
+            LaunchedEffect(row.s("text"),PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer(sourceId,row.s("text"),if(you)"user message" else "Codex response")}
             ImmersionSelection(row.s("text")){BilingualMessage(sourceId,row.s("text"),onDisplayedText=onDisplayedText)}
 
             if(row.optBoolean("truncated"))WorkflowText("Excerpt · full content remains on the workstation",fontSize=10.sp,color=Muted)
@@ -594,7 +594,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
 @Composable fun ActivityRow(row:JSONObject,fullyExpanded:Boolean=false){
     val sourceId="activity:"+row.s("id")
     val rawOperation=row.s("type") in listOf("commandExecution","roomOperation")
-    LaunchedEffect(row.s("text"),PocketImmersion.enabled){if(!rawOperation)PocketImmersion.offer(sourceId,row.s("text"),"public thought or activity")}
+    LaunchedEffect(row.s("text"),PocketImmersion.enabled,PocketImmersion.planVersion){if(!rawOperation)PocketImmersion.offer(sourceId,row.s("text"),"public thought or activity")}
     var locallyExpanded by remember(row.s("id")){mutableStateOf(false)}
     val expanded=fullyExpanded||locallyExpanded
     val running=row.s("status")=="inProgress";val unknown=row.s("status")=="unknown";val failed=row.s("status") in listOf("failed","declined")||(!row.isNull("exitCode")&&row.optInt("exitCode")!=0)

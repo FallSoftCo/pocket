@@ -10,6 +10,7 @@ internal fun supportedImmersionPlanVersion(value:String)=value=="transgrammatic-
 
 /** Translation is a display layer: submitted text, commands, copy and audit retain originals. */
 object PocketImmersion {
+    var planVersion by mutableStateOf("transgrammatic-english-italian-v1"); private set
     private var enabledState by mutableStateOf(false)
     val enabled get()=enabledState
     private var supportState by mutableStateOf(true)
@@ -66,7 +67,7 @@ object PocketImmersion {
     private fun clearReadingChoices(){readingChoices.clear();readingRevision++}
     private fun version(text:String)=immersionSourceHash(text)
     private fun cacheKey()="immersion-display-cache-v5:"+profileKey()
-    private fun eligible(row:JSONObject)=supportedImmersionPlanVersion(row.s("planVersion"))&&row.s("density")==density
+    private fun eligible(row:JSONObject)=row.s("planVersion")==planVersion&&row.s("density")==density
     private fun cached(id:String,text:String):JSONObject? {if(translations.isEmpty()&&byContent.isEmpty())return null;val hash=version(text);return translations[id]?.takeIf{it.s("version")==hash&&eligible(it)}?:byContent[hash]?.takeIf{eligible(it)}}
     private var cacheSave:Job?=null
     private fun persistCache(){
@@ -89,6 +90,7 @@ object PocketImmersion {
         }
     }
     fun restore(){
+        planVersion=Pocket.prefs.getString(profileKey()+":planVersion","transgrammatic-english-italian-v1").orEmpty().takeIf(::supportedImmersionPlanVersion)?:"transgrammatic-english-italian-v1"
         motionState=Pocket.prefs.getBoolean(profileKey()+":motion",true)
         val oldDensity=densityState
         val ownerChanged=readingChoices.restore(readingOwner())
@@ -115,6 +117,10 @@ object PocketImmersion {
     private fun sync(){val captured=profileKey();Pocket.scope.launch{try{val result=Pocket.api("/api/immersion/v2",JSONObject().put("enabled",enabled).put("density",density));if(captured==profileKey())accept(result)}catch(_:Exception){if(captured==profileKey())unavailable=enabled}}}
     fun accept(event:JSONObject){
         if(!enabled||!supportedImmersionPlanVersion(event.s("planVersion")))return
+        if(planVersion!=event.s("planVersion")){
+            planVersion=event.s("planVersion")
+            Pocket.prefs.edit().putString(profileKey()+":planVersion",planVersion).apply()
+        }
         unavailable=event.optBoolean("unavailable",false)
         event.optJSONArray("jobs")?.let{jobs->
             remotePending=jobs.objects().any{it.s("state") in listOf("pending","running","retryWaiting")}

@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.*
         // Native link hit testing covers the visible text, not reserved blank width.
         addLink(LinkAnnotation.Clickable("label-action",TextLinkStyles(),linkInteractionListener={onActivate()}),0,length)
     }
-    LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.density,targetOverride){if(targetOverride==null)PocketImmersion.offerLabel(text)}
+    LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.planVersion,PocketImmersion.density,targetOverride){if(targetOverride==null)PocketImmersion.offerLabel(text)}
     val target=if(PocketImmersion.enabled&&targetOverride!=null)targetOverride else PocketImmersion.label(text)
     val plan=scaffoldOverride?.takeIf{it.source==text&&it.target==target&&alignedTargetValid(it)}
         ?.let{ImmersionPresentation(target,text,true,listOf(it))}?:PocketImmersion.labelPresentation(text,target)

@@ -38,7 +38,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 
 /** Context-aware target phrases remain inline at ordinary reading size. */
 @Composable fun BilingualMessage(id:String,original:String,modifier:Modifier=Modifier,onDisplayedText:((String)->Unit)?=null){
-    LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offer(id,original)}
+    LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.planVersion,PocketImmersion.density){PocketImmersion.offer(id,original)}
     if(!PocketImmersion.enabled){ReportDisplayedImmersion(id,original,onDisplayedText);Column(modifier){RichText(original)};return}
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
     val readingKey=remember(id,plan.source,plan.text,Pocket.environmentId,Pocket.base,Pocket.token,Pocket.selected,PocketVoice.targetThread,PocketImmersion.density){PocketImmersion.readingKey(id,plan)}
@@ -75,7 +75,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 
 /** Dense/tappable cards leave phraseRescue=false, so their native actions retain every tap. */
 @Composable fun ImmersionText(id:String,original:String,modifier:Modifier=Modifier,color:Color=Paper,fontSize:TextUnit=16.sp,lineHeight:TextUnit=24.sp,maxLines:Int=Int.MAX_VALUE,fontWeight:FontWeight?=null,kind:String="public display",rescue:Boolean=true,overflow:TextOverflow=TextOverflow.Ellipsis,phraseRescue:Boolean=rescue,links:Boolean=true,onDisplayedText:((String)->Unit)?=null){
-    LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.density){PocketImmersion.offer(id,original,kind)}
+    LaunchedEffect(id,original,PocketImmersion.enabled,PocketImmersion.planVersion,PocketImmersion.density){PocketImmersion.offer(id,original,kind)}
     val plan=PocketImmersion.presentation(id,original).takeIf{it.source==original}?:ImmersionPresentation(original,original,false)
     val readingKey=remember(id,plan.source,plan.text,Pocket.environmentId,Pocket.base,Pocket.token,Pocket.selected,PocketVoice.targetThread,PocketImmersion.density){PocketImmersion.readingKey(id,plan)}
     val selected=PocketImmersion.readingSelection(readingKey,plan)
