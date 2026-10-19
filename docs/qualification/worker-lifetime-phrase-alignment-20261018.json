@@ -1,6 +1,6 @@
 {
   "date": "2026-10-18",
-  "status": "source candidate, not released",
+  "status": "source candidate with Android compile and backend checks; not released",
   "host": "authorized disk-backed build host",
   "checks": {
     "focusedTests": 18,
@@ -12,14 +12,41 @@
     "backendTestsBeforeFinalLockAddition": 543,
     "backendPassed": 543,
     "kernelConcurrentOwnerExclusionAndSuccessor": true,
-    "finalOwnedLifecycleTests": 3
+    "finalOwnedLifecycleTests": 3,
+    "sharedSessionCoordinatorRuntimeAndDirectRouting": true,
+    "androidCompile": {
+      "result": "success",
+      "memoryMaxGiB": 3,
+      "memoryPeakGiB": 2.1,
+      "swapPeakBytes": 0,
+      "elapsedSeconds": 77.113,
+      "temporaryUnitTerminated": true
+    },
+    "releaseStorageRejectsRamPaths": true,
+    "releaseDefaults": {
+      "heapMiB": 2048,
+      "workers": 1,
+      "kotlinInProcess": true
+    },
+    "finalSharedRuntimeBackendTests": {
+      "tests": 545,
+      "passed": 545,
+      "concurrency": 2
+    }
   },
   "limits": [
     "No production service restart",
     "No new model calls or agent delegation",
-    "Android v2 acceptance edited but not built/installed",
     "Teacher semantic accuracy not established by structural validation",
     "Persistent role ownership and fleet duplicates audit remains incomplete",
-    "Native emulator lock integration syntax checked; no emulator launched for this change"
-  ]
+    "Native emulator lock integration syntax checked; no emulator launched for this change",
+    "Android compiled only; v2 candidate has not been packaged, qualified on emulator, published or installed"
+  ],
+  "cleanup": {
+    "retiredOldQaGatewayNativeChildProxyAndTwoTranscriptVoiceFixtures": true,
+    "qaDataAndAcceptedReceiptsRetained": true,
+    "productionServicesStopped": false,
+    "oldQaSourceMovedToDisk": true,
+    "phoneObservedVersionCode": 134
+  }
 }

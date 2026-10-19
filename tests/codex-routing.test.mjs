@@ -84,4 +84,11 @@ test('same-thread steering, idle continuation, and exact pending request respons
  assert.equal(calls.findLast(c=>c.method==='turn/start').params.threadId,'thread-phone');
  active=true;assert.equal((await api('/api/threads/thread-live/interrupt',{})).status,200);
  assert.deepEqual(calls.find(c=>c.method==='turn/interrupt').params,{threadId:'thread-live',turnId:'turn-original'});
+ const coordinator=await api('/api/voice/start',{});assert.equal(coordinator.status,200);
+ assert.equal(calls.filter(c=>c.method==='initialize').length,1,'coordinator focus reuses the session runtime instead of opening another client');
+ assert.equal(wss.clients.size,1);
+ const directAfterVoice=randomUUID();await api('/api/threads/thread-live/reply',{id:directAfterVoice,text:'Keep this instruction in the direct session'});
+ await waitFor(async()=>(await api('/api/replies/'+directAfterVoice)).data.state==='accepted');
+ assert.equal(calls.findLast(c=>c.method==='turn/steer').params.threadId,'thread-live');
+
 });

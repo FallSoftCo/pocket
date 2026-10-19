@@ -37,3 +37,12 @@ test('kernel ownership excludes a concurrent runner and permits the successor af
   release();const successor=acquireOwnedRunLock(path);successor();
  }finally{release?.();rmSync(dir,{recursive:true,force:true});}
 });
+
+test('release storage refuses RAM-backed source, output, cache or stage without reducing the disk reserve',async()=>{
+ const {checkBuildStorage}=await import('../scripts/build-storage.mjs');
+ const disk={bavail:100*1024**3,bsize:1,type:0xef53};
+ for(const ram of ['/source','/outputs','/cache','/stage']){
+  assert.throws(()=>checkBuildStorage('/stage',path=>({...disk,type:path===ram?0x01021994:disk.type}),['/source','/outputs','/cache']),/RAM-backed build path/);
+ }
+ const result=checkBuildStorage('/stage',()=>disk,['/source','/outputs','/cache']);assert.ok(result.rootRequired>80*1024**3);
+});

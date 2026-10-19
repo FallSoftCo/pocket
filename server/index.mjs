@@ -101,7 +101,9 @@ const attached=new Set(), pending=new Map(), syncing=new Set();
 db.exec('CREATE TABLE IF NOT EXISTS immersion_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
 const immersionCwd=resolve(dir,'immersion');mkdirSync(immersionCwd,{recursive:true,mode:0o700});
 const internalSessions=new InternalSessions(db,[{cwd:immersionCwd,kind:'immersion'}]);
-const voiceCodex=new Codex();
+// Session, coordinator and immersion RPCs share one multiplexed stock runtime.
+// Separate threads retain their own instructions, model choices and routing.
+const voiceCodex=codex;
 const humanIngress=new HumanIngress(db);
 const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,host:hostName,
   api:async(path,body,actor)=>{const delegation=humanIngress.delegate(actor,body===undefined?'GET':'POST',path,body);try{const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`,'Content-Type':'application/json',...delegation.headers},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:AbortSignal.timeout(35000)});const data=await r.json();if(!r.ok)throw Error(data.error||'Pocket control failed.');return data;}finally{delegation.release();}},
@@ -122,7 +124,7 @@ if(audioCommand&&(!Array.isArray(audioCommand)||!audioCommand.length||audioComma
 const nativeAudioWorkspace=resolve(dir,'native-audio-workspace');
 mkdirSync(nativeAudioWorkspace,{recursive:true,mode:0o700});
 const nativeVoiceCodex=new Codex(undefined,{command:audioCommand,processCwd:nativeAudioWorkspace});
-const immersion=new ImmersionWorker({codex:nativeHollywood?nativeVoiceCodex:new Codex(),cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
+const immersion=new ImmersionWorker({codex:nativeHollywood?nativeVoiceCodex:codex,cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
 // Existing devices retain their old endpoint/cache; reuse native authenticated transport.
 db.exec('CREATE TABLE IF NOT EXISTS immersion_transgrammatic_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
 const transgrammaticImmersion=new ImmersionWorker({

@@ -5,6 +5,10 @@ import {join,resolve,isAbsolute,relative} from 'node:path';
 import {hostname} from 'node:os';
 import {checkBuildStorage} from './build-storage.mjs';
 import {productionSourceSha,qualificationInputSha,fileSha,sha256} from './release-qualification.mjs';
+const buildHeapMiB=Number(process.env.NEXTCOMP_BUILD_HEAP_MIB||2048);
+const buildWorkers=Number(process.env.NEXTCOMP_BUILD_WORKERS||1);
+if(!Number.isInteger(buildHeapMiB)||buildHeapMiB<1024||buildHeapMiB>4096||!Number.isInteger(buildWorkers)||buildWorkers<1||buildWorkers>2)throw Error('Invalid bounded Android build resource budget.');
+const gradleArgs=['--no-daemon','--max-workers='+buildWorkers,'-Dorg.gradle.jvmargs=-Xmx'+buildHeapMiB+'m -XX:ActiveProcessorCount=2 -Dfile.encoding=UTF-8','-Pkotlin.compiler.execution.strategy=in-process'];
 const root=fileURLToPath(new URL('..',import.meta.url));
 for(const key of ['POCKET_SIGNING_STORE','POCKET_SIGNING_PASSWORD','POCKET_RELEASE_STAGE','NEXTCOMP_BUILD_HOST'])if(!process.env[key])throw Error(`${key} is required; see docs/RELEASING.md.`);
 if(hostname()!==process.env.NEXTCOMP_BUILD_HOST)throw Error('Not the explicitly configured build host.');
@@ -18,9 +22,9 @@ const stage=outside(process.env.POCKET_RELEASE_STAGE);if(existsSync(stage))throw
 const sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT;if(!sdk)throw Error('Set ANDROID_HOME.');
 mkdirSync(stage,{recursive:true,mode:0o700});const directory=join(stage,'app-updates');mkdirSync(directory,{mode:0o700});
 const policy=JSON.parse(readFileSync(join(root,'scripts/release-policy.json'),'utf8'));
-const record={schema:1,state:'building',startedAt:Date.now(),productionSourceBefore:productionSourceSha(root),qualificationInputSha:qualificationInputSha(root),policySha:sha256(Buffer.from(JSON.stringify(policy))),tasks:[]};
+const record={schema:1,state:'building',startedAt:Date.now(),productionSourceBefore:productionSourceSha(root),qualificationInputSha:qualificationInputSha(root),policySha:sha256(Buffer.from(JSON.stringify(policy))),tasks:[],resourceBudget:{heapMiB:buildHeapMiB,workers:buildWorkers,kotlinInProcess:true}};
 writeFileSync(join(directory,'build-intent.json'),JSON.stringify(record,null,2)+'\n',{flag:'wx',mode:0o600});
-const run=(command,args,env=process.env,cwd=root)=>{const storage=checkBuildStorage(stage,statfsSync,[root,join(root,"android/app/build"),process.env.GRADLE_USER_HOME||join(process.env.HOME,".gradle")]);(record.storageChecks??=[]).push({at:Date.now(),...storage});const r=spawnSync(command,args,{cwd,env,stdio:'inherit'});if(r.status!==0)throw Error(`Release command did not complete: ${command} (${r.status??r.signal})`);};
+const run=(command,args,env=process.env,cwd=root)=>{const storage=checkBuildStorage(stage,statfsSync,[root,join(root,"android/app/build"),process.env.GRADLE_USER_HOME||join(process.env.HOME,".gradle"),...([join(root,"node_modules"),join(root,"android/.gradle")].filter(existsSync))]);(record.storageChecks??=[]).push({at:Date.now(),...storage});const r=spawnSync(command,args,{cwd,env,stdio:'inherit'});if(r.status!==0)throw Error(`Release command did not complete: ${command} (${r.status??r.signal})`);};
 const unit=variant=>{const directory=join(root,'android/app/build/test-results/test'+variant+'UnitTest');const result={tests:0,failures:0,errors:0,skipped:0};for(const name of readdirSync(directory).filter(n=>/^TEST-.+\.xml$/.test(n))){const xml=readFileSync(join(directory,name),'utf8'),header=xml.match(/<testsuite\s[^>]+>/)?.[0];if(!header)throw Error('Invalid JUnit output.');for(const key of Object.keys(result)){const value=header.match(new RegExp('\\b'+key+'="(\\d+)"'))?.[1];if(value===undefined)throw Error('Incomplete JUnit output.');result[key]+=Number(value);}}if(!result.tests||result.failures||result.errors||result.skipped>=result.tests)throw Error('Unit checks failed or unavailable.');return result;};
 try{
  // Incremental ZIP packaging can retain large dead gaps after input changes.
@@ -40,21 +44,21 @@ try{
  }
  writeFileSync(join(directory,'build-intent.json'),JSON.stringify(record,null,2)+'\n',{mode:0o600});
  const signed=['testDebugUnitTest','testReleaseUnitTest','lintDebug','lintRelease','assembleDebug','assembleRelease'];
- run('./gradlew',['--no-daemon','--max-workers=2','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8',...signed],process.env,join(root,'android'));record.tasks.push(...signed);record.unit={debug:unit('Debug'),release:unit('Release')};
+ run('./gradlew',[...gradleArgs,...signed],process.env,join(root,'android'));record.tasks.push(...signed);record.unit={debug:unit('Debug'),release:unit('Release')};
  const primaryRelease=join(stage,'primary-release.apk');
  copyFileSync(join(root,'android/app/build/outputs/apk/release/app-release.apk'),primaryRelease);
  let compatibleRelease=join(root,'android/app/build/outputs/apk/debug/app-debug.apk');
  if(phoneStore){
   const phoneEnv={...process.env,POCKET_SIGNING_STORE:phoneStore,POCKET_SIGNING_PASSWORD:process.env.POCKET_PHONE_SIGNING_PASSWORD,POCKET_SIGNING_ALIAS:process.env.POCKET_PHONE_SIGNING_ALIAS};
   delete phoneEnv.POCKET_SIGNING_KEY_PASSWORD;
-  run('./gradlew',['--no-daemon','--max-workers=2','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8','assembleRelease'],phoneEnv,join(root,'android'));
+  run('./gradlew',[...gradleArgs,'assembleRelease'],phoneEnv,join(root,'android'));
   compatibleRelease=join(stage,'phone-compatible-release.apk');
   copyFileSync(join(root,'android/app/build/outputs/apk/release/app-release.apk'),compatibleRelease);
   record.tasks.push('assembleRelease(phone-compatible-optimized)');
   record.phoneCompatible={optimized:true,apkSha256:fileSha(compatibleRelease)};
  }
  const qaEnv={...process.env};delete qaEnv.POCKET_DEBUG_STORE;
- const qa=['assembleQualification','assembleQualificationAndroidTest'];run('./gradlew',['--no-daemon','--max-workers=2','-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8',...qa],qaEnv,join(root,'android'));record.tasks.push(...qa);
+ const qa=['assembleQualification','assembleQualificationAndroidTest'];run('./gradlew',[...gradleArgs,...qa],qaEnv,join(root,'android'));record.tasks.push(...qa);
  const env={...process.env,POCKET_DATA:stage};delete env.POCKET_SIGNING_PASSWORD;delete env.POCKET_SIGNING_KEY_PASSWORD;
  const release=primaryRelease;
  run(process.execPath,[join(root,'scripts/prepare-app-update.mjs'),release,compatibleRelease],env);

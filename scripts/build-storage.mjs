@@ -1,14 +1,17 @@
 import {statfsSync} from 'node:fs';
-export function checkBuildStorage(stage, statfs = statfsSync, ramPaths = []) {
+export function checkBuildStorage(stage, statfs = statfsSync, buildPaths = []) {
  const available = path => { const s = statfs(path); return Number(s.bavail) * Number(s.bsize); };
  const rootAvailable = available('/'), stageAvailable = available(stage);
- // When source, outputs, Gradle cache and staging are all tmpfs, only small
- // metadata/log writes touch root. Artifact headroom belongs to staging.
- const allRam = ramPaths.length === 3 && [stage,...ramPaths].every(path => Number(statfs(path).type) === 0x01021994);
- const rootWriteHeadroom = (allRam ? 16 : 512) * 1024 ** 2;
+ // Source, dependencies, outputs, caches and release staging must be disk-backed.
+ // Low disk space must never silently turn a build into host RAM consumption.
+ for(const path of [stage,...buildPaths]){
+  const type=Number(statfs(path).type);
+  if(type===0x01021994||type===0x858458f6)throw Error('RAM-backed build path is forbidden: '+path);
+ }
+ const rootWriteHeadroom = 512 * 1024 ** 2;
  const rootRequired = 80 * 1024 ** 3 + rootWriteHeadroom;
  const stageRequired = 1024 ** 3;
  if (rootAvailable < rootRequired) throw Error('Build recovery reserve unavailable on root filesystem.');
  if (stageAvailable < stageRequired) throw Error('Build staging space unavailable.');
- return {rootAvailable, rootRequired, rootWriteHeadroom, allRam, stageAvailable, stageRequired};
+ return {rootAvailable, rootRequired, rootWriteHeadroom, stageAvailable, stageRequired};
 }
