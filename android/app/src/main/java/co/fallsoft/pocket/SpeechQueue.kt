@@ -67,3 +67,12 @@ class CompletedSpeechLedger(initial:List<Long> = emptyList(),private val limit:I
 internal fun speechOriginMatches(notificationLocal:Boolean?,activeLocal:Boolean)=notificationLocal==null||notificationLocal==activeLocal
 
 internal fun notificationSpeechHoldReason(voiceActive:Boolean):String?=if(voiceActive)"Voice mode is active · Stop voice to listen" else null
+
+/** Notification IDs are positive; explicit preview/read owners use local negative
+ * IDs. Retiring legacy notification speech never marks a notification heard/read.
+ */
+internal fun retireAutomaticSpeech(messages:MutableList<SpokenMessage>):Int {
+    val before=messages.size
+    messages.removeAll{it.id>0&&it.kind!="preview"}
+    return before-messages.size
+}

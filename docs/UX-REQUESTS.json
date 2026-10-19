@@ -3041,5 +3041,11 @@
     "requirement": "Bottom toolbar controls, including the focus/important control, must not collide with their container",
     "implementation": "One shared dock/footer surface;8dp horizontal and6dp vertical interior clearances, minimum2dp sibling gap and6dp wrapped-row gap. Important filter uses explicit12dp horizontal/8dp vertical content padding, retaining48dp minimum targets. No control removal or behavior change.",
     "qualification": "Verify normal and large text in native emulator before publication; physical phone not claimed."
+  },
+  "on_demand_speech_no_unsolicited_backlog_20261019": {
+    "status": "source candidate; native migration and playback qualification pending",
+    "problem": "Spoken-message mode admits notifications into unbounded persistent queues; paused queues accumulate hundreds. Clear selected-source does not clear global count.",
+    "design": "Notification arrival never admits playback; requested voice replies retain their existing owner. Manual Speak reads the chosen passage. Retire legacy notification-ID backlog on profile restoration without marking sources read/heard. One direct Clear all playback action. No new automatic announcements or model polling.",
+    "cost": "Pending count measures queued text, not proof of rendered audio. Remove unnecessary notification-speech immersion preparation. No billing totals inferred."
   }
 }

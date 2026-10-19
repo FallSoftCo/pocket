@@ -31,7 +31,11 @@ object PocketAudio {
     private var preparation:Job?=null
     private var preparing=false
     private val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
-    fun init(){mode=Pocket.prefs.getString("audioMode","tones")?:"tones"}
+    fun init(){
+        val saved=Pocket.prefs.getString("audioMode","tones")?:"tones"
+        mode=if(saved=="summaries")"tones" else saved
+        if(saved!=mode)Pocket.prefs.edit().putString("audioMode",mode).apply()
+    }
     fun kind(raw:String)=if(labels.containsKey(raw))raw else "update"
     fun file(c:Context,profile:String,event:String)=File(c.filesDir,"notification-audio/$profile-v1/$event.wav")
     fun uri(profile:String,event:String)=Uri.parse("content://co.fallsoft.pocket.sounds/$profile-v1/$event.wav")
@@ -51,9 +55,9 @@ object PocketAudio {
         return id
     }
     fun select(value:String){
-        if(value !in listOf("tones","voice","system","summaries"))return
+        if(value !in listOf("tones","voice","system"))return
         mode=value;Pocket.prefs.edit().putString("audioMode",value).apply();status=""
-        if(value!="summaries")PocketSpeech.clear()
+
         if(value=="voice")prepareVoice()
     }
     fun prepareVoice(){
@@ -94,7 +98,6 @@ object PocketAudio {
     fun preview(raw:String){
         val event=kind(raw)
         PocketNotifications.show(Pocket.context,org.json.JSONObject().put("id",900000000L+labels.keys.indexOf(event)).put("kind",event).put("title",phrases[event]).put("body","Sound preview · ${labels[event]}"))
-        if(mode=="summaries")PocketSpeech.request(Pocket.context,org.json.JSONObject().put("id",System.currentTimeMillis()).put("_speechPreview",true).put("kind",event).put("spoken_summary",when(event){"complete"->"NextComp: all tests passed. The release is ready.";"question"->"Website: should I publish the preview or keep it private?";else->"Build failed: signing credentials are missing."}))
     }
     private fun ensureTone(c:Context,event:String){
         val dest=file(c,"tones",event);if(dest.length()>44)return

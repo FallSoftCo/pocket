@@ -127,8 +127,15 @@ object PocketSpeech {
             sessions.explicitFocus=grouped.optBoolean("explicitFocus")
             queue=sessions.current
         }catch(_:Exception){sessions.queues[null]=queue}
-        if(sessions.count>0&&PocketSpeechCaptions.state.id!=queue.current?.id)PocketSpeechCaptions.dismiss()
-        if(Pocket.token.isBlank())clearAll() else {if(legacyProfile==null)save(true);publish();if(count>0)showPaused()}
+        // Legacy positive IDs came from notification admission, not an explicit
+        // listening request. Retire that backlog without acknowledging its source.
+        val retired=sessions.queues.values.sumOf{retireAutomaticSpeech(it.messages)}
+        if(retired>0){
+            sessions.queues.values.forEach{it.chunkIndex=0;it.positionMs=0}
+            storage.edit().remove("currentRendering").remove("rendering:"+currentProfile).commit()
+        }
+        if(sessions.count==0||PocketSpeechCaptions.state.id!=queue.current?.id)PocketSpeechCaptions.dismiss()
+        if(Pocket.token.isBlank())clearAll() else {if(legacyProfile==null||retired>0)save(true);publish();if(count>0)showPaused()}
     }
     internal fun publish(){currentMessageId=queue.current?.id;activeCount=queue.messages.size;if(displayedOwner!=null){displayedRunning=!queue.paused&&queue.current!=null;displayedProblem=if(queue.paused)queue.reason else ""};sources=sessions.queues.filterValues{it.messages.isNotEmpty()}.map{(source,q)->source to ((if(source=="@audio-preview")"Audio preview" else if(source==null)"Unknown session" else PocketNotificationTitles.title(source,q.current?.title.orEmpty().ifBlank{"Session"})) to q.messages.size)};activeSource=sessions.activeSource;count=if(displayedOwner!=null)queue.messages.size else sessions.count;paused=queue.paused;title=if(displayedOwner!=null)displayedTitle else queue.current?.let{m->if(m.kind=="preview")"Audio preview" else m.threadId?.let{PocketNotificationTitles.title(it,m.title)}?:"Unknown session"}?:"Choose a speech session";status=queue.reason}
     internal fun save(durable:Boolean=false){
@@ -161,6 +168,7 @@ object PocketSpeech {
         val ledger=heard(profile);ledger.completed(id);storage.edit().putString("heard:"+profile,JSONArray(ledger.snapshot()).toString()).commit()
     }
     fun clearAll(){
+        ++selectionGeneration;++displayedGeneration
         displayedOwner?.let{stopDisplayed(it)}
         service?.discard();sessions=SessionSpeechQueues();queue=sessions.current;val remembered=storage.all.filterKeys{it.startsWith("heard:")};val edit=storage.edit().clear();remembered.forEach{(key,value)->if(value is String)edit.putString(key,value)};edit.commit();directory.deleteRecursively()
         Pocket.context.getSystemService(NotificationManager::class.java).cancel(998);publish()
@@ -191,38 +199,6 @@ object PocketSpeech {
         val files=directory.listFiles()?.filter{it.extension=="wav"}?.sortedByDescending{it.lastModified()}.orEmpty()
         var bytes=0L;files.forEachIndexed{i,file->bytes+=file.length();if(i>=16||bytes>32L*1024*1024)file.delete()}
     }
-    fun allowed(c:Context,kind:String):Boolean {
-        if(PocketAudio.mode!="summaries"||Pocket.token.isBlank())return false
-        val audio=c.getSystemService(AudioManager::class.java)
-        val manager=c.getSystemService(NotificationManager::class.java)
-        if(!NotificationManagerCompat.from(c).areNotificationsEnabled()||audio.ringerMode!=AudioManager.RINGER_MODE_NORMAL||audio.getStreamVolume(AudioManager.STREAM_NOTIFICATION)==0||audio.mode!=AudioManager.MODE_NORMAL)return false
-        if(manager.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_ALL)return false
-        val channel=manager.getNotificationChannel(PocketAudio.channel(c,kind))
-        return channel!=null&&channel.importance>=NotificationManager.IMPORTANCE_DEFAULT&&channel.sound!=null
-    }
-    fun request(c:Context,n:JSONObject){Pocket.scope.launch{
-        if(n.has("_environment")&&n.s("_environment")!=Pocket.environmentId)return@launch
-        if(!speechOriginMatches(if(n.has("_local"))n.optBoolean("_local")else null,Pocket.local))return@launch
-        if(n.s("kind")=="coordinator_report")return@launch
-        if(!allowed(c,n.s("kind")))return@launch
-        val preview=n.optBoolean("_speechPreview")
-        val incoming=SpokenMessage(if(preview)-n.optLong("id").coerceAtLeast(1)else n.optLong("id"),if(preview)"Audio preview" else n.s("title"),if(preview)"preview" else n.s("kind"),text(n),n.s("speech_pending")=="1",n.s("thread_id").ifBlank{n.s("threadId")}.takeIf{it.isNotBlank()})
-        if(heard(ownerProfile()).contains(incoming.id))return@launch
-        val wasEmpty=sessions.count==0
-        sessions.enqueue(incoming)
-        if(preview&&displayed.parked==null&&!PocketVoice.active){selectSource(incoming.sourceKey);return@launch}
-        if(displayed.parked!=null||PocketVoice.active){save(true);return@launch}
-        val focused=Pocket.selected.takeIf{PocketVoice.foreground}
-        if((wasEmpty||queue.current==null)&&!sessions.explicitFocus){
-            if(focused==null||focused==incoming.threadId){sessions.activeSource=incoming.threadId;queue=sessions.current}else{save(true);return@launch}
-        }
-        val hadSaved=queue.messages.isNotEmpty()&&queue.paused
-        save(true)
-        if(incoming.threadId!=sessions.activeSource||hadSaved){showPaused();return@launch}
-        if(service==null)queue.resume()
-        if(service==null&&c.getSystemService(AudioManager::class.java).isMusicActive){hold("Waiting while other audio plays");return@launch}
-        service?.next()?:start(c,"play")
-    }}
     internal fun voiceOwnsAudio()=PocketVoice.captureBusy ||
         PocketVoice.active&&(displayedOwner==null||PocketVoice.state !in setOf("Ready","Paused"))
     fun control(action:String){

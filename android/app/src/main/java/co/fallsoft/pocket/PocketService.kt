@@ -62,7 +62,6 @@ object PocketNotifications {
         if(sameProfile){synchronized(immersedNotices){immersedNotices[id]=ImmersedNotice(n.toString(),immersionProfile(),reminder);while(immersedNotices.size>30)immersedNotices.remove(immersedNotices.keys.first())}}
         val title=if(sameProfile)immersed("notification-title:${n.optLong("id")}",n.s("title"))else n.s("title")
         val body=if(sameProfile)immersed("notification-body:${n.optLong("id")}",n.s("body"))else n.s("body")
-        if(sameProfile&&PocketImmersion.enabled){val spoken=PocketSpeech.text(n);PocketImmersion.offer("notification-speech:${n.optLong("id")}",spoken,"speech urgent")}
 
         val b=NotificationCompat.Builder(c,PocketAudio.channel(c,n.s("kind"))).setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title).setContentText(body)

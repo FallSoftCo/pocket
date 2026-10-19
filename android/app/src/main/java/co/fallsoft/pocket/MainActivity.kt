@@ -289,6 +289,10 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun SpeechSourceLabel(){
+    if(PocketSpeech.displayedOwner!=null){
+        WorkflowText(PocketSpeech.title,color=Paper,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        return
+    }
     var sourceOpen by remember{mutableStateOf(false)}
     Box{
         TextButton({sourceOpen=true},contentPadding=PaddingValues(horizontal=0.dp),modifier=Modifier.heightIn(min=48.dp)){
@@ -296,7 +300,6 @@ class MainActivity:ComponentActivity(){
         }
         DropdownMenu(expanded=sourceOpen,onDismissRequest={sourceOpen=false},properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
             PocketSpeech.sources.forEach{(source,details)->DropdownMenuItem(text={Text("${if(source==PocketSpeech.activeSource)"• " else ""}${details.first} · ${details.second}")},onClick={sourceOpen=false;PocketSpeech.selectSource(source)})}
-            DropdownMenuItem(text={BilingualLabel("Clear all saved speech",centered=false)},onClick={sourceOpen=false;PocketSpeech.clearAll()})
         }
     }
 }
@@ -611,8 +614,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                 FilterChip(selected=PocketAudio.mode==value,onClick={PocketAudio.select(value)},label={BilingualLabel(label,fontSize=12.sp)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
             }
         }
-        FilterChip(selected=PocketAudio.mode=="summaries",onClick={PocketAudio.select("summaries")},label={BilingualLabel("Speak messages")},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
-        WorkflowText(when(PocketAudio.mode){"summaries"->"A short tone, then the spoken message using your Codex account allowance. Pause and resume from the player or notification, including while locked. Other audio pauses speech and saves your place. Quiet mode and Do Not Disturb silence speech.";"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        WorkflowText(when(PocketAudio.mode){"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        WorkflowText("Replies speak in voice mode or when you tap Speak. Notifications never build a speech backlog.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
         WorkflowText(SpeechUsage.summary(),color=Muted,fontSize=12.sp,lineHeight=18.sp)
         WorkflowText("Generated/played counters cover notification and manual speech. Voice-mode connection time includes idle time. Playback does not prove audibility. Cancelled generation can still consume allowance; these are local activity counters, not billing totals.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
         if(PocketAudio.status.isNotBlank())WorkflowText(PocketAudio.status,color=Mint,fontSize=12.sp)
@@ -682,10 +685,11 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     IconButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")},enabled=available,modifier=Modifier.size(48.dp)){
         SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)"Resume" else "Pause"),modifier=Modifier.size(28.dp),tint=if(available)Mint else Muted)
     }
-    if(iconOnly)IconButton({PocketSpeech.clear()},enabled=available,modifier=Modifier.size(48.dp)){
-        Icon(Icons.Rounded.Close,PocketImmersion.label("Clear speech from active session"),Modifier.size(28.dp),tint=if(available)Coral else Muted)
-    }else TextButton({PocketSpeech.clear()},enabled=available,modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp).semantics{contentDescription=PocketImmersion.label("Clear speech from active session")},contentPadding=PaddingValues(horizontal=8.dp)){
-        BilingualLabel("Clear session",color=if(available)Coral else Muted,fontSize=14.sp)
+    val clearable=available||PocketSpeech.count>0
+    TextButton({PocketSpeech.clearAll()},enabled=clearable,
+        modifier=Modifier.heightIn(min=48.dp).widthIn(min=72.dp).semantics{contentDescription=PocketImmersion.label("Clear all saved speech")},
+        contentPadding=PaddingValues(horizontal=10.dp)){
+        BilingualLabel("Clear all",color=if(clearable)Coral else Muted,fontSize=14.sp)
     }
 }
 
