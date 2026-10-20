@@ -2960,7 +2960,7 @@
     {
       "id": "shared-catalog-read-lane-20261019",
       "request": "Avoid duplicate startup/reconnect inventory work and late responses replacing a newly selected catalog filter.",
-      "status": "browser-qualified; deployment pending",
+      "status": "deployed; actual private browser one startup read and 296ms selected-message readback",
       "implementation": "Startup/WebSocket/poll readers join a shared per-device/filter lane. Explicit refresh and event invalidation coalesce to one follow-up. Old filter/profile responses cannot commit into current list.",
       "evidence": "docs/qualification/web-shared-session-state-20261019.json"
     }
