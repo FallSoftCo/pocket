@@ -72,6 +72,7 @@ class HollywoodVoiceKeysNativeTest{
    key(KeyEvent.ACTION_DOWN)
    await("Hardware did not start actual microphone"){PocketVoice.state=="Listening"&&PocketVoice.recordingStartedAt>0}
    assertEquals("Old receipt was overwritten",strandedId,p.getString("voicePendingId",null))
+   assertEquals("Original saved environment changed at capture start",id,p.getString("voicePendingEnvironment",null))
    assertArrayEquals("Original unresolved audio changed",strandedAudio,c.filesDir.resolve("voice-pending.wav").readBytes())
    assertTrue("Starting capture closed the IME",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
    assertEquals(roomA,PocketVoice.targetRoom?.s("roomId"))
@@ -137,6 +138,7 @@ class HollywoodVoiceKeysNativeTest{
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
    await("Settings hardware stop failed"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
    tap("native-settings-back")
+   assertEquals("Original saved environment changed during later captures",id,p.getString("voicePendingEnvironment",null))
    val status=Pocket.apiEnvironment(source,"/_qa/status")
    val starts=status.getJSONArray("starts").objects().drop(priorStarts)
    assertTrue("Capture initialized an unrelated coordinator",starts.isEmpty())
@@ -162,6 +164,7 @@ class HollywoodVoiceKeysNativeTest{
    val cleanup=runCatching {
    val pending=p.getString("voicePendingId",null)
    if(pending!=null){
+    android.util.Log.i("NextCompVoiceQA","Saved source before cleanup: "+p.getString("voicePendingEnvironment",null)+"; expected "+id)
     require(p.getString("voicePendingEnvironment",null)==id){"Cleanup refused an unrelated saved receipt; it remains untouched"}
     val status=Pocket.apiEnvironment(source,"/_qa/status");require(status.getBoolean("noProvider")&&status.getInt("blockedTaskWrites")==0)
     c.filesDir.resolve("qa-synthetic-voice-pending-"+pending+".json").writeText(JSONObject().put("id",pending).put("noProvider",true).toString())

@@ -21,6 +21,8 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/api/backends')body={backends:[{id:'codex',configured:false,available:false},binding]};
  else if(path==='/api/status')body={connected:true,host:'Owned synthetic native voice',deviceId:'synthetic-native-voice-device'};
  else if(path==='/api/app/update')body={available:false};
+ else if(path==='/api/immersion/v2'&&['GET','POST'].includes(req.method)){record({kind:'immersion-preference',method:req.method});body={planVersion:'transgrammatic-english-italian-v1',unavailable:true,jobs:[],translations:[]};}
+ else if(path==='/api/immersion/v2/translate'&&req.method==='POST'){record({kind:'translation-unavailable'});status=503;body={error:'Owned voice fixture has no translation provider'};}
  else if(path==='/api/voice/history')body={turns:[],hasEarlier:false};
  else if(path==='/api/voice/start'&&req.method==='POST'){const input=JSON.parse(raw);starts.push(input);record({kind:'voice-start',input});body={ok:true};}
  else if(path==='/api/voice/native/start'){nativeAttempts++;record({kind:'provider-blocked'});status=503;body={error:'Owned QA provider intentionally unavailable'};}
