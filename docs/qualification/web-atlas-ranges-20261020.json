@@ -1,5 +1,5 @@
 {
-  "state": "qualified-not-deployed",
+  "state": "revised-candidate-qualified-after-live-rollback",
   "date": "2026-10-20T06:04:20.587070+00:00",
   "causeEvidence": {
     "realHttp2HeaderWaitMs": 11334,
@@ -14,7 +14,7 @@
     "noMotionDiagnostic": "Invalid comparison: Playwright request routing disabled browser caching; not used as proof against motion contention."
   },
   "change": "Reassemble immutable original atlas bytes from bounded32KiB HTTP range responses; two page jobs, one sequential range per job; validate representation, length and budget; preserve compressed/decoded LRU, static fallback and no repeated range fetches",
-  "wireTestsPassed": 14,
+  "wireTestsPassed": 15,
   "controlledBrowser": {
     "state": "complete",
     "baseline": false,
@@ -52,5 +52,40 @@
   "limits": [
     "Actual private HTTP2 reopen qualification and deployment remain pending.",
     "No Android APK/artwork regeneration or shared Tailscale settings change."
-  ]
+  ],
+  "initialLiveCandidate": {
+    "reopenToMessageMs": 2934,
+    "http2FirstByteMs": 983,
+    "state": "failed-animation-completion; rolled back",
+    "sameDraftAndCanonicalReadPassed": true,
+    "phoneAndBackendChanged": false
+  },
+  "transferBudgets": {
+    "chunkBytes": 32768,
+    "parallelPages": 2,
+    "perRequestStallMs": 10000,
+    "overallDeadlineMs": 60000,
+    "maxPageBytes": 2097152,
+    "reason": "Do not abandon healthy progress because low-priority paced ranges span more than the previous whole-file deadline; individual stalled responses and total work remain bounded"
+  },
+  "revisedBrowserCases": {
+    "state": "passed",
+    "cases": [
+      "web-symbol-motion-check",
+      "web-atlas-upgrade-check"
+    ],
+    "startedAt": 1792476969.1022718,
+    "finishedAt": 1792476982.914017
+  },
+  "warmCacheUpgrade": {
+    "state": "complete",
+    "errors": [],
+    "humanSubmissions": 0,
+    "warmCache": {
+      "originalBytes": 330948,
+      "reconstructedBytes": 330948,
+      "byteExact": true,
+      "ranges": 11
+    }
+  }
 }

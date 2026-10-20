@@ -34,3 +34,14 @@ test('small complete assets work while incomplete range pages do not advance the
  const incomplete=await host(t,(_req,res)=>{res.writeHead(206,{'Content-Range':'bytes 0-3/65536','Content-Length':4,ETag:'"short"'});res.end('part');});
  await assert.rejects(downloadAtlas(incomplete),/budget/);
 });
+
+test('healthy paced ranges survive the per-chunk stall budget while a stalled response aborts',async t=>{
+ const source=Buffer.alloc(4096,7);let reads=0;
+ const paced=await host(t,(req,res)=>{
+  reads++;const start=Number(/^bytes=(\d+)-/.exec(req.headers.range)[1]);setTimeout(()=>{res.writeHead(206,{'Content-Range':'bytes '+start+'-'+(start+1023)+'/4096','Content-Length':1024,ETag:'"paced"'});res.end(source.subarray(start,start+1024));},60);
+ });
+ const blob=await downloadAtlas(paced,{chunkBytes:1024,stallMs:150,deadlineMs:1200});
+ assert.deepEqual(Buffer.from(await blob.arrayBuffer()),source);assert.equal(reads,4);
+ const stalled=await host(t,()=>{});
+ await assert.rejects(downloadAtlas(stalled,{stallMs:30,deadlineMs:250}),{name:'TimeoutError'});
+});

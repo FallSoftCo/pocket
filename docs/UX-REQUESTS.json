@@ -3159,7 +3159,7 @@
     "next": "Versioned gateway closure, actual private open/reopen and original draft/row identity verification"
   },
   "web_bounded_atlas_transport_20261020": {
-    "state": "qualified-not-deployed",
+    "state": "revised-candidate-qualified-after-live-rollback",
     "evidence": "docs/qualification/web-atlas-ranges-20261020.json",
     "next": "Exact private HTTP2 reopen with original state and positive animation; controlled reversible owning gateway update"
   }

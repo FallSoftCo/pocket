@@ -3,7 +3,7 @@ import {clientBase,clientURL} from './paths.mjs';
 const base=clientBase(import.meta.url),motion=matchMedia('(prefers-reduced-motion: reduce)');
 const active=new Set(),states=new WeakMap(),pages=new Map(),pending=new Map();
 const failed=new Set(),compressed=new Map();const budget=32*1024*1024,compressedBudget=12*1024*1024;let bytes=0,compressedBytes=0,clock=0,manifest;
-let draws=0,ticks=0,decodeFailures=0,ready=true,pageFlights=0;const pageQueue=[];
+let draws=0,ticks=0,decodeFailures=0,lastFailure=null,ready=true,pageFlights=0;const pageQueue=[];
 function pumpDownloads(){if(!ready||document.hidden||motion.matches)return;while(pageFlights<2&&pageQueue.length){const job=pageQueue.shift();pageFlights++;Promise.resolve().then(job.read).then(job.resolve,job.reject).finally(()=>{pageFlights--;pumpDownloads();});}}
 const download=read=>new Promise((resolve,reject)=>{pageQueue.push({read,resolve,reject});pumpDownloads();});
 const manifestPromise=()=>manifest??=fetch(clientURL(base,'symbols/motion/manifest.json'),{priority:'low',signal:AbortSignal.timeout(15000)}).then(r=>{if(!r.ok)throw Error('Symbol manifest unavailable');return r.json();});
@@ -24,7 +24,7 @@ async function loadPage(name,atlas,page){
    const bitmap=await createImageBitmap(blob),size=bitmap.width*bitmap.height*4;
    while(bytes+size>budget&&pages.size){const [old,entry]=pages.entries().next().value;pages.delete(old);bytes-=entry.size;entry.bitmap.close();}
    pages.set(key,{bitmap,size});bytes+=size;return bitmap;
-  }catch{failed.add(key);decodeFailures++;return null;}finally{pending.delete(key);}
+  }catch(error){failed.add(key);decodeFailures++;lastFailure=String(error?.message||'Symbol transfer failed').slice(0,120);return null;}finally{pending.delete(key);}
  })();pending.set(key,promise);return promise;
 }
 const observer=new IntersectionObserver(entries=>{
@@ -81,4 +81,4 @@ export function animatedSymbol(name,{size=32,label=''}={}){
  const prepare=()=>{if(!ready||document.hidden||motion.matches||state.atlas)return;manifestPromise().then(data=>{state.atlas=data[name];wake();}).catch(()=>{});};
  state.prepare=prepare;observer.observe(node);return node;
 }
-export function symbolMotionStats(){return {draws,ticks,active:active.size,decodedBytes:bytes,compressedBytes,pending:pending.size,downloads:pageFlights,queuedDownloads:pageQueue.length,ready,decodeFailures,scheduled:!!clock};}
+export function symbolMotionStats(){return {draws,ticks,active:active.size,decodedBytes:bytes,compressedBytes,pending:pending.size,downloads:pageFlights,queuedDownloads:pageQueue.length,ready,decodeFailures,lastFailure,scheduled:!!clock};}

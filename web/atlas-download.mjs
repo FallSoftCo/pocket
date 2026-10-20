@@ -12,13 +12,15 @@ async function readExact(response,expected){
  if(offset!==expected)throw Error('Truncated atlas body');
  return bytes.buffer;
 }
-export async function downloadAtlas(url,{fetcher=fetch,chunkBytes=32768,maxBytes=2*1024*1024,signal=AbortSignal.timeout(15000)}={}){
+export async function downloadAtlas(url,{fetcher=fetch,chunkBytes=32768,maxBytes=2*1024*1024,signal,stallMs=10000,deadlineMs=60000}={}){
  if(!Number.isSafeInteger(chunkBytes)||chunkBytes<1024||!Number.isSafeInteger(maxBytes)||maxBytes<chunkBytes)throw Error('Invalid atlas transfer budget');
+ if(!Number.isSafeInteger(stallMs)||stallMs<1||!Number.isSafeInteger(deadlineMs)||deadlineMs<stallMs)throw Error('Invalid atlas time budget');
+ const lifetime=signal?AbortSignal.any([signal,AbortSignal.timeout(deadlineMs)]):AbortSignal.timeout(deadlineMs);
  const chunks=[];let offset=0,total=null,etag=null,modified=null;
  while(total===null||offset<total){
   const headers={Range:'bytes='+offset+'-'+(offset+chunkBytes-1)};
   if(modified)headers['If-Range']=modified;
-  const response=await fetcher(url,{headers,priority:'low',signal});
+  const response=await fetcher(url,{headers,priority:'low',signal:AbortSignal.any([lifetime,AbortSignal.timeout(stallMs)])});
   const reject=async message=>{await response.body?.cancel().catch(()=>{});throw Error(message);};
   if(response.status===200){
    const size=Number(response.headers.get('content-length'));
