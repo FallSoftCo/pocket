@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.*
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
@@ -36,7 +38,7 @@ class ImmersionFlipFlopNativeTest {
     CompositionLocalProvider(LocalImmersionMotionState provides allowMotion.value,LocalImmersionTransitionAnimated provides false){
      MaterialTheme{ImmersionReadingWaveHost{Column(Modifier.fillMaxSize().statusBarsPadding().padding(24.dp)){
       SharedInlineImmersionText(target,meaning,{1f})
-      TextButton(onClick={taps++}){BilingualLabel("Full permissions for new tasks")}
+      TextButton(onClick={taps++},modifier=Modifier.semantics{contentDescription="Flip fixture action"}){BilingualLabel("Full permissions for new tasks")}
      }}}
     }
    }}
@@ -46,7 +48,7 @@ class ImmersionFlipFlopNativeTest {
     device.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile("(Puoi|Can-you) .*"))).forEach{node->
      try{if(node.text in expected)seen+=node.text}catch(_:androidx.test.uiautomator.StaleObjectException){}
     }
-    if(!tapped){val control=device.findObjects(By.clickable(true)).firstOrNull{it.visibleBounds.height()>0};if(control!=null){control.click();tapped=true}}
+    if(!tapped){val control=device.findObject(By.desc("Flip fixture action"));if(control!=null){control.click();tapped=true}}
     Thread.sleep(150)
    }
    device.takeScreenshot(java.io.File(c.cacheDir,"flip-flop-native.png"))
