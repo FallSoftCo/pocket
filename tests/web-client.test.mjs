@@ -18,6 +18,7 @@ test('web gateway authenticates pairing, protects credential and blocks foreign 
  assert.equal((await fetch(base+'/api/devices',{headers:{Cookie:cookie}})).status,403);
  assert.equal((await fetch(base+'/api/notify',{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:'{}'})).status,403);
  assert.equal((await fetch(base+'/api/threads/thread-123/reply',{method:'POST',headers:{Cookie:cookie,Origin:'https://evil.example','Content-Type':'application/json'},body:'{}'})).status,403);
+ const asset=await fetch(base+'/symbols/nextcomp.png');assert.equal(asset.status,200);assert.equal(asset.headers.get('cache-control'),'private, no-cache');const etag=asset.headers.get('etag');assert.ok(etag);await asset.arrayBuffer();assert.equal(await new Promise((resolve,reject)=>{http.get(base+'/symbols/nextcomp.png',{headers:{'If-None-Match':etag}},res=>{res.resume();res.on('end',()=>resolve(res.statusCode));}).on('error',reject);}),304);
  const staticResponse=await fetch(base+'/');assert.match(staticResponse.headers.get('content-security-policy'),/frame-ancestors 'none'/);assert.match(await staticResponse.text(),/NextComp/);
  const logout=await fetch(base+'/web/logout',{method:'POST',headers:{Cookie:cookie,Origin:origin}});assert.match(logout.headers.get('set-cookie'),/Max-Age=0/);
 });
@@ -99,4 +100,23 @@ test('paired browser audio upload preserves immutable bytes and room binding wit
  const headers={Origin:origin,Cookie:cookie,'Content-Type':'audio/wav','X-Hollywood-Binding':binding};
  assert.equal((await fetch(base+'/api/voice/recordings/original-audio/audio',{method:'PUT',headers:{...headers,Origin:'https://foreign.test'},body:payload})).status,403);
  const uploaded=await fetch(base+'/api/voice/recordings/original-audio/audio',{method:'PUT',headers,body:payload});assert.equal(uploaded.status,200);assert.equal((await uploaded.json()).id,'original-audio');assert.equal(admitted,1);
+});
+
+test('gateway compresses negotiated JSON while preserving identity, status, and binary representations',async t=>{
+ const {gunzipSync}=await import('node:zlib'),token='f'.repeat(64),data={text:'Una domanda importante. '.repeat(6000)},binary=Buffer.from([82,73,70,70,0,255,9,7]);
+ const backend=http.createServer((req,res)=>{
+  if(req.url==='/api/pair'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({token,id:'compression-fixture'}));}
+  if(req.headers.authorization!=='Bearer '+token){res.writeHead(401).end();return;}
+  if(req.url==='/api/audio'){res.writeHead(206,{'Content-Type':'audio/wav'}).end(binary);return;}
+  res.writeHead(202,{'Content-Type':'application/json'}).end(JSON.stringify(data));
+ });backend.listen(0,'127.0.0.1');await once(backend,'listening');t.after(()=>backend.close());
+ const origin='https://private.example.test',gateway=createWebClient({backend:'http://127.0.0.1:'+backend.address().port,origin});
+ gateway.server.listen(0,'127.0.0.1');await once(gateway.server,'listening');t.after(()=>gateway.server.close());
+ const base='http://127.0.0.1:'+gateway.server.address().port;
+ const pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}),cookie=pair.headers.get('set-cookie').split(';')[0];await pair.arrayBuffer();
+ const read=(path,encoding)=>new Promise((resolve,reject)=>{http.get(base+path,{headers:{Cookie:cookie,'Accept-Encoding':encoding}},res=>{const chunks=[];res.on('data',b=>chunks.push(b));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks)}));}).on('error',reject);});
+ const compressed=await read('/api/threads','gzip');assert.equal(compressed.status,202);assert.equal(compressed.headers['content-encoding'],'gzip');assert.match(compressed.headers.vary,/Accept-Encoding/i);
+ assert.deepEqual(JSON.parse(gunzipSync(compressed.body)),data);assert.ok(compressed.body.length<Buffer.byteLength(JSON.stringify(data))/5);
+ for(const encoding of ['identity','gzip;q=0,identity;q=1']){const plain=await read('/api/threads',encoding);assert.equal(plain.headers['content-encoding'],undefined);assert.deepEqual(JSON.parse(plain.body),data);}
+ const audio=await read('/api/audio','gzip');assert.equal(audio.status,206);assert.equal(audio.headers['content-encoding'],undefined);assert.deepEqual(audio.body,binary);
 });

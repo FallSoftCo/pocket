@@ -2,7 +2,7 @@ import http from 'node:http';
 import {once} from 'node:events';
 import {WebSocketServer} from 'ws';
 import {createWebClient} from '../server/web-client.mjs';
-export async function fixture(){
+export async function fixture({extraThreads=0,gatewayFactory=createWebClient}={}){
  const original='I found two useful options. Which material should we use?';
  const words=[['Ho','I-have'],[' ',' '],['trovato','found'],[' ',' '],['due','two'],[' ',' '],['opzioni','options'],[' ',' '],['utili','useful'],['. ','. '],['Quale','Which'],[' ',' '],['materiale','material'],[' ',' '],['dovremmo','should-we'],[' ',' '],['usare','use'],['?','?']];
  let offset=0;const targetSegments=words.map(([target,meaning])=>{const start=offset;offset+=target.length;return {start,end:offset,target,meaning};});
@@ -22,7 +22,7 @@ export async function fixture(){
  if(path==='/api/voice/native/capabilities')return json({durableAudioAdmission:true,maxRecordingSeconds:600});
  if(path.startsWith('/api/voice/recordings')){res.statusCode=req.method==='POST'?503:404;return json({error:req.method==='POST'?'Synthetic audio adapter unavailable. Recording retained.':'Original recording not admitted.'});}
  if(path==='/api/status')return json({deviceId:'browser-fixture',device:'Pixelbook Go fixture',capabilities:{readOnlyTimeline:true},host:'Synthetic workstation',version:'fixture',defaultCwd:'/synthetic/project'});
- if(path==='/api/threads'&&req.method==='GET')return json({threads:[parent,other,child]});
+ if(path==='/api/threads'&&req.method==='GET')return json({threads:[parent,other,child,...Array.from({length:extraThreads},(_,n)=>({id:'inventory-'+n,name:'Synthetic work '+n,preview:'Synthetic previous work context. '.repeat(10),status:{type:'idle'},canAcceptDirectInput:true,createdAt:1700000000,recencyAt:1700000000000}))]});
  if(path==='/api/voice/history')return json({turns,hasEarlier:false});
  if(path==='/api/voice/start')return json({ok:true});
  if(path==='/api/voice/text'){if(!turns.some(t=>t.id===body.turnId))turns.push({id:body.turnId,transcript:body.text,response:'I can help. Your request is in context.',state:'completed',actions:[{threadId:parent.id,name:parent.name,type:'route'}]});return json(turns.at(-1));}
@@ -40,6 +40,6 @@ export async function fixture(){
  if(path==='/api/voice/native/start'){res.statusCode=503;return json({error:'Synthetic native provider unavailable. Recording is saved.'});}
  res.statusCode=404;json({error:'Unknown fixture route'});
  }catch(e){res.statusCode=500;res.end(JSON.stringify({error:e.message}));}});
- const wss=new WebSocketServer({server:backend});wss.on('connection',ws=>{connections.add(ws);ws.send(JSON.stringify({type:'status',connected:true}));ws.on('close',()=>connections.delete(ws));});backend.listen(0,'127.0.0.1');await once(backend,'listening');const gateway=createWebClient({backend:`http://127.0.0.1:${backend.address().port}`,origin:'http://127.0.0.1:18982',secure:false});gateway.server.listen(18982,'127.0.0.1');await once(gateway.server,'listening');
+ const wss=new WebSocketServer({server:backend});wss.on('connection',ws=>{connections.add(ws);ws.send(JSON.stringify({type:'status',connected:true}));ws.on('close',()=>connections.delete(ws));});backend.listen(0,'127.0.0.1');await once(backend,'listening');const gateway=gatewayFactory({backend:`http://127.0.0.1:${backend.address().port}`,origin:'http://127.0.0.1:18982',secure:false});gateway.server.listen(18982,'127.0.0.1');await once(gateway.server,'listening');
  return {url:'http://127.0.0.1:18982',writes,reads,rows,connections,setSummary(id,patch){Object.assign([parent,other,child].find(t=>t.id===id),patch);},broadcast(event){for(const ws of connections)ws.send(JSON.stringify(event));},holdHead(id){let release;const promise=new Promise(r=>release=r);headHolds.set(id,{promise,release});},releaseHead(id){const hold=headHolds.get(id);headHolds.delete(id);hold?.release();},failHead(id){headFailures.set(id,true);},holdHistory(){holdEarlier=true;historyWaiter=new Promise(resolve=>{historyStarted=resolve;});},waitForHistory(){return Promise.race([historyWaiter,new Promise((_,reject)=>setTimeout(()=>reject(Error('History request never began')),3500))]);},releaseHistory(){holdEarlier=false;releaseEarlier?.();},emit(row,beforeId){const target=rows.get(parent.id),at=beforeId?target.findIndex(r=>r.id===beforeId):-1;if(at>=0)target.splice(at,0,row);else{const existing=target.findIndex(r=>r.id===row.id);if(existing>=0)target[existing]=row;else target.push(row);}for(const ws of connections)ws.send(JSON.stringify({type:'timeline',threadId:parent.id,row,version:++rev}));},closeSockets(){for(const ws of connections)ws.close();},async close(){for(const hold of headHolds.values())hold.release();headHolds.clear();for(const ws of connections)ws.terminate();for(const ws of gateway.sockets.clients)ws.terminate();wss.close();await Promise.all([new Promise(r=>backend.close(r)),new Promise(r=>gateway.server.close(r))]);}};
 }

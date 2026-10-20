@@ -1,5 +1,5 @@
 import {SessionStore} from './session-store.mjs';
-import {animatedSymbol} from './symbol-motion.mjs';
+import {animatedSymbol,setSymbolMotionReady} from './symbol-motion.mjs';
 import {ReadFeedback} from './read-feedback.mjs';
 import {ImmersionLayer} from './immersion.mjs';
 import {richText,foldRuns,usageSummary,sessionState,canonicalPage,ReadLanes} from './presentation.mjs';
@@ -9,10 +9,11 @@ import {BrowserVoice} from './voice.mjs';
 import {clientBase,clientURL} from './paths.mjs';
 import {importPreviousProfile} from './migration.mjs';
 const base=clientBase(import.meta.url);
+setSymbolMotionReady(false);
 function setLabel(node,text){const source=String(text??'');if(node.dataset.labelSource!==source){node.dataset.labelSource=source;node.textContent=source;}}
 const $=id=>document.getElementById(id),el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)setLabel(n,text);return n;};
 let scope=read('scope','coordinator'),deviceId='',threads=[],current=null,status=null,ws=null,authenticated=false,polling=false,installEvent=null,models=[],loadSerial=0,earlierBusy=false,reconnectTimer,follow=true;
-let openedScope=null;const readerViews=new Map();
+let openedScope=null,catalogSettled=false,catalogFailure=false;const readerViews=new Map();
 let seatOrder=[],deliveryFlight=null,startFlight=null;
 const lanes=new ReadLanes();
 const readFeedback=new ReadFeedback(state=>{const node=$('message-loading');node.hidden=!state.visible;if(state.visible)setLabel(node,state.initial?'Loading latest messages…':'Updating messages…');$('transcript').setAttribute('aria-busy',String(state.visible));});
@@ -22,7 +23,7 @@ const cache=new SessionStore(),receipts=new Set(),notifySeen=new Set();
 cache.subscribeMetadata(id=>{if(id===scope)renderHeader();});let pending=read('pending',null),newPending=read('newPending',null);
 async function api(path,body,options={}){
  const method=options.method||(body===undefined?'GET':'POST'),binary=body instanceof Blob||body instanceof ArrayBuffer;
- const r=await fetch(clientURL(base,path),{method,credentials:'same-origin',headers:{'Content-Type':binary?'audio/wav':'application/json',...(options.headers||{})},...(body===undefined?{}:{body:binary?body:JSON.stringify(body)}),...(method==='GET'?{signal:AbortSignal.timeout(20000)}:{})});
+ const r=await fetch(clientURL(base,path),{method,credentials:'same-origin',headers:{'Content-Type':binary?'audio/wav':'application/json',...(options.headers||{})},...(body===undefined?{}:{body:binary?body:JSON.stringify(body)}),priority:'high',...(method==='GET'?{signal:AbortSignal.timeout(20000)}:{})});
  let data;try{data=await r.json();}catch{data={error:`Backend returned HTTP ${r.status}.`};}
  if(!r.ok){if(r.status===401&&authenticated){authenticated=false;ws?.close();$('app').hidden=true;$('pairing').hidden=false;}throw Object.assign(Error(data.error||`Request failed (${r.status}).`),{status:r.status});}return data;
 }
@@ -62,7 +63,7 @@ function renderList(){
   if(n!==cursor)list.insertBefore(n,cursor);cursor=n.nextSibling;
  }for(const n of old.values())n.remove();
  if(wasBottom&&now>listReadingUntil)list.scrollTop=list.scrollHeight;else if(anchor?.isConnected&&anchorOffset!=null)list.scrollTop+=anchor.getBoundingClientRect().top-anchorOffset;
- if(!ordered.length)$('catalog-note').textContent='No work matches this view.';
+ if(!ordered.length)$('catalog-note').textContent=catalogFailure?'Could not load work. Refresh to retry.':!catalogSettled?'Loading work…':'No work matches this view.';
 }
 async function renameCard(thread,card){
  const input=el('input');input.value=thread.name||'';input.setAttribute('aria-label','Session name');input.onclick=e=>e.stopPropagation();card.children[0].replaceChildren(input);input.focus();input.select();let finished=false;
@@ -155,9 +156,10 @@ function pumpBackgroundHeads(){
 async function refreshList({invalidate=false}={}){
  const filter=$('filter').value,profile=deviceId;
  return lanes.run('catalog/'+profile+'/'+filter,false,async()=>{
-  const metadataTicket=cache.ticket(),data=await api('/api/threads'+(filter==='archived'?'?archived=true':''));
+  const metadataTicket=cache.ticket();let data;
+  try{data=await api('/api/threads'+(filter==='archived'?'?archived=true':''));}catch(error){if(deviceId===profile&&$('filter').value===filter){catalogFailure=true;renderList();}throw error;}
   if(deviceId!==profile||$('filter').value!==filter)return;
-  threads=cache.catalog(data.threads||[],metadataTicket);$('catalog-note').textContent=data.catalogPartial?'Showing a bounded inventory. Search or open known work.':'';renderList();
+  catalogSettled=true;catalogFailure=false;threads=cache.catalog(data.threads||[],metadataTicket);$('catalog-note').textContent=data.catalogPartial?'Showing a bounded inventory. Search or open known work.':'';renderList();setSymbolMotionReady(true);
   for(const id of cache.catalogChanges){if(id===scope)scheduleRefresh({head:true});else queueBackgroundHead(id);}
  },{invalidate});
 }
@@ -232,7 +234,7 @@ function scheduleRefresh({head=true,catalog=false,attention=false}={}){
 async function refreshAttention(){const data=await api('/api/attention');$('attention-count').textContent=data.notifications.length;$('reports-toggle').dataset.count=data.notifications.length||'';$('attention-panel').replaceChildren(el('h2','','Needs your attention'));for(const n of data.notifications){const box=el('div','inbox-item');box.append(el('p','',n.title),el('p','',n.body),button('Open original work',()=>open(n.thread_id)));$('attention-panel').append(box);}}
 async function showReports(before=null){const data=await api('/api/coordinator/reports'+(before?'?before='+before:''));if(!before)$('reports-panel').replaceChildren(el('h2','','Work updates'));for(const r of data.reports||data.items||[]){const box=el('div','inbox-item');box.append(el('p','',r.response||r.text||''),button('Mark this report read',async()=>{await api(`/api/voice/turns/${r.id}/presented`,{});}));for(const a of r.actions||[])if(a.threadId)box.append(button('Open work',()=>open(a.threadId)));$('reports-panel').append(box);}if($('reports-panel').children.length===1)$('reports-panel').append(el('p','muted','No scheduled reports yet. Enable scheduling in Settings for this browser.'));if(data.hasEarlier)$('reports-panel').append(button('Older reports',()=>showReports(data.before)));if(!before)$('reports-panel').hidden=false;}
 function readThemePreference(){try{return JSON.parse(localStorage.getItem('nextcomp.web.theme'));}catch{return null;}}
-async function boot(){try{try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;if(await importPreviousProfile(base,deviceId)){scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);}authenticated=true;$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;if(read('deviceId')&&read('deviceId')!==deviceId){const original=read('deviceId');if(pending)write('detachedPending.'+original,pending);if(newPending)write('detachedStart.'+original,newPending);pending=null;newPending=null;write('pending',null);write('newPending',null);scope='coordinator';}write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);await voice.restore();void voice.loadCapabilities();if(pending)await reconcilePending();if(newPending)await reconcileStart();}catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}}
+async function boot(){try{try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;if(await importPreviousProfile(base,deviceId)){scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);}authenticated=true;$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;if(read('deviceId')&&read('deviceId')!==deviceId){const original=read('deviceId');if(pending)write('detachedPending.'+original,pending);if(newPending)write('detachedStart.'+original,newPending);pending=null;newPending=null;write('pending',null);write('newPending',null);scope='coordinator';}write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();const initial=await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);if(initial[0].status==='rejected')error(initial[0].reason);else if(initial[1].status==='rejected')error(initial[1].reason);await voice.restore();void voice.loadCapabilities();if(pending)await reconcilePending();if(newPending)await reconcileStart();}catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}}
 $('pair-form').onsubmit=async e=>{e.preventDefault();const b=$('pair-form').querySelector('button');b.disabled=true;try{await api('/web/pair',Object.fromEntries(new FormData(e.target)));await boot();}catch(err){$('pair-error').textContent=err.message;}finally{b.disabled=false;}};
 $('composer').onsubmit=run(async e=>{e.preventDefault();await send();});$('draft').oninput=saveDraft;$('draft').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();void run(send)();}};
 $('coordinator').onclick=run(()=>open('coordinator'));$('refresh').onclick=run(async()=>{seatOrder=[];await refreshList({invalidate:true});});$('search').oninput=renderList;$('filter').onchange=run(async()=>{seatOrder=[];await refreshList({invalidate:true});});$('back').onclick=()=>{saveDraft();saveView();document.body.classList.remove('chat-open');seatOrder=[];renderList();};$('important').onchange=()=>toggleImportant();$('earlier').onclick=run(async()=>{demandOlder();await loadEarlier();});$('latest').onclick=()=>{follow=true;$('transcript').scrollTop=$('transcript').scrollHeight;};$('transcript').onscroll=()=>{follow=$('transcript').scrollHeight-$('transcript').scrollTop-$('transcript').clientHeight<90;void ackVisible();scheduleEdge();};
