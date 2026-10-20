@@ -43,6 +43,11 @@ class HollywoodReconnectNativeTest {
    val after=control("state")
    assertEquals("Metadata recovery unexpectedly needed another live connection",before.getInt("connections"),after.getInt("connections"))
    val draft="Keep this unsent native room draft"
+   if(!d.hasObject(By.clazz("android.widget.EditText"))){
+    await("Keyboard control did not become available"){d.hasObject(By.res("native-room-keyboard"))}
+    requireNotNull(d.findObject(By.res("native-room-keyboard"))).click()
+   }
+   await("Keyboard action did not open the composer"){d.hasObject(By.clazz("android.widget.EditText"))}
    requireNotNull(d.findObject(By.clazz("android.widget.EditText"))).text=draft
    await("Draft was not saved"){p.all.any{(key,value)->key.startsWith("draft:hollywood:")&&value==draft}}
    control("fail");control("disconnect")
