@@ -4,12 +4,10 @@ export function flipFlopPlan(units){
  if(!Array.isArray(units)||!units.length||units.some(u=>typeof u.target!=='string'||typeof u.meaning!=='string'||!u.target&&u.meaning))return null;
  const taught=units.filter(u=>!u.literal&&lexical(u.target));
  if(taught.some(u=>!u.meaning.trim()))return null;
- let seed=0;const first=taught[0]?.target||'';for(let i=0;i<first.length;i++)seed=(Math.imul(seed,31)+first.charCodeAt(i))|0;
- let ordinal=0;
- const slots=units.map((u,index)=>{const eligible=!u.literal&&lexical(u.target);return {...u,id:u.id??index,eligible,targetFirst:eligible?((ordinal++ + seed)&1)===0:true};});
- const render=phase=>slots.map(u=>!u.eligible||u.targetFirst!==(phase===1)?u.target:u.meaning).join('');
+ const slots=units.map((u,index)=>({...u,id:u.id??index,eligible:!u.literal&&lexical(u.target)}));
+ const render=phase=>slots.map(u=>u.eligible&&phase===0?u.meaning:u.target).join('');
  const forms=[render(0),render(1)];
- const assignment=phase=>slots.filter(u=>u.eligible).map(u=>u.targetFirst!==(phase===1)?'it':'en');
+ const assignment=phase=>slots.filter(u=>u.eligible).map(()=>phase===0?'en':'it');
  return {slots,forms,assignment,eligible:taught.length,distinct:slots.filter(u=>u.eligible&&u.target!==u.meaning).length};
 }
 export function transgrammaticFlipPlan(source,plan){

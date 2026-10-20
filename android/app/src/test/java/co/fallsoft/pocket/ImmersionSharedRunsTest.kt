@@ -16,6 +16,7 @@ class ImmersionSharedRunsTest {
   val italian=listOf("Il","lavoro","continua")
   val english=listOf("The","work","continues")
   val forms=immersionFlipForms(sentence(italian),sentence(english))!!
+  assertEquals(english.joinToString(" "),forms[0].text);assertEquals(italian.joinToString(" "),forms[1].text)
   val first=forms[0].text.split(' ');val second=forms[1].text.split(' ')
   italian.indices.forEach{index->
    assertEquals(setOf(italian[index],english[index]),setOf(first[index],second[index]))
