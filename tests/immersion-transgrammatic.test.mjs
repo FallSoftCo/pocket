@@ -18,7 +18,7 @@ test('complete Italian and Italian-order English survive worker request/cache/pe
    if(method==='model/list')return {data:[]};
    if(method==='thread/start')return {thread:{id:'grammar-qa'}};
    if(method==='turn/start'){const batch=JSON.parse(args.input[0].text).sources;queueMicrotask(()=>{
-    this.emit('event',{method:'item/completed',params:{threadId:'grammar-qa',item:{type:'agentMessage',text:JSON.stringify(Object.fromEntries(batch.map(row=>[row.key,{'0':{target:target.slice(0,-1),words:segments}}])))}}});
+    this.emit('event',{method:'item/completed',params:{threadId:'grammar-qa',item:{type:'agentMessage',text:JSON.stringify(Object.fromEntries(batch.map(row=>[row.key,{'0':{target:target.slice(0,-1),words:segments.map((s,i)=>({...s,group:i<3?0:1}))}}])))}}});
     this.emit('event',{method:'turn/completed',params:{threadId:'grammar-qa',turn:{status:'completed'}}});
    });return {turn:{id:'grammar-turn'}};}
    throw Error('Unexpected transport call '+method);
@@ -31,7 +31,7 @@ test('complete Italian and Italian-order English survive worker request/cache/pe
   assert.equal(result.planVersion,TRANSGRAMMATIC_VERSION);assert.equal(result.text,target);
   assert.equal(result.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'The your connection is available');
   const instructions=codex.calls.find(c=>c.method==='thread/start').args.developerInstructions;
-  assert.match(instructions,/Translate ALL eligible prose/);assert.match(instructions,/small grammatical PHRASES/);assert.match(instructions,/Le registrazioni salvate -> The recordings saved/);assert.doesNotMatch(instructions,/containing only its complete lexical words/);assert.doesNotMatch(instructions,/Partial mixed-language grammar is explicitly acceptable/);
+  assert.match(instructions,/Translate ALL eligible prose/);assert.match(instructions,/small grammatical flip groups/);assert.match(instructions,/The recordings saved are ready/);assert.doesNotMatch(instructions,/containing only its complete lexical words/);assert.doesNotMatch(instructions,/Partial mixed-language grammar is explicitly acceptable/);
   worker.submit('device-a',[{id:'second-surface',text:source}]);await worker.flush();
   assert.equal(codex.calls.filter(c=>c.method==='turn/start').length,1);
   assert.equal(saved.get('device-a').translations.length,2);assert.equal(worker.snapshot('other-device').translations.length,0);
@@ -98,7 +98,7 @@ test('server-owned units cover Markdown without protected prose or duplicate sou
  for(const word of ['Ready','Open','now','Read','and','wait','seconds','again'])assert.ok(covered.includes(word));
  const prepared=prepareTransgrammaticBatch([{id:'original-id',version:immersionHash(body),text:body}]);
  assert.deepEqual(prepared.schema.properties['0'].required,units.map((_,i)=>String(i)));
- const result={'0':Object.fromEntries(units.map((u,i)=>[String(i),{target:u.source,words:[{target:u.source,occurrence:0,meaning:u.source}]}]))};
+ const result={'0':Object.fromEntries(units.map((u,i)=>[String(i),{target:u.source,words:[{target:u.source,occurrence:0,meaning:u.source,group:0}]}]))};
  const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(body,row);
  assert.equal(row.id,'original-id');assert.equal(row.text,body);assert.ok(validateTransgrammaticPlan(body,row));
 });
@@ -128,13 +128,17 @@ test('phrase-owned scaffold links expansions once and rejects overlapping Italia
  const text='I am going to the station';
  const prepared=prepareTransgrammaticBatch([{id:'phrase',version:immersionHash(text),text}]);
  const result={'0':{'0':{target:'Sto andando alla stazione',words:[
-  {target:'Sto andando',occurrence:0,meaning:'Am going'},
-  {target:'alla',occurrence:0,meaning:'to the'},
-  {target:'stazione',occurrence:0,meaning:'station'}
+  {target:'Sto andando',occurrence:0,meaning:'Am going',group:0},
+  {target:'alla',occurrence:0,meaning:'to the',group:1},
+  {target:'stazione',occurrence:0,meaning:'station',group:1}
  ]}}};
+ const missingGroup=structuredClone(result);delete missingGroup['0']['0'].words[1].group;
+ assert.equal(validateTransgrammaticPlan(text,prepared.decode(missingGroup).translations[0]),null);
+ const discontinuous=structuredClone(result);discontinuous['0']['0'].words[1].group=2;
+ assert.equal(validateTransgrammaticPlan(text,prepared.decode(discontinuous).translations[0]),null);
  const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(text,row);
  const validated=validateTransgrammaticPlan(text,row);assert.ok(validated);
- assert.equal(validated.spans[0].targetSegments.map(x=>x.meaning||x.target).join(''),'Am going to-the station');
+ assert.equal(validated.spans[0].targetSegments.map(x=>x.meaning||x.target).join(''),'Am-going to-the station');
  const bad=structuredClone(row);bad.spans[0].targetSegments.push({...bad.spans[0].targetSegments[1]});
  assert.equal(validateTransgrammaticPlan(text,bad),null);
 });
@@ -145,16 +149,16 @@ test('source-owned sentence punctuation is emitted once for captured teacher phr
  const prepared=prepareTransgrammaticBatch([{id:'captured-phrase',version:immersionHash(text),text}]);
  for(const lexicalPunctuation of [false,true]){
   const result={'0':{'0':{target:'Mi sto occupando delle impostazioni dell’account.',words:[
-   {target:'Mi',occurrence:0,meaning:'myself'},
-   {target:'sto occupando',occurrence:0,meaning:'am taking care'},
-   {target:'delle',occurrence:0,meaning:'of the'},
-   {target:'impostazioni',occurrence:0,meaning:'settings'},
-   {target:'dell’account'+(lexicalPunctuation?'.':''),occurrence:0,meaning:'of the account'+(lexicalPunctuation?'.':'')}
+   {target:'Mi',occurrence:0,meaning:'myself',group:0},
+   {target:'sto occupando',occurrence:0,meaning:'am taking care',group:0},
+   {target:'delle',occurrence:0,meaning:'of the',group:1},
+   {target:'impostazioni',occurrence:0,meaning:'settings',group:1},
+   {target:'dell’account'+(lexicalPunctuation?'.':''),occurrence:0,meaning:'of the account'+(lexicalPunctuation?'.':''),group:1}
   ]}}};
   const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(text,row);
   const valid=validateTransgrammaticPlan(text,row);assert.ok(valid);
   assert.equal(valid.text,'Mi sto occupando delle impostazioni dell’account.');
-  assert.equal(valid.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'myself am taking care of-the settings of-the-account');
+  assert.equal(valid.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'myself am-taking-care of-the settings of-the-account');
  }
 });
 
@@ -164,15 +168,15 @@ test('phrase plan survives contextual worker decoding without word splitting or 
  const target='Puoi aprire l’ultimo messaggio in questa conversazione';
  const prepared=prepareTransgrammaticBatch([{id:'phrase',version:immersionHash(original),text:original}]);
  const decoded=prepared.decode({'0':{'0':{target,words:[
-  {target:'Puoi aprire',occurrence:0,meaning:'Can-you open'},
-  {target:'l’ultimo messaggio',occurrence:0,meaning:'the latest message'},
-  {target:'in questa conversazione',occurrence:0,meaning:'in this conversation'}
+  {target:'Puoi',occurrence:0,meaning:'Can-you',group:0},{target:'aprire',occurrence:0,meaning:'open',group:0},
+  {target:'l’ultimo',occurrence:0,meaning:'the latest',group:1},{target:'messaggio',occurrence:0,meaning:'message',group:1},
+  {target:'in',occurrence:0,meaning:'in',group:2},{target:'questa',occurrence:0,meaning:'this',group:2},{target:'conversazione',occurrence:0,meaning:'conversation',group:2}
  ]}}}).translations[0];
  decoded.text=transgrammaticContract.derive(original,decoded);
  const validated=validateTransgrammaticPlan(original,decoded);assert.ok(validated);
  assert.equal(validated.planVersion,'transgrammatic-english-italian-v3');
  const phrases=validated.spans[0].targetSegments.filter(s=>s.meaning);
- assert.deepEqual(phrases.map(s=>s.meaning),['Can-you open','the latest message','in this conversation']);
+ assert.deepEqual(phrases.map(s=>s.meaning),['Can-you open','the-latest message','in this conversation']);
  assert.deepEqual(phrases.map(s=>s.target),['Puoi aprire','l’ultimo messaggio','in questa conversazione']);
  assert.match(prepared.input.instruction,/noun phrases/);
  assert.equal(validated.text,target+'?');
