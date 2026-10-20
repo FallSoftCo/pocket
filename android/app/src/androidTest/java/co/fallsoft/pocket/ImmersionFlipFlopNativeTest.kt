@@ -30,7 +30,7 @@ class ImmersionFlipFlopNativeTest {
   androidx.test.uiautomator.Configurator.getInstance().setWaitForIdleTimeout(300)
   var taps=0
   val allowMotion=mutableStateOf(true)
-  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+  ActivityScenario.launch(ImmersionFixtureActivity::class.java).use{scenario->
    try {
    scenario.onActivity{activity->PocketImmersion.setEnabled(true);activity.setContent{
     CompositionLocalProvider(LocalImmersionMotionState provides allowMotion.value,LocalImmersionTransitionAnimated provides false){
