@@ -1,0 +1,53 @@
+{
+  "versionCode": 139,
+  "versionName": "0.5.0-alpha.121",
+  "state": "published",
+  "sourceBuildCommit": "dddc69a902df60bbf7a2c9ebb44e307ad7cc3d30",
+  "productionSourceSha": "e85f224eecb8c0b75ac147cddb3304d6b14d2ae6382180e56551cefb3921cb48",
+  "qualificationInputSha": "2b13fc19554664d985bba4bc47f2f24d9a5a64cad1d5b71c873fe13da211e29e",
+  "unit": {
+    "debug": {
+      "tests": 398,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "release": {
+      "tests": 398,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    }
+  },
+  "nativeCases": 28,
+  "optimizedApkSha256": "729774543cbe6078aabe78db63bab2376d46167092dc4c20aeca6ae532fbaee5",
+  "optimizedReview": "actual screenshot and unchanged black-box assertions passed; helper now prepares independent QA profiles/drafts rather than relying on prior test state",
+  "nativePlayback": {
+    "state": "passed",
+    "audioReadyMs": 15217,
+    "connectionSetupMs": 8296,
+    "audioWaitMs": 6921,
+    "physicalPhone": false
+  },
+  "delivery": {
+    "channelBefore": 137,
+    "channelAfter": 139,
+    "singleAnnouncement": true,
+    "fcmAccepted": true,
+    "fcmAttempts": 1,
+    "physicalPhoneInstallVerified": false
+  },
+  "preserved": [
+    "pairing and existing environment profiles",
+    "drafts and original outgoing receipts",
+    "running Codex and native room work",
+    "immutable signed artifacts and failed qualification diagnostics"
+  ],
+  "limits": [
+    "Software emulator key-to-draw timing is not optical handset latency; initial sample exceeded 2 seconds in the loaded emulator.",
+    "Cold web reopen measured about 10 seconds; further startup work remains.",
+    "Middle volume step is currently 33%; requested 50% remains a follow-up.",
+    "Physical phone audio, notification display and installation are not independently verified for this update."
+  ],
+  "publishedAt": "2026-10-20T02:03:16.393911+00:00"
+}
