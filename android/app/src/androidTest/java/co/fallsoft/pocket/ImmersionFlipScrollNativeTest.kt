@@ -23,7 +23,9 @@ import java.util.concurrent.atomic.AtomicReference
 /** Actual native text, keyed lazy-list recycling, input and link activation. */
 @RunWith(AndroidJUnit4::class)
 class ImmersionFlipScrollNativeTest {
- @Test fun keyedRecyclingKeepsComplementaryFormsAndNativeTextWhileTyping(){
+ @Test(timeout=120000) fun keyedRecyclingKeepsComplementaryFormsAndNativeTextWhileTyping(){
+  fun step(label:String){android.util.Log.i("FlipScrollQA",label)}
+  step("start")
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val d=UiDevice.getInstance(i)
   check(d.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   Configurator.getInstance().setWaitForIdleTimeout(200)
@@ -41,8 +43,10 @@ class ImmersionFlipScrollNativeTest {
   fun await(label:String,predicate:()->Boolean){val end=android.os.SystemClock.elapsedRealtime()+15000;while(android.os.SystemClock.elapsedRealtime()<end){if(predicate())return;Thread.sleep(50)};assertTrue(label,predicate())}
   fun rendered(index:Int)=d.findObject(By.text(java.util.regex.Pattern.compile(".*\\[$index\\]")))?.text
   fun scroll(index:Int){i.runOnMainSync{coroutine.get().launch{list.get().scrollToItem(index)}};await("List did not reach $index"){rendered(index)!=null}}
+  step("launch")
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
-   scenario.onActivity{activity->PocketImmersion.setEnabled(true);activity.setContent{
+   step("launched")
+   scenario.onActivity{activity->step("set-content");PocketImmersion.setEnabled(true);activity.setContent{
     CompositionLocalProvider(LocalImmersionMotionState provides true,LocalImmersionTransitionAnimated provides false){
      MaterialTheme{ImmersionReadingWaveHost{
       val state=rememberLazyListState();val scope=rememberCoroutineScope();val flip=LocalImmersionFlip.current!!
@@ -67,22 +71,29 @@ class ImmersionFlipScrollNativeTest {
      }}
     }
    }}
+   step("content-set")
    await("First complementary paragraph did not render"){rendered(0) in expected.getValue(0)}
+   step("first-rendered")
    val initial=rendered(0)!!;val initialPhase=clock.get().phase
    // Recycle all initial items, then return within the same reading interval.
-   scroll(28);scroll(0)
+   scroll(28);step("scrolled-away");scroll(0);step("scrolled-back")
    val returned=rendered(0)!!
    val expectedIndex=expected.getValue(0).indexOf(initial) xor (initialPhase xor clock.get().phase)
    assertEquals("Recycling reassigned the paragraph language",expected.getValue(0)[expectedIndex],returned)
    assertTrue("Native normal text spacing was not measured",layouts.isNotEmpty())
+   step("spacing-checked")
    val passage=d.findObject(By.text(rendered(0)!!)).visibleBounds
    d.click(passage.left+6,passage.centerY());await("Inline link must activate once"){linkClicks==1}
+   step("link-activated")
    val edit=d.findObject(By.clazz("android.widget.EditText"));edit.click();edit.text="Typing survives the language flip"
+   step("typed")
    val oldPhase=clock.get().phase
    await("IME/input stopped complementary flipping"){clock.get().phase!=oldPhase}
    assertEquals("Typing draft changed", "Typing survives the language flip",d.findObject(By.clazz("android.widget.EditText")).text)
+   step("flipped-with-ime")
    d.pressBack()
    await("Paragraph lost its complementary language"){rendered(0) in expected.getValue(0)}
+   step("complete")
    d.takeScreenshot(java.io.File(c.cacheDir,"flip-scroll-native.png"))
   }
  }
