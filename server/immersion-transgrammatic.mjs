@@ -11,7 +11,7 @@ export function validateTransgrammaticPlan(source,row){
  return value?{...value,planVersion:TRANSGRAMMATIC_VERSION}:null;
 }
 export const transgrammaticContract={
- version:TRANSGRAMMATIC_VERSION,jobVersion:'grammatical-phrases-v1',durableJobs:true,retryDelays:[30000,120000],instructions:TRANSGRAMMATIC_INSTRUCTIONS,
+ version:TRANSGRAMMATIC_VERSION,jobVersion:'grammatical-phrases-v1',durableJobs:true,retryDelays:[30000,120000],instructions:TRANSGRAMMATIC_INSTRUCTIONS,alignmentInstructions:'',
  prepareBatch:prepareTransgrammaticBatch,validate:validateTransgrammaticPlan,derive:(source,row)=>deriveImmersionText(source,row,{complete:true})
 };
 

@@ -31,7 +31,7 @@ test('complete Italian and Italian-order English survive worker request/cache/pe
   assert.equal(result.planVersion,TRANSGRAMMATIC_VERSION);assert.equal(result.text,target);
   assert.equal(result.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'The your connection is available');
   const instructions=codex.calls.find(c=>c.method==='thread/start').args.developerInstructions;
-  assert.match(instructions,/Translate ALL eligible prose/);assert.doesNotMatch(instructions,/Partial mixed-language grammar is explicitly acceptable/);
+  assert.match(instructions,/Translate ALL eligible prose/);assert.match(instructions,/small grammatical PHRASES/);assert.doesNotMatch(instructions,/containing only its complete lexical words/);assert.doesNotMatch(instructions,/Partial mixed-language grammar is explicitly acceptable/);
   worker.submit('device-a',[{id:'second-surface',text:source}]);await worker.flush();
   assert.equal(codex.calls.filter(c=>c.method==='turn/start').length,1);
   assert.equal(saved.get('device-a').translations.length,2);assert.equal(worker.snapshot('other-device').translations.length,0);
