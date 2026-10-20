@@ -1,5 +1,5 @@
 {
-  "state": "revised-candidate-qualified-after-live-rollback",
+  "state": "deployed-private-live-qualified",
   "date": "2026-10-20T06:04:20.587070+00:00",
   "causeEvidence": {
     "realHttp2HeaderWaitMs": 11334,
@@ -50,8 +50,8 @@
     ]
   },
   "limits": [
-    "Actual private HTTP2 reopen qualification and deployment remain pending.",
-    "No Android APK/artwork regeneration or shared Tailscale settings change."
+    "One actual private HTTP2 reopen measurement; not a universal latency guarantee.",
+    "Physical Android139 exact APK verified separately; no Android binary change in this web release."
   ],
   "initialLiveCandidate": {
     "reopenToMessageMs": 2934,
@@ -87,5 +87,20 @@
       "byteExact": true,
       "ranges": 11
     }
+  },
+  "finalLive": {
+    "source": "a2ba177",
+    "protocol": "h2",
+    "reopenToMessageMs": 3058,
+    "documentFirstByteMs": 516.6,
+    "maxAtlasResponseBytes": 32768,
+    "positiveAnimation": true,
+    "decodeFailures": 0,
+    "canonicalIdentityAndDraftRetained": true,
+    "duplicateRows": 0,
+    "humanSubmissions": 0,
+    "ownedQaDeviceRevoked": true,
+    "otherPrivateRoutesPreserved": true,
+    "phoneOrBackendRestarted": false
   }
 }
