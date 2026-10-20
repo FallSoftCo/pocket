@@ -45,7 +45,7 @@ class ImmersionFlipScrollNativeTest {
   fun rendered(index:Int)=d.findObject(By.text(java.util.regex.Pattern.compile(".*\\[$index\\]")))?.text
   fun scroll(index:Int){i.runOnMainSync{coroutine.get().launch{list.get().scrollToItem(index)}};await("List did not reach $index"){rendered(index)!=null}}
   step("launch")
-  ActivityScenario.launch(ImmersionFixtureActivity::class.java).use{scenario->
+  ActivityScenario.launch(NativeComponentFixtureActivity::class.java).use{scenario->
    try {
    step("launched")
    scenario.onActivity{activity->step("set-content");PocketImmersion.setEnabled(true);activity.setContent{

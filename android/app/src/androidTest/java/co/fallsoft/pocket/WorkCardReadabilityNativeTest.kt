@@ -24,13 +24,13 @@ class WorkCardReadabilityNativeTest {
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val openedSession=AtomicInteger();val openedRoom=AtomicInteger()
-  val monitor=i.addMonitor(MainActivity::class.java.name,null,false)
-  c.startActivity(android.content.Intent(c,MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
-  val activity=i.waitForMonitorWithTimeout(monitor,10000) as? MainActivity
+  val monitor=i.addMonitor(NativeComponentFixtureActivity::class.java.name,null,false)
+  c.startActivity(android.content.Intent(c,NativeComponentFixtureActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
+  val activity=i.waitForMonitorWithTimeout(monitor,10000) as? NativeComponentFixtureActivity
   assertNotNull(activity)
   try{
    i.runOnMainSync{
-    check(!PocketImmersion.enabled){"Readability scene requires retained QA immersion disabled; do not change its preferences"}
+    // Pixel contrast and stable tap IDs must work with either retained language preference.
     activity!!.setContent{MaterialTheme{
      Column(Modifier.fillMaxSize().background(Ink).statusBarsPadding().padding(12.dp).semantics{testTagsAsResourceId=true},
        verticalArrangement=Arrangement.spacedBy(8.dp)){

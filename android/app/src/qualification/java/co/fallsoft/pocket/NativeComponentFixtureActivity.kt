@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 
 /** Component-only native journeys. Never packaged in shipped debug/release APKs. */
-class ImmersionFixtureActivity : ComponentActivity() {
+class NativeComponentFixtureActivity : ComponentActivity() {
  override fun onCreate(savedInstanceState:Bundle?) {
   super.onCreate(savedInstanceState)
   enableEdgeToEdge()
