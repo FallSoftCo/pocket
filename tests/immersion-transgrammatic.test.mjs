@@ -83,7 +83,7 @@ test('restart after durable acceptance reuses grammar plans without inference',a
 test('simultaneous surfaces share one content job and receive separate canonical surface IDs',async()=>{
  const w=new ImmersionWorker({codex:new EventEmitter(),cwd:'/owned-qa',contract:transgrammaticContract,delay:100000});
  try{w.setEnabled('a',true);w.submit('a',[{id:'chat',text:source},{id:'card',text:source}]);let inputs=0;
- w.translate=async batch=>{inputs+=batch.length;return {translations:batch.map(row=>({...plan(),id:row.id}))};};
+ w.translate=async batch=>{assert.equal(w.snapshot('a').jobs[0].state,'running');inputs+=batch.length;return {translations:batch.map(row=>({...plan(),id:row.id}))};};
  await w.flush();assert.equal(inputs,1);assert.deepEqual(w.snapshot('a').translations.map(x=>x.id),['chat','card']);assert.equal(w.snapshot('a').jobs.length,0);
  }finally{w.close();}
 });

@@ -21,7 +21,7 @@ const preservesProtectedText=(source,text)=>[...fencedBlocks(source),...(source.
 const digest=text=>createHash('sha256').update(text).digest('hex');
 const displayPriority=(source)=>/urgent|question/.test(source.kind||'')?3:/^(row:|coordinator:|saved-reply:)/.test(source.id)||source.kind==='message'?2:/^label:/.test(source.id)||/interface/.test(source.kind||'')?0:1;
 export class ImmersionWorker {
- constructor({codex,cwd,registerThread=()=>{},publish=()=>{},load=()=>null,save=()=>{},delay=2500,timeout=60000,maxCache=600,contract=null,now=Date.now}){Object.assign(this,{codex,cwd,registerThread,publish,load,save,delay,timeout,maxCache});this.now=now;this.durableJobs=contract?.durableJobs===true;this.retryDelays=contract?.retryDelays||[];this.jobVersion=contract?.jobVersion||'quoted-anchors-v1';this.prepareBatch=contract?.prepareBatch;this.planVersion=contract?.version||IMMERSION_PLAN_VERSION;this.instructions=contract?.instructions||IMMERSION_INSTRUCTIONS;this.alignmentInstructions=contract?.alignmentInstructions??IMMERSION_ALIGNMENT_INSTRUCTIONS;this.validate=contract?.validate||validateImmersionPlan;this.derive=contract?.derive||deriveImmersionText;this.closed=false;this.devices=new Map();this.threads=new Set();this.pending=null;this.timer=null;this.busy=false;this.generation=0;this.turns=0;this.model=null;this.modelResolved=false;this.lastRun=0;this.thread=null;this.onEvent=e=>this.observe(e);codex.on('event',this.onEvent);this.onDisconnect=()=>{this.thread=null;this.pending?.reject(Error('Codex disconnected'));};codex.on('disconnected',this.onDisconnect);}
+ constructor({codex,cwd,registerThread=()=>{},publish=()=>{},load=()=>null,save=()=>{},delay=2500,timeout=60000,maxCache=600,contract=null,now=Date.now}){Object.assign(this,{codex,cwd,registerThread,publish,load,save,delay,timeout,maxCache});this.now=now;this.durableJobs=contract?.durableJobs===true;this.retryDelays=contract?.retryDelays||[];this.jobVersion=contract?.jobVersion||'quoted-anchors-v1';this.prepareBatch=contract?.prepareBatch;this.planVersion=contract?.version||IMMERSION_PLAN_VERSION;this.instructions=contract?.instructions||IMMERSION_INSTRUCTIONS;this.alignmentInstructions=contract?.alignmentInstructions??IMMERSION_ALIGNMENT_INSTRUCTIONS;this.validate=contract?.validate||validateImmersionPlan;this.derive=contract?.derive||deriveImmersionText;this.closed=false;this.devices=new Map();this.threads=new Set();this.pending=null;this.timer=null;this.busy=false;this.activeJobs=[];this.generation=0;this.turns=0;this.model=null;this.modelResolved=false;this.lastRun=0;this.thread=null;this.onEvent=e=>this.observe(e);codex.on('event',this.onEvent);this.onDisconnect=()=>{this.thread=null;this.pending?.reject(Error('Codex disconnected'));};codex.on('disconnected',this.onDisconnect);}
  state(id){
   if(!this.devices.has(id)){
    const saved=this.load(id)||{},now=this.now();
@@ -41,7 +41,7 @@ export class ImmersionWorker {
   const s=this.state(id),now=this.now();
   for(const [key,job]of s.queue)if(job.expiresAt<=now)s.queue.delete(key);
   this.schedule();
-  const jobs=[...s.queue.values()].map(job=>({id:job.id,version:job.version,state:job.retryBlocked?'unavailable':job.nextAttemptAt>now?'retryWaiting':'pending',attempts:job.attempts||0,retryAt:job.nextAttemptAt||0,reason:job.lastError||null}));
+  const jobs=[...s.queue.values()].map(job=>({id:job.id,version:job.version,state:this.activeJobs.some(entry=>entry.device===id&&entry.source.version===job.version&&entry.source.density===job.density)?'running':job.retryBlocked?'unavailable':job.nextAttemptAt>now?'retryWaiting':'pending',attempts:job.attempts||0,retryAt:job.nextAttemptAt||0,reason:job.lastError||null}));
   return {enabled:s.enabled,language:'it',density:s.density,planVersion:this.planVersion,translations:s.enabled?[...s.cache.values()]:[],...(this.durableJobs?{jobs,unavailable:jobs.some(job=>job.state==='unavailable')}: {})};
  }
  ownsThread(id){return this.threads.has(id);}
@@ -68,6 +68,7 @@ export class ImmersionWorker {
   // Checkpoint attempts before inference. A restart resumes display-only work,
   // never an action, and cannot reset the bounded retry budget.
   for(const {device,source}of selected){source.lastError='PLAN_NOT_RETURNED';source.attempts=(source.attempts||0)+1;source.nextAttemptAt=now+Math.max(this.timeout,30000);this.persist(device);}
+  this.activeJobs=selected;
   const batch=selected.map(({source},i)=>({...source,id:String(i)}));
   try{
    const result=await this.translate(batch);
@@ -93,6 +94,7 @@ export class ImmersionWorker {
    }
   }catch(error){this.thread=null;for(const {source}of selected)source.lastError='TRANSLATION_UNAVAILABLE';}
   finally{
+   this.activeJobs=[];
    for(const {device,source}of selected){
     const state=this.state(device);
     if(state.queue.get(source.id)!==source)continue;
