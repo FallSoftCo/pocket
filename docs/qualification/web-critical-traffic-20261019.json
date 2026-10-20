@@ -1,5 +1,5 @@
 {
-  "state": "candidate-qualified",
+  "state": "deployed-open-and-reopen-verified",
   "scope": "Authenticated web JSON and decorative media scheduling; no stock runtime, native app backend, model, or pairing change",
   "changes": [
     "Negotiated asynchronous gzip for JSON; audio and other binary payloads remain byte exact",
@@ -35,7 +35,19 @@
   ],
   "limits": [
     "Controlled synthetic network benchmark is not a universal phone or production latency claim",
-    "Fresh production browser reopen still required before marking deployed",
-    "Prior coalescing-only release rolled back after empty catalog observation; slow raw transfer reproduced on the previous release too"
-  ]
+    "Full real browser reopen still measured10.1seconds on this link; startup is not considered fully optimized",
+    "Native139 release remains separate and under qualified emulator checks; no phone installation claimed"
+  ],
+  "deployed": {
+    "sourceCommit": "e350d9c1a3dd29ad68a344b5e6ea609a3ef973b4",
+    "archiveSha256": "06df7a27647c335b6ae6adbb4d1570bd9a2144468b11018e89c1844440566e0f",
+    "sameCookieKeyAndPairing": true,
+    "newSocketsOnReopen": 2,
+    "draftRetained": true,
+    "canonicalIdentityRetained": true,
+    "duplicateRenderedIds": 0,
+    "humanSubmissions": 0,
+    "fullBrowserReopenMs": 10145,
+    "disposableQaIdentityRevoked": true
+  }
 }

@@ -2967,7 +2967,7 @@
     {
       "id": "critical-web-content-before-decorative-media-20261019",
       "request": "Text/session loading must remain prompt while modeled icons animate; slow network cannot leave a blank or misleading catalog.",
-      "status": "candidate-qualified; live readback pending",
+      "status": "deployed; actual open/reopen preserved draft and canonical identities without submissions or duplicate rows",
       "evidence": "docs/qualification/web-critical-traffic-20261019.json"
     }
   ],
