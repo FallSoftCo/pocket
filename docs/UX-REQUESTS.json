@@ -3164,13 +3164,14 @@
     "next": "Native direct API transport parity and unified deliberate speech playback; preserve original assets and bounded background delivery"
   },
   "native_api_transport_parity_20261020": {
-    "state": "investigating-implementation",
+    "state": "source-and-wire-qualified; owning release pending",
     "observation": "Direct stock /api/threads returns552048 identity bytes despite Accept-Encoding:gzip; web gateway already compresses the same catalog",
     "requirements": [
       "Negotiate JSON compression on authenticated native API without touching canonical data or write admission",
       "Preserve binary/audio/APK and range/event streaming",
       "Avoid redundant loopback compression on web forward path",
       "Qualify real byte identity/status/auth and activate only through controlled quiet owning release"
-    ]
+    ],
+    "evidence": "docs/qualification/native-json-transport-20261020.json"
   }
 }

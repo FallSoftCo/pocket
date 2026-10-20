@@ -1,3 +1,4 @@
+import {nativeJsonCompression} from './json-compression.mjs';
 import {readThreadProjection} from './thread-projection.mjs';
 import {MAX_RECORDING_WAV_BYTES,MAX_RECORDING_SECONDS} from './audio-limits.mjs';
 import {HumanIngress,admissionTransaction} from './human-ingress.mjs';
@@ -93,6 +94,7 @@ if(nativeHollywood)push.allowedKinds=new Set(['app_update']);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex();
 const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
+app.use('/api',nativeJsonCompression());
 const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
 const hollywoodPush=nativeHollywood?new HollywoodPush({db,gateway:hollywood,push,publish:(device,event)=>{
  for(const ws of sockets.clients)if(ws.deviceId===device&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(event));

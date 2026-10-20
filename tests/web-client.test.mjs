@@ -8,12 +8,12 @@ import WebSocket,{WebSocketServer} from 'ws';
 
 test('web gateway authenticates pairing, protects credential and blocks foreign origins and owner routes',async t=>{
  const token='a'.repeat(64);let observed;
- const upstream=http.createServer(async(req,res)=>{observed={url:req.url,authorization:req.headers.authorization};res.setHeader('Content-Type','application/json');if(req.url==='/api/pair')res.end(JSON.stringify({token,id:'browser',host:'fixture'}));else if(req.headers.authorization!==`Bearer ${token}`){res.statusCode=401;res.end(JSON.stringify({error:'Unauthorized'}));}else res.end(JSON.stringify({ok:true}));});upstream.listen(0,'127.0.0.1');await once(upstream,'listening');t.after(()=>upstream.close());
+ const upstream=http.createServer(async(req,res)=>{observed={url:req.url,authorization:req.headers.authorization,encoding:req.headers['accept-encoding']};res.setHeader('Content-Type','application/json');if(req.url==='/api/pair')res.end(JSON.stringify({token,id:'browser',host:'fixture'}));else if(req.headers.authorization!==`Bearer ${token}`){res.statusCode=401;res.end(JSON.stringify({error:'Unauthorized'}));}else res.end(JSON.stringify({ok:true}));});upstream.listen(0,'127.0.0.1');await once(upstream,'listening');t.after(()=>upstream.close());
  const backend=`http://127.0.0.1:${upstream.address().port}`,origin='https://private.example.test';const gateway=createWebClient({backend,origin});gateway.server.listen(0,'127.0.0.1');await once(gateway.server,'listening');t.after(()=>gateway.server.close());const base=`http://127.0.0.1:${gateway.server.address().port}`;
  assert.equal((await fetch(base+'/api/status')).status,401);
  assert.equal((await fetch(base+'/web/pair',{method:'POST',headers:{Origin:'https://evil.example'},body:'{}'})).status,403);
  const pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{"code":"fixture"}'});assert.equal(pair.status,200);assert.equal((await pair.json()).token,undefined);const header=pair.headers.get('set-cookie');assert.match(header,/HttpOnly/);assert.match(header,/Secure/);assert.match(header,/SameSite=Strict/);const cookie=header.split(';')[0];
- const r=await fetch(base+'/api/status',{headers:{Cookie:cookie}});assert.equal(r.status,200);assert.equal(observed.authorization,`Bearer ${token}`);
+ const r=await fetch(base+'/api/status',{headers:{Cookie:cookie}});assert.equal(r.status,200);assert.equal(observed.authorization,`Bearer ${token}`);assert.equal(observed.encoding,'identity');
  assert.equal((await fetch(base+'/api/status',{headers:{Cookie:cookie+'tampered'}})).status,401);
  assert.equal((await fetch(base+'/api/devices',{headers:{Cookie:cookie}})).status,403);
  assert.equal((await fetch(base+'/api/notify',{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:'{}'})).status,403);
