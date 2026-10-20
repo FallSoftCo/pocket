@@ -11,12 +11,12 @@ const agentA='dddddddd-dddd-4ddd-8ddd-ddddddddddd1',agentB='dddddddd-dddd-4ddd-8
 const binding={id:'lax',name:'Synthetic LAX',configured:true,available:true,api:3,modes:['rooms','direct'],bindingId:'e'.repeat(64),installationId:authority,authorityId:authority,principalId:human,defaultRoomId:roomA,voice:true};
 const rooms=[roomA,roomB].map((id,n)=>({id,authority,name:'Synthetic voice room '+(n?'B':'A'),owner:n?agentB:agentA,purpose:'Owned UI fixture; no provider or worker',revision:1}));
 const sockets=new Set(),starts=[];let nativeAttempts=0,blockedTaskWrites=0;
-const journal=process.env.NATIVE_VOICE_UI_LOG;
+const journal=process.env.NATIVE_VOICE_UI_LOG||process.env.NEXTCOMP_QA_LOG;
 function record(row){if(journal)fs.appendFileSync(journal,JSON.stringify({at:Date.now(),...row})+'\n',{mode:0o600});}
 const server=http.createServer(async(req,res)=>{
  let raw='';for await(const b of req){raw+=b;if(raw.length>32000){res.writeHead(413).end();return}}
  if(req.headers.authorization!=='Bearer '+token){res.writeHead(401).end('{}');return}
- const path=new URL(req.url,'http://127.0.0.1').pathname;let body={},status=200;
+ const path=new URL(req.url,'http://127.0.0.1').pathname;record({kind:'request',method:req.method,path,bytes:Buffer.byteLength(raw)});let body={},status=200;
  if(path==='/_qa/status')body={starts,nativeAttempts,blockedTaskWrites,noProvider:true};
  else if(path==='/api/backends')body={backends:[{id:'codex',configured:false,available:false},binding]};
  else if(path==='/api/status')body={connected:true,host:'Owned synthetic native voice',deviceId:'synthetic-native-voice-device'};
