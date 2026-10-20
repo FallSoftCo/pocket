@@ -42,6 +42,7 @@ class HollywoodVoiceKeysNativeTest{
   val originalDraft=client.draft(HollywoodScope(roomA,agentA))
   val originalDraftB=client.draft(HollywoodScope(roomB,agentB))
   var catalogFeedbackMs=-1L
+  var journeyFailure:Throwable?=null
   try{
    // Retained app data is intentional. Only the synthetic fixture's two scopes
    // begin empty for the voice-primary assertion; finally restores both drafts.
@@ -149,6 +150,8 @@ class HollywoodVoiceKeysNativeTest{
     .put("draftPreserved",true).put("navigationKeptOriginalRoom",true).put("catalogDefaultRoom",true).put("catalogFeedbackMs",catalogFeedbackMs).put("settingsCapture",true).put("providerQualified",false).put("physicalPhone",false).toString())
    d.takeScreenshot(c.filesDir.resolve("native-room-volume-ime.png"))
   }catch(failure:Throwable){
+   journeyFailure=failure
+   android.util.Log.e("NextCompVoiceQA","Native voice journey failed before cleanup",failure)
    d.takeScreenshot(c.filesDir.resolve("native-room-capture-failure.png"))
    d.dumpWindowHierarchy(c.filesDir.resolve("native-room-capture-failure.xml"))
    throw failure
@@ -156,19 +159,22 @@ class HollywoodVoiceKeysNativeTest{
    i.runOnMainSync{PocketVoice.stop()}
    // Only this disposable fixture's recording can be cleared, and only after
    // its no-provider/task-write boundary answers definitively.
+   val cleanup=runCatching {
    val pending=p.getString("voicePendingId",null)
    if(pending!=null){
-    require(p.getString("voicePendingEnvironment",null)==id)
+    require(p.getString("voicePendingEnvironment",null)==id){"Cleanup refused an unrelated saved receipt; it remains untouched"}
     val status=Pocket.apiEnvironment(source,"/_qa/status");require(status.getBoolean("noProvider")&&status.getInt("blockedTaskWrites")==0)
     c.filesDir.resolve("qa-synthetic-voice-pending-"+pending+".json").writeText(JSONObject().put("id",pending).put("noProvider",true).toString())
     c.filesDir.resolve("voice-pending.wav").takeIf{it.exists()}?.copyTo(c.filesDir.resolve("qa-synthetic-voice-"+pending+".wav"),overwrite=false)
     p.edit().remove("voicePendingId").remove("voicePendingRoom").remove("voicePendingSourceLabel").remove("voicePendingTarget")
      .remove("voicePendingLocal").remove("voicePendingEnvironment").remove("voicePendingOwner").remove("voicePendingTextRequest").commit()
    }
+   }
    client.saveDraft(HollywoodScope(roomA,agentA),originalDraft)
    client.saveDraft(HollywoodScope(roomB,agentB),originalDraftB)
    Configurator.getInstance().waitForIdleTimeout=oldIdle
    i.runOnMainSync{if(Pocket.captureEnvironment(old)!=null)Pocket.activateEnvironment(old,force=true)}
+   cleanup.exceptionOrNull()?.let{failure->journeyFailure?.addSuppressed(failure)?:throw failure}
   }
  }
 }
