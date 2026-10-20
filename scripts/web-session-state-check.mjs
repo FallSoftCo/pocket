@@ -3,6 +3,7 @@ const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAY
 const dir=process.env.WEB_EVIDENCE_DIR;await mkdir(dir,{recursive:true});const f=await fixture();let browser;const errors=[],evidence=[];
 try{
  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE});const page=await browser.newPage({viewport:{width:1440,height:900}});page.setDefaultTimeout(5000);page.on('pageerror',e=>errors.push(e.message));await page.goto(f.url);await page.locator('input[name=code]').fill('SYNTHETIC');await page.locator('#pair-form button[type=submit]').click();await page.locator('[data-id=parent-123]').click();await page.locator('#transcript .message').first().waitFor();
+ assert.equal(f.reads.filter(r=>r.path==='/api/threads').length,1,'boot and initial WebSocket share one catalog read');evidence.push('startup and WebSocket reconciliation share one inventory request');
  f.rows.get('parent-123').push({id:'preview-only-current',kind:'message',text:'Newest response learned from catalog evidence'});
  const at=Date.now();f.broadcast({type:'sessionPreview',threadId:'parent-123',preview:'Newest response learned from catalog evidence',previewRole:'assistant'});
  await page.waitForFunction(()=>[...document.querySelectorAll('#transcript .body')].some(n=>n.textContent==='Newest response learned from catalog evidence'));
@@ -52,6 +53,22 @@ try{
  f.broadcast({type:'sessionActivity',threadId:'unclassified-agent',status:{type:'active'}});
  await page.waitForTimeout(300);assert.equal(await page.locator('[data-id=unclassified-agent]').count(),0);
  evidence.push('thin events cannot invent blank or unclassified session cards');
+ await page.locator('#find-work').click();
+ let releaseCatalog;const heldCatalog=new Promise(resolve=>releaseCatalog=resolve);let heldCatalogReads=0;
+ const holdCatalog=async route=>{heldCatalogReads++;const response=await route.fetch();await heldCatalog;await route.fulfill({response,json:{threads:[{id:'stale-filter-row',name:'Stale active inventory'}]}});};
+ await page.route('**/api/threads',holdCatalog);
+ await page.locator('#refresh').evaluate(n=>n.click());
+ for(let n=0;n<60&&heldCatalogReads===0;n++)await page.waitForTimeout(25);
+ assert.equal(heldCatalogReads,1);await page.locator('#refresh').evaluate(n=>n.click());await page.waitForTimeout(100);
+ assert.equal(heldCatalogReads,1,'concurrent explicit refreshes must not issue parallel inventory reads');
+ await page.selectOption('#filter','archived');
+ for(let n=0;n<60&&!f.reads.some(r=>r.path==='/api/threads'&&r.query.includes('archived=true'));n++)await page.waitForTimeout(25);
+ assert.ok(f.reads.some(r=>r.path==='/api/threads'&&r.query.includes('archived=true')));
+ releaseCatalog();await page.waitForTimeout(400);
+ assert.equal(await page.locator('[data-id=stale-filter-row]').count(),0,'old filter response must not replace selected inventory');
+ assert.ok(heldCatalogReads<=2,'real invalidations coalesce to one follow-up');
+ await page.unroute('**/api/threads',holdCatalog);
+ evidence.push('catalog refreshes share a flight with at most one dirty follow-up; a delayed old-filter response cannot replace the current inventory');
  assert.deepEqual(errors,[]);assert.equal(f.writes.filter(w=>w.path.endsWith('/reply')).length,0);
  await writeFile(dir+'/receipt.json',JSON.stringify({passed:true,currentMs,cachedMs,catalogMs,evidence,pageErrors:errors},null,2));console.log(JSON.stringify({passed:true,currentMs,cachedMs,evidence}));
 }catch(e){await writeFile(dir+'/failure.json',JSON.stringify({error:e.message,errors,evidence},null,2));throw e;}finally{await browser?.close();await f.close();}

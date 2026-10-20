@@ -2944,17 +2944,25 @@
       "id": "shared-web-session-state-and-readonly-projection-20261019",
       "request": "Web list shows latest messages while conversation loading lags; both views must share session state.",
       "contract": "One session entity owns catalog metadata and timeline. Meaningful preview/interaction changes invalidate missing content; HTTP catalog changes also reconcile. Live known rows update closed cached sessions; bounded background prewarm requires a read-only timeline capability and its dedicated endpoint. Late responses cannot roll back live metadata. History reads never resume runtime work; explicit commands retain original IDs and control paths.",
-      "state": "candidate-qualified"
+      "state": "candidate-qualified",
+      "status": "deployed-web; native139 remains under qualification"
     },
     {
       "id": "bounded-semantic-head-20261019",
       "request": "Fast latest history with recent conversational context during operation bursts; hidden internal items must not cause unbounded history scanning.",
-      "status": "candidate-qualified",
+      "status": "deployed; local native read and actual private browser message readback passed",
       "implementation": "Initial readonly head seeks a conversational item within four provider pages, two turns, 32 displayed items and 512000 display bytes. Every provider item page consumes the read budget, including filtered internal content. Older pages retain exact cursors and use a two-source-page budget. No runtime attachment or model calls.",
       "limits": [
         "If recent source pages contain no message, the response remains honestly partial with an older cursor; this does not promise every opening contains a message.",
         "Production minute-long stall not reproduced; code-level unbounded hidden-item scan confirmed."
       ]
+    },
+    {
+      "id": "shared-catalog-read-lane-20261019",
+      "request": "Avoid duplicate startup/reconnect inventory work and late responses replacing a newly selected catalog filter.",
+      "status": "browser-qualified; deployment pending",
+      "implementation": "Startup/WebSocket/poll readers join a shared per-device/filter lane. Explicit refresh and event invalidation coalesce to one follow-up. Old filter/profile responses cannot commit into current list.",
+      "evidence": "docs/qualification/web-shared-session-state-20261019.json"
     }
   ],
   "current_state": {

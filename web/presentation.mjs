@@ -57,8 +57,8 @@ export function canonicalPage(previous,incoming,{older=false}={}){
 }
 export class ReadLanes {
  constructor(){this.heads=new Map();this.history=new Map();}
- run(key,older,read){
-  const lane=older?this.history:this.heads,active=lane.get(key);if(active){if(!older)active.dirty=true;return active.promise;}
+ run(key,older,read,{invalidate=true}={}){
+  const lane=older?this.history:this.heads,active=lane.get(key);if(active){if(!older&&invalidate)active.dirty=true;return active.promise;}
   const entry={dirty:false,promise:null};
   entry.promise=Promise.resolve().then(async()=>{let result;do{entry.dirty=false;result=await read();}while(!older&&entry.dirty);return result;}).finally(()=>{if(lane.get(key)===entry)lane.delete(key);});lane.set(key,entry);return entry.promise;
  }

@@ -47,5 +47,15 @@
     "errors": [],
     "disposableReadbackDevicesRevoked": true
   },
-  "rollback": "Keep current data; restore previous private route and, at a safe transport boundary, remove only the readonly-projection backend drop-in. Old source closures retained. Prior 18893 gateway drained at zero connections; 18892 retained while connected."
+  "rollback": "Keep current data; restore previous private route and, at a safe transport boundary, remove only the readonly-projection backend drop-in. Old source closures retained. Prior 18893 gateway drained at zero connections; 18892 retained while connected.",
+  "catalogLane": {
+    "state": "browser-qualified",
+    "evidence": "/home/aosp/.local/state/nextcomp/web-session-state-20261019-r11/receipt.json",
+    "startupInventoryRequests": 1,
+    "dirtyRefreshesCoalesced": true,
+    "oldFilterCannotCommit": true,
+    "previewOnlyMs": 202,
+    "cachedOpenMs": 56,
+    "refreshRegression": "/home/aosp/.local/state/nextcomp/web-session-state-20261019-refresh-r09/receipt.json"
+  }
 }

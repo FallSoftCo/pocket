@@ -1,5 +1,5 @@
 {
-  "state": "candidate-qualified",
+  "state": "deployed",
   "tests": 21,
   "cases": [
     "Canonical older cursor after operation burst reaches recent agent message",
@@ -13,6 +13,16 @@
   },
   "limits": [
     "No full minute-long stall reproduced",
-    "Actual live deployment/readback still pending"
-  ]
+    "Longer-than-budget action bursts remain partial with an exact continuation; legacy full-turn runtime fallbacks retain their existing compatibility behavior"
+  ],
+  "live": {
+    "closureSha256": "6cf8bdd14ec9ede94a55bfcd32ad3fd0e4ccce4c50c7a8aacabcae7d36d18dc2",
+    "backendReadMs": 40,
+    "privateBrowserClickToMessageMs": 383,
+    "noBrowserErrors": true,
+    "pairingUnchanged": true,
+    "runtimePidsPreserved": true,
+    "unknownVoiceReceiptsPreserved": 3,
+    "phoneTouched": false
+  }
 }
