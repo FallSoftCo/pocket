@@ -32,6 +32,7 @@ class ImmersionFlipScrollNativeTest {
   val list=AtomicReference<LazyListState>();val coroutine=AtomicReference<CoroutineScope>()
   val clock=AtomicReference<ImmersionFlipClock>();val layouts=java.util.concurrent.ConcurrentHashMap<Int,TextLayoutResult>()
   var linkClicks=0
+  val allowMotion=mutableStateOf(true)
   fun form(words:List<String>,index:Int)=buildAnnotatedString{
    words.forEachIndexed{n,word->if(n>0)append(' ');val start=length;append(word);addStringAnnotation("immersion-reserve","lexical:"+n,start,length)}
    if(index==0)addLink(LinkAnnotation.Clickable("inline-reference",linkInteractionListener={linkClicks++}),0,words.first().length)
@@ -45,9 +46,10 @@ class ImmersionFlipScrollNativeTest {
   fun scroll(index:Int){i.runOnMainSync{coroutine.get().launch{list.get().scrollToItem(index)}};await("List did not reach $index"){rendered(index)!=null}}
   step("launch")
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   try {
    step("launched")
    scenario.onActivity{activity->step("set-content");PocketImmersion.setEnabled(true);activity.setContent{
-    CompositionLocalProvider(LocalImmersionMotionState provides true,LocalImmersionTransitionAnimated provides false){
+    CompositionLocalProvider(LocalImmersionMotionState provides allowMotion.value,LocalImmersionTransitionAnimated provides false){
      MaterialTheme{ImmersionReadingWaveHost{
       val state=rememberLazyListState();val scope=rememberCoroutineScope();val flip=LocalImmersionFlip.current!!
       val measurer=rememberTextMeasurer();var typed by remember{mutableStateOf("")}
@@ -95,6 +97,11 @@ class ImmersionFlipScrollNativeTest {
    await("Paragraph lost its complementary language"){rendered(0) in expected.getValue(0)}
    step("complete")
    d.takeScreenshot(java.io.File(c.cacheDir,"flip-scroll-native.png"))
+   } finally {
+    // Stop only the synthetic fixture clock before ActivityScenario waits for idle.
+    // Live language cycling is intentionally perpetual; teardown must not wait for it.
+    i.runOnMainSync { allowMotion.value=false }
+   }
   }
  }
 }

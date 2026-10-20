@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ImmersionFlipFlopNativeTest {
- @Test fun allUnitsFlipWithoutAnimationAndTouchDoesNotSuspendClock(){
+ @Test(timeout=90000) fun allUnitsFlipWithoutAnimationAndTouchDoesNotSuspendClock(){
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   fun form(words:List<String>)=buildAnnotatedString{words.forEachIndexed{index,word->
@@ -29,9 +29,11 @@ class ImmersionFlipFlopNativeTest {
   val expected=immersionFlipForms(target,meaning)!!.map{it.text}.toSet()
   androidx.test.uiautomator.Configurator.getInstance().setWaitForIdleTimeout(300)
   var taps=0
+  val allowMotion=mutableStateOf(true)
   ActivityScenario.launch(MainActivity::class.java).use{scenario->
+   try {
    scenario.onActivity{activity->PocketImmersion.setEnabled(true);activity.setContent{
-    CompositionLocalProvider(LocalImmersionMotionState provides true,LocalImmersionTransitionAnimated provides false){
+    CompositionLocalProvider(LocalImmersionMotionState provides allowMotion.value,LocalImmersionTransitionAnimated provides false){
      MaterialTheme{ImmersionReadingWaveHost{Column(Modifier.fillMaxSize().statusBarsPadding().padding(24.dp)){
       SharedInlineImmersionText(target,meaning,{1f})
       TextButton(onClick={taps++}){BilingualLabel("Full permissions for new tasks")}
@@ -50,6 +52,11 @@ class ImmersionFlipFlopNativeTest {
    device.takeScreenshot(java.io.File(c.cacheDir,"flip-flop-native.png"))
    assertEquals("Every lexical position must render both complementary assignments even with animations disabled",expected,seen)
    assertTrue("Touch remains actionable",taps>0)
+   } finally {
+    // Stop only the synthetic fixture clock before ActivityScenario waits for idle.
+    // Live language cycling is intentionally perpetual; teardown must not wait for it.
+    i.runOnMainSync { allowMotion.value=false }
+   }
   }
  }
 }
