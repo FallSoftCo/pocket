@@ -8,7 +8,7 @@ test('history projection preserves snapshot boundary and never attaches or start
  const result=await readThreadProjection('thread-one',{codex,history,timeline,historyHeads});
  assert.equal(result._pocketSnapshotRevision,12);assert.equal(result._pocketSnapshotHistoryHead.version,12);
  assert.deepEqual(seeds[0][1],{throughVersion:12});
- assert.deepEqual(reads[0],{before:null,preferPaging:true,maxItems:8,maxBytes:512000,maxTurns:1});
+ assert.deepEqual(reads[0],{before:null,preferPaging:true,maxBytes:512000,maxItems:32,maxTurns:2,maxSourcePages:4,stopAfterConversation:true});
  await readThreadProjection('thread-one',{codex,history,timeline,historyHeads},{before:'older'});
  assert.equal(seeds.length,1);assert.equal(reads[1].before,'older');
  assert.deepEqual(calls.map(x=>x.method),['thread/read','thread/read']);

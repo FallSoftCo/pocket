@@ -202,3 +202,34 @@ test('a cursor entering an older turn anchors before the retained newer heading'
  assert.equal(older._pocketPage.insertBefore,'newer-turn/header');
  assert.equal(older.turns[0].id,'older-turn');
 });
+
+test('recent conversation window crosses an operations burst and retains exact older cursor',async()=>{
+ const calls=[],items=Array.from({length:80},(_,n)=>({id:'source-'+n,type:n===15?'agentMessage':'commandExecution',text:n===15?'Progress answer':undefined,command:'synthetic'}));
+ const history=new ThreadHistory({async call(method,p){
+  calls.push({method,p});
+  if(method==='thread/turns/list')return {data:[{id:'latest',status:'inProgress'}],backwardsCursor:'latest-anchor',nextCursor:null};
+  const offset=Number(p.cursor||0),part=items.slice(offset,offset+p.limit);
+  return {data:part.map(item=>({item})),nextCursor:offset+part.length<items.length?String(offset+part.length):null};
+ }});history.paginationSupported=true;
+ const first=await history.read({id:'busy',historyMode:'paginated'},{maxItems:32,maxTurns:2,maxSourcePages:4,stopAfterConversation:true});
+ assert.equal(calls.filter(c=>c.method==='thread/items/list').length,2);
+ assert.equal(first.turns[0].items[0].id,'source-15');assert.equal(first.turns[0].items.at(-1).id,'source-0');
+ const cursor=JSON.parse(Buffer.from(first._pocketPage.before.slice(6),'base64url'));assert.equal(cursor.itemCursor,'16');
+ const older=await history.read({id:'busy',historyMode:'paginated'},{before:first._pocketPage.before,maxItems:8,maxSourcePages:2});
+ assert.equal(older._pocketPage.insertBefore,'latest/source-15');
+ assert.deepEqual(older.turns[0].items.map(x=>x.id),Array.from({length:8},(_,n)=>'source-'+(23-n)));
+ assert.ok(calls.every(c=>!['thread/read','thread/resume','turn/start'].includes(c.method)));
+});
+
+test('filtered internal items still consume the source read budget and can be continued without a rescan',async()=>{
+ const cursors=[];const history=new ThreadHistory({async call(method,p){
+  if(method==='thread/turns/list')return {data:[{id:'latest',status:'inProgress'}],backwardsCursor:'latest-anchor',nextCursor:null};
+  cursors.push(p.cursor||null);const offset=Number(p.cursor||0);
+  return {data:Array.from({length:8},(_,n)=>({item:{id:'hidden-'+(offset+n),type:'reasoning',summary:[],content:['never returned']}})),nextCursor:String(offset+8)};
+ }});history.paginationSupported=true;
+ const first=await history.read({id:'internal-burst',historyMode:'paginated'},{maxItems:32,maxSourcePages:4,stopAfterConversation:true});
+ assert.deepEqual(cursors,[null,'8','16','24']);assert.equal(first.turns[0].items.length,0);assert.equal(first._pocketPage.hasEarlier,true);
+ assert.ok(!JSON.stringify(first).includes('never returned'));
+ await history.read({id:'internal-burst',historyMode:'paginated'},{before:first._pocketPage.before,maxItems:8,maxSourcePages:2});
+ assert.deepEqual(cursors,[null,'8','16','24','32','40']);
+});

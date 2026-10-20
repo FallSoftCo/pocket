@@ -1,0 +1,18 @@
+{
+  "state": "candidate-qualified",
+  "tests": 21,
+  "cases": [
+    "Canonical older cursor after operation burst reaches recent agent message",
+    "Filtered internal items consume four-page initial budget and two-page continuation budget without rescanning"
+  ],
+  "externalActions": false,
+  "runtimeAttachment": false,
+  "liveTimingBefore": {
+    "ownSessionProjectionMs": 17,
+    "itemPages": 2
+  },
+  "limits": [
+    "No full minute-long stall reproduced",
+    "Actual live deployment/readback still pending"
+  ]
+}

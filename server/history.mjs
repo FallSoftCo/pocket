@@ -64,7 +64,7 @@ export class ThreadHistory {
     return this.observeSnapshot(this.identity?.snapshot(thread)||thread);
   }
 
-  async readPaged(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8,preferPaging=false}={}){
+  async readPaged(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8,preferPaging=false,maxSourcePages=8,stopAfterConversation=false}={}){
     const threadId=metadata.id;
     if(metadata.historyMode!=='paginated'&&!preferPaging)return this.observeSnapshot((await this.codex.call('thread/read',{threadId,includeTurns:true})).thread);
     if(this.paginationSupported!==true){
@@ -90,7 +90,8 @@ export class ThreadHistory {
       else throw Error('That history position is no longer available. Reopen the task.');
     }
     const insertBefore=state.olderThanRow||null;
-    const turns=[];let count=0,bytes=0;const visited=new Set();
+    const turns=[];let count=0,bytes=0,sourcePages=0;const visited=new Set();
+    const hasConversation=()=>stopAfterConversation&&turns.some(turn=>turn.items.some(item=>['userMessage','agentMessage','plan'].includes(item.type)));
     const finish=next=>({...metadata,turns:turns.reverse(),_pocketPage:{hasEarlier:!!next,before:next?encode('items:',next):null,...(insertBefore?{insertBefore}:{})}});
     for(let turnCount=0;turnCount<maxTurns;turnCount++){
       const resumed=!!state.anchor;
@@ -104,6 +105,7 @@ export class ThreadHistory {
         const key=JSON.stringify([header.id,cursor]);if(visited.has(key))throw Error('Codex returned a repeated history cursor.');visited.add(key);
         const limit=Math.max(1,Math.min(8,maxItems,Math.floor(maxBytes/64000)));
         const part=await this.codex.call('thread/items/list',{threadId,turnId:header.id,limit,sortDirection:'desc',...(cursor?{cursor}:{})});
+        sourcePages++;
         const items=part.data.map(entry=>displayItem(entry.item,header.id)).filter(Boolean);
         const size=items.reduce((n,item)=>n+Buffer.byteLength(JSON.stringify(item)),0);
         if(count&&(count+items.length>maxItems||bytes+size>maxBytes)){
@@ -114,7 +116,7 @@ export class ThreadHistory {
         turn.items.push(...items);count+=items.length;bytes+=size;
         if(!part.nextCursor)break;
         cursor=part.nextCursor;
-        if(count>=maxItems||bytes>=maxBytes){
+        if(count>=maxItems||bytes>=maxBytes||sourcePages>=maxSourcePages||hasConversation()){
           turn.items.reverse();
           if(!anchor)throw Error('Codex did not provide a history anchor. Update Codex to continue paging.');
           return finish({anchor,nextTurn,itemCursor:cursor,olderThanRow:turn.items.length?`${header.id}/${turn.items[0].id}`:turns.at(-1)?`${turns.at(-1).id}/header`:null});
@@ -123,7 +125,7 @@ export class ThreadHistory {
       turn.items.reverse();
       if(!nextTurn)return finish(null);
       state={nextTurn,olderThanRow:`${header.id}/header`};
-      if(count>=maxItems||bytes>=maxBytes)return finish(state);
+      if(count>=maxItems||bytes>=maxBytes||sourcePages>=maxSourcePages||hasConversation())return finish(state);
     }
     return finish(state);
   }
