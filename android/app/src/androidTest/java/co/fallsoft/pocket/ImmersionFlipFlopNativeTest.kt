@@ -25,7 +25,7 @@ class ImmersionFlipFlopNativeTest {
    if(index>0)append(' ');val start=length;append(word)
    addStringAnnotation("immersion-reserve","lexical:"+index,start,length)
   }}
-  val target=form(listOf("Il","lavoro","continua"));val meaning=form(listOf("The","work","continues"))
+  val target=form(listOf("Puoi aprire","l’ultimo messaggio","in questa conversazione"));val meaning=form(listOf("Can-you open","the latest message","in this conversation"))
   val expected=immersionFlipForms(target,meaning)!!.map{it.text}.toSet()
   androidx.test.uiautomator.Configurator.getInstance().setWaitForIdleTimeout(300)
   var taps=0
@@ -43,7 +43,7 @@ class ImmersionFlipFlopNativeTest {
    val seen=mutableSetOf<String>();val end=android.os.SystemClock.elapsedRealtime()+23000
    var tapped=false
    while(android.os.SystemClock.elapsedRealtime()<end&&seen!=expected){
-    device.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile("(Il|The) .*"))).forEach{node->
+    device.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile("(Puoi|Can-you) .*"))).forEach{node->
      try{if(node.text in expected)seen+=node.text}catch(_:androidx.test.uiautomator.StaleObjectException){}
     }
     if(!tapped){val control=device.findObjects(By.clickable(true)).firstOrNull{it.visibleBounds.height()>0};if(control!=null){control.click();tapped=true}}

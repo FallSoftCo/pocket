@@ -1,0 +1,54 @@
+{
+  "state": "source-and-focused-rendering-qualified-not-deployed",
+  "versionCode": 140,
+  "versionName": "0.5.0-alpha.122",
+  "planVersion": "transgrammatic-english-italian-v3",
+  "wireTests": 17,
+  "androidUnit": "ImmersionSharedRunsTest passed; complete phrase equivalence and complementary assignment",
+  "browser": {
+    "state": "complete",
+    "humanSubmissions": 0,
+    "errors": [],
+    "journey": {
+      "before": 3,
+      "slots": 3,
+      "forms": [
+        "Puoi aprire the latest message in questa conversazione?",
+        "Can-you open l’ultimo messaggio in this conversation?"
+      ],
+      "requests": [
+        {
+          "path": "/api/immersion/v2/translate",
+          "sources": 1
+        }
+      ],
+      "restored": "Can you open the latest message in this conversation?",
+      "source": "Can you open the latest message in this conversation?",
+      "phrases": [
+        [
+          "Puoi aprire",
+          "Can-you open"
+        ],
+        [
+          "l’ultimo messaggio",
+          "the latest message"
+        ],
+        [
+          "in questa conversazione",
+          "in this conversation"
+        ]
+      ]
+    }
+  },
+  "limits": [
+    "Teacher phrase selection still requires linguistic review of actual generated output; fixture proof does not establish semantic correctness or learning efficacy.",
+    "Sixteen common authored labels grouped explicitly; longer legacy authored settings strings are not claimed complete.",
+    "Signed APK/native candidate and coordinated gateway/web deployment pending; phone remains139."
+  ],
+  "behavior": [
+    "Complete phrase units flip atomically",
+    "Both complementary phases preserve target order",
+    "Old semantic cache invalidated without whole-history model replay",
+    "No extra render-loop parsing, animation or model polling"
+  ]
+}

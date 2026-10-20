@@ -6,7 +6,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
 
-internal fun supportedImmersionPlanVersion(value:String)=value=="transgrammatic-english-italian-v1"||value=="transgrammatic-english-italian-v2"
+internal fun supportedImmersionPlanVersion(value:String)=value=="transgrammatic-english-italian-v1"||value=="transgrammatic-english-italian-v2"||value=="transgrammatic-english-italian-v3"
 
 /** Translation is a display layer: submitted text, commands, copy and audit retain originals. */
 object PocketImmersion {

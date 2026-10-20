@@ -134,7 +134,7 @@ test('phrase-owned scaffold links expansions once and rejects overlapping Italia
  ]}}};
  const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(text,row);
  const validated=validateTransgrammaticPlan(text,row);assert.ok(validated);
- assert.equal(validated.spans[0].targetSegments.map(x=>x.meaning||x.target).join(''),'Am-going to-the station');
+ assert.equal(validated.spans[0].targetSegments.map(x=>x.meaning||x.target).join(''),'Am going to-the station');
  const bad=structuredClone(row);bad.spans[0].targetSegments.push({...bad.spans[0].targetSegments[1]});
  assert.equal(validateTransgrammaticPlan(text,bad),null);
 });
@@ -154,6 +154,42 @@ test('source-owned sentence punctuation is emitted once for captured teacher phr
   const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(text,row);
   const valid=validateTransgrammaticPlan(text,row);assert.ok(valid);
   assert.equal(valid.text,'Mi sto occupando delle impostazioni dell’account.');
-  assert.equal(valid.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'myself am-taking-care of-the settings of-the-account');
+  assert.equal(valid.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'myself am taking care of-the settings of-the-account');
  }
+});
+
+test('phrase plan survives contextual worker decoding without word splitting or blanket hyphenation',async()=>{
+ const {prepareTransgrammaticBatch}=await import('../server/immersion-transgrammatic.mjs');
+ const original='Can you open the latest message in this conversation?';
+ const target='Puoi aprire l’ultimo messaggio in questa conversazione';
+ const prepared=prepareTransgrammaticBatch([{id:'phrase',version:immersionHash(original),text:original}]);
+ const decoded=prepared.decode({'0':{'0':{target,words:[
+  {target:'Puoi aprire',occurrence:0,meaning:'Can-you open'},
+  {target:'l’ultimo messaggio',occurrence:0,meaning:'the latest message'},
+  {target:'in questa conversazione',occurrence:0,meaning:'in this conversation'}
+ ]}}}).translations[0];
+ decoded.text=transgrammaticContract.derive(original,decoded);
+ const validated=validateTransgrammaticPlan(original,decoded);assert.ok(validated);
+ assert.equal(validated.planVersion,'transgrammatic-english-italian-v3');
+ const phrases=validated.spans[0].targetSegments.filter(s=>s.meaning);
+ assert.deepEqual(phrases.map(s=>s.meaning),['Can-you open','the latest message','in this conversation']);
+ assert.deepEqual(phrases.map(s=>s.target),['Puoi aprire','l’ultimo messaggio','in questa conversazione']);
+ assert.match(prepared.input.instruction,/noun phrases/);
+ assert.equal(validated.text,target+'?');
+});
+
+test('phrase-generator revision replaces legacy cache lazily and persists the replacement across restart',async()=>{
+ const saved=new Map([['a',{enabled:true,density:'strong',translations:[{id:'body',original:source,version:immersionHash(source),text:target,planVersion:'transgrammatic-english-italian-v2',density:'strong',spans:[]}]}]]);
+ const make=()=>new ImmersionWorker({codex:new EventEmitter(),cwd:'/owned-qa',contract:transgrammaticContract,delay:100000,load:id=>saved.get(id),save:(id,state)=>saved.set(id,structuredClone(state))});
+ let w=make(),runs=0;
+ assert.equal(w.snapshot('a').translations.length,0);
+ // No automatic historical replay: only an explicit currently displayed source queues work.
+ assert.equal(w.snapshot('a').jobs.length,0);
+ w.submit('a',[{id:'body',text:source}]);
+ w.translate=async batch=>{runs++;return {translations:[{...plan(),id:batch[0].id}]};};
+ await w.flush();assert.equal(runs,1);
+ assert.equal(saved.get('a').translations[0].planVersion,TRANSGRAMMATIC_VERSION);w.close();
+ w=make();w.submit('a',[{id:'body',text:source}]);
+ w.translate=async()=>{throw Error('Accepted phrase cache must survive reopening');};
+ await w.flush();assert.equal(w.snapshot('a').translations.length,1);assert.equal(w.snapshot('a').jobs.length,0);w.close();
 });

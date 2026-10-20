@@ -78,4 +78,22 @@ class ImmersionSharedRunsTest {
   assertEquals(target.text,runs.joinToString(""){it.forms[1].text})
  }
 
+ @Test fun grammaticalPhraseAssignmentsStayWholeAndComplementary() {
+  val pairs=listOf("Puoi aprire" to "Can-you open","l’ultimo messaggio" to "the latest message","in questa conversazione" to "in this conversation")
+  fun form(italian:Boolean)=buildAnnotatedString {
+   pairs.forEachIndexed { i,pair ->
+    if(i>0)append(" ")
+    val at=length;append(if(italian)pair.first else pair.second)
+    addStringAnnotation("immersion-reserve","phrase:$i",at,length)
+   }
+   append("?")
+  }
+  val forms=requireNotNull(immersionFlipForms(form(true),form(false))).map{it.text}
+  pairs.forEach{(it,en)->
+   assertEquals(1,forms.count{form->form.contains(it)})
+   assertEquals(1,forms.count{form->form.contains(en)})
+  }
+  assertTrue(forms.all{it.endsWith("?")})
+ }
+
 }
