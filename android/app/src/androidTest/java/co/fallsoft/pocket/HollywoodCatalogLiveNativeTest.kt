@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.*
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
+import org.json.JSONArray
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,8 +32,16 @@ class HollywoodCatalogLiveNativeTest {
   }
   val latest=client.call("rooms/$target/history?before=9007199254740991&limit=100").getJSONArray("events").objects().last{it.s("kind") in listOf("message","result","request")&&it.s("body").isNotBlank()}.s("body").take(80)
   val original=Pocket.environmentId;val oldIdle=Configurator.getInstance().waitForIdleTimeout;Configurator.getInstance().waitForIdleTimeout=0
+  // Each journey establishes its own existing paired QA profile. Never depend on another test's preferences.
+  val profileId="live_room_qa_20261015";val prefs=c.getSharedPreferences("pocket",0)
+  val profiles=JSONArray(prefs.getString("environments:v1","[]")).objects().filter{it.s("id")!=profileId}
+  val owner=backendOwner(config.s("base"),config.s("token"))
+  check(prefs.edit().putString("environments:v1",JSONArray(profiles+JSONObject().put("id",profileId).put("name","Real room QA").put("local",false)).toString())
+   .putString("activeEnvironment",profileId).putString("environment:$profileId:server",config.s("base")).putString("environment:$profileId:token",config.s("token"))
+   .putString("backend:"+owner,"lax").putString("hollywood-room:"+owner+":"+config.getJSONObject("identity").s("bindingId"),target).commit())
+
   try {
-   i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment("live_room_qa_20261015",force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+   i.runOnMainSync{Pocket.init(c);check(Pocket.activateEnvironment(profileId,force=true)){"Original paired QA profile did not activate"};c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
    await("Original accepted message missing"){d.hasObject(By.textContains(latest))}
    val controls=d.findObject(By.res("native-room-controls")).visibleBounds
    val history=d.findObject(By.res("native-room-history")).visibleBounds
