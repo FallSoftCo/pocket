@@ -2963,6 +2963,12 @@
       "status": "deployed; actual private browser one startup read and 296ms selected-message readback",
       "implementation": "Startup/WebSocket/poll readers join a shared per-device/filter lane. Explicit refresh and event invalidation coalesce to one follow-up. Old filter/profile responses cannot commit into current list.",
       "evidence": "docs/qualification/web-shared-session-state-20261019.json"
+    },
+    {
+      "id": "critical-web-content-before-decorative-media-20261019",
+      "request": "Text/session loading must remain prompt while modeled icons animate; slow network cannot leave a blank or misleading catalog.",
+      "status": "candidate-qualified; live readback pending",
+      "evidence": "docs/qualification/web-critical-traffic-20261019.json"
     }
   ],
   "current_state": {

@@ -1,0 +1,41 @@
+{
+  "state": "candidate-qualified",
+  "scope": "Authenticated web JSON and decorative media scheduling; no stock runtime, native app backend, model, or pairing change",
+  "changes": [
+    "Negotiated asynchronous gzip for JSON; audio and other binary payloads remain byte exact",
+    "API requests high priority; atlas requests low priority, two downloads maximum, no motion downloads before catalog paint",
+    "Display clock sleeps while all requested pages are unavailable; original animation resumes as assets arrive",
+    "Static assets revalidate with ETags instead of mandatory complete reload; API responses remain no-store",
+    "Cold catalog reports loading/failure explicitly; bootstrap failures are observed"
+  ],
+  "baseline": {
+    "inventoryRows": 803,
+    "downloadBytesPerSecond": 131072,
+    "latencyMs": 100,
+    "catalogPaintMs": 23275,
+    "clickToMessageMs": 8562,
+    "peakAtlasRequests": 9
+  },
+  "candidate": {
+    "catalogPaintMs": 5267,
+    "clickToMessageMs": 280,
+    "peakAtlasRequests": 2,
+    "atlasBeforeCatalog": 0,
+    "gzip": true,
+    "positiveMotion": true,
+    "waitingClockTicksAtFirstDraw": 4
+  },
+  "evidence": "/home/aosp/.local/state/nextcomp/web-transport-final-20261019-r01/pipeline.json",
+  "checks": [
+    "Actual throttled Chromium large inventory/selected message with positive animation",
+    "Shared session state and stale response/filter protection",
+    "Read feedback, scoped errors, draft retention and real WebSocket activity burst",
+    "Modeled pixel animation, offscreen/decoded caches, reduced-motion and freeze/resume",
+    "HTTP gzip/identity/UTF8/status/binary/auth/ETag contract"
+  ],
+  "limits": [
+    "Controlled synthetic network benchmark is not a universal phone or production latency claim",
+    "Fresh production browser reopen still required before marking deployed",
+    "Prior coalescing-only release rolled back after empty catalog observation; slow raw transfer reproduced on the previous release too"
+  ]
+}
