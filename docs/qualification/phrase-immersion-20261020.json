@@ -1,5 +1,5 @@
 {
-  "state": "source-and-focused-rendering-qualified-not-deployed",
+  "state": "android140-published-backend-staged",
   "versionCode": 140,
   "versionName": "0.5.0-alpha.122",
   "planVersion": "transgrammatic-english-italian-v3",
@@ -14,7 +14,7 @@
       "slots": 3,
       "forms": [
         "Puoi aprire the latest message in questa conversazione?",
-        "Can-you open l’ultimo messaggio in this conversation?"
+        "Can-you open l\u2019ultimo messaggio in this conversation?"
       ],
       "requests": [
         {
@@ -30,7 +30,7 @@
           "Can-you open"
         ],
         [
-          "l’ultimo messaggio",
+          "l\u2019ultimo messaggio",
           "the latest message"
         ],
         [
@@ -41,14 +41,42 @@
     }
   },
   "limits": [
-    "Teacher phrase selection still requires linguistic review of actual generated output; fixture proof does not establish semantic correctness or learning efficacy.",
-    "Sixteen common authored labels grouped explicitly; longer legacy authored settings strings are not claimed complete.",
-    "Signed APK/native candidate and coordinated gateway/web deployment pending; phone remains139."
+    "Software-rendered emulator timings are not physical handset performance qualification.",
+    "Provider audio/physical audibility not established by synthetic voice fixture.",
+    "Only16 authored common controls reviewed; remaining legacy authored settings still require review.",
+    "Real model grouping remains contextual model output, not a universal grammar proof."
   ],
   "behavior": [
     "Complete phrase units flip atomically",
     "Both complementary phases preserve target order",
     "Old semantic cache invalidated without whole-history model replay",
     "No extra render-loop parsing, animation or model polling"
-  ]
+  ],
+  "sourceCommit": "c2419d7",
+  "nativeCasesPassed": 28,
+  "optimizedExactApkReview": "passed",
+  "phoneCompatibleApkSha256": "40193b09a0510f5dec55aa31cc929a870f5f89a42037f4a3d5659cfab9264005",
+  "realTeacherSample": {
+    "elapsedMs": 6522,
+    "requests": 1,
+    "italian": "Le registrazioni salvate sono pronte. Non ho ancora finito.",
+    "groups": [
+      "Le registrazioni salvate",
+      "sono pronte",
+      "Non ho ancora finito"
+    ],
+    "englishSupport": [
+      "The recordings saved",
+      "are ready",
+      "not I-have yet finished"
+    ]
+  },
+  "delivery": {
+    "versionCode": 140,
+    "versionName": "0.5.0-alpha.122",
+    "channelPublished": true,
+    "announcementCount": 1,
+    "phoneInstallVerified": false,
+    "backendSemanticActivation": false
+  }
 }
