@@ -3129,5 +3129,11 @@
       "Reduce measured cold web startup and native audio startup latency; retain tested shared state and bounded traffic architecture",
       "Verify physical phone audio, notification display and existing 0/50/100 presets when reachable"
     ]
+  },
+  "web_cold_start_static_20261020": {
+    "state": "qualified-not-deployed",
+    "evidence": "docs/qualification/web-cold-static-20261020.json",
+    "purpose": "Reduce avoidable cold startup transfer; preserve critical content priority and shared state",
+    "next": "Versioned gateway closure, actual private open/reopen and original draft/row identity verification"
   }
 }

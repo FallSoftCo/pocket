@@ -120,3 +120,27 @@ test('gateway compresses negotiated JSON while preserving identity, status, and 
  for(const encoding of ['identity','gzip;q=0,identity;q=1']){const plain=await read('/api/threads',encoding);assert.equal(plain.headers['content-encoding'],undefined);assert.deepEqual(JSON.parse(plain.body),data);}
  const audio=await read('/api/audio','gzip');assert.equal(audio.status,206);assert.equal(audio.headers['content-encoding'],undefined);assert.deepEqual(audio.body,binary);
 });
+
+test('cold-start documents and modules compress without breaking conditional or range delivery',async t=>{
+ const {gunzipSync}=await import('node:zlib');
+ const {readFile}=await import('node:fs/promises');
+ const g=createWebClient({origin:'https://private.example.test'});
+ g.server.listen(0,'127.0.0.1');await once(g.server,'listening');
+ t.after(()=>{g.server.closeAllConnections();g.server.close();});
+ const port=g.server.address().port;
+ const read=(path,headers={})=>new Promise((resolve,reject)=>{
+  http.get({host:'127.0.0.1',port,path,headers},res=>{
+   const chunks=[];res.on('data',x=>chunks.push(x));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks)}));
+  }).on('error',reject);
+ });
+ const expected=await readFile(new URL('../web/app.mjs',import.meta.url));
+ const responses=await Promise.all(Array.from({length:8},()=>read('/app.mjs',{'Accept-Encoding':'gzip'})));
+ for(const r of responses){assert.equal(r.status,200);assert.equal(r.headers['content-encoding'],'gzip');assert.deepEqual(gunzipSync(r.body),expected);assert.ok(r.body.length<expected.length/2);assert.equal(r.headers['cache-control'],'private, no-cache');}
+ assert.equal(new Set(responses.map(x=>x.headers.etag)).size,1);
+ const unchanged=await read('/app.mjs',{'Accept-Encoding':'gzip','If-None-Match':responses[0].headers.etag});
+ assert.equal(unchanged.status,304);assert.equal(unchanged.body.length,0);
+ const identity=await read('/app.mjs',{'Accept-Encoding':'gzip;q=0, identity;q=1'});assert.equal(identity.headers['content-encoding'],undefined);assert.deepEqual(identity.body,expected);
+ const range=await read('/app.mjs',{'Accept-Encoding':'gzip',Range:'bytes=0-7'});assert.equal(range.status,206);assert.equal(range.headers['content-encoding'],undefined);assert.deepEqual(range.body,expected.subarray(0,8));
+ const html=await read('/',{'Accept-Encoding':'gzip'});assert.equal(html.headers['content-encoding'],'gzip');assert.equal(html.headers['cache-control'],'no-store');assert.match(gunzipSync(html.body).toString(),/<!doctype html>/i);
+ assert.equal((await read('/missing-module.mjs',{'Accept-Encoding':'gzip'})).status,404);
+});

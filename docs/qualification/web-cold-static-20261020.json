@@ -1,0 +1,58 @@
+{
+  "state": "qualified-not-deployed",
+  "date": "2026-10-20T05:43:33.288423+00:00",
+  "change": "Compress cold-start document and immutable root JavaScript/CSS using negotiated async gzip; bounded per-release single-flight encoded asset cache; preserve conditional and range semantics",
+  "protocolTests": {
+    "passed": 11,
+    "failed": 0
+  },
+  "controlledBrowser": {
+    "link": "128KiB/s,100ms latency,803 synthetic catalog rows",
+    "baseline": {
+      "state": "complete",
+      "baseline": true,
+      "errors": [],
+      "peakAtlasRequests": 2,
+      "atlasBeforeCatalog": 0,
+      "catalogEncoding": "gzip",
+      "catalogPaintMs": 5377,
+      "clickToMessageMs": 287,
+      "catalogReads": 1
+    },
+    "candidate": {
+      "state": "complete",
+      "baseline": false,
+      "errors": [],
+      "peakAtlasRequests": 2,
+      "atlasBeforeCatalog": 0,
+      "catalogEncoding": "gzip",
+      "catalogPaintMs": 4246,
+      "clickToMessageMs": 298,
+      "motion": {
+        "draws": 2,
+        "ticks": 4,
+        "active": 7,
+        "decodedBytes": 2097152,
+        "compressedBytes": 330948,
+        "pending": 7,
+        "downloads": 2,
+        "queuedDownloads": 5,
+        "ready": true,
+        "decodeFailures": 0,
+        "scheduled": true
+      },
+      "catalogReads": 2
+    }
+  },
+  "limits": [
+    "Single controlled comparison; does not establish actual private-link improvement.",
+    "No Android binary change or physical audio claim."
+  ],
+  "preserved": [
+    "paired cookie authority and CSRF guards",
+    "private no-cache static ETag revalidation",
+    "no-store API/document policy",
+    "audio/APK and byte-range delivery",
+    "existing positive modeled animation and shared session state"
+  ]
+}

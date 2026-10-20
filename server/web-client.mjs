@@ -2,11 +2,13 @@ import express from 'express';
 import {gzip} from 'node:zlib';
 import {createTailnetBrowserAuth} from './tailnet-browser-auth.mjs';
 import http from 'node:http';
-import {createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
+import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {mkdirSync,readFileSync,writeFileSync,chmodSync,existsSync} from 'node:fs';
 import {homedir} from 'node:os';
+import {readFile,stat} from 'node:fs/promises';
+import {promisify} from 'node:util';
 import {ThreadHistory} from './history.mjs';
 import {timelinePage} from './timeline.mjs';
 import {WebSocketServer,WebSocket} from 'ws';
@@ -28,11 +30,12 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
  app.use('/api/voice/recordings',express.raw({type:'audio/wav',limit:19200044}));
  app.use(express.json({limit:'1mb'}));
  // JSON is the critical representation; binary audio/APKs and atlases pass through unchanged.
- const sendJson=(req,res,data)=>{
-  const bytes=Buffer.from(JSON.stringify(data));res.type('json');res.vary('Accept-Encoding');
+ const sendBytes=(req,res,bytes)=>{
+  res.vary('Accept-Encoding');
   if(bytes.length<1024||req.acceptsEncodings('gzip','identity')!=='gzip')return res.send(bytes);
   gzip(bytes,{level:4},(error,encoded)=>{if(res.destroyed)return;if(error)return res.send(bytes);res.set('Content-Encoding','gzip').send(encoded);});
  };
+ const sendJson=(req,res,data)=>{res.type('json');return sendBytes(req,res,Buffer.from(JSON.stringify(data)));};
  const csrf=(req,res,next)=>req.headers.origin===origin?next():res.status(403).json({error:'Open NextComp at its configured private address.'});
  const forward=async(req,path,body,token)=>fetch(new URL(path,target),{method:req.method,redirect:'error',headers:{...(token?{Authorization:`Bearer ${token}`}:{ }),'Content-Type':Buffer.isBuffer(body)?'audio/wav':'application/json',...(typeof req.headers?.['x-hollywood-binding']==='string'?{'X-Hollywood-Binding':req.headers['x-hollywood-binding']}:{})},...(body===undefined?{}:{body:Buffer.isBuffer(body)?body:JSON.stringify(body)}),signal:AbortSignal.timeout(45000)});
  app.post('/web/pair',csrf,async(req,res,next)=>{try{const r=await forward(req,'/api/pair',{code:req.body.code,name:String(req.body.name||'NextComp browser').slice(0,100)});const data=await r.json();if(r.ok){setCookie(res,data.token);res.json({id:data.id,host:data.host});}else res.status(r.status).json({error:data.error});}catch(e){next(e);}});
@@ -78,8 +81,34 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
  });
  const assets=resolve(dirname(fileURLToPath(import.meta.url)),'../web');
  app.get('/migration.html',(_req,res)=>{if(!migrationTargetOrigin)return res.sendStatus(404);res.set('Content-Security-Policy',`default-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors ${migrationTargetOrigin}; base-uri 'none'`);res.type('html').send('<!doctype html><meta charset="utf-8"><title>NextComp local profile transfer</title><script type="module" src="/migration-frame.mjs"></script>');});
- app.get('/',(_req,res)=>{let html=readFileSync(resolve(assets,'index.html'),'utf8').replace(/(src|href)="\/([^"]+)"/g,(_match,attribute,path)=>`${attribute}="${basePath}${path}"`);if(migrationSourceOrigin)res.set('Content-Security-Policy',res.get('Content-Security-Policy')+`; frame-src ${migrationSourceOrigin}`);if(migrationTargetOrigin)html=html.replace('</body>',`<p class="access-link"><a href="${migrationTargetOrigin}/nextcomp/">Open NextComp at its cleaner address ↗</a></p></body>`);res.type('html').send(html);});
+ app.get('/',(req,res)=>{let html=readFileSync(resolve(assets,'index.html'),'utf8').replace(/(src|href)="\/([^"]+)"/g,(_match,attribute,path)=>`${attribute}="${basePath}${path}"`);if(migrationSourceOrigin)res.set('Content-Security-Policy',res.get('Content-Security-Policy')+`; frame-src ${migrationSourceOrigin}`);if(migrationTargetOrigin)html=html.replace('</body>',`<p class="access-link"><a href="${migrationTargetOrigin}/nextcomp/">Open NextComp at its cleaner address ↗</a></p></body>`);res.type('html');sendBytes(req,res,Buffer.from(html));});
  app.get('/manifest.webmanifest',(_req,res)=>{const manifest=JSON.parse(readFileSync(resolve(assets,'manifest.webmanifest'),'utf8'));Object.assign(manifest,{id:basePath,start_url:basePath,scope:basePath});manifest.icons=manifest.icons.map(icon=>({...icon,src:basePath+icon.src.replace(/^\//,'')}));res.type('application/manifest+json').json(manifest);});
+ // Immutable release assets: coalesce encoding once per file, retain private
+ // conditional caching, and leave binary/range delivery to express.static.
+ const textAssets=new Map(),encode=promisify(gzip);
+ app.get(/^\/[a-zA-Z0-9][a-zA-Z0-9_.-]*\.(?:mjs|js|css)$/,async(req,res,next)=>{
+  try{
+   const name=req.path.slice(1);let pending=textAssets.get(name);
+   if(!pending){
+    pending=(async()=>{
+     const file=resolve(assets,name),info=await stat(file);
+     if(!info.isFile()||info.size>512*1024)return null;
+     const raw=await readFile(file);
+     return {raw,gzip:raw.length>=1024?await encode(raw,{level:4}):null,etag:'W/"'+createHash('sha256').update(raw).digest('hex')+'"'};
+    })();
+    if(textAssets.size>=32)textAssets.delete(textAssets.keys().next().value);
+    textAssets.set(name,pending);
+    pending.catch(()=>{if(textAssets.get(name)===pending)textAssets.delete(name)});
+   }
+   const value=await pending;if(!value)return next();
+   // Preserve byte-range semantics rather than compressing an arbitrary range.
+   if(req.headers.range)return next();
+   res.set({'Cache-Control':'private, no-cache',ETag:value.etag});res.vary('Accept-Encoding');
+   res.type(name.endsWith('.css')?'css':'js');
+   if(value.gzip&&req.acceptsEncodings('gzip','identity')==='gzip'){res.set('Content-Encoding','gzip');return res.send(value.gzip);}
+   return res.send(value.raw);
+  }catch(error){if(error.code==='ENOENT'||error.code==='ENOTDIR')return next();next(error);}
+ });
  app.use(express.static(assets,{etag:true,index:false,setHeaders:res=>res.setHeader('Cache-Control','private, no-cache')}));
  server.on('upgrade',(req,socket,head)=>{
   const token=cookie(req);if(req.url!=='/events'||req.headers.origin!==origin||!token){socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');return;}
