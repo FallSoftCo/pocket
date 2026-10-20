@@ -3126,8 +3126,8 @@
     "scope": "Complementary instant inline immersion, canonical history/order recovery, on-demand speech, padded controls/depth, retained volume-key capture, foreground notification handling",
     "physicalPhoneInstallVerified": false,
     "next": [
-      "Fix requested 50% middle volume step",
-      "Reduce measured cold web startup and native audio startup latency; retain tested shared state and bounded traffic architecture"
+      "Reduce measured cold web startup and native audio startup latency; retain tested shared state and bounded traffic architecture",
+      "Verify physical phone audio, notification display and existing 0/50/100 presets when reachable"
     ]
   }
 }

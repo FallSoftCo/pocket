@@ -46,8 +46,17 @@
   "limits": [
     "Software emulator key-to-draw timing is not optical handset latency; initial sample exceeded 2 seconds in the loaded emulator.",
     "Cold web reopen measured about 10 seconds; further startup work remains.",
-    "Middle volume step is currently 33%; requested 50% remains a follow-up.",
     "Physical phone audio, notification display and installation are not independently verified for this update."
   ],
-  "publishedAt": "2026-10-20T02:03:16.393911+00:00"
+  "publishedAt": "2026-10-20T02:03:16.393911+00:00",
+  "volumePresets": {
+    "implemented": [
+      0,
+      50,
+      100
+    ],
+    "existingSystemLevelsPreservedUntilExplicitTap": true,
+    "qaScreenshot33Percent": "Retained Android system volume; not the middle preset",
+    "source": "android/app/src/main/java/co/fallsoft/pocket/VoiceScreen.kt:InlineSpeechVolume"
+  }
 }
