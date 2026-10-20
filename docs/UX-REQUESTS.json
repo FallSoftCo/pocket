@@ -3001,11 +3001,11 @@
     {
       "id": "immersion-complete-english-reference-phase",
       "requested": "2026-10-20",
-      "status": "web-live-android-alpha123-qualification-running",
+      "status": "range-corrected-web-qualification-passed-android-candidate",
       "request": "Replace alternating word/phrase parity with100%English reference followed by50\u2013100%Italian.",
-      "implementation": "All English-vocabulary support in Italian grammatical order, then100%Italian, preserving whole grammatical groups.100%is the selected endpoint of the requested range; no new partial-density control added.",
+      "implementation": "Six cached forms: English,50%Italian,English,75%Italian,English,100%Italian. Choose contiguous whole grammatical groups using lexical-word coverage; phrase granularity may exceed the target.100%phase guarantees every eligible phrase reaches Italian. No per-word alternation.",
       "validation": "17 focused checks and rendered browser journey passed with exactly one visible-source submission, zero human message writes and original text restored when disabled. Android141/alpha123 build and bounded native qualification running.",
-      "delivery": "Web route updated with pairing storage unchanged; Android140 remains current published version.",
+      "delivery": "Prior all-or-nothing web version being superseded. Android141 candidate intentionally stopped as obsolete;142/alpha124 follows correction.",
       "constraints": [
         "No per-word alternation",
         "No fade or animation",

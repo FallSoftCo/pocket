@@ -80,8 +80,8 @@ class ImmersionFlipScrollNativeTest {
    // Recycle all initial items, then return within the same reading interval.
    scroll(28);step("scrolled-away");scroll(0);step("scrolled-back")
    val returned=rendered(0)!!
-   val expectedIndex=expected.getValue(0).indexOf(initial) xor (initialPhase xor clock.get().phase)
-   assertEquals("Recycling reassigned the paragraph language",expected.getValue(0)[expectedIndex],returned)
+   if(initialPhase==clock.get().phase)assertEquals("Recycling reassigned the paragraph language",initial,returned)
+   else assertTrue("Recycled paragraph lost its valid language phase",returned in expected.getValue(0))
    assertTrue("Native normal text spacing was not measured",layouts.isNotEmpty())
    step("spacing-checked")
    val passage=d.findObject(By.text(rendered(0)!!)).visibleBounds

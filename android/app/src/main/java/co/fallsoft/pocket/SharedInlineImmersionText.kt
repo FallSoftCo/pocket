@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.*
         var heldPhase by rememberSaveable(owner){mutableIntStateOf(flipClock.phase)}
         var observedPhase by remember{mutableIntStateOf(flipClock.phase)}
         val tick=flipClock.phase
-        SideEffect{if(observedPhase!=tick){heldPhase=1-heldPhase;observedPhase=tick}}
+        SideEffect{if(observedPhase!=tick){heldPhase=(heldPhase+1)%paired.size;observedPhase=tick}}
         val shown=paired[heldPhase]
         androidx.compose.material3.Text(shown,modifier=modifier,color=color,fontSize=fontSize,
             lineHeight=lineHeight,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,

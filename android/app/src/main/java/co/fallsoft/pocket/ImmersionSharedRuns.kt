@@ -44,12 +44,21 @@ internal fun immersionSharedRuns(forms:List<AnnotatedString>):List<ImmersionShar
     return runs.filter{it.forms.any{form->form.isNotEmpty()}}
 }
 
-/** One complete English scaffold, then complete Italian; phrase boundaries stay intact. */
+/** Complete English references alternate with50%,75%,100%Italian phrase coverage. */
 internal fun immersionFlipForms(target:AnnotatedString,meaning:AnnotatedString):List<AnnotatedString>? {
     val runs=immersionSharedRuns(listOf(target,meaning))?:return null
     val eligible=runs.filter{it.id!=null&&it.forms[0].any{c->c.isLetter()}}
     if(eligible.isEmpty()||eligible.any{it.forms[1].isBlank()})return null
-    return listOf(1,0).map{form->buildAnnotatedString{
-        for(run in runs)append(run.forms[if(run.id!=null)form else 0])
-    }}
+    fun mixed(fraction:Double,start:Int):AnnotatedString {
+        val weights=eligible.map{Regex("[\\p{L}\\p{M}]+").findAll(it.forms[0].text).count()}
+        val goal=kotlin.math.ceil(weights.sum()*fraction).toInt()
+        val selected=mutableSetOf<String>();var covered=0
+        for(offset in eligible.indices){
+            if(covered>=goal)break
+            val index=(start+offset)%eligible.size
+            selected+=eligible[index].id!!;covered+=weights[index]
+        }
+        return buildAnnotatedString{for(run in runs)append(run.forms[if(run.id==null||run.id in selected)0 else 1])}
+    }
+    return listOf(meaning,mixed(.5,0),meaning,mixed(.75,eligible.size/2),meaning,target)
 }

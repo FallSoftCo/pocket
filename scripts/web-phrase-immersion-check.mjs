@@ -34,15 +34,16 @@ try{
   await layer.scan();
   const deadline=performance.now()+4000;
   while(!layer.nodes.has(element)&&performance.now()<deadline){await new Promise(r=>setTimeout(r,100));await layer.scan();}
-  const first=element.textContent;layer.flip();const second=element.textContent;
+  const forms=[];for(let phase=0;phase<6;phase++){forms.push(element.textContent);layer.flip();}
   const slots=layer.nodes.get(element)?.pair.eligible;
   layer.accept({enabled:false,planVersion:plan.planVersion,translations:[]});await layer.scan();
-  return {before,slots,forms:[first,second],requests,restored:element.textContent,source,phrases};
+  return {before,slots,forms,requests,restored:element.textContent,source,phrases};
  });
  assert.equal(result.journey.slots,3);
+ assert.ok(result.journey.forms[0].includes('Can-you open'));assert.ok(result.journey.forms[1].includes('Puoi aprire'));assert.ok(result.journey.forms[1].includes('in this conversation'));
  for(const [it,en]of result.journey.phrases){
-  assert.equal(result.journey.forms.filter(f=>f.includes(it)).length,1);
-  assert.equal(result.journey.forms.filter(f=>f.includes(en)).length,1);
+  assert.equal(Number(result.journey.forms.some(f=>f.includes(it))),1);
+  assert.equal(Number(result.journey.forms.some(f=>f.includes(en))),1);
  }
  assert.equal(result.journey.requests.length,1);
  assert.equal(result.journey.requests[0].sources,1);

@@ -14,7 +14,7 @@ export class ImmersionLayer {
   for(const [element,entry] of this.nodes)if(element.isConnected)this.restore(element,entry);
  }
  async load(){try{this.accept(await this.api('/api/immersion/v2'));}catch(e){this.onStatus('Immersion unavailable · '+e.message);}}
- accept(snapshot){this.revision(snapshot.planVersion);this.enabled=snapshot.enabled===true;for(const plan of snapshot.translations||[])this.plans.set(plan.original,plan);this.onStatus(this.enabled?'Flip-flop · every paired unit switches English/Italian':'Off');this.schedule();if(this.enabled&&!this.timer)this.timer=setTimeout(()=>this.flip(),10000);if(!this.enabled){clearTimeout(this.timer);this.timer=null;}}
+ accept(snapshot){this.revision(snapshot.planVersion);this.enabled=snapshot.enabled===true;for(const plan of snapshot.translations||[])this.plans.set(plan.original,plan);this.onStatus(this.enabled?'English reference ·50–100%Italian phrases':'Off');this.schedule();if(this.enabled&&!this.timer)this.timer=setTimeout(()=>this.flip(),10000);if(!this.enabled){clearTimeout(this.timer);this.timer=null;}}
  handle(event){if(event.type!=='immersion')return false;if(!['transgrammatic-english-italian-v2','transgrammatic-english-italian-v3'].includes(event.planVersion))return true;this.revision(event.planVersion);for(const plan of event.translations||[])this.plans.set(plan.original,plan);this.schedule();return true;}
  async setEnabled(enabled){this.accept(await this.api('/api/immersion/v2',{enabled,density:'strong'}));}
  schedule(){clearTimeout(this.scanTimer);this.scanTimer=setTimeout(()=>void this.scan(),160);}
@@ -42,10 +42,10 @@ export class ImmersionLayer {
   if(document.visibilityState==='visible'){
    const anchors=['transcript','work-list'].map(id=>{const root=document.getElementById(id);if(!root)return null;const child=[...root.children].find(n=>n.getBoundingClientRect().bottom>root.getBoundingClientRect().top);return child?{root,child,offset:child.getBoundingClientRect().top-root.getBoundingClientRect().top}:null;}).filter(Boolean);
    for(const [element,entry] of this.nodes){const rect=element.getBoundingClientRect();if(!element.isConnected||rect.bottom<=0||rect.top>=innerHeight||rect.width===0||rect.height===0)continue;
-    entry.phase=1-entry.phase;this.held.set(entry.identity,entry.phase);entry.current.replaceChildren(entry.rich?richText(entry.pair.forms[entry.phase]):document.createTextNode(entry.pair.forms[entry.phase]));entry.stack.dataset.flipPhase=String(entry.phase);
+    entry.phase=(entry.phase+1)%entry.pair.forms.length;this.held.set(entry.identity,entry.phase);entry.current.replaceChildren(entry.rich?richText(entry.pair.forms[entry.phase]):document.createTextNode(entry.pair.forms[entry.phase]));entry.stack.dataset.flipPhase=String(entry.phase);
    }
    for(const anchor of anchors)if(anchor.child.isConnected)anchor.root.scrollTop+=anchor.child.getBoundingClientRect().top-anchor.root.getBoundingClientRect().top-anchor.offset;
-   this.phase=1-this.phase;while(this.held.size>4096)this.held.delete(this.held.keys().next().value);
+   this.phase=(this.phase+1)%6;while(this.held.size>4096)this.held.delete(this.held.keys().next().value);
   }
   this.timer=setTimeout(()=>this.flip(),10000);
  }

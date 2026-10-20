@@ -16,8 +16,8 @@ class ImmersionSharedRunsTest {
   val italian=listOf("Il","lavoro","continua")
   val english=listOf("The","work","continues")
   val forms=immersionFlipForms(sentence(italian),sentence(english))!!
-  assertEquals(english.joinToString(" "),forms[0].text);assertEquals(italian.joinToString(" "),forms[1].text)
-  val first=forms[0].text.split(' ');val second=forms[1].text.split(' ')
+  assertEquals(english.joinToString(" "),forms[0].text);assertEquals(italian.joinToString(" "),forms.last().text)
+  val first=forms[0].text.split(' ');val second=forms.last().text.split(' ')
   italian.indices.forEach{index->
    assertEquals(setOf(italian[index],english[index]),setOf(first[index],second[index]))
   }
@@ -91,8 +91,8 @@ class ImmersionSharedRunsTest {
   }
   val forms=requireNotNull(immersionFlipForms(form(true),form(false))).map{it.text}
   pairs.forEach{(it,en)->
-   assertEquals(1,forms.count{form->form.contains(it)})
-   assertEquals(1,forms.count{form->form.contains(en)})
+   assertTrue(forms.any{form->form.contains(it)})
+   assertTrue(forms.any{form->form.contains(en)})
   }
   assertTrue(forms.all{it.endsWith("?")})
  }
