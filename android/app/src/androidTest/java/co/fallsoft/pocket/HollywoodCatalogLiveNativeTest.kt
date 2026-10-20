@@ -41,7 +41,7 @@ class HollywoodCatalogLiveNativeTest {
    .putString("backend:"+owner,"lax").putString("hollywood-room:"+owner+":"+config.getJSONObject("identity").s("bindingId"),target).commit())
 
   try {
-   i.runOnMainSync{Pocket.init(c);check(Pocket.activateEnvironment(profileId,force=true)){"Original paired QA profile did not activate"};c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+   i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment(profileId,force=true);check(Pocket.environmentId==profileId&&Pocket.base==config.s("base")){"Original paired QA profile did not activate"};c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
    await("Original accepted message missing"){d.hasObject(By.textContains(latest))}
    val controls=d.findObject(By.res("native-room-controls")).visibleBounds
    val history=d.findObject(By.res("native-room-history")).visibleBounds
