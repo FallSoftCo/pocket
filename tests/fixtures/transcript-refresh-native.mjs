@@ -10,9 +10,11 @@ const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthe
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
 let notificationAttention=[];
+// Each independent native test may own a fresh synthetic authority; legacy fixtures remain valid.
+const authorized=req=>req.headers.authorization==='Bearer synthetic-system76'||/^Bearer synthetic-system76-[a-f0-9-]{36}$/.test(req.headers.authorization||'');
 const server=http.createServer(async(req,res)=>{
  let raw='';for await(const b of req)raw+=b;
- if(req.headers.authorization!=='Bearer synthetic-system76'){res.writeHead(401);res.end('{}');return;}
+ if(!authorized(req)){res.writeHead(401);res.end('{}');return;}
  const path=new URL(req.url,'http://localhost').pathname;let body={};
  if(holdAncillaries&&['/api/status','/api/activity','/api/notifications','/api/attention'].includes(path)){
   heldAncillaries++;
@@ -174,5 +176,5 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/api/activity'){while(holdActivity)await new Promise(r=>setTimeout(r,30));body={items:[]};}
  res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));
 });
-server.on('upgrade',(req,socket)=>{if(rejectLive){socket.destroy();return;}if(req.headers.authorization!=='Bearer synthetic-system76'){socket.destroy();return;}socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+crypto.createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n\r\n');connections++;sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));if(!quietReconnect)send(socket,{type:'status',connected:!runtimeOffline});});
+server.on('upgrade',(req,socket)=>{if(rejectLive){socket.destroy();return;}if(!authorized(req)){socket.destroy();return;}socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+crypto.createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n\r\n');connections++;sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));if(!quietReconnect)send(socket,{type:'status',connected:!runtimeOffline});});
 server.listen(Number(process.env.PORT||19998),'127.0.0.1',()=>console.log('Owned transcript fixture ready'));

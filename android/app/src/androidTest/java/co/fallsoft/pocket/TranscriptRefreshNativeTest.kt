@@ -27,7 +27,7 @@ class TranscriptRefreshNativeTest {
   // Seed permissions only on the asserted disposable emulator, before launch.
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
-  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","First saved draft").putString("draft:second-thread","Second saved draft").commit()
+  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76-"+java.util.UUID.randomUUID().toString()).putString("deviceId","synthetic-device-a").putString("draft:same-thread","First saved draft").putString("draft:second-thread","Second saved draft").commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
@@ -571,7 +571,7 @@ class TranscriptRefreshNativeTest {
  @Test fun previewDuringScheduledRecentReadIsNotLost(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
-  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Keep my draft").commit()
+  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76-"+java.util.UUID.randomUUID().toString()).putString("deviceId","synthetic-device-a").putString("draft:same-thread","Keep my draft").commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.loading}
@@ -683,7 +683,7 @@ class TranscriptRefreshNativeTest {
  private fun exerciseCurrentHeadsAndInputOrder():android.content.SharedPreferences{
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
-  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Unsaved draft preserved").commit()
+  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76-"+java.util.UUID.randomUUID().toString()).putString("deviceId","synthetic-device-a").putString("draft:same-thread","Unsaved draft preserved").commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.loading}
