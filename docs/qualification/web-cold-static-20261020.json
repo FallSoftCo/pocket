@@ -1,5 +1,5 @@
 {
-  "state": "qualified-not-deployed",
+  "state": "deployed",
   "date": "2026-10-20T05:43:33.288423+00:00",
   "change": "Compress cold-start document and immutable root JavaScript/CSS using negotiated async gzip; bounded per-release single-flight encoded asset cache; preserve conditional and range semantics",
   "protocolTests": {
@@ -54,5 +54,24 @@
     "no-store API/document policy",
     "audio/APK and byte-range delivery",
     "existing positive modeled animation and shared session state"
-  ]
+  ],
+  "actualPrivateReadbacks": {
+    "reopenMs": [
+      12424,
+      6509,
+      11136,
+      13292
+    ],
+    "draftAndCanonicalIdentityRetained": true,
+    "duplicateRows": 0,
+    "humanSubmissions": 0,
+    "ownedQaDevicesRevoked": true,
+    "http1DiagnosticReopenMs": 2174,
+    "http2MainHeaderWaitMs": 11334,
+    "freshCurlFirstByteSeconds": {
+      "http1": 0.3623,
+      "http2": 0.354068
+    }
+  },
+  "remaining": "Real reused HTTP2 cold navigation is not solved by text compression; packet log attributes the delay to previously issued background atlas data. See bounded atlas transfer candidate."
 }

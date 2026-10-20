@@ -35,7 +35,10 @@
     "singleAnnouncement": true,
     "fcmAccepted": true,
     "fcmAttempts": 1,
-    "physicalPhoneInstallVerified": false
+    "physicalPhoneInstallVerified": true,
+    "phoneVersionCode": 139,
+    "phoneApkSha256": "729774543cbe6078aabe78db63bab2376d46167092dc4c20aeca6ae532fbaee5",
+    "verification": "Read-only Termux SSH package/version and APK SHA readback; no install or input replay"
   },
   "preserved": [
     "pairing and existing environment profiles",
@@ -46,7 +49,7 @@
   "limits": [
     "Software emulator key-to-draw timing is not optical handset latency; initial sample exceeded 2 seconds in the loaded emulator.",
     "Cold web reopen measured about 10 seconds; further startup work remains.",
-    "Physical phone audio, notification display and installation are not independently verified for this update."
+    "Physical phone audio and notification display remain unverified; version139 and exact APK bytes are now verified."
   ],
   "publishedAt": "2026-10-20T02:03:16.393911+00:00",
   "volumePresets": {

@@ -7,7 +7,7 @@ const dir=process.env.WEB_EVIDENCE_DIR;await mkdir(dir,{recursive:true});
 const f=await fixture();let browser;const errors=[],evidence=[];
 try{
  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE});
- const context=await browser.newContext({viewport:{width:1440,height:900},colorScheme:'dark'}),page=await context.newPage();page.setDefaultTimeout(8000);page.on('pageerror',e=>errors.push(e.message));const atlasReads=[];page.on('request',r=>{if(r.url().endsWith('.webp'))atlasReads.push(r.url());});
+ const context=await browser.newContext({viewport:{width:1440,height:900},colorScheme:'dark'}),page=await context.newPage();page.setDefaultTimeout(8000);page.on('pageerror',e=>errors.push(e.message));const atlasReads=[];page.on('request',r=>{if(r.url().endsWith('.webp'))atlasReads.push(r.url()+' '+(r.headers()['range']||'full'));});
  await page.goto(f.url);await page.locator('input[name=code]').fill('SYNTHETIC');await page.locator('#pair-form button[type=submit]').click();
  await page.locator('[data-id=parent-123]').click();await page.locator('#transcript .modeled-symbol canvas').first().waitFor({state:'visible'});
  const stats=()=>page.evaluate(async()=>{const m=await import('/symbol-motion.mjs');return m.symbolMotionStats();});
@@ -23,7 +23,7 @@ try{
  const offscreen=await page.evaluate(async()=>{const m=await import('/symbol-motion.mjs'),holder=document.createElement('div');holder.id='offscreen-motion-fixture';holder.style='position:fixed;left:-10000px;top:-10000px';for(let n=0;n<300;n++)holder.append(m.animatedSymbol('codex'));document.body.append(holder);return m.symbolMotionStats();});
  await page.waitForTimeout(200);const afterOffscreen=await stats();assert.ok(afterOffscreen.active<20);await page.locator('#offscreen-motion-fixture').evaluate(n=>n.remove());
  evidence.push('300 offscreen history icons do not join animation work; drawing leaves transcript geometry and typing intact');
- await page.waitForTimeout(2800);assert.equal(atlasReads.length,new Set(atlasReads).size,'looping visible icons do not repeatedly fetch evicted decoded pages');await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(100);const reduced=await stats();await page.waitForTimeout(400);assert.deepEqual(await stats(),reduced);assert.equal(reduced.scheduled,false);assert.equal(await page.locator('.modeled-symbol canvas:visible').count(),0);assert.ok(await page.locator('.modeled-symbol img:visible').count()>0);
+ await page.waitForTimeout(2800);assert.equal(atlasReads.length,new Set(atlasReads).size,'looping visible icons do not fetch the same atlas byte range again');await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(100);const reduced=await stats();await page.waitForTimeout(400);assert.deepEqual(await stats(),reduced);assert.equal(reduced.scheduled,false);assert.equal(await page.locator('.modeled-symbol canvas:visible').count(),0);assert.ok(await page.locator('.modeled-symbol img:visible').count()>0);
  await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForTimeout(200);assert.ok((await stats()).draws>reduced.draws);
  evidence.push('compressed source pages remain bounded and avoid repeated network reads across loops');evidence.push('live reduced-motion preference stops the shared clock and shows static fallback, then resumes');
  // Actual browser lifecycle events, not a mocked document.hidden property.

@@ -1,0 +1,56 @@
+{
+  "state": "qualified-not-deployed",
+  "date": "2026-10-20T06:04:20.587070+00:00",
+  "causeEvidence": {
+    "realHttp2HeaderWaitMs": 11334,
+    "bytesArrivingAheadOfNavigation": {
+      "nextcompAtlas": 330948,
+      "editnoteAtlas": 338920,
+      "catalog": 77335,
+      "staticCodex": 48646
+    },
+    "freshHttp2CurlFirstByteMs": 354,
+    "sameAppHttp1ReopenMs": 2174,
+    "noMotionDiagnostic": "Invalid comparison: Playwright request routing disabled browser caching; not used as proof against motion contention."
+  },
+  "change": "Reassemble immutable original atlas bytes from bounded32KiB HTTP range responses; two page jobs, one sequential range per job; validate representation, length and budget; preserve compressed/decoded LRU, static fallback and no repeated range fetches",
+  "wireTestsPassed": 14,
+  "controlledBrowser": {
+    "state": "complete",
+    "baseline": false,
+    "errors": [],
+    "peakAtlasRequests": 2,
+    "atlasBeforeCatalog": 0,
+    "catalogEncoding": "gzip",
+    "catalogPaintMs": 4272,
+    "clickToMessageMs": 288,
+    "motion": {
+      "draws": 2,
+      "ticks": 5,
+      "active": 7,
+      "decodedBytes": 2097152,
+      "compressedBytes": 330948,
+      "pending": 7,
+      "downloads": 2,
+      "queuedDownloads": 5,
+      "ready": true,
+      "decodeFailures": 0,
+      "scheduled": true
+    },
+    "catalogReads": 2
+  },
+  "motionBrowser": {
+    "passed": true,
+    "evidence": [
+      "actual modeled N and visible dock/message symbols advance rendered pixels on shared display clock; decoded cache <=32MiB",
+      "300 offscreen history icons do not join animation work; drawing leaves transcript geometry and typing intact",
+      "compressed source pages remain bounded and avoid repeated network reads across loops",
+      "live reduced-motion preference stops the shared clock and shows static fallback, then resumes",
+      "browser freeze/resume retains rendered symbols without replaying requests"
+    ]
+  },
+  "limits": [
+    "Actual private HTTP2 reopen qualification and deployment remain pending.",
+    "No Android APK/artwork regeneration or shared Tailscale settings change."
+  ]
+}

@@ -1,3 +1,4 @@
+import {downloadAtlas} from './atlas-download.mjs';
 import {clientBase,clientURL} from './paths.mjs';
 const base=clientBase(import.meta.url),motion=matchMedia('(prefers-reduced-motion: reduce)');
 const active=new Set(),states=new WeakMap(),pages=new Map(),pending=new Map();
@@ -16,7 +17,7 @@ async function loadPage(name,atlas,page){
    let blob=compressed.get(key);
    if(blob){compressed.delete(key);compressed.set(key,blob);}
    else{
-    blob=await download(async()=>{const response=await fetch(clientURL(base,'symbols/motion/'+atlas.pages[page]),{priority:'low',signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('Symbol page unavailable');return response.blob();});
+    blob=await download(()=>downloadAtlas(clientURL(base,'symbols/motion/'+atlas.pages[page])));
     while(compressedBytes+blob.size>compressedBudget&&compressed.size){const [old,value]=compressed.entries().next().value;compressed.delete(old);compressedBytes-=value.size;}
     if(blob.size<=compressedBudget){compressed.set(key,blob);compressedBytes+=blob.size;}
    }

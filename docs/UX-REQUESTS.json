@@ -2885,7 +2885,14 @@
       "implementation": [
         "Only the current service owner publishes presentation state, capture release and recording errors",
         "Native capture test observes the asynchronous durable cancellation result, not merely service destruction"
-      ]
+      ],
+      "deliveryEvidence": {
+        "nativeVersionCode": 139,
+        "exactPhoneApkVerified": true,
+        "requiredNativeCasesPassed": 28,
+        "physicalVoiceVerified": false,
+        "qualification": "docs/qualification/alpha121-20261019.json"
+      }
     },
     {
       "id": "volume-only-capture-and-selected-title-edit-20261019",
@@ -2897,7 +2904,14 @@
         "Keep volume-button operation with keyboard, coordinator and direct conversations, navigation/origin/drafts intact",
         "Select existing title only on entering edit, never reset selection while typing",
         "Update native touch-specific qualification expectations to volume-only UX rather than fake old touch results"
-      ]
+      ],
+      "deliveryEvidence": {
+        "nativeVersionCode": 139,
+        "exactPhoneApkVerified": true,
+        "requiredNativeCasesPassed": 28,
+        "physicalVoiceVerified": false,
+        "qualification": "docs/qualification/alpha121-20261019.json"
+      }
     },
     {
       "id": "web-tailnet-automatic-browser-signin-20261019",
@@ -2920,7 +2934,14 @@
       "id": "complementary-flip-flop-all-units-20261019",
       "request": "Replace the wave with instant roughly 50/50 Italian/English. Every eligible unit must be assigned the opposite language on each flip, with no permanently untranslated ordinary content.",
       "contract": "Stable aligned lexical/phrase units in Italian grammar, complementary phase assignments, one shared ten-second foreground clock, no fade/wipe/frame loop, no tap-initiated phase or scroll reshuffle. Protected literals remain canonical. Missing plans are incomplete coverage, never successful immersion.",
-      "state": "implementation"
+      "state": "implementation",
+      "deliveryEvidence": {
+        "nativeVersionCode": 139,
+        "exactPhoneApkVerified": true,
+        "requiredNativeCasesPassed": 28,
+        "physicalVoiceVerified": false,
+        "qualification": "docs/qualification/alpha121-20261019.json"
+      }
     },
     {
       "id": "web-reading-edge-refresh-flicker-20261019",
@@ -2944,8 +2965,8 @@
       "id": "shared-web-session-state-and-readonly-projection-20261019",
       "request": "Web list shows latest messages while conversation loading lags; both views must share session state.",
       "contract": "One session entity owns catalog metadata and timeline. Meaningful preview/interaction changes invalidate missing content; HTTP catalog changes also reconcile. Live known rows update closed cached sessions; bounded background prewarm requires a read-only timeline capability and its dedicated endpoint. Late responses cannot roll back live metadata. History reads never resume runtime work; explicit commands retain original IDs and control paths.",
-      "state": "candidate-qualified",
-      "status": "deployed-web; native139 remains under qualification"
+      "state": "deployed",
+      "status": "deployed web and native139; exact phone APK verified; ongoing transport-latency work is recorded separately"
     },
     {
       "id": "bounded-semantic-head-20261019",
@@ -3124,16 +3145,22 @@
     "versionCode": 139,
     "evidence": "docs/qualification/alpha121-20261019.json",
     "scope": "Complementary instant inline immersion, canonical history/order recovery, on-demand speech, padded controls/depth, retained volume-key capture, foreground notification handling",
-    "physicalPhoneInstallVerified": false,
+    "physicalPhoneInstallVerified": true,
     "next": [
-      "Reduce measured cold web startup and native audio startup latency; retain tested shared state and bounded traffic architecture",
-      "Verify physical phone audio, notification display and existing 0/50/100 presets when reachable"
+      "Reduce real reused HTTP2 navigation delay using confirmed bounded-background-transfer architecture",
+      "Unify on-demand read-aloud and live voice playback lifecycle; reduce full-clip startup delay",
+      "Verify physical voice/foreground notification interactions; continue immersion coverage and browser/mobile parity"
     ]
   },
   "web_cold_start_static_20261020": {
-    "state": "qualified-not-deployed",
+    "state": "deployed",
     "evidence": "docs/qualification/web-cold-static-20261020.json",
     "purpose": "Reduce avoidable cold startup transfer; preserve critical content priority and shared state",
     "next": "Versioned gateway closure, actual private open/reopen and original draft/row identity verification"
+  },
+  "web_bounded_atlas_transport_20261020": {
+    "state": "qualified-not-deployed",
+    "evidence": "docs/qualification/web-atlas-ranges-20261020.json",
+    "next": "Exact private HTTP2 reopen with original state and positive animation; controlled reversible owning gateway update"
   }
 }
