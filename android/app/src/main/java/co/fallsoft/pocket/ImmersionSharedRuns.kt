@@ -44,21 +44,23 @@ internal fun immersionSharedRuns(forms:List<AnnotatedString>):List<ImmersionShar
     return runs.filter{it.forms.any{form->form.isNotEmpty()}}
 }
 
-/** Complete English references alternate with50%,75%,100%Italian phrase coverage. */
+/** Complete English alternates with the two nearest-half grammatical phrase blocks. */
 internal fun immersionFlipForms(target:AnnotatedString,meaning:AnnotatedString):List<AnnotatedString>? {
     val runs=immersionSharedRuns(listOf(target,meaning))?:return null
     val eligible=runs.filter{it.id!=null&&it.forms[0].any{c->c.isLetter()}}
     if(eligible.isEmpty()||eligible.any{it.forms[1].isBlank()})return null
-    fun mixed(fraction:Double,start:Int):AnnotatedString {
-        val weights=eligible.map{Regex("[\\p{L}\\p{M}]+").findAll(it.forms[0].text).count()}
-        val goal=kotlin.math.ceil(weights.sum()*fraction).toInt()
-        val selected=mutableSetOf<String>();var covered=0
-        for(offset in eligible.indices){
-            if(covered>=goal)break
-            val index=(start+offset)%eligible.size
-            selected+=eligible[index].id!!;covered+=weights[index]
-        }
-        return buildAnnotatedString{for(run in runs)append(run.forms[if(run.id==null||run.id in selected)0 else 1])}
+    val weights=eligible.map{Regex("[\\p{L}\\p{M}]+").findAll(it.forms[0].text).count()}
+    val half=weights.sum()/2.0
+    var covered=0;var best=Double.POSITIVE_INFINITY;var cut=eligible.size
+    for(index in 1 until eligible.size){
+        covered+=weights[index-1]
+        val distance=kotlin.math.abs(half-covered)
+        if(distance<best){best=distance;cut=index}
     }
-    return listOf(meaning,mixed(.5,0),meaning,mixed(.75,eligible.size/2),meaning,target)
+    fun mixed(selected:Set<String>)=buildAnnotatedString{
+        for(run in runs)append(run.forms[if(run.id==null||run.id in selected)0 else 1])
+    }
+    val first=eligible.take(cut).mapNotNull{it.id}.toSet()
+    val second=eligible.drop(cut).mapNotNull{it.id}.toSet()
+    return listOf(meaning,mixed(first),meaning,mixed(second))
 }

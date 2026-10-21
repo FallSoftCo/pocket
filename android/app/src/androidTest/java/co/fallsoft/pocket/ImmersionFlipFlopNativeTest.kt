@@ -42,7 +42,7 @@ class ImmersionFlipFlopNativeTest {
      }}}
     }
    }}
-   val seen=mutableSetOf<String>();val end=android.os.SystemClock.elapsedRealtime()+65000
+   val seen=mutableSetOf<String>();val end=android.os.SystemClock.elapsedRealtime()+45000
    var tapped=false
    while(android.os.SystemClock.elapsedRealtime()<end&&seen!=expected){
     device.findObjects(By.pkg(c.packageName).text(java.util.regex.Pattern.compile("(Puoi|Can-you) .*"))).forEach{node->
@@ -52,7 +52,7 @@ class ImmersionFlipFlopNativeTest {
     Thread.sleep(150)
    }
    device.takeScreenshot(java.io.File(c.cacheDir,"flip-flop-native.png"))
-   assertEquals("Every lexical position must render English reference and50–100%Italian phrase assignments even with animations disabled",expected,seen)
+   assertEquals("Every lexical position must render English reference and complementary half-Italian phrase assignments even with animations disabled",expected,seen)
    assertTrue("Touch remains actionable",taps>0)
    } finally {
     // Stop only the synthetic fixture clock before ActivityScenario waits for idle.

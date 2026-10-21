@@ -7,14 +7,12 @@ export function flipFlopPlan(units){
  const slots=units.map((u,index)=>({...u,id:u.id??index,eligible:!u.literal&&lexical(u.target)}));
  const eligible=slots.filter(u=>u.eligible);
  const weight=u=>(u.target.match(/[\p{L}\p{M}]+/gu)||[]).length;
- const select=(fraction,start)=>{
-  const selected=new Set(),goal=Math.ceil(eligible.reduce((n,u)=>n+weight(u),0)*fraction);let covered=0;
-  for(let i=0;i<eligible.length&&covered<goal;i++){const unit=eligible[(start+i)%eligible.length];selected.add(unit);covered+=weight(unit);}
-  return selected;
- };
- const selections=[new Set(),select(.5,0),new Set(),select(.75,Math.floor(eligible.length/2)),new Set(),new Set(eligible)];
+ const total=eligible.reduce((n,u)=>n+weight(u),0);let cut=eligible.length,covered=0,best=Infinity;
+ for(let i=1;i<eligible.length;i++){covered+=weight(eligible[i-1]);const distance=Math.abs(total/2-covered);if(distance<best){best=distance;cut=i;}}
+ const first=new Set(eligible.slice(0,cut)),second=new Set(eligible.slice(cut));
+ const selections=[new Set(),first,new Set(),second];
  const render=selected=>slots.map(u=>!u.eligible||selected.has(u)?u.target:u.meaning).join('');
- const forms=selections.map(render);
+ const english=render(selections[0]);const forms=[english,render(first),english,render(second)];
  const assignment=phase=>eligible.map(u=>selections[phase].has(u)?'it':'en');
  return {slots,forms,assignment,eligible:taught.length,distinct:slots.filter(u=>u.eligible&&u.target!==u.meaning).length};
 }

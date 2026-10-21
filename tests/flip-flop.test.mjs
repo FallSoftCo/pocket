@@ -4,11 +4,12 @@ import {flipFlopPlan,transgrammaticFlipPlan} from '../web/flip-flop.mjs';
 test('every lexical unit changes assignment and survives both complementary phases',()=>{
  const units=[{target:'Il',meaning:'The'},{target:' ',meaning:' ',literal:true},{target:'lavoro',meaning:'work'},{target:' ',meaning:' ',literal:true},{target:'continua',meaning:'continues'},{target:'.',meaning:'.',literal:true}];
  const plan=flipFlopPlan(units);assert.equal(plan.eligible,3);
- assert.deepEqual(plan.assignment(5),plan.assignment(0).map(x=>x==='it'?'en':'it'));
+ assert.deepEqual(plan.assignment(3),plan.assignment(1).map(x=>x==='it'?'en':'it'));
  for(const unit of units.filter(x=>!x.literal)){assert.equal(Number(plan.forms.some(x=>x.includes(unit.target))),1);assert.equal(Number(plan.forms.some(x=>x.includes(unit.meaning))),1);}
- assert.deepEqual(plan.assignment(0),['en','en','en']);assert.deepEqual(plan.assignment(5),['it','it','it']);
- assert.equal(plan.forms[0],'The work continues.');assert.equal(plan.forms[5],'Il lavoro continua.');
- assert.equal(plan.assignment(1).filter(x=>x==='it').length,2);assert.ok(plan.forms[1].includes('continues'));
+ assert.deepEqual(plan.assignment(0),['en','en','en']);assert.deepEqual(plan.assignment(2),['en','en','en']);
+ assert.equal(plan.forms[0],'The work continues.');assert.ok(plan.forms[1].includes('Il'));assert.ok(plan.forms[3].includes('continua'));
+ assert.equal(plan.assignment(1).filter(x=>x==='it').length,1);assert.ok(plan.forms[1].includes('continues'));
+ assert.equal(plan.forms[0],plan.forms[2]);assert.ok(!plan.forms.includes('Il lavoro continua.'));
  assert.deepEqual(flipFlopPlan(units).forms,plan.forms);
 });
 test('missing lexical equivalents cannot masquerade as completed immersion',()=>{
@@ -31,7 +32,7 @@ test('grammatical phrases flip atomically with complete complementary coverage',
  });
  const plan=transgrammaticFlipPlan(source,{original:source,planVersion:'transgrammatic-english-italian-v3',text:target+'?',spans:[{start:0,end:source.length-1,source:source.slice(0,-1),target,targetSegments}]});
  assert.ok(plan);assert.equal(plan.eligible,3);
- assert.deepEqual(plan.assignment(5),plan.assignment(0).map(x=>x==='it'?'en':'it'));
+ assert.deepEqual(plan.assignment(3),plan.assignment(1).map(x=>x==='it'?'en':'it'));
  for(const [it,en] of pairs){
   assert.equal(Number(plan.forms.some(form=>form.includes(it))),1);
   assert.equal(Number(plan.forms.some(form=>form.includes(en))),1);
