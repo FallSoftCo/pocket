@@ -34,6 +34,8 @@ internal object CodexSessionRepository {
     private val latest=ConcurrentHashMap<Pair<String,String>,JSONObject>()
     private val known=ConcurrentHashMap<Pair<String,String>,Long>()
     private val dirty=ConcurrentHashMap.newKeySet<Pair<String,String>>()
+    private val invalidations=ConcurrentHashMap<Pair<String,String>,Long>()
+    private val invalidationSerial=java.util.concurrent.atomic.AtomicLong()
     private val livePending=ConcurrentHashMap<Triple<String,String,String>,Pair<Source,JSONObject>>()
     private val liveScheduled=java.util.concurrent.atomic.AtomicBoolean()
     private val lastLive=ConcurrentHashMap<Pair<String,String>,Long>()
@@ -56,6 +58,7 @@ internal object CodexSessionRepository {
                 if(!current(source))throw CancellationException("Pairing changed")
                 val baseline=latest[key]?.optJSONObject("historyHead")?.s("epoch")
                 val notificationAtStart=known[key]?:0
+                val invalidationAtStart=invalidations[key]?:0
                 val liveAtStart=liveGenerations[key]?:0
                 val path="/api/threads/"+android.net.Uri.encode(id)+(if(background)"/head" else "?view=timeline")
                 val response=CodexReadTransport.read(destination,path,client=if(background)backgroundClient else CodexReadTransport.historyClient)
@@ -63,6 +66,7 @@ internal object CodexSessionRepository {
                 if(!baseline.isNullOrBlank()&&currentEpoch!=baseline&&response.optJSONObject("historyHead")?.s("epoch")==baseline)
                     throw java.io.IOException("Message runtime changed during the read")
                 response.put("_notificationObserved",notificationAtStart)
+                response.put("_catalogObserved",invalidationAtStart)
                 response.put("_liveGenerationAtReadStart",liveAtStart)
             }.also{created->
                 requests[key]=created
@@ -72,12 +76,14 @@ internal object CodexSessionRepository {
         val response=request.await()
         return withContext(Dispatchers.Default){JSONObject(response.toString())}
     }
+    internal fun currentSnapshot(destination:EnvironmentRequest,id:String,value:JSONObject):Boolean=
+        value.optLong("_catalogObserved")==(invalidations[source(destination).scope to id]?:0)
     private fun current(source:Source)=Pocket.captureEnvironment(source.destination.environment.id)?.matches(source.destination)==true
     fun peek(id:String):JSONObject? {
         val destination=Pocket.captureEnvironment()?:return null
         return latest[source(destination).scope to id]
     }
-    fun canPresent(id:String,value:JSONObject):Boolean=notificationWatermark(id)<=value.optLong("throughNotification")
+    fun canPresent(id:String,value:JSONObject):Boolean=notificationWatermark(id)<=value.optLong("throughNotification")&&!isDirty(id)
     fun isDirty(id:String):Boolean {
         val destination=Pocket.captureEnvironment()?:return true
         return (source(destination).scope to id) in dirty
@@ -192,6 +198,11 @@ internal object CodexSessionRepository {
             if(notification<=(known[key]?:0))return
             known.merge(key,notification){a,b->maxOf(a,b)}
         }
+        if(!current(source))return
+        // Publish missing-content evidence before the card can recompose or be
+        // tapped. Disk restoration/network admission must never delay this flag.
+        invalidations[key]=invalidationSerial.incrementAndGet()
+        dirty.add(key)
         io.launch{
             ensurePump();if(!current(source))return@launch
             load(source,id)
@@ -251,7 +262,7 @@ internal object CodexSessionRepository {
             val high=safe.optLong("throughNotification")
             known[source.scope to id]=maxOf(known[source.scope to id]?:0,high)
             val key=source.scope to id
-            if(key !in pending)dirty.remove(key)
+            if(key !in pending&&value.optLong("_catalogObserved")==(invalidations[key]?:0))dirty.remove(key)
             save(source,id,safe,key in dirty)
         }
     }
@@ -337,7 +348,7 @@ internal object CodexSessionRepository {
                         retainNewerLiveHead(key,safe,response.optLong("_liveGenerationAtReadStart"))
                         enforcePositions(intent.source.scope,intent.thread,safe)
                         latest[key]=safe
-                        if(!pending.containsKey(key))dirty.remove(key)
+                        if(!pending.containsKey(key)&&response.optLong("_catalogObserved")==(invalidations[key]?:0))dirty.remove(key)
                         save(intent.source,intent.thread,safe,pending.containsKey(key))
                         withContext(Dispatchers.Main.immediate){
                             if(Pocket.captureEnvironment()?.matches(intent.source.destination)==true)

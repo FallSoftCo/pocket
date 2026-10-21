@@ -75,9 +75,12 @@ class CodexClosedSessionSyncNativeTest {
    main{Pocket.closeTask();PocketLive.stop()}
    val destination=requireNotNull(Pocket.captureEnvironment())
    runBlocking{CodexCatalog.source(destination).head()}
-   qa("search-only-update")
+   qa("search-only-update");qa("hold-history")
    runBlocking{CodexCatalog.source(destination).readPage("fresh")}
    assertEquals("Search did not advance its card","Fresh response 2",CodexCatalog.source(destination).tasks.first{it.id=="same-thread"}.preview)
+   assertTrue("A newer card left the old shared snapshot marked current",CodexSessionRepository.isDirty("same-thread"))
+   assertFalse("Dirty cached text was still presentable",CodexSessionRepository.canPresent("same-thread",requireNotNull(CodexSessionRepository.peek("same-thread"))))
+   qa("release-history")
    await("Card advanced but the shared message snapshot remained stale"){
     CodexSessionRepository.peek("same-thread")?.getJSONObject("timeline")?.getJSONArray("rows")?.objects()?.any{it.s("text")=="Fresh response 2"}==true&&
      !CodexSessionRepository.isDirty("same-thread")

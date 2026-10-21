@@ -392,6 +392,12 @@ object PocketTranscript {
                 }
             }
             val d=if(latest)CodexSessionRepository.readCurrent(destination,id)else CodexReadTransport.read(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
+            if(latest&&!CodexSessionRepository.currentSnapshot(destination,id,d)){
+                // New catalog evidence superseded this read. Keep the viewport
+                // and retry through its owner; this is not a network failure.
+                CodexConversations.continueLatest()
+                return
+            }
             validateTranscriptSnapshot(d,id)
             if(older)beforeApply()
             if(!current()||!reads.active(read))return
