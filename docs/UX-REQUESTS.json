@@ -3063,6 +3063,16 @@
       ],
       "qualification": "Ten required native journeys and exact compatible optimized APK passed. Further intentional-reading checks tracked separately; emulator and physical-phone evidence are distinguished.",
       "evidence": "docs/qualification/android-history-windows-147.json"
+    },
+    {
+      "id": "actual-alpha110-visible-window-and-viewport-demand-148",
+      "request": "Installed147 still shows Alpha110 installed messages, missing intervening content, then latest. Do not treat an interval marker as success. Render connected current history and hydrate a usable viewport, preserving stored old content and deliberate reading restoration.",
+      "status": "implementation and real-session native replay qualification in progress",
+      "acceptance": [
+        "Actual session read-only pages with stale Alpha110 cache and stale saved anchor never paint the old island as current predecessor",
+        "Bounded viewport hydration handles tool-heavy raw pages and collapsed runs without repeated user gestures or whole-history download",
+        "Keep old local bodies, input order, drafts, pairing, source isolation and current/older read independence"
+      ]
     }
   ],
   "current_state": {

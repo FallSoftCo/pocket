@@ -36,5 +36,6 @@
     "coldRestorationUnderBlockedHistory": "restored correct anchor with history still blocked; measured3024ms missed2000ms target on software emulator",
     "performanceTargetMet": false,
     "followUp": "Cold disk/viewport restoration latency remains open; do not claim flawless or subsecond loading."
-  }
+  },
+  "knownPostReleaseFailure": "User confirmed installed147 still displays Alpha110 cache islands adjacent to latest. Prior tests proved gap bookkeeping, not a usable contiguous reading window.148 must reproduce this actual-session case before claiming repair."
 }

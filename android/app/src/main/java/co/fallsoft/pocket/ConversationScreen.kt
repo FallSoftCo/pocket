@@ -614,16 +614,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     CodexConversations.readerInteraction(conversation.key,conversation.incarnation);follow=false;filterPassage=null
                     if(up){
                         historyGesture++;pageGesture=historyGesture
-                        if(!important&&gapNearViewport()){
-                            viewportGap()?.let{gap->
-                                readViewportGap(gap,pageGesture)
-                            }
-                        }
-                        if(!important&&!list.canScrollBackward&&PocketTranscript.earlier){
+                        if(!important&&(gapNearViewport()||!list.canScrollBackward&&PocketTranscript.earlier)){
                             if(PocketTranscript.loading)snapshotFlow{PocketTranscript.loading}.first{!it}
                             val cursor=PocketTranscript.before
-                            if(PocketTranscript.earlier)CodexConversations.readFrom(conversation.key,conversation.incarnation,older=true)
-                            pageHydrated=!PocketTranscript.earlier||PocketTranscript.before!=cursor
+                            val gaps=PocketTranscript.historyGaps.map{it.id to it.cursor}
+                            hydrateViewport(pageGesture)
+                            pageHydrated=(!PocketTranscript.earlier&&PocketTranscript.historyGaps.isEmpty())||
+                                PocketTranscript.before!=cursor||PocketTranscript.historyGaps.map{it.id to it.cursor}!=gaps
                         }
                     }
                 },onSettled={up,completed->

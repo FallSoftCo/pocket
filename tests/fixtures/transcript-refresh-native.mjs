@@ -46,6 +46,18 @@ const server=http.createServer(async(req,res)=>{
   if(!page){res.writeHead(409,{'Content-Type':'application/json'});res.end('{"error":"Read-only capture boundary; not EOF"}');return;}
   res.setHeader('Content-Type','application/json');res.end(JSON.stringify(replayResponse(page)));return;
  }
+ if(replayEnabled&&path==='/api/threads/same-thread/timeline/position'&&req.method==='POST'){
+  const input=JSON.parse(raw);const order=[],seen=new Set();
+  for(const page of [...replay.pages].reverse())for(const row of page.response.timeline.rows){
+   if(row.turnId===input.turnId&&!['turn','turnEnd','request','attachments'].includes(row.kind)&&!seen.has(row.id)){seen.add(row.id);order.push(row);}
+  }
+  const item=r=>r.itemId||r.id?.replace(input.turnId+'/','');
+  const at=order.findIndex(r=>item(r)===input.itemId||input.clientId&&r.clientId===input.clientId);
+  const known=new Set(input.knownItemIds||[]);
+  const next=at<0?null:order.slice(at+1).find(r=>known.has(item(r)));
+  res.setHeader('Content-Type','application/json');
+  res.end(JSON.stringify({available:at>=0,insertBefore:next?.id||null,cursor:null}));return;
+ }
  if(replayEnabled&&req.method!=='GET'&&path.startsWith('/api/')){
   res.writeHead(403,{'Content-Type':'application/json'});res.end('{"error":"Read-only history replay; no work admission"}');return;
  }
