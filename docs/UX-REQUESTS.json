@@ -3233,7 +3233,7 @@
     "evidence": "docs/qualification/native-json-transport-20261020.json"
   },
   "catalog_consistency_20261021": {
-    "status": "candidate146; native qualification pending",
+    "status": "146/alpha128 qualified and published; physical installation pending verification",
     "requirements": [
       "Legacy paired stock gateways without backend discovery remain readable only after authenticated canonical catalog verification; retain real authentication/network errors",
       "Every accepted head/search/page catalog update invalidates the same environment-bound message snapshot",

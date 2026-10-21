@@ -1,5 +1,5 @@
 {
-  "state": "candidate-native-qualification-pending",
+  "state": "qualified-and-published",
   "versionCode": 146,
   "scope": [
     "Legacy stock discovery compatibility",
@@ -19,5 +19,29 @@
     "No model or command replay",
     "Installed145 remains until qualification and signed update publication",
     "Specific reported session still requested; sampled fast backend reads alone do not establish handset freshness"
-  ]
+  ],
+  "versionName": "0.5.0-alpha.128",
+  "sourceCommit": "c175308",
+  "compatibleApkSha256": "31fe409d164b75ccca4a030f6ab988dbcfa4741b8a64a14d08c22260727ab620",
+  "unit": {
+    "debug": 411,
+    "release": 411,
+    "failures": 0
+  },
+  "lint": "debug/release passed",
+  "nativeJourneys": 6,
+  "legacyPhoneThreadAttachmentReads": 0,
+  "optimized": {
+    "exactSignedApk": true,
+    "stockMissedEventVisibleMs": 7216,
+    "roomCatalogAndOriginalMessage": true,
+    "volumeKeysImeDraftAndOrigin": true,
+    "providerSpeechQualified": false,
+    "physicalPhoneQualified": false
+  },
+  "delivery": {
+    "channels": "existing workstation and additive Mac",
+    "announcement": "one accepted by FCM",
+    "phoneInstallation": "not yet verified"
+  }
 }
