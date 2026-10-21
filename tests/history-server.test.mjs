@@ -9,7 +9,7 @@ import {once} from 'node:events';
 import {DatabaseSync} from 'node:sqlite';
 import {WebSocketServer,WebSocket} from 'ws';
 
-test('HTTP conversation loading uses metadata-only resume and opaque history pages; outages identify the failed connection',async t=>{
+test('HTTP conversation loading stays read-only with opaque history pages; outages identify the failed connection',async t=>{
  const dir=await mkdtemp(join(tmpdir(),'pocket-history-http-')),socket=join(dir,'codex.sock');
  const upstream=http.createServer(),wss=new WebSocketServer({server:upstream});await new Promise(r=>upstream.listen(socket,r));
  const allocator=http.createServer();await new Promise(r=>allocator.listen(0,'127.0.0.1',r));const port=allocator.address().port;await new Promise(r=>allocator.close(r));
@@ -51,7 +51,7 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
  assert.ok(forwarded.at-sentAt<1000,'Forwarding waited for history/runtime reads');
  assert.equal(calls.filter(c=>['thread/resume','thread/turns/list','thread/items/list','turn/start'].includes(c.method)).length,beforeUnopened,'Public forwarding started history or model work');
  const recent=await api('/api/threads/large-thread?view=timeline');assert.equal(recent.status,200);assert.equal(recent.data.timeline.rows[0].turnId,'turn-15');assert.ok(recent.data.timeline.hasEarlier);
- assert.equal(blockedRecovery.length,1,'recent HTTP response must finish while missed-history recovery is still blocked');
+ assert.equal(blockedRecovery.length,0,'A read-only recent projection must not start an unrelated summary recovery');
  const historyCount=()=>calls.filter(c=>/^thread\/(read|resume|turns\/list|items\/list)$/.test(c.method)).length;
  const beforeProbe=historyCount();const headStatus=await api('/api/status?threadId=large-thread');
  assert.equal(headStatus.status,200);assert.deepEqual(headStatus.data.historyHead,recent.data.historyHead);
@@ -78,7 +78,7 @@ test('HTTP conversation loading uses metadata-only resume and opaque history pag
    seen.push(page.rows[0].turnId);
  }
  assert.deepEqual(seen,Array.from({length:16},(_,i)=>'turn-'+(15-i)),'older pages must remain complete and ordered');
- assert.ok(calls.filter(c=>c.method==='thread/resume').every(c=>c.params.excludeTurns));
+ assert.equal(calls.filter(c=>c.method==='thread/resume').length,0,'Read-only paging must never attach or resume the thread');
  assert.ok(calls.filter(c=>c.method==='thread/read').every(c=>!c.params.includeTurns));
  const beforeCold=calls.length;const cold=await api('/api/threads/cold-thread?view=timeline');assert.equal(cold.status,200);assert.equal(cold.data.timeline.rows[0].turnId,'turn-15');assert.ok(calls.slice(beforeCold).every(c=>c.method!=='thread/read'||!c.params.includeTurns),'cold recent attach must not fetch full history when pagination hint is absent');
  const afterColdDb=new DatabaseSync(join(dir,'pocket.sqlite'));afterColdDb.prepare('DELETE FROM watches WHERE thread_id=?').run('cold-thread');afterColdDb.close();

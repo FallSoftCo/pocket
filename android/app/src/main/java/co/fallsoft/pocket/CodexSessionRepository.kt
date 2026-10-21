@@ -268,8 +268,6 @@ internal object CodexSessionRepository {
         val source=source(destination)
         io.launch{
             if(!current(source))return@launch
-            val page=JSONObject(safe.getJSONObject("timeline").toString())
-            safe.put("timeline",page)
             retainNewerLiveHead(source.scope to id,safe,value.optLong("_liveGenerationAtReadStart"))
             enforcePositions(source.scope,id,safe)
             val stored=putLatest(source.scope to id,safe)
@@ -288,7 +286,7 @@ internal object CodexSessionRepository {
         val oldHead=previous.optJSONObject("historyHead")?:return
         val newHead=safe.optJSONObject("historyHead")?:return
         if(oldHead.s("epoch")!=newHead.s("epoch")||oldHead.optLong("version")<=newHead.optLong("version"))return
-        val rows=mergeRestoredTranscriptRows(safe.getJSONObject("timeline").getJSONArray("rows").objects(),previous.getJSONObject("timeline").getJSONArray("rows").objects())
+        val rows=newerTranscriptHead(safe.getJSONObject("timeline").getJSONArray("rows").objects(),previous.getJSONObject("timeline").getJSONArray("rows").objects())?:return
         safe.getJSONObject("timeline").put("rows",org.json.JSONArray(rows))
         safe.put("historyHead",oldHead)
     }
@@ -364,8 +362,6 @@ internal object CodexSessionRepository {
                         if(!current(intent.source))continue
                         validateTranscriptSnapshot(response,intent.thread)
                         val safe=presentation(response)
-                        val page=JSONObject(safe.getJSONObject("timeline").toString())
-                                    safe.put("timeline",page)
                         retainNewerLiveHead(key,safe,response.optLong("_liveGenerationAtReadStart"))
                         enforcePositions(intent.source.scope,intent.thread,safe)
                         val stored=putLatest(key,safe)

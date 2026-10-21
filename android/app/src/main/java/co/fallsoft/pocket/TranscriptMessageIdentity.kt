@@ -150,3 +150,18 @@ internal fun groupTranscriptTurns(rows:List<JSONObject>):List<JSONObject>{
     }
     return groups.values.flatten()
 }
+
+/** Reconcile only the current canonical window with its overlapping live tail.
+ * An older retained prefix is not part of this server page and cannot inherit
+ * its cursor. Without an overlap, keep the read's head instead of guessing. */
+internal fun newerTranscriptHead(canonical:List<JSONObject>,live:List<JSONObject>):List<JSONObject>?{
+    val ids=canonical.mapTo(hashSetOf()){it.s("id")}
+    val boundary=live.indexOfLast{it.s("id") in ids}
+    if(boundary<0)return null
+    val previous=live.associateBy{it.s("id")}
+    val current=canonical.map{row->
+        val newer=previous[row.s("id")]?.takeIf{it.optLong("version")>row.optLong("version")}
+        if(newer==null)row else mergeTranscriptMessageEvidence(row,newer,preferIncoming=true)
+    }
+    return groupTranscriptTurns(current+live.drop(boundary+1).filter{it.s("id") !in ids})
+}

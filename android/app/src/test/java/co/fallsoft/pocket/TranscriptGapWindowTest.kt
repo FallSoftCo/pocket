@@ -42,4 +42,14 @@ class TranscriptGapWindowTest {
   assertNull(missingTranscriptWindow(head,head,page,emptyList()))
   assertNull(missingTranscriptWindow(old,head,JSONObject().put("hasEarlier",false),emptyList()))
  }
+
+ @Test fun newerLiveHeadCannotSmuggleAnOldDisconnectedPrefixIntoTheCurrentWindow(){
+  fun row(id:String,version:Int=0)=JSONObject().put("id",id).put("kind","message").put("version",version)
+  val canonical=listOf(row("current-a"),row("current-b"))
+  val live=listOf(row("oct10"),row("current-a"),row("current-b",10),row("new-live",11))
+  val merged=newerTranscriptHead(canonical,live)!!
+  assertEquals(listOf("current-a","current-b","new-live"),merged.map{it.s("id")})
+  assertEquals(10,merged[1].optInt("version"))
+  assertNull(newerTranscriptHead(canonical,listOf(row("disconnected"))))
+ }
 }
