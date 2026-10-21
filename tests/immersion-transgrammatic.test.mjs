@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {EventEmitter} from 'node:events';
 import {ImmersionWorker} from '../server/immersion-worker.mjs';
 import {immersionHash,deriveImmersionText} from '../server/immersion-plan.mjs';
-import {transgrammaticContract,validateTransgrammaticPlan,TRANSGRAMMATIC_VERSION} from '../server/immersion-transgrammatic.mjs';
+import {transgrammaticContract,validateTransgrammaticPlan,TRANSGRAMMATIC_VERSION,grammaticalTargetSegments} from '../server/immersion-transgrammatic.mjs';
 
 const source='Your connection is available.';
 const target='La tua connessione è disponibile.';
@@ -196,4 +196,14 @@ test('phrase-generator revision replaces legacy cache lazily and persists the re
  w=make();w.submit('a',[{id:'body',text:source}]);
  w.translate=async()=>{throw Error('Accepted phrase cache must survive reopening');};
  await w.flush();assert.equal(w.snapshot('a').translations.length,1);assert.equal(w.snapshot('a').jobs.length,0);w.close();
+});
+
+test('articles cannot be isolated from noun phrases at a flip boundary',()=>{
+ const words=[{target:'Il',meaning:'The',occurrence:0,group:0},{target:'messaggio',meaning:'message',occurrence:0,group:1}];
+ assert.equal(grammaticalTargetSegments('Il messaggio',words),null);
+ const grouped=grammaticalTargetSegments('Il messaggio',words.map(w=>({...w,group:0})));
+ assert.equal(grouped.length,1);assert.equal(grouped[0].target,'Il messaggio');assert.equal(grouped[0].meaning,'The message');
+ const prep=[{target:'nella',meaning:'in-the',occurrence:0,group:0},{target:'conversazione',meaning:'conversation',occurrence:0,group:1}];
+ assert.equal(grammaticalTargetSegments('nella conversazione',prep),null);
+ assert.equal(grammaticalTargetSegments('nella conversazione',prep.map(w=>({...w,group:0})))[0].meaning,'in-the conversation');
 });
