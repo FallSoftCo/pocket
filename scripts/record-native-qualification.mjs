@@ -68,7 +68,9 @@ try{
   if(existsSync('/proc/'+owner.fixturePid))throw Error('Old owned fixture has not stopped.');
  }
  const fd=openSync(join(directory,'fixture-'+id+'.log'),'wx',0o600);
- fixture=startOwnedFixture(resolve(root,fixtureScript),{cwd:root,env:{...childEnv,PORT:fixturePort,NEXTCOMP_QA_EPOCH:crypto.randomUUID(),NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},fd});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
+ const replayPath=name==='co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#actualHistoryReplayNeverPaintsAlpha110IslandAndFillsRecentViewport'?process.env.NEXTCOMP_QA_HISTORY_REPLAY:null;
+ if(replayPath&&(!replayPath.startsWith('/')||!existsSync(replayPath)))throw Error('Private history replay capture unavailable.');
+ fixture=startOwnedFixture(resolve(root,fixtureScript),{cwd:root,env:{...childEnv,...(replayPath?{NEXTCOMP_QA_HISTORY_REPLAY:replayPath}:{}),PORT:fixturePort,NEXTCOMP_QA_EPOCH:crypto.randomUUID(),NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},fd});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
  run(['reverse','tcp:18880','tcp:'+fixturePort]);
  for(const [from,to] of Object.entries(owner.reversePorts||{})){if(!/^\d{4,5}$/.test(from)||!Number.isSafeInteger(to)||to<1024||to>65535)throw Error('Invalid owned QA reverse mapping');run(['reverse','tcp:'+from,'tcp:'+to]);}
