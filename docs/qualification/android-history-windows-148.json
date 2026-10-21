@@ -1,0 +1,35 @@
+{
+  "versionCode": 148,
+  "version": "0.5.0-alpha.130",
+  "state": "published-system76-awaiting-phone-install",
+  "productionSourceSha": "e9ac8cfff4b3285d317503d10502b016b0cb8f5e63549f9197ef58697b155e2e",
+  "changes": [
+    "Project connected canonical history windows without deleting retained cached bodies.",
+    "Bounded automatic viewport backfill rather than one raw page per gesture.",
+    "Stage delayed user inputs until canonical position proof; commit proof and placement together."
+  ],
+  "evidence": {
+    "requiredNativeJourneys": 7,
+    "allPassed": true,
+    "actualPrivateHistoryReplayPages": 25,
+    "privateCaptureSha256": "a54c5e29094ea10583d63f82daa03685178d1314aeef2bf0859fcae5261e2c3e",
+    "heldInputPlacementNativePassed": true,
+    "optimizedExactPayload": true,
+    "newWorkSubmissions": 0,
+    "phoneTouched": false
+  },
+  "retainedFailure": {
+    "firstNativeAttempt": "Private capture environment was not forwarded to the fixture; failed before UI assertions. Corrected narrow recorder allowlist and reran unchanged APK."
+  },
+  "limits": [
+    "Installed phone remains147 until actual update confirmation.",
+    "Software emulator optimized cold silent head8091ms; speed is not fully resolved.",
+    "Physical phone audio/provider speech not qualified.",
+    "Actual transcript capture remains private; no real chat screenshots published."
+  ],
+  "notification": {
+    "id": 2265,
+    "state": "accepted_by_fcm",
+    "attempts": 1
+  }
+}
