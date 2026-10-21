@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {displayItem} from './timeline.mjs';
 import {HistoryPositionIndex} from './history-position-index.mjs';
 
@@ -14,7 +15,11 @@ export class ThreadHistory {
     const validId=v=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,256}$/.test(v);
     if(!validId(threadId)||!validId(turnId)||!validId(itemId)||!Array.isArray(knownItemIds)||knownItemIds.length>256||knownItemIds.some(id=>!validId(id)))throw invalid();
     if(clientId!=null&&!validId(clientId))throw invalid();
+    if(cursor!=null&&(typeof cursor!=='string'||cursor.length>16000))throw invalid();
     const observed=this.positions.resolve(threadId,turnId,{itemId,clientId,knownItemIds});if(observed)return observed;
+    if(cursor?.startsWith('position-scan:'))return this.scanItemSuccessor(threadId,{turnId,itemId,clientId,knownItemIds,cursor});
+    if(this.itemAnchorsSupported===false&&!this.turnOnlyThreads.has(threadId))
+      return this.scanItemSuccessor(threadId,{turnId,itemId,clientId,knownItemIds});
     let next={type:'item',itemId};
     if(cursor!=null){
       if(typeof cursor!=='string'||cursor.length>16000||!cursor.startsWith('position:'))throw invalid();
@@ -30,7 +35,10 @@ export class ThreadHistory {
       try{page=await this.codex.call('thread/items/list',{threadId,turnId,cursor:next,sortDirection:'asc',limit:8});}
       catch(e){
         if(unsupportedItems(e)||/invalid type: map, expected a string/i.test(e.message||'')){
-          if(!unsupportedItems(e))this.itemAnchorsSupported=false;
+          if(!unsupportedItems(e)){
+            this.itemAnchorsSupported=false;
+            return this.scanItemSuccessor(threadId,{turnId,itemId,clientId,knownItemIds});
+          }
           return {available:false,insertBefore:null,cursor:null};
         }
         throw e;
@@ -43,6 +51,45 @@ export class ThreadHistory {
       next=page.nextCursor;
     }
     return {available:true,insertBefore:null,cursor:encode('position:',{threadId,turnId,itemId,next})};
+  }
+  // Some native versions accept only opaque list cursors, not item anchors.
+  // Walk bounded descending pages for this exact input, carrying the nearest
+  // already-visible successor across continuations. This never resumes a thread
+  // and never sorts by arrival time, text or opaque item IDs.
+  async scanItemSuccessor(threadId,{turnId,itemId,clientId,knownItemIds,cursor=null}){
+    const known=new Set(knownItemIds);known.delete(itemId);
+    const digest=createHash('sha256').update(JSON.stringify([...known].sort())).digest('hex');
+    let next=null,successor=null;
+    if(cursor){
+      let state;try{state=JSON.parse(Buffer.from(cursor.slice(14),'base64url').toString());}catch{throw Object.assign(Error('Invalid item position.'),{status:400});}
+      if(state.threadId!==threadId||state.turnId!==turnId||state.itemId!==itemId||state.clientId!==clientId||state.knownDigest!==digest||
+          typeof state.next!=='string'||!state.next||state.successor!=null&&!known.has(state.successor))
+        throw Object.assign(Error('Invalid item position.'),{status:400});
+      next=state.next;successor=state.successor;
+    }
+    const visited=new Set();
+    for(let n=0;n<4;n++){
+      if(visited.has(next))throw Error('Codex returned a repeated item position.');visited.add(next);
+      let page;
+      try{page=await this.codex.call('thread/items/list',{threadId,turnId,sortDirection:'desc',limit:8,...(next?{cursor:next}:{})});}
+      catch(error){
+        if(unsupportedItems(error)||/invalid type: map, expected a string/i.test(error.message||''))
+          return {available:false,insertBefore:null,cursor:null};
+        throw error;
+      }
+      for(const entry of page.data||[]){
+        if(entry.turnId!=null&&entry.turnId!==turnId)throw Error('Codex returned an item outside the requested turn.');
+        const raw=entry.item;if(!raw)continue;
+        const item=this.identity?.item(threadId,turnId,raw)||raw;
+        const row=item._pocketRow||item;
+        const same=item.type==='userMessage'&&(clientId?(row.clientId||row.clientUserMessageId)===clientId:raw.id===itemId);
+        if(same)return {available:true,insertBefore:successor?turnId+'/'+successor:null,cursor:null};
+        if(known.has(raw.id)&&displayItem(item,turnId))successor=raw.id;
+      }
+      if(!page.nextCursor)return {available:false,insertBefore:null,cursor:null,awaitingHistory:true};
+      next=page.nextCursor;
+    }
+    return {available:false,insertBefore:null,cursor:encode('position-scan:',{threadId,turnId,itemId,clientId,knownDigest:digest,next,successor})};
   }
   async preview(metadata){
     const thread=await this.read(metadata,{summary:true});this.onPreview(thread);

@@ -116,3 +116,28 @@ Cold background transcript reads require advertised readOnlyTimeline capability 
 
 
 Known missing-content evidence marks the shared cache dirty synchronously before the updated card can be tapped. Dirty cached text is not current presentation. Each read carries the invalidation generation it observed; an earlier in-flight read cannot clear a newer invalidation. A superseded foreground result quietly requests the next owned read, rather than showing a connection error or presenting stale text as current.
+
+
+## Canonical history windows and entry intent (2026-10-21)
+
+A server page and its cursor are one presentation-cache unit. Trimming a row prefix
+while keeping that cursor skips the removed prefix on the next request, so shared
+caches now retain complete bounded windows and evict whole snapshots under byte
+budgets. Legacy shared snapshots require current revalidation. Eviction never
+changes draft, pairing, delivery or read-acknowledgement journals.
+
+A current window does not establish coverage back to an older retained window.
+Shared-cache ingress and disk/memory restoration register explicit missing
+intervals through the same window-boundary reducer as current HTTP reads.
+Historical demand remains independent of the current-message lane.
+
+An explicit conversation opening targets latest. Foreground restoration and an
+explicit resume-reading intent retain the saved anchor. UI restoration state is
+scoped to the conversation incarnation as well as its source, preventing a
+retired viewport's anchor from controlling a newly selected one.
+
+Provider turn/item/client identity establishes message order. Native versions
+that support only opaque item cursors use bounded descending position lookup,
+carrying the nearest visible successor across source-bound continuations.
+No history repair starts a model turn, resends input, or uses message text as
+identity. Candidate qualification is recorded separately from deployment.

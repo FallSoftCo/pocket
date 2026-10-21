@@ -59,7 +59,7 @@ class TranscriptRefreshNativeTest {
   assertEquals(Pocket.prefs.getString("position-journal-qa-scope",null),PocketTranscript.scopeKey())
   val expected=JSONObject(Pocket.prefs.getString("position-journal-qa-expected",null)!!)
   val started=android.os.SystemClock.elapsedRealtime()
-  main{Pocket.open("same-thread")}
+  main{Pocket.open("same-thread",resumeReading=true)}
   await{has(1)&&PocketTranscript.loading&&PocketTranscript.readPosition?.rowId==expected.s("row")&&PocketTranscript.readPosition?.offset==expected.optInt("offset")}
   val elapsed=android.os.SystemClock.elapsedRealtime()-started
   assertFalse(PocketTranscript.readPosition!!.follow)
@@ -121,7 +121,7 @@ class TranscriptRefreshNativeTest {
   val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",org.json.JSONArray().put(bare)).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("position",JSONObject().put("row","identity/item-183").put("offset",17).put("follow",false))
   assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
   val restored=PocketTranscript.cacheRestoreRevision
-  main{Pocket.open("same-thread")};await{PocketTranscript.cacheRestoreRevision>restored&&PocketTranscript.loading}
+  main{Pocket.open("same-thread",resumeReading=true)};await{PocketTranscript.cacheRestoreRevision>restored&&PocketTranscript.loading}
   assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"})
   qa("release-history");await{has(1)&&!PocketTranscript.updating}
   fun users()=PocketTranscript.rows.filter{it.s("kind")=="user"}
@@ -146,7 +146,7 @@ class TranscriptRefreshNativeTest {
   val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("position",JSONObject().put("row","identity/item-32").put("offset",17).put("follow",false))
   assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
   val restoredBefore=PocketTranscript.cacheRestoreRevision
-  main{Pocket.open("same-thread")};await{PocketTranscript.cacheRestoreRevision>restoredBefore&&PocketTranscript.loading}
+  main{Pocket.open("same-thread",resumeReading=true)};await{PocketTranscript.cacheRestoreRevision>restoredBefore&&PocketTranscript.loading}
   assertEquals("Legacy reading anchor was lost during duplicate collapse","identity/client-user/send-one",PocketTranscript.readPosition?.rowId)
   assertEquals(17,PocketTranscript.readPosition?.offset)
   assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"})
@@ -160,7 +160,7 @@ class TranscriptRefreshNativeTest {
   assertEquals(2,users().size);assertEquals(firstId,users().first().s("id"))
   await{device.findObjects(By.text("Same deliberate text")).size==2}
   main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}}
-  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&users().firstOrNull{it.s("clientId")=="send-one"}?.s("itemId")=="item-183"}
+  main{Pocket.open("same-thread",resumeReading=true)};await{has(1)&&!PocketTranscript.updating&&users().firstOrNull{it.s("clientId")=="send-one"}?.s("itemId")=="item-183"}
   assertEquals(2,users().size)
   assertEquals("History replacement discarded live provider evidence",firstId,transcriptDisplayAnchor(PocketTranscript.rows,"identity/new-live-id"))
   assertEquals("Canonical history reference no longer addresses the send",firstId,transcriptDisplayAnchor(PocketTranscript.rows,"identity/item-183"))

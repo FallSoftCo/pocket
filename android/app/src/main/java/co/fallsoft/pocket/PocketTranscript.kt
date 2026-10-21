@@ -49,12 +49,27 @@ object PocketTranscript {
     private val bridgeBefore get()=gapWindows.lastOrNull()?.cursor
     private val bridgeKnown get()=gapWindows.lastOrNull()?.olderAnchor?.let{setOf(it)}.orEmpty()
     private val bridgeBoundary get()=gapWindows.lastOrNull()?.beforeRow
-    private fun beginGap(cursor:String,boundary:String?,known:Set<String>){
+    private fun beginGap(cursor:String,boundary:String?,known:Collection<String>){
         val older=known.lastOrNull()?:return
         if(boundary==null||gapWindows.any{it.beforeRow==boundary||it.cursor==cursor})return
         val gap=TranscriptGapWindow(java.util.UUID.randomUUID().toString(),cursor,boundary,older)
         gapWindows=gapWindows+gap;coverageVerified=true
         if(!initialGapProbeUsed)initialGapProbe=gap.id
+    }
+    private fun recordWindow(retained:List<JSONObject>,incoming:List<JSONObject>,page:JSONObject,unknownCoverage:Boolean=false){
+        missingTranscriptWindow(retained,incoming,page,gapWindows,unknownCoverage)?.let{gap->
+            gapWindows=gapWindows+gap
+            if(!initialGapProbeUsed)initialGapProbe=gap.id
+        }
+    }
+    private fun followNewWindow(previous:List<JSONObject>,incoming:List<JSONObject>){
+        if(readerIntentRevision!=cacheRestoreIntent)return
+        val previousTail=previous.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
+        val incomingTail=incoming.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
+        if(incomingTail!=null&&incomingTail!=previousTail){
+            preferLatestOnOpen=true
+            if(readPosition!=null||positionRestorePending){readPosition=null;positionRestorePending=false;cacheRestoreRevision++}
+        }
     }
     private fun probeInitialGap(){
         if(!initialGapProbeUsed&&!reads.historyLoading&&!refreshPending&&automaticRetryAllowed)
@@ -192,6 +207,8 @@ object PocketTranscript {
         if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey()||!CodexSessionRepository.canPresent(id,value))return
         val incoming=value.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
         if(incoming.isEmpty())return
+        followNewWindow(rows,incoming)
+        recordWindow(rows,incoming,value.getJSONObject("timeline"),!coverageVerified)
         rows=mergeRestoredTranscriptRows(rows,incoming)
         if(cachedNeedsConfirmation){readPosition=null;cacheRestoreRevision++}
         cachedNeedsConfirmation=false;revision++
@@ -208,7 +225,7 @@ object PocketTranscript {
         reads.reset();refreshPending=false;missedUpdates=false;pendingHead=null;buffered.clear()
     }
     fun reset(id:String)=CodexConversations.select(id,force=true)
-    internal fun resetState(id:String,scope:CoroutineScope){
+    internal fun resetState(id:String,scope:CoroutineScope,openLatest:Boolean=false){
         operationScope=scope
         latestReadError="";historicalReadError="";positionReadError="";readFailureSince=0L
         cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false
@@ -220,10 +237,11 @@ object PocketTranscript {
         needsDiskRestore=cached?.diskPending?: (cached==null)
         val shared=CodexSessionRepository.peek(id)
         val sharedRows=shared?.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
-        preferLatestOnOpen=sharedRows.isNotEmpty()&&sharedRows.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")!=cached?.rows?.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
+        preferLatestOnOpen=openLatest||sharedRows.isNotEmpty()&&sharedRows.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")!=cached?.rows?.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
         cachedNeedsConfirmation=shared==null||!CodexSessionRepository.canPresent(id,shared)
         rows=if(sharedRows.isEmpty())cached?.rows.orEmpty()else mergeRestoredTranscriptRows(cached?.rows.orEmpty(),sharedRows);Pocket.detail=cached?.detail;readPosition=cached?.position?.takeUnless{preferLatestOnOpen}
         earlier=cached?.earlier?:false;before=cached?.before;gapWindows=cached?.gaps.orEmpty();gapReadId=null;gapProblems=emptyMap();initialGapProbe=null;initialGapProbeUsed=false;coverageVerified=cached?.coverageVerified?:false;reads.reset();refreshPending=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
+        if(shared!=null&&sharedRows.isNotEmpty())recordWindow(cached?.rows.orEmpty(),sharedRows,shared.getJSONObject("timeline"),!coverageVerified)
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
     fun clear()=CodexConversations.close()
@@ -358,7 +376,12 @@ object PocketTranscript {
                             val cachedIds=promoteTranscriptIdentityEvidence(cached.rows,rows).mapTo(hashSetOf()){it.s("id")}
                             if(oldest in cachedIds){before=cached.before;earlier=cached.earlier}
                             if(latestPage==null){
-                                gapWindows=cached.gaps;coverageVerified=cached.coverageVerified
+                                gapWindows=(cached.gaps+gapWindows).distinctBy{it.id};coverageVerified=cached.coverageVerified
+                                val shared=CodexSessionRepository.peek(id)
+                                if(shared!=null){
+                                    val headRows=shared.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
+                                    recordWindow(cached.rows,headRows,shared.getJSONObject("timeline"),!cached.coverageVerified)
+                                }
                                 baselineRows=normalizeTranscriptMessages(baselineRows.values+cached.rows).associateBy{it.s("id")}
                             }else{
                                 // Retain every previously known interval when the current
@@ -420,16 +443,7 @@ object PocketTranscript {
             // unseen current work. Resolve that policy before cache restoration
             // can move this opening back to an obsolete day. A gesture during
             // the read remains authoritative.
-            if(latest&&readerIntentRevision==cacheRestoreIntent){
-                val previousTail=rows.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
-                val incomingTail=incoming.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
-                if(incomingTail!=null&&incomingTail!=previousTail){
-                    preferLatestOnOpen=true
-                    if(readPosition!=null||positionRestorePending){
-                        readPosition=null;positionRestorePending=false;cacheRestoreRevision++
-                    }
-                }
-            }
+            if(latest)followNewWindow(rows,incoming)
             val previousEvidence=rows.associateBy{it.s("id")}
             incoming=incoming.map{mergeTranscriptMessageEvidence(previousEvidence[it.s("id")],it)}
             if(!older&&bridgeCursor==null){latestPage=incoming;latestBefore=page.s("before").takeIf{it.isNotBlank()};latestHasEarlier=page.optBoolean("hasEarlier")}
@@ -456,10 +470,7 @@ object PocketTranscript {
                     // A contiguous head can prove one or more intervals complete.
                     // It never rewinds the independent cursor of another interval.
                     gapWindows=gapWindows.filterNot{it.beforeRow in incomingIds&&it.olderAnchor in incomingIds}
-                    val retainedOutside=loadedIds-incomingIds
-                    val needsGap=wasLoaded&&incomingContent.isNotEmpty()&&page.optBoolean("hasEarlier")&&
-                        (!overlaps||(!coverageVerified&&gapWindows.isEmpty()&&retainedOutside.isNotEmpty()))
-                    if(needsGap&&nextBefore!=null)beginGap(nextBefore,incomingContent.first().s("id"),retainedOutside.toList().takeLast(1024).toSet())
+                    if(wasLoaded)recordWindow(rows,incoming,page,!coverageVerified&&gapWindows.isEmpty())
                     coverageVerified=true
                 }
                 val mergeRows=if(!older&&wasLoaded&&!overlaps)incoming.filterNot{it.s("kind")=="turn"&&rows.any{old->old.s("id")==it.s("id")}}else incoming

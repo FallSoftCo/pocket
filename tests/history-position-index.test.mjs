@@ -52,3 +52,30 @@ test('bounded ordinary read indexes receipt-enriched complete input before slici
  }
  assert.deepEqual(calls,['thread/turns/list','thread/turns/list']);
 });
+
+test('opaque-only native pagination locates a delayed input without full reads or chronology guesses',async()=>{
+ const calls=[];
+ const history=new ThreadHistory({call:async(method,params)=>{
+   calls.push({method,params});assert.equal(method,'thread/items/list');
+   if(params.cursor&&typeof params.cursor==='object')throw Error('invalid type: map, expected a string');
+   const item=(id,type,clientId)=>({turnId:'turn',item:{id,type,clientId,text:'identical text'}});
+   if(!params.cursor)return {data:[item('latest','agentMessage'),item('reply','agentMessage')],nextCursor:'older'};
+   assert.equal(params.cursor,'older');
+   return {data:[item('new-provider-input','userMessage','send'),item('prior','agentMessage')]};
+ }});
+ const result=await history.locateItemSuccessor('thread',{turnId:'turn',itemId:'live-provider-input',clientId:'send',knownItemIds:['prior','reply','latest']});
+ assert.deepEqual(result,{available:true,insertBefore:'turn/reply',cursor:null});
+ assert.equal(calls.length,3);
+ assert.ok(calls.slice(1).every(c=>c.params.sortDirection==='desc'&&c.params.limit===8));
+});
+test('opaque position continuation binds the exact input and visible anchors',async()=>{
+ const history=new ThreadHistory({call:async(_method,params)=>({data:[{item:{id:'r'+(params.cursor||0),type:'agentMessage',text:'output'}}],nextCursor:String(Number(params.cursor||0)+1)})});
+ history.itemAnchorsSupported=false;
+ const args={turnId:'turn',itemId:'input',clientId:'send',knownItemIds:['r0']};
+ const page=await history.locateItemSuccessor('thread',args);
+ assert.ok(page.cursor.startsWith('position-scan:'));
+ await assert.rejects(history.locateItemSuccessor('thread',{...args,clientId:'other',cursor:page.cursor}),/Invalid item position/);
+ await assert.rejects(history.locateItemSuccessor('thread',{...args,knownItemIds:['other'],cursor:page.cursor}),/Invalid item position/);
+ const next=await history.locateItemSuccessor('thread',{...args,cursor:page.cursor});
+ assert.notEqual(next.cursor,page.cursor);
+});

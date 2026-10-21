@@ -58,18 +58,18 @@ internal object CodexConversations {
         val old=session;session=null;old?.scope?.cancel()
     }
     /** Selection is owned here even through legacy/test adapters; no read is implied. */
-    fun select(id:String?,force:Boolean=false){
+    fun select(id:String?,force:Boolean=false,openLatest:Boolean=false){
         if(!force&&selected==id&&session?.let{current(it)}==true)return
         retire();selected=id;detail=null;viewport=id!=null
         if(id==null){selectionKey=null;serial++;PocketTranscript.clearState();return}
-        attach(id)
+        attach(id,openLatest)
     }
-    private fun attach(id:String):Session? {
+    private fun attach(id:String,openLatest:Boolean=false):Session? {
         val destination=Pocket.captureEnvironment()?:return null
         val scope=CoroutineScope(SupervisorJob(Pocket.scope.coroutineContext[Job])+Dispatchers.Main.immediate+EnvironmentRequestContext(destination))
         val value=Session(key(destination,id),++serial,destination,scope)
         selectionKey=value.key;session=value
-        PocketTranscript.resetState(id,scope)
+        PocketTranscript.resetState(id,scope,openLatest)
         startLatestPump(value)
         startProbe(value)
         return value

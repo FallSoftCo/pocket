@@ -1,12 +1,15 @@
 {
   "schema": 1,
-  "qualification": "catalog-protocol-and-message-consistency",
+  "qualification": "canonical-history-windows-and-message-order",
   "requiredNativeCases": [
-    "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin",
+    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#sharedHeadKeepsWholePageAndExposesMissingMiddleBeforeDiskReopen",
+    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#longRetainedGapDoesNotDrainOrResetWhileCurrentMessagesAdvance",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#currentHeadsAndDelayedInputRemainOrderedAcrossCachedReopen",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#canonicalInputPositionSurvivesProviderChangeDuringLookup",
     "co.fallsoft.pocket.CodexClosedSessionSyncNativeTest#searchPageAdvancesSharedMessagesBeforeReopeningWithoutNotification",
-    "co.fallsoft.pocket.CodexClosedSessionSyncNativeTest#closedSessionRefreshesBeforeOpeningAndLiveRowsDoNotWaitForHistory",
-    "co.fallsoft.pocket.CatalogStartupNativeTest#delayedSearchCannotRollBackLiveCatalogEvidence",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#newestMessagePaintsWhileOlderReadIsHeld",
+    "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin",
+    "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending",
     "co.fallsoft.pocket.ForegroundNotificationNativeTest#activeAppCoalescesAlertsPreservesQuestionsAndKeepsDelayedRefreshInline"
   ],
   "limits": [
@@ -17,7 +20,7 @@
     "Native volume/IME/AudioRecord is checked against an explicit no-provider fixture; physical phone/provider transcript and TTS remain unqualified.",
     "Incremental recording delivery: existing installed speech renderer/cache policy retained. Experimental rendered speech path is not enabled or qualified. No paid API or model switch.",
     "Complementary instant flip replaces the superseded waterfall visual contract; actual native coverage retains keyed recycling, normal glyph spacing, active keyboard/typing and link activation. Historical wave tests/evidence remain in source but are not current product acceptance.",
-    "146 focused native policy covers changed legacy discovery, catalog search/page acceptance and background/foreground message consistency. Full debug/release unit suites, lints and exact optimized voice/draft/head probe remain required.145 complete28-case receipts remain immutable, not reused as146 proof."
+    "147 native qualification targets entire bounded-page retention, missing intervals with a prewarmed shared head and late old disk cache, explicit latest entry, history demand, canonical input order, concurrent latest/history lanes, environment isolation, foreground notifications and stock typing. No older-version receipts establish this candidate."
   ],
   "requiredOptimizedReview": "native-room-catalog-and-typing",
   "captureInteraction": "volume-buttons"

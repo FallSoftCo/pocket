@@ -115,9 +115,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
 
     val restoreRevision=PocketTranscript.cacheRestoreRevision
-    val readPosition=remember(Pocket.environmentId,Pocket.selected,restoreRevision){PocketTranscript.readPosition}
-    var restoredPosition by remember(Pocket.environmentId,Pocket.selected,restoreRevision){mutableStateOf(readPosition==null||readPosition.follow)}
-    var follow by remember(Pocket.environmentId,Pocket.selected,restoreRevision){mutableStateOf(readPosition?.follow?:true)}
+    val readPosition=remember(Pocket.environmentId,Pocket.selected,restoreRevision,conversation.incarnation){PocketTranscript.readPosition}
+    var restoredPosition by remember(Pocket.environmentId,Pocket.selected,restoreRevision,conversation.incarnation){mutableStateOf(readPosition==null||readPosition.follow)}
+    var follow by remember(Pocket.environmentId,Pocket.selected,restoreRevision,conversation.incarnation){mutableStateOf(readPosition?.follow?:true)}
     var important by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     var filterPassage by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<String?>(null)}
     var filterRequest by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<FilterReadingRequest?>(null)}

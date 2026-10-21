@@ -206,7 +206,7 @@ object Pocket {
     val loadingSessions get()=CodexCatalog.paging
     fun moreSessions(search:String="")=CodexCatalog.page(search)
     internal fun pauseConversationReads()=CodexConversations.suspendReading()
-    fun open(id:String,keyboard:Boolean=false){if(BackendNavigation.open(id)){CodexConversations.suspendReading();return};openWithKeyboard=keyboard;newTask=false;error="";tab=0;CodexConversations.select(id,force=true);CodexConversations.invalidate(immediate=true);PocketReplies.reconcile(id)}
+    fun open(id:String,keyboard:Boolean=false,resumeReading:Boolean=false){if(BackendNavigation.open(id)){CodexConversations.suspendReading();return};openWithKeyboard=keyboard;newTask=false;error="";tab=0;CodexConversations.select(id,force=true,openLatest=!resumeReading);CodexConversations.invalidate(immediate=true);PocketReplies.reconcile(id)}
     fun refreshDetail()=CodexConversations.invalidate(immediate=true)
     fun closeTask()=CodexConversations.close()
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}

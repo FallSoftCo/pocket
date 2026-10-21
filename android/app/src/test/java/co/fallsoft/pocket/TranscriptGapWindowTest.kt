@@ -29,4 +29,17 @@ class TranscriptGapWindowTest {
   val anchors=many.mapTo(hashSetOf()){it.s("id")}
   assertEquals(anchors,migrateTranscriptAnchors(many,anchors).keys)
  }
+
+ @Test fun headWindowCannotHideMissingMiddleOrChooseAnUnorderedOldAnchor(){
+  fun row(id:String)=JSONObject().put("id",id).put("kind","message")
+  val old=listOf(row("oct10-a"),row("oct10-z"))
+  val head=listOf(row("today-a"),row("today-z"))
+  val page=JSONObject().put("hasEarlier",true).put("before","canonical-older-cursor")
+  val gap=missingTranscriptWindow(old,head,page,emptyList())!!
+  assertEquals("oct10-z",gap.olderAnchor)
+  assertEquals("today-a",gap.beforeRow)
+  assertNull(missingTranscriptWindow(old,head,page,listOf(gap)))
+  assertNull(missingTranscriptWindow(head,head,page,emptyList()))
+  assertNull(missingTranscriptWindow(old,head,JSONObject().put("hasEarlier",false),emptyList()))
+ }
 }

@@ -3262,5 +3262,21 @@
       "No production restart or new APK publication.",
       "Continue native cached/live ordering verification."
     ]
+  },
+  "history_windows_20261021": {
+    "request": "This chat opens October10 content, then latest messages with nothing between; preserve canonical user/response ordering.",
+    "status": "implementation_native_qualification_pending",
+    "contract": [
+      "Explicit conversation entry opens latest; foreground continuation and explicit resume retain reading position.",
+      "Every bounded authoritative window keeps its own original cursor. Cache budget eviction removes whole windows, never a row prefix while retaining its cursor.",
+      "Shared head, memory restoration, disk restoration and HTTP current windows all register missing intervals before joining retained content.",
+      "Scrolling requests bounded history without blocking current messages or discarding retained local history.",
+      "Canonical input placement uses provider/client identity and provider order, including opaque-only native pagination; no text or timestamp guesses."
+    ],
+    "limits": [
+      "Physical phone reproduction remains user-reported; native equivalent seeded with distant old window and saved old anchor.",
+      "Backend ordering changes are not yet activated.",
+      "No message resend or model turn is part of verification."
+    ]
   }
 }

@@ -39,3 +39,22 @@ internal fun restoreTranscriptGaps(value:JSONObject,rows:List<JSONObject>):List<
     return raw.map{it.copy(beforeRow=aliases[it.beforeRow]?:it.beforeRow,olderAnchor=aliases[it.olderAnchor]?:it.olderAnchor)}
         .filter{it.beforeRow in ids&&it.olderAnchor in ids}.distinctBy{it.id}
 }
+
+/** A bounded current page proves only its own contiguous window. A retained
+ * window outside it needs an explicit interval; catalog/cache merges cannot
+ * silently claim that the intervening history was loaded. */
+internal fun missingTranscriptWindow(
+    retained:List<JSONObject>,incoming:List<JSONObject>,page:JSONObject,
+    gaps:List<TranscriptGapWindow>,unknownCoverage:Boolean=false
+):TranscriptGapWindow?{
+    if(!page.optBoolean("hasEarlier"))return null
+    val cursor=page.s("before");if(cursor.isBlank())return null
+    val content=incoming.filter{transcriptContentAnchor(it.s("kind"))}
+    val boundary=content.firstOrNull()?.s("id")?:return null
+    val ids=content.mapTo(hashSetOf()){it.s("id")}
+    val old=retained.filter{transcriptContentAnchor(it.s("kind"))}
+    val outside=old.filter{it.s("id") !in ids}
+    if(outside.isEmpty()||(!unknownCoverage&&old.any{it.s("id") in ids}))return null
+    if(gaps.any{it.beforeRow==boundary||it.cursor==cursor})return null
+    return TranscriptGapWindow(java.util.UUID.randomUUID().toString(),cursor,boundary,outside.last().s("id"))
+}

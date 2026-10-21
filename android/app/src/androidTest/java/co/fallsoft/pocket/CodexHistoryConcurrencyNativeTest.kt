@@ -122,6 +122,56 @@ class CodexHistoryConcurrencyNativeTest {
             check(edit.commit())
         }
     }
+
+    @Test fun sharedHeadKeepsWholePageAndExposesMissingMiddleBeforeDiskReopen(){
+        check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE);val original=prefs.all.toMap()
+        fun qa(name:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+name,JSONObject())}
+        try{
+            prefs.edit().clear().putString("server","http://127.0.0.1:18880")
+                .putString("token","synthetic-system76-"+java.util.UUID.randomUUID().toString()).putString("deviceId","synthetic-device-a")
+                .putString("draft:same-thread","Unsent across old and new windows").commit()
+            main{Pocket.init(context)}
+            val destination=requireNotNull(Pocket.captureEnvironment())
+            val hundred=org.json.JSONArray((0 until 100).map{n->JSONObject().put("id","complete-window-"+n).put("kind","message").put("text","Window message "+n)})
+            val checkpoint=JSONObject().put("thread",JSONObject().put("id","same-thread"))
+                .put("timeline",JSONObject().put("rows",hundred).put("hasEarlier",true).put("before","before-entire-window"))
+            CodexSessionRepository.accepted(destination,"same-thread",checkpoint)
+            await("Shared cache did not publish the complete page"){CodexSessionRepository.peek("same-thread")?.getJSONObject("timeline")?.getJSONArray("rows")?.length()==100}
+            assertEquals("before-entire-window",CodexSessionRepository.peek("same-thread")!!.getJSONObject("timeline").s("before"))
+            qa("long-retained-gap")
+            val head=runBlocking{CodexSessionRepository.readCurrent(destination,"same-thread")}
+            CodexSessionRepository.accepted(destination,"same-thread",head)
+            await("Current shared head not ready"){CodexSessionRepository.peek("same-thread")?.getJSONObject("timeline")?.getJSONArray("rows")?.objects()?.any{it.s("text")=="Fresh response 1"}==true}
+            val scope=PocketTranscript.scopeKey()
+            val old=org.json.JSONArray((0 until 1000).map{n->JSONObject().put("id","retained-old-"+n).put("kind","message").put("turnId","old-turn").put("text","Retained old message "+n)})
+            val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old)
+                .put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+                .put("coverageVerified",true).put("position",JSONObject().put("row","retained-old-500").put("offset",17).put("follow",false))
+            assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+            main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
+            await("Disk restoration joined old and new windows without a missing interval",20000){PocketTranscript.historyGaps.isNotEmpty()&&PocketTranscript.rows.count{it.s("id").startsWith("retained-old-")}==1000}
+            assertTrue("Normal opening restored an obsolete passage instead of latest",device.wait(Until.hasObject(By.text("Fresh response 1")),5000))
+            assertFalse("Old reading anchor was restored on an explicit latest open",PocketTranscript.readPosition?.rowId=="retained-old-500")
+            await("Independent current head did not settle",20000){PocketTranscript.currentHistoryVerified&&!PocketTranscript.loading}
+            val state=qa("state")
+            assertTrue("Opening drained historical pages",state.getJSONArray("reads").objects().count{it.optBoolean("older")}<=1)
+            assertEquals("Unsent across old and new windows",prefs.getString("draft:same-thread",null))
+            assertEquals(0,state.getJSONArray("replies").length())
+            java.io.File(context.cacheDir,"shared-window-reopen-result.json").writeText(JSONObject()
+                .put("completePageRetained",100).put("olderRowsRetained",1000).put("missingMiddleExplicit",true)
+                .put("openedAtLatest",true).put("originalCursorRetained",true).put("workSubmitted",0).toString())
+        }finally{
+            main{Pocket.closeTask();PocketLive.stop()}
+            val edit=prefs.edit().clear()
+            for((key,value)in original)when(value){
+                is String->edit.putString(key,value);is Boolean->edit.putBoolean(key,value);is Int->edit.putInt(key,value)
+                is Long->edit.putLong(key,value);is Float->edit.putFloat(key,value)
+                is Set<*>->edit.putStringSet(key,value.filterIsInstance<String>().toSet())
+            }
+            check(edit.commit())
+        }
+    }
     @Test fun longRetainedGapDoesNotDrainOrResetWhileCurrentMessagesAdvance(){
         check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
         val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE);val original=prefs.all.toMap()
