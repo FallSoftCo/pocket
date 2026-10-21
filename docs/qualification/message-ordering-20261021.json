@@ -1,0 +1,16 @@
+{
+  "status": "candidate_not_deployed",
+  "base": "1d3cd72",
+  "tests": {
+    "focused": 26,
+    "failures": 0,
+    "http_reopen": true,
+    "original_regression_failed_before_fix": true
+  },
+  "unresolved": [
+    "Exact reported phone pair",
+    "Native cache/live journey",
+    "Broader HTTP test expects a background recovery call not observed; no full pass claimed"
+  ],
+  "no_external_work_submitted": true
+}

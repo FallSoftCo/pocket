@@ -6,7 +6,7 @@ test('complete ordinary turn read resolves hidden input with rebuilt provider id
  const calls=[];const codex={call:async(method)=>{calls.push(method);if(method!=='thread/turns/list')throw Error('unexpected provider read');return {data:[{id:'turn',items:[{id:'canonical',type:'userMessage',clientId:'send',content:[{type:'text',text:'private input'}]},{id:'answer',type:'agentMessage',text:'reply'}]}]};}};
  const history=new ThreadHistory(codex);history.turnOnlyThreads.add('thread');
  assert.equal((await history.locateItemSuccessor('thread',{turnId:'turn',itemId:'live',clientId:'send',knownItemIds:['answer']})).available,false);
- const page=await history.turnPage({id:'thread'},{maxItems:1});assert.equal(page.turns[0].items.length,1);
+ const page=await history.read({id:'thread'},{maxItems:1});assert.equal(page.turns[0].items.length,1);
  assert.deepEqual(await history.locateItemSuccessor('thread',{turnId:'turn',itemId:'live',clientId:'send',knownItemIds:['answer']}),{available:true,insertBefore:'turn/answer',cursor:null});
  assert.deepEqual(calls,['thread/turns/list']);assert.ok(!JSON.stringify([...history.positions.turns]).includes('private input'));
 });
@@ -29,4 +29,26 @@ test('only missing observed turn advertises a history-dependent retry',async()=>
  assert.equal((await history.locateItemSuccessor('thread',request)).awaitingHistory,true);
  history.positions.observe('thread','turn',[{id:'other',kind:'user',clientId:'other'}]);
  assert.equal((await history.locateItemSuccessor('thread',request)).awaitingHistory,undefined);
+});
+
+test('bounded ordinary read indexes receipt-enriched complete input before slicing',async()=>{
+ const calls=[];
+ const history=new ThreadHistory({call:async method=>{
+   calls.push(method);
+   assert.equal(method,'thread/turns/list');
+   return {data:[{id:'turn',items:[
+     {id:'canonical',type:'userMessage',content:[{type:'text',text:'input'}]},
+     {id:'answer',type:'agentMessage',text:'reply'}
+   ]}]};
+ }},{identity:{snapshot:thread=>({...thread,turns:thread.turns.map(turn=>({...turn,items:turn.items.map(item=>item.type==='userMessage'?{...item,clientId:'send'}:item)}))})}});
+ history.turnOnlyThreads.add('thread');
+ for(let n=0;n<2;n++){
+   if(n===1)history.fullSnapshotThreads.add('thread');
+   const page=await history.read({id:'thread'},{maxItems:1});
+   assert.equal(page.turns[0].items.length,1);
+   assert.equal(page.turns[0].items[0].id,'answer');
+   assert.deepEqual(await history.locateItemSuccessor('thread',{turnId:'turn',itemId:'different-live-id',clientId:'send',knownItemIds:['answer']}),
+     {available:true,insertBefore:'turn/answer',cursor:null});
+ }
+ assert.deepEqual(calls,['thread/turns/list','thread/turns/list']);
 });

@@ -61,7 +61,10 @@ export class ThreadHistory {
     else if(this.turnOnlyThreads.has(metadata.id)&&!options.summary)thread=await this.turnPage(metadata,options);
     else try{thread=await this.readPaged(metadata,options);}
     catch(e){if(!unsupportedItems(e))throw e;this.turnOnlyThreads.add(metadata.id);thread=await this.turnPage(metadata,options);}
-    return this.observeSnapshot(this.identity?.snapshot(thread)||thread);
+    const display=this.identity?.snapshot(thread)||thread;
+    // Turn-only reads already indexed the complete provider turn. This result
+    // is only a bounded presentation window, including inherited-history paths.
+    return this.turnOnlyThreads.has(metadata.id)?display:this.observeSnapshot(display);
   }
 
   async readPaged(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8,preferPaging=false,maxSourcePages=8,stopAfterConversation=false}={}){
@@ -140,9 +143,13 @@ export class ThreadHistory {
       else throw Error('That history position changed with Codex. Reopen the task.');
     }
     const page=await this.codex.call('thread/turns/list',{threadId:metadata.id,limit:1,sortDirection:state.anchor?'asc':'desc',itemsView:'full',...((state.anchor||state.cursor)?{cursor:state.anchor||state.cursor}:{})});
-    const turn=page.data[0];
-    if(!turn)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
-    if(state.turnId&&turn.id!==state.turnId)throw Error('The history turn boundary is no longer available. Reopen the task.');
+    const providerTurn=page.data[0];
+    if(!providerTurn)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
+    if(state.turnId&&providerTurn.id!==state.turnId)throw Error('The history turn boundary is no longer available. Reopen the task.');
+    // Send identity and chronological evidence belong to the complete provider
+    // turn, before the wire page is bounded. Re-observing that bounded result
+    // would discard the very input needed to position a delayed live echo.
+    const turn=this.identity?.snapshot({id:metadata.id,turns:[providerTurn]})?.turns[0]||providerTurn;
     const items=(turn.items||[]).map(item=>displayItem(item,turn.id)).filter(Boolean);
     this.positions.observe(metadata.id,turn.id,items);
     const end=state.beforeItemId?items.findIndex(item=>item.id===state.beforeItemId):Math.max(0,items.length-state.offset);
