@@ -1,17 +1,14 @@
 {
   "schema": 1,
-  "qualification": "canonical-history-windows-and-message-order",
+  "qualification": "contiguous-visible-history-and-actual-session-replay",
   "requiredNativeCases": [
+    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#actualHistoryReplayNeverPaintsAlpha110IslandAndFillsRecentViewport",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#sharedHeadKeepsWholePageAndExposesMissingMiddleBeforeDiskReopen",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#lateDiskInputIsPositionedFromVisibleHistoryWithoutAnotherSend",
-    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#longRetainedGapDoesNotDrainOrResetWhileCurrentMessagesAdvance",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#currentHeadsAndDelayedInputRemainOrderedAcrossCachedReopen",
-    "co.fallsoft.pocket.TranscriptRefreshNativeTest#canonicalInputPositionSurvivesProviderChangeDuringLookup",
-    "co.fallsoft.pocket.CodexClosedSessionSyncNativeTest#searchPageAdvancesSharedMessagesBeforeReopeningWithoutNotification",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#newestMessagePaintsWhileOlderReadIsHeld",
     "co.fallsoft.pocket.EnvironmentIsolationNativeTest#sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin",
-    "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending",
-    "co.fallsoft.pocket.ForegroundNotificationNativeTest#activeAppCoalescesAlertsPreservesQuestionsAndKeepsDelayedRefreshInline"
+    "co.fallsoft.pocket.TypingResponsivenessNativeTest#stockConversationMeasuresMotionAndMainThreadStallsWithoutSending"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
@@ -21,7 +18,7 @@
     "Native volume/IME/AudioRecord is checked against an explicit no-provider fixture; physical phone/provider transcript and TTS remain unqualified.",
     "Incremental recording delivery: existing installed speech renderer/cache policy retained. Experimental rendered speech path is not enabled or qualified. No paid API or model switch.",
     "Complementary instant flip replaces the superseded waterfall visual contract; actual native coverage retains keyed recycling, normal glyph spacing, active keyboard/typing and link activation. Historical wave tests/evidence remain in source but are not current product acceptance.",
-    "147 native qualification targets entire bounded-page retention, missing intervals with a prewarmed shared head and late old disk cache, explicit latest entry, history demand, canonical input order, concurrent latest/history lanes, environment isolation, foreground notifications and stock typing. No older-version receipts establish this candidate."
+    "148 requires replay of private canonical read-only pages captured from the actual reported session, with legacy Alpha110 islands and obsolete reading anchor. The replay never proxies or dispatches live work; retained old bodies must stay stored, never paint as current predecessors, and tool-heavy raw pages hydrate a bounded viewport automatically. Additional cases cover cached order, current/older concurrency, input placement, source isolation and typing. Exact optimized release and all unit/lint checks remain required."
   ],
   "requiredOptimizedReview": "native-room-catalog-and-typing",
   "captureInteraction": "volume-buttons"

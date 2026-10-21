@@ -130,7 +130,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val latestAnswer=rows.lastOrNull{it.s("kind")=="message"}
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val historyGaps=PocketTranscript.historyGaps
-    val windowRows=remember(rows,historyGaps.map{it.id to it.beforeRow}){transcriptRowsWithGaps(rows,historyGaps)}
+    val gapBoundaries=historyGaps.map{it.id to it.beforeRow}
+    val retainedAnchor=PocketTranscript.readPosition?.rowId
+    val windowRange=remember(rows,gapBoundaries,retainedAnchor){connectedTranscriptRange(rows,historyGaps,retainedAnchor)}
+    val windowRows=remember(rows,gapBoundaries,windowRange){connectedTranscriptWindow(rows,historyGaps,windowRange)}
     val filteredRows=if(!important)windowRows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
     val runExpansionKey=Pocket.key("runExpansion:"+Pocket.selected)
     var expandedRunIds by remember(Pocket.environmentId,Pocket.selected){
@@ -275,21 +278,46 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         return PocketTranscript.historyGaps.lastOrNull{it.rowId in visible}
     }
     fun gapNearViewport():Boolean = viewportGap()!=null
-    suspend fun readViewportGap(gap:TranscriptHistoryGap,gesture:Long){
-        if(PocketTranscript.loading||PocketTranscript.updating)return
-        // Anchor content, not the moving interval marker. A user gesture during
-        // the request owns the viewport and must never be undone afterward.
-        val anchor=list.layoutInfo.visibleItemsInfo.firstOrNull{item->
-            item.key.toString() in latestRowIds&&!item.key.toString().startsWith(TranscriptHistoryGap.ROW_PREFIX)
-        }
-        val canonical=anchor?.let{latestRunProjection.canonicalId(it.key.toString())}
-        CodexConversations.readGapFrom(conversation.key,conversation.incarnation,gap.cursor)
-        androidx.compose.runtime.withFrameNanos{};androidx.compose.runtime.withFrameNanos{}
-        if(historyGesture==gesture&&!list.isScrollInProgress&&anchor!=null&&canonical!=null){
-            val index=latestRowIds.indexOf(latestRunProjection.displayId(canonical))
-            if(index>=0)list.requestScrollToItem(index,-anchor.offset)
-        }
+    suspend fun hydrateViewport(gesture:Long,initial:Boolean=false){
+        val budget=TranscriptViewportBudget(android.os.SystemClock.elapsedRealtime())
+        do{
+            if(PocketTranscript.loading||PocketTranscript.updating||list.isScrollInProgress||historyGesture!=gesture)return
+            val gap=viewportGap()
+            val cursor=gap?.cursor?:PocketTranscript.before.takeIf{PocketTranscript.earlier}
+            if(gap?.problem?.isNotBlank()==true||!budget.next(cursor,android.os.SystemClock.elapsedRealtime()))break
+            val anchor=list.layoutInfo.visibleItemsInfo.firstOrNull{item->
+                item.key.toString() in latestRowIds&&!item.key.toString().startsWith(TranscriptHistoryGap.ROW_PREFIX)
+            }
+            val canonical=anchor?.let{latestRunProjection.canonicalId(it.key.toString())}
+            if(gap!=null)CodexConversations.readGapFrom(conversation.key,conversation.incarnation,gap.cursor)
+            else CodexConversations.readFrom(conversation.key,conversation.incarnation,older=true)
+            androidx.compose.runtime.withFrameNanos{};androidx.compose.runtime.withFrameNanos{}
+            if(historyGesture!=gesture||list.isScrollInProgress)return
+            if(!follow&&anchor!=null&&canonical!=null){
+                val index=latestRowIds.indexOf(latestRunProjection.displayId(canonical))
+                if(index>=0)list.requestScrollToItem(index,-anchor.offset)
+                androidx.compose.runtime.withFrameNanos{}
+            }
+            // Continue only while the reader still needs this edge. Tool-heavy
+            // raw pages may fold to one row, so one HTTP page is not one viewport.
+            if(initial){
+                if(list.canScrollBackward)break
+            }else if(viewportGap()==null&&(list.firstVisibleItemIndex>4||!PocketTranscript.earlier))break
+            if(PocketTranscript.readError.isNotBlank())break
+        }while(true)
         satisfiedGapGesture=maxOf(satisfiedGapGesture,gesture)
+    }
+    var initialViewportHydrated by remember(conversation.incarnation){mutableStateOf(false)}
+    LaunchedEffect(list,conversation.incarnation){
+        snapshotFlow{
+            !initialViewportHydrated&&!important&&restoredPosition&&PocketTranscript.currentHistoryVerified&&
+                !PocketTranscript.updating&&!PocketTranscript.loading&&!list.isScrollInProgress&&
+                list.layoutInfo.visibleItemsInfo.isNotEmpty()&&!list.canScrollBackward&&
+                (viewportGap()!=null||PocketTranscript.earlier)
+        }.distinctUntilChanged().filter{it}.collect{
+            initialViewportHydrated=true
+            hydrateViewport(historyGesture,initial=true)
+        }
     }
     var shortHistoryPull by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     val historyScrollObserver=remember(list,Pocket.environmentId,Pocket.selected){object:NestedScrollConnection{
@@ -356,8 +384,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             }
         }
     }
-    // Missing intervals have their own demand lane. A completed page never
-    // recursively downloads the rest of an old cache: another gesture is demand.
+    // Missing intervals hydrate a bounded viewport per explicit reading demand.
+    // Raw tool pages can fold to one row; no demand downloads the whole archive.
     LaunchedEffect(list,Pocket.environmentId,Pocket.selected,important,conversation.incarnation){
         snapshotFlow{
             gapDemand?.takeIf{!important&&!follow&&!pagingViewport&&restoredPosition&&
@@ -369,7 +397,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             val gap=PocketTranscript.historyGaps.firstOrNull{it.rowId==demand.rowId}
             if(gap==null||gap.cursor!=demand.cursor){
                 satisfiedGapGesture=maxOf(satisfiedGapGesture,demand.gesture)
-            }else readViewportGap(gap,demand.gesture)
+            }else hydrateViewport(demand.gesture)
             if(satisfiedGapGesture>=demand.gesture&&gapDemand==demand)gapDemand=null
         }
     }
@@ -378,24 +406,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     LaunchedEffect(Pocket.environmentId,Pocket.selected,important,conversation.incarnation){
         snapshotFlow{!pagingViewport&&restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)}
             .distinctUntilChanged().filter{it}.collect{
-                var retryMs=1000L
-                while(!pagingViewport&&restoredPosition&&historyGesture!=satisfiedHistoryGesture&&PocketTranscript.automaticRetryAllowed&&!list.isScrollInProgress&&shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading)){
-                    // Wait for finger/fling and layout to settle before another page.
-                    delay(180)
-                    if(pagingViewport||list.isScrollInProgress||!shouldPrefetchTranscript(follow,important,list.firstVisibleItemIndex,PocketTranscript.earlier,PocketTranscript.loading))break
-                    val cursor=PocketTranscript.before
-                    val gesture=historyGesture
-                    CodexConversations.readFrom(conversation.key,conversation.incarnation,older=true)
-                    androidx.compose.runtime.withFrameNanos{}
-                    androidx.compose.runtime.withFrameNanos{}
-                    if(PocketTranscript.before==cursor&&PocketTranscript.earlier){
-                        // Remain anchored; retry only while the reader is still near this edge.
-                        delay(retryMs);retryMs=(retryMs*2).coerceAtMost(15000)
-                    }else{
-                        // A short page is not permission to drain the whole history.
-                        // A gesture made during this read remains a fresh demand.
-                        satisfiedHistoryGesture=gesture;retryMs=1000L
-                    }
+                val gesture=historyGesture
+                delay(180)
+                if(!pagingViewport&&restoredPosition&&!list.isScrollInProgress){
+                    hydrateViewport(gesture)
+                    satisfiedHistoryGesture=gesture
                 }
             }
     }
@@ -463,7 +478,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                         Row(Modifier.fillMaxWidth().heightIn(min=36.dp).testTag("conversation-history-gap"),
                             verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                             if(historyGap?.loading==true)AnimatedMark(20)
-                            BilingualLabel(if(historyGap?.loading==true)"Loading earlier messages" else if(historyGap?.problem?.isNotBlank()==true)"Earlier messages unavailable" else "Earlier messages",color=Muted,fontSize=13.sp)
+                            BilingualLabel(if(row.s("historyDirection")=="newer"){
+                                if(historyGap?.loading==true)"Loading newer messages" else if(historyGap?.problem?.isNotBlank()==true)"Newer messages unavailable" else "Newer messages"
+                            }else if(historyGap?.loading==true)"Loading earlier messages" else if(historyGap?.problem?.isNotBlank()==true)"Earlier messages unavailable" else "Earlier messages",color=Muted,fontSize=13.sp)
                         }
                     }else if(row.s("kind")=="commandRuns"&&commandGroup!=null) {
                         val expanded=commandGroup.any{it.s("id") in expandedRunIds}

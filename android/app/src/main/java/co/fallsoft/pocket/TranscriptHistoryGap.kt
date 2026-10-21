@@ -18,6 +18,46 @@ internal fun transcriptRowsWithGaps(rows:List<JSONObject>,gaps:List<TranscriptHi
         add(row)
     }}
 }
+/** A disconnected retained island is storage, not the current reading window.
+ * Expose only the component attached to the newest page until canonical reads
+ * bridge it. This preserves cached bodies without presenting invented adjacency.
+ * The gap stays at the reading edge and advances as older pages are hydrated. */
+internal data class TranscriptWindowRange(val start:Int,val end:Int)
+internal fun connectedTranscriptRange(rows:List<JSONObject>,gaps:List<TranscriptHistoryGap>,anchor:String?):TranscriptWindowRange{
+    val cuts=gaps.mapNotNull{gap->rows.indexOfFirst{it.s("id")==gap.beforeRow}.takeIf{it>=0}}.distinct().sorted()
+    val anchored=anchor?.let{id->rows.indexOfFirst{it.s("id")==id}.takeIf{it>=0}}
+    // A repeated turn heading can precede the component it decorates. Its first
+    // content row owns coverage; storing a heading must never select an old island.
+    val target=anchored?.let{index->
+        val row=rows[index]
+        if(row.s("kind")=="turn"&&row.s("turnId").isNotBlank())
+            rows.indices.firstOrNull{it>index&&rows[it].s("turnId")==row.s("turnId")&&transcriptContentAnchor(rows[it].s("kind"))}?:index
+        else index
+    }?:rows.lastIndex
+    return TranscriptWindowRange(cuts.lastOrNull{it<=target}?:0,cuts.firstOrNull{it>target}?:rows.size)
+}
+internal fun connectedTranscriptWindow(rows:List<JSONObject>,gaps:List<TranscriptHistoryGap>,range:TranscriptWindowRange):List<JSONObject>{
+    val content=rows.subList(range.start,range.end)
+    val turn=content.firstOrNull()?.s("turnId").orEmpty()
+    val header=rows.take(range.start).lastOrNull{it.s("kind")=="turn"&&turn.isNotBlank()&&it.s("turnId")==turn}
+    val ids=content.mapTo(hashSetOf()){it.s("id")}
+    val next=rows.getOrNull(range.end)?.s("id")
+    val trailing=gaps.filter{it.beforeRow==next}.map{
+        JSONObject().put("id",it.rowId).put("kind","historyGap").put("historyDirection","newer")
+    }
+    return listOfNotNull(header)+transcriptRowsWithGaps(content,gaps.filter{it.beforeRow in ids})+trailing
+}
+
+/** One viewport demand, not a whole-history downloader or a one-raw-page gate. */
+internal class TranscriptViewportBudget(private val began:Long,private val maxPages:Int=8,private val maxMillis:Long=2000){
+    private var pages=0
+    private val seen=hashSetOf<String>()
+    fun next(cursor:String?,now:Long):Boolean{
+        if(cursor.isNullOrBlank()||pages>=maxPages||pages>0&&now-began>=maxMillis||!seen.add(cursor))return false
+        pages++;return true
+    }
+}
+
 internal fun transcriptReadingAnchor(row:String,gaps:List<TranscriptHistoryGap>):String =
     gaps.firstOrNull{it.rowId==row}?.beforeRow?:row
 internal fun restoreTranscriptGaps(value:JSONObject,rows:List<JSONObject>):List<TranscriptGapWindow>{

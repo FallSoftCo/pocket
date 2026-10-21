@@ -24,6 +24,54 @@ class CodexHistoryConcurrencyNativeTest {
         while(android.os.SystemClock.elapsedRealtime()<end&&!condition())Thread.sleep(30)
         assertTrue(message,condition())
     }
+    @Test fun actualHistoryReplayNeverPaintsAlpha110IslandAndFillsRecentViewport(){
+        check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+        prefs.edit().clear().putString("server","http://127.0.0.1:18880")
+            .putString("token","synthetic-system76-"+java.util.UUID.randomUUID().toString())
+            .putString("deviceId","synthetic-device-a").putString("draft:same-thread","Unsent actual-history audit draft").commit()
+        main{Pocket.init(context)}
+        fun qa(name:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+name,JSONObject())}
+        val evidence=qa("enable-history-replay")
+        assertEquals("recorded-native-read-only",evidence.s("source"));assertTrue(evidence.optInt("pages")>=16)
+        val destination=requireNotNull(Pocket.captureEnvironment())
+        val current=runBlocking{CodexSessionRepository.readCurrent(destination,"same-thread")}
+        CodexSessionRepository.accepted(destination,"same-thread",current)
+        await("Canonical shared head did not settle"){CodexSessionRepository.peek("same-thread")!=null}
+        val old=org.json.JSONArray().put(JSONObject().put("id","legacy-alpha110-a").put("kind","message").put("text","Alpha110 is installed on your phone and connected."))
+            .put(JSONObject().put("id","legacy-alpha110-b").put("kind","message").put("text","Alpha110 is installed and connected."))
+        current.getJSONObject("timeline").getJSONArray("rows").objects().forEach{old.put(JSONObject(it.toString()))}
+        val scope=PocketTranscript.scopeKey()
+        val cached=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old)
+            .put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("coverageVerified",true)
+            .put("position",JSONObject().put("row","legacy-alpha110-a").put("offset",0).put("follow",false))
+        assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",cached.toString()))
+        qa("hold-replay-head")
+        try{
+            main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
+            await("Legacy islands were not retained for the audit"){PocketTranscript.rows.count{it.s("id").startsWith("legacy-alpha110-")}==2}
+            repeat(4){
+                assertFalse("Alpha110 cache island painted before fresh history",device.hasObject(By.textContains("Alpha110 is installed")))
+                Thread.sleep(100)
+            }
+            qa("release-replay-head")
+            await("Actual canonical head did not settle",20000){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
+            await("Tool-heavy raw pages left the viewport unhydrated",12000){qa("replay-state").getJSONArray("reads").objects().any{it.optBoolean("older")}}
+            await("Viewport hydration did not settle",12000){!PocketTranscript.loading&&!PocketTranscript.updating}
+            assertFalse("Old Alpha110 island is still presented as recent context",device.hasObject(By.textContains("Alpha110 is installed")))
+            val projected=connectedTranscriptWindow(PocketTranscript.rows,PocketTranscript.historyGaps,
+                connectedTranscriptRange(PocketTranscript.rows,PocketTranscript.historyGaps,PocketTranscript.readPosition?.rowId))
+            assertFalse(projected.any{it.s("id").startsWith("legacy-alpha110-")})
+            assertEquals("Local retained bodies were erased",2,PocketTranscript.rows.count{it.s("id").startsWith("legacy-alpha110-")})
+            val state=qa("replay-state")
+            assertTrue("Opening downloaded history without a viewport budget",state.getJSONArray("reads").objects().count{it.optBoolean("older")}<=9)
+            assertEquals(0,state.optInt("submissions"))
+            assertEquals("Unsent actual-history audit draft",prefs.getString("draft:same-thread",null))
+            java.io.File(context.filesDir,"actual-history-window-audit.json").writeText(JSONObject()
+                .put("actualReadOnlyCapturePages",evidence.optInt("pages")).put("alpha110NeverVisible",true).put("legacyBodiesRetained",2)
+                .put("olderReads",state.getJSONArray("reads").objects().count{it.optBoolean("older")}).put("workSubmitted",0).toString())
+        }finally{qa("release-replay-head");main{Pocket.closeTask();PocketLive.stop()}}
+    }
     @Test fun newestMessagePaintsWhileOlderReadIsHeld(){
         check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
         val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
@@ -168,7 +216,7 @@ class CodexHistoryConcurrencyNativeTest {
             assertFalse("Old reading anchor was restored on an explicit latest open",PocketTranscript.readPosition?.rowId=="retained-old-500")
             await("Independent current head did not settle",20000){PocketTranscript.currentHistoryVerified&&!PocketTranscript.loading}
             val state=qa("state")
-            assertTrue("Opening drained historical pages",state.getJSONArray("reads").objects().count{it.optBoolean("older")}-historicalBefore<=1)
+            assertTrue("Opening exceeded bounded viewport hydration",state.getJSONArray("reads").objects().count{it.optBoolean("older")}-historicalBefore<=9)
             assertEquals("Unsent across old and new windows",prefs.getString("draft:same-thread",null))
             assertEquals(0,state.getJSONArray("replies").length())
             java.io.File(context.cacheDir,"shared-window-reopen-result.json").writeText(JSONObject()
@@ -201,14 +249,17 @@ class CodexHistoryConcurrencyNativeTest {
             assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
             main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
             await("Current message never became independently fresh",20000){PocketTranscript.currentHistoryVerified&&PocketTranscript.rows.any{it.s("text")=="Fresh response 1"}}
-            await("Bounded initial overlap probe did not settle",20000){PocketTranscript.historyGap?.cursor=="long-gap-992"&&!PocketTranscript.loading}
+            await("Bounded initial overlap probe did not settle",20000){PocketTranscript.historyGap?.cursor?.startsWith("long-gap-")==true&&!PocketTranscript.loading}
+            Thread.sleep(2500)
+            await("Initial viewport hydration did not settle",12000){!PocketTranscript.loading&&!PocketTranscript.updating}
+            val initialCursor=requireNotNull(PocketTranscript.historyGap).cursor
             assertFalse("A historical gap kept the current head updating",PocketTranscript.updating)
             assertEquals(1000,PocketTranscript.rows.count{it.s("id").startsWith("retained-old-")})
-            val count=olderReads().size;assertEquals(1,count)
+            val count=olderReads().size;assertTrue("Initial viewport hydration exceeded its budget",count in 1..9)
             qa("silent");main{Pocket.refreshDetail()}
             await("Current head was blocked by retained history",12000){PocketTranscript.rows.any{it.s("text")=="Fresh response 2"}&&!PocketTranscript.currentLoading}
             Thread.sleep(3000)
-            assertEquals("A head refresh reset the historical cursor","long-gap-992",PocketTranscript.historyGap?.cursor)
+            assertEquals("A head refresh reset the historical cursor",initialCursor,PocketTranscript.historyGap?.cursor)
             assertEquals("Opening or refreshing eagerly drained historical pages",count,olderReads().size)
             qa("hold-history")
             assertTrue("The current answer has not painted",device.wait(Until.hasObject(By.text("Fresh response 2")),10000))
@@ -217,17 +268,19 @@ class CodexHistoryConcurrencyNativeTest {
             val bounds=viewport!!.visibleBounds
             device.swipe(bounds.centerX(),(bounds.top+bounds.height()*.25).toInt(),bounds.centerX(),(bounds.top+bounds.height()*.78).toInt(),18)
             await("Thumb scrolling did not request the visible gap",12000){olderReads().size==count+1}
-            assertEquals("long-gap-992",olderReads().last().s("cursor"))
+            assertEquals(initialCursor,olderReads().last().s("cursor"))
             qa("silent");main{Pocket.refreshDetail()}
             await("A held historical interval blocked the next current head",12000){PocketTranscript.rows.any{it.s("text")=="Fresh response 3"}&&!PocketTranscript.currentLoading}
-            assertEquals("Current refresh rewound an in-flight interval","long-gap-992",PocketTranscript.historyGap?.cursor)
+            assertEquals("Current refresh rewound an in-flight interval",initialCursor,PocketTranscript.historyGap?.cursor)
             qa("release-history")
-            await("Requested interval did not advance",12000){PocketTranscript.historyGap?.cursor=="long-gap-984"&&!PocketTranscript.loading}
+            val advancedCursor="long-gap-"+(initialCursor.removePrefix("long-gap-").toInt()-8)
+            await("Requested interval did not advance",12000){PocketTranscript.historyGap?.cursor==advancedCursor&&!PocketTranscript.loading}
             Thread.sleep(3000)
             assertEquals("One gesture recursively drained more than one interval",count+1,olderReads().size)
             qa("new-long-window");main{Pocket.refreshDetail()}
             await("A second away interval was hidden or replaced the first",12000){PocketTranscript.rows.any{it.s("text")=="Fresh response 4"}&&PocketTranscript.historyGaps.size==2&&!PocketTranscript.currentLoading}
-            assertEquals(setOf("long-gap-984","next-gap-1000"),PocketTranscript.historyGaps.map{it.cursor}.toSet())
+            assertTrue(PocketTranscript.historyGaps.any{it.cursor==advancedCursor})
+            assertTrue(PocketTranscript.historyGaps.any{it.cursor.startsWith("next-gap-")})
             Thread.sleep(2500)
             assertEquals("A second head window restarted automatic history draining",count+1,olderReads().size)
             await("Multiple gap windows were not persisted",12000){
@@ -238,7 +291,8 @@ class CodexHistoryConcurrencyNativeTest {
                 Pocket.closeTask();PocketTranscript.release();Pocket.open("same-thread")
             }
             await("Disk reopening lost a retained interval",20000){PocketTranscript.currentHistoryVerified&&PocketTranscript.historyGaps.size==2&&!PocketTranscript.loading}
-            assertEquals(setOf("long-gap-984","next-gap-1000"),PocketTranscript.historyGaps.map{it.cursor}.toSet())
+            assertTrue(PocketTranscript.historyGaps.any{it.cursor==advancedCursor})
+            assertTrue(PocketTranscript.historyGaps.any{it.cursor.startsWith("next-gap-")})
             assertEquals(1000,PocketTranscript.rows.count{it.s("id").startsWith("retained-old-")})
             assertEquals("Retained gap draft",prefs.getString("draft:same-thread",null))
             assertEquals(0,qa("state").getJSONArray("replies").length())
