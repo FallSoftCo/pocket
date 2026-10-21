@@ -83,19 +83,19 @@ class TranscriptRefreshNativeTest {
   val release=kotlinx.coroutines.CompletableDeferred<Unit>()
   try{
    main{PocketTranscript.reset("same-thread");Pocket.scope.launchEnvironment{PocketTranscript.load(beforeCacheRead={release.await()})}}
-   await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.currentLoading}
+   await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
    assertFalse(PocketTranscript.rows.any{it.s("clientId")=="same-send"})
-   val reads=qa("state").getJSONArray("reads").length()
+   val reads=qa("state").getJSONArray("reads").objects().count{!it.optBoolean("older")}
    release.complete(Unit)
    await{PocketTranscript.rows.any{it.s("clientId")=="same-send"}&&!PocketTranscript.updating&&qa("state").getJSONArray("positions").length()>0}
    val rows=PocketTranscript.rows
    assertEquals(1,rows.count{it.s("clientId")=="same-send"})
    assertTrue(rows.indexOfFirst{it.s("clientId")=="same-send"}<rows.indexOfFirst{it.s("id")=="order/answer"})
    val input=device.wait(Until.findObject(By.text("Restored delayed input")),3000)
-   val response=device.wait(Until.findObject(By.text("Cached ordering answer")),3000)
+   val response=device.wait(Until.findObject(By.text("Stale anchored answer")),3000)
    assertNotNull(input);assertNotNull(response)
    assertTrue("Native bubbles still display answer before its input",input!!.visibleBounds.bottom<=response!!.visibleBounds.top)
-   assertEquals("Visible repair restarted conversation reads",reads,qa("state").getJSONArray("reads").length())
+   assertEquals("Visible repair restarted current-message reads",reads,qa("state").getJSONArray("reads").objects().count{!it.optBoolean("older")})
    assertEquals(0,qa("state").getJSONArray("replies").length())
   }finally{release.complete(Unit)}
  }
