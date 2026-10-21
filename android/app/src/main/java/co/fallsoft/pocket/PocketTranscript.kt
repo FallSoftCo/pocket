@@ -217,8 +217,9 @@ object PocketTranscript {
         val page=value.getJSONObject("timeline")
         recordWindow(rows,incoming,page,!coverageVerified)
         rows=mergeRestoredTranscriptRows(rows,incoming)
-        confirmedRows=confirmedRows+canonicalTranscriptIds(page,incoming)
-        coverageVerified=true
+        val canonical=canonicalTranscriptIds(page,incoming)
+        confirmedRows=confirmedRows+canonical
+        if(canonical.isNotEmpty())coverageVerified=true
         if(!hadRows){before=page.s("before").takeIf{it.isNotBlank()};earlier=page.optBoolean("hasEarlier")}
         if(Pocket.detail==null)Pocket.detail=transcriptPresentationDetail(id,value)
         historyLoaded=rows.isNotEmpty()
@@ -259,8 +260,9 @@ object PocketTranscript {
         gapWindows=cached?.gaps.orEmpty();gapReadId=null;gapProblems=emptyMap();initialGapProbe=null;initialGapProbeUsed=false;coverageVerified=cached?.coverageVerified?:false;reads.reset();refreshPending=false;historyLoaded=rows.isNotEmpty();checkedThisOpen=false;freshForRead=false
         if(sharedPage!=null&&sharedRows.isNotEmpty()){
             recordWindow(cached?.rows.orEmpty(),sharedRows,sharedPage,!coverageVerified)
-            confirmedRows=confirmedRows+canonicalTranscriptIds(sharedPage,sharedRows)
-            coverageVerified=true
+            val canonical=canonicalTranscriptIds(sharedPage,sharedRows)
+            confirmedRows=confirmedRows+canonical
+            if(canonical.isNotEmpty())coverageVerified=true
         }
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
@@ -421,8 +423,9 @@ object PocketTranscript {
                                 if(shared!=null&&shared.optInt("windowSchema")==2){
                                     val headRows=shared.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
                                     recordWindow(cached.rows,headRows,shared.getJSONObject("timeline"),!cached.coverageVerified,cached.confirmed)
-                                    confirmedRows=confirmedRows+canonicalTranscriptIds(shared.getJSONObject("timeline"),headRows)
-                                    coverageVerified=true
+                                    val canonical=canonicalTranscriptIds(shared.getJSONObject("timeline"),headRows)
+                                    confirmedRows=confirmedRows+canonical
+                                    if(canonical.isNotEmpty())coverageVerified=true
                                 }
                                 baselineRows=normalizeTranscriptMessages(baselineRows.values+cached.rows).associateBy{it.s("id")}
                             }else{
@@ -512,8 +515,8 @@ object PocketTranscript {
                     // A contiguous head can prove one or more intervals complete.
                     // It never rewinds the independent cursor of another interval.
                     gapWindows=gapWindows.filterNot{it.beforeRow in incomingIds&&it.olderAnchor in incomingIds&&it.unverified.all{ref->ref in incomingIds}}
-                    if(wasLoaded)recordWindow(rows,incoming,page,!coverageVerified&&gapWindows.isEmpty())
-                    coverageVerified=true
+                    if(wasLoaded)recordWindow(rows,incoming,page,!coverageVerified)
+                    if(incomingContent.isNotEmpty())coverageVerified=true
                 }
                 val mergeRows=if(!older&&wasLoaded&&!overlaps)incoming.filterNot{it.s("kind")=="turn"&&rows.any{old->old.s("id")==it.s("id")}}else incoming
                 rows=mergeTranscriptPage(rows,mergeRows,older,{it.s("id")},{it.optLong("version")},insertBefore=if(older)transcriptDisplayAnchor(rows,page.s("insertBefore").takeIf{it.isNotBlank()})else null,keepPosition={it.s("kind")=="turn"})
