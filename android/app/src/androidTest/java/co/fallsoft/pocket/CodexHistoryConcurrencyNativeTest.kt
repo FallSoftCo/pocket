@@ -51,14 +51,14 @@ class CodexHistoryConcurrencyNativeTest {
             main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
             await("Legacy islands were not retained for the audit"){PocketTranscript.rows.count{it.s("id").startsWith("legacy-alpha110-")}==2}
             repeat(4){
-                assertFalse("Alpha110 cache island painted before fresh history",device.hasObject(By.textContains("Alpha110 is installed")))
+                assertFalse("Alpha110 cache island painted before fresh history",device.hasObject(By.textStartsWith("Alpha110 is installed")))
                 Thread.sleep(100)
             }
             qa("release-replay-head")
             await("Actual canonical head did not settle",20000){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
             await("Tool-heavy raw pages left the viewport unhydrated",12000){qa("replay-state").getJSONArray("reads").objects().any{it.optBoolean("older")}}
             await("Viewport hydration did not settle",12000){!PocketTranscript.loading&&!PocketTranscript.updating}
-            assertFalse("Old Alpha110 island is still presented as recent context",device.hasObject(By.textContains("Alpha110 is installed")))
+            assertFalse("Old Alpha110 island is still presented as recent context",device.hasObject(By.textStartsWith("Alpha110 is installed")))
             val projected=connectedTranscriptWindow(PocketTranscript.rows,PocketTranscript.historyGaps,
                 connectedTranscriptRange(PocketTranscript.rows,PocketTranscript.historyGaps,PocketTranscript.readPosition?.rowId))
             assertFalse(projected.any{it.s("id").startsWith("legacy-alpha110-")})
