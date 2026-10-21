@@ -42,7 +42,13 @@ internal object UnifiedWorkCatalog {
     })
     private fun catalogStores()=profiles.values.filter{origin->
         readers[key(origin)].orEmpty().any{it.backend=="codex"}
-    }.map{CodexCatalog.source(it,archived)}
+    }.mapNotNull{origin->
+        // A pairing replacement invalidates the discovery snapshot before its next
+        // refresh. Never render or page a store belonging to the previous owner.
+        if(Pocket.captureEnvironment(origin.environment.id)?.matches(origin)==true)
+            CodexCatalog.source(origin,archived)
+        else null
+    }
     val hasEarlier get()=catalogStores().any{it.cursor!=null}
     suspend fun more(){
         coroutineScope{catalogStores().filter{it.cursor!=null}.map{store->launch{
