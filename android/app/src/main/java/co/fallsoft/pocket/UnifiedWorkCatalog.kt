@@ -113,7 +113,10 @@ internal object UnifiedWorkCatalog {
         // Single flight is set by the owning job; this function does not change selection.
         probes[source]=Pocket.scope.launch{
             try{
-                val status=WorkCatalogTransport.get(destination,"/api/backends")
+                val status=discoverWorkBackends(
+                    {WorkCatalogTransport.get(destination,"/api/backends")},
+                    {codexReader(destination).head();Unit}
+                )
                 if(!ownsProbe())return@launch
                 val available=status.getJSONArray("backends").objects()
                 require(available.map{it.s("id")}.distinct().size==available.size){"Backend discovery is unconfirmed"}
@@ -131,6 +134,15 @@ internal object UnifiedWorkCatalog {
                 failures.remove(source);nextProbe[source]=System.currentTimeMillis()+60_000
                 discoveryErrors=discoveryErrors-source
                 reconcileReaders();poller.refresh()
+                // Publish catalog immediately; ancillary capability discovery cannot
+                // delay visible work or grant unsafe legacy history attachment.
+                if(Pocket.captureEnvironment()?.matches(destination)!=true){
+                    try{
+                        val metadata=WorkCatalogTransport.get(destination,"/api/status")
+                        if(ownsProbe())CodexSessionRepository.observeCapabilities(destination,metadata.optJSONObject("capabilities"))
+                    }catch(cancelled:CancellationException){throw cancelled}
+                    catch(_:Exception){if(ownsProbe())CodexSessionRepository.observeCapabilities(destination,null)}
+                }
             }catch(cancelled:CancellationException){throw cancelled}
             catch(error:Exception){
                 if(ownsProbe()){

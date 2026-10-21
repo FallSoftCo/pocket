@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 /** Environment-owned message synchronization. No turn admission or read acknowledgements. */
 internal object CodexSessionRepository {
     private data class Source(val destination:EnvironmentRequest,val scope:String)
-    private data class Intent(val source:Source,val thread:String,val notification:Long=0)
+    private data class Intent(val source:Source,val thread:String,val notification:Long=0,val priority:Long=0)
     private val lane=Dispatchers.IO.limitedParallelism(1)
     private val io=CoroutineScope(SupervisorJob()+lane+CoroutineExceptionHandler{_,error->
         // A disposable cache failure must never take down input/voice or expose text.
@@ -20,6 +20,12 @@ internal object CodexSessionRepository {
     })
     // Network admission cannot queue behind startup SQLite restoration or parsing.
     private val network=CoroutineScope(SupervisorJob()+Dispatchers.IO)
+    // Background reads have their own two-call/five-second budget. They share
+    // cached session identity and single-flight results, never UI admission capacity.
+    private val backgroundClient by lazy{CodexReadTransport.historyClient.newBuilder()
+        .dispatcher(okhttp3.Dispatcher().apply{maxRequests=2;maxRequestsPerHost=2})
+        .callTimeout(5,java.util.concurrent.TimeUnit.SECONDS).build()}
+    private val readOnlyCapabilities=ConcurrentHashMap<String,Boolean>()
     private val requestMutex=Mutex()
     private val requests=mutableMapOf<Pair<String,String>,Deferred<JSONObject>>()
     private val inFlight=hashSetOf<Pair<String,String>>()
@@ -43,7 +49,7 @@ internal object CodexSessionRepository {
     }.apply{setWriteAheadLoggingEnabled(true)}.writableDatabase}
     private fun source(destination:EnvironmentRequest)=Source(destination,transcriptCacheOwner(destination.environment.id,destination.endpoint,destination.token))
     /** Shared current read, independent of viewport lifetime. Consumers own private JSON copies. */
-    suspend fun readCurrent(destination:EnvironmentRequest,id:String):JSONObject {
+    suspend fun readCurrent(destination:EnvironmentRequest,id:String,background:Boolean=false):JSONObject {
         val source=source(destination);val key=source.scope to id
         val request=requestMutex.withLock{
             requests[key]?.takeIf{it.isActive}?:network.async{
@@ -51,7 +57,8 @@ internal object CodexSessionRepository {
                 val baseline=latest[key]?.optJSONObject("historyHead")?.s("epoch")
                 val notificationAtStart=known[key]?:0
                 val liveAtStart=liveGenerations[key]?:0
-                val response=CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"?view=timeline")
+                val path="/api/threads/"+android.net.Uri.encode(id)+(if(background)"/head" else "?view=timeline")
+                val response=CodexReadTransport.read(destination,path,client=if(background)backgroundClient else CodexReadTransport.historyClient)
                 val currentEpoch=latest[key]?.optJSONObject("historyHead")?.s("epoch")
                 if(!baseline.isNullOrBlank()&&currentEpoch!=baseline&&response.optJSONObject("historyHead")?.s("epoch")==baseline)
                     throw java.io.IOException("Message runtime changed during the read")
@@ -85,6 +92,32 @@ internal object CodexSessionRepository {
         val destination=Pocket.captureEnvironment()?:return 0
         return known[source(destination).scope to id]?:0
     }
+    /** Only server-advertised read-only snapshots admit cold background reads.
+     * Legacy sources keep live/cache evidence and explicit foreground control.
+     */
+    fun observeCapabilities(destination:EnvironmentRequest,capabilities:JSONObject?){
+        val source=source(destination)
+        val allowed=capabilities?.optBoolean("readOnlyTimeline")==true
+        val previous=readOnlyCapabilities.put(source.scope,allowed)
+        if(previous==allowed||!allowed)return
+        io.launch{
+            if(!current(source))return@launch
+            ensurePump()
+            dirty.filter{it.first==source.scope}.forEach{key->
+                if(key !in pending)pending[key]=Intent(source,key.second,known[key]?:0,
+                    workTimeMillis(latest[key]?.optJSONObject("thread")?.optLong("activityAt")?:0))
+            }
+            trimPending();wake.trySend(Unit)
+        }
+    }
+    private fun trimPending(){
+        if(pending.size<=32)return
+        val keep=pending.entries.sortedWith(
+            compareByDescending<Map.Entry<Pair<String,String>,Intent>>{readOnlyCapabilities[it.value.source.scope]==true}
+                .thenByDescending{it.value.priority}
+        ).take(32).map{it.key}.toSet()
+        pending.keys.filter{it !in keep}.forEach{pending.remove(it)}
+    }
     fun activate(){
         val destination=Pocket.captureEnvironment()?:return
         val source=source(destination)
@@ -100,6 +133,7 @@ internal object CodexSessionRepository {
                     if(cursor.getInt(3)!=0&&(!alreadyLoaded||key in dirty)){dirty.add(key);pending[key]=Intent(source,thread,cursor.getLong(2))}
                 }
             }
+            trimPending()
             val selected=Pocket.selected
             if(selected!=null)latest[source.scope to selected]?.takeIf{canPresent(selected,it)}?.let{value->
                 withContext(Dispatchers.Main.immediate){
@@ -151,7 +185,7 @@ internal object CodexSessionRepository {
             }
         }
     }
-    fun invalidate(id:String,destination:EnvironmentRequest?=Pocket.captureEnvironment(),notification:Long=0){
+    fun invalidate(id:String,destination:EnvironmentRequest?=Pocket.captureEnvironment(),notification:Long=0,priorityAt:Long=0){
         if(id.isBlank()||destination==null)return
         val source=source(destination);val key=source.scope to id
         if(notification>0){
@@ -161,7 +195,7 @@ internal object CodexSessionRepository {
         io.launch{
             ensurePump();if(!current(source))return@launch
             load(source,id)
-            queue(Intent(source,id,notification))
+            queue(Intent(source,id,notification,maxOf(workTimeMillis(priorityAt),if(notification>0)System.currentTimeMillis() else 0)))
         }
     }
     /** Persist server-proven ordering in the shared tail as well as the open
@@ -272,7 +306,9 @@ internal object CodexSessionRepository {
     private fun queue(intent:Intent){
         val key=intent.source.scope to intent.thread
         known[key]=maxOf(known[key]?:0,intent.notification)
-        pending[key]=intent
+        val old=pending[key]
+        pending[key]=intent.copy(priority=maxOf(intent.priority,old?.priority?:0))
+        trimPending()
         dirty.add(key)
         save(intent.source,intent.thread,null,true)
         wake.trySend(Unit)
@@ -280,17 +316,18 @@ internal object CodexSessionRepository {
     private fun ensurePump(){
         if(started)return
         started=true
-        repeat(3){io.launch{
+        repeat(2){io.launch{
             for(signal in wake){
                 delay(120) // One burst, one canonical repair; token deltas do not trigger reads.
                 while(pending.isNotEmpty()){
-                    val key=pending.keys.lastOrNull{it !in inFlight}?:break
+                    val key=pending.entries.filter{it.key !in inFlight&&readOnlyCapabilities[it.value.source.scope]==true}
+                        .maxByOrNull{it.value.priority}?.key?:break
                     val intent=pending.remove(key)?:continue
                     if(!current(intent.source))continue
                     inFlight.add(key)
                     if(pending.isNotEmpty())wake.trySend(Unit)
                     try{
-                        val response=readCurrent(intent.source.destination,intent.thread)
+                        val response=readCurrent(intent.source.destination,intent.thread,background=true)
                         if(!current(intent.source))continue
                         validateTranscriptSnapshot(response,intent.thread)
                         val safe=presentation(response)

@@ -12,10 +12,11 @@ for(const profile of profiles){
   let raw='';for await(const b of req)raw+=b;
   const path=new URL(req.url,'http://localhost').pathname;let body={};
   console.log(JSON.stringify({host:profile.host,path,method:req.method}));
+  if(path==='/api/backends'&&profile.host==='Phone'){res.writeHead(404,{'Content-Type':'text/html'});res.end('<html>Cannot GET /api/backends</html>');return;}
   if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
-  else if(path==='/api/status')body={host:profile.host,connected:true,local:profile.host==='Phone',deviceId:profile.device};
+  else if(path==='/api/status')body={host:profile.host,capabilities:{readOnlyTimeline:profile.host!=='Phone'},connected:true,local:profile.host==='Phone',deviceId:profile.device};
   else if(path==='/api/threads')body={threads:[thread(),thread('second-thread')]};
-  else if(/^\/api\/threads\/[^/]+$/.test(path)){const t=thread(path.split('/').at(-1));body={thread:{...t,turns:[]},timeline:{rows:[{id:t.id+'/answer',turnId:'synthetic',kind:'message',text:t.preview}],hasEarlier:false,before:null},revision:0,notes:[],pending:[],notifications:[],outgoing:[]};}
+  else if(/^\/api\/threads\/[^/]+(?:\/head)?$/.test(path)){const t=thread(path.split('/')[3]);body={thread:{...t,turns:[]},timeline:{rows:[{id:t.id+'/answer',turnId:'synthetic',kind:'message',text:t.preview}],hasEarlier:false,before:null},revision:0,notes:[],pending:[],notifications:[],outgoing:[]};}
   else if(/^\/api\/threads\/[^/]+\/reply$/.test(path)){const input=JSON.parse(raw);sent.push({host:profile.host,thread:path.split('/')[3],id:input.id});body={id:input.id,state:'accepted'};}
   else if(path==='/api/app/update'){updateChecks.push({host:profile.host,device:profile.device});body={available:false};}
   else if(path==='/api/notifications'||path==='/api/attention')body={notifications:[],items:[]};

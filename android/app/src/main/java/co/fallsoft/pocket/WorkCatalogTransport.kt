@@ -15,7 +15,7 @@ internal object WorkCatalogTransport {
         .callTimeout(8,TimeUnit.SECONDS).build()}
     suspend fun get(destination:EnvironmentRequest,path:String,binding:String?=null):JSONObject {
         val resource=path.substringBefore('?')
-        require(resource in setOf("/api/backends","/api/threads","/api/hollywood/v3/rooms"))
+        require(resource in setOf("/api/backends","/api/status","/api/threads","/api/hollywood/v3/rooms"))
         require(if(resource=="/api/hollywood/v3/rooms")binding?.matches(Regex("[0-9a-f]{64}"))==true else binding==null)
         val request=Request.Builder().url(destination.endpoint.trimEnd('/')+path)
             .header("Authorization","Bearer "+destination.token)
@@ -27,9 +27,7 @@ internal object WorkCatalogTransport {
                 override fun onResponse(call:Call,response:Response){
                     try{
                         val value=response.use{
-                            val json=try{JSONObject(it.body?.string().orEmpty())}catch(e:Exception){throw IOException("Catalog response unavailable")}
-                            if(!it.isSuccessful)throw PocketApiException(it.code,ConnectionMessages.server(json.s("error","Catalog unavailable")))
-                            json
+                            parseWorkCatalogResponse(it.code,it.body?.string().orEmpty())
                         }
                         if(continuation.isActive)continuation.resume(value)
                     }catch(e:Exception){if(continuation.isActive)continuation.resumeWithException(e)}
@@ -91,4 +89,28 @@ internal fun workTimeMillis(value:Long):Long=when {
     value<=0->0
     value<100_000_000_000L->value*1000
     else->value
+}
+
+
+// Preserve HTTP status even when a legacy server returns an HTML error page.
+// Malformed successful responses remain failures, never an empty catalog.
+internal fun parseWorkCatalogResponse(status:Int,body:String):JSONObject {
+    val json=try{JSONObject(body)}catch(_:Exception){null}
+    if(status !in 200..299)throw PocketApiException(status,
+        ConnectionMessages.server(json?.s("error","Catalog unavailable")?:"Catalog unavailable"))
+    return json?:throw IOException("Catalog response unavailable")
+}
+
+/** Older stock gateways predate backend discovery. Confirm their authenticated
+ * canonical session catalog before advertising stock capability; authentication,
+ * network and malformed-response failures never downgrade to this compatibility path.
+ */
+internal suspend fun discoverWorkBackends(
+    read:suspend ()->JSONObject,
+    confirmLegacyCodex:suspend ()->Unit
+):JSONObject = try{read()}catch(error:PocketApiException){
+    if(error.status!=404)throw error
+    confirmLegacyCodex()
+    JSONObject().put("backends",org.json.JSONArray().put(JSONObject()
+        .put("id","codex").put("configured",true).put("available",true)))
 }

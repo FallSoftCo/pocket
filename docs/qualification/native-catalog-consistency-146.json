@@ -1,0 +1,23 @@
+{
+  "state": "candidate-native-qualification-pending",
+  "versionCode": 146,
+  "scope": [
+    "Legacy stock discovery compatibility",
+    "Common head/search/page acceptance",
+    "Monotonic preview evidence",
+    "Capability-gated bounded background read admission"
+  ],
+  "requiredJourneys": [
+    "Legacy phone catalog and same-ID environment isolation",
+    "Search-only update repairs shared messages before reopen",
+    "Closed notification/live synchronization",
+    "Delayed search does not roll back current evidence",
+    "New current message while older read held",
+    "Foreground alert coalescing"
+  ],
+  "limits": [
+    "No model or command replay",
+    "Installed145 remains until qualification and signed update publication",
+    "Specific reported session still requested; sampled fast backend reads alone do not establish handset freshness"
+  ]
+}

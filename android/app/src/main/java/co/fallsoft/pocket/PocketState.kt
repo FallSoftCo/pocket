@@ -387,11 +387,12 @@ internal fun mergeLiveTask(current:Task?, fetched:Task, baseline:Task?):Task {
     if(current==null)return fetched
     val newerLive=current.activityAt>(baseline?.activityAt?:0) && current.activityAt>=fetched.activityAt
     val changedPreview=current.preview!=baseline?.preview||current.previewRole!=baseline?.previewRole||current.previewKind!=baseline?.previewKind
+    val keepPreview=changedPreview||current.activityAt>fetched.activityAt
     return fetched.copy(
         status=if(newerLive||current.status!=baseline?.status)current.status else fetched.status,
-        preview=if(changedPreview)current.preview else fetched.preview,
-        previewRole=if(changedPreview)current.previewRole else fetched.previewRole,
-        previewKind=if(changedPreview)current.previewKind else fetched.previewKind,
+        preview=if(keepPreview)current.preview else fetched.preview,
+        previewRole=if(keepPreview)current.previewRole else fetched.previewRole,
+        previewKind=if(keepPreview)current.previewKind else fetched.previewKind,
         activityAt=maxOf(current.activityAt,fetched.activityAt))
 }
 

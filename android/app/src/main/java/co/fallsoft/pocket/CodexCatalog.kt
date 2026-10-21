@@ -118,6 +118,7 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
         value.metadata=launch(value,CodexCatalogLane.METADATA){
             val revision=Pocket.statusRevision
             val result=read(value,"/api/status")
+            CodexSessionRepository.observeCapabilities(value.destination,result.optJSONObject("capabilities"))
             if(!selected())return@launch
             val backendKey="backend:"+backendOwner(value.destination.endpoint,value.destination.token)
             if(result.s("backend")=="lax"&&!Pocket.prefs.contains(backendKey)){
@@ -138,21 +139,28 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
         value.catalog=launch(value,CodexCatalogLane.CATALOG){
             val baseline=tasks.associateBy{it.id}
             val result=read(value,if(value.key.archived)"/api/threads?archived=true"else "/api/threads")
-            val fetched=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}.orEmpty()
-            val previous=tasks.firstOrNull{it.id==Pocket.selected}
-            fetched.forEach{next->
-                val old=baseline[next.id]
-                if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,next.preview,next.previewKind,next.status)||transcriptLiveActivityAdvanced(old.activityAt,next.activityAt))
-                    CodexSessionRepository.invalidate(next.id,value.destination)
-            }
-            tasks=mergeLiveTaskSnapshot(tasks,fetched,baseline,result.optBoolean("refreshPending")||result.s("nextCursor").isNotBlank())
-            tasks.firstOrNull{selected()&&it.id==Pocket.selected}?.let{latest->
-                if(transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,latest.preview,latest.previewKind,latest.status)||
-                    transcriptLiveActivityAdvanced(previous?.activityAt,latest.activityAt))CodexConversations.invalidate()
-            }
+            val fetched=result.getJSONArray("threads").objects().map{catalogTask(it)}
+            acceptCatalog(fetched,baseline,result.optBoolean("refreshPending")||result.s("nextCursor").isNotBlank())
             complete=!result.optBoolean("refreshPending")
             if(!cursorInitialized&&complete){cursor=result.s("nextCursor").takeIf{it.isNotBlank()};cursorInitialized=true}
             load=CatalogLoadState.Ready;catalogAcceptedAt=android.os.SystemClock.elapsedRealtime()
+        }
+    }
+    /** Every accepted catalog lane publishes work evidence and invalidates the
+     * corresponding shared transcript. Search/page results are not a second
+     * source of card-only freshness. Compare accepted merges, not stale HTTP rows.
+     */
+    private fun acceptCatalog(fetched:List<Task>,baseline:Map<String,Task>,partial:Boolean){
+        val previous=tasks.associateBy{it.id}
+        val merged=mergeLiveTaskSnapshot(tasks,fetched,baseline,partial)
+        tasks=merged
+        merged.forEach{next->
+            val old=previous[next.id]
+            if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,next.preview,next.previewKind,next.status)||
+                transcriptLiveActivityAdvanced(old.activityAt,next.activityAt)){
+                CodexSessionRepository.invalidate(next.id,destination,priorityAt=next.activityAt)
+                if(selected()&&Pocket.selected==next.id)CodexConversations.invalidate()
+            }
         }
     }
     /** Same canonical store serves the merged list and selected conversation.
@@ -186,7 +194,7 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
                     (next?.let{"&cursor="+android.net.Uri.encode(it)}?:"")+
                     (if(search.isNotBlank())"&search="+android.net.Uri.encode(search)else ""))
                 if(ticket!=pageSerial)return@launch
-                tasks=mergeLiveTaskSnapshot(tasks,result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}.orEmpty(),baseline,true)
+                acceptCatalog(result.getJSONArray("threads").objects().map{catalogTask(it)},baseline,true)
                 if(search.isBlank())cursor=result.s("nextCursor").takeIf{it.isNotBlank()}
             }finally{if(current(value)&&ticket==pageSerial)paging=false}
         }

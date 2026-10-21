@@ -54,6 +54,8 @@ class EnvironmentIsolationNativeTest {
   // the canonical projection; tap the same visible second-thread ID on each.
   await{UnifiedWorkCatalog.snapshots.filter{it.key.environment in setOf("workstation","remote_qa")}
    .count{it.entries.any{entry->entry.key.id=="second-thread"}}==2}
+  await{UnifiedWorkCatalog.snapshots.any{it.key.environment=="phone"&&it.entries.any{entry->entry.key.id=="same-thread"}}}
+  assertFalse("Legacy phone discovery incorrectly reported a catalog error",UnifiedWorkCatalog.discoveryErrors.keys.any{it.environment=="phone"})
   assertTrue("Other source card not rendered",visible(By.text("OZZZ synthetic work two"),15000))
   assertTrue(visible(By.textContains("OZZZ second answer only"),5000))
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")

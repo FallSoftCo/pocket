@@ -123,4 +123,36 @@ class WorkCatalogStateTest {
   assertEquals(task,catalogTask(task.catalogJson()))
  }
 
+
+ @Test fun legacyHtmlDiscovery404UsesTheVerifiedCanonicalCodexCatalog()=kotlinx.coroutines.runBlocking {
+  var confirmed=0
+  val result=discoverWorkBackends({parseWorkCatalogResponse(404,"<html>Cannot GET /api/backends</html>")},{confirmed++})
+  assertEquals(1,confirmed)
+  val backend=result.getJSONArray("backends").getJSONObject(0)
+  assertEquals("codex",backend.getString("id"));assertTrue(backend.getBoolean("configured"))
+ }
+ @Test fun discoveryCannotHideAuthorizationOutagesOrMalformedSuccessfulResponses()=kotlinx.coroutines.runBlocking {
+  for(status in listOf(401,403,503)){
+   var confirmed=false
+   try{
+    discoverWorkBackends({parseWorkCatalogResponse(status,"<html>unavailable</html>")},{confirmed=true})
+    fail("HTTP error advertised a working catalog")
+   }catch(error:PocketApiException){assertEquals(status,error.status)}
+   assertFalse(confirmed)
+  }
+  var confirmed=false
+  try{discoverWorkBackends({parseWorkCatalogResponse(200,"not json")},{confirmed=true});fail("Malformed success accepted")}
+  catch(_:java.io.IOException){}
+  assertFalse(confirmed)
+  try{discoverWorkBackends({parseWorkCatalogResponse(404,"missing")},{throw PocketApiException(403,"Not authorized")});fail("Unverified legacy catalog accepted")}
+  catch(error:PocketApiException){assertEquals(403,error.status)}
+ }
+
+ @Test fun olderInventoryCannotRollBackThePreviewAcceptedFromSearch(){
+  val current=catalogTask(org.json.JSONObject().put("id","same").put("preview","New answer")
+   .put("previewKind","message").put("previewRole","codex").put("activityAt",2000))
+  val older=current.copy(preview="Older answer",activityAt=1000)
+  val result=mergeLiveTask(current,older,current)
+  assertEquals("New answer",result.preview);assertEquals(2000L,result.activityAt)
+ }
 }
