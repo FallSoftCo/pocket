@@ -167,3 +167,23 @@ lookups with a five-second per-request timeout. A late disk restoration therefor
 does not need another user send or a coincidental head message to repair order.
 A successful independent current read can retry failed visible ordering once;
 this never starts a model, sends input or recursively triggers another read.
+
+
+### Canonical membership is independent of live projection
+
+A shared current-window cache records the identities read from its canonical
+server page. Live updates may change text or add visible rows, but cannot add to
+that page's canonical membership. The retained transcript separately persists
+the union of corroborated source identities and its missing-interval ledger.
+
+A current page joins an older window only through corroborated identities, not
+through an arbitrary live overlay that happens to reappear in the page. Otherwise
+its canonical cursor opens a missing interval back to the older verified window.
+Older and gap pages corroborate additional identities as they are read. Version1
+checkpoints and version2 bodies without proof metadata retain their data but
+cannot supply coverage proof. This also applies when only the shared cache exists
+and no separate retained checkpoint has been written yet.
+
+EOF with retained source identities outside the returned full window is an
+unavailable interval, not successful deletion or complete coverage. Such a marker
+has no manufactured provider cursor; a later canonical page may supply one.

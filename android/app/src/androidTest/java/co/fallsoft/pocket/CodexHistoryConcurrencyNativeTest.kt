@@ -140,10 +140,22 @@ class CodexHistoryConcurrencyNativeTest {
             await("Shared cache did not publish the complete page"){CodexSessionRepository.peek("same-thread")?.getJSONObject("timeline")?.getJSONArray("rows")?.length()==100}
             assertEquals("before-entire-window",CodexSessionRepository.peek("same-thread")!!.getJSONObject("timeline").s("before"))
             qa("long-retained-gap")
+            val firstHead=runBlocking{CodexSessionRepository.readCurrent(destination,"same-thread")}
+            val liveRow=JSONObject(firstHead.getJSONObject("timeline").getJSONArray("rows").objects().first{transcriptContentAnchor(it.s("kind"))}.toString()).put("version",1000)
+            CodexSessionRepository.timeline(destination,JSONObject().put("threadId","same-thread").put("turnId",liveRow.s("turnId")).put("version",1000).put("historyHead",firstHead.getJSONObject("historyHead")).put("row",liveRow))
+            await("Live overlay did not reach the shared window"){CodexSessionRepository.peek("same-thread")?.getJSONObject("timeline")?.getJSONArray("rows")?.objects()?.any{it.s("id")==liveRow.s("id")}==true}
+            assertEquals("A live row falsely became canonical history",100,CodexSessionRepository.peek("same-thread")!!.getJSONObject("timeline").getJSONArray("canonicalIds").length())
+            val scope=PocketTranscript.scopeKey()
+            main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
+            await("A matching live overlay hid the missing canonical interval",20000){PocketTranscript.currentHistoryVerified&&PocketTranscript.historyGaps.isNotEmpty()&&!PocketTranscript.loading}
+            val cache=TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1"))
+            await("Canonical gap did not retain the old window boundary",12000){cache.read(scope,"same-thread")?.let{JSONObject(it).optJSONArray("historyGaps")?.objects()?.any{it.s("olderAnchor")=="complete-window-99"}}==true}
+            main{Pocket.closeTask();PocketTranscript.release()}
+            runBlocking{CodexConversations.storageScope.coroutineContext[kotlinx.coroutines.Job]?.children?.toList()?.forEach{it.join()}}
             val head=runBlocking{CodexSessionRepository.readCurrent(destination,"same-thread")}
             CodexSessionRepository.accepted(destination,"same-thread",head)
-            await("Current shared head not ready"){CodexSessionRepository.peek("same-thread")?.getJSONObject("timeline")?.getJSONArray("rows")?.objects()?.any{it.s("text")=="Fresh response 1"}==true}
-            val scope=PocketTranscript.scopeKey()
+            await("Current shared head not ready"){CodexSessionRepository.peek("same-thread")?.getJSONObject("timeline")?.getJSONArray("canonicalIds")?.length()==1}
+            val historicalBefore=qa("state").getJSONArray("reads").objects().count{it.optBoolean("older")}
             val old=org.json.JSONArray((0 until 1000).map{n->JSONObject().put("id","retained-old-"+n).put("kind","message").put("turnId","old-turn").put("text","Retained old message "+n)})
             old.put(JSONObject(head.getJSONObject("timeline").getJSONArray("rows").objects().first{transcriptContentAnchor(it.s("kind"))}.toString()))
             val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old)
@@ -156,12 +168,12 @@ class CodexHistoryConcurrencyNativeTest {
             assertFalse("Old reading anchor was restored on an explicit latest open",PocketTranscript.readPosition?.rowId=="retained-old-500")
             await("Independent current head did not settle",20000){PocketTranscript.currentHistoryVerified&&!PocketTranscript.loading}
             val state=qa("state")
-            assertTrue("Opening drained historical pages",state.getJSONArray("reads").objects().count{it.optBoolean("older")}<=1)
+            assertTrue("Opening drained historical pages",state.getJSONArray("reads").objects().count{it.optBoolean("older")}-historicalBefore<=1)
             assertEquals("Unsent across old and new windows",prefs.getString("draft:same-thread",null))
             assertEquals(0,state.getJSONArray("replies").length())
             java.io.File(context.cacheDir,"shared-window-reopen-result.json").writeText(JSONObject()
                 .put("completePageRetained",100).put("olderRowsRetained",1000).put("missingMiddleExplicit",true)
-                .put("openedAtLatest",true).put("originalCursorRetained",true).put("workSubmitted",0).toString())
+                .put("openedAtLatest",true).put("originalCursorRetained",true).put("liveOverlayCannotProveCoverage",true).put("workSubmitted",0).toString())
         }finally{
             main{Pocket.closeTask();PocketLive.stop()}
             val edit=prefs.edit().clear()
@@ -185,7 +197,7 @@ class CodexHistoryConcurrencyNativeTest {
             val scope=PocketTranscript.scopeKey()
             val cached=org.json.JSONArray()
             repeat(1000){n->cached.put(JSONObject().put("id","retained-old-"+n).put("kind","message").put("turnId","old-turn").put("text","Retained old message "+n))}
-            val snapshot=JSONObject().put("schema",2).put("scope",scope).put("id","same-thread").put("rows",cached).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("coverageVerified",true)
+            val snapshot=JSONObject().put("schema",2).put("scope",scope).put("id","same-thread").put("rows",cached).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("coverageVerified",true).put("confirmedIds",org.json.JSONArray(cached.objects().map{it.s("id")}))
             assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
             main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
             await("Current message never became independently fresh",20000){PocketTranscript.currentHistoryVerified&&PocketTranscript.rows.any{it.s("text")=="Fresh response 1"}}

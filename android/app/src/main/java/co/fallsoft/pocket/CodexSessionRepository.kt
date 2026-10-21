@@ -38,7 +38,7 @@ internal object CodexSessionRepository {
     private fun putLatest(key:Pair<String,String>,value:JSONObject):Boolean{
         val weight=value.toString().length.toLong()*2
         if(weight>4L*1024*1024){latest.remove(key);memoryWeights.remove(key);dirty.add(key);return false}
-        if(value.optInt("windowSchema")!=2)dirty.add(key)
+        if(value.optInt("windowSchema")!=2||value.optJSONObject("timeline")?.optJSONArray("canonicalIds")==null)dirty.add(key)
         latest[key]=value
         memoryWeights.remove(key);memoryWeights[key]=weight
         var total=memoryWeights.values.sum()
@@ -99,7 +99,7 @@ internal object CodexSessionRepository {
         val destination=Pocket.captureEnvironment()?:return null
         return latest[source(destination).scope to id]
     }
-    fun canPresent(id:String,value:JSONObject):Boolean=value.optInt("windowSchema")==2&&notificationWatermark(id)<=value.optLong("throughNotification")&&!isDirty(id)
+    fun canPresent(id:String,value:JSONObject):Boolean=value.optInt("windowSchema")==2&&value.optJSONObject("timeline")?.optJSONArray("canonicalIds")!=null&&notificationWatermark(id)<=value.optLong("throughNotification")&&!isDirty(id)
     fun isDirty(id:String):Boolean {
         val destination=Pocket.captureEnvironment()?:return true
         return (source(destination).scope to id) in dirty
@@ -290,13 +290,16 @@ internal object CodexSessionRepository {
         safe.getJSONObject("timeline").put("rows",org.json.JSONArray(rows))
         safe.put("historyHead",oldHead)
     }
-    private fun presentation(value:JSONObject):JSONObject =
-        JSONObject().put("windowSchema",2).put("thread",transcriptPresentationDetail(value.getJSONObject("thread").s("id"),value).getJSONObject("thread"))
-            .put("timeline",JSONObject(value.getJSONObject("timeline"),value.getJSONObject("timeline").keys().asSequence().toList().toTypedArray())
-                .put("rows",org.json.JSONArray(value.getJSONObject("timeline").getJSONArray("rows").objects().filter{it.s("kind")!="request"})))
-            .put("revision",value.optLong("revision"))
-            .put("historyHead",value.optJSONObject("historyHead"))
+    private fun presentation(value:JSONObject):JSONObject {
+        val sourcePage=value.getJSONObject("timeline")
+        val rows=normalizeTranscriptMessages(sourcePage.getJSONArray("rows").objects().filter{it.s("kind")!="request"})
+        val page=JSONObject(sourcePage,sourcePage.keys().asSequence().toList().toTypedArray())
+            .put("rows",org.json.JSONArray(rows))
+            .put("canonicalIds",org.json.JSONArray(rows.filter{transcriptContentAnchor(it.s("kind"))}.map{it.s("id")}))
+        return JSONObject().put("windowSchema",2).put("thread",transcriptPresentationDetail(value.getJSONObject("thread").s("id"),value).getJSONObject("thread"))
+            .put("timeline",page).put("revision",value.optLong("revision")).put("historyHead",value.optJSONObject("historyHead"))
             .put("throughNotification",maxOf(value.optJSONArray("notifications")?.objects()?.maxOfOrNull{it.optLong("id")}?:0,value.optLong("throughNotification"),value.optLong("_notificationObserved")))
+    }
     private fun load(source:Source,id:String):JSONObject? {
         val key=source.scope to id
         latest[key]?.let{return it}

@@ -57,7 +57,7 @@ class TranscriptGapWindowTest {
   fun row(id:String)=JSONObject().put("id",id).put("kind","message")
   val legacy=JSONObject().put("schema",1).put("coverageVerified",true)
   assertFalse(verifiedTranscriptCoverage(legacy))
-  assertTrue(verifiedTranscriptCoverage(JSONObject().put("schema",2).put("coverageVerified",true)))
+  assertTrue(verifiedTranscriptCoverage(JSONObject().put("schema",2).put("coverageVerified",true).put("confirmedIds",JSONArray(listOf("old")))))
   val retained=listOf(row("old-1"),row("old-0"),row("recent-3"),row("recent-4"),row("head-5"))
   val head=listOf(row("head-5"))
   val gap=missingTranscriptWindow(retained,head,JSONObject().put("hasEarlier",true).put("before","before-5"),emptyList(),unknownCoverage=true)!!
@@ -74,5 +74,26 @@ class TranscriptGapWindowTest {
   assertEquals("saved-old",stopped.olderAnchor)
   val rows=listOf(JSONObject().put("id","missing-from-source").put("kind","message"),JSONObject().put("id","saved-old").put("kind","message"),JSONObject().put("id","source-end").put("kind","message"))
   assertEquals(listOf(stopped),restoreTranscriptGaps(JSONObject().put("historyGaps",JSONArray(listOf(stopped.json()))),rows))
+ }
+
+ @Test fun liveOverlayOverlapCannotProveTheMissingCanonicalInterval(){
+  fun row(id:String)=JSONObject().put("id",id).put("kind","message")
+  val retained=listOf(row("old-a"),row("old-b"),row("new-live"))
+  val current=listOf(row("new-live"))
+  val page=JSONObject().put("hasEarlier",true).put("before","source-cursor")
+  val gap=missingTranscriptWindow(retained,current,page,emptyList(),confirmed=setOf("old-a","old-b"))!!
+  assertEquals("old-b",gap.olderAnchor)
+  assertTrue(gap.unverified.isEmpty())
+  assertNull(missingTranscriptWindow(retained,current,page,emptyList(),confirmed=setOf("new-live")))
+ }
+ @Test fun sourceMembershipExcludesLiveRowsAndEofDoesNotPretendPastRowsWereDeleted(){
+  fun row(id:String)=JSONObject().put("id",id).put("kind","message")
+  val rows=listOf(row("canonical"),row("live"))
+  val page=JSONObject().put("canonicalIds",JSONArray(listOf("canonical")))
+  assertEquals(setOf("canonical"),canonicalTranscriptIds(page,rows))
+  val eof=JSONObject().put("hasEarlier",false)
+  val gap=missingTranscriptWindow(listOf(row("old")),listOf(row("new")),eof,emptyList(),confirmed=setOf("old"))!!
+  assertTrue(gap.exhausted);assertTrue(gap.cursor.isEmpty())
+  assertEquals(setOf("old"),gap.unverified)
  }
 }

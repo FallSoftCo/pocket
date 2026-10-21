@@ -24,7 +24,7 @@ internal fun restoreTranscriptGaps(value:JSONObject,rows:List<JSONObject>):List<
     val typed=value.optJSONArray("historyGaps")
     val raw=if(typed!=null)typed.objects().mapNotNull{v->
         val id=v.s("id");val cursor=v.s("cursor");val before=v.s("beforeRow");val older=v.s("olderAnchor")
-        if(id.isBlank()||cursor.isBlank()||cursor.length>16000||before.isBlank()||older.isBlank())null
+        if(id.isBlank()||cursor.isBlank()&&!v.optBoolean("exhausted")||cursor.length>16000||before.isBlank()||older.isBlank())null
         else TranscriptGapWindow(id,cursor,before,older,v.optBoolean("exhausted"),v.optJSONArray("unverified")?.let{a->(0 until a.length()).map{a.optString(it)}.filter{it.isNotBlank()}.toSet()}.orEmpty())
     } else {
         val cursor=value.s("bridgeBefore");val before=value.s("bridgeBoundary")
@@ -43,26 +43,39 @@ internal fun restoreTranscriptGaps(value:JSONObject,rows:List<JSONObject>):List<
 /** A bounded current page proves only its own contiguous window. A retained
  * window outside it needs an explicit interval; catalog/cache merges cannot
  * silently claim that the intervening history was loaded. */
+internal fun canonicalTranscriptIds(page:JSONObject,rows:List<JSONObject>):Set<String>{
+    val content=rows.filter{transcriptContentAnchor(it.s("kind"))}
+    val ids=content.mapTo(hashSetOf()){it.s("id")}
+    val raw=page.optJSONArray("canonicalIds")?:return ids
+    val references=(0 until raw.length()).map{raw.optString(it)}.toSet()
+    val aliases=migrateTranscriptAnchors(rows,references)
+    return references.map{aliases[it]?:it}.filterTo(linkedSetOf()){it in ids}
+}
 internal fun missingTranscriptWindow(
     retained:List<JSONObject>,incoming:List<JSONObject>,page:JSONObject,
-    gaps:List<TranscriptGapWindow>,unknownCoverage:Boolean=false
+    gaps:List<TranscriptGapWindow>,unknownCoverage:Boolean=false,confirmed:Set<String>?=null
 ):TranscriptGapWindow?{
-    if(!page.optBoolean("hasEarlier"))return null
-    val cursor=page.s("before");if(cursor.isBlank())return null
-    val content=incoming.filter{transcriptContentAnchor(it.s("kind"))}
+    val ids=canonicalTranscriptIds(page,incoming)
+    val content=incoming.filter{it.s("id") in ids}
     val boundary=content.firstOrNull()?.s("id")?:return null
-    val ids=content.mapTo(hashSetOf()){it.s("id")}
     val old=retained.filter{transcriptContentAnchor(it.s("kind"))}
+        .filter{unknownCoverage||confirmed==null||it.s("id") in confirmed}
     val outside=old.filter{it.s("id") !in ids}
-    if(outside.isEmpty()||(!unknownCoverage&&old.any{it.s("id") in ids}))return null
-    if(gaps.any{it.beforeRow==boundary||it.cursor==cursor})return null
-    return TranscriptGapWindow(java.util.UUID.randomUUID().toString(),cursor,boundary,(if(unknownCoverage)outside.first() else outside.last()).s("id"),unverified=if(unknownCoverage)outside.mapTo(linkedSetOf()){it.s("id")}else emptySet())
+    if(outside.isEmpty())return null
+    val earlier=page.optBoolean("hasEarlier")
+    if(earlier&&!unknownCoverage&&old.any{it.s("id") in ids})return null
+    val cursor=page.s("before")
+    if(earlier&&cursor.isBlank())return null
+    if(gaps.any{it.beforeRow==boundary||cursor.isNotBlank()&&it.cursor==cursor})return null
+    return TranscriptGapWindow(java.util.UUID.randomUUID().toString(),cursor,boundary,
+        (if(unknownCoverage)outside.first()else outside.last()).s("id"),exhausted=!earlier,
+        unverified=if(unknownCoverage||!earlier)outside.mapTo(linkedSetOf()){it.s("id")}else emptySet())
 }
 
 /** Version1 cached rows may already join disconnected islands without recording
  * a gap. Their old coverage flag is not proof; retain the rows and re-establish
  * coverage of every retained content identity on bounded reader demand. */
-internal fun verifiedTranscriptCoverage(value:JSONObject)=value.optInt("schema")==2&&value.optBoolean("coverageVerified")
+internal fun verifiedTranscriptCoverage(value:JSONObject)=value.optInt("schema")==2&&value.optBoolean("coverageVerified")&&value.optJSONArray("confirmedIds")!=null
 
 internal fun advanceTranscriptGap(gap:TranscriptGapWindow,incoming:List<JSONObject>,page:JSONObject):TranscriptGapWindow?{
     val content=incoming.filter{transcriptContentAnchor(it.s("kind"))}
