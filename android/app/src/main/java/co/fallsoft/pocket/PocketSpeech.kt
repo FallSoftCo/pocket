@@ -286,11 +286,18 @@ class PocketSpeechService:Service(){
     private lateinit var session:MediaSession
     private val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
     private val queue get()=PocketSpeech.queue
-    private val timeout=Runnable{pause("Speech stalled · Tap Resume to retry")}
+    private val playbackProgress=SpeechPlaybackProgress()
+    private val timeout=object:Runnable{override fun run(){
+        val media=player
+        val remaining=if(started&&prepared&&!transientPaused&&media!=null)runCatching{
+            playbackProgress.remaining(SystemClock.elapsedRealtime(),media.currentPosition)
+        }.getOrDefault(0L) else 0L
+        if(remaining>0)handler.postDelayed(this,remaining) else pause("Speech stalled · Tap Resume to retry")
+    }}
     private val checkpoint=object:Runnable{override fun run(){
         if(closed||queue.paused)return
         SpeechUsage.playback(playbackMeter)
-        if(prepared)player?.let{queue.positionMs=it.currentPosition;PocketSpeech.save();queue.current?.let{m->PocketSpeechCaptions.update(m.id,m.title,spokenChunk,queue.chunkIndex,renderedChunks.size,speakingProfile)}}
+        if(prepared)player?.let{queue.positionMs=it.currentPosition;if(started&&!transientPaused)playbackProgress.remaining(SystemClock.elapsedRealtime(),queue.positionMs);PocketSpeech.save();queue.current?.let{m->PocketSpeechCaptions.update(m.id,m.title,spokenChunk,queue.chunkIndex,renderedChunks.size,speakingProfile)}}
         handler.postDelayed(this,2000)
     }}
     override fun onBind(intent:Intent?)=null
@@ -461,7 +468,7 @@ class PocketSpeechService:Service(){
         notificationSpeechHoldReason(PocketSpeech.voiceOwnsAudio())?.let{pause(it);return}
         handler.removeCallbacks(timeout);media.start();started=true;playbackMeter.start(SystemClock.elapsedRealtime())
         queue.current?.let{PocketSpeechCaptions.update(it.id,it.title,spokenChunk,queue.chunkIndex,renderedChunks.size,speakingProfile)}
-        handler.postDelayed(timeout,(media.duration-media.currentPosition).toLong().coerceAtLeast(0)+15000)
+        playbackProgress.restart(SystemClock.elapsedRealtime(),media.currentPosition);handler.postDelayed(timeout,15000)
         Log.i("PocketSpeech","Playing audio $id/$index from ${media.currentPosition} ms")
         updateControls(PlaybackState.STATE_PLAYING);handler.removeCallbacks(checkpoint);handler.post(checkpoint)
     }
@@ -477,7 +484,7 @@ class PocketSpeechService:Service(){
         val media=player?:return
         try{
             media.start();transientPaused=false;playbackMeter.start(SystemClock.elapsedRealtime())
-            handler.postDelayed(timeout,(media.duration-media.currentPosition).toLong().coerceAtLeast(0)+15000)
+            playbackProgress.restart(SystemClock.elapsedRealtime(),media.currentPosition);handler.postDelayed(timeout,15000)
             updateControls(PlaybackState.STATE_PLAYING);handler.removeCallbacks(checkpoint);handler.post(checkpoint)
         }catch(_:IllegalStateException){pause("Playback interrupted · Tap Resume to retry")}
     }
