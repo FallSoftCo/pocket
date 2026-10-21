@@ -51,11 +51,10 @@ internal object WorkSourceActions {
     fun open(entry:WorkEntry<WorkCatalogPayload>,keyboard:Boolean){
         try{
             val destination=validateWorkDestination(entry,Pocket.captureEnvironment(entry.key.source.environment))
-            require(!PocketVoice.active&&PocketVoice.state !in setOf("Listening","Starting microphone","Finishing recording")){
-                "Finish voice before opening another source"
-            }
+            // Capture/voice owns its navigation admission. An idle voice
+            // presentation is not an ongoing recording and must not lock the list.
             Pocket.activateEnvironment(destination.environment.id)
-            require(Pocket.captureEnvironment()?.matches(destination)==true){"Could not select the original source"}
+            require(Pocket.captureEnvironment()?.matches(destination)==true){Pocket.error.ifBlank{"Could not select the original source"}}
             when(entry.key.kind){
                 WorkKind.SESSION->{BackendNavigation.select("codex");Pocket.open(entry.key.id,keyboard)}
                 WorkKind.ROOM->HollywoodNotifications.openRoom(destination,JSONObject(entry.value.binding!!),entry.key.id,keyboard)

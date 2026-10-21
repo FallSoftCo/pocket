@@ -56,6 +56,9 @@ class EnvironmentIsolationNativeTest {
    .count{it.entries.any{entry->entry.key.id=="second-thread"}}==2}
   assertTrue("Other source card not rendered",visible(By.text("OZZZ synthetic work two"),15000))
   assertTrue(visible(By.textContains("OZZZ second answer only"),5000))
+  device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
+  main{PocketVoice.start(context,recordImmediately=false,inPlace=true)}
+  await{PocketVoice.active&&PocketVoice.state=="Ready"}
   device.findObject(By.textContains("OZZZ second answer only")).click()
   await{Pocket.environmentId=="remote_qa"&&Pocket.selected=="second-thread"&&PocketTranscript.rows.any{it.s("text")=="OZZZ second answer only"}}
   main{Pocket.closeTask()}
