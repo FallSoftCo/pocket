@@ -56,7 +56,7 @@ object PocketTranscript {
                 gapWindows=gapWindows+gap
                 if(!initialGapProbeUsed)initialGapProbe=gap.id
             }else if(unknownCoverage||existing.exhausted&&gap.cursor.isNotBlank()){
-                gapWindows=gapWindows.map{if(it.id==existing.id)it.copy(cursor=gap.cursor,olderAnchor=gap.olderAnchor,exhausted=gap.exhausted,unverified=it.unverified+gap.unverified)else it}
+                gapWindows=gapWindows.map{if(it.id==existing.id)it.copy(cursor=gap.cursor,olderAnchor=gap.olderAnchor,exhausted=gap.exhausted,unverified=it.unverified+gap.unverified+it.olderAnchor)else it}
                 if(!initialGapProbeUsed)initialGapProbe=existing.id
             }
         }
