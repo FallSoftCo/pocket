@@ -78,5 +78,23 @@
     "announcementCount": 1,
     "phoneInstallVerified": false,
     "backendSemanticActivation": false
+  },
+  "followupRangeCorrection": {
+    "source": "9ef05df",
+    "versionCode": 142,
+    "versionName": "0.5.0-alpha.124",
+    "cycle": [
+      "English",
+      "50%Italian",
+      "English",
+      "75%Italian",
+      "English",
+      "100%Italian"
+    ],
+    "build": "complete; both399-case unit variants and both lints passed",
+    "native": "16of28 verified so far; same immutable APK and controller identities retained",
+    "failureRetained": "Original closed-session background-sync assertion failed once; fresh isolated run passed. No production-code change made to force this pass; original cause remains undetermined.",
+    "web": "Live; six rendered forms passed with one visible-source submission and no human writes",
+    "phone": "Installed140 confirmed through read-only package manager;142 not yet published"
   }
 }
