@@ -73,7 +73,7 @@ class TranscriptRefreshNativeTest {
   java.io.File(context.cacheDir,"position-journal-restore.json").writeText(JSONObject().put("cachedRestoreMs",elapsed).put("row",expected.s("row")).put("offset",expected.optInt("offset")).put("visible",true).toString())
  }
  @Test fun lateDiskInputIsPositionedFromVisibleHistoryWithoutAnotherSend(){
-  twoChats();qa("anchored");qa("release-position")
+  twoChats();qa("anchored")
   val scope=PocketTranscript.scopeKey()
   val user=JSONObject().put("id","order/live-uuid").put("itemId","live-uuid").put("turnId","order").put("clientId","same-send").put("kind","user").put("text","Restored delayed input")
   val answer=JSONObject().put("id","order/answer").put("itemId","answer").put("turnId","order").put("kind","message").put("text","Cached ordering answer")
@@ -87,7 +87,14 @@ class TranscriptRefreshNativeTest {
    assertFalse(PocketTranscript.rows.any{it.s("clientId")=="same-send"})
    val reads=qa("state").getJSONArray("reads").objects().count{!it.optBoolean("older")}
    release.complete(Unit)
-   await{PocketTranscript.rows.any{it.s("clientId")=="same-send"}&&!PocketTranscript.updating&&qa("state").getJSONArray("positions").length()>0}
+   await{PocketTranscript.rows.any{it.s("clientId")=="same-send"}&&qa("state").getJSONArray("positions").length()>0}
+   assertTrue("Unplaced input was not staged",unplacedTranscriptInputs(PocketTranscript.rows).isNotEmpty())
+   repeat(4){
+    assertFalse("Input painted after its answer before position proof",device.hasObject(By.text("Restored delayed input")))
+    Thread.sleep(100)
+   }
+   qa("release-position")
+   await{PocketTranscript.rows.any{it.s("clientId")=="same-send"&&it.s("_inputOrder")=="canonical"}&&!PocketTranscript.updating}
    val rows=PocketTranscript.rows
    assertEquals(1,rows.count{it.s("clientId")=="same-send"})
    assertTrue(rows.indexOfFirst{it.s("clientId")=="same-send"}<rows.indexOfFirst{it.s("id")=="order/answer"})
@@ -97,7 +104,7 @@ class TranscriptRefreshNativeTest {
    assertTrue("Native bubbles still display answer before its input",input!!.visibleBounds.bottom<=response!!.visibleBounds.top)
    assertEquals("Visible repair restarted current-message reads",reads,qa("state").getJSONArray("reads").objects().count{!it.optBoolean("older")})
    assertEquals(0,qa("state").getJSONArray("replies").length())
-  }finally{release.complete(Unit)}
+  }finally{release.complete(Unit);qa("release-position")}
  }
  @Test fun historyEvidenceRepairsDeferredPositionOnce(){
   twoChats();qa("await-position-history");main{Pocket.open("same-thread")}

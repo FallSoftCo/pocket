@@ -20,7 +20,7 @@ object PocketTranscript {
     private var positioning by mutableStateOf(false)
     val currentLoading get()=reads.latestLoading
     val currentReadError get()=latestReadError.ifBlank{positionReadError}
-    val updating get()=positionRestorePending||(!freshForRead&&cacheRestoring)||refreshPending||reads.latestLoading||positioning
+    val updating get()=positionRestorePending||(!freshForRead&&cacheRestoring)||refreshPending||reads.latestLoading||positioning||pendingVisibleInputOrder
     internal val historyGaps:List<TranscriptHistoryGap> get(){
         revision
         return gapWindows.map{TranscriptHistoryGap(it.id,it.cursor,it.beforeRow,reads.gapLoading&&gapReadId==it.id,gapProblems[it.id].orEmpty().ifBlank{if(it.exhausted)"Saved messages are separated from the available history." else ""})}
@@ -81,7 +81,8 @@ object PocketTranscript {
     private val positionQueue=linkedMapOf<String,InputPosition>()
     private var positionJob:Job?=null
     private var positionActive:String?=null
-    private var visiblePositionRows=emptySet<String>()
+    private var visiblePositionRows by mutableStateOf(emptySet<String>())
+    private val pendingVisibleInputOrder by derivedStateOf{unplacedTranscriptInputs(rows).any{it in visiblePositionRows}}
     private val positionClient by lazy{CodexReadTransport.historyClient.newBuilder().callTimeout(5,java.util.concurrent.TimeUnit.SECONDS).build()}
     private var positionHistoryRevision=0L
     private data class InputAttempt(val target:String,val item:String)
@@ -225,6 +226,7 @@ object PocketTranscript {
         historyLoaded=rows.isNotEmpty()
         if(cachedNeedsConfirmation){readPosition=null;cacheRestoreRevision++}
         cachedNeedsConfirmation=false;revision++
+        reconcileVisibleInputs(visiblePositionRows)
     }
     // Work evidence survives an in-flight history refresh; read acknowledgements do not.
     internal var currentWorkVerified by mutableStateOf(false);private set
@@ -308,6 +310,10 @@ object PocketTranscript {
                             cursor?.let{body.put("cursor",it)}
                             val result=CodexReadTransport.read(destination,"/api/threads/$id/timeline/position",body,client=positionClient)
                             if(!current())return@launch
+                            if(rows.any{it.s("id")==request.target&&it.s("_inputOrder")=="canonical"}){
+                                positionFailures.remove(request.target);positionReadError=positionFailures.values.firstOrNull().orEmpty()
+                                break
+                            }
                             if(result.optBoolean("awaitingHistory")){
                                 val deferred=InputAttempt(request.target,request.item)
                                 awaitingPositionHistory.add(deferred)
@@ -321,19 +327,22 @@ object PocketTranscript {
                                         ?.let{reconcileInputPosition(it)}
                                 }
                             }
-                            if(result.optBoolean("available")){
-                                positionFailures.remove(request.target);positionReadError=positionFailures.values.firstOrNull().orEmpty()
-                            }
                             val successor=transcriptDisplayAnchor(rows,result.s("insertBefore")).orEmpty()
-                            if(successor.isNotBlank()){
-                                if(successor.startsWith("${request.turn}/")){
-                                    val repaired=placeTranscriptRowBefore(rows,request.target,successor){it.s("id")}
-                                    if(repaired!==rows){rows=repaired;rememberRecent(persist=true);revision++}
-                                    CodexSessionRepository.positioned(destination,id,request.target,successor)
-                                }
+                            cursor=result.s("cursor").takeIf{it.isNotBlank()}
+                            if(result.optBoolean("available")&&(successor.isNotBlank()||cursor==null)){
+                                require(successor.isBlank()||successor.startsWith(request.turn+"/")){"Position result belongs to another turn"}
+                                var placed=rows.map{if(it.s("id")==request.target)positionedTranscriptInput(it,successor)else it}
+                                if(successor.isNotBlank())placed=placeTranscriptRowBefore(placed,request.target,successor){it.s("id")}
+                                // Placement and publication commit in one main-thread transaction.
+                                rows=placed;rememberRecent(persist=true);revision++
+                                positionFailures.remove(request.target);positionReadError=positionFailures.values.firstOrNull().orEmpty()
+                                CodexSessionRepository.positioned(destination,id,request.target,successor)
                                 break
                             }
-                            cursor=result.s("cursor").takeIf{it.isNotBlank()}
+                            if(cursor==null&&!result.optBoolean("awaitingHistory")){
+                                positionFailures[request.target]="Waiting for canonical input order."
+                                positionReadError=positionFailures.values.first()
+                            }
                             val next=cursor?:break
                             if(!visited.add(next))break
                             delay(16)
@@ -356,13 +365,18 @@ object PocketTranscript {
      * event arrives. At most four visible candidates enter the existing serial
      * read lane; stale offscreen viewport requests are dropped before dispatch. */
     internal fun reconcileVisibleInputs(ids:Set<String>){
-        visiblePositionRows=ids
-        val stale=positionQueue.values.filter{it.viewport&&it.target !in ids&&it.target!=positionActive}
+        val pending=unplacedTranscriptInputs(rows)
+        val visible=rows.withIndex().filter{it.value.s("id") in ids}
+        val visibleTurns=visible.mapTo(hashSetOf()){it.value.s("turnId")}
+        val candidates=rows.withIndex().filter{it.value.s("id") in pending&&it.value.s("turnId") in visibleTurns}
+            .sortedBy{candidate->visible.minOfOrNull{kotlin.math.abs(it.index-candidate.index)}?:Int.MAX_VALUE}.take(4)
+        // Pending rows are intentionally absent from accessibility/display IDs.
+        // Nearby visible content owns their bounded ordering read.
+        visiblePositionRows=ids+candidates.map{it.value.s("id")}
+        val stale=positionQueue.values.filter{it.viewport&&it.target !in visiblePositionRows&&it.target!=positionActive}
         stale.forEach{positionQueue.remove(it.target);attemptedPositions.remove(InputAttempt(it.target,it.item))}
         if(!Pocket.connected||!Pocket.codexOnline)return
-        val firstReplies=rows.withIndex().filter{it.value.s("kind")=="message"}.groupBy{it.value.s("turnId")}.mapValues{it.value.first().index}
-        rows.withIndex().filter{(index,row)->row.s("kind")=="user"&&row.s("id") in ids&&firstReplies[row.s("turnId")]?.let{index>it}==true}
-            .takeLast(4).forEach{reconcileInputPosition(it.value,viewport=true)}
+        candidates.forEach{reconcileInputPosition(it.value,viewport=true)}
     }
     fun latest()=CodexConversations.retry()
     internal fun prepareRetry(){
@@ -451,6 +465,7 @@ object PocketTranscript {
                         if(current()){
                             needsDiskRestore=false;cacheRestoring=false;cacheRestoreJob=null
                             if(freshForRead)rememberRecent(persist=true)
+                            reconcileVisibleInputs(visiblePositionRows)
                             probeInitialGap()
                         }
                     }
@@ -468,7 +483,7 @@ object PocketTranscript {
             if(!current()||!reads.active(read))return
             // A current-head read may have replaced the gap while this page was in flight.
             if(gapTicket!=null&&gapWindows.none{it.id==gapTicket.id&&it.cursor==bridgeCursor})return
-            val page=d.optJSONObject("timeline")?:JSONObject();var incoming=normalizeTranscriptMessages(page.optJSONArray("rows")?.objects()?:emptyList())
+            val page=d.optJSONObject("timeline")?:JSONObject();var incoming=normalizeTranscriptMessages(page.optJSONArray("rows")?.objects()?.map(::canonicalTranscriptInput)?:emptyList())
             incoming.forEach{it.put("version",maxOf(it.optLong("version"),d.optLong("revision")))}
             // Promote incomplete live/cache identities before the snapshot diff.
             // Otherwise a metadata-enriched history row is treated as a new send.
@@ -481,6 +496,10 @@ object PocketTranscript {
             rows=promoteTranscriptIdentityEvidence(rows,reconciled)
             baselineRows=promoteTranscriptIdentityEvidence(baselineRows.values.toList(),reconciled).associateBy{it.s("id")}
             incoming=promoteTranscriptIdentityEvidence(incoming,reconciled)
+            val placedInputs=incoming.filter{it.s("kind")=="user"&&it.s("_inputOrder")=="canonical"}.mapTo(hashSetOf()){it.s("id")}
+            positionFailures.keys.removeAll(placedInputs)
+            awaitingPositionHistory.removeAll{it.target in placedInputs}
+            positionReadError=positionFailures.values.firstOrNull().orEmpty()
             if(!older&&bridgeCursor==null)rows=authoritativeSnapshotBase(rows,baselineRows,incoming.mapTo(hashSetOf()){it.s("id")},{it.s("id")}){JSONObject(it.toString()).put("version",0)}
             // A stored reading position belongs to the cached head, not to
             // unseen current work. Resolve that policy before cache restoration

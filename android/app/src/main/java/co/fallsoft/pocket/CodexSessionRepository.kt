@@ -251,6 +251,8 @@ internal object CodexSessionRepository {
         var result=groupTranscriptTurns(rows)
         for((key,successor) in positionEvidence)if(key.first==scope&&key.second==id){
             val target=transcriptDisplayAnchor(result,key.third)?:continue
+            result=result.map{if(it.s("id")==target)positionedTranscriptInput(it,successor)else it}
+            if(successor.isBlank())continue
             val before=transcriptDisplayAnchor(result,successor)?:continue
             result=placeTranscriptRowBefore(result,target,before){it.s("id")}
         }
@@ -292,7 +294,7 @@ internal object CodexSessionRepository {
     }
     private fun presentation(value:JSONObject):JSONObject {
         val sourcePage=value.getJSONObject("timeline")
-        val rows=normalizeTranscriptMessages(sourcePage.getJSONArray("rows").objects().filter{it.s("kind")!="request"})
+        val rows=normalizeTranscriptMessages(sourcePage.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map(::canonicalTranscriptInput))
         val page=JSONObject(sourcePage,sourcePage.keys().asSequence().toList().toTypedArray())
             .put("rows",org.json.JSONArray(rows))
             .put("canonicalIds",org.json.JSONArray(rows.filter{transcriptContentAnchor(it.s("kind"))}.map{it.s("id")}))

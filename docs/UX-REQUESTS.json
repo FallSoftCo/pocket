@@ -3071,7 +3071,8 @@
       "acceptance": [
         "Actual session read-only pages with stale Alpha110 cache and stale saved anchor never paint the old island as current predecessor",
         "Bounded viewport hydration handles tool-heavy raw pages and collapsed runs without repeated user gestures or whole-history download",
-        "Keep old local bodies, input order, drafts, pairing, source isolation and current/older read independence"
+        "Keep old local bodies, input order, drafts, pairing, source isolation and current/older read independence",
+        "Out-of-order live/restored inputs are not painted in arrival order; native test holds canonical placement lookup and requires no wrong-position bubble before proof, then one correctly placed bubble."
       ]
     }
   ],

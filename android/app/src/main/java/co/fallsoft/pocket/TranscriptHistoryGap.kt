@@ -26,15 +26,34 @@ internal data class TranscriptWindowRange(val start:Int,val end:Int)
 internal fun connectedTranscriptRange(rows:List<JSONObject>,gaps:List<TranscriptHistoryGap>,anchor:String?):TranscriptWindowRange{
     val cuts=gaps.mapNotNull{gap->rows.indexOfFirst{it.s("id")==gap.beforeRow}.takeIf{it>=0}}.distinct().sorted()
     val anchored=anchor?.let{id->rows.indexOfFirst{it.s("id")==id}.takeIf{it>=0}}
-    // A repeated turn heading can precede the component it decorates. Its first
-    // content row owns coverage; storing a heading must never select an old island.
-    val target=anchored?.let{index->
-        val row=rows[index]
-        if(row.s("kind")=="turn"&&row.s("turnId").isNotBlank())
-            rows.indices.firstOrNull{it>index&&rows[it].s("turnId")==row.s("turnId")&&transcriptContentAnchor(rows[it].s("kind"))}?:index
-        else index
-    }?:rows.lastIndex
-    return TranscriptWindowRange(cuts.lastOrNull{it<=target}?:0,cuts.firstOrNull{it>target}?:rows.size)
+    // Structural headings repeat across pages and cannot select a historical
+    // island. Resolve them to this turn's newest content. Proven input edges
+    // likewise select their attached component, including chained inputs.
+    var target=anchored?:rows.lastIndex
+    val visited=hashSetOf<Int>()
+    while(target in rows.indices&&visited.add(target)){
+        val row=rows[target]
+        val successor=row.s("_inputSuccessor").takeIf{row.s("kind")=="user"&&row.s("_inputOrder")=="canonical"&&it.isNotBlank()}
+        val next=if(successor!=null)rows.indexOfFirst{it.s("id")==successor}.takeIf{it>=0}
+            else if(row.s("kind")=="turn"&&row.s("turnId").isNotBlank())
+                rows.indices.lastOrNull{rows[it].s("turnId")==row.s("turnId")&&transcriptContentAnchor(rows[it].s("kind"))}
+            else null
+        if(next==null||next==target)break
+        target=next
+    }
+    var start=cuts.lastOrNull{it<=target}?:0
+    val end=cuts.firstOrNull{it>target}?:rows.size
+    // A position proof connects its input to this component even while the
+    // surrounding raw-item interval is still loading. Keep that gap explicit.
+    while(start>0){
+        val input=rows[start-1]
+        val successor=input.s("_inputSuccessor")
+        val connected=input.s("kind")=="user"&&input.s("_inputOrder")=="canonical"&&successor.isNotBlank()&&
+            rows.subList(start,end).any{it.s("id")==successor}
+        if(!connected)break
+        start--
+    }
+    return TranscriptWindowRange(start,end)
 }
 internal fun connectedTranscriptWindow(rows:List<JSONObject>,gaps:List<TranscriptHistoryGap>,range:TranscriptWindowRange):List<JSONObject>{
     val content=rows.subList(range.start,range.end)

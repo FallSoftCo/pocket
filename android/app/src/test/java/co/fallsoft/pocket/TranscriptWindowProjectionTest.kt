@@ -27,6 +27,9 @@ class TranscriptWindowProjectionTest {
         val gaps=listOf(gap("missing","current/body"))
         val visible=connectedTranscriptWindow(rows,gaps,connectedTranscriptRange(rows,gaps,"current/header"))
         assertEquals(listOf("current/header","ui:history-gap:missing","current/body"),visible.map{it.getString("id")})
+        val split=listOf(rows[1],row("same-turn-old").put("turnId","current"),rows[2])
+        assertEquals(listOf("current/header","ui:history-gap:missing","current/body"),
+            connectedTranscriptWindow(split,gaps,connectedTranscriptRange(split,gaps,"current/header")).map{it.getString("id")})
     }
     @Test fun newestConnectedComponentWinsAcrossMultipleRetainedIslands(){
         val rows=listOf(row("old"),row("middle"),row("current"),row("tail"))
@@ -35,6 +38,21 @@ class TranscriptWindowProjectionTest {
             connectedTranscriptWindow(rows,gaps,connectedTranscriptRange(rows,gaps,null)).map{it.getString("id")})
         assertEquals(listOf("ui:history-gap:a","middle","ui:history-gap:b"),
             connectedTranscriptWindow(rows,gaps,connectedTranscriptRange(rows,gaps,"middle")).map{it.getString("id")})
+    }
+    @Test fun delayedInputPublishesOnceAfterItsPositionProofNotBefore(){
+        val answer=row("turn/answer").put("turnId","turn")
+        val input=JSONObject().put("id","turn/input").put("kind","user").put("turnId","turn").put("text","Request")
+        val raw=listOf(answer,input)
+        assertEquals(setOf("turn/input"),unplacedTranscriptInputs(raw))
+        assertTrue(unplacedTranscriptInputs(listOf(input,answer)).isEmpty())
+        val proven=listOf(positionedTranscriptInput(input,"turn/answer"),answer)
+        assertTrue(unplacedTranscriptInputs(proven).isEmpty())
+        val gaps=listOf(gap("unloaded-raw-items","turn/answer"))
+        val visible=connectedTranscriptWindow(proven,gaps,connectedTranscriptRange(proven,gaps,"turn/input"))
+        assertEquals(listOf("turn/input","ui:history-gap:unloaded-raw-items","turn/answer"),visible.map{it.getString("id")})
+        val updated=mergeTranscriptMessageEvidence(proven.first(),JSONObject(input.toString()).put("version",999))
+        assertEquals("canonical",updated.optString("_inputOrder"))
+        assertEquals("turn/answer",updated.optString("_inputSuccessor"))
     }
     @Test fun viewportHydrationHasBoundedWorkAndRejectsUnchangedCursors(){
         val b=TranscriptViewportBudget(100)

@@ -133,8 +133,11 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val gapBoundaries=historyGaps.map{it.id to it.beforeRow}
     val retainedAnchor=PocketTranscript.readPosition?.rowId
     val windowRange=remember(rows,gapBoundaries,retainedAnchor){connectedTranscriptRange(rows,historyGaps,retainedAnchor)}
-    val windowRows=remember(rows,gapBoundaries,windowRange){connectedTranscriptWindow(rows,historyGaps,windowRange)}
-    val filteredRows=if(!important)windowRows else orphanRows+rows.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
+    val unplacedInputs=remember(rows){unplacedTranscriptInputs(rows)}
+    val windowRows=remember(rows,gapBoundaries,windowRange,unplacedInputs){
+        connectedTranscriptWindow(rows,historyGaps,windowRange).filterNot{it.s("id") in unplacedInputs}
+    }
+    val filteredRows=if(!important)windowRows else orphanRows+rows.filter{it.s("id") !in unplacedInputs}.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
     val runExpansionKey=Pocket.key("runExpansion:"+Pocket.selected)
     var expandedRunIds by remember(Pocket.environmentId,Pocket.selected){
         mutableStateOf(Pocket.prefs.getStringSet(runExpansionKey,emptySet()).orEmpty().toSet())
@@ -259,7 +262,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     LaunchedEffect(list,conversation.key,conversation.incarnation){
         snapshotFlow{
             if(list.isScrollInProgress||PocketTranscript.currentLoading)emptySet()
-            else list.layoutInfo.visibleItemsInfo.mapTo(linkedSetOf()){it.key.toString()}
+            else list.layoutInfo.visibleItemsInfo.mapTo(linkedSetOf()){latestRunProjection.canonicalId(it.key.toString())}
         }.debounce(120).distinctUntilChanged().collect{ids->
             CodexConversations.visibleRows(conversation.key,conversation.incarnation,ids)
         }
