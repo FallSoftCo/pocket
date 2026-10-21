@@ -101,7 +101,7 @@
     "versionCode": 144,
     "versionName": "0.5.0-alpha.126",
     "state": "published",
-    "phoneInstalledConfirmed": 140,
+    "phoneInstalledConfirmed": 144,
     "languageCycle": "0%Italian/full English, nearest-half Italian whole phrase block, full English, complementary phrase block",
     "nativeJourneysPassed": 28,
     "optimizedExactApkPassed": true,
@@ -116,6 +116,7 @@
       "Software emulator does not establish physical phone latency or audio audibility.",
       "Unified cross-environment catalog is recorded scope, not delivered in144.",
       "Existing historical failures retained; new native run passed all28 cases."
-    ]
+    ],
+    "phoneInstallEvidence": "Read-only Termux SSH package manager returned co.fallsoft.pocket versionCode144 on2026-10-21. No install or input action repeated."
   }
 }

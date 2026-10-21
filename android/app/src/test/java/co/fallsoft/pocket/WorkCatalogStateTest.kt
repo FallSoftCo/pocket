@@ -59,4 +59,28 @@ class WorkCatalogStateTest {
   }finally{poller.stop();child.coroutineContext[kotlinx.coroutines.Job]!!.cancel()}
  }
 
+
+ @Test fun capturedReadersKeepHostAndHumanBindingAndRejectInvalidCatalogs()=kotlinx.coroutines.runBlocking {
+  val a=EnvironmentRequest(EnvironmentIdentity("a","First"),"https://first.invalid","token-a")
+  val b=EnvironmentRequest(EnvironmentIdentity("b","Second"),"https://second.invalid","token-b")
+  val requests=mutableListOf<EnvironmentRequest>()
+  val read:suspend (EnvironmentRequest,String,String?)->org.json.JSONObject={destination,path,binding->
+   requests+=destination;assertEquals("/api/threads",path);assertNull(binding)
+   org.json.JSONObject().put("threads",org.json.JSONArray().put(org.json.JSONObject().put("id","same-id").put("name","Title").put("activityAt",1700000000)))
+  }
+  val left=WorkCatalogReader(a,"codex",read=read).head().single()
+  val right=WorkCatalogReader(b,"codex",read=read).head().single()
+  assertNotEquals(left.key,right.key);assertEquals(listOf(a,b),requests)
+  assertEquals(1700000000000L,left.workAt)
+  val id="00000000-0000-4000-8000-000000000111"
+  val identity=org.json.JSONObject().put("bindingId","a".repeat(64)).put("authorityId",id).put("principalId",id).put("defaultRoomId",id)
+  val rooms=WorkCatalogReader(a,"lax",identity){destination,path,binding->
+   assertEquals(a,destination);assertEquals("/api/hollywood/v3/rooms",path);assertEquals("a".repeat(64),binding)
+   org.json.JSONObject().put("binding",org.json.JSONObject(identity.toString()).put("principalId","00000000-0000-4000-8000-000000000222")).put("rooms",org.json.JSONArray())
+  }
+  try{rooms.head();fail("Foreign room audience accepted")}catch(expected:IllegalArgumentException){}
+  val invalid=WorkCatalogReader(b,"codex",read={_,_,_->org.json.JSONObject()})
+  try{invalid.head();fail("Missing catalog became empty success")}catch(expected:org.json.JSONException){}
+ }
+
 }

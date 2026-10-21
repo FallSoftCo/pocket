@@ -64,7 +64,7 @@ internal class WorkCatalogReader(
             require(rows.all{it.s("id").isNotBlank()}&&rows.map{it.s("id")}.distinct().size==rows.size){"Session identities unavailable"}
             rows.map{row->
                 val task=catalogTask(row)
-                WorkEntry(WorkItemKey(key,WorkKind.SESSION,"",task.id),taskWorkTime(task).coerceAtLeast(0),
+                WorkEntry(WorkItemKey(key,WorkKind.SESSION,"",task.id),workTimeMillis(taskWorkTime(task)),
                     WorkCatalogPayload(destination,row.toString()))
             }
         }
@@ -75,11 +75,20 @@ internal class WorkCatalogReader(
             val rows=result.getJSONArray("rooms").objects()
             require(rows.all{hollywoodUuid(it.s("id"))&&it.s("name").isNotBlank()}&&rows.map{it.s("id")}.distinct().size==rows.size){"Room identities unavailable"}
             rows.map{row->
-                // Deliberate room activity, never the observation timestamp in room.activity.
-                val at=listOf("activityAt","updatedAt","createdAt").map{row.optLong(it)}.maxOrNull()?:0
+                // Current room catalog has no work-recency contract. Unknown is
+                // zero, never room edits or the polling timestamp in activity.
+                val at=0L
                 WorkEntry(WorkItemKey(key,WorkKind.ROOM,binding.s("authorityId"),row.s("id")),at.coerceAtLeast(0),
                     WorkCatalogPayload(destination,row.toString(),binding.toString()))
             }
         }
     }
+}
+
+
+// Existing stock catalogs can carry epoch seconds; compare one time unit across hosts.
+internal fun workTimeMillis(value:Long):Long=when {
+    value<=0->0
+    value<100_000_000_000L->value*1000
+    else->value
 }

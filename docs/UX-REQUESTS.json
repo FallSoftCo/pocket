@@ -3016,7 +3016,7 @@
     {
       "id": "unified-cross-environment-work-list-20261021",
       "request": "One combined work list across all connected environments and Codex sessions/LAX rooms. Environment is an item badge/provenance, not prerequisite navigation. Rooms/sessions visually distinct within same list.",
-      "status": "recorded-design-required",
+      "status": "in-progress-source-bound-read-foundation-verified-ui-not-connected",
       "acceptance": [
         "Discover all saved connected profiles without switching environment; merge catalogs, not credentials or canonical stores.",
         "Use composite profile/authority/kind/item identity for caches, selection, drafts, receipts and notifications; every mutation routes to original source.",
@@ -3025,6 +3025,13 @@
         "Opening/replying/voice/questions/cancel and notification deep links stay bound to correct source; no unknown-delivery replay.",
         "Preserve existing pairings/profiles/drafts and deliberate backend ownership boundaries.",
         "Native and web parity, test two real environments with overlapping IDs and offline/reconnect; do not infer merged list from a single-host fixture."
+      ],
+      "progress": [
+        "Independent source incarnation/state reducer and bounded single-flight read scheduler implemented.",
+        "Captured GET-only credential/binding-aware reader implemented; actual cancellation propagates to HTTP.",
+        "Focused source collision, independent read, late response, unavailable retention and binding rejection checks pass.",
+        "Live Hollywood QA read verified missing canonical room work-recency/preview projection; private coordination artifact retained, not delivered through a human endpoint.",
+        "Unified native/web UI, discovery, cache/pagination integration and real two-host journeys remain."
       ]
     }
   ],
