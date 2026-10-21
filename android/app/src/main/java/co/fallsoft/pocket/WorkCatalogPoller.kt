@@ -39,5 +39,9 @@ internal class WorkCatalogPoller<T>(
             }
         }
     }
-    fun stop(){jobs.values.forEach{it.cancel()};jobs.clear()}
+    fun stop(){
+        jobs.values.forEach{it.cancel()};jobs.clear()
+        state.snapshots().filter{it.refreshing}.forEach{state.cancelRead(it.key,it.generation)}
+        publish(state.snapshots())
+    }
 }

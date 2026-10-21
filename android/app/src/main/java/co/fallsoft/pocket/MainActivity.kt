@@ -458,17 +458,17 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
 }
 @Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis(),headerBadge:(@Composable ()->Unit)?=null,
-    modifier:Modifier=Modifier,onOpen:(Boolean)->Unit={Pocket.open(t.id,keyboard=it)},
+    modifier:Modifier=Modifier,identityScope:String=Pocket.environmentId,onRestore:()->Unit={Pocket.restoreTask(t.id)},onOpen:(Boolean)->Unit={Pocket.open(t.id,keyboard=it)},
     onRename:((String,()->Unit)->Unit)?={name,done->Pocket.renameTask(t.id,name,done)},
     onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)}){
     val active=t.status in listOf("active","pending");val activityTime=taskWorkTime(t);val ageColor=sessionAgeColor(activityTime,now)
-    LaunchedEffect(Pocket.environmentId,t.id,t.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
+    LaunchedEffect(identityScope,t.id,t.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("card:"+identityScope+":"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
-    var rename by remember(Pocket.environmentId,t.id){mutableStateOf(false)};var name by remember(Pocket.environmentId,t.id){mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(t.title))}
-    val highlight=remember(Pocket.environmentId,t.id){Animatable(0f)}
+    var rename by remember(identityScope,t.id){mutableStateOf(false)};var name by remember(identityScope,t.id){mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(t.title))}
+    val highlight=remember(identityScope,t.id){Animatable(0f)}
     val revision=Triple(t.preview,t.status,t.activityAt)
-    var observed by remember(Pocket.environmentId,t.id){mutableStateOf(revision)}
-    LaunchedEffect(Pocket.environmentId,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
+    var observed by remember(identityScope,t.id){mutableStateOf(revision)}
+    LaunchedEffect(identityScope,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
     val cardText=Paper
     val stateLabel=when{active->if(t.status=="pending")"Starting" else "Working";t.needsInput->"Needs your input";t.status=="idle"->"Idle";t.status=="blocked"->"Blocked";t.status=="failed"->"Failed";else->"Status unavailable"}
     WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,modifier,knownIdle=t.status=="idle"&&!t.needsInput){
@@ -483,7 +483,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                 LaunchedEffect(Unit){focus.requestFocus()}
                 OutlinedTextField(name,{name=it.copy(text=it.text.take(120))},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.text.trim().isNotEmpty())onRename?.invoke(name.text.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.text.trim().isNotEmpty())onRename?.invoke(name.text.trim()){rename=false}}))
             }else Box(Modifier.weight(1f),contentAlignment=Alignment.CenterStart){
-                LaunchedEffect(Pocket.environmentId,t.id,t.title,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("session-title:"+t.id,t.title,"session title")}
+                LaunchedEffect(identityScope,t.id,t.title,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("session-title:"+identityScope+":"+t.id,t.title,"session title")}
                 val titleConfiguration=androidx.compose.ui.platform.LocalViewConfiguration.current
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalViewConfiguration provides object:androidx.compose.ui.platform.ViewConfiguration by titleConfiguration {
                     override val minimumTouchTargetSize=androidx.compose.ui.unit.DpSize.Zero
@@ -502,7 +502,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                     BilingualLabel(if(t.watched)"On" else "Off",fontSize=10.sp,color=if(t.watched)Mint else Muted)
                 }
             }
-            if(t.archived)IconButton({Pocket.restoreTask(t.id)},modifier=Modifier.size(48.dp)){SymbolIcon(Icons.Rounded.Unarchive,"Restore conversation",tint=Mint,modifier=Modifier.size(18.dp))}
+            if(t.archived)IconButton(onRestore,modifier=Modifier.size(48.dp)){SymbolIcon(Icons.Rounded.Unarchive,"Restore conversation",tint=Mint,modifier=Modifier.size(18.dp))}
 
         }
         Row(Modifier.fillMaxWidth().height(previewHeight),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
@@ -510,7 +510,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            ImmersionText("card:"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(stateLabel+" · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
+            ImmersionText("card:"+identityScope+":"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(stateLabel+" · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
         }
 
     }

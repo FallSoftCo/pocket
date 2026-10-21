@@ -73,7 +73,7 @@ internal class WorkCatalogReader(
             val result=read(destination,"/api/hollywood/v3/rooms",binding.s("bindingId"))
             require(result.optJSONObject("binding")?.let{hollywoodBindingMatches(binding,it)}==true){"Room audience is unconfirmed"}
             val rows=result.getJSONArray("rooms").objects()
-            require(rows.all{hollywoodUuid(it.s("id"))&&it.s("name").isNotBlank()}&&rows.map{it.s("id")}.distinct().size==rows.size){"Room identities unavailable"}
+            require(rows.all{hollywoodUuid(it.s("id"))&&it.s("name").isNotBlank()&&it.s("authority")==binding.s("authorityId")}&&rows.map{it.s("id")}.distinct().size==rows.size){"Room identities unavailable"}
             rows.map{row->
                 // Current room catalog has no work-recency contract. Unknown is
                 // zero, never room edits or the polling timestamp in activity.

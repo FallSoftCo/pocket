@@ -3016,7 +3016,7 @@
     {
       "id": "unified-cross-environment-work-list-20261021",
       "request": "One combined work list across all connected environments and Codex sessions/LAX rooms. Environment is an item badge/provenance, not prerequisite navigation. Rooms/sessions visually distinct within same list.",
-      "status": "in-progress-source-bound-read-foundation-verified-ui-not-connected",
+      "status": "in-progress-discovery-and-renderer-staged-product-roots-not-connected",
       "acceptance": [
         "Discover all saved connected profiles without switching environment; merge catalogs, not credentials or canonical stores.",
         "Use composite profile/authority/kind/item identity for caches, selection, drafts, receipts and notifications; every mutation routes to original source.",
@@ -3027,11 +3027,23 @@
         "Native and web parity, test two real environments with overlapping IDs and offline/reconnect; do not infer merged list from a single-host fixture."
       ],
       "progress": [
-        "Independent source incarnation/state reducer and bounded single-flight read scheduler implemented.",
-        "Captured GET-only credential/binding-aware reader implemented; actual cancellation propagates to HTTP.",
-        "Focused source collision, independent read, late response, unavailable retention and binding rejection checks pass.",
-        "Live Hollywood QA read verified missing canonical room work-recency/preview projection; private coordination artifact retained, not delivered through a human endpoint.",
-        "Unified native/web UI, discovery, cache/pagination integration and real two-host journeys remain."
+        "Source-bound read state and bounded independent poller verified.",
+        "All-paired-profile discovery and source-badged unified renderer now compile; existing card edit/expansion/restore callbacks are source-explicit.",
+        "Staged UI is not connected to product roots or published. Canonical source-store integration, retained heads, pagination and native navigation journeys remain.",
+        "A separate stock Mac native catalog and real authenticated isolated NextComp gateway both returned the Mac session. Probe processes stopped and original terminal/auth state preserved; no phone enrollment or work submission.",
+        "Room latest-work timestamp/preview projection is absent in current verified live contract; do not invent it from observation timestamps."
+      ]
+    },
+    {
+      "id": "mac-stock-session-visibility-20261021",
+      "request": "User cannot see the MacBook session. Include stock Mac Codex work in the unified list with correct source identity and safe original execution ownership.",
+      "status": "native-and-http-source-qualified-not-enrolled-or-delivered",
+      "acceptance": [
+        "Use the real stock Codex profile, not the separate Losangelex profile.",
+        "Add a persistent authenticated source without overwriting existing phone profiles or copying session history between hosts.",
+        "Preserve existing standalone terminal work; notLoaded in a new reader is not proof of idle.",
+        "Keep canonical identity, drafts and action routing bound to Mac; no duplicate work/model startup merely to make the session visible.",
+        "Verify the actual Mac session in the delivered native/web list and opening/reply capabilities honestly before claiming fixed."
       ]
     }
   ],

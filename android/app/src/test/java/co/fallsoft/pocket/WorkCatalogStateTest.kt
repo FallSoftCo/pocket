@@ -79,6 +79,11 @@ class WorkCatalogStateTest {
    org.json.JSONObject().put("binding",org.json.JSONObject(identity.toString()).put("principalId","00000000-0000-4000-8000-000000000222")).put("rooms",org.json.JSONArray())
   }
   try{rooms.head();fail("Foreign room audience accepted")}catch(expected:IllegalArgumentException){}
+  val foreignRoom=WorkCatalogReader(a,"lax",identity){_,_,_->
+   org.json.JSONObject().put("binding",identity).put("rooms",org.json.JSONArray().put(org.json.JSONObject()
+    .put("id",id).put("name","Foreign room").put("authority","00000000-0000-4000-8000-000000000222")))
+  }
+  try{foreignRoom.head();fail("Foreign authority accepted under a valid binding")}catch(expected:IllegalArgumentException){}
   val invalid=WorkCatalogReader(b,"codex",read={_,_,_->org.json.JSONObject()})
   try{invalid.head();fail("Missing catalog became empty success")}catch(expected:org.json.JSONException){}
  }
