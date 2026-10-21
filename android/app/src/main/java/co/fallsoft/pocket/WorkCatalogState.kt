@@ -2,8 +2,13 @@ package co.fallsoft.pocket
 
 /** A visible item is never identified by its server ID alone. */
 internal enum class WorkKind { SESSION, ROOM }
-internal data class WorkSourceKey(val environment:String,val owner:String,val backend:String="codex")
-internal data class WorkItemKey(val source:WorkSourceKey,val kind:WorkKind,val authority:String,val id:String)
+internal data class WorkSourceKey(val environment:String,val owner:String,val backend:String="codex",val query:String="recent")
+internal data class WorkItemKey(val source:WorkSourceKey,val kind:WorkKind,val authority:String,val id:String) {
+    // Lazy item keys are saved by Android. Length prefixes preserve exact
+    // component boundaries without Parcelable or delimiter collisions.
+    fun saveableKey()=listOf(source.environment,source.owner,source.backend,source.query,kind.name,authority,id)
+        .joinToString("|"){it.length.toString()+":"+it}
+}
 internal data class WorkEntry<T>(val key:WorkItemKey,val workAt:Long,val value:T)
 internal data class WorkSourceSnapshot<T>(
     val key:WorkSourceKey,val generation:Long,val entries:List<WorkEntry<T>> = emptyList(),

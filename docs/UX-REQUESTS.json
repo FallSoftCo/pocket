@@ -3016,7 +3016,7 @@
     {
       "id": "unified-cross-environment-work-list-20261021",
       "request": "One combined work list across all connected environments and Codex sessions/LAX rooms. Environment is an item badge/provenance, not prerequisite navigation. Rooms/sessions visually distinct within same list.",
-      "status": "in-progress-discovery-and-renderer-staged-product-roots-not-connected",
+      "status": "in_progress",
       "acceptance": [
         "Discover all saved connected profiles without switching environment; merge catalogs, not credentials or canonical stores.",
         "Use composite profile/authority/kind/item identity for caches, selection, drafts, receipts and notifications; every mutation routes to original source.",
@@ -3033,19 +3033,21 @@
         "A separate stock Mac native catalog and real authenticated isolated NextComp gateway both returned the Mac session. Probe processes stopped and original terminal/auth state preserved; no phone enrollment or work submission.",
         "Room latest-work timestamp/preview projection is absent in current verified live contract; do not invent it from observation timestamps."
       ],
-      "source_action_progress_20261021": "Captured-source navigation and rename/watch/restore admission compiled and focused tests passed on final r15. Pairing rotation, overlapping IDs, path identity and explicit backend selection protected. Controllers/renderer remain staged; root wiring and persistent Mac enrollment not delivered."
+      "source_action_progress_20261021": "Captured-source navigation and rename/watch/restore admission compiled and focused tests passed on final r15. Pairing rotation, overlapping IDs, path identity and explicit backend selection protected. Controllers/renderer remain staged; root wiring and persistent Mac enrollment not delivered.",
+      "candidate_20261021": "Merged Codex list mounted. Shared per-source CodexCatalogStore registry owns selected and merged state, live projection, retained pages, recent/archive/search cursors. Focused native cross-source same-ID navigation/draft/unknown-delivery and startup/retry/paging journeys passed. Signed145 release qualification pending; native room Back/list and browser parity remain."
     },
     {
       "id": "mac-stock-session-visibility-20261021",
       "request": "User cannot see the MacBook session. Include stock Mac Codex work in the unified list with correct source identity and safe original execution ownership.",
-      "status": "native-and-http-source-qualified-not-enrolled-or-delivered",
+      "status": "in_progress",
       "acceptance": [
         "Use the real stock Codex profile, not the separate Losangelex profile.",
         "Add a persistent authenticated source without overwriting existing phone profiles or copying session history between hosts.",
         "Preserve existing standalone terminal work; notLoaded in a new reader is not proof of idle.",
         "Keep canonical identity, drafts and action routing bound to Mac; no duplicate work/model startup merely to make the session visible.",
         "Verify the actual Mac session in the delivered native/web list and opening/reply capabilities honestly before claiming fixed."
-      ]
+      ],
+      "candidate_20261021": "Existing stock CLI0.156.1 native managed Unix daemon started once without changing auth/model/permissions or stopping terminals. Independent gateway returned known stock thread through authenticated private HTTPS. Phone not yet paired; no model turn started and no session migrated."
     }
   ],
   "current_state": {

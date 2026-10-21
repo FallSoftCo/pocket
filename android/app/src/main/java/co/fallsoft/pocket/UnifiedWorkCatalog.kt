@@ -9,10 +9,23 @@ import org.json.JSONObject
  */
 internal object UnifiedWorkCatalog {
     private val state=WorkCatalogState<WorkCatalogPayload>()
-    var snapshots by mutableStateOf(emptyList<WorkSourceSnapshot<WorkCatalogPayload>>());private set
+    private var sourceSnapshots by mutableStateOf(emptyList<WorkSourceSnapshot<WorkCatalogPayload>>())
+    val snapshots by derivedStateOf{
+        sourceSnapshots.map{snapshot->
+            val destination=profiles.values.firstOrNull{it.environment.id==snapshot.key.environment&&
+                backendOwner(it.endpoint,it.token)==snapshot.key.owner}
+            if(snapshot.key.backend!="codex"||destination==null||
+                Pocket.captureEnvironment(destination.environment.id)?.matches(destination)!=true)snapshot
+            else{
+                val tasks=CodexCatalog.source(destination,snapshot.key.query=="archived").tasks
+                snapshot.copy(entries=tasks.map{task->WorkEntry(WorkItemKey(snapshot.key,WorkKind.SESSION,"",task.id),
+                    workTimeMillis(taskWorkTime(task)),WorkCatalogPayload(destination,task.catalogJson().toString()))})
+            }
+        }
+    }
     var discoveryErrors by mutableStateOf(emptyMap<WorkSourceKey,String>());private set
     var discovering by mutableStateOf(emptySet<WorkSourceKey>());private set
-    private val poller=WorkCatalogPoller(Pocket.scope,state,{snapshots=it})
+    private val poller=WorkCatalogPoller(Pocket.scope,state,{sourceSnapshots=it})
     private var profiles=emptyMap<WorkSourceKey,EnvironmentRequest>()
     private val readers=mutableMapOf<WorkSourceKey,List<WorkCatalogReader>>()
     private val probes=mutableMapOf<WorkSourceKey,Job>()
@@ -22,6 +35,26 @@ internal object UnifiedWorkCatalog {
     private var probeSerial=0L
     private var ticker:Job?=null
     private var viewers=0
+    private var archived=false
+    private fun codexReader(destination:EnvironmentRequest)=WorkCatalogReader(destination,"codex",archived=archived,read={origin,path,_->
+        val store=CodexCatalog.source(origin,path.contains("archived=true"))
+        JSONObject().put("threads",org.json.JSONArray(store.head().map{it.catalogJson()}))
+    })
+    private fun catalogStores()=profiles.values.filter{origin->
+        readers[key(origin)].orEmpty().any{it.backend=="codex"}
+    }.map{CodexCatalog.source(it,archived)}
+    val hasEarlier get()=catalogStores().any{it.cursor!=null}
+    suspend fun more(){
+        coroutineScope{catalogStores().filter{it.cursor!=null}.map{store->launch{
+            try{store.readPage()}catch(e:CancellationException){throw e}catch(_:Exception){}
+        }}.joinAll()}
+    }
+    fun search(query:String){
+        if(query.isBlank())return
+        catalogStores().forEach{store->Pocket.scope.launch{
+            try{store.readPage(query)}catch(e:CancellationException){throw e}catch(_:Exception){}
+        }}
+    }
 
     fun attach():()->Unit {
         viewers++
@@ -37,6 +70,16 @@ internal object UnifiedWorkCatalog {
     }
     private fun key(destination:EnvironmentRequest)=WorkSourceKey(destination.environment.id,backendOwner(destination.endpoint,destination.token),"discovery")
     fun refresh() {
+        if(archived!=Pocket.showArchived){
+            archived=Pocket.showArchived
+            readers.keys.toList().forEach{source->
+                val destination=profiles[source]?:return@forEach
+                readers[source]=readers[source].orEmpty().mapNotNull{reader->
+                    if(reader.backend=="codex")codexReader(destination)else if(!archived)reader else null
+                }
+            }
+        }
+        CodexCatalog.refresh()
         val next=Pocket.environmentProfiles.all().mapNotNull{Pocket.captureEnvironment(it.id)}.associateBy(::key)
         val removed=profiles.keys-next.keys
         removed.forEach{source->probes.remove(source)?.cancel();readers.remove(source);nextProbe.remove(source);failures.remove(source);probeTickets.remove(source)}
@@ -78,9 +121,9 @@ internal object UnifiedWorkCatalog {
                 val old=readers[source].orEmpty()
                 val discovered=available.flatMap{backend->
                     when{
-                        backend.s("id")=="codex"&&backend.optBoolean("configured")->listOf(WorkCatalogReader(destination,"codex"))
-                        backend.s("id")=="lax"&&backend.optBoolean("available")->listOf(WorkCatalogReader(destination,"lax",backend))
-                        backend.s("id")=="lax"&&backend.optBoolean("configured")->old.filter{it.backend=="lax"}
+                        backend.s("id")=="codex"&&backend.optBoolean("configured")->listOf(codexReader(destination))
+                        backend.s("id")=="lax"&&!archived&&backend.optBoolean("available")->listOf(WorkCatalogReader(destination,"lax",backend))
+                        backend.s("id")=="lax"&&!archived&&backend.optBoolean("configured")->old.filter{it.backend=="lax"}
                         else->emptyList()
                     }
                 }

@@ -26,7 +26,18 @@ class EnvironmentIsolationNativeTest {
  private fun main(block:()->Unit)=instrumentation.runOnMainSync(block)
  private fun await(condition:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){instrumentation.uiAutomation.clearCache();if(condition())return;Thread.sleep(100)};assertTrue("Timed out waiting for isolated environment state",condition())}
  private fun present(selector:BySelector):Boolean{instrumentation.uiAutomation.clearCache();return device.hasObject(selector)}
- private fun visible(selector:BySelector,timeoutMs:Long):Boolean{val end=android.os.SystemClock.elapsedRealtime()+timeoutMs;while(android.os.SystemClock.elapsedRealtime()<end){if(present(selector))return true;Thread.sleep(100)};return present(selector)}
+ private fun visible(selector:BySelector,timeoutMs:Long):Boolean{val end=android.os.SystemClock.elapsedRealtime()+timeoutMs;while(android.os.SystemClock.elapsedRealtime()<end){if(present(selector))return true;Thread.sleep(100)};val found=present(selector);if(!found){
+  main{
+   val rows=JSONArray()
+   UnifiedWorkCatalog.snapshots.forEach{source->rows.put(JSONObject().put("environment",source.key.environment)
+    .put("backend",source.key.backend).put("error",source.error).put("refreshing",source.refreshing)
+    .put("entries",JSONArray(source.entries.map{JSONObject(it.value.body).s("name")})))}
+   context.cacheDir.resolve("unified-catalog-state.json").writeText(JSONObject().put("sources",rows)
+    .put("profiles",JSONArray(Pocket.environmentProfiles.all().map{it.id})).toString())
+  }
+  device.dumpWindowHierarchy(context.cacheDir.resolve("unified-catalog-failure.xml"))
+  device.takeScreenshot(context.cacheDir.resolve("unified-catalog-failure.png"))
+ };return found}
  @Test fun sameThreadHistoryDraftsAndPendingDeliveryStayWithOrigin(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa"){"Wrong emulator ownership"}
   check(android.os.Build.FINGERPRINT.contains("generic")||android.os.Build.FINGERPRINT.contains("emu")){"Synthetic test must never run on an owner's phone"}
@@ -39,9 +50,18 @@ class EnvironmentIsolationNativeTest {
    .putString("environments:v1",JSONArray().put(JSONObject().put("id","workstation").put("name","System76")).put(JSONObject().put("id","remote_qa").put("name","OZZZ")).toString()).commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   assertTrue(visible(By.text("System76 synthetic work"),15000))
-  assertTrue(visible(By.textContains("System76 second answer only"),5000))
+  // The oldest card can be outside the viewport. Both sources must be in
+  // the canonical projection; tap the same visible second-thread ID on each.
+  await{UnifiedWorkCatalog.snapshots.filter{it.key.environment in setOf("workstation","remote_qa")}
+   .count{it.entries.any{entry->entry.key.id=="second-thread"}}==2}
+  assertTrue("Other source card not rendered",visible(By.text("OZZZ synthetic work two"),15000))
+  assertTrue(visible(By.textContains("OZZZ second answer only"),5000))
+  device.findObject(By.textContains("OZZZ second answer only")).click()
+  await{Pocket.environmentId=="remote_qa"&&Pocket.selected=="second-thread"&&PocketTranscript.rows.any{it.s("text")=="OZZZ second answer only"}}
+  main{Pocket.closeTask()}
+  assertTrue(visible(By.textContains("System76 second answer only"),10000))
   device.findObject(By.textContains("System76 second answer only")).click()
-  await{Pocket.selected=="second-thread"&&PocketTranscript.rows.any{it.s("text")=="System76 second answer only"}}
+  await{Pocket.environmentId=="workstation"&&Pocket.selected=="second-thread"&&PocketTranscript.rows.any{it.s("text")=="System76 second answer only"}}
   main{Pocket.closeTask()}
   assertTrue(visible(By.textContains("System76 answer only"),5000))
   device.findObject(By.textContains("System76 answer only")).click()

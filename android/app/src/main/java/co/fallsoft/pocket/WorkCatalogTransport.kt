@@ -45,11 +45,11 @@ internal data class WorkCatalogPayload(val destination:EnvironmentRequest,val bo
 
 /** Adapter for independently readable catalog lanes, not a conversation or command transport. */
 internal class WorkCatalogReader(
-    val destination:EnvironmentRequest,val backend:String,val identity:JSONObject?=null,
+    val destination:EnvironmentRequest,val backend:String,val identity:JSONObject?=null,val archived:Boolean=false,
     private val read:suspend (EnvironmentRequest,String,String?)->JSONObject=WorkCatalogTransport::get
 ) {
     val key=WorkSourceKey(destination.environment.id,backendOwner(destination.endpoint,destination.token)+
-        (if(backend=="lax")":"+identity?.s("bindingId").orEmpty() else ""),backend)
+        (if(backend=="lax")":"+identity?.s("bindingId").orEmpty() else ""),backend,if(archived)"archived"else"recent")
     init {
         require(backend in setOf("codex","lax"))
         if(backend=="lax"){
@@ -59,7 +59,7 @@ internal class WorkCatalogReader(
     }
     suspend fun head():List<WorkEntry<WorkCatalogPayload>> = when(backend){
         "codex"->{
-            val result=read(destination,"/api/threads",null)
+            val result=read(destination,if(archived)"/api/threads?archived=true"else"/api/threads",null)
             val rows=result.getJSONArray("threads").objects()
             require(rows.all{it.s("id").isNotBlank()}&&rows.map{it.s("id")}.distinct().size==rows.size){"Session identities unavailable"}
             rows.map{row->

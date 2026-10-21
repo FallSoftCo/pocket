@@ -223,8 +223,8 @@ class MainActivity:ComponentActivity(){
 
     BackHandler(Pocket.tab==1&&Pocket.selected==null&&!Pocket.newTask){Pocket.tab=0}
     var workToolsOpen by remember{mutableStateOf(false)}
-    val workListState=key(Pocket.local,Pocket.token,Pocket.showArchived){rememberLazyListState()}
-    val workCatalogView=remember(Pocket.environmentId,Pocket.token){SessionCatalogViewState(Pocket.showArchived)}
+    val workListState=rememberLazyListState()
+    val workCatalogView=remember{SessionCatalogViewState(Pocket.showArchived)}
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
     Column(Modifier.fillMaxSize()){
         ConnectionNotice()
@@ -247,11 +247,8 @@ class MainActivity:ComponentActivity(){
 @Composable fun PocketDock(onFind:()->Unit,onTab:()->Unit,listState:androidx.compose.foundation.lazy.LazyListState?=null){
     WorkCatalogDock{
         IconButton({Pocket.tab=0;onFind()},modifier=Modifier.size(48.dp)){SymbolIcon("Search","Find",Modifier.size(32.dp),tint=Mint)}
-        if(Pocket.tab==0&&listState!=null)ReaderPagingButtons(listState,hasEarlier=Pocket.sessionCursor!=null,onPrepare={up->
-            if(up&&!listState.canScrollForward&&Pocket.sessionCursor!=null&&!Pocket.loadingSessions){
-                Pocket.moreSessions()
-                snapshotFlow{Pocket.loadingSessions}.first{!it}
-            }
+        if(Pocket.tab==0&&listState!=null)ReaderPagingButtons(listState,hasEarlier=UnifiedWorkCatalog.hasEarlier,onPrepare={up->
+            if(up&&!listState.canScrollForward&&UnifiedWorkCatalog.hasEarlier)UnifiedWorkCatalog.more()
         })
         InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
         UsageDock(Modifier.width(compactUsageDockWidth()),compact=true)
@@ -348,93 +345,18 @@ class MainActivity:ComponentActivity(){
 class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntStateOf(if(archived)3 else 0);val query=mutableStateOf("")}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={},listState:androidx.compose.foundation.lazy.LazyListState=rememberLazyListState(),view:SessionCatalogViewState=remember{SessionCatalogViewState(Pocket.showArchived)}){
-    DisposableEffect(Pocket.environmentId,Pocket.token,Pocket.showArchived){
-        val environment=Pocket.environmentId;val archived=Pocket.showArchived
-        CodexCatalog.listVisibility(environment,archived,true)
-        onDispose{CodexCatalog.listVisibility(environment,archived,false)}
-    }
-    var filter by view.filter;var query by view.query
-    var touching by remember{mutableStateOf(false)}
-    var listClock by remember{mutableLongStateOf(System.currentTimeMillis())}
-    var displayed by remember(Pocket.environmentId,Pocket.token,Pocket.showArchived){mutableStateOf(Pocket.tasks)}
-    val orderKey=Pocket.key(if(Pocket.showArchived)"archivedWorkActivityOrderV2" else "workActivityOrderV2")
-    var order by remember(Pocket.environmentId,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(orderKey,"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{taskWorkTime(it)}.map{it.id}})}
-    LaunchedEffect(Pocket.environmentId,Pocket.token,Pocket.showArchived){
-        val pacing=SessionListPacing();var observed=Pocket.tasks.associateBy{it.id}
-        while(true){
-            val latest=Pocket.tasks;val now=android.os.SystemClock.elapsedRealtime()
-            if(System.currentTimeMillis()-listClock>=5_000)listClock=System.currentTimeMillis()
-            // Initial membership comes from an authenticated catalog read, not
-            // Codex runtime health. An offline worker must not hide readable work.
-            if(displayed.isEmpty()&&latest.isNotEmpty()&&Pocket.catalogLoad==CatalogLoadState.Ready)displayed=latest
-            val changed=latest.count{observed[it.id]!=it};observed=latest.associateBy{it.id}
-            pacing.record(now,changed)
-            val active=latest.count{it.status in listOf("active","pending")}
-            val interacting=listState.isScrollInProgress||touching||toolsOpen
-            val pacedOrderDue=pacing.orderDue(now,active,interacting)
-            val explicitBoundary=sessionReconcileAllowed(Pocket.sessionOrderRequest!=Pocket.sessionOrderHandled,Pocket.sessionSnapshotComplete,Pocket.connected,Pocket.codexOnline,pacing.interactionSettled(now,interacting))
-            val orderDue=(pacedOrderDue&&Pocket.sessionSnapshotComplete&&Pocket.connected&&Pocket.codexOnline)||explicitBoundary
-            if(pacing.contentDue(now,active)){
-                // Deliver live text/status in place; membership changes wait for a safe moment.
-                displayed=sessionContentInPlace(displayed,latest){it.id};pacing.contentDelivered(now)
-            }
-            // Authenticated complete catalog membership is independent of worker health.
-            // Add/remove identities at a settled reading boundary; preserve existing
-            // relative order and LazyColumn keys instead of promoting stale activity.
-            if(Pocket.sessionSnapshotComplete&&Pocket.connected&&Pocket.catalogLoad==CatalogLoadState.Ready&&pacing.interactionSettled(now,interacting)&&displayed.map{it.id}.toSet()!=latest.map{it.id}.toSet()){
-                val surviving=latest.map{it.id}.toSet()
-                val existing=order.filter{it in surviving}
-                val additions=latest.filter{it.id !in existing}.sortedByDescending{taskWorkTime(it)}.map{it.id}
-                order=additions+existing
-                displayed=latest
-            }
-            if(orderDue){
-                // Safe bounded delivery promotes genuine activity; live peers remain tied.
-                val families=sessionGroups(latest).associateBy{it.task.id}
-                val entries=latest.map{task->val children=families[task.id]?.children.orEmpty();SessionRank(task.id,maxOf(taskWorkTime(task),children.maxOfOrNull{taskWorkTime(it)}?:0),task.status in listOf("active","pending")||children.any{it.status=="active"})}
-                val next=if(Pocket.showArchived)stableSessionOrder(order,entries,System.currentTimeMillis()) else liveSessionOrder(order,entries,System.currentTimeMillis(),explicitBoundary)
-                if(next!=order)order=next
-                val encoded=org.json.JSONArray(next).toString()
-                if(Pocket.prefs.getString(orderKey,null)!=encoded)Pocket.prefs.edit().putString(orderKey,encoded).apply()
-                displayed=latest
-                Pocket.finishSessionOrderRequest(Pocket.sessionOrderRequest,latest.map{it.id}.toSet())
-                if(explicitBoundary)listState.scrollToItem(0)
-                pacing.orderDelivered(now)
-            }
-            delay(100)
-        }
-    }
-    val rank=order.withIndex().associate{it.value to it.index}
-    val showCoordinator=filter!=3&&(filter!=1||PocketCoordinator.busy)&&(query.isBlank()||"Coordinator".contains(query,true)||PocketCoordinator.preview.contains(query,true))
-    LaunchedEffect(query,Pocket.local,Pocket.showArchived){if(query.isNotBlank()){delay(400);Pocket.moreSessions(query)}}
-    val groups=sessionGroups(displayed.sortedBy{rank[it.id]?:Int.MAX_VALUE})
-    fun matches(t:Task)=query.isBlank()||t.title.contains(query,true)||t.cwd.contains(query,true)||t.preview.contains(query,true)||t.catalogContext.contains(query,true)||t.agentNickname.contains(query,true)
-    val shown=groups.filter{filter==4||query.isNotBlank()||meaningfulCatalogTask(it.task)||it.children.any(::meaningfulCatalogTask)}.sortedBy{rank[it.task.id]?:Int.MAX_VALUE}.filter{group->val t=group.task;(filter!=1||t.status in listOf("active","pending")||group.children.any{it.status=="active"})&&(filter!=2||t.watched||group.children.any{it.watched})&&(matches(t)||group.children.any(::matches))}
-    val orphans=if(filter==4||query.isNotBlank())ungroupedChildren(displayed).filter(::matches).sortedByDescending{taskWorkTime(it)} else emptyList()
-    Column(Modifier.fillMaxSize()){
-    WorkCatalogList(Modifier.weight(1f).pointerInput(Unit){
-        awaitPointerEventScope{try{while(true){touching=awaitPointerEvent(PointerEventPass.Initial).changes.any{it.pressed}}}finally{touching=false}}
-    },state=listState,contentPadding=PaddingValues(top=12.dp,bottom=12.dp)){
+    UnifiedWorkScreen(toolsOpen,onToolsOpen,listState,view)
+}
 
-        item{ErrorBanner()}
-        if(showCoordinator)item(key="nextcomp-coordinator"){CoordinatorCard()}
-        if(displayed.isEmpty()&&Pocket.catalogLoad!=CatalogLoadState.Ready)item(key="catalog-startup"){CatalogStartupStatus()}
 
-        val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
-        if(attention.isNotEmpty()){item{Label("NEEDS YOU · ${attention.size}",Coral)};items(attention,key={"attention-${it.optLong("id")}"}){AttentionCard(it)}}
-        if(shown.isEmpty()&&!showCoordinator)item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
-        items(shown,key={it.task.id}){group->SessionGroupCard(if(query.isNotBlank()&&!matches(group.task))group.copy(children=group.children.filter(::matches))else group,listClock)}
-        if(orphans.isNotEmpty()){item(key="unloaded-parent-agents"){Label("AGENT HISTORY · PARENT OUTSIDE THIS LIST",Muted)};items(orphans,key={it.id}){AgentResultCard(it)}}
-        if(Pocket.sessionCursor!=null)item(key="older-session-page"){TextButton({Pocket.moreSessions()},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}}
-    }
-    WorkUpdatesEntry()
-
-    }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable internal fun SessionCatalogTools(toolsOpen:Boolean,onToolsOpen:(Boolean)->Unit,view:SessionCatalogViewState){
+    var query by view.query;var filter by view.filter
     if(toolsOpen)ModalBottomSheet(onDismissRequest={onToolsOpen(false)},containerColor=Panel){
         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=16.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             OutlinedTextField(query,{query=it},placeholder={BilingualLabel("Find sessions",centered=false)},singleLine=true,modifier=Modifier.fillMaxWidth())
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived","History").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(i==0)Pocket.requestSessionOrder();if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={BilingualLabel(title)})}}
-            if(Pocket.sessionCursor!=null)TextButton({Pocket.moreSessions()},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived","History").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(i==0)Pocket.requestSessionOrder();if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.refresh();UnifiedWorkCatalog.refresh()}},label={BilingualLabel(title)})}}
+            if(UnifiedWorkCatalog.hasEarlier)TextButton({Pocket.scope.launch{UnifiedWorkCatalog.more()}},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}
             ProfileSwitcher()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
                 Button({onToolsOpen(false);Pocket.composeTask()},modifier=Modifier.weight(1f).heightIn(min=56.dp)){BilingualLabel("New task",maxLines=2)}

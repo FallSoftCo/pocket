@@ -13,6 +13,7 @@ class WorkCatalogStateTest {
   assertEquals(1,state.ordered(emptyList()).size)
   state.accept(first,a,listOf(row(first),row(first,WorkKind.ROOM)),101)
   assertEquals(3,state.ordered(emptyList()).map{it.key}.toSet().size)
+  assertEquals(3,state.ordered(emptyList()).map{it.key.saveableKey()}.toSet().size)
   val failure=state.begin(first)!!;state.fail(first,failure,"Offline")
   assertEquals(3,state.ordered(emptyList()).size)
   assertFalse(state.snapshots().first{it.key==first}.available)
@@ -114,6 +115,12 @@ class WorkCatalogStateTest {
   assertEquals(2,calls.size)
   commands.metadata(entry(a,"id/with?path"),"unarchive",org.json.JSONObject())
   assertEquals("/api/threads/id%2Fwith%3Fpath/unarchive",calls.last().second)
+ }
+
+ @Test fun canonicalTaskProjectionPreservesIdentityCapabilitiesAndLiveContext(){
+  val task=Task("same-id","Live task","/work","active",123,true,true,"running command","codex","tool",456,789,
+   "parent-id",true,"Ada","worker",false,3,"Recent output",true)
+  assertEquals(task,catalogTask(task.catalogJson()))
  }
 
 }

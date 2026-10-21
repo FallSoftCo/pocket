@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONObject
+import androidx.lifecycle.repeatOnLifecycle
 
 /** Rendering is source-explicit; this view never changes global profile or dispatches commands. */
 internal data class UnifiedWorkActions(
@@ -41,7 +42,7 @@ private data class UnifiedWorkRow(
     snapshots:List<WorkSourceSnapshot<WorkCatalogPayload>>,discovering:Boolean,
     actions:UnifiedWorkActions,modifier:Modifier=Modifier,state:LazyListState=rememberLazyListState(),
     query:String="",workingOnly:Boolean=false,followingOnly:Boolean=false,showHistory:Boolean=false,
-    onRefresh:()->Unit={}
+    onRefresh:()->Unit={},leading:(@Composable ()->Unit)?=null,showEmptyState:Boolean=true
 ) {
     var order by remember{mutableStateOf(emptyList<WorkItemKey>())}
     var touching by remember{mutableStateOf(false)}
@@ -71,10 +72,10 @@ private data class UnifiedWorkRow(
         displayed=displayed.mapNotNull{latest[it.entry.key]}+sorted.filter{next->displayed.none{it.entry.key==next.entry.key}}
         if(!interacting){
             kotlinx.coroutines.delay(750)
-            val byId=sorted.associateBy{it.entry.key.toString()}
-            val ranked=sorted.map{row->SessionRank(row.entry.key.toString(),row.entry.workAt,
-                row.task?.status in setOf("active","pending"))}
-            val next=liveSessionOrder(order.filter{it.toString() in byId}.map{it.toString()},ranked,System.currentTimeMillis())
+            val byId=sorted.associateBy{it.entry.key.saveableKey()}
+            val ranked=sorted.map{row->SessionRank(row.entry.key.saveableKey(),row.entry.workAt,
+                row.task?.status in setOf("active","pending")||row.group?.children?.any{it.status in setOf("active","pending")}==true)}
+            val next=liveSessionOrder(order.filter{it.saveableKey() in byId}.map{it.saveableKey()},ranked,System.currentTimeMillis())
             displayed=next.mapNotNull{byId[it]};order=displayed.map{it.entry.key}
         }
     }
@@ -90,12 +91,13 @@ private data class UnifiedWorkRow(
     WorkCatalogList(modifier.pointerInput(Unit){
         awaitPointerEventScope{try{while(true){touching=awaitPointerEvent(PointerEventPass.Initial).changes.any{it.pressed}}}finally{touching=false}}
     },state=state){
-        if(shown.isEmpty())item(key="unified-empty"){
+        if(leading!=null)item(key="unified-context"){leading()}
+        if(shown.isEmpty()&&showEmptyState)item(key="unified-empty"){
             if(discovering||snapshots.any{it.refreshing})Column(Modifier.fillMaxWidth().padding(20.dp)){Mark(64);BilingualLabel("Loading conversations")}
             else Column(Modifier.fillMaxWidth().padding(20.dp)){BilingualLabel("No matching work");TextButton(onRefresh){BilingualLabel("Refresh")}}
         }
-        items(shown,key={it.entry.key}){row->
-            val entry=row.entry;val identity=entry.key.toString()
+        items(shown,key={it.entry.key.saveableKey()}){row->
+            val entry=row.entry;val identity=entry.key.saveableKey()
             if(row.room!=null){
                 HollywoodRoomCard(row.room,row.source.available,identityScope=identity,
                     headerBadge={WorkOriginBadge(entry,row.source.available)},onKeyboard={actions.open(entry,true)}){actions.open(entry,false)}
@@ -123,4 +125,43 @@ private data class UnifiedWorkRow(
             }
         }
     }
+}
+
+/** Uses the existing session footer/search surface; destinations never key this view. */
+@Composable internal fun UnifiedWorkScreen(
+    toolsOpen:Boolean,onToolsOpen:(Boolean)->Unit,listState:LazyListState,view:SessionCatalogViewState
+){
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle){
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED){
+            val detach=UnifiedWorkCatalog.attach()
+            try{kotlinx.coroutines.awaitCancellation()}finally{detach()}
+        }
+    }
+    val snapshots=UnifiedWorkCatalog.snapshots
+    val filter by view.filter;val query by view.query
+    LaunchedEffect(query){if(query.isNotBlank()){kotlinx.coroutines.delay(400);UnifiedWorkCatalog.search(query)}}
+    LaunchedEffect(Pocket.showArchived){UnifiedWorkCatalog.refresh()}
+    val initialCatalog=snapshots.none{it.entries.isNotEmpty()}&&Pocket.catalogLoad!=CatalogLoadState.Ready
+    Column(Modifier.fillMaxSize()){
+        UnifiedWorkList(snapshots,UnifiedWorkCatalog.discovering.isNotEmpty(),WorkSourceActions.actions,
+            modifier=Modifier.weight(1f),state=listState,query=query,workingOnly=filter==1,
+            followingOnly=filter==2,showHistory=filter==4,onRefresh={UnifiedWorkCatalog.refresh()},showEmptyState=!initialCatalog,
+            leading={
+                ErrorBanner()
+                if(initialCatalog)CatalogStartupStatus()
+                if(filter!=3&&(filter!=1||PocketCoordinator.busy)&&(query.isBlank()||"Coordinator".contains(query,true)||PocketCoordinator.preview.contains(query,true)))CoordinatorCard()
+                UnifiedWorkCatalog.discoveryErrors.forEach{(source,message)->
+                    val name=Pocket.environmentProfiles.all().firstOrNull{it.id==source.environment}?.name?:source.environment
+                    Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){
+                        Text("$name · $message",Modifier.weight(1f),color=Coral,maxLines=2,overflow=TextOverflow.Ellipsis)
+                        TextButton({UnifiedWorkCatalog.refresh()}){BilingualLabel("Retry")}
+                    }
+                }
+                val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
+                if(attention.isNotEmpty()){Label("NEEDS YOU · "+attention.size,Coral);attention.forEach{AttentionCard(it)}}
+            })
+        WorkUpdatesEntry()
+    }
+    SessionCatalogTools(toolsOpen,onToolsOpen,view)
 }

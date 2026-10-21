@@ -172,7 +172,7 @@ object Pocket {
         CodexCatalog.reset();statusRevision++;sessionOrderRequest=0;sessionOrderHandled=0
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
         PocketLive.stop();PocketTranscript.clear();environmentId=id;local=forLocal;base=nextBase;token=nextToken;host=destination.environment.name
-        sending=false;starting=false;busy=false;error="";startStatus="";connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
+        sending=false;starting=false;busy=false;error="";startStatus="";connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";selected=null;detail=null;newTask=false
         lastNotification=prefs.getLong(key("lastNotification"),0);environmentProfiles.select(id)
         fullPermissions=prefs.getBoolean(key("fullPermissions"),prefs.getBoolean("fullPermissions",true))
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))"Firebase push is ready" else "Setting up notifications…"
