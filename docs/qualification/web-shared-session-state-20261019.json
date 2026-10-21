@@ -38,7 +38,7 @@
   "webLive": {
     "sourceCommit": "50ee8a4",
     "closureSha256": "f70d23380dd205329c7308af48df4ed84a63c5aa08785f1fa94bdbc7399bb09a",
-    "url": "https://system76-pc.tailb77f2a.ts.net/nextcomp/",
+    "url": "<private-tailnet-origin>/nextcomp/",
     "sameCookieKeyAndPairing": true,
     "firstMessageMs": 296,
     "inventoryRequestsAtStartup": 1,
@@ -55,5 +55,6 @@
     "previewOnlyMs": 202,
     "cachedOpenMs": 56,
     "refreshRegression": "/home/aosp/.local/state/nextcomp/web-session-state-20261019-refresh-r09/receipt.json"
-  }
+  },
+  "publicSummaryRedaction": "Deployment hostname redacted for source publication; exact original receipt retained privately. Measured results and artifact checksums are unchanged."
 }

@@ -3,7 +3,7 @@
   "status": "web-deployed-native-candidate",
   "webClosureSha256": "5844dcb5d58fdb449d433f9a72a3555e1991a77962b1f3edaebb8ff4145a610f",
   "web": {
-    "route": "https://system76-pc.tailb77f2a.ts.net/nextcomp/",
+    "route": "<private-tailnet-origin>/nextcomp/",
     "renderedDesktopPassed": true,
     "renderedTouchPassed": true,
     "realTailnetLoginStatus": 200,
@@ -39,5 +39,6 @@
     "Full application string coverage and real cached message-plan coverage",
     "Browser room and named environment parity",
     "Physical phone and actual provider audio qualification"
-  ]
+  ],
+  "publicSummaryRedaction": "Deployment hostname redacted for source publication; exact original receipt retained privately. Measured results and artifact checksums are unchanged."
 }
