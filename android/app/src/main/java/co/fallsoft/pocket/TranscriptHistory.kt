@@ -16,12 +16,7 @@ internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Bool
     var sharedIndex=0
     order.indices.forEach{index->if(order[index] in sharedIds)order[index]=shared[sharedIndex++]}
     val boundary=insertBefore?.takeIf{it in order&&page.none{row->id(row)==it}}
-    if(boundary!=null){
-        // The server cursor proves these page rows precede this retained row.
-        // Repeated turn headings stay at their earliest retained position.
-        val movable=page.filterNot{id(it) in existing&&keepPosition(it)}.map(id)
-        order.removeAll(movable.toSet());order.addAll(order.indexOf(boundary),movable)
-    }else if(page.none{id(it) in existing}){
+    if(page.none{id(it) in existing}){
         val anchor=insertBefore?.let{order.indexOf(it)}?:-1
         order.addAll(if(anchor>=0)anchor else if(older)0 else order.size,page.map(id))
     }else{
@@ -37,6 +32,20 @@ internal fun <T> mergeTranscriptPage(current:List<T>,incoming:List<T>,older:Bool
         if(pending.isNotEmpty()){
             val at=previous?.let{order.indexOf(it)+1}?:if(older)0 else order.size
             order.addAll(at,pending)
+        }
+    }
+    if(boundary!=null){
+        // A cursor proves "before", not adjacency. Retained rows already before
+        // the boundary must not jump past intervening history on a repeated page.
+        // Page order above is authoritative; move only remaining violations.
+        val at=order.indexOf(boundary)
+        val pageIds=page.mapTo(hashSetOf(),id)
+        val misplaced=order.drop(at+1).filter{key->
+            key in pageIds&&(key !in existing||!keepPosition(values.getValue(key)))
+        }
+        if(misplaced.isNotEmpty()){
+            order.removeAll(misplaced.toSet())
+            order.addAll(order.indexOf(boundary),misplaced)
         }
     }
     return order.map{values.getValue(it)}
