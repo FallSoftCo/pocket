@@ -30,5 +30,11 @@
     "Software emulator silent-head recovery8579ms is not physical handset latency; no subsecond claim.",
     "Physical phone/provider audio remains unqualified; volume/IME/draft tested with no-provider fixture."
   ],
-  "compatibleSha256": "afb95d32787492ad8b7c4e0a6715ee6aa3fa96b63b29738102017cb38594cdf3"
+  "compatibleSha256": "afb95d32787492ad8b7c4e0a6715ee6aa3fa96b63b29738102017cb38594cdf3",
+  "additionalRestoreCheck": {
+    "checkpointDoesNotRewriteMessages": "passed",
+    "coldRestorationUnderBlockedHistory": "restored correct anchor with history still blocked; measured3024ms missed2000ms target on software emulator",
+    "performanceTargetMet": false,
+    "followUp": "Cold disk/viewport restoration latency remains open; do not claim flawless or subsecond loading."
+  }
 }
