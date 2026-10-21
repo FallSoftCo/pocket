@@ -40,7 +40,7 @@ class TranscriptGapWindowTest {
   assertEquals("today-a",gap.beforeRow)
   assertNull(missingTranscriptWindow(old,head,page,listOf(gap)))
   assertNull(missingTranscriptWindow(head,head,page,emptyList()))
-  assertNull(missingTranscriptWindow(old,head,JSONObject().put("hasEarlier",false),emptyList()))
+  assertTrue(missingTranscriptWindow(old,head,JSONObject().put("hasEarlier",false),emptyList())!!.exhausted)
  }
 
  @Test fun newerLiveHeadCannotSmuggleAnOldDisconnectedPrefixIntoTheCurrentWindow(){
