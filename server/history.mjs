@@ -198,7 +198,7 @@ export class ThreadHistory {
     // would discard the very input needed to position a delayed live echo.
     const turn=this.identity?.snapshot({id:metadata.id,turns:[providerTurn]})?.turns[0]||providerTurn;
     const items=(turn.items||[]).map(item=>displayItem(item,turn.id)).filter(Boolean);
-    this.positions.observe(metadata.id,turn.id,items);
+    this.positions.observe(metadata.id,turn.id,items,{complete:true});
     const end=state.beforeItemId?items.findIndex(item=>item.id===state.beforeItemId):Math.max(0,items.length-state.offset);
     if(end<0)throw Error('The history item boundary is no longer available. Reopen the task.');
     let start=end,bytes=0;

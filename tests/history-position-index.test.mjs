@@ -79,3 +79,12 @@ test('opaque position continuation binds the exact input and visible anchors',as
  const next=await history.locateItemSuccessor('thread',{...args,cursor:page.cursor});
  assert.notEqual(next.cursor,page.cursor);
 });
+
+test('partial ordering windows cannot prove the absence of a known successor',()=>{
+ const index=new HistoryPositionIndex();
+ const request={itemId:'input',knownItemIds:['reply']};
+ index.observe('thread','turn',[{id:'input',kind:'user'}]);
+ assert.equal(index.resolve('thread','turn',request),null);
+ index.observe('thread','turn',[{id:'input',kind:'user'}],{complete:true});
+ assert.deepEqual(index.resolve('thread','turn',request),{available:true,insertBefore:null,cursor:null});
+});
