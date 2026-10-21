@@ -88,4 +88,32 @@ class WorkCatalogStateTest {
   try{invalid.head();fail("Missing catalog became empty success")}catch(expected:org.json.JSONException){}
  }
 
+ @Test fun metadataFollowsCapturedSourceAndRejectsRepairedOrForgedEntries()=kotlinx.coroutines.runBlocking {
+  val a=EnvironmentRequest(EnvironmentIdentity("one","MacBook"),"https://mac.example","private-a")
+  val b=EnvironmentRequest(EnvironmentIdentity("two","Workstation"),"https://pc.example","private-b")
+  fun entry(destination:EnvironmentRequest,id:String="same-id"):WorkEntry<WorkCatalogPayload>{
+   val source=WorkSourceKey(destination.environment.id,backendOwner(destination.endpoint,destination.token),"codex")
+   return WorkEntry(WorkItemKey(source,WorkKind.SESSION,"",id),1,
+    WorkCatalogPayload(destination,org.json.JSONObject().put("id",id).toString()))
+  }
+  var paired=a
+  val calls=mutableListOf<Pair<EnvironmentRequest,String>>()
+  val commands=WorkSourceCommands({id->if(id=="one")paired else b}){destination,path,_->
+   calls.add(destination to path);org.json.JSONObject().put("accepted",true)
+  }
+  commands.metadata(entry(a),"rename",org.json.JSONObject().put("name","Mac work"))
+  commands.metadata(entry(b),"watch",org.json.JSONObject().put("enabled",false))
+  assertEquals(a,calls[0].first);assertEquals(b,calls[1].first)
+  paired=a.copy(token="rotated")
+  try{commands.metadata(entry(a),"watch",org.json.JSONObject());fail("Old pairing admitted")}catch(expected:IllegalArgumentException){}
+  assertEquals(2,calls.size)
+  paired=a
+  val forged=entry(a).let{it.copy(key=it.key.copy(source=it.key.source.copy(environment="two")))}
+  try{commands.metadata(forged,"rename",org.json.JSONObject());fail("Foreign source admitted")}catch(expected:IllegalArgumentException){}
+  try{commands.metadata(entry(a),"reply",org.json.JSONObject());fail("Turn command admitted")}catch(expected:IllegalArgumentException){}
+  assertEquals(2,calls.size)
+  commands.metadata(entry(a,"id/with?path"),"unarchive",org.json.JSONObject())
+  assertEquals("/api/threads/id%2Fwith%3Fpath/unarchive",calls.last().second)
+ }
+
 }

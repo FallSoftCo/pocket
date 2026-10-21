@@ -99,7 +99,9 @@ private val LocalBackendSetting=staticCompositionLocalOf<BackendSetting?>{null}
             lax=available.firstOrNull{it.s("id")=="lax"}?:JSONObject()
             if(lax.optBoolean("available"))Pocket.captureEnvironment(Pocket.environmentId)?.let{HollywoodNotifications.rememberBinding(it,lax);HollywoodNotifications.catchUp(it,lax)}
             choices=available.filter{it.optBoolean("configured")}.map{it.s("id") to it.s("name")}
-            if(status.optBoolean("canonical")&&status.s("defaultBackend")=="lax"){
+            // A discovered default applies only to an unchosen source. Reconnect
+            // must not overwrite an explicit source-bound Codex navigation.
+            if(!Pocket.prefs.contains("backend:$owner")&&status.optBoolean("canonical")&&status.s("defaultBackend")=="lax"){
                 backend="lax";Pocket.prefs.edit().putString("backend:$owner","lax").apply();Pocket.pauseConversationReads()
             }
             true

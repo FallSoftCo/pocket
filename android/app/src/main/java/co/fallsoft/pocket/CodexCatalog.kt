@@ -115,7 +115,10 @@ internal object CodexCatalog {
         value.metadata=launch(value,CodexCatalogLane.METADATA){
             val revision=Pocket.statusRevision
             val result=read(value,"/api/status")
-            if(result.s("backend")=="lax"){Pocket.prefs.edit().putString("backend:"+backendOwner(Pocket.base,Pocket.token),"lax").apply();CodexConversations.suspendReading()}
+            val backendKey="backend:"+backendOwner(value.destination.endpoint,value.destination.token)
+            if(result.s("backend")=="lax"&&!Pocket.prefs.contains(backendKey)){
+                Pocket.prefs.edit().putString(backendKey,"lax").apply();CodexConversations.suspendReading()
+            }
             Pocket.acceptUsage(result.optJSONObject("usage"))
             if(Pocket.statusRevision==revision){Pocket.codexOnline=result.optBoolean("connected");Pocket.codexConnectionMessage=ConnectionMessages.server(result.optJSONObject("problem")?.s("message").orEmpty())}
             Pocket.host=result.s("host");Pocket.defaultCwd=result.s("defaultCwd")

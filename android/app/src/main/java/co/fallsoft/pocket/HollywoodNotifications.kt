@@ -13,7 +13,7 @@ import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-internal data class HollywoodOpenTarget(val owner:String,val binding:String,val room:String,val event:String,val attention:JSONObject?,val reply:HollywoodScope?)
+internal data class HollywoodOpenTarget(val owner:String,val binding:String,val room:String,val event:String,val attention:JSONObject?,val reply:HollywoodScope?,val keyboard:Boolean=false)
 
 /** Notification identity never becomes a stock thread or follows the selected workstation. */
 internal object HollywoodNotifications {
@@ -131,6 +131,14 @@ internal object HollywoodNotifications {
             save(key,result)
         }
         rememberBinding(origin,binding);return result
+    }
+    /** Direct catalog navigation shares the existing typed room destination, not a fake alert. */
+    fun openRoom(origin:EnvironmentRequest,binding:JSONObject,room:String,keyboard:Boolean=false){
+        require(Pocket.captureEnvironment()?.matches(origin)==true){"Select the original environment"}
+        require(!PocketVoice.active){"Finish voice before opening another room"}
+        require(hollywoodUuid(room)&&binding.s("bindingId").matches(Regex("[0-9a-f]{64}")))
+        BackendNavigation.select("lax")
+        target=HollywoodOpenTarget(owner(origin),binding.s("bindingId"),room,"",null,null,keyboard)
     }
     fun openIntent(key:String){
         if(PocketVoice.active){Pocket.error="Finish voice before opening another room";return}

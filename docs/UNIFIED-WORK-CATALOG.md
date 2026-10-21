@@ -70,3 +70,16 @@ currently selected connection. Product integration must reuse the canonical
 per-source catalog/conversation stores rather than permanently introducing a
 second independent copy of their entities. Preserve archived/search pagination,
 notification freshness and child ownership while changing the discovery boundary.
+
+
+### Source-bound navigation admission (2026-10-21)
+WorkSourceActions validates each item against the still-paired captured source,
+credential epoch, backend, room binding and authority before navigation or metadata
+mutation. Rename/watch/restore requests capture their destination without switching
+the selected profile. Metadata admission rejects turn/reply operations. Opening a
+room uses the existing typed room destination (including keyboard intent), never a
+synthetic notification or human message. Backend capability/default responses may
+not overwrite an explicit backend selection after reconnect.
+
+These controllers are staged for the unified view. Their presence does not mean
+the default product list or persistent Mac source has shipped.

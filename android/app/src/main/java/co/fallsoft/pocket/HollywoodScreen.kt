@@ -227,6 +227,7 @@ import androidx.lifecycle.repeatOnLifecycle
             choose(target.room)
             target.reply?.let{reply->recipient=reply.recipient;direct=reply.audience=="direct";source=reply.sourceEvent;postOnly=reply.kind=="message"}
             inspecting=target.attention
+            if(target.keyboard){keyboardInput=true;requestKeyboard=true}
             headRefreshRevision++
             HollywoodNotifications.consumed(target)
         }
