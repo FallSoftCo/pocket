@@ -3,8 +3,8 @@ package co.fallsoft.pocket
 import org.json.JSONObject
 
 /** Durable missing interval between retained windows. No receipt/read-ack authority. */
-internal data class TranscriptGapWindow(val id:String,val cursor:String,val beforeRow:String,val olderAnchor:String,val exhausted:Boolean=false){
-    fun json()=JSONObject().put("id",id).put("cursor",cursor).put("beforeRow",beforeRow).put("olderAnchor",olderAnchor).put("exhausted",exhausted)
+internal data class TranscriptGapWindow(val id:String,val cursor:String,val beforeRow:String,val olderAnchor:String,val exhausted:Boolean=false,val unverified:Set<String> = emptySet()){
+    fun json()=JSONObject().put("id",id).put("cursor",cursor).put("beforeRow",beforeRow).put("olderAnchor",olderAnchor).put("exhausted",exhausted).put("unverified",org.json.JSONArray(unverified.toList()))
 }
 internal data class TranscriptHistoryGap(val id:String,val cursor:String,val beforeRow:String,val loading:Boolean,val problem:String){
     val rowId get()=ROW_PREFIX+id
@@ -25,7 +25,7 @@ internal fun restoreTranscriptGaps(value:JSONObject,rows:List<JSONObject>):List<
     val raw=if(typed!=null)typed.objects().mapNotNull{v->
         val id=v.s("id");val cursor=v.s("cursor");val before=v.s("beforeRow");val older=v.s("olderAnchor")
         if(id.isBlank()||cursor.isBlank()||cursor.length>16000||before.isBlank()||older.isBlank())null
-        else TranscriptGapWindow(id,cursor,before,older,v.optBoolean("exhausted"))
+        else TranscriptGapWindow(id,cursor,before,older,v.optBoolean("exhausted"),v.optJSONArray("unverified")?.let{a->(0 until a.length()).map{a.optString(it)}.filter{it.isNotBlank()}.toSet()}.orEmpty())
     } else {
         val cursor=value.s("bridgeBefore");val before=value.s("bridgeBoundary")
         val known=value.optJSONArray("bridgeKnown")
@@ -34,9 +34,9 @@ internal fun restoreTranscriptGaps(value:JSONObject,rows:List<JSONObject>):List<
         else listOf(TranscriptGapWindow(java.util.UUID.randomUUID().toString(),cursor,before,older))
     }
     val ids=rows.mapTo(hashSetOf()){transcriptMessageIdentity(it.s("kind"),it.s("turnId"),it.s("clientId"),it.s("id"))}
-    val requested=raw.flatMap{listOf(it.beforeRow,it.olderAnchor)}.toSet()
+    val requested=raw.flatMap{listOf(it.beforeRow,it.olderAnchor)+it.unverified}.toSet()
     val aliases=migrateTranscriptAnchors(rows,requested)
-    return raw.map{it.copy(beforeRow=aliases[it.beforeRow]?:it.beforeRow,olderAnchor=aliases[it.olderAnchor]?:it.olderAnchor)}
+    return raw.map{it.copy(beforeRow=aliases[it.beforeRow]?:it.beforeRow,olderAnchor=aliases[it.olderAnchor]?:it.olderAnchor,unverified=it.unverified.map{ref->aliases[ref]?:ref}.toSet())}
         .filter{it.beforeRow in ids&&it.olderAnchor in ids}.distinctBy{it.id}
 }
 
@@ -56,22 +56,24 @@ internal fun missingTranscriptWindow(
     val outside=old.filter{it.s("id") !in ids}
     if(outside.isEmpty()||(!unknownCoverage&&old.any{it.s("id") in ids}))return null
     if(gaps.any{it.beforeRow==boundary||it.cursor==cursor})return null
-    return TranscriptGapWindow(java.util.UUID.randomUUID().toString(),cursor,boundary,(if(unknownCoverage)outside.first() else outside.last()).s("id"))
+    return TranscriptGapWindow(java.util.UUID.randomUUID().toString(),cursor,boundary,(if(unknownCoverage)outside.first() else outside.last()).s("id"),unverified=if(unknownCoverage)outside.mapTo(linkedSetOf()){it.s("id")}else emptySet())
 }
 
 /** Version1 cached rows may already join disconnected islands without recording
  * a gap. Their old coverage flag is not proof; retain the rows and re-establish
- * coverage from the oldest retained anchor on bounded reader demand. */
+ * coverage of every retained content identity on bounded reader demand. */
 internal fun verifiedTranscriptCoverage(value:JSONObject)=value.optInt("schema")==2&&value.optBoolean("coverageVerified")
 
 internal fun advanceTranscriptGap(gap:TranscriptGapWindow,incoming:List<JSONObject>,page:JSONObject):TranscriptGapWindow?{
     val content=incoming.filter{transcriptContentAnchor(it.s("kind"))}
-    if(content.any{it.s("id")==gap.olderAnchor})return null
+    val ids=content.mapTo(hashSetOf()){it.s("id")}
+    val pending=gap.unverified-ids
+    if(if(gap.unverified.isNotEmpty())pending.isEmpty() else gap.olderAnchor in ids)return null
     val boundary=content.firstOrNull()?.s("id")?:gap.beforeRow
     // EOF without the retained anchor is a disconnected/unavailable interval,
     // not evidence that all history between the two islands was displayed.
-    if(!page.optBoolean("hasEarlier"))return gap.copy(beforeRow=boundary,exhausted=true)
+    if(!page.optBoolean("hasEarlier"))return gap.copy(beforeRow=boundary,exhausted=true,unverified=pending)
     val cursor=page.s("before")
     check(cursor.isNotBlank()&&cursor!=gap.cursor){"History page did not advance; cached messages are retained."}
-    return gap.copy(cursor=cursor,beforeRow=boundary,exhausted=false)
+    return gap.copy(cursor=cursor,beforeRow=boundary,exhausted=false,unverified=pending)
 }

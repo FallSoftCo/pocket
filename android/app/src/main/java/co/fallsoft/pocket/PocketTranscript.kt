@@ -50,9 +50,15 @@ object PocketTranscript {
     private val bridgeKnown get()=gapWindows.lastOrNull()?.olderAnchor?.let{setOf(it)}.orEmpty()
     private val bridgeBoundary get()=gapWindows.lastOrNull()?.beforeRow
     private fun recordWindow(retained:List<JSONObject>,incoming:List<JSONObject>,page:JSONObject,unknownCoverage:Boolean=false){
-        missingTranscriptWindow(retained,incoming,page,gapWindows,unknownCoverage)?.let{gap->
-            gapWindows=gapWindows+gap
-            if(!initialGapProbeUsed)initialGapProbe=gap.id
+        missingTranscriptWindow(retained,incoming,page,if(unknownCoverage)emptyList()else gapWindows,unknownCoverage)?.let{gap->
+            val existing=gapWindows.firstOrNull{it.beforeRow==gap.beforeRow||it.cursor==gap.cursor}
+            if(existing==null){
+                gapWindows=gapWindows+gap
+                if(!initialGapProbeUsed)initialGapProbe=gap.id
+            }else if(unknownCoverage){
+                gapWindows=gapWindows.map{if(it.id==existing.id)it.copy(olderAnchor=gap.olderAnchor,unverified=it.unverified+gap.unverified)else it}
+                if(!initialGapProbeUsed)initialGapProbe=existing.id
+            }
         }
     }
     private fun followNewWindow(previous:List<JSONObject>,incoming:List<JSONObject>){
@@ -83,7 +89,7 @@ object PocketTranscript {
     private data class Snapshot(val rows:List<JSONObject>,val detail:JSONObject,val before:String?,val earlier:Boolean,val bridgeBefore:String?,val position:TranscriptReadPosition?,val bridgeKnown:Set<String> = emptySet(),val bridgeBoundary:String?=null,val coverageVerified:Boolean=false,val diskPending:Boolean=false,val gaps:List<TranscriptGapWindow> = emptyList())
     private val rowWeights=java.util.WeakHashMap<JSONObject,Long>()
     private val recent=RecentTranscriptCache<Snapshot>(4,Long.MAX_VALUE,12L*1024*1024){snapshot->
-        snapshot.rows.sumOf{row->rowWeights.getOrPut(row){row.toString().length.toLong()*2}}+snapshot.detail.toString().length*2L+snapshot.gaps.sumOf{(it.id.length+it.cursor.length+it.beforeRow.length+it.olderAnchor.length)*2L}
+        snapshot.rows.sumOf{row->rowWeights.getOrPut(row){row.toString().length.toLong()*2}}+snapshot.detail.toString().length*2L+snapshot.gaps.sumOf{(it.id.length+it.cursor.length+it.beforeRow.length+it.olderAnchor.length)*2L+it.unverified.sumOf{ref->ref.length*2L}}
     }
     private var ownerScope:String?=null
     internal fun scopeKey():String{
@@ -385,8 +391,8 @@ object PocketTranscript {
                                 // Retain every previously known interval when the current
                                 // head wins the race against disk restoration.
                                 val restored=(cached.gaps+gapWindows).associateBy{it.id}.values.toList()
-                                val aliases=migrateTranscriptAnchors(rows,restored.flatMap{listOf(it.beforeRow,it.olderAnchor)}.toSet())
-                                gapWindows=restored.map{it.copy(beforeRow=aliases[it.beforeRow]?:it.beforeRow,olderAnchor=aliases[it.olderAnchor]?:it.olderAnchor)}
+                                val aliases=migrateTranscriptAnchors(rows,restored.flatMap{listOf(it.beforeRow,it.olderAnchor)+it.unverified}.toSet())
+                                gapWindows=restored.map{it.copy(beforeRow=aliases[it.beforeRow]?:it.beforeRow,olderAnchor=aliases[it.olderAnchor]?:it.olderAnchor,unverified=it.unverified.map{ref->aliases[ref]?:ref}.toSet())}
                                 recordWindow(cached.rows,latestPage!!,JSONObject().put("hasEarlier",latestHasEarlier).put("before",latestBefore),!cached.coverageVerified)
                             }
                             historyLoaded=true
@@ -425,10 +431,10 @@ object PocketTranscript {
             // Promote incomplete live/cache identities before the snapshot diff.
             // Otherwise a metadata-enriched history row is treated as a new send.
             val reconciled=normalizeTranscriptMessages(rows+incoming)
-            val requested=gapWindows.flatMap{listOf(it.beforeRow,it.olderAnchor)}.toMutableSet().apply{readPosition?.let{add(it.rowId)}}
+            val requested=gapWindows.flatMap{listOf(it.beforeRow,it.olderAnchor)+it.unverified}.toMutableSet().apply{readPosition?.let{add(it.rowId)}}
             val moved=migrateTranscriptAnchors(reconciled,requested)
             readPosition=readPosition?.let{it.copy(rowId=moved[it.rowId]?:it.rowId)}
-            gapWindows=gapWindows.map{it.copy(beforeRow=moved[it.beforeRow]?:it.beforeRow,olderAnchor=moved[it.olderAnchor]?:it.olderAnchor)}
+            gapWindows=gapWindows.map{it.copy(beforeRow=moved[it.beforeRow]?:it.beforeRow,olderAnchor=moved[it.olderAnchor]?:it.olderAnchor,unverified=it.unverified.map{ref->moved[ref]?:ref}.toSet())}
             rows=promoteTranscriptIdentityEvidence(rows,reconciled)
             baselineRows=promoteTranscriptIdentityEvidence(baselineRows.values.toList(),reconciled).associateBy{it.s("id")}
             incoming=promoteTranscriptIdentityEvidence(incoming,reconciled)
@@ -457,7 +463,7 @@ object PocketTranscript {
                         gap.id==window.id->advanceTranscriptGap(gap,incoming,page)?.also{advanced->
                             if(advanced.exhausted)gapProblems=gapProblems+(gap.id to "Saved messages are separated from the available history.")
                         }
-                        gap.beforeRow in incomingIds&&gap.olderAnchor in incomingIds->null
+                        gap.beforeRow in incomingIds&&gap.olderAnchor in incomingIds&&gap.unverified.all{it in incomingIds}->null
                         else->gap
                     }
                 }
@@ -465,7 +471,7 @@ object PocketTranscript {
                 if(!older){
                     // A contiguous head can prove one or more intervals complete.
                     // It never rewinds the independent cursor of another interval.
-                    gapWindows=gapWindows.filterNot{it.beforeRow in incomingIds&&it.olderAnchor in incomingIds}
+                    gapWindows=gapWindows.filterNot{it.beforeRow in incomingIds&&it.olderAnchor in incomingIds&&it.unverified.all{ref->ref in incomingIds}}
                     if(wasLoaded)recordWindow(rows,incoming,page,!coverageVerified&&gapWindows.isEmpty())
                     coverageVerified=true
                 }

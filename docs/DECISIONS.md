@@ -147,9 +147,10 @@ identity. Candidate qualification is recorded separately from deployment.
 
 Version1 retained checkpoints can already contain old and recent islands with an
 incorrect coverage flag. The version2 decoder keeps their messages and reading
-anchors but does not trust that flag. Revalidation follows canonical pages back
-to the oldest retained anchor, so encountering a cached recent prefix cannot
-silently close an older missing interval. Current metadata written by version2
+anchors but does not trust that flag. Revalidation tracks every retained
+content identity through contiguous canonical pages. Encountering a cached recent
+prefix or the first saved row cannot silently close an older missing interval;
+all retained references in the unverified prefix must be corroborated. Current metadata written by version2
 continues to retain explicit independent windows.
 
 A source EOF without the retained anchor leaves an unavailable interval. It is
