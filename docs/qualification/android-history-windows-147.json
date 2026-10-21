@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "versionCode": 147,
+  "versionName": "0.5.0-alpha.129",
+  "implementationCommit": "1c93433",
+  "state": "published",
+  "changes": [
+    "Preserve whole canonical pages and their matching cursors",
+    "Keep canonical coverage separate from live overlays; expose missing retained intervals",
+    "Open explicit session selections at latest; preserve intentional history restoration",
+    "Resolve delayed/restored input placement using bounded canonical position reads",
+    "Treat bridge cursors as before constraints, not adjacency",
+    "Exclude invalidated pairing stores from catalog footer projections"
+  ],
+  "qualification": {
+    "unitPerVariant": 418,
+    "unitFailures": 0,
+    "existingSkippedPerVariant": 2,
+    "lints": [
+      "debug",
+      "release"
+    ],
+    "requiredNativeJourneys": 10,
+    "exactCompatibleOptimizedProbe": true,
+    "physicalPhoneInstallVerified": false
+  },
+  "limits": [
+    "Earlier failed candidates were not published; native regressions exposed pairing transition and repeated-bridge defects and remained unchanged after fixes.",
+    "Typing/Back probe first failed under emulator SystemUI ANRs; unchanged APK/test passed after bounded CPU allowance and settling. Earlier failure receipts retained.",
+    "Software emulator silent-head recovery8579ms is not physical handset latency; no subsecond claim.",
+    "Physical phone/provider audio remains unqualified; volume/IME/draft tested with no-provider fixture."
+  ],
+  "compatibleSha256": "afb95d32787492ad8b7c4e0a6715ee6aa3fa96b63b29738102017cb38594cdf3"
+}
