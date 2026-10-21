@@ -145,6 +145,7 @@ class CodexHistoryConcurrencyNativeTest {
             await("Current shared head not ready"){CodexSessionRepository.peek("same-thread")?.getJSONObject("timeline")?.getJSONArray("rows")?.objects()?.any{it.s("text")=="Fresh response 1"}==true}
             val scope=PocketTranscript.scopeKey()
             val old=org.json.JSONArray((0 until 1000).map{n->JSONObject().put("id","retained-old-"+n).put("kind","message").put("turnId","old-turn").put("text","Retained old message "+n)})
+            old.put(JSONObject(head.getJSONObject("timeline").getJSONArray("rows").objects().first{transcriptContentAnchor(it.s("kind"))}.toString()))
             val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old)
                 .put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
                 .put("coverageVerified",true).put("position",JSONObject().put("row","retained-old-500").put("offset",17).put("follow",false))
@@ -184,7 +185,7 @@ class CodexHistoryConcurrencyNativeTest {
             val scope=PocketTranscript.scopeKey()
             val cached=org.json.JSONArray()
             repeat(1000){n->cached.put(JSONObject().put("id","retained-old-"+n).put("kind","message").put("turnId","old-turn").put("text","Retained old message "+n))}
-            val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",cached).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+            val snapshot=JSONObject().put("schema",2).put("scope",scope).put("id","same-thread").put("rows",cached).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("coverageVerified",true)
             assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
             main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
             await("Current message never became independently fresh",20000){PocketTranscript.currentHistoryVerified&&PocketTranscript.rows.any{it.s("text")=="Fresh response 1"}}

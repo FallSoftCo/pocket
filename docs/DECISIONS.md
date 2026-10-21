@@ -141,3 +141,19 @@ that support only opaque item cursors use bounded descending position lookup,
 carrying the nearest visible successor across source-bound continuations.
 No history repair starts a model turn, resends input, or uses message text as
 identity. Candidate qualification is recorded separately from deployment.
+
+
+### Retained-cache upgrade and disconnected history
+
+Version1 retained checkpoints can already contain old and recent islands with an
+incorrect coverage flag. The version2 decoder keeps their messages and reading
+anchors but does not trust that flag. Revalidation follows canonical pages back
+to the oldest retained anchor, so encountering a cached recent prefix cannot
+silently close an older missing interval. Current metadata written by version2
+continues to retain explicit independent windows.
+
+A source EOF without the retained anchor leaves an unavailable interval. It is
+not treated as a successful join. The marker and retained messages persist;
+unchanged failed intervals do not repeatedly fetch on every scroll. Reopening
+permits a fresh user-demanded attempt, and explicit refresh can retry the
+interval. No model work or command replay is part of this recovery.

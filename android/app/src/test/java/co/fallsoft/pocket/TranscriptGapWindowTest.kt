@@ -52,4 +52,27 @@ class TranscriptGapWindowTest {
   assertEquals(10,merged[1].optInt("version"))
   assertNull(newerTranscriptHead(canonical,listOf(row("disconnected"))))
  }
+
+ @Test fun legacyOverlappingCacheDoesNotResolveItsMissingMiddleAtTheFirstRecentOverlap(){
+  fun row(id:String)=JSONObject().put("id",id).put("kind","message")
+  val legacy=JSONObject().put("schema",1).put("coverageVerified",true)
+  assertFalse(verifiedTranscriptCoverage(legacy))
+  assertTrue(verifiedTranscriptCoverage(JSONObject().put("schema",2).put("coverageVerified",true)))
+  val retained=listOf(row("old-0"),row("old-1"),row("recent-3"),row("recent-4"),row("head-5"))
+  val head=listOf(row("head-5"))
+  val gap=missingTranscriptWindow(retained,head,JSONObject().put("hasEarlier",true).put("before","before-5"),emptyList(),unknownCoverage=true)!!
+  assertEquals("old-0",gap.olderAnchor)
+  val first=advanceTranscriptGap(gap,listOf(row("recent-3"),row("recent-4")),JSONObject().put("hasEarlier",true).put("before","before-3"))!!
+  val middle=advanceTranscriptGap(first,listOf(row("old-1"),row("missing-2")),JSONObject().put("hasEarlier",true).put("before","before-1"))!!
+  assertEquals("old-0",middle.olderAnchor)
+  assertNull(advanceTranscriptGap(middle,listOf(row("old-0")),JSONObject().put("hasEarlier",false)))
+ }
+ @Test fun sourceEofCannotEraseAnUnconnectedSavedWindow(){
+  val gap=TranscriptGapWindow("gap","cursor","new","saved-old")
+  val stopped=advanceTranscriptGap(gap,listOf(JSONObject().put("id","source-end").put("kind","message")),JSONObject().put("hasEarlier",false))!!
+  assertTrue(stopped.exhausted)
+  assertEquals("saved-old",stopped.olderAnchor)
+  val rows=listOf(JSONObject().put("id","saved-old").put("kind","message"),JSONObject().put("id","source-end").put("kind","message"))
+  assertEquals(listOf(stopped),restoreTranscriptGaps(JSONObject().put("historyGaps",JSONArray(listOf(stopped.json()))),rows))
+ }
 }

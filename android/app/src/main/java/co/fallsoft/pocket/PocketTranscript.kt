@@ -23,7 +23,7 @@ object PocketTranscript {
     val updating get()=positionRestorePending||(!freshForRead&&cacheRestoring)||refreshPending||reads.latestLoading||positioning
     internal val historyGaps:List<TranscriptHistoryGap> get(){
         revision
-        return gapWindows.map{TranscriptHistoryGap(it.id,it.cursor,it.beforeRow,reads.gapLoading&&gapReadId==it.id,gapProblems[it.id].orEmpty())}
+        return gapWindows.map{TranscriptHistoryGap(it.id,it.cursor,it.beforeRow,reads.gapLoading&&gapReadId==it.id,gapProblems[it.id].orEmpty().ifBlank{if(it.exhausted)"Saved messages are separated from the available history." else ""})}
     }
     internal val historyGap get()=historyGaps.lastOrNull()
     fun markRefreshPending(){
@@ -49,13 +49,6 @@ object PocketTranscript {
     private val bridgeBefore get()=gapWindows.lastOrNull()?.cursor
     private val bridgeKnown get()=gapWindows.lastOrNull()?.olderAnchor?.let{setOf(it)}.orEmpty()
     private val bridgeBoundary get()=gapWindows.lastOrNull()?.beforeRow
-    private fun beginGap(cursor:String,boundary:String?,known:Collection<String>){
-        val older=known.lastOrNull()?:return
-        if(boundary==null||gapWindows.any{it.beforeRow==boundary||it.cursor==cursor})return
-        val gap=TranscriptGapWindow(java.util.UUID.randomUUID().toString(),cursor,boundary,older)
-        gapWindows=gapWindows+gap;coverageVerified=true
-        if(!initialGapProbeUsed)initialGapProbe=gap.id
-    }
     private fun recordWindow(retained:List<JSONObject>,incoming:List<JSONObject>,page:JSONObject,unknownCoverage:Boolean=false){
         missingTranscriptWindow(retained,incoming,page,gapWindows,unknownCoverage)?.let{gap->
             gapWindows=gapWindows+gap
@@ -123,14 +116,14 @@ object PocketTranscript {
             // must come from the live backend rather than an old disk snapshot.
             val detail=transcriptPresentationDetail(id,snapshot.detail)
             val position=snapshot.position?.let{JSONObject().put("row",it.rowId).put("offset",it.offset).put("follow",it.follow)}
-            val body=JSONObject().put("schema",1).put("scope",scope).put("id",id).put("rows",org.json.JSONArray(snapshot.rows.filter{it.s("kind")!="request"})).put("detail",detail).put("before",snapshot.before).put("earlier",snapshot.earlier).put("bridgeBefore",snapshot.bridgeBefore).put("bridgeKnown",org.json.JSONArray(snapshot.bridgeKnown.toList())).put("bridgeBoundary",snapshot.bridgeBoundary).put("coverageVerified",snapshot.coverageVerified).put("historyGaps",org.json.JSONArray(snapshot.gaps.map{it.json()})).put("position",position).toString()
+            val body=JSONObject().put("schema",2).put("scope",scope).put("id",id).put("rows",org.json.JSONArray(snapshot.rows.filter{it.s("kind")!="request"})).put("detail",detail).put("before",snapshot.before).put("earlier",snapshot.earlier).put("bridgeBefore",snapshot.bridgeBefore).put("bridgeKnown",org.json.JSONArray(snapshot.bridgeKnown.toList())).put("bridgeBoundary",snapshot.bridgeBoundary).put("coverageVerified",snapshot.coverageVerified).put("historyGaps",org.json.JSONArray(snapshot.gaps.map{it.json()})).put("position",position).toString()
             disk.write(scope,id,body){diskRequests[key]==sequence}
             if(position!=null)disk.writePosition(scope,id,position.toString(),sequence)
         }catch(_:Exception){/* A cache failure never changes delivery, draft or network state. */}}
     }
     private suspend fun diskSnapshot(scope:String,id:String):Snapshot?=withContext(Dispatchers.IO){try{
         val value=disk.read(scope,id)?.let{JSONObject(it)}?:return@withContext null
-        if(value.optInt("schema")!=1||value.s("scope")!=scope||value.s("id")!=id)return@withContext null
+        if(value.optInt("schema") !in 1..2||value.s("scope")!=scope||value.s("id")!=id)return@withContext null
         val detail=value.getJSONObject("detail");if(detail.optJSONObject("thread")?.s("id")!=id)return@withContext null
         val originalRows=value.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map{it.put("version",0L)}
         // Sidecar state can be newer than the full history checkpoint. Accept
@@ -149,7 +142,7 @@ object PocketTranscript {
         val cachedRows=normalizeTranscriptMessages(originalRows)
         if(cachedRows.any{it.s("id").isBlank()}||cachedRows.map{it.s("id")}.distinct().size!=cachedRows.size)return@withContext null
         val position=rawPosition?.let{TranscriptReadPosition(migrated[it.s("row")]?:it.s("row"),it.optInt("offset"),it.optBoolean("follow"))}
-        Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position,rawKnown.map{migrated[it]?:it}.toSet(),rawBoundary?.let{migrated[it]?:it},value.optBoolean("coverageVerified"),gaps=restoreTranscriptGaps(value,originalRows))
+        Snapshot(cachedRows,detail,value.s("before").takeIf{it.isNotBlank()},value.optBoolean("earlier"),value.s("bridgeBefore").takeIf{it.isNotBlank()},position,rawKnown.map{migrated[it]?:it}.toSet(),rawBoundary?.let{migrated[it]?:it},verifiedTranscriptCoverage(value),gaps=restoreTranscriptGaps(value,originalRows))
     }catch(_:Exception){null}}
     private fun rememberRecent(persist:Boolean=false){
         val id=owner?:return;val scope=ownerScope?:return
@@ -242,7 +235,7 @@ object PocketTranscript {
         cachedNeedsConfirmation=openLatest&&(shared==null||!CodexSessionRepository.canPresent(id,shared))
         rows=if(sharedRows.isEmpty())cached?.rows.orEmpty()else mergeRestoredTranscriptRows(cached?.rows.orEmpty(),sharedRows);Pocket.detail=cached?.detail;readPosition=cached?.position?.takeUnless{preferLatestOnOpen}
         earlier=cached?.earlier?:false;before=cached?.before;gapWindows=cached?.gaps.orEmpty();gapReadId=null;gapProblems=emptyMap();initialGapProbe=null;initialGapProbeUsed=false;coverageVerified=cached?.coverageVerified?:false;reads.reset();refreshPending=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
-        if(shared!=null&&sharedRows.isNotEmpty())recordWindow(cached?.rows.orEmpty(),sharedRows,shared.getJSONObject("timeline"),!coverageVerified)
+        if(shared!=null&&sharedRows.isNotEmpty()&&shared.optInt("windowSchema")==2)recordWindow(cached?.rows.orEmpty(),sharedRows,shared.getJSONObject("timeline"),!coverageVerified)
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
     fun clear()=CodexConversations.close()
@@ -328,7 +321,11 @@ object PocketTranscript {
         }
     }
     fun latest()=CodexConversations.retry()
-    internal fun prepareRetry(){attemptedPositions.removeAll{it.target in positionFailures.keys};positionFailures.clear()}
+    internal fun prepareRetry(){
+        attemptedPositions.removeAll{it.target in positionFailures.keys};positionFailures.clear()
+        gapWindows.firstOrNull{it.exhausted}?.let{initialGapProbe=it.id;initialGapProbeUsed=false}
+        gapWindows=gapWindows.map{it.copy(exhausted=false)};gapProblems=emptyMap()
+    }
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
     fun release(){recent.clear();trace()}
     suspend fun load(older:Boolean=false,bridgeCursor:String?=null,retryAttempt:Int=0,beforeApply:suspend ()->Unit={},beforeCacheRead:suspend ()->Unit={})=
@@ -337,7 +334,7 @@ object PocketTranscript {
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return
         if(owner!=id||(older&&(!earlier||before==null)))return
-        if(bridgeCursor!=null&&gapWindows.none{it.cursor==bridgeCursor})return
+        if(bridgeCursor!=null&&gapWindows.none{it.cursor==bridgeCursor&&(!it.exhausted||it.id !in gapProblems)})return
         val kind=when{older->TranscriptReadState.Kind.OLDER;bridgeCursor!=null->TranscriptReadState.Kind.GAP;else->TranscriptReadState.Kind.LATEST}
         val latest=kind==TranscriptReadState.Kind.LATEST
         if(latest&&reads.latestLoading){missedUpdates=true;refreshPending=true;return}
@@ -379,7 +376,7 @@ object PocketTranscript {
                             if(latestPage==null){
                                 gapWindows=(cached.gaps+gapWindows).distinctBy{it.id};coverageVerified=cached.coverageVerified
                                 val shared=CodexSessionRepository.peek(id)
-                                if(shared!=null){
+                                if(shared!=null&&shared.optInt("windowSchema")==2){
                                     val headRows=shared.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
                                     recordWindow(cached.rows,headRows,shared.getJSONObject("timeline"),!cached.coverageVerified)
                                 }
@@ -390,11 +387,7 @@ object PocketTranscript {
                                 val restored=(cached.gaps+gapWindows).associateBy{it.id}.values.toList()
                                 val aliases=migrateTranscriptAnchors(rows,restored.flatMap{listOf(it.beforeRow,it.olderAnchor)}.toSet())
                                 gapWindows=restored.map{it.copy(beforeRow=aliases[it.beforeRow]?:it.beforeRow,olderAnchor=aliases[it.olderAnchor]?:it.olderAnchor)}
-                                val latestIds=latestPage!!.filter{transcriptContentAnchor(it.s("kind"))}.mapTo(hashSetOf()){it.s("id")}
-                                val retained=rows.filter{transcriptContentAnchor(it.s("kind"))&&it.s("id") !in latestIds}.map{it.s("id")}
-                                if(retained.isNotEmpty()&&latestHasEarlier&&latestBefore!=null){
-                                    beginGap(latestBefore!!,latestPage!!.firstOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id"),retained.takeLast(1024).toSet())
-                                }
+                                recordWindow(cached.rows,latestPage!!,JSONObject().put("hasEarlier",latestHasEarlier).put("before",latestBefore),!cached.coverageVerified)
                             }
                             historyLoaded=true
                             if(readerIntentRevision==intentAtStart&&!preferLatestOnOpen){
@@ -461,7 +454,9 @@ object PocketTranscript {
                 rows=mergeTranscriptPage(rows,incoming,false,{it.s("id")},{it.optLong("version")},insertBefore=transcriptDisplayAnchor(rows,page.s("insertBefore").takeIf{it.isNotBlank()})?:window.beforeRow,keepPosition={it.s("kind")=="turn"})
                 gapWindows=gapWindows.mapNotNull{gap->
                     when{
-                        gap.id==window.id->if(overlaps||!page.optBoolean("hasEarlier"))null else gap.copy(cursor=nextBefore!!,beforeRow=incomingContent.firstOrNull()?.s("id")?:gap.beforeRow)
+                        gap.id==window.id->advanceTranscriptGap(gap,incoming,page)?.also{advanced->
+                            if(advanced.exhausted)gapProblems=gapProblems+(gap.id to "Saved messages are separated from the available history.")
+                        }
                         gap.beforeRow in incomingIds&&gap.olderAnchor in incomingIds->null
                         else->gap
                     }
