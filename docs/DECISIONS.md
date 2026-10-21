@@ -158,3 +158,12 @@ not treated as a successful join. The marker and retained messages persist;
 unchanged failed intervals do not repeatedly fetch on every scroll. Reopening
 permits a fresh user-demanded attempt, and explicit refresh can retry the
 interval. No model work or command replay is part of this recovery.
+
+
+Visible retained inputs also use the existing canonical-position lane. Settled
+viewport demand admits at most four suspect inputs; undispatched offscreen
+viewport requests are dropped, and one serial owner performs bounded read-only
+lookups with a five-second per-request timeout. A late disk restoration therefore
+does not need another user send or a coincidental head message to repair order.
+A successful independent current read can retry failed visible ordering once;
+this never starts a model, sends input or recursively triggers another read.

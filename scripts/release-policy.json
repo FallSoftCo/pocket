@@ -3,6 +3,7 @@
   "qualification": "canonical-history-windows-and-message-order",
   "requiredNativeCases": [
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#sharedHeadKeepsWholePageAndExposesMissingMiddleBeforeDiskReopen",
+    "co.fallsoft.pocket.TranscriptRefreshNativeTest#lateDiskInputIsPositionedFromVisibleHistoryWithoutAnotherSend",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#longRetainedGapDoesNotDrainOrResetWhileCurrentMessagesAdvance",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#currentHeadsAndDelayedInputRemainOrderedAcrossCachedReopen",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#canonicalInputPositionSurvivesProviderChangeDuringLookup",

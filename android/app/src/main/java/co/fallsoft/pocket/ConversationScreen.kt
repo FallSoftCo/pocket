@@ -253,6 +253,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             android.util.Log.d("PocketScroll","index=${position.first} offset=${position.second} moving=${position.third} follow=$follow dragged=$dragged rows=${shownRows.size}")
         }
     }
+    LaunchedEffect(list,conversation.key,conversation.incarnation){
+        snapshotFlow{
+            if(list.isScrollInProgress||PocketTranscript.currentLoading)emptySet()
+            else list.layoutInfo.visibleItemsInfo.mapTo(linkedSetOf()){it.key.toString()}
+        }.debounce(120).distinctUntilChanged().collect{ids->
+            CodexConversations.visibleRows(conversation.key,conversation.incarnation,ids)
+        }
+    }
     var pagingViewport by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     var pageHydrated by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(true)}
     var pageGesture by remember(Pocket.environmentId,Pocket.selected){mutableLongStateOf(0)}

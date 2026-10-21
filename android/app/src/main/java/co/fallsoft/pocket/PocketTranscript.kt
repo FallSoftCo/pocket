@@ -76,9 +76,12 @@ object PocketTranscript {
     }
     private var coverageVerified=false
     private var missedUpdates=false
-    private data class InputPosition(val turn:String,val target:String,val item:String,val client:String,val known:List<String>,val evidence:Long)
+    private data class InputPosition(val turn:String,val target:String,val item:String,val client:String,val known:List<String>,val evidence:Long,val viewport:Boolean=false)
     private val positionQueue=linkedMapOf<String,InputPosition>()
     private var positionJob:Job?=null
+    private var positionActive:String?=null
+    private var visiblePositionRows=emptySet<String>()
+    private val positionClient by lazy{CodexReadTransport.historyClient.newBuilder().callTimeout(5,java.util.concurrent.TimeUnit.SECONDS).build()}
     private var positionHistoryRevision=0L
     private data class InputAttempt(val target:String,val item:String)
     private val attemptedPositions=hashSetOf<InputAttempt>()
@@ -221,7 +224,7 @@ object PocketTranscript {
     internal fun pauseReading()=CodexConversations.suspendReading()
     internal fun pauseState(){
         rememberRecent(persist=true);generation++;cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false
-        positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false
+        positionJob?.cancel();positionJob=null;positionActive=null;visiblePositionRows=emptySet();positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false
         reads.reset();refreshPending=false;missedUpdates=false;pendingHead=null;buffered.clear()
     }
     fun reset(id:String)=CodexConversations.select(id,force=true)
@@ -229,7 +232,7 @@ object PocketTranscript {
         operationScope=scope
         latestReadError="";historicalReadError="";positionReadError="";readFailureSince=0L
         cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false
-        positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false
+        positionJob?.cancel();positionJob=null;positionActive=null;visiblePositionRows=emptySet();positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false
         cacheRestoreIntent=readerIntentRevision
         currentWorkVerified=false
         generation++;owner=id;ownerScope=scopeKey();observedHead=null;pendingHead=null;headSnapshotsSupported=null;automaticRetryAllowed=true
@@ -245,7 +248,7 @@ object PocketTranscript {
         buffered.clear();browsingEarlier=false;missedUpdates=false;revision++;trace()
     }
     fun clear()=CodexConversations.close()
-    internal fun clearState(){operationScope=null;latestReadError="";historicalReadError="";positionReadError="";readFailureSince=0L;cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false;needsDiskRestore=true;positionJob?.cancel();positionJob=null;positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;currentWorkVerified=false;generation++;owner=null;ownerScope=null;observedHead=null;pendingHead=null;headSnapshotsSupported=null;readPosition=null;rows=emptyList();buffered.clear();reads.reset();refreshPending=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;gapWindows=emptyList();gapReadId=null;gapProblems=emptyMap();initialGapProbe=null;initialGapProbeUsed=false;coverageVerified=false;earlier=false;browsingEarlier=false;revision++;trace()}
+    internal fun clearState(){operationScope=null;latestReadError="";historicalReadError="";positionReadError="";readFailureSince=0L;cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false;needsDiskRestore=true;positionJob?.cancel();positionJob=null;positionActive=null;visiblePositionRows=emptySet();positionQueue.clear();attemptedPositions.clear();awaitingPositionHistory.clear();positionFailures.clear();positioning=false;automaticRetryAllowed=true;currentWorkVerified=false;generation++;owner=null;ownerScope=null;observedHead=null;pendingHead=null;headSnapshotsSupported=null;readPosition=null;rows=emptyList();buffered.clear();reads.reset();refreshPending=false;historyLoaded=false;checkedThisOpen=false;freshForRead=false;before=null;gapWindows=emptyList();gapReadId=null;gapProblems=emptyMap();initialGapProbe=null;initialGapProbeUsed=false;coverageVerified=false;earlier=false;browsingEarlier=false;revision++;trace()}
     /** Called only by the resumed, unfiltered viewport after settling at latest. */
     internal fun presentedLatest(){
         val id=Pocket.selected?:return
@@ -254,7 +257,7 @@ object PocketTranscript {
         PocketNotificationReads.readVisible(id,d.optJSONArray("notifications")?.objects()?:emptyList(),local=Pocket.local,catchup=if(!checkedThisOpen)d.optJSONObject("catchup")else null,environment=Pocket.environmentId)
         checkedThisOpen=true
     }
-    fun reconcileInputPosition(raw:JSONObject){
+    fun reconcileInputPosition(raw:JSONObject,viewport:Boolean=false){
         val row=normalizeTranscriptMessage(raw)
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return;val turn=row.s("turnId");val target=row.s("id")
@@ -267,13 +270,14 @@ object PocketTranscript {
         val known=transcriptPositionAnchors(rows.filter{it.s("turnId")==turn&&it.s("kind") !in listOf("turn","turnEnd","request","attachments")}).map{it.s("itemId").ifBlank{it.s("id").removePrefix("$turn/")}}
         if(known.none{it!=item})return
         attemptedPositions.add(attempt)
-        positionQueue[target]=InputPosition(turn,target,item,row.s("clientId"),known,positionHistoryRevision)
+        positionQueue[target]=InputPosition(turn,target,item,row.s("clientId"),known,positionHistoryRevision,viewport)
         if(positionJob?.isActive==true)return
         positioning=true
         positionJob=readScope.launch{
             try{
                 while(current()&&positionQueue.isNotEmpty()){
                     val request=positionQueue.values.first()
+                    positionActive=request.target
                     try{
                         var cursor:String?=null;val visited=hashSetOf<String>()
                         // One serial read lane, bounded per target and driven only by
@@ -283,7 +287,7 @@ object PocketTranscript {
                             val body=JSONObject().put("turnId",request.turn).put("itemId",request.item).put("knownItemIds",org.json.JSONArray(request.known))
                             if(request.client.isNotBlank())body.put("clientId",request.client)
                             cursor?.let{body.put("cursor",it)}
-                            val result=CodexReadTransport.read(destination,"/api/threads/$id/timeline/position",body)
+                            val result=CodexReadTransport.read(destination,"/api/threads/$id/timeline/position",body,client=positionClient)
                             if(!current())return@launch
                             if(result.optBoolean("awaitingHistory")){
                                 val deferred=InputAttempt(request.target,request.item)
@@ -297,6 +301,9 @@ object PocketTranscript {
                                         (request.client.isNotBlank()&&it.s("clientId")==request.client&&it.s("turnId")==request.turn)}
                                         ?.let{reconcileInputPosition(it)}
                                 }
+                            }
+                            if(result.optBoolean("available")){
+                                positionFailures.remove(request.target);positionReadError=positionFailures.values.firstOrNull().orEmpty()
                             }
                             val successor=transcriptDisplayAnchor(rows,result.s("insertBefore")).orEmpty()
                             if(successor.isNotBlank()){
@@ -320,11 +327,23 @@ object PocketTranscript {
                             positionFailures[request.target]="Could not confirm message order. "+PocketNetwork.error(e)
                             positionReadError=positionFailures.values.first()
                         }
-                    }finally{if(current()&&positionQueue[request.target]===request)positionQueue.remove(request.target)}
+                    }finally{if(current()){positionActive=null;if(positionQueue[request.target]===request)positionQueue.remove(request.target)}}
                 }
             }finally{if(current()){positioning=false;positionJob=null}}
 
         }
+    }
+    /** Settled viewport demand repairs retained inputs even when no new input
+     * event arrives. At most four visible candidates enter the existing serial
+     * read lane; stale offscreen viewport requests are dropped before dispatch. */
+    internal fun reconcileVisibleInputs(ids:Set<String>){
+        visiblePositionRows=ids
+        val stale=positionQueue.values.filter{it.viewport&&it.target !in ids&&it.target!=positionActive}
+        stale.forEach{positionQueue.remove(it.target);attemptedPositions.remove(InputAttempt(it.target,it.item))}
+        if(!Pocket.connected||!Pocket.codexOnline)return
+        val firstReplies=rows.withIndex().filter{it.value.s("kind")=="message"}.groupBy{it.value.s("turnId")}.mapValues{it.value.first().index}
+        rows.withIndex().filter{(index,row)->row.s("kind")=="user"&&row.s("id") in ids&&firstReplies[row.s("turnId")]?.let{index>it}==true}
+            .takeLast(4).forEach{reconcileInputPosition(it.value,viewport=true)}
     }
     fun latest()=CodexConversations.retry()
     internal fun prepareRetry(){
@@ -499,6 +518,9 @@ object PocketTranscript {
             succeeded=true;trace()
             if(!older&&bridgeCursor==null){
                 positionHistoryRevision++
+                // A healthy independent history read permits one retry of failed
+                // visible ordering work; it cannot start another history/model loop.
+                attemptedPositions.removeAll{it.target in positionFailures.keys}
                 // Retry only after a successful independent snapshot supplied new ordering evidence.
                 val deferredTargets=awaitingPositionHistory.mapTo(hashSetOf()){it.target}
                 attemptedPositions.removeAll(awaitingPositionHistory);awaitingPositionHistory.clear()
@@ -508,6 +530,7 @@ object PocketTranscript {
                 val incomingIds=incoming.mapTo(hashSetOf()){it.s("id")}
                 val firstReplies=incoming.filter{it.s("kind")=="message"}.groupBy{it.s("turnId")}.mapValues{(_,items)->rows.indexOfFirst{it.s("id")==items.first().s("id")}}
                 rows.filterIndexed{index,row->row.s("kind")=="user"&&row.s("id") !in incomingIds&&firstReplies[row.s("turnId")]?.let{it>=0&&index>it}==true}.forEach{reconcileInputPosition(it)}
+                reconcileVisibleInputs(visiblePositionRows)
             }
         }catch(e:CancellationException){throw e}catch(e:Exception){if(current()){
             if(latest){

@@ -72,6 +72,33 @@ class TranscriptRefreshNativeTest {
   assertEquals(0,qa("state").getJSONArray("replies").length())
   java.io.File(context.cacheDir,"position-journal-restore.json").writeText(JSONObject().put("cachedRestoreMs",elapsed).put("row",expected.s("row")).put("offset",expected.optInt("offset")).put("visible",true).toString())
  }
+ @Test fun lateDiskInputIsPositionedFromVisibleHistoryWithoutAnotherSend(){
+  twoChats();qa("anchored");qa("release-position")
+  val scope=PocketTranscript.scopeKey()
+  val user=JSONObject().put("id","order/live-uuid").put("itemId","live-uuid").put("turnId","order").put("clientId","same-send").put("kind","user").put("text","Restored delayed input")
+  val answer=JSONObject().put("id","order/answer").put("itemId","answer").put("turnId","order").put("kind","message").put("text","Cached ordering answer")
+  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",org.json.JSONArray().put(answer).put(user))
+   .put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+  assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+  val release=kotlinx.coroutines.CompletableDeferred<Unit>()
+  try{
+   main{PocketTranscript.reset("same-thread");Pocket.scope.launchEnvironment{PocketTranscript.load(beforeCacheRead={release.await()})}}
+   await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.currentLoading}
+   assertFalse(PocketTranscript.rows.any{it.s("clientId")=="same-send"})
+   val reads=qa("state").getJSONArray("reads").length()
+   release.complete(Unit)
+   await{PocketTranscript.rows.any{it.s("clientId")=="same-send"}&&!PocketTranscript.updating&&qa("state").getJSONArray("positions").length()>0}
+   val rows=PocketTranscript.rows
+   assertEquals(1,rows.count{it.s("clientId")=="same-send"})
+   assertTrue(rows.indexOfFirst{it.s("clientId")=="same-send"}<rows.indexOfFirst{it.s("id")=="order/answer"})
+   val input=device.wait(Until.findObject(By.text("Restored delayed input")),3000)
+   val response=device.wait(Until.findObject(By.text("Cached ordering answer")),3000)
+   assertNotNull(input);assertNotNull(response)
+   assertTrue("Native bubbles still display answer before its input",input!!.visibleBounds.bottom<=response!!.visibleBounds.top)
+   assertEquals("Visible repair restarted conversation reads",reads,qa("state").getJSONArray("reads").length())
+   assertEquals(0,qa("state").getJSONArray("replies").length())
+  }finally{release.complete(Unit)}
+ }
  @Test fun historyEvidenceRepairsDeferredPositionOnce(){
   twoChats();qa("await-position-history");main{Pocket.open("same-thread")}
   await{PocketTranscript.rows.any{it.s("id")=="order/answer"}&&!PocketTranscript.loading}

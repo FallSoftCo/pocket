@@ -214,6 +214,9 @@ internal object CodexConversations {
         }catch(error:CancellationException){throw error}
         catch(_:Exception){/* Unavailable read evidence changes neither commands nor verified work. */}
     }
+    fun visibleRows(key:CodexConversationKey?,incarnation:Long,ids:Set<String>){
+        if(owns(key,incarnation))PocketTranscript.reconcileVisibleInputs(ids)
+    }
     fun timeline(update:JSONObject){
         if(!viewport||(!foreground&&!PocketVoice.foreground))return
         val value=active()?:return
