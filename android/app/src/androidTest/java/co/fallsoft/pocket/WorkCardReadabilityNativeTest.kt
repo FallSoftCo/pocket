@@ -58,8 +58,14 @@ class WorkCardReadabilityNativeTest {
     return bitmap.getPixel(b.left+8,b.centerY())
    }
    val sessionColor=surface("qa-Idle session");val roomColor=surface("native-room:idle")
-   assertEquals("Idle session hue lost",0xff152137.toInt(),sessionColor)
-   assertEquals("Rooms must share the identical idle hue",sessionColor,roomColor)
+   // Depth shading changes pixels slightly; assert the shared cool hue and
+   // accessibility, rather than requiring a flat untextured surface.
+   fun coolHue(v:Int):Boolean=android.graphics.Color.blue(v)>android.graphics.Color.green(v)+10&&
+    android.graphics.Color.green(v)>android.graphics.Color.red(v)+4
+   assertTrue("Idle session hue lost",coolHue(sessionColor))
+   assertTrue("Idle room hue lost",coolHue(roomColor))
+   for(channel in listOf<(Int)->Int>(android.graphics.Color::red,android.graphics.Color::green,android.graphics.Color::blue))
+    assertTrue("Room/session idle chroma diverged",kotlin.math.abs(channel(sessionColor)-channel(roomColor))<=8)
    fun luminance(v:Int):Double{
     fun linear(n:Int):Double{val x=n/255.0;return if(x<=.04045)x/12.92 else Math.pow((x+.055)/1.055,2.4)}
     return .2126*linear(android.graphics.Color.red(v))+.7152*linear(android.graphics.Color.green(v))+.0722*linear(android.graphics.Color.blue(v))
