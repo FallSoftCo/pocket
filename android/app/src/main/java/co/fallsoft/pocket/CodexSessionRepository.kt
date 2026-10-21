@@ -326,7 +326,15 @@ internal object CodexSessionRepository {
             arrayOf<Any?>(source.scope,id,value?.toString(),known[source.scope to id]?:0,if(dirty)1 else 0,System.currentTimeMillis()))
         // Cache eviction affects presentation only; never deletes commands, drafts or pairing.
         db.execSQL("DELETE FROM recent WHERE rowid IN (SELECT rowid FROM recent WHERE dirty=0 ORDER BY updated DESC LIMIT -1 OFFSET 512)")
-        db.execSQL("UPDATE recent SET body=NULL WHERE rowid IN (SELECT rowid FROM (SELECT rowid,SUM(length(CAST(body AS BLOB))) OVER (ORDER BY updated DESC,rowid DESC) AS retained_bytes FROM recent WHERE body IS NOT NULL) WHERE retained_bytes>67108864)")
+        // Basic SQLite operations retain support for the declared Android28 minimum.
+        val oversized=mutableListOf<Long>();var retainedBytes=0L
+        db.rawQuery("SELECT rowid,length(CAST(body AS BLOB)) FROM recent WHERE body IS NOT NULL ORDER BY updated DESC,rowid DESC",null).use{cursor->
+            while(cursor.moveToNext()){
+                retainedBytes+=cursor.getLong(1)
+                if(retainedBytes>64L*1024*1024)oversized.add(cursor.getLong(0))
+            }
+        }
+        if(oversized.isNotEmpty())db.execSQL("UPDATE recent SET body=NULL WHERE rowid IN ("+oversized.joinToString(","){"?"}+")",oversized.toTypedArray())
     }
     private fun queue(intent:Intent){
         val key=intent.source.scope to intent.thread

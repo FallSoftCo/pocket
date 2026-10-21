@@ -63,7 +63,7 @@ object PocketTranscript {
         }
     }
     private fun followNewWindow(previous:List<JSONObject>,incoming:List<JSONObject>){
-        if(readerIntentRevision!=cacheRestoreIntent)return
+        if(!openingAtLatest||readerIntentRevision!=cacheRestoreIntent)return
         val previousTail=previous.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
         val incomingTail=incoming.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
         if(incomingTail!=null&&incomingTail!=previousTail){
@@ -201,6 +201,7 @@ object PocketTranscript {
     private var checkedThisOpen=false
     private var freshForRead=false
     private var cachedNeedsConfirmation by mutableStateOf(true)
+    private var openingAtLatest=false
     private var preferLatestOnOpen=false
     internal val presentationReady get()=!cachedNeedsConfirmation||latestReadError.isNotBlank()
     internal fun repositoryUpdated(id:String,value:JSONObject){
@@ -237,8 +238,8 @@ object PocketTranscript {
         needsDiskRestore=cached?.diskPending?: (cached==null)
         val shared=CodexSessionRepository.peek(id)
         val sharedRows=shared?.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
-        preferLatestOnOpen=openLatest||sharedRows.isNotEmpty()&&sharedRows.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")!=cached?.rows?.lastOrNull{transcriptContentAnchor(it.s("kind"))}?.s("id")
-        cachedNeedsConfirmation=shared==null||!CodexSessionRepository.canPresent(id,shared)
+        openingAtLatest=openLatest;preferLatestOnOpen=openLatest
+        cachedNeedsConfirmation=openLatest&&(shared==null||!CodexSessionRepository.canPresent(id,shared))
         rows=if(sharedRows.isEmpty())cached?.rows.orEmpty()else mergeRestoredTranscriptRows(cached?.rows.orEmpty(),sharedRows);Pocket.detail=cached?.detail;readPosition=cached?.position?.takeUnless{preferLatestOnOpen}
         earlier=cached?.earlier?:false;before=cached?.before;gapWindows=cached?.gaps.orEmpty();gapReadId=null;gapProblems=emptyMap();initialGapProbe=null;initialGapProbeUsed=false;coverageVerified=cached?.coverageVerified?:false;reads.reset();refreshPending=false;historyLoaded=cached!=null;checkedThisOpen=false;freshForRead=false
         if(shared!=null&&sharedRows.isNotEmpty())recordWindow(cached?.rows.orEmpty(),sharedRows,shared.getJSONObject("timeline"),!coverageVerified)
