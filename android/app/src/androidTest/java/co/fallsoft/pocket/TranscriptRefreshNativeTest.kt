@@ -98,10 +98,23 @@ class TranscriptRefreshNativeTest {
    val rows=PocketTranscript.rows
    assertEquals(1,rows.count{it.s("clientId")=="same-send"})
    assertTrue(rows.indexOfFirst{it.s("clientId")=="same-send"}<rows.indexOfFirst{it.s("id")=="order/answer"})
-   val input=device.wait(Until.findObject(By.text("Restored delayed input")),3000)
-   val response=device.wait(Until.findObject(By.text("Stale anchored answer")),3000)
-   assertNotNull(input);assertNotNull(response)
-   assertTrue("Native bubbles still display answer before its input",input!!.visibleBounds.bottom<=response!!.visibleBounds.top)
+   // Assert one committed accessibility frame, rather than retaining a node
+   // from before Compose replaces the staged input and its surrounding layout.
+   val visibleDeadline=android.os.SystemClock.elapsedRealtime()+3000
+   var visibleOrder=false
+   var lastBounds="no simultaneous input/answer frame"
+   while(android.os.SystemClock.elapsedRealtime()<visibleDeadline&&!visibleOrder){
+    val input=device.findObject(By.text("Restored delayed input"))?.visibleBounds
+    val response=device.findObject(By.text("Stale anchored answer"))?.visibleBounds
+    lastBounds="input=$input answer=$response"
+    visibleOrder=input!=null&&response!=null&&!input.isEmpty&&!response.isEmpty&&input.bottom<=response.top
+    if(!visibleOrder)Thread.sleep(50)
+   }
+   if(!visibleOrder){
+    device.takeScreenshot(java.io.File(context.cacheDir,"late-input-visible-failure.png"))
+    device.dumpWindowHierarchy(java.io.File(context.cacheDir,"late-input-visible-failure.xml"))
+   }
+   assertTrue("Native input and answer did not paint together in canonical order: $lastBounds",visibleOrder)
    assertEquals("Visible repair restarted current-message reads",reads,qa("state").getJSONArray("reads").objects().count{!it.optBoolean("older")})
    assertEquals(0,qa("state").getJSONArray("replies").length())
   }finally{release.complete(Unit);qa("release-position")}
