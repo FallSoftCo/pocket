@@ -3078,7 +3078,7 @@
     {
       "id": "native-canonical-transcript-authority-20261022",
       "request": "Stop patching independent chronology/freshness paths. Use the actual native Codex ordered timeline and one source-scoped conversation store for list, chat, notification reconciliation and reopening. Preserve existing controls, caches, drafts, unknown receipts, voice and deliberate history reading.",
-      "status": "native route, bounded live subscriptions and normalized Android authority implemented; three focused native probes passed including real Mac history/concurrent older read and bounded delta repair; final signed150 build/deployment and browser replacement remain open",
+      "status": "Android150 native authority qualified and published; PC/Mac thin native gateways deployed with original daemons/receipts preserved. Phone still149 at readback; real-device install/journey and browser normalized-store replacement remain open.",
       "acceptance": [
         "Carry native (position,kind-rank,ID) chronology and opaque cursors unchanged, including tied positions and realtime entries.",
         "No wrong-order first paint or later input jump from live/snapshot overlap.",
@@ -3087,7 +3087,7 @@
         "Latest following never selects a historical component; deliberate reading remains anchored.",
         "Native actual-session integration on Mac and system76, reconnect, concurrent older paging, provider-alias correlation and source isolation; no existing work replay."
       ],
-      "evidence": "docs/qualification/native-timeline-adapter-20261022.json",
+      "evidence": "docs/qualification/native-transcript-probe-150.json",
       "architecture": "docs/CODEX-TIMELINE-ARCHITECTURE.md"
     },
     {

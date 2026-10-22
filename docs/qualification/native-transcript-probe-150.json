@@ -1,11 +1,11 @@
 {
   "schema": 1,
-  "state": "focused-native-passed-not-published",
+  "state": "published-native-qualified-phone-install-pending",
   "versionCode": 150,
   "productionSourceSha": "e68ec9fbf443456ec105d6f4db9a7739c528e97937d5e3dbe58b76682e1fd08b",
-  "qualificationInputSha": "c41977d4bf550f5155ead6f66b55b3d49e278f00cfad2126f3d3ba7425c6e669",
+  "qualificationInputSha": "ce45dca154644598d0b293af62f4e3ddca65acc6a0f818bfc9049e9ba923b483",
   "qualificationApkSha": "7d734029667a4740d84b1f3f3a089afda2bbeb4ac2c69e62939b8388397c377a",
-  "testApkSha": "f0956b287422707586102111e3fb2c93afba317352b652e44bddd88f3f9e6203",
+  "testApkSha": "4af2ac1374f7c6de407af117810c6a0b7419de32ce753978b4b885f3a8d26609",
   "native": {
     "sqliteRestartSourceIsolation": true,
     "durableFollowLatest": true,
@@ -29,13 +29,11 @@
     "measurement": "current-state verification; not optical first paint or physical phone latency"
   },
   "remaining": [
-    "Full signed release build and final source-matched native gate",
-    "Exact optimized APK review",
-    "Minimal PC/Mac gateway delivery and update publication",
-    "Actual phone install/readback",
+    "Actual phone install/readback and real-device latest/order/latency journey",
+    "Physical voice/provider speech and notification display qualification",
     "Browser native-store replacement"
   ],
-  "productionChanged": false,
+  "productionChanged": true,
   "phoneInstalledVersionObserved": 149,
   "legacyCompatibility": {
     "actualRetainedHistoryReplay": true,
@@ -46,5 +44,37 @@
     "productionSourceSha": "3024d87ba49aca8743b024bc9dfbdfd2949a481e0c871716e07093d578d67d4f",
     "qualificationInputSha": "dd685c1006f9c0f72811d9345819e201ea2d094fd69d20594150eb9b3f3fa015",
     "scope": "Prior negotiated-protocol build; later change only protects native live envelopes. Final source-matched release cases still required."
-  }
+  },
+  "release": {
+    "versionCode": 150,
+    "versionName": "0.5.0-alpha.132",
+    "compatibleApkSha256": "4077c9a0b9ea77b73eef5b9e503d21b5099fd0c0ad29e2420ac0a30439635d4c",
+    "nativeCases": 11,
+    "exactOptimizedNative": {
+      "canonicalPairOrder": true,
+      "reopenOriginalPairExactlyOnce": true,
+      "questionSkipOnce": true,
+      "legacyReads": 0,
+      "positionRepair": 0,
+      "workSubmissions": 0,
+      "retainedQaPreferencesRestored": true
+    },
+    "system76GatewayHeadMs": 46,
+    "macGatewayHeadMs": 55,
+    "system76OlderPageMs": 14,
+    "nativePageEntries": 64,
+    "nativeDaemonsAndOriginalReceiptsPreserved": true,
+    "bothExistingUpdateChannelsPublished": true,
+    "announcementCount": 1,
+    "fcmAcceptedAttempts": 1,
+    "phoneInstalledVersionLastObserved": 149,
+    "phoneInstallNotClaimed": true,
+    "sourceCommitBeforeReceipt": "522127d"
+  },
+  "qualificationCorrections": [
+    "Original failed legacy visual assertion retained. Final test checks contemporaneous visible bounds; no APK change for test correction.",
+    "Original failed optimized hierarchy capture retained; bounded observational capture validation added, no app/action replay.",
+    "Original catalog selector failure retained; test now respects composed status/preview and explicit Chat action.",
+    "Mac first gateway registration failed and restored original healthy gateway. launchd log proved bootstrap preceded old registration removal; settled removal before second activation."
+  ]
 }
