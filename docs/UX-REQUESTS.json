@@ -3129,14 +3129,19 @@
     },
     {
       "id": "immersion-contextual-cognates-20261022",
-      "status": "in-progress",
+      "status": "delivered-incrementally",
       "request": "Prefer closer accurate English/Italian teaching equivalents, such as correction/correzione instead of fix/correzione. Awkward Italian-grammar English is explicitly acceptable for acquisition.",
       "requirements": [
         "Choose contextual cognates and recognizable synonyms for display glosses; do not preserve original English wording merely for native fluency.",
         "Keep Italian grammatical order, articles and complete phrase grouping. Preserve meaning and grammatical role; reject false friends.",
         "Do not force equal lengths or alter canonical task inputs, code, names or identifiers.",
         "Qualify bounded actual model output and deliver incrementally; preserve existing validated cache and avoid mass regeneration."
-      ]
+      ],
+      "delivery": {
+        "scope": "New teacher-generated plans on workstation and Mac; no APK, no cache purge or retry-budget reset",
+        "evidence": "Seven synthetic cases plus one actual production-runtime canary reviewed; normal plan generation remains one model pass",
+        "limits": "Contextual synonym selection is model-generated, not universally guaranteed."
+      }
     }
   ],
   "current_state": {
