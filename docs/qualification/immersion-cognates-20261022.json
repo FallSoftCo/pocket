@@ -1,0 +1,25 @@
+{
+  "state": "reviewed",
+  "policy": "contextual-cognates-v1",
+  "model": "gpt-6-luna",
+  "requests": 2,
+  "syntheticCases": 7,
+  "ownedRuntimesClosed": true,
+  "observations": {
+    "nounCognate": "correzione/correction",
+    "verbRole": "Correggi/Correct, not Correction",
+    "intentionalTransgrammaticEnglish": "Correct the-error before to restart",
+    "configurationConnection": "configuration/configurazione and connection/connessione",
+    "falseFriend": "attualmente/currently retained; actually translated as in realt\u00e0/in fact",
+    "modalityNegation": "might not retained",
+    "deadline": "3 days retained",
+    "protectedIdentifier": "settings.json byte-identical"
+  },
+  "limits": [
+    "One finite synthetic batch evaluation, not a guarantee for all contextual senses.",
+    "The library sentence is context-ambiguous; its physical-library reading does not qualify the software-library sense.",
+    "Prompt preference improves new plans, not a deterministic synonym-replacement rule.",
+    "Existing accepted plans remain cached; no mass regeneration or increased retry budget."
+  ],
+  "reviewedAt": 1792703716.1756108
+}

@@ -3126,6 +3126,17 @@
         "Optional duplicate-safe operator delivery receipts and metadata-only notification admission implemented and actual HTTP qualified; not yet deployed.",
         "User-bound intents, typed agent-tool schema refresh, priority/actions and native rendering remain pending."
       ]
+    },
+    {
+      "id": "immersion-contextual-cognates-20261022",
+      "status": "in-progress",
+      "request": "Prefer closer accurate English/Italian teaching equivalents, such as correction/correzione instead of fix/correzione. Awkward Italian-grammar English is explicitly acceptable for acquisition.",
+      "requirements": [
+        "Choose contextual cognates and recognizable synonyms for display glosses; do not preserve original English wording merely for native fluency.",
+        "Keep Italian grammatical order, articles and complete phrase grouping. Preserve meaning and grammatical role; reject false friends.",
+        "Do not force equal lengths or alter canonical task inputs, code, names or identifiers.",
+        "Qualify bounded actual model output and deliver incrementally; preserve existing validated cache and avoid mass regeneration."
+      ]
     }
   ],
   "current_state": {
