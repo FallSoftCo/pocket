@@ -80,7 +80,8 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
         if(v.follow!=following||v.anchor!=position?.rowId)v.revision=++viewSerial
         if(v.follow!=following){v.low=null;v.high=null}
         v.follow=following;v.anchor=position?.rowId
-        if(position!=null)db.execSQL("INSERT OR REPLACE INTO reader VALUES(?,?,?)",
+        if(position==null)db.delete("reader","scope=? AND thread=?",args(scope,id))
+        else db.execSQL("INSERT OR REPLACE INTO reader VALUES(?,?,?)",
             arrayOf(scope,id,JSONObject().put("row",position.rowId).put("offset",position.offset).put("follow",position.follow).toString()))
     }
     private fun keyForRow(scope:String,id:String,row:String?):NativeTranscriptKey?{

@@ -28,6 +28,9 @@ internal object CodexSessionRepository {
     private val readOnlyCapabilities=ConcurrentHashMap<String,Boolean>()
     private val nativeCapabilities=ConcurrentHashMap<String,Boolean>()
     private val nativeFollowing=ConcurrentHashMap<Pair<String,String>,Boolean>()
+    // Native positions are normally durable at completion. One first observation
+    // requests position proof; repeated deltas cannot create a metadata read loop.
+    private val nativeUnpositioned=linkedMapOf<Pair<String,String>,MutableSet<String>>()
     private val nativeStore by lazy{NativeTranscriptStore(Pocket.context)}
     fun nativeEnabled(destination:EnvironmentRequest?=Pocket.captureEnvironment()):Boolean =
         destination!=null&&nativeCapabilities[source(destination).scope]!=false
@@ -63,6 +66,19 @@ internal object CodexSessionRepository {
             ?:return task.copy(preview="",previewRole="activity",previewKind="pending")
         return task.copy(preview=row.s("text").take(600),previewRole=when(row.s("kind")){"user"->"user";"message"->"codex";else->"activity"},
             previewKind=if(row.s("kind")=="activity")"activity"else"message")
+    }
+    /** Visible cards request the same committed native head as chat. Cold older
+     * cards are not permanently blank after bounded catalog admission evicts them. */
+    fun previewVisible(environmentId:String,id:String){
+        val destination=Pocket.captureEnvironment(environmentId)?:return
+        if(!nativeEnabled(destination))return
+        val source=source(destination);val key=source.scope to id
+        if(latest[key]?.optJSONObject("nativePreview")!=null)return
+        io.launch{
+            if(!current(source)||key in pending||key in inFlight||latest[key]?.optJSONObject("nativePreview")!=null)return@launch
+            ensurePump()
+            queue(Intent(source,id,known[key]?:0,System.currentTimeMillis()))
+        }
     }
     fun focus(id:String,position:TranscriptReadPosition?){
         val destination=Pocket.captureEnvironment()?:return
@@ -282,7 +298,17 @@ internal object CodexSessionRepository {
                     val updates=group.map{it.second.second}.sortedBy{it.optLong("version")}
                     if(nativeEnabled(source.destination)){
                         var repair=previous==null
-                        for(update in updates)if(!nativeStore.live(source.scope,id,update))repair=true
+                        val unknown=nativeUnpositioned.getOrPut(key){linkedSetOf()}
+                        for(update in updates){
+                            val rowId=update.optJSONObject("row")?.s("id")?.takeIf{it.isNotBlank()}
+                                ?:update.s("nativeItemId").takeIf{it.isNotBlank()}?.let{update.s("turnId")+"/"+it}
+                            if(nativeStore.live(source.scope,id,update)){if(rowId!=null)unknown.remove(rowId);continue}
+                            val method=update.s("nativeMethod")
+                            val terminal=method=="item/completed"||method=="turn/completed"
+                            if(rowId==null||terminal||unknown.add(rowId))repair=true
+                            while(unknown.size>128)unknown.remove(unknown.first())
+                        }
+                        while(nativeUnpositioned.size>256)nativeUnpositioned.remove(nativeUnpositioned.keys.first())
                         val next=nativeStore.snapshot(source.scope,id)
                         if(next!=null){
                             putLatest(key,next)

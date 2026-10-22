@@ -383,6 +383,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     modifier:Modifier=Modifier,identityScope:String=Pocket.environmentId,onRestore:()->Unit={Pocket.restoreTask(t.id)},onOpen:(Boolean)->Unit={Pocket.open(t.id,keyboard=it)},
     onRename:((String,()->Unit)->Unit)?={name,done->Pocket.renameTask(t.id,name,done)},
     onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)}){
+    LaunchedEffect(identityScope,t.id){if(!t.archived)CodexSessionRepository.previewVisible(identityScope,t.id)}
     val active=t.status in listOf("active","pending");val activityTime=taskWorkTime(t);val ageColor=sessionAgeColor(activityTime,now)
     LaunchedEffect(identityScope,t.id,t.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("card:"+identityScope+":"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)

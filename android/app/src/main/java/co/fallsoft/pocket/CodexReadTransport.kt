@@ -30,7 +30,7 @@ internal object CodexReadTransport {
     suspend fun read(destination:EnvironmentRequest,path:String,body:JSONObject?=null,client:OkHttpClient=if(body==null)historyClient else positionClient):JSONObject {
         val resource=path.substringBefore('?')
         require(
-            body==null&&(resource.matches(Regex("/api/threads/[^/]+(?:/head)?"))||resource in setOf("/api/threads","/api/status","/api/activity","/api/notifications","/api/attention"))||
+            body==null&&(resource.matches(Regex("/api/threads/[^/]+(?:/head|/native-timeline)?"))||resource in setOf("/api/threads","/api/status","/api/activity","/api/notifications","/api/attention"))||
             body!=null&&resource.matches(Regex("/api/threads/[^/]+/timeline/position"))
         ){"Only canonical history reads are supported"}
 

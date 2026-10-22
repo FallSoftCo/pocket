@@ -1,3 +1,4 @@
+import {NativeSubscriptions} from './native-subscriptions.mjs';
 import {NativeTimelineReader,projectNativeTimeline} from './native-timeline.mjs';
 import {nativeJsonCompression} from './json-compression.mjs';
 import {readThreadProjection} from './thread-projection.mjs';
@@ -95,6 +96,7 @@ if(nativeHollywood)push.allowedKinds=new Set(['app_update']);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex();
 const nativeTimelineReader=new NativeTimelineReader(codex);
+const nativeSubscriptions=new NativeSubscriptions(codex);
 const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
 app.use('/api',nativeJsonCompression());
 const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
@@ -474,7 +476,7 @@ codex.on('event',m=>{
   if(threadId&&/^(item\/|turn\/completed)/.test(m.method))liveDelivery.activity(()=>activityBoard.snapshot());
   if(m.method==='account/rateLimits/updated')rateLimits.liveUpdate(p);
   if(m.method==='account/updated'){rateLimits.clear();void rateLimits.refresh({force:true});}
-  if(threadId){const update=timeline.ingest(m);if(update){historyHeads.observe(threadId,update.version);liveDelivery.timeline({...update,historyHead:historyHeads.snapshot(threadId)});}}
+  if(threadId){const update=timeline.ingest(m);if(update){historyHeads.observe(threadId,update.version);liveDelivery.timeline({...update,nativeMethod:m.method,nativeItemId:p.itemId||p.item?.id||null,historyHead:historyHeads.snapshot(threadId)});}}
   if(threadId&&m.method==='thread/realtime/itemCompleted'){
     const version=++timeline.version;historyHeads.observe(threadId,version);
     liveDelivery.timeline({threadId,version,reload:true,historyHead:historyHeads.snapshot(threadId)});
@@ -757,6 +759,7 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
  await codex.connect();
  const {thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});
  if(thread?.id!==id)throw Error('Native timeline belongs to another session.');
+ if(cursor===null)void nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(id)}).catch(error=>console.error('Native live subscription unavailable',error.message));
  const revision=timeline.version,historyHead=historyHeads.snapshot(id);
  const page=await nativeTimelineReader.read(id,{cursor,limit:64});
  const requests=[...pending.values()].filter(m=>m.params.threadId===id);

@@ -5,7 +5,7 @@ import {projectNativeTimeline} from '../../server/native-timeline.mjs';
 const port=Number(process.env.PORT||19998),epoch=process.env.NEXTCOMP_QA_EPOCH||crypto.randomUUID();
 const capture=process.env.NEXTCOMP_QA_NATIVE_CAPTURE?JSON.parse(fs.readFileSync(process.env.NEXTCOMP_QA_NATIVE_CAPTURE,'utf8')):null;
 const captured=new Map((capture?.pages||[]).map(p=>[p.cursor??'',p.response]));
-let revision=1,hold=false,offline=false,replay=false,legacyReads=0,positionReads=0,workSubmissions=0,question=false,answers=0;
+let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads=0,positionReads=0,workSubmissions=0,question=false,answers=0,streamFinished=false,streamsSent=0,streamTimer=null;
 const sockets=new Set(),reads=[];
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
 const item=(position,id,type,text)=>({type:'item',position,turnId:'native-turn',item:{id,type,...(type==='userMessage'?{content:[{type:'text',text}]}:{text})}});
@@ -15,7 +15,13 @@ function page(){
   item(2,'request-one','userMessage','Native request one'),
   item(3,'answer-one','agentMessage','Native answer one'),
   ...(revision>1?[item(4,'request-two','userMessage','Native request two'),item(5,'answer-two','agentMessage','Native answer two')]:[]),
-  {type:'turnCompleted',position:revision>1?6:4,turnId:'native-turn',status:'completed'}
+  {type:'turnCompleted',position:revision>1?6:4,turnId:'native-turn',status:'completed'},
+  ...(streamFinished?[
+   {type:'turnStarted',position:10,turnId:'stream-turn',startedAt:2},
+   {...item(11,'stream-user','userMessage','Native stream request'),turnId:'stream-turn'},
+   {...item(12,'stream-answer','agentMessage','Native stream answer'),turnId:'stream-turn'},
+   {type:'turnCompleted',position:13,turnId:'stream-turn',status:'completed'}
+  ]:[])
  ],nextCursor:null,activeRealtimeSessionAtPageStart:null};
 }
 function send(socket,value){const bytes=Buffer.from(JSON.stringify(value));const header=bytes.length<126?Buffer.from([129,bytes.length]):Buffer.from([129,126,bytes.length>>8,bytes.length&255]);socket.write(Buffer.concat([header,bytes]));}
@@ -30,7 +36,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/api/threads/same-thread/native-timeline'){
   const cursor=url.searchParams.get('before')||'';
   reads.push({cursor,at:Date.now(),replay});
-  while(hold&&!res.destroyed)await new Promise(resolve=>setTimeout(resolve,20));
+  while((hold||holdOlder&&cursor)&&!res.destroyed)await new Promise(resolve=>setTimeout(resolve,20));
   if(res.destroyed)return;
   if(offline){res.writeHead(503).end('{"error":"Synthetic native outage"}');return;}
   const source=replay?captured.get(cursor):page();
@@ -42,6 +48,16 @@ const server=http.createServer(async(req,res)=>{
  }else if(path==='/_qa/question'){question=true;revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});body={ok:true};
  }else if(path==='/api/requests/native-question/answer'){answers++;question=false;revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});body={ok:true};
  }else if(path==='/api/threads/same-thread/timeline/position'){positionReads++;res.writeHead(500).end('{"error":"Legacy position repair entered native mode"}');return;
+ }else if(path==='/_qa/stream-unpositioned'){
+  if(streamTimer)throw Error('Synthetic stream already started');
+  streamTimer=setInterval(()=>{
+   streamsSent++;
+   broadcast({type:'timeline',threadId:'same-thread',turnId:'stream-turn',version:revision,nativeMethod:'item/agentMessage/delta',nativeItemId:'stream-answer',historyHead:{threadId:'same-thread',epoch,version:revision},row:{id:'stream-turn/stream-answer',itemId:'stream-answer',turnId:'stream-turn',kind:'message',text:'Native stream answer',version:revision}});
+   if(streamsSent>=20){clearInterval(streamTimer);streamTimer=null;}
+  },100);body={ok:true};
+ }else if(path==='/_qa/stream-finish'){
+  streamFinished=true;revision++;
+  broadcast({type:'timeline',threadId:'same-thread',turnId:'stream-turn',version:revision,nativeMethod:'item/completed',nativeItemId:'stream-answer',historyHead:{threadId:'same-thread',epoch,version:revision},row:{id:'stream-turn/stream-answer',itemId:'stream-answer',turnId:'stream-turn',kind:'message',text:'Native stream answer',version:revision}});body={ok:true};
  }else if(path==='/_qa/advance-held'){
   revision=2;hold=true;
   broadcast({type:'timeline',threadId:'same-thread',turnId:'native-turn',version:2,historyHead:{threadId:'same-thread',epoch,version:2},
@@ -49,13 +65,15 @@ const server=http.createServer(async(req,res)=>{
   broadcast({type:'timeline',threadId:'same-thread',turnId:'native-turn',version:2,historyHead:{threadId:'same-thread',epoch,version:2},
    row:{id:'native-turn/request-two',itemId:'request-two',turnId:'native-turn',kind:'user',text:'Native request two',version:2}});
   body={ok:true};
- }else if(path==='/_qa/release'){hold=false;body={ok:true};}
+ }else if(path==='/_qa/hold-older'){holdOlder=true;body={ok:true};}
+ else if(path==='/_qa/release-older'){holdOlder=false;body={ok:true};}
+ else if(path==='/_qa/release'){hold=false;holdOlder=false;body={ok:true};}
  else if(path==='/_qa/disconnect'){offline=true;for(const s of sockets)s.destroy();body={ok:true};}
  else if(path==='/_qa/recover'){offline=false;revision++;broadcast({type:'status',connected:true});body={ok:true};}
  else if(path==='/_qa/enable-capture'){
   if(!capture){res.writeHead(409).end('{"error":"Private native capture required"}');return;}
-  replay=true;body={source:'recorded-native-timeline',pages:captured.size};
- }else if(path==='/_qa/state')body={reads,legacyReads,positionReads,workSubmissions,answers};
+  replay=true;body={source:'recorded-native-timeline',pages:captured.size,firstBefore:captured.get('')?.nextCursor};
+ }else if(path==='/_qa/state')body={reads,legacyReads,positionReads,workSubmissions,answers,streamsSent};
  else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
  else if(path==='/api/notifications')body={notifications:[]};
  else if(path==='/api/activity')body={items:[]};
@@ -74,4 +92,4 @@ server.on('upgrade',(req,socket)=>{
  sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));send(socket,{type:'status',connected:true});
 });
 server.listen(port,'127.0.0.1',()=>console.log('Owned native canonical fixture ready '+port));
-process.on('SIGTERM',()=>{for(const s of sockets)s.destroy();server.close(()=>process.exit(0));});
+process.on('SIGTERM',()=>{if(streamTimer)clearInterval(streamTimer);for(const s of sockets)s.destroy();server.close(()=>process.exit(0));});

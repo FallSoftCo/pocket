@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -20,7 +21,9 @@ class NativeCanonicalTranscriptNativeTest{
     private fun await(message:String,timeout:Long=15000,condition:()->Boolean){
         val end=android.os.SystemClock.elapsedRealtime()+timeout
         while(android.os.SystemClock.elapsedRealtime()<end&&!condition())Thread.sleep(30)
-        assertTrue(message,condition())
+        val passed=condition()
+        val diagnostics=if(passed)"" else " [selected="+Pocket.selected+", native="+PocketTranscript.canonicalMode+", verified="+PocketTranscript.currentHistoryVerified+", updating="+PocketTranscript.updating+", loading="+PocketTranscript.loading+", rows="+PocketTranscript.rows.size+", error="+PocketTranscript.readError+", appError="+Pocket.error+", reads="+runCatching{qa("state").optJSONArray("reads")?.length()}.getOrNull()+"]"
+        assertTrue(message+diagnostics,passed)
     }
     private fun prepare(){
         check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
@@ -34,6 +37,8 @@ class NativeCanonicalTranscriptNativeTest{
     @Test fun nativeOrderSurvivesDelayedArrivalQuestionsAndReconnectWithoutLegacyRepair(){
         prepare()
         try{
+            val command=runCatching{runBlocking{CodexReadTransport.read(requireNotNull(Pocket.captureEnvironment()),"/api/threads/same-thread/reply",JSONObject().put("text","must never dispatch"))}}
+            assertTrue("Read transport admitted a command",command.exceptionOrNull() is IllegalArgumentException)
             open()
             await("Native current head did not settle"){PocketTranscript.canonicalMode&&PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
             assertTrue(device.wait(Until.hasObject(By.text("Native answer one")),4000))
@@ -64,6 +69,16 @@ class NativeCanonicalTranscriptNativeTest{
             open()
             await("Reopen did not restore canonical native history"){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Native answer two"}}
             assertEquals(1,PocketTranscript.rows.count{it.s("text")=="Native request two"})
+            val beforeStream=qa("state").getJSONArray("reads").length()
+            qa("stream-unpositioned")
+            await("Synthetic native stream did not finish"){qa("state").optInt("streamsSent")>=20}
+            Thread.sleep(300)
+            assertTrue("Unpositioned token deltas caused repeated native reads",qa("state").getJSONArray("reads").length()-beforeStream<=2)
+            assertFalse("Unpositioned stream was painted as canonical history",device.hasObject(By.text("Native stream answer")))
+            qa("stream-finish")
+            await("Completed native stream did not receive canonical position"){PocketTranscript.rows.any{it.s("text")=="Native stream answer"}&&!PocketTranscript.updating}
+            val streamRows=PocketTranscript.rows
+            assertTrue(streamRows.indexOfFirst{it.s("text")=="Native stream request"}<streamRows.indexOfFirst{it.s("text")=="Native stream answer"})
             val state=qa("state")
             assertEquals(0,state.getInt("legacyReads"));assertEquals(0,state.getInt("positionReads"));assertEquals(0,state.getInt("workSubmissions"))
             assertEquals("Native unsent draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
@@ -75,13 +90,30 @@ class NativeCanonicalTranscriptNativeTest{
             val capture=qa("enable-capture")
             assertEquals("recorded-native-timeline",capture.s("source"))
             assertTrue(capture.optInt("pages")>=4)
+            val openedAt=android.os.SystemClock.elapsedRealtime()
             open()
             await("Recorded actual native page did not become current",20000){PocketTranscript.canonicalMode&&PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&PocketTranscript.rows.any{it.has("_nativePosition")}}
+            val headVerifiedMs=android.os.SystemClock.elapsedRealtime()-openedAt
+            instrumentation.sendStatus(0,android.os.Bundle().apply{putString("stream","\nNative canonical load: "+JSONObject().put("headVerifiedMs",headVerifiedMs).put("capturePages",capture.optInt("pages")).put("measurement","current-state verification; not optical first paint").toString()+"\n")})
+            await("Native viewport hydration did not settle",15000){!PocketTranscript.loading}
+            val olderCursor=capture.s("firstBefore");assertTrue(olderCursor.isNotBlank())
+            val readsBefore=qa("state").getJSONArray("reads").length()
+            qa("hold-older")
+            var older:kotlinx.coroutines.Job?=null
+            try{
+                main{older=Pocket.scope.launch{PocketTranscript.load(bridgeCursor=olderCursor)}}
+                await("Native older read never entered its independent lane"){qa("state").getJSONArray("reads").length()>readsBefore&&PocketTranscript.loading}
+                val headReads=qa("state").getJSONArray("reads").objects().count{it.s("cursor").isBlank()}
+                main{CodexConversations.invalidate(immediate=true)}
+                await("Current native head waited behind the held older page"){qa("state").getJSONArray("reads").objects().count{it.s("cursor").isBlank()}>headReads&&PocketTranscript.currentHistoryVerified&&!PocketTranscript.currentLoading}
+                assertTrue("Older read unexpectedly settled before release",older?.isActive==true)
+            }finally{qa("release-older")}
+            await("Released native older page did not commit"){older?.isCompleted==true&&!PocketTranscript.loading}
             val keys=PocketTranscript.rows.filter{it.has("_nativePosition")}.map{NativeTranscriptKey(it.getLong("_nativePosition"),it.getInt("_nativeRank"),it.s("_nativeId"))}
             assertTrue(keys.zipWithNext().all{(a,b)->a<b})
             assertTrue(PocketTranscript.rows.none{it.s("text").startsWith("Alpha110 is installed")})
             val state=qa("state");assertEquals(0,state.getInt("legacyReads"));assertEquals(0,state.getInt("positionReads"));assertEquals(0,state.getInt("workSubmissions"))
             assertEquals("Native unsent draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
-        }finally{main{Pocket.closeTask();PocketLive.stop()}}
+        }finally{qa("release");main{Pocket.closeTask();PocketLive.stop()}}
     }
 }

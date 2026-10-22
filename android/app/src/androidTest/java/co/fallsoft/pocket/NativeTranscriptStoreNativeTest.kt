@@ -40,6 +40,7 @@ class NativeTranscriptStoreNativeTest{
             assertTrue(older.getJSONObject("timeline").getJSONArray("rows").objects().any{it.s("id")==first})
             assertNotEquals(head.s("nativeWindow"),older.s("nativeWindow"))
             assertEquals("Native entry 700",older.getJSONObject("nativePreview").s("text"))
+            store.focus("a","same-thread",TranscriptReadPosition(first,0,false))
             val unknown=JSONObject().put("version",50).put("historyHead",head.getJSONObject("historyHead")).put("row",entry(699,"Late native user","user","late-user").getJSONObject("row"))
             assertFalse("Unknown placement was admitted as chronology",store.live("a","same-thread",unknown))
             val live=JSONObject().put("version",50).put("historyHead",JSONObject(head.getJSONObject("historyHead").toString()).put("version",50))
@@ -59,6 +60,8 @@ class NativeTranscriptStoreNativeTest{
             assertEquals("Other environment",store.snapshot("b","same-thread")!!.getJSONObject("nativePreview").s("text"))
             store.close();store=NativeTranscriptStore(context,name)
             snapshot=requireNotNull(store.snapshot("a","same-thread"))
+            assertNull("Returning to latest did not clear the durable historical anchor",store.reader("a","same-thread"))
+            assertTrue(snapshot.optBoolean("nativeFollowing"))
             assertEquals("Canonical final answer",snapshot.getJSONObject("nativePreview").s("text"))
             assertFalse("Disk restored command/question authority",snapshot.has("pending")||snapshot.has("outgoing"))
             val keys=snapshot.getJSONObject("timeline").getJSONArray("rows").objects().filter{it.has("_nativePosition")}.map{NativeTranscriptKey(it.getLong("_nativePosition"),it.getInt("_nativeRank"),it.s("_nativeId"))}
