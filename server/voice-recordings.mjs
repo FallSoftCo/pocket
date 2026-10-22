@@ -41,7 +41,7 @@ export class VoiceRecordings {
   const result=row.result?JSON.parse(row.result):null;
   return {...(result||{}),id:row.id,phase:row.phase,state:result?.state||phases[row.phase]||'unknown',
    audioSha256:row.audio_sha256,bytes:row.bytes,canRetryAudio:row.phase==='failed'&&!row.result,transcript:result?.transcript||row.transcript||'',
-   response:result?.response||'',actions:result?.actions||[],error:row.error||result?.error||null};
+   response:result?.response||'',actions:result?.actions||[],speechSegments:result?.speechSegments||[],timings:result?.timings||{},speech_error:result?.speech_error||null,error:row.error||result?.error||null};
  }
  async create(device,{id,destination,audioSha256,bytes},principal){
   const requestHash=admissionHash(device,{id,destination,audioSha256,bytes},principal);

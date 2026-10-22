@@ -3096,6 +3096,19 @@
       "status": "published149; eight native journeys and exact optimized APK qualified; actual phone SSH confirms version149 installed",
       "evidence": "docs/qualification/android-mac-following-149.json",
       "remaining": "Native canonical-store replacement remains separate open work."
+    },
+    {
+      "id": "central-eyes-free-coordinator-20261022",
+      "request": "One primarily spoken central coordinator controlling existing Codex work across paired environments; proactive meaningful audio updates, fast first audio, indexed durable evidence rather than huge context. Preserve native recording, routing, questions, permissions, drafts and receipts.",
+      "status": "implementation in progress; not deployed",
+      "architecture": "docs/VOICE-COORDINATOR-ARCHITECTURE.md",
+      "acceptance": [
+        "Stored public evidence retrieval, no model polling or blanket worker wakes",
+        "Environment-qualified references and authenticated delegation",
+        "Stable final speech begins before whole response/audio buffering",
+        "Meaningful fresh outcomes only, coalesced by source; heard differs from fetched",
+        "Native/real model/audio journey and compatible update delivery"
+      ]
     }
   ],
   "current_state": {

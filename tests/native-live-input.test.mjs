@@ -1,9 +1,27 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import vm from 'node:vm';
-function input(){const events=[],sources=[];let time=0;const source=readFileSync(new URL('../android/app/src/main/assets/native-voice.html',import.meta.url),'utf8').match(/<script>([\s\S]*)<\/script>/)[1].replace("connect().catch(e=>report('error',e.message));",'');const context=vm.createContext({PocketAudio:{event:(...e)=>events.push(e)},window:{},Date:{now:()=>0},setTimeout:()=>{},setInterval:()=>{},Float32Array,JSON,Blob,atob:s=>Buffer.from(s,'base64').toString('binary')});context.fakeCtx={get currentTime(){return time},createBuffer(_channels,n,rate){return {duration:n/rate,data:new Float32Array(n),getChannelData(){return this.data}}},createBufferSource(){const source={connect(){},start(at){this.at=at},stop(){this.stopped=true}};sources.push(source);return source}};vm.runInContext(source,context);context.remote={muted:false};vm.runInContext("ctx=fakeCtx;pc={connectionState:'connected'};dc={readyState:'open'};dest={};beginInput(3)",context);return {events,sources,network:rows=>{context.statsRows=rows;return vm.runInContext("pc.getStats=async()=>statsRows;networkBoundary('test')",context)},eval:code=>vm.runInContext(code,context),append(bytes,token=3){context.pcm=bytes.toString('base64');vm.runInContext(`appendInput(${token},pcm)`,context)},end(i){sources[i].onended?.()},time(value){time=value}}}
-test('PCM is scheduled during capture and finish does not replay the full recording',()=>{const c=input();c.append(Buffer.alloc(3200));c.time(.1);c.append(Buffer.alloc(3200));assert.equal(c.sources.length,2);assert.ok(c.sources[1].at>=c.sources[0].at+.1);assert.equal(c.events.length,0);c.eval('finishInput(3)');c.end(0);assert.equal(c.events.length,0);c.end(1);assert.deepEqual(c.events,[['sent','']]);assert.equal(c.sources.length,2)});
-test('little-endian signed PCM samples preserve source values',()=>{const c=input();const b=Buffer.alloc(6);b.writeInt16LE(-32768,0);b.writeInt16LE(0,2);b.writeInt16LE(32767,4);c.append(b);assert.equal(c.sources[0].buffer.data[0],-1);assert.equal(c.sources[0].buffer.data[2],32767/32768)});
-test('cancelled capture stops its sources and cannot finish or append into its replacement',()=>{const c=input();c.append(Buffer.alloc(3200));c.eval('cancelInput();beginInput(5)');assert.equal(c.sources[0].stopped,true);c.end(0);c.append(Buffer.alloc(3200),3);assert.equal(c.sources.length,1);assert.throws(()=>c.eval('finishInput(3)'),/replaced/);c.append(Buffer.alloc(3200),5);c.eval('finishInput(5)');c.end(1);assert.deepEqual(c.events,[['sent','']])});
-test('empty finished input settles once without launching coding or speaking',()=>{const c=input();c.eval('finishInput(3);finishInput(3)');assert.deepEqual(c.events,[['sent','']]);assert.equal(c.sources.length,0)});
-test('malformed PCM fails visibly and excessive queued input is bounded',()=>{const c=input();assert.throws(()=>c.append(Buffer.alloc(1)),/Invalid PCM/);assert.throws(()=>c.append(Buffer.alloc(3840002)),/120 seconds/)});
-
-test('network boundary telemetry contains timing and packet counts without candidate identities',async()=>{const c=input();await c.network(new Map([['secret-audio',{type:'inbound-rtp',kind:'audio',packetsReceived:8,packetsLost:1,jitter:.012,address:'DO_NOT_INCLUDE'}],['secret-pair',{type:'candidate-pair',state:'succeeded',nominated:true,currentRoundTripTime:.032,localCandidateId:'DO_NOT_INCLUDE',remoteCandidateId:'DO_NOT_INCLUDE'}]]));const sample=c.events.find(([kind])=>kind==='network');assert.ok(sample);const data=JSON.parse(sample[1]);assert.equal(data.samples[0].packetsReceived,8);assert.equal(data.samples[1].roundTripTime,.032);assert.ok(!sample[1].includes('DO_NOT_INCLUDE'));assert.ok(!sample[1].includes('secret-'))});
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {NativeLiveInput} from '../server/native-live-input.mjs';
+test('live audio is evidence only; exact sealed recording and device bind reuse across restart',async()=>{
+ const db=new DatabaseSync(':memory:');let listens=0,finals=0;
+ const voice={listen(){listens++},async finalTranscript(device,connection,proof,id){finals++;assert.equal(id,'recording_original');assert.equal(proof.confirmed,true);return {text:'Synthetic complete request.',segments:1}}};
+ let live=new NativeLiveInput({db,voice});live.begin('phone_a','recording_original','connection_original');
+ assert.equal(live.cached({device:'phone_a',id:'recording_original',sha256:'a'.repeat(64)}),null);
+ await assert.rejects(live.finalize('phone_b',{id:'recording_original',connectionId:'connection_original',audioSha256:'a'.repeat(64),bytes:3244,finalization:{confirmed:true,reason:'client_request'}}),/another recording or device/);
+ const args={id:'recording_original',connectionId:'connection_original',audioSha256:'a'.repeat(64),bytes:3244,finalization:{confirmed:true,reason:'client_request'}};
+ await live.finalize('phone_a',args);await live.finalize('phone_a',args);assert.equal(finals,1);assert.equal(listens,1);
+ live=new NativeLiveInput({db,voice});
+ assert.equal(live.cached({device:'phone_b',id:args.id,sha256:args.audioSha256}),null);
+ assert.equal(live.cached({device:'phone_a',id:args.id,sha256:'b'.repeat(64)}),null);
+ assert.equal(live.cached({device:'phone_a',id:args.id,sha256:args.audioSha256}).text,'Synthetic complete request.');
+ await assert.rejects(live.finalize('phone_a',{...args,audioSha256:'b'.repeat(64)}),/recording changed/);
+});
+test('cancellation and gateway restart prevent late live finalization without affecting durable WAV fallback',async()=>{
+ const db=new DatabaseSync(':memory:'),voice={listen(){},async finalTranscript(){return {text:'No execution authority.',segments:1}}};
+ let live=new NativeLiveInput({db,voice});live.begin('phone_a','recording_cancel','connection_cancel');live.cancel('phone_a','recording_cancel');
+ const args={id:'recording_cancel',connectionId:'connection_cancel',audioSha256:'a'.repeat(64),bytes:3244,finalization:{confirmed:true,reason:'client_request'}};
+ await assert.rejects(live.finalize('phone_a',args),/no longer accepts/);
+ live.begin('phone_a','recording_restart','connection_restart');live=new NativeLiveInput({db,voice});
+ await assert.rejects(live.finalize('phone_a',{...args,id:'recording_restart',connectionId:'connection_restart'}),/no longer accepts/);
+ assert.equal(live.cached({device:'phone_a',id:args.id,sha256:args.audioSha256}),null);
+});

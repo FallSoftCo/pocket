@@ -4,6 +4,7 @@ const explicitCompletion=false;
 const livePlayback=false;
 let providerResponse=null,providerComplete=false,expectedSpeech="",providerDoneAt=0,recordingStarted=0,providerDuration=0,latestTranscriptEnd=0;
 let outputPaused=false,liveStarted=false,stoppedToken=null;
+let inputClosing=false,inputClosedReceived=false;
 let inputToken=0,inputNextAt=0,inputFinished=false,inputSent=false,inputSources=new Set(),inputSamples=0;
 let pc,dc,ctx,dest,remote,analyser,source,recorder,lastBlob,allowOutput=false,speaking=false,lastEnergy=0,ended=false,renderToken=0,recordToken=0;
 const report=(kind,data='')=>PocketAudio.event(kind,String(data));
@@ -25,7 +26,7 @@ async function connect(){
  pc=new RTCPeerConnection();pc.addTrack(dest.stream.getAudioTracks()[0]);dc=pc.createDataChannel('oai-events');
  dc.onopen=()=>{report('connected');void networkBoundary('connected')};dc.onerror=()=>report('error','Voice data channel failed.');
  dc.onmessage=e=>{try{providerEvent(JSON.parse(e.data))}catch{}};
- pc.onconnectionstatechange=()=>{if(['failed','disconnected'].includes(pc.connectionState))report('error','Voice audio disconnected. Reconnect to continue.');};
+ pc.onconnectionstatechange=()=>{if(!ended&&!inputClosing&&!inputClosedReceived&&['failed','disconnected'].includes(pc.connectionState))report('error','Voice audio disconnected. Reconnect to continue.');};
  pc.ontrack=e=>{
   const stream=e.streams[0]||new MediaStream([e.track]);
   remote=document.createElement('audio');remote.srcObject=stream;remote.autoplay=true;remote.muted=true;document.body.append(remote);remote.play().catch(e=>report('error',e.message));
@@ -41,6 +42,8 @@ async function connect(){
 
 function speechWords(text){return String(text||'').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();}
 function providerEvent(m){
+ if(m.type==='session.closed'&&inputClosing){inputClosing=false;inputClosedReceived=true;report('inputClosed',JSON.stringify({confirmed:['close_requested','client_request'].includes(m.reason),reason:m.reason}));return;}
+
  if(m.type==='error'){report('error',m.error?.message||'Voice provider error.');return;}
  if(!explicitCompletion||!allowOutput)return;
  if(m.type==='output_transcript.added'&&Number.isFinite(m.end_ms))latestTranscriptEnd=Math.max(latestTranscriptEnd,m.end_ms);
@@ -67,7 +70,7 @@ function sampleOutput(){
  }
 }
 
-function cancelInput(){inputToken++;for(const source of inputSources){source.onended=null;try{source.stop()}catch{}}inputSources.clear();inputFinished=false;inputSent=false;inputSamples=0;inputNextAt=0;}
+function cancelInput(){inputClosing=false;inputClosedReceived=false;inputToken++;for(const source of inputSources){source.onended=null;try{source.stop()}catch{}}inputSources.clear();inputFinished=false;inputSent=false;inputSamples=0;inputNextAt=0;}
 function beginInput(token){
  if(!pc||pc.connectionState!=='connected'||dc.readyState!=='open')throw Error('Voice connection is not ready.');
  cancelInput();inputToken=token;allowOutput=false;if(remote)remote.muted=true;inputNextAt=ctx.currentTime+.03;
@@ -75,7 +78,7 @@ function beginInput(token){
 function appendInput(token,pcm){
  if(token!==inputToken||inputFinished)return;
  const raw=atob(pcm);if(raw.length%2)throw Error('Invalid PCM input.');
- inputSamples+=raw.length/2;if(inputSamples>1920000)throw Error('Voice recording exceeds 120 seconds.');
+ inputSamples+=raw.length/2;if(inputSamples>9616000)throw Error('Voice recording exceeds ten minutes.');
  const audio=ctx.createBuffer(1,raw.length/2,16000),samples=audio.getChannelData(0);
  for(let i=0;i<samples.length;i++){let n=raw.charCodeAt(i*2)|(raw.charCodeAt(i*2+1)<<8);if(n>=32768)n-=65536;samples[i]=n/32768;}
  const source=ctx.createBufferSource();source.buffer=audio;source.connect(dest);inputSources.add(source);
@@ -83,6 +86,7 @@ function appendInput(token,pcm){
  source.onended=()=>{inputSources.delete(source);if(token===inputToken&&inputFinished&&!inputSent&&inputSources.size===0){inputSent=true;report('sent');void networkBoundary('inputDrained')}};source.start(at);
 }
 function finishInput(token){if(token!==inputToken)throw Error('Recorded input was replaced.');inputFinished=true;if(!inputSent&&inputSources.size===0){inputSent=true;report('sent');void networkBoundary('inputDrained')}}
+function closeInput(token){if(token!==inputToken||!inputSent||!dc||dc.readyState!=='open')throw Error('Input has not drained.');inputClosing=true;dc.send(JSON.stringify({type:'session.close'}));}
 async function answer(sdp){await pc.setRemoteDescription({type:'answer',sdp})}
 async function send(wav){
  if(!pc||pc.connectionState!=='connected'||dc.readyState!=='open')throw Error('Voice connection is not ready.');

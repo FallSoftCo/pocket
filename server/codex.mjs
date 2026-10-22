@@ -90,6 +90,10 @@ export class Codex extends EventEmitter {
     if (!this.ready) throw this.problem||codexConnectionError('CODEX_UNAVAILABLE');
     this.send({id, result});
   }
+  reject(id, message, code=-32601) {
+    if (!this.ready) throw this.problem||codexConnectionError('CODEX_UNAVAILABLE');
+    this.send({id,error:{code,message}});
+  }
   canSend(){return this.command?!!this.child?.stdin?.writable:this.ws?.readyState===WebSocket.OPEN;}
   send(value){const raw=JSON.stringify(value);if(this.command)this.child.stdin.write(raw+'\n');else this.ws.send(raw);}
   closeTransport(transport=this.transport){if(this.command)transport?.kill();else transport?.close();}

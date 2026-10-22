@@ -99,7 +99,7 @@ import kotlinx.coroutines.flow.*
                 item(key="coordinator-assistant:$id"){
                     Column{
                         VoiceChatMessage("Codex",turn.second,false)
-                        PocketCoordinator.routes[id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketCoordinator.close();Pocket.open(route.threadId)},{PocketCoordinator.correctionOf=route;updateDraft(route.correction+draft);PocketCoordinator.keyboard(true)})}
+                        PocketCoordinator.routes[id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketCoordinator.close();openCoordinatorRoute(route)},{PocketCoordinator.correctionOf=route;updateDraft(route.correction+draft);PocketCoordinator.keyboard(true)})}
                     }
                 }
             }

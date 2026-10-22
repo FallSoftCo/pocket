@@ -3,7 +3,7 @@ package co.fallsoft.pocket
 /** A delivery receipt is not a claim that the worker finished its task. */
 internal data class CoordinatorRoute(
     val threadId:String,val name:String,val operation:String,val mode:String,val state:String,
-    val turnId:String="",val reason:String=""
+    val turnId:String="",val reason:String="",val environmentId:String?=null
 ){
     val label:String get()=when(state){
         "queued"->"Queued"
@@ -20,3 +20,11 @@ internal data class CoordinatorRoute(
 data class CoordinatorMessage(val id:String,val first:String,val second:String)
 
 internal data class CoordinatorItemExposure(val id:String,val offset:Int,val size:Int,val start:Int,val end:Int)
+
+internal fun openCoordinatorRoute(route:CoordinatorRoute){
+    route.environmentId?.takeIf{it!="current"}?.let{id->
+        if(Pocket.captureEnvironment(id)==null){PocketVoice.captureFailure("The original environment is no longer paired.");return}
+        Pocket.activateEnvironment(id)
+    }
+    Pocket.open(route.threadId)
+}

@@ -109,6 +109,7 @@ internal object InterfaceGrammarScaffolds {
         "Full permissions for new tasks" to "Permessi~completi|Permissions~full per~i~nuovi~incarichi|for~the~new~tasks",
         "Full device access. Commands run without approval prompts." to "Accesso|Access completo|full al|to-the dispositivo.|device. I|The comandi|commands vengono|are eseguiti|executed senza|without richieste|requests di|of approvazione.|approval.",
         "Applies to future tasks in this environment." to "Si|One applica|applies ai|to-the futuri|future incarichi|tasks in questo|this ambiente.|environment.",
+        "Spoken work updates" to "Aggiornamenti|Updates vocali|spoken sul~lavoro|on~the~work",
         "Coordinator check-ins" to "Aggiornamenti|Updates del~coordinatore|of-the~coordinator",
         "Status checks only; agent messages are manual" to "Solo|Only controlli|checks dello|of-the stato;|status; i|the messaggi|messages agli|to-the agenti|agents sono|are manuali|manual",
         "Work updates" to "Aggiornamenti|Updates del~lavoro|of-the~work",

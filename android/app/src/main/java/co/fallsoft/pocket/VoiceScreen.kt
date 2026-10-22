@@ -63,7 +63,7 @@ import androidx.lifecycle.repeatOnLifecycle
             if(PocketVoice.historyProblem.isNotBlank())item{ImmersionText("voice:history-problem",PocketVoice.historyProblem,color=Coral);TextButton({PocketVoice.service?.loadHistory()}){BilingualLabel("Retry history")}}
             PocketVoice.messages.forEach{turn->
                 item(key="user:${turn.id}"){VoiceChatMessage("You",turn.first,true)}
-                item(key="assistant:${turn.id}"){VoiceChatMessage("Codex",turn.second,false);PocketVoice.routes[turn.id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketVoice.stop();Pocket.open(route.threadId)},{PocketVoice.correctionOf=route;draft=route.correction+draft;keyboardInput=true})}}
+                item(key="assistant:${turn.id}"){VoiceChatMessage("Codex",turn.second,false);PocketVoice.routes[turn.id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketVoice.stop();openCoordinatorRoute(route)},{PocketVoice.correctionOf=route;draft=route.correction+draft;keyboardInput=true})}}
             }
             if(PocketVoice.heard.isNotBlank()&&PocketVoice.messages.lastOrNull()?.first!=PocketVoice.heard)item{VoiceChatMessage("You",PocketVoice.heard,true)}
         }

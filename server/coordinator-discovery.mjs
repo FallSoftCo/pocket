@@ -29,7 +29,7 @@ const activityNames = {commandExecution:'Run command', fileChange:'File changes'
   dynamicToolCall:'Tool activity', webSearch:'Web search', collabAgentToolCall:'Agent activity',
   subAgentActivity:'Agent activity', imageGeneration:'Image generation', imageView:'View image', plan:'Plan',
   enteredReviewMode:'Code review', exitedReviewMode:'Code review'};
-function evidence(raw, listed, id) {
+export function coordinatorEvidence(raw, listed, id) {
   if (!raw?.thread || raw.thread.id !== id) throw Object.assign(Error('Mismatched thread'), {code:'mismatched_thread'});
   const summary = {...listed, ...metadata({...listed, ...raw.thread, id}), availability:'available'};
   const rows = Array.isArray(raw.timeline?.rows) ? raw.timeline.rows.slice(-200) : [];
@@ -76,6 +76,7 @@ export class CoordinatorDiscovery {
     Object.assign(this, {api, owns, clock, readTimeoutMs, totalTimeoutMs});
   }
   async initialSnapshot({threadIds = []} = {}) {
+    if(this.memory)return this.memory.initialSnapshot({threadIds});
     // Greetings and direct follow-ups must not wait for unrelated history reads.
     // This is explicitly partial metadata; semantic routing still uses discover/read.
     const errors = []; let result;
@@ -89,6 +90,7 @@ export class CoordinatorDiscovery {
       instruction:'Partial metadata only. Use discover for relevant public history before routing work; read the intended target before changing it. Greetings do not require work discovery.', errors};
   }
   async discover({query = '', threadIds = [], limit = 6, cursor: startCursor = null} = {}) {
+    if(this.memory)return this.memory.discover({query,threadIds,limit,cursor:startCursor});
     const checkedAt = this.clock(), deadline = Date.now() + this.totalTimeoutMs;
     const catalogById = new Map(), errors = [];
     let nextCursor = typeof startCursor === 'string' && startCursor ? startCursor.slice(0, 2000) : null, refreshPending = false, complete = false;
@@ -143,7 +145,7 @@ export class CoordinatorDiscovery {
           if (deadline - Date.now() <= 5) throw Object.assign(Error('Deadline'), {code:'timeout'});
           const raw = await bounded(() => this.api(`/api/threads/${encodeURIComponent(id)}?view=timeline`),
             Math.min(this.readTimeoutMs, deadline - Date.now()));
-          sessions[index] = evidence(raw, listed, id);
+          sessions[index] = coordinatorEvidence(raw, listed, id);
         } catch (error) {
           const code = errorCode(error);
           sessions[index] = {...listed, availability:'unavailable', readError:code, history:{scope:'unavailable'}};

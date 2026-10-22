@@ -29,7 +29,7 @@ function setup(t){
 const injected=(codex,id)=>codex.calls.filter(c=>c.method==='thread/inject_items'&&c.params.threadId===id).flatMap(c=>c.params.items);
 const messageText=item=>item.content.map(part=>part.text).join('');
 
-test('legacy coordinator gains current tools while preserving every history row and durable focus/reference state',async t=>{
+test('legacy coordinator uses a bounded prompt checkpoint while preserving the complete journal and durable focus/reference state',async t=>{
   const {controller,db,codex,history,put}=setup(t);history();
   put.run('phone','uncertain_turn','hash','unknown','Unknown earlier request','Partial old result','Connection lost',1001);
   put.run('phone','failed_turn','hash','failed','Failed earlier request',null,'Transport failed',1002);
@@ -47,7 +47,8 @@ test('legacy coordinator gains current tools while preserving every history row 
   assert.ok(start.params.dynamicTools[0].inputSchema.properties.operation.enum.includes('discover'));
   assert.ok(start.params.dynamicTools[0].inputSchema.properties.operation.enum.includes('catchup'));
   const items=injected(codex,'candidate_1'),users=items.filter(item=>item.role==='user').map(messageText);
-  assert.equal(users.length,132);assert.equal(users[0],'Historical user 0');assert.equal(users[129],'Historical user 129');
+  assert.equal(users.length,8);assert.equal(users[0],'Historical user 124');assert.equal(users[5],'Historical user 129');
+  const retrieved=await controller.control({device:'phone',id:'lookup_history'},{operation:'history',arguments:{query:'Historical user 0'}});assert.equal(retrieved.items[0].transcript,'Historical user 0');
   assert.deepEqual(users.slice(-2),['Unknown earlier request','Failed earlier request']);
   assert.doesNotMatch(JSON.stringify(items),/Other device private|Current request must not/);
   assert.match(JSON.stringify(items),/Historical coordinator delivery status: unknown/);
@@ -73,7 +74,7 @@ test('successful migration is idempotent and resumes the new tool contract on re
 });
 
 test('partial injection failure preserves original mapping/history and retries into a fresh hidden candidate without duplicates',async t=>{
-  const {controller,codex,history,db}=setup(t);history();codex.failInject=2;
+  const {controller,codex,history,db}=setup(t);history();codex.failInject=1;
   const before=db.prepare('SELECT * FROM voice_turns ORDER BY rowid').all();
   await assert.rejects(controller.ensure('phone'),/Synthetic injection unavailable/);
   assert.equal(controller.session('phone').thread_id,'legacy_controller');
@@ -84,8 +85,8 @@ test('partial injection failure preserves original mapping/history and retries i
   codex.failInject=0;await controller.ensure('phone');
   assert.equal(controller.session('phone').thread_id,'candidate_2');
   const users=injected(codex,'candidate_2').filter(item=>item.role==='user').map(messageText);
-  assert.equal(users.length,130);assert.equal(new Set(users).size,130);
-  assert.equal(users[0],'Historical user 0');assert.equal(users.at(-1),'Historical user 129');
+  assert.equal(users.length,8);assert.equal(new Set(users).size,8);
+  assert.equal(users[0],'Historical user 122');assert.equal(users.at(-1),'Historical user 129');
   assert.equal(controller.owns('candidate_1'),true);assert.equal(controller.owns('legacy_controller'),true);
 });
 
@@ -104,11 +105,12 @@ test('an active old coordinator is allowed to finish without interruption or rep
   assert.equal(codex.calls.some(c=>c.method==='turn/interrupt'||c.method==='thread/archive'),false);
 });
 
-test('large historical messages are streamed without truncation or broken surrogate pairs',async t=>{
-  const {controller,codex,put}=setup(t);const original='🙂'.repeat(40000)+' last words';
+test('large messages remain intact in the journal while bounded checkpoint excerpts preserve Unicode',async t=>{
+  const {controller,codex,put}=setup(t);const original='a'+'🙂'.repeat(40000)+' last words';
   put.run('phone','large_history','hash','completed',original,original,null,1000);
   await controller.ensure('phone');const items=injected(codex,'candidate_1');
-  for(const role of ['user','assistant'])assert.equal(items.filter(item=>item.role===role).map(messageText).join(''),original);
+  for(const role of ['user','assistant']){const text=items.filter(item=>item.role===role).map(messageText).join('');assert.ok(text.length<1700);assert.ok(original.startsWith(text));}
+  const row=controller.db.prepare('SELECT transcript,response FROM voice_turns WHERE id=?').get('large_history');assert.equal(row.transcript,original);assert.equal(row.response,original);
   assert.ok(items.every(item=>messageText(item).length<=32000));
   assert.ok(items.every(item=>!/[\uD800-\uDBFF]$/.test(messageText(item))));
 });

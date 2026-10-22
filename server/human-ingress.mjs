@@ -24,7 +24,13 @@ export class HumanIngress{
  middleware(req,res,next){
   if(!humanInputRoute(req.method,req.originalUrl.split('?')[0]))return next();
   try{
-   if(req.device?.id&&req.device.id!=='owner'){req.humanPrincipal={version:1,kind:'paired-device',deviceId:req.device.id};return next();}
+   if(req.device?.id&&req.device.id!=='owner'){
+    req.humanPrincipal={version:1,kind:'paired-device',deviceId:req.device.id};
+    const turn=req.get('X-NextComp-Coordinator-Turn'),origin=req.get('X-NextComp-Coordinator-Origin');
+    if(typeof turn==='string'&&/^[a-zA-Z0-9_-]{8,100}$/.test(turn)&&typeof origin==='string'&&/^[a-f0-9]{24}$/.test(origin))
+     req.humanPrincipal.coordinator={voiceTurnId:turn,origin,attestation:'original-paired-device-delegation'};
+    return next();
+   }
    const key=req.get('X-NextComp-Voice-Delegation'),grant=this.delegations.get(key);if(key)this.delegations.delete(key);
    if(!grant||grant.expires<=this.now()||grant.method!==req.method||grant.path!==req.originalUrl.split('?')[0]||grant.body!==digest(req.body))throw fail('Human input requires a paired device. Agents must use native interagent messaging.');
    if(!this.active(grant.principal))throw fail('The originating voice request is no longer active.');

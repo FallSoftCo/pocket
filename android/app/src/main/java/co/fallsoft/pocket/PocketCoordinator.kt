@@ -76,7 +76,7 @@ object PocketCoordinator {
         Pocket.prefs.edit().putString("coordinator-history:$owner",cached.toString()).apply()
     }
     fun keyboard(show:Boolean){keyboardRequested=show}
-    fun open(keyboard:Boolean=false){capture();if(!visible)ready=false;visible=true;keyboardRequested=keyboard;loadHistory();resumePending()}
+    fun open(keyboard:Boolean=false){CoordinatorVoiceLink.prepare();capture();if(!visible)ready=false;visible=true;keyboardRequested=keyboard;loadHistory();resumePending()}
     fun close(){visible=false;keyboardRequested=false}
     fun olderHistory(){loadHistory(true)}
     fun loadHistory(older:Boolean=false){
@@ -125,7 +125,7 @@ object PocketCoordinator {
         if(clean.isBlank()||clean.length>24000||work?.isActive==true)return false
         if(savedPending(t)!=null){problem="Check the previous turn before sending another message.";return false}
         val pending=JSONObject().put("id",UUID.randomUUID().toString()).put("text",clean)
-        correctionOf?.let{pending.put("correctionOf",JSONObject().put("turnId",it.turnId).put("threadId",it.threadId))}
+        correctionOf?.let{pending.put("correctionOf",JSONObject().put("turnId",it.turnId).put("threadId",it.threadId).put("environmentId",it.environmentId))}
         Pocket.prefs.edit().putString("coordinator-pending:${t.identity}",pending.toString()).commit()
         pendingText=clean;problem="";runTurn(t,pending);return true
     }
@@ -160,7 +160,7 @@ object PocketCoordinator {
         }
     }
     private fun applyActions(actions:List<JSONObject>){for(action in actions)when(action.s("type")){
-        "select"->{val id=action.s("threadId").takeIf{it.isNotBlank()};PocketVoice.targetThread=id;if(visible){close();if(id==null)Pocket.closeTask()else Pocket.open(id)}}
+        "select"->{action.s("environmentId").takeIf{it.isNotBlank()&&it!="current"}?.let{Pocket.activateEnvironment(it)};val id=action.s("threadId").takeIf{it.isNotBlank()};PocketVoice.targetThread=id;if(visible){close();if(id==null)Pocket.closeTask()else Pocket.open(id)}}
         "permissions"->Pocket.updateFullPermissions(action.optBoolean("full"))
         "profile"->{if(!visible)continue;val local=action.optBoolean("local");if(Pocket.savedToken(local).isBlank())problem="That device is not paired. Pair it in NextComp first." else {Pocket.activate(local);capture();loadHistory()}}
         "exit"->close()

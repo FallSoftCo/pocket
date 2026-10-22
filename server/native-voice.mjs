@@ -56,9 +56,9 @@ export class NativeVoice {
   s.input={id:inputId,segments:[],pending:'',changed:Date.now(),startedAt:Date.now(),destination:null};
   return {ok:true};
  }
- async finalTranscript(device,id,finalization){
+ async finalTranscript(device,id,finalization,expectedInputId=null){
   const s=[...this.sessions.values()].find(value=>value.device===device&&value.id===id);
-  if(!s||s.purpose!=='transcription'||!s.input||finalization?.confirmed!==true||
+  if(!s||s.purpose!=='transcription'||!s.input||expectedInputId!==null&&s.input.id!==expectedInputId||finalization?.confirmed!==true||
     finalization.connectionId!==id||!['client_request','close_requested'].includes(finalization.reason))
    throw failure('The recording session did not finalize cleanly.',503);
   const input=s.input,deadline=Date.now()+5000;
