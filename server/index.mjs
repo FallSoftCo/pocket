@@ -1,3 +1,4 @@
+import {CoordinatorHeadReader} from './coordinator-head.mjs';
 import {CoordinatorCollector} from './coordinator-collector.mjs';
 import {NativeLiveInput} from './native-live-input.mjs';
 import {createCoordinatorHub} from './coordinator-hub.mjs';
@@ -99,6 +100,7 @@ if(nativeHollywood)push.allowedKinds=new Set(['app_update']);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex();
 const nativeTimelineReader=new NativeTimelineReader(codex);
+const coordinatorHeadReader=new CoordinatorHeadReader({codex,native:nativeTimelineReader});
 const nativeSubscriptions=new NativeSubscriptions(codex);
 const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
 app.use('/api',nativeJsonCompression());
@@ -776,11 +778,11 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
  if(thread?.id!==id)throw Error('Native timeline belongs to another session.');
  if(cursor===null&&req.query.observeOnly!=='1')void nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(id)}).catch(error=>console.error('Native live subscription unavailable',error.message));
  const revision=timeline.version,historyHead=historyHeads.snapshot(id);
- const page=await nativeTimelineReader.read(id,{cursor,limit:64});
+ const head=await coordinatorHeadReader.read(id,{cursor,limit:64,observationOnly:req.query.observeOnly==='1'});
  const requests=[...pending.values()].filter(m=>m.params.threadId===id);
  const response={
   thread:{...thread,...catalogFields(thread),turns:[]},
-  timeline:projectNativeTimeline(page,{identity:sendIdentity,threadId:id,revision}),
+  timeline:head.observation||projectNativeTimeline(head.page,{identity:sendIdentity,threadId:id,revision}),
   revision,historyHead,pending:requests,
   notes:conversationNotes.list(id),recovery:turnRecovery.get(id)||null,turnSettings:savedTurnSettings(id),
   notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(id).map(notificationRow),req.device.id),

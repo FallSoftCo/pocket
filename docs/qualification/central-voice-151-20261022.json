@@ -52,5 +52,20 @@
     "announcement": "One source-workstation notification; accepted by FCM once",
     "phone": "Last SSH package read remains150; user OS update not yet confirmed",
     "runtimeCompatibility": "Actual active remote-owned thread rejects thread/timeline/list with -32601; bounded thread/turns/list works54ms. Background evidence backs off and remains explicitly unavailable; no workers restarted."
+  },
+  "compatibilityFollowup": {
+    "state": "real-read-qualified",
+    "source": "native-turn-summary for observation-only reads after typed timeline capability refusal",
+    "limits": {
+      "turns": 3,
+      "itemsView": "summary",
+      "capabilityRetryMs": 60000
+    },
+    "actualNativeReadMs": 78,
+    "publicMessages": 3,
+    "catchupMaterialItems": 3,
+    "indexed": true,
+    "modelOrWorkerStarts": 0,
+    "displayChronology": "Native timeline unchanged; evidence windows are never substituted into the UI timeline"
   }
 }
