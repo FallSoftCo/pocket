@@ -1,3 +1,4 @@
+import {itemRow,displayTurnError} from './timeline.mjs';
 // Codex owns chronology. This adapter neither constructs turns nor infers order.
 // No attachment, thread resume, command journal or model activation occurs here.
 const ranks=new Map([['turnStarted',0],['item',1],['realtime',2],['turnCompleted',3]]);
@@ -50,4 +51,30 @@ export class NativeTimelineReader {
   // Consumers receive a private payload; one view cannot mutate another's page.
   return structuredClone(await request);
  }
+}
+
+/** Display projection only. Every source entry keeps its canonical key even if
+ * its public presentation is empty. Raw reasoning/audio/provider payloads never
+ * become phone transcript rows. */
+export function projectNativeTimeline(page,{identity=null,threadId,revision=0}={}){
+ const entries=page.data.map(entry=>{
+  const key=nativeTimelineKey(entry),turnId=entry.turnId||'realtime:'+entry.item.realtimeSessionId;
+  let row=null;
+  if(entry.type==='item'){
+   let item=entry.item;
+   if(identity)item=identity.snapshot({id:threadId,turns:[{id:turnId,items:[item]}]}).turns[0].items[0];
+   row=itemRow(item,turnId,revision);
+   if(row)row={...row,id:turnId+'/'+entry.item.id,itemId:entry.item.id};
+  }else if(entry.type==='turnStarted')row={id:turnId+'/header',turnId,kind:'turn',status:'inProgress',startedAt:entry.startedAt,version:revision};
+  else if(entry.type==='turnCompleted')row={id:turnId+'/end',turnId,kind:'turnEnd',status:entry.status,
+   durationMs:entry.durationMs,text:entry.error?.message||'',error:displayTurnError(entry.error),version:revision};
+  else if(entry.item.type==='transcriptSegment')row={id:'realtime/'+entry.item.id,itemId:entry.item.id,turnId,
+   kind:entry.item.role==='user'?'user':'message',type:'realtimeTranscript',text:entry.item.text||'',version:revision};
+  if(row)row={...row,_nativePosition:key[0],_nativeRank:key[1],_nativeId:key[2],
+   ...(row.kind==='user'?{_inputOrder:'canonical'}:{})};
+  return {id:entry.type+':'+turnId+':'+key[2],key,row};
+ });
+ return {native:1,entries,rows:entries.flatMap(entry=>entry.row?[entry.row]:[]),
+  hasEarlier:page.nextCursor!==null,before:page.nextCursor,
+  activeRealtimeSessionAtPageStart:page.activeRealtimeSessionAtPageStart};
 }

@@ -103,7 +103,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val latestTurn=rows.lastOrNull{it.s("kind")=="turn"}
     val status=conversation.execution
     val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
-    val latestFailure=rows.lastOrNull{it.s("kind")=="turnEnd"}?.takeIf{it.s("status")=="failed"&&(latestTurn==null||it.s("turnId")==latestTurn.s("turnId"))}
+    val latestFailure=(if(PocketTranscript.canonicalMode)d?.optJSONObject("nativeExecutionTurn")else rows.lastOrNull{it.s("kind")=="turnEnd"})?.takeIf{it.s("status")=="failed"}
     val list=key(Pocket.environmentId,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
     DisposableEffect(Pocket.environmentId,Pocket.selected,conversation.incarnation){
         val environment=Pocket.environmentId;val id=Pocket.selected;val key=conversation.key;val incarnation=conversation.incarnation
@@ -135,9 +135,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val windowRange=remember(rows,gapBoundaries,retainedAnchor){connectedTranscriptRange(rows,historyGaps,retainedAnchor)}
     val unplacedInputs=remember(rows){unplacedTranscriptInputs(rows)}
     val windowRows=remember(rows,gapBoundaries,windowRange,unplacedInputs){
-        connectedTranscriptWindow(rows,historyGaps,windowRange).filterNot{it.s("id") in unplacedInputs}
+        if(PocketTranscript.canonicalMode)rows else connectedTranscriptWindow(rows,historyGaps,windowRange).filterNot{it.s("id") in unplacedInputs}
     }
-    val filteredRows=if(!important)windowRows else orphanRows+rows.filter{it.s("id") !in unplacedInputs}.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)}
+    val nativeRequests=if(PocketTranscript.canonicalMode)d?.optJSONArray("pending")?.objects()?.map{request->JSONObject().put("id","request/"+request.s("id")).put("kind","request").put("request",request)}.orEmpty()else emptyList()
+    val filteredRows=(if(!important)windowRows else orphanRows+rows.filter{it.s("id") !in unplacedInputs}.filter{importantConversationKind(it.s("kind"),it.s("type"),it.s("status"),noteFor(it)!=null,it.s("phase"),it===latestAnswer)})+nativeRequests
     val runExpansionKey=Pocket.key("runExpansion:"+Pocket.selected)
     var expandedRunIds by remember(Pocket.environmentId,Pocket.selected){
         mutableStateOf(Pocket.prefs.getStringSet(runExpansionKey,emptySet()).orEmpty().toSet())

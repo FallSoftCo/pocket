@@ -26,6 +26,77 @@ internal object CodexSessionRepository {
         .dispatcher(okhttp3.Dispatcher().apply{maxRequests=2;maxRequestsPerHost=2})
         .callTimeout(5,java.util.concurrent.TimeUnit.SECONDS).build()}
     private val readOnlyCapabilities=ConcurrentHashMap<String,Boolean>()
+    private val nativeCapabilities=ConcurrentHashMap<String,Boolean>()
+    private val nativeFollowing=ConcurrentHashMap<Pair<String,String>,Boolean>()
+    private val nativeStore by lazy{NativeTranscriptStore(Pocket.context)}
+    fun nativeEnabled(destination:EnvironmentRequest?=Pocket.captureEnvironment()):Boolean =
+        destination!=null&&nativeCapabilities[source(destination).scope]!=false
+    private fun native(value:JSONObject)=value.optInt("windowSchema")==3||value.optJSONObject("timeline")?.optInt("native")==1
+    private suspend fun nativeCommitted(source:Source,id:String,response:JSONObject,cursor:String?):JSONObject=withContext(lane){
+        if(!current(source))throw CancellationException("Pairing changed")
+        nativeStore.commit(source.scope,id,response,cursor)
+        val protected=inFlight.toMutableSet().apply{add(source.scope to id);Pocket.captureEnvironment()?.let{current->Pocket.selected?.let{add(CodexSessionRepository.source(current).scope to it)}}}
+        nativeStore.trim(protected)
+        requireNotNull(nativeStore.snapshot(source.scope,id)).also{value->
+            for(field in listOf("_notificationObserved","_catalogObserved","_liveGenerationAtReadStart"))value.put(field,response.optLong(field))
+            value.put("_nativeReadVerified",true)
+            val key=source.scope to id
+            val stored=putLatest(key,value)
+            // A committed current native read settles the same invalidation it
+            // observed. Older-page reads never claim current-head freshness.
+            if(cursor==null&&stored&&key !in pending&&
+                response.optLong("_catalogObserved")== (invalidations[key]?:0)&&
+                response.optLong("_notificationObserved")>= (known[key]?:0))dirty.remove(key)
+            save(source,id,null,key in dirty)
+            withContext(Dispatchers.Main.immediate){if(current(source))publishPreview(id,value,source.destination)}
+        }
+    }
+    private fun publishPreview(id:String,value:JSONObject,destination:EnvironmentRequest){
+        val row=value.optJSONObject("nativePreview")?:return
+        if(Pocket.captureEnvironment(destination.environment.id)?.matches(destination)!=true)return
+        val catalog=CodexCatalog.source(destination)
+        catalog.tasks=catalog.tasks.map{if(it.id==id)nativeCatalogProjection(destination,it)else it}
+    }
+    fun nativeCatalogProjection(destination:EnvironmentRequest,task:Task):Task{
+        if(!nativeEnabled(destination))return task
+        val row=latest[source(destination).scope to task.id]?.optJSONObject("nativePreview")
+            ?:return task.copy(preview="",previewRole="activity",previewKind="pending")
+        return task.copy(preview=row.s("text").take(600),previewRole=when(row.s("kind")){"user"->"user";"message"->"codex";else->"activity"},
+            previewKind=if(row.s("kind")=="activity")"activity"else"message")
+    }
+    fun focus(id:String,position:TranscriptReadPosition?){
+        val destination=Pocket.captureEnvironment()?:return
+        if(!nativeEnabled(destination))return
+        val source=source(destination);val key=source.scope to id
+        io.launch{
+            if(!current(source))return@launch
+            val changed=nativeFollowing.put(key,position?.follow?:true)!=(position?.follow?:true)
+            nativeStore.focus(source.scope,id,position)
+            if(changed)nativeStore.snapshot(source.scope,id)?.let{value->
+                putLatest(key,value)
+                withContext(Dispatchers.Main.immediate){if(current(source))CodexConversations.repositoryUpdated(id,value)}
+            }
+        }
+    }
+    fun releaseNativeMemory(){io.launch{nativeStore.releaseMemory()}}
+    suspend fun cachedNative(destination:EnvironmentRequest,id:String):JSONObject?=withContext(lane){
+        val source=source(destination)
+        if(!current(source))return@withContext null
+        nativeStore.snapshot(source.scope,id)?.also{putLatest(source.scope to id,it)}
+    }
+    suspend fun readOlder(destination:EnvironmentRequest,id:String,cursor:String):JSONObject{
+        val source=source(destination)
+        if(!nativeEnabled(destination))return CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"?view=timeline&before="+android.net.Uri.encode(cursor))
+        if(cursor.startsWith("native-local:"))return withContext(lane){
+            if(!current(source))throw CancellationException("Pairing changed")
+            nativeStore.navigate(source.scope,id,cursor)
+            requireNotNull(nativeStore.snapshot(source.scope,id)).also{putLatest(source.scope to id,it)}
+        }
+        val response=CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"/native-timeline?before="+android.net.Uri.encode(cursor))
+        validateTranscriptSnapshot(response,id)
+        return nativeCommitted(source,id,response,cursor)
+    }
+
     private val requestMutex=Mutex()
     private val requests=mutableMapOf<Pair<String,String>,Deferred<JSONObject>>()
     private val inFlight=hashSetOf<Pair<String,String>>()
@@ -36,9 +107,9 @@ internal object CodexSessionRepository {
     // the server's original cursor silently skips history on the next page.
     private val memoryWeights=linkedMapOf<Pair<String,String>,Long>()
     private fun putLatest(key:Pair<String,String>,value:JSONObject):Boolean{
-        val weight=value.toString().length.toLong()*2
+        val weight=if(native(value))value.optLong("_nativeWindowBytes")+16384 else value.toString().length.toLong()*2
         if(weight>4L*1024*1024){latest.remove(key);memoryWeights.remove(key);dirty.add(key);return false}
-        if(value.optInt("windowSchema")!=2||value.optJSONObject("timeline")?.optJSONArray("canonicalIds")==null)dirty.add(key)
+        if(value.optInt("windowSchema") !in listOf(2,3)||value.optJSONObject("timeline")?.optJSONArray("canonicalIds")==null)dirty.add(key)
         latest[key]=value
         memoryWeights.remove(key);memoryWeights[key]=weight
         var total=memoryWeights.values.sum()
@@ -76,30 +147,44 @@ internal object CodexSessionRepository {
                 val notificationAtStart=known[key]?:0
                 val invalidationAtStart=invalidations[key]?:0
                 val liveAtStart=liveGenerations[key]?:0
-                val path="/api/threads/"+android.net.Uri.encode(id)+(if(background)"/head" else "?view=timeline")
-                val response=CodexReadTransport.read(destination,path,client=if(background)backgroundClient else CodexReadTransport.historyClient)
+                val base="/api/threads/"+android.net.Uri.encode(id)
+                var useNative=nativeEnabled(destination)
+                val response=try{
+                    CodexReadTransport.read(destination,base+if(useNative)"/native-timeline"else if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
+                }catch(error:PocketApiException){
+                    // A missing route on an unadvertised older gateway is explicit
+                    // compatibility. Provider errors/auth failures never downgrade.
+                    if(!useNative||nativeCapabilities[source.scope]==true||error.status!=404)throw error
+                    nativeCapabilities[source.scope]=false;useNative=false
+                    CodexReadTransport.read(destination,base+if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
+                }
                 val currentEpoch=latest[key]?.optJSONObject("historyHead")?.s("epoch")
                 if(!baseline.isNullOrBlank()&&currentEpoch!=baseline&&response.optJSONObject("historyHead")?.s("epoch")==baseline)
                     throw java.io.IOException("Message runtime changed during the read")
                 response.put("_notificationObserved",notificationAtStart)
                 response.put("_catalogObserved",invalidationAtStart)
                 response.put("_liveGenerationAtReadStart",liveAtStart)
+                if(useNative){
+                    validateTranscriptSnapshot(response,id)
+                    if(response.optJSONObject("timeline")?.optInt("native")!=1)throw java.io.IOException("Native timeline was not returned")
+                    nativeCommitted(source,id,response,null)
+                }else response
             }.also{created->
                 requests[key]=created
                 created.invokeOnCompletion{network.launch{requestMutex.withLock{if(requests[key]===created)requests.remove(key)}}}
             }
         }
         val response=request.await()
-        return withContext(Dispatchers.Default){JSONObject(response.toString())}
+        return if(native(response))response else withContext(Dispatchers.Default){JSONObject(response.toString())}
     }
     internal fun currentSnapshot(destination:EnvironmentRequest,id:String,value:JSONObject):Boolean=
-        value.optLong("_catalogObserved")==(invalidations[source(destination).scope to id]?:0)
+        native(value)||value.optLong("_catalogObserved")==(invalidations[source(destination).scope to id]?:0)
     private fun current(source:Source)=Pocket.captureEnvironment(source.destination.environment.id)?.matches(source.destination)==true
     fun peek(id:String):JSONObject? {
         val destination=Pocket.captureEnvironment()?:return null
-        return latest[source(destination).scope to id]
+        return latest[source(destination).scope to id]?.takeIf{!nativeEnabled(destination)||native(it)}
     }
-    fun canPresent(id:String,value:JSONObject):Boolean=value.optInt("windowSchema")==2&&value.optJSONObject("timeline")?.optJSONArray("canonicalIds")!=null&&notificationWatermark(id)<=value.optLong("throughNotification")&&!isDirty(id)
+    fun canPresent(id:String,value:JSONObject):Boolean=(value.optInt("windowSchema")==3||!nativeEnabled()&&value.optInt("windowSchema")==2)&&value.optJSONObject("timeline")?.optJSONArray("canonicalIds")!=null&&notificationWatermark(id)<=value.optLong("throughNotification")&&!isDirty(id)
     fun isDirty(id:String):Boolean {
         val destination=Pocket.captureEnvironment()?:return true
         return (source(destination).scope to id) in dirty
@@ -119,6 +204,13 @@ internal object CodexSessionRepository {
      */
     fun observeCapabilities(destination:EnvironmentRequest,capabilities:JSONObject?){
         val source=source(destination)
+        if(capabilities!=null){
+            val enabled=capabilities.optInt("canonicalTimeline")==1
+            val was=nativeCapabilities.put(source.scope,enabled)
+            if(enabled&&was==false)Pocket.scope.launch(Dispatchers.Main.immediate){
+                if(current(source))Pocket.selected?.let{CodexConversations.select(it,force=true,openLatest=true);Pocket.scheduleRefresh()}
+            }
+        }
         val allowed=capabilities?.optBoolean("readOnlyTimeline")==true
         val previous=readOnlyCapabilities.put(source.scope,allowed)
         if(previous==allowed||!allowed)return
@@ -151,7 +243,7 @@ internal object CodexSessionRepository {
                     val thread=cursor.getString(0);val key=source.scope to thread
                     val alreadyLoaded=latest.containsKey(key)
                     known[key]=maxOf(known[key]?:0,cursor.getLong(2))
-                    if(!cursor.isNull(1))runCatching{JSONObject(cursor.getString(1))}.getOrNull()?.let{if(!latest.containsKey(key))putLatest(key,it)}
+                    if(!nativeEnabled(source.destination)&&!cursor.isNull(1))runCatching{JSONObject(cursor.getString(1))}.getOrNull()?.let{if(!latest.containsKey(key))putLatest(key,it)}
                     if(cursor.getInt(3)!=0&&(!alreadyLoaded||key in dirty)){dirty.add(key);pending[key]=Intent(source,thread,cursor.getLong(2))}
                 }
             }
@@ -188,6 +280,23 @@ internal object CodexSessionRepository {
                     val key=source.scope to id;lastLive[key]=android.os.SystemClock.elapsedRealtime()
                     val previous=load(source,id)
                     val updates=group.map{it.second.second}.sortedBy{it.optLong("version")}
+                    if(nativeEnabled(source.destination)){
+                        var repair=previous==null
+                        for(update in updates)if(!nativeStore.live(source.scope,id,update))repair=true
+                        val next=nativeStore.snapshot(source.scope,id)
+                        if(next!=null){
+                            putLatest(key,next)
+                            withContext(Dispatchers.Main.immediate){if(current(source)){
+                                publishPreview(id,next,source.destination)
+                                CodexConversations.repositoryUpdated(id,next)
+                            }}
+                        }
+                        if(repair){
+                            withContext(Dispatchers.Main.immediate){if(current(source)&&Pocket.captureEnvironment()?.matches(source.destination)==true&&Pocket.selected==id){PocketTranscript.markRefreshPending();CodexConversations.invalidate()}}
+                            queue(Intent(source,id))
+                        }
+                        continue
+                    }
                     if(previous!=null){
                         val next=JSONObject(previous.toString());val page=next.getJSONObject("timeline")
                         var rows=page.getJSONArray("rows").objects()
@@ -265,6 +374,7 @@ internal object CodexSessionRepository {
     }
     /** Save an authoritative recent page without retaining pending requests/command authority. */
     fun accepted(destination:EnvironmentRequest,id:String,value:JSONObject){
+        if(native(value))return
         validateTranscriptSnapshot(value,id)
         val safe=presentation(value)
         val source=source(destination)
@@ -293,6 +403,7 @@ internal object CodexSessionRepository {
         safe.put("historyHead",oldHead)
     }
     private fun presentation(value:JSONObject):JSONObject {
+        if(native(value))return value
         val sourcePage=value.getJSONObject("timeline")
         val rows=normalizeTranscriptMessages(sourcePage.getJSONArray("rows").objects().filter{it.s("kind")!="request"}.map(::canonicalTranscriptInput))
         val page=JSONObject(sourcePage,sourcePage.keys().asSequence().toList().toTypedArray())
@@ -304,7 +415,8 @@ internal object CodexSessionRepository {
     }
     private fun load(source:Source,id:String):JSONObject? {
         val key=source.scope to id
-        latest[key]?.let{return it}
+        latest[key]?.takeIf{!nativeEnabled(source.destination)||native(it)}?.let{return it}
+        if(nativeEnabled(source.destination))return nativeStore.snapshot(source.scope,id)?.also{putLatest(key,it)}
         return db.rawQuery("SELECT body,notification FROM recent WHERE scope=? AND thread=?",arrayOf(source.scope,id)).use{cursor->
             if(!cursor.moveToFirst())return@use null
             known[key]=maxOf(known[key]?:0,cursor.getLong(1))
@@ -314,7 +426,7 @@ internal object CodexSessionRepository {
     private fun save(source:Source,id:String,value:JSONObject?,dirty:Boolean){
         val key=source.scope to id
         val previous=writes[key]
-        writes[key]=Triple(source,value?:previous?.second,dirty)
+        writes[key]=Triple(source,if(value!=null&&native(value))null else value?:previous?.second,dirty)
         if(writeJob?.isActive==true)return
         writeJob=io.launch{
             delay(200)
@@ -367,8 +479,10 @@ internal object CodexSessionRepository {
                         if(!current(intent.source))continue
                         validateTranscriptSnapshot(response,intent.thread)
                         val safe=presentation(response)
-                        retainNewerLiveHead(key,safe,response.optLong("_liveGenerationAtReadStart"))
-                        enforcePositions(intent.source.scope,intent.thread,safe)
+                        if(!native(safe)){
+                            retainNewerLiveHead(key,safe,response.optLong("_liveGenerationAtReadStart"))
+                            enforcePositions(intent.source.scope,intent.thread,safe)
+                        }
                         val stored=putLatest(key,safe)
                         if(stored&&!pending.containsKey(key)&&response.optLong("_catalogObserved")==(invalidations[key]?:0))dirty.remove(key)
                         save(intent.source,intent.thread,if(stored)safe else null,key in dirty)

@@ -1,6 +1,6 @@
 # Codex transcript authority
 
-Status: implementation required. Android149's follow-window correction is containment, not completion of this design.
+Status: native authenticated route and normalized Android store implemented in candidate150, awaiting native qualification and deployment. Browser replacement remains open. Android149's follow-window correction is containment, not completion of this design.
 
 ## Observed production contract
 
@@ -44,3 +44,9 @@ Persist native entries by source/thread/canonical identity with indexed native o
 Canonical item positions can contain gaps and tied ordinals. Numeric gaps alone do not prove missing history. Page coverage follows native cursors and actual returned boundaries. Preserve all native entry types in storage even when presentation folds tool runs or hides structural records.
 
 The server reader is implemented and qualified with actual native Mac paging. It is deliberately not wired into an existing live release by that source change alone. Remaining work is the authenticated narrow route, the durable client store, migration from legacy caches and binding all consumers to its committed revision. Existing Android149 qualification applies only to its compiled follow-window containment.
+
+## Candidate150 implementation boundary
+
+`NativeTranscriptStore` owns indexed canonical entries and exact page coverage in source/thread-scoped SQLite. `CodexSessionRepository` serializes commits and live payload updates; the screen consumes bounded committed windows and does not run legacy ordering/successor repair in native mode. Native invisible entries retain coverage keys without forwarding raw reasoning. Live pending questions and outgoing controls are memory/current-response authority, never restored from transcript disk. Legacy caches are retained but cannot establish native chronology.
+
+The private eight-page Mac capture contains512 native entries. Adapter/fixture projection checks pass with zero legacy history reads, position repairs or work submissions. Main and instrumentation compilation passed before the final foreground dirty-state correction; the compatible candidate build and actual SQLite/screen/reconnect gates remain required. These are implementation facts, not delivery claims. No native daemon/model/permission/pairing change is involved.

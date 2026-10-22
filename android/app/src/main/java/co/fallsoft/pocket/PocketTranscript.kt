@@ -8,6 +8,7 @@ object PocketTranscript {
     private var operationScope:CoroutineScope?=null
     private val readScope get()=requireNotNull(operationScope){"No selected conversation read owner"}
     var rows by mutableStateOf(listOf<JSONObject>());private set
+    internal var canonicalMode by mutableStateOf(false);private set
     private val reads=TranscriptReadState()
     val loading get()=reads.loading
     private var latestReadError by mutableStateOf("")
@@ -115,7 +116,7 @@ object PocketTranscript {
     private val diskSequence=java.util.concurrent.atomic.AtomicLong()
     private val diskRequests=java.util.concurrent.ConcurrentHashMap<String,Long>()
     private fun persist(scope:String,id:String,snapshot:Snapshot){
-        if(snapshot.diskPending)return
+        if(canonicalMode||snapshot.diskPending)return
         // Recent-cache insertion already measured these rows. Avoid constructing a
         // second giant JSON string for an oversized active history.
         var measured=0L
@@ -158,6 +159,7 @@ object PocketTranscript {
     }catch(_:Exception){null}}
     private fun rememberRecent(persist:Boolean=false){
         val id=owner?:return;val scope=ownerScope?:return
+        if(canonicalMode)return
         if(historyLoaded&&scope==scopeKey())Pocket.detail?.let{val snapshot=Snapshot(rows,it,before,earlier,bridgeBefore,readPosition,bridgeKnown,bridgeBoundary,coverageVerified,cacheRestoring,gapWindows,confirmedRows);recent.put(scope,id,snapshot,android.os.SystemClock.elapsedRealtime());if(persist)persist(scope,id,snapshot)}
     }
     private fun persistReadingPosition(scope:String,id:String,position:TranscriptReadPosition){
@@ -166,6 +168,7 @@ object PocketTranscript {
         CodexConversations.storageScope.launch{runCatching{disk.writePosition(scope,id,payload,sequence)}}
     }
     internal fun rememberPosition(scope:String,id:String,position:TranscriptReadPosition){
+        if(canonicalMode&&owner==id&&ownerScope==scope){readPosition=position;CodexSessionRepository.focus(id,position);return}
         val now=android.os.SystemClock.elapsedRealtime()
         if(owner==id&&ownerScope==scope){if(readPosition!=position){
             readPosition=position
@@ -210,6 +213,10 @@ object PocketTranscript {
     private var preferLatestOnOpen=false
     internal val presentationReady get()=!cachedNeedsConfirmation||latestReadError.isNotBlank()
     internal fun repositoryUpdated(id:String,value:JSONObject){
+        if(value.optInt("windowSchema")==3){
+            if(owner==id&&Pocket.selected==id&&ownerScope==scopeKey())applyNativeSnapshot(value,value.optBoolean("_nativeReadVerified"))
+            return
+        }
         if(owner!=id||Pocket.selected!=id||ownerScope!=scopeKey()||!CodexSessionRepository.canPresent(id,value))return
         val incoming=value.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty()
         if(incoming.isEmpty())return
@@ -248,6 +255,16 @@ object PocketTranscript {
         cacheRestoreIntent=readerIntentRevision
         currentWorkVerified=false
         generation++;owner=id;ownerScope=scopeKey();observedHead=null;pendingHead=null;headSnapshotsSupported=null;automaticRetryAllowed=true
+        canonicalMode=CodexSessionRepository.nativeEnabled()
+        if(canonicalMode){
+            rows=emptyList();Pocket.detail=null;readPosition=null;before=null;earlier=false;gapWindows=emptyList()
+            coverageVerified=false;confirmedRows=emptySet();historyLoaded=false;freshForRead=false
+            cachedNeedsConfirmation=true;needsDiskRestore=true;reads.reset();refreshPending=false;buffered.clear()
+            openingAtLatest=openLatest;preferLatestOnOpen=openLatest;browsingEarlier=false;missedUpdates=false
+            CodexSessionRepository.peek(id)?.takeIf{it.optInt("windowSchema")==3&&CodexSessionRepository.canPresent(id,it)&&(!openLatest||it.optBoolean("nativeFollowing"))}?.let{applyNativeSnapshot(it,false)}
+            if(openLatest){readPosition=null;CodexSessionRepository.focus(id,null)}
+            revision++;return
+        }
         val cached=recent.get(ownerScope!!,id,android.os.SystemClock.elapsedRealtime())
         needsDiskRestore=cached?.diskPending?: (cached==null)
         val shared=CodexSessionRepository.peek(id)
@@ -279,6 +296,7 @@ object PocketTranscript {
         checkedThisOpen=true
     }
     fun reconcileInputPosition(raw:JSONObject,viewport:Boolean=false){
+        if(canonicalMode)return
         val row=normalizeTranscriptMessage(raw)
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return;val turn=row.s("turnId");val target=row.s("id")
@@ -365,6 +383,7 @@ object PocketTranscript {
      * event arrives. At most four visible candidates enter the existing serial
      * read lane; stale offscreen viewport requests are dropped before dispatch. */
     internal fun reconcileVisibleInputs(ids:Set<String>){
+        if(canonicalMode)return
         val pending=unplacedTranscriptInputs(rows)
         val visible=rows.withIndex().filter{it.value.s("id") in ids}
         val visibleTurns=visible.mapTo(hashSetOf()){it.value.s("turnId")}
@@ -385,12 +404,14 @@ object PocketTranscript {
         gapWindows=gapWindows.map{it.copy(exhausted=false)};gapProblems=emptyMap()
     }
     // Android memory pressure evicts inactive snapshots, never the conversation being read.
-    fun release(){recent.clear();trace()}
+    fun release(){recent.clear();CodexSessionRepository.releaseNativeMemory();trace()}
     suspend fun load(older:Boolean=false,bridgeCursor:String?=null,retryAttempt:Int=0,beforeApply:suspend ()->Unit={},beforeCacheRead:suspend ()->Unit={})=
         CodexConversations.read(older,bridgeCursor,retryAttempt,beforeApply,beforeCacheRead)
     internal suspend fun readPage(older:Boolean=false,bridgeCursor:String?=null,retryAttempt:Int=0,beforeApply:suspend ()->Unit={},beforeCacheRead:suspend ()->Unit={}){
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return
+        if(CodexSessionRepository.nativeEnabled()&&readNativePage(id,older,bridgeCursor,retryAttempt,beforeApply))return
+        canonicalMode=false
         if(owner!=id||(older&&(!earlier||before==null)))return
         if(bridgeCursor!=null&&gapWindows.none{it.cursor==bridgeCursor&&it.cursor.isNotBlank()&&(!it.exhausted||it.id !in gapProblems)})return
         val kind=when{older->TranscriptReadState.Kind.OLDER;bridgeCursor!=null->TranscriptReadState.Kind.GAP;else->TranscriptReadState.Kind.LATEST}
@@ -612,7 +633,94 @@ object PocketTranscript {
             }
         }
     }
+    private fun applyNativeSnapshot(value:JSONObject,verified:Boolean){
+        val id=owner?:return
+        if(value.optJSONObject("thread")?.s("id")!=id||ownerScope!=scopeKey())return
+        val page=value.optJSONObject("timeline")?:return
+        if(page.optInt("native")!=1)return
+        canonicalMode=true
+        if(value.optLong("nativeRevision")<(Pocket.detail?.optLong("nativeRevision")?:0)){
+            // The sole store has already committed this read and a later update.
+            // An older viewport callback cannot roll that transaction backwards.
+            if(verified){currentWorkVerified=true;freshForRead=true;latestReadError="";readFailureSince=0}
+            return
+        }
+        if(value.optLong("nativeViewRevision")<(Pocket.detail?.optLong("nativeViewRevision")?:0))return
+        val incoming=page.optJSONArray("rows")?.objects().orEmpty()
+        val changed=value.optLong("nativeRevision")!=Pocket.detail?.optLong("nativeRevision")||value.s("nativeWindow")!=Pocket.detail?.s("nativeWindow")||rows.isEmpty()
+        if(changed)rows=incoming
+        before=page.s("before").takeIf{it.isNotBlank()};earlier=page.optBoolean("hasEarlier")
+        gapWindows=page.optJSONArray("gaps")?.objects()?.map{g->TranscriptGapWindow(g.s("id"),g.s("cursor"),g.s("beforeRow"),g.s("olderAnchor"))}.orEmpty()
+        confirmedRows=page.optJSONArray("canonicalIds")?.let{a->(0 until a.length()).map{a.getString(it)}.toSet()}.orEmpty()
+        coverageVerified=true;cachedNeedsConfirmation=false;historyLoaded=true
+        if(readPosition==null&&!preferLatestOnOpen)value.optJSONObject("readingPosition")?.let{p->
+            readPosition=TranscriptReadPosition(p.s("row"),p.optInt("offset"),p.optBoolean("follow",true))
+        }
+        if(value.optBoolean("nativeFollowing")&&readPosition?.follow==false){readPosition=null;cacheRestoreRevision++}
+        Pocket.detail=JSONObject(value,value.keys().asSequence().filter{it !in listOf("timeline","nativePreview")}.toList().toTypedArray())
+        if(verified){
+            refreshPending=CodexSessionRepository.isDirty(id)
+            currentWorkVerified=true;freshForRead=true;latestReadError="";readFailureSince=0
+            parseHead(value.optJSONObject("historyHead"),id)?.let{observedHead=it;headSnapshotsSupported=true}
+        }
+        if(changed)revision++
+    }
+    private suspend fun readNativePage(id:String,older:Boolean,bridgeCursor:String?,retryAttempt:Int,beforeApply:suspend()->Unit):Boolean{
+        if(owner!=id||ownerScope!=scopeKey())return true
+        val latest=!older&&bridgeCursor==null
+        if(latest&&reads.latestLoading){missedUpdates=true;return true}
+        if(!latest&&reads.historyLoading)return true
+        val cursor=bridgeCursor?:if(older)before else null
+        if(!latest&&cursor==null)return true
+        val kind=if(latest)TranscriptReadState.Kind.LATEST else if(bridgeCursor!=null)TranscriptReadState.Kind.GAP else TranscriptReadState.Kind.OLDER
+        val destination=Pocket.captureEnvironment()?:return true
+        val read=reads.begin(kind)?:return true
+        val ticket=generation;val scope=scopeKey()
+        fun current()=owner==id&&Pocket.selected==id&&generation==ticket&&ownerScope==scope&&scopeKey()==scope
+        var succeeded=false
+        if(latest&&needsDiskRestore){
+            needsDiskRestore=false
+            cacheRestoreJob=readScope.launch{
+                val cached=CodexSessionRepository.cachedNative(destination,id)
+                if(current()&&cached!=null&&CodexSessionRepository.canPresent(id,cached))applyNativeSnapshot(cached,false)
+            }
+        }
+        try{
+            val value=if(latest)CodexSessionRepository.readCurrent(destination,id)else CodexSessionRepository.readOlder(destination,id,requireNotNull(cursor))
+            if(value.optJSONObject("timeline")?.optInt("native")!=1){
+                canonicalMode=false;needsDiskRestore=true
+                return false
+            }
+            if(!latest)beforeApply()
+            if(current()&&reads.active(read)){
+                applyNativeSnapshot(value,latest)
+                if(!latest){historicalReadError="";browsingEarlier=true}
+                succeeded=true
+            }
+        }catch(error:CancellationException){throw error}
+        catch(error:Exception){if(current()){
+            if(latest){
+                automaticRetryAllowed=retryableTranscriptRead(error)
+                val now=android.os.SystemClock.elapsedRealtime();if(readFailureSince==0L)readFailureSince=now
+                if(!automaticRetryAllowed||now-readFailureSince>=5000)latestReadError=PocketNetwork.error(error)
+            }else historicalReadError=PocketNetwork.error(error)
+        }}
+        finally{
+            if(current()&&reads.active(read)){
+                reads.finish(read)
+                if(latest){
+                    refreshPending=!succeeded&&automaticRetryAllowed
+                    if(!succeeded&&automaticRetryAllowed)CodexConversations.continueLatest(
+                        delayMs=(1000L shl retryAttempt.coerceAtMost(5)).coerceAtMost(30000),
+                        retryAttempt=(retryAttempt+1).coerceAtMost(5))
+                    else if(missedUpdates){missedUpdates=false;CodexConversations.continueLatest()}
+                }
+            }
+        }
+        return true
+    }
     fun apply(update:JSONObject,buffer:Boolean=true){
+        if(canonicalMode)return
         if(update.s("threadId")!=Pocket.selected||owner!=Pocket.selected||ownerScope!=scopeKey())return
         parseHead(update.optJSONObject("historyHead"),owner!!)?.let{head->
             val changedRuntime=observedHead?.epoch?.let{it!=head.epoch}?:historyLoaded

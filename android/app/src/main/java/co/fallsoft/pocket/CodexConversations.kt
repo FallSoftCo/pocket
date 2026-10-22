@@ -221,6 +221,7 @@ internal object CodexConversations {
         if(!viewport||(!foreground&&!PocketVoice.foreground))return
         val value=active()?:return
         if(!current(value)||update.s("threadId")!=value.key.thread)return
+        if(PocketTranscript.canonicalMode)return // Repository commits the only native projection.
         val input=transcriptInputEvent(PocketTranscript.rows,update.optJSONObject("row"))
         PocketTranscript.apply(update)
         if(input.needsPosition)input.row?.let{PocketTranscript.reconcileInputPosition(it)}
@@ -230,7 +231,7 @@ internal object CodexConversations {
         val rows=if(PocketTranscript.presentationReady)PocketTranscript.rows else emptyList();val d=detail
         val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
         val task=Pocket.tasks.firstOrNull{it.id==selected}
-        val turn=rows.lastOrNull{it.s("kind")=="turn"}
+        val turn=if(PocketTranscript.canonicalMode)d?.optJSONObject("nativeExecutionTurn")else rows.lastOrNull{it.s("kind")=="turn"}
         val verified=PocketTranscript.currentWorkVerified
         val current=session!=null&&PocketTranscript.currentHistoryVerified
         val error=PocketTranscript.currentReadError

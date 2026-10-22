@@ -50,16 +50,17 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#existingAgentDisclosureOpensIndependentSessionAndKeepsPrivateRepliesScoped'||name.startsWith('co.fallsoft.pocket.RoomNavigationNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomRoutingNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomVoiceNativeTest#');
 const voiceCase=name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#');
 const environmentCase=name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
-const fixtureScript=voiceCase?'tests/fixtures/native-room-voice-ui.mjs':environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
+const canonicalCase=name.startsWith('co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeTranscriptStoreNativeTest#');
+const fixtureScript=canonicalCase?'tests/fixtures/native-canonical-transcript.mjs':voiceCase?'tests/fixtures/native-room-voice-ui.mjs':environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
 const portKey=voiceCase?'voice':environmentCase?'environment':teamCase?'team':'transcript';
 const portValue=owner.fixturePorts?.[portKey]??(environmentCase?19995:teamCase?19992:19998);
 if(!Number.isSafeInteger(portValue)||portValue<1024||portValue>65532)throw Error('Invalid owned fixture port.');
 const fixturePort=String(portValue);
 const fixtureToken=voiceCase?'synthetic-native-voice-only':teamCase?'synthetic-alpha24-only':'synthetic-system76';
-const fixtureHost=voiceCase?'Owned synthetic native voice':environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
-const fixtureReadyMessage=voiceCase?'Owned synthetic native voice fixture ready '+fixturePort:environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
+const fixtureHost=canonicalCase?'Native canonical source':voiceCase?'Owned synthetic native voice':environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
+const fixtureReadyMessage=canonicalCase?'Owned native canonical fixture ready':voiceCase?'Owned synthetic native voice fixture ready '+fixturePort:environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
 let fixture;
-const ownedFixtures=['tests/fixtures/native-room-voice-ui.mjs','tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
+const ownedFixtures=['tests/fixtures/native-canonical-transcript.mjs','tests/fixtures/native-room-voice-ui.mjs','tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
 try{
  if(owner.fixturePid&&existsSync('/proc/'+owner.fixturePid)){
   const args=readFileSync('/proc/'+owner.fixturePid+'/cmdline','utf8');
@@ -70,7 +71,9 @@ try{
  const fd=openSync(join(directory,'fixture-'+id+'.log'),'wx',0o600);
  const replayPath=name==='co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#actualHistoryReplayNeverPaintsAlpha110IslandAndFillsRecentViewport'?process.env.NEXTCOMP_QA_HISTORY_REPLAY:null;
  if(replayPath&&(!replayPath.startsWith('/')||!existsSync(replayPath)))throw Error('Private history replay capture unavailable.');
- fixture=startOwnedFixture(resolve(root,fixtureScript),{cwd:root,env:{...childEnv,...(replayPath?{NEXTCOMP_QA_HISTORY_REPLAY:replayPath}:{}),PORT:fixturePort,NEXTCOMP_QA_EPOCH:crypto.randomUUID(),NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},fd});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
+ const nativeCapture=name==='co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#recordedNativeMacPagesOpenCurrentAndRetainNativeKeys'?process.env.NEXTCOMP_QA_NATIVE_CAPTURE:null;
+ if(nativeCapture&&(!nativeCapture.startsWith('/')||!existsSync(nativeCapture)))throw Error('Private native capture unavailable.');
+ fixture=startOwnedFixture(resolve(root,fixtureScript),{cwd:root,env:{...childEnv,...(nativeCapture?{NEXTCOMP_QA_NATIVE_CAPTURE:nativeCapture}:{}),...(replayPath?{NEXTCOMP_QA_HISTORY_REPLAY:replayPath}:{}),PORT:fixturePort,NEXTCOMP_QA_EPOCH:crypto.randomUUID(),NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},fd});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
  run(['reverse','tcp:18880','tcp:'+fixturePort]);
  for(const [from,to] of Object.entries(owner.reversePorts||{})){if(!/^\d{4,5}$/.test(from)||!Number.isSafeInteger(to)||to<1024||to>65535)throw Error('Invalid owned QA reverse mapping');run(['reverse','tcp:'+from,'tcp:'+to]);}

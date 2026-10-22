@@ -321,7 +321,10 @@ object Pocket {
                 val changed=transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,json.s("preview"),json.s("previewKind","message"),previous?.status)||
                     transcriptLiveActivityAdvanced(previous?.activityAt,json.optLong("activityAt"))
                 discoverSession(id)
-                tasks=tasks.map{if(it.id==id)it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
+                tasks=tasks.map{if(it.id==id){
+                    val next=it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))
+                    captureEnvironment()?.let{destination->CodexSessionRepository.nativeCatalogProjection(destination,next)}?:next
+                }else it}
                 if(changed){CodexSessionRepository.preview(id);if(id==selected)scheduleRefresh()}
             }
             "sessionActivity" -> {

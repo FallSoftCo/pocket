@@ -41,6 +41,7 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
     private fun selected()=Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.showArchived==archived
     private fun current(value:Session)=session===value&&Pocket.captureEnvironment(value.destination.environment.id)?.matches(value.destination)==true
     private var catalogAcceptedAt=0L
+    private val transcriptHints=mutableMapOf<String,Task>()
     private fun retire(){val old=session;session=null;old?.scope?.cancel();inFlight.clear();paging=false;pageSerial++}
     fun reset(){
         retire();retainedKey=null;tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList()
@@ -153,9 +154,10 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
     private fun acceptCatalog(fetched:List<Task>,baseline:Map<String,Task>,partial:Boolean){
         val previous=tasks.associateBy{it.id}
         val merged=mergeLiveTaskSnapshot(tasks,fetched,baseline,partial)
-        tasks=merged
+        tasks=merged.map{CodexSessionRepository.nativeCatalogProjection(destination,it)}
         merged.forEach{next->
-            val old=previous[next.id]
+            val old=if(CodexSessionRepository.nativeEnabled(destination))transcriptHints[next.id] else previous[next.id]
+            if(old==null||next.activityAt>=old.activityAt)transcriptHints[next.id]=next
             if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,next.preview,next.previewKind,next.status)||
                 transcriptLiveActivityAdvanced(old.activityAt,next.activityAt)){
                 CodexSessionRepository.invalidate(next.id,destination,priorityAt=next.activityAt)

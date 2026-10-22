@@ -1,7 +1,10 @@
 {
   "schema": 1,
-  "qualification": "connected-history-following-and-canonical-input-placement",
+  "qualification": "native-transcript-authority-order-coverage-and-reconnect",
   "requiredNativeCases": [
+    "co.fallsoft.pocket.NativeTranscriptStoreNativeTest#canonicalPagesLiveOverlapAndRestartKeepOneAuthority",
+    "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#nativeOrderSurvivesDelayedArrivalQuestionsAndReconnectWithoutLegacyRepair",
+    "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#recordedNativeMacPagesOpenCurrentAndRetainNativeKeys",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#followingLatestCrossesDisconnectedWindowWhileHistoryReadIsHeld",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#actualHistoryReplayNeverPaintsAlpha110IslandAndFillsRecentViewport",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#sharedHeadKeepsWholePageAndExposesMissingMiddleBeforeDiskReopen",
@@ -19,7 +22,8 @@
     "Native volume/IME/AudioRecord is checked against an explicit no-provider fixture; physical phone/provider transcript and TTS remain unqualified.",
     "Incremental recording delivery: existing installed speech renderer/cache policy retained. Experimental rendered speech path is not enabled or qualified. No paid API or model switch.",
     "Complementary instant flip replaces the superseded waterfall visual contract; actual native coverage retains keyed recycling, normal glyph spacing, active keyboard/typing and link activation. Historical wave tests/evidence remain in source but are not current product acceptance.",
-    "148 requires replay of private canonical read-only pages captured from the actual reported session, with legacy Alpha110 islands and obsolete reading anchor. The replay never proxies or dispatches live work; retained old bodies must stay stored, never paint as current predecessors, and tool-heavy raw pages hydrate a bounded viewport automatically. Additional cases cover cached order, current/older concurrency, input placement, source isolation and typing. Exact optimized release and all unit/lint checks remain required."
+    "148 requires replay of private canonical read-only pages captured from the actual reported session, with legacy Alpha110 islands and obsolete reading anchor. The replay never proxies or dispatches live work; retained old bodies must stay stored, never paint as current predecessors, and tool-heavy raw pages hydrate a bounded viewport automatically. Additional cases cover cached order, current/older concurrency, input placement, source isolation and typing. Exact optimized release and all unit/lint checks remain required.",
+    "150 introduces the native timeline authority. Native SQLite/restart and recorded Mac timeline journeys must pass without legacy history reads or position repair. Existing legacy cases guard compatibility, not proof of native correctness. No model turns or task submissions are allowed in native fixture qualification."
   ],
   "requiredOptimizedReview": "native-room-catalog-and-typing",
   "captureInteraction": "volume-buttons"

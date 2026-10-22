@@ -1,3 +1,4 @@
+import {NativeTimelineReader,projectNativeTimeline} from './native-timeline.mjs';
 import {nativeJsonCompression} from './json-compression.mjs';
 import {readThreadProjection} from './thread-projection.mjs';
 import {MAX_RECORDING_WAV_BYTES,MAX_RECORDING_SECONDS} from './audio-limits.mjs';
@@ -93,6 +94,7 @@ const push=loadPush(db,dir);
 if(nativeHollywood)push.allowedKinds=new Set(['app_update']);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex();
+const nativeTimelineReader=new NativeTimelineReader(codex);
 const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
 app.use('/api',nativeJsonCompression());
 const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
@@ -473,6 +475,10 @@ codex.on('event',m=>{
   if(m.method==='account/rateLimits/updated')rateLimits.liveUpdate(p);
   if(m.method==='account/updated'){rateLimits.clear();void rateLimits.refresh({force:true});}
   if(threadId){const update=timeline.ingest(m);if(update){historyHeads.observe(threadId,update.version);liveDelivery.timeline({...update,historyHead:historyHeads.snapshot(threadId)});}}
+  if(threadId&&m.method==='thread/realtime/itemCompleted'){
+    const version=++timeline.version;historyHeads.observe(threadId,version);
+    liveDelivery.timeline({threadId,version,reload:true,historyHead:historyHeads.snapshot(threadId)});
+  }
   if(m.method==='serverRequest/resolved'){pending.delete(String(p.requestId));resolveAttention('request_id=?',String(p.requestId));}
   if(threadId&&attached.has(threadId)&&m.method==='turn/started'){
     if(p.turn?.id)db.prepare('DELETE FROM speech_contexts WHERE thread_id=? AND turn_id IS NOT ?').run(threadId,p.turn.id);
@@ -653,7 +659,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>{const threadId=req.query.threadId;if(threadId!==undefined&&(typeof threadId!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(threadId)))return res.status(400).json({error:'Invalid thread identifier'});void rateLimits.refresh();res.json({...codex.status(),...(threadId?{historyHead:historyHeads.snapshot(threadId)}:{}),capabilities:{readOnlyTimeline:true},usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
+app.get('/api/status',(req,res)=>{const threadId=req.query.threadId;if(threadId!==undefined&&(typeof threadId!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(threadId)))return res.status(400).json({error:'Invalid thread identifier'});void rateLimits.refresh();res.json({...codex.status(),...(threadId?{historyHead:historyHeads.snapshot(threadId)}:{}),capabilities:{readOnlyTimeline:true,canonicalTimeline:1},usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -743,6 +749,27 @@ app.post('/api/threads/:id/continuation/checkpoint',owner,route(async(req,res)=>
 app.post('/api/threads/:id/timeline/position',route(async(req,res)=>{
   const id=requireId(req.params.id);await codex.connect();
   res.json(await history.locateItemSuccessor(id,req.body));
+}));
+app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
+ const id=requireId(req.params.id),cursor=req.query.before??null;
+ if(cursor!==null&&(typeof cursor!=='string'||!cursor||cursor.length>16384))
+  return res.status(400).json({error:'Invalid native timeline cursor.'});
+ await codex.connect();
+ const {thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});
+ if(thread?.id!==id)throw Error('Native timeline belongs to another session.');
+ const revision=timeline.version,historyHead=historyHeads.snapshot(id);
+ const page=await nativeTimelineReader.read(id,{cursor,limit:64});
+ const requests=[...pending.values()].filter(m=>m.params.threadId===id);
+ const response={
+  thread:{...thread,...catalogFields(thread),turns:[]},
+  timeline:projectNativeTimeline(page,{identity:sendIdentity,threadId:id,revision}),
+  revision,historyHead,pending:requests,
+  notes:conversationNotes.list(id),recovery:turnRecovery.get(id)||null,turnSettings:savedTurnSettings(id),
+  notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(id).map(notificationRow),req.device.id),
+  outgoing:pendingOutgoing(db,id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(id)
+ };
+ if(cursor===null)response.catchup=sessionCatchup.capture(req.device.id,id,response);
+ res.set('Cache-Control','no-store').json(response);
 }));
 app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
   const timelineView=req.query.view==='timeline'||req.path.endsWith('/head');
