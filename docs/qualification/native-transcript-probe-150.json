@@ -2,10 +2,10 @@
   "schema": 1,
   "state": "focused-native-passed-not-published",
   "versionCode": 150,
-  "productionSourceSha": "3024d87ba49aca8743b024bc9dfbdfd2949a481e0c871716e07093d578d67d4f",
-  "qualificationInputSha": "dd685c1006f9c0f72811d9345819e201ea2d094fd69d20594150eb9b3f3fa015",
-  "qualificationApkSha": "b03c8a2a45b2c45a780f5f4b620bc54176448fd851960642b56600eea1bd5ace",
-  "testApkSha": "66587b22f2a743fc44339ef62ca2f4b651f1947c1d4227e9ef54add170aba07d",
+  "productionSourceSha": "e68ec9fbf443456ec105d6f4db9a7739c528e97937d5e3dbe58b76682e1fd08b",
+  "qualificationInputSha": "c41977d4bf550f5155ead6f66b55b3d49e278f00cfad2126f3d3ba7425c6e669",
+  "qualificationApkSha": "7d734029667a4740d84b1f3f3a089afda2bbeb4ac2c69e62939b8388397c377a",
+  "testApkSha": "f0956b287422707586102111e3fb2c93afba317352b652e44bddd88f3f9e6203",
   "native": {
     "sqliteRestartSourceIsolation": true,
     "durableFollowLatest": true,
@@ -19,7 +19,9 @@
     "positionRepairCallsInNativeJourneys": 0,
     "workSubmissions": 0,
     "retainedQaProfilesRestored": true,
-    "allOwnedChildrenStopped": true
+    "allOwnedChildrenStopped": true,
+    "liveQuestionSurvivesRenderEvictionWith35OtherHistories": true,
+    "restartedCacheNeverRestoresQuestionAuthority": true
   },
   "timing": {
     "recordedMacHeadVerifiedMs": 4428,
@@ -40,6 +42,9 @@
     "sameIdAcrossEnvironmentsAndDrafts": true,
     "currentHeadIndependentOfOlderRead": true,
     "privateCaptureProvisioned": true,
-    "allOwnedChildrenStopped": true
+    "allOwnedChildrenStopped": true,
+    "productionSourceSha": "3024d87ba49aca8743b024bc9dfbdfd2949a481e0c871716e07093d578d67d4f",
+    "qualificationInputSha": "dd685c1006f9c0f72811d9345819e201ea2d094fd69d20594150eb9b3f3fa015",
+    "scope": "Prior negotiated-protocol build; later change only protects native live envelopes. Final source-matched release cases still required."
   }
 }

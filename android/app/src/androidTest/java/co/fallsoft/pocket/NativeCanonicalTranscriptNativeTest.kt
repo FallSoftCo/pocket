@@ -20,8 +20,8 @@ class NativeCanonicalTranscriptNativeTest{
     private fun main(action:()->Unit)=instrumentation.runOnMainSync(action)
     private fun await(message:String,timeout:Long=15000,condition:()->Boolean){
         val end=android.os.SystemClock.elapsedRealtime()+timeout
-        while(android.os.SystemClock.elapsedRealtime()<end&&!condition())Thread.sleep(30)
-        val passed=condition()
+        var passed=condition()
+        while(!passed&&android.os.SystemClock.elapsedRealtime()<end){Thread.sleep(30);passed=condition()}
         val diagnostics=if(passed)"" else " [selected="+Pocket.selected+", native="+PocketTranscript.canonicalMode+", verified="+PocketTranscript.currentHistoryVerified+", updating="+PocketTranscript.updating+", loading="+PocketTranscript.loading+", rows="+PocketTranscript.rows.size+", error="+PocketTranscript.readError+", appError="+Pocket.error+", reads="+runCatching{qa("state").optJSONArray("reads")?.length()}.getOrNull()+"]"
         assertTrue(message+diagnostics,passed)
     }

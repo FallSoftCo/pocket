@@ -58,6 +58,15 @@ class NativeTranscriptStoreNativeTest{
             store.commit("b","same-thread",page(listOf(entry(700,"Other environment")),null),null)
             assertEquals("Canonical final answer",store.snapshot("a","same-thread")!!.getJSONObject("nativePreview").s("text"))
             assertEquals("Other environment",store.snapshot("b","same-thread")!!.getJSONObject("nativePreview").s("text"))
+            for(n in 1..35){
+                val inactive="inactive-"+n
+                val value=page(listOf(entry(1,"Inactive history")),null)
+                value.getJSONObject("thread").put("id",inactive)
+                store.commit("c",inactive,value,null)
+            }
+            store.trim(setOf("a" to "same-thread"))
+            store.releaseMemory()
+            assertEquals("Render eviction lost the current question", "must-not-restore",store.snapshot("a","same-thread")!!.getJSONArray("pending").getJSONObject(0).s("id"))
             store.close();store=NativeTranscriptStore(context,name)
             snapshot=requireNotNull(store.snapshot("a","same-thread"))
             assertNull("Returning to latest did not clear the durable historical anchor",store.reader("a","same-thread"))

@@ -60,7 +60,9 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
         }
         return value
     }
-    fun releaseMemory(){rendered.clear();renderedBytes=0;coverage.clear();details.clear()}
+    // Live control envelopes are bounded separately and never restored from disk.
+    // Render-memory pressure cannot revoke a currently actionable question.
+    fun releaseMemory(){rendered.clear();renderedBytes=0;coverage.clear()}
     fun close(){db.close()}
     private fun args(scope:String,id:String)=arrayOf(scope,id)
     private fun state(scope:String,id:String)=db.rawQuery("SELECT detail,head,version,notification,revision,bytes FROM state WHERE scope=? AND thread=?",args(scope,id)).use{
@@ -155,7 +157,6 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
         }finally{db.endTransaction()}
         if(cursor==null)details[scope to id]=JSONObject(value.toString()).apply{remove("timeline")}
         coverage.remove(scope to id)
-        while(details.size>32)details.remove(details.keys.first())
         while(views.size>32)views.remove(views.keys.first())
     }
     /** A live payload can replace a known canonical row, never create chronology. */
@@ -180,6 +181,10 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
         return true
     }
     fun trim(protected:Set<Pair<String,String>>){
+        while(details.size>32){
+            val victim=details.keys.firstOrNull{it !in protected}?:break
+            details.remove(victim)
+        }
         var total=0L;var count=0
         val remove=mutableListOf<Pair<String,String>>()
         db.rawQuery("SELECT scope,thread,bytes FROM state ORDER BY updated DESC",null).use{c->
