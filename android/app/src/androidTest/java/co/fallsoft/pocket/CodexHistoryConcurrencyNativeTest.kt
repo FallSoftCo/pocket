@@ -213,6 +213,8 @@ class CodexHistoryConcurrencyNativeTest {
                 .putString("draft:same-thread","Unsent across old and new windows").commit()
             main{Pocket.init(context)}
             val destination=requireNotNull(Pocket.captureEnvironment())
+            val advertised=runBlocking{Pocket.apiEnvironment(destination,"/api/status")}.getJSONObject("capabilities")
+            main{CodexSessionRepository.observeCapabilities(destination,advertised)}
             val hundred=org.json.JSONArray((0 until 100).map{n->JSONObject().put("id","complete-window-"+n).put("kind","message").put("text","Window message "+n)})
             val checkpoint=JSONObject().put("thread",JSONObject().put("id","same-thread"))
                 .put("timeline",JSONObject().put("rows",hundred).put("hasEarlier",true).put("before","before-entire-window"))
