@@ -14,8 +14,21 @@ def qualify_native_stock(*,root,q,data,adb,launch):
   req=urllib.request.Request('http://127.0.0.1:'+str(port)+'/_qa/'+name,headers={'Authorization':'Bearer synthetic-system76'},method='POST')
   with urllib.request.urlopen(req,timeout=4)as response:return json.load(response)
  def dump():
-  adb('shell','uiautomator','dump','/sdcard/owned-native150.xml')
-  return adb('exec-out','cat','/sdcard/owned-native150.xml')
+  # A completed framework instrumentation can leave UIAutomation briefly busy.
+  # Retain every failed read; retry only this observational capture, never taps,
+  # commands, fixture transitions or app launches.
+  for attempt in range(3):
+   command=adb('shell','uiautomator','dump','/sdcard/owned-native150.xml')
+   raw=adb('exec-out','cat','/sdcard/owned-native150.xml')
+   try:
+    assert ET.fromstring(raw).tag=='hierarchy'
+    return raw
+   except (ET.ParseError,AssertionError):
+    stem=q/('hierarchy-capture-'+str(time.time_ns()))
+    stem.with_suffix('.stdout').write_bytes(command)
+    stem.with_suffix('.raw').write_bytes(raw)
+    if attempt<2:time.sleep(.25)
+  raise RuntimeError('UIAutomation returned no valid hierarchy; raw capture retained at '+str(stem))
  def texts(tree,text):return[n for n in tree.iter('node')if n.get('text')==text]
  def wait(text,timeout=25):
   deadline=time.monotonic()+timeout
