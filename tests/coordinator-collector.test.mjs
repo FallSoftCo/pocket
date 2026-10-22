@@ -10,7 +10,7 @@ test('background reconciliation indexes changed public work with no model/messag
  const thread=()=>({id:'thread_worker',name:'Worker',activityAt:activity,status:{type:'idle'}});
  const discovery={async page(params){pages.push(params);return {data:params.cursor?[]:[thread()],nextCursor:params.cursor?null:'opaque_next'}},remember(t){db.prepare('INSERT OR REPLACE INTO pocket_discovered_threads VALUES(?,?,0,?)').run(t.id,JSON.stringify(t),now);return t}};
  const catchup=new SessionCatchup({db,clock:()=>now}),memory=new CoordinatorMemory({db,clock:()=>now});
- const options={db,discovery,memory,catchup,ready:()=>true,clock:()=>now,read:async()=>{reads++;return {thread:thread(),timeline:{rows:[{kind:'message',type:'agentMessage',itemId:'answer_'+activity,turnId:'turn_'+activity,phase:'final_answer',status:'completed',text:reply}]}}}};
+ const options={db,discovery,memory,catchup,ready:()=>true,clock:()=>now,read:async path=>{assert.match(path,/observeOnly=1$/);reads++;return {thread:thread(),timeline:{rows:[{kind:'message',type:'agentMessage',itemId:'answer_'+activity,turnId:'turn_'+activity,phase:'final_answer',status:'completed',text:reply}]}}}};
  let collector=new CoordinatorCollector(options);await collector.tick();assert.equal(reads,1);assert.equal(catchup.cursor('thread_worker'),0,'Initial history became unsolicited audio');
  now+=15000;await collector.tick();assert.equal(reads,1,'Inventory refresh timestamps caused another history read');assert.ok(pages.some(p=>p.cursor==='opaque_next'));
  activity=now+1000;now+=15000;reply='The signed update is ready.';await collector.tick();assert.equal(reads,2);

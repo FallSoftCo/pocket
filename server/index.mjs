@@ -233,7 +233,7 @@ const coordinatorReports=new CoordinatorReports({db,catchup:sessionCatchup,hidde
 voiceController.reports=coordinatorReports;
 const coordinatorHub=createCoordinatorHub({db,controller:voiceController,catchup:sessionCatchup,hidden:catchupHidden,key:secrets.adminToken,authorize:actor=>humanIngress.active(actor),app,route:fn=>route(fn),read:async path=>{const result=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`},signal:AbortSignal.timeout(2500)});if(!result.ok)throw Error('Native public evidence unavailable');return result.json();}});
 const coordinatorCollector=new CoordinatorCollector({db,discovery:sessionDiscovery,memory:coordinatorHub.memory,catchup:sessionCatchup,hidden:catchupHidden,
- ready:()=>!nativeHollywood&&codex.ready,subscribe:thread=>nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(thread.id)}),
+ ready:()=>!nativeHollywood&&codex.ready,
  read:path=>coordinatorHub.memory.read(path)});
 coordinatorHub.memory.collection=()=>coordinatorCollector.status();
 if(!nativeHollywood)setInterval(()=>void coordinatorCollector.tick().catch(error=>console.error('Coordinator evidence collection unavailable',error.code||error.name)),15000).unref();
@@ -774,7 +774,7 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
  await codex.connect();
  const {thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});
  if(thread?.id!==id)throw Error('Native timeline belongs to another session.');
- if(cursor===null)void nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(id)}).catch(error=>console.error('Native live subscription unavailable',error.message));
+ if(cursor===null&&req.query.observeOnly!=='1')void nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(id)}).catch(error=>console.error('Native live subscription unavailable',error.message));
  const revision=timeline.version,historyHead=historyHeads.snapshot(id);
  const page=await nativeTimelineReader.read(id,{cursor,limit:64});
  const requests=[...pending.values()].filter(m=>m.params.threadId===id);
@@ -786,7 +786,7 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
   notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(id).map(notificationRow),req.device.id),
   outgoing:pendingOutgoing(db,id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(id)
  };
- if(cursor===null){response.catchup=sessionCatchup.capture(req.device.id,id,response);coordinatorHub.memory.capture(id,response);}
+ if(cursor===null){if(req.query.observeOnly!=='1')response.catchup=sessionCatchup.capture(req.device.id,id,response);coordinatorHub.memory.capture(id,response);}
  res.set('Cache-Control','no-store').json(response);
 }));
 app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{

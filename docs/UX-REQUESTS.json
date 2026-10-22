@@ -3110,6 +3110,18 @@
         "Native/real model/audio journey and compatible update delivery"
       ],
       "background_collection": "Native events plus bounded read-only catalog and recent-page reconciliation, independent of open chat. No agent messages, model turns, wakeups or read acknowledgements; durable observations, freshness, pagination and backoff."
+    },
+    {
+      "id": "agent-notification-intents-20261022",
+      "status": "planned-after-central-voice151",
+      "request": "User-defined specific notifications and richer agent pushes; distinguish requested outcomes and important decisions from frequent fine-grained progress.",
+      "requirements": [
+        "Durable task-scoped notify-me-when intents with explicit conditions and original user provenance.",
+        "Typed agent notification tooling, never human reply/turn impersonation; stable idempotency identities and receipts.",
+        "Rich bounded previews, source attribution and direct open/reply/decision actions; requested priority remains distinguishable.",
+        "Coalesce routine activity and suppress redundant foreground alerts; preserve meaningful outcomes, pending questions and unseen semantics.",
+        "Coordinate spoken updates and notification preferences; no unsolicited transcript audio or model polling."
+      ]
     }
   ],
   "current_state": {

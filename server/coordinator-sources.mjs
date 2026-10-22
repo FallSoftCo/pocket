@@ -39,15 +39,20 @@ export class CoordinatorSources {
   const write=controlPlane||/^\/api\/threads(?:$|\/[a-zA-Z0-9_-]{5,100}\/(?:reply|interrupt|rename|archive|unarchive|watch|settings|queue\/resume|replies\/[a-zA-Z0-9_-]{8,120})$)|^\/api\/requests\/[a-zA-Z0-9_-]+\/answer$/.test(path);
   if(typeof path!=='string'||path.includes('://')||path.includes('..')||(body===undefined?!read:!write))throw fail('Unsupported delegated coordinator operation.',403);
   if(body!==undefined&&!controlPlane&&(!actor||actor.deviceId!==device||!actor.voiceTurnId||!this.authorize(actor)))throw fail('A remote mutation needs its original human voice command.',403);
+  if(path!=='/api/status'&&!row.verified_at){
+   const status=await this.call(device,sourceId,'/api/status');
+   if(!status.deviceId||status.deviceId==='owner')throw fail('This source requires its original paired-device credential.',403);
+   this.db.prepare('UPDATE coordinator_sources SET verified_at=?,problem=NULL WHERE device_id=? AND source_id=?').run(this.clock(),device,sourceId);
+  }
   let command=null;
   if(body!==undefined&&!controlPlane){
    const unresolved=this.db.prepare("SELECT * FROM coordinator_remote_commands WHERE device_id=? AND source_id=? AND path=? AND state IN ('sending','unknown') LIMIT 8").all(device,sourceId,path);
    for(const old of unresolved){
     let receipt=null;
     if(old.request_id)try{receipt=await this.call(device,sourceId,'/api/coordinator/receipt?id='+encodeURIComponent(old.request_id));}catch{}
-    if(receipt?.id===old.request_id&&['accepted','cancelled','failed'].includes(receipt.state)){
+    if(receipt?.id===old.request_id&&['queued','sent','steered','accepted','cancelled','failed'].includes(receipt.state)){
      this.db.prepare("UPDATE coordinator_remote_commands SET state='responded',result=? WHERE id=?").run(JSON.stringify(receipt),old.id);
-     if(old.voice_turn===actor.voiceTurnId)return receipt;
+     if(old.voice_turn===actor.voiceTurnId)return {...receipt,reconciledOriginal:true,notSubmittedNewCommand:true};
     }else throw fail('Original remote delivery is uncertain. Read its original source receipt; no further command was sent.',409);
    }
    const bodyHash=createHash('sha256').update(JSON.stringify(body)).digest('hex');
@@ -56,6 +61,7 @@ export class CoordinatorSources {
    if(previous){
     if(previous.body_hash!==bodyHash||previous.path!==path)throw fail('Original delegated command identity conflicts; nothing was resent.',409);
     if(previous.state==='responded')return JSON.parse(previous.result);
+    if(previous.state==='rejected'){const value=JSON.parse(previous.result);throw fail(value.error,value.status);}
     throw fail('Original remote delivery is uncertain. Inspect its source receipt before any further send; do not repeat this operation.',409);
    }
    this.db.prepare("INSERT INTO coordinator_remote_commands(id,device_id,source_id,voice_turn,path,body_hash,state,result,at,request_id) VALUES(?,?,?,?,?,?,'sending',NULL,?,?)").run(commandId,device,sourceId,actor.voiceTurnId,path,bodyHash,this.clock(),typeof body.id==='string'?body.id:null);command=commandId;
@@ -63,10 +69,20 @@ export class CoordinatorSources {
   try{
   const response=await this.fetchImpl(row.base+path,{redirect:'error',headers:{Authorization:'Bearer '+this.credential(row),'Content-Type':'application/json','X-NextComp-Coordinator-Hop':'1',...(body===undefined||controlPlane?{}:{'X-NextComp-Coordinator-Turn':actor.voiceTurnId,'X-NextComp-Coordinator-Origin':createHash('sha256').update(this.key).digest('hex').slice(0,24)})},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:AbortSignal.timeout(body===undefined||controlPlane?2500:15000)});
   let value;try{value=await response.json()}catch{throw fail('The delegated source returned an invalid response.',502)}
-  if(!response.ok)throw fail('The delegated source could not complete this operation (HTTP '+response.status+').',response.status);
+  if(!response.ok){
+   const error=fail('The delegated source could not complete this operation (HTTP '+response.status+').',response.status);
+   // Typed authentication/admission refusal is not unknown command delivery.
+   // Other failures stay uncertain and are never automatically repeated.
+   if(command&&[401,403].includes(response.status)&&typeof value.error==='string'){
+    this.db.prepare("UPDATE coordinator_remote_commands SET state='rejected',result=? WHERE id=?").run(JSON.stringify({error:error.message,status:response.status}),command);
+    error.definitiveRejection=true;
+   }
+   throw error;
+  }
   if(command)this.db.prepare("UPDATE coordinator_remote_commands SET state='responded',result=? WHERE id=?").run(JSON.stringify(value),command);
   return value;
   }catch(error){
+   if(error.definitiveRejection)throw error;
    if(command){this.db.prepare("UPDATE coordinator_remote_commands SET state='unknown' WHERE id=?").run(command);throw Object.assign(fail('Remote delivery is unconfirmed for the original command. Inspect that source and receipt; never repeat the send automatically.',409),{code:'REMOTE_DELIVERY_UNKNOWN'});}
    throw error;
   }

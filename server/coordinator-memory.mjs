@@ -70,7 +70,7 @@ export class CoordinatorMemory {
  }
  async readHead(id){
   if(!valid(id)||this.hidden(id))throw Error('Choose an available work session.');
-  if(!this.reading.has(id)){const promise=(async()=>this.capture(id,await this.read('/api/threads/'+encodeURIComponent(id)+'/native-timeline')))();this.reading.set(id,promise);promise.finally(()=>{if(this.reading.get(id)===promise)this.reading.delete(id)}).catch(()=>{});}
+  if(!this.reading.has(id)){const promise=(async()=>this.capture(id,await this.read('/api/threads/'+encodeURIComponent(id)+'/native-timeline?observeOnly=1')))();this.reading.set(id,promise);promise.finally(()=>{if(this.reading.get(id)===promise)this.reading.delete(id)}).catch(()=>{});}
   return this.reading.get(id);
  }
 }

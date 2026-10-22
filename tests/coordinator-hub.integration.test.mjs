@@ -40,10 +40,11 @@ test('only append-stable final sentences become speech, before item completion; 
  assert.throws(()=>segments.event(active,completion('thread_alpha','final','I changed the previous answer.')),/replaced/);
 });
 test('two real HTTP source authorities keep identical IDs and receipts separate; lost ACK and reopen never resend; ciphertext is device-bound',async t=>{
- let posts=0;const server=http.createServer(async(req,res)=>{
+ let posts=0,knownReceipt=false;const server=http.createServer(async(req,res)=>{
   if(req.headers.authorization!=='Bearer original-paired-device-token')return res.writeHead(403).end('{}');
   if(req.url==='/api/status')return res.end(JSON.stringify({deviceId:'phone_a'}));
   if(req.method==='POST'){posts++;req.socket.destroy();return;}
+  if(knownReceipt&&req.url.startsWith('/api/coordinator/receipt'))return res.end(JSON.stringify({id:'original_reply',state:'queued'}));
   res.end(JSON.stringify({thread:{id:'same_thread',name:'Remote source'}}));
  });server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>server.close());
  const d=db(),fetchImpl=(url,options)=>fetch('http://127.0.0.1:'+server.address().port+new URL(url).pathname,options);
@@ -56,5 +57,24 @@ test('two real HTTP source authorities keep identical IDs and receipts separate;
  await assert.rejects(sources.call('phone_a','mac','/api/threads/same_thread/reply',body,actor),/unconfirmed/);assert.equal(posts,1);
  sources=new CoordinatorSources({db:d,key:'private-installation-key',fetchImpl,localApi:async()=>({}),authorize:()=>true});
  await assert.rejects(sources.call('phone_a','mac','/api/threads/same_thread/reply',body,actor),/uncertain/);assert.equal(posts,1);
+ knownReceipt=true;const reconciled=await sources.call('phone_a','mac','/api/threads/same_thread/reply',body,actor);assert.equal(reconciled.state,'queued');assert.equal(reconciled.notSubmittedNewCommand,true);assert.equal(posts,1);
  await assert.rejects(sources.call('phone_a','mac','/api/pairing',{},actor),/Unsupported/);
+});
+test('paired source authorization refusal is definitive, does not poison later human turns, and admin credentials never become a paired grant',async()=>{
+ const d=db();let allowed=false,owner=false,posts=0;
+ const sources=new CoordinatorSources({db:d,key:'private-installation-key',localApi:async()=>({}),authorize:()=>true,fetchImpl:async(url,options)=>{
+  const path=new URL(url).pathname;
+  if(path==='/api/status')return new Response(JSON.stringify({deviceId:owner?'owner':'remote_phone'}));
+  if(options.method==='POST'){posts++;return new Response(JSON.stringify(allowed?{id:'new_original_reply',state:'queued'}:{error:'Original pairing is not authorized.'}),{status:allowed?202:403});}
+  return new Response('{}');
+ }});
+ await sources.register('phone_a',[{environmentId:'remote',name:'Remote',base:'https://remote.example.ts.net',token:'original-paired-device-token'}]);
+ const body={id:'original_rejected_reply',text:'Synthetic input'},actor={deviceId:'phone_a',voiceTurnId:'first_human_turn',voiceCallId:'original_call'};
+ await assert.rejects(sources.call('phone_a','remote','/api/threads/same_thread/reply',body,actor),e=>e.status===403);
+ await assert.rejects(sources.call('phone_a','remote','/api/threads/same_thread/reply',body,actor),e=>e.status===403);assert.equal(posts,1);
+ allowed=true;const accepted=await sources.call('phone_a','remote','/api/threads/same_thread/reply',{...body,id:'new_original_reply'},{...actor,voiceTurnId:'new_human_turn'});
+ assert.equal(accepted.state,'queued');assert.equal(posts,2);
+ owner=true;await sources.register('phone_b',[{environmentId:'remote',name:'Remote',base:'https://remote.example.ts.net',token:'an-owner-token-is-not-human'}]);
+ await assert.rejects(sources.call('phone_b','remote','/api/threads/same_thread/native-timeline'),/paired-device credential/);
+ assert.equal(posts,2);
 });

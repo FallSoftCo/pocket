@@ -4,8 +4,8 @@ import {INTERACTIVE_SOURCES} from './session-discovery.mjs';
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 /** Reconciles observations, never work. No turn, message, permissions, or agent-start API. */
 export class CoordinatorCollector {
- constructor({db,discovery,memory,catchup,read,ready,hidden=()=>false,subscribe=()=>{},clock=Date.now,budget=8}) {
-  Object.assign(this,{db,discovery,memory,catchup,read,ready,hidden,subscribe,clock,budget});this.running=null;
+ constructor({db,discovery,memory,catchup,read,ready,hidden=()=>false,clock=Date.now,budget=8}) {
+  Object.assign(this,{db,discovery,memory,catchup,read,ready,hidden,clock,budget});this.running=null;
   db.exec(`CREATE TABLE IF NOT EXISTS coordinator_collector_state(id INTEGER PRIMARY KEY CHECK(id=1),cursor TEXT,catalog_at INTEGER,scan_at INTEGER,error TEXT);
    INSERT OR IGNORE INTO coordinator_collector_state(id) VALUES(1);
    CREATE TABLE IF NOT EXISTS coordinator_observations(thread_id TEXT PRIMARY KEY,work_at INTEGER NOT NULL,status TEXT NOT NULL,observed_at INTEGER,captured_at INTEGER,requested INTEGER NOT NULL DEFAULT 0,retry_at INTEGER NOT NULL DEFAULT 0,failures INTEGER NOT NULL DEFAULT 0,error TEXT);
@@ -24,7 +24,6 @@ export class CoordinatorCollector {
    const needed=status==='active'&&(!old?.captured_at||at-old.captured_at>=15000)||changed||!old&&recent;
    this.db.prepare(`INSERT INTO coordinator_observations(thread_id,work_at,status,observed_at,requested) VALUES(?,?,?,?,?)
     ON CONFLICT(thread_id) DO UPDATE SET work_at=excluded.work_at,status=excluded.status,observed_at=excluded.observed_at,requested=MAX(requested,excluded.requested)`).run(thread.id,workAt,status,at,needed?1:0);
-   if(status==='active')void Promise.resolve(this.subscribe(thread)).catch(()=>{});
   }
   return page.nextCursor||null;
  }
@@ -41,7 +40,7 @@ export class CoordinatorCollector {
    while(next<rows.length){
     const row=rows[next++];if(this.hidden(row.thread_id)){this.db.prepare('UPDATE coordinator_observations SET requested=0 WHERE thread_id=?').run(row.thread_id);continue;}
     try{
-     const response=await this.read('/api/threads/'+encodeURIComponent(row.thread_id)+'/native-timeline');
+     const response=await this.read('/api/threads/'+encodeURIComponent(row.thread_id)+'/native-timeline?observeOnly=1');
      if(response.thread?.id!==row.thread_id)throw Error('Native identity changed');
      this.memory.capture(row.thread_id,response);const material=this.catchup.material(response),seed=row.captured_at==null;
      this.db.exec('BEGIN IMMEDIATE');
