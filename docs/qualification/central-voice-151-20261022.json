@@ -1,7 +1,7 @@
 {
   "versionCode": 151,
   "versionName": "0.5.0-alpha.133",
-  "state": "qualified-not-deployed",
+  "state": "published-workstation-and-mac",
   "scope": "Codex-native central voice coordinator",
   "apkSha256": "624e0f56001567168c26a0ef12218b52696d8c30630ce05ab3576150370a42e4",
   "evidence": {
@@ -45,5 +45,12 @@
     "Provider and model timings are separate actual journeys, not a claimed full physical round trip.",
     "Prepared workstation and Mac gateways require controlled cutover; Android update is not yet published.",
     "Requested rich notification tooling is recorded follow-up, not implemented in this version."
-  ]
+  ],
+  "delivery": {
+    "gateways": "Both deployed; original native daemons/pairings/outgoing and voice receipts preserved",
+    "update": "151/alpha.133 published in both existing signed channels",
+    "announcement": "One source-workstation notification; accepted by FCM once",
+    "phone": "Last SSH package read remains150; user OS update not yet confirmed",
+    "runtimeCompatibility": "Actual active remote-owned thread rejects thread/timeline/list with -32601; bounded thread/turns/list works54ms. Background evidence backs off and remains explicitly unavailable; no workers restarted."
+  }
 }
