@@ -22,6 +22,7 @@ def qualify_native_stock(*,root,q,data,adb,launch):
    raw=adb('exec-out','cat','/sdcard/owned-native150.xml')
    try:
     assert ET.fromstring(raw).tag=='hierarchy'
+    (q/'last-visible-hierarchy.xml').write_bytes(raw)
     return raw
    except (ET.ParseError,AssertionError):
     stem=q/('hierarchy-capture-'+str(time.time_ns()))
@@ -30,11 +31,11 @@ def qualify_native_stock(*,root,q,data,adb,launch):
     if attempt<2:time.sleep(.25)
   raise RuntimeError('UIAutomation returned no valid hierarchy; raw capture retained at '+str(stem))
  def texts(tree,text):return[n for n in tree.iter('node')if n.get('text')==text]
- def wait(text,timeout=25):
+ def wait(text,timeout=25,contains=False):
   deadline=time.monotonic()+timeout
   while time.monotonic()<deadline:
    xml=dump();tree=ET.fromstring(xml)
-   if texts(tree,text):return xml,tree
+   if any((text in n.get('text','') if contains else n.get('text')==text) for n in tree.iter('node')):return xml,tree
    time.sleep(.15)
   raise RuntimeError('Exact optimized native UI did not show '+text)
  def tap(node):
@@ -72,7 +73,12 @@ def qualify_native_stock(*,root,q,data,adb,launch):
    if time.monotonic()>deadline:raise RuntimeError('Exact optimized question answer did not route')
    time.sleep(.1)
   qa('disconnect');adb('shell','input','keyevent','KEYCODE_BACK');qa('recover')
-  xml,tree=wait('Native canonical work');xml,tree=wait('Native answer two');beforeReopen=len(qa('state')['reads']);tap(texts(tree,'Native answer two')[0]);xml,tree=wait('Native request two')
+  xml,tree=wait('Native canonical work');xml,tree=wait('Native answer two',contains=True)
+  # Idle status and preview share one text node. Open the actual Chat region,
+  # not the editable title or an assumed standalone preview node.
+  openChat=[n for n in tree.iter('node')if n.get('content-desc')=='Open Chat for Native canonical work']
+  assert len(openChat)==1,'Native catalog lacks its explicit Chat action'
+  beforeReopen=len(qa('state')['reads']);tap(openChat[0]);xml,tree=wait('Native request two')
   deadline=time.monotonic()+15
   while len(qa('state')['reads'])<=beforeReopen or texts(tree,'Native pending question'):
    if time.monotonic()>deadline:raise RuntimeError('Exact optimized reopen did not reconcile current state')
@@ -82,7 +88,10 @@ def qualify_native_stock(*,root,q,data,adb,launch):
   state=qa('state');assert state['legacyReads']==state['positionReads']==state['workSubmissions']==0 and state['answers']==1
   result.update(state='complete',canonicalPairOrder=True,reopenOriginalPairExactlyOnce=True,questionSkipOnce=True,legacyReads=0,positionRepair=0,workSubmissions=0,reads=len(state['reads']),finishedAt=time.time());save()
  except BaseException as error:
-  result.update(state='failed',error=str(error));save();raise
+  result.update(state='failed',error=str(error));save()
+  try:(q/'native-canonical-failure.png').write_bytes(adb('exec-out','screencap','-p'))
+  except Exception:pass
+  raise
  finally:
   try:
    if fixture is not None and fixture.poll()is None:qa('release')
