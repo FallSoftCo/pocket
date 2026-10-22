@@ -3108,7 +3108,8 @@
         "Stable final speech begins before whole response/audio buffering",
         "Meaningful fresh outcomes only, coalesced by source; heard differs from fetched",
         "Native/real model/audio journey and compatible update delivery"
-      ]
+      ],
+      "background_collection": "Native events plus bounded read-only catalog and recent-page reconciliation, independent of open chat. No agent messages, model turns, wakeups or read acknowledgements; durable observations, freshness, pagination and backoff."
     }
   ],
   "current_state": {

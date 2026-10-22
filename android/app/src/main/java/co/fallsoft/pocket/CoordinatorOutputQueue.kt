@@ -36,6 +36,11 @@ internal class CoordinatorOutputQueue {
         val value=current?.takeIf{it.id==id}?:return null
         heard.add(id);while(heard.size>512)heard.remove(heard.first());current=null;return value
     }
+    fun discardResponse(key:String):Boolean {
+        replies.removeAll{it.recordingKey==key}
+        if(current?.recordingKey!=key)return false
+        current=null;return true
+    }
     fun quietUpdates(){updates.clear()}
     fun bargeIn(){current=null;replies.clear();updates.clear()}
     fun includes(id:String)=id in heard||current?.id==id||replies.any{it.id==id}||updates.values.any{it.id==id}

@@ -1,3 +1,4 @@
+import {CoordinatorCollector} from './coordinator-collector.mjs';
 import {NativeLiveInput} from './native-live-input.mjs';
 import {createCoordinatorHub} from './coordinator-hub.mjs';
 import {NativeSubscriptions} from './native-subscriptions.mjs';
@@ -231,6 +232,11 @@ const coordinatorReports=new CoordinatorReports({db,catchup:sessionCatchup,hidde
   }});
 voiceController.reports=coordinatorReports;
 const coordinatorHub=createCoordinatorHub({db,controller:voiceController,catchup:sessionCatchup,hidden:catchupHidden,key:secrets.adminToken,authorize:actor=>humanIngress.active(actor),app,route:fn=>route(fn),read:async path=>{const result=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`},signal:AbortSignal.timeout(2500)});if(!result.ok)throw Error('Native public evidence unavailable');return result.json();}});
+const coordinatorCollector=new CoordinatorCollector({db,discovery:sessionDiscovery,memory:coordinatorHub.memory,catchup:sessionCatchup,hidden:catchupHidden,
+ ready:()=>!nativeHollywood&&codex.ready,subscribe:thread=>nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(thread.id)}),
+ read:path=>coordinatorHub.memory.read(path)});
+coordinatorHub.memory.collection=()=>coordinatorCollector.status();
+if(!nativeHollywood)setInterval(()=>void coordinatorCollector.tick().catch(error=>console.error('Coordinator evidence collection unavailable',error.code||error.name)),15000).unref();
 if(!nativeHollywood)setInterval(()=>void coordinatorReports.tick().catch(error=>console.error('Coordinator report',error.message)),60000).unref();
 
 const timeline=new LiveTimeline();
@@ -551,7 +557,7 @@ app.use('/api',(req,res,next)=>humanIngress.middleware(req,res,next));
 // Retained work stays in the database; native mode never starts its schedulers.
 app.use('/api',(req,res,next)=>{
   if(!nativeHollywood)return next();
-  const safe=/^\/coordinator\/(?:evidence|receipt|sources|listening|voice-preferences|catchup(?:\/presented)?|voice-updates(?:\/presented)?)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}\/timing$/.test(req.path)||/^\/immersion(?:\/v2)?(?:\/translate)?$/.test(req.path)||req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat|capabilities)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||/^\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel))?$/.test(req.path)||/^\/voice\/recordings(?:\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel|retry-audio|cancel-request))?)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
+  const safe=/^\/coordinator\/(?:evidence|receipt|sources|listening|voice-preferences|catchup(?:\/presented)?|voice-updates(?:\/presented)?)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}\/timing$/.test(req.path)||/^\/immersion(?:\/v2)?(?:\/translate)?$/.test(req.path)||req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat|capabilities)$/.test(req.path)||/^\/voice\/native\/input\/(begin|finalize|cancel)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||/^\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel))?$/.test(req.path)||/^\/voice\/recordings(?:\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel|retry-audio|cancel-request))?)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
     req.method==='DELETE'&&/^\/devices\/[0-9a-f-]{36}$/.test(req.path);
   if(!safe)return res.status(403).json({error:'Use the original Hollywood room and identity for this environment.',code:'HOLLYWOOD_NATIVE_ROUTE_REQUIRED'});
   if(req.path==='/status'){void rateLimits.refresh();return void hollywood.status(req.device.id).then(status=>res.json({connected:status.available,backend:'lax',binding:status,usage:rateLimits.snapshot(),
@@ -937,6 +943,6 @@ app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.
 const port=Number(process.env.PORT||18880);
 server.listen(port,'127.0.0.1',()=>{
  console.log(`NextComp listening on 127.0.0.1:${port}`);
- if(!nativeHollywood)voiceController.restoreQueued();
+ if(!nativeHollywood){voiceController.restoreQueued();void coordinatorCollector.tick().catch(()=>{});}
  if(nativeAudioIntake)void voiceRecordings.start().catch(error=>console.error('Voice recording recovery unavailable',error.message));
 });

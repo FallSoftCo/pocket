@@ -32,11 +32,11 @@ export class CoordinatorMemory {
   this.db.prepare('INSERT INTO coordinator_memory_heads VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET payload=excluded.payload,observed_at=excluded.observed_at').run(threadId,JSON.stringify(value),this.clock());return value;
  }
  catalog(){
-  return this.db.prepare('SELECT metadata,seen_at FROM pocket_discovered_threads WHERE archived=0 ORDER BY seen_at DESC LIMIT 1200').all().map(row=>({...JSON.parse(row.metadata),observedAt:row.seen_at})).filter(t=>valid(t.id)&&!this.hidden(t.id));
+  return this.db.prepare(`SELECT metadata,seen_at FROM pocket_discovered_threads WHERE archived=0 ORDER BY MAX(COALESCE(json_extract(metadata,'$.activityAt'),0),COALESCE(json_extract(metadata,'$.recencyAt'),json_extract(metadata,'$.createdAt'),0)*CASE WHEN COALESCE(json_extract(metadata,'$.recencyAt'),json_extract(metadata,'$.createdAt'),0)<100000000000 THEN 1000 ELSE 1 END) DESC LIMIT 1200`).all().map(row=>({...JSON.parse(row.metadata),observedAt:row.seen_at})).filter(t=>valid(t.id)&&!this.hidden(t.id));
  }
  initialSnapshot({threadIds=[]}={}){
   const all=this.catalog(),refs=new Set(threadIds);const catalog=[...all.filter(t=>refs.has(t.id)),...all.filter(t=>!refs.has(t.id))].slice(0,8).map(t=>this.meta(t));
-  return {deferred:true,sessions:[],catalog,catalogCount:catalog.length,listedCount:all.length,checkedAt:this.clock(),scope:{complete:false,kind:'stored-public-evidence'},instruction:'Indexed observations, not a complete live roster. Discover retrieves public requests/results; read verifies a target before mutation.',errors:[]};
+  return {collection:this.collection?.()||null,deferred:true,sessions:[],catalog,catalogCount:catalog.length,listedCount:all.length,checkedAt:this.clock(),scope:{complete:false,kind:'stored-public-evidence'},instruction:'Indexed observations, not a complete live roster. Discover retrieves public requests/results; read verifies a target before mutation.',errors:[]};
  }
  meta(t){return {id:t.id,name:clip(t.name,120),cwd:clip(t.cwd,140),status:t.status?.type||t.status||'unknown',observedAt:t.observedAt||null,canAcceptDirectInput:t.canAcceptDirectInput!==false&&!t.parentThreadId,parentThreadId:t.parentThreadId||null,preview:clip(t.preview,200)};}
  async discover({query='',threadIds=[],limit=3,hydrate=true,cursor=null}={}){
@@ -52,7 +52,7 @@ export class CoordinatorMemory {
   }catch{/* Stored evidence remains explicitly partial. */}}
 
   if(words.length){const match=words.map(w=>'"'+w.replaceAll('"','""')+'"').join(' OR ');
-   for(const row of this.db.prepare('SELECT thread_id,bm25(coordinator_memory_search) AS rank FROM coordinator_memory_search WHERE coordinator_memory_search MATCH ? ORDER BY rank LIMIT 40').all(match))if(!ranked.has(row.thread_id))ranked.set(row.thread_id,0);
+   for(const row of this.db.prepare('SELECT thread_id,bm25(coordinator_memory_search) AS rank FROM coordinator_memory_search WHERE coordinator_memory_search MATCH ? ORDER BY rank LIMIT 40').all(match))if(!ranked.has(row.thread_id))ranked.set(row.thread_id,100-row.rank);
    for(const t of all){const hay=[t.name,t.cwd,t.preview].join(' ').toLowerCase();const score=words.filter(w=>hay.includes(w.toLowerCase())).length;if(score)ranked.set(t.id,(ranked.get(t.id)||0)+score);}
   }
   for(const [id]of [...ranked].sort((a,b)=>b[1]-a[1]))if(chosen.length<limit&&!chosen.includes(id)&&!this.hidden(id))chosen.push(id);
@@ -66,7 +66,7 @@ export class CoordinatorMemory {
    catch(error){const messages=this.db.prepare('SELECT role,phase,text,turn_id FROM coordinator_memory WHERE thread_id=? ORDER BY id DESC LIMIT 8').all(id).reverse().map(r=>({role:r.role,text:clip(r.text,1200),phase:r.phase,turnId:r.turn_id}));return {...this.meta(byId.get(id)||{id}),messages,availability:'unavailable',readError:'native-head-unavailable',history:{scope:'stored-public-evidence',truncated:true}};}
   };
   await Promise.all(Array.from({length:Math.min(3,chosen.length)},async()=>{while(next<chosen.length){const n=next++;sessions[n]=await retrieve(chosen[n]);}}));
-  return {sessions,catalog:all.slice(0,12).map(t=>this.meta(t)),listedCount:all.length,checkedAt:this.clock(),scope:{complete:false,kind:'indexed-public-evidence',nextCursor},errors:sessions.filter(s=>s.availability==='unavailable').map(s=>({operation:'read',threadId:s.id,code:s.readError}))};
+  return {collection:this.collection?.()||null,sessions,catalog:all.slice(0,12).map(t=>this.meta(t)),listedCount:all.length,checkedAt:this.clock(),scope:{complete:false,kind:'indexed-public-evidence',nextCursor},errors:sessions.filter(s=>s.availability==='unavailable').map(s=>({operation:'read',threadId:s.id,code:s.readError}))};
  }
  async readHead(id){
   if(!valid(id)||this.hidden(id))throw Error('Choose an available work session.');

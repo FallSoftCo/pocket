@@ -20,7 +20,7 @@ export class CoordinatorListening {
  max(){return Number(this.db.prepare('SELECT COALESCE(MAX(seq),0) AS n FROM session_catchup_events').get().n);}
  configure(device,enabled){
   if(typeof enabled!=='boolean')throw fail('Choose whether to listen to work updates.');enabled=enabled&&this.preferences(device).spokenUpdates;const old=this.db.prepare('SELECT * FROM coordinator_listening WHERE device_id=?').get(device),at=this.clock();
-  if(enabled&&old?.enabled){this.db.prepare('UPDATE coordinator_listening SET last_seen=? WHERE device_id=?').run(at,device);return this.status(device);}
+  if(enabled&&old?.enabled&&at-old.last_seen<30000){this.db.prepare('UPDATE coordinator_listening SET last_seen=? WHERE device_id=?').run(at,device);return this.status(device);}
   this.db.prepare('INSERT INTO coordinator_listening VALUES(?,?,?,?,?) ON CONFLICT(device_id) DO UPDATE SET enabled=excluded.enabled,after_seq=excluded.after_seq,started_at=excluded.started_at,last_seen=excluded.last_seen').run(device,enabled?1:0,this.max(),at,at);return this.status(device);
  }
  status(device){const r=this.db.prepare('SELECT * FROM coordinator_listening WHERE device_id=?').get(device);return {...this.preferences(device),enabled:!!r?.enabled,startedAt:r?.started_at||null,mode:'new-material-only',modelPolling:false};}

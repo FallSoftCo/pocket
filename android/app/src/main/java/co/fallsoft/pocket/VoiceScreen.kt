@@ -137,7 +137,7 @@ import androidx.lifecycle.repeatOnLifecycle
             val current=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
             val next=when{current<middle->middle;current<max->max;else->0}
             audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,next,0)
-            volume=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);problem=""
+            volume=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);PocketVoice.service?.playbackVolumeChanged(volume);problem=""
         }catch(e:Exception){
             problem=e.message?:"Could not change playback volume"
             android.widget.Toast.makeText(context,problem,android.widget.Toast.LENGTH_LONG).show()

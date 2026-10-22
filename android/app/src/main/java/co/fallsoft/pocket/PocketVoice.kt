@@ -566,7 +566,10 @@ class PocketVoiceService:Service(){
     internal fun offerResponse(turn:VoiceTurnStore.Turn,receipt:JSONObject,complete:Boolean){
         if(!PocketVoice.active||turn.key!=PocketVoice.latestRecordingKey||!ownsOrigin(turn.origin))return
         val segments=receipt.optJSONArray("speechSegments")?.objects().orEmpty()
-        if(receipt.s("speech_error").isNotBlank()){PocketVoice.problem=receipt.s("speech_error");return}
+        if(receipt.s("speech_error").isNotBlank()){
+            if(outputs.discardResponse(turn.key)){outputWork?.cancel();outputWork=null;disconnectNative();stopPlayer()}
+            PocketVoice.problem=receipt.s("speech_error");return
+        }
         if(receipt.s("state") in setOf("thinking","running")&&nativeId==null&&!PocketVoice.captureBusy&&nativeConnecting==null){
             scope.launch{try{connectNative();if(!nativeRendering&&!nativeSpeaking)state("Ready")}catch(e:CancellationException){throw e}catch(_:Exception){/* A real passage retries setup and surfaces the error. */}}
         }
@@ -636,6 +639,13 @@ class PocketVoiceService:Service(){
     private fun abandonFocus(){focus?.let{audio.abandonAudioFocusRequest(it)};focus=null}
     private fun finishNativePlayback(){abandonFocus();state("Ready");captionFinished();val done=afterSpeech;afterSpeech=null;done?.invoke()}
     private fun play(file:File,part:Boolean=false,startAt:Int=0,isError:Boolean=false){nativeAudio?.silence();nativeRendering=false;nativeSpeaking=false;player?.release();player=null;playing=false;abandonFocus();if(!part){speechFiles=listOf(file);speechIndex=0;afterSpeech=null};if(!requestFocus()){state("Paused");return};player=MediaPlayer().apply{setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());setDataSource(file.absolutePath);setOnCompletionListener{playing=false;abandonFocus();if(speechIndex+1<speechFiles.size){speechIndex++;play(speechFiles[speechIndex],true)}else{state(if(isError)"Retry needed" else "Ready");if(!isError)captionFinished();val done=afterSpeech;afterSpeech=null;done?.invoke()}};setOnErrorListener{_,_,_->playing=false;state("Retry needed");PocketVoice.problem="Unable to play speech. Use Replay to try the audio again.";abandonFocus();true};prepare();if(startAt>0)seekTo(startAt.coerceAtMost((duration-1).coerceAtLeast(0)));start()};playing=true;state(if(isError)"Retry needed" else "Speaking");if(!isError)captionStarted()}
+    fun playbackVolumeChanged(level:Int){
+        if(level==0){
+            if(nativeRendering||nativeSpeaking){nativePaused=true;nativeAudio?.pause();state("Paused")}
+            if(playing){player?.pause();playing=false;state("Paused")}
+        }else if(nativePaused||outputs.current!=null&&PocketVoice.state=="Paused")togglePlayback()
+        else drainOutput()
+    }
     fun togglePlayback(){
         val passage=outputs.current
         if(passage!=null&&spokenOwner!=passage.id&&!nativeRendering&&!nativeSpeaking){
@@ -659,6 +669,6 @@ class PocketVoiceService:Service(){
     override fun onDestroy(){val owned=PocketVoice.service===this;checkpointNativeUsage(stop=true);transportGeneration++;nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;if(owned){PocketVoice.active=false;PocketVoice.captureBusy=false;state("Ready");PocketVoice.service=null};recording?.cancel();scope.cancel();stopPlayer();tones.release();if(lock?.isHeld==true)lock?.release();if(owned&&!PocketVoice.foreground&&!Pocket.local)PocketLive.stop();stopForeground(STOP_FOREGROUND_REMOVE);if(caption!=null&&PocketSpeechCaptions.state.phase=="Speaking")PocketSpeechCaptions.pause(captionProfile);PocketSpeechCaptions.retain();super.onDestroy()}
 }
 
-internal fun routeReceipts(actions:List<JSONObject>,turnId:String=""):List<CoordinatorRoute> = actions.filter{it.s("type")=="route"&&it.s("threadId").isNotBlank()}.map{CoordinatorRoute(it.s("threadId"),it.s("name"),it.s("operation"),it.s("mode"),it.s("state"),it.s("turnId").ifBlank{turnId},it.s("reason"))}.distinct()
+internal fun routeReceipts(actions:List<JSONObject>,turnId:String=""):List<CoordinatorRoute> = actions.filter{it.s("type")=="route"&&it.s("threadId").isNotBlank()}.map{CoordinatorRoute(it.s("threadId"),it.s("name"),it.s("operation"),it.s("mode"),it.s("state"),it.s("turnId").ifBlank{turnId},it.s("reason"),it.s("environmentId").ifBlank{null})}.distinct()
 
 internal data class CoordinatorPresentation(val id:String,val endpoint:String,val credential:String)
