@@ -1,0 +1,25 @@
+{
+  "versionCode": 149,
+  "version": "0.5.0-alpha.131",
+  "state": "candidate-in-verification",
+  "sourceCommit": "4bbae30",
+  "observed": {
+    "phoneInstalledVersion": 148,
+    "phoneActiveEnvironment": "MacBook Pro",
+    "phoneVisible": "Older House assembly messages while newer canonical response exists",
+    "macCatalogMs": 93,
+    "macHeadMs": 23,
+    "macForegroundTimelineMs": 29,
+    "macStatusHeadMs": 16,
+    "phoneInputsChanged": false,
+    "workSubmissions": 0
+  },
+  "defect": "ConversationScreen passed the measured saved viewport anchor to connected-window selection even while follow=true. An anchor into a previous disconnected component could therefore hide a newer canonical window.",
+  "fix": "Use retained row anchor only when followingLatest=false. Measured reading positions remain persisted, but do not override explicit follow mode.",
+  "nativeAcceptance": "Following reader receives a disjoint new canonical page while historical read is held. New response must paint before historical release, older bodies and draft retained; no work submitted.",
+  "limits": [
+    "Not yet qualified or published.",
+    "Do not infer actual phone cache details unavailable through accessibility.",
+    "Mac gateway remains older than system76 history-position-index repair; no gateway restart performed during active typing."
+  ]
+}
