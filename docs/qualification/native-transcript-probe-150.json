@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "state": "focused-native-passed-not-published",
+  "versionCode": 150,
+  "productionSourceSha": "3024d87ba49aca8743b024bc9dfbdfd2949a481e0c871716e07093d578d67d4f",
+  "qualificationInputSha": "dd685c1006f9c0f72811d9345819e201ea2d094fd69d20594150eb9b3f3fa015",
+  "qualificationApkSha": "b03c8a2a45b2c45a780f5f4b620bc54176448fd851960642b56600eea1bd5ace",
+  "testApkSha": "66587b22f2a743fc44339ef62ca2f4b651f1947c1d4227e9ef54add170aba07d",
+  "native": {
+    "sqliteRestartSourceIsolation": true,
+    "durableFollowLatest": true,
+    "unknownArrivalNeverPaintedAsCanonical": true,
+    "questionSkipAndReconnect": true,
+    "twentyDeltaReadBudgetAtMostTwo": true,
+    "recordedMacPages": 8,
+    "capturedEntries": 512,
+    "currentHeadWhileOlderReadHeld": true,
+    "legacyReadsInNativeJourneys": 0,
+    "positionRepairCallsInNativeJourneys": 0,
+    "workSubmissions": 0,
+    "retainedQaProfilesRestored": true,
+    "allOwnedChildrenStopped": true
+  },
+  "timing": {
+    "recordedMacHeadVerifiedMs": 4428,
+    "environment": "software emulator",
+    "measurement": "current-state verification; not optical first paint or physical phone latency"
+  },
+  "remaining": [
+    "Full signed release build and final source-matched native gate",
+    "Exact optimized APK review",
+    "Minimal PC/Mac gateway delivery and update publication",
+    "Actual phone install/readback",
+    "Browser native-store replacement"
+  ],
+  "productionChanged": false,
+  "phoneInstalledVersionObserved": 149,
+  "legacyCompatibility": {
+    "actualRetainedHistoryReplay": true,
+    "sameIdAcrossEnvironmentsAndDrafts": true,
+    "currentHeadIndependentOfOlderRead": true,
+    "privateCaptureProvisioned": true,
+    "allOwnedChildrenStopped": true
+  }
+}

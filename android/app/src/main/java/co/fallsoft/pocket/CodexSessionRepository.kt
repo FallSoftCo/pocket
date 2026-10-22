@@ -26,7 +26,30 @@ internal object CodexSessionRepository {
         .dispatcher(okhttp3.Dispatcher().apply{maxRequests=2;maxRequestsPerHost=2})
         .callTimeout(5,java.util.concurrent.TimeUnit.SECONDS).build()}
     private val readOnlyCapabilities=ConcurrentHashMap<String,Boolean>()
+    private val capabilityClient by lazy{Pocket.http.newBuilder()
+        .dispatcher(okhttp3.Dispatcher().apply{maxRequests=4;maxRequestsPerHost=2})
+        .callTimeout(5,java.util.concurrent.TimeUnit.SECONDS).build()}
     private val nativeCapabilities=ConcurrentHashMap<String,Boolean>()
+    private val capabilityMutex=Mutex()
+    private val capabilityRequests=mutableMapOf<String,Deferred<Unit>>()
+    /** Negotiate once per paired source before choosing a history protocol.
+     * Older gateways are explicit compatibility, never an optimistic native
+     * request whose error disables further refresh. Auth/network errors stay errors. */
+    private suspend fun ensureCapabilities(source:Source){
+        if(nativeCapabilities.containsKey(source.scope))return
+        val request=capabilityMutex.withLock{
+            capabilityRequests[source.scope]?.takeIf{it.isActive}?:network.async{
+                if(!current(source))throw CancellationException("Pairing changed")
+                val status=CodexReadTransport.read(source.destination,"/api/status",client=capabilityClient)
+                if(!current(source))throw CancellationException("Pairing changed")
+                observeCapabilities(source.destination,status.optJSONObject("capabilities")?:JSONObject())
+            }.also{created->
+                capabilityRequests[source.scope]=created
+                created.invokeOnCompletion{network.launch{capabilityMutex.withLock{if(capabilityRequests[source.scope]===created)capabilityRequests.remove(source.scope)}}}
+            }
+        }
+        request.await()
+    }
     private val nativeFollowing=ConcurrentHashMap<Pair<String,String>,Boolean>()
     // Native positions are normally durable at completion. One first observation
     // requests position proof; repeated deltas cannot create a metadata read loop.
@@ -102,6 +125,7 @@ internal object CodexSessionRepository {
     }
     suspend fun readOlder(destination:EnvironmentRequest,id:String,cursor:String):JSONObject{
         val source=source(destination)
+        ensureCapabilities(source)
         if(!nativeEnabled(destination))return CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"?view=timeline&before="+android.net.Uri.encode(cursor))
         if(cursor.startsWith("native-local:"))return withContext(lane){
             if(!current(source))throw CancellationException("Pairing changed")
@@ -164,6 +188,7 @@ internal object CodexSessionRepository {
                 val invalidationAtStart=invalidations[key]?:0
                 val liveAtStart=liveGenerations[key]?:0
                 val base="/api/threads/"+android.net.Uri.encode(id)
+                ensureCapabilities(source)
                 var useNative=nativeEnabled(destination)
                 val response=try{
                     CodexReadTransport.read(destination,base+if(useNative)"/native-timeline"else if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
@@ -223,8 +248,9 @@ internal object CodexSessionRepository {
         if(capabilities!=null){
             val enabled=capabilities.optInt("canonicalTimeline")==1
             val was=nativeCapabilities.put(source.scope,enabled)
-            if(enabled&&was==false)Pocket.scope.launch(Dispatchers.Main.immediate){
-                if(current(source))Pocket.selected?.let{CodexConversations.select(it,force=true,openLatest=true);Pocket.scheduleRefresh()}
+            if(was!=enabled)Pocket.scope.launch(Dispatchers.Main.immediate){
+                if(current(source)&&Pocket.captureEnvironment()?.matches(source.destination)==true&&PocketTranscript.canonicalMode!=enabled)
+                    Pocket.selected?.let{CodexConversations.select(it,force=true,openLatest=true);CodexConversations.invalidate(immediate=true)}
             }
         }
         val allowed=capabilities?.optBoolean("readOnlyTimeline")==true
