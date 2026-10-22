@@ -13,3 +13,9 @@ Rich content should include source, the requested condition, a short result, opt
 Implement on the existing notification journal and delivery queue rather than creating a second delivery authority. Extend the current notification tool boundary with idempotency and principal provenance; do not send agent information through human task admission. Coordinator natural-language interpretation may create an intent only within its active original human command. Background event matching never wakes a model.
 
 Qualification must cover repeat/lost-response delivery, restarts, changed account/profile, same session IDs on different environments, foreground/background transitions, expired/cancelled intents, unchanged blocked work, and independent audio/push choices. No flood of fine-grained updates should be needed to discover one requested result.
+
+## Delivery foundation candidate
+
+The existing operator notification route now has a staged optional Idempotency-Key contract. Identical retries return the original receipt; conflicting content is refused. Notification, receipt and durable push queue commit in one SQLite transaction, so restart recovery cannot duplicate the push. Concurrent independent handlers are covered. The route reads source metadata without attaching, resuming or downloading the conversation. Actual HTTP integration checks authorization, concurrent/lost-response retries and one queue entry. This foundation is not yet deployed and does not claim requested-intent matching or new agent authority.
+
+The current shared MCP adapter caches each service’s tool list and owns a persistent notification-tool subprocess. New tool schemas require an owning per-service refresh/release; restarting the whole shared adapter would unnecessarily interrupt unrelated services. Existing notify_user clients remain unchanged until that integration is qualified. Original agent authorship and original human request provenance must remain explicit.

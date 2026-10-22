@@ -54,7 +54,7 @@
     "runtimeCompatibility": "Actual active remote-owned thread rejects thread/timeline/list with -32601; bounded thread/turns/list works54ms. Background evidence backs off and remains explicitly unavailable; no workers restarted."
   },
   "compatibilityFollowup": {
-    "state": "real-read-qualified",
+    "state": "deployed-workstation-and-mac",
     "source": "native-turn-summary for observation-only reads after typed timeline capability refusal",
     "limits": {
       "turns": 3,
@@ -66,6 +66,10 @@
     "catchupMaterialItems": 3,
     "indexed": true,
     "modelOrWorkerStarts": 0,
-    "displayChronology": "Native timeline unchanged; evidence windows are never substituted into the UI timeline"
+    "displayChronology": "Native timeline unchanged; evidence windows are never substituted into the UI timeline",
+    "actualLiveGatewayHeadMs": 113,
+    "protectedStateUnchanged": true,
+    "nativeDaemonsRetained": true,
+    "additionalAndroidInstallRequired": false
   }
 }

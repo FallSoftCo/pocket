@@ -1,3 +1,4 @@
+import {mountOperatorNotifications} from './notification-requests.mjs';
 import {CoordinatorHeadReader} from './coordinator-head.mjs';
 import {CoordinatorCollector} from './coordinator-collector.mjs';
 import {NativeLiveInput} from './native-live-input.mjs';
@@ -923,16 +924,7 @@ function saveAttachment(file,threadId){
   const dest=resolve(folder,id);writeFileSync(dest,readFileSync(actual),{mode:0o600});db.prepare('INSERT INTO files VALUES(?,?,?,?,?)').run(id,name,mime,dest,threadId);
   return {id,name,mime,url:`/api/files/${id}`,size:st.size};
 }
-app.post('/api/notify',owner,route(async(req,res)=>{
-  const b=req.body, threadId=requireId(b.thread_id);
-  if(!b.message||String(b.message).length>32000)return res.status(400).json({error:'A message up to 32000 characters is required.'});
-  if(b.spoken_summary!==undefined&&(typeof b.spoken_summary!=='string'||b.spoken_summary.length>32000))return res.status(400).json({error:'Spoken text must be at most 32000 characters.'});
-  if(b.spoken_context!==undefined&&(typeof b.spoken_context!=='string'||b.spoken_context.length>120))return res.status(400).json({error:'Spoken context must be a short prompt summary.'});
-  const t=await attach(threadId);
-  db.prepare('INSERT OR IGNORE INTO watches(thread_id,name,enabled) VALUES(?,?,0)').run(threadId,t.name||'Codex');
-  const attachments=(b.files||[]).slice(0,5).map(f=>saveAttachment(f,threadId));
-  res.json({notification:notify(threadId,String(b.title||t.name||'Codex update').slice(0,180),String(b.message),['update','complete','question','error'].includes(b.kind)?b.kind:'update',attachments,null,b.spoken_summary,null,promptContext(turnPrompt(t.turns?.at(-1)),b.spoken_context))});
-}));
+mountOperatorNotifications(app,{db,codex,owner,route,requireId,saveAttachment,notify,promptContext});
 app.get('/api/files/:id',(req,res)=>{const f=db.prepare('SELECT * FROM files WHERE id=?').get(req.params.id);if(!f)return res.sendStatus(404);res.set('Content-Type',f.mime);res.set('Content-Disposition',`inline; filename*=UTF-8''${encodeURIComponent(f.name)}`);res.sendFile(f.disk_path);});
 app.get('/api/devices',owner,(_req,res)=>res.json({devices:db.prepare('SELECT id,name,created_at,last_seen FROM devices').all()}));
 app.delete('/api/devices/:id',owner,(req,res)=>{db.prepare('DELETE FROM devices WHERE id=?').run(req.params.id);for(const s of sockets.clients)if(s.deviceId===req.params.id)s.close();res.json({ok:true});});
