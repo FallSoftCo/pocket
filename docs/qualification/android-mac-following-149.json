@@ -1,7 +1,7 @@
 {
   "versionCode": 149,
   "version": "0.5.0-alpha.131",
-  "state": "candidate-in-verification",
+  "state": "published-system76-and-mac-awaiting-phone-install",
   "sourceCommit": "4bbae30",
   "observed": {
     "phoneInstalledVersion": 148,
@@ -18,8 +18,24 @@
   "fix": "Use retained row anchor only when followingLatest=false. Measured reading positions remain persisted, but do not override explicit follow mode.",
   "nativeAcceptance": "Following reader receives a disjoint new canonical page while historical read is held. New response must paint before historical release, older bodies and draft retained; no work submitted.",
   "limits": [
-    "Not yet qualified or published.",
-    "Do not infer actual phone cache details unavailable through accessibility.",
-    "Mac gateway remains older than system76 history-position-index repair; no gateway restart performed during active typing."
-  ]
+    "Phone last independently confirmed148;149 install and physical interaction unverified.",
+    "Native provider speech not qualified; emulator volume-key/draft regression passed.",
+    "Software emulator cold silent head3688ms and first key2981ms are not handset latency.",
+    "Mac gateway retains its existing source/daemon; no gateway restart during active typing."
+  ],
+  "qualification": {
+    "nativeJourneys": 8,
+    "allPassed": true,
+    "optimizedExactPhonePayload": true,
+    "phoneApkSha256": "4586ef0835dd72fd782278d77aee2346982d29177ea27ee257e98891cf14d8eb",
+    "allOwnedQaChildrenStopped": true,
+    "productionGatewayRestart": false,
+    "newModelWork": 0
+  },
+  "notification": {
+    "id": 2275,
+    "fcm": "accepted_by_fcm",
+    "attempts": 1
+  },
+  "architecturalReplacement": "Native timeline reader implemented and actual Mac paging qualified; not yet wired into the durable client store. Do not call149 architecture completion."
 }

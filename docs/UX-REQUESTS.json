@@ -3089,6 +3089,13 @@
       ],
       "evidence": "docs/qualification/native-timeline-adapter-20261022.json",
       "architecture": "docs/CODEX-TIMELINE-ARCHITECTURE.md"
+    },
+    {
+      "id": "mac-following-window-149",
+      "request": "Installed148 MacBook conversation remains on older content while its canonical head is current. A following reader must follow the newest connected window, preserving deliberate older reading.",
+      "status": "published149; eight native journeys and exact optimized APK qualified; physical install pending",
+      "evidence": "docs/qualification/android-mac-following-149.json",
+      "remaining": "Native canonical-store replacement remains separate open work."
     }
   ],
   "current_state": {
