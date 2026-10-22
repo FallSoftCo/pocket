@@ -19,6 +19,8 @@ The Mac gateway returned a newer response in23ms while installed Android148 show
 1. A thin authenticated environment adapter forwards bounded native timeline pages, preserving positions, item identities, opaque cursors and source identity. Canonical order is the native tuple (position, entry-kind rank, ID), not position alone: a turn boundary and item may share one rollout ordinal. Native ranks are turnStarted0, item1, realtime2, turnCompleted3. It does not synthesize chronology or attach/resume a worker to read history.
 2. One environment/thread-scoped durable conversation store owns canonical entries, page coverage, freshness and atomic revisions. Shared catalog preview, chat, notification reconciliation and reopen use this same state.
 3. Live updates amend an existing canonical item by identity. New items whose positions are not yet known remain provisional until a bounded native timeline repair supplies positions. Arrival timestamps never establish chronology. Streaming payload updates must not erase position proof.
+Payload freshness is separate from chronology: a live update received after a snapshot began can preserve a newer payload at its existing native key. It cannot invent a new key. Keep source-scoped read/event watermarks for that concurrency purpose only.
+
 4. Outgoing receipts and drafts remain a separate command journal. An unsent or accepted-but-not-yet-observed command is not a fabricated canonical history item; native client correlation joins it exactly once.
 5. View state owns only follow-latest, an intentional reading anchor, filtering, collapsed runs and layout. It never mutates stored ordering or chooses a stale component while following latest.
 6. Reconnect repairs a bounded current page and resumes source-scoped coverage. Older reads retain the original opaque native cursors. Background reads do not mark seen, start workers or replay commands.
@@ -34,3 +36,11 @@ Remove the old successor-guessing and screen-order repair from native-timeline m
 ## Current release boundary
 
 149 remains a narrow containment candidate with its own native follow-mode acceptance. Its result must not be described as architecture completion. No gateway/native-daemon restart is authorized merely by this document. Native voice, pairing, drafts, accepted/unknown outgoing receipts, deliberate history reading and environment identity remain required.
+
+## Store replacement constraints
+
+Persist native entries by source/thread/canonical identity with indexed native order and page-coverage metadata. Update changed items and bounded visible windows rather than serializing or re-normalizing an entire historical transcript on each token. A memory cache is a disposable projection of this store, not another authority. Old JSON caches remain private migration inputs; unpositioned legacy islands must not be painted as current canonical history.
+
+Canonical item positions can contain gaps and tied ordinals. Numeric gaps alone do not prove missing history. Page coverage follows native cursors and actual returned boundaries. Preserve all native entry types in storage even when presentation folds tool runs or hides structural records.
+
+The server reader is implemented and qualified with actual native Mac paging. It is deliberately not wired into an existing live release by that source change alone. Remaining work is the authenticated narrow route, the durable client store, migration from legacy caches and binding all consumers to its committed revision. Existing Android149 qualification applies only to its compiled follow-window containment.
