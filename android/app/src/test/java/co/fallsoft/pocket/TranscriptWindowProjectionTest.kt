@@ -54,6 +54,15 @@ class TranscriptWindowProjectionTest {
         assertEquals("canonical",updated.optString("_inputOrder"))
         assertEquals("turn/answer",updated.optString("_inputSuccessor"))
     }
+    @Test fun savedViewportCannotPinFollowingReaderToAnOlderDisconnectedComponent(){
+        val rows=listOf(row("old"),row("current"))
+        val gaps=listOf(gap("missed","current"))
+        val measured=TranscriptReadPosition("old",0,true)
+        val following=connectedTranscriptRange(rows,gaps,transcriptWindowAnchor(measured,true))
+        assertEquals(listOf("ui:history-gap:missed","current"),connectedTranscriptWindow(rows,gaps,following).map{it.s("id")})
+        val reading=connectedTranscriptRange(rows,gaps,transcriptWindowAnchor(measured.copy(follow=false),false))
+        assertEquals(listOf("old","ui:history-gap:missed"),connectedTranscriptWindow(rows,gaps,reading).map{it.s("id")})
+    }
     @Test fun viewportHydrationHasBoundedWorkAndRejectsUnchangedCursors(){
         val b=TranscriptViewportBudget(100)
         repeat(8){assertTrue(b.next("page-"+it,101))}

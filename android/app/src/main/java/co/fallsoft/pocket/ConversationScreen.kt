@@ -131,7 +131,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val orphanRows=notes.filter{note->rows.none{row->row.s("itemId",row.s("id"))==note.s("id")||row.s("id")==note.s("id")}}.map{note->JSONObject().put("id","retained:"+note.s("id")).put("itemId",note.s("id")).put("kind","message").put("text",note.s("text")).put("retainedExcerpt",true)}
     val historyGaps=PocketTranscript.historyGaps
     val gapBoundaries=historyGaps.map{it.id to it.beforeRow}
-    val retainedAnchor=PocketTranscript.readPosition?.rowId
+    val retainedAnchor=transcriptWindowAnchor(PocketTranscript.readPosition,follow)
     val windowRange=remember(rows,gapBoundaries,retainedAnchor){connectedTranscriptRange(rows,historyGaps,retainedAnchor)}
     val unplacedInputs=remember(rows){unplacedTranscriptInputs(rows)}
     val windowRows=remember(rows,gapBoundaries,windowRange,unplacedInputs){

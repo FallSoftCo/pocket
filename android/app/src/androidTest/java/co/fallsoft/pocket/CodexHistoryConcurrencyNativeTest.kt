@@ -72,6 +72,38 @@ class CodexHistoryConcurrencyNativeTest {
                 .put("olderReads",state.getJSONArray("reads").objects().count{it.optBoolean("older")}).put("workSubmitted",0).toString())
         }finally{qa("release-replay-head");main{Pocket.closeTask();PocketLive.stop()}}
     }
+    @Test fun followingLatestCrossesDisconnectedWindowWhileHistoryReadIsHeld(){
+        check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+        prefs.edit().clear().putString("server","http://127.0.0.1:18880")
+            .putString("token","synthetic-system76-"+java.util.UUID.randomUUID().toString())
+            .putString("deviceId","synthetic-device-a").putString("draft:same-thread","Mac freshness draft").commit()
+        main{Pocket.init(context)}
+        fun qa(name:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+name,JSONObject())}
+        qa("long-retained-gap")
+        try{
+            main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
+            await("Initial current head did not settle",20000){PocketTranscript.currentHistoryVerified&&!PocketTranscript.loading&&!PocketTranscript.updating}
+            assertTrue(device.wait(Until.hasObject(By.text("Fresh response 1")),4000))
+            // A reader can return to the tail after browsing; a saved measured
+            // anchor must no longer select an old island once following resumes.
+            main{
+                PocketTranscript.readerInteraction()
+                PocketTranscript.rememberPosition(PocketTranscript.scopeKey(),"same-thread",TranscriptReadPosition("long-head",0,true))
+            }
+            qa("hold-history")
+            qa("new-long-window")
+            main{Pocket.refreshDetail()}
+            await("Newest disjoint canonical page did not arrive",12000){PocketTranscript.rows.any{it.s("id")=="long-head-new"}&&!PocketTranscript.currentLoading}
+            assertTrue("Following reader stayed on an old connected component",device.wait(Until.hasObject(By.text("Fresh response 2")),4000))
+            assertTrue("Historical raw bodies were discarded",PocketTranscript.rows.any{it.s("id")=="long-head"})
+            assertEquals("Mac freshness draft",prefs.getString("draft:same-thread",null))
+            assertEquals(0,qa("state").getJSONArray("replies").length())
+        }finally{
+            qa("release-history")
+            main{Pocket.closeTask();PocketLive.stop()}
+        }
+    }
     @Test fun newestMessagePaintsWhileOlderReadIsHeld(){
         check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
         val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)

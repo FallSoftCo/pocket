@@ -1,7 +1,8 @@
 {
   "schema": 1,
-  "qualification": "contiguous-visible-history-and-actual-session-replay",
+  "qualification": "connected-history-following-and-canonical-input-placement",
   "requiredNativeCases": [
+    "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#followingLatestCrossesDisconnectedWindowWhileHistoryReadIsHeld",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#actualHistoryReplayNeverPaintsAlpha110IslandAndFillsRecentViewport",
     "co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#sharedHeadKeepsWholePageAndExposesMissingMiddleBeforeDiskReopen",
     "co.fallsoft.pocket.TranscriptRefreshNativeTest#lateDiskInputIsPositionedFromVisibleHistoryWithoutAnotherSend",

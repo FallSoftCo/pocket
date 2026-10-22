@@ -22,6 +22,11 @@ internal fun transcriptRowsWithGaps(rows:List<JSONObject>,gaps:List<TranscriptHi
  * Expose only the component attached to the newest page until canonical reads
  * bridge it. This preserves cached bodies without presenting invented adjacency.
  * The gap stays at the reading edge and advances as older pages are hydrated. */
+/** A measured viewport position is not a history-reading request while following.
+ * Only deliberate historical reading selects an older connected component. */
+internal fun transcriptWindowAnchor(position:TranscriptReadPosition?,followingLatest:Boolean):String? =
+    position?.rowId?.takeUnless{followingLatest}
+
 internal data class TranscriptWindowRange(val start:Int,val end:Int)
 internal fun connectedTranscriptRange(rows:List<JSONObject>,gaps:List<TranscriptHistoryGap>,anchor:String?):TranscriptWindowRange{
     val cuts=gaps.mapNotNull{gap->rows.indexOfFirst{it.s("id")==gap.beforeRow}.takeIf{it>=0}}.distinct().sorted()
