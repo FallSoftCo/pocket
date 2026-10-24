@@ -23,3 +23,5 @@ Classification is bounded to four outstanding observations, two concurrent reads
 ## Qualification
 
 Actual HTTP authorities test identical native IDs, source-specific replies and questions, credential revocation, binary recording upload, opaque JSON attachment delivery and source isolation. A rendered Chromium journey uses synthetic content for open/reply, a lost reply response followed by reload without resubmission, original local drafts, live remote events, source-bound linked images and the empty/temporary filters. Real read-only gateway qualification found and opened the user's Mac session without posting to it. Native Mac-window interaction and physical audio are separate evidence, not claimed by these browser fixtures.
+
+An optional owner-configured `WEB_CATALOG_STORE` provides read-only compatibility for native metadata reporting `thread not loaded`. It reads only the exact existing canonical discovery declaration of temporary work, never message history, and does not resume a thread or write a parallel catalog. Unknown or missing declarations stay unknown.

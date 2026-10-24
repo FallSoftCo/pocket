@@ -1,5 +1,5 @@
 {
-  "state": "qualified-not-deployed",
+  "state": "deployed-verified",
   "scope": "Source-qualified workstation and Mac browser catalog",
   "automated": {
     "httpAndCompatibilityCases": 21,
@@ -23,5 +23,10 @@
     "Unknown unavailable metadata is not falsely classified empty; some legacy untitled tasks retain contextual workspace labels.",
     "New task creation retains primary default; no environment chooser or full web voice parity is claimed.",
     "Shared notification-tool rollout remains a separate candidate."
-  ]
+  ],
+  "delivery": {
+    "cleanAndCompatibilityRoutes": "Both authenticated HTTPS routes contain the unique real Mac session and open its current timeline; final read returned18 rows, zero actual work submissions",
+    "routeIsolation": "Only two existing proxy targets changed; unrelated routes preserved",
+    "cleanup": "Only owned disposable primary/Mac paired devices revoked; existing user sign-ins retained"
+  }
 }

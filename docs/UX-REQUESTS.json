@@ -3145,7 +3145,7 @@
     },
     {
       "id": "web-unified-mac-catalog-20261024",
-      "status": "qualified-not-deployed",
+      "status": "deployed-verified",
       "request": "Mac web cannot see sets and shows untitled/unnamed inventory.",
       "requirements": [
         "One source-qualified list with environment attribution; no manual browser re-pair required.",

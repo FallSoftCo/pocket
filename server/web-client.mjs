@@ -1,3 +1,4 @@
+import {DatabaseSync} from 'node:sqlite';
 import {WebEnvironments,environmentRoute,qualifyPayload,CatalogPresentation} from './web-environments.mjs';
 import express from 'express';
 import {gzip} from 'node:zlib';
@@ -175,18 +176,34 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
  app.use((err,req,res,_next)=>{res.status(Number.isInteger(err.status)&&err.status>=400&&err.status<=599?err.status:502).json({error:err.message||'Backend unavailable. Reconnect to check delivery.'});});
  return {app,server,sockets};
 }
-export function runtimeMetadata(codex=new Codex()){
+export function runtimeMetadata(codex=new Codex(),{catalogStore=null}={}){
+ let catalog;
  let snapshot=new Map(),snapshotPartial=false,cacheAt=0,loading;const history=new ThreadHistory(codex);
  return {async history(thread,before){const raw=await history.read(thread,{before,preferPaging:true});const page=timelinePage(raw,[],{before:raw._pocketPage?null:before});if(raw._pocketPage)Object.assign(page,raw._pocketPage);return {thread:{...thread,turns:[]},timeline:page,pending:[],outgoing:[],notifications:[],notes:[],revision:0,watched:false,historyReadOnly:true};},async list(archived=false){if(!archived&&Date.now()-cacheAt<10000)return {threads:[...snapshot.values()],partial:snapshotPartial};if(loading&&!archived)return loading;
   const work=(async()=>{await codex.connect();const found=new Map();let cursor=null,partial=false;
    for(let i=0;i<6;i++){let result;const args={limit:100,sortKey:'recency_at',sortDirection:'desc',archived,useStateDbOnly:true,...(cursor?{cursor}:{})};try{result=await codex.call('thread/list',args);}catch(e){if(e.rpc?.code!==-32602)throw e;result=await codex.call('thread/list',{...args,sortKey:'created_at'});}
     for(const t of result.data||[])found.set(t.id,{...t,...sessionIdentity(t),recencyAt:workTime(t)});cursor=result.nextCursor;if(!cursor)break;partial=true;
    }if(!archived){snapshot=found;snapshotPartial=!!cursor;cacheAt=Date.now();}return {threads:[...found.values()],partial:!!cursor};})();if(!archived){loading=work;void work.finally(()=>{loading=null;}).catch(()=>{});}return work;
- },async read(id){await codex.connect();const {thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});if(thread?.id!==id)throw Error('Session identity changed.');return {...thread,...sessionIdentity(thread),recencyAt:workTime(thread)};}};
+ },async read(id){
+  await codex.connect();
+  try{const {thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});if(thread?.id!==id)throw Error('Session identity changed.');return {...thread,...sessionIdentity(thread),recencyAt:workTime(thread)};}
+  catch(error){
+   // Immutable temporary-session declarations survive an unloaded runtime.
+   // Read only the existing canonical catalog metadata, never message history.
+   if(catalogStore&&error.rpc?.code===-32600&&/^thread not loaded:/.test(error.message)){
+    try{
+     if(!catalog){catalog=new DatabaseSync(catalogStore,{readOnly:true});catalog.exec('PRAGMA query_only=ON;PRAGMA busy_timeout=25');}
+     const row=catalog.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(id),known=row?JSON.parse(row.metadata):null;
+     if(known?.id===id&&known.ephemeral===true)return {id,ephemeral:true};
+    }catch{/* A missing/changed store is not evidence of an empty session. */}
+   }
+   throw error;
+  }
+ }};
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const folder=process.env.WEB_DATA||resolve(homedir(),'.local/share/nextcomp-web');mkdirSync(folder,{recursive:true,mode:0o700});const keyPath=resolve(folder,'cookie-key');if(!existsSync(keyPath))writeFileSync(keyPath,randomBytes(32),{mode:0o600,flag:'wx'});chmodSync(keyPath,0o600);
  const tailnetAuth=process.env.WEB_TAILNET_AUTH_SECRETS?createTailnetBrowserAuth({backend:process.env.POCKET_URL||'http://127.0.0.1:18880',ownerToken:JSON.parse(readFileSync(process.env.WEB_TAILNET_AUTH_SECRETS,'utf8')).adminToken}):null;
  const environments=process.env.WEB_ENVIRONMENTS_FILE?WebEnvironments.fromFile(process.env.WEB_ENVIRONMENTS_FILE):null;
- const {server}=createWebClient({environments,catalogMetadata:process.env.WEB_CATALOG_METADATA==='1'?runtimeMetadata():null,tailnetAuth,origin:process.env.WEB_ORIGIN,basePath:process.env.WEB_BASE_PATH||'/',migrationSourceOrigin:process.env.WEB_MIGRATION_SOURCE_ORIGIN||null,migrationTargetOrigin:process.env.WEB_MIGRATION_TARGET_ORIGIN||null,backend:process.env.POCKET_URL,metadata:process.env.WEB_LEGACY_METADATA==='1'?runtimeMetadata():null,key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
+ const {server}=createWebClient({environments,catalogMetadata:process.env.WEB_CATALOG_METADATA==='1'?runtimeMetadata(undefined,{catalogStore:process.env.WEB_CATALOG_STORE||null}):null,tailnetAuth,origin:process.env.WEB_ORIGIN,basePath:process.env.WEB_BASE_PATH||'/',migrationSourceOrigin:process.env.WEB_MIGRATION_SOURCE_ORIGIN||null,migrationTargetOrigin:process.env.WEB_MIGRATION_TARGET_ORIGIN||null,backend:process.env.POCKET_URL,metadata:process.env.WEB_LEGACY_METADATA==='1'?runtimeMetadata():null,key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
 }
