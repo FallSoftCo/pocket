@@ -1,3 +1,4 @@
+import {WebEnvironments,environmentRoute,qualifyPayload,CatalogPresentation} from './web-environments.mjs';
 import express from 'express';
 import {gzip} from 'node:zlib';
 import {createTailnetBrowserAuth} from './tailnet-browser-auth.mjs';
@@ -15,8 +16,10 @@ import {WebSocketServer,WebSocket} from 'ws';
 import {Codex} from './codex.mjs';
 import {sessionIdentity,workTime} from '../web/model.mjs';
 
-// Separate loopback gateway: no owner credentials, database writes or backend restart.
-export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=true,metadata=null,key=randomBytes(32),basePath='/',migrationSourceOrigin=null,migrationTargetOrigin=null,tailnetAuth=null}={}) {
+// Separate loopback gateway: backends retain task admission and durable receipts.
+// Paired source credentials stay server-side; no arbitrary RPC/admin proxy.
+export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=true,metadata=null,key=randomBytes(32),basePath='/',migrationSourceOrigin=null,migrationTargetOrigin=null,tailnetAuth=null,environments=null,catalogMetadata=null}={}) {
+ const presentation=new CatalogPresentation();
  const target=new URL(backend);if(!['127.0.0.1','localhost','[::1]'].includes(target.hostname))throw Error('Web backend must be loopback.');
  if(!origin||new URL(origin).origin!==origin||(secure&&!origin.startsWith('https://')))throw Error('Set WEB_ORIGIN to the private HTTPS origin.');
  if(!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(basePath))throw Error('WEB_BASE_PATH must be a rooted directory path ending in /.');
@@ -27,7 +30,7 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
  const cookie=req=>{const value=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(cookieName+'='))?.slice(cookieName.length+1)||'';const [token,mac]=value.split('.');if(!token||!/^[a-f0-9]{64}$/.test(token)||!mac)return null;const expected=sign(token);return mac.length===expected.length&&timingSafeEqual(Buffer.from(mac),Buffer.from(expected))?token:null;};
  const setCookie=(res,token)=>res.setHeader('Set-Cookie',`${cookieName}=${token?token+'.'+sign(token):''}; Path=/; HttpOnly; SameSite=Strict; ${secure?'Secure; ':''}Max-Age=${token?365*86400:0}`);
  app.disable('x-powered-by');app.use((req,res,next)=>{res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Permissions-Policy':'camera=(), microphone=(self)','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"});next();});
- app.use('/api/voice/recordings',express.raw({type:'audio/wav',limit:19200044}));
+ app.use(['/api/voice/recordings',/^\/api\/environments\/[a-z][a-z0-9-]{1,30}\/voice\/recordings/],express.raw({type:'audio/wav',limit:19200044}));
  app.use(express.json({limit:'1mb'}));
  // JSON is the critical representation; binary audio/APKs and atlases pass through unchanged.
  const sendBytes=(req,res,bytes)=>{
@@ -53,6 +56,18 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
   // Browser devices never receive or proxy owner tokens, pairing or arbitrary RPC.
   if(/^\/api\/(?:pair(?:ing)?|devices|notify)(?:\/|$)/.test(req.originalUrl.split('?')[0]))return res.sendStatus(403);
   try{
+   const remote=environmentRoute(req.originalUrl);
+   if(remote){
+    if(!environments)return res.status(403).json({error:'This environment is not connected.'});
+    const auth=await forward({...req,method:'GET'},'/api/status',undefined,token);
+    if(!auth.ok)return res.status(auth.status).json({error:'Original browser authorization is unavailable.'});
+    const identity=await auth.json();await environments.ensure(identity.deviceId);
+    const response=await environments.forward(identity.deviceId,remote.environmentId,remote.path,req.method,req.method==='GET'?undefined:req.body);
+    if(response.status===401){await response.arrayBuffer();return res.status(409).json({error:'This environment credential is unavailable. The original browser pairing is unchanged.',environmentId:remote.environmentId});}
+    res.status(response.status);
+    if(/^\/api\/files\//.test(remote.path)||!response.headers.get('content-type')?.includes('application/json')){res.type(response.headers.get('content-type')||'application/octet-stream');return res.send(Buffer.from(await response.arrayBuffer()));}
+    return sendJson(req,res,qualifyPayload(await response.json(),remote.environmentId));
+   }
    const guarded=/^\/api\/threads\/([^/]+)\/(reply|queue\/resume|replies\/[^/]+)$/.exec(req.originalUrl.split('?')[0]);
    const detail=req.method==='GET'&&/^\/threads\/[^/]+$/.test(req.path);
    const voiceTarget=req.originalUrl==='/api/voice/start'&&req.body.threadId;
@@ -76,6 +91,23 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
     }catch{data.catalogPartial=true;data.catalogWarning='Runtime metadata unavailable; child routing is checked when opening work.';}
    }
    if(metadata&&req.method==='GET'&&/^\/threads\/[^/]+$/.test(req.path)&&data.thread)Object.assign(data.thread,runtimeThread||await metadata.read(data.thread.id));
+   if((environments||catalogMetadata)&&req.method==='GET'&&req.path==='/threads'){
+    await presentation.annotate(data.threads||[],{key:token,metadata:catalogMetadata?.read?.bind(catalogMetadata),read:async id=>{
+     const observed=await forward({...req,method:'GET'},'/api/threads/'+encodeURIComponent(id)+'/native-timeline?observeOnly=1',undefined,token);
+     if(!observed.ok)throw Error('Observation unavailable');return observed.json();
+    }});
+   }
+   if(environments&&req.method==='GET'&&req.path==='/threads'){
+    const auth=await forward({...req,method:'GET'},'/api/status',undefined,token);if(!auth.ok)return res.status(auth.status).json({error:'Original browser authorization is unavailable.'});
+    const identity=await auth.json();let remote;try{await environments.ensure(identity.deviceId);remote=await environments.catalog(identity.deviceId,req.originalUrl);}catch{remote={threads:[],environments:[{id:'remote',name:'Other environments',available:false}]};}
+    data.threads=[...(data.threads||[]).map(t=>({...t,environmentId:'current',environmentName:'Workstation',environmentUnavailable:false})),...remote.threads];data.environments=[{id:'current',name:'Workstation',available:true},...remote.environments];data.catalogPartial=!!data.nextCursor||remote.environments.some(e=>e.partial);
+   }
+   if(environments&&req.method==='GET'&&req.path==='/attention'&&Array.isArray(data.notifications)){
+    const auth=await forward({...req,method:'GET'},'/api/status',undefined,token);
+    if(auth.ok){const identity=await auth.json();const roster=environments.list(identity.deviceId);let next=0;
+     await Promise.all(Array.from({length:Math.min(3,roster.length)},async()=>{while(next<roster.length){const source=roster[next++];try{const reply=await environments.forward(identity.deviceId,source.id,'/api/attention');if(reply.ok){const value=qualifyPayload(await reply.json(),source.id);data.notifications.push(...(value.notifications||[]).map(n=>({...n,environmentName:source.name})));}}catch{}}}));
+    }
+   }
    sendJson(req,res.status(r.status),data);
   }catch(e){next(e);}
  });
@@ -113,10 +145,34 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
  server.on('upgrade',(req,socket,head)=>{
   const token=cookie(req);if(req.url!=='/events'||req.headers.origin!==origin||!token){socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');return;}
   const upstream=new WebSocket(new URL('/events',backend.replace(/^http/,'ws')),{headers:{Authorization:`Bearer ${token}`}});socket.on('close',()=>upstream.terminate());upstream.on('error',()=>socket.destroy());upstream.on('unexpected-response',(_req,r)=>{r.resume();socket.destroy();upstream.terminate();});
-  upstream.once('open',()=>sockets.handleUpgrade(req,socket,head,ws=>{upstream.on('message',(data,isBinary)=>{if(ws.readyState===WebSocket.OPEN)ws.send(data,{binary:isBinary});});ws.on('message',data=>{if(upstream.readyState===WebSocket.OPEN)upstream.send(data);});ws.on('close',()=>upstream.close());upstream.on('close',()=>ws.close());ws.on('error',()=>upstream.close());}));
+  upstream.once('open',()=>sockets.handleUpgrade(req,socket,head,ws=>{
+   const remotes=new Set(),retryTimers=new Set();let ended=false;
+   ws.on('close',()=>{ended=true;for(const timer of retryTimers)clearTimeout(timer);for(const remote of remotes)remote.close();});
+   if(environments)void(async()=>{
+    const auth=await forward({method:'GET',headers:{}},'/api/status',undefined,token);if(!auth.ok)return;
+    const identity=await auth.json();await environments.ensure(identity.deviceId);
+    for(const source of environments.list(identity.deviceId)){
+     let attempts=0;
+     const connect=async()=>{
+      if(ended)return;
+      try{
+       const check=await environments.forward(identity.deviceId,source.id,'/api/status');if(!check.ok)return;
+       if(ended)return;
+       const remote=new WebSocket(new URL('/events',source.base.replace(/^http/,'ws')),{headers:{Authorization:'Bearer '+source.token}});remotes.add(remote);
+       remote.on('open',()=>{attempts=0;if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'environmentStatus',environmentId:source.id,available:true}));});
+       remote.on('message',raw=>{try{const message=JSON.parse(raw);if(['status','rateLimits','immersion'].includes(message.type))return;if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({...qualifyPayload(message,source.id),environmentId:source.id}));}catch{}});
+       remote.on('error',()=>{});
+       remote.on('close',()=>{remotes.delete(remote);if(!ended){if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'environmentStatus',environmentId:source.id,available:false}));schedule();}});
+      }catch{if(!ended)schedule();}
+     };
+     const schedule=()=>{const timer=setTimeout(()=>{retryTimers.delete(timer);void connect();},Math.min(30000,1000*2**Math.min(attempts++,5)));retryTimers.add(timer);};
+     void connect();
+    }
+   })().catch(()=>{});
+   upstream.on('message',(data,isBinary)=>{if(ws.readyState===WebSocket.OPEN)ws.send(data,{binary:isBinary});});ws.on('message',data=>{if(upstream.readyState===WebSocket.OPEN)upstream.send(data);});ws.on('close',()=>upstream.close());upstream.on('close',()=>ws.close());ws.on('error',()=>upstream.close());}));
   // Buffer initial backend status before downstream upgrade completes.
  });
- app.use((err,req,res,_next)=>{res.status(502).json({error:err.message||'Backend unavailable. Reconnect to check delivery.'});});
+ app.use((err,req,res,_next)=>{res.status(Number.isInteger(err.status)&&err.status>=400&&err.status<=599?err.status:502).json({error:err.message||'Backend unavailable. Reconnect to check delivery.'});});
  return {app,server,sockets};
 }
 export function runtimeMetadata(codex=new Codex()){
@@ -131,5 +187,6 @@ export function runtimeMetadata(codex=new Codex()){
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const folder=process.env.WEB_DATA||resolve(homedir(),'.local/share/nextcomp-web');mkdirSync(folder,{recursive:true,mode:0o700});const keyPath=resolve(folder,'cookie-key');if(!existsSync(keyPath))writeFileSync(keyPath,randomBytes(32),{mode:0o600,flag:'wx'});chmodSync(keyPath,0o600);
  const tailnetAuth=process.env.WEB_TAILNET_AUTH_SECRETS?createTailnetBrowserAuth({backend:process.env.POCKET_URL||'http://127.0.0.1:18880',ownerToken:JSON.parse(readFileSync(process.env.WEB_TAILNET_AUTH_SECRETS,'utf8')).adminToken}):null;
- const {server}=createWebClient({tailnetAuth,origin:process.env.WEB_ORIGIN,basePath:process.env.WEB_BASE_PATH||'/',migrationSourceOrigin:process.env.WEB_MIGRATION_SOURCE_ORIGIN||null,migrationTargetOrigin:process.env.WEB_MIGRATION_TARGET_ORIGIN||null,backend:process.env.POCKET_URL,metadata:process.env.WEB_LEGACY_METADATA==='1'?runtimeMetadata():null,key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
+ const environments=process.env.WEB_ENVIRONMENTS_FILE?WebEnvironments.fromFile(process.env.WEB_ENVIRONMENTS_FILE):null;
+ const {server}=createWebClient({environments,catalogMetadata:process.env.WEB_CATALOG_METADATA==='1'?runtimeMetadata():null,tailnetAuth,origin:process.env.WEB_ORIGIN,basePath:process.env.WEB_BASE_PATH||'/',migrationSourceOrigin:process.env.WEB_MIGRATION_SOURCE_ORIGIN||null,migrationTargetOrigin:process.env.WEB_MIGRATION_TARGET_ORIGIN||null,backend:process.env.POCKET_URL,metadata:process.env.WEB_LEGACY_METADATA==='1'?runtimeMetadata():null,key:readFileSync(keyPath)});server.listen(Number(process.env.WEB_PORT||18882),'127.0.0.1',()=>console.log('NextComp web gateway ready on loopback'));
 }

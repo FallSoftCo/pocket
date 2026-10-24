@@ -1,0 +1,27 @@
+{
+  "state": "qualified-not-deployed",
+  "scope": "Source-qualified workstation and Mac browser catalog",
+  "automated": {
+    "httpAndCompatibilityCases": 21,
+    "renderedBrowser": "Actual Chromium on authorized development host, desktop/mobile synthetic content; original request once, Mac-only reply/skip, source image, live update, draft retention and lost-response receipt without resubmission",
+    "realGatewayRead": "Actual Mac session found and opened,22 rows, zero actual work submissions",
+    "coldFirstBrowserSetupCatalogMs": 4563,
+    "warmCatalogMs": [
+      1112,
+      869
+    ],
+    "headMs": 478
+  },
+  "preserved": [
+    "Existing primary cookie key, pairings, drafts and original pending receipts",
+    "Phone profiles and native Codex workers",
+    "Original task text and opaque tool/file content",
+    "All unrelated private proxy routes"
+  ],
+  "limits": [
+    "Mac Chrome window was not driven; actual HTTP visibility and synthetic rendered browser journeys are distinct evidence.",
+    "Unknown unavailable metadata is not falsely classified empty; some legacy untitled tasks retain contextual workspace labels.",
+    "New task creation retains primary default; no environment chooser or full web voice parity is claimed.",
+    "Shared notification-tool rollout remains a separate candidate."
+  ]
+}

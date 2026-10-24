@@ -37,29 +37,30 @@ export class RecordingController {
  }
  async deliver(id){
   let r=this.records.find(r=>r.id===id);if(!r||r.deviceId!==this.profile)throw Error('Recording belongs to its original browser identity.');
-  const capabilities=await this.api('/api/voice/native/capabilities');if(!capabilities?.durableAudioAdmission)throw Error('This environment has no durable native audio adapter. Recording remains saved.');
+  const sourceApi=(path,body,options={})=>this.api(path,body,{...options,scope:r.scope});
+  const capabilities=await sourceApi('/api/voice/native/capabilities');if(!capabilities?.durableAudioAdmission)throw Error('This environment has no durable native audio adapter. Recording remains saved.');
   if(r.state==='unknown')throw Error('Original delivery is uncertain. Check its receipt before any new submission.');
   if(!r.wav){await this.save({...r,state:'preparing',error:null});const prepare=this.preparing.then(()=>wavFromRecording(r.blob));this.preparing=prepare.catch(()=>{});const wav=await prepare;const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',await wav.arrayBuffer()))].map(v=>v.toString(16).padStart(2,'0')).join('');r={...r,wav,audioSha256:digest,bytes:wav.size};await this.save(r);}
   if(this.cancelled.has(id))return;if(this.profile!==r.deviceId)throw Error('Recording retained for its original browser identity.');
-  let receipt=await this.api(`/api/voice/recordings/${id}`).catch(e=>e.status===404?null:Promise.reject(e));
-  if(!receipt)receipt=await this.api('/api/voice/recordings',{id,destination:r.destination,audioSha256:r.audioSha256,bytes:r.bytes});
+  let receipt=await sourceApi(`/api/voice/recordings/${id}`).catch(e=>e.status===404?null:Promise.reject(e));
+  if(!receipt)receipt=await sourceApi('/api/voice/recordings',{id,destination:r.destination,audioSha256:r.audioSha256,bytes:r.bytes});
   if(receipt.audioSha256!==r.audioSha256)throw Error('Original audio receipt did not match. Recording retained.');
   if(this.cancelled.has(id))return;
-  if(['receiving','sealing'].includes(receipt.phase))receipt=await this.api(`/api/voice/recordings/${id}/audio`,r.wav,{method:'PUT'});
+  if(['receiving','sealing'].includes(receipt.phase))receipt=await sourceApi(`/api/voice/recordings/${id}/audio`,r.wav,{method:'PUT'});
   if(receipt.audioSha256!==r.audioSha256)throw Error('Upload receipt did not match the original recording.');
   await this.save({...r,state:receipt.phase==='unknown'?'unknown':receipt.phase==='accepted'?'submitted':receipt.state||'processing',receipt,error:receipt.error||null});this.watch(id);return receipt;
  }
  watch(id){
   if(!this.watchers)this.watchers=new Map();clearTimeout(this.watchers.get(id));let checks=0;
   const check=async()=>{if(++checks>20||document.visibilityState!=='visible')return;const r=this.records.find(r=>r.id===id);if(!r||r.deviceId!==this.profile||r.state==='cancelled')return;
-   try{const receipt=await this.api(`/api/voice/recordings/${id}`);const terminal=receipt.phase==='accepted'||['unknown','failed','cancelled'].includes(receipt.phase);await this.save({...r,state:receipt.phase==='accepted'?'submitted':receipt.state,receipt,error:receipt.error});if(!terminal)this.watchers.set(id,setTimeout(check,Math.min(15000,1000*2**Math.min(checks,4))));}catch(e){this.publish(e.message);}
+   try{const receipt=await this.api(`/api/voice/recordings/${id}`,undefined,{scope:r.scope});const terminal=receipt.phase==='accepted'||['unknown','failed','cancelled'].includes(receipt.phase);await this.save({...r,state:receipt.phase==='accepted'?'submitted':receipt.state,receipt,error:receipt.error});if(!terminal)this.watchers.set(id,setTimeout(check,Math.min(15000,1000*2**Math.min(checks,4))));}catch(e){this.publish(e.message);}
   };this.watchers.set(id,setTimeout(check,1000));
  }
  async discard(id=this.pending?.id){
   const capture=this.recording;if(capture&&(!id||id===capture.id)){capture.cancelled=true;capture.stopping=true;capture.recorder.stop();return;}
   const r=this.records.find(r=>r.id===id);if(!r)return;if(r.state==='unknown'&&!r.audioSha256)throw Error('Original delivery is uncertain. Review it before forgetting the local copy.');this.cancelled.add(id);
   try{
-   if(r.audioSha256){const receipt=await this.api(`/api/voice/recordings/${id}/cancel`,{destination:r.destination,audioSha256:r.audioSha256,bytes:r.bytes});if(receipt.state!=='cancelled')throw Error('Original recording cancellation was not confirmed.');}
+   if(r.audioSha256){const receipt=await this.api(`/api/voice/recordings/${id}/cancel`,{destination:r.destination,audioSha256:r.audioSha256,bytes:r.bytes},{scope:r.scope});if(receipt.state!=='cancelled')throw Error('Original recording cancellation was not confirmed.');}
    await this.save({id:r.id,deviceId:r.deviceId,scope:r.scope,state:'cancelled',createdAt:r.createdAt});
   }catch(e){await voiceJournal('put',{...r,state:'unknown',error:e.message});this.records=this.records.map(x=>x.id===id?{...r,state:'unknown',error:e.message}:x);this.publish(e.message);throw e;}
   this.publish('Recording cancelled');

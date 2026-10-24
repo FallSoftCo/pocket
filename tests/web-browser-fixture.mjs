@@ -2,7 +2,7 @@ import http from 'node:http';
 import {once} from 'node:events';
 import {WebSocketServer} from 'ws';
 import {createWebClient} from '../server/web-client.mjs';
-export async function fixture({extraThreads=0,gatewayFactory=createWebClient}={}){
+export async function fixture({extraThreads=0,extraCatalog=[],observationPages={},gatewayFactory=createWebClient}={}){
  const original='I found two useful options. Which material should we use?';
  const words=[['Ho','I-have'],[' ',' '],['trovato','found'],[' ',' '],['due','two'],[' ',' '],['opzioni','options'],[' ',' '],['utili','useful'],['. ','. '],['Quale','Which'],[' ',' '],['materiale','material'],[' ',' '],['dovremmo','should-we'],[' ',' '],['usare','use'],['?','?']];
  let offset=0;const targetSegments=words.map(([target,meaning])=>{const start=offset;offset+=target.length;return {start,end:offset,target,meaning};});
@@ -22,7 +22,7 @@ export async function fixture({extraThreads=0,gatewayFactory=createWebClient}={}
  if(path==='/api/voice/native/capabilities')return json({durableAudioAdmission:true,maxRecordingSeconds:600});
  if(path.startsWith('/api/voice/recordings')){res.statusCode=req.method==='POST'?503:404;return json({error:req.method==='POST'?'Synthetic audio adapter unavailable. Recording retained.':'Original recording not admitted.'});}
  if(path==='/api/status')return json({deviceId:'browser-fixture',device:'Pixelbook Go fixture',capabilities:{readOnlyTimeline:true},host:'Synthetic workstation',version:'fixture',defaultCwd:'/synthetic/project'});
- if(path==='/api/threads'&&req.method==='GET')return json({threads:[parent,other,child,...Array.from({length:extraThreads},(_,n)=>({id:'inventory-'+n,name:'Synthetic work '+n,preview:'Synthetic previous work context. '.repeat(10),status:{type:'idle'},canAcceptDirectInput:true,createdAt:1700000000,recencyAt:1700000000000}))]});
+ if(path==='/api/threads'&&req.method==='GET')return json({threads:[parent,other,child,...extraCatalog,...Array.from({length:extraThreads},(_,n)=>({id:'inventory-'+n,name:'Synthetic work '+n,preview:'Synthetic previous work context. '.repeat(10),status:{type:'idle'},canAcceptDirectInput:true,createdAt:1700000000,recencyAt:1700000000000}))]});
  if(path==='/api/voice/history')return json({turns,hasEarlier:false});
  if(path==='/api/voice/start')return json({ok:true});
  if(path==='/api/voice/text'){if(!turns.some(t=>t.id===body.turnId))turns.push({id:body.turnId,transcript:body.text,response:'I can help. Your request is in context.',state:'completed',actions:[{threadId:parent.id,name:parent.name,type:'route'}]});return json(turns.at(-1));}
@@ -36,6 +36,7 @@ export async function fixture({extraThreads=0,gatewayFactory=createWebClient}={}
  if(path.startsWith('/api/session-starts/')){const row=starts.get(path.split('/').at(-1));if(!row){res.statusCode=404;return json({error:'Not found'});}return json(row);}
  if(path.startsWith('/api/requests/')){pending=[];return json({ok:true});}
  if(path.startsWith('/api/replies/')){const row=outgoing.get(path.split('/').at(-1));if(!row){res.statusCode=404;return json({error:'Not found'});}return json(row);}
+ const observed=/^\/api\/threads\/([^/]+)\/native-timeline$/.exec(path);if(observed&&observationPages[observed[1]])return json(observationPages[observed[1]]);
  const match=/^\/api\/threads\/([^/]+)(?:\/(.*))?$/.exec(path);if(match){const id=match[1],action=match[2],thread=[parent,other,child].find(t=>t.id===id);if(action==='reply'){if(!outgoing.has(body.id)){outgoing.set(body.id,{...body,state:'accepted',thread_id:id});rows.get(id).push({id:body.id,kind:'user',title:'You',text:body.text});}return json({id:body.id,state:'accepted'});}if(action==='notes/remove'){notes=notes.filter(n=>n.id!==body.id);return json({notes});}if(action==='rename'){thread.name=body.name;return json({ok:true});}if(action&&action!=='head')return json({ok:true});const earlier=url.searchParams.has('before');if(!earlier&&headHolds.has(id))await headHolds.get(id).promise;if(!earlier&&headFailures.has(id)){headFailures.delete(id);res.statusCode=503;return json({error:'Synthetic current-head unavailable'});}if(earlier&&holdEarlier){historyStarted?.();await new Promise(resolve=>{releaseEarlier=resolve;});}return json({thread,timeline:{rows:earlier?[{id:'old/answer',kind:'message',title:'Codex',text:'Earlier useful result'}]:rows.get(id),hasEarlier:id===parent.id&&!earlier,before:earlier?'old':'t1'},pending:id===parent.id?pending:[],notes:id===parent.id?notes:[],outgoing:[...outgoing.values()].filter(o=>o.thread_id===id),revision:rev,watched:true});}
  if(path==='/api/voice/native/start'){res.statusCode=503;return json({error:'Synthetic native provider unavailable. Recording is saved.'});}
  res.statusCode=404;json({error:'Unknown fixture route'});
