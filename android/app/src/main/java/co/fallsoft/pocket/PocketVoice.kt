@@ -214,7 +214,7 @@ class PocketVoiceService:Service(){
     private var speechFiles=emptyList<File>()
     private var speechIndex=0
     private val updates=ArrayDeque<JSONObject>()
-    private val tones=ToneGenerator(AudioManager.STREAM_MUSIC,55)
+    private val feedback=VoiceFeedback.open()
     private val pendingFile get()=File(filesDir,"voice-pending.wav")
     private val spokenFile get()=File(filesDir,"voice-spoken.wav")
     private val turnId get()=Pocket.prefs.getString("voicePendingId",null)
@@ -274,7 +274,7 @@ class PocketVoiceService:Service(){
     internal fun matchesSelectedCaptureEnvironment()=capturedEnvironment==Pocket.environmentId&&endpoint==Pocket.base.trimEnd('/')&&credential==Pocket.token
     private fun captureProfile(){local=Pocket.local;capturedEnvironment=Pocket.environmentId;endpoint=Pocket.savedBase(local).trimEnd('/');credential=Pocket.savedToken(local);captionProfile="${local}:${Pocket.savedBase(local)}:${Pocket.prefs.getString(Pocket.key("deviceId",local),"")}";caption=null}
     private fun wake(){lock?.acquire(10*60*1000L)}
-    private fun beep(ok:Boolean=true){if(!PocketVoice.active)return;tones.startTone(if(ok)ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_PROP_NACK,110)}
+    private fun beep(ok:Boolean=true){if(!PocketVoice.active)return;feedback.beep(ok)}
     private fun state(s:String){if(PocketVoice.service!==this)return;PocketVoice.state=s;if(s=="Listening")PocketVoice.recordingStartedAt=SystemClock.elapsedRealtime();if(s!="Listening")PocketVoice.captureLevel=0f;if(s=="Paused")caption?.let{PocketSpeechCaptions.pause(it.profile);refreshCaptionNotification()};android.util.Log.i("PocketVoice","State: $s");idleDisconnect?.cancel();if(s=="Ready")idleDisconnect=scope.launch{delay(30000);if(PocketVoice.state=="Ready"&&turnId==null&&recorder==null)disconnectNative()}}
     private suspend fun api(path:String,body:JSONObject?=null,base:String=endpoint,token:String=credential):JSONObject{
         val requestEnvironment=capturedEnvironment
@@ -666,7 +666,7 @@ class PocketVoiceService:Service(){
     private fun stopNativeRemote(){if(nativeId!=null){val request=Request.Builder().url("$endpoint/api/voice/native/stop").header("Authorization","Bearer $credential").post(JSONObject().put("connectionId",nativeId).toString().toRequestBody("application/json".toMediaType())).build();http.newCall(request).enqueue(object:Callback{override fun onFailure(call:Call,e:java.io.IOException){};override fun onResponse(call:Call,response:Response){response.close()}})}}
     private fun disconnectNative(){nativeConnecting?.cancel();nativeConnecting=null;captureStreamFailed=true;captureStreaming=false;captureStreamJob?.cancel();capturePrefix.clear();nativeAudio?.cancelInput();checkpointNativeUsage(stop=true);transportGeneration++;stopNativeRemote();nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;nativeReady?.cancel();nativeReady=null}
     fun leave(){stopRecording=true;PocketVoice.launching=false;PocketVoice.active=false;disconnectNative();recording?.cancel();work?.cancel();stopPlayer();state("Ready");stopSelf()}
-    override fun onDestroy(){val owned=PocketVoice.service===this;checkpointNativeUsage(stop=true);transportGeneration++;nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;if(owned){PocketVoice.active=false;PocketVoice.captureBusy=false;state("Ready");PocketVoice.service=null};recording?.cancel();scope.cancel();stopPlayer();tones.release();if(lock?.isHeld==true)lock?.release();if(owned&&!PocketVoice.foreground&&!Pocket.local)PocketLive.stop();stopForeground(STOP_FOREGROUND_REMOVE);if(caption!=null&&PocketSpeechCaptions.state.phase=="Speaking")PocketSpeechCaptions.pause(captionProfile);PocketSpeechCaptions.retain();super.onDestroy()}
+    override fun onDestroy(){val owned=PocketVoice.service===this;checkpointNativeUsage(stop=true);transportGeneration++;nativeHeartbeat?.cancel();nativeAudio?.close();nativeAudio=null;nativeId=null;if(owned){PocketVoice.active=false;PocketVoice.captureBusy=false;state("Ready");PocketVoice.service=null};recording?.cancel();scope.cancel();stopPlayer();feedback.close();if(lock?.isHeld==true)lock?.release();if(owned&&!PocketVoice.foreground&&!Pocket.local)PocketLive.stop();stopForeground(STOP_FOREGROUND_REMOVE);if(caption!=null&&PocketSpeechCaptions.state.phase=="Speaking")PocketSpeechCaptions.pause(captionProfile);PocketSpeechCaptions.retain();super.onDestroy()}
 }
 
 internal fun routeReceipts(actions:List<JSONObject>,turnId:String=""):List<CoordinatorRoute> = actions.filter{it.s("type")=="route"&&it.s("threadId").isNotBlank()}.map{CoordinatorRoute(it.s("threadId"),it.s("name"),it.s("operation"),it.s("mode"),it.s("state"),it.s("turnId").ifBlank{turnId},it.s("reason"),it.s("environmentId").ifBlank{null})}.distinct()

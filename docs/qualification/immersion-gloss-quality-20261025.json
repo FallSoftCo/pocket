@@ -61,5 +61,21 @@
     "No153 production publication/install or service restart performed at this checkpoint.",
     "Actual installed phone version152 verified by Termux SSH pm on2026-10-25.",
     "Final combined signed APK/native gates and real media-only input/output still required; preflight is not substituted."
-  ]
+  ],
+  "webDeployment": {
+    "state": "spacing-and-authored-label-assets-live",
+    "routes": [
+      "private443/nextcomp/",
+      "private8448/"
+    ],
+    "cookieAndExistingSocketsPreserved": true,
+    "backendTeacherV4": "staged-not-active"
+  },
+  "releaseQualification": {
+    "r01": "Signed153 built; actual media passed; held on unchanged IndependentVoiceCaptureNativeTest hardware stop failure. Never published.",
+    "rootCause": "Actual Android ANR trace main thread blocked in ToneGenerator native_setup inside PocketVoiceService constructor. The system ANR window intercepted the volume key.",
+    "productionFix": "VoiceFeedback serial background owner; no native tone setup/play/release on Main or under state lock. One coalesced pending cue, stale/closed-owner suppression and asynchronous idle resource release; zero service/context references retained.",
+    "regressionProof": "Blocked-factory test500 queued feedback calls: one native owner, cancelled sound suppressed and resource released; actual unchanged AudioRecord/hardware-stop/durable-cancel journey passed26.404s on owned emulator.",
+    "r02": "Same unpublished153 version; final signed build and five native policy cases plus exact optimized review required. No physical phone claim."
+  }
 }

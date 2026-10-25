@@ -3170,6 +3170,12 @@
       "request": "Reject duplicated English lexical gloss ownership while preserving real repetition and Italian grammar. Improve fixed bilingual phrase line spacing and subtle rounding across Android and web. Retain exact text layout while flipping and direct text help.",
       "status": "candidate153-semantic-cache-migration-native-preflight-and-actual-desktop-mobile-browser-passed; combined-signed-release-and-production-activation-pending",
       "evidence": "docs/qualification/immersion-gloss-quality-20261025.json"
+    },
+    {
+      "id": "voice-feedback-nonblocking-service-startup-20261025",
+      "request": "Voice recording and volume keys must remain responsive during native audio setup. Confirmation sounds are optional and must never block Android service startup, capture control, or shutdown; fence stale sounds and bound resource ownership.",
+      "status": "actual-service-constructor-ANR-diagnosed; single-background-feedback-owner-and-unchanged-native-recording-journey-passed; signed153-r02-pending",
+      "evidence": "docs/qualification/immersion-gloss-quality-20261025.json"
     }
   ],
   "current_state": {
