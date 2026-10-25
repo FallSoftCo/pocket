@@ -47,7 +47,7 @@
     "remoteNative": "published",
     "mac": "published",
     "updateAnnouncements": 1,
-    "repairingRequired": false,
+    "rePairingRequired": false,
     "serviceRestartRequired": false
   },
   "limits": [
