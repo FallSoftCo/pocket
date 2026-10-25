@@ -26,7 +26,18 @@ class NativeReadingParityNativeTest {
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   fun main(action:()->Unit)=i.runOnMainSync(action)
   fun await(message:String,condition:()->Boolean){val end=android.os.SystemClock.elapsedRealtime()+30000;while(android.os.SystemClock.elapsedRealtime()<end&&!condition())Thread.sleep(50);assertTrue(message+" [selected="+Pocket.selected+", native="+PocketTranscript.canonicalMode+", verified="+PocketTranscript.currentHistoryVerified+", updating="+PocketTranscript.updating+", loading="+PocketTranscript.loading+", readError="+PocketTranscript.readError+", error="+Pocket.error+"]",condition())}
-  fun click(selector:BySelector){val node=device.wait(Until.findObject(selector),7000);assertNotNull("Control unavailable after presentation transition: $selector",node);node!!.click()}
+  fun click(selector:BySelector){
+   val end=android.os.SystemClock.elapsedRealtime()+10000;var bounds:android.graphics.Rect?=null;var stableAt=0L
+   while(android.os.SystemClock.elapsedRealtime()<end){
+    val node=device.findObject(selector);val next=node?.visibleBounds;val now=android.os.SystemClock.elapsedRealtime()
+    if(next!=null&&!next.isEmpty&&node.isEnabled){
+     if(next==bounds&&now-stableAt>=350){node.click();return}
+     if(next!=bounds){bounds=android.graphics.Rect(next);stableAt=now}
+    }else{bounds=null;stableAt=now}
+    Thread.sleep(75)
+   }
+   fail("Control did not settle after presentation transition: $selector")
+  }
   fun qa(action:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/$action",JSONObject())}
   c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76-reading").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Native unsent draft").commit()
   main{Pocket.init(c);PocketImmersion.setEnabled(false);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
@@ -55,6 +66,7 @@ class NativeReadingParityNativeTest {
    assertEquals("User input must not be a saved result",1,device.findObjects(By.text("Reply")).size)
    click(By.text("Reply"))
    await("Reply did not preserve the existing draft"){c.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread","").orEmpty().let{it.contains("About this result:")&&it.contains("Native unsent draft")}}
+   await("Reply keyboard did not become visible"){i.uiAutomation.windows.any{it.type==android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD}}
    click(By.desc("Questions and results"))
    click(By.text("In conversation"))
    click(By.desc("Questions and results"))
