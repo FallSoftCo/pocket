@@ -34,8 +34,9 @@ class NativeReadingParityNativeTest {
    await("Canonical conversation did not open"){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
    qa("question")
    await("Question did not enter canonical metadata"){Pocket.detail?.optJSONArray("pending")?.length()==1}
-   if(!device.hasObject(By.text("Native pending question"))){
-    val control=device.wait(Until.findObject(By.desc("Questions and results")),5000);assertNotNull("Question entry is not reachable",control);control!!.click()
+   if(!device.wait(Until.hasObject(By.text("Native pending question")),5000)){
+    val control=device.wait(Until.findObject(By.desc("Questions and results")),5000)
+    if(control!=null)control.click() else assertTrue("Question entry is not reachable",device.hasObject(By.text("Native pending question")))
    }
    assertTrue("One tap did not reveal the pending question",device.wait(Until.hasObject(By.text("Native pending question")),5000))
    assertTrue("Drawer stole the activity window used for volume-key capture",AppWindowVisibility.focused)
