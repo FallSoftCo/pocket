@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-22",
+  "updated": "2026-10-24",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -3153,6 +3153,17 @@
         "Contextual labels, positive empty/temporary classification and accessible filters; no deleting or guessing idle work.",
         "Read-only real-session verification and rendered synthetic browser journeys; preserve original state and native workers."
       ]
+    },
+    {
+      "id": "reading-slots-media-questions-20261024",
+      "status": "web-deployed-verified-native-follow-up",
+      "request": "Try stable bilingual phrase spaces with subtle background and minimal corner rounding; inline gallery/image previews without app switching; visible actionable questions in desktop right pane/mobile drawer; replace ineffective Answers UI.",
+      "implementation": [
+        "CSS intrinsic dual-language phrase cells, instant visibility changes and direct phrase toggle; no per-flip reshaping or font shrinking",
+        "Existing gallery catalog resolves ordinary gallery links without agent-specific messages or new endpoint; inline image attachments",
+        "One Needs you/questions/results pane, actionable approvals and input, source-qualified global attention and catalog badges, deduplicated non-user saved results"
+      ],
+      "nativeAndroid": "Requirements retained; no new APK or physical-phone delivery is claimed by this web candidate."
     }
   ],
   "current_state": {

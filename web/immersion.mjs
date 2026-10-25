@@ -1,3 +1,4 @@
+import {phraseSlots} from './phrase-slots.mjs';
 import {flipFlopPlan,transgrammaticFlipPlan} from './flip-flop.mjs';
 import {richText} from './presentation.mjs';
 import {clientURL} from './paths.mjs';
@@ -18,7 +19,7 @@ export class ImmersionLayer {
  handle(event){if(event.type!=='immersion')return false;if(!['transgrammatic-english-italian-v2','transgrammatic-english-italian-v3'].includes(event.planVersion))return true;this.revision(event.planVersion);for(const plan of event.translations||[])this.plans.set(plan.original,plan);this.schedule();return true;}
  async setEnabled(enabled){this.accept(await this.api('/api/immersion/v2',{enabled,density:'strong'}));}
  schedule(){clearTimeout(this.scanTimer);this.scanTimer=setTimeout(()=>void this.scan(),160);}
- restore(element,entry){entry.animations?.forEach(a=>a.cancel());if(element.classList.contains('body'))element.replaceChildren(richText(entry.source));else element.textContent=entry.source;element.style.height='';delete element.dataset.immersionManaged;this.nodes.delete(element);}
+ restore(element,entry){entry.animations?.forEach(a=>a.cancel());if(element.classList.contains('body'))element.replaceChildren(richText(entry.source,entry.resolveUrl));else element.textContent=entry.source;element.style.height='';delete element.dataset.immersionManaged;this.nodes.delete(element);}
  async scan(){
   for(const [element,entry] of this.nodes){if(!element.isConnected)this.nodes.delete(element);else if(!this.enabled)this.restore(element,entry);}
   if(!this.enabled)return;
@@ -32,8 +33,8 @@ export class ImmersionLayer {
    element.dataset.immersionCoverage=pair.eligible===pair.distinct?"paired":"identity-review";
    const identity=element.dataset.immersionId||source,phase=this.held.get(identity)??this.phase;
    const stack=document.createElement('span');stack.className='immersion-stack';stack.dataset.flipPhase=String(phase);stack.dataset.flipEligible=String(pair.eligible);stack.dataset.flipDistinct=String(pair.distinct);
-   const current=document.createElement('span');current.className='immersion-current';const rich=element.classList.contains('body');current.append(rich?richText(pair.forms[phase]):document.createTextNode(pair.forms[phase]));stack.append(current);element.replaceChildren(stack);element.dataset.immersionManaged='true';
-   this.nodes.set(element,{identity,source,pair,current,stack,rich,phase});
+   const current=document.createElement('span');current.className='immersion-current';const rich=element.classList.contains('body'),resolveUrl=element._resolveUrl||((url)=>url);const render=value=>{if(rich)return richText(value,resolveUrl);const fragment=document.createDocumentFragment();fragment.append(document.createTextNode(value));return fragment;};const slots=phraseSlots(pair,phase,render,{interactive:!element.closest('button,a,label,summary,[role=button]')});current.append(slots.root);stack.append(current);element.replaceChildren(stack);element.dataset.immersionManaged='true';
+   this.nodes.set(element,{identity,source,pair,current,stack,rich,phase,slots,resolveUrl});
   }
   if(sources.length){sources.forEach(s=>this.submitted.set(s.text,true));try{this.accept(await this.api('/api/immersion/v2/translate',{sources}));}catch(e){this.onStatus('Immersion waiting · '+e.message);}}
  }
@@ -42,7 +43,7 @@ export class ImmersionLayer {
   if(document.visibilityState==='visible'){
    const anchors=['transcript','work-list'].map(id=>{const root=document.getElementById(id);if(!root)return null;const child=[...root.children].find(n=>n.getBoundingClientRect().bottom>root.getBoundingClientRect().top);return child?{root,child,offset:child.getBoundingClientRect().top-root.getBoundingClientRect().top}:null;}).filter(Boolean);
    for(const [element,entry] of this.nodes){const rect=element.getBoundingClientRect();if(!element.isConnected||rect.bottom<=0||rect.top>=innerHeight||rect.width===0||rect.height===0)continue;
-    entry.phase=(entry.phase+1)%entry.pair.forms.length;this.held.set(entry.identity,entry.phase);entry.current.replaceChildren(entry.rich?richText(entry.pair.forms[entry.phase]):document.createTextNode(entry.pair.forms[entry.phase]));entry.stack.dataset.flipPhase=String(entry.phase);
+    entry.phase=(entry.phase+1)%entry.pair.forms.length;this.held.set(entry.identity,entry.phase);entry.slots.setPhase(entry.phase);entry.stack.dataset.flipPhase=String(entry.phase);
    }
    for(const anchor of anchors)if(anchor.child.isConnected)anchor.root.scrollTop+=anchor.child.getBoundingClientRect().top-anchor.root.getBoundingClientRect().top-anchor.offset;
    this.phase=(this.phase+1)%4;while(this.held.size>4096)this.held.delete(this.held.keys().next().value);

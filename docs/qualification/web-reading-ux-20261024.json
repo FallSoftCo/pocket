@@ -1,0 +1,23 @@
+{
+  "state": "web-deployed-verified-native-follow-up",
+  "scope": "Browser intrinsic immersion phrase slots, inline gallery previews and unified questions/results pane",
+  "evidence": {
+    "httpCompatibilityCases": 21,
+    "actualChromium": "reading-ux-20261024-r07 desktop1440/mobile390; no JavaScript errors; owned fixtures closed",
+    "phraseGeometry": "All x/y/width/height measurements identical across phase changes; one visible language; direct tap changes only selected phrase",
+    "requestJourney": "Question visible immediately on desktop, input value/focus retained during a second request, answer submitted once, saved draft preserved, result reply/navigation/dismissal passed",
+    "media": "Ordinary gallery URL produces an inline existing-catalog poster with original link preserved",
+    "realProduction": "Both private HTTPS routes serve all new modules and authenticated catalog; real Mac session visible/openable; no actual task messages submitted"
+  },
+  "release": {
+    "backendOrNativeRestart": false,
+    "pairingsChanged": "Only disposable QA browser identities added and then revoked; user pairings/cookies preserved",
+    "apkPublished": false
+  },
+  "limits": [
+    "Mobile viewport is browser qualification, not installed Android APK evidence.",
+    "Closed browser web push remains unavailable.",
+    "Cross-origin gallery fragments without a supported catalog remain links.",
+    "Original result navigation outside locally loaded history reports this limitation; it does not pretend an original row was fetched."
+  ]
+}

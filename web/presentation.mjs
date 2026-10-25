@@ -2,12 +2,17 @@ import {clientBase,clientURL} from './paths.mjs';
 const client=clientBase(import.meta.url);
 const node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 const safeURL=value=>{try{const u=new URL(String(value).startsWith('/api/')?clientURL(client,value):value,location.href);return ['https:','http:'].includes(u.protocol)?u.href:null;}catch{return null;}};
+function plain(text,parent){
+ const pattern=/https?:\/\/[^\s<>]+/g;let at=0;
+ for(const match of text.matchAll(pattern)){const value=match[0].replace(/[.,;!?]+$/,'');parent.append(document.createTextNode(text.slice(at,match.index)));const href=safeURL(value);if(href){const link=node('a',value);link.href=href;link.target='_blank';link.rel='noopener noreferrer';parent.append(link);}else parent.append(document.createTextNode(value));at=match.index+value.length;}
+ parent.append(document.createTextNode(text.slice(at)));
+}
 function inline(text,parent,resolveUrl=value=>value){
  const pattern=/(!?\[([^\]\n]+)\]\(([^\s)]+)\)|`([^`\n]+)`|\*\*([^*\n]+)\*\*|__([^_\n]+)__|\*([^*\n]+)\*)/g;let at=0;
- for(const m of text.matchAll(pattern)){parent.append(document.createTextNode(text.slice(at,m.index)));at=m.index+m[0].length;
+ for(const m of text.matchAll(pattern)){plain(text.slice(at,m.index),parent);at=m.index+m[0].length;
   if(m[2]){const url=safeURL(resolveUrl(m[3]));if(!url){parent.append(document.createTextNode(m[0]));continue;}if(m[0].startsWith('!')){const image=node('img');image.src=url;image.alt=m[2];image.loading='lazy';image.decoding='async';image.referrerPolicy='no-referrer';const a=node('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.append(image);parent.append(a);}else{const a=node('a',m[2]);a.href=url;a.target='_blank';a.rel='noopener noreferrer';parent.append(a);if(/\.(png|jpe?g|webp|gif)(\?|$)/i.test(url)){const image=node('img');image.src=url;image.alt=m[2];image.loading='lazy';image.decoding='async';image.referrerPolicy='no-referrer';parent.append(image);}}}
   else parent.append(node(m[4]?'code':m[5]||m[6]?'strong':'em',m[4]||m[5]||m[6]||m[7]));
- }parent.append(document.createTextNode(text.slice(at)));
+ }plain(text.slice(at),parent);
 }
 const cells=line=>line.trim().replace(/^\||\|$/g,'').split(/(?<!\\)\|/).map(x=>x.trim().replace(/\\\|/g,'|'));
 export function richText(value,resolveUrl=value=>value){
