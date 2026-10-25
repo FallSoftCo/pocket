@@ -236,7 +236,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             snapshotFlow{
                 val latest=PocketTranscript.rows.lastOrNull{it.s("kind") !in listOf("turn","turnEnd")&&it.s("text").isNotBlank()}?.s("id")
                 val visible=latest!=null&&list.layoutInfo.visibleItemsInfo.any{it.key==latest}
-                val eligible=AppWindowVisibility.focused&&!actionsOpen&&!important&&!BlackoutVisibility.active&&!PocketVoice.active&&!PocketTranscript.loading&&!PocketTranscript.updating&&!list.isScrollInProgress&&!list.canScrollForward&&visible
+                val eligible=AppWindowVisibility.focused&&!actionsOpen&&!reviewOpen&&!important&&!BlackoutVisibility.active&&!PocketVoice.active&&!PocketTranscript.loading&&!PocketTranscript.updating&&!list.isScrollInProgress&&!list.canScrollForward&&visible
                 eligible to PocketTranscript.revision
             }.collectLatest{(eligible,_)->
                 if(eligible){delay(500);CodexConversations.presented(conversation.key,conversation.incarnation)}
@@ -261,7 +261,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     LaunchedEffect(reviewRequests.map{it.s("id")}){
         val fresh=reviewRequests.any{it.s("id") !in seenQuestions}
         seenQuestions.addAll(reviewRequests.map{it.s("id")})
-        if(fresh&&!keyboardInput&&!PocketVoice.active&&!BlackoutVisibility.active)reviewOpen=true
+        if(fresh&&!keyboardInput&&!PocketVoice.captureBusy&&!BlackoutVisibility.active)reviewOpen=true
     }
     LaunchedEffect(keyboardInput,conversation.incarnation){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
     ConversationBack{Pocket.closeTask()}
@@ -456,7 +456,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     val reviewPanel:@Composable ()->Unit={ConversationReviewContent(reviewRequests,reviewResults,otherQuestions,
         onClose={reviewOpen=false},
-        onReply={note->val context="About this result:\n"+note.s("text")+"\n\n";val next=context+editor.text;editor=TextFieldValue(next,TextRange(context.length));saveReplyDraft(draftKey,next);keyboardInput=true;reviewOpen=false},
+        onReply={note->val context="About this result:\n"+note.s("text").take(500)+"\n\n";val next=context+editor.text;editor=TextFieldValue(next,TextRange(context.length));saveReplyDraft(draftKey,next);keyboardInput=true;reviewOpen=false},
         onSource={note->
             reviewOpen=false;follow=false;CodexConversations.readerInteraction(conversation.key,conversation.incarnation)
             val sourceThread=Pocket.selected;val destination=Pocket.captureEnvironment()

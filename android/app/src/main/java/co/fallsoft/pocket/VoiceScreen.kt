@@ -46,16 +46,16 @@ import androidx.lifecycle.repeatOnLifecycle
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
     LaunchedEffect(keyboardInput){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
+    var questionsOpen by remember(Pocket.environmentId){mutableStateOf(false)}
     val scroll=androidx.compose.foundation.lazy.rememberLazyListState()
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     val coverage=remember(Pocket.local,Pocket.token){CoordinatorReadingCoverage()}
     LaunchedEffect(scroll,lifecycle,coverage){lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
-        snapshotFlow{if(BlackoutVisibility.active)emptyList()else scroll.layoutInfo.let{layout->layout.visibleItemsInfo.filter{item->item.key.toString().startsWith("assistant:")}.map{item->CoordinatorItemExposure(item.key.toString().substringAfter(":"),item.offset,item.size,layout.viewportStartOffset,layout.viewportEndOffset)}}}
+        snapshotFlow{if(BlackoutVisibility.active||questionsOpen)emptyList()else scroll.layoutInfo.let{layout->layout.visibleItemsInfo.filter{item->item.key.toString().startsWith("assistant:")}.map{item->CoordinatorItemExposure(item.key.toString().substringAfter(":"),item.offset,item.size,layout.viewportStartOffset,layout.viewportEndOffset)}}}
             .collect{items->if(PocketVoice.foreground)items.forEach{item->if(coverage.expose(item.id,item.offset,item.size,item.start,item.end))PocketVoice.presented(item.id)}}
     }}
     ConversationBack{PocketVoice.stop();Pocket.closeTask()}
     LaunchedEffect(PocketVoice.messages.size,PocketVoice.heard,PocketVoice.response){if(scroll.layoutInfo.totalItemsCount>0)scroll.animateScrollToItem(scroll.layoutInfo.totalItemsCount-1)}
-    var questionsOpen by remember(Pocket.environmentId){mutableStateOf(false)}
     val questions=Pocket.attention.filter{it.s("kind") in listOf("question","approval")}
     ConversationReviewScaffold(questionsOpen,{questionsOpen=false},review={ConversationReviewContent(emptyList(),emptyList(),questions,{questionsOpen=false},{},{},{},emptySet())}){
     Column(Modifier.fillMaxSize().imePadding()){

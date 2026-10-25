@@ -47,6 +47,7 @@ internal fun usefulConversationResults(notes:List<JSONObject>,rows:List<JSONObje
         }
     }
 }
+@OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun ConversationReviewContent(requests:List<JSONObject>,results:List<JSONObject>,other:List<JSONObject>,onClose:()->Unit,onReply:(JSONObject)->Unit,onSource:(JSONObject)->Unit,onDismiss:(JSONObject)->Unit,removing:Set<String>){
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal=16.dp)){
         Row(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
@@ -66,7 +67,7 @@ internal fun usefulConversationResults(notes:List<JSONObject>,rows:List<JSONObje
             if(results.isNotEmpty())item{BilingualLabel("Saved results",fontSize=16.sp,color=Mint,centered=false)}
             items(results,key={"result:"+it.s("id")}){note->Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(4.dp)){
                 BilingualMessage("review-result:"+note.s("id"),note.s("text"))
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
                     TextButton({onReply(note)}){BilingualLabel("Reply")}
                     TextButton({onSource(note)}){BilingualLabel("In conversation")}
                     TextButton({onDismiss(note)},enabled=note.s("id") !in removing){BilingualLabel(if(note.s("id") in removing)"Removing…" else "Dismiss",color=Muted)}

@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material3.Text
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,7 +29,7 @@ import androidx.compose.ui.unit.*
     onTextLayout:(TextLayoutResult)->Unit={}
 ){
     val runs=remember(forms){requireNotNull(immersionSharedRuns(forms))}
-    val style=TextStyle(color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign)
+    val style=LocalTextStyle.current.merge(TextStyle(color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign))
     val measurer=rememberTextMeasurer(cacheSize=128);val density=LocalDensity.current
     val overrides=remember(forms){mutableStateMapOf<String,Int>()}
     LaunchedEffect(phase){overrides.clear()}
