@@ -34,6 +34,7 @@ class NativeReadingParityNativeTest {
    await("Canonical conversation did not open"){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
    qa("question")
    assertTrue("Question did not become visible",device.wait(Until.hasObject(By.text("Native pending question")),10000))
+   assertTrue("Drawer stole the activity window used for volume-key capture",AppWindowVisibility.focused)
    val option=device.wait(Until.findObject(By.text("Proceed")),2000);assertNotNull(option);option!!.click()
    assertTrue(device.wait(Until.hasObject(By.text("Proceed").clazz("android.widget.EditText")),3000))
    device.findObject(By.desc("Close questions")).click()

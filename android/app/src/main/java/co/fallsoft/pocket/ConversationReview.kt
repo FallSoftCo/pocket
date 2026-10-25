@@ -9,11 +9,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import kotlinx.coroutines.flow.drop
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import org.json.JSONObject
 
 internal fun usefulConversationResults(notes:List<JSONObject>,rows:List<JSONObject>):List<JSONObject>{
@@ -30,12 +31,19 @@ internal fun usefulConversationResults(notes:List<JSONObject>,rows:List<JSONObje
         Box(Modifier.weight(1f).fillMaxHeight()){content()}
         if(open)Surface(color=Panel,modifier=Modifier.width(340.dp).fillMaxHeight()){review()}
     }}else{
-        content()
-        if(open)Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=true)){
-            Row(Modifier.fillMaxSize()){
-                Spacer(Modifier.weight(1f).fillMaxHeight().clickable(onClick=onClose))
-                Surface(color=Panel,modifier=Modifier.width(minOf(420.dp,(width*.96f).dp)).fillMaxHeight()){review()}
-            }
+        val direction=LocalLayoutDirection.current
+        val state=rememberDrawerState(if(open)DrawerValue.Open else DrawerValue.Closed)
+        val close by rememberUpdatedState(onClose)
+        LaunchedEffect(open){if(open)state.open()else state.close()}
+        LaunchedEffect(state){snapshotFlow{state.currentValue}.drop(1).collect{if(it==DrawerValue.Closed)close()}}
+        // Only drawer placement is RTL. Content retains its actual reading direction.
+        // Staying in this Activity preserves volume keys, IME and foreground read ownership.
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl){
+            ModalNavigationDrawer(drawerState=state,gesturesEnabled=open,drawerContent={
+                CompositionLocalProvider(LocalLayoutDirection provides direction){
+                    ModalDrawerSheet(modifier=Modifier.width(minOf(420.dp,(width*.96f).dp)),drawerContainerColor=Panel,windowInsets=WindowInsets(0,0,0,0)){review()}
+                }
+            }){CompositionLocalProvider(LocalLayoutDirection provides direction){content()}}
         }
     }
 }
