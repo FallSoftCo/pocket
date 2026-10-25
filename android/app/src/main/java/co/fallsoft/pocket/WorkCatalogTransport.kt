@@ -73,9 +73,8 @@ internal class WorkCatalogReader(
             val rows=result.getJSONArray("rooms").objects()
             require(rows.all{hollywoodUuid(it.s("id"))&&it.s("name").isNotBlank()&&it.s("authority")==binding.s("authorityId")}&&rows.map{it.s("id")}.distinct().size==rows.size){"Room identities unavailable"}
             rows.map{row->
-                // Current room catalog has no work-recency contract. Unknown is
-                // zero, never room edits or the polling timestamp in activity.
-                val at=0L
+                // Event epoch-ms is already canonical; never scale it like legacy sessions.
+                val at=HollywoodRoomFeedSummary.read(row)?.workAt?:0L
                 WorkEntry(WorkItemKey(key,WorkKind.ROOM,binding.s("authorityId"),row.s("id")),at.coerceAtLeast(0),
                     WorkCatalogPayload(destination,row.toString(),binding.toString()))
             }
@@ -114,3 +113,50 @@ internal suspend fun discoverWorkBackends(
     JSONObject().put("backends",org.json.JSONArray().put(JSONObject()
         .put("id","codex").put("configured",true).put("available",true)))
 }
+
+/** Viewer-authorized feedSummary v1 only; never room metadata or observation time.
+ * Recency must name the highest-sequence projected event, not the largest clock.
+ * Malformed/legacy summaries leave the room navigable with unknown work time.
+ */
+internal data class HollywoodRoomFeedSummary(val workAt:Long,val preview:String?) {
+    companion object {
+        private const val MAX_SAFE=9007199254740991L
+        private data class Event(val id:String,val seq:Long,val at:Long,val text:String?)
+        private fun integer(raw:JSONObject,key:String):Long? {
+            val value=raw.opt(key)
+            if(value !is Int&&value !is Long)return null
+            return (value as Number).toLong().takeIf{it in 0..MAX_SAFE}
+        }
+        private fun event(raw:JSONObject,textKey:String):Event? {
+            val id=raw.opt("eventId") as? String?:return null
+            if(!hollywoodUuid(id))return null
+            val seq=integer(raw,"seq")?.takeIf{it>0}?:return null
+            val at=integer(raw,"occurredAt")?:return null
+            // Do not stringify arbitrary objects or render unbounded legacy text.
+            val text=(raw.opt(textKey) as? String)?.takeIf{
+                raw.opt("truncated") is Boolean&&it.codePointCount(0,it.length)<=320&&it.isNotBlank()
+            }
+            return Event(id,seq,at,text)
+        }
+        fun read(room:JSONObject):HollywoodRoomFeedSummary? {
+            val raw=room.optJSONObject("feedSummary")?:return null
+            if(integer(raw,"version")!=1L)return null
+            val events=mutableListOf<Event>()
+            for((key,textKey) in listOf("latestMessage" to "body","latestActivity" to "title")){
+                if(raw.isNull(key))continue
+                events+=event(raw.optJSONObject(key)?:return null,textKey)?:return null
+            }
+            val latest=events.maxByOrNull{it.seq}
+            if(latest==null){
+                if(!raw.isNull("recency"))return null
+                return HollywoodRoomFeedSummary(0,null)
+            }
+            val recency=event(raw.optJSONObject("recency")?:return null,"")?:return null
+            if(recency.id!=latest.id||recency.seq!=latest.seq||recency.at!=latest.at)return null
+            return HollywoodRoomFeedSummary(recency.at,events.sortedByDescending{it.seq}.firstNotNullOfOrNull{it.text})
+        }
+    }
+}
+
+internal fun hollywoodRoomPreview(room:JSONObject,available:Boolean):String =
+    (if(available)HollywoodRoomFeedSummary.read(room)?.preview else null)?:room.s("purpose")

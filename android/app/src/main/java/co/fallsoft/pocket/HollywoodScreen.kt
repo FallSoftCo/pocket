@@ -33,8 +33,6 @@ import androidx.lifecycle.repeatOnLifecycle
         ForegroundNotifications.visibleRoom=visible
         onDispose{if(ForegroundNotifications.visibleRoom==visible)ForegroundNotifications.visibleRoom=null}
     }
-    val catalog=remember(client){HollywoodRoomCatalog{client.call("rooms")}}
-    val rooms=catalog.rooms
     val catalogList=remember(client.bindingId){androidx.compose.foundation.lazy.LazyListState()}
     var catalogSearchOpen by remember(client.bindingId){mutableStateOf(false)}
     var catalogQuery by remember(client.bindingId){mutableStateOf("")}
@@ -171,8 +169,15 @@ import androidx.lifecycle.repeatOnLifecycle
             while(isActive){coordinatorFeed.refreshDetail();delay(15000)}
         }
     }
-    LaunchedEffect(catalog,browsing,PocketLive.connectionRevision,lifecycle){
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){while(isActive){catalog.refresh();delay(if(browsing)5000 else 15000)}}
+    LaunchedEffect(browsing,PocketLive.connectionRevision,lifecycle){
+        if(!browsing)return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
+            val detach=UnifiedWorkCatalog.attach()
+            try{UnifiedWorkCatalog.refresh();awaitCancellation()}finally{detach()}
+        }
+    }
+    LaunchedEffect(browsing,catalogQuery){
+        if(browsing&&catalogQuery.isNotBlank()){delay(400);UnifiedWorkCatalog.search(catalogQuery)}
     }
     LaunchedEffect(feed,list){
         snapshotFlow{Triple(list.isScrollInProgress,list.firstVisibleItemIndex,following)}.collect{(scrolling,index,follow)->
@@ -264,30 +269,20 @@ import androidx.lifecycle.repeatOnLifecycle
     BackHandler(browsing&&catalogMenu){catalogMenu=false}
     if(browsing){
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
-            if(catalog.loading&&rooms.isEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().testTag("native-room-catalog-loading"))
-            if(!catalog.available&&!catalog.loading){
-                BilingualLabel("Rooms could not refresh",Modifier.padding(horizontal=16.dp),color=Coral)
-                TextButton({jobs.launch{catalog.refresh()}},Modifier.testTag("native-room-catalog-retry")){BilingualLabel("Retry")}
-            }
-            if(catalog.available&&rooms.isEmpty())BilingualLabel("No rooms available",Modifier.padding(16.dp),color=Muted)
             Box(Modifier.weight(1f).fillMaxWidth()){
-            WorkCatalogList(Modifier.fillMaxSize(),state=catalogList,reverseLayout=true,contentPadding=PaddingValues(top=12.dp,bottom=12.dp)){
-                val terms=catalogQuery.trim().split(Regex("\\s+")).filter{it.isNotBlank()}
-                val ordered=rooms.filter{item->terms.all{term->(item.s("name")+" "+item.s("purpose")).contains(term,ignoreCase=true)}}
-                    .sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
-                if(ordered.isEmpty()&&terms.isNotEmpty())item{BilingualLabel("No matching rooms",Modifier.fillMaxWidth().padding(16.dp),color=Muted)}
-                items(ordered,key={it.s("id")}){item->
-                    HollywoodRoomCard(item,catalog.available){choose(item.s("id"))}
-                }
+                HollywoodWorkCatalog(UnifiedWorkCatalog.snapshots,UnifiedWorkCatalog.discovering.isNotEmpty(),
+                    catalogList,catalogQuery,{UnifiedWorkCatalog.refresh()},
+                    discoveryErrors=UnifiedWorkCatalog.discoveryErrors)
             }
-            }
+            if(UnifiedWorkCatalog.hasEarlier)TextButton({jobs.launch{UnifiedWorkCatalog.more()}},
+                Modifier.testTag("native-catalog-earlier")){BilingualLabel("Earlier work")}
             ConversationSpeechDock()
             InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
             if(catalogSearchOpen){
                 Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
                     androidx.compose.material3.OutlinedTextField(catalogQuery,{catalogQuery=it},singleLine=true,
                         modifier=Modifier.weight(1f).testTag("native-room-search").focusRequester(catalogSearchFocus),
-                        placeholder={BilingualLabel("Find rooms")},
+                        placeholder={BilingualLabel("Find work")},
                         keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Search),
                         keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSearch={keyboard?.hide()}))
                     IconButton({catalogSearchOpen=false;catalogQuery="";keyboard?.hide()},Modifier.size(48.dp).testTag("native-room-search-close")){
@@ -300,7 +295,7 @@ import androidx.lifecycle.repeatOnLifecycle
                     Modifier.size(48.dp).testTag("native-catalog-find")){SymbolIcon("Search",PocketImmersion.label("Find"),Modifier.size(32.dp),tint=Mint)}
                 ReaderPagingButtons(catalogList)
                 InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-                ConversationActionsMenu(catalogMenu,{catalogMenu=it},modifier=Modifier.testTag("native-catalog-controls"),contextLabel="Rooms"){
+                ConversationActionsMenu(catalogMenu,{catalogMenu=it},modifier=Modifier.testTag("native-catalog-controls"),contextLabel="Work"){
                     TextButton({catalogMenu=false;onSettings()},Modifier.testTag("native-catalog-settings")){BilingualLabel("Settings")}
                     ProfileSwitcher(inlineOptions=true){catalogMenu=false}
                     PocketUpdateControl()
@@ -397,7 +392,7 @@ import androidx.lifecycle.repeatOnLifecycle
             account.credits.compact()?.let{Text(it,color=Muted)}
             if(account.remainingPercent==null&&account.credits.compact()==null)BilingualLabel("Account usage unavailable",centered=false,color=Muted)
             PocketUpdateControl()
-            TextButton({menu=false;browsing=true},Modifier.testTag("native-room-catalog")){BilingualLabel("Rooms")}
+            TextButton({menu=false;browsing=true},Modifier.testTag("native-room-catalog")){BilingualLabel("Work")}
             ProfileSwitcher(inlineOptions=true){menu=false}
             val context=androidx.compose.ui.platform.LocalContext.current
             TextButton({menu=false;context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}
@@ -431,6 +426,30 @@ import androidx.lifecycle.repeatOnLifecycle
     }
     if(workflow)HollywoodWorkDialog(client,room){workflow=false}
     inspecting?.let{value->HollywoodAttentionDialog(client,value,{inspecting=null}){jobs.launch{refresh(room)}}}
+}
+
+
+/** Hollywood entry uses the same source-bound body/actions as the stock entry.
+ * Discovery never borrows the selected room's client or converts rooms to sessions.
+ */
+@Composable internal fun HollywoodWorkCatalog(
+    snapshots:List<WorkSourceSnapshot<WorkCatalogPayload>>,discovering:Boolean,
+    state:LazyListState,query:String,onRefresh:()->Unit,
+    actions:UnifiedWorkActions=WorkSourceActions.actions,
+    discoveryErrors:Map<WorkSourceKey,String> = emptyMap()
+){
+    UnifiedWorkList(snapshots,discovering,actions,Modifier.fillMaxSize(),state=state,
+        query=query,showHistory=Pocket.showArchived,onRefresh=onRefresh,leading={
+            ErrorBanner()
+            discoveryErrors.forEach{(source,message)->
+                val name=Pocket.environmentProfiles.all().firstOrNull{it.id==source.environment}?.name?:source.environment
+                Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
+                    Text("$name · $message",Modifier.weight(1f),color=Coral,maxLines=2,
+                        overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    TextButton(onRefresh){BilingualLabel("Retry")}
+                }
+            }
+        })
 }
 
 @Composable private fun HollywoodAttentionDialog(client:HollywoodClient,source:JSONObject,dismiss:()->Unit,changed:()->Unit){

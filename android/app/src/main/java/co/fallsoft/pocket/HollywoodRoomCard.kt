@@ -21,6 +21,7 @@ import org.json.JSONObject
 /** No generic session Idle fallback; only the canonical catalog can assert quiet work. */
 @Composable internal fun HollywoodRoomCard(room:JSONObject,available:Boolean,identityScope:String=Pocket.environmentId,headerBadge:(@Composable ()->Unit)?=null,onKeyboard:(()->Unit)?=null,onOpen:()->Unit) {
     val activity=HollywoodRoomActivity.read(room,available)
+    val preview=hollywoodRoomPreview(room,available)
     val density=LocalDensity.current
     val lineHeight=with(density){20.sp.toDp()}.coerceAtLeast(24.dp)
     val previewHeight=with(density){18.sp.toDp()}.coerceAtLeast(18.dp)
@@ -81,7 +82,7 @@ import org.json.JSONObject
             // Reserve exactly one context line even when a room has no purpose yet.
             // Activity bursts and missing context must not move the next touch target.
             Box(Modifier.fillMaxWidth().height(previewHeight)) {
-                if(room.s("purpose").isNotBlank())ImmersionText("room-purpose:"+identityScope+":"+room.s("id"),room.s("purpose"),color=Muted,fontSize=13.sp,lineHeight=18.sp,maxLines=1,overflow=TextOverflow.Ellipsis,rescue=false,phraseRescue=false,links=false)
+                if(preview.isNotBlank())ImmersionText("room-preview:"+identityScope+":"+room.s("id"),preview,color=Muted,fontSize=13.sp,lineHeight=18.sp,maxLines=1,overflow=TextOverflow.Ellipsis,rescue=false,phraseRescue=false,links=false)
             }
         }
     }
