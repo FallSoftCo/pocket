@@ -15,9 +15,12 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
     val latest=rememberUpdatedState(onBack)
     val hide=rememberUpdatedState(hideKeyboard)
     val leave:()->Unit={if(hide.value)keyboard?.hide();latest.value()}
-    BackHandler(onBack=leave)
-    DisposableEffect(activity){
-        if(Build.VERSION.SDK_INT>=33&&activity!=null){
+    // The native blackout overlay owns Back while it is visible. Keeping an
+    // overlay-priority conversation callback would bypass its exit/restoration.
+    val blackout=BlackoutVisibility.active
+    BackHandler(enabled=!blackout,onBack=leave)
+    DisposableEffect(activity,blackout){
+        if(Build.VERSION.SDK_INT>=33&&activity!=null&&!blackout){
             val callback=OnBackInvokedCallback{if(hide.value)keyboard?.hide();latest.value()}
             activity.onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_OVERLAY,callback)
             onDispose{activity.onBackInvokedDispatcher.unregisterOnBackInvokedCallback(callback)}

@@ -264,7 +264,21 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         if(fresh&&!keyboardInput&&!PocketVoice.captureBusy&&!BlackoutVisibility.active)reviewOpen=true
     }
     LaunchedEffect(keyboardInput,conversation.incarnation){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
-    ConversationBack{Pocket.closeTask()}
+    val dismissingControl=actionsOpen||reviewOpen||settingsOpen||renameOpen||confirmArchive||
+        editingQueue!=null||queueOpen||confirmRetry!=null
+    ConversationBack(hideKeyboard=!dismissingControl){
+        when{
+            confirmRetry!=null->confirmRetry=null
+            editingQueue!=null->editingQueue=null
+            confirmArchive->confirmArchive=false
+            renameOpen->renameOpen=false
+            settingsOpen->settingsOpen=false
+            queueOpen->queueOpen=false
+            reviewOpen->reviewOpen=false
+            actionsOpen->actionsOpen=false
+            else->Pocket.closeTask()
+        }
+    }
     val hasDraft by remember(editorState){derivedStateOf{editorState.value.text.isNotBlank()}}
     val submit:(String)->Unit={mode->val submitted=editor.text;val submittedGeneration=replyDraftGeneration(draftKey);follow=true;CodexConversations.submit(conversation.key,conversation.incarnation,submitted,mode,draftKey){if(editor.text==submitted&&replyDraftGeneration(draftKey)==submittedGeneration){editor=TextFieldValue("");Pocket.prefs.edit().remove(draftKey).apply()}}}
     val waiting=d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") in listOf("queued","held")&&it.s("mode")=="queue"}?:emptyList()

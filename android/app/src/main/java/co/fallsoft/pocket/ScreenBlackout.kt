@@ -38,6 +38,7 @@ class ScreenBlackout(private val activity: Activity) {
     private val session = BlackoutWindowSession()
     private var overlay: View? = null
     private var backCallback: OnBackPressedCallback? = null
+    private var nativeBackCallback: android.window.OnBackInvokedCallback? = null
     private val accessibilityBefore = mutableMapOf<View, Int>()
     private var priorBarBehavior = 0
     private var priorStatusVisible = true
@@ -87,6 +88,12 @@ class ScreenBlackout(private val activity: Activity) {
         }.also { callback -> (activity as? ComponentActivity)?.onBackPressedDispatcher?.addCallback(callback) }
         decor.addView(surface, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         surface.requestFocus()
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val callback = android.window.OnBackInvokedCallback { exit() }
+            activity.onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_OVERLAY, callback)
+            nativeBackCallback = callback
+        }
         surface.announceForAccessibility(surface.contentDescription)
     }
 
@@ -95,6 +102,10 @@ class ScreenBlackout(private val activity: Activity) {
         BlackoutVisibility.active = false
         overlay?.let { (it.parent as? ViewGroup)?.removeView(it) }
         overlay = null
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            nativeBackCallback?.let { activity.onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) }
+        }
+        nativeBackCallback = null
         backCallback?.remove()
         backCallback = null
         accessibilityBefore.forEach { (view, importance) -> view.importantForAccessibility = importance }

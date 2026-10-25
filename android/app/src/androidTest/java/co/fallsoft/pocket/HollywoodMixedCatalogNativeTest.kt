@@ -35,10 +35,12 @@ class HollywoodMixedCatalogNativeTest {
         val end=System.currentTimeMillis()+20000
         while(System.currentTimeMillis()<end){
             if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
-            if(b())return
+            if(try{b()}catch(_:StaleObjectException){false})return
             Thread.sleep(80)
         }
-        capture("failed");assertTrue(label,b())
+        capture("failed")
+        java.io.File(context.cacheDir,"mixed-failed-ime.txt").writeText(device.executeShellCommand("dumpsys input_method"))
+        fail(label)
     }
     private fun capture(name:String){
         device.dumpWindowHierarchy(java.io.File(context.cacheDir,"mixed-"+name+".xml"))
@@ -48,20 +50,90 @@ class HollywoodMixedCatalogNativeTest {
         device.executeShellCommand("screencap -p "+path)
         assertTrue(device.executeShellCommand("stat -c %s "+path).trim().toLong()>1000)
     }
+    private fun observedBounds(selector:BySelector):android.graphics.Rect?{
+        // UiObject2 handles may retire during an ordinary rendered frame.
+        // Retry only observation; no input has been injected at this point.
+        return try{
+            val node=device.findObject(selector)?:return null
+            if(!node.isEnabled)return null
+            android.graphics.Rect(node.visibleBounds).takeUnless{it.isEmpty}
+        }catch(_:StaleObjectException){null}
+    }
+    private fun identity()="environment=${Pocket.environmentId} selected=${Pocket.selected} native=${BackendNavigation.nativeSelected()}"
     private fun click(selector:BySelector){
         var bounds:android.graphics.Rect?=null;var stableAt=0L
         val end=android.os.SystemClock.elapsedRealtime()+20000
         while(android.os.SystemClock.elapsedRealtime()<end){
             if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
-            val node=device.findObject(selector);val next=node?.visibleBounds
+            val next=observedBounds(selector)
             val now=android.os.SystemClock.elapsedRealtime()
-            if(next!=null&&!next.isEmpty&&node.isEnabled){
-                if(next==bounds&&now-stableAt>=250){node.click();return}
+            if(next!=null){
+                if(next==bounds&&now-stableAt>=250){
+                    println("LIVE_TAP "+selector+" bounds="+next+" "+identity())
+                    // One actual native touch. No stale handle is dereferenced
+                    // after observation, and dispatched input is never retried.
+                    assertTrue("Touch injection failed: "+selector,device.click(next.centerX(),next.centerY()))
+                    return
+                }
                 if(next!=bounds){bounds=android.graphics.Rect(next);stableAt=now}
             }else{bounds=null;stableAt=now}
             Thread.sleep(50)
         }
         capture("unstable-target");fail("Tap target did not settle: "+selector)
+    }
+    private fun openBlackout(){
+        click(By.desc("Settings, app updates, usage and activity"))
+        await("Room popup missing"){device.hasObject(By.text("Work"))}
+        for(step in 0..10){
+            if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
+            val control=observedBounds(By.text("Blackout"))
+            if(control!=null&&control.height()>20){
+                capture("blackout-visible");click(By.text("Blackout"));return
+            }
+            assertTrue("Blackout not reachable in bounded popup scroll",step<10)
+            var popup:android.graphics.Rect?=null
+            await("Popup scroll surface missing"){
+                popup=observedBounds(By.clazz("android.widget.ScrollView").pkg("co.fallsoft.pocket"))
+                (popup?.height()?:0)>100&&(popup?.width()?:0)>100
+            }
+            val b=requireNotNull(popup)
+            capture("popup-scroll-"+step)
+            assertTrue("Popup swipe failed",device.swipe(b.centerX(),b.bottom-b.height()/5,b.centerX(),b.top+b.height()/5,24))
+            Thread.sleep(180)
+        }
+    }
+    private fun focusedIme(label:String){
+        click(By.clazz("android.widget.EditText"))
+        await(label+" editor not focused with visible IME"){
+            device.findObject(By.clazz("android.widget.EditText"))?.isFocused==true&&
+                i.uiAutomation.windows.any { window ->
+                    val bounds=android.graphics.Rect()
+                    window.getBoundsInScreen(bounds)
+                    window.type==android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD&&bounds.height()>300
+                }
+        }
+        println("FOCUSED_IME "+label+" "+device.executeShellCommand("dumpsys input_method").lineSequence()
+            .filter{it.contains("mInputShown")||it.contains("mImeWindowVis")}.joinToString(" | "))
+        println("BACK_CALLBACK "+label+" "+device.executeShellCommand("dumpsys window windows").lineSequence()
+            .filter{it.contains("OnBackInvoked")}.joinToString(" | "))
+        capture(label+"-focused-ime")
+    }
+    private fun rawBack(){device.executeShellCommand("input keyevent KEYCODE_BACK")}
+    private fun systemBack(label:String){focusedIme(label);rawBack()}
+    private fun menuBack(label:String,text:String,draft:String,marker:String){
+        val environment=Pocket.environmentId;val selected=Pocket.selected;val native=BackendNavigation.nativeSelected()
+        assertTrue(label+" source text not mounted before menu",device.hasObject(By.text(text)))
+        click(By.desc("Settings, app updates, usage and activity"))
+        await(label+" menu not opened"){device.hasObject(By.text(marker))}
+        capture(label+"-menu")
+        rawBack()
+        await(label+" Back navigated instead of closing menu"){
+            !device.hasObject(By.text(marker))&&Pocket.environmentId==environment&&Pocket.selected==selected&&
+                BackendNavigation.nativeSelected()==native&&
+                device.findObject(By.clazz("android.widget.EditText"))?.text==draft
+        }
+        capture(label+"-menu-dismissed")
+        println("MENU_BACK_PRESERVED "+label)
     }
     private fun binding()=JSONObject().put("id","lax").put("api",3).put("configured",true).put("available",true)
         .put("bindingId","e".repeat(64)).put("installationId",authority).put("authorityId",authority)
@@ -93,7 +165,9 @@ class HollywoodMixedCatalogNativeTest {
         val roomIntent=client.capture(scope,"Saved unknown room input").put("state","unknown").toString()
         val roomPendingKey="pending:"+client.key(scope)
         check(prefs.edit().putString(roomPendingKey,roomIntent).commit())
+        val voiceBefore=listOf(PocketVoice.active,PocketVoice.captureBusy,PocketVoice.targetThread,PocketVoice.targetRoom?.toString())
         fun preserved(){
+            assertEquals("Navigation changed voice state",voiceBefore,listOf(PocketVoice.active,PocketVoice.captureBusy,PocketVoice.targetThread,PocketVoice.targetRoom?.toString()))
             assertEquals(roomDraft,client.draft(scope));assertEquals(stockDraft,prefs.getString(stockKey,null))
             assertEquals("Changed unknown room receipt",roomIntent,prefs.getString(roomPendingKey,null))
             val saved=ClientReplyJournal({prefs.getString("client-replies:v1","[]")!!},{false}).all().single()
@@ -103,8 +177,7 @@ class HollywoodMixedCatalogNativeTest {
         // Match the existing repository MainActivity probes; no idle-dependent
         // ActivityScenario cleanup can conceal a routing assertion failure.
         main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
-        // Live status/animation is not global idleness. Await actual app state
-        // and stable target geometry instead of ten-second implicit idle waits.
+        // Continuous live UI is synchronized by state and stable target geometry.
         val configuration=Configurator.getInstance()
         val previousIdleTimeout=configuration.waitForIdleTimeout
         configuration.waitForIdleTimeout=0
@@ -114,7 +187,8 @@ class HollywoodMixedCatalogNativeTest {
             assertEquals("Initial room draft",device.findObject(By.clazz("android.widget.EditText")).text)
             device.findObject(By.clazz("android.widget.EditText")).text=roomDraft
             await("Room typing not persisted"){client.draft(scope)==roomDraft};capture("room")
-            click(By.res("native-room-controls"));click(By.res("native-room-catalog"))
+            menuBack("room",roomText,roomDraft,"Work")
+            systemBack("room")
             await("Hollywood list missing mixed sources"){device.hasObject(By.desc("Open Chat for Original room"))&&device.hasObject(By.desc("Open Chat for Original session"))}
             val entries=UnifiedWorkCatalog.snapshots.flatMap{it.entries}
             val room=entries.single{it.key.kind==WorkKind.ROOM&&it.key.id==roomId}
@@ -128,11 +202,11 @@ class HollywoodMixedCatalogNativeTest {
             assertEquals("Initial stock draft",device.findObject(By.clazz("android.widget.EditText")).text)
             device.findObject(By.clazz("android.widget.EditText")).text=stockDraft
             await("Stock typing not persisted"){prefs.getString(stockKey,null)==stockDraft}
-            preserved();capture("session");click(By.text("Stock host"));click(By.text("Back"))
+            preserved();capture("session");menuBack("stock",sessionText,stockDraft,"Back");systemBack("stock")
             await("Stock shared list lost room"){Pocket.selected==null&&device.hasObject(By.desc("Open Chat for Original room"))}
             click(By.desc("Open Keyboard for Original room"))
             await("Original room/draft not mounted on return"){Pocket.environmentId=="room-host"&&device.hasObject(By.text(roomText))&&device.findObject(By.clazz("android.widget.EditText"))?.text==roomDraft}
-            preserved();capture("returned-room");click(By.res("native-room-controls"));click(By.res("native-room-catalog"))
+            preserved();capture("returned-room");systemBack("returned-room")
             await("Room list missing"){device.hasObject(By.desc("Open Chat for Original session"))}
             qa("room-outage");main{UnifiedWorkCatalog.refresh()}
             await("Unavailable source not isolated"){
@@ -157,6 +231,38 @@ class HollywoodMixedCatalogNativeTest {
             click(By.desc("Open Keyboard for Original room"))
             await("Original room not mounted after recovery"){Pocket.environmentId=="room-host"&&device.hasObject(By.text(roomText))}
             preserved();capture("final-room")
+            openBlackout()
+            await("Blackout overlay missing"){BlackoutVisibility.active&&device.hasObject(By.desc("Blackout active. Tap to return to NextComp."))}
+            // A fresh Android image presents its own first-use immersive
+            // education window. Acknowledge that exact OS prompt before testing
+            // app Back; never treat a system-window Back as blackout navigation.
+            capture("blackout-entry")
+            val education=By.pkg("android").text("Got it")
+            var acknowledgedEducation=false
+            var focusedSince=0L
+            await("Blackout does not own the foreground window"){
+                if(device.hasObject(education)&&!acknowledgedEducation){
+                    capture("blackout-system-education")
+                    click(education)
+                    acknowledgedEducation=true
+                    focusedSince=0L
+                }
+                val appFocused=i.uiAutomation.windows.any{
+                    it.isFocused&&it.root?.packageName?.toString()=="co.fallsoft.pocket"
+                }&&!device.hasObject(education)
+                val now=android.os.SystemClock.elapsedRealtime()
+                if(!appFocused)focusedSince=0L
+                else if(focusedSince==0L)focusedSince=now
+                appFocused&&now-focusedSince>=1500
+            }
+            capture("blackout")
+            rawBack()
+            await("Back did not dismiss blackout before conversation navigation"){
+                !BlackoutVisibility.active&&Pocket.environmentId=="room-host"&&BackendNavigation.nativeSelected()&&device.hasObject(By.text(roomText))&&
+                    device.findObject(By.clazz("android.widget.EditText"))?.text==roomDraft
+            }
+            preserved();capture("blackout-dismissed")
+            println("BLACKOUT_BACK_PRESERVED")
             val state=qa("state")
             assertEquals("Navigation admitted task/provider write",0,state.getInt("blockedTaskWrites"))
             assertEquals("Wrong source route accepted",0,state.getInt("wrongSource"))
