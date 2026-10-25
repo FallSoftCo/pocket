@@ -1,0 +1,104 @@
+{
+  "schema": "lax-nextcomp-C2-actual-native-qualification/v1",
+  "at": 1792963392.8634117,
+  "state": "bounded_emulator_slice_passed",
+  "actor": "01a12c58-d21a-79b0-a512-0c3bc6dc0ee4",
+  "source": {
+    "hollywood": "ff41fcf429fab49c367e917ed58fc5c94481e462",
+    "hollywoodVersion": "0.3.0.dev126",
+    "connector": "0.1.0.dev168",
+    "schema": 40,
+    "native": "r334-r02 unchanged",
+    "nextcompBase": "2fbdcac",
+    "ownedFiles": {
+      "server/hollywood.mjs": "d158108233eb2677e22238d1e49a985945bd128cfa69540eacb0154a9e3cd308",
+      "server/hollywood-context-review.mjs": "85378591cd7b683bd2dec121bc7987f51763ef88d737d8f25600d6957b8572c2",
+      "android/app/src/main/java/co/fallsoft/pocket/HollywoodClient.kt": "eb048b8fb95b850e581f5e474db5ebff7084425a23036cdb7aee990cf3937440",
+      "android/app/src/main/java/co/fallsoft/pocket/HollywoodScreen.kt": "482188f0f8d7584360664fd131c30335046c1fee8b0d048699f70525053d74ec",
+      "android/app/src/main/java/co/fallsoft/pocket/HollywoodContextReview.kt": "40defcc5887aa028ace336be92e432df5f385c72cd474b4487da907561b3e057",
+      "android/app/src/main/java/co/fallsoft/pocket/HollywoodContextReviewSession.kt": "2ec89630214dfe00c925e677261c1e9753e22f1cf764e3c896493639b11811cb",
+      "android/app/src/androidTest/java/co/fallsoft/pocket/HollywoodContextReviewNativeTest.kt": "a145a070db1b99f50d4b340ca4ab6bbc8f6161891dd212db08ec620f4c264346",
+      "docs/HUMAN-CONTEXT-WINDOWS.md": "4cd7c724d3875a09e0f7f1e55ad09a04443ee9d93a6f545a8e338f32356d5855"
+    }
+  },
+  "checks": {
+    "actualHttpPgSourceIndex": 34,
+    "installedArtifactHttpPgSourceIndex": 34,
+    "actualGatewayAuthorizationCases": 6,
+    "originalTaskPosts": 1,
+    "originalApprovalPosts": 1,
+    "actualAcceptedAcknowledgementDropped": true,
+    "originalReceiptGetsThroughEmulatorProxy": 1,
+    "nativeGeneration": 1,
+    "sameOriginalWriterThread": true,
+    "actualConversationEvents": 3,
+    "separateActualActivityEvents": 6,
+    "initialExactArtifactBytes": 37,
+    "all3ContextsReallyInferred": true,
+    "primaryDraftAndReviewSurvivedEnvironmentSwitch": true,
+    "foreignReviewNotVisible": true,
+    "failedMetadataHonestUnavailable": true,
+    "nativeJourneys": {
+      "r06": {
+        "passed": true,
+        "seconds": 193.656
+      },
+      "r07": {
+        "passed": true,
+        "seconds": 65.918
+      },
+      "r08": {
+        "passed": true,
+        "seconds": 181.763
+      }
+    },
+    "otherOwnerProtectedFilesUnchanged": 8,
+    "productionPidsUnchanged": true
+  },
+  "models": {
+    "model": "gpt-6.1-sol",
+    "effort": "xhigh",
+    "totals": {
+      "requests": 10,
+      "completed": 10,
+      "reportedUncachedInputPlusOutput": 63953,
+      "unknownUsage": 0
+    },
+    "endedBy": "900-second finite guard; same workers remain stopped",
+    "postRefreshInference": false
+  },
+  "assistanceAndFailures": [
+    "First setup readiness and missing local administrative journal directory",
+    "Global role required role-scope, original rejected400 retained",
+    "QA proxy gzip Content-Encoding defect, no product output synthesized",
+    "Obsolete native provider override replaced by built-in openai_base_url, before any model request",
+    "First-boot System UI ANR, test disabled-composer/Back/scroll helper corrections",
+    "First full journey r06 passed193.656s after corrections; r07 and r08 resume same installed operation read-only",
+    "Actual screenshots found fixed-row cancellation wrapping and loading/error mislabelling; final candidate uses FlowRow and honest unavailable state"
+  ],
+  "limits": [
+    "Idle Writer canonical-source selection only",
+    "No UI cancellation/replacement interaction proof in this run; prior backend and real R338 revision evidence separate",
+    "No active-turn/Reader/Responder/whole-window/native-action human marks",
+    "No full provider-input token preview",
+    "No post-refresh inference in R340; real continuation proof is prior R338",
+    "No physical phone, live push/provider voice, enterprise rollout or universal Codex-replacement claim"
+  ],
+  "productionChanged": false,
+  "phoneTouched": false,
+  "releasePublished": false,
+  "protectedOwnerVoiceWorkPreserved": true,
+  "artifacts": [
+    {
+      "name": "candidate-qualification.apk",
+      "sha256": "545b762f5fa274d37bf189ddb23dd405d65c50831a678425e76512535ecbeca1",
+      "bytes": 118350961
+    },
+    {
+      "name": "qualification-tests.apk",
+      "sha256": "9239132d104f17cfd1125e5ca857c6be31d8abd4fdad7c1b3aff957e54e11cc3",
+      "bytes": 7372102
+    }
+  ],
+  "evidence": "Private R340 receipts; actual QA identifiers/credentials and provider payloads are not published."
+}

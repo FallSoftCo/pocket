@@ -23,11 +23,13 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
     val authorityId=identity.s("authorityId")
     val principalId=identity.s("principalId")
     val defaultRoomId=identity.s("defaultRoomId")
+    val contextReviewEnabled=identity.optBoolean("contextReview",false)
     init { require(bindingId.matches(Regex("[0-9a-f]{64}")));require(listOf(authorityId,principalId,defaultRoomId).all(::hollywoodUuid)) }
-    suspend fun call(path:String,body:JSONObject?=null):JSONObject=withContext(Dispatchers.IO){
+    suspend fun call(path:String,body:JSONObject?=null,method:String=if(body==null)"GET" else "POST"):JSONObject=withContext(Dispatchers.IO){
         val request=Request.Builder().url("$base/api/hollywood/v3/$path")
             .header("Authorization","Bearer $token").header("X-Hollywood-Binding",bindingId)
-        if(body!=null)request.post(body.toString().toRequestBody("application/json".toMediaType()))
+        require(method in listOf("GET","POST","PUT")&&(body!=null||method=="GET"))
+        if(body!=null)request.method(method,body.toString().toRequestBody("application/json".toMediaType()))
         val built=request.build()
         // A lost write acknowledgement can leave its pooled socket stale.
         // Retry only GET, once, on an isolated fresh connection. Never replay a write

@@ -63,6 +63,7 @@ import androidx.lifecycle.repeatOnLifecycle
     var menu by remember{mutableStateOf(false)}
     var addressMenu by remember(client.bindingId,room){mutableStateOf(false)}
     var workflow by remember(client.bindingId,room){mutableStateOf(false)}
+    var contextReview by remember(client.bindingId,room){mutableStateOf(false)}
     var inspecting by remember{mutableStateOf<JSONObject?>(null)}
     var guidance by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
     var guidanceReceipt by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
@@ -237,13 +238,14 @@ import androidx.lifecycle.repeatOnLifecycle
             HollywoodNotifications.consumed(target)
         }
     }
-    if(!browsing)ConversationBack(hideKeyboard=!menu&&!addressMenu&&guidance==null&&guidanceReceipt==null&&inspecting==null&&!workflow){
+    if(!browsing)ConversationBack(hideKeyboard=!menu&&!addressMenu&&guidance==null&&guidanceReceipt==null&&inspecting==null&&!workflow&&!contextReview){
         when{
             addressMenu->addressMenu=false
             menu->menu=false
             guidance!=null->guidance=null
             guidanceReceipt!=null->guidanceReceipt=null
             inspecting!=null->inspecting=null
+            contextReview->contextReview=false
             workflow->workflow=false
             else->browsing=true
         }
@@ -400,6 +402,7 @@ import androidx.lifecycle.repeatOnLifecycle
                 TextButton({guidance=saved;menu=false},modifier=Modifier.testTag("native-guidance-saved:"+saved.s("deliveryId")+":"+saved.s("nativeTurn"))){Text("Saved guidance · "+(client.guidancePending(saved)?.s("state")?:"draft"))}
             }
             TextButton({menu=false;workflow=true},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-workflow")){BilingualLabel("Goals & work")}
+            if(client.contextReviewEnabled)TextButton({menu=false;contextReview=true},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-context-open")){BilingualLabel("Context windows")}
             RoomWorkControls(work,agentNames,client,room,stopping,feed.detailError,feed.attentionError,
                 onAttention={menu=false;inspecting=it},onGuidance={menu=false;guidance=it},onStop={target,inspect->stop(target,inspect)})
         }
@@ -425,6 +428,7 @@ import androidx.lifecycle.repeatOnLifecycle
         },confirmButton={TextButton({guidanceReceipt=null}){BilingualLabel("Close")}})
     }
     if(workflow)HollywoodWorkDialog(client,room){workflow=false}
+    if(contextReview)HollywoodContextReviewDialog(client,actors,destination){contextReview=false}
     inspecting?.let{value->HollywoodAttentionDialog(client,value,{inspecting=null}){jobs.launch{refresh(room)}}}
 }
 

@@ -1,3 +1,4 @@
+import {contextReviewPath,contextReviewRequest,requireReviewDevice,verifyReviewReply} from './hollywood-context-review.mjs';
 import {constants,closeSync,existsSync,fstatSync,openSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -87,7 +88,7 @@ export class HollywoodClient {
 }
 
 export class HollywoodGateway {
-  constructor(config,options={}){this.config=config;this.options=options;this.clients=new Map();}
+  constructor(config,options={}){this.config=config;this.options={contextReviewEnabled:process.env.POCKET_CONTEXT_REVIEW==='1',...options};this.clients=new Map();}
   client(device){
     if(!this.config||this.config.invalid)throw fail(503,'This environment needs a valid Hollywood installation binding.');
     const config=this.config.devices.get(device)||this.config.defaultBinding;
@@ -96,7 +97,7 @@ export class HollywoodGateway {
     return this.clients.get(config.bindingId);
   }
   async status(device){
-    try{const client=this.client(device);const identity=await client.verify();return {id:'lax',name:'LAX',configured:true,available:true,api:3,modes:['rooms','direct'],...identity};}
+    try{const client=this.client(device);const identity=await client.verify();return {id:'lax',name:'LAX',configured:true,available:true,api:3,modes:['rooms','direct'],...(this.options.contextReviewEnabled?{contextReview:true}:{}),...identity};}
     catch(error){return {id:'lax',name:'LAX',configured:!!this.config&&!this.config.invalid,available:false,api:3,error:error.code||'HOLLYWOOD_UNAVAILABLE'};}
   }
 }
@@ -152,15 +153,21 @@ export function hollywoodRequest(method,tail,query,body){
 /** Mount only after NextComp requireAuth. Registration is private local administration. */
 export function mountHollywood(app,{dir,gateway=new HollywoodGateway(loadHollywood(dir))}){
   app.get('/api/hollywood/v3/identity',async(req,res,next)=>{
-    try{const client=gateway.client(req.device.id);res.json(await client.verify());}catch(error){next(error);}
+    try{const client=gateway.client(req.device.id);res.json({...await client.verify(),...(gateway.options.contextReviewEnabled?{contextReview:true}:{})});}catch(error){next(error);}
   });
   app.use('/api/hollywood/v3',async(req,res,next)=>{
     try{
+      const review=contextReviewPath(req.path);
+      if(review){
+        if(!gateway.options.contextReviewEnabled)throw fail(404,'Context review is not enabled in this environment.');
+        requireReviewDevice(req);
+      }
       const client=gateway.client(req.device.id);
       if(req.get('X-Hollywood-Binding')!==client.config.bindingId)throw fail(409,'This operation belongs to another saved environment or human binding.','HOLLYWOOD_BINDING_MISMATCH');
-      const operation=hollywoodRequest(req.method,req.path,req.query,req.body);
+      const operation=review?contextReviewRequest(req.method,req.path,req.query,req.body):hollywoodRequest(req.method,req.path,req.query,req.body);
       if(operation.body?.scope&&operation.body.scope.authorityId!==client.config.authorityId)throw fail(409,'Attention belongs to another enterprise.','HOLLYWOOD_BINDING_MISMATCH');
       const value=await client.call(operation.path,operation);
+      if(review)verifyReviewReply(operation.path,value,client);
       res.json({...value,binding:client.envelope()});
     }catch(error){next(error);}
   });
