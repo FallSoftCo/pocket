@@ -296,17 +296,20 @@ class PocketVoiceService:Service(){
 
         }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}finally{starting=false}
     }}
-    private suspend fun connectNative(purpose:String="voice"){
-        val pending=nativeConnecting?:scope.async(start=CoroutineStart.LAZY){connectNativeOnce(purpose)}.also{nativeConnecting=it;it.start()}
+    private suspend fun connectNative(purpose:String="voice",speechText:String?=null,speechToken:Long=0L){
+        val pending=nativeConnecting?:scope.async(start=CoroutineStart.LAZY){connectNativeOnce(purpose,speechText,speechToken)}.also{nativeConnecting=it;it.start()}
         try{pending.await()}finally{if(nativeConnecting===pending)nativeConnecting=null}
     }
-    private suspend fun connectNativeOnce(purpose:String){
+    private var nativeStartupSpeech=false
+    private suspend fun connectNativeOnce(purpose:String,speechText:String?,speechToken:Long){
         checkpointNativeUsage(stop=true)
         nativeHeartbeat?.cancel();nativeAudio?.close();nativeId=null
         val ready=CompletableDeferred<Unit>();nativeReady=ready;val ticket=++transportGeneration;val audioEndpoint=endpoint;val audioCredential=credential
         nativeAudio=NativeVoiceAudio(this,explicitCompletion=true,livePlayback=true) audio@{kind,data->if(!PocketVoice.active||ticket!=transportGeneration)return@audio;when(kind){
             "offer"->scope.launch{try{
-                val result=api("/api/voice/native/start",JSONObject().put("sdp",data).put("purpose",purpose),audioEndpoint,audioCredential)
+                if(speechText!=null)nativeAudio?.prepareSpeech(speechToken,speechText)
+                val result=api("/api/voice/native/start",JSONObject().put("sdp",data).put("purpose",purpose).apply{speechText?.let{put("text",it)}},audioEndpoint,audioCredential)
+                nativeStartupSpeech=result.optBoolean("startupSpeech")
                 if(!nativeNegotiationCurrent(ticket,transportGeneration,PocketVoice.active,nativeAudio!=null)){
                     android.util.Log.i("PocketVoiceTiming","Discarded stale audio negotiation $ticket")
                     api("/api/voice/native/stop",JSONObject().put("connectionId",result.s("id")),audioEndpoint,audioCredential)
@@ -321,6 +324,9 @@ class PocketVoiceService:Service(){
                 val cached=withContext(Dispatchers.IO){File.createTempFile("voice-spoken-",".tmp",filesDir).apply{writeBytes(bytes)}}
                 if(generation!=speechGeneration||ticket!=transportGeneration){cached.delete();return@launch}
                 check(cached.renameTo(spokenFile)){"Unable to save spoken response."};spokenOwner=outputs.current?.id;clearCompletedSpeechPending()
+                // A complete local cache owns replay/resume now; the immutable
+                // passage's model connection has no further work to perform.
+                disconnectNative()
                 if(payload.optBoolean("live")){
                     nativeRendering=false;nativeSpeaking=false;nativeCacheReady=true
                     if(nativePaused){if(nativeResumeRequested){nativePaused=false;play(spokenFile,true,nativePausedPositionMs)}else state("Paused")}
@@ -555,11 +561,12 @@ class PocketVoiceService:Service(){
         caption=notification?.let{NativeCaption(it.optLong("id"),it.s("title"),spoken,captionProfile)}
         if(text.isBlank()){done?.invoke();state("Ready");return}
         state("Preparing speech")
-        if(nativeTransportNeedsConnection(nativeId,nativeAudio!=null))connectNative()
+        disconnectNative()
         stopPlayer();if(!requestFocus())throw IllegalStateException("Another app is using audio. Retry when it finishes.")
-        afterSpeech=done;spokenOwner=null;speechGeneration++;nativeRendering=true;nativePaused=false;nativeCacheReady=false;nativeResumeRequested=false;nativeAudioBeganAt=0L;nativeAudioCacheStartedAt=SystemClock.elapsedRealtime();nativePausedPositionMs=0;requireNotNull(nativeAudio){"Voice transport is unavailable."}.speak(speechGeneration,spoken)
+        afterSpeech=done;spokenOwner=null;speechGeneration++;nativeRendering=true;nativePaused=false;nativeCacheReady=false;nativeResumeRequested=false;nativeAudioBeganAt=0L;nativeAudioCacheStartedAt=SystemClock.elapsedRealtime();nativePausedPositionMs=0;connectNative("speech",spoken,speechGeneration)
+        if(!nativeStartupSpeech)requireNotNull(nativeAudio){"Voice transport is unavailable."}.speak(speechGeneration,spoken)
         android.util.Log.i("PocketVoiceTiming","Speech $speechGeneration requested")
-        api("/api/voice/native/speak",JSONObject().put("connectionId",nativeId).put("text",spoken).put("voiceTurnId",voiceTurnId))
+        if(!nativeStartupSpeech)api("/api/voice/native/speak",JSONObject().put("connectionId",nativeId).put("text",spoken).put("voiceTurnId",voiceTurnId))
     }
 
     internal fun ownsOrigin(origin:VoiceTurnStore.Origin)=origin.environment==capturedEnvironment&&origin.endpoint==endpoint&&origin.pairing==backendOwner(endpoint,credential)
@@ -570,9 +577,8 @@ class PocketVoiceService:Service(){
             if(outputs.discardResponse(turn.key)){outputWork?.cancel();outputWork=null;disconnectNative();stopPlayer()}
             PocketVoice.problem=receipt.s("speech_error");return
         }
-        if(receipt.s("state") in setOf("thinking","running")&&nativeId==null&&!PocketVoice.captureBusy&&nativeConnecting==null){
-            scope.launch{try{connectNative();if(!nativeRendering&&!nativeSpeaking)state("Ready")}catch(e:CancellationException){throw e}catch(_:Exception){/* A real passage retries setup and surfaces the error. */}}
-        }
+        // No speculative output model session while work is still thinking.
+        // Each requested passage owns an immutable isolated speech session.
         val ids=responseSegments.getOrPut(turn.key){linkedSetOf()}
         val title=if(JSONObject(turn.origin.destination).optString("threadId").isBlank())"Coordinator" else PocketVoice.targetSourceLabel?:"Conversation"
         for(segment in segments){val id=segment.s("id");if(id.isBlank()||!ids.add(id))continue;outputs.response(CoordinatorUtterance(turn.key+":"+id,segment.s("text"),title,turn.id,turn.key))}

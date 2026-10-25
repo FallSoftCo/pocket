@@ -83,5 +83,18 @@
     "causeEvidence": "Repeated UiObject2 actions separated by roughly10s on continuously updating UI. All original mixed-source assertions completed before the prior command deadline.",
     "change": "Disable implicit global-idle wait only within mixed-catalog test; explicit app-state waits and250ms stable-target geometry; restore prior Configurator value in finally. No app animation suppression, source mutation, assertion deletion or deadline increase.",
     "targetedPreflight": "Actual unchanged source/draft/receipt/outage assertions passed with terminal OK(1test);160.917s on the bounded software emulator; owned resources stopped. This is functional qualification, not handset response/frame-time measurement."
+  },
+  "nativeSpeechStartup": {
+    "state": "preflight_pass_not_signed_release",
+    "oldPath": "Two retained follow-on appendText attempts had no assistant output after acknowledged negotiation. No upstream capacity cause asserted.",
+    "newPath": "Immutable passage at purpose speech startup; receiver armed before answer; no idle output prewarm; completed cache releases transport.",
+    "preflightSeconds": 35.486,
+    "inputDurationMs": 7100,
+    "stopToFinalTranscriptMs": 1607,
+    "firstAudioIncludingConnectionMs": 4470,
+    "speechCompletedIncludingConnectionMs": 11003,
+    "taskAdmissions": 0,
+    "sourceLimit": "Two lifecycle refinements (immediate local-cache transport handoff and prearmed live unmute) follow this media preflight and remain part of final signed qualification.",
+    "physicalPhone": false
   }
 }

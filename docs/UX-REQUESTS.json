@@ -3406,5 +3406,22 @@
       "Backend ordering changes are not yet activated.",
       "No message resend or model turn is part of verification."
     ]
+  },
+  "native_speech_startup_20261025": {
+    "request": "Reliable eyes-free speech with minimal latency and no idle/unrequested generation.",
+    "status": "implemented_live_media_preflight_passed_signed_release_pending",
+    "observed": "Two same-build legacy follow-on speech attempts negotiated successfully but emitted no assistant output; transcription succeeded. Startup-bound isolated speech produced assistant events and complete live audio.",
+    "contract": [
+      "Bind each spoken passage to isolated speech startup using existing API; never send it as task/user input.",
+      "Arm local playback and recording before applying the peer answer so first audio is retained.",
+      "Retain explicitly negotiated compatibility with older gateways; no endpoint proliferation.",
+      "No speculative output model while work is thinking; release provider transport when complete local replay cache owns the passage.",
+      "Preserve recording origin, cancellation, saved work receipt and pause/resume; speech retries cannot rerun Codex work."
+    ],
+    "limits": [
+      "Native preflight only; current final APK and real phone remain to be qualified.",
+      "Workstation existing route forwarding needs narrow owning rollout; Mac/OZZZ already forward startup text.",
+      "First audio4470ms includes fresh connection setup; this is not a complete coordinator/task latency measurement."
+    ]
   }
 }

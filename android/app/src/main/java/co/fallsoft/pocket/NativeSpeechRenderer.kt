@@ -28,13 +28,13 @@ internal class NativeSpeechRenderer(private val context:Context,private val endp
     }
     suspend fun render(text:String):ByteArray=withContext(Dispatchers.Main.immediate){
         val connected=CompletableDeferred<Unit>();val audio=CompletableDeferred<ByteArray>()
-        var connection:String?=null;var transport:NativeVoiceAudio?=null
+        var connection:String?=null;var transport:NativeVoiceAudio?=null;var startupSpeech=false
         val began=android.os.SystemClock.elapsedRealtime();SpeechUsage.add("attempts")
         val jobs=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
         try{
             transport=NativeVoiceAudio(context,explicitCompletion=true){kind,data->
                 when(kind){
-                    "offer"->jobs.launch{try{val answer=api("/api/voice/native/start",JSONObject().put("sdp",data).put("purpose","speech"));connection=answer.s("id");transport?.answer(answer.s("sdp"))}catch(e:Exception){connected.completeExceptionally(e)}}
+                    "offer"->jobs.launch{try{transport?.prepareSpeech(1L,text);val answer=api("/api/voice/native/start",JSONObject().put("sdp",data).put("purpose","speech").put("text",text));connection=answer.s("id");startupSpeech=answer.optBoolean("startupSpeech");transport?.answer(answer.s("sdp"))}catch(e:Exception){connected.completeExceptionally(e)}}
                     "connected"->connected.complete(Unit)
                     "error"->{val error=IllegalStateException(data);connected.completeExceptionally(error);audio.completeExceptionally(error)}
                     "audio"->jobs.launch(Dispatchers.Default){try{val payload=JSONObject(data);if(payload.optLong("token")==1L){val encoded=payload.s("data");require(encoded.length<=24*1024*1024){"Native speech exceeded its size limit"};val bytes=Base64.decode(encoded,Base64.DEFAULT);require(validNativeSpeechAudio(bytes)){"Native speech returned invalid audio"};audio.complete(bytes)}}catch(e:Exception){audio.completeExceptionally(e)}}
@@ -44,9 +44,13 @@ internal class NativeSpeechRenderer(private val context:Context,private val endp
             val connectedAt=android.os.SystemClock.elapsedRealtime()
             SpeechUsage.add("connectionSetupMs",connectedAt-began)
             android.util.Log.i("PocketSpeechTiming","Connected after ${connectedAt-began} ms")
-            requireNotNull(transport).speak(1L,text)
             val requestedAt=android.os.SystemClock.elapsedRealtime()
-            api("/api/voice/native/speak",JSONObject().put("connectionId",connection).put("text",text))
+            if(!startupSpeech){
+                // Compatibility only for older gateways; upgraded gateways
+                // bind the immutable passage before the peer can emit audio.
+                requireNotNull(transport).speak(1L,text)
+                api("/api/voice/native/speak",JSONObject().put("connectionId",connection).put("text",text))
+            }
             val bytes=withTimeout(90000){audio.await()}
             val receivedAt=android.os.SystemClock.elapsedRealtime()
             SpeechUsage.add("audioWaitMs",receivedAt-requestedAt)

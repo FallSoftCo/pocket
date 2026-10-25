@@ -24,16 +24,17 @@ window.onerror=(message)=>report('error',message);
 async function connect(){
  ctx=new AudioContext();await ctx.resume();dest=ctx.createMediaStreamDestination();const quiet=ctx.createConstantSource();quiet.offset.value=0;quiet.connect(dest);quiet.start();
  pc=new RTCPeerConnection();pc.addTrack(dest.stream.getAudioTracks()[0]);dc=pc.createDataChannel('oai-events');
- dc.onopen=()=>{report('connected');void networkBoundary('connected')};dc.onerror=()=>report('error','Voice data channel failed.');
+ dc.onopen=()=>{if(allowOutput)startSpeechDeadline(renderToken);report('connected');void networkBoundary('connected')};dc.onerror=()=>report('error','Voice data channel failed.');
  dc.onmessage=e=>{try{providerEvent(JSON.parse(e.data))}catch{}};
  pc.onconnectionstatechange=()=>{if(!ended&&!inputClosing&&!inputClosedReceived&&['failed','disconnected'].includes(pc.connectionState))report('error','Voice audio disconnected. Reconnect to continue.');};
  pc.ontrack=e=>{
   const stream=e.streams[0]||new MediaStream([e.track]);
-  remote=document.createElement('audio');remote.srcObject=stream;remote.autoplay=true;remote.muted=true;document.body.append(remote);remote.play().catch(e=>report('error',e.message));
+  remote=document.createElement('audio');remote.srcObject=stream;remote.autoplay=true;remote.muted=!(allowOutput&&livePlayback&&!outputPaused);document.body.append(remote);remote.play().catch(e=>report('error',e.message));
   analyser=ctx.createAnalyser();analyser.fftSize=1024;ctx.createMediaStreamSource(stream).connect(analyser);
   recorder=new MediaRecorder(stream);let chunks=[];
   recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
   recorder.onstop=()=>{const token=stoppedToken??recordToken;stoppedToken=null;if(chunks.length&&token===renderToken&&allowOutput){lastBlob=new Blob(chunks,{type:recorder.mimeType});const reader=new FileReader();reader.onload=()=>{if(token===renderToken&&allowOutput){allowOutput=false;report('audio',JSON.stringify({token,live:livePlayback&&liveStarted,paused:outputPaused,data:String(reader.result).split(',')[1]}));if(livePlayback&&liveStarted){report('finished',String(token));void networkBoundary('finished')}}};reader.readAsDataURL(lastBlob);}chunks=[]};
+  if(allowOutput&&recorder.state==='inactive')recorder.start();
  };
  await pc.setLocalDescription(await pc.createOffer());await new Promise(resolve=>{if(pc.iceGatheringState==='complete')return resolve();pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete')resolve()});setTimeout(resolve,3000)});
  report('offer',pc.localDescription.sdp);
@@ -95,11 +96,15 @@ async function send(wav){
  const raw=atob(wav),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));const buffer=await ctx.decodeAudioData(bytes.buffer);
  source=ctx.createBufferSource();source.buffer=buffer;source.connect(dest);source.onended=()=>{source=null;report('sent')};source.start();
 }
-function speak(token,expectedText=""){
+function prepareSpeech(token,expectedText=""){
  renderToken=token;recordToken=token;providerResponse=null;providerComplete=false;expectedSpeech=expectedText;providerDoneAt=0;recordingStarted=Date.now();providerDuration=0;latestTranscriptEnd=0;
  allowOutput=true;speaking=false;liveStarted=false;outputPaused=false;lastEnergy=Date.now();if(remote){remote.muted=!livePlayback;remote.play().catch(e=>report('error',e.message));if(recorder?.state==='inactive')recorder.start();}
+ }
+function startSpeechDeadline(token){
  const timeoutToken=token;setTimeout(()=>{if(renderToken===timeoutToken&&allowOutput&&!speaking&&Date.now()-lastEnergy>20000){allowOutput=false;report('error','No spoken response arrived. Retry to read the saved result.');}},21000);
 }
+
+function speak(token,expectedText=""){prepareSpeech(token,expectedText);startSpeechDeadline(token);}
 
 function pauseOutput(){outputPaused=true;if(remote)remote.muted=true;report('paused',String(renderToken));}
 function resumeOutput(){if(!allowOutput)return;outputPaused=false;if(remote)remote.muted=!livePlayback;if(liveStarted)report('speaking',String(renderToken));}

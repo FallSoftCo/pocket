@@ -47,6 +47,7 @@ class NativeVoiceAudio(context:Context,private val explicitCompletion:Boolean=fa
         return withTimeout(15000){closed.await()}
     }
     fun cancelInput(){inputClosed?.cancel();inputClosed=null;sent?.cancel();sent=null;js("cancelInput()")}
+    fun prepareSpeech(token:Long,expectedText:String)=js("prepareSpeech($token,${JSONObject.quote(expectedText)})")
     fun speak(token:Long,expectedText:String="")=js("speak($token,${JSONObject.quote(expectedText)})")
 
     fun pause()=js("pauseOutput()")
