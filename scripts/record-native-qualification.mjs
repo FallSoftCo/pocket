@@ -50,7 +50,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#existingAgentDisclosureOpensIndependentSessionAndKeepsPrivateRepliesScoped'||name.startsWith('co.fallsoft.pocket.RoomNavigationNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomRoutingNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomVoiceNativeTest#');
 const voiceCase=name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#');
 const environmentCase=name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
-const canonicalCase=name.startsWith('co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeTranscriptStoreNativeTest#');
+const canonicalCase=name.startsWith('co.fallsoft.pocket.NativeReadingParityNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeTranscriptStoreNativeTest#');
 const fixtureScript=canonicalCase?'tests/fixtures/native-canonical-transcript.mjs':voiceCase?'tests/fixtures/native-room-voice-ui.mjs':environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
 const portKey=voiceCase?'voice':environmentCase?'environment':teamCase?'team':'transcript';
 const portValue=owner.fixturePorts?.[portKey]??(environmentCase?19995:teamCase?19992:19998);

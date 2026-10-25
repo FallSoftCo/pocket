@@ -6,7 +6,8 @@ const port=Number(process.env.PORT||19998),epoch=process.env.NEXTCOMP_QA_EPOCH||
 const capture=process.env.NEXTCOMP_QA_NATIVE_CAPTURE?JSON.parse(fs.readFileSync(process.env.NEXTCOMP_QA_NATIVE_CAPTURE,'utf8')):null;
 const captured=new Map((capture?.pages||[]).map(p=>[p.cursor??'',p.response]));
 let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads=0,positionReads=0,workSubmissions=0,question=false,answers=0,streamFinished=false,streamsSent=0,streamTimer=null;
-const sockets=new Set(),reads=[];
+let retainedResult=false;
+const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
 const item=(position,id,type,text)=>({type:'item',position,turnId:'native-turn',item:{id,type,...(type==='userMessage'?{content:[{type:'text',text}]}:{text})}});
 function page(){
@@ -28,6 +29,13 @@ function send(socket,value){const bytes=Buffer.from(JSON.stringify(value));const
 function broadcast(value){for(const s of sockets)send(s,value);}
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost'),path=url.pathname;
+ if(path.startsWith('/8bar/')){
+  if(req.headers.authorization){galleryCredentialLeaks++;res.writeHead(403).end();return;}
+  if(path==='/8bar/showcase-catalog.json'){galleryMetadataReads++;res.setHeader('Content-Type','application/json');res.end(JSON.stringify([{id:'native-preview',title:'Native material study',poster:'preview.svg'}]));return;}
+  if(path==='/8bar/preview.svg'){galleryImageReads++;res.setHeader('Content-Type','image/svg+xml');res.end('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#254d50"/><rect x="24" y="24" width="280" height="252" rx="4" fill="#b69972"/><text x="24" y="326" font-size="25" fill="white">Native material study</text></svg>');return;}
+  res.writeHead(404).end();return;
+ }
+
  if(!String(req.headers.authorization||'').startsWith('Bearer synthetic-system76')){res.writeHead(401).end('{}');return;}
  let raw='';for await(const chunk of req)raw+=chunk;
  let body={};res.setHeader('Content-Type','application/json');
@@ -42,9 +50,11 @@ const server=http.createServer(async(req,res)=>{
   const source=replay?captured.get(cursor):page();
   if(!source){res.writeHead(409).end('{"error":"Capture boundary, not end of history"}');return;}
   body={thread:meta(),timeline:projectNativeTimeline(source,{threadId:'same-thread',revision}),revision,
-   historyHead:{threadId:'same-thread',epoch,version:revision},pending:question?[{id:'native-question',method:'item/tool/requestUserInput',params:{threadId:'same-thread',turnId:'native-turn',itemId:'question',questions:[{id:'choice',header:'Choice',question:'Native pending question',options:[{label:'Proceed',description:'Proceed in the synthetic fixture'}]}]}}]:[],outgoing:[],notes:[],notifications:[]};
+   historyHead:{threadId:'same-thread',epoch,version:revision},pending:question?[{id:'native-question',method:'item/tool/requestUserInput',params:{threadId:'same-thread',turnId:'native-turn',itemId:'question',questions:[{id:'choice',header:'Choice',question:'Native pending question',options:[{label:'Proceed',description:'Proceed in the synthetic fixture'}]}]}}]:[],outgoing:[],notes:retainedResult?[{id:'answer-one',text:'Native answer one'},{id:'request-one',text:'Native request one'}]:[],notifications:[]};
  }else if(path==='/api/threads/same-thread'||path==='/api/threads/same-thread/head'){
   legacyReads++;res.writeHead(500).end('{"error":"Native source used legacy history"}');return;
+ }else if(path==='/_qa/result'){retainedResult=true;revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});body={ok:true};
+ }else if(path==='/api/threads/same-thread/notes/remove'){retainedResult=false;body={notes:[]};
  }else if(path==='/_qa/question'){question=true;revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});body={ok:true};
  }else if(path==='/api/requests/native-question/answer'){answers++;question=false;revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});body={ok:true};
  }else if(path==='/api/threads/same-thread/timeline/position'){positionReads++;res.writeHead(500).end('{"error":"Legacy position repair entered native mode"}');return;
@@ -73,7 +83,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/enable-capture'){
   if(!capture){res.writeHead(409).end('{"error":"Private native capture required"}');return;}
   replay=true;body={source:'recorded-native-timeline',pages:captured.size,firstBefore:captured.get('')?.nextCursor};
- }else if(path==='/_qa/state')body={reads,legacyReads,positionReads,workSubmissions,answers,streamsSent};
+ }else if(path==='/_qa/state')body={reads,legacyReads,positionReads,workSubmissions,answers,streamsSent,galleryMetadataReads,galleryImageReads,galleryCredentialLeaks};
  else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
  else if(path==='/api/notifications')body={notifications:[]};
  else if(path==='/api/activity')body={items:[]};

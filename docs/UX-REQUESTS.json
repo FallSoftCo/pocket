@@ -3156,14 +3156,14 @@
     },
     {
       "id": "reading-slots-media-questions-20261024",
-      "status": "web-deployed-verified-native-follow-up",
+      "status": "web-deployed-native152-qualifying",
       "request": "Try stable bilingual phrase spaces with subtle background and minimal corner rounding; inline gallery/image previews without app switching; visible actionable questions in desktop right pane/mobile drawer; replace ineffective Answers UI.",
       "implementation": [
         "CSS intrinsic dual-language phrase cells, instant visibility changes and direct phrase toggle; no per-flip reshaping or font shrinking",
         "Existing gallery catalog resolves ordinary gallery links without agent-specific messages or new endpoint; inline image attachments",
         "One Needs you/questions/results pane, actionable approvals and input, source-qualified global attention and catalog badges, deduplicated non-user saved results"
       ],
-      "nativeAndroid": "Requirements retained; no new APK or physical-phone delivery is claimed by this web candidate."
+      "nativeAndroid": "152/alpha134 candidate: shared fixed phrase placeholders, automatic gallery metadata previews, adaptive question/result drawer, durable source-bound answer drafts and submitted/unconfirmed receipts. Native emulator and signed update qualification pending."
     }
   ],
   "current_state": {

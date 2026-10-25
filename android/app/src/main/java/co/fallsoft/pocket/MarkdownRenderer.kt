@@ -71,7 +71,7 @@ internal fun MarkdownInline.annotated(clickableLinks:Boolean=true):AnnotatedStri
     visible.sortedBy{it.position}.forEach { image ->
         val at=if(image.position==Int.MAX_VALUE)content.length else (image.position+prefixLength).coerceIn(cursor,content.length)
         if(at>cursor)onText(content.subSequence(cursor,at))
-        LinkedImagePreview(image)
+        if(image.gallery)GalleryCardPreview(image)else LinkedImagePreview(image)
         cursor=at
     }
     if(cursor<content.length)onText(content.subSequence(cursor,content.length))

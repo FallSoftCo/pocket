@@ -62,7 +62,7 @@ import androidx.compose.ui.unit.*
             lineHeight=lineHeight.takeIf{it!=TextUnit.Unspecified}?:LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
             overflow=overflow,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
             snapshot=actionText(form(current)),reserve=listOf(form(target),form(support)),
-            readingWave=if(waveAllowed)readingWave else null,trackWholeTextVisibility=true)
+            readingWave=if(waveAllowed)readingWave else null,trackWholeTextVisibility=true,phraseTaps=false)
         return
     }
     var nativeVisible by remember(text,target,plan){mutableStateOf(false)}
@@ -118,7 +118,7 @@ import androidx.compose.ui.unit.*
             lineHeight=lineHeight.takeIf{it!=TextUnit.Unspecified}?:LocalTextStyle.current.lineHeight.takeIf{it!=TextUnit.Unspecified}?:fontSize*1.3f,
             fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,
             textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
-            onVisibleRanges={_,readable->nativeVisible=readable},trackWholeTextVisibility=true)
+            onVisibleRanges={_,readable->nativeVisible=readable},trackWholeTextVisibility=true,phraseTaps=false)
     }
 }
 

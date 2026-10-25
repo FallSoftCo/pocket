@@ -94,17 +94,16 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
 }
 
 /** Bottom-row controls share one stable playback owner across popup changes. */
-@Composable internal fun ConversationNotesControls(important:Boolean,onFilter:()->Unit,hasSpeech:Boolean,speechText:()->String){
+@Composable internal fun ConversationNotesControls(questions:Int,results:Int,onReview:()->Unit,hasSpeech:Boolean,speechText:()->String){
     val host="filter:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}:${Pocket.selected}"
     DisposableEffect(host){onDispose{PocketSpeech.displayedOwner?.takeIf{it==host}?.let{PocketSpeech.stopDisplayed(it)}}}
     val speaking=PocketSpeech.displayedRunning||PocketSpeech.count>0&&!PocketSpeech.paused
-    FilledTonalButton(onClick=onFilter,contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),modifier=Modifier.heightIn(min=48.dp).semantics{
-        role=Role.Checkbox
-        toggleableState=if(important)androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off
-        contentDescription=PocketImmersion.label("Important")
-        stateDescription=if(important)"Important messages" else "All messages"
+    FilledTonalButton(onClick=onReview,contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),modifier=Modifier.heightIn(min=48.dp).semantics{
+        role=Role.Button
+        contentDescription="Questions and results"
+        stateDescription="$questions pending questions, $results saved results"
     }){
-        BilingualLabel("Important",fontSize=12.sp,color=if(important)Mint else Paper)
+        BilingualLabel(if(questions>0)"Needs you · $questions" else if(results>0)"Results · $results" else "Questions",fontSize=12.sp,color=if(questions>0)Coral else Paper)
     }
     IconButton({
         if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}

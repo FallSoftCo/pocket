@@ -565,11 +565,18 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){SymbolIcon(Icons.Rounded.AttachFile,null,tint=Mint,modifier=Modifier.size(18.dp));Text(a.s("name"),color=Mint,fontSize=12.sp,modifier=Modifier.padding(start=8.dp).weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis);SymbolIcon(Icons.AutoMirrored.Rounded.OpenInNew,null,tint=Muted,modifier=Modifier.size(16.dp))}
     }
 }
-@Composable fun RequestCard(r:JSONObject){val p=r.optJSONObject("params")?:return;val id=r.s("id");val isQuestion=r.s("method").contains("requestUserInput");val answers=remember(id){mutableStateMapOf<String,String>()}
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(22.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+@Composable fun RequestCard(r:JSONObject){val p=r.optJSONObject("params")?:return;val id=r.s("id");val isQuestion=r.s("method").contains("requestUserInput")
+    val fingerprint=remember(r.toString()){java.security.MessageDigest.getInstance("SHA-256").digest(r.toString().toByteArray()).take(12).joinToString(""){"%02x".format(it)}}
+    val draftKey=Pocket.key("questionDraft:"+backendOwner(Pocket.base,Pocket.token)+":"+Pocket.selected+":"+id+":"+fingerprint)
+    val answers=remember(draftKey){mutableStateMapOf<String,String>().apply{runCatching{JSONObject(Pocket.prefs.getString(draftKey,"{}")?:"{}").let{saved->saved.keys().forEach{key->put(key,saved.s(key))}}}}}
+    fun saveAnswer(key:String,value:String){answers[key]=value;val saved=JSONObject();answers.forEach{(k,v)->saved.put(k,v)};Pocket.prefs.edit().putString(draftKey,saved.toString()).apply()}
+    val delivery=QuestionDelivery.state(draftKey);val editable=delivery !in listOf("sending","submitted","unconfirmed")
+    fun submit(body:JSONObject)=QuestionDelivery.submit(draftKey,id,body)
+
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(6.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
             Box(Modifier.weight(1f)){Label(if(isQuestion)"YOUR INPUT" else "NEEDS YOUR APPROVAL",Coral)}
-            if(isQuestion)TextButton({PocketQuestionActions.skipRequest(id)},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp)){BilingualLabel("Skip",color=Mint)}
+            if(isQuestion)TextButton({submit(JSONObject().put("skip",true))},enabled=editable,modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp)){BilingualLabel("Skip",color=Mint)}
         }
         if(isQuestion){p.optJSONArray("questions")?.objects()?.forEach{q->
             val questionId="request:$id:"+q.s("id")
@@ -580,14 +587,17 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                 val label=o.s("label");val optionId="$questionId:option:$index"
                 val description=o.s("description")
                 LaunchedEffect(label,description,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer(optionId,label,"question option");PocketImmersion.offer("$optionId:description",description,"question option explanation")}
-                OutlinedButton({answers[q.s("id")]=label},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){
+                OutlinedButton({saveAnswer(q.s("id"),label)},enabled=editable,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){
                     Column(Modifier.fillMaxWidth()){
                         ImmersionText(optionId,label,color=Paper,kind="question option",rescue=false)
                         if(description.isNotBlank())ImmersionText("$optionId:description",description,color=Muted,fontSize=14.sp,kind="question option explanation",rescue=false)
                     }
                 }
-            };OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={BilingualLabel("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){BilingualLabel("Send answers")}}
-        else{ImmersionText("approval:"+id,p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({Pocket.answer(id,JSONObject().put("decision","accept"))}){BilingualLabel("Allow once")};OutlinedButton({Pocket.answer(id,JSONObject().put("decision","decline"))}){BilingualLabel("Decline",color=Coral)}}}else WorkflowText("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
+            };OutlinedTextField(answers[q.s("id")]?:"",{saveAnswer(q.s("id"),it)},enabled=editable,label={BilingualLabel("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};submit(JSONObject().put("answers",a))},enabled=editable){BilingualLabel("Send answers")}}
+        else{ImmersionText("approval:"+id,p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({submit(JSONObject().put("decision","accept"))},enabled=editable){BilingualLabel("Allow once")};OutlinedButton({submit(JSONObject().put("decision","decline"))},enabled=editable){BilingualLabel("Decline",color=Coral)}}}else WorkflowText("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
+        if(delivery.isNotBlank()){WorkflowText(when(delivery){"sending"->"Submitting decision…";"submitted"->"Decision submitted";"unconfirmed"->"Delivery unconfirmed. Check current work before trying again.";else->"Decision was not accepted. Review and try again."},color=if(delivery=="unconfirmed")Coral else Muted,fontSize=13.sp)
+            if(delivery=="unconfirmed")TextButton({Pocket.refreshDetail();Pocket.refresh()}){BilingualLabel("Check current work")}}
+
     }
 }
 

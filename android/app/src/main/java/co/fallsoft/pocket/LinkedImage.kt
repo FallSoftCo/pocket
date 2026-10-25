@@ -106,6 +106,7 @@ private object LinkedImageLoading {
 }
 
 @Composable internal fun linkedImageAllowed(image:MarkdownImage):Boolean {
+    if(image.gallery)return true
     val url=LinkedImagePolicy.resolve(image.destination,Pocket.base)?:return false
     var accepted by remember(url,image.requiresMimeCheck,Pocket.token){mutableStateOf(!image.requiresMimeCheck)}
     LaunchedEffect(url,image.requiresMimeCheck,Pocket.token){

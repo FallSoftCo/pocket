@@ -31,8 +31,8 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
 }
 
 /** One native text flow. Help substitutes the selected phrase; it never adds another line. */
-@Composable private fun ImmersionReading(content:AnnotatedString,selected:ImmersionSpan?,fontSize:TextUnit,lineHeight:TextUnit,color:Color=Paper,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,overflow:TextOverflow=TextOverflow.Clip,cycle:ImmersionCycleRender?=null,plan:ImmersionPresentation?=null,textAlign:TextAlign=TextAlign.Start,onClose:()->Unit){
-    if(cycle!=null&&plan!=null){Box(if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose)){ReservedImmersionText(content,plan,cycle.alpha,fontSize,lineHeight,color,fontWeight,maxLines,overflow,cycle,textAlign=textAlign)};return}
+@Composable private fun ImmersionReading(content:AnnotatedString,selected:ImmersionSpan?,fontSize:TextUnit,lineHeight:TextUnit,color:Color=Paper,fontWeight:FontWeight?=null,maxLines:Int=Int.MAX_VALUE,overflow:TextOverflow=TextOverflow.Clip,cycle:ImmersionCycleRender?=null,plan:ImmersionPresentation?=null,textAlign:TextAlign=TextAlign.Start,phraseTaps:Boolean=true,onClose:()->Unit){
+    if(cycle!=null&&plan!=null){Box(if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose)){ReservedImmersionText(content,plan,cycle.alpha,fontSize,lineHeight,color,fontWeight,maxLines,overflow,cycle,textAlign=textAlign,phraseTaps=phraseTaps)};return}
     Text(content,fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,textAlign=textAlign,modifier=if(selected==null)Modifier.fillMaxWidth()else Modifier.fillMaxWidth().clickable(onClick=onClose))
 }
 
@@ -86,7 +86,7 @@ private fun hybridAnnotated(content:MarkdownInline,ranges:List<ImmersionDisplayR
     val ranges=remember(plan,shownText,cycle.plan){MarkdownContent.replacementRanges(cycle.plan,shownText,null).map{range->range.copy(span=plan.spans.first{it.start==range.span.start&&it.end==range.span.end})}}
     val content=hybridAnnotated(inline,if(PocketImmersion.enabled)ranges else emptyList(),0,selected,phraseRescue&&PocketImmersion.supportEnabled,links){PocketImmersion.selectReading(readingKey,if(selected==it)null else it)}
     Column(modifier){
-        ImmersionReading(content,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},color=color,fontSize=fontSize,lineHeight=lineHeight,maxLines=maxLines,fontWeight=fontWeight,overflow=overflow,cycle=cycle.takeIf{PocketImmersion.enabled&&PocketImmersion.supportEnabled},plan=plan,onClose={PocketImmersion.selectReading(readingKey,null)})
+        ImmersionReading(content,selected.takeIf{phraseRescue&&PocketImmersion.supportEnabled},color=color,fontSize=fontSize,lineHeight=lineHeight,maxLines=maxLines,fontWeight=fontWeight,overflow=overflow,cycle=cycle.takeIf{PocketImmersion.enabled&&PocketImmersion.supportEnabled},plan=plan,phraseTaps=phraseRescue,onClose={PocketImmersion.selectReading(readingKey,null)})
     }
 }
 

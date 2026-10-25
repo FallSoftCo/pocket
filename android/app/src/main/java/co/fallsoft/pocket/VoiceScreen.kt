@@ -55,6 +55,9 @@ import androidx.lifecycle.repeatOnLifecycle
     }}
     ConversationBack{PocketVoice.stop();Pocket.closeTask()}
     LaunchedEffect(PocketVoice.messages.size,PocketVoice.heard,PocketVoice.response){if(scroll.layoutInfo.totalItemsCount>0)scroll.animateScrollToItem(scroll.layoutInfo.totalItemsCount-1)}
+    var questionsOpen by remember(Pocket.environmentId){mutableStateOf(false)}
+    val questions=Pocket.attention.filter{it.s("kind") in listOf("question","approval")}
+    ConversationReviewScaffold(questionsOpen,{questionsOpen=false},review={ConversationReviewContent(emptyList(),emptyList(),questions,{questionsOpen=false},{},{},{},emptySet())}){
     Column(Modifier.fillMaxSize().imePadding()){
         HorizontalDivider()
         androidx.compose.foundation.lazy.LazyColumn(state=scroll,modifier=Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
@@ -81,12 +84,17 @@ import androidx.lifecycle.repeatOnLifecycle
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 IconButton({PocketVoice.stop();Pocket.closeTask()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
                 InlineSpeechVolume(Modifier.weight(1f).widthIn(min=64.dp))
+                IconButton({questionsOpen=true},modifier=Modifier.size(48.dp).semantics{contentDescription="Questions and results"}){
+                    BadgedBox(badge={if(questions.isNotEmpty())Badge{Text(questions.size.toString())}}){SymbolIcon(Icons.Rounded.QuestionAnswer,"Questions and results",Modifier.size(28.dp),tint=if(questions.isNotEmpty())Coral else Muted)}
+                }
                 UsageDock(Modifier.width(usageDockWidth()))
                 IconButton({PocketVoice.playback()},modifier=Modifier.size(48.dp)){SymbolIcon(if(PocketVoice.state=="Speaking")"Pause" else "PlayArrow",if(PocketVoice.state=="Speaking")"Pause" else "Replay",Modifier.size(32.dp))}
             }
         }
     }
 }
+}
+
 @Composable internal fun VoiceChatMessage(speaker:String,text:String,user:Boolean){
     if(text.isBlank())return
     val sourceId="voice:"+text.hashCode()+":"+user
