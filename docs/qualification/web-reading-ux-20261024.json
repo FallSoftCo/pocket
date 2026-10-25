@@ -3,11 +3,12 @@
   "scope": "Browser intrinsic immersion phrase slots, inline gallery previews and unified questions/results pane",
   "evidence": {
     "httpCompatibilityCases": 21,
-    "actualChromium": "reading-ux-20261024-r07 desktop1440/mobile390; no JavaScript errors; owned fixtures closed",
+    "actualChromium": "reading-ux-20261024-r08 desktop1440/mobile390; no JavaScript errors; owned fixtures closed",
     "phraseGeometry": "All x/y/width/height measurements identical across phase changes; one visible language; direct tap changes only selected phrase",
     "requestJourney": "Question visible immediately on desktop, input value/focus retained during a second request, answer submitted once, saved draft preserved, result reply/navigation/dismissal passed",
     "media": "Ordinary gallery URL produces an inline existing-catalog poster with original link preserved",
-    "realProduction": "Both private HTTPS routes serve all new modules and authenticated catalog; real Mac session visible/openable; no actual task messages submitted"
+    "realProduction": "Both private HTTPS routes serve all new modules and authenticated catalog; real Mac session visible/openable; no actual task messages submitted",
+    "acceptedAnswerRefreshFailure": "Actual submitted answer followed by injected503 head read; submitted state retained, submit disabled, one answer POST only, subsequent live refresh removes resolved request."
   },
   "release": {
     "backendOrNativeRestart": false,
