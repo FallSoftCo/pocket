@@ -129,7 +129,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
     var reviewOpen by rememberSaveable(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     val reviewRequests=d?.optJSONArray("pending")?.objects().orEmpty()
-    val reviewResults=usefulConversationResults(notes,rows)
+    val reviewResults=remember(notes,rows){usefulConversationResults(notes,rows)}
     val otherQuestions=Pocket.attention.filter{it.s("thread_id")!=Pocket.selected&&it.s("kind") in listOf("question","approval")}
     val reviewCount=reviewRequests.size+otherQuestions.size
 

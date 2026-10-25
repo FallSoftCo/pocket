@@ -168,3 +168,7 @@ own identity and proof earlier work is terminal.
 A failed immutable qualification stays failed. Test-only corrections require new
 test-input attestation; do not edit old receipts or publish with stale evidence.
 The signed build, final native gate and optimized APK review remain required.
+
+## Current CPU storage admission
+
+The user-directed October22 override is8GiB plus measured additional build bytes and concurrent reservations, superseding historical80GiB wording above. `storage-build` retains the actual capacity check; native build trees and caches remain disk-backed.

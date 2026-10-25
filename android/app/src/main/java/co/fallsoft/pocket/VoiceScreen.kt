@@ -85,7 +85,7 @@ import androidx.lifecycle.repeatOnLifecycle
                 IconButton({PocketVoice.stop();Pocket.closeTask()},modifier=Modifier.size(48.dp)){SymbolIcon("ArrowBack","Back",Modifier.size(32.dp))}
                 InlineSpeechVolume(Modifier.weight(1f).widthIn(min=64.dp))
                 IconButton({questionsOpen=true},modifier=Modifier.size(48.dp).semantics{contentDescription="Questions and results"}){
-                    BadgedBox(badge={if(questions.isNotEmpty())Badge{Text(questions.size.toString())}}){SymbolIcon(Icons.Rounded.QuestionAnswer,"Questions and results",Modifier.size(28.dp),tint=if(questions.isNotEmpty())Coral else Muted)}
+                    BadgedBox(badge={if(questions.isNotEmpty())Badge{Text(questions.size.toString())}}){SymbolIcon(if(questions.isEmpty())Icons.Rounded.NotificationsNone else Icons.Rounded.NotificationsActive,"Questions and results",Modifier.size(28.dp),tint=if(questions.isNotEmpty())Coral else Muted)}
                 }
                 UsageDock(Modifier.width(usageDockWidth()))
                 IconButton({PocketVoice.playback()},modifier=Modifier.size(48.dp)){SymbolIcon(if(PocketVoice.state=="Speaking")"Pause" else "PlayArrow",if(PocketVoice.state=="Speaking")"Pause" else "Replay",Modifier.size(32.dp))}
