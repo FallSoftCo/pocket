@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "state": "published",
+  "publishedAt": "2026-10-25T03:21:20.911441+00:00",
+  "web": {
+    "desktopAndMobile": true,
+    "features": [
+      "stable phrase spaces",
+      "inline gallery previews",
+      "actionable question/result side pane or drawer"
+    ],
+    "earlierSourceCommits": [
+      "dc191cf",
+      "d0148e0"
+    ]
+  },
+  "android": {
+    "versionCode": 152,
+    "versionName": "0.5.0-alpha.134",
+    "productionSourceSha": "f053f077d3b645ebf229f0f69b92f036e184b7b9e17ccd107f9e433fbb60883f",
+    "qualificationInputSha": "0f0e40e55c38dbf780bb59639fb46d561c3abbcde47d4368fb8993d3647aec5f",
+    "nativeCases": 4,
+    "optimizedPhoneApkSha256": "094a995368ffc1985d40437bfe6fcfda16fe0892b6834bedd5d40daa996e2100",
+    "unit": {
+      "debug": {
+        "tests": 426,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      "release": {
+        "tests": 426,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      }
+    },
+    "lintDebug": true,
+    "lintRelease": true,
+    "nativeReadingActions": true,
+    "nativeAudioAndIndependentRecording": true,
+    "canonicalHistoryAndReconnect": true,
+    "optimizedRoomTypingAndCanonicalReview": true
+  },
+  "delivery": {
+    "workstation": "published",
+    "remoteNative": "published",
+    "mac": "published",
+    "updateAnnouncements": 1,
+    "repairingRequired": false,
+    "serviceRestartRequired": false
+  },
+  "limits": [
+    "Last physical phone readback was151; installation of152 has not been claimed.",
+    "Physical volume-button, playback, push rendering and frame pacing were not requalified on the handset.",
+    "Emulator/provider audio and UI evidence are separate from physical-device evidence."
+  ]
+}

@@ -8,7 +8,7 @@ Saved results share this pane, with Reply, In conversation and Dismiss. Entries 
 
 For preview adoption, agents can share ordinary Markdown images, direct image links, file attachments or an existing gallery card link. The browser resolves same-origin `/8bar/#card-id` against the existing `showcase-catalog.json`, caches it briefly and renders the card poster or a deliberate non-autoplay video player inline. It never invents card IDs, sends a room/chat post, opens the external gallery automatically, proxies arbitrary servers or invokes a model. Original links remain available. Gallery metadata failure leaves the original link intact. Cross-origin galleries without a supported metadata origin remain ordinary links.
 
-This revision is browser-first, with desktop and mobile viewport qualification. It is not an Android APK delivery or a physical phone qualification. The matching native treatment remains tracked separately.
+The browser treatment is deployed for desktop and mobile web. Matching Android152/alpha134 is now available through the existing signed updater; it preserves pairing and app data. Native emulator qualification is complete. The last physical-phone readback was151, so this is an available update rather than a claim that152 is already installed or physically qualified.
 
 ## Android152 candidate
 
@@ -21,3 +21,5 @@ The conversation footer opens one Questions and results surface, with a tablet s
 The Android build preflight now uses the user-directed8GiB CPU reserve instead of its obsolete hard-coded80GiB floor. The shared storage-build admission still accounts for measured peak bytes and concurrent reservations; RAM remains forbidden for build trees.
 
 The native end drawer uses an in-activity Material navigation drawer, with reading direction restored inside its contents. It does not create a dialog window that would take volume-key handling or foreground-read ownership away from the activity.
+
+The final native journey checks question visibility/submission, answer and conversation drafts, saved-result reply/source/dismiss actions, all phrase geometries and credential-free gallery loading. Separate native cases retain real input finalization/live speech, independent recording and canonical history/reconnect ordering. The exact optimized phone-compatible APK also passed canonical room/catalog and typing/voice-key checks. Emulator key-to-draw observations are not physical phone performance measurements.
