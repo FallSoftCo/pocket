@@ -49,8 +49,19 @@ class HollywoodMixedCatalogNativeTest {
         assertTrue(device.executeShellCommand("stat -c %s "+path).trim().toLong()>1000)
     }
     private fun click(selector:BySelector){
-        await("Missing clickable "+selector){device.hasObject(selector)}
-        requireNotNull(device.findObject(selector)).click()
+        var bounds:android.graphics.Rect?=null;var stableAt=0L
+        val end=android.os.SystemClock.elapsedRealtime()+20000
+        while(android.os.SystemClock.elapsedRealtime()<end){
+            if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
+            val node=device.findObject(selector);val next=node?.visibleBounds
+            val now=android.os.SystemClock.elapsedRealtime()
+            if(next!=null&&!next.isEmpty&&node.isEnabled){
+                if(next==bounds&&now-stableAt>=250){node.click();return}
+                if(next!=bounds){bounds=android.graphics.Rect(next);stableAt=now}
+            }else{bounds=null;stableAt=now}
+            Thread.sleep(50)
+        }
+        capture("unstable-target");fail("Tap target did not settle: "+selector)
     }
     private fun binding()=JSONObject().put("id","lax").put("api",3).put("configured",true).put("available",true)
         .put("bindingId","e".repeat(64)).put("installationId",authority).put("authorityId",authority)
@@ -92,6 +103,11 @@ class HollywoodMixedCatalogNativeTest {
         // Match the existing repository MainActivity probes; no idle-dependent
         // ActivityScenario cleanup can conceal a routing assertion failure.
         main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+        // Live status/animation is not global idleness. Await actual app state
+        // and stable target geometry instead of ten-second implicit idle waits.
+        val configuration=Configurator.getInstance()
+        val previousIdleTimeout=configuration.waitForIdleTimeout
+        configuration.waitForIdleTimeout=0
         try {
             await("Original room text/editor not mounted"){device.hasObject(By.text(roomText))&&device.hasObject(By.clazz("android.widget.EditText"))}
             assertEquals("room-host",Pocket.environmentId);assertTrue(BackendNavigation.nativeSelected())
@@ -148,6 +164,6 @@ class HollywoodMixedCatalogNativeTest {
             assertTrue("Stock WebSocket missing",state.getJSONArray("websockets").objects().any{it.s("source")=="stock"})
             assertTrue(state.getJSONArray("reads").objects().any{it.s("source")=="room"&&it.s("path").contains("/"+roomId+"/history")})
             assertTrue(state.getJSONArray("reads").objects().any{it.s("source")=="stock"&&it.s("path").contains("/existing-session")})
-        }finally{main{PocketLive.stop()}}
+        }finally{configuration.waitForIdleTimeout=previousIdleTimeout;main{PocketLive.stop()}}
     }
 }

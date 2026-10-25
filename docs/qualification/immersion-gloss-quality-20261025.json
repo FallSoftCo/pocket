@@ -76,6 +76,12 @@
     "rootCause": "Actual Android ANR trace main thread blocked in ToneGenerator native_setup inside PocketVoiceService constructor. The system ANR window intercepted the volume key.",
     "productionFix": "VoiceFeedback serial background owner; no native tone setup/play/release on Main or under state lock. One coalesced pending cue, stale/closed-owner suppression and asynchronous idle resource release; zero service/context references retained.",
     "regressionProof": "Blocked-factory test500 queued feedback calls: one native owner, cancelled sound suppressed and resource released; actual unchanged AudioRecord/hardware-stop/durable-cancel journey passed26.404s on owned emulator.",
-    "r02": "Same unpublished153 version; final signed build and five native policy cases plus exact optimized review required. No physical phone claim."
+    "r02": "Current signed application passed live account media, actual independent capture/volume-stop/cancel, canonical order/question/reconnect, and reading slots/gallery/decisions. Mixed catalog assertions reached JUnit dot; automatic UI synchronization exceeded runner budget before final result. Never published.",
+    "r03": "Application source unchanged25a6a528ce18ad0c4a5e2e88fe021e5843b568be60b59bf1fe455e433c1694b5; test synchronization changed, final strict input/test-APK qualification must be rebuilt. Existing per-step assertions and180s native command budget retained."
+  },
+  "nativeMethodology": {
+    "causeEvidence": "Repeated UiObject2 actions separated by roughly10s on continuously updating UI. All original mixed-source assertions completed before the prior command deadline.",
+    "change": "Disable implicit global-idle wait only within mixed-catalog test; explicit app-state waits and250ms stable-target geometry; restore prior Configurator value in finally. No app animation suppression, source mutation, assertion deletion or deadline increase.",
+    "targetedPreflight": "Actual unchanged source/draft/receipt/outage assertions passed with terminal OK(1test);160.917s on the bounded software emulator; owned resources stopped. This is functional qualification, not handset response/frame-time measurement."
   }
 }
