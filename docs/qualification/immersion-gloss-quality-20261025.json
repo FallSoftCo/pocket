@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "candidate": {
+    "versionCode": 153,
+    "versionName": "0.5.0-alpha.135",
+    "productionPublished": false
+  },
+  "cause": "Overlapping English meaning ownership across teacher lexical alignments, not duplicate DOM layers.",
+  "architecture": [
+    "Versioned v4 quality gate rejects introduced repetitions; no generic repeated-word deletion.",
+    "Quality-checked valid v3 cache migrates without inference; attempts and retry blocks retained.",
+    "Invalid cached plans excluded and repaired only through existing visible-source bounded worker.",
+    "Native natural paragraph line layout honors reserved placeholder height; compact control labels retain existing line height."
+  ],
+  "cacheSample": {
+    "input": 600,
+    "retainedUnchanged": 520,
+    "excluded": 80,
+    "modelCalls": 0,
+    "loadMs": 79
+  },
+  "teacherEvaluation": {
+    "requests": 2,
+    "cases": 5,
+    "toolsOrBusinessSends": 0,
+    "result": "passed targeted possessive, adjective/article, compound-auxiliary and fixed-expression cases",
+    "physicalAudioQualified": false
+  },
+  "nativePreflight": {
+    "state": "passed-not-final-release-qualified",
+    "elapsedSeconds": 43.162,
+    "wrappedRowsDoNotOverlap": true,
+    "fixedGeometryAcrossFourPhases": true,
+    "directTap": true,
+    "questionDraftAndGallery": true,
+    "sourceBeforeMixedCatalogIntegration": true
+  },
+  "browser": {
+    "state": "passed",
+    "tool": "registered computer-use MCP; existing main Chrome; owned temporary tab",
+    "desktopAndMobile": true,
+    "lineGapsPx": [
+      4,
+      4
+    ],
+    "radiusPx": 4,
+    "bodyFontPx": 16,
+    "lineHeightPx": 29.6,
+    "fixedGeometryAcrossFourPhases": true,
+    "directTap": true,
+    "errors": [],
+    "existingTabsPreserved": true,
+    "modelCalls": 0
+  },
+  "catalogIntegration": {
+    "commit": "fbde6a8",
+    "handoffPatchSha256": "15a710ddb350cd7bf8e3eff9c4a5154133648e2b576e29d29d5f14ed5988908e",
+    "focusedImeBackFix": "separate Global-owned follow-up pending; not claimed fixed"
+  },
+  "limits": [
+    "No153 production publication/install or service restart performed at this checkpoint.",
+    "Actual installed phone version152 verified by Termux SSH pm on2026-10-25.",
+    "Final combined signed APK/native gates and real media-only input/output still required; preflight is not substituted."
+  ]
+}

@@ -17,7 +17,7 @@ export function flipFlopPlan(units){
  return {slots,forms,assignment,eligible:taught.length,distinct:slots.filter(u=>u.eligible&&u.target!==u.meaning).length};
 }
 export function transgrammaticFlipPlan(source,plan){
- if(plan?.original!==source||!['transgrammatic-english-italian-v2','transgrammatic-english-italian-v3'].includes(plan.planVersion)||!Array.isArray(plan.spans))return null;
+ if(plan?.original!==source||!['transgrammatic-english-italian-v2','transgrammatic-english-italian-v3','transgrammatic-english-italian-v4'].includes(plan.planVersion)||!Array.isArray(plan.spans))return null;
  const units=[];let at=0;const protectedRanges=protectedImmersionRanges(source);
  const uncovered=(start,end)=>[...source.slice(start,end).matchAll(/[\p{L}\p{M}]/gu)].some(m=>!protectedRanges.some(p=>start+m.index>=p.start&&start+m.index<p.end));
  for(const span of plan.spans){

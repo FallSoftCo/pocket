@@ -16,7 +16,7 @@ export class ImmersionLayer {
  }
  async load(){try{this.accept(await this.api('/api/immersion/v2'));}catch(e){this.onStatus('Immersion unavailable · '+e.message);}}
  accept(snapshot){this.revision(snapshot.planVersion);this.enabled=snapshot.enabled===true;for(const plan of snapshot.translations||[])this.plans.set(plan.original,plan);this.onStatus(this.enabled?'English reference ↔50%Italian phrases':'Off');this.schedule();if(this.enabled&&!this.timer)this.timer=setTimeout(()=>this.flip(),10000);if(!this.enabled){clearTimeout(this.timer);this.timer=null;}}
- handle(event){if(event.type!=='immersion')return false;if(!['transgrammatic-english-italian-v2','transgrammatic-english-italian-v3'].includes(event.planVersion))return true;this.revision(event.planVersion);for(const plan of event.translations||[])this.plans.set(plan.original,plan);this.schedule();return true;}
+ handle(event){if(event.type!=='immersion')return false;if(!['transgrammatic-english-italian-v2','transgrammatic-english-italian-v3','transgrammatic-english-italian-v4'].includes(event.planVersion))return true;this.revision(event.planVersion);for(const plan of event.translations||[])this.plans.set(plan.original,plan);this.schedule();return true;}
  async setEnabled(enabled){this.accept(await this.api('/api/immersion/v2',{enabled,density:'strong'}));}
  schedule(){clearTimeout(this.scanTimer);this.scanTimer=setTimeout(()=>void this.scan(),160);}
  restore(element,entry){entry.animations?.forEach(a=>a.cancel());if(element.classList.contains('body'))element.replaceChildren(richText(entry.source,entry.resolveUrl));else element.textContent=entry.source;element.style.height='';delete element.dataset.immersionManaged;this.nodes.delete(element);}

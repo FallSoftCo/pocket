@@ -174,7 +174,7 @@ test('phrase plan survives contextual worker decoding without word splitting or 
  ]}}}).translations[0];
  decoded.text=transgrammaticContract.derive(original,decoded);
  const validated=validateTransgrammaticPlan(original,decoded);assert.ok(validated);
- assert.equal(validated.planVersion,'transgrammatic-english-italian-v3');
+ assert.equal(validated.planVersion,TRANSGRAMMATIC_VERSION);
  const phrases=validated.spans[0].targetSegments.filter(s=>s.meaning);
  assert.deepEqual(phrases.map(s=>s.meaning),['Can-you open','the-latest message','in this conversation']);
  assert.deepEqual(phrases.map(s=>s.target),['Puoi aprire','l’ultimo messaggio','in questa conversazione']);
@@ -206,4 +206,46 @@ test('articles cannot be isolated from noun phrases at a flip boundary',()=>{
  const prep=[{target:'nella',meaning:'in-the',occurrence:0,group:0},{target:'conversazione',meaning:'conversation',occurrence:0,group:1}];
  assert.equal(grammaticalTargetSegments('nella conversazione',prep),null);
  assert.equal(grammaticalTargetSegments('nella conversazione',prep.map(w=>({...w,group:0})))[0].meaning,'in-the conversation');
+});
+
+test('overlapping English glosses are rejected without deleting Italian words or genuine repetition',async()=>{
+ const {introducedEnglishRepetition}=await import('../server/immersion-quality.mjs');
+ for(const [source,target,meaning]of [
+  ['Your music','La tua musica','Your your music'],
+  ['Another drain','Un altro drenaggio','Another another drain'],
+  ['The permission has been removed','Il permesso è stato rimosso','The permission has-been been removed'],
+  ['Please acknowledge the guidelines','Per favore riconosci le linee guida','Please please acknowledge the guidance guidance'],
+  ['Our uploads','I nostri caricamenti','Our our uploads'],
+  ['Faster tools','Strumenti più rapidi','Tools faster faster']
+ ])assert.equal(introducedEnglishRepetition(source,target,meaning),true,meaning);
+ for(const [source,target,meaning]of [
+  ['Your music','La tua musica','The your music'],
+  ['Another drain','Un altro drenaggio','An other drain'],
+  ['The permission has been removed','Il permesso è stato rimosso','The permission is been removed'],
+  ['I knew that that book mattered','Sapevo che quel libro importava','I-knew that that book mattered'],
+  ['I had experienced enough','Avevo avuto abbastanza','I-had had enough'],
+  ['Very very good','Molto molto bene','Very very good']
+ ])assert.equal(introducedEnglishRepetition(source,target,meaning),false,meaning);
+ const bad={version:immersionHash('Your music'),spans:[{source:'Your music',occurrence:0,target:'La tua musica',targetSegments:[{target:'La tua musica',occurrence:0,meaning:'Your your music',role:'other',features:[],relations:[]}]}]};bad.text=transgrammaticContract.derive('Your music',bad);
+ assert.equal(validateTransgrammaticPlan('Your music',bad),null);
+});
+test('quality migration preserves valid cached teaching and existing retry budgets without inference',async()=>{
+ const {validateImmersionPlan}=await import('../server/immersion-plan.mjs');
+ const make=(original,target,meaning)=>{
+  const raw={version:immersionHash(original),spans:[{source:original,occurrence:0,target,targetSegments:[{target,occurrence:0,meaning,role:'other',features:[],relations:[]}]}]};raw.text=transgrammaticContract.derive(original,raw);
+  return {...validateImmersionPlan(original,raw,{complete:true}),id:meaning.includes('your your')?'bad':'good',density:'strong',planVersion:'transgrammatic-english-italian-v3'};
+ };
+ const good=make('Your connection','La tua connessione','The your connection'),bad=make('Your music','La tua musica','your your music');
+ let saved={enabled:true,density:'strong',translations:[good,bad],jobs:[{id:'prior-retry',text:'Please continue.',version:immersionHash('Please continue.'),planVersion:'transgrammatic-english-italian-v3',jobVersion:'lexical-grammatical-groups-v1',density:'strong',attempts:2,nextAttemptAt:130000,expiresAt:900000}]};
+ const codex=new EventEmitter();let calls=0;codex.connect=async()=>{calls++;throw Error('Cache migration must not request a model');};
+ const worker=new ImmersionWorker({codex,cwd:'/owned-qa',contract:transgrammaticContract,now:()=>100000,load:()=>saved,save:(_,v)=>{saved=structuredClone(v);},delay:100000});
+ try{
+  const snapshot=worker.snapshot('device');assert.equal(snapshot.translations.length,1);assert.equal(snapshot.translations[0].original,good.original);assert.deepEqual(snapshot.translations[0].spans,good.spans);assert.equal(snapshot.translations[0].planVersion,TRANSGRAMMATIC_VERSION);assert.equal(snapshot.jobs[0].attempts,2);assert.equal(snapshot.jobs[0].state,'retryWaiting');assert.equal(calls,0);
+  worker.submit('device',[{id:'bad',text:bad.original,kind:'message'}]);assert.equal(worker.snapshot('device').jobs.find(j=>j.id==='bad').attempts,0);assert.equal(worker.snapshot('device').jobs.find(j=>j.id==='prior-retry').attempts,2);assert.equal(calls,0);
+ }finally{worker.close();}
+});
+test('authored control catalog has disjoint English lexical meanings',async()=>{
+ const {readFileSync}=await import('node:fs');const {introducedEnglishRepetition}=await import('../server/immersion-quality.mjs');
+ const rows=JSON.parse(readFileSync(new URL('../web/interface-grammar.json',import.meta.url)));
+ for(const [source,parts]of Object.entries(rows))assert.equal(introducedEnglishRepetition(source,parts.map(p=>p.target).join(''),parts.map(p=>p.meaning||p.target).join('')),false,source);
 });

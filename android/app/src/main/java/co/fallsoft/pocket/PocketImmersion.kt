@@ -6,7 +6,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
 
-internal fun supportedImmersionPlanVersion(value:String)=value=="transgrammatic-english-italian-v1"||value=="transgrammatic-english-italian-v2"||value=="transgrammatic-english-italian-v3"
+internal fun supportedImmersionPlanVersion(value:String)=value=="transgrammatic-english-italian-v1"||value=="transgrammatic-english-italian-v2"||value=="transgrammatic-english-italian-v3"||value=="transgrammatic-english-italian-v4"
 
 /** Translation is a display layer: submitted text, commands, copy and audit retain originals. */
 object PocketImmersion {
@@ -66,7 +66,7 @@ object PocketImmersion {
     fun selectReading(key:ImmersionReadingKey,span:ImmersionSpan?){readingChoices.select(key,span);readingRevision++}
     private fun clearReadingChoices(){readingChoices.clear();readingRevision++}
     private fun version(text:String)=immersionSourceHash(text)
-    private fun cacheKey()="immersion-display-cache-v5:"+profileKey()
+    private fun cacheKey()="immersion-display-cache-v6:"+profileKey()
     private fun eligible(row:JSONObject)=row.s("planVersion")==planVersion&&row.s("density")==density
     private fun cached(id:String,text:String):JSONObject? {if(translations.isEmpty()&&byContent.isEmpty())return null;val hash=version(text);return translations[id]?.takeIf{it.s("version")==hash&&eligible(it)}?:byContent[hash]?.takeIf{eligible(it)}}
     private var cacheSave:Job?=null
@@ -119,6 +119,7 @@ object PocketImmersion {
         if(!enabled||!supportedImmersionPlanVersion(event.s("planVersion")))return
         if(planVersion!=event.s("planVersion")){
             planVersion=event.s("planVersion")
+            translations=emptyMap();byContent=emptyMap();clearReadingChoices()
             Pocket.prefs.edit().putString(profileKey()+":planVersion",planVersion).apply()
         }
         unavailable=event.optBoolean("unavailable",false)

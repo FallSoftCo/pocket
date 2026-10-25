@@ -104,7 +104,7 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .modeled-symbol>[hidden] { display:none!important; }
 
 /* Aligned phrase slots reserve the larger language at ordinary text size. No animation. */
-.immersion-phrase { display:inline-grid; grid-template-columns:minmax(0,1fr); vertical-align:baseline; max-width:100%; padding:0 2px; margin:0 1px; border-radius:2px; background:color-mix(in srgb,var(--accent) 9%,transparent); cursor:pointer; white-space:normal; }
+.immersion-phrase { display:inline-grid; grid-template-columns:minmax(0,1fr); vertical-align:baseline; max-width:100%; padding:0 3px; margin:2px 1px; border-radius:4px; background:color-mix(in srgb,var(--accent) 9%,transparent); cursor:pointer; white-space:normal; }
 .phrase-form { grid-area:1/1; min-width:0; overflow-wrap:anywhere; line-height:inherit; }
 .immersion-phrase:hover { background:color-mix(in srgb,var(--accent) 17%,transparent); }
 .immersion-phrase:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
@@ -137,3 +137,6 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .phrase-label { white-space:pre; max-width:none; }.phrase-label .phrase-form { overflow-wrap:normal; }.review-heading>button { flex-shrink:0; min-width:64px; }.review-heading h2 { min-width:0; }
 
 .review-pane .question-label { font-size:16px; line-height:1.5; }.review-pane .question-label input { font-size:16px; }
+
+.message .body:has(.immersion-phrase),.review-pane .body:has(.immersion-phrase) { line-height:1.85; }
+.immersion-phrase.phrase-label { margin-block:0; }

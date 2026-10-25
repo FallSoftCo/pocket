@@ -74,7 +74,7 @@ class NativeReadingParityNativeTest {
    await("Dismiss did not apply its canonical notes receipt"){Pocket.detail?.optJSONArray("notes")?.length()==0}
    main{Pocket.closeTask();PocketLive.stop()}
    fun form(values:List<String>)=buildAnnotatedString{values.forEachIndexed{at,text->if(at>0)append(' ');val begin=length;append(text);addStringAnnotation("immersion-reserve","part:$at",begin,length)}}
-   val forms=requireNotNull(immersionFlipForms(form(listOf("La correzione","è pronta")),form(listOf("The correction","is ready"))))
+   val forms=requireNotNull(immersionFlipForms(form(listOf("La correzione","è pronta","per la distribuzione","in questa conversazione")),form(listOf("The correction","is ready","for the distribution","in this conversation"))))
    val phase=mutableIntStateOf(0);val boxes=java.util.concurrent.atomic.AtomicReference<List<androidx.compose.ui.geometry.Rect?>>(null)
    main{val activity=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().single();activity.setContent{
     MaterialTheme{Column(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp)){
@@ -83,8 +83,11 @@ class NativeReadingParityNativeTest {
      GalleryCardPreview(MarkdownImage("http://127.0.0.1:18880/8bar/#native-preview","Native synthetic gallery",gallery=true))
     }}
    }}
-   await("Phrase layout did not appear"){boxes.get()?.size==2}
+   await("Phrase layout did not appear"){boxes.get()?.size==4}
    val before=boxes.get()
+   val rects=requireNotNull(before).filterNotNull();val bands=rects.groupBy{it.top}.values.sortedBy{it.first().top}
+   assertTrue("The reading fixture must wrap to exercise line spacing",bands.size>=2)
+   assertTrue("Reserved phrase rows overlap",bands.zipWithNext().all{(prior,next)->next.minOf{it.top}>=prior.maxOf{it.bottom}-.5f})
    for(value in 1..3){main{phase.intValue=value};Thread.sleep(250);assertEquals("Phrase geometry changed on flip",before,boxes.get())}
    main{phase.intValue=0};Thread.sleep(200)
    val phrase=device.wait(Until.findObject(By.desc("The correction")),2000);assertNotNull(phrase);phrase!!.click()

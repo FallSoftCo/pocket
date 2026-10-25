@@ -51,16 +51,17 @@ const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#existing
 const voiceCase=name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#');
 const environmentCase=name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
 const canonicalCase=name.startsWith('co.fallsoft.pocket.NativeReadingParityNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeTranscriptStoreNativeTest#');
-const fixtureScript=canonicalCase?'tests/fixtures/native-canonical-transcript.mjs':voiceCase?'tests/fixtures/native-room-voice-ui.mjs':environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
-const portKey=voiceCase?'voice':environmentCase?'environment':teamCase?'team':'transcript';
+const mixedCase=name.startsWith('co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#');
+const fixtureScript=mixedCase?'tests/fixtures/hollywood-mixed-catalog-native.mjs':canonicalCase?'tests/fixtures/native-canonical-transcript.mjs':voiceCase?'tests/fixtures/native-room-voice-ui.mjs':environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
+const portKey=mixedCase?'mixed':voiceCase?'voice':environmentCase?'environment':teamCase?'team':'transcript';
 const portValue=owner.fixturePorts?.[portKey]??(environmentCase?19995:teamCase?19992:19998);
 if(!Number.isSafeInteger(portValue)||portValue<1024||portValue>65532)throw Error('Invalid owned fixture port.');
 const fixturePort=String(portValue);
-const fixtureToken=voiceCase?'synthetic-native-voice-only':teamCase?'synthetic-alpha24-only':'synthetic-system76';
-const fixtureHost=canonicalCase?'Native canonical source':voiceCase?'Owned synthetic native voice':environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
-const fixtureReadyMessage=canonicalCase?'Owned native canonical fixture ready':voiceCase?'Owned synthetic native voice fixture ready '+fixturePort:environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
+const fixtureToken=mixedCase?'synthetic-mixed-room':voiceCase?'synthetic-native-voice-only':teamCase?'synthetic-alpha24-only':'synthetic-system76';
+const fixtureHost=mixedCase?'Room host':canonicalCase?'Native canonical source':voiceCase?'Owned synthetic native voice':environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
+const fixtureReadyMessage=mixedCase?'Owned mixed catalog fixture ready '+fixturePort:canonicalCase?'Owned native canonical fixture ready':voiceCase?'Owned synthetic native voice fixture ready '+fixturePort:environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
 let fixture;
-const ownedFixtures=['tests/fixtures/native-canonical-transcript.mjs','tests/fixtures/native-room-voice-ui.mjs','tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
+const ownedFixtures=['tests/fixtures/hollywood-mixed-catalog-native.mjs','tests/fixtures/native-canonical-transcript.mjs','tests/fixtures/native-room-voice-ui.mjs','tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
 try{
  if(owner.fixturePid&&existsSync('/proc/'+owner.fixturePid)){
   const args=readFileSync('/proc/'+owner.fixturePid+'/cmdline','utf8');
