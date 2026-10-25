@@ -60,11 +60,12 @@ class HollywoodMixedCatalogNativeTest {
         }catch(_:StaleObjectException){null}
     }
     private fun identity()="environment=${Pocket.environmentId} selected=${Pocket.selected} native=${BackendNavigation.nativeSelected()}"
-    private fun click(selector:BySelector){
+    private fun click(selector:BySelector,retired:()->Boolean={false}):Boolean{
         var bounds:android.graphics.Rect?=null;var stableAt=0L
         val end=android.os.SystemClock.elapsedRealtime()+20000
         while(android.os.SystemClock.elapsedRealtime()<end){
             if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
+            if(retired())return false
             val next=observedBounds(selector)
             val now=android.os.SystemClock.elapsedRealtime()
             if(next!=null){
@@ -72,14 +73,15 @@ class HollywoodMixedCatalogNativeTest {
                     println("LIVE_TAP "+selector+" bounds="+next+" "+identity())
                     // One actual native touch. No stale handle is dereferenced
                     // after observation, and dispatched input is never retried.
+                    if(retired())return false
                     assertTrue("Touch injection failed: "+selector,device.click(next.centerX(),next.centerY()))
-                    return
+                    return true
                 }
                 if(next!=bounds){bounds=android.graphics.Rect(next);stableAt=now}
             }else{bounds=null;stableAt=now}
             Thread.sleep(50)
         }
-        capture("unstable-target");fail("Tap target did not settle: "+selector)
+        capture("unstable-target");fail("Tap target did not settle: "+selector);return false
     }
     private fun openBlackout(){
         click(By.desc("Settings, app updates, usage and activity"))
@@ -222,9 +224,22 @@ class HollywoodMixedCatalogNativeTest {
             await("Shared list missing after outage"){Pocket.selected==null&&device.hasObject(By.desc("Open Chat for Original session"))}
             // A stale card must refuse changed pairing, not borrow selected credentials.
             check(prefs.edit().putString("environment:stock-host:token","synthetic-changed").commit())
-            click(By.desc("Open Chat for Original session"))
-            await("Stale action not refused"){Pocket.error.contains("pairing changed")}
+            val staleTarget=By.desc("Open Chat for Original session")
+            val sourceInvalidated:()->Boolean={
+                UnifiedWorkCatalog.discoveryErrors.keys.any{it.environment=="stock-host"}&&
+                    !device.hasObject(staleTarget)
+            }
+            // Real refresh can retire the old credential-bound row before a
+            // thumb reaches it. Do not require a removed card to remain tappable.
+            val tappedStale=click(staleTarget,sourceInvalidated)
+            await("Changed pairing remained actionable"){
+                sourceInvalidated()||
+                    (tappedStale&&Pocket.error=="This source pairing changed. Refresh the work list.")
+            }
             assertNull("Stale card retargeted conversation",Pocket.selected)
+            preserved()
+            println("PAIRING_FENCED "+if(tappedStale)"retained-card-refused" else "catalog-invalidated")
+            capture("pairing-fenced")
             check(prefs.edit().putString("environment:stock-host:token","synthetic-mixed-stock").commit())
             qa("room-online");main{UnifiedWorkCatalog.refresh()}
             await("Room source not recovered"){UnifiedWorkCatalog.snapshots.any{it.key.environment=="room-host"&&it.available}}
