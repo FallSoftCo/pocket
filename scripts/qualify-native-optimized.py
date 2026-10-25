@@ -52,6 +52,13 @@ def qualify_native_stock(*,root,q,data,adb,launch):
     time.sleep(.1)
   adb('shell','am','force-stop','co.fallsoft.pocket');adb('install','-r',str(data/'qualification.apk'))
   original=adb('exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml');assert ET.fromstring(original).tag=='map'
+  # The framework probe captures the live canonical room before restoring its
+  # profile. Harvest that exact image before a cold AVD cleanup can discard it.
+  room_capture=adb('exec-out','run-as','co.fallsoft.pocket','cat','files/optimized-native-room.png')
+  room_stamp=float(adb('shell','run-as','co.fallsoft.pocket','stat','-c','%Y','files/optimized-native-room.png'))
+  assert room_capture.startswith(bytes([137,80,78,71])) and room_stamp>=build['finishedAt']/1000-2,'Fresh optimized room capture required'
+  (data/'optimized-native-room.png').write_bytes(room_capture)
+
   prefs=ET.Element('map')
   for key,value in {'server':'http://127.0.0.1:18880','token':'synthetic-system76-'+str(uuid.uuid4()),'deviceId':'synthetic-device-a','draft:same-thread':'Native optimized retained draft'}.items():ET.SubElement(prefs,'string',name=key).text=value
   adb('shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'",input=ET.tostring(prefs,encoding='utf-8',xml_declaration=True))
