@@ -107,7 +107,7 @@ class OnDemandSpeechNativeTest {
       Spacer(Modifier.weight(1f))
       ConversationFooter{
        InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-       ConversationNotesControls(false,{},false,{""})
+       ConversationNotesControls(0,0,{},false,{""})
        ConversationActionsMenu(false,{}){}
        ReaderPagingButtons(rememberLazyListState())
       }

@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
-import kotlinx.coroutines.flow.drop
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,10 +31,12 @@ internal fun usefulConversationResults(notes:List<JSONObject>,rows:List<JSONObje
         if(open)Surface(color=Panel,modifier=Modifier.width(340.dp).fillMaxHeight()){review()}
     }}else{
         val direction=LocalLayoutDirection.current
-        val state=rememberDrawerState(if(open)DrawerValue.Open else DrawerValue.Closed)
         val close by rememberUpdatedState(onClose)
+        val state=rememberDrawerState(if(open)DrawerValue.Open else DrawerValue.Closed,confirmStateChange={next->
+            if(next==DrawerValue.Closed)close()
+            true
+        })
         LaunchedEffect(open){if(open)state.open()else state.close()}
-        LaunchedEffect(state){snapshotFlow{state.currentValue}.drop(1).collect{if(it==DrawerValue.Closed)close()}}
         // Only drawer placement is RTL. Content retains its actual reading direction.
         // Staying in this Activity preserves volume keys, IME and foreground read ownership.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl){
