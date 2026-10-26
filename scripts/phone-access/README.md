@@ -3,16 +3,14 @@
 Installed on the existing F-Droid Termux/Boot/API setup on 2026-10-26. These are
 exact small runtime scripts, not an APK or a second model supervisor.
 
-`ensure.py` is installed as `~/.local/bin/phone-access-ensure`. One Android
-Termux:API job checks SSH supervision approximately every 15 minutes:
+`ensure.py` is installed as `~/.local/bin/phone-access-ensure`. The helper is **manual-only**.
 
-```sh
-termux-job-scheduler --script "$HOME/.local/bin/phone-access-ensure" \
-  --job-id 8022 --period-ms 900000 --network any \
-  --battery-not-low true --persisted true
-```
+**Do not schedule it periodically.** The initial job8022 was cancelled after
+actual live use showed visible Termux task/session notifications on every
+callback despite no repair being needed. Phone uptime was14days; SSH, backend
+and Codex PIDs stayed stable. No recurring replacement was installed.
 
-Check existing pending job IDs before installation. Never cancel unrelated jobs.
+Do not cancel unrelated jobs.
 The helper is single-flight, refuses a second living SSH daemon/listener, respects
 service down state and its own disabled marker, and limits repair attempts to
 one per five minutes. It never starts Codex or the local application backend.
@@ -49,3 +47,8 @@ Disable this job with `termux-job-scheduler --cancel --job-id 8022`.
 Set `~/.local/state/phone-access/disabled` to suppress helper repairs. Protected
 before-files on the phone are in `~/.local/state/phone-access-recovery-20261026/`;
 restore only owned files and retain the current service/control state.
+
+Correction: earlier registration/pending/callback evidence below is historical,
+not current activation. Current pending-job readback says No jobs found. Boot
+startup and runit SSH crash backoff remain active; no service restarted during
+this correction. Whole-app death recovery remains OS-dependent/manual.
