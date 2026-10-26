@@ -3201,6 +3201,12 @@
         "Not yet installed on phone or production gateway.",
         "Fast per-thread history failures do not by themselves establish the cause of all observed minute-long update delays."
       ]
+    },
+    {
+      "id": "web-native-history-source-pages-20261026",
+      "request": "Web session list and conversation must share fresh canonical state without old disconnected history islands or cross-session protocol fallback.",
+      "status": "implemented-qualified",
+      "evidence": "docs/qualification/web-native-history-20261026.json"
     }
   ],
   "current_state": {
