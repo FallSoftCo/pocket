@@ -39,15 +39,13 @@ class CoordinatorNativeAudioLiveTest {
   val events=mutableListOf<JSONObject>();val began=SystemClock.elapsedRealtime()
   var audio:NativeVoiceAudio?=null;var connection:String?=null
   val volume=c.getSystemService(AudioManager::class.java);val original=volume.getStreamVolume(AudioManager.STREAM_MUSIC)
-  fun connect(purpose:String,passage:String?=null,onEvent:(String,String)->Unit):NativeVoiceAudio {
+  fun connect(purpose:String,onEvent:(String,String)->Unit):NativeVoiceAudio {
    val ready=CompletableFuture<Unit>();var created:NativeVoiceAudio?=null
    i.runOnMainSync{created=NativeVoiceAudio(c,explicitCompletion=true,livePlayback=true){kind,data->
     synchronized(events){events.add(JSONObject().put("kind",kind).put("at",SystemClock.elapsedRealtime()-began))}
     when(kind){
      "offer"->executor.submit{try{
-      if(passage!=null)i.runOnMainSync{created!!.prepareSpeech(2,passage)}
-      val result=api("/api/voice/native/start",JSONObject().put("sdp",data).put("purpose",purpose).apply{passage?.let{put("text",it)}});connection=result.getString("id")
-      if(passage!=null)check(result.optBoolean("startupSpeech")){"Gateway did not bind the startup speech passage"}
+      val result=api("/api/voice/native/start",JSONObject().put("sdp",data).put("purpose",purpose));connection=result.getString("id")
       i.runOnMainSync{created!!.answer(result.getString("sdp"))}
      }catch(e:Exception){ready.completeExceptionally(e)}}
      "connected"->ready.complete(Unit)
@@ -78,13 +76,15 @@ class CoordinatorNativeAudioLiveTest {
    val finalized=SystemClock.elapsedRealtime()
    i.runOnMainSync{audio!!.close()};api("/api/voice/native/stop",JSONObject().put("connectionId",connection));connection=null
    val complete=CompletableFuture<JSONObject>();var firstAudio:Long?=null
-   val passage="The coordinator received your request. Your other work has not been interrupted."
-   val speechAt=SystemClock.elapsedRealtime()
-   audio=connect("speech",passage){kind,data->
+   audio=connect("voice"){kind,data->
     if(kind=="speaking"&&firstAudio==null)firstAudio=SystemClock.elapsedRealtime()
     if(kind=="audio")complete.complete(JSONObject(data))
     if(kind=="error")complete.completeExceptionally(IllegalStateException(data))
    }
+   val passage="The coordinator received your request. Your other work has not been interrupted."
+   val speechAt=SystemClock.elapsedRealtime()
+   i.runOnMainSync{audio!!.speak(2,passage)}
+   api("/api/voice/native/speak",JSONObject().put("connectionId",connection).put("text",passage))
    val result=complete.get(70,TimeUnit.SECONDS);val speechDone=SystemClock.elapsedRealtime()
    assertTrue("Live audio was not used",result.optBoolean("live"));assertNotNull(firstAudio)
    assertTrue("First audio waited for the full cache",firstAudio!!<speechDone-250)

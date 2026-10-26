@@ -24,5 +24,6 @@
     "No phone install or production backend activation yet.",
     "Not proof that every previously reported multi-minute delay has the same cause.",
     "Separate speech-output qualification remains unresolved; no audio-model switch authorized."
-  ]
+  ],
+  "deliveryScope": "History and previously qualified UX; experimental startup-bound speech code2fbdcac is removed from this delivery only and remains on original branch with WIP."
 }

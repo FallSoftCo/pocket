@@ -6,7 +6,8 @@
     "co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#captureStartsAndStopsIndependentlyOfPresentationState",
     "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#nativeOrderSurvivesDelayedArrivalQuestionsAndReconnectWithoutLegacyRepair",
     "co.fallsoft.pocket.NativeReadingParityNativeTest#slotsGalleryAndDecisionDrawerPreserveInputAndSource",
-    "co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage"
+    "co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage",
+    "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#mixedHistoryProtocolsStaySessionScopedAndKeepTheirOriginalCursors"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
@@ -23,7 +24,8 @@
     "153 additionally retains actual mixed room/stock MainActivity source routing, both drafts and original unknown receipts through an owned synthetic room outage/recovery. Gloss-quality rejects introduced English repetition; exact bilingual slot geometry includes non-overlapping wrapped rows. Physical device/provider/push qualification remains separate.",
     "153 r02 additionally moves optional tone generation out of voice service construction/Main. The existing IndependentVoiceCaptureNativeTest remains unchanged and must pass hardware stop and durable cancellation; diagnostic ANR traces and rejected153 r01 are retained.",
     "153 r03 uses explicit app-state/stable-target synchronization for the continuously updating mixed catalog; prior UiAutomator configuration is restored. The original assertions and180s native command budget remain. Software-emulator overall journey duration is not a physical interaction latency claim.",
-    "153 r04 expands the mixed native journey to actual focused-IME Back in room/stock/returned-room, both menu dismissals, source outage/recovery and native Blackout exit. This single expanded case has a bounded300s software-emulator command cap; all other180s caps and every assertion remain. Measured R12 completed188s with a retained Blackout failure; completion timing is not phone latency evidence."
+    "153 r04 expands the mixed native journey to actual focused-IME Back in room/stock/returned-room, both menu dismissals, source outage/recovery and native Blackout exit. This single expanded case has a bounded300s software-emulator command cap; all other180s caps and every assertion remain. Measured R12 completed188s with a retained Blackout failure; completion timing is not phone latency evidence.",
+    "History repair delivery keeps the pre-experiment speech implementation; startup-bound speech experiment remains isolated and is not included. All original native cases remain required. The new visible mixed-history journey must settle zero-revision snapshots without read storms and preserve each session protocol and original cursors."
   ],
   "requiredOptimizedReview": "native-room-catalog-and-typing",
   "captureInteraction": "volume-buttons"
