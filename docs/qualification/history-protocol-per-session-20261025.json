@@ -25,5 +25,11 @@
     "Not proof that every previously reported multi-minute delay has the same cause.",
     "Separate speech-output qualification remains unresolved; no audio-model switch authorized."
   ],
-  "deliveryScope": "History and previously qualified UX; experimental startup-bound speech code2fbdcac is removed from this delivery only and remains on original branch with WIP."
+  "deliveryScope": "History and previously qualified UX; experimental startup-bound speech code2fbdcac is removed from this delivery only and remains on original branch with WIP.",
+  "optimizedFailure": {
+    "candidate": "a2061dd",
+    "cause": "Unified catalog direct-room navigation reused an unconditional active-voice guard intended for notification/backend changes.",
+    "fix": "Allow same-environment room navigation when already in native rooms; preserve captured voice origin and retain cross-backend/environment safety.",
+    "status": "Rebuilding exact new candidate; prior failure retained, not relabeled pass."
+  }
 }

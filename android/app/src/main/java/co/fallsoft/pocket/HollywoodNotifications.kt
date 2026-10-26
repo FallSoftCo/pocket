@@ -135,7 +135,9 @@ internal object HollywoodNotifications {
     /** Direct catalog navigation shares the existing typed room destination, not a fake alert. */
     fun openRoom(origin:EnvironmentRequest,binding:JSONObject,room:String,keyboard:Boolean=false){
         require(Pocket.captureEnvironment()?.matches(origin)==true){"Select the original environment"}
-        require(!PocketVoice.active){"Finish voice before opening another room"}
+        // Reading another room in the current environment must not retarget
+        // capture. PocketVoice retains the immutable original destination.
+        require(!PocketVoice.active||BackendNavigation.nativeSelected()){"Finish voice before changing backends"}
         require(hollywoodUuid(room)&&binding.s("bindingId").matches(Regex("[0-9a-f]{64}")))
         BackendNavigation.select("lax")
         target=HollywoodOpenTarget(owner(origin),binding.s("bindingId"),room,"",null,null,keyboard)
