@@ -104,14 +104,18 @@ export class ThreadHistory {
   }
   async read(metadata,options={}){
     let thread;
-    if(this.fullSnapshotThreads.has(metadata.id))thread=await this.fullSnapshotPage(metadata,options);
+    // A persisted cursor identifies its protocol across process restarts. Never
+    // reinterpret a complete-turn boundary using volatile capability state.
+    const completeTurnCursor=typeof options.before==='string'&&options.before.startsWith('turnfull:');
+    if(completeTurnCursor)thread=await this.turnPage(metadata,options);
+    else if(this.fullSnapshotThreads.has(metadata.id))thread=await this.fullSnapshotPage(metadata,options);
     else if(this.turnOnlyThreads.has(metadata.id)&&!options.summary)thread=await this.turnPage(metadata,options);
     else try{thread=await this.readPaged(metadata,options);}
     catch(e){if(!unsupportedItems(e))throw e;this.turnOnlyThreads.add(metadata.id);thread=await this.turnPage(metadata,options);}
     const display=this.identity?.snapshot(thread)||thread;
     // Turn-only reads already indexed the complete provider turn. This result
     // is only a bounded presentation window, including inherited-history paths.
-    return this.turnOnlyThreads.has(metadata.id)?display:this.observeSnapshot(display);
+    return completeTurnCursor||this.turnOnlyThreads.has(metadata.id)?display:this.observeSnapshot(display);
   }
 
   async readPaged(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8,preferPaging=false,maxSourcePages=8,stopAfterConversation=false}={}){

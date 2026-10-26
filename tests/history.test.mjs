@@ -233,3 +233,18 @@ test('filtered internal items still consume the source read budget and can be co
  await history.read({id:'internal-burst',historyMode:'paginated'},{before:first._pocketPage.before,maxItems:8,maxSourcePages:2});
  assert.deepEqual(cursors,[null,'8','16','24','32','40']);
 });
+
+
+test('saved complete-turn cursor survives a fresh reader without protocol discovery or losing its boundary',async()=>{
+ const calls=[];
+ const codex={async call(method,p){calls.push({method,p});assert.equal(method,'thread/turns/list');assert.equal(p.itemsView,'full');return {data:[{id:'current',items:Array.from({length:6},(_,i)=>({id:'m'+i,type:'agentMessage',text:'Message '+i}))}],backwardsCursor:'stable-turn',nextCursor:null};}};
+ const first=new ThreadHistory(codex);first.turnOnlyThreads.add('thread1');
+ const page=await first.read({id:'thread1',historyMode:'paginated'},{maxItems:2});
+ assert.deepEqual(page.turns[0].items.map(x=>x.id),['m4','m5']);assert.ok(page._pocketPage.before.startsWith('turnfull:'));
+ calls.length=0;
+ const restarted=new ThreadHistory(codex);
+ const older=await restarted.read({id:'thread1',historyMode:'paginated'},{before:page._pocketPage.before,preferPaging:true,maxItems:2});
+ assert.deepEqual(older.turns[0].items.map(x=>x.id),['m2','m3']);assert.equal(calls.length,1);
+ assert.equal(calls[0].p.cursor,'stable-turn');assert.equal(calls[0].p.sortDirection,'asc');
+ await assert.rejects(new ThreadHistory(codex).read({id:'thread1'},{before:'turnfull:not-json'}),/Invalid history position/);
+});
