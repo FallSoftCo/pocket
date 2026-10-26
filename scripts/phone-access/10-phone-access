@@ -1,5 +1,4 @@
 #!/data/data/com.termux/files/usr/bin/sh
+# Supported Termux:Boot + termux-services path. No polling or worker launch here.
 termux-wake-lock
-# The package startup is idempotent on a fresh boot; existing services remain owned by runit.
 . /data/data/com.termux/files/usr/etc/profile.d/start-services.sh
-exec /data/data/com.termux/files/home/.local/bin/phone-access-ensure
