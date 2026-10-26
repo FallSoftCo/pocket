@@ -79,6 +79,19 @@ def qualify_native_stock(*,root,q,data,adb,launch):
   while qa('state')['answers']!=1:
    if time.monotonic()>deadline:raise RuntimeError('Exact optimized question answer did not route')
    time.sleep(.1)
+  # Answering a question does not dismiss its review drawer. Back correctly
+  # closes that control first; close it through its public action before testing
+  # conversation-to-catalog Back. Do not weaken the subsequent source assertions.
+  xml=dump();tree=ET.fromstring(xml)
+  close=[n for n in tree.iter('node')if n.get('content-desc')=='Close questions']
+  if close:
+   assert len(close)==1,'Ambiguous questions close action'
+   tap(close[0]);deadline=time.monotonic()+8
+   while True:
+    xml=dump();tree=ET.fromstring(xml)
+    if not any(n.get('content-desc')=='Close questions'for n in tree.iter('node')):break
+    if time.monotonic()>deadline:raise RuntimeError('Questions drawer did not close before Back navigation')
+    time.sleep(.1)
   qa('disconnect');adb('shell','input','keyevent','KEYCODE_BACK');qa('recover')
   xml,tree=wait('Native canonical work');xml,tree=wait('Native answer two',contains=True)
   # Idle status and preview share one text node. Open the actual Chat region,
