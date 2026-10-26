@@ -1,0 +1,5 @@
+#!/data/data/com.termux/files/usr/bin/sh
+umask 077
+mkdir -p "$HOME/.local/state/phone-access"
+date +%s > "$HOME/.local/state/phone-access/sshd-start"
+exec sshd -D -e 2>&1

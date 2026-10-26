@@ -1,0 +1,15 @@
+#!/data/data/com.termux/files/usr/bin/sh
+umask 077
+state="$HOME/.local/state/phone-access"
+mkdir -p "$state"
+now=$(date +%s)
+start=$(cat "$state/sshd-start" 2>/dev/null || echo 0)
+delay=$(cat "$state/sshd-backoff" 2>/dev/null || echo 2)
+case "$start:$delay" in *[!0-9:]*|:*) start=0; delay=2;; esac
+if [ "$((now-start))" -ge 120 ]; then delay=2; fi
+[ "$delay" -lt 2 ] && delay=2
+[ "$delay" -gt 300 ] && delay=300
+printf 'at=%s exit=%s signal=%s retry_seconds=%s\n' "$now" "$1" "$2" "$delay" > "$state/sshd-last-exit"
+next=$((delay*2)); [ "$next" -gt 300 ] && next=300
+printf '%s\n' "$next" > "$state/sshd-backoff"
+sleep "$delay"
