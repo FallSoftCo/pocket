@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-25",
+  "status": "implemented-native-qualified-not-deployed",
+  "changes": [
+    "Dispatch persisted complete-turn cursors without volatile capability discovery.",
+    "Typed unsupported native history selects turn/item history only for its environment-bound session.",
+    "Keep native chronology separate; permission/network failures never downgrade.",
+    "Use Long revision zeros so fresh snapshots settle and dirty counters clear without a read storm.",
+    "Reuse the negotiated first page in the visible conversation instead of refetching it."
+  ],
+  "verification": {
+    "node": "27 focused history/coordinator/native/HTTP checks pass",
+    "android": "qualification and instrumentation APKs compile",
+    "native": {
+      "journey": "mixedHistoryProtocolsStaySessionScopedAndKeepTheirOriginalCursors",
+      "seconds": 5.437,
+      "legacyReads": 5,
+      "phone": false,
+      "modelCalls": 0,
+      "childrenStopped": true
+    }
+  },
+  "limits": [
+    "No phone install or production backend activation yet.",
+    "Not proof that every previously reported multi-minute delay has the same cause.",
+    "Separate speech-output qualification remains unresolved; no audio-model switch authorized."
+  ]
+}

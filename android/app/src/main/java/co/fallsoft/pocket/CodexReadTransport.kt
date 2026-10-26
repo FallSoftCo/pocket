@@ -49,7 +49,7 @@ internal object CodexReadTransport {
                         val value=response.use{
                             val raw=it.body?.string().orEmpty()
                             val json=try{JSONObject(raw)}catch(_:Exception){throw PocketApiException(it.code,"Unexpected history response")}
-                            if(!it.isSuccessful)throw PocketApiException(it.code,ConnectionMessages.server(json.s("error","History unavailable")))
+                            if(!it.isSuccessful)throw PocketApiException(it.code,ConnectionMessages.server(json.s("error","History unavailable")),json.optString("code").takeIf{it.isNotBlank()})
                             json
                         }
                         if(continuation.isActive)continuation.resume(value)

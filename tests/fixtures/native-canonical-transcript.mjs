@@ -6,7 +6,7 @@ const port=Number(process.env.PORT||19998),epoch=process.env.NEXTCOMP_QA_EPOCH||
 const capture=process.env.NEXTCOMP_QA_NATIVE_CAPTURE?JSON.parse(fs.readFileSync(process.env.NEXTCOMP_QA_NATIVE_CAPTURE,'utf8')):null;
 const captured=new Map((capture?.pages||[]).map(p=>[p.cursor??'',p.response]));
 let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads=0,positionReads=0,workSubmissions=0,question=false,answers=0,streamFinished=false,streamsSent=0,streamTimer=null;
-let retainedResult=false;
+let retainedResult=false,legacyHistoryReads=0;
 const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
 const item=(position,id,type,text)=>({type:'item',position,turnId:'native-turn',item:{id,type,...(type==='userMessage'?{content:[{type:'text',text}]}:{text})}});
@@ -29,6 +29,7 @@ function send(socket,value){const bytes=Buffer.from(JSON.stringify(value));const
 function broadcast(value){for(const s of sockets)send(s,value);}
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost'),path=url.pathname;
+ if(process.env.NEXTCOMP_QA_HISTORY_TRACE==='1')console.log(JSON.stringify({at:Date.now(),method:req.method,path,query:url.search}));
  if(path.startsWith('/8bar/')){
   if(req.headers.authorization){galleryCredentialLeaks++;res.writeHead(403).end();return;}
   if(path==='/8bar/showcase-catalog.json'){galleryMetadataReads++;res.setHeader('Content-Type','application/json');res.end(JSON.stringify([{id:'native-preview',title:'Native material study',poster:'preview.svg'}]));return;}
@@ -40,6 +41,15 @@ const server=http.createServer(async(req,res)=>{
  let raw='';for await(const chunk of req)raw+=chunk;
  let body={};res.setHeader('Content-Type','application/json');
  if(path==='/api/status')body={host:'Native canonical source',connected:!offline,deviceId:'synthetic-device-a',capabilities:{readOnlyTimeline:true,canonicalTimeline:1},...(url.searchParams.has('threadId')?{historyHead:{threadId:'same-thread',epoch,version:revision}}:{})};
+ else if(path==='/api/threads/legacy-thread/native-timeline'){res.writeHead(409).end(JSON.stringify({code:'NATIVE_TIMELINE_UNSUPPORTED',error:'This session uses turn history rather than native timeline history.'}));return;}
+ else if(path==='/api/threads/denied-thread/native-timeline'){res.writeHead(403).end(JSON.stringify({code:'DENIED',error:'Synthetic permission refusal'}));return;}
+ else if(path==='/api/threads/legacy-thread'||path==='/api/threads/legacy-thread/head'){
+  legacyHistoryReads++;
+  const older=url.searchParams.has('before');
+  if(older&&url.searchParams.get('before')!=='legacy-opaque-cursor'){res.writeHead(400).end('{}');return;}
+  const rows=[{id:'legacy-turn/'+(older?'earlier':'request'),turnId:'legacy-turn',kind:'user',text:older?'Earlier legacy request':'Legacy request'},{id:'legacy-turn/'+(older?'old-answer':'answer'),turnId:'legacy-turn',kind:'message',text:older?'Earlier legacy answer':'Legacy answer'}];
+  body={thread:{...meta(),id:'legacy-thread',historyMode:'legacy'},timeline:{rows,canonicalIds:rows.map(r=>r.id),hasEarlier:!older,before:older?null:'legacy-opaque-cursor'},revision,historyHead:{threadId:'legacy-thread',epoch,version:revision},pending:[],outgoing:[],notes:[],notifications:[]};
+ }
  else if(path==='/api/threads')body={threads:[{...meta(),preview:revision>1?'Native answer two':'Native answer one',previewRole:'codex',previewKind:'message'}]};
  else if(path==='/api/threads/same-thread/native-timeline'){
   const cursor=url.searchParams.get('before')||'';
@@ -83,7 +93,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/enable-capture'){
   if(!capture){res.writeHead(409).end('{"error":"Private native capture required"}');return;}
   replay=true;body={source:'recorded-native-timeline',pages:captured.size,firstBefore:captured.get('')?.nextCursor};
- }else if(path==='/_qa/state')body={reads,legacyReads,positionReads,workSubmissions,answers,streamsSent,galleryMetadataReads,galleryImageReads,galleryCredentialLeaks};
+ }else if(path==='/_qa/state')body={reads,legacyReads,legacyHistoryReads,positionReads,workSubmissions,answers,streamsSent,galleryMetadataReads,galleryImageReads,galleryCredentialLeaks};
  else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
  else if(path==='/api/notifications')body={notifications:[]};
  else if(path==='/api/activity')body={items:[]};

@@ -1,7 +1,7 @@
 import {itemRow} from './timeline.mjs';
 // Observation compatibility is separate from display chronology. Never merge
 // positions from different protocols or use an evidence page as a UI timeline.
-const unsupported=e=>e?.rpc?.code===-32601&&/thread\/timeline\/list.*not supported/i.test(e.message);
+const unsupported=e=>e?.code==='NATIVE_TIMELINE_UNSUPPORTED'||e?.rpc?.code===-32601&&/thread\/timeline\/list.*not supported/i.test(e.message);
 export class CoordinatorHeadReader {
  constructor({codex,native,clock=Date.now}){Object.assign(this,{codex,native,clock});this.compatibility=new Map();this.reading=new Map();}
  read(threadId,{cursor=null,limit=64,observationOnly=false}={}){

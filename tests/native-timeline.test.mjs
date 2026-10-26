@@ -34,3 +34,13 @@ test('native display keeps full public messages, omits raw reasoning and preserv
  assert.equal(result.before,source.nextCursor);assert.equal(result.rows.at(-2).text,'spoken result');
  assert.ok(!JSON.stringify(result).includes('private raw reasoning'));
 });
+
+
+test('typed unsupported history is per-session and never reclassifies transport or permission failures',async()=>{
+ const calls=[];
+ const reader=new NativeTimelineReader({connect:async()=>{},call:async(method,p)=>{calls.push(p.threadId);if(p.threadId==='legacy')throw Object.assign(Error('thread/timeline/list is not supported yet'),{rpc:{code:-32601}});if(p.threadId==='denied')throw Object.assign(Error('Denied'),{rpc:{code:-32001}});return {data:[],nextCursor:null,activeRealtimeSessionAtPageStart:null};}});
+ await assert.rejects(reader.read('legacy'),e=>e.status===409&&e.code==='NATIVE_TIMELINE_UNSUPPORTED');
+ assert.deepEqual((await reader.read('modern')).data,[]);
+ await assert.rejects(reader.read('denied'),e=>e.message==='Denied'&&e.code!=='NATIVE_TIMELINE_UNSUPPORTED');
+ assert.deepEqual(calls,['legacy','modern','denied']);
+});

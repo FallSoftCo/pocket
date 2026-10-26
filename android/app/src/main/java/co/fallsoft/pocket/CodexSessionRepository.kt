@@ -30,6 +30,7 @@ internal object CodexSessionRepository {
         .dispatcher(okhttp3.Dispatcher().apply{maxRequests=4;maxRequestsPerHost=2})
         .callTimeout(5,java.util.concurrent.TimeUnit.SECONDS).build()}
     private val nativeCapabilities=ConcurrentHashMap<String,Boolean>()
+    private val turnHistorySessions=ConcurrentHashMap.newKeySet<Pair<String,String>>()
     private val capabilityMutex=Mutex()
     private val capabilityRequests=mutableMapOf<String,Deferred<Unit>>()
     /** Negotiate once per paired source before choosing a history protocol.
@@ -55,8 +56,8 @@ internal object CodexSessionRepository {
     // requests position proof; repeated deltas cannot create a metadata read loop.
     private val nativeUnpositioned=linkedMapOf<Pair<String,String>,MutableSet<String>>()
     private val nativeStore by lazy{NativeTranscriptStore(Pocket.context)}
-    fun nativeEnabled(destination:EnvironmentRequest?=Pocket.captureEnvironment()):Boolean =
-        destination!=null&&nativeCapabilities[source(destination).scope]!=false
+    fun nativeEnabled(destination:EnvironmentRequest?=Pocket.captureEnvironment(),id:String?=Pocket.selected):Boolean =
+        destination!=null&&nativeCapabilities[source(destination).scope]!=false&&(id==null||(source(destination).scope to id) !in turnHistorySessions)
     private fun native(value:JSONObject)=value.optInt("windowSchema")==3||value.optJSONObject("timeline")?.optInt("native")==1
     private suspend fun nativeCommitted(source:Source,id:String,response:JSONObject,cursor:String?):JSONObject=withContext(lane){
         if(!current(source))throw CancellationException("Pairing changed")
@@ -71,8 +72,8 @@ internal object CodexSessionRepository {
             // A committed current native read settles the same invalidation it
             // observed. Older-page reads never claim current-head freshness.
             if(cursor==null&&stored&&key !in pending&&
-                response.optLong("_catalogObserved")== (invalidations[key]?:0)&&
-                response.optLong("_notificationObserved")>= (known[key]?:0))dirty.remove(key)
+                response.optLong("_catalogObserved")== (invalidations[key]?:0L)&&
+                response.optLong("_notificationObserved")>= (known[key]?:0L))dirty.remove(key)
             save(source,id,null,key in dirty)
             withContext(Dispatchers.Main.immediate){if(current(source))publishPreview(id,value,source.destination)}
         }
@@ -84,7 +85,7 @@ internal object CodexSessionRepository {
         catalog.tasks=catalog.tasks.map{if(it.id==id)nativeCatalogProjection(destination,it)else it}
     }
     fun nativeCatalogProjection(destination:EnvironmentRequest,task:Task):Task{
-        if(!nativeEnabled(destination))return task
+        if(!nativeEnabled(destination,task.id))return task
         val row=latest[source(destination).scope to task.id]?.optJSONObject("nativePreview")
             ?:return task.copy(preview="",previewRole="activity",previewKind="pending")
         return task.copy(preview=row.s("text").take(600),previewRole=when(row.s("kind")){"user"->"user";"message"->"codex";else->"activity"},
@@ -94,18 +95,18 @@ internal object CodexSessionRepository {
      * cards are not permanently blank after bounded catalog admission evicts them. */
     fun previewVisible(environmentId:String,id:String){
         val destination=Pocket.captureEnvironment(environmentId)?:return
-        if(!nativeEnabled(destination))return
+        if(!nativeEnabled(destination,id))return
         val source=source(destination);val key=source.scope to id
         if(latest[key]?.optJSONObject("nativePreview")!=null)return
         io.launch{
             if(!current(source)||key in pending||key in inFlight||latest[key]?.optJSONObject("nativePreview")!=null)return@launch
             ensurePump()
-            queue(Intent(source,id,known[key]?:0,System.currentTimeMillis()))
+            queue(Intent(source,id,known[key]?:0L,System.currentTimeMillis()))
         }
     }
     fun focus(id:String,position:TranscriptReadPosition?){
         val destination=Pocket.captureEnvironment()?:return
-        if(!nativeEnabled(destination))return
+        if(!nativeEnabled(destination,id))return
         val source=source(destination);val key=source.scope to id
         io.launch{
             if(!current(source))return@launch
@@ -126,7 +127,7 @@ internal object CodexSessionRepository {
     suspend fun readOlder(destination:EnvironmentRequest,id:String,cursor:String):JSONObject{
         val source=source(destination)
         ensureCapabilities(source)
-        if(!nativeEnabled(destination))return CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"?view=timeline&before="+android.net.Uri.encode(cursor))
+        if(!nativeEnabled(destination,id))return CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"?view=timeline&before="+android.net.Uri.encode(cursor))
         if(cursor.startsWith("native-local:"))return withContext(lane){
             if(!current(source))throw CancellationException("Pairing changed")
             nativeStore.navigate(source.scope,id,cursor)
@@ -184,19 +185,23 @@ internal object CodexSessionRepository {
             requests[key]?.takeIf{it.isActive}?:network.async{
                 if(!current(source))throw CancellationException("Pairing changed")
                 val baseline=latest[key]?.optJSONObject("historyHead")?.s("epoch")
-                val notificationAtStart=known[key]?:0
-                val invalidationAtStart=invalidations[key]?:0
-                val liveAtStart=liveGenerations[key]?:0
+                val notificationAtStart=known[key]?:0L
+                val invalidationAtStart=invalidations[key]?:0L
+                val liveAtStart=liveGenerations[key]?:0L
                 val base="/api/threads/"+android.net.Uri.encode(id)
                 ensureCapabilities(source)
-                var useNative=nativeEnabled(destination)
+                var useNative=nativeEnabled(destination,id)
                 val response=try{
                     CodexReadTransport.read(destination,base+if(useNative)"/native-timeline"else if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
                 }catch(error:PocketApiException){
-                    // A missing route on an unadvertised older gateway is explicit
-                    // compatibility. Provider errors/auth failures never downgrade.
-                    if(!useNative||nativeCapabilities[source.scope]==true||error.status!=404)throw error
-                    nativeCapabilities[source.scope]=false;useNative=false
+                    // Only a typed per-session capability refusal changes its
+                    // history protocol. Network/auth failures never downgrade,
+                    // and another session on this host keeps native chronology.
+                    val sessionUnsupported=error.status==409&&error.code=="NATIVE_TIMELINE_UNSUPPORTED"
+                    val routeMissing=error.status==404&&nativeCapabilities[source.scope]!=true
+                    if(!useNative||!sessionUnsupported&&!routeMissing)throw error
+                    if(sessionUnsupported)turnHistorySessions.add(key)else nativeCapabilities[source.scope]=false
+                    useNative=false
                     CodexReadTransport.read(destination,base+if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
                 }
                 val currentEpoch=latest[key]?.optJSONObject("historyHead")?.s("epoch")
@@ -219,13 +224,13 @@ internal object CodexSessionRepository {
         return if(native(response))response else withContext(Dispatchers.Default){JSONObject(response.toString())}
     }
     internal fun currentSnapshot(destination:EnvironmentRequest,id:String,value:JSONObject):Boolean=
-        native(value)||value.optLong("_catalogObserved")==(invalidations[source(destination).scope to id]?:0)
+        native(value)||value.optLong("_catalogObserved")==(invalidations[source(destination).scope to id]?:0L)
     private fun current(source:Source)=Pocket.captureEnvironment(source.destination.environment.id)?.matches(source.destination)==true
     fun peek(id:String):JSONObject? {
         val destination=Pocket.captureEnvironment()?:return null
-        return latest[source(destination).scope to id]?.takeIf{!nativeEnabled(destination)||native(it)}
+        return latest[source(destination).scope to id]?.takeIf{!nativeEnabled(destination,id)||native(it)}
     }
-    fun canPresent(id:String,value:JSONObject):Boolean=(value.optInt("windowSchema")==3||!nativeEnabled()&&value.optInt("windowSchema")==2)&&value.optJSONObject("timeline")?.optJSONArray("canonicalIds")!=null&&notificationWatermark(id)<=value.optLong("throughNotification")&&!isDirty(id)
+    fun canPresent(id:String,value:JSONObject):Boolean=(value.optInt("windowSchema")==3||!nativeEnabled(id=id)&&value.optInt("windowSchema")==2)&&value.optJSONObject("timeline")?.optJSONArray("canonicalIds")!=null&&notificationWatermark(id)<=value.optLong("throughNotification")&&!isDirty(id)
     fun isDirty(id:String):Boolean {
         val destination=Pocket.captureEnvironment()?:return true
         return (source(destination).scope to id) in dirty
@@ -233,12 +238,12 @@ internal object CodexSessionRepository {
     fun preview(id:String,destination:EnvironmentRequest?=Pocket.captureEnvironment()){
         if(destination==null)return
         val key=source(destination).scope to id
-        if(android.os.SystemClock.elapsedRealtime()-(lastLive[key]?:0)<2000)return
+        if(android.os.SystemClock.elapsedRealtime()-(lastLive[key]?:0L)<2000)return
         invalidate(id,destination)
     }
     fun notificationWatermark(id:String):Long {
         val destination=Pocket.captureEnvironment()?:return 0
-        return known[source(destination).scope to id]?:0
+        return known[source(destination).scope to id]?:0L
     }
     /** Only server-advertised read-only snapshots admit cold background reads.
      * Legacy sources keep live/cache evidence and explicit foreground control.
@@ -249,7 +254,7 @@ internal object CodexSessionRepository {
             val enabled=capabilities.optInt("canonicalTimeline")==1
             val was=nativeCapabilities.put(source.scope,enabled)
             if(was!=enabled)Pocket.scope.launch(Dispatchers.Main.immediate){
-                if(current(source)&&Pocket.captureEnvironment()?.matches(source.destination)==true&&PocketTranscript.canonicalMode!=enabled)
+                if(current(source)&&Pocket.captureEnvironment()?.matches(source.destination)==true&&PocketTranscript.canonicalMode!=nativeEnabled(destination))
                     Pocket.selected?.let{CodexConversations.select(it,force=true,openLatest=true);CodexConversations.invalidate(immediate=true)}
             }
         }
@@ -260,8 +265,8 @@ internal object CodexSessionRepository {
             if(!current(source))return@launch
             ensurePump()
             dirty.filter{it.first==source.scope}.forEach{key->
-                if(key !in pending)pending[key]=Intent(source,key.second,known[key]?:0,
-                    workTimeMillis(latest[key]?.optJSONObject("thread")?.optLong("activityAt")?:0))
+                if(key !in pending)pending[key]=Intent(source,key.second,known[key]?:0L,
+                    workTimeMillis(latest[key]?.optJSONObject("thread")?.optLong("activityAt")?:0L))
             }
             trimPending();wake.trySend(Unit)
         }
@@ -284,8 +289,8 @@ internal object CodexSessionRepository {
                 while(cursor.moveToNext()){
                     val thread=cursor.getString(0);val key=source.scope to thread
                     val alreadyLoaded=latest.containsKey(key)
-                    known[key]=maxOf(known[key]?:0,cursor.getLong(2))
-                    if(!nativeEnabled(source.destination)&&!cursor.isNull(1))runCatching{JSONObject(cursor.getString(1))}.getOrNull()?.let{if(!latest.containsKey(key))putLatest(key,it)}
+                    known[key]=maxOf(known[key]?:0L,cursor.getLong(2))
+                    if(!nativeEnabled(source.destination,thread)&&!cursor.isNull(1))runCatching{JSONObject(cursor.getString(1))}.getOrNull()?.let{if(!latest.containsKey(key))putLatest(key,it)}
                     if(cursor.getInt(3)!=0&&(!alreadyLoaded||key in dirty)){dirty.add(key);pending[key]=Intent(source,thread,cursor.getLong(2))}
                 }
             }
@@ -322,7 +327,7 @@ internal object CodexSessionRepository {
                     val key=source.scope to id;lastLive[key]=android.os.SystemClock.elapsedRealtime()
                     val previous=load(source,id)
                     val updates=group.map{it.second.second}.sortedBy{it.optLong("version")}
-                    if(nativeEnabled(source.destination)){
+                    if(nativeEnabled(source.destination,id)){
                         var repair=previous==null
                         val unknown=nativeUnpositioned.getOrPut(key){linkedSetOf()}
                         for(update in updates){
@@ -372,7 +377,7 @@ internal object CodexSessionRepository {
         if(id.isBlank()||destination==null)return
         val source=source(destination);val key=source.scope to id
         if(notification>0){
-            if(notification<=(known[key]?:0))return
+            if(notification<=(known[key]?:0L))return
             known.merge(key,notification){a,b->maxOf(a,b)}
         }
         if(!current(source))return
@@ -436,16 +441,16 @@ internal object CodexSessionRepository {
             enforcePositions(source.scope,id,safe)
             val stored=putLatest(source.scope to id,safe)
             val high=safe.optLong("throughNotification")
-            known[source.scope to id]=maxOf(known[source.scope to id]?:0,high)
+            known[source.scope to id]=maxOf(known[source.scope to id]?:0L,high)
             val key=source.scope to id
-            if(stored&&key !in pending&&value.optLong("_catalogObserved")==(invalidations[key]?:0))dirty.remove(key)
+            if(stored&&key !in pending&&value.optLong("_catalogObserved")==(invalidations[key]?:0L))dirty.remove(key)
             save(source,id,if(stored)safe else null,key in dirty)
         }
     }
     private fun retainNewerLiveHead(key:Pair<String,String>,safe:JSONObject,readBaseline:Long){
         // A persisted higher server counter is not a live event. Only output
         // received after this read started may outrank its authoritative page.
-        if((liveGenerations[key]?:0)<=readBaseline)return
+        if((liveGenerations[key]?:0L)<=readBaseline)return
         val previous=latest[key]?:return
         val oldHead=previous.optJSONObject("historyHead")?:return
         val newHead=safe.optJSONObject("historyHead")?:return
@@ -463,15 +468,15 @@ internal object CodexSessionRepository {
             .put("canonicalIds",org.json.JSONArray(rows.filter{transcriptContentAnchor(it.s("kind"))}.map{it.s("id")}))
         return JSONObject().put("windowSchema",2).put("thread",transcriptPresentationDetail(value.getJSONObject("thread").s("id"),value).getJSONObject("thread"))
             .put("timeline",page).put("revision",value.optLong("revision")).put("historyHead",value.optJSONObject("historyHead"))
-            .put("throughNotification",maxOf(value.optJSONArray("notifications")?.objects()?.maxOfOrNull{it.optLong("id")}?:0,value.optLong("throughNotification"),value.optLong("_notificationObserved")))
+            .put("throughNotification",maxOf(value.optJSONArray("notifications")?.objects()?.maxOfOrNull{it.optLong("id")}?:0L,value.optLong("throughNotification"),value.optLong("_notificationObserved")))
     }
     private fun load(source:Source,id:String):JSONObject? {
         val key=source.scope to id
-        latest[key]?.takeIf{!nativeEnabled(source.destination)||native(it)}?.let{return it}
-        if(nativeEnabled(source.destination))return nativeStore.snapshot(source.scope,id)?.also{putLatest(key,it)}
+        latest[key]?.takeIf{!nativeEnabled(source.destination,id)||native(it)}?.let{return it}
+        if(nativeEnabled(source.destination,id))return nativeStore.snapshot(source.scope,id)?.also{putLatest(key,it)}
         return db.rawQuery("SELECT body,notification FROM recent WHERE scope=? AND thread=?",arrayOf(source.scope,id)).use{cursor->
             if(!cursor.moveToFirst())return@use null
-            known[key]=maxOf(known[key]?:0,cursor.getLong(1))
+            known[key]=maxOf(known[key]?:0L,cursor.getLong(1))
             if(cursor.isNull(0))null else runCatching{JSONObject(cursor.getString(0))}.getOrNull()?.also{putLatest(key,it)}
         }
     }
@@ -490,7 +495,7 @@ internal object CodexSessionRepository {
     }
     private fun persist(source:Source,id:String,value:JSONObject?,dirty:Boolean){
         db.execSQL("INSERT INTO recent(scope,thread,body,notification,dirty,updated) VALUES(?,?,?,?,?,?) ON CONFLICT(scope,thread) DO UPDATE SET body=COALESCE(excluded.body,recent.body),notification=MAX(recent.notification,excluded.notification),dirty=excluded.dirty,updated=excluded.updated",
-            arrayOf<Any?>(source.scope,id,value?.toString(),known[source.scope to id]?:0,if(dirty)1 else 0,System.currentTimeMillis()))
+            arrayOf<Any?>(source.scope,id,value?.toString(),known[source.scope to id]?:0L,if(dirty)1 else 0,System.currentTimeMillis()))
         // Cache eviction affects presentation only; never deletes commands, drafts or pairing.
         db.execSQL("DELETE FROM recent WHERE rowid IN (SELECT rowid FROM recent WHERE dirty=0 ORDER BY updated DESC LIMIT -1 OFFSET 512)")
         // Basic SQLite operations retain support for the declared Android28 minimum.
@@ -505,9 +510,9 @@ internal object CodexSessionRepository {
     }
     private fun queue(intent:Intent){
         val key=intent.source.scope to intent.thread
-        known[key]=maxOf(known[key]?:0,intent.notification)
+        known[key]=maxOf(known[key]?:0L,intent.notification)
         val old=pending[key]
-        pending[key]=intent.copy(priority=maxOf(intent.priority,old?.priority?:0))
+        pending[key]=intent.copy(priority=maxOf(intent.priority,old?.priority?:0L))
         trimPending()
         dirty.add(key)
         save(intent.source,intent.thread,null,true)
@@ -536,7 +541,7 @@ internal object CodexSessionRepository {
                             enforcePositions(intent.source.scope,intent.thread,safe)
                         }
                         val stored=putLatest(key,safe)
-                        if(stored&&!pending.containsKey(key)&&response.optLong("_catalogObserved")==(invalidations[key]?:0))dirty.remove(key)
+                        if(stored&&!pending.containsKey(key)&&response.optLong("_catalogObserved")==(invalidations[key]?:0L))dirty.remove(key)
                         save(intent.source,intent.thread,if(stored)safe else null,key in dirty)
                         withContext(Dispatchers.Main.immediate){
                             if(Pocket.captureEnvironment()?.matches(intent.source.destination)==true)

@@ -24,7 +24,7 @@ fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback els
 data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0,val recencyAt:Long=0,val parentThreadId:String?=null,val isChild:Boolean=false,val agentNickname:String="",val agentRole:String="",val canAcceptDirectInput:Boolean=true,val unreadCount:Int=0,val catalogContext:String="",val needsInput:Boolean=false)
 data class Message(val id:String,val role:String,val text:String)
 data class ReplyFailure(val id:String,val message:String)
-class PocketApiException(val status:Int,message:String):Exception(message)
+class PocketApiException(val status:Int,message:String,val code:String?=null):Exception(message)
 
 object Pocket {
     lateinit var context:Context

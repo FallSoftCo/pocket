@@ -42,7 +42,13 @@ export class NativeTimelineReader {
   if(!request){
    request=(async()=>{
     await this.codex.connect();
-    const page=await this.codex.call('thread/timeline/list',{threadId,limit,...(cursor!==null?{cursor}:{})});
+    let page;
+    try{page=await this.codex.call('thread/timeline/list',{threadId,limit,...(cursor!==null?{cursor}:{})});}
+    catch(error){
+     if(error?.rpc?.code===-32601&&/thread\/timeline\/list.*not supported/i.test(error.message||''))
+      throw Object.assign(new Error('This session uses turn history rather than native timeline history.'),{status:409,code:'NATIVE_TIMELINE_UNSUPPORTED',rpc:error.rpc});
+     throw error;
+    }
     return validateNativeTimelinePage(page,{cursor,limit});
    })();
    this.reads.set(key,request);

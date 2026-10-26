@@ -156,7 +156,7 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
         val merged=mergeLiveTaskSnapshot(tasks,fetched,baseline,partial)
         tasks=merged.map{CodexSessionRepository.nativeCatalogProjection(destination,it)}
         merged.forEach{next->
-            val old=if(CodexSessionRepository.nativeEnabled(destination))transcriptHints[next.id] else previous[next.id]
+            val old=if(CodexSessionRepository.nativeEnabled(destination,next.id))transcriptHints[next.id] else previous[next.id]
             if(old==null||next.activityAt>=old.activityAt)transcriptHints[next.id]=next
             if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,next.preview,next.previewKind,next.status)||
                 transcriptLiveActivityAdvanced(old.activityAt,next.activityAt)){

@@ -116,4 +116,39 @@ class NativeCanonicalTranscriptNativeTest{
             assertEquals("Native unsent draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
         }finally{qa("release");main{Pocket.closeTask();PocketLive.stop()}}
     }
+    @Test fun mixedHistoryProtocolsStaySessionScopedAndKeepTheirOriginalCursors(){
+        prepare()
+        try{
+            val destination=requireNotNull(Pocket.captureEnvironment())
+            runBlocking{
+                val modern=CodexSessionRepository.readCurrent(destination,"same-thread")
+                assertEquals(1,modern.getJSONObject("timeline").getInt("native"))
+                val legacy=CodexSessionRepository.readCurrent(destination,"legacy-thread")
+                assertFalse(CodexSessionRepository.nativeEnabled(destination,"legacy-thread"))
+                assertTrue("A fresh zero-revision snapshot was incorrectly rejected",CodexSessionRepository.currentSnapshot(destination,"legacy-thread",legacy))
+                assertTrue(CodexSessionRepository.nativeEnabled(destination,"same-thread"))
+                assertEquals("Legacy request",legacy.getJSONObject("timeline").getJSONArray("rows").getJSONObject(0).getString("text"))
+                val cursor=legacy.getJSONObject("timeline").getString("before")
+                assertEquals("legacy-opaque-cursor",cursor)
+                val earlier=CodexSessionRepository.readOlder(destination,"legacy-thread",cursor)
+                assertEquals("Earlier legacy request",earlier.getJSONObject("timeline").getJSONArray("rows").getJSONObject(0).getString("text"))
+                val refused=runCatching{CodexSessionRepository.readCurrent(destination,"denied-thread")}.exceptionOrNull()
+                assertTrue(refused is PocketApiException&&refused.status==403)
+                assertTrue(CodexSessionRepository.nativeEnabled(destination,"denied-thread"))
+                assertEquals(1,CodexSessionRepository.readCurrent(destination,"same-thread").getJSONObject("timeline").getInt("native"))
+            }
+            main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("legacy-thread")}
+            await("Legacy conversation did not present verified turn history"){!PocketTranscript.canonicalMode&&PocketTranscript.currentHistoryVerified&&PocketTranscript.rows.any{it.s("text")=="Legacy answer"}}
+            assertTrue(device.wait(Until.hasObject(By.text("Legacy answer")),4000))
+            val legacyRows=PocketTranscript.rows
+            assertTrue(legacyRows.indexOfFirst{it.s("text")=="Legacy request"}<legacyRows.indexOfFirst{it.s("text")=="Legacy answer"})
+            main{Pocket.closeTask();Pocket.open("same-thread")}
+            await("Modern conversation lost native history after legacy navigation"){PocketTranscript.canonicalMode&&PocketTranscript.currentHistoryVerified&&PocketTranscript.rows.any{it.s("text")=="Native answer one"}}
+            assertTrue(device.wait(Until.hasObject(By.text("Native answer one")),4000))
+            val state=qa("state");assertEquals(0,state.getInt("workSubmissions"));assertEquals(0,state.getInt("positionReads"))
+            assertTrue("Legacy conversation entered an unbounded refresh loop",state.getInt("legacyHistoryReads")<=8)
+            assertEquals("Native unsent draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+        }finally{main{Pocket.closeTask();PocketLive.stop()}}
+    }
+
 }

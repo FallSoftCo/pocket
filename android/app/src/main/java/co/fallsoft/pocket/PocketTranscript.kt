@@ -410,7 +410,8 @@ object PocketTranscript {
     internal suspend fun readPage(older:Boolean=false,bridgeCursor:String?=null,retryAttempt:Int=0,beforeApply:suspend ()->Unit={},beforeCacheRead:suspend ()->Unit={}){
         if(BackendNavigation.teamSelected())return
         val id=Pocket.selected?:return
-        if(CodexSessionRepository.nativeEnabled()&&readNativePage(id,older,bridgeCursor,retryAttempt,beforeApply))return
+        var negotiatedPage:JSONObject?=null
+        if(CodexSessionRepository.nativeEnabled()&&readNativePage(id,older,bridgeCursor,retryAttempt,beforeApply){negotiatedPage=it})return
         canonicalMode=false
         if(owner!=id||(older&&(!earlier||before==null)))return
         if(bridgeCursor!=null&&gapWindows.none{it.cursor==bridgeCursor&&it.cursor.isNotBlank()&&(!it.exhausted||it.id !in gapProblems)})return
@@ -492,7 +493,7 @@ object PocketTranscript {
                     }
                 }
             }
-            val d=if(latest)CodexSessionRepository.readCurrent(destination,id)else CodexReadTransport.read(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
+            val d=if(latest)negotiatedPage?:CodexSessionRepository.readCurrent(destination,id)else CodexReadTransport.read(destination,"/api/threads/$id?view=timeline"+if(cursor!=null)"&before=${android.net.Uri.encode(cursor)}" else "")
             if(latest&&!CodexSessionRepository.currentSnapshot(destination,id,d)){
                 // New catalog evidence superseded this read. Keep the viewport
                 // and retry through its owner; this is not a network failure.
@@ -665,7 +666,7 @@ object PocketTranscript {
         }
         if(changed)revision++
     }
-    private suspend fun readNativePage(id:String,older:Boolean,bridgeCursor:String?,retryAttempt:Int,beforeApply:suspend()->Unit):Boolean{
+    private suspend fun readNativePage(id:String,older:Boolean,bridgeCursor:String?,retryAttempt:Int,beforeApply:suspend()->Unit,onLegacy:(JSONObject)->Unit):Boolean{
         if(owner!=id||ownerScope!=scopeKey())return true
         val latest=!older&&bridgeCursor==null
         if(latest&&reads.latestLoading){missedUpdates=true;return true}
@@ -689,6 +690,7 @@ object PocketTranscript {
             val value=if(latest)CodexSessionRepository.readCurrent(destination,id)else CodexSessionRepository.readOlder(destination,id,requireNotNull(cursor))
             if(value.optJSONObject("timeline")?.optInt("native")!=1){
                 canonicalMode=false;needsDiskRestore=true
+                onLegacy(value);succeeded=true
                 return false
             }
             if(!latest)beforeApply()

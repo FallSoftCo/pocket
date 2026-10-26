@@ -20,6 +20,7 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
    if(m.method==='thread/turns/list'&&m.params.itemsView==='summary'){blockedRecovery.push(m);return;}
    if(disconnect&&m.method==='thread/read'){disconnect=false;ws.terminate();return;}
    if(m.method==='thread/read'&&m.params.includeTurns||m.method==='thread/resume'&&!m.params.excludeTurns){ws.close(1009,'Full history is too large');return;}
+   if(m.method==='thread/timeline/list'){ws.send(JSON.stringify({id:m.id,error:{code:-32601,message:'thread/timeline/list is not supported yet'}}));return;}
    let result={};
    if(['thread/read','thread/resume'].includes(m.method))result={thread:m.params.threadId==='cold-thread'?{...metadata,id:'cold-thread',historyMode:undefined}:metadata};
    if(m.method==='thread/list')result={data:m.params.archived?[{...metadata,id:'archived-thread',name:'Archived conversation'}]:[metadata]};
@@ -50,6 +51,7 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
  assert.equal(forwarded.value.row.text,'Fast response');
  assert.ok(forwarded.at-sentAt<1000,'Forwarding waited for history/runtime reads');
  assert.equal(calls.filter(c=>['thread/resume','thread/turns/list','thread/items/list','turn/start'].includes(c.method)).length,beforeUnopened,'Public forwarding started history or model work');
+ const nativeRefusal=await api('/api/threads/large-thread/native-timeline');assert.equal(nativeRefusal.status,409);assert.equal(nativeRefusal.data.code,'NATIVE_TIMELINE_UNSUPPORTED');
  const recent=await api('/api/threads/large-thread?view=timeline');assert.equal(recent.status,200);assert.equal(recent.data.timeline.rows[0].turnId,'turn-15');assert.ok(recent.data.timeline.hasEarlier);
  assert.equal(blockedRecovery.length,0,'A read-only recent projection must not start an unrelated summary recovery');
  const historyCount=()=>calls.filter(c=>/^thread\/(read|resume|turns\/list|items\/list)$/.test(c.method)).length;
