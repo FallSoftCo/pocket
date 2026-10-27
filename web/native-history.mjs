@@ -18,6 +18,9 @@ export class NativeHistory {
  accept(data,id,{cursor=null,anchor=null}={}){
   const page=validateNativePage(data,id),epoch=data.historyHead?.epoch;
   if(typeof epoch!=='string'||!epoch)throw invalid();
+  // Prior-runtime coverage cannot prove positions after source replacement.
+  // These components are already unselectable; release their retained bodies.
+  if(cursor===null&&this.epoch!==null&&this.epoch!==epoch)this.components=[];
   if(cursor!==null&&page.before===cursor)throw Error('Canonical history cursor did not advance.');
   const incoming=new Map(page.entries.map(e=>[key(e),structuredClone(e)]));
   const joined=this.components.filter(c=>c.epoch===epoch&&([...incoming.keys()].some(k=>c.entries.has(k))||cursor!==null&&c.before===cursor));

@@ -77,4 +77,60 @@ class NativeTranscriptStoreNativeTest{
             assertTrue(keys.zipWithNext().all{(a,b)->a<b})
         }finally{store.close();context.deleteDatabase(name)}
     }
+    @Test fun repairedSourceCannotBeHiddenByLargerPositionsFromThePreviousRuntime(){
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val name="owned-native-generation-"+java.util.UUID.randomUUID()+".sqlite"
+        var store=NativeTranscriptStore(context,name)
+        fun generation(value:JSONObject,epoch:String)=value.apply{getJSONObject("historyHead").put("epoch",epoch)}
+        try{
+            store.commit("mac","same-thread",generation(page(listOf(entry(900,"Stale cached answer",id="old-answer")),"old-cursor"),"before-repair"),null)
+            store.focus("mac","same-thread",TranscriptReadPosition("t/old-answer",0,false))
+            val repaired=generation(page(listOf(entry(20,"Current user","user","new-user"),entry(21,"Current answer",id="new-answer")),"repaired-cursor"),"after-repair")
+            store.commit("mac","same-thread",repaired,null)
+            var snapshot=requireNotNull(store.snapshot("mac","same-thread"))
+            assertEquals(listOf("Current user","Current answer"),snapshot.getJSONObject("timeline").getJSONArray("rows").objects().map{it.s("text")})
+            assertEquals("Current answer",snapshot.getJSONObject("nativePreview").s("text"))
+            assertEquals("repaired-cursor",snapshot.getJSONObject("timeline").s("before"))
+            assertTrue(snapshot.isNull("readingPosition"))
+            store.close();store=NativeTranscriptStore(context,name)
+            snapshot=requireNotNull(store.snapshot("mac","same-thread"))
+            assertEquals("Current answer",snapshot.getJSONObject("nativePreview").s("text"))
+            assertFalse(snapshot.getJSONObject("timeline").getJSONArray("rows").objects().any{it.s("text")=="Stale cached answer"})
+        }finally{store.close();context.deleteDatabase(name)}
+    }
+
+    @Test fun versionOneCacheUpgradeRequiresFreshCoverageWithoutDeletingOldBodies(){
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val name="owned-native-v1-"+java.util.UUID.randomUUID()+".sqlite"
+        val file=context.getDatabasePath(name);file.parentFile?.mkdirs()
+        val legacy=android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(file,null)
+        // Golden schema from the shipped153 cache, not the current constructor.
+        legacy.execSQL("CREATE TABLE entry(scope TEXT,thread TEXT,id TEXT,pos INTEGER,rank INTEGER,sort_id TEXT,row_id TEXT,body TEXT,epoch TEXT,version INTEGER,bytes INTEGER,PRIMARY KEY(scope,thread,id))")
+        legacy.execSQL("CREATE INDEX native_order ON entry(scope,thread,pos,rank,sort_id)")
+        legacy.execSQL("CREATE INDEX native_row ON entry(scope,thread,row_id)")
+        legacy.execSQL("CREATE TABLE page(scope TEXT,thread TEXT,id TEXT,request TEXT,next TEXT,first TEXT,last TEXT,PRIMARY KEY(scope,thread,id))")
+        legacy.execSQL("CREATE TABLE state(scope TEXT,thread TEXT,detail TEXT,head TEXT,version INTEGER,notification INTEGER,revision INTEGER,bytes INTEGER,updated INTEGER,PRIMARY KEY(scope,thread))")
+        legacy.execSQL("CREATE TABLE reader(scope TEXT,thread TEXT,body TEXT,PRIMARY KEY(scope,thread))")
+        val old=entry(900,"Retained old cache",id="old-body");val oldBody=old.getJSONObject("row").toString();val oldHead=JSONObject().put("epoch","before-repair")
+        legacy.execSQL("INSERT INTO entry VALUES(?,?,?,?,?,?,?,?,?,?,?)",arrayOf<Any>("mac","same-thread",old.s("id"),900,1,"old-body","t/old-body",oldBody,"before-repair",1,oldBody.length))
+        legacy.execSQL("INSERT INTO page VALUES(?,?,?,?,?,?,?)",arrayOf<Any?>("mac","same-thread","old-page",null,"old-cursor",old.getJSONArray("key").toString(),old.getJSONArray("key").toString()))
+        legacy.execSQL("INSERT INTO state VALUES(?,?,?,?,?,?,?,?,?)",arrayOf<Any>("mac","same-thread",JSONObject().put("thread",JSONObject().put("id","same-thread")).toString(),oldHead.toString(),1,0,1,oldBody.length,1))
+        legacy.version=1;legacy.close()
+        val store=NativeTranscriptStore(context,name)
+        try{
+            val cached=requireNotNull(store.snapshot("mac","same-thread"))
+            assertEquals(0,cached.getJSONObject("timeline").getJSONArray("rows").length())
+            assertTrue(cached.isNull("nativePreview"))
+            val fresh=page(listOf(entry(20,"Fresh question","user","new-user"),entry(21,"Fresh answer",id="new-answer")),null)
+            fresh.getJSONObject("historyHead").put("epoch","after-repair")
+            store.commit("mac","same-thread",fresh,null)
+            val snapshot=requireNotNull(store.snapshot("mac","same-thread"))
+            assertEquals("Fresh answer",snapshot.getJSONObject("nativePreview").s("text"))
+            android.database.sqlite.SQLiteDatabase.openDatabase(file.path,null,android.database.sqlite.SQLiteDatabase.OPEN_READONLY).use{db->
+                db.rawQuery("SELECT COUNT(*) FROM entry WHERE row_id='t/old-body'",null).use{c->assertTrue(c.moveToFirst());assertEquals(1,c.getInt(0))}
+                assertEquals(2,db.version)
+            }
+        }finally{store.close();context.deleteDatabase(name)}
+    }
+
 }

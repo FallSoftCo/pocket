@@ -40,3 +40,9 @@ test('authenticated HTTP gateway feeds native and legacy sessions into the same 
  assert.deepEqual(store.get('parent-123').rows.map(r=>r.text),['question','answer']);assert.equal(store.get('other-123').protocol,'turns');
  assert.equal(reader.protocols.get('parent-123'),'native');assert.equal(f.writes.filter(w=>!['/api/pair'].includes(w.path)).length,0);
 });
+
+test('a repaired source generation replaces larger old positions and releases unreachable coverage',()=>{
+ const h=new NativeHistory();h.accept(page('mac',[row(900,'stale old answer')],'old'),'mac');
+ const repaired=page('mac',[row(20,'current question','user'),row(21,'current answer')],'current');repaired.historyHead.epoch='after-repair';
+ const result=h.accept(repaired,'mac');assert.deepEqual(result.rows.map(r=>r.text),['current question','current answer']);assert.equal(h.components.length,1);assert.equal(result.before,'current');
+});

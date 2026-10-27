@@ -25,16 +25,24 @@ internal data class NativeTranscriptKey(val position:Long,val rank:Int,val id:St
  * repository's serialized storage lane. Legacy JSON caches are never imported
  * as ordering evidence. Commands/drafts/pairing are not stored here. */
 internal class NativeTranscriptStore(context:android.content.Context,databaseName:String="codex-native-transcripts-v1.sqlite"){
-    private val db=object:SQLiteOpenHelper(context,databaseName,null,1){
+    private val db=object:SQLiteOpenHelper(context,databaseName,null,2){
         override fun onCreate(db:SQLiteDatabase){
             db.execSQL("CREATE TABLE entry(scope TEXT,thread TEXT,id TEXT,pos INTEGER,rank INTEGER,sort_id TEXT,row_id TEXT,body TEXT,epoch TEXT,version INTEGER,bytes INTEGER,PRIMARY KEY(scope,thread,id))")
             db.execSQL("CREATE INDEX native_order ON entry(scope,thread,pos,rank,sort_id)")
             db.execSQL("CREATE INDEX native_row ON entry(scope,thread,row_id)")
-            db.execSQL("CREATE TABLE page(scope TEXT,thread TEXT,id TEXT,request TEXT,next TEXT,first TEXT,last TEXT,PRIMARY KEY(scope,thread,id))")
+            db.execSQL("CREATE INDEX native_generation_order ON entry(scope,thread,epoch,pos,rank,sort_id)")
+            db.execSQL("CREATE TABLE page(scope TEXT,thread TEXT,id TEXT,request TEXT,next TEXT,first TEXT,last TEXT,epoch TEXT NOT NULL DEFAULT '',PRIMARY KEY(scope,thread,id))")
             db.execSQL("CREATE TABLE state(scope TEXT,thread TEXT,detail TEXT,head TEXT,version INTEGER,notification INTEGER,revision INTEGER,bytes INTEGER,updated INTEGER,PRIMARY KEY(scope,thread))")
             db.execSQL("CREATE TABLE reader(scope TEXT,thread TEXT,body TEXT,PRIMARY KEY(scope,thread))")
         }
-        override fun onUpgrade(db:SQLiteDatabase,oldVersion:Int,newVersion:Int){}
+        override fun onUpgrade(db:SQLiteDatabase,oldVersion:Int,newVersion:Int){
+            // Old page coverage has no source generation proof. Keep its bodies
+            // on disk, but require a native page to revalidate their positions.
+            if(oldVersion<2){
+                db.execSQL("ALTER TABLE page ADD COLUMN epoch TEXT NOT NULL DEFAULT ''")
+                db.execSQL("CREATE INDEX native_generation_order ON entry(scope,thread,epoch,pos,rank,sort_id)")
+            }
+        }
     }.apply{setWriteAheadLoggingEnabled(true)}.writableDatabase
     private data class Page(val first:NativeTranscriptKey,val last:NativeTranscriptKey,val request:String?,val next:String?)
     private data class Component(var first:NativeTranscriptKey,var last:NativeTranscriptKey,var before:String?,val pages:MutableList<Page>)
@@ -88,13 +96,13 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
     }
     private fun keyForRow(scope:String,id:String,row:String?):NativeTranscriptKey?{
         if(row==null)return null
-        return db.rawQuery("SELECT pos,rank,sort_id FROM entry WHERE scope=? AND thread=? AND row_id=? LIMIT 1",arrayOf(scope,id,row)).use{
+        return db.rawQuery("SELECT pos,rank,sort_id FROM entry WHERE scope=? AND thread=? AND epoch=? AND row_id=? LIMIT 1",arrayOf(scope,id,state(scope,id)?.optJSONObject("head")?.s("epoch").orEmpty(),row)).use{
             if(it.moveToFirst())NativeTranscriptKey(it.getLong(0),it.getInt(1),it.getString(2))else null
         }
     }
     private fun components(scope:String,id:String):List<Component> = coverage.getOrPut(scope to id){
         val pages=mutableListOf<Page>();val ends=hashSetOf<String>()
-        db.rawQuery("SELECT first,last,request,next FROM page WHERE scope=? AND thread=?",args(scope,id)).use{c->
+        db.rawQuery("SELECT first,last,request,next FROM page WHERE scope=? AND thread=? AND epoch=?",args(scope,id)+arrayOf(state(scope,id)?.optJSONObject("head")?.s("epoch").orEmpty())).use{c->
             while(c.moveToNext()){
                 if(c.isNull(0)){if(!c.isNull(2)&&c.isNull(3))ends.add(c.getString(2));continue}
                 pages.add(Page(NativeTranscriptKey.parse(JSONArray(c.getString(0))),NativeTranscriptKey.parse(JSONArray(c.getString(1))),if(c.isNull(2))null else c.getString(2),if(c.isNull(3))null else c.getString(3)))
@@ -122,7 +130,7 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
         val keys=entries.map{NativeTranscriptKey.parse(it.getJSONArray("key"))}
         if(keys.zipWithNext().any{(a,b)->a>=b}||entries.map{it.s("id")}.toSet().size!=entries.size)throw java.io.IOException("Native timeline order changed")
         val head=value.optJSONObject("historyHead")?:JSONObject()
-        val epoch=head.s("epoch");val version=value.optLong("revision")
+        val epoch=head.s("epoch");require(epoch.isNotBlank()){"Native history source generation unavailable"};val version=value.optLong("revision")
         val safe=transcriptPresentationDetail(id,value)
         val notification=maxOf(value.optLong("_notificationObserved"),value.optJSONArray("notifications")?.objects()?.maxOfOrNull{it.optLong("id")}?:0)
         val next=page.s("before").takeIf{it.isNotBlank()}
@@ -141,8 +149,8 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
                     arrayOf<Any?>(scope,id,entry.s("id"),key.position,key.rank,key.id,row?.s("id"),body,epoch,version,bytes))
                 delta+=bytes-(old?.third?:0)
             }
-            db.execSQL("INSERT OR REPLACE INTO page VALUES(?,?,?,?,?,?,?)",
-                arrayOf<Any?>(scope,id,pageId,cursor,next,keys.firstOrNull()?.json()?.toString(),keys.lastOrNull()?.json()?.toString()))
+            db.execSQL("INSERT OR REPLACE INTO page VALUES(?,?,?,?,?,?,?,?)",
+                arrayOf<Any?>(scope,id,pageId,cursor,next,keys.firstOrNull()?.json()?.toString(),keys.lastOrNull()?.json()?.toString(),epoch))
             val previous=state(scope,id)
             // Historical reads never replace live pending controls or current head.
             if(cursor==null||previous==null){
@@ -211,14 +219,15 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
         if(direction=="latest"){v.follow=true;v.anchor=null;v.low=null;v.high=null;return}
         val key=NativeTranscriptKey.parse(JSONArray(cursor.substringAfter("native-local:"+direction+":")))
         v.follow=false
-        v.anchor=db.rawQuery("SELECT row_id FROM entry WHERE scope=? AND thread=? AND (pos,rank,sort_id)=(?,?,?) AND body IS NOT NULL LIMIT 1",
-            arrayOf(scope,id,key.position.toString(),key.rank.toString(),key.id)).use{if(it.moveToFirst())it.getString(0)else v.anchor}
+        v.anchor=db.rawQuery("SELECT row_id FROM entry WHERE scope=? AND thread=? AND epoch=? AND (pos,rank,sort_id)=(?,?,?) AND body IS NOT NULL LIMIT 1",
+            arrayOf(scope,id,state(scope,id)?.optJSONObject("head")?.s("epoch").orEmpty(),key.position.toString(),key.rank.toString(),key.id)).use{if(it.moveToFirst())it.getString(0)else v.anchor}
         v.low=null;v.high=null
     }
     /** At most512 rendered rows are materialized. Older bodies remain indexed
      * locally and are paged without a network read or a tap-to-load requirement. */
     fun snapshot(scope:String,id:String):JSONObject?{
         val state=state(scope,id)?:return null
+        val epoch=state.getJSONObject("head").s("epoch")
         val components=components(scope,id)
         val v=view(scope,id);val anchor=if(v.follow)null else keyForRow(scope,id,v.anchor)
         val component=components.lastOrNull{anchor!=null&&anchor>=it.first&&anchor<=it.last}?:components.lastOrNull()
@@ -226,8 +235,8 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
         val rows=mutableListOf<JSONObject>()
         var before:String?=null;val gaps=JSONArray()
         if(component!=null){
-            val bounds=mutableListOf<Any>(scope,id,component.first.position,component.first.rank,component.first.id,component.last.position,component.last.rank,component.last.id)
-            var condition="scope=? AND thread=? AND (pos,rank,sort_id)>=(?,?,?) AND (pos,rank,sort_id)<=(?,?,?) AND body IS NOT NULL"
+            val bounds=mutableListOf<Any>(scope,id,epoch,component.first.position,component.first.rank,component.first.id,component.last.position,component.last.rank,component.last.id)
+            var condition="scope=? AND thread=? AND epoch=? AND (pos,rank,sort_id)>=(?,?,?) AND (pos,rank,sort_id)<=(?,?,?) AND body IS NOT NULL"
             val low=v.low?.takeIf{!v.follow&&it>=component.first&&it<=component.last}
             val high=v.high?.takeIf{!v.follow&&it>=component.first&&it<=component.last}
             // Explicit local paging extends from its native key. Normal historical
@@ -240,13 +249,13 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
             if(!ascending)rows.reverse()
             // An anchored passage needs its following context too.
             if(anchor!=null&&low==null&&high==null){
-                db.rawQuery("SELECT body FROM entry WHERE scope=? AND thread=? AND body IS NOT NULL AND (pos,rank,sort_id)>(?,?,?) AND (pos,rank,sort_id)<=(?,?,?) ORDER BY pos,rank,sort_id LIMIT 128",
-                    arrayOf(scope,id,anchor.position.toString(),anchor.rank.toString(),anchor.id,component.last.position.toString(),component.last.rank.toString(),component.last.id)).use{c->while(c.moveToNext())rows.add(render(scope,id,c.getString(0)))}
+                db.rawQuery("SELECT body FROM entry WHERE scope=? AND thread=? AND epoch=? AND body IS NOT NULL AND (pos,rank,sort_id)>(?,?,?) AND (pos,rank,sort_id)<=(?,?,?) ORDER BY pos,rank,sort_id LIMIT 128",
+                    arrayOf(scope,id,epoch,anchor.position.toString(),anchor.rank.toString(),anchor.id,component.last.position.toString(),component.last.rank.toString(),component.last.id)).use{c->while(c.moveToNext())rows.add(render(scope,id,c.getString(0)))}
             }
             fun rowKey(row:JSONObject)=NativeTranscriptKey(row.getLong("_nativePosition"),row.getInt("_nativeRank"),row.s("_nativeId"))
             val first=rows.firstOrNull()?.let(::rowKey);val last=rows.lastOrNull()?.let(::rowKey)
-            fun exists(op:String,key:NativeTranscriptKey)=db.rawQuery("SELECT 1 FROM entry WHERE scope=? AND thread=? AND body IS NOT NULL AND (pos,rank,sort_id)"+op+"(?,?,?) AND (pos,rank,sort_id)>=(?,?,?) AND (pos,rank,sort_id)<=(?,?,?) LIMIT 1",
-                arrayOf(scope,id,key.position.toString(),key.rank.toString(),key.id,component.first.position.toString(),component.first.rank.toString(),component.first.id,component.last.position.toString(),component.last.rank.toString(),component.last.id)).use{it.moveToFirst()}
+            fun exists(op:String,key:NativeTranscriptKey)=db.rawQuery("SELECT 1 FROM entry WHERE scope=? AND thread=? AND epoch=? AND body IS NOT NULL AND (pos,rank,sort_id)"+op+"(?,?,?) AND (pos,rank,sort_id)>=(?,?,?) AND (pos,rank,sort_id)<=(?,?,?) LIMIT 1",
+                arrayOf(scope,id,epoch,key.position.toString(),key.rank.toString(),key.id,component.first.position.toString(),component.first.rank.toString(),component.first.id,component.last.position.toString(),component.last.rank.toString(),component.last.id)).use{it.moveToFirst()}
             before=if(first!=null&&exists("<",first))local("older",first)else component.before
             if(last!=null&&exists(">",last)){
                 val gapId="native-newer";val cursor=local("newer",last)
@@ -259,17 +268,17 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
             }
         }
         val page=JSONObject().put("native",1).put("rows",JSONArray(rows)).put("canonicalIds",JSONArray(rows.filter{it.s("kind")!="historyGap"}.map{it.s("id")})).put("hasEarlier",before!=null).put("before",before).put("gaps",gaps)
-        val preview=db.rawQuery("SELECT body FROM entry WHERE scope=? AND thread=? AND body IS NOT NULL ORDER BY pos DESC,rank DESC,sort_id DESC LIMIT 16",args(scope,id)).use{c->
+        val preview=if(components.isEmpty())null else db.rawQuery("SELECT body FROM entry WHERE scope=? AND thread=? AND epoch=? AND body IS NOT NULL ORDER BY pos DESC,rank DESC,sort_id DESC LIMIT 16",args(scope,id)+arrayOf(epoch)).use{c->
             var found:JSONObject?=null
             while(c.moveToNext()&&found==null){val row=render(scope,id,c.getString(0));if(row.s("kind") in listOf("message","user","activity")&&row.s("text").isNotBlank())found=row}
             found
         }
-        val execution=db.rawQuery("SELECT body FROM entry WHERE scope=? AND thread=? AND rank IN (0,3) AND body IS NOT NULL ORDER BY pos DESC,rank DESC,sort_id DESC LIMIT 1",args(scope,id)).use{c->if(c.moveToFirst())render(scope,id,c.getString(0))else null}
+        val execution=if(components.isEmpty())null else db.rawQuery("SELECT body FROM entry WHERE scope=? AND thread=? AND epoch=? AND rank IN (0,3) AND body IS NOT NULL ORDER BY pos DESC,rank DESC,sort_id DESC LIMIT 1",args(scope,id)+arrayOf(epoch)).use{c->if(c.moveToFirst())render(scope,id,c.getString(0))else null}
         output.put("nativeExecutionTurn",execution)
         output.put("_nativeWindowBytes",rows.sumOf{it.s("text").length*2L+it.s("detail").length*2L+512})
         output.put("nativePreview",preview)
         return output.put("nativeViewRevision",v.revision).put("nativeWindow",JSONArray(rows.map{it.s("id")}).toString()).put("nativeFollowing",v.follow).put("windowSchema",3).put("timeline",page).put("historyHead",state.getJSONObject("head")).put("revision",state.optLong("version"))
             .put("nativeRevision",state.optLong("revision")).put("throughNotification",state.optLong("notification"))
-            .put("readingPosition",reader(scope,id)?.let{JSONObject().put("row",it.rowId).put("offset",it.offset).put("follow",it.follow)})
+            .put("readingPosition",reader(scope,id)?.takeIf{it.follow||keyForRow(scope,id,it.rowId)!=null}?.let{JSONObject().put("row",it.rowId).put("offset",it.offset).put("follow",it.follow)})
     }
 }
