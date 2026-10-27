@@ -3457,7 +3457,7 @@
   },
   "native_history_generation_20261027": {
     "request": "Mac sessions remain stale across clients; native derived index may exceed rewritten rollout and obsolete larger cached ordinals must not hide repaired history.",
-    "status": "mac_index_repaired_client_release_qualification_pending",
+    "status": "mac_repaired_web_live_android154_published_native_qualified",
     "contract": [
       "Codex canonical projector rebuilds only affected derived records; original rollouts, agents, receipts and pairing remain unchanged.",
       "Cache coverage and anchors are scoped to native history epoch; retained old bodies are not rendered as proven current history.",
@@ -3473,7 +3473,7 @@
       "naturalProjectionAdvance": true
     },
     "limits": [
-      "No physical handset install or render claim for154 yet.",
+      "Android154 published on all3 existing channels; physical handset install/render remains separate.",
       "Native source shrink rejection is isolated maintenance source, not a newly installed Mac Codex runtime."
     ]
   }

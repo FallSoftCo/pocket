@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "versionCode": 154,
+  "versionName": "0.5.0-alpha.136",
+  "compiledSource": "ab61be23ed662c15c89b596128cc51a3b59c3a8e",
+  "productionSourceSha": "dda0bba4b411029cea228812f4d430f462cc74a589a449a89ec6f1e9f82419de",
+  "qualificationInputSha": "ffb2d11b8b504072b6cb03da518562fe8ba041994900c9023d847999db204274",
+  "state": "published",
+  "checks": {
+    "nativeCases": 9,
+    "realSqliteVersionOneUpgrade": true,
+    "largerObsoletePositionsCannotHideNewSource": true,
+    "canonicalOrderAndReconnect": true,
+    "mixedSourceNavigationDraftsAndOriginalReceipts": true,
+    "existingNativeMediaInputAndLiveOutput": true,
+    "exactOptimizedCanonicalPairsAndQuestion": true,
+    "actualNativeScreenshotsReviewed": true,
+    "webFocusedTests": 6
+  },
+  "macRecovery": {
+    "derivedIndexBeyondCanonicalSourceEnd": true,
+    "affectedThreads": 2,
+    "nativeProjectorUsed": true,
+    "snapshotItemsValidatedAgainstInstalledProviderSchema": 11830,
+    "atomicTargetedPublication": true,
+    "newestApiItemsComparedWithCanonicalSource": true,
+    "backendReadMs": [51.58, 39.07],
+    "runningNativeProcessPreserved": true,
+    "sourceFilesAndPairingPreserved": true,
+    "unrelatedOriginalIndexRowsLostOrChanged": 0,
+    "naturalProjectionCaughtUpAfterRepair": true
+  },
+  "delivery": {
+    "channels": ["workstation", "mac", "ozzz"],
+    "compatibleApkSha256": "1f8e9f641c0037bcb02dfce87c76a8f4305c37239244829708f731582870afa5",
+    "primaryApkSha256": "b4f0e53292e748ed91bb1b112dffb4c292ba01c34a8ee1c9e47ba4151f4a441b",
+    "singleUpdateAnnouncement": true,
+    "pushAcceptedAttempts": 1,
+    "webPrivateRoutesUpdated": true
+  },
+  "retainedFailures": [
+    "Six-GiB QA cgroup exhausted during software-emulator rendering; production unaffected. Corrected to eight GiB.",
+    "A leftover interrupted fixture journal correctly refused reuse; archived original artifacts before resuming.",
+    "Two-core software emulator navigation timed out. Four-core allocation passed the unchanged assertions and 300-second deadline in193.154seconds."
+  ],
+  "limits": [
+    "No physical handset154 install, optical latency, acoustic or rendered-push claim.",
+    "Mac native binary was preserved. The source-shrink read guard remains separately qualified source, not a deployed native runtime change.",
+    "Unknown business actions were not replayed; no work/model tasks were submitted during native fixture qualification."
+  ]
+}
