@@ -296,7 +296,7 @@ class PocketVoiceService:Service(){
 
         }catch(e:Exception){if(e is CancellationException)throw e;fail(e)}finally{starting=false}
     }}
-    private suspend fun connectNative(purpose:String="voice"){
+    private suspend fun connectNative(purpose:String="speech"){
         val pending=nativeConnecting?:scope.async(start=CoroutineStart.LAZY){connectNativeOnce(purpose)}.also{nativeConnecting=it;it.start()}
         try{pending.await()}finally{if(nativeConnecting===pending)nativeConnecting=null}
     }

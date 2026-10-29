@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "versionCode": 155,
+  "versionName": "0.5.0-alpha.137",
+  "state": "published-phone-installation-unverified",
+  "problem": "Retained-terminal interactions were absent from the live activity projection. A managed Codex updater replacement also failed with a control-socket-in-use error, leaving the gateway unable to connect until terminal launch.",
+  "changes": [
+    "Current-turn source-owned terminal interaction projection without stdin or transcript mutation",
+    "Derived boolean activity UI in its own Compose restart scope",
+    "Explicitly enrolled, deduplicated managed daemon start on refused/missing socket; no restart or task admission",
+    "Speech-only renderer instructions apply without startup passage; isolated transcription retained",
+    "Safe speech completion diagnostic counts/timings; stable single-tap native question target with retained failure captures"
+  ],
+  "evidence": {
+    "actualBackendConnected": true,
+    "actualTerminalActivityObserved": true,
+    "nativeDaemonRestartedForDeployment": false,
+    "allFinalNativeCases": 10,
+    "exactOptimizedPayload": true,
+    "canonicalOrderAndReopenSingle": true,
+    "questionSkipOnce": true,
+    "readOnlyJourneyWorkSubmissions": 0,
+    "pairingAndOutgoingStatePreserved": true,
+    "originalFailedAttemptsRetained": true
+  },
+  "limits": [
+    "Physical phone last reported154. Published update requires its normal Android installation confirmation.",
+    "Live WebRTC input/output was qualified on an owned emulator; phone acoustic capture and rendered FCM display were not established.",
+    "Existing narrow stock footer wrapping remains an ergonomic follow-up.",
+    "The updater control-socket collision itself was not reproduced by interrupting the active native runtime; supported recovery is exercised using an isolated refused Unix socket."
+  ]
+}

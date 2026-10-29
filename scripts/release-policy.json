@@ -10,7 +10,8 @@
     "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#mixedHistoryProtocolsStaySessionScopedAndKeepTheirOriginalCursors",
     "co.fallsoft.pocket.NativeTranscriptStoreNativeTest#canonicalPagesLiveOverlapAndRestartKeepOneAuthority",
     "co.fallsoft.pocket.NativeTranscriptStoreNativeTest#repairedSourceCannotBeHiddenByLargerPositionsFromThePreviousRuntime",
-    "co.fallsoft.pocket.NativeTranscriptStoreNativeTest#versionOneCacheUpgradeRequiresFreshCoverageWithoutDeletingOldBodies"
+    "co.fallsoft.pocket.NativeTranscriptStoreNativeTest#versionOneCacheUpgradeRequiresFreshCoverageWithoutDeletingOldBodies",
+    "co.fallsoft.pocket.CommandHistoryNativeTest#groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
@@ -29,7 +30,9 @@
     "153 r03 uses explicit app-state/stable-target synchronization for the continuously updating mixed catalog; prior UiAutomator configuration is restored. The original assertions and180s native command budget remain. Software-emulator overall journey duration is not a physical interaction latency claim.",
     "153 r04 expands the mixed native journey to actual focused-IME Back in room/stock/returned-room, both menu dismissals, source outage/recovery and native Blackout exit. This single expanded case has a bounded300s software-emulator command cap; all other180s caps and every assertion remain. Measured R12 completed188s with a retained Blackout failure; completion timing is not phone latency evidence.",
     "History repair delivery keeps the pre-experiment speech implementation; startup-bound speech experiment remains isolated and is not included. All original native cases remain required. The new visible mixed-history journey must settle zero-revision snapshots without read storms and preserve each session protocol and original cursors.",
-    "154 requires real SQLite v1 upgrade and native history-generation replacement: retain old bodies without treating obsolete source coverage/anchors/previews as current. New native head and continuation cursor must win over larger obsolete ordinals. Mac derived-index repair is separately verified against canonical source; no model work is replayed."
+    "154 requires real SQLite v1 upgrade and native history-generation replacement: retain old bodies without treating obsolete source coverage/anchors/previews as current. New native head and continuation cursor must win over larger obsolete ordinals. Mac derived-index repair is separately verified against canonical source; no model work is replayed.",
+    "155 requires source-scoped retained-terminal activity without transcript mutation or raw terminal input; unavailable managed transport recovery uses only explicitly enrolled Codex daemon start, never restart or turn replay.",
+    "155 also retains isolated input/output purposes: speech connections always receive speech-only instructions, quoted passages remain data, and safe completion diagnostics retain counts/timings rather than transcript text. Native question actions observe stable enabled bounds and still submit exactly once with the original acknowledgement assertions."
   ],
   "requiredOptimizedReview": "native-room-catalog-and-typing",
   "captureInteraction": "volume-buttons"

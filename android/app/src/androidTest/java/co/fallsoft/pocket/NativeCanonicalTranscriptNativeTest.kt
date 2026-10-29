@@ -25,6 +25,22 @@ class NativeCanonicalTranscriptNativeTest{
         val diagnostics=if(passed)"" else " [selected="+Pocket.selected+", native="+PocketTranscript.canonicalMode+", verified="+PocketTranscript.currentHistoryVerified+", updating="+PocketTranscript.updating+", loading="+PocketTranscript.loading+", rows="+PocketTranscript.rows.size+", error="+PocketTranscript.readError+", appError="+Pocket.error+", reads="+runCatching{qa("state").optJSONArray("reads")?.length()}.getOrNull()+"]"
         assertTrue(message+diagnostics,passed)
     }
+    /** Observe a stable enabled action target, then tap once. No action retry. */
+    private fun skipBounds():android.graphics.Rect{
+        val end=android.os.SystemClock.elapsedRealtime()+8000
+        var last:android.graphics.Rect?=null;var stable=0
+        while(android.os.SystemClock.elapsedRealtime()<end){
+            val bounds=try{
+                var node=device.findObject(By.text("Skip"))?:device.findObject(By.text("Salta"))
+                while(node!=null&&!node.isClickable)node=node.parent
+                node?.takeIf{it.isEnabled}?.visibleBounds?.takeIf{it.width()>0&&it.height()>0}?.let{android.graphics.Rect(it)}
+            }catch(_:StaleObjectException){null}
+            if(bounds!=null&&bounds==last)stable++ else stable=0
+            if(stable>=2)return requireNotNull(bounds)
+            last=bounds;Thread.sleep(50)
+        }
+        throw AssertionError("Question Skip did not become a stable enabled action")
+    }
     private fun prepare(){
         check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
         context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear()
@@ -60,8 +76,8 @@ class NativeCanonicalTranscriptNativeTest{
             assertTrue("Native answer painted above its input",user!!.visibleBounds.bottom<=answer!!.visibleBounds.top)
             qa("question")
             assertTrue("Native pending question not actionable",device.wait(Until.hasObject(By.text("Native pending question")),8000))
-            val skip=device.wait(Until.findObject(By.text("Skip")),2000)?:device.wait(Until.findObject(By.text("Salta")),2000)
-            assertNotNull("Question skip control missing",skip);skip!!.click()
+            val skip=skipBounds()
+            device.click(skip.centerX(),skip.centerY())
             await("Question answer was not routed"){qa("state").optInt("answers")==1}
             qa("disconnect")
             main{Pocket.closeTask()}
@@ -82,6 +98,10 @@ class NativeCanonicalTranscriptNativeTest{
             val state=qa("state")
             assertEquals(0,state.getInt("legacyReads"));assertEquals(0,state.getInt("positionReads"));assertEquals(0,state.getInt("workSubmissions"))
             assertEquals("Native unsent draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
+        }catch(error:Throwable){
+            runCatching{device.takeScreenshot(java.io.File(context.cacheDir,"native-question-failure.png"))}
+            runCatching{device.dumpWindowHierarchy(java.io.File(context.cacheDir,"native-question-failure.xml"))}
+            throw error
         }finally{qa("release");main{Pocket.closeTask();PocketLive.stop()}}
     }
     @Test fun recordedNativeMacPagesOpenCurrentAndRetainNativeKeys(){

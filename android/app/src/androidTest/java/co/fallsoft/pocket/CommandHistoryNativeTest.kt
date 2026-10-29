@@ -45,6 +45,13 @@ class CommandHistoryNativeTest {
   assertFalse(device.hasObject(By.text("First command stdout")))
   assertFalse(device.hasObject(By.text("Waiting for the operation")))
   val source=PocketTranscript.rows.map{it.toString()}
+  main{Pocket.activities=listOf(JSONObject().put("threadId","same-thread").put("previewKind","terminalInteraction").put("state","working"))}
+  assertTrue(device.wait(Until.hasObject(By.text("Using existing terminal")),5000))
+  assertEquals("Live terminal activity changed canonical history",source,PocketTranscript.rows.map{it.toString()})
+  main{Pocket.activities=listOf(JSONObject().put("threadId","other-thread").put("previewKind","terminalInteraction").put("state","working"))}
+  assertTrue(device.wait(Until.gone(By.text("Using existing terminal")),5000))
+  main{Pocket.activities=listOf(JSONObject().put("threadId","same-thread").put("previewKind","terminalInteraction").put("state","finished"))}
+  assertFalse(device.hasObject(By.text("Using existing terminal")))
   requireNotNull(device.findObject(By.desc("Expand command runs"))).click()
   assertTrue(device.wait(Until.hasObject(By.text("First full command detail")),5000))
   assertTrue(device.wait(Until.hasObject(By.text("Wait detail preserved")),5000))

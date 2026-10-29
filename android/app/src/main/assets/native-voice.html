@@ -52,6 +52,11 @@ function providerEvent(m){
  }
  if(m.type==='turn.done'&&providerResponse!==null&&m.turn?.id===providerResponse){
   const turn=m.turn;
+  report('speechValidation',JSON.stringify({role:turn.role,status:turn.status,hasError:!!turn.error,
+   endMs:turn.end_ms,startMs:turn.start_ms,latestTranscriptEnd,
+   hasExpected:!!expectedSpeech,expectedWords:speechWords(expectedSpeech).split(' ').filter(Boolean).length,
+   actualWords:speechWords(turn.transcript).split(' ').filter(Boolean).length,
+   textMatches:speechWords(turn.transcript)===speechWords(expectedSpeech)}));
   if(turn.role!=='assistant'||turn.error||(turn.status&&turn.status!=='completed')||
      !Number.isFinite(turn.end_ms)||!Number.isFinite(turn.start_ms)||turn.end_ms<latestTranscriptEnd||turn.end_ms<turn.start_ms||
      !expectedSpeech||speechWords(turn.transcript)!==speechWords(expectedSpeech)){

@@ -384,6 +384,10 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     onRename:((String,()->Unit)->Unit)?={name,done->Pocket.renameTask(t.id,name,done)},
     onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)}){
     LaunchedEffect(identityScope,t.id){if(!t.archived)CodexSessionRepository.previewVisible(identityScope,t.id)}
+    val activitySource=Pocket.captureEnvironment(identityScope)?.let{CodexCatalog.source(it)}
+    val terminalActive by remember(activitySource,t.id){derivedStateOf{activitySource?.activities?.any{row->
+        row.s("threadId")==t.id&&row.s("previewKind")=="terminalInteraction"&&row.s("state")=="working"
+    }==true}}
     val active=t.status in listOf("active","pending");val activityTime=taskWorkTime(t);val ageColor=sessionAgeColor(activityTime,now)
     LaunchedEffect(identityScope,t.id,t.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("card:"+identityScope+":"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
@@ -430,10 +434,11 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         }
         Row(Modifier.fillMaxWidth().height(previewHeight),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
             Box(Modifier.width(18.dp).height(previewHeight)){
-            if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
+            if(terminalActive&&Pocket.codexOnline)SymbolIcon("Terminal",null,Modifier.size(18.dp))
+            else if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            ImmersionText("card:"+identityScope+":"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(stateLabel+" · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
+            ImmersionText("card:"+identityScope+":"+t.id,if(terminalActive&&Pocket.codexOnline)"Using existing terminal" else if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(stateLabel+" · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
         }
 
     }

@@ -42,7 +42,7 @@ class CoordinatorNativeAudioLiveTest {
   fun connect(purpose:String,onEvent:(String,String)->Unit):NativeVoiceAudio {
    val ready=CompletableFuture<Unit>();var created:NativeVoiceAudio?=null
    i.runOnMainSync{created=NativeVoiceAudio(c,explicitCompletion=true,livePlayback=true){kind,data->
-    synchronized(events){events.add(JSONObject().put("kind",kind).put("at",SystemClock.elapsedRealtime()-began))}
+    synchronized(events){events.add(JSONObject().put("kind",kind).put("at",SystemClock.elapsedRealtime()-began).apply{if(kind=="speechValidation")put("validation",JSONObject(data))})}
     when(kind){
      "offer"->executor.submit{try{
       val result=api("/api/voice/native/start",JSONObject().put("sdp",data).put("purpose",purpose));connection=result.getString("id")
@@ -76,7 +76,7 @@ class CoordinatorNativeAudioLiveTest {
    val finalized=SystemClock.elapsedRealtime()
    i.runOnMainSync{audio!!.close()};api("/api/voice/native/stop",JSONObject().put("connectionId",connection));connection=null
    val complete=CompletableFuture<JSONObject>();var firstAudio:Long?=null
-   audio=connect("voice"){kind,data->
+   audio=connect("speech"){kind,data->
     if(kind=="speaking"&&firstAudio==null)firstAudio=SystemClock.elapsedRealtime()
     if(kind=="audio")complete.complete(JSONObject(data))
     if(kind=="error")complete.completeExceptionally(IllegalStateException(data))
@@ -94,6 +94,7 @@ class CoordinatorNativeAudioLiveTest {
     .put("speechCompletedMs",speechDone-speechAt).put("livePlayback",true).put("taskAdmissions",0)
     .put("events",org.json.JSONArray(synchronized(events){events.toList()})).toString())
   }finally{
+   File(c.filesDir,"coordinator-native-audio-diagnostics.json").writeText(org.json.JSONArray(synchronized(events){events.toList()}).toString())
    i.runOnMainSync{audio?.close()}
    connection?.let{runCatching{api("/api/voice/native/stop",JSONObject().put("connectionId",it))}}
    volume.setStreamVolume(AudioManager.STREAM_MUSIC,original,0);executor.shutdownNow()

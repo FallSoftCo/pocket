@@ -99,7 +99,7 @@ if(automation)chmodSync(automationPath,0o600);
 const push=loadPush(db,dir);
 if(nativeHollywood)push.allowedKinds=new Set(['app_update']);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
-const codex=new Codex();
+const codex=new Codex(undefined,{managedStart:process.env.POCKET_CODEX_MANAGED_START});
 const nativeTimelineReader=new NativeTimelineReader(codex);
 const coordinatorHeadReader=new CoordinatorHeadReader({codex,native:nativeTimelineReader});
 const nativeSubscriptions=new NativeSubscriptions(codex);
@@ -525,7 +525,7 @@ codex.on('event',m=>{
 });
 codex.on('connected',()=>{emit('status',codex.status());void rateLimits.refresh({force:true});});
 codex.on('status',status=>emit('status',status));
-codex.on('disconnected',error=>{rateLimits.disconnected();console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();sessionDiscovery.clearLiveStatus();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
+codex.on('disconnected',error=>{activityBoard.disconnected();liveDelivery.activity(()=>activityBoard.snapshot());rateLimits.disconnected();console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();sessionDiscovery.clearLiveStatus();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
 let reconnecting=false;
 setInterval(async()=>{
   if(nativeHollywood||reconnecting)return;reconnecting=true;

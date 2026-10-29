@@ -3,7 +3,20 @@ export class ActivityBoard {
   constructor(clock=()=>Date.now()){this.clock=clock;this.items=new Map();this.sequence=0;}
   observe(event){
     const p=event.params||{},threadId=p.threadId||p.thread?.id;if(!threadId)return;
-    if(event.method==='turn/completed'){for(const [key,item] of this.items)if(item.threadId===threadId&&item.state==='working')this.items.set(key,{...item,state:'finished',at:this.clock(),sequence:++this.sequence});return;}
+    if(event.method==='turn/completed'){for(const [key,item] of this.items)if(item.threadId===threadId&&item.state==='working'&&(item.previewKind!=='terminalInteraction'||item.turnId===(p.turnId||p.turn?.id)))this.items.set(key,{...item,state:'finished',at:this.clock(),sequence:++this.sequence});return;}
+    // A retained terminal belongs to its original transcript item, but a new
+    // interaction is current-turn activity. Never copy stdin into presentation.
+    if(event.method==='item/commandExecution/terminalInteraction'){
+      if(typeof p.turnId!=='string'||typeof p.itemId!=='string')return;
+      const key=threadId+':terminal:'+p.turnId+':'+p.itemId;
+      this.items.set(key,{id:key,threadId,itemId:p.itemId,turnId:p.turnId,
+        preview:'Using existing terminal',previewRole:'activity',previewKind:'terminalInteraction',
+        summary:'Using existing terminal',state:'working',at:this.clock(),sequence:++this.sequence});
+      this.prune();return;
+    }
+    if(event.method==='item/completed')for(const [key,value] of this.items)
+      if(value.threadId===threadId&&value.previewKind==='terminalInteraction'&&value.itemId===p.item?.id)
+        this.items.set(key,{...value,state:p.item.status==='failed'?'failed':'finished',at:this.clock(),sequence:++this.sequence});
     let item=p.item,itemId=item?.id||p.itemId||p.turn?.id;
     if(!itemId)return;
     const key=threadId+':'+itemId,old=this.items.get(key);let preview;
@@ -20,6 +33,7 @@ export class ActivityBoard {
     this.items.set(key,{id:key,threadId,itemId,preview:preview.preview.slice(0,280),previewRole:preview.previewRole,previewKind:preview.previewKind||'message',summary:old?.summary||preview.preview,thinkingParts:preview.thinkingParts??old?.thinkingParts,state,at:this.clock(),sequence:++this.sequence});
     this.prune();
   }
+  disconnected(){for(const [key,item] of this.items)if(item.previewKind==='terminalInteraction')this.items.delete(key);}
   prune(){const now=this.clock();for(const [id,item]of this.items)if(item.previewKind==='thinking'||item.state!=='working'&&now-item.at>90000)this.items.delete(id);while(this.items.size>100)this.items.delete(this.items.keys().next().value);}
   snapshot(){this.prune();return [...this.items.values()].sort((a,b)=>b.at-a.at||b.sequence-a.sequence);}
 }

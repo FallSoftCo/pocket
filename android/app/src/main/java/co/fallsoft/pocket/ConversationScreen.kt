@@ -589,6 +589,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","dispatching"))TextButton({val source=Pocket.selected;val profile=Pocket.environmentId;val destination=Pocket.captureEnvironment();scope.launch{try{Pocket.apiEnvironment(requireNotNull(destination),"/api/threads/$source/recovery",JSONObject().put("cancel",true));if(Pocket.selected==source&&Pocket.environmentId==profile)Pocket.refreshDetail()}catch(e:Exception){if(Pocket.selected==source&&Pocket.environmentId==profile)Pocket.error=e.message?:"Could not pause recovery"}}}){BilingualLabel("Pause recovery",fontSize=12.sp)}
             else TextButton({val next=continuationDraft(editor.text);editor=TextFieldValue(next,TextRange(next.length));saveReplyDraft(draftKey,next);keyboardInput=true;scope.launch{delay(32);inputFocus.requestFocus();keyboard?.show()}},enabled=!Pocket.sending){BilingualLabel(if(d?.optJSONObject("recovery")?.s("state") in listOf("waiting","running","dispatching"))"Recovery active · review" else "Review continuation",fontSize=12.sp)}
         }
+        TerminalInteractionStatus(Pocket.environmentId,Pocket.selected)
         ConversationLiveCaption()
         InlineCaptureStatus()
         if(keyboardInput)DraftComposerScope{
@@ -829,3 +830,17 @@ internal fun conversationFilterAnchor(before:List<String>,after:List<String>,vis
 // Keystrokes are observed in this restart scope, not by the transcript owner.
 // The owner observes only empty/nonempty draft changes for its menu enablement.
 @Composable private fun DraftComposerScope(content:@Composable ()->Unit){content()}
+
+/** Transient source-owned execution metadata, never a canonical transcript row.
+ * Observe a boolean in its own restart scope so unrelated token/activity traffic
+ * cannot invalidate the composer, reader or footer. */
+@Composable private fun TerminalInteractionStatus(environment:String,thread:String?){
+    val source=Pocket.captureEnvironment(environment)?.let{CodexCatalog.source(it)}
+    val visible by remember(source,thread){derivedStateOf{source?.activities?.any{
+        it.s("threadId")==thread&&it.s("previewKind")=="terminalInteraction"&&it.s("state")=="working"
+    }==true}}
+    if(visible&&Pocket.codexOnline)Row(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=6.dp).testTag("live-terminal-activity"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+        SymbolIcon("Terminal","Terminal activity",Modifier.size(22.dp))
+        BilingualLabel("Using existing terminal",fontSize=13.sp,color=Mint,centered=false)
+    }
+}

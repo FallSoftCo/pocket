@@ -1,3 +1,4 @@
+import {ManagedDaemonRecovery} from './managed-daemon-recovery.mjs';
 import WebSocket from 'ws';
 import { EventEmitter } from 'node:events';
 import { homedir } from 'node:os';
@@ -6,8 +7,8 @@ import {createInterface} from 'node:readline';
 import {codexConnectionError,isServerDraining,isHistoryLineageError,historyLineageError} from './connection-errors.mjs';
 
 export class Codex extends EventEmitter {
-  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined}={}) {
-    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;
+  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined,managedStart=null}={}) {
+    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.managedRecovery=new ManagedDaemonRecovery(managedStart);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;
   }
   executionOptions(){
     const sandbox=process.env.POCKET_CODEX_SANDBOX,approvalPolicy=process.env.POCKET_CODEX_APPROVAL_POLICY;
@@ -27,7 +28,10 @@ export class Codex extends EventEmitter {
           previous.once('exit',done);previous.kill();
         });
       }
-      return this.openConnection();
+      try{return await this.openConnection();}catch(error){
+        if(!this.command&&await this.managedRecovery.recover(error))return this.openConnection();
+        throw error;
+      }
     })();
     this.connecting=attempt;
     try{return await attempt;}finally{if(this.connecting===attempt)this.connecting=null;}
