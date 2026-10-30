@@ -6,6 +6,17 @@ android {
     defaultConfig { applicationId = "co.fallsoft.pocket"; minSdk = 28; targetSdk = 36; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 156; versionName = "0.5.0-alpha.138" }
     signingConfigs {
+        // Retained QA devices may already use the maintained release identity.
+        // Configure that existing signer explicitly; never erase their data or
+        // substitute a test APK for the optimized distributed release.
+        if (System.getenv("POCKET_QA_SIGNING_STORE") != null && System.getenv("POCKET_QA_SIGNING_PASSWORD") != null) {
+            create("qa") {
+                storeFile = file(System.getenv("POCKET_QA_SIGNING_STORE"))
+                storePassword = System.getenv("POCKET_QA_SIGNING_PASSWORD")
+                keyAlias = System.getenv("POCKET_QA_SIGNING_ALIAS") ?: "pocket"
+                keyPassword = System.getenv("POCKET_QA_SIGNING_KEY_PASSWORD") ?: System.getenv("POCKET_QA_SIGNING_PASSWORD")
+            }
+        }
         if (System.getenv("POCKET_SIGNING_STORE") != null) {
             create("release") {
                 storeFile = file(System.getenv("POCKET_SIGNING_STORE"))
@@ -25,6 +36,7 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
             matchingFallbacks += listOf("debug")
+            signingConfig = signingConfigs.findByName("qa") ?: signingConfig
         }
         getByName("release") {
             isDebuggable = false

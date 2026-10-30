@@ -172,3 +172,18 @@ The signed build, final native gate and optimized APK review remain required.
 ## Current CPU storage admission
 
 The user-directed October22 override is8GiB plus measured additional build bytes and concurrent reservations, superseding historical80GiB wording above. `storage-build` retains the actual capacity check; native build trees and caches remain disk-backed.
+
+### Retained QA devices using the maintained certificate
+
+When the owned emulator is already signed with the maintained release identity,
+set `POCKET_QA_SIGNING_STORE`, `POCKET_QA_SIGNING_PASSWORD` and
+`POCKET_QA_SIGNING_ALIAS` privately to that existing signer. Optional
+`POCKET_QA_SIGNING_KEY_PASSWORD` supports a distinct key password. Only the
+qualification variant uses this explicit QA configuration. Shipping release
+signing and the phone-compatible optimized variant stay separate. A store-only
+QA setting retains the historical debug-compatible behavior.
+
+Check the installed and candidate certificate before installation. This does not
+authorize uninstalling the owner's phone or erasing retained QA preferences to
+solve a signing mismatch. Record the test artifact as debuggable qualification,
+never as an optimized release or physical-phone verification.
