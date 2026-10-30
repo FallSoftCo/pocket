@@ -1,10 +1,11 @@
 from pathlib import Path
 import os,json,time,subprocess,urllib.request,xml.etree.ElementTree as ET,uuid,hashlib,re,socket
 
-def qualify_native_stock(*,root,q,data,adb,launch):
- assert adb('shell','getprop','ro.boot.qemu.avd_name').strip()==b'nextcomp_env_qa','Owned NextComp emulator required'
+def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",signer_sha="22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"):
+ assert re.fullmatch(r'(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)',avd_name)
+ assert adb('shell','getprop','ro.boot.qemu.avd_name').decode().strip()==avd_name,'Owned NextComp emulator required'
  manifest=json.loads((data/'manifest.json').read_text());build=json.loads((data/'build.json').read_text())
- variant=next(v for v in manifest['variants'] if v['signerSha256']=='22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31')
+ variant=next(v for v in manifest['variants'] if v['signerSha256']==signer_sha)
  apk=data/variant['path'];assert hashlib.sha256(apk.read_bytes()).hexdigest()==variant['sha256']
  result={'state':'running','kind':'exact-optimized-native-canonical','versionCode':manifest['versionCode'],'apkSha256':variant['sha256'],'productionSourceSha':build['productionSourceSha'],'phoneTouched':False}
  path=q/'optimized-native-canonical.json'

@@ -54,7 +54,13 @@ class CommandHistoryNativeTest {
   assertFalse(device.hasObject(By.text("Using existing terminal")))
   requireNotNull(device.findObject(By.desc("Expand command runs"))).click()
   assertTrue(device.wait(Until.hasObject(By.text("First full command detail")),5000))
-  assertTrue(device.wait(Until.hasObject(By.text("Wait detail preserved")),5000))
+  val waitVisible=device.wait(Until.hasObject(By.text("Wait detail preserved")),5000)
+  if(!waitVisible){
+   device.dumpWindowHierarchy(java.io.File(c.filesDir,"command-history-failure.xml"))
+   device.takeScreenshot(java.io.File(c.filesDir,"command-history-failure.png"))
+   java.io.File(c.filesDir,"command-history-failure-rows.json").writeText(org.json.JSONArray(PocketTranscript.rows).toString())
+  }
+  assertTrue("Expanded wait detail missing from viewport; source="+PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")},waitVisible)
   assertTrue(device.hasObject(By.text("Answer after commands")))
   assertEquals("Expansion changed canonical history",source,PocketTranscript.rows.map{it.toString()})
   val protected=PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")}.map{Triple(it.s("id"),it.s("text"),it.s("detail"))}

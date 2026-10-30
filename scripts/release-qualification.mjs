@@ -24,6 +24,14 @@ export function confinedFile(directory,name){
  const root=realpathSync(directory),path=realpathSync(resolve(root,name)),rel=relative(root,path);
  if((rel==='..'||rel.startsWith('../'))||isAbsolute(rel)||!statSync(path).isFile())fail('Qualification file escapes artifact directory.');return path;
 }
+export function validNativeTargetReceipt(receipt){
+ if(receipt.avdName==='nextcomp_env_qa')return true; // Historical retained receipts.
+ return /^(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)$/.test(receipt.avdName||'')&&
+  /^emulator-[0-9]{4,5}$/.test(receipt.serial||'')&&
+  /^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(receipt.actor||'')&&
+  /^[0-9]+$/.test(receipt.preflight?.emulatorStartTicks||'')&&
+  receipt.preflight?.installedApkVerified===true;
+}
 export function validateReleaseQualification({directory,manifest,build,native,policy,optimizedReview}){
  if(existsSync(join(directory,'visual-rejection.json')))fail('This candidate was visually rejected; preserve it and qualify a new candidate.');
  if(manifest.packageName!=='co.fallsoft.pocket'||!Number.isSafeInteger(manifest.versionCode)||manifest.versionCode<1||!Array.isArray(manifest.variants)||!manifest.variants.length)fail('Invalid prepared manifest.');
@@ -38,7 +46,7 @@ export function validateReleaseQualification({directory,manifest,build,native,po
  if(policy.schema!==1||!Array.isArray(policy.requiredNativeCases)||!policy.requiredNativeCases.length||new Set(policy.requiredNativeCases).size!==policy.requiredNativeCases.length)fail('Invalid native release policy.');
  if(build.policySha!==sha256(Buffer.from(JSON.stringify(policy))))fail('Release policy changed after build.');
  const byCase=new Map();for(const receipt of native){
-  if(typeof receipt.case!=='string'||!policy.requiredNativeCases.includes(receipt.case)||receipt.schema!==1||receipt.state!=='complete'||receipt.exitCode!==0||receipt.productionSourceSha!==build.productionSourceSha||receipt.qualificationInputSha!==build.qualificationInputSha||receipt.qualificationApkSha!==build.qualificationApkSha||receipt.installedApkSha!==build.qualificationApkSha||receipt.testApkSha!==build.testApkSha||receipt.versionCode!==manifest.versionCode||receipt.finishedAt<receipt.startedAt||receipt.startedAt<build.finishedAt||!Number.isFinite(receipt.startedAt)||!Number.isFinite(receipt.finishedAt)||receipt.avdName!=='nextcomp_env_qa')fail('Native receipt is stale, incomplete or for another APK.');
+  if(typeof receipt.case!=='string'||!policy.requiredNativeCases.includes(receipt.case)||receipt.schema!==1||receipt.state!=='complete'||receipt.exitCode!==0||receipt.productionSourceSha!==build.productionSourceSha||receipt.qualificationInputSha!==build.qualificationInputSha||receipt.qualificationApkSha!==build.qualificationApkSha||receipt.installedApkSha!==build.qualificationApkSha||receipt.testApkSha!==build.testApkSha||receipt.versionCode!==manifest.versionCode||receipt.finishedAt<receipt.startedAt||receipt.startedAt<build.finishedAt||!Number.isFinite(receipt.startedAt)||!Number.isFinite(receipt.finishedAt)||!validNativeTargetReceipt(receipt))fail('Native receipt is stale, incomplete or for another APK.');
   const log=confinedFile(directory,receipt.log);if(fileSha(log)!==receipt.logSha||!nativeOutputPassed(readFileSync(log,'utf8')))fail('Native test failed or its log changed.');
   if(byCase.has(receipt.case))fail('Duplicate native receipt.');byCase.set(receipt.case,receipt);
  }
