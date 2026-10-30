@@ -9,6 +9,7 @@ import express from 'express';
 import {FleetAccess,FleetProofs} from '../server/fleet.mjs';
 import {BackendArtifacts,publishBackendArtifact,sha256,mountBackendArtifacts,issueArtifactCapability} from '../server/backend-artifacts.mjs';
 import {fetchBackendArtifact} from '../scripts/backend-artifact.mjs';
+import {bootstrapFetch} from '../scripts/backend-bootstrap-fetch.mjs';
 function fixture(){
  const dir=mkdtempSync(resolve(tmpdir(),'nextcomp-fleet-')),fleetId=randomUUID(),accountId=randomUUID();
  const members=[0,1].map((_,i)=>{const pair=generateKeyPairSync('ed25519'),id=randomUUID();writeFileSync(resolve(dir,id),pair.privateKey.export({type:'pkcs8',format:'pem'}),{mode:0o600});return {id,name:'fixture'+i,origin:'https://fixture'+i+'.invalid',publicKey:pair.publicKey.export({type:'spki',format:'pem'})};});
@@ -68,6 +69,10 @@ test('real blob GET/HEAD with node proofs; interrupted read and lost receipt nev
   assert.equal((await fetchBackendArtifact({...args,fetcher:()=>{throw Error('must not fetch');}})).state,'verified');
   assert.deepEqual(readFileSync(resolve(downloads,manifest.sha256+'.tar.gz')),bytes);
   assert.ok(!readFileSync(resolve(downloads,'same-read.json'),'utf8').includes(cap));
+  const bootstrap=resolve(f.dir,'bootstrap');mkdirSync(bootstrap);const configFile=resolve(f.dir,'bootstrap-fleet.json'),manifestFile=resolve(f.dir,'manifest.json');
+  writeFileSync(configFile,JSON.stringify(f.configs[1]),{mode:0o600});writeFileSync(manifestFile,JSON.stringify(manifest));
+  const boot=await bootstrapFetch({configFile,manifestFile,sourceNode:f.configs[0].nodeId,dir:bootstrap,operationId:'bootstrap-read',fetcher});
+  assert.equal(boot.state,'verified');assert.deepEqual(readFileSync(resolve(bootstrap,manifest.sha256+'.tar.gz')),bytes);
   chmodSync(keyFile,0o644);assert.throws(()=>new BackendArtifacts({dir:store,keyFile}));
  }finally{if(server)await new Promise(r=>server.close(r));f.close();}
 });

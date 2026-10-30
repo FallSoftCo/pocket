@@ -51,6 +51,13 @@ corrupt files and write methods are refused.
 
 Run helpers locally with the existing service identity where a protected key is
 needed; the operator authorizes that identity without revealing/copying its key.
+For initial GPU enrollment only, the operator installs the reviewed standalone
+`scripts/backend-bootstrap-fetch.mjs` and `scripts/backend-release.py` once. The
+bootstrap fetcher uses Node standard-library Ed25519 signing (no JWT parsing or
+verification, no dependencies/build on GPU), fixed machine-only proof scope, and
+the same exact manifest/hash/read-receipt rules. It takes `--fleet`, `--source-node`,
+`--store`, `--manifest`, `--operation`; it cannot activate software. Subsequent
+closed releases contain the normal helpers and pinned jose verifier.
 
 ```
 storage-build --peak-bytes 268435456 -- python3 scripts/backend-release.py build --source CHECKOUT --output OUT
