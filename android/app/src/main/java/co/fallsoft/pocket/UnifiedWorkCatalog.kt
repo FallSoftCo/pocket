@@ -124,6 +124,7 @@ internal object UnifiedWorkCatalog {
                     {codexReader(destination).head();Unit}
                 )
                 if(!ownsProbe())return@launch
+                FleetConnections.observe(destination,status.optJSONObject("fleet")){refresh()}
                 val available=status.getJSONArray("backends").objects()
                 require(available.map{it.s("id")}.distinct().size==available.size){"Backend discovery is unconfirmed"}
                 require(available.any{it.s("id") in setOf("codex","lax")&&it.optBoolean("configured")}){"No supported work catalog is confirmed"}

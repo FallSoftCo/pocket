@@ -44,7 +44,7 @@ export function environmentRoute(path){
  return environmentId?{environmentId,path:url.pathname+url.search}:null;
 }
 export class WebEnvironments {
- constructor({profiles={},fetchImpl=fetch,secure=true}){this.profiles=profiles;this.fetch=fetchImpl;this.secure=secure;this.lastCatalog=new Map();this.catalogFlights=new Map();this.verified=new Map();this.presentation=new CatalogPresentation();this.provisioning=new Map();this.provisionRetry=new Map();}
+ constructor({profiles={},fetchImpl=fetch,secure=true,fleet=null}){this.fleet=fleet;this.profiles=profiles;this.fetch=fetchImpl;this.secure=secure;this.lastCatalog=new Map();this.catalogFlights=new Map();this.verified=new Map();this.presentation=new CatalogPresentation();this.provisioning=new Map();this.provisionRetry=new Map();}
  static fromFile(file,options={}){
   const result=new WebEnvironments(options);let stamp;
   result.refresh=()=>{
@@ -54,7 +54,8 @@ export class WebEnvironments {
    result.profiles=config.profiles;result.provisionCommand=config.provisionCommand;result.verified.clear();stamp=next;
   };result.refresh();return result;
  }
- async ensure(device){
+ async ensure(device,token){
+  this.fleet?.observe(device,token);
   this.refresh?.();if(device==='owner'||!device)throw fail('Use the original paired browser.',403);
   if(this.profiles[device]||!this.provisionCommand)return;
   if((this.provisionRetry.get(device)||0)>Date.now())return;
@@ -67,7 +68,11 @@ export class WebEnvironments {
   return this.provisioning.get(device);
  }
  list(device){
-  this.refresh?.();const roster=this.profiles[device]||[];if(!Array.isArray(roster)||roster.length>12||new Set(roster.map(s=>s.id)).size!==roster.length)throw Error('Invalid environment roster.');
+  this.refresh?.();const saved=this.profiles[device]||[];
+  if(!Array.isArray(saved))throw Error('Invalid environment roster.');
+  const imported=this.fleet?.list(device)||[];
+  const roster=[...saved,...imported.filter(source=>!saved.some(p=>p.id===source.id||p.base===source.base))];
+  if(!Array.isArray(roster)||roster.length>128||new Set(roster.map(s=>s.id)).size!==roster.length)throw Error('Invalid environment roster.');
   return roster.map(source=>{
    const url=new URL(source.base);
    if(!idPattern.test(source.id)||source.id==='current'||typeof source.name!=='string'||!source.name||typeof source.token!=='string'||source.token.length<12||url.username||url.password||url.pathname!=='/'||url.search||url.hash||
@@ -75,7 +80,7 @@ export class WebEnvironments {
    return source;
   });
  }
- source(device,id){const source=this.list(device).find(s=>s.id===id);if(!source)throw fail('This environment is not connected to this browser.',403);return source;}
+ source(device,id){const source=this.list(device).find(s=>s.id===id);if(!source)throw fail('This environment is not connected to this browser.',403);if(source.retired)throw fail('This environment is no longer enrolled in the fleet.',409);return source;}
  async forward(device,environment,path,method='GET',body,headers={}){
   const source=this.source(device,environment);
   if(!path.startsWith('/api/')||path.includes('://')||path.includes('..')||/^\/api\/(pair(?:ing)?|devices|notify)(?:\/|\?|$)/.test(path))throw fail('This environment route is unavailable.',403);

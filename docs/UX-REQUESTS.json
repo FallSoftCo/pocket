@@ -3222,6 +3222,19 @@
         "tests/integrate-hollywood-node-inbox.mjs",
         "docs/FEDERATED-HOLLYWOOD.md"
       ]
+    },
+    {
+      "id": "fleet-single-connection-clients-20261030",
+      "request": "Android and web must discover all authorized fleet hosts from an existing authenticated connection, show one combined rooms/sessions list, and not require manual environment pairing per host. Host execution identity, scoped drafts/outgoing receipts and existing pairings remain intact. Qualified fleet gateways must support reconnect without replaying unknown commands. Host enrollment is operator work, not normal user UX. Include compatible Android delivery and web update in architecture completion.",
+      "status": "implementation-in-progress; not delivered",
+      "acceptance": [
+        "Existing paired client discovers the new development room without manual Add environment",
+        "No origin token sent to a merely advertised or untrusted endpoint",
+        "Stable fleet/node/work identities deduplicate rooms across gateways and preserve native session owner",
+        "Peer outage does not hide healthy work or mark failed history as empty",
+        "Reconnect and uncertain writes inspect original receipts; no automatic mutation replay",
+        "Native emulator and actual private HTTPS web journeys, with physical phone limits stated honestly"
+      ]
     }
   ],
   "current_state": {

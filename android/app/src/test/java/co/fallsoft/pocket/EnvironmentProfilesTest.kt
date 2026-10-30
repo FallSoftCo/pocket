@@ -55,4 +55,34 @@ class EnvironmentProfilesTest {
   values[remote.key("token")]="new-private";values[remote.key("deviceId")]="old-device"
   assertNull(store.capturePush("old-device"));assertEquals("workstation",store.selected().id)
  }
+
+ @Test fun automaticFleetEnrollmentPreservesLegacyCredentialsDraftsAndUnknownReceipts(){
+  fun id(n:Int)="00000000-0000-4000-8000-"+n.toString().padStart(12,'0')
+  val values=mutableMapOf<String,Any>("server" to "https://old.example","token" to "old-private",
+   "deviceId" to "original-device","draft:same" to "Keep typing","outbox:unknown" to "Unknown original send")
+  val original=values.toMap();val store=EnvironmentProfiles(prefs(values))
+  val raw=org.json.JSONObject().put("version",1).put("id",id(1)).put("accountId",id(2)).put("nodeId",id(3))
+   .put("sessionPath","/api/fleet/session").put("members",org.json.JSONArray()
+    .put(org.json.JSONObject().put("id",id(3)).put("name","Original").put("origin","https://old.example"))
+    .put(org.json.JSONObject().put("id",id(4)).put("name","GPU").put("origin","https://gpu.example.test")))
+  val fleet=FleetDescriptor.read(raw)
+  fun access(d:FleetDescriptor,m:FleetMember,token:String)=FleetEnrollment.read(org.json.JSONObject()
+   .put("version",1).put("fleetId",d.id).put("accountId",d.accountId).put("nodeId",m.id)
+   .put("deviceId",id(5)).put("ownerDeviceId",id(6)).put("token",token),d,m,id(6))
+  val anchor=store.enroll(fleet,fleet.members[0],access(fleet,fleet.members[0],"a".repeat(64)))
+  assertEquals("workstation",anchor.id)
+  val remote=store.enroll(fleet,fleet.members[1],access(fleet,fleet.members[1],"b".repeat(64)))
+  for((key,value) in original)assertEquals(value,values[key])
+  assertEquals("workstation",store.selected().id)
+  assertEquals("b".repeat(64),store.capture(remote.id)?.token)
+  val restored=EnvironmentProfiles(prefs(values));assertEquals(id(4),restored.capture(remote.id)?.environment?.fleet?.nodeId)
+  store.add("Third","https://third.example.test","third-private","third-device")
+  assertEquals(remote.fleet,store.capture(remote.id)?.environment?.fleet)
+  store.enroll(fleet,fleet.members[1],access(fleet,fleet.members[1],"c".repeat(64)))
+  assertEquals("b".repeat(64),store.capture(remote.id)?.token)
+  val changed=FleetDescriptor.read(org.json.JSONObject(raw.toString()).put("accountId",id(9)))
+  val before=values.toMap()
+  assertTrue(runCatching{store.enroll(changed,changed.members[1],access(changed,changed.members[1],"d".repeat(64)))}.isFailure)
+  assertEquals(before,values)
+ }
 }

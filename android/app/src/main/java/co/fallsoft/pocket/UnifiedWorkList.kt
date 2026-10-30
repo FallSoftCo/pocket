@@ -24,7 +24,8 @@ internal data class UnifiedWorkActions(
 )
 private data class UnifiedWorkRow(
     val entry:WorkEntry<WorkCatalogPayload>,val source:WorkSourceSnapshot<WorkCatalogPayload>,
-    val task:Task?=null,val group:SessionGroup?=null,val room:JSONObject?=null,val orphan:Boolean=false
+    val task:Task?=null,val group:SessionGroup?=null,val room:JSONObject?=null,val orphan:Boolean=false,
+    val displayKey:String=entry.key.saveableKey()
 )
 @Composable private fun WorkOriginBadge(entry:WorkEntry<WorkCatalogPayload>,available:Boolean) {
     val kind=if(entry.key.kind==WorkKind.ROOM)"Room" else "Session"
@@ -44,7 +45,7 @@ private data class UnifiedWorkRow(
     query:String="",workingOnly:Boolean=false,followingOnly:Boolean=false,showHistory:Boolean=false,
     onRefresh:()->Unit={},leading:(@Composable ()->Unit)?=null,showEmptyState:Boolean=true
 ) {
-    var order by remember{mutableStateOf(emptyList<WorkItemKey>())}
+    var order by remember{mutableStateOf(emptyList<String>())}
     var touching by remember{mutableStateOf(false)}
     val rows=remember(snapshots){
         snapshots.flatMap{source->
@@ -58,25 +59,28 @@ private data class UnifiedWorkRow(
             // Retain child ownership; children with an unloaded parent remain discoverable.
             mapped+ungroupedChildren(tasks.values.toList()).mapNotNull{task->
                 sessions.firstOrNull{it.key.id==task.id}?.let{UnifiedWorkRow(it,source,task,orphan=true)}
-            }+source.entries.filter{it.key.kind==WorkKind.ROOM}.map{UnifiedWorkRow(it,source,room=JSONObject(it.value.body))}
+            }
+        }+fleetRoomProjections(snapshots).map{projection->
+            UnifiedWorkRow(projection.route.copy(workAt=projection.content.workAt),projection.source,
+                room=projection.displayRoom(),displayKey=projection.identity)
         }
     }
     val rank=order.withIndex().associate{it.value to it.index}
     val sorted=rows.sortedWith(compareByDescending<UnifiedWorkRow>{it.entry.workAt}
-        .thenBy{rank[it.entry.key]?:Int.MAX_VALUE}.thenBy{it.entry.key.source.environment}.thenBy{it.entry.key.id})
+        .thenBy{rank[it.displayKey]?:Int.MAX_VALUE}.thenBy{it.entry.key.source.environment}.thenBy{it.entry.key.id})
     // Content can update in place during interaction. Reordering waits for reading to settle.
     var displayed by remember{mutableStateOf(emptyList<UnifiedWorkRow>())}
     val interacting=state.isScrollInProgress||touching
     LaunchedEffect(rows,interacting){
-        val latest=rows.associateBy{it.entry.key}
-        displayed=displayed.mapNotNull{latest[it.entry.key]}+sorted.filter{next->displayed.none{it.entry.key==next.entry.key}}
+        val latest=rows.associateBy{it.displayKey}
+        displayed=displayed.mapNotNull{latest[it.displayKey]}+sorted.filter{next->displayed.none{it.displayKey==next.displayKey}}
         if(!interacting){
             kotlinx.coroutines.delay(750)
-            val byId=sorted.associateBy{it.entry.key.saveableKey()}
-            val ranked=sorted.map{row->SessionRank(row.entry.key.saveableKey(),row.entry.workAt,
+            val byId=sorted.associateBy{it.displayKey}
+            val ranked=sorted.map{row->SessionRank(row.displayKey,row.entry.workAt,
                 row.task?.status in setOf("active","pending")||row.group?.children?.any{it.status in setOf("active","pending")}==true)}
-            val next=liveSessionOrder(order.filter{it.saveableKey() in byId}.map{it.saveableKey()},ranked,System.currentTimeMillis())
-            displayed=next.mapNotNull{byId[it]};order=displayed.map{it.entry.key}
+            val next=liveSessionOrder(order.filter{it in byId},ranked,System.currentTimeMillis())
+            displayed=next.mapNotNull{byId[it]};order=displayed.map{it.displayKey}
         }
     }
     val terms=query.trim().split(Regex("\\s+")).filter{it.isNotBlank()}
@@ -96,8 +100,8 @@ private data class UnifiedWorkRow(
             if(discovering||snapshots.any{it.refreshing})Column(Modifier.fillMaxWidth().padding(20.dp)){Mark(64);BilingualLabel("Loading conversations")}
             else Column(Modifier.fillMaxWidth().padding(20.dp)){BilingualLabel("No matching work");TextButton(onRefresh){BilingualLabel("Refresh")}}
         }
-        items(shown,key={it.entry.key.saveableKey()}){row->
-            val entry=row.entry;val identity=entry.key.saveableKey()
+        items(shown,key={it.displayKey}){row->
+            val entry=row.entry;val identity=row.displayKey
             if(row.room!=null){
                 HollywoodRoomCard(row.room,row.source.available,identityScope=identity,
                     headerBadge={WorkOriginBadge(entry,row.source.available)},onKeyboard={actions.open(entry,true)}){actions.open(entry,false)}
@@ -157,6 +161,10 @@ private data class UnifiedWorkRow(
                         Text("$name · $message",Modifier.weight(1f),color=Coral,maxLines=2,overflow=TextOverflow.Ellipsis)
                         TextButton({UnifiedWorkCatalog.refresh()}){BilingualLabel("Retry")}
                     }
+                }
+                FleetConnections.unavailable.values.distinct().forEach{message->
+                    Text(message,Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),
+                        color=Coral,maxLines=2,overflow=TextOverflow.Ellipsis)
                 }
                 val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
                 if(attention.isNotEmpty()){Label("NEEDS YOU · "+attention.size,Coral);attention.forEach{AttentionCard(it)}}
