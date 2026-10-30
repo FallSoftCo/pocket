@@ -9,6 +9,8 @@ import {nativeJsonCompression} from './json-compression.mjs';
 import {readThreadProjection} from './thread-projection.mjs';
 import {MAX_RECORDING_WAV_BYTES,MAX_RECORDING_SECONDS} from './audio-limits.mjs';
 import {HumanIngress,admissionTransaction} from './human-ingress.mjs';
+import {FleetAccess,loadFleet} from './fleet.mjs';
+import {BackendArtifacts,mountBackendArtifacts} from './backend-artifacts.mjs';
 import {CreditObservations} from './credit-observations.mjs';
 import {CatalogContext} from './catalog-context.mjs';
 import {WorkObservations} from './work-observations.mjs';
@@ -82,6 +84,11 @@ const hostName=process.env.POCKET_HOST_NAME||hostname();
 const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
 const {db,secrets}=openStore(dir);
+const fleet=process.env.POCKET_FLEET_CONFIG?new FleetAccess({db,config:()=>loadFleet(process.env.POCKET_FLEET_CONFIG)}):null;
+if(fleet)fleet.config(); // Reject incomplete enrollment before opening a listener.
+const backendArtifacts=process.env.POCKET_BACKEND_ARTIFACTS_DIR?new BackendArtifacts({dir:process.env.POCKET_BACKEND_ARTIFACTS_DIR,keyFile:process.env.POCKET_BACKEND_ARTIFACTS_KEY_FILE,dataDir:dir}):null;
+if(process.env.POCKET_BACKEND_ARTIFACTS_KEY_FILE&&!backendArtifacts)throw Error('Artifact store directory is required.');
+const backendRelease=existsSync(resolve(root,'backend-release.json'))?JSON.parse(readFileSync(resolve(root,'backend-release.json'),'utf8')):null;
 const hollywood=new HollywoodGateway(loadHollywood(dir));
 const nativeHollywood=process.env.POCKET_EXECUTION_BACKEND==='hollywood'||!!hollywood.config?.native;
 const sendIdentity=new SendIdentity(db);
@@ -128,6 +135,7 @@ const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,ho
   }});
 
 voiceController.authorizeQueued=async device=>{
+ if(fleet)await fleet.authorizeAlias(device);
  if(!db.prepare('SELECT 1 FROM devices WHERE id=?').get(device))throw Object.assign(Error('The original device is no longer authorized.'),{status:403});
 };
 
@@ -201,6 +209,7 @@ const voiceRecordings=new VoiceRecordings({
   return voiceController.cancelQueued(device,id);
  },
  authorize:async(device,principal)=>{
+  if(fleet)await fleet.authorizeAlias(device);
   if(principal.deviceId!==device||!db.prepare('SELECT 1 FROM devices WHERE id=?').get(device))
    throw Object.assign(Error('The original human device is no longer authorized. Recording retained.'),{status:403});
  }
@@ -281,8 +290,10 @@ if(nativeHollywood){
 setInterval(()=>{if(!nativeHollywood&&sockets.clients.size)void rateLimits.refresh();},60000).unref();
 const safeEqual=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const getToken=req=>(req.headers.authorization||'').replace(/^Bearer /,'');
-const identity=req=>{const t=getToken(req); if(t&&safeEqual(t,secrets.adminToken))return {id:'owner',name:'Local owner'};return db.prepare('SELECT id,name FROM devices WHERE token_hash=?').get(hash(t));};
-const requireAuth=(req,res,next)=>{req.device=identity(req); if(!req.device)return res.status(401).json({error:'Pair this device to continue.'});next();};
+const identity=async req=>{const t=getToken(req);if(!t)return null;if(t&&safeEqual(t,secrets.adminToken))return {id:'owner',name:'Local owner'};
+ if(fleet&&t.includes('.')){try{const v=await fleet.authenticate(t);req.fleetPrincipal=v.principal;return v.device;}catch{return null;}}
+ return db.prepare('SELECT id,name FROM devices WHERE token_hash=?').get(hash(t));};
+const requireAuth=async(req,res,next)=>{try{req.device=await identity(req);if(!req.device)return res.status(401).json({error:'Pair this device to continue.'});next();}catch{res.status(401).json({error:'Device authentication unavailable.'});}};
 const owner=(req,res,next)=>{if(req.device.id!=='owner')return res.status(403).json({error:'Local owner access required'});next();};
 const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 const requireId=id=>{if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(id))throw new Error('Invalid thread identifier');return id;};
@@ -539,7 +550,9 @@ setInterval(async()=>{
 if(!nativeHollywood)codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
-app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:appVersion}));
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:appVersion,...(backendRelease?{releaseDigest:backendRelease.releaseDigest,sourceCommit:backendRelease.sourceCommit}:{})}));
+if(backendArtifacts)mountBackendArtifacts(app,{artifacts:backendArtifacts,nodeAuthorize:fleet?(token,scope)=>fleet.authorizeNode(token,scope):undefined});
+if(fleet)fleet.mountStatus(app);
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -555,6 +568,10 @@ app.post('/api/pair',(req,res)=>{
   res.json({token,id,host:hostName,firebase:push.config,local:localMode,...(automation?{automationSecret:automation.secret}:{})});
 });
 app.use('/api',requireAuth);
+if(fleet){
+ app.post('/api/fleet/session',route(async(req,res)=>res.set('Cache-Control','no-store').json(await fleet.session(req.device,req.fleetPrincipal))));
+ app.get('/api/backends',(req,res,next)=>{const send=res.json.bind(res);res.json=value=>send({...value,fleet:fleet.discovery()});next();});
+}
 app.use('/api',(req,res,next)=>humanIngress.middleware(req,res,next));
 // An enterprise room gateway cannot expose the old single-owner session lanes.
 // Retained work stays in the database; native mode never starts its schedulers.
@@ -588,7 +605,7 @@ mountHollywood(app,{dir,gateway:hollywood});
 if(nativeHollywood)app.get('/api/backends',route(async(req,res)=>res.json({defaultBackend:'lax',canonical:true,backends:[{...await hollywood.status(req.device.id),voice:!!audioCommand}]})));
 if(!nativeHollywood)mountLosangelex(app,{dir,codex,db,workRecord,hollywood,publish:(thread,onPersist,event)=>notify(thread,'Losangelex needs you',event?.body||'Open the team conversation to review its request.',event?.kind==='approval'?'approval':'question',[],null,null,null,null,onPersist),resolve:resolveAttention});
 app.get('/api/computer-use',route(async(_req,res)=>res.json(await computerUseStatus())));
-mountAppUpdates(app,{updates:new AppUpdates({dir,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
+mountAppUpdates(app,{updates:new AppUpdates({dir,feedDir:process.env.POCKET_APP_UPDATES_DIR,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
 coordinatorHub.mount();
 app.get('/api/coordinator/reporting',(req,res)=>res.json(coordinatorReports.settings(req.device.id)));
 app.post('/api/coordinator/reporting',route(async(req,res)=>res.json(coordinatorReports.configure(req.device.id,req.body))));
@@ -928,9 +945,10 @@ mountOperatorNotifications(app,{db,codex,owner,route,requireId,saveAttachment,no
 app.get('/api/files/:id',(req,res)=>{const f=db.prepare('SELECT * FROM files WHERE id=?').get(req.params.id);if(!f)return res.sendStatus(404);res.set('Content-Type',f.mime);res.set('Content-Disposition',`inline; filename*=UTF-8''${encodeURIComponent(f.name)}`);res.sendFile(f.disk_path);});
 app.get('/api/devices',owner,(_req,res)=>res.json({devices:db.prepare('SELECT id,name,created_at,last_seen FROM devices').all()}));
 app.delete('/api/devices/:id',owner,(req,res)=>{db.prepare('DELETE FROM devices WHERE id=?').run(req.params.id);for(const s of sockets.clients)if(s.deviceId===req.params.id)s.close();res.json({ok:true});});
-server.on('upgrade',(req,socket,head)=>{
-  const device=identity(req);if(!device||req.url!=='/events'){socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');socket.destroy();return;}
+server.on('upgrade',async(req,socket,head)=>{
+  const device=await identity(req);if(!device||req.url!=='/events'){socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');socket.destroy();return;}
   sockets.handleUpgrade(req,socket,head,ws=>{ws.deviceId=device.id;ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.on('error',()=>{});db.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(now(),device.id);if(nativeHollywood){void hollywood.status(device.id).then(value=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'status',backend:'lax',connected:value.available,binding:value}));});}else{ws.send(JSON.stringify({type:'status',...codex.status()}));ws.send(JSON.stringify({type:'rateLimits',usage:rateLimits.snapshot()}));}if(!nativeHollywood)void rateLimits.refresh();sockets.emit('connection',ws,req);});
+  if(req.fleetPrincipal){const timer=setInterval(async()=>{if(!await identity(req))socket.destroy();},15000);timer.unref();socket.once('close',()=>clearInterval(timer));}
 });
 setInterval(()=>{for(const ws of sockets.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000).unref();
 app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.message);if(res.destroyed||res.headersSent)return;res.status(err.status||400).json({error:err.message,...(err.code?{code:err.code}:{})});});
