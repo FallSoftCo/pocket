@@ -1,7 +1,7 @@
 from pathlib import Path
 import os,json,time,subprocess,urllib.request,xml.etree.ElementTree as ET,uuid,hashlib,re,socket
 
-def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",signer_sha="22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31"):
+def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",signer_sha="22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",room_capture=None,room_evidence=None):
  assert re.fullmatch(r'(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)',avd_name)
  assert adb('shell','getprop','ro.boot.qemu.avd_name').decode().strip()==avd_name,'Owned NextComp emulator required'
  manifest=json.loads((data/'manifest.json').read_text());build=json.loads((data/'build.json').read_text())
@@ -55,10 +55,18 @@ def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",sig
   original=adb('exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml');assert ET.fromstring(original).tag=='map'
   # The framework probe captures the live canonical room before restoring its
   # profile. Harvest that exact image before a cold AVD cleanup can discard it.
-  room_capture=adb('exec-out','run-as','co.fallsoft.pocket','cat','files/optimized-native-room.png')
-  room_stamp=float(adb('shell','run-as','co.fallsoft.pocket','stat','-c','%Y','files/optimized-native-room.png'))
-  assert room_capture.startswith(bytes([137,80,78,71])) and room_stamp>=build['finishedAt']/1000-2,'Fresh optimized room capture required'
-  (data/'optimized-native-room.png').write_bytes(room_capture)
+  if room_capture is not None:
+   # A separate real-room journey may own the optimized capture. Bind its
+   # actual bytes and APK rather than copying a picture into app private data.
+   assert room_evidence and room_evidence['state']=='complete' and room_evidence['apkSha256']==variant['sha256']
+   assert room_evidence['originalAcceptedMessageSingle'] and room_evidence['canonicalRoomSnapshot']
+   room_bytes=Path(room_capture).read_bytes();room_stamp=room_evidence['capturedAt']/1000
+   assert hashlib.sha256(room_bytes).hexdigest()==room_evidence['captureSha256']
+  else:
+   room_bytes=adb('exec-out','run-as','co.fallsoft.pocket','cat','files/optimized-native-room.png')
+   room_stamp=float(adb('shell','run-as','co.fallsoft.pocket','stat','-c','%Y','files/optimized-native-room.png'))
+  assert room_bytes.startswith(bytes([137,80,78,71])) and room_stamp>=build['finishedAt']/1000-2,'Fresh optimized room capture required'
+  (data/'optimized-native-room.png').write_bytes(room_bytes)
 
   prefs=ET.Element('map')
   for key,value in {'server':'http://127.0.0.1:18880','token':'synthetic-system76-'+str(uuid.uuid4()),'deviceId':'synthetic-device-a','draft:same-thread':'Native optimized retained draft'}.items():ET.SubElement(prefs,'string',name=key).text=value
