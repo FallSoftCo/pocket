@@ -101,3 +101,15 @@ test('a visually rejected candidate cannot publish even with prior green checks'
   assert.equal(JSON.parse(readFileSync(join(f.destination,'manifest.json'))).versionCode,1);
  }finally{rmSync(f.root,{recursive:true,force:true});}
 });
+
+// A custom retained AVD needs the runner's live process/installation preflight;
+// changing only the name cannot make an arbitrary target a qualified emulator.
+test('explicit owned emulator receipts require retained runtime preflight',()=>{
+ const f=fixture();try{
+  const receipt=f.native[0];receipt.avdName='nextcomp_federation_20261030';
+  assert.throws(()=>validateReleaseQualification(f),/Native receipt/);
+  Object.assign(receipt,{serial:'emulator-5650',actor:'01a0f2bc-ff5a-70c2-b682-10f0987dab80',preflight:{emulatorStartTicks:'1058124440',installedApkVerified:true}});
+  assert.equal(validateReleaseQualification(f).nativeCases,1);
+  receipt.serial='100.101.220.29:5555';assert.throws(()=>validateReleaseQualification(f),/Native receipt/);
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});

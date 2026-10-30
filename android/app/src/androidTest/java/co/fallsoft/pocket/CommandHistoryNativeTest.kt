@@ -52,28 +52,39 @@ class CommandHistoryNativeTest {
   assertTrue(device.wait(Until.gone(By.text("Using existing terminal")),5000))
   main{Pocket.activities=listOf(JSONObject().put("threadId","same-thread").put("previewKind","terminalInteraction").put("state","finished"))}
   assertFalse(device.hasObject(By.text("Using existing terminal")))
+  // Expanded operations are reader content, not a promise that every detail fits
+  // simultaneously. Exercise the same finite page controls as a thumb reader.
+  fun reveal(text:String):Boolean {
+   if(device.wait(Until.hasObject(By.text(text)),1000))return true
+   for(direction in listOf("Page down","Page up"))repeat(3){
+    val control=device.findObject(By.desc(direction)) ?: return@repeat
+    control.click()
+    if(device.wait(Until.hasObject(By.text(text)),1000))return true
+   }
+   return false
+  }
   requireNotNull(device.findObject(By.desc("Expand command runs"))).click()
-  assertTrue(device.wait(Until.hasObject(By.text("First full command detail")),5000))
-  val waitVisible=device.wait(Until.hasObject(By.text("Wait detail preserved")),5000)
+  assertTrue(reveal("First full command detail"))
+  val waitVisible=reveal("Wait detail preserved")
   if(!waitVisible){
    device.dumpWindowHierarchy(java.io.File(c.filesDir,"command-history-failure.xml"))
    device.takeScreenshot(java.io.File(c.filesDir,"command-history-failure.png"))
    java.io.File(c.filesDir,"command-history-failure-rows.json").writeText(org.json.JSONArray(PocketTranscript.rows).toString())
   }
   assertTrue("Expanded wait detail missing from viewport; source="+PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")},waitVisible)
-  assertTrue(device.hasObject(By.text("Answer after commands")))
+  assertTrue(reveal("Answer after commands"))
   assertEquals("Expansion changed canonical history",source,PocketTranscript.rows.map{it.toString()})
   val protected=PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")}.map{Triple(it.s("id"),it.s("text"),it.s("detail"))}
   main{Pocket.open("second-thread")}
   await{Pocket.selected=="second-thread"&&!PocketTranscript.loading}
   main{Pocket.open("same-thread")}
   await{Pocket.selected=="same-thread"&&!PocketTranscript.loading}
-  assertTrue("Returning collapsed the command passage",device.wait(Until.hasObject(By.text("First full command detail")),5000))
-  assertTrue(device.hasObject(By.text("Wait detail preserved")))
+  assertTrue("Returning collapsed the command passage",reveal("First full command detail"))
+  assertTrue(reveal("Wait detail preserved"))
   requireNotNull(device.findObject(By.text("Collapse runs"))).click()
   assertTrue(device.wait(Until.gone(By.text("First full command detail")),5000))
   assertFalse(device.hasObject(By.text("Waiting for the operation")))
-  assertTrue(device.hasObject(By.text("Answer after commands")))
+  assertTrue(reveal("Answer after commands"))
   assertEquals("Navigation lost or changed the command passage",protected,PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")}.map{Triple(it.s("id"),it.s("text"),it.s("detail"))})
   assertEquals("same-thread",Pocket.selected)
  }
