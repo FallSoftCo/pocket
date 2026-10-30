@@ -2,6 +2,11 @@ import {randomBytes,createHash} from 'node:crypto';
 const fail=message=>Object.assign(Error(message),{status:403,code:'HUMAN_DEVICE_REQUIRED'});
 const digest=value=>createHash('sha256').update(JSON.stringify(value??{})).digest('hex');
 export function humanInputRoute(method,path){
+ // Match Express's case-insensitive/trailing-slash routing before proxying.
+ try{path=decodeURIComponent(path).replace(/\/{2,}/g,'/').replace(/\/$/,'').toLowerCase();}catch{return true;}
+ // All canonical mutations carry human intent, including attention and future
+ // controls. Read-only administration is not permission to submit room work.
+ if(!['GET','HEAD','OPTIONS'].includes(method)&&/^\/api\/hollywood\/v3(?:\/|$)/.test(path))return true;
  if(method==='POST'&&/^\/api\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/cancel)?$/.test(path))return true;
  if(method==='PUT'&&/^\/api\/voice\/recordings\/[^/]+\/audio$/.test(path))return true;
  if(method==='POST'&&/^\/api\/voice\/recordings(?:\/[^/]+\/(?:cancel|retry-audio|cancel-request))?$/.test(path))return true;
