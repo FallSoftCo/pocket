@@ -50,6 +50,7 @@ internal object FleetConnections {
                 val enrolled=FleetMembership(fleet.id,fleet.accountId,fleet.nodeId,session.deviceId)
                 Pocket.environmentProfiles.associateFleet(source.environment.id,enrolled)
                 added=source.environment.fleet!=enrolled
+                if(added)withContext(Dispatchers.Main){changed();added=false}
                 for(member in fleet.members){
                     if(!current(source))return@launch
                     val memberKey=key+":"+member.id
@@ -80,7 +81,7 @@ internal object FleetConnections {
                     check(Pocket.prefs.edit().remove(opKey).commit())
                     added=true
                     failures.remove(memberKey);retryAt.remove(memberKey)
-                    withContext(Dispatchers.Main){unavailable.remove(memberKey)}
+                    withContext(Dispatchers.Main){unavailable.remove(memberKey);changed();added=false}
                     }catch(error:CancellationException){throw error}
                     catch(_:Exception){
                         val attempts=(failures[memberKey]?:0)+1;failures[memberKey]=attempts

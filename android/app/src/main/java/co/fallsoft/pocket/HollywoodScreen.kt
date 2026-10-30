@@ -124,7 +124,7 @@ import androidx.lifecycle.repeatOnLifecycle
     val catalogMicDestination=if(stoppingRoomCapture)PocketVoice.targetRoom else coordinatorVoiceDestination
     val catalogMicLabel=if(stoppingRoomCapture)PocketVoice.targetSourceLabel else coordinatorVoiceLabel
     val roomVoiceOrigin=Pocket.captureEnvironment(Pocket.environmentId)
-    DisposableEffect(roomVoiceOrigin,foregroundVoiceDestination?.toString(),foregroundVoiceLabel){
+    DisposableEffect(owner,roomVoiceOrigin?.environment?.id,foregroundVoiceDestination?.toString(),foregroundVoiceLabel){
         val detach=if(roomVoiceOrigin!=null&&foregroundVoiceDestination!=null)
             ForegroundRoomInput.attach(CaptureDestination(roomVoiceOrigin,null,foregroundVoiceDestination.toString(),foregroundVoiceLabel,true)) else null
         onDispose{detach?.invoke()}
