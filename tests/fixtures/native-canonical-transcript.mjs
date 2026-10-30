@@ -27,8 +27,11 @@ function page(){
 }
 function send(socket,value){const bytes=Buffer.from(JSON.stringify(value));const header=bytes.length<126?Buffer.from([129,bytes.length]):Buffer.from([129,126,bytes.length>>8,bytes.length&255]);socket.write(Buffer.concat([header,bytes]));}
 function broadcast(value){for(const s of sockets)send(s,value);}
+function trace(value){if(process.env.NEXTCOMP_QA_LOG)fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify({at:Date.now(),...value})+'\n',{mode:0o600});}
 const server=http.createServer(async(req,res)=>{
+
  const url=new URL(req.url,'http://localhost'),path=url.pathname;
+ trace({kind:'request',method:req.method,path,query:url.search,revision,streamsSent,offline});
  if(process.env.NEXTCOMP_QA_HISTORY_TRACE==='1')console.log(JSON.stringify({at:Date.now(),method:req.method,path,query:url.search}));
  if(path.startsWith('/8bar/')){
   if(req.headers.authorization){galleryCredentialLeaks++;res.writeHead(403).end();return;}
@@ -112,4 +115,4 @@ server.on('upgrade',(req,socket)=>{
  sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));send(socket,{type:'status',connected:true});
 });
 server.listen(port,'127.0.0.1',()=>console.log('Owned native canonical fixture ready '+port));
-process.on('SIGTERM',()=>{if(streamTimer)clearInterval(streamTimer);for(const s of sockets)s.destroy();server.close(()=>process.exit(0));});
+process.on('SIGTERM',()=>{trace({kind:'finalState',reads,streamsSent,legacyReads,positionReads,workSubmissions,answers});if(streamTimer)clearInterval(streamTimer);for(const s of sockets)s.destroy();server.close(()=>process.exit(0));});

@@ -349,7 +349,10 @@ internal object CodexSessionRepository {
                             }}
                         }
                         if(repair){
-                            withContext(Dispatchers.Main.immediate){if(current(source)&&Pocket.captureEnvironment()?.matches(source.destination)==true&&Pocket.selected==id){PocketTranscript.markRefreshPending();CodexConversations.invalidate()}}
+                            // The repository owns a successful native repair. Scheduling
+                            // the viewport pump as well issues a second sequential read
+                            // after the shared in-flight read has already completed.
+                            withContext(Dispatchers.Main.immediate){if(current(source)&&Pocket.captureEnvironment()?.matches(source.destination)==true&&Pocket.selected==id)PocketTranscript.markRefreshPending()}
                             queue(Intent(source,id))
                         }
                         continue
@@ -549,9 +552,14 @@ internal object CodexSessionRepository {
                         }
                     }catch(error:CancellationException){if(current(intent.source))throw error}
                     catch(_:Exception){
-                        // Durable dirty state survives transport loss. A reconnect/event retries;
-                        // no model wake, unbounded retry loop or command replay.
+                        // Durable dirty state survives transport loss. Only a failed
+                        // background read hands an active viewport to its existing
+                        // bounded recovery pump; success must never schedule both.
                         save(intent.source,intent.thread,null,true)
+                        if(nativeEnabled(intent.source.destination,intent.thread))withContext(Dispatchers.Main.immediate){
+                            if(current(intent.source)&&Pocket.captureEnvironment()?.matches(intent.source.destination)==true&&Pocket.selected==intent.thread)
+                                CodexConversations.invalidate()
+                        }
                     }finally{
                         inFlight.remove(key)
                         if(pending.isNotEmpty())wake.trySend(Unit)
