@@ -23,7 +23,7 @@ import org.junit.runner.RunWith
 class NativeReadingParityNativeTest {
  @Test(timeout=150000) fun slotsGalleryAndDecisionDrawerPreserveInputAndSource(){
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
-  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  requireOwnedNativeTarget(device)
   fun main(action:()->Unit)=i.runOnMainSync(action)
   fun await(message:String,condition:()->Boolean){val end=android.os.SystemClock.elapsedRealtime()+30000;while(android.os.SystemClock.elapsedRealtime()<end&&!condition())Thread.sleep(50);assertTrue(message+" [selected="+Pocket.selected+", native="+PocketTranscript.canonicalMode+", verified="+PocketTranscript.currentHistoryVerified+", updating="+PocketTranscript.updating+", loading="+PocketTranscript.loading+", readError="+PocketTranscript.readError+", error="+Pocket.error+"]",condition())}
   fun click(selector:BySelector){

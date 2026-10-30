@@ -142,7 +142,7 @@ class HollywoodMixedCatalogNativeTest {
         .put("principalId","bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb").put("defaultRoomId",roomId).put("voice",false)
 
     @Test fun hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage(){
-        check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+        requireOwnedNativeTarget(device)
         device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
         val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
         val roomOwner=backendOwner(base,"synthetic-mixed-room")

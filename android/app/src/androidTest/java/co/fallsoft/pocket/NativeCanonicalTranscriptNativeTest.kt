@@ -42,7 +42,7 @@ class NativeCanonicalTranscriptNativeTest{
         throw AssertionError("Question Skip did not become a stable enabled action")
     }
     private fun prepare(){
-        check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+        requireOwnedNativeTarget(device)
         context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear()
             .putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76-"+java.util.UUID.randomUUID())
             .putString("deviceId","synthetic-device-a").putString("draft:same-thread","Native unsent draft").commit()

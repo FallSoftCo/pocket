@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
 class CoordinatorNativeAudioLiveTest {
  @Test fun liveInputFinalizesAndOutputPlaysBeforeCompleteBuffer() {
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
-  check(UiDevice.getInstance(i).executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  requireOwnedNativeTarget(UiDevice.getInstance(i))
   i.runOnMainSync{Pocket.init(c)}
   check(Pocket.base=="http://127.0.0.1:18889"){"Only the retained isolated QA authority is allowed"}
   val http=OkHttpClient.Builder().callTimeout(40,TimeUnit.SECONDS).build()

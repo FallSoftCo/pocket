@@ -22,7 +22,7 @@ class CommandHistoryNativeTest {
   assertTrue("Synthetic conversation did not become ready",condition())
  }
  @Test fun groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory(){
-  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  requireOwnedNativeTarget(device)
   val c=i.targetContext
   c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear()
    .putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76")
