@@ -7,6 +7,9 @@ export class HollywoodPush {
   db.exec(`CREATE TABLE IF NOT EXISTS hollywood_inbox_cursors(
    device TEXT REFERENCES devices(id) ON DELETE CASCADE,binding TEXT,cursor INTEGER NOT NULL,pending_cursor INTEGER NOT NULL DEFAULT 0,
    PRIMARY KEY(device,binding));
+  CREATE TABLE IF NOT EXISTS hollywood_inbox_node_cursors(
+   device TEXT REFERENCES devices(id) ON DELETE CASCADE,binding TEXT,node TEXT,cursor INTEGER NOT NULL,pending_cursor INTEGER NOT NULL DEFAULT 0,
+   PRIMARY KEY(device,binding,node));
   CREATE TABLE IF NOT EXISTS hollywood_push_deliveries(
    device TEXT REFERENCES devices(id) ON DELETE CASCADE,binding TEXT,event TEXT,revision INTEGER NOT NULL,hint TEXT NOT NULL,
    action TEXT NOT NULL,state TEXT NOT NULL DEFAULT 'queued',attempts INTEGER NOT NULL DEFAULT 0,next_attempt INTEGER NOT NULL DEFAULT 0,
@@ -49,7 +52,7 @@ export class HollywoodPush {
     .run(page.events.length===100?page.nextCursor:0,device,client.config.bindingId);this.db.exec('COMMIT');
   }catch(error){this.db.exec('ROLLBACK');throw error;}
  }
- async observe(device){
+ async observeLegacy(device){
   const client=this.gateway.client(device);await client.verify();const binding=client.config.bindingId;
   let cursor=this.db.prepare('SELECT cursor FROM hollywood_inbox_cursors WHERE device=? AND binding=?').get(device,binding)?.cursor;
   if(cursor===undefined){
@@ -66,6 +69,70 @@ export class HollywoodPush {
    this.db.exec('COMMIT');
   }catch(error){this.db.exec('ROLLBACK');throw error;}
  }
+ async observeNode(device,client,node,localNode){
+  const binding=client.config.bindingId,query={nodeId:node};
+  let row=this.db.prepare('SELECT * FROM hollywood_inbox_node_cursors WHERE device=? AND binding=? AND node=?').get(device,binding,node);
+  const checkedPage=(value,after)=>{
+   if(value.nodeId!==node&&!(node===localNode&&value.nodeId===undefined))throw Error('Hollywood inbox source is unconfirmed.');
+   return this.page(client,value,after);
+  };
+  if(!row){
+   const old=node===localNode?this.db.prepare('SELECT * FROM hollywood_inbox_cursors WHERE device=? AND binding=?').get(device,binding):null;
+   const cursor=old?.cursor??checkedPage(await client.call('inbox',{query}),0).nextCursor;
+   this.db.prepare('INSERT OR IGNORE INTO hollywood_inbox_node_cursors(device,binding,node,cursor,pending_cursor) VALUES(?,?,?,?,?)')
+    .run(device,binding,node,cursor,old?.pending_cursor??0);
+   row=this.db.prepare('SELECT * FROM hollywood_inbox_node_cursors WHERE device=? AND binding=? AND node=?').get(device,binding,node);
+  }
+  const pending=checkedPage(await client.call('inbox/pending',{query:{...query,after:row.pending_cursor,limit:100}}),row.pending_cursor);
+  this.db.exec('BEGIN IMMEDIATE');
+  try{
+   for(const h of pending.events)this.stage(device,client,{...h,nodeId:node});
+   this.db.prepare('UPDATE hollywood_inbox_node_cursors SET pending_cursor=? WHERE device=? AND binding=? AND node=?')
+    .run(pending.events.length===100?pending.nextCursor:0,device,binding,node);this.db.exec('COMMIT');
+  }catch(error){this.db.exec('ROLLBACK');throw error;}
+  const page=checkedPage(await client.call('inbox',{query:{...query,after:row.cursor,limit:100}}),row.cursor);
+  this.db.exec('BEGIN IMMEDIATE');
+  try{
+   for(const h of page.events)this.stage(device,client,{...h,nodeId:node});
+   this.db.prepare('UPDATE hollywood_inbox_node_cursors SET cursor=? WHERE device=? AND binding=? AND node=?')
+    .run(page.nextCursor,device,binding,node);this.db.exec('COMMIT');
+  }catch(error){this.db.exec('ROLLBACK');throw error;}
+ }
+ async observe(device){
+  const client=this.gateway.client(device);await client.verify();
+  const catalog=await client.call('rooms');
+  if(catalog.nodeId===undefined&&catalog.sources===undefined){await this.observeLegacy(device);return [];}
+  if(catalog.authorityId!==client.config.authorityId||!uuid(catalog.nodeId)||!Array.isArray(catalog.sources))throw Error('Hollywood inbox discovery is unconfirmed.');
+  const nodes=new Map();
+  for(const source of catalog.sources){
+   if(source.authorityId!==client.config.authorityId)continue;
+   if(!uuid(source.nodeId)||!['connected','not_authorized','unavailable'].includes(source.status)||nodes.has(source.nodeId))throw Error('Hollywood inbox source list is unconfirmed.');
+   nodes.set(source.nodeId,source);
+  }
+  if(nodes.get(catalog.nodeId)?.status!=='connected')throw Error('Local Hollywood inbox source is unconfirmed.');
+  this.sourceFailures??=new Map();
+  const unavailable=new Set([...nodes.values()].filter(s=>s.status!=='connected').map(s=>s.nodeId));
+  this.sourceFailures.set(client.config.bindingId,unavailable);
+  const errors=[];
+  // Separate source cursors; one missing peer cannot block local observation.
+  const ready=[...nodes.values()].filter(s=>s.status==='connected');
+  for(let offset=0;offset<ready.length;offset+=4){
+   const batch=ready.slice(offset,offset+4);
+   const results=await Promise.allSettled(batch.map(s=>this.observeNode(device,client,s.nodeId,catalog.nodeId)));
+   results.forEach((result,i)=>{if(result.status==='rejected'){unavailable.add(batch[i].nodeId);errors.push({node:batch[i].nodeId,code:result.reason.code||'HOLLYWOOD_INBOX_UNAVAILABLE'});}});
+  }
+  return errors;
+ }
+ sourceUnavailable(client,row){
+  return this.sourceFailures?.get(client.config.bindingId)?.has(JSON.parse(row.hint).nodeId)||false;
+ }
+ holdSource(client,row){
+  const node=JSON.parse(row.hint).nodeId;
+  if(!uuid(node))return false;
+  this.sourceFailures??=new Map();
+  if(!this.sourceFailures.has(client.config.bindingId))this.sourceFailures.set(client.config.bindingId,new Set());
+  this.sourceFailures.get(client.config.bindingId).add(node);return true;
+ }
  payload(device,client,h,action){
   // No room text, question, approval command, account credential or native control enters FCM.
   return {hollywood_inbox:'1',device_id:device,binding_id:client.config.bindingId,authority_id:h.authorityId,
@@ -75,10 +142,11 @@ export class HollywoodPush {
   const rows=this.db.prepare("SELECT * FROM hollywood_push_deliveries WHERE device=? AND binding=? AND action='notify' AND json_extract(hint,'$.attentionId') IS NOT NULL AND state NOT IN ('revoked','expired') ORDER BY checked_at,event LIMIT 100")
    .all(device,client.config.bindingId);
   for(const row of rows){
+   if(this.sourceUnavailable(client,row))continue;
    try{const value=await client.call('inbox/events/'+row.event);this.stage(device,client,this.checked(client,value.hint));
     this.db.prepare('UPDATE hollywood_push_deliveries SET checked_at=? WHERE device=? AND binding=? AND event=?').run(this.clock(),device,row.binding,row.event);}
    catch(error){
-    if(![403,404].includes(error.status))throw error;
+    if(![403,404].includes(error.status)){if(this.holdSource(client,row))continue;throw error;}
     this.db.prepare("UPDATE hollywood_push_deliveries SET state='revoked',error='Audience no longer authorized',updated_at=? WHERE device=? AND binding=? AND event=?")
      .run(this.clock(),device,row.binding,row.event);
    }
@@ -89,6 +157,7 @@ export class HollywoodPush {
   const rows=this.db.prepare("SELECT * FROM hollywood_push_deliveries WHERE device=? AND binding=? AND state IN ('queued','retry') AND next_attempt<=? ORDER BY updated_at LIMIT 100")
    .all(device,client.config.bindingId,this.clock());
   for(const row of rows){
+   if(this.sourceUnavailable(client,row))continue;
    // Pairing and current installation binding are checked again for each delivery attempt.
    const token=this.db.prepare('SELECT p.token FROM push_tokens p JOIN devices d ON d.id=p.device_id WHERE p.device_id=? AND p.project_id=?')
     .get(device,this.push.config.projectId);if(!token)continue;
@@ -96,7 +165,7 @@ export class HollywoodPush {
    let h;
    try{h=this.checked(client,(await client.call('inbox/events/'+row.event)).hint);}
    catch(error){
-    if(![403,404].includes(error.status))throw error;
+    if(![403,404].includes(error.status)){if(this.holdSource(client,row))continue;throw error;}
     this.db.prepare("UPDATE hollywood_push_deliveries SET state='revoked',error='Audience no longer authorized',updated_at=? WHERE device=? AND binding=? AND event=?")
      .run(this.clock(),device,row.binding,row.event);continue;
    }
@@ -123,7 +192,7 @@ export class HollywoodPush {
   if(this.busy)return;this.busy=true;const errors=[];
   try{
    for(const {id} of this.db.prepare('SELECT id FROM devices ORDER BY id').all()){
-    try{await this.observe(id);const client=this.gateway.client(id);await this.refreshRetained(id,client);await this.flush(id,client);}
+    try{for(const error of await this.observe(id))errors.push({device:id,...error});const client=this.gateway.client(id);await this.refreshRetained(id,client);await this.flush(id,client);}
     catch(error){errors.push({device:id,code:error.code||'HOLLYWOOD_INBOX_UNAVAILABLE'});}
    }
    return {errors};
