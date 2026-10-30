@@ -24,7 +24,9 @@ import androidx.lifecycle.repeatOnLifecycle
 /** Native Hollywood conversation; existing session surfaces, canonical room identities. */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class,ExperimentalLayoutApi::class)
 @Composable internal fun HollywoodScreen(owner:String,binding:JSONObject,onSettings:()->Unit){
-    val client=remember(owner,binding.s("bindingId")){HollywoodClient(owner,binding)}
+    val origin=Pocket.captureEnvironment()?.takeIf{backendOwner(it.endpoint,it.token)==owner}
+    if(origin==null){BilingualLabel("Original connection unavailable",Modifier.padding(16.dp));return}
+    val client=remember(owner,binding.s("bindingId"),origin){HollywoodClient(owner,binding,origin.endpoint.trimEnd('/'),origin.token,origin)}
     val jobs=rememberCoroutineScope()
     var room by remember(client.bindingId){mutableStateOf(Pocket.prefs.getString("hollywood-room:$owner:${client.bindingId}",client.defaultRoomId)?:client.defaultRoomId)}
     var browsing by remember(client.bindingId){mutableStateOf(false)}
@@ -42,10 +44,10 @@ import androidx.lifecycle.repeatOnLifecycle
 
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     var headRefreshRevision by remember(client.bindingId){mutableIntStateOf(0)}
-    val feeds=remember(client.bindingId){mutableMapOf<String,HollywoodRoomFeed>()}
-    val feed=feeds.getOrPut("conversation:$room"){HollywoodRoomFeed(room,"conversation"){path->client.call(path)}}
-    val coordinatorFeed=feeds.getOrPut("conversation:"+client.defaultRoomId){HollywoodRoomFeed(client.defaultRoomId,"conversation"){path->client.call(path)}}
-    val activityFeed=feeds.getOrPut("activity:$room"){HollywoodRoomFeed(room,"activity"){path->client.call(path)}}
+    val feeds=remember(client){mutableMapOf<String,HollywoodRoomFeed>()}
+    val feed=feeds.getOrPut("conversation:$room"){HollywoodRoomFeed(room,"conversation",client.historyKey(room,"conversation")){path->client.call(path)}}
+    val coordinatorFeed=feeds.getOrPut("conversation:"+client.defaultRoomId){HollywoodRoomFeed(client.defaultRoomId,"conversation",client.historyKey(client.defaultRoomId,"conversation")){path->client.call(path)}}
+    val activityFeed=feeds.getOrPut("activity:$room"){HollywoodRoomFeed(room,"activity",client.historyKey(room,"activity")){path->client.call(path)}}
     val detail=feed.detail
     val events=remember(feed.events,activityFeed.events){(feed.events+activityFeed.events).distinctBy{it.s("id")}.sortedBy{it.optLong("seq")}}
     val attention=feed.attention
@@ -362,6 +364,12 @@ import androidx.lifecycle.repeatOnLifecycle
         }
         ForegroundWorkNotice()
         InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
+        val otherSends=remember(client,room,feed.events){hollywoodOtherSends(Pocket.prefs,origin,binding,room,
+            Pocket.environmentProfiles.all().mapNotNull{Pocket.captureEnvironment(it.id)})}
+        otherSends.forEach{saved->TextButton({try{
+            Pocket.activateEnvironment(saved.origin.environment.id)
+            HollywoodNotifications.openRoom(saved.origin,saved.binding,saved.scope.room,true,saved.scope)
+        }catch(e:Exception){error=e.message.orEmpty()}}){BilingualLabel("Review saved send",centered=false);Text(" · "+saved.origin.environment.name)}}
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
         if(showTextInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){ConversationComposerRow{
             RoomDraftComposerScope{

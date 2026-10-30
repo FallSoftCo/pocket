@@ -12,21 +12,27 @@ internal object UnifiedWorkCatalog {
     private var sourceSnapshots by mutableStateOf(emptyList<WorkSourceSnapshot<WorkCatalogPayload>>())
     val snapshots by derivedStateOf{
         sourceSnapshots.map{snapshot->
-            val destination=profiles.values.firstOrNull{it.environment.id==snapshot.key.environment&&
-                backendOwner(it.endpoint,it.token)==snapshot.key.owner}
-            if(snapshot.key.backend!="codex"||destination==null||
+            val destination=profiles.values.firstOrNull{origin->
+                val owner=backendOwner(origin.endpoint,origin.token)
+                origin.environment.id==snapshot.key.environment&&(snapshot.key.owner==owner||
+                    snapshot.key.backend=="lax"&&snapshot.key.owner.startsWith(owner+":"))
+            }
+            if(destination==null||
                 Pocket.captureEnvironment(destination.environment.id)?.matches(destination)!=true)snapshot
-            else{
+            else if(snapshot.key.backend=="lax")snapshot.copy(entries=snapshot.entries.map{entry->
+                entry.copy(value=entry.value.copy(destination=destination))
+            })
+            else if(snapshot.key.backend=="codex"){
                 val tasks=CodexCatalog.source(destination,snapshot.key.query=="archived").tasks
                 snapshot.copy(entries=tasks.map{task->WorkEntry(WorkItemKey(snapshot.key,WorkKind.SESSION,"",task.id),
                     workTimeMillis(taskWorkTime(task)),WorkCatalogPayload(destination,task.catalogJson().toString()))})
-            }
+            }else snapshot
         }
     }
     var discoveryErrors by mutableStateOf(emptyMap<WorkSourceKey,String>());private set
     var discovering by mutableStateOf(emptySet<WorkSourceKey>());private set
     private val poller=WorkCatalogPoller(Pocket.scope,state,{sourceSnapshots=it})
-    private var profiles=emptyMap<WorkSourceKey,EnvironmentRequest>()
+    private var profiles by mutableStateOf(emptyMap<WorkSourceKey,EnvironmentRequest>())
     private val readers=mutableMapOf<WorkSourceKey,List<WorkCatalogReader>>()
     private val probes=mutableMapOf<WorkSourceKey,Job>()
     private val nextProbe=mutableMapOf<WorkSourceKey,Long>()

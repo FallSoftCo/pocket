@@ -16,7 +16,8 @@ internal class HollywoodAcceptedReceiptNotSaved(val receipt:JSONObject):java.io.
 
 /** Captured source profile and human binding. A pending action never follows navigation. */
 internal class HollywoodClient(val owner:String,source:JSONObject,
-    private val base:String=Pocket.base.trimEnd('/'),private val token:String=Pocket.token) {
+    private val base:String=Pocket.base.trimEnd('/'),private val token:String=Pocket.token,
+    private val origin:EnvironmentRequest?=null) {
     private val identity=JSONObject(source.toString())
     private val http=Pocket.http.newBuilder().retryOnConnectionFailure(false).followRedirects(false).followSslRedirects(false).build()
     val bindingId=identity.s("bindingId")
@@ -57,11 +58,20 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
         error("Read attempt ended without a result")
     }
     fun key(scope:HollywoodScope)="hollywood:$owner:$bindingId:${scope.room}:${scope.recipient}:${scope.audience}:${scope.sourceEvent?:"root"}:${scope.kind}"
-    fun draft(scope:HollywoodScope)=Pocket.prefs.getString("draft:"+key(scope),"").orEmpty()
-    fun saveDraft(scope:HollywoodScope,text:String){Pocket.prefs.edit().putString("draft:"+key(scope),text).putString("scope:"+key(scope),scope.json().toString()).apply()}
-    fun savedScopes(room:String):List<HollywoodScope> = Pocket.prefs.all.filterKeys{it.startsWith("scope:hollywood:$owner:$bindingId:")}.values
-        .mapNotNull{value->runCatching{HollywoodScope.from(JSONObject(value as String))}.getOrNull()}
-        .distinct().filter{it.room==room&&(draft(it).isNotBlank()||pending(it)!=null)}
+    fun historyKey(room:String,view:String):String {
+        require(hollywoodUuid(room)&&view in listOf("conversation","activity","all"))
+        val realm=origin?.environment?.fleet
+        val physical="hollywood-history:$owner:$bindingId:$room:$view"
+        if(realm==null)return physical
+        val logical="fleet-room-history:"+FleetWorkIdentity(realm.fleetId,realm.accountId,
+            principalId,WorkKind.ROOM,authorityId,room).key+":"+view
+        HollywoodRoomHistory.migrate(physical,logical)
+        return logical
+    }
+    private val drafts by lazy{HollywoodDraftStore(Pocket.prefs,owner,identity,origin)}
+    fun draft(scope:HollywoodScope)=drafts.draft(scope)
+    fun saveDraft(scope:HollywoodScope,text:String)=drafts.save(scope,text)
+    fun savedScopes(room:String)=drafts.scopes(room).filter{draft(it).isNotBlank()||pending(it)!=null}
     fun pending(scope:HollywoodScope)=Pocket.prefs.getString("pending:"+key(scope),null)?.let{JSONObject(it)}
     private fun persist(key:String,value:JSONObject?){
         val edit=Pocket.prefs.edit();if(value==null)edit.remove(key)else edit.putString(key,value.toString())

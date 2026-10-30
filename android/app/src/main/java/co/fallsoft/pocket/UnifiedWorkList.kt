@@ -29,8 +29,9 @@ private data class UnifiedWorkRow(
 )
 @Composable private fun WorkOriginBadge(entry:WorkEntry<WorkCatalogPayload>,available:Boolean) {
     val kind=if(entry.key.kind==WorkKind.ROOM)"Room" else "Session"
-    val name=entry.value.destination.environment.name
-    Row(Modifier.widthIn(max=110.dp).semantics{contentDescription="$kind on $name; "+if(available)"catalog verified" else "catalog unavailable"},
+    val route=entry.value.destination.environment.name
+    val name=if(entry.key.kind==WorkKind.ROOM)"Room" else route
+    Row(Modifier.widthIn(max=110.dp).semantics{contentDescription="$kind via $route; "+if(available)"catalog verified" else "catalog unavailable"},
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
         SymbolIcon(if(entry.key.kind==WorkKind.ROOM)"Layers" else "Codex",null,Modifier.size(16.dp),tint=if(available)Muted else Coral)
         Text(name,color=if(available)Muted else Coral,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)

@@ -32,16 +32,16 @@ internal fun fleetRoomIdentity(entry:WorkEntry<WorkCatalogPayload>):String {
  * No mutations or receipt retries occur when the chosen route changes.
  */
 internal fun fleetRoomProjections(snapshots:List<WorkSourceSnapshot<WorkCatalogPayload>>):List<FleetRoomProjection> {
-    data class Candidate(val entry:WorkEntry<WorkCatalogPayload>,val source:WorkSourceSnapshot<WorkCatalogPayload>,val seq:Long)
+    data class Candidate(val entry:WorkEntry<WorkCatalogPayload>,val source:WorkSourceSnapshot<WorkCatalogPayload>,val seq:Long,val voice:Boolean)
     val candidates=snapshots.flatMap{source->source.entries.filter{it.key.kind==WorkKind.ROOM}.map{entry->
         val room=JSONObject(entry.value.body)
         val seq=if(HollywoodRoomFeedSummary.read(room)!=null)
             room.optJSONObject("feedSummary")?.optJSONObject("recency")?.optLong("seq",0)?:0 else 0
-        Candidate(entry,source,seq)
+        Candidate(entry,source,seq,entry.value.binding?.let{JSONObject(it).optBoolean("voice")}==true)
     }}
     return candidates.groupBy{fleetRoomIdentity(it.entry)}.map{(identity,options)->
         val content=options.sortedWith(compareByDescending<Candidate>{it.seq}.thenBy{it.entry.key.saveableKey()}).first()
-        val route=options.sortedWith(compareByDescending<Candidate>{it.source.available}.thenBy{it.entry.key.saveableKey()}).first()
+        val route=options.sortedWith(compareByDescending<Candidate>{it.source.available}.thenByDescending{it.voice}.thenBy{it.entry.key.saveableKey()}).first()
         FleetRoomProjection(identity,content.entry,route.entry,route.source)
     }
 }

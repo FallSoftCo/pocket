@@ -10,25 +10,29 @@ import org.json.JSONObject
  * No read can submit, retry, resume or retarget work. The composition owns lifetime.
  */
 @Stable
-internal class HollywoodRoomFeed(val room:String,val view:String?=null,private val read:suspend (String)->JSONObject) {
+internal class HollywoodRoomFeed(val room:String,val view:String?=null,private val memoryKey:String?=null,private val read:suspend (String)->JSONObject) {
     init{require(view==null||view in listOf("conversation","activity","all"))}
     private fun history(direction:String)="rooms/$room/history?$direction&limit=100"+(view?.let{"&view=$it"}.orEmpty())
-    var events by mutableStateOf(emptyList<JSONObject>());private set
+    private val historyWriter=Any()
+    private val retained=memoryKey?.let(HollywoodRoomHistory::get)
+    var events by mutableStateOf(retained?.events.orEmpty());private set
     var detail by mutableStateOf(JSONObject());private set
     var justAccepted by mutableStateOf(emptyList<JSONObject>());private set
     private var acceptanceRevision=0L
     var attention by mutableStateOf(emptyList<JSONObject>());private set
-    var cursor:Long? by mutableStateOf(null);private set
-    var older:Long? by mutableStateOf(null);private set
-    var loading by mutableStateOf(true);private set
+    var cursor:Long? by mutableStateOf(retained?.cursor);private set
+    var older:Long? by mutableStateOf(retained?.older);private set
+    var loading by mutableStateOf(retained==null);private set
     var loadingOlder by mutableStateOf(false);private set
     var historyError by mutableStateOf("");private set
     var detailError by mutableStateOf("");private set
     var attentionError by mutableStateOf("");private set
-    var verifiedAt by mutableLongStateOf(0L);private set
+    var verifiedAt by mutableLongStateOf(retained?.verifiedAt?:0L);private set
     private data class Gap(val after:Long,val before:Long)
-    private var gaps by mutableStateOf(emptyList<Gap>())
+    private var gaps by mutableStateOf(retained?.gaps?.map{Gap(it.first,it.second)}.orEmpty())
     val catchingUp get()=gaps.isNotEmpty()
+    private fun retain(){memoryKey?.let{key->if(cursor!=null)HollywoodRoomHistory.put(key,
+        HollywoodHistorySnapshot(events,cursor,older,gaps.map{it.after to it.before},verifiedAt,historyWriter))}}
     private val gapMutex=Mutex()
     private val latestMutex=Mutex()
     private val olderMutex=Mutex()
@@ -45,6 +49,9 @@ internal class HollywoodRoomFeed(val room:String,val view:String?=null,private v
     private fun merge(incoming:List<JSONObject>) {
         if(incoming.isEmpty())return
         val known=events.associateBy{it.s("id")}
+        require(incoming.all{event->known[event.s("id")]?.let{hollywoodJsonEqual(it,event)}!=false}){
+            "Canonical room event changed; saved messages are retained"
+        }
         // Canonical events are immutable. Empty/unchanged reads do not rebuild
         // every message or invalidate text layout while the human is typing.
         if(incoming.all{known[it.s("id")]?.toString()==it.toString()})return
@@ -74,7 +81,7 @@ internal class HollywoodRoomFeed(val room:String,val view:String?=null,private v
             }
         }catch(e:CancellationException){throw e}
         catch(e:Exception){historyError=e.message?:"Messages could not refresh"}
-        finally{loading=false}
+        finally{loading=false;retain()}
     }
     suspend fun fillGapPage()=gapMutex.withLock {
         val gap=gaps.firstOrNull()?:return@withLock
@@ -87,6 +94,7 @@ internal class HollywoodRoomFeed(val room:String,val view:String?=null,private v
             gaps=if(finished)gaps.filter{it!=gap}else gaps.map{if(it==gap)Gap(next,gap.before)else it}
         }catch(e:CancellationException){throw e}
         catch(e:Exception){historyError=e.message?:"Missed messages could not load"}
+        finally{retain()}
     }
     suspend fun loadOlder()=olderMutex.withLock {
         val before=older?:return@withLock
@@ -101,7 +109,7 @@ internal class HollywoodRoomFeed(val room:String,val view:String?=null,private v
             // Never change the live head or its freshness with an older-page read.
         }catch(e:CancellationException){throw e}
         catch(e:Exception){historyError=e.message?:"Earlier messages could not load"}
-        finally{loadingOlder=false}
+        finally{loadingOlder=false;retain()}
     }
     /** Fresh submit receipts may assert queued delivery, never permissions or execution. */
     fun accepted(receipt:JSONObject){

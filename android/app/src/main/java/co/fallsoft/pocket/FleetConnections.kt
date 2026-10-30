@@ -41,21 +41,27 @@ internal object FleetConnections {
                 if(metadataOnly){
                     Pocket.environmentProfiles.associateFleet(source.environment.id,
                         FleetMembership(fleet.id,fleet.accountId,fleet.nodeId,session.deviceId))
-                    added=true
+                    added=true;failures.remove(key);retryAt.remove(key)
+                    withContext(Dispatchers.Main){unavailable.remove(key)}
                     return@launch
                 }
                 check(Pocket.prefs.edit().putString(prefix+"ownerDeviceId",session.deviceId)
                     .putString(prefix+"anchor",source.environment.id).commit())
-                Pocket.environmentProfiles.associateFleet(source.environment.id,
-                    FleetMembership(fleet.id,fleet.accountId,fleet.nodeId,session.deviceId))
+                val enrolled=FleetMembership(fleet.id,fleet.accountId,fleet.nodeId,session.deviceId)
+                Pocket.environmentProfiles.associateFleet(source.environment.id,enrolled)
+                added=source.environment.fleet!=enrolled
                 for(member in fleet.members){
                     if(!current(source))return@launch
+                    val memberKey=key+":"+member.id
                     // A saved pairing remains authoritative. Do not replace its token/device ID.
                     val known=Pocket.environmentProfiles.all().any{profile->
                         !profile.local&&Pocket.captureEnvironment(profile.id)?.endpoint?.trimEnd('/')==member.origin
                     }
-                    if(known)continue
-                    val memberKey=key+":"+member.id
+                    if(known){
+                        failures.remove(memberKey);retryAt.remove(memberKey)
+                        withContext(Dispatchers.Main){unavailable.remove(memberKey)}
+                        continue
+                    }
                     if(System.currentTimeMillis()<(retryAt[memberKey]?:0))continue
                     try {
                     val opKey=prefix+"enroll:"+member.id
