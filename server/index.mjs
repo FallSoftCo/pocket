@@ -9,7 +9,8 @@ import {nativeJsonCompression} from './json-compression.mjs';
 import {readThreadProjection} from './thread-projection.mjs';
 import {MAX_RECORDING_WAV_BYTES,MAX_RECORDING_SECONDS} from './audio-limits.mjs';
 import {HumanIngress,admissionTransaction} from './human-ingress.mjs';
-import {FleetAccess,loadFleet} from './fleet.mjs';
+import {loadFleet} from './fleet.mjs';
+import {LocalFleetAccess,enrollmentKey} from './fleet-enrollment.mjs';
 import {BackendArtifacts,mountBackendArtifacts} from './backend-artifacts.mjs';
 import {CreditObservations} from './credit-observations.mjs';
 import {CatalogContext} from './catalog-context.mjs';
@@ -84,7 +85,7 @@ const hostName=process.env.POCKET_HOST_NAME||hostname();
 const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
 const {db,secrets}=openStore(dir);
-const fleet=process.env.POCKET_FLEET_CONFIG?new FleetAccess({db,config:()=>loadFleet(process.env.POCKET_FLEET_CONFIG)}):null;
+const fleet=process.env.POCKET_FLEET_CONFIG?new LocalFleetAccess({db,credentialKey:enrollmentKey(dir),config:()=>loadFleet(process.env.POCKET_FLEET_CONFIG)}):null;
 if(fleet)fleet.config(); // Reject incomplete enrollment before opening a listener.
 const backendArtifacts=process.env.POCKET_BACKEND_ARTIFACTS_DIR?new BackendArtifacts({dir:process.env.POCKET_BACKEND_ARTIFACTS_DIR,keyFile:process.env.POCKET_BACKEND_ARTIFACTS_KEY_FILE,dataDir:dir}):null;
 if(process.env.POCKET_BACKEND_ARTIFACTS_KEY_FILE&&!backendArtifacts)throw Error('Artifact store directory is required.');
@@ -124,7 +125,7 @@ const internalSessions=new InternalSessions(db,[{cwd:immersionCwd,kind:'immersio
 // Session, coordinator and immersion RPCs share one multiplexed stock runtime.
 // Separate threads retain their own instructions, model choices and routing.
 const voiceCodex=codex;
-const humanIngress=new HumanIngress(db);
+const humanIngress=new HumanIngress(db,{deviceActive:device=>!fleet||fleet.deviceActive(device)});
 const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,host:hostName,
   api:async(path,body,actor)=>{const delegation=humanIngress.delegate(actor,body===undefined?'GET':'POST',path,body);try{const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`,'Content-Type':'application/json',...delegation.headers},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:AbortSignal.timeout(35000)});const data=await r.json();if(!r.ok)throw Error(data.error||'Pocket control failed.');return data;}finally{delegation.release();}},
   transcribe:async audio=>{
@@ -292,6 +293,7 @@ const safeEqual=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length=
 const getToken=req=>(req.headers.authorization||'').replace(/^Bearer /,'');
 const identity=async req=>{const t=getToken(req);if(!t)return null;if(t&&safeEqual(t,secrets.adminToken))return {id:'owner',name:'Local owner'};
  if(fleet&&t.includes('.')){try{const v=await fleet.authenticate(t);req.fleetPrincipal=v.principal;return v.device;}catch{return null;}}
+ if(fleet){try{const local=fleet.opaqueIdentity(t);if(local){req.fleetPrincipal=local.principal;return local.device;}return fleet.authorizeLocal(db.prepare('SELECT id,name FROM devices WHERE token_hash=?').get(hash(t)));}catch{return null;}}
  return db.prepare('SELECT id,name FROM devices WHERE token_hash=?').get(hash(t));};
 const requireAuth=async(req,res,next)=>{try{req.device=await identity(req);if(!req.device)return res.status(401).json({error:'Pair this device to continue.'});next();}catch{res.status(401).json({error:'Device authentication unavailable.'});}};
 const owner=(req,res,next)=>{if(req.device.id!=='owner')return res.status(403).json({error:'Local owner access required'});next();};
@@ -553,6 +555,8 @@ app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-
 app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:appVersion,...(backendRelease?{releaseDigest:backendRelease.releaseDigest,sourceCommit:backendRelease.sourceCommit}:{})}));
 if(backendArtifacts)mountBackendArtifacts(app,{artifacts:backendArtifacts,nodeAuthorize:fleet?(token,scope)=>fleet.authorizeNode(token,scope):undefined});
 if(fleet)fleet.mountStatus(app);
+// A revoked credential may read ONLY its original deny receipt, never regain access.
+if(fleet)app.get('/api/fleet/revocations/:operationId',route(async(req,res)=>res.set('Cache-Control','no-store').json(await fleet.revocationReceipt(getToken(req),req.params.operationId))));
 const pairAttempts=new Map();
 setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
 app.post('/api/pair',(req,res)=>{
@@ -570,6 +574,9 @@ app.post('/api/pair',(req,res)=>{
 app.use('/api',requireAuth);
 if(fleet){
  app.post('/api/fleet/session',route(async(req,res)=>res.set('Cache-Control','no-store').json(await fleet.session(req.device,req.fleetPrincipal))));
+ app.post('/api/fleet/enroll',route(async(req,res)=>{if(!req.body||Object.keys(req.body).join(',')!=='operationId')return res.status(400).json({error:'Keep the original enrollment operationId.'});res.set('Cache-Control','no-store').json(await fleet.enroll(req.device,req.fleetPrincipal,req.body.operationId));}));
+ app.get('/api/fleet/enrollments/:operationId',route(async(req,res)=>res.set('Cache-Control','no-store').json(await fleet.enrollment(req.device,req.fleetPrincipal,req.params.operationId))));
+ app.post('/api/fleet/revoke',route(async(req,res)=>{if(!req.body||Object.keys(req.body).join(',')!=='operationId')return res.status(400).json({error:'Keep the original revocation operationId.'});res.set('Cache-Control','no-store').json(await fleet.revoke(req.device,req.fleetPrincipal,req.body.operationId));}));
  app.get('/api/backends',(req,res,next)=>{const send=res.json.bind(res);res.json=value=>send({...value,fleet:fleet.discovery()});next();});
 }
 app.use('/api',(req,res,next)=>humanIngress.middleware(req,res,next));
@@ -708,6 +715,7 @@ app.post('/api/device/push',(req,res)=>{
 });
 app.post('/api/device/disconnect',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Device access required.'});
+  if(fleet)fleet.revokeLocal(req.device.id);
   db.prepare('DELETE FROM devices WHERE id=?').run(req.device.id);
   for(const s of sockets.clients)if(s.deviceId===req.device.id)s.close();
   res.json({ok:true});
@@ -944,16 +952,17 @@ function saveAttachment(file,threadId){
 mountOperatorNotifications(app,{db,codex,owner,route,requireId,saveAttachment,notify,promptContext});
 app.get('/api/files/:id',(req,res)=>{const f=db.prepare('SELECT * FROM files WHERE id=?').get(req.params.id);if(!f)return res.sendStatus(404);res.set('Content-Type',f.mime);res.set('Content-Disposition',`inline; filename*=UTF-8''${encodeURIComponent(f.name)}`);res.sendFile(f.disk_path);});
 app.get('/api/devices',owner,(_req,res)=>res.json({devices:db.prepare('SELECT id,name,created_at,last_seen FROM devices').all()}));
-app.delete('/api/devices/:id',owner,(req,res)=>{db.prepare('DELETE FROM devices WHERE id=?').run(req.params.id);for(const s of sockets.clients)if(s.deviceId===req.params.id)s.close();res.json({ok:true});});
+app.delete('/api/devices/:id',owner,(req,res)=>{if(fleet)fleet.revokeLocal(req.params.id);db.prepare('DELETE FROM devices WHERE id=?').run(req.params.id);for(const s of sockets.clients)if(s.deviceId===req.params.id)s.close();res.json({ok:true});});
 server.on('upgrade',async(req,socket,head)=>{
   const device=await identity(req);if(!device||req.url!=='/events'){socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');socket.destroy();return;}
   sockets.handleUpgrade(req,socket,head,ws=>{ws.deviceId=device.id;ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.on('error',()=>{});db.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(now(),device.id);if(nativeHollywood){void hollywood.status(device.id).then(value=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'status',backend:'lax',connected:value.available,binding:value}));});}else{ws.send(JSON.stringify({type:'status',...codex.status()}));ws.send(JSON.stringify({type:'rateLimits',usage:rateLimits.snapshot()}));}if(!nativeHollywood)void rateLimits.refresh();sockets.emit('connection',ws,req);});
-  if(req.fleetPrincipal){const timer=setInterval(async()=>{if(!await identity(req))socket.destroy();},15000);timer.unref();socket.once('close',()=>clearInterval(timer));}
+  if(fleet&&device.id!=='owner'){const timer=setInterval(async()=>{if(!await identity(req))socket.destroy();},15000);timer.unref();socket.once('close',()=>clearInterval(timer));}
 });
 setInterval(()=>{for(const ws of sockets.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000).unref();
 app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.message);if(res.destroyed||res.headersSent)return;res.status(err.status||400).json({error:err.message,...(err.code?{code:err.code}:{})});});
 const port=Number(process.env.PORT||18880);
 server.listen(port,'127.0.0.1',()=>{
+ if(fleet)fleet.startRevocationSync();
  console.log(`NextComp listening on 127.0.0.1:${port}`);
  if(!nativeHollywood){voiceController.restoreQueued();void coordinatorCollector.tick().catch(()=>{});}
  if(nativeAudioIntake)void voiceRecordings.start().catch(error=>console.error('Voice recording recovery unavailable',error.message));

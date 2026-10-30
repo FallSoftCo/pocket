@@ -13,11 +13,11 @@ export function humanInputRoute(method,path){
  return method==='POST'&&(path==='/api/threads'||/^\/api\/threads\/[^/]+\/(?:reply|queue\/resume|replies\/[^/]+)$/.test(path)||/^\/api\/voice\/(?:start|text|native\/(?:start|input|commit)|turns\/[^/]+)$/.test(path));
 }
 export class HumanIngress{
- constructor(db,{now=Date.now}={}){
-  this.db=db;this.now=now;this.delegations=new Map();
+ constructor(db,{now=Date.now,deviceActive=()=>true}={}){
+  this.db=db;this.now=now;this.deviceActive=deviceActive;this.delegations=new Map();
   db.exec('CREATE TABLE IF NOT EXISTS human_admissions(kind TEXT NOT NULL,request_id TEXT NOT NULL,principal TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(kind,request_id)); CREATE TABLE IF NOT EXISTS human_admission_actions(id INTEGER PRIMARY KEY,kind TEXT NOT NULL,request_id TEXT NOT NULL,action TEXT NOT NULL,principal TEXT NOT NULL,created_at INTEGER NOT NULL);');
  }
- active(actor){return actor&&typeof actor.deviceId==='string'&&typeof actor.voiceTurnId==='string'&&this.db.prepare('SELECT 1 FROM devices WHERE id=?').get(actor.deviceId)&&this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND id=? AND state='thinking'").get(actor.deviceId,actor.voiceTurnId);}
+ active(actor){return actor&&typeof actor.deviceId==='string'&&typeof actor.voiceTurnId==='string'&&this.db.prepare('SELECT 1 FROM devices WHERE id=?').get(actor.deviceId)&&this.deviceActive(actor.deviceId)&&this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND id=? AND state='thinking'").get(actor.deviceId,actor.voiceTurnId);}
  delegate(actor,method,path,body){
   if(!humanInputRoute(method,path))return {headers:{},release(){}};
   if(!this.active(actor))throw fail('Voice control needs its original paired device and active voice turn.');
@@ -30,6 +30,7 @@ export class HumanIngress{
   if(!humanInputRoute(req.method,req.originalUrl.split('?')[0]))return next();
   try{
    if(req.device?.id&&req.device.id!=='owner'){
+    if(!this.deviceActive(req.device.id))throw fail('The original human device is no longer authorized.');
     req.humanPrincipal={version:1,kind:'paired-device',deviceId:req.device.id};
     const turn=req.get('X-NextComp-Coordinator-Turn'),origin=req.get('X-NextComp-Coordinator-Origin');
     if(typeof turn==='string'&&/^[a-zA-Z0-9_-]{8,100}$/.test(turn)&&typeof origin==='string'&&/^[a-f0-9]{24}$/.test(origin))

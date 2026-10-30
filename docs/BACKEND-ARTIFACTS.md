@@ -25,12 +25,15 @@ JWT lifetime is 900s, type `nextcomp-device+jwt`, audience
 refresh on another gateway. Original home pairing IDs/database state are kept.
 Remote aliases are stable fleet/account/home/device identities, never token hashes.
 
-Remote authentication and queued remote-device work check original-home status
+In deployed d8c0e5b, remote authentication and queued remote-device work check original-home status
 using read-only `/fleet/v1/devices/<fleet-device-id>`, with a separate node JWT
 scope `device:status` bound to that exact GET path/device. Removing the original
 paired device revokes access across members, including refresh and after restart.
 An unavailable home denies access rather than silently accepting stale revocation
 state. Offline-home failover is therefore NOT certified by this implementation.
+The next server candidate replaces this availability limitation with stable local
+opaque enrollment and durable eventual denial catch-up; see the exact client and
+receipt contract in [FLEET-SERVER-ENROLLMENT.md](FLEET-SERVER-ENROLLMENT.md).
 Device credentials cannot satisfy node routes; node proofs cannot enter human APIs.
 
 ## Immutable transfer and receipts
