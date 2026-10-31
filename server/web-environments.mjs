@@ -44,7 +44,7 @@ export function environmentRoute(path){
  return environmentId?{environmentId,path:url.pathname+url.search}:null;
 }
 export class WebEnvironments {
- constructor({profiles={},fetchImpl=fetch,secure=true,fleet=null}){this.fleet=fleet;this.profiles=profiles;this.fetch=fetchImpl;this.secure=secure;this.lastCatalog=new Map();this.catalogFlights=new Map();this.verified=new Map();this.presentation=new CatalogPresentation();this.provisioning=new Map();this.provisionRetry=new Map();}
+ constructor({profiles={},fetchImpl=fetch,secure=true,fleet=null}={}){this.fleet=fleet;this.profiles=profiles;this.fetch=fetchImpl;this.secure=secure;this.lastCatalog=new Map();this.catalogFlights=new Map();this.verified=new Map();this.presentation=new CatalogPresentation();this.provisioning=new Map();this.provisionRetry=new Map();}
  static fromFile(file,options={}){
   const result=new WebEnvironments(options);let stamp;
   result.refresh=()=>{

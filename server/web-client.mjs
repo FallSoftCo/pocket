@@ -53,6 +53,20 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
  });
  app.get('/web/config',(_req,res)=>res.json({basePath,migrationSourceOrigin,migrationTargetOrigin}));
  app.post('/web/logout',csrf,(req,res)=>{setCookie(res,null);res.json({ok:true});});
+ // Discover already-authorized sources without depending on a stock catalog.
+ app.get('/web/environments',async(req,res,next)=>{
+  const token=cookie(req);if(!token)return res.status(401).json({error:'Pair this browser to continue.'});
+  try{
+   const auth=await forward({...req,method:'GET'},'/api/status',undefined,token);
+   if(!auth.ok){if(auth.status===401)setCookie(res,null);return res.status(auth.status).json({error:'Original browser authorization is unavailable.'});}
+   const identity=await auth.json();
+   if(typeof identity.deviceId!=='string'||!identity.deviceId||identity.deviceId==='owner')return res.status(403).json({error:'Use the original paired browser.'});
+   await environments?.ensure(identity.deviceId,token);
+   const sources=environments?.list(identity.deviceId)||[];
+   res.json({environments:[{id:'current',name:identity.host||'Workstation',available:true},...sources.map(s=>({id:s.id,name:s.name,available:!s.retired}))]});
+  }catch(e){next(e);}
+ });
+
  app.use('/api',async(req,res,next)=>{
   const token=cookie(req);if(!token)return res.status(401).json({error:'Pair this browser to continue.'});
   if(req.method!=='GET'&&req.headers.origin!==origin)return res.status(403).json({error:'Request origin does not match NextComp.'});

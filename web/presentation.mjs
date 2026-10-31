@@ -30,7 +30,7 @@ export function richText(value,resolveUrl=value=>value){
  }return root;
 }
 export function foldRuns(rows){const output=[];let run=null;for(const row of rows){
- if(row.kind==='activity'){if(!run){run={id:'runs/'+row.id,kind:'runs',rows:[]};output.push(run);}run.rows.push(row);}
+ if(row.kind==='activity'){if(!run||run.groupBoundary!==row.groupBoundary){run={id:'runs/'+row.id,kind:'runs',groupBoundary:row.groupBoundary,rows:[]};output.push(run);}run.rows.push(row);}
  else if(['turn','turnEnd'].includes(row.kind)){if(row.text){run=null;output.push({...row,kind:'message',title:'Turn stopped'});}else if(run)run.rows.push(row);}
  else{run=null;output.push(row);}
  }return output;}
