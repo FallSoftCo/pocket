@@ -31,6 +31,11 @@ class HollywoodRoomActivityTest {
   r.put("nativeState",state)
   r.put("room",JSONObject().put("id","cccccccc-cccc-4ccc-8ccc-ccccccccccc1")).put("deliveries",org.json.JSONArray())
   assertEquals("Needs you",hollywoodRoomWork(r,"",emptyList()).label)
+  r.getJSONArray("deliveries").put(JSONObject().put("id","dddddddd-dddd-4ddd-8ddd-ddddddddddd1").put("state","unknown").put("can_cancel",true))
+  val withEarlier=hollywoodRoomWork(r,"",emptyList())
+  assertEquals(1,withEarlier.deliveries.size);assertTrue(withEarlier.currentDeliveries.isEmpty())
+  assertEquals("Needs you",withEarlier.label)
+
 
   val active=HollywoodRoomActivity.read(r,true)!!
   assertTrue(active.native);assertFalse(active.executing);assertTrue(active.needsHuman);assertFalse(active.idle)

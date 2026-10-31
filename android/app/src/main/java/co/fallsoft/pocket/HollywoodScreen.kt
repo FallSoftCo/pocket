@@ -382,7 +382,7 @@ import androidx.lifecycle.repeatOnLifecycle
         }
         ConversationFooter{
         InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-        val singleStop=work.deliveries.filter{it.optBoolean("can_cancel")&&!it.optBoolean("cancellation_requested")&&
+        val singleStop=work.currentDeliveries.filter{it.optBoolean("can_cancel")&&!it.optBoolean("cancellation_requested")&&
             it.s("state")!="cancel_requested"&&client.stopRecord(it.s("id"))==null}.singleOrNull().takeIf{work.verified}
         if(singleStop!=null)key(singleStop.s("id")){
             TextButton({stop(singleStop,false)},enabled=singleStop.s("id") !in stopping,

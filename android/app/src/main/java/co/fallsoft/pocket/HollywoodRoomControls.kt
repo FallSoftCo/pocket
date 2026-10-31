@@ -10,6 +10,7 @@ import org.json.JSONObject
 
 /** Current room work is a separate projection from history and transport health. */
 internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<JSONObject>,val questions:List<JSONObject>,val nativePresent:Boolean=false,val native:HollywoodRoomActivity?=null) {
+    val currentDeliveries get()=if(nativePresent)emptyList() else deliveries
     private fun count(state:String)=deliveries.count{it.s("state")==state}
     val label get()=when {
         !verified->"Status unavailable"
@@ -50,6 +51,7 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
     BilingualLabel(work.label,centered=false,color=if(work.label in listOf("Needs you","Outcome unknown","Blocked"))Coral else Muted)
     if(detailError.isNotBlank())Text(detailError.take(180),color=Coral,maxLines=3)
     if(attentionError.isNotBlank())BilingualLabel("Questions could not refresh",centered=false,color=Coral)
+    if(work.nativePresent&&work.deliveries.isNotEmpty())BilingualLabel("Earlier work",centered=false,color=Muted)
     val shown=work.deliveries.map{it.s("id")}.toSet()
     client.unresolvedStops(room).filter{it.getJSONObject("scope").s("deliveryId") !in shown}.forEach{saved->
         val scope=saved.getJSONObject("scope");val id=scope.s("deliveryId")
