@@ -100,12 +100,13 @@ import androidx.compose.ui.unit.sp
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable internal fun ConversationActionsMenu(expanded:Boolean,onExpandedChange:(Boolean)->Unit,
     modifier:Modifier=Modifier,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,bottomActions:Boolean=false,contextLabel:String?=null,
+    accountUsage:WeeklyUsage?=null,accountSourceLabel:String?=null,
     content:@Composable ColumnScope.()->Unit){
     val context=androidx.compose.ui.platform.LocalContext.current
     // A fresh opening starts with current work before the popup is measured.
     val menuScroll=androidx.compose.runtime.remember(expanded,bottomActions){androidx.compose.foundation.ScrollState(if(bottomActions)Int.MAX_VALUE else 0)}
     Box{
-        UsageDock(modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)})
+        UsageDock(modifier.width(compactUsageDockWidth(accountSourceLabel!=null)),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)},usage=accountUsage?:Pocket.weeklyUsage,accountSourceLabel=accountSourceLabel)
         DropdownMenu(expanded,{onExpandedChange(false)},scrollState=menuScroll,modifier=Modifier.width(300.dp).heightIn(max=if(bottomActions)280.dp else 420.dp).semantics{testTagsAsResourceId=true},
             properties=androidx.compose.ui.window.PopupProperties(focusable=false),content={
                 val report:@Composable ()->Unit={

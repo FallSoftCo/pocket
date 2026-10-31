@@ -125,7 +125,7 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
             if(result.s("backend")=="lax"&&!Pocket.prefs.contains(backendKey)){
                 Pocket.prefs.edit().putString(backendKey,"lax").apply();CodexConversations.suspendReading()
             }
-            Pocket.acceptUsage(result.optJSONObject("usage"))
+            Pocket.acceptUsage(result.optJSONObject("usage"),value.destination)
             if(Pocket.statusRevision==revision){Pocket.codexOnline=result.optBoolean("connected");Pocket.codexConnectionMessage=ConnectionMessages.server(result.optJSONObject("problem")?.s("message").orEmpty())}
             Pocket.host=result.s("host");Pocket.defaultCwd=result.s("defaultCwd")
             val changed=Pocket.prefs.getString(Pocket.key("deviceId"),"")!=result.s("deviceId")

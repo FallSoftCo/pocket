@@ -32,12 +32,18 @@ import java.util.Locale
     return maxOf((72*density.fontScale.coerceAtLeast(1f)).dp,with(density){width.toDp()}+24.dp)
 }
 
-@Composable internal fun compactUsageDockWidth():androidx.compose.ui.unit.Dp{
+@Composable internal fun compactUsageDockWidth(account:Boolean=false):androidx.compose.ui.unit.Dp{
     val density=LocalDensity.current
     val measure=androidx.compose.ui.text.rememberTextMeasurer()
     val settings=measure.measure(androidx.compose.ui.text.AnnotatedString(PocketImmersion.label("Settings")),style=LocalTextStyle.current.copy(fontSize=12.sp)).size.width
     val balance=measure.measure(androidx.compose.ui.text.AnnotatedString("99.9k cr"),style=LocalTextStyle.current.copy(fontSize=16.sp)).size.width
-    return maxOf(with(density){settings.toDp()+8.dp},with(density){balance.toDp()+24.dp},80.dp)
+    val allowance=measure.measure(androidx.compose.ui.text.AnnotatedString("<0.1%"),style=LocalTextStyle.current.copy(fontSize=16.sp)).size.width
+    // The actual value shares its row with a 20dp status icon. Text scaling must
+    // not squeeze the visible allowance out of that row.
+    val accountLabel=if(account)listOf("Last known","Unavailable","Loading…").maxOf{
+        measure.measure(androidx.compose.ui.text.AnnotatedString(PocketImmersion.label(it)),style=LocalTextStyle.current.copy(fontSize=12.sp)).size.width
+    }else 0
+    return maxOf(with(density){settings.toDp()+8.dp},with(density){maxOf(balance,allowance).toDp()+32.dp},with(density){accountLabel.toDp()+8.dp},80.dp)
 }
 
 @Composable fun UsageDetails(onNavigate:()->Unit={}){
@@ -79,30 +85,34 @@ import java.util.Locale
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun UsageDock(modifier:Modifier=Modifier,conversationOnly:Boolean=false,compact:Boolean=false,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,contextLabel:String?=null,onOpen:(()->Unit)?=null){
+@Composable fun UsageDock(modifier:Modifier=Modifier,conversationOnly:Boolean=false,compact:Boolean=false,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,contextLabel:String?=null,onOpen:(()->Unit)?=null,
+    usage:WeeklyUsage=Pocket.weeklyUsage,accountSourceLabel:String?=null){
     var open by remember{mutableStateOf(false)}
     var now by remember{mutableLongStateOf(System.currentTimeMillis())}
     LaunchedEffect(Unit){while(true){delay(30_000);now=System.currentTimeMillis()}}
-    val usage=Pocket.weeklyUsage
+    val accountFacts=accountSourceLabel?.let{accountToolbarFacts(usage,now,Pocket.connected&&Pocket.codexOnline)}
     val stale=usage.isStale(now,Pocket.connected&&Pocket.codexOnline)
     val remaining=usage.remainingPercent
-    val creditPrimary=remaining==0.0&&usage.credits.compact()!=null
+    val creditPrimary=accountFacts==null&&remaining==0.0&&usage.credits.compact()!=null
     val color=when{creditPrimary&&!usage.credits.isStale(now,Pocket.connected&&Pocket.codexOnline)&&usage.continuationState=="existing-credits-available"->NextGreen;remaining==null||stale->Muted;remaining<=20->Coral;remaining<=50->Mint;else->NextGreen}
     val day=usage.resetsAt?.let{SimpleDateFormat("EEE",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     val time=usage.resetsAt?.let{SimpleDateFormat("HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000))}.orEmpty()
     val hasUsage=creditPrimary||remaining!=null
     val hasReset=day.isNotBlank()
-    val hasProfiles=contextLabel!=null||Pocket.environmentProfiles.all().size>1
-    val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*((if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+1)+10.dp}.coerceAtLeast(58.dp)
+    val hasProfiles=accountSourceLabel!=null||contextLabel!=null||Pocket.environmentProfiles.all().size>1
+    val accountLines=(if(accountFacts?.credits!=null)1 else 0)+(if(accountFacts?.freshness?.isNotBlank()==true)1 else 0)
+    val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*((if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+1+accountLines)+10.dp}.coerceAtLeast(58.dp)
     Box(if(compact)modifier.heightIn(min=compactHeight)else modifier.height(usageDockHeight())) {
-    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=listOfNotNull(contextLabel,statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label()).joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
+    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=listOfNotNull(accountSourceLabel,contextLabel,statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label(),accountFacts?.freshness,if(accountFacts!=null)usage.continuationLabel else null).filter{it.isNotBlank()}.joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
         if(compact)Column(Modifier.fillMaxWidth().heightIn(min=compactHeight).padding(vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
                 SymbolIcon(statusIcon?:"Tune",null,Modifier.size(20.dp),spinning=statusSpinning)
-                if(hasUsage)Text(if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=16.sp,lineHeight=20.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
+                if(accountFacts!=null||hasUsage)Text(accountFacts?.primary?:if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=16.sp,lineHeight=20.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
             }
+            accountFacts?.credits?.let{Text(it,color=if(usage.credits.isStale(now,Pocket.connected&&Pocket.codexOnline))Muted else Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)}
             if(hasReset)Text("$day $time",color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
-            if(hasProfiles)BilingualLabel(contextLabel?:Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            accountFacts?.freshness?.takeIf{it.isNotBlank()}?.let{BilingualLabel(it,color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)}
+            if(hasProfiles)BilingualLabel(accountSourceLabel?:contextLabel?:Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=if(accountSourceLabel!=null)2 else 1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             BilingualLabel(statusLabel?:"Settings",color=Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
         }else Column(Modifier.fillMaxSize().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){

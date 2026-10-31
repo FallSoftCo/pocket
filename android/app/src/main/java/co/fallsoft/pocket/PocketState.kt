@@ -46,6 +46,7 @@ object Pocket {
     internal var statusRevision=0L
     var codexConnectionMessage by mutableStateOf("")
     var weeklyUsage by mutableStateOf(WeeklyUsage())
+    internal var weeklyUsageOwner by mutableStateOf<String?>(null)
     var openWithKeyboard by mutableStateOf(false)
     var usageSamples by mutableStateOf(emptyList<UsageSample>())
     var error by mutableStateOf(""); var busy by mutableStateOf(false)
@@ -188,18 +189,28 @@ object Pocket {
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration-$environmentId")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention-$environmentId")
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
-        val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal)).remove(key("usageSamples",wasLocal))
+        val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal)).remove(key("weeklyUsageOwner",wasLocal)).remove(key("usageSamples",wasLocal))
         if(wasLocal)edit.remove(key("automationSecret",true)).putBoolean("automationAllowed",false)
-        edit.apply();weeklyUsage=WeeklyUsage();CodexCatalog.reset();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
+        edit.apply();weeklyUsage=WeeklyUsage();weeklyUsageOwner=null;CodexCatalog.reset();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
         val fallback=environmentProfiles.all().firstOrNull{it.id!=environmentId&&captureEnvironment(it.id)!=null}
         if(fallback!=null){activateEnvironment(fallback.id)}else{token="";base="";pushStatus="Not paired";local=false;prefs.edit().putBoolean("activeLocal",false).apply();LocalMonitorService.stop(context);PocketSpeech.init()}
     }
-    private fun restoreUsage(){usageSamples=try{JSONArray(prefs.getString(key("usageSamples"),"[]")).objects().map{UsageSample(it.optLong("at"),it.optDouble("remaining"),it.optLong("reset"))}.filter{it.at>0&&it.reset>0&&it.remaining.isFinite()&&it.remaining in 0.0..100.0}}catch(_:Exception){emptyList()};weeklyUsage=try{prefs.getString(key("weeklyUsage"),null)?.let{WeeklyUsage.fromJson(JSONObject(it)).copy(stale=true)}?:WeeklyUsage()}catch(_:Exception){WeeklyUsage()}}
-    internal fun acceptUsage(json:JSONObject?){
+    private fun restoreUsage(){
+        val source=captureEnvironment()
+        val trusted=accountUsageCacheMatches(prefs.getString(key("weeklyUsageOwner"),null),source)
+        weeklyUsageOwner=source?.takeIf{trusted}?.let(::accountUsageOwner)
+        // Pre-marker cache entries have no attributable account. Leave them on
+        // disk, but wait for existing authenticated metadata before showing them.
+        usageSamples=if(!trusted)emptyList()else try{JSONArray(prefs.getString(key("usageSamples"),"[]")).objects().map{UsageSample(it.optLong("at"),it.optDouble("remaining"),it.optLong("reset"))}.filter{it.at>0&&it.reset>0&&it.remaining.isFinite()&&it.remaining in 0.0..100.0}}catch(_:Exception){emptyList()}
+        weeklyUsage=if(!trusted)WeeklyUsage(state="unavailable")else try{prefs.getString(key("weeklyUsage"),null)?.let{WeeklyUsage.fromJson(JSONObject(it)).copy(stale=true)}?:WeeklyUsage()}catch(_:Exception){WeeklyUsage(state="unavailable")}
+    }
+    internal fun acceptUsage(json:JSONObject?,source:EnvironmentRequest?=captureEnvironment()){
+        if(source==null||captureEnvironment()?.matches(source)!=true)return
+        weeklyUsageOwner=accountUsageOwner(source)
         weeklyUsage=WeeklyUsage.fromJson(json)
         usageSamples=UsageForecast.record(usageSamples,weeklyUsage)
         prefs.edit().putString(key("usageSamples"),JSONArray().apply{usageSamples.forEach{put(JSONObject().put("at",it.at).put("remaining",it.remaining).put("reset",it.reset))}}.toString()).apply()
-        val edit=prefs.edit();if(json==null)edit.remove(key("weeklyUsage"))else edit.putString(key("weeklyUsage"),json.toString());edit.apply()
+        val edit=prefs.edit().putString(key("weeklyUsageOwner"),weeklyUsageOwner);if(json==null)edit.remove(key("weeklyUsage"))else edit.putString(key("weeklyUsage"),json.toString());edit.apply()
     }
     fun refresh()=CodexCatalog.refresh(explicit=true)
     val sessionCursor get()=CodexCatalog.cursor
@@ -296,7 +307,7 @@ object Pocket {
         when(json.s("type")){
             "hollywoodInbox" -> {coroutineContext[EnvironmentRequestContext]?.destination?.let{HollywoodNotifications.socket(it,json)}}
             "threadRenamed" -> {val applied=PocketNotificationTitles.rename(json.s("threadId"),json.s("name"),json.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=json.optLong("revision"));if(applied)tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(title=json.s("name"))else it}}
-            "rateLimits" -> acceptUsage(json.optJSONObject("usage"))
+            "rateLimits" -> acceptUsage(json.optJSONObject("usage"),coroutineContext[EnvironmentRequestContext]?.destination)
             "sessionInteraction" -> {rememberSessionInteraction(json.s("threadId"),"item:"+json.s("interactionId"));discoverSession(json.s("threadId"))}
             "status" -> {
                 statusRevision++

@@ -27,6 +27,8 @@ import androidx.lifecycle.repeatOnLifecycle
     val origin=Pocket.captureEnvironment()?.takeIf{backendOwner(it.endpoint,it.token)==owner}
     if(origin==null){BilingualLabel("Original connection unavailable",Modifier.padding(16.dp));return}
     val client=remember(owner,binding.s("bindingId"),origin){HollywoodClient(owner,binding,origin.endpoint.trimEnd('/'),origin.token,origin)}
+    val accountUsage=accountUsageForToolbar(Pocket.weeklyUsageOwner,origin,Pocket.captureEnvironment(),Pocket.weeklyUsage)
+    val accountSourceLabel="Account · "+origin.environment.name
     val jobs=rememberCoroutineScope()
     var room by remember(client.bindingId){mutableStateOf(Pocket.prefs.getString("hollywood-room:$owner:${client.bindingId}",client.defaultRoomId)?:client.defaultRoomId)}
     var browsing by remember(client.bindingId){mutableStateOf(false)}
@@ -299,7 +301,7 @@ import androidx.lifecycle.repeatOnLifecycle
                     Modifier.size(48.dp).testTag("native-catalog-find")){SymbolIcon("Search",PocketImmersion.label("Find"),Modifier.size(32.dp),tint=Mint)}
                 ReaderPagingButtons(catalogList)
                 InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-                ConversationActionsMenu(catalogMenu,{catalogMenu=it},modifier=Modifier.testTag("native-catalog-controls"),contextLabel="Work"){
+                ConversationActionsMenu(catalogMenu,{catalogMenu=it},modifier=Modifier.testTag("native-catalog-controls"),contextLabel="Work",accountUsage=accountUsage,accountSourceLabel=accountSourceLabel){
                     TextButton({catalogMenu=false;onSettings()},Modifier.testTag("native-catalog-settings")){BilingualLabel("Settings")}
                     ProfileSwitcher(inlineOptions=true){catalogMenu=false}
                     PocketUpdateControl()
@@ -393,11 +395,11 @@ import androidx.lifecycle.repeatOnLifecycle
         },enabled=scope!=null,modifier=Modifier.size(48.dp).testTag("native-room-keyboard")){
             SymbolIcon("Keyboard",PocketImmersion.label("Keyboard"),Modifier.size(32.dp),tint=Paper)
         }
-        ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,contextLabel=detail.optJSONObject("room")?.s("name")){
+        ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,contextLabel=detail.optJSONObject("room")?.s("name"),accountUsage=accountUsage,accountSourceLabel=accountSourceLabel){
             addressControl()
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             if(activityFeed.historyError.isNotBlank())BilingualLabel("Activity unavailable",color=Coral,centered=false)
-            val account=Pocket.weeklyUsage
+            val account=accountUsage
             if(account.remainingPercent!=null)Text(account.remainingLabel(),color=Muted)
             account.credits.compact()?.let{Text(it,color=Muted)}
             if(account.remainingPercent==null&&account.credits.compact()==null)BilingualLabel("Account usage unavailable",centered=false,color=Muted)
