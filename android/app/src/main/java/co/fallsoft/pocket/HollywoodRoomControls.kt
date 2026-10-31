@@ -9,11 +9,16 @@ import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 
 /** Current room work is a separate projection from history and transport health. */
-internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<JSONObject>,val questions:List<JSONObject>) {
+internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<JSONObject>,val questions:List<JSONObject>,val nativePresent:Boolean=false,val native:HollywoodRoomActivity?=null) {
     private fun count(state:String)=deliveries.count{it.s("state")==state}
     val label get()=when {
         !verified->"Status unavailable"
         questions.isNotEmpty()->"Needs you"
+        nativePresent&&native==null->"Status unavailable"
+        nativePresent&&native?.needsHuman==true->"Needs you"
+        nativePresent&&native?.executing==true->"Running"
+        nativePresent&&native?.uncertain==true->"Status unavailable"
+        nativePresent->"Idle"
         deliveries.any{it.s("state")=="running"&&!it.optBoolean("cancellation_requested")}->"Running"
         count("claimed")>0->"Starting"
         count("pending")>0->"Queued"
@@ -34,7 +39,8 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
     val verified=error.isBlank()&&hollywoodUuid(detail.optJSONObject("room")?.s("id").orEmpty())&&raw!=null&&raw.length()==canonical.size&&deliveries.all{it.s("state") in known}
     val ordered=deliveries.sortedWith(compareBy<JSONObject>{when(it.s("state")){"running"->0;"claimed"->1;"pending"->2;else->3}}.thenBy{it.s("id")})
     val questions=attention.filter{hollywoodAttentionCanRespond(it)}
-    return HollywoodRoomWork(verified,ordered,questions)
+    val nativePresent=HollywoodRoomActivity.usesNative(detail)
+    return HollywoodRoomWork(verified,ordered,questions,nativePresent,if(nativePresent)HollywoodRoomActivity.read(detail,verified)else null)
 }
 
 /** Work stays closest to the anchor; keyed rows cannot retarget a press during live updates. */

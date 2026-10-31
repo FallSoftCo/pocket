@@ -14,6 +14,16 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
         private const val MAX_SAFE=9007199254740991L
         val keys=listOf("pending","claimed","running","cancelRequested","unknown","waitingForHuman")
         val labels=listOf("Queued","Claimed","Running","Stopping","Unknown","Needs you")
+        fun usesNative(room:JSONObject):Boolean {
+            if(!room.has("nativeState"))return false
+            val raw=room.optJSONObject("nativeState")?:return true
+            fun number(key:String):Long? {
+                val value=raw.opt(key)
+                return if(value is Int||value is Long)(value as Number).toLong()else null
+            }
+            return !(number("version")==1L&&number("runtimeCount")==0L&&
+                number("observedAt")?.let{it>0}==true&&raw.optJSONArray("agents")?.length()==0)
+        }
         fun read(room:JSONObject,available:Boolean):HollywoodRoomActivity? {
             if(!available)return null
             val native=room.optJSONObject("nativeState")
@@ -37,14 +47,13 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
                         when(status.optString("type")) {
                             "idle"->Unit
                             "active"->{
-                                counts[2]++
                                 val flags=status.optJSONArray("activeFlags")?:return null
                                 var waiting=false
                                 for(j in 0 until flags.length())when(flags.optString(j)) {
                                     "waitingOnApproval","waitingOnUserInput"->waiting=true
                                     else->return null
                                 }
-                                if(waiting)counts[5]++
+                                if(waiting)counts[5]++ else counts[2]++
                             }
                             "notLoaded","systemError","unavailable"->counts[4]++
                             else->return null

@@ -157,6 +157,8 @@ class HollywoodMixedCatalogNativeTest {
         val config=Configurator.getInstance();val old=config.waitForIdleTimeout;config.waitForIdleTimeout=0
         try{
             await("Room composer not mounted"){device.hasObject(By.text(roomText))&&device.hasObject(By.clazz("android.widget.EditText"))}
+            if(InstrumentationRegistry.getArguments().getString("nativeStateExpected")=="true")
+                await("Open-room footer lost native waiting state"){device.hasObject(By.text("Needs you"))}
             focusedIme("before-send")
             click(By.desc("Send message"))
             await("Synthetic send not admitted"){qa("state").optInt("acceptedSyntheticSends")==1}
@@ -169,6 +171,13 @@ class HollywoodMixedCatalogNativeTest {
             assertEquals("Next draft while request is pending",device.findObject(By.clazz("android.widget.EditText")).text)
             assertEquals(1,qa("state").optInt("acceptedSyntheticSends"))
             capture("accepted-conversation-keyboard-draft")
+            if(InstrumentationRegistry.getArguments().getString("nativeStateExpected")=="true") {
+                systemBack("accepted-send")
+                await("Native room list not visible"){device.hasObject(By.desc("Open Chat for Original room"))}
+                await("Native working/waiting state was replaced by legacy idle"){device.hasObject(By.descContains("1 Needs you"))}
+                capture("native-state-list")
+            }
+
         }finally{config.waitForIdleTimeout=old}
     }
 

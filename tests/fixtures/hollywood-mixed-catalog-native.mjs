@@ -10,6 +10,7 @@ const roomId='cccccccc-cccc-4ccc-8ccc-ccccccccccc1',agent='dddddddd-dddd-4ddd-8d
 const binding={id:'lax',api:3,name:'Synthetic rooms',configured:true,available:true,modes:['rooms','direct'],
  bindingId:'e'.repeat(64),installationId:authority,authorityId:authority,principalId:human,defaultRoomId:roomId,voice:false};
 const room={id:roomId,authority,name:'Original room',owner:agent,purpose:'Synthetic original authority',revision:1};
+const nativeState=()=>process.env.NEXTCOMP_QA_NATIVE_ROOM_STATE==='1'?{nativeState:{version:1,observedAt:Date.now(),runtimeCount:1,agents:[{agentId:agent,nativeThread:'synthetic-native-thread',revision:1,observedAt:Date.now(),expiresAt:Date.now()+75000,status:{type:'active',activeFlags:['waitingOnUserInput']}}]}}:{};
 const thread={id:'existing-session',name:'Original session',cwd:'/synthetic',status:{type:'idle'},canAcceptDirectInput:true,
  preview:'Stock session answer from original stock host',previewRole:'codex',previewKind:'message',activityAt:1700000000000,updatedAt:1700000000000};
 const sockets=new Set(),reads=[],websockets=[];
@@ -44,7 +45,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/api/hollywood/v3/rooms'){
   if(source!=='room'||req.headers['x-hollywood-binding']!==binding.bindingId){wrongSource++;status=403;body={error:'Wrong original room source'};}
   else if(outage){status=503;body={error:'Synthetic room catalog unavailable'};}
-  else body={binding,rooms:[{...room,activity:{version:1,observedAt:Date.now(),pending:0,claimed:0,running:0,cancelRequested:0,unknown:0,waitingForHuman:0}}]};
+  else body={binding,rooms:[{...room,activity:{version:1,observedAt:Date.now(),pending:0,claimed:0,running:0,cancelRequested:0,unknown:0,waitingForHuman:0},...nativeState()}]};
  }else if(path.startsWith('/api/hollywood/v3/')){
   if(source!=='room'||req.headers['x-hollywood-binding']!==binding.bindingId){wrongSource++;status=403;body={error:'Wrong original room source'};}
   else if(path==='/api/hollywood/v3/rooms/'+roomId+'/history'){
@@ -52,7 +53,7 @@ const server=http.createServer(async(req,res)=>{
    const event={id:'00000000-0000-4000-8000-000000000117',seq:1,authority,room:roomId,author:agent,authorName:'Synthetic room agent',audience:'room',kind:'message',body:'Canonical room answer from original authority'};
    body={binding,roomId,view,events:view==='activity'||after>=1?[]:[event],nextCursor:view==='activity'?0:1,hasMore:false,olderCursor:null};
   }else if(path.endsWith('/attention'))body={binding,attention:[],nextCursor:0};
-  else if(path==='/api/hollywood/v3/rooms/'+roomId)body={binding,room,permissions:{can_post:true,can_request:true},actors:[{id:agent,name:'Synthetic room agent',kind:'agent'},{id:human,name:'Synthetic viewer',kind:'human'}],deliveries:[]};
+  else if(path==='/api/hollywood/v3/rooms/'+roomId)body={binding,room,...nativeState(),permissions:{can_post:true,can_request:true},actors:[{id:agent,name:'Synthetic room agent',kind:'agent'},{id:human,name:'Synthetic viewer',kind:'human'}],deliveries:[]};
   else {status=404;body={binding,error:'No synthetic receipt; original remains unknown'};}
  }else if(path==='/api/threads')body={threads:source==='stock'?[thread]:[]};
  else if(/^\/api\/threads\/existing-session(?:\/head)?$/.test(path)){

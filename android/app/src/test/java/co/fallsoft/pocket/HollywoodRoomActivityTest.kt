@@ -29,13 +29,21 @@ class HollywoodRoomActivityTest {
    .put("status",JSONObject().put("type","active").put("activeFlags",org.json.JSONArray().put("waitingOnUserInput")))
   val state=JSONObject().put("version",1).put("observedAt",1000L).put("runtimeCount",1).put("agents",org.json.JSONArray().put(agent))
   r.put("nativeState",state)
+  r.put("room",JSONObject().put("id","cccccccc-cccc-4ccc-8ccc-ccccccccccc1")).put("deliveries",org.json.JSONArray())
+  assertEquals("Needs you",hollywoodRoomWork(r,"",emptyList()).label)
+
   val active=HollywoodRoomActivity.read(r,true)!!
-  assertTrue(active.native);assertTrue(active.executing);assertTrue(active.needsHuman);assertFalse(active.idle)
+  assertTrue(active.native);assertFalse(active.executing);assertTrue(active.needsHuman);assertFalse(active.idle)
+  agent.getJSONObject("status").put("activeFlags",org.json.JSONArray())
+  assertTrue(HollywoodRoomActivity.read(r,true)!!.executing)
+  assertEquals("Running",hollywoodRoomWork(r,"",emptyList()).label)
+  agent.getJSONObject("status").put("activeFlags",org.json.JSONArray().put("waitingOnUserInput"))
   state.put("runtimeCount",2)
   assertTrue(HollywoodRoomActivity.read(r,true)!!.uncertain)
   state.put("runtimeCount",1);agent.put("expiresAt",999L)
   val expired=HollywoodRoomActivity.read(r,true)!!
   assertTrue(expired.uncertain);assertFalse(expired.idle);assertFalse(expired.executing)
+  assertEquals("Status unavailable",hollywoodRoomWork(r,"",emptyList()).label)
   agent.put("expiresAt",2000L).getJSONObject("status").put("type","idle")
   assertTrue(HollywoodRoomActivity.read(r,true)!!.idle)
   state.put("agents",org.json.JSONArray().put(agent).put(agent)).put("runtimeCount",2)
