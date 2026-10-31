@@ -34,10 +34,11 @@ export function foldRuns(rows){const output=[];let run=null;for(const row of row
  else if(['turn','turnEnd'].includes(row.kind)){if(row.text){run=null;output.push({...row,kind:'message',title:'Turn stopped'});}else if(run)run.rows.push(row);}
  else{run=null;output.push(row);}
  }return output;}
-export function usageSummary(usage){
- const weekly=usage?.weekly,remaining=Number(weekly?.remainingPercent),valid=weekly?.remainingPercent!=null&&Number.isFinite(remaining)&&remaining>=0&&remaining<=100;
+export function usageSummary(usage,now=Date.now()){
+ const weekly=usage?.weekly,remaining=weekly?.remainingPercent,valid=typeof remaining==='number'&&Number.isFinite(remaining)&&remaining>=0&&remaining<=100;
  const percent=valid?`${Math.round(remaining*10)/10}% left`:'Usage unavailable',reset=Number(weekly?.resetsAt);
- return {compact:percent,remaining:valid?remaining:null,reset:reset>0?`Resets ${new Date(reset*1000).toLocaleString()}`:'Reset time unavailable',stale:usage?.stale===true||!usage?.updatedAt||Date.now()-usage.updatedAt>120000,credits:usage?.credits?.balance!=null?`${usage.credits.balance} credits`:usage?.credits?.unlimited?'Unlimited credits':'Credits unavailable',continuation:usage?.continuation?.label||'Credit continuation status unavailable'};
+ const balance=usage?.credits?.balance,knownCredit=typeof balance==='number'&&Number.isFinite(balance)&&balance>=0;
+ return {compact:percent,remaining:valid?remaining:null,reset:reset>0?`Resets ${new Date(reset*1000).toLocaleString()}`:'Reset time unavailable',stale:usage?.stale===true||!Number.isSafeInteger(usage?.updatedAt)||usage.updatedAt<=0||now-usage.updatedAt>120000,credits:knownCredit?`${balance} credits`:usage?.credits?.unlimited===true?'Unlimited credits':'Credits unavailable',continuation:usage?.continuation?.label||'Credit continuation status unavailable'};
 }
 export function sessionState(thread){if(thread?.environmentUnavailable)return {label:'Status unavailable',tone:'unknown'};const type=thread?.status?.type||'unavailable';if(type==='active')return {label:'Working',tone:'working'};if(type==='pending'||thread?.pendingCount>0)return {label:'Needs you',tone:'attention'};if(type==='idle')return {label:'Idle',tone:'idle'};return {label:type==='unavailable'?'Status unavailable':type,tone:'unknown'};}
 export function canonicalPage(previous,incoming,{older=false}={}){

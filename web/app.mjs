@@ -2,7 +2,7 @@ import {HistoryReader} from './native-history.mjs';
 import {RequestList} from './request-list.mjs';
 import {InlineMedia} from './media-previews.mjs';
 import {ReviewPane} from './review-pane.mjs';
-import {environmentPath,catalogVisible,catalogTitle} from './environments.mjs';
+import {environmentPath,environmentOf,catalogVisible,catalogTitle} from './environments.mjs';
 import {SessionStore} from './session-store.mjs';
 import {animatedSymbol,setSymbolMotionReady} from './symbol-motion.mjs';
 import {ReadFeedback} from './read-feedback.mjs';
@@ -16,6 +16,7 @@ import {importPreviousProfile} from './migration.mjs';
 import {RoomClient,isRoom,sourcePath,canAnswer} from './room-client.mjs';
 import {roomState,RoomHistory} from './room-model.mjs';
 import {deliveryAccepted,bindingMatches,jsonEqual} from './receipt-policy.mjs';
+import {AccountUsageCache} from './account-usage.mjs';
 const base=clientBase(import.meta.url);
 setSymbolMotionReady(false);
 function setLabel(node,text){const source=String(text??'');if(node.dataset.labelSource!==source){node.dataset.labelSource=source;node.textContent=source;if(node.tagName==='BUTTON')node.setAttribute('aria-label',source);}}
@@ -30,6 +31,7 @@ readFeedback.select(scope);
 
 const historyReader=new HistoryReader((...args)=>api(...args));
 const rooms=new RoomClient((...args)=>api(...args));
+const accountUsage=new AccountUsageCache(),accountFlights=new Map();
 let roomEntries=[],roomView='all';const roomTargets=new Map();
 const targetFor=id=>{if(!roomTargets.has(id))roomTargets.set(id,read('roomTarget.'+deviceId+'.'+id,{recipientId:null,audience:'room',sourceEventId:null}));return roomTargets.get(id);};
 const cache=new SessionStore(),receipts=new Set(),notifySeen=new Set();cache.protect(scope);
@@ -116,7 +118,7 @@ async function open(id){
  if(isRoom(id)&&!rooms.entries.has(id)){void run(()=>refreshList())();await rooms.waitForEntry(id);}
  saveDraft();saveView();for(const panel of document.querySelectorAll(':popover-open'))panel.hidePopover();scope=id;cache.protect(scope);readFeedback.select(scope);write('scope',scope);const view=readerViews.get(readerKey(id));follow=view?.follow??true;
  current=id==='coordinator'?null:cache.get(id)?.snapshot||null;openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');openedScope=scope;$('requests').dataset.signature='';$('error').hidden=true;$('transcript').replaceChildren();$('attention-panel').hidden=true;$('reports-panel').hidden=true;document.body.classList.add('chat-open');renderHeader();renderList();renderTranscript();renderRequests();renderOutbox();renderNotes();restoreView(view);
- await refreshConversation();if(scope===id){if(follow)$('transcript').scrollTop=$('transcript').scrollHeight;else restoreView(view);}
+ renderUsage();void refreshAccountUsage();await refreshConversation();if(scope===id){if(follow)$('transcript').scrollTop=$('transcript').scrollHeight;else restoreView(view);}
 }
 async function refreshConversation(before=null){
  const selected=scope,selectedView=roomView,hasSnapshot=cache.has(selected);const request=lanes.run(readerKey(selected),before!==null,async()=>{
@@ -260,9 +262,9 @@ async function reconcilePending(){if(deliveryFlight)return deliveryFlight;if(!pe
 let runtimeConnected=null;
 function handleEvent(m){
  if(m.type==='hollywoodInbox'||m.type==='roomEvent'||m.type==='roomNativeState'){scheduleRefresh({head:isRoom(scope),catalog:true});return;}
- if(m.type==='environmentStatus'){scheduleRefresh({head:false,catalog:true});return;}
+ if(m.type==='environmentStatus'){if(m.available===false||m.connected===false)accountUsage.unavailable(m.environmentId);if(m.available===true&&accountSource().environment===m.environmentId)void refreshAccountUsage();renderUsage();scheduleRefresh({head:false,catalog:true});return;}
  if(immersion.handle(m))return;
- if(m.type==='rateLimits'){status={...status,usage:m.usage};renderUsage();return;}
+ if(m.type==='rateLimits'){const environment=m.environmentId||'current';if(environment==='current')status={...status,usage:m.usage};accountUsage.limits(environment,m.usage);renderUsage();return;}
  if(m.type==='status'){
   const recovered=runtimeConnected===false&&m.connected===true;runtimeConnected=m.connected;
   setLabel($('connection'),m.connected===false?'Codex reconnecting…':'Connected');
@@ -306,7 +308,7 @@ function connectEvents(){
  clearTimeout(reconnectTimer);if(!authenticated)return;ws?.close();
  ws=new WebSocket(clientURL(base,'events').replace(/^http/,'ws'));const own=ws;
  ws.onopen=()=>{$('connection').textContent='Connected';void run(async()=>{await Promise.all([refreshList(),refreshConversation(),refreshAttention()]);await reconcilePending();})()};
- ws.onmessage=e=>{let m;try{m=JSON.parse(e.data);}catch{return;}handleEvent(m);};
+ ws.onmessage=e=>{if(ws!==own||!authenticated)return;let m;try{m=JSON.parse(e.data);}catch{return;}handleEvent(m);};
  ws.onclose=()=>{if(ws!==own||!authenticated)return;$('connection').textContent='Reconnecting…';reconnectTimer=setTimeout(connectEvents,3000);};ws.onerror=()=>own.close();
 }
 let refreshTimer,lastHeadRefresh=0;const requestedHeads=new Set();let requestedCatalog=false,requestedAttention=false;
@@ -342,13 +344,29 @@ for(const [id,action,body] of [['watch','watch',()=>({enabled:!current?.watched}
 $('rename').onclick=run(async()=>{const name=prompt('Session name',current?.thread?.name||'');if(name){await api(`/api/threads/${scope}/rename`,{name});await refreshConversation();await refreshList({invalidate:true});}});$('save-turn').onclick=run(async()=>{await api(`/api/threads/${scope}/settings`,{model:$('model').value,effort:$('effort').value,mode:$('turn-mode').value==='plan'?'plan':'default'});$('controls-dialog').hidePopover?.();$('controls-dialog').close();await refreshConversation();});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;$('install').hidden=false;});$('install').onclick=run(async()=>{await installEvent?.prompt();installEvent=null;$('install').hidden=true;});
 window.addEventListener('online',()=>{if(authenticated){connectEvents();scheduleRefresh();}});window.addEventListener('offline',()=>{$('connection').textContent='Offline · drafts saved';});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&authenticated){scheduleRefresh();if(ws?.readyState!==WebSocket.OPEN)connectEvents();}});window.addEventListener('pagehide',()=>{saveDraft();void voice.close();});window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();$('search-panel').hidden=false;$('search').focus();}if(e.key==='Escape'&&!document.querySelector('dialog[open],:popover-open')&&innerWidth<=760)document.body.classList.remove('chat-open');});
-setInterval(()=>{if(!authenticated||polling||document.visibilityState!=='visible')return;polling=true;void run(async()=>{await Promise.all([refreshConversation(),refreshAttention()]);if(newPending)await reconcileStart();})().finally(()=>polling=false);void run(()=>refreshList())();},10000);
+setInterval(()=>{if(!authenticated||polling||document.visibilityState!=='visible')return;renderUsage();polling=true;void run(async()=>{await Promise.all([refreshConversation(),refreshAttention()]);if(newPending)await reconcileStart();})().finally(()=>polling=false);void run(()=>refreshList())();},10000);
 if('serviceWorker' in navigator)navigator.serviceWorker.register(clientURL(base,'sw.js'),{scope:base.pathname}).catch(()=>{});
 const immersion=new ImmersionLayer(api,base,text=>{$('immersion-state').textContent=text;$('immersion-enabled').checked=immersion.enabled;});
 $('immersion-enabled').onchange=run(()=>immersion.setEnabled($('immersion-enabled').checked));
 void boot().then(()=>{if(authenticated)void immersion.load();});
 
-function renderUsage(){const usage=usageSummary(status?.usage);setLabel($('usage'),usage.compact);$('usage').title=usage.reset+(usage.stale?' · Last known':'');const box=$('account-usage');box.replaceChildren(el('strong','',usage.compact),el('p','',usage.reset),el('p','',usage.credits),el('p','muted',usage.continuation),el('p','muted',usage.stale?'Last known observation':'Current account observation'));}
+function accountSource(){
+ if(isRoom(scope)){try{const route=rooms.route(scope,{requireAvailable:false});return {environment:route.environment,name:route.name};}catch{return {environment:null,name:'Original room source unavailable'};}}
+ const environment=environmentOf(scope)||'current',name=threads.find(t=>t.id===scope)?.environmentName||(environment==='current'?status?.host:rooms.sources.find(s=>s.id===environment)?.name)||environment;
+ return {environment,name};
+}
+async function refreshAccountUsage(){
+ const source=accountSource(),owner=deviceId;if(!source.environment||!owner||!accountUsage.needsStatus(source.environment))return;
+ const key=owner+'/'+source.environment;if(accountFlights.has(key))return accountFlights.get(key);
+ const work=(async()=>{try{const value=await api(sourcePath(source.environment,'/api/status'),undefined,{timeout:4000});if(deviceId===owner)accountUsage.status(source.environment,value,source.name);}catch{if(deviceId===owner)accountUsage.unavailable(source.environment);}finally{accountFlights.delete(key);if(deviceId===owner)renderUsage();}})();accountFlights.set(key,work);return work;
+}
+function renderUsage(){
+ accountUsage.profile(deviceId);if(status?.deviceId===deviceId&&!accountUsage.observations.has('current'))accountUsage.status('current',status,status.host);
+ const source=accountSource(),usage=accountUsage.view(source.environment,source.name);
+ setLabel($('usage'),usage.label);$('usage').title=usage.provenance+' · '+usage.reset+' · '+usage.freshness;
+ const toolbarUsage=$('conversation-usage');if(toolbarUsage){setLabel(toolbarUsage,usage.label+' · '+usage.source);toolbarUsage.dataset.usageState=usage.state;toolbarUsage.dataset.usageEnvironment=usage.environment||'';toolbarUsage.title=usage.reset+' · '+usage.freshness;toolbarUsage.setAttribute('aria-label',usage.provenance+'; '+usage.label+'; '+usage.reset+'; '+usage.freshness);}
+ const box=$('account-usage');box.replaceChildren(el('strong','',usage.label),el('p','',usage.provenance),el('p','',usage.reset),el('p','',usage.credits),el('p','muted',usage.creditStale?'Last known or unavailable credit observation':'Current credit observation'),el('p','muted',usage.continuation),el('p','muted',usage.freshness));
+}
 $('usage').onclick=()=>{$('settings-dialog').showModal();renderUsage();};
 
 function renderNotes(){if(review)review.update({scope,pending:isRoom(scope)?(current?.roomAttention||[]).filter(v=>v.attention?.state==='pending').map(v=>({id:v.attention.id})):current?.pending||[],notes:current?.notes||[],rows:cache.get(scope)?.rows||[],notifications:attentionItems});}
@@ -361,6 +379,7 @@ $('toggle-keyboard').onclick=()=>{$('composer').classList.toggle('keyboard-open'
 let playbackVolume=read('playbackVolume',1);function volume(){voice.volume=playbackVolume;if(voice.audio)voice.audio.volume=playbackVolume;$('playback-volume').textContent=playbackVolume===0?'Muted':`${playbackVolume*100}%`;}$('playback-volume').onclick=()=>{playbackVolume=playbackVolume===0?.5:playbackVolume===.5?1:0;write('playbackVolume',playbackVolume);volume();};volume();
 // One bottom control surface; reading space is not consumed by a second header.
 const toolbar=document.querySelector('.transcript-toolbar'),header=document.querySelector('.conversation-header');
+const conversationUsage=button('Usage unavailable',()=>{renderUsage();anchorPanel($('settings-dialog'),conversationUsage);});conversationUsage.id='conversation-usage';conversationUsage.className='conversation-usage';conversationUsage.dataset.accountUsage='';toolbar.append(conversationUsage);
 toolbar.prepend($('back'));toolbar.append($('parent'),$('session-menu'));for(const control of toolbar.querySelectorAll('button'))control.type='button';$('composer').append(toolbar);header.classList.add('footer-identity');$('composer').prepend(header);
 $('draft').addEventListener('focus',()=>{$('composer').classList.add('keyboard-open');});
 
@@ -452,7 +471,7 @@ function changeRoomTarget(target){
 }
 roomRecipient.onchange=run(()=>changeRoomTarget({...targetFor(scope),recipientId:roomRecipient.value||null}));
 roomAudience.onchange=run(()=>{if(roomAudience.value==='direct'&&!targetFor(scope).recipientId){renderHeader();throw Error('Choose an explicit recipient before private input.');}changeRoomTarget({...targetFor(scope),audience:roomAudience.value});});
-roomGateway.onchange=run(async()=>{saveDraft();saveView();rooms.select(scope,roomGateway.value);current=null;openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');renderHeader();await refreshConversation();});
+roomGateway.onchange=run(async()=>{saveDraft();saveView();rooms.select(scope,roomGateway.value);current=null;openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');renderHeader();renderUsage();void refreshAccountUsage();await refreshConversation();});
 roomProjection.onchange=run(async()=>{saveView();roomView=roomProjection.value;const history=rooms.history(scope,roomView),view=readerViews.get(readerKey());follow=view?.follow??true;cache.set(scope,{rows:history.rows(),hasEarlier:history.olderCursor!==null,before:history.olderCursor,snapshot:current});renderHeader();renderTranscript();restoreView(view);await refreshConversation();});
 function roomVoiceOptions(){
  if(!isRoom(scope)){if(scope==='coordinator'&&status?.backend==='lax')throw Error('Choose an exact room and agent before recording.');return {};}
