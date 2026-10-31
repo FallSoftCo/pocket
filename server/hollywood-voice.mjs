@@ -46,7 +46,7 @@ export class HollywoodVoice {
   const e=value.event,deliveries=value.deliveries;
   if(!value.accepted||!uuid(e?.id)||e.authority!==d.binding.authorityId||e.author!==d.binding.principalId||e.room!==d.roomId||e.body!==row.text||
     e.kind!=='request'||e.audience!==d.audience||e.recipient!==d.recipientId||(e.source??null)!==(d.sourceEventId??null)||
-    !Array.isArray(deliveries)||deliveries.length!==1||deliveries[0].agent!==d.recipientId)throw fail('Original recording receipt is unconfirmed.',502);
+    !Array.isArray(deliveries)||!(deliveries.length===1&&deliveries[0].agent===d.recipientId||deliveries.length===0&&e.data?.conversationVersion===1&&e.data?.authorKind==='human'))throw fail('Original recording receipt is unconfirmed.',502);
   return e;
  }
  async dispatch(device,id){
@@ -79,21 +79,29 @@ export class HollywoodVoice {
   const outputs=JSON.parse(row.outputs);let cursor=page.nextCursor;
   for(let count=0;count<5;count++){
    for(const item of page.events){
-    if(item.source!==event.id||item.author!==d.recipientId||item.room!==d.roomId)continue;
-    if(['message','result'].includes(item.kind)&&!outputs.some(o=>o.id===item.id))outputs.push({id:item.id,text:item.body,kind:item.kind});
+    if((item.source!==event.id&&item.data?.humanInputEventId!==event.id)||item.author!==d.recipientId||item.room!==d.roomId)continue;
+    if(item.recipient&&item.recipient!==d.binding.principalId)continue;
+    if(['message','result'].includes(item.kind)&&!outputs.some(o=>o.id===item.id))outputs.push({id:item.id,text:item.body,kind:item.kind,...(item.data?.responseVersion===1?{phase:item.data.responsePhase}: {})});
    }
    cursor=page.nextCursor;if(page.events.length<100||count===4)break;
    page=await client.call('rooms/'+d.roomId+'/history',{query:{after:cursor,limit:100}});
   }
   const delivery=receipt.deliveries[0];
-  // Do not settle before the result event was actually read through this cursor.
-  const resultSeen=!delivery.result_event||outputs.some(o=>o.id===delivery.result_event);
-  const state=delivery.state==='completed'&&resultSeen?'completed':['failed','cancelled'].includes(delivery.state)&&resultSeen?'failed':delivery.state==='unknown'?'unknown':'thinking';
+  let state;
+  if(delivery){
+   // Preserve original legacy receipts and their original cursor semantics.
+   const resultSeen=!delivery.result_event||outputs.some(o=>o.id===delivery.result_event);
+   state=delivery.state==='completed'&&resultSeen?'completed':['failed','cancelled'].includes(delivery.state)&&resultSeen?'failed':delivery.state==='unknown'?'unknown':'thinking';
+  }else{
+   // This is response availability, never inferred completion of all work.
+   state=outputs.some(o=>['answer','blocked'].includes(o.phase))?'completed':'thinking';
+  }
+  const answers=outputs.filter(o=>['answer','blocked'].includes(o.phase));
   const messages=outputs.filter(o=>o.kind==='message');
-  const response=(messages.length?messages:outputs).map(o=>o.text).join('\n\n');
+  const response=(answers.length?answers:messages.length?messages:outputs).map(o=>o.text).join('\n\n');
   const bounded=response.length>15000?response.slice(0,14900)+'\nFurther details remain in the room.':response;
   this.db.prepare('UPDATE hollywood_voice_turns SET event=?,cursor=?,outputs=?,response=?,state=?,error=? WHERE device=? AND id=?')
-    .run(event.id,cursor,JSON.stringify(outputs),bounded||null,state,state==='unknown'?'Original native delivery is unknown; do not repeat.':state==='failed'?'Native work '+delivery.state+'.':null,device,id);
+    .run(event.id,cursor,JSON.stringify(outputs),bounded||null,state,state==='unknown'?'Original native delivery is unknown; do not repeat.':state==='failed'?'Native work '+delivery?.state+'.':null,device,id);
   return this.get(device,id);
  }
  async history(device,before=Number.MAX_SAFE_INTEGER){

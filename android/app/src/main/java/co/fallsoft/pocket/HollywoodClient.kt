@@ -308,7 +308,10 @@ internal fun hollywoodMessageMatches(identity:JSONObject,scope:HollywoodScope,bo
         event.s("room")!=scope.room||event.s("kind")!=scope.kind||event.s("body")!=body.s("body")||event.s("audience")!=scope.audience||
         event.s("recipient")!=scope.recipient||event.s("source")!=scope.sourceEvent.orEmpty())return false
     val deliveries=receipt.optJSONArray("deliveries")?.objects()?:return false
-    return if(scope.kind=="message")deliveries.isEmpty()else deliveries.size==1&&deliveries.single().s("agent")==scope.recipient
+    val conversation=event.optJSONObject("data")
+    return if(scope.kind=="message")deliveries.isEmpty()
+        else if(deliveries.isEmpty())conversation?.optInt("conversationVersion")==1&&conversation.s("authorKind")=="human"
+        else deliveries.size==1&&deliveries.single().s("agent")==scope.recipient
 }
 
 /** The server decides callback lifetime; a conversation has no delivery claim. */

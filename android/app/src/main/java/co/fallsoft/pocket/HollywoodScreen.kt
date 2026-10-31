@@ -373,7 +373,7 @@ import androidx.lifecycle.repeatOnLifecycle
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
         if(showTextInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){ConversationComposerRow{
             RoomDraftComposerScope{
-            ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f).focusRequester(keyboardFocus),enabled=scope!=null&&!busy,
+            ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f).focusRequester(keyboardFocus),enabled=scope!=null,
                 onSend={if(!busy&&pending==null&&inputState.value.text.isNotBlank()&&detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true)send()},placeholder={BilingualLabel("Message…",centered=false)})
             }
             ConversationSendButton(hasDraft,scope!=null&&!busy&&pending==null&&hasDraft&&
@@ -476,7 +476,7 @@ import androidx.lifecycle.repeatOnLifecycle
     val request=attention.getJSONObject("request")
     val questions=request.optJSONArray("questions")?.objects().orEmpty()
     val approval=attention.s("method") !in listOf("hollywood/question","item/tool/requestUserInput")
-    val open=attention.s("state")=="pending"&&current.s("deliveryState") in listOf("claimed","running")&&pending==null
+    val open=hollywoodAttentionCanRespond(current)&&pending==null
     fun answer(decision:String?=null,inspect:Boolean=false){
         busy=true;jobs.launch{try{
             val fresh=client.call("attention/$id")

@@ -13,9 +13,14 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
         val item=data?.s("itemId").orEmpty()
         val thread=data?.s("thread").orEmpty()
         val native=data?.s("type")=="executionActivity"
+        val lifecycle=data?.s("type")=="executorState"
         val structured=native&&data?.s("nativeType") in listOf("planUpdate","goalState")
         val rawStatus=data?.s("status").orEmpty()
         val status=when{
+            lifecycle&&data?.s("deliveryState") in listOf("completed","cancelled")->"completed"
+            lifecycle&&data?.s("deliveryState")=="failed"->"failed"
+            lifecycle&&data?.s("deliveryState") in listOf("pending","claimed","running","cancel_requested")->"inProgress"
+            lifecycle->"unknown"
             native&&data?.s("phase")=="completed"->rawStatus.takeIf{it in listOf("failed","declined")}?: "completed"
             rawStatus in listOf("inProgress","completed","failed","declined","unknown")->rawStatus
             native&&data?.s("phase")=="started"->"inProgress"
@@ -23,10 +28,10 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
         }
         // Execution observations never acquire chat semantics, including native
         // commentary. Deliberate room messages come only from conversation events.
-        val activity=if(native)!structured else event.s("kind")=="artifact"&&item.isNotBlank()&&thread.isNotBlank()&&
+        val activity=lifecycle||if(native)!structured else event.s("kind")=="artifact"&&item.isNotBlank()&&thread.isNotBlank()&&
             rawStatus in listOf("inProgress","completed","failed","declined","unknown")
         val identity=JSONArray(if(structured)listOf(event.s("authority"),author,data?.s("deliveryId"),data?.optLong("generation"),thread,data?.s("turn"),data?.s("nativeType"),data?.optJSONObject("nativeGoal")?.s("goalId"))else if(native)listOf(event.s("authority"),author,data?.s("deliveryId"),
-            data?.optLong("generation"),thread,data?.s("turn"),item)else listOf(author,thread,item)).toString()
+            data?.optLong("generation"),thread,data?.s("turn"),item)else if(lifecycle)listOf(event.s("authority"),data?.s("deliveryId"),data?.optLong("generation"),data?.s("executorId"),"executorState")else listOf(author,thread,item)).toString()
         val actionIdentity=if(native&&data?.optInt("activityVersion")==1&&data.s("actionId").isNotBlank())
             JSONArray(listOf(event.s("authority"),data.s("actionId"))).toString()else identity
         val previous=if(activity||structured)operations[actionIdentity]else null
