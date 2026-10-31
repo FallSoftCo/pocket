@@ -229,7 +229,7 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
         val attention=value.getJSONObject("attention");val scope=value.getJSONObject("scope");val id=attention.s("id")
         require(attentionPending(id)==null){"Inspect the original pending response first"}
         require(scope.s("authorityId")==authorityId&&scope.s("attentionId")==id)
-        require(attention.s("state")=="pending"&&value.s("deliveryState") in listOf("claimed","running")){"This native request is no longer accepting answers"}
+        require(hollywoodAttentionCanRespond(value)){"This native request is no longer accepting answers"}
         val body=JSONObject().put("operationId","phone-attention:"+UUID.randomUUID()).put("scope",JSONObject(scope.toString())).put("response",JSONObject(response.toString()))
         val intent=JSONObject().put("binding",JSONObject(identity.toString())).put("body",body).put("state","saved")
         persist("attention:$owner:$bindingId:$id",intent);intent
@@ -309,4 +309,22 @@ internal fun hollywoodMessageMatches(identity:JSONObject,scope:HollywoodScope,bo
         event.s("recipient")!=scope.recipient||event.s("source")!=scope.sourceEvent.orEmpty())return false
     val deliveries=receipt.optJSONArray("deliveries")?.objects()?:return false
     return if(scope.kind=="message")deliveries.isEmpty()else deliveries.size==1&&deliveries.single().s("agent")==scope.recipient
+}
+
+/** The server decides callback lifetime; a conversation has no delivery claim. */
+internal fun hollywoodAttentionCanRespond(value:JSONObject):Boolean {
+    val attention=value.optJSONObject("attention")?:return false
+    val scope=value.optJSONObject("scope")?:return false
+    if(attention.s("state")!="pending"||!value.optBoolean("canRespond",false))return false
+    if(scope.has("conversationVersion")){
+        if(scope.optInt("conversationVersion",0)!=1)return false
+        return listOf("authorityId","attentionId","agentId","roomId","sourceEventId").all{hollywoodUuid(scope.s(it))}&&
+            scope.s("authorityId")==attention.s("authority")&&scope.s("sourceEventId")==attention.s("event")&&
+            listOf("nativeThread","nativeTurn").all{scope.s(it).length in 1..128}&&
+            scope.s("requestDigest").matches(Regex("[0-9a-f]{64}"))&&
+            scope.s("attentionId")==attention.s("id")&&scope.s("agentId")==attention.s("agent")&&
+            scope.s("roomId")==attention.s("room")&&scope.s("nativeThread")==attention.s("native_thread")&&
+            scope.s("nativeTurn")==attention.s("native_turn")&&scope.s("requestDigest")==attention.s("digest")
+    }
+    return value.s("deliveryState") in listOf("claimed","running")||value.s("responseMode")=="same-agent-context-input"
 }

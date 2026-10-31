@@ -33,7 +33,7 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
     val known=setOf("pending","claimed","running","cancel_requested","blocked","unknown","completed","failed","cancelled")
     val verified=error.isBlank()&&hollywoodUuid(detail.optJSONObject("room")?.s("id").orEmpty())&&raw!=null&&raw.length()==canonical.size&&deliveries.all{it.s("state") in known}
     val ordered=deliveries.sortedWith(compareBy<JSONObject>{when(it.s("state")){"running"->0;"claimed"->1;"pending"->2;else->3}}.thenBy{it.s("id")})
-    val questions=attention.filter{it.optJSONObject("attention")?.s("state")=="pending"&&it.s("deliveryState") in listOf("claimed","running")}
+    val questions=attention.filter{hollywoodAttentionCanRespond(it)}
     return HollywoodRoomWork(verified,ordered,questions)
 }
 

@@ -125,10 +125,16 @@ export function hollywoodRequest(method,tail,query,body){
       !['room','direct'].includes(body.audience)||body.recipientId!=null&&!uuid(body.recipientId)||body.sourceEventId!=null&&!uuid(body.sourceEventId)||
       body.audience==='direct'&&!body.recipientId)throw fail(400,'Keep an exact room, audience and stable message identity.','HOLLYWOOD_REQUEST_REJECTED');
   }else if(method==='POST'&&p.length===3&&p[0]==='attention'&&uuid(p[1])&&p[2]==='response'){
-    if(!fields(body,['operationId','scope','response'])||!operation(body.operationId)||!fields(body.scope,['authorityId','attentionId','deliveryId','agentId','roomId','hostId','generation','nativeThread','nativeTurn','requestDigest'])||
-      body.scope.attentionId!==p[1]||!['authorityId','attentionId','deliveryId','agentId','roomId','hostId'].every(key=>uuid(body.scope[key]))||
-      !Number.isSafeInteger(body.scope.generation)||body.scope.generation<1||!['nativeThread','nativeTurn'].every(key=>typeof body.scope[key]==='string'&&body.scope[key].length>0&&body.scope[key].length<=128)||
-      !/^[0-9a-f]{64}$/.test(body.scope.requestDigest))throw fail(400,'Answer the exact captured Hollywood attention.','HOLLYWOOD_REQUEST_REJECTED');
+    const scope=body?.scope;
+    const common=['authorityId','attentionId','agentId','roomId','nativeThread','nativeTurn','requestDigest'];
+    const conversation=scope?.conversationVersion===1;
+    const keys=conversation?[...common,'conversationVersion','sourceEventId']:[...common,'deliveryId','hostId','generation'];
+    const ids=conversation?['authorityId','attentionId','agentId','roomId','sourceEventId']:['authorityId','attentionId','agentId','roomId','deliveryId','hostId'];
+    if(!fields(body,['operationId','scope','response'])||!operation(body.operationId)||!fields(scope,keys)||Object.keys(scope).length!==keys.length||
+      scope.attentionId!==p[1]||!ids.every(key=>uuid(scope[key]))||
+      !conversation&&(!Number.isSafeInteger(scope.generation)||scope.generation<1)||
+      !['nativeThread','nativeTurn'].every(key=>typeof scope[key]==='string'&&scope[key].length>0&&scope[key].length<=128)||
+      !/^[0-9a-f]{64}$/.test(scope.requestDigest))throw fail(400,'Answer the exact captured Hollywood attention.','HOLLYWOOD_REQUEST_REJECTED');
     const response=body.response;
     const approval=fields(response,['decision'])&&['accept','decline'].includes(response.decision);
     const question=fields(response,['answers'])&&response.answers&&typeof response.answers==='object'&&!Array.isArray(response.answers)&&Object.values(response.answers).every(answer=>fields(answer,['answers'])&&Array.isArray(answer.answers)&&answer.answers.length>0&&answer.answers.length<=12&&answer.answers.every(text=>typeof text==='string'));
