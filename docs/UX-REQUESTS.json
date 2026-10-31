@@ -3245,7 +3245,7 @@
     {
       "id": "room-visible-toolbar-account-usage-20261031",
       "request": "Show account usage in the room toolbar, matching the sessions toolbar; deliver next alongside web room integration. User explicitly requests this as the next room-owned implementation and delivery cycle.",
-      "status": "Integrated into Global-owned159/alpha141 candidate; Android source unit/compile proof and browser unit/HTTP proof recorded. Actual rendered large-footer failure retained and corrected source is under independent requalification. Signed/native/federated read and publication gates remain; not delivered.",
+      "status": "Integrated into Global-owned159/alpha141 candidate. Android29 JVM cases and main/instrumentation compile; browser24 own focused cases. Independent actual Chromium3a5094a passes desktop/touch/2x-footer usage, shared-caption and pane reachability plus original Send/Reply/draft journeys; separate38 synthetic regressions pass. Original rendered failures retained. Signed159/native-device/authenticated live-browser and final publication gates remain; not delivered.",
       "acceptance": [
         "Usage stays visible in the room bottom toolbar, not hidden inside controls menu.",
         "Reuse existing shared account usage presentation and cheap cached observation; no separate per-room quota transport/model polling.",
