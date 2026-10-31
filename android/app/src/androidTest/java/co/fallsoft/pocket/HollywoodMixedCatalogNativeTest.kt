@@ -141,6 +141,37 @@ class HollywoodMixedCatalogNativeTest {
         .put("bindingId","e".repeat(64)).put("installationId",authority).put("authorityId",authority)
         .put("principalId","bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb").put("defaultRoomId",roomId).put("voice",false)
 
+    @Test fun acceptedConversationSendKeepsKeyboardAndNewDraft(){
+        requireOwnedNativeTarget(device)
+        device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+        val roomOwner=backendOwner(base,"synthetic-mixed-room")
+        check(prefs.edit().clear().putString("environments:v1",JSONArray().put(JSONObject().put("id","room-host").put("name","Room host")).toString())
+            .putString("activeEnvironment","room-host").putString("environment:room-host:server",base)
+            .putString("environment:room-host:token","synthetic-mixed-room").putString("backend:"+roomOwner,"lax").commit())
+        main{Pocket.init(context)}
+        val client=HollywoodClient(roomOwner,binding(),base,"synthetic-mixed-room")
+        val scope=HollywoodScope(roomId,agent,"room",null,"request")
+        client.saveDraft(scope,"First human request")
+        main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+        val config=Configurator.getInstance();val old=config.waitForIdleTimeout;config.waitForIdleTimeout=0
+        try{
+            await("Room composer not mounted"){device.hasObject(By.text(roomText))&&device.hasObject(By.clazz("android.widget.EditText"))}
+            focusedIme("before-send")
+            click(By.desc("Send message"))
+            await("Synthetic send not admitted"){qa("state").optInt("acceptedSyntheticSends")==1}
+            val editor=device.findObject(By.clazz("android.widget.EditText"))
+            assertTrue("Sending disabled the editor",editor.isEnabled)
+            assertTrue("Sending removed editor focus",editor.isFocused)
+            assertTrue("Sending dismissed the IME",i.uiAutomation.windows.any{it.type==android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD})
+            editor.text="Next draft while request is pending"
+            await("Pending send did not preserve new draft"){client.pending(scope)==null&&client.draft(scope)=="Next draft while request is pending"}
+            assertEquals("Next draft while request is pending",device.findObject(By.clazz("android.widget.EditText")).text)
+            assertEquals(1,qa("state").optInt("acceptedSyntheticSends"))
+            capture("accepted-conversation-keyboard-draft")
+        }finally{config.waitForIdleTimeout=old}
+    }
+
     @Test fun hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage(){
         requireOwnedNativeTarget(device)
         device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
