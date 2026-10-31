@@ -23,4 +23,22 @@ class HollywoodRoomActivityTest {
   }
   val future=room();future.getJSONObject("activity").put("version",2);assertNull(HollywoodRoomActivity.read(future,true))
  }
+ @Test fun nativeStateOverridesLegacyIdleAndRetainsUnseenOrExpiredAsUnknown(){
+  val r=room()
+  val agent=JSONObject().put("agentId","a").put("nativeThread","t").put("expiresAt",2000L)
+   .put("status",JSONObject().put("type","active").put("activeFlags",org.json.JSONArray().put("waitingOnUserInput")))
+  val state=JSONObject().put("version",1).put("observedAt",1000L).put("runtimeCount",1).put("agents",org.json.JSONArray().put(agent))
+  r.put("nativeState",state)
+  val active=HollywoodRoomActivity.read(r,true)!!
+  assertTrue(active.native);assertTrue(active.executing);assertTrue(active.needsHuman);assertFalse(active.idle)
+  state.put("runtimeCount",2)
+  assertTrue(HollywoodRoomActivity.read(r,true)!!.uncertain)
+  state.put("runtimeCount",1);agent.put("expiresAt",999L)
+  val expired=HollywoodRoomActivity.read(r,true)!!
+  assertTrue(expired.uncertain);assertFalse(expired.idle);assertFalse(expired.executing)
+  agent.put("expiresAt",2000L).getJSONObject("status").put("type","idle")
+  assertTrue(HollywoodRoomActivity.read(r,true)!!.idle)
+  state.put("agents",org.json.JSONArray().put(agent).put(agent)).put("runtimeCount",2)
+  assertNull(HollywoodRoomActivity.read(r,true))
+ }
 }

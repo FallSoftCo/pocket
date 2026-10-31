@@ -28,7 +28,7 @@ import org.json.JSONObject
 
     val spoken=when {
         activity==null->"Status unavailable"
-        activity.idle->"Idle; no visible unsettled work at observation"
+        activity.idle->if(activity.native)"Native agents idle at observation" else "Idle; no visible unsettled work at observation"
         else->activity.categories().joinToString("; "){(label,count)->"$count $label"}
     }
     WorkCardSurface(activity?.scheduled==true,activity?.needsHuman==true,
