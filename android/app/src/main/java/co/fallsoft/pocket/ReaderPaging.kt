@@ -3,6 +3,9 @@ package co.fallsoft.pocket
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -58,16 +61,20 @@ import androidx.compose.ui.draw.alpha
             finally{paging=null;settled(up,completed)}
         }
     }
-    for(up in listOf(true,false)){
-        val label=if(up)"Page up" else "Page down"
-        IconButton({page(up)},enabled=paging==null&&(if(up)upEnabled else downEnabled),
-            modifier=Modifier.size(48.dp).testTag(if(up)"reader-page-up" else "reader-page-down").semantics{
-                testTagsAsResourceId=true
-                contentDescription=PocketImmersion.label(label)
-                if(paging==up)stateDescription="Paging"
-            }){
-            SymbolIcon(if(paging==up)"Codex" else if(up)"ArrowUpward" else "ArrowDownward",null,
-                Modifier.size(32.dp).alpha(if(paging==up||(paging==null&&(if(up)upEnabled else downEnabled)))1f else .32f),spinning=paging==up)
+    // FlowRow must wrap the pair, never Page down alone. Reserve both full touch
+    // targets even when the preceding footer controls nearly fill a line.
+    Row(Modifier.width(98.dp).testTag("reader-paging-controls"),horizontalArrangement=Arrangement.spacedBy(2.dp)){
+        for(up in listOf(true,false)){
+            val label=if(up)"Page up" else "Page down"
+            IconButton({page(up)},enabled=paging==null&&(if(up)upEnabled else downEnabled),
+                modifier=Modifier.size(48.dp).testTag(if(up)"reader-page-up" else "reader-page-down").semantics{
+                    testTagsAsResourceId=true
+                    contentDescription=PocketImmersion.label(label)
+                    if(paging==up)stateDescription="Paging"
+                }){
+                SymbolIcon(if(paging==up)"Codex" else if(up)"ArrowUpward" else "ArrowDownward",null,
+                    Modifier.size(32.dp).alpha(if(paging==up||(paging==null&&(if(up)upEnabled else downEnabled)))1f else .32f),spinning=paging==up)
+            }
         }
     }
 }
