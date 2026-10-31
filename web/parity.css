@@ -38,7 +38,7 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .composer-actions { margin:6px 0; gap:6px; }.composer-actions button { min-width:56px; }.composer-actions #mic { flex:1; }#send { min-width:64px; }
 #draft-note { display:none; }#toggle-keyboard { display:none; }
 .transcript-toolbar { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px; padding:6px; border:1px solid var(--line); border-radius:20px; background:linear-gradient(var(--depth-top),var(--surface)); }
-.transcript-toolbar button { display:block; flex:1; min-width:44px; min-height:48px; padding:8px; border:0; background:none; font-size:12px; }.transcript-toolbar label { min-height:48px; padding:8px; font-size:12px; }.transcript-toolbar #latest { margin-left:0; }
+.transcript-toolbar button { display:block; flex:1 0 max-content; min-width:44px; max-width:100%; min-height:48px; padding:8px; border:0; background:none; font-size:12px; white-space:normal; overflow-wrap:break-word; }.transcript-toolbar label { min-height:48px; padding:8px; font-size:12px; }.transcript-toolbar #latest { margin-left:0; }
 #back { display:block; }#earlier { display:none!important; }
 #message-loading { padding:6px 20px; color:var(--muted); font-size:12px; text-align:center; }
 .referenced { outline:2px solid var(--accent); outline-offset:6px; }
@@ -48,7 +48,7 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
  #sidebar { padding:10px 12px max(12px,env(safe-area-inset-bottom)); }.brand { margin-bottom:8px; }.brand strong { font-size:18px; }
  #transcript { padding:16px; }#composer { padding:8px 12px max(12px,env(safe-area-inset-bottom)); }
  .footer-identity h1 { font-size:12px; }.footer-identity>div { min-width:0; }.footer-identity p:last-child { max-width:48vw; }
- .transcript-toolbar { gap:2px; }.transcript-toolbar button { font-size:11px; min-width:42px; }.transcript-toolbar label { padding:6px; font-size:11px; }
+ .transcript-toolbar { gap:2px; }.transcript-toolbar button { font-size:11px; min-width:44px; }.transcript-toolbar label { padding:6px; font-size:11px; }
  #draft { display:none; }#composer.keyboard-open #draft { display:block; }#toggle-keyboard { display:block; }#composer.keyboard-open #toggle-keyboard { display:none; }
  .message .body { font-size:15px; }.message.user { margin-left:4%; }.composer-actions { flex-wrap:nowrap; }#send-mode { max-width:110px; font-size:11px; }
  #sidebar footer button { min-height:52px; }
@@ -62,9 +62,9 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 #startup { display:flex; min-height:100dvh; align-items:center; justify-content:center; flex-direction:column; gap:18px; color:var(--muted); }
 .card-heading { display:flex; align-items:center; justify-content:space-between; gap:6px; }.card-heading .child-badge { flex:0 0 auto; min-height:28px; }
 
-.input-row { display:flex; align-items:center; gap:6px; margin:0 0 6px; }.input-row #draft { flex:1; min-width:0; }.input-row #mic { flex:0 0 auto; padding:8px 12px; font-size:12px; }.input-row #send { flex:0 0 auto; }
+.input-row { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:0 0 6px; }.input-row #draft { flex:1 1 6ch; min-width:min(100%,6ch); }.input-row #mic { flex:0 0 max-content; max-width:100%; padding:8px 12px; font-size:12px; }.input-row #send { flex:0 0 max-content; max-width:100%; }
 .composer-actions { display:none; }.anchored-panel { position:fixed; width:min(320px,calc(100vw - 24px)); max-height:65dvh; overflow:auto; border-radius:18px; padding:20px; box-shadow:var(--shadow); }.anchored-panel:popover-open { display:block; }.anchored-panel::backdrop { background:transparent; }
-@media(max-width:760px){.input-row #toggle-keyboard,.input-row #mic { display:block; flex:1; min-height:48px; }.input-row #send { display:none; }#composer.keyboard-open .input-row #send { display:block; }#composer.keyboard-open .input-row #toggle-keyboard { display:none; }#composer.keyboard-open .input-row #mic { flex:0 0 auto; min-width:48px; max-width:70px; font-size:11px; }.transcript-toolbar #latest { display:none; }.transcript-toolbar #session-menu { min-width:54px; }}
+@media(max-width:760px){.input-row #toggle-keyboard,.input-row #mic { display:block; flex:1 0 max-content; max-width:100%; min-height:48px; }.input-row #send { display:none; }#composer.keyboard-open .input-row #send { display:block; }#composer.keyboard-open .input-row #toggle-keyboard { display:none; }#composer.keyboard-open .input-row #mic { flex:0 0 max-content; min-width:48px; max-width:100%; font-size:11px; }.transcript-toolbar #latest { display:none; }.transcript-toolbar #session-menu { min-width:54px; }}
 
 .message,.run-block { content-visibility:auto; contain-intrinsic-size:auto 120px; }
 
@@ -135,6 +135,11 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .question-option { display:block; width:100%; text-align:left; }.question-option small { display:block; margin-top:3px; font-size:12px; }.request-status { margin-top:10px; color:var(--muted); }.request-status:empty { display:none; }
 
 .phrase-label { white-space:pre; max-width:none; }.phrase-label .phrase-form { overflow-wrap:normal; }.review-heading>button { flex-shrink:0; min-width:64px; }.review-heading h2 { min-width:0; }
+/* Measure shared captions before wrapping controls onto another row. Never
+   compress a large-text label into an equal fractional button or clip Record.
+   Translated captions may wrap inside a full-width target at extreme widths. */
+.transcript-toolbar button .phrase-label,.input-row button .phrase-label { white-space:normal; max-width:100%; }
+.transcript-toolbar button .phrase-form,.input-row button .phrase-form { overflow-wrap:break-word; }
 
 .review-pane .question-label { font-size:16px; line-height:1.5; }.review-pane .question-label input { font-size:16px; }
 
