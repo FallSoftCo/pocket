@@ -33,6 +33,32 @@ class FleetRoomProjectionTest {
         assertEquals(oldLive.entries.single().key,room.route.key)
         assertEquals("private-4",room.route.value.destination.token)
     }
+    private fun native(snapshot:WorkSourceSnapshot<WorkCatalogPayload>,observedAt:Long,status:String):WorkSourceSnapshot<WorkCatalogPayload> {
+        val entry=snapshot.entries.single()
+        val state=JSONObject().put("version",1).put("observedAt",observedAt).put("runtimeCount",1)
+            .put("agents",org.json.JSONArray().put(JSONObject().put("agentId",id(42)).put("nativeThread","existing")
+                .put("expiresAt",observedAt+75_000).put("status",JSONObject().put("type",status).put("activeFlags",org.json.JSONArray()))))
+        return snapshot.copy(entries=listOf(entry.copy(value=entry.value.copy(body=JSONObject(entry.value.body).put("nativeState",state).toString()))))
+    }
+    @Test fun latestPreviewCannotPinExpiredNativeStatusFromAnotherGateway() {
+        val live=native(snapshot(4,10),50_000,"idle")
+        val retained=native(snapshot(5,20,false),1_000,"unavailable")
+        val room=fleetRoomProjections(listOf(live,retained)).single()
+        val display=room.displayRoom()
+        assertEquals(20,display.getJSONObject("feedSummary").getJSONObject("latestMessage").getInt("seq"))
+        assertEquals(50_000L,display.getJSONObject("nativeState").getLong("observedAt"))
+        assertTrue(HollywoodRoomActivity.read(display,true)!!.idle)
+        assertEquals("private-4",room.route.value.destination.token)
+        assertEquals(1_000L,JSONObject(retained.entries.single().value.body).getJSONObject("nativeState").getLong("observedAt"))
+    }
+    @Test fun missingCurrentNativeObservationCannotFallBackToRetainedUnknownOrLegacyIdle() {
+        val retained=native(snapshot(5,20,false),1_000,"unavailable")
+        val live=snapshot(4,10)
+        val display=fleetRoomProjections(listOf(live,retained)).single().displayRoom()
+        assertTrue(display.isNull("nativeState"))
+        assertNull(HollywoodRoomActivity.read(display,true))
+        assertTrue(HollywoodRoomActivity.usesNative(display))
+    }
     @Test fun availableVoiceGatewayKeepsTheFullInteractionWithoutFakingAnExecutionHost() {
         assertEquals("host5",fleetRoomProjections(listOf(snapshot(4,20),snapshot(5,10,voice=true))).single().route.value.destination.environment.id)
         assertEquals("host4",fleetRoomProjections(listOf(snapshot(4,20),snapshot(5,10,available=false,voice=true))).single().route.value.destination.environment.id)

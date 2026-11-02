@@ -3552,5 +3552,22 @@
     "implementation": "Recipient-free default Android composer and captured voice; web room-wide voice; Hollywood human requests skip legacy owner fallback; preserved addressed drafts, original operations, receipts and unknown deliveries.",
     "status": "Backend176 live on CPU; Android160 signed candidate building and native qualification pending; web/gateway changes not yet deployed.",
     "verification": "Real PG/HTTP retired-owner publication, fanout, same-ID receipt, revoked private recipient denied; five focused node checks pass. Production isolated-authority POST rejected400 with zero canonical command/events, not counted as passed."
+  },
+  "room_native_status_freshness_20261102": {
+    "request": "All rooms show Unknown 6; retain latest room previews but show current native runtime status, distinguishing unavailable observations from unknown deliveries and approvals from questions.",
+    "status": "candidate; Android161 not yet published",
+    "implementation": [
+      "Fleet-room display overlays nativeState from the reachable authenticated route independently of the retained newest message preview.",
+      "A missing current native observation cannot fall back to retained native state or legacy Idle.",
+      "The existing bottom-anchored room menu opens with current work nearest the footer."
+    ],
+    "qualification": [
+      "Regression: newest retained message from an offline gateway with a fresh Idle observation on the live route.",
+      "Regression: missing current native state is unavailable; retained body and route credentials remain unchanged."
+    ],
+    "limits": [
+      "No physical phone installation proof.",
+      "Unavailable runtime observations remain honestly unavailable; labels are not worker recovery."
+    ]
   }
 }

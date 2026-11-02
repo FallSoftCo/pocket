@@ -13,6 +13,10 @@ internal data class FleetRoomProjection(
         // Current delivery state comes from the live route, not an old retained preview.
         val live=JSONObject(route.value.body)
         if(source.available&&live.has("activity"))put("activity",live.get("activity"))else remove("activity")
+        // Preview recency and native runtime freshness are independent lanes.
+        // Never carry a stale native observation from the preview gateway.
+        if(source.available&&live.has("nativeState"))put("nativeState",live.get("nativeState"))
+        else if(has("nativeState"))put("nativeState",JSONObject.NULL)
     }
 }
 

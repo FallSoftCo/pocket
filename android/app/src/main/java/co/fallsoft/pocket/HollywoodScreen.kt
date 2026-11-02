@@ -394,7 +394,7 @@ import androidx.lifecycle.repeatOnLifecycle
         },enabled=scope!=null,modifier=Modifier.size(48.dp).testTag("native-room-keyboard")){
             SymbolIcon("Keyboard",PocketImmersion.label("Keyboard"),Modifier.size(32.dp),tint=Paper)
         }
-        ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,contextLabel=detail.optJSONObject("room")?.s("name"),accountUsage=accountUsage,accountSourceLabel=accountSourceLabel){
+        ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),bottomActions=true,statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,contextLabel=detail.optJSONObject("room")?.s("name"),accountUsage=accountUsage,accountSourceLabel=accountSourceLabel){
             addressControl()
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             if(activityFeed.historyError.isNotBlank())BilingualLabel("Activity unavailable",color=Coral,centered=false)

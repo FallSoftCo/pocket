@@ -46,6 +46,7 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
         fun read(room:JSONObject,available:Boolean):HollywoodRoomActivity? {
             if(!available)return null
             val native=room.optJSONObject("nativeState")
+            if(room.has("nativeState")&&native==null)return null
             if(native!=null) {
                 fun number(value:Any?):Long? = if(value is Int||value is Long)(value as Number).toLong().takeIf{it in 0..MAX_SAFE}else null
                 if(number(native.opt("version"))!=1L)return null

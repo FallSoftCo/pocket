@@ -15,6 +15,7 @@ class HollywoodRoomActivityTest {
   assertTrue(HollywoodRoomActivity.read(room(),true)!!.idle)
   assertNull(HollywoodRoomActivity.read(room(),false))
   assertNull(HollywoodRoomActivity.read(JSONObject(),true))
+  assertNull(HollywoodRoomActivity.read(room().put("nativeState",JSONObject.NULL),true))
   for(key in listOf("version","observedAt")+HollywoodRoomActivity.keys){
    val missing=room();missing.getJSONObject("activity").remove(key);assertNull(key,HollywoodRoomActivity.read(missing,true))
    for(value in listOf(-1,1.25,"1",JSONObject.NULL,9007199254740992L)){
