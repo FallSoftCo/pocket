@@ -35,6 +35,29 @@ is trusted. It validates the complete reader set, including duplicate public
 keys, before writing. Local request creation/completion remains portable. The
 acceptance packet must be delivered as a protected owner/current-user file.
 
+Some existing gateways intentionally have a service-owned0600 Fleet config
+inside a root-owned0750 directory. The service identity can read but cannot
+rename there; ordinary root key/file readers must not silently accept another
+UID's private files. For this CONFIG maintenance operation only, root may add
+`--config-owner-review ROOT_PRIVATE_REVIEW_JSON`. Its schema is
+`nextcomp-artifact-reader-config-owner-review/v1`, with exact `configFile`,
+`expectedConfigSha256`, and `file`/`parent` objects containing the independently
+reviewed current integer `uid`, `gid`, `mode`, `device`, `inode`. Record numeric
+modes, e.g.0600=384 and0750=488; derive actual identities, never copy placeholders.
+The parent must remain root-owned and non-group/world-writable. The config must
+remain regular, nonsymlink, single-linked0600 with the exact reviewed owner.
+The protected review's hash joins the ORIGINAL acceptance intent. Existing
+flock, whole-config validation and final content CAS still apply; replacement
+preserves the config's owner/mode and the parent's identity. An unchanged
+accepted operation reconciles without rewriting. A wrong review or drift holds.
+
+This is not permission to chown/relax the existing directory/config, copy a
+service key, broaden `privateNodeFile`, or issue human tokens. Host-side key
+creation/completion/read rules do not change. The focused owner integration
+requires actual root plus an existing nonroot service UID in an owned `/run`
+fixture: it proves service read/parent-write denial, ordinary root-reader denial,
+explicit reviewed acceptance and preserved identities without live config reads.
+
 The initial code/bootstrap trust must be owner supplied once, not fabricated
 from Hollywood credentials. Subsequent releases use normal scoped reader proofs
 without per-release grants. Owner acceptance is a distinct authorized local
