@@ -1,5 +1,47 @@
 # One owner, one fleet connection
 
+## Artifact-only host readers
+
+`artifactReaders: [{id, publicKey}]` is a separate protected configuration role.
+It is NOT `members`: these keys cannot issue/authenticate human sessions, appear
+in host discovery, query device status, enroll/revoke devices or activate code.
+Existing member proofs remain compatible. The distinct
+`nextcomp-artifact-reader+jwt` type is accepted only by exact GET/HEAD immutable
+blob authorization with node/fleet/account/audience/hash/path/time bindings.
+Removing a reader from the current protected config revokes its next request;
+no reader key may alias a full member's ID or key.
+
+One-time provisioning uses `scripts/artifact-reader-enrollment.mjs`:
+
+1. On the EXISTING host, create an existing-private state directory and run
+   `--action create --state DIR --node ORIGINAL_HOST_UUID --challenge ORIGINAL_REQUEST_UUID`.
+   The key stays local. Only a signed public request is returned. Interrupted
+   preparation reconciles its original intent/key, never silently rotates it.
+2. The actual gateway owner independently verifies the attributable agent/host
+   binding and original challenge. Run `--action accept --state PRIVATE_OPERATION_DIR
+   --node EXPECTED_HOST_UUID --challenge ORIGINAL_REQUEST_UUID --request PUBLIC_REQUEST
+   --request-sha256 ATTRIBUTED_REQUEST_FILE_SHA256 --fleet EXISTING_PROTECTED_GATEWAY_CONFIG`. This preserves member authority,
+   records the original config/intent and adds ONLY the read-only role.
+3. Return `acceptance.public.json` through the existing trusted owner path. On
+   the same host run `--action complete --state ORIGINAL_DIR --acceptance FILE`,
+   then the standard bootstrap reader's `--provision-reader` and `--check-reader`.
+   The accepted public gateway configuration references the locally retained key;
+   no key, human credential, profile or database is transported.
+
+Owner acceptance runs on an existing Linux gateway under util-linux `flock
+--no-fork`. The same process retains and verifies the kernel file lock through
+config read, original intent, compare and replacement; no spin loop or lock flag
+is trusted. It validates the complete reader set, including duplicate public
+keys, before writing. Local request creation/completion remains portable. The
+acceptance packet must be delivered as a protected owner/current-user file.
+
+The initial code/bootstrap trust must be owner supplied once, not fabricated
+from Hollywood credentials. Subsequent releases use normal scoped reader proofs
+without per-release grants. Owner acceptance is a distinct authorized local
+operation, not an automatic consequence of a self-signed public request. Gateway
+code adoption has its own quiet/rollback boundary; publishing this source or
+editing a reader descriptor does not claim the current gateway supports it.
+
 Status: implementation, not a delivered capability. Existing pairings remain valid.
 
 The owner has full access to the enrolled NextComp fleet. Hosts are enrolled by

@@ -1,7 +1,8 @@
 /** Fleet device authority and machine proofs are deliberately disjoint. */
 import {readFileSync,openSync,closeSync,fstatSync,constants} from 'node:fs';
 import {createPrivateKey,createPublicKey,randomUUID,createHash} from 'node:crypto';
-import {SignJWT,jwtVerify} from 'jose';
+import {SignJWT,jwtVerify,decodeProtectedHeader} from 'jose';
+import {artifactReaders,authorizeArtifactReader,ARTIFACT_READER_TYPE} from './artifact-readers.mjs';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const invalid=()=>Object.assign(Error('Fleet authorization is unavailable or invalid.'),{status:401});
 const requireValue=value=>{if(!value)throw invalid();};
@@ -16,7 +17,7 @@ export function fleetConfig(v){
   const u=new URL(m.origin);requireValue(uuid.test(m.id)&&typeof m.name==='string'&&m.name.length<=100&&u.protocol==='https:'&&!u.username&&!u.password&&!u.search&&!u.hash&&u.pathname==='/'&&u.origin===m.origin&&!ids.has(m.id)&&!origins.has(m.origin));
   const key=createPublicKey(m.publicKey);requireValue(key.asymmetricKeyType==='ed25519');ids.add(m.id);origins.add(m.origin);
  }
- requireValue(ids.has(v.nodeId));return v;
+ requireValue(ids.has(v.nodeId));artifactReaders(v);return v;
 }
 export function loadFleet(file){return fleetConfig(JSON.parse(protectedFile(file)));}
 export class FleetProofs{
@@ -45,6 +46,8 @@ export class FleetProofs{
   return this.sign('nextcomp-node+jwt',{sub:c.nodeId,method,path,scope,...(sha256?{sha256}:{}),...(deviceId?{deviceId}:{})},target,60);
  }
  async authorizeNode(token,expected){
+  try{if(decodeProtectedHeader(token).typ===ARTIFACT_READER_TYPE)return await authorizeArtifactReader(token,this.config(),expected,this.now());}
+  catch{throw invalid();}
   const c=this.config(),p=await this.verify(token,'nextcomp-node+jwt',c.nodeId,60);requireValue(p.sub===p.iss);
   requireValue(Object.entries(expected).every(([k,v])=>p[k]===v));return p;
  }

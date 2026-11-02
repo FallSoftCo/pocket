@@ -17,7 +17,9 @@ function saved(path,value){const tmp=path+'.'+randomUUID()+'.tmp',fd=openSync(tm
 function identity(configFile){
  const c=JSON.parse(read(configFile,65536,true));
  check(c.version===1&&[c.fleetId,c.accountId,c.nodeId].every(x=>uuid.test(x))&&Array.isArray(c.members)&&c.members.length<=32);
- const self=c.members.find(v=>v.id===c.nodeId);check(self&&typeof c.privateKeyFile==='string'&&isAbsolute(c.privateKeyFile));
+ check(c.readerOnly===undefined||c.readerOnly===true);
+ const self=c.readerOnly?{id:c.nodeId,publicKey:c.readerPublicKey}:c.members.find(v=>v.id===c.nodeId);
+ check(self&&(!c.readerOnly||!c.members.some(v=>v.id===c.nodeId))&&typeof c.privateKeyFile==='string'&&isAbsolute(c.privateKeyFile));
  const key=createPrivateKey(read(c.privateKeyFile,65536,true));
  const publicKey=createPublicKey(key).export({type:'spki',format:'pem'});
  check(key.asymmetricKeyType==='ed25519'&&publicKey===createPublicKey(self.publicKey).export({type:'spki',format:'pem'}));
@@ -27,8 +29,12 @@ function identity(configFile){
 export function provisionReader({configFile,expectedNode,readerFile}){
  const {c,publicKeySha256}=identity(configFile);check(uuid.test(expectedNode)&&c.nodeId===expectedNode&&isAbsolute(readerFile));
  const value={schema:'nextcomp-local-artifact-reader/v1',configFile:realpathSync(configFile),nodeId:c.nodeId,
-              fleetId:c.fleetId,accountId:c.accountId,publicKeySha256};
- if(existsSync(readerFile)){check(JSON.stringify(JSON.parse(read(readerFile,16384,true)))===JSON.stringify(value));}
+              fleetId:c.fleetId,accountId:c.accountId,publicKeySha256,
+              proofType:c.readerOnly?'nextcomp-artifact-reader+jwt':'nextcomp-node+jwt'};
+ if(existsSync(readerFile)){
+  const old=JSON.parse(read(readerFile,16384,true));
+  check(Object.entries(value).every(([k,v])=>(old[k]??(k==='proofType'?'nextcomp-node+jwt':undefined))===v));
+ }
  else{const fd=openSync(readerFile,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{const b=Buffer.from(JSON.stringify(value)+'\n');let n=0;while(n<b.length)n+=writeSync(fd,b,n,b.length-n);fsyncSync(fd);}finally{closeSync(fd);}syncReaderDirectory(readerFile);}
  checkReader(readerFile);
  return {schema:value.schema,nodeId:c.nodeId,publicKeySha256,ready:true,enrolled:false,credentialsCopied:false};
@@ -38,7 +44,8 @@ export function checkReader(readerFile){
  check(reader.schema==='nextcomp-local-artifact-reader/v1'&&isAbsolute(reader.configFile)&&
        [reader.nodeId,reader.fleetId,reader.accountId].every(v=>uuid.test(v))&&hash.test(reader.publicKeySha256));
  const info=identity(reader.configFile);check(info.c.nodeId===reader.nodeId&&info.c.fleetId===reader.fleetId&&
-       info.c.accountId===reader.accountId&&info.publicKeySha256===reader.publicKeySha256);
+       info.c.accountId===reader.accountId&&info.publicKeySha256===reader.publicKeySha256&&
+       (reader.proofType??'nextcomp-node+jwt')===(info.c.readerOnly?'nextcomp-artifact-reader+jwt':'nextcomp-node+jwt'));
  return info;
 }
 export async function bootstrapFetch({configFile,readerFile,manifestFile,sourceNode,dir,operationId,fetcher=fetch}){
@@ -58,7 +65,7 @@ export async function bootstrapFetch({configFile,readerFile,manifestFile,sourceN
   if(existsSync(target)){const b=read(target,512*1024**2);check(b.length===m.size&&digest(b)===m.sha256);saved(receipt,{...result,reconciled:true});return {...result,reconciled:true};}
   check(old?.state!=='verified');saved(receipt,{...result,state:'fetching'});
   if(existsSync(partial)){check(lstatSync(partial).isFile()&&!lstatSync(partial).isSymbolicLink());unlinkSync(partial);}
-  const iat=Math.floor(Date.now()/1000),header={alg:'EdDSA',typ:'nextcomp-node+jwt',kid:c.nodeId};
+  const iat=Math.floor(Date.now()/1000),header={alg:'EdDSA',typ:c.readerOnly?'nextcomp-artifact-reader+jwt':'nextcomp-node+jwt',kid:c.nodeId};
   const claims={iss:c.nodeId,sub:c.nodeId,aud:sourceNode,fleetId:c.fleetId,accountId:c.accountId,scope:'artifact:read',sha256:m.sha256,method:'GET',path,iat,exp:iat+60,jti:randomUUID()};
   const body=Buffer.from(JSON.stringify(header)).toString('base64url')+'.'+Buffer.from(JSON.stringify(claims)).toString('base64url');
   const proof=body+'.'+sign(null,Buffer.from(body),key).toString('base64url');
