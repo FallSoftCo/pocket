@@ -18,6 +18,16 @@ class HollywoodDraftStoreTest {
     }
     private fun origin(node:Int)=EnvironmentRequest(EnvironmentIdentity("host$node","Host $node",fleet=FleetMembership(id(1),id(2),id(node),id(3))),"https://host$node.test","opaque-$node")
     private fun binding(node:Int)=JSONObject().put("bindingId",node.toString().padStart(64,'a')).put("authorityId",id(8)).put("principalId",id(9))
+    @Test fun roomBroadcastHasNoRecipientAndRetainsAddressedDraftAndUnknownSend() {
+        val scope=HollywoodScope(id(10),"");val body=scope.message("room-command","Speak to the room")
+        assertFalse(body.has("recipientId"));assertEquals(scope,HollywoodScope.from(scope.json()))
+        try { HollywoodScope(id(10),"",audience="direct");fail("Private scope requires recipient") } catch(_:IllegalArgumentException) {}
+        val data=mutableMapOf<String,Any>();val origin=origin(4);val store=HollywoodDraftStore(prefs(data),backendOwner(origin.endpoint,origin.token),binding(4),origin)
+        val addressed=HollywoodScope(id(10),id(11));store.save(addressed,"Original addressed draft")
+        store.save(scope,"New room draft")
+        assertEquals("Original addressed draft",store.draft(addressed));assertEquals("New room draft",store.draft(scope))
+        assertEquals(setOf(scope,addressed),store.scopes(scope.room).toSet())
+    }
     @Test fun draftMovesAcrossGatewaysButClearingCannotResurrectLegacyTextOrCrossAnAudience() {
         val data=mutableMapOf<String,Any>();val preferences=prefs(data);val first=origin(4);val second=origin(5)
         val scope=HollywoodScope(id(10),id(11));val owner=backendOwner(first.endpoint,first.token)

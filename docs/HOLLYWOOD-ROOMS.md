@@ -140,3 +140,9 @@ entry/reconnect). It performs no per-room history scans or model calls to derive
 presence. Native room cards keep inline immersion for common labels and room
 purpose, and expose all counts in accessibility text. Alpha102 stays immutable;
 this follow-up has not been published or installed on the phone.
+
+## Room-wide human input (alpha142 candidate)
+
+The default composer and captured voice destination name the room, not its owner. No recipientId is sent for ordinary room-wide input. Explicit addressed/private input retains its recipient. Human room requests no longer acquire a default owner inside Hollywood. Publication snapshots current authorized agents and creates no execution reservation. Each runtime consumes its own canonical conversation feed.
+
+Existing addressed drafts, accepted receipts and unknown sends retain their original scope, operation and physical route. Opening the new room-wide composer neither migrates nor retries them; the saved-message controls remain available. Voice reply inspection accepts only correlated canonical agent output for room-wide input, with existing explicit-recipient and legacy receipt checks retained.

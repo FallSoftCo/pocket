@@ -151,7 +151,7 @@ class HollywoodMixedCatalogNativeTest {
             .putString("environment:room-host:token","synthetic-mixed-room").putString("backend:"+roomOwner,"lax").commit())
         main{Pocket.init(context)}
         val client=HollywoodClient(roomOwner,binding(),base,"synthetic-mixed-room")
-        val scope=HollywoodScope(roomId,agent,"room",null,"request")
+        val scope=HollywoodScope(roomId,"","room",null,"request")
         client.saveDraft(scope,"First human request")
         main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
         val config=Configurator.getInstance();val old=config.waitForIdleTimeout;config.waitForIdleTimeout=0
@@ -170,6 +170,7 @@ class HollywoodMixedCatalogNativeTest {
             await("Pending send did not preserve new draft"){client.pending(scope)==null&&client.draft(scope)=="Next draft while request is pending"}
             assertEquals("Next draft while request is pending",device.findObject(By.clazz("android.widget.EditText")).text)
             assertEquals(1,qa("state").optInt("acceptedSyntheticSends"))
+            assertFalse("Room send still targeted a default agent",qa("state").getJSONObject("lastSyntheticMessage").has("recipientId"))
             capture("accepted-conversation-keyboard-draft")
             if(InstrumentationRegistry.getArguments().getString("nativeStateExpected")=="true") {
                 systemBack("accepted-send")
@@ -202,7 +203,7 @@ class HollywoodMixedCatalogNativeTest {
             .putString("client-replies:v1",JSONArray().put(stockIntent.json()).toString()).commit())
         main{Pocket.init(context)}
         val client=HollywoodClient(roomOwner,binding(),base,"synthetic-mixed-room")
-        val scope=HollywoodScope(roomId,agent,"room",null,"request")
+        val scope=HollywoodScope(roomId,"","room",null,"request")
         client.saveDraft(scope,"Initial room draft")
         val roomIntent=client.capture(scope,"Saved unknown room input").put("state","unknown").toString()
         val roomPendingKey="pending:"+client.key(scope)

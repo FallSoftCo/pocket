@@ -71,8 +71,8 @@ import androidx.lifecycle.repeatOnLifecycle
     var inspecting by remember{mutableStateOf<JSONObject?>(null)}
     var guidance by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
     var guidanceReceipt by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
-    val destination=recipient.ifBlank{detail.optJSONObject("room")?.s("owner").orEmpty()}
-    val scope=if(hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source,if(postOnly)"message" else "request")else null
+    val destination=recipient
+    val scope=if(!direct&&destination.isEmpty()||hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source,if(postOnly)"message" else "request")else null
     val currentScope by rememberUpdatedState(scope)
     val inputState=remember(scope){mutableStateOf(TextFieldValue(scope?.let(client::draft).orEmpty()))}
     var input by inputState
@@ -101,7 +101,7 @@ import androidx.lifecycle.repeatOnLifecycle
         inspecting==null&&guidance==null&&guidanceReceipt==null&&!workflow
     val roomVoiceDestination=remember(voiceAllowed,scope,client.bindingId,room){
         if(!voiceAllowed)null else JSONObject().put("backend","lax").put("bindingId",client.bindingId).put("authorityId",client.authorityId)
-            .put("roomId",room).put("recipientId",scope!!.recipient).put("audience",scope.audience)
+            .put("roomId",room).put("audience",scope!!.audience).apply{scope.recipient.takeIf{it.isNotBlank()}?.let{put("recipientId",it)}}
             .apply{scope.sourceEvent?.let{put("sourceEventId",it)}}
     }
     val roomVoiceName=detail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
@@ -111,14 +111,13 @@ import androidx.lifecycle.repeatOnLifecycle
     val visibleMicDestination=roomVoiceDestination?:PocketVoice.targetRoom?.takeIf{stoppingRoomCapture}
     val visibleMicLabel=if(roomVoiceDestination==null)PocketVoice.targetSourceLabel else roomVoiceLabel
     val coordinatorDetail=coordinatorFeed.detail
-    val coordinatorOwner=coordinatorDetail.optJSONObject("room")?.s("owner").orEmpty()
+    // The room is the destination; its owner is not a default execution recipient.
     val coordinatorVoiceDestination=remember(browsing,binding.optBoolean("voice"),coordinatorDetail,coordinatorFeed.detailError){
         if(!browsing||!binding.optBoolean("voice")||coordinatorFeed.detailError.isNotBlank()||
             coordinatorDetail.optJSONObject("permissions")?.optBoolean("can_request")!=true||
-            !hollywoodUuid(coordinatorOwner)||
-            coordinatorDetail.optJSONArray("actors")?.objects().orEmpty().none{it.s("id")==coordinatorOwner&&it.s("kind")=="agent"})null
+            !hollywoodUuid(client.defaultRoomId))null
         else JSONObject().put("backend","lax").put("bindingId",client.bindingId).put("authorityId",client.authorityId)
-            .put("roomId",client.defaultRoomId).put("recipientId",coordinatorOwner).put("audience","room")
+            .put("roomId",client.defaultRoomId).put("audience","room")
     }
     val coordinatorVoiceLabel=coordinatorDetail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
     val foregroundVoiceDestination=if(browsing)coordinatorVoiceDestination else roomVoiceDestination
@@ -258,12 +257,12 @@ import androidx.lifecycle.repeatOnLifecycle
         Column(Modifier.fillMaxWidth()){
             TextButton({addressMenu=!addressMenu},Modifier.fillMaxWidth().testTag("native-room-address")){
                 val roomLabel=detail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
-                val recipientLabel=agentNames[destination].orEmpty().ifBlank{"Choose recipient"}
+                val recipientLabel=agentNames[destination].orEmpty().ifBlank{if(direct)"Choose recipient" else "All room agents"}
                 Text(roomLabel+" · "+(if(direct)"Private" else "Room")+" → "+recipientLabel,
                     maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
             if(addressMenu)Column{
-            Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
+            Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("All room agents")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
             actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";addressMenu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(actor.s("name"))}}
             Row{Checkbox(postOnly,{postOnly=it},Modifier.testTag("native-post-only"));BilingualLabel("Post without requesting work")}
             if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}

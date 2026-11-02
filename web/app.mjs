@@ -465,9 +465,9 @@ function renderRoomHeader(){
   (target.recipientId===null||(detail.actors||[]).some(a=>a.id===target.recipientId&&a.kind==='agent'))&&(target.audience!=='direct'||!!target.recipientId);
  $('draft').disabled=false; // An outage must not prevent saving a local draft.
  $('send').disabled=!enabled||!!deliveryFlight||!!pending;
- $('mic').disabled=!voice.recording&&(!enabled||!target.recipientId||!voice.supported());
+ $('mic').disabled=!voice.recording&&(!enabled||!voice.supported());
  $('draft').placeholder=target.audience==='direct'?'Message the selected agent privately…':'Message this room…';
- setLabel($('draft-note'),target.audience==='room'?'Public input reaches room agents. Choose a recipient for scoped voice.':'Private input to the selected recipient.');
+ setLabel($('draft-note'),target.audience==='room'?'Typed and spoken room input reaches the current room agents.':'Private input to the selected recipient.');
 }
 function changeRoomTarget(target){
  if(!isRoom(scope))throw Error('Open the original room.');saveDraft();
@@ -479,11 +479,11 @@ roomAudience.onchange=run(()=>{if(roomAudience.value==='direct'&&!targetFor(scop
 roomGateway.onchange=run(async()=>{saveDraft();saveView();rooms.select(scope,roomGateway.value);current=null;openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');renderHeader();renderUsage();void refreshAccountUsage();await refreshConversation();});
 roomProjection.onchange=run(async()=>{saveView();roomView=roomProjection.value;const history=rooms.history(scope,roomView),view=readerViews.get(readerKey());follow=view?.follow??true;cache.set(scope,{rows:history.rows(),hasEarlier:history.olderCursor!==null,before:history.olderCursor,snapshot:current});renderHeader();renderTranscript();restoreView(view);await refreshConversation();});
 function roomVoiceOptions(){
- if(!isRoom(scope)){if(scope==='coordinator'&&status?.backend==='lax')throw Error('Choose an exact room and agent before recording.');return {};}
+ if(!isRoom(scope)){if(scope==='coordinator'&&status?.backend==='lax')throw Error('Choose a room before recording.');return {};}
  const e=rooms.entry(scope),route=rooms.route(scope),target={...targetFor(scope)};
- if(!target.recipientId)throw Error('Room voice needs an explicit recipient; public fanout voice is unavailable.');
+ if(target.audience==='direct'&&!target.recipientId)throw Error('Choose an explicit direct recipient.');
  if(current?.detailError||!current?.permissions?.can_request)throw Error('Room voice is unavailable for this human binding.');
- return {destination:{room:{backend:'lax',bindingId:route.binding.bindingId,authorityId:route.binding.authorityId,roomId:e.roomId,recipientId:target.recipientId,audience:target.audience,...(target.sourceEventId?{sourceEventId:target.sourceEventId}:{})}},transport:{environment:route.environment}};
+ return {destination:{room:{backend:'lax',bindingId:route.binding.bindingId,authorityId:route.binding.authorityId,roomId:e.roomId,...(target.recipientId?{recipientId:target.recipientId}:{}),audience:target.audience,...(target.sourceEventId?{sourceEventId:target.sourceEventId}:{})}},transport:{environment:route.environment}};
 }
 function decisionKey(route,id){return 'roomDecision.'+JSON.stringify([deviceId,route.environment,route.binding.bindingId,route.binding.principalId,id]);}
 const decisionFlights=new Map();

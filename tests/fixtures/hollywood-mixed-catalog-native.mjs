@@ -14,6 +14,7 @@ const nativeState=()=>process.env.NEXTCOMP_QA_NATIVE_ROOM_STATE==='1'?{nativeSta
 const thread={id:'existing-session',name:'Original session',cwd:'/synthetic',status:{type:'idle'},canAcceptDirectInput:true,
  preview:'Stock session answer from original stock host',previewRole:'codex',previewKind:'message',activityAt:1700000000000,updatedAt:1700000000000};
 const sockets=new Set(),reads=[],websockets=[];
+let lastSyntheticMessage=null;
 let blockedTaskWrites=0,wrongSource=0,outage=false,acceptedSyntheticSends=0;
 function record(row){if(process.env.NEXTCOMP_QA_LOG)fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify(row)+'\n',{mode:0o600});}
 function origin(req){return {'Bearer synthetic-mixed-room':'room','Bearer synthetic-mixed-stock':'stock'}[req.headers.authorization];}
@@ -24,13 +25,13 @@ const server=http.createServer(async(req,res)=>{
  const u=new URL(req.url,'http://127.0.0.1'),path=u.pathname;
  const row={source,method:req.method,path};record(row);if(req.method==='GET')reads.push(row);
  let body={},status=200;
- if(path==='/_qa/state')body={reads,websockets,blockedTaskWrites,wrongSource,outage,acceptedSyntheticSends};
+ if(path==='/_qa/state')body={reads,websockets,blockedTaskWrites,wrongSource,outage,acceptedSyntheticSends,lastSyntheticMessage};
  else if(path==='/_qa/room-outage'){outage=true;body={ok:true};}
  else if(path==='/_qa/room-online'){outage=false;body={ok:true};}
  else if(req.method==='POST'&&process.env.NEXTCOMP_QA_CONVERSATION_SEND==='1'&&path==='/api/hollywood/v3/rooms/'+roomId+'/messages'){
   if(source!=='room'||req.headers['x-hollywood-binding']!==binding.bindingId){wrongSource++;status=403;body={error:'Wrong original source'};}
   else{
-   const sent=JSON.parse(raw);acceptedSyntheticSends++;
+   const sent=JSON.parse(raw);lastSyntheticMessage=sent;acceptedSyntheticSends++;
    await new Promise(resolve=>setTimeout(resolve,3000));
    body={binding,accepted:true,deliveries:[],event:{id:'00000000-0000-4000-8000-000000000118',seq:2,authority,room:roomId,author:human,
     kind:sent.kind,body:sent.body,audience:sent.audience,recipient:sent.recipientId??null,source:sent.sourceEventId??null,

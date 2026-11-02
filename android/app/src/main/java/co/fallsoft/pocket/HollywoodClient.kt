@@ -298,9 +298,9 @@ internal fun hollywoodJsonEqual(a:JSONObject,b:JSONObject):Boolean {
 }
 internal data class HollywoodScope(val room:String,val recipient:String,val audience:String="room",val sourceEvent:String?=null,val kind:String="request") {
     companion object { fun from(value:JSONObject)=HollywoodScope(value.s("room"),value.s("recipient"),value.s("audience"),value.s("sourceEvent").takeIf{it.isNotBlank()},value.s("kind")) }
-    init {require(hollywoodUuid(room));require(hollywoodUuid(recipient));require(audience in listOf("room","direct"));require(sourceEvent==null||hollywoodUuid(sourceEvent));require(kind in listOf("message","request"))}
+    init {require(hollywoodUuid(room));require(recipient.isEmpty()&&audience=="room"||hollywoodUuid(recipient));require(audience in listOf("room","direct"));require(sourceEvent==null||hollywoodUuid(sourceEvent));require(kind in listOf("message","request"))}
     fun json()=JSONObject().put("room",room).put("recipient",recipient).put("audience",audience).put("sourceEvent",sourceEvent).put("kind",kind)
-    fun message(id:String,text:String)=JSONObject().put("operationId",id).put("kind",kind).put("body",text).put("audience",audience).put("recipientId",recipient).apply{sourceEvent?.let{put("sourceEventId",it)}}
+    fun message(id:String,text:String)=JSONObject().put("operationId",id).put("kind",kind).put("body",text).put("audience",audience).apply{recipient.takeIf{it.isNotBlank()}?.let{put("recipientId",it)};sourceEvent?.let{put("sourceEventId",it)}}
 }
 internal fun hollywoodMessageMatches(identity:JSONObject,scope:HollywoodScope,body:JSONObject,receipt:JSONObject):Boolean {
     val event=receipt.optJSONObject("event")?:return false
