@@ -119,7 +119,11 @@ export function hollywoodRequest(method,tail,query,body){
   else if(method==='GET'&&p.length===4&&p[0]==='attention'&&uuid(p[1])&&p[2]==='commands'&&operation(p[3]))allowed=[];
   else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['history','attention'].includes(p[2]))allowed=p[2]==='history'?['after','before','limit','view']:['after','limit'];
   else if(method==='GET'&&p.length===2&&((p[0]==='commands'&&operation(p[1]))||(['attention','deliveries','native-controls'].includes(p[0])&&uuid(p[1]))))allowed=[];
-  else if(method==='POST'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&p[2]==='messages'){
+  else if(method==='POST'&&p.length===1&&p[0]==='rooms'){
+    if(!fields(body,['operationId','id','name','purpose','ownerId'])||!operation(body.operationId)||!uuid(body.id)||!uuid(body.ownerId)||
+      !['name','purpose'].every(key=>typeof body[key]==='string'&&body[key].trim()&&body[key].length<=(key==='name'?200:4000)))
+      throw fail(400,'A room needs its original identity, name, purpose and existing agent owner.','HOLLYWOOD_REQUEST_REJECTED');
+  }else if(method==='POST'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&p[2]==='messages'){
     if(!fields(body,['operationId','kind','body','audience','recipientId','sourceEventId'])||!operation(body.operationId)||
       !['message','request'].includes(body.kind)||typeof body.body!=='string'||!body.body.trim()||Buffer.byteLength(body.body)>6000||
       !['room','direct'].includes(body.audience)||body.recipientId!=null&&!uuid(body.recipientId)||body.sourceEventId!=null&&!uuid(body.sourceEventId)||

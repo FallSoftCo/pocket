@@ -19,7 +19,8 @@ export class HumanIngress{
  }
  active(actor){return actor&&typeof actor.deviceId==='string'&&typeof actor.voiceTurnId==='string'&&this.db.prepare('SELECT 1 FROM devices WHERE id=?').get(actor.deviceId)&&this.deviceActive(actor.deviceId)&&this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND id=? AND state='thinking'").get(actor.deviceId,actor.voiceTurnId);}
  delegate(actor,method,path,body){
-  if(!humanInputRoute(method,path))return {headers:{},release(){}};
+  const roomRead=method==='GET'&&/^\/api\/hollywood\/v3\/(?:identity|rooms(?:\/[0-9a-f-]{36})?)$/.test(path);
+  if(!humanInputRoute(method,path)&&!roomRead)return {headers:{},release(){}};
   if(!this.active(actor))throw fail('Voice control needs its original paired device and active voice turn.');
   const at=this.now();for(const [key,value] of this.delegations)if(value.expires<=at)this.delegations.delete(key);
   const key=randomBytes(32).toString('base64url');
@@ -27,7 +28,7 @@ export class HumanIngress{
   return {headers:{'X-NextComp-Voice-Delegation':key},release:()=>this.delegations.delete(key)};
  }
  middleware(req,res,next){
-  if(!humanInputRoute(req.method,req.originalUrl.split('?')[0]))return next();
+  if(!humanInputRoute(req.method,req.originalUrl.split('?')[0])&&!req.get('X-NextComp-Voice-Delegation'))return next();
   try{
    if(req.device?.id&&req.device.id!=='owner'){
     if(!this.deviceActive(req.device.id))throw fail('The original human device is no longer authorized.');
