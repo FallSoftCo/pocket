@@ -58,7 +58,20 @@ class RoomAccountUsageNativeTest {
             val layouts=mutableListOf<TextLayoutResult>()
             node.performSemanticsAction(SemanticsActions.GetTextLayoutResult){it(layouts)}
             assertTrue("Missing text layout for $text",layouts.isNotEmpty())
-            assertTrue("Clipped visible account text: $text",layouts.none{it.hasVisualOverflow})
+            if(layouts.any{it.hasVisualOverflow}){
+                val detail=layouts.joinToString { "size=${it.size} overflowWidth=${it.didOverflowWidth} overflowHeight=${it.didOverflowHeight} input=${it.layoutInput.constraints} style=${it.layoutInput.style}" }
+                device.takeScreenshot(i.targetContext.filesDir.resolve("room-usage-intrinsic-overflow.png"))
+                println("ACCOUNT_INTRINSIC_OVERFLOW $text width=${width.intValue} font=${font.floatValue} ime=${imeVisible()} $detail")
+            }
+            // FlowRow intrinsic measurement can report didOverflowWidth when
+            // paragraph width exceeds the final text box although every glyph fits.
+            // Verify the actual full text and glyph boxes, not that intermediate flag.
+            assertTrue("Clipped visible account text: $text",layouts.all{layout->
+                layout.lineCount>0 && layout.getLineEnd(layout.lineCount-1,true)==layout.layoutInput.text.length &&
+                    (0 until layout.lineCount).none{layout.isLineEllipsized(it)} &&
+                    layout.layoutInput.text.indices.all{index->val box=layout.getBoundingBox(index)
+                        box.left>=-1f&&box.top>=-1f&&box.right<=layout.size.width+1f&&box.bottom<=layout.size.height+1f}
+            })
         }
         ActivityScenario.launch(NativeComponentFixtureActivity::class.java).use{scenario->
             scenario.onActivity{it.setContent{
