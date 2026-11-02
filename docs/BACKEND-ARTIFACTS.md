@@ -96,3 +96,43 @@ Focused journeys: `node --test tests/fleet-artifacts.test.mjs
 tests/fleet-gateway.test.mjs tests/backend-release.test.mjs`. These exercise actual
 owned gateway restart/session/revocation, loopback transfer, interrupted reads,
 lost receipts, unsafe archives and explicit rollback; they are not phone proof.
+# Host-local enrolled artifact reader
+
+`scripts/backend-bootstrap-fetch.mjs` plus `artifact-local-files.mjs` are a
+maintained Node-stdlib-only local reader. They use an already-enrolled Fleet
+identity and existing verified HTTPS blob route, not a new server or human API.
+No per-release bearer grant is needed. They never activate code or start work.
+
+As the existing local Fleet service identity (or its explicitly authorized
+operator), establish one private binding:
+
+```
+node backend-bootstrap-fetch.mjs --provision-reader --fleet /protected/fleet.json --node EXISTING_FLEET_NODE_UUID --reader /private/artifact-reader.json
+node backend-bootstrap-fetch.mjs --check-reader --reader /private/artifact-reader.json
+node backend-bootstrap-fetch.mjs --reader /private/artifact-reader.json --manifest /staging/artifact-manifest.json --source-node SERVING_FLEET_NODE_UUID --store /staging/downloads --operation ORIGINAL_OPERATION_ID
+```
+
+Provisioning checks the protected config, existing Ed25519 private/public-key
+match and expected Fleet node. It writes a private policy referencing the
+original config and pinning node/fleet/account/public-key identity; it never
+creates, prints or copies a key. Fleet roster/origin changes remain governed by
+the existing protected enrollment configuration. A changed identity requires a
+new explicit reader binding; the old policy is not silently rewritten.
+
+Keep the two code files together and root/owner-protected. Existing `--fleet`
+reads remain compatible. Symlinked release CLI invocation runs the actual main;
+module imports remain inert. Every fetch keeps its original content address and
+operation receipt. A lost verified receipt is recovered from actual immutable
+bytes without another HTTP request; no restart is implied.
+
+POSIX protection checks owner/mode. Windows code uses actual owner/allow-ACE
+inspection via the installed PowerShell, never POSIX mode bits or ACL repair;
+that adapter requires local Windows qualification before a deployment claim.
+The Linux test uses a real child CLI through a release symlink, verified HTTPS,
+an enrolled synthetic node proof, a published immutable fixture and original
+receipt recovery. It is not evidence of enrollment or activation on every host.
+
+Missing local Fleet configuration/key authority is a provisioning prerequisite,
+not permission to reuse Hollywood federation tokens, another host's identity or
+expired grants. These are distinct credential/trust domains even when host UUIDs
+coincide. Record the exact original owner boundary instead of reenrolling.
