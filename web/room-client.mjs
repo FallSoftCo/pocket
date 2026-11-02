@@ -111,7 +111,14 @@ export class RoomClient{
  async detail(id){
   const entry=this.entry(id),value=await this.readCall(id,'rooms/'+entry.roomId);
   if(value.room?.id!==entry.roomId||value.room.authority!==entry.binding.authorityId||!Array.isArray(value.actors)||!value.permissions)throw Error('Room detail scope is unconfirmed.');
-  entry.detail=value;entry.room=value.room;return value;
+  // Room metadata excludes runtime observations. Preserve preview metadata,
+  // but replace runtime state with this read's explicit top-level observation.
+  const room={...entry.room,...value.room};
+  if(Object.hasOwn(value,'nativeState'))room.nativeState=value.nativeState;
+  else if(!Object.hasOwn(value.room,'nativeState')&&Object.hasOwn(entry.room,'nativeState'))room.nativeState=null;
+  if(Object.hasOwn(value,'activity'))room.activity=value.activity;
+  else if(!Object.hasOwn(value.room,'activity'))delete room.activity;
+  entry.detail=value;entry.room=room;return value;
  }
  history(id,view){
   const e=this.entry(id),key=id+'/'+view;

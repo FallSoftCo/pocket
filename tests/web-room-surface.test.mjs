@@ -58,3 +58,23 @@ test('conversation question and legacy approval require exact native scope and a
  assert.equal(canAnswer({...value,scope:{...scope,nativeTurn:'other'}}),false);
  assert.equal(canAnswer({...value,attention:{...attention,state:'expired'}}),false);
 });
+
+
+test('detail runtime observation replaces retained catalog status without erasing preview or retargeting writes',async()=>{
+ const native=type=>({version:1,observedAt:1000,runtimeCount:1,agents:[{agentId:id(5),nativeThread:'original',expiresAt:2000,status:{type,activeFlags:[]}}]});
+ let observed=native('idle');
+ const client=new RoomClient(async path=>{
+  if(path.endsWith('/identity'))return binding;
+  if(path.endsWith('/rooms'))return {authorityId:id(2),rooms:[{...room,feedSummary:{version:1,marker:'retained'},nativeState:native('unavailable')}],binding};
+  return {room,actors:[],permissions:{can_post:true},binding,...(observed===undefined?{}:{nativeState:observed})};
+ });
+ const [entry]=await client.discover();await client.discovery.done;
+ const captured=structuredClone(client.route(entry.id));
+ await client.detail(entry.id);
+ assert.equal(roomState(client.entry(entry.id).room,{now:1500}).label,'Idle');
+ assert.equal(client.entry(entry.id).room.feedSummary.marker,'retained');
+ assert.equal(client.route(entry.id).binding.bindingId,captured.binding.bindingId);
+ observed=undefined;await client.detail(entry.id);
+ assert.equal(roomState(client.entry(entry.id).room,{now:1500}).known,false);
+ assert.equal(client.entry(entry.id).room.nativeState,null);
+});
