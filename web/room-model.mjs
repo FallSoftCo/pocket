@@ -21,22 +21,22 @@ export function roomState(room,{available=true,now=Date.now()}={}){
  const n=room.nativeState;
  if(!n||n.version!==1||!Number.isSafeInteger(n.observedAt)||n.observedAt<=0||!Number.isSafeInteger(n.runtimeCount)||n.runtimeCount<0||!Array.isArray(n.agents)||n.agents.length>n.runtimeCount)return unavailable;
  if(n.runtimeCount===0)return n.agents.length===0?roomActivityState(room.activity):unavailable;
- let working=0,waiting=0,unknown=n.runtimeCount-n.agents.length;const seen=new Set();
+ let working=0,waiting=0,idle=0,approvals=0,inputs=0,unavailableCount=n.runtimeCount-n.agents.length;const seen=new Set();
  for(const agent of n.agents){
   const key=agent.agentId+'/'+agent.nativeThread;
   if(!uuid(agent.agentId)||!agent.nativeThread||seen.has(key)||!Number.isSafeInteger(agent.expiresAt))return unavailable;
   seen.add(key);
-  if(agent.expiresAt<=Math.max(now,n.observedAt)){unknown++;continue;}
-  if(agent.status?.type==='idle')continue;
+  if(agent.expiresAt<=Math.max(now,n.observedAt)){unavailableCount++;continue;}
+  if(agent.status?.type==='idle'){idle++;continue;}
   if(agent.status?.type==='active'){
    const flags=agent.status.activeFlags;
    if(!Array.isArray(flags)||flags.some(f=>!['waitingOnApproval','waitingOnUserInput'].includes(f)))return unavailable;
-   if(flags.length)waiting++;else working++;
-  }else if(['unavailable','notLoaded','systemError'].includes(agent.status?.type))unknown++;
+   if(flags.length){waiting++;if(flags.includes('waitingOnApproval'))approvals++;if(flags.includes('waitingOnUserInput'))inputs++;}else working++;
+  }else if(['unavailable','notLoaded','systemError'].includes(agent.status?.type))unavailableCount++;
   else return unavailable;
  }
- const labels=[waiting?waiting+' needs you':'',working?working+' working':'',unknown?unknown+' unavailable':''].filter(Boolean);
- return {label:labels.join(' · ')||'Idle',tone:waiting||unknown?'attention':working?'live':'idle',known:true,native:true};
+ const labels=[approvals?approvals+' approval needed':'',inputs?inputs+' reply needed':'',working?working+' working':'',idle&&unavailableCount&&!working&&!waiting?idle+' idle':'',unavailableCount?unavailableCount+' agent status unavailable':''].filter(Boolean);
+ return {label:labels.join(' · ')||'Idle',tone:waiting?'attention':working?'live':unavailableCount?'unavailable':'idle',known:true,native:true,availability:{idle,unavailable:unavailableCount},attention:{approvals,inputs}};
 }
 export function roomEventRows(events,{authorityId,roomId,principalId,names={}}){
  if(![authorityId,roomId,principalId].every(uuid))throw Error('A verified room audience is required.');

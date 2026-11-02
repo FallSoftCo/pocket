@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {roomActivityState,roomEventRows} from '../web/room-model.mjs';
+import {roomActivityState,roomEventRows,roomState} from '../web/room-model.mjs';
 const id=n=>'aaaaaaaa-aaaa-4aaa-8aaa-'+String(n).padStart(12,'0');
 const scope={authorityId:id(1),roomId:id(2),principalId:id(3)};
 const event=(n,phase,author=id(4))=>({id:id(n),seq:n,authority:scope.authorityId,room:scope.roomId,author,audience:'room',body:'Run observation',data:{type:'executionActivity',activityVersion:1,actionId:'action-'+String(50).padStart(64,'0'),phase,status:phase==='completed'?'completed':'inProgress',title:'Compile',hostId:id(60),deliveryId:id(70),output:'compiler output'}});
@@ -40,4 +40,17 @@ test('room head refresh retains loaded history and independent older cursor with
  const conflict={...b,id:id(90)};
  assert.throws(()=>history.apply(page([conflict],null)),/sequence/);
  assert.equal(history.events.size,2);
+});
+
+
+test('mixed native availability is distinct from historical unknown delivery and actual approval',()=>{
+ const now=1000,agents=Array.from({length:6},(_,i)=>({agentId:id(i+30),nativeThread:'t-'+i,expiresAt:2000,status:{type:i===5?'unavailable':'idle',activeFlags:[]}}));
+ const room={activity:{version:1,observedAt:now,pending:0,claimed:0,running:0,cancelRequested:0,unknown:1,waitingForHuman:0},nativeState:{version:1,observedAt:now,runtimeCount:6,agents}};
+ let state=roomState(room,{now});
+ assert.equal(state.label,'5 idle · 1 agent status unavailable');assert.equal(state.tone,'unavailable');assert.deepEqual(state.availability,{idle:5,unavailable:1});
+ assert.doesNotMatch(state.label,/unknown|unconfirmed|needs you/);
+ agents[5].status={type:'active',activeFlags:['waitingOnApproval']};state=roomState(room,{now});
+ assert.equal(state.label,'1 approval needed');assert.equal(state.tone,'attention');assert.deepEqual(state.attention,{approvals:1,inputs:0});
+ agents[5].status={type:'active',activeFlags:['waitingOnUserInput']};assert.equal(roomState(room,{now}).label,'1 reply needed');
+ agents[5].status={type:'idle',activeFlags:[]};assert.equal(roomState(room,{now}).label,'Idle');
 });

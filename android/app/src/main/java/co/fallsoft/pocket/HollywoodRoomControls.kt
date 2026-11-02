@@ -14,11 +14,11 @@ internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<J
     private fun count(state:String)=deliveries.count{it.s("state")==state}
     val label get()=when {
         !verified->"Status unavailable"
-        questions.isNotEmpty()->"Needs you"
+        questions.isNotEmpty()->if(questions.all{it.optJSONObject("attention")?.s("method")?.endsWith("requestApproval")==true})"Approval needed" else "Reply needed"
         nativePresent&&native==null->"Status unavailable"
-        nativePresent&&native?.needsHuman==true->"Needs you"
+        nativePresent&&native?.needsHuman==true->native.summary
         nativePresent&&native?.executing==true->"Running"
-        nativePresent&&native?.uncertain==true->"Status unavailable"
+        nativePresent&&native?.uncertain==true->native.summary
         nativePresent->"Idle"
         deliveries.any{it.s("state")=="running"&&!it.optBoolean("cancellation_requested")}->"Running"
         count("claimed")>0->"Starting"
@@ -48,7 +48,7 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
 @Composable internal fun RoomWorkControls(work:HollywoodRoomWork,names:Map<String,String>,client:HollywoodClient,room:String,
     stopping:Set<String>,detailError:String,attentionError:String,onAttention:(JSONObject)->Unit,onGuidance:(JSONObject)->Unit,onStop:(JSONObject,Boolean)->Unit){
     SavedVoiceRecordingControls()
-    BilingualLabel(work.label,centered=false,color=if(work.label in listOf("Needs you","Outcome unknown","Blocked"))Coral else Muted)
+    BilingualLabel(work.label,centered=false,color=if(work.label in listOf("Needs you","Approval needed","Reply needed","Outcome unknown","Blocked"))Coral else Muted)
     if(detailError.isNotBlank())Text(detailError.take(180),color=Coral,maxLines=3)
     if(attentionError.isNotBlank())BilingualLabel("Questions could not refresh",centered=false,color=Coral)
     if(work.nativePresent&&work.deliveries.isNotEmpty())BilingualLabel("Earlier work",centered=false,color=Muted)
@@ -86,7 +86,12 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
         val id=question.getJSONObject("attention").s("id")
         androidx.compose.runtime.key("question:"+id){
             TextButton({onAttention(question)},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-room-question:"+id)){
-                BilingualLabel("Needs you",centered=false)
+                val request=question.optJSONObject("attention")?.optJSONObject("request")
+                Column(Modifier.fillMaxWidth()) {
+                    BilingualLabel(if(question.optJSONObject("attention")?.s("method")?.endsWith("requestApproval")==true)"Approval needed" else "Reply needed",centered=false)
+                    val context=request?.s("reason").orEmpty().ifBlank{request?.optJSONArray("questions")?.optJSONObject(0)?.s("question").orEmpty()}
+                    if(context.isNotBlank())Text(context,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,color=Paper)
+                }
             }
         }
     }

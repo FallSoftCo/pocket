@@ -3,13 +3,32 @@ package co.fallsoft.pocket
 import org.json.JSONObject
 
 /** A viewer-scoped observation, never a work timestamp or a host-health signal. */
-internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Long>,val native:Boolean=false) {
-    val idle get()=counts.all{it==0L}
+internal data class RoomActivityCategory(val key:String,val label:String,val count:Long)
+internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Long>,val native:Boolean=false,
+    val idleAgents:Long=0,val unavailableAgents:Long=0,val approvals:Long=0,val inputRequests:Long=0) {
+    val idle get()=counts.all{it==0L}&&unavailableAgents==0L
     val executing get()=counts[2]>0
     val scheduled get()=counts.take(4).any{it>0}
     val needsHuman get()=counts[5]>0
-    val uncertain get()=counts[4]>0
-    fun categories()=keys.indices.filter{counts[it]>0}.map{labels[it] to counts[it]}
+    val uncertain get()=counts[4]>0||unavailableAgents>0
+    val states get()=if(!native)keys.indices.filter{counts[it]>0}.map{RoomActivityCategory(keys[it],labels[it],counts[it])} else buildList {
+        if(approvals>0)add(RoomActivityCategory("approval","Approval needed",approvals))
+        if(inputRequests>0)add(RoomActivityCategory("input","Reply needed",inputRequests))
+        if(counts[2]>0)add(RoomActivityCategory("running","Running",counts[2]))
+        if(idleAgents>0&&counts[2]==0L&&counts[5]==0L)add(RoomActivityCategory("idle","Idle",idleAgents))
+        if(unavailableAgents>0)add(RoomActivityCategory("unavailable","Agent unavailable",unavailableAgents))
+    }
+    fun categories()=states.map{it.label to it.count}
+    val summary get()=when {
+        !native->categories().joinToString(" · "){(label,count)->"$count $label"}.ifEmpty{"Idle"}
+        approvals>0&&inputRequests==0L->"Approval needed"
+        inputRequests>0&&approvals==0L->"Reply needed"
+        counts[5]>0->"Needs you"
+        executing->"Running"
+        unavailableAgents>0&&idleAgents>0->"$idleAgents idle · $unavailableAgents unavailable"
+        unavailableAgents>0->"Agent status unavailable"
+        else->"Idle"
+    }
     companion object {
         private const val MAX_SAFE=9007199254740991L
         val keys=listOf("pending","claimed","running","cancelRequested","unknown","waitingForHuman")
@@ -35,7 +54,7 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
                 if(total<agents.length())return null
                 if(total>0) {
                     val observed=number(native.opt("observedAt"))?.takeIf{it>0}?:return null
-                    val counts=MutableList(6){0L};counts[4]=total-agents.length()
+                    val counts=MutableList(6){0L};var unavailable=total-agents.length();var idle=0L;var approvals=0L;var inputs=0L
                     val identities=mutableSetOf<String>()
                     for(i in 0 until agents.length()) {
                         val agent=agents.optJSONObject(i)?:return null
@@ -43,23 +62,24 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
                         if(!identities.add(identity))return null
                         val expires=number(agent.opt("expiresAt"))?:return null
                         val status=agent.optJSONObject("status")?:return null
-                        if(expires<=observed) { counts[4]++;continue }
+                        if(expires<=observed) { unavailable++;continue }
                         when(status.optString("type")) {
-                            "idle"->Unit
+                            "idle"->idle++
                             "active"->{
                                 val flags=status.optJSONArray("activeFlags")?:return null
                                 var waiting=false
                                 for(j in 0 until flags.length())when(flags.optString(j)) {
-                                    "waitingOnApproval","waitingOnUserInput"->waiting=true
+                                    "waitingOnApproval"->{waiting=true;approvals++}
+                                    "waitingOnUserInput"->{waiting=true;inputs++}
                                     else->return null
                                 }
                                 if(waiting)counts[5]++ else counts[2]++
                             }
-                            "notLoaded","systemError","unavailable"->counts[4]++
+                            "notLoaded","systemError","unavailable"->unavailable++
                             else->return null
                         }
                     }
-                    return HollywoodRoomActivity(observed,counts,native=true)
+                    return HollywoodRoomActivity(observed,counts,native=true,idleAgents=idle,unavailableAgents=unavailable,approvals=approvals,inputRequests=inputs)
                 }
             }
             val raw=room.optJSONObject("activity")?:return null

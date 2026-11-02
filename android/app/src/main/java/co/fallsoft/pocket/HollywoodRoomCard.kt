@@ -32,7 +32,7 @@ import org.json.JSONObject
         else->activity.categories().joinToString("; "){(label,count)->"$count $label"}
     }
     WorkCardSurface(activity?.scheduled==true,activity?.needsHuman==true,
-        if(activity?.uncertain==true||activity?.needsHuman==true)Coral else Mint,modifier=Modifier
+        if(activity?.needsHuman==true||activity?.counts?.get(4)?.let{it>0}==true)Coral else Mint,modifier=Modifier
             .testTag("native-room:"+room.s("id")).then(if(onKeyboard==null)Modifier.clickable(onClick=onOpen)else Modifier),knownIdle=activity?.idle==true) {
         if(onKeyboard!=null)Row(Modifier.matchParentSize()){
             CardInteractionRegion("Chat",Modifier.weight(.78f).fillMaxHeight(),room.s("name"),onOpen)
@@ -49,7 +49,7 @@ import org.json.JSONObject
                         activity.needsHuman->Icons.Rounded.ErrorOutline
                         activity.scheduled->Icons.Rounded.MoreHoriz
                         else->Icons.Rounded.Pause
-                    },spoken,tint=if(activity?.uncertain==true||activity?.needsHuman==true)Coral else Muted,modifier=Modifier.size(20.dp))
+                    },spoken,tint=if(activity?.needsHuman==true||activity?.counts?.get(4)?.let{it>0}==true)Coral else Muted,modifier=Modifier.size(20.dp))
                 }
             }
             Row(Modifier.fillMaxWidth().height(lineHeight).testTag("native-room-activity:"+room.s("id")).semantics{contentDescription=spoken},
@@ -59,17 +59,17 @@ import org.json.JSONObject
                 else {
                     // Surface attention before ordinary execution. These categories overlap;
                     // never add them into a misleading total or resort the catalog here.
-                    val order=listOf(5,4,2,0,3,1)
-                    val states=order.filter{activity.counts[it]>0}
+                    val order=listOf("approval","input","waitingForHuman","running","pending","cancelRequested","claimed","idle","unavailable","unknown")
+                    val states=activity.states.sortedBy{order.indexOf(it.key)}
                     val shown=states.take(if(density.fontScale>1.3f)2 else 3)
-                    shown.forEachIndexed { position,index ->
-                        val count=activity.counts[index]
-                        val tint=if(index in listOf(4,5))Coral else Paper
-                        Row((if(position==0)Modifier.weight(1f) else Modifier).testTag("native-room-state:"+room.s("id")+":"+HollywoodRoomActivity.keys[index]),
+                    shown.forEachIndexed { position,state ->
+                        val count=state.count
+                        val tint=if(state.key in listOf("approval","input","waitingForHuman","unknown"))Coral else Paper
+                        Row((if(position==0)Modifier.weight(1f) else Modifier).testTag("native-room-state:"+room.s("id")+":"+state.key),
                             horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
-                            if(position==0)BilingualLabel(HollywoodRoomActivity.labels[index],Modifier.weight(1f,fill=false),color=tint,centered=false)
+                            if(position==0||shown.size<=2)BilingualLabel(state.label,Modifier.weight(1f,fill=false),color=tint,centered=false)
                             else {
-                                val name=when(index){0->"Inbox";1->"Computer";2->"Codex";3->"Stop";4->"ErrorOutline";else->"User"}
+                                val name=when(state.key){"pending"->"Inbox";"claimed"->"Computer";"running"->"Codex";"cancelRequested"->"Stop";"idle"->"Pause";"unavailable","unknown"->"ErrorOutline";else->"User"}
                                 SymbolIcon(name,null,Modifier.size(18.dp),tint=tint)
                             }
                             Text(if(count>999)"999+" else count.toString(),color=tint,fontSize=14.sp,maxLines=1)
