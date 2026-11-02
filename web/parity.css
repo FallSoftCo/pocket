@@ -149,7 +149,7 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .room-controls label{display:flex;flex-direction:column;font-size:.75rem;min-width:0;flex:1 1 8rem}
 .room-controls select{width:100%;min-height:44px;max-width:100%}
 .room-controls button{min-height:44px}
-.transcript-toolbar #conversation-usage{display:flex;flex:1 1 9rem;min-inline-size:0;max-inline-size:20rem;min-height:48px;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:.25em .65em;padding:.5em .65em;white-space:normal;overflow-wrap:normal;font-variant-numeric:tabular-nums;text-align:start}
+.transcript-toolbar #conversation-usage{display:flex;flex:1 1 9rem;min-inline-size:min(100%,18em);max-inline-size:20rem;min-height:48px;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:.25em .65em;padding:.5em .65em;white-space:normal;overflow-wrap:normal;font-variant-numeric:tabular-nums;text-align:start}
 .conversation-usage .account-allowance{flex:0 0 auto;white-space:nowrap;font-weight:600}
 .conversation-usage .account-source{flex:1 1 auto;min-width:0;white-space:normal;overflow-wrap:break-word}
 .conversation-usage[data-usage-state=stale],.conversation-usage[data-usage-state=unavailable]{opacity:.72}
