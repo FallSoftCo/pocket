@@ -101,7 +101,7 @@ import java.util.Locale
     val hasReset=day.isNotBlank()
     val hasProfiles=accountSourceLabel!=null||contextLabel!=null||Pocket.environmentProfiles.all().size>1
     val accountLines=(if(accountFacts?.credits!=null)1 else 0)+(if(accountFacts?.freshness?.isNotBlank()==true)1 else 0)
-    val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*((if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+1+accountLines)+10.dp}.coerceAtLeast(58.dp)
+    val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*((if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+accountLines)+12.dp}.coerceAtLeast(58.dp)
     Box(if(compact)modifier.heightIn(min=compactHeight)else modifier.height(usageDockHeight())) {
     Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=listOfNotNull(accountSourceLabel,contextLabel,statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label(),accountFacts?.freshness,if(accountFacts!=null)usage.continuationLabel else null).filter{it.isNotBlank()}.joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
         if(compact)Column(Modifier.fillMaxWidth().heightIn(min=compactHeight).padding(vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
@@ -112,8 +112,9 @@ import java.util.Locale
             accountFacts?.credits?.let{Text(it,color=if(usage.credits.isStale(now,Pocket.connected&&Pocket.codexOnline))Muted else Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)}
             if(hasReset)Text("$day $time",color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
             accountFacts?.freshness?.takeIf{it.isNotBlank()}?.let{BilingualLabel(it,color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)}
-            if(hasProfiles)BilingualLabel(accountSourceLabel?:contextLabel?:Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=if(accountSourceLabel!=null)2 else 1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            BilingualLabel(statusLabel?:"Settings",color=Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
+            if(hasProfiles)BilingualLabel(accountSourceLabel?:contextLabel?:Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            // Status is already shown by the state icon and retained in the
+            // accessible description/drawer. Do not repeat it as another row.
         }else Column(Modifier.fillMaxSize().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
                 if(!creditPrimary)AnimatedMark(20)
