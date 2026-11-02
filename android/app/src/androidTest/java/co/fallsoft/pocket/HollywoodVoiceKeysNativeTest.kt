@@ -95,7 +95,7 @@ class HollywoodVoiceKeysNativeTest{
    android.util.Log.i("NextCompVoiceQA","catalogFeedbackMs="+catalogFeedbackMs)
    assertFalse("Removed catalog microphone returned",d.hasObject(By.res("native-catalog-microphone")))
    tap("native-room:"+roomB)
-   await("Other room did not open"){d.hasObject(By.res("native-room-controls"))&&d.hasObject(By.text("Synthetic voice room B"))}
+   await("Other room did not open"){d.hasObject(By.res("native-room-controls"))&&p.getString("hollywood-room:"+backendOwner(base,token)+":"+bindingId,null)==roomB&&Pocket.apiEnvironment(source,"/_qa/status").getJSONArray("historyRooms").objects().any{it.s("roomId")==roomB}}
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_UP)
    await("Hardware stop did not complete"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
    assertEquals("Navigation retargeted captured recording",roomA,PocketVoice.targetRoom?.s("roomId"))
