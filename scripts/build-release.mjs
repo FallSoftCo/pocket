@@ -3,6 +3,7 @@ import {copyFileSync,mkdirSync,readFileSync,writeFileSync,readdirSync,existsSync
 import {fileURLToPath} from 'node:url';
 import {join,resolve,isAbsolute,relative} from 'node:path';
 import {hostname} from 'node:os';
+import {nativeTestPlan} from './native-test-plan.mjs';
 import {checkBuildStorage} from './build-storage.mjs';
 import {productionSourceSha,qualificationInputSha,fileSha,sha256} from './release-qualification.mjs';
 const buildHeapMiB=Number(process.env.NEXTCOMP_BUILD_HEAP_MIB||2048);
@@ -21,8 +22,8 @@ if(phoneStore){outside(phoneStore);for(const key of ['POCKET_PHONE_SIGNING_PASSW
 const stage=outside(process.env.POCKET_RELEASE_STAGE);if(existsSync(stage))throw Error('Use a new staging directory; inspect an existing build instead of overwriting its receipt.');
 const sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT;if(!sdk)throw Error('Set ANDROID_HOME.');
 mkdirSync(stage,{recursive:true,mode:0o700});const directory=join(stage,'app-updates');mkdirSync(directory,{mode:0o700});
-const policy=JSON.parse(readFileSync(join(root,'scripts/release-policy.json'),'utf8'));
-const record={schema:1,state:'building',startedAt:Date.now(),productionSourceBefore:productionSourceSha(root),qualificationInputSha:qualificationInputSha(root),policySha:sha256(Buffer.from(JSON.stringify(policy))),tasks:[],resourceBudget:{heapMiB:buildHeapMiB,workers:buildWorkers,kotlinInProcess:true}};
+const {policy,plan:nativePlan}=nativeTestPlan(root,JSON.parse(readFileSync(join(root,'scripts/release-policy.json'),'utf8')),{baseRef:process.env.NEXTCOMP_RELEASE_BASE_REF,baseStage:process.env.NEXTCOMP_RELEASE_BASE_STAGE});
+const record={schema:1,nativePlan,state:'building',startedAt:Date.now(),productionSourceBefore:productionSourceSha(root),qualificationInputSha:qualificationInputSha(root),policySha:sha256(Buffer.from(JSON.stringify(policy))),tasks:[],resourceBudget:{heapMiB:buildHeapMiB,workers:buildWorkers,kotlinInProcess:true}};
 writeFileSync(join(directory,'build-intent.json'),JSON.stringify(record,null,2)+'\n',{flag:'wx',mode:0o600});
 const run=(command,args,env=process.env,cwd=root)=>{const storage=checkBuildStorage(stage,statfsSync,[root,join(root,"android/app/build"),process.env.GRADLE_USER_HOME||join(process.env.HOME,".gradle"),...([join(root,"node_modules"),join(root,"android/.gradle")].filter(existsSync))]);(record.storageChecks??=[]).push({at:Date.now(),...storage});const r=spawnSync(command,args,{cwd,env,stdio:'inherit'});if(r.status!==0)throw Error(`Release command did not complete: ${command} (${r.status??r.signal})`);};
 const unit=variant=>{const directory=join(root,'android/app/build/test-results/test'+variant+'UnitTest');const result={tests:0,failures:0,errors:0,skipped:0};for(const name of readdirSync(directory).filter(n=>/^TEST-.+\.xml$/.test(n))){const xml=readFileSync(join(directory,name),'utf8'),header=xml.match(/<testsuite\s[^>]+>/)?.[0];if(!header)throw Error('Invalid JUnit output.');for(const key of Object.keys(result)){const value=header.match(new RegExp('\\b'+key+'="(\\d+)"'))?.[1];if(value===undefined)throw Error('Incomplete JUnit output.');result[key]+=Number(value);}}if(!result.tests||result.failures||result.errors||result.skipped>=result.tests)throw Error('Unit checks failed or unavailable.');return result;};
@@ -44,7 +45,8 @@ try{
  }
  writeFileSync(join(directory,'build-intent.json'),JSON.stringify(record,null,2)+'\n',{mode:0o600});
  const signed=['testDebugUnitTest','testReleaseUnitTest','lintDebug','lintRelease','assembleDebug','assembleRelease'];
- run('./gradlew',[...gradleArgs,...signed],process.env,join(root,'android'));record.tasks.push(...signed);record.unit={debug:unit('Debug'),release:unit('Release')};
+ const selectedTasks=signed.flatMap(task=>task.startsWith('test')?[task,...(policy.unitFilters||[]).flatMap(name=>['--tests',name])]:[task]);
+ run('./gradlew',[...gradleArgs,...selectedTasks],process.env,join(root,'android'));record.tasks.push(...signed);record.unit={debug:unit('Debug'),release:unit('Release')};
  const primaryRelease=join(stage,'primary-release.apk');
  copyFileSync(join(root,'android/app/build/outputs/apk/release/app-release.apk'),primaryRelease);
  let compatibleRelease=join(root,'android/app/build/outputs/apk/debug/app-debug.apk');

@@ -3555,7 +3555,7 @@
   },
   "room_native_status_freshness_20261102": {
     "request": "All rooms show Unknown 6; retain latest room previews but show current native runtime status, distinguishing unavailable observations from unknown deliveries and approvals from questions.",
-    "status": "candidate; Android161 not yet published",
+    "status": "Android161 published to both channels; web deployed; physical installation unverified",
     "implementation": [
       "Fleet-room display overlays nativeState from the reachable authenticated route independently of the retained newest message preview.",
       "A missing current native observation cannot fall back to retained native state or legacy Idle.",
@@ -3568,6 +3568,20 @@
     "limits": [
       "No physical phone installation proof.",
       "Unavailable runtime observations remain honestly unavailable; labels are not worker recovery."
+    ]
+  },
+  "change_scoped_release_checks_20261102": {
+    "request": "Separate unrelated tests and stop forcing full provider/audio regression on narrow fixes.",
+    "status": "implemented for subsequent builds; current161 completed records unchanged",
+    "implementation": [
+      "Verified baseline commit must match complete prior qualified native source fingerprint.",
+      "Known room-status changes select affected model tests, two release integration invariants and exact-APK room-list review.",
+      "Voice, footer, navigation and unmapped changes retain full regression.",
+      "No model/provider/emulator activation when calculating a test plan."
+    ],
+    "limits": [
+      "First scoped family is room status; other feature families retain full regression.",
+      "No new APK build is required for this tooling-only change."
     ]
   }
 }

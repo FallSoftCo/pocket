@@ -11,10 +11,8 @@ function inputSha(root,inputs){
  const hash=createHash('sha256');for(const path of files.sort()){hash.update(relative(root,path));hash.update('\0');hash.update(fileSha(path));hash.update('\0');}return hash.digest('hex');
 }
 export const qualificationInputSha=root=>inputSha(root,['android/app/src/test','android/app/src/androidTest','tests/fixtures','server/timeline.mjs']);
-export function productionSourceSha(root){
- const inputs=['android/app/src/main','android/app/src/debug','android/app/src/release','android/app/src/qualification','android/app/build.gradle.kts','android/build.gradle.kts','android/settings.gradle.kts','android/gradle.properties','android/gradle'];
- return inputSha(root,inputs);
-}
+export const productionSourceInputs=['android/app/src/main','android/app/src/debug','android/app/src/release','android/app/src/qualification','android/app/build.gradle.kts','android/build.gradle.kts','android/settings.gradle.kts','android/gradle.properties','android/gradle'];
+export function productionSourceSha(root){return inputSha(root,productionSourceInputs);}
 export function nativeOutputPassed(output,expectedTests=1){
  const successes=output.split(/\r?\n/).map(line=>line.trim().match(/^OK \((\d+) tests?\)$/)).filter(Boolean);
  return successes.length===1&&Number(successes[0][1])===expectedTests&&!/FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|shortMsg=|There (?:was|were) \d+ failures?|Error in [\w$]/i.test(output);
@@ -57,6 +55,9 @@ export function validateReleaseQualification({directory,manifest,build,native,po
   const observations=policy.requiredOptimizedReview==='native-room-catalog-and-typing'?['typingDrawn','canonicalRoomSnapshot','originalAcceptedMessageSingle','optimizedPayloadVerified']:['searchSurvived','selectedIdentitiesReadable','recipientDraftsPreserved','correctSingleSend'];
   if(policy.captureInteraction!==undefined&&policy.captureInteraction!=='volume-buttons')fail('Unknown capture interaction contract.');
   if(policy.requiredNativeCases.some(name=>typeof name==='string'&&name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#')))observations.push('nativeVoiceHardwareKeys',policy.captureInteraction==='volume-buttons'?'nativeVolumeOnlyControls':'nativeVoiceTouch','nativeVoiceDraftAndOrigin');
+  const extra=policy.requiredOptimizedObservations??[];
+  if(!Array.isArray(extra)||extra.some(key=>typeof key!=='string'||!/^\w{1,80}$/.test(key)))fail('Invalid scoped review observations.');
+  observations.push(...extra);
   if(observations.some(key=>review.observations?.[key]!==true))fail('Required optimized interaction/visual review did not pass.');
   if(!Array.isArray(review.artifacts)||review.artifacts.length!==2||new Set(review.artifacts.map(a=>a.path)).size!==2)fail('Optimized review artifacts missing.');
   for(const artifact of review.artifacts)if(!hex.test(artifact.sha256)||fileSha(confinedFile(directory,artifact.path))!==artifact.sha256)fail('Optimized review artifact changed.');

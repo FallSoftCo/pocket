@@ -187,3 +187,31 @@ Check the installed and candidate certificate before installation. This does not
 authorize uninstalling the owner's phone or erasing retained QA preferences to
 solve a signing mismatch. Record the test artifact as debuggable qualification,
 never as an optimized release or physical-phone verification.
+
+## Change-scoped native qualification
+
+The release builder now supports a verified baseline through
+`NEXTCOMP_RELEASE_BASE_REF` (an ancestor Git commit) and
+`NEXTCOMP_RELEASE_BASE_STAGE` (its complete qualified app-updates directory).
+The baseline's native source fingerprint must match that Git source exactly;
+passing a recent arbitrary commit cannot silently skip earlier changed code.
+The selected plan is retained in build-intent.json and build.json. Missing or
+unmapped baselines retain the full policy; an inconsistent supplied baseline
+fails before any build commands.
+
+The first narrow profile covers FleetRoomProjection, HollywoodRoomActivity and
+HollywoodRoomCard plus their declared model tests and a pure version bump.
+It runs the two affected model families, the small chronology/accepted-send
+integration invariant set, and an exact optimized-APK room-list observation.
+It requires neither provider audio nor unrelated paging/immersion journeys.
+Full debug/release lint and signed artifact checks remain. Footer, navigation,
+voice, profile, build configuration and release-pipeline changes fall back to
+the full suite until their own impact profiles are reviewed. This is a narrow
+implemented profile, not a complete dependency map for the application.
+
+The full release-policy.json remains the separate regression policy. Supplying
+no baseline selects that policy explicitly. Do not edit completed release
+receipts to take advantage of a smaller later plan. Version161 was published
+with its original completed14-case record; this separation applies to subsequent
+candidates. Read-only plan calculation and gate checks do not run an emulator,
+contact a provider, submit work or create a periodic schedule.
