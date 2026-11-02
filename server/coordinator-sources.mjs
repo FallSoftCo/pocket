@@ -47,17 +47,18 @@ export class CoordinatorSources {
   }
   let command=null;
   if(body!==undefined&&!controlPlane){
+   const bodyHash=createHash('sha256').update(JSON.stringify(body)).digest('hex');
+   const commandId=createHash('sha256').update(JSON.stringify([device,sourceId,actor.voiceTurnId,actor.voiceCallId||body.id||path])).digest('hex');
    const unresolved=this.db.prepare("SELECT * FROM coordinator_remote_commands WHERE device_id=? AND source_id=? AND path=? AND state IN ('sending','unknown') LIMIT 8").all(device,sourceId,path);
    for(const old of unresolved){
     let receipt=null;
-    if(old.request_id)try{receipt=await this.call(device,sourceId,'/api/coordinator/receipt?id='+encodeURIComponent(old.request_id));}catch{}
-    if(receipt?.id===old.request_id&&['queued','sent','steered','accepted','cancelled','failed'].includes(receipt.state)){
+    if(old.request_id)try{receipt=await this.call(device,sourceId,path==='/api/hollywood/v3/rooms'?'/api/hollywood/v3/rooms/'+encodeURIComponent(old.request_id):'/api/coordinator/receipt?id='+encodeURIComponent(old.request_id),undefined,actor);}catch{}
+    const roomAccepted=path==='/api/hollywood/v3/rooms'&&receipt?.room?.id===old.request_id;
+    if(roomAccepted||receipt?.id===old.request_id&&['queued','sent','steered','accepted','cancelled','failed'].includes(receipt.state)){
      this.db.prepare("UPDATE coordinator_remote_commands SET state='responded',result=? WHERE id=?").run(JSON.stringify(receipt),old.id);
-     if(old.voice_turn===actor.voiceTurnId)return {...receipt,reconciledOriginal:true,notSubmittedNewCommand:true};
+     if(old.id===commandId)return {...receipt,reconciledOriginal:true,notSubmittedNewCommand:true};
     }else throw fail('Original remote delivery is uncertain. Read its original source receipt; no further command was sent.',409);
    }
-   const bodyHash=createHash('sha256').update(JSON.stringify(body)).digest('hex');
-   const commandId=createHash('sha256').update(JSON.stringify([device,sourceId,actor.voiceTurnId,actor.voiceCallId||body.id||path])).digest('hex');
    const previous=this.db.prepare('SELECT * FROM coordinator_remote_commands WHERE id=?').get(commandId);
    if(previous){
     if(previous.body_hash!==bodyHash||previous.path!==path)throw fail('Original delegated command identity conflicts; nothing was resent.',409);

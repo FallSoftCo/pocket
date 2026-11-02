@@ -1,4 +1,4 @@
-import {coordinatorRooms} from './coordinator-rooms.mjs';
+import {coordinatorRooms,CoordinatorRoomCommands} from './coordinator-rooms.mjs';
 import {textPrefix} from './text-boundary.mjs';
 import {CoordinatorSegments} from './coordinator-segments.mjs';
 import {MAX_RECORDING_WAV_BYTES} from './audio-limits.mjs';
@@ -38,7 +38,7 @@ export function validateVoiceAudio(audio){
 }
 export class VoiceController {
   constructor({db,codex,api,transcribe,cwd,host,catchup=null,hidden=()=>false,reports=null}){
-    Object.assign(this,{db,codex,api,transcribe,cwd,host,catchup,hidden,reports});this.starting=new Map();this.active=new Map();this.resumed=new Set();this.queueing=new Set();
+    Object.assign(this,{db,codex,api,transcribe,cwd,host,catchup,hidden,reports});this.roomCommands=new CoordinatorRoomCommands(db);this.starting=new Map();this.active=new Map();this.resumed=new Set();this.queueing=new Set();
     db.exec(`CREATE TABLE IF NOT EXISTS voice_sessions(device TEXT PRIMARY KEY,thread_id TEXT,selected TEXT,full INTEGER NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS voice_turns(device TEXT,id TEXT,hash TEXT,state TEXT,transcript TEXT,response TEXT,error TEXT,actions TEXT DEFAULT '[]',created_at INTEGER,PRIMARY KEY(device,id));
       CREATE TABLE IF NOT EXISTS voice_calls(device TEXT,turn_id TEXT,call_id TEXT,state TEXT,result TEXT,PRIMARY KEY(device,turn_id,call_id));
@@ -246,7 +246,7 @@ export class VoiceController {
       const identity=await call('/api/hollywood/v3/identity');
       if(!/^[0-9a-f]{64}$/.test(identity.bindingId))throw fail('This device has no available Hollywood room binding.',503);
       actor.hollywoodBinding=identity.bindingId;
-      return coordinatorRooms({operation,args:a,active,callId:toolContext.callId,environmentId,get:path=>call(path),post:call,action:value=>this.action(active,value),prior:this.get(active.device,active.id)?.actions||[]});
+      return coordinatorRooms({operation,args:a,active,callId:toolContext.callId,environmentId,get:path=>call(path),post:call,action:value=>this.action(active,value),commands:this.roomCommands.scope(active.device,environmentId,identity.bindingId)});
     }
     switch(operation){
       case 'history':{const query=String(a.query||'').trim().slice(0,300),before=Number.isSafeInteger(a.before)?a.before:Number.MAX_SAFE_INTEGER;

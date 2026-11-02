@@ -136,6 +136,9 @@ test('uncertain room creation is read back rather than submitted again',async()=
  const active={device:'phone',id:'room-uncertain'},call={tool:'pocket_control',callId:'original-room',arguments:{operation:'createRoom',arguments:{name:'Original',purpose:'Original purpose',ownerId:agent,sourceRoomId:sourceRoom}}};
  assert.equal((await controller.tool(active,call)).success,false);assert.equal(writes,1);
  assert.equal((await controller.tool(active,call)).success,false);assert.equal(writes,1);
- const result=await controller.tool(active,{...call,callId:'inspect-original-room'});
+ const replacementCodex=new FakeCodex(),replacement=new VoiceController({db,codex:replacementCodex,api:controller.api,cwd:'/tmp',host:'test'});
+ db.prepare("INSERT INTO voice_turns(device,id,hash,state,transcript,created_at) VALUES('phone','room-after-restart','hash','thinking','Inspect original room',2)").run();
+ const result=await replacement.tool({device:'phone',id:'room-after-restart'},{...call,callId:'inspect-original-room'});
+ assert.equal(replacementCodex.calls.length,0);
  assert.equal(result.success,true);assert.equal(JSON.parse(result.contentItems[0].text).reconciledOriginal,true);assert.equal(writes,1);db.close();
 });
