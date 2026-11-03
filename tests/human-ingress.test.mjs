@@ -78,3 +78,18 @@ test('voice delegation is device/turn/request-bound, one-use, expiring and canno
  const saved=db.prepare('SELECT principal FROM human_admissions').get().principal;
  const reopened=new HumanIngress(db);assert.equal(db.prepare('SELECT principal FROM human_admissions').get().principal,saved);assert.equal(reopened.delegations.size,0);
 });
+
+test('coordinator room reads resolve the originating human binding rather than the installation owner',async t=>{
+ const db=new DatabaseSync(':memory:');t.after(()=>db.close());
+ db.exec("CREATE TABLE devices(id TEXT PRIMARY KEY,name TEXT);CREATE TABLE voice_turns(device TEXT,id TEXT,state TEXT);INSERT INTO devices VALUES('phone','Phone');INSERT INTO voice_turns VALUES('phone','voice-room-read','thinking');");
+ const ingress=new HumanIngress(db),app=express();app.use((req,res,next)=>{req.device={id:'owner'};next();});app.use((req,res,next)=>ingress.middleware(req,res,next));
+ app.get('/api/hollywood/v3/identity',(req,res)=>res.json({bindingDevice:req.device.id}));
+ app.use((err,_req,res,_next)=>res.status(err.status||500).json({error:err.code}));
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
+ const path='/api/hollywood/v3/identity',origin='http://127.0.0.1:'+server.address().port,actor={deviceId:'phone',voiceTurnId:'voice-room-read'};
+ const grant=ingress.delegate(actor,'GET',path,undefined);
+ const r=await fetch(origin+path,{headers:grant.headers});assert.equal(r.status,200);assert.equal((await r.json()).bindingDevice,'phone');
+ assert.equal((await fetch(origin+path,{headers:grant.headers})).status,403);
+ const changed=ingress.delegate(actor,'GET',path,undefined);assert.equal((await fetch(origin+'/api/hollywood/v3/rooms',{headers:changed.headers})).status,403);
+ db.exec("UPDATE voice_turns SET state='completed'");assert.throws(()=>ingress.delegate(actor,'GET',path),/original paired device/);
+});
