@@ -61,7 +61,7 @@ export function roomEventRows(events,{authorityId,roomId,principalId,names={}}){
   const previous=native?operations.get(identity):null;
   const observations=[...(previous?.actionObservations||[]),...(native?[{eventId:event.id,seq:event.seq,phase:data.phase,status:data.status}]:[])];
   if(previous&&terminal.has(previous.status)&&!terminal.has(status)){previous.actionObservations=observations;continue;}
-  const row={id:native?'room-action:'+identity:'room-event:'+event.id,roomEventId:event.id,roomAuthor:event.author===principalId?'You':string(event.authorName)||names[event.author]||event.author,
+  const row={id:native?'room-action:'+identity:'room-event:'+event.id,roomEventId:event.id,roomAuthor:event.author===principalId?'You':names[event.author]||string(event.authorName)||event.author,
    roomAudience:event.audience,roomRecipient:event.recipient,kind:activity||structured?'activity':event.author===principalId?'user':'message',text:string(event.body),canonicalSeq:event.seq};
   if(native){
    Object.assign(row,{type:structured?data.nativeType:'roomOperation',status,actionId,actionObservations:observations,agentId:event.author,hostId:data.hostId,deliveryId:data.deliveryId,nativeThread:data.thread,nativeTurn:data.turn,itemId:data.itemId,
@@ -110,5 +110,5 @@ export class RoomHistory {
   for(const seq of sequences.keys())this.latestSeq=this.latestSeq===null?seq:Math.max(this.latestSeq,seq);
   return this.rows();
  }
- rows(){return roomEventRows([...this.events.values()],this.scope);}
+ rows(names={}){return roomEventRows([...this.events.values()],{...this.scope,names});}
 }

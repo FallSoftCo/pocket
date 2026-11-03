@@ -46,7 +46,7 @@ internal fun roomTranscriptRows(events:List<JSONObject>,prefix:String,principalI
         }
         val eventId=event.opt("id")
         val row=JSONObject().put("id",if(activity||structured)"$prefix:operation:$actionIdentity" else "$prefix:$eventId")
-            .put("roomEventId",eventId).put("roomAuthor",if(author==principalId)"You"else event.s("authorName",agentNames[author]?:author))
+            .put("roomEventId",eventId).put("roomAuthor",if(author==principalId)"You"else agentNames[author]?:event.s("authorName",author))
             .put("roomAudience",event.s("audience")).put("roomRecipient",event.s("recipient"))
             .put("kind",if(activity)"activity" else if(author=="you"||event.optBoolean("isSelf")||author==principalId)"user" else "message")
             .put("text",if(native&&data?.s("nativeType") in listOf("agentMessage","plan"))data?.s("output")else event.s("body"))

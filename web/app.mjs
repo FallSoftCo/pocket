@@ -1,4 +1,5 @@
 import {HistoryReader} from './native-history.mjs';
+import {roomActorLabel,roomOriginSummary,roomOriginRows} from './room-identity.mjs';
 import {RequestList} from './request-list.mjs';
 import {InlineMedia} from './media-previews.mjs';
 import {ReviewPane} from './review-pane.mjs';
@@ -447,14 +448,20 @@ const roomProjection=roomSelect('room-view','View','data-room-view');
 const roomRecipient=roomSelect('room-recipient','Recipient','data-room-recipient');
 const roomAudience=roomSelect('room-audience','Audience','data-room-audience');
 const roomReply=button('Clear reply target',()=>changeRoomTarget({...targetFor(scope),sourceEventId:null}));roomReply.id='room-source-event';roomControls.append(roomReply);
+const roomRoster=el('details','room-roster'),roomRosterTitle=el('summary',''),roomRosterBody=el('div','');
+roomRoster.id='room-agent-roster';roomRosterBody.style.whiteSpace='pre-line';roomRosterBody.style.maxHeight='260px';roomRosterBody.style.overflow='auto';
+roomRoster.append(roomRosterTitle,roomRosterBody);roomControls.append(roomRoster);
 $('composer').prepend(roomControls);
 function options(select,values,value){const signature=JSON.stringify(values);if(select.dataset.options!==signature){select.replaceChildren(...values.map(([id,label])=>{const option=el('option','',label);option.value=id;return option;}));select.dataset.options=signature;}select.value=value;}
 function renderRoomHeader(){
  const e=rooms.entry(scope),route=rooms.route(scope,{requireAvailable:false}),target=targetFor(scope),detail=current;
  roomControls.hidden=false;$('main').dataset.roomId=e.roomId;
+ roomRosterTitle.textContent=roomOriginSummary(detail,{available:!detail?.detailError});
+ roomRosterBody.textContent=[...roomOriginRows(detail),...(detail?.actors||[]).filter(a=>a.can_read===true).map(a=>
+   roomActorLabel(a)+(a.participation==='retained-source-owner'?' · Retained original-source owner (not public fanout)':a.identity?.originRoomId===e.roomId?' · Origin here':' · Existing/visiting participant'))].join('\n');
  options(roomGateway,e.routes.map(r=>[r.environment,r.name+(r.available?'':' · Unavailable')]),route.environment);
  options(roomProjection,[['all','Conversation + activity'],['conversation','Conversation'],['activity','Activity']],roomView);
- options(roomRecipient,[['','All room agents'],...(detail?.actors||[]).filter(a=>a.kind==='agent').map(a=>[a.id,a.name||a.id])],target.recipientId||'');
+ options(roomRecipient,[['','All room agents'],...(detail?.actors||[]).filter(a=>a.kind==='agent').map(a=>[a.id,roomActorLabel(a)])],target.recipientId||'');
  options(roomAudience,[['room','Public room'],['direct','Private to recipient']],target.audience);
  roomReply.hidden=!target.sourceEventId;roomReply.title=target.sourceEventId||'';
  setLabel($('title'),e.room.name||'Hollywood room');setLabel($('context-label'),'HOLLYWOOD ROOM');

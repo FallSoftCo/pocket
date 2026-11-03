@@ -1,4 +1,5 @@
 import {RoomHistory} from './room-model.mjs';
+import {roomActorNames} from './room-identity.mjs';
 import {bindingMatches,jsonEqual} from './receipt-policy.mjs';
 export const uuid=v=>typeof v==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(v);
 export const isRoom=id=>typeof id==='string'&&id.startsWith('room:');
@@ -143,7 +144,7 @@ export class RoomClient{
    if(fill.events.length<100||next>=gap.before)history.gaps.shift();
    else if(next>gap.after)gap.after=next;
   }
-  return {rows:history.rows(),hasEarlier:history.olderCursor!==null,before:history.olderCursor,catchingUp:!!history.gaps?.length};
+  return {rows:history.rows(roomActorNames(entry.detail?.actors)),hasEarlier:history.olderCursor!==null,before:history.olderCursor,catchingUp:!!history.gaps?.length};
  }
  async attention(id){
   const e=this.entry(id),page=await this.readCall(id,'rooms/'+e.roomId+'/attention?limit=100');

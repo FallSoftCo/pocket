@@ -86,7 +86,7 @@ internal object HollywoodNotifications {
         val c=Pocket.context;val manager=c.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel("hollywood", "Hollywood rooms",NotificationManager.IMPORTANCE_HIGH))
         val b=NotificationCompat.Builder(c,"hollywood").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(status?:if(generic)"Hollywood update" else value.optJSONObject("hint")?.s("roomName","Hollywood").orEmpty())
+            .setContentTitle(status?:if(generic)"Hollywood update" else roomNotificationTitle(value))
             .setContentText(if(generic)"Open the room to review" else value.optJSONObject("event")?.s("body")?.take(2000).orEmpty())
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setSilent(quiet).setOnlyAlertOnce(true).setAutoCancel(false).setContentIntent(open(key))
             .addExtras(Bundle().apply{putString("hollywoodEvent",value.s("eventId"));putString("hollywoodBinding",value.s("bindingId"));putString("hollywoodEnvironment",value.s("environment"));putLong("hollywoodRevision",value.optLong("revision"))})
@@ -118,7 +118,8 @@ internal object HollywoodNotifications {
         if(h.optLong("revision")<old.optLong("revision"))return null
         val result=JSONObject(old.toString()).put("revision",h.getLong("revision")).put("binding",binding).put("hint",h).put("event",event)
             .put("action",if(h.optBoolean("notify"))"notify" else "resolve").put("state",if(h.optBoolean("notify"))"verified" else "resolved")
-        result.remove("reply");result.remove("attention")
+        result.remove("reply");result.remove("attention");result.remove("author")
+        value.optJSONObject("author")?.takeIf{it.s("agentId")==event.s("author")}?.let{result.put("author",it)}
         if(h.s("attentionId").isNotBlank())result.put("attention",client.call("attention/"+h.s("attentionId")))
         else if(h.optBoolean("notify")){
             val room=client.call("rooms/"+h.s("roomId"));val actor=room.getJSONArray("actors").objects().firstOrNull{it.s("id")==event.s("author")}
