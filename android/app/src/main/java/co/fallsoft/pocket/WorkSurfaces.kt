@@ -105,6 +105,23 @@ import androidx.compose.ui.unit.sp
     val context=androidx.compose.ui.platform.LocalContext.current
     // A fresh opening starts with current work before the popup is measured.
     val menuScroll=androidx.compose.runtime.remember(expanded,bottomActions){androidx.compose.foundation.ScrollState(if(bottomActions)Int.MAX_VALUE else 0)}
+    // Follow the work edge across measurement changes only while it is the
+    // user's current edge. A manual scroll away suspends following until the
+    // user returns or reopens. This effect observes only the open popup.
+    androidx.compose.runtime.LaunchedEffect(expanded,bottomActions,menuScroll){
+        if(expanded&&bottomActions){
+            var previousMax=-1
+            var followWork=true
+            androidx.compose.runtime.snapshotFlow{Triple(menuScroll.maxValue,menuScroll.value,menuScroll.isScrollInProgress)}.collect{(maximum,value,scrolling)->
+                if(maximum!=Int.MAX_VALUE){
+                    if(scrolling)followWork=value>=maximum-2
+                    else if(maximum==previousMax)followWork=value>=maximum-2
+                    if(maximum!=previousMax&&followWork&&!scrolling)menuScroll.scrollTo(maximum)
+                    previousMax=maximum
+                }
+            }
+        }
+    }
     Box{
         UsageDock(modifier.width(compactUsageDockWidth(accountSourceLabel!=null)),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)},usage=accountUsage?:Pocket.weeklyUsage,accountSourceLabel=accountSourceLabel)
         DropdownMenu(expanded,{onExpandedChange(false)},scrollState=menuScroll,modifier=Modifier.width(300.dp).heightIn(max=if(bottomActions)280.dp else 420.dp).semantics{testTagsAsResourceId=true},

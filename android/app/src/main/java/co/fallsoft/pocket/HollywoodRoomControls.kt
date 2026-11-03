@@ -30,7 +30,7 @@ internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<J
         else->"Idle"
     }
     val spinning get()=label=="Running"
-    val icon get()=when(label){"Running"->"Codex";"Queued","Starting"->"MoreHoriz";"Idle"->"Pause";"Stop requested"->"Stop";else->"ErrorOutline"}
+    val icon get()=when(label){"Running"->"Codex";"Queued","Starting","Shared context busy"->"MoreHoriz";"Idle"->"Pause";"Stop requested"->"Stop";else->"ErrorOutline"}
 }
 
 internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSONObject>,accepted:List<JSONObject> = emptyList()):HollywoodRoomWork {

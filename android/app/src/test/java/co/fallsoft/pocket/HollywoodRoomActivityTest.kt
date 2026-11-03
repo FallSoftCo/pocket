@@ -65,7 +65,7 @@ class HollywoodRoomActivityTest {
   assertFalse(busy.idle);assertFalse(busy.executing);assertFalse(busy.uncertain);assertFalse(busy.needsHuman)
   r.put("room",JSONObject().put("id","cccccccc-cccc-4ccc-8ccc-ccccccccccc1")).put("deliveries",org.json.JSONArray())
   val work=hollywoodRoomWork(r,"",emptyList())
-  assertEquals("Shared context busy",work.label);assertFalse(work.spinning)
+  assertEquals("Shared context busy",work.label);assertFalse(work.spinning);assertEquals("MoreHoriz",work.icon)
   agent.put("expiresAt",999L)
   assertTrue(HollywoodRoomActivity.read(r,true)!!.uncertain)
   agent.put("expiresAt",2000L).getJSONObject("status").put("activeFlags",org.json.JSONArray().put("waitingOnApproval"))
