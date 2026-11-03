@@ -59,6 +59,16 @@ class HollywoodMixedCatalogNativeTest {
             android.graphics.Rect(node.visibleBounds).takeUnless{it.isEmpty}
         }catch(_:StaleObjectException){null}
     }
+    private fun showAddressControl(){
+        val selector=By.text("Original room · Room → All room agents")
+        for(step in 0..8){
+            if(observedBounds(selector)?.height()?.let{it>20}==true)return
+            assertTrue("Address not reachable in bounded popup scroll",step<8)
+            val popup=observedBounds(By.clazz("android.widget.ScrollView").pkg("co.fallsoft.pocket"))
+            requireNotNull(popup){"Room controls have no scroll surface"}
+            assertTrue(device.swipe(popup.centerX(),popup.top+popup.height()/4,popup.centerX(),popup.bottom-popup.height()/4,24))
+        }
+    }
     private fun identity()="environment=${Pocket.environmentId} selected=${Pocket.selected} native=${BackendNavigation.nativeSelected()}"
     private fun click(selector:BySelector,retired:()->Boolean={false}):Boolean{
         var bounds:android.graphics.Rect?=null;var stableAt=0L
@@ -161,10 +171,10 @@ class HollywoodMixedCatalogNativeTest {
                 await("Open-room footer lost native waiting state"){device.hasObject(By.text("Needs you"))}
             if(InstrumentationRegistry.getArguments().getString("roomOriginExpected")=="true") {
                 click(By.desc("Settings, app updates, usage and activity"))
-                click(By.res("native-room-address"))
+                showAddressControl();click(By.text("Original room · Room → All room agents"))
                 await("Mac room-owned participant missing"){device.hasObject(By.text("Original room · MacBook Pro"))}
                 assertFalse("Retained Global remained a current recipient",device.hasObject(By.text("Retained Global source owner")))
-                capture("room-origin-address");click(By.res("native-room-address"));rawBack()
+                capture("room-origin-address");rawBack();rawBack()
                 await("Closing room controls lost composer"){device.hasObject(By.clazz("android.widget.EditText"))}
             }
             focusedIme("before-send")

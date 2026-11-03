@@ -57,7 +57,11 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
     stopping:Set<String>,detailError:String,attentionError:String,onAttention:(JSONObject)->Unit,onGuidance:(JSONObject)->Unit,onStop:(JSONObject,Boolean)->Unit){
     SavedVoiceRecordingControls()
     BilingualLabel(work.label,centered=false,color=if(work.label in listOf("Needs you","Approval needed","Reply needed","Outcome unknown","Blocked"))Coral else Muted)
-    if(work.setupLabel!=null)work.setupAgents.forEach{agent->
+    val setupExpanded=androidx.compose.runtime.remember(client.bindingId,room){androidx.compose.runtime.mutableStateOf(false)}
+    if(work.setupLabel!=null&&work.setupAgents.isNotEmpty())TextButton({setupExpanded.value=!setupExpanded.value},Modifier.testTag("native-room-environments")){
+        BilingualLabel("Environments",centered=false);Text(" · ${work.setupAgents.count{it.optBoolean("ready")}}/${work.setupAgents.size}")
+    }
+    if(work.setupLabel!=null&&setupExpanded.value)work.setupAgents.forEach{agent->
         Column(Modifier.fillMaxWidth().padding(vertical=6.dp)){
             Text(agent.s("host_name").ifBlank{"Environment"},color=Paper,style=MaterialTheme.typography.bodyMedium)
             BilingualLabel(if(agent.optBoolean("ready"))"Ready" else when(agent.s("readiness",agent.s("state"))){
