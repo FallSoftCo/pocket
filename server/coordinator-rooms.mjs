@@ -45,7 +45,7 @@ export async function coordinatorRooms({operation,args:a,active,callId,environme
  action({type:'room-create',state:'submitting',roomId,operationId:body.operationId,name:body.name,purpose:body.purpose,ownerId:a.ownerId,...(environmentId?{environmentId}:{})});
  let result;
  try{result=await post(base,body);}catch(error){
-  if([400,401,403,404,409,422].includes(error.status)){commands.finish(body.operationId,'rejected',{status:error.status});action({type:'room-create',state:'rejected',roomId,operationId:body.operationId,...(environmentId?{environmentId}:{})});}
+  if(error.code!=='REMOTE_DELIVERY_UNKNOWN'&&[400,401,403,404,409,422].includes(error.status)){commands.finish(body.operationId,'rejected',{status:error.status});action({type:'room-create',state:'rejected',roomId,operationId:body.operationId,...(environmentId?{environmentId}:{})});}
   throw error;
  }
  const room=result.room||result;

@@ -114,3 +114,16 @@ test('large messages remain intact in the journal while bounded checkpoint excer
   assert.ok(items.every(item=>messageText(item).length<=32000));
   assert.ok(items.every(item=>!/[\uD800-\uDBFF]$/.test(messageText(item))));
 });
+
+// A matching integer can describe an older tool enum on an existing device.
+test('matching legacy revision never substitutes for the exact coordinator tool contract',async t=>{
+ const {controller,codex,db,history}=setup(t);history(2);
+ db.prepare("UPDATE voice_sessions SET tool_revision=? WHERE device='phone'").run(VOICE_TOOL_REVISION);
+ const result=await controller.ensure('phone');
+ assert.equal(result.thread_id,'candidate_1');
+ assert.equal(result.tool_contract,(await import('../server/voice-controller.mjs')).VOICE_TOOL_CONTRACT);
+ const start=codex.calls.find(c=>c.method==='thread/start');
+ assert.ok(start.params.dynamicTools[0].inputSchema.properties.operation.enum.includes('createRoom'));
+ assert.equal(codex.calls.some(c=>['turn/start','turn/steer','turn/interrupt'].includes(c.method)),false);
+ await controller.ensure('phone');assert.equal(codex.starts,1);
+});

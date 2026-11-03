@@ -1,0 +1,11 @@
+{
+  "scope": "Coordinator room discovery and creation through original human pairings",
+  "checks": 33,
+  "networkIntegration": "Real HTTP fixture: paired token/binding, admitted creation, lost ACK and reopen original-ID reconciliation without second POST",
+  "liveRead": "Original paired live source identity/room reads succeeded with binding; an unavailable source is not an empty inventory",
+  "limits": [
+    "No business room created by the capability question",
+    "No phone interaction, model inference or actual PG creation claimed by fixture"
+  ],
+  "revisionProtection": "Persisted exact tool/instruction contract fingerprint; idle-only replacement, full journal and selection retained"
+}

@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-03T03:39:55.821273+00:00",
+  "updated": "2026-11-03",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -3593,5 +3593,19 @@
       "First scoped family is room status; other feature families retain full regression.",
       "No new APK build is required for this tooling-only change."
     ]
+  },
+  "coordinator_room_capability_20261103": {
+    "request": "Coordinator must understand NextComp/Hollywood rooms and discover/create them through existing paired human sources.",
+    "status": "implemented; backend release qualification in progress",
+    "architecture": [
+      "Exact persisted coordinator tool/instruction contract fingerprint, safe idle upgrade preserving full journal/focus/unknown receipts",
+      "On-demand bound room catalogue across original paired sources, same-authority dedup and stable writer preference",
+      "Room binding independent of selected Codex host, original human command provenance and durable creation receipt; no automatic replay"
+    ],
+    "verification": [
+      "27 focused checks passed including migration, routing, creation provenance and lost ACK",
+      "Original device-paired live GETs verified existing federated rooms with explicit binding"
+    ],
+    "phoneInstallRequired": false
   }
 }

@@ -30,8 +30,8 @@ export class CoordinatorSources {
    this.db.prepare('UPDATE coordinator_sources SET verified_at=?,problem=NULL WHERE device_id=? AND source_id=?').run(this.clock(),device,s.environmentId);
   }catch{this.db.prepare('UPDATE coordinator_sources SET problem=? WHERE device_id=? AND source_id=?').run('Paired source unavailable; no work submitted.',device,s.environmentId);}}}));return {sources:this.list(device)};
  }
- async call(device,sourceId,path,body,actor){
-  if(!sourceId||sourceId==='current')return this.localApi(path,body,actor);
+ async call(device,sourceId,path,body,actor,options={}){
+  if(!sourceId||sourceId==='current')return this.localApi(path,body,actor,options);
   const row=this.db.prepare('SELECT * FROM coordinator_sources WHERE device_id=? AND source_id=?').get(device,sourceId);if(!row)throw fail('This environment is not delegated to this human device.',403);
   // No arbitrary proxy, pairing/admin/credential endpoints or nested federation.
   const roomRead=/^\/api\/hollywood\/v3\/(?:rooms(?:$|\/[0-9a-f-]{36}$)|identity$)/.test(path);
@@ -69,7 +69,7 @@ export class CoordinatorSources {
    this.db.prepare("INSERT INTO coordinator_remote_commands(id,device_id,source_id,voice_turn,path,body_hash,state,result,at,request_id) VALUES(?,?,?,?,?,?,'sending',NULL,?,?)").run(commandId,device,sourceId,actor.voiceTurnId,path,bodyHash,this.clock(),typeof body.id==='string'?body.id:null);command=commandId;
   }
   try{
-  const response=await this.fetchImpl(row.base+path,{redirect:'error',headers:{Authorization:'Bearer '+this.credential(row),'Content-Type':'application/json',...(actor?.hollywoodBinding?{'X-Hollywood-Binding':actor.hollywoodBinding}:{}),'X-NextComp-Coordinator-Hop':'1',...(body===undefined||controlPlane?{}:{'X-NextComp-Coordinator-Turn':actor.voiceTurnId,'X-NextComp-Coordinator-Origin':createHash('sha256').update(this.key).digest('hex').slice(0,24)})},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:AbortSignal.timeout(body===undefined||controlPlane?2500:15000)});
+  const response=await this.fetchImpl(row.base+path,{redirect:'error',headers:{Authorization:'Bearer '+this.credential(row),'Content-Type':'application/json',...(actor?.hollywoodBinding?{'X-Hollywood-Binding':actor.hollywoodBinding}:{}),'X-NextComp-Coordinator-Hop':'1',...(body===undefined||controlPlane?{}:{'X-NextComp-Coordinator-Turn':actor.voiceTurnId,'X-NextComp-Coordinator-Origin':createHash('sha256').update(this.key).digest('hex').slice(0,24)})},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:options.signal?AbortSignal.any([AbortSignal.timeout(body===undefined||controlPlane?2500:15000),options.signal]):AbortSignal.timeout(body===undefined||controlPlane?2500:15000)});
   let value;try{value=await response.json()}catch{throw fail('The delegated source returned an invalid response.',502)}
   if(!response.ok){
    const error=fail('The delegated source could not complete this operation (HTTP '+response.status+').',response.status);
