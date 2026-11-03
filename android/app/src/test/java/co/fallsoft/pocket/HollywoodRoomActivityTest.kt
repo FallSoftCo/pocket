@@ -55,6 +55,19 @@ class HollywoodRoomActivityTest {
   state.put("agents",org.json.JSONArray().put(agent).put(agent)).put("runtimeCount",2)
   assertNull(HollywoodRoomActivity.read(r,true))
  }
+ @Test fun sharedBusyIsNeitherOfflineIdleNorAClaimOfRoomExecution(){
+  val agent=JSONObject().put("agentId","a").put("nativeThread","t").put("expiresAt",2000L)
+   .put("status",JSONObject().put("type","activeElsewhere").put("activeFlags",org.json.JSONArray()))
+  val state=JSONObject().put("version",1).put("observedAt",1000L).put("runtimeCount",1).put("agents",org.json.JSONArray().put(agent))
+  val r=room().put("nativeState",state)
+  val busy=HollywoodRoomActivity.read(r,true)!!
+  assertEquals("Shared context busy",busy.summary);assertEquals(1L,busy.sharedBusyAgents)
+  assertFalse(busy.idle);assertFalse(busy.executing);assertFalse(busy.uncertain);assertFalse(busy.needsHuman)
+  agent.put("expiresAt",999L)
+  assertTrue(HollywoodRoomActivity.read(r,true)!!.uncertain)
+  agent.put("expiresAt",2000L).getJSONObject("status").put("activeFlags",org.json.JSONArray().put("waitingOnApproval"))
+  assertNull(HollywoodRoomActivity.read(r,true))
+ }
  @Test fun missingParticipantStatusIsNotAnUnknownDeliveryAndApprovalIsActionable(){
   val agents=org.json.JSONArray()
   repeat(6){i->agents.put(JSONObject().put("agentId","agent-$i").put("nativeThread","thread-$i").put("expiresAt",2000L)

@@ -5,8 +5,9 @@ import org.json.JSONObject
 /** A viewer-scoped observation, never a work timestamp or a host-health signal. */
 internal data class RoomActivityCategory(val key:String,val label:String,val count:Long)
 internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Long>,val native:Boolean=false,
-    val idleAgents:Long=0,val unavailableAgents:Long=0,val approvals:Long=0,val inputRequests:Long=0) {
-    val idle get()=counts.all{it==0L}&&unavailableAgents==0L
+    val idleAgents:Long=0,val unavailableAgents:Long=0,val approvals:Long=0,val inputRequests:Long=0,
+    val sharedBusyAgents:Long=0) {
+    val idle get()=counts.all{it==0L}&&unavailableAgents==0L&&sharedBusyAgents==0L
     val executing get()=counts[2]>0
     val scheduled get()=counts.take(4).any{it>0}
     val needsHuman get()=counts[5]>0
@@ -15,7 +16,8 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
         if(approvals>0)add(RoomActivityCategory("approval","Approval needed",approvals))
         if(inputRequests>0)add(RoomActivityCategory("input","Reply needed",inputRequests))
         if(counts[2]>0)add(RoomActivityCategory("running","Running",counts[2]))
-        if(idleAgents>0&&counts[2]==0L&&counts[5]==0L)add(RoomActivityCategory("idle","Idle",idleAgents))
+        if(sharedBusyAgents>0)add(RoomActivityCategory("sharedBusy","Shared context busy",sharedBusyAgents))
+        if(idleAgents>0&&counts[2]==0L&&counts[5]==0L&&sharedBusyAgents==0L)add(RoomActivityCategory("idle","Idle",idleAgents))
         if(unavailableAgents>0)add(RoomActivityCategory("unavailable","Agent unavailable",unavailableAgents))
     }
     fun categories()=states.map{it.label to it.count}
@@ -25,6 +27,7 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
         inputRequests>0&&approvals==0L->"Reply needed"
         counts[5]>0->"Needs you"
         executing->"Running"
+        sharedBusyAgents>0->"Shared context busy"
         unavailableAgents>0&&idleAgents>0->"$idleAgents idle · $unavailableAgents unavailable"
         unavailableAgents>0->"Agent status unavailable"
         else->"Idle"
@@ -55,7 +58,7 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
                 if(total<agents.length())return null
                 if(total>0) {
                     val observed=number(native.opt("observedAt"))?.takeIf{it>0}?:return null
-                    val counts=MutableList(6){0L};var unavailable=total-agents.length();var idle=0L;var approvals=0L;var inputs=0L
+                    val counts=MutableList(6){0L};var unavailable=total-agents.length();var idle=0L;var approvals=0L;var inputs=0L;var sharedBusy=0L
                     val identities=mutableSetOf<String>()
                     for(i in 0 until agents.length()) {
                         val agent=agents.optJSONObject(i)?:return null
@@ -66,6 +69,11 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
                         if(expires<=observed) { unavailable++;continue }
                         when(status.optString("type")) {
                             "idle"->idle++
+                            "activeElsewhere"->{
+                                val flags=status.optJSONArray("activeFlags")?:return null
+                                if(flags.length()!=0)return null
+                                sharedBusy++
+                            }
                             "active"->{
                                 val flags=status.optJSONArray("activeFlags")?:return null
                                 var waiting=false
@@ -80,7 +88,7 @@ internal data class HollywoodRoomActivity(val observedAt:Long,val counts:List<Lo
                             else->return null
                         }
                     }
-                    return HollywoodRoomActivity(observed,counts,native=true,idleAgents=idle,unavailableAgents=unavailable,approvals=approvals,inputRequests=inputs)
+                    return HollywoodRoomActivity(observed,counts,native=true,idleAgents=idle,unavailableAgents=unavailable,approvals=approvals,inputRequests=inputs,sharedBusyAgents=sharedBusy)
                 }
             }
             val raw=room.optJSONObject("activity")?:return null
