@@ -164,7 +164,7 @@ class HollywoodMixedCatalogNativeTest {
                 click(By.res("native-room-address"))
                 await("Mac room-owned participant missing"){device.hasObject(By.text("Original room · MacBook Pro"))}
                 assertFalse("Retained Global remained a current recipient",device.hasObject(By.text("Retained Global source owner")))
-                capture("room-origin-address");rawBack()
+                capture("room-origin-address");click(By.res("native-room-address"));rawBack()
                 await("Closing room controls lost composer"){device.hasObject(By.clazz("android.widget.EditText"))}
             }
             focusedIme("before-send")
