@@ -1,4 +1,5 @@
 import {randomBytes,createHash} from 'node:crypto';
+import {coordinatorRoomPath} from './coordinator-room-paths.mjs';
 const fail=message=>Object.assign(Error(message),{status:403,code:'HUMAN_DEVICE_REQUIRED'});
 const digest=value=>createHash('sha256').update(JSON.stringify(value??{})).digest('hex');
 export function humanInputRoute(method,path){
@@ -19,7 +20,7 @@ export class HumanIngress{
  }
  active(actor){return actor&&typeof actor.deviceId==='string'&&typeof actor.voiceTurnId==='string'&&this.db.prepare('SELECT 1 FROM devices WHERE id=?').get(actor.deviceId)&&this.deviceActive(actor.deviceId)&&this.db.prepare("SELECT 1 FROM voice_turns WHERE device=? AND id=? AND state='thinking'").get(actor.deviceId,actor.voiceTurnId);}
  delegate(actor,method,path,body){
-  const roomRead=method==='GET'&&/^\/api\/hollywood\/v3\/(?:identity|rooms(?:\/[0-9a-f-]{36})?)$/.test(path);
+  const roomRead=coordinatorRoomPath(path,method)&&method==='GET';
   if(!humanInputRoute(method,path)&&!roomRead)return {headers:{},release(){}};
   if(!this.active(actor))throw fail('Voice control needs its original paired device and active voice turn.');
   const at=this.now();for(const [key,value] of this.delegations)if(value.expires<=at)this.delegations.delete(key);
@@ -39,7 +40,7 @@ export class HumanIngress{
     return next();
    }
    const key=req.get('X-NextComp-Voice-Delegation'),grant=this.delegations.get(key);if(key)this.delegations.delete(key);
-   if(!grant||grant.expires<=this.now()||grant.method!==req.method||grant.path!==req.originalUrl.split('?')[0]||grant.body!==digest(req.body))throw fail('Human input requires a paired device. Agents must use native interagent messaging.');
+   if(!grant||grant.expires<=this.now()||grant.method!==req.method||grant.path!==req.originalUrl||grant.body!==digest(req.body))throw fail('Human input requires a paired device. Agents must use native interagent messaging.');
    if(!this.active(grant.principal))throw fail('The originating voice request is no longer active.');
    req.device=this.db.prepare('SELECT id,name FROM devices WHERE id=?').get(grant.principal.deviceId);req.humanPrincipal=grant.principal;next();
   }catch(error){res.status(error.status||403).json({error:error.message,code:error.code||'HUMAN_DEVICE_REQUIRED'});}

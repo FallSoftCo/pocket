@@ -8,6 +8,7 @@ export class CoordinatorRoomCommands {
  scope(device,source,binding){
   const db=this.db,key=[device,source||'current',binding];
   return {
+   pendingAny:()=>db.prepare("SELECT 1 FROM coordinator_room_commands WHERE device=? AND source=? AND binding=? AND state='submitting' LIMIT 1").get(...key),
    pending:hash=>db.prepare("SELECT * FROM coordinator_room_commands WHERE device=? AND source=? AND binding=? AND request_hash=? AND state='submitting' ORDER BY rowid LIMIT 1").get(...key,hash),
    start:(body,hash)=>db.prepare("INSERT INTO coordinator_room_commands VALUES(?,?,?,?,?,'submitting',?,NULL)").run(...key,body.operationId,hash,JSON.stringify(body)),
    finish:(operation,state,result)=>db.prepare('UPDATE coordinator_room_commands SET state=?,result=? WHERE device=? AND source=? AND binding=? AND operation=?').run(state,JSON.stringify(result),...key,operation)
