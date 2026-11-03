@@ -107,3 +107,38 @@ test('admitted voice routing survives navigation before asynchronous startup and
   codex.emit('event',{method:'turn/completed',params:{threadId:'controller-123',turn:{id:'turn-123',status:'completed'}}});
  }finally{db.close();}
 });
+
+test('coordinator creates project rooms with existing agents and retains human provenance',async()=>{
+ const {controller,db}=setup();await controller.ensure('phone');
+ db.prepare("INSERT INTO voice_turns(device,id,hash,state,transcript,created_at) VALUES('phone','room-command','hash','thinking','Create a project room',1)").run();
+ const agent='11111111-1111-4111-8111-111111111111',sourceRoom='22222222-2222-4222-8222-222222222222',writes=[];
+ controller.api=async(path,body,actor)=>{
+  if(path.endsWith('/identity'))return {bindingId:'a'.repeat(64)};
+  if(body){writes.push({path,body,actor});return {...body,owner:body.ownerId};}
+  if(path.endsWith(sourceRoom))return {actors:[{id:agent,kind:'agent',active:true}]};
+  return {rooms:[]};
+ };
+ const active={device:'phone',id:'room-command'};
+ const call={tool:'pocket_control',callId:'create-project-one',arguments:{operation:'createRoom',arguments:{name:'Project One',purpose:'Build a product',ownerId:agent,sourceRoomId:sourceRoom}}};
+ const first=await controller.tool(active,call);assert.equal(first.success,true);assert.equal(writes.length,1);
+ assert.deepEqual(writes[0].actor,{deviceId:'phone',voiceTurnId:'room-command',voiceCallId:'create-project-one',hollywoodBinding:'a'.repeat(64)});
+ assert.deepEqual(await controller.tool(active,call),first);assert.equal(writes.length,1);
+ const second=await controller.tool(active,{...call,callId:'create-project-two',arguments:{...call.arguments,arguments:{...call.arguments.arguments,name:'Project Two'}}});
+ assert.equal(second.success,true);assert.equal(writes.length,2);assert.notEqual(writes[0].body.id,writes[1].body.id);
+ assert.equal(JSON.parse(first.contentItems[0].text).agentsStarted,0);db.close();
+});
+
+test('uncertain room creation is read back rather than submitted again',async()=>{
+ const {controller,db}=setup();await controller.ensure('phone');
+ db.prepare("INSERT INTO voice_turns(device,id,hash,state,transcript,created_at) VALUES('phone','room-uncertain','hash','thinking','Create room',1)").run();
+ const agent='11111111-1111-4111-8111-111111111111',sourceRoom='22222222-2222-4222-8222-222222222222';let stored,writes=0;
+ controller.api=async(path,body)=>{if(path.endsWith('/identity'))return {bindingId:'a'.repeat(64)};if(body){writes++;stored={...body,owner:body.ownerId};throw Error('Lost reply');}return path.endsWith(sourceRoom)?{actors:[{id:agent,kind:'agent'}]}:{room:stored};};
+ const active={device:'phone',id:'room-uncertain'},call={tool:'pocket_control',callId:'original-room',arguments:{operation:'createRoom',arguments:{name:'Original',purpose:'Original purpose',ownerId:agent,sourceRoomId:sourceRoom}}};
+ assert.equal((await controller.tool(active,call)).success,false);assert.equal(writes,1);
+ assert.equal((await controller.tool(active,call)).success,false);assert.equal(writes,1);
+ const replacementCodex=new FakeCodex(),replacement=new VoiceController({db,codex:replacementCodex,api:controller.api,cwd:'/tmp',host:'test'});
+ db.prepare("INSERT INTO voice_turns(device,id,hash,state,transcript,created_at) VALUES('phone','room-after-restart','hash','thinking','Inspect original room',2)").run();
+ const result=await replacement.tool({device:'phone',id:'room-after-restart'},{...call,callId:'inspect-original-room'});
+ assert.equal(replacementCodex.calls.length,0);
+ assert.equal(result.success,true);assert.equal(JSON.parse(result.contentItems[0].text).reconciledOriginal,true);assert.equal(writes,1);db.close();
+});

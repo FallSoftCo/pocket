@@ -30,13 +30,14 @@ export class CoordinatorSources {
    this.db.prepare('UPDATE coordinator_sources SET verified_at=?,problem=NULL WHERE device_id=? AND source_id=?').run(this.clock(),device,s.environmentId);
   }catch{this.db.prepare('UPDATE coordinator_sources SET problem=? WHERE device_id=? AND source_id=?').run('Paired source unavailable; no work submitted.',device,s.environmentId);}}}));return {sources:this.list(device)};
  }
- async call(device,sourceId,path,body,actor){
-  if(!sourceId||sourceId==='current')return this.localApi(path,body,actor);
+ async call(device,sourceId,path,body,actor,options={}){
+  if(!sourceId||sourceId==='current')return this.localApi(path,body,actor,options);
   const row=this.db.prepare('SELECT * FROM coordinator_sources WHERE device_id=? AND source_id=?').get(device,sourceId);if(!row)throw fail('This environment is not delegated to this human device.',403);
   // No arbitrary proxy, pairing/admin/credential endpoints or nested federation.
-  const read=path==='/api/status'||/^\/api\/(?:threads(?:\?|\/[a-zA-Z0-9_-]{5,100}(?:\/(?:native-timeline|head))?(?:\?|$))|session-starts\/[a-zA-Z0-9_-]{8,120}$|projects$|models$|attention$|notifications(?:\?|$)|coordinator\/(?:evidence|voice-updates|catchup|receipt)(?:\?|$))/.test(path);
+  const roomRead=/^\/api\/hollywood\/v3\/(?:rooms(?:$|\/[0-9a-f-]{36}$)|identity$)/.test(path);
+  const read=roomRead||path==='/api/status'||/^\/api\/(?:threads(?:\?|\/[a-zA-Z0-9_-]{5,100}(?:\/(?:native-timeline|head))?(?:\?|$))|session-starts\/[a-zA-Z0-9_-]{8,120}$|projects$|models$|attention$|notifications(?:\?|$)|coordinator\/(?:evidence|voice-updates|catchup|receipt)(?:\?|$))/.test(path);
   const controlPlane=/^\/api\/coordinator\/(?:listening|voice-updates\/presented|catchup\/presented)$/.test(path);
-  const write=controlPlane||/^\/api\/threads(?:$|\/[a-zA-Z0-9_-]{5,100}\/(?:reply|interrupt|rename|archive|unarchive|watch|settings|queue\/resume|replies\/[a-zA-Z0-9_-]{8,120})$)|^\/api\/requests\/[a-zA-Z0-9_-]+\/answer$/.test(path);
+  const write=path==='/api/hollywood/v3/rooms'||controlPlane||/^\/api\/threads(?:$|\/[a-zA-Z0-9_-]{5,100}\/(?:reply|interrupt|rename|archive|unarchive|watch|settings|queue\/resume|replies\/[a-zA-Z0-9_-]{8,120})$)|^\/api\/requests\/[a-zA-Z0-9_-]+\/answer$/.test(path);
   if(typeof path!=='string'||path.includes('://')||path.includes('..')||(body===undefined?!read:!write))throw fail('Unsupported delegated coordinator operation.',403);
   if(body!==undefined&&!controlPlane&&(!actor||actor.deviceId!==device||!actor.voiceTurnId||!this.authorize(actor)))throw fail('A remote mutation needs its original human voice command.',403);
   if(path!=='/api/status'&&!row.verified_at){
@@ -46,17 +47,18 @@ export class CoordinatorSources {
   }
   let command=null;
   if(body!==undefined&&!controlPlane){
+   const bodyHash=createHash('sha256').update(JSON.stringify(body)).digest('hex');
+   const commandId=createHash('sha256').update(JSON.stringify([device,sourceId,actor.voiceTurnId,actor.voiceCallId||body.id||path])).digest('hex');
    const unresolved=this.db.prepare("SELECT * FROM coordinator_remote_commands WHERE device_id=? AND source_id=? AND path=? AND state IN ('sending','unknown') LIMIT 8").all(device,sourceId,path);
    for(const old of unresolved){
     let receipt=null;
-    if(old.request_id)try{receipt=await this.call(device,sourceId,'/api/coordinator/receipt?id='+encodeURIComponent(old.request_id));}catch{}
-    if(receipt?.id===old.request_id&&['queued','sent','steered','accepted','cancelled','failed'].includes(receipt.state)){
+    if(old.request_id)try{receipt=await this.call(device,sourceId,path==='/api/hollywood/v3/rooms'?'/api/hollywood/v3/rooms/'+encodeURIComponent(old.request_id):'/api/coordinator/receipt?id='+encodeURIComponent(old.request_id),undefined,actor);}catch{}
+    const roomAccepted=path==='/api/hollywood/v3/rooms'&&receipt?.room?.id===old.request_id;
+    if(roomAccepted||receipt?.id===old.request_id&&['queued','sent','steered','accepted','cancelled','failed'].includes(receipt.state)){
      this.db.prepare("UPDATE coordinator_remote_commands SET state='responded',result=? WHERE id=?").run(JSON.stringify(receipt),old.id);
-     if(old.voice_turn===actor.voiceTurnId)return {...receipt,reconciledOriginal:true,notSubmittedNewCommand:true};
+     if(old.id===commandId)return {...receipt,reconciledOriginal:true,notSubmittedNewCommand:true};
     }else throw fail('Original remote delivery is uncertain. Read its original source receipt; no further command was sent.',409);
    }
-   const bodyHash=createHash('sha256').update(JSON.stringify(body)).digest('hex');
-   const commandId=createHash('sha256').update(JSON.stringify([device,sourceId,actor.voiceTurnId,actor.voiceCallId||body.id||path])).digest('hex');
    const previous=this.db.prepare('SELECT * FROM coordinator_remote_commands WHERE id=?').get(commandId);
    if(previous){
     if(previous.body_hash!==bodyHash||previous.path!==path)throw fail('Original delegated command identity conflicts; nothing was resent.',409);
@@ -67,7 +69,7 @@ export class CoordinatorSources {
    this.db.prepare("INSERT INTO coordinator_remote_commands(id,device_id,source_id,voice_turn,path,body_hash,state,result,at,request_id) VALUES(?,?,?,?,?,?,'sending',NULL,?,?)").run(commandId,device,sourceId,actor.voiceTurnId,path,bodyHash,this.clock(),typeof body.id==='string'?body.id:null);command=commandId;
   }
   try{
-  const response=await this.fetchImpl(row.base+path,{redirect:'error',headers:{Authorization:'Bearer '+this.credential(row),'Content-Type':'application/json','X-NextComp-Coordinator-Hop':'1',...(body===undefined||controlPlane?{}:{'X-NextComp-Coordinator-Turn':actor.voiceTurnId,'X-NextComp-Coordinator-Origin':createHash('sha256').update(this.key).digest('hex').slice(0,24)})},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:AbortSignal.timeout(body===undefined||controlPlane?2500:15000)});
+  const response=await this.fetchImpl(row.base+path,{redirect:'error',headers:{Authorization:'Bearer '+this.credential(row),'Content-Type':'application/json',...(actor?.hollywoodBinding?{'X-Hollywood-Binding':actor.hollywoodBinding}:{}),'X-NextComp-Coordinator-Hop':'1',...(body===undefined||controlPlane?{}:{'X-NextComp-Coordinator-Turn':actor.voiceTurnId,'X-NextComp-Coordinator-Origin':createHash('sha256').update(this.key).digest('hex').slice(0,24)})},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:options.signal?AbortSignal.any([AbortSignal.timeout(body===undefined||controlPlane?2500:15000),options.signal]):AbortSignal.timeout(body===undefined||controlPlane?2500:15000)});
   let value;try{value=await response.json()}catch{throw fail('The delegated source returned an invalid response.',502)}
   if(!response.ok){
    const error=fail('The delegated source could not complete this operation (HTTP '+response.status+').',response.status);
