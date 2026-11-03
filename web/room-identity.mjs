@@ -16,8 +16,12 @@ export function roomOriginSummary(detail,{available=true}={}){
  const ready=state.agents.filter(a=>a.ready===true).length;
  return 'Room agents: '+ready+'/'+state.agents.length+' ready'+(state.generation?.phase==='staging'?' · Handoff required':ready<state.agents.length?' · Initialization incomplete':'');
 }
-export const roomOriginRows=(detail,{available=true}={})=>(detail?.roomAgents?.agents||[]).map(a=>
- (a.host_name||a.node)+' · '+(!available?'Status unavailable':a.ready===true?'Ready':a.readiness||a.state||'unconfirmed')+(!available||a.ready===true?'':a.note?' · '+a.note:''));
+export function roomOriginRows(detail,{available=true}={}){
+ const setup=detail?.roomAgents,selected=(detail?.room||detail)?.id;
+ if(setup?.version!==1||!Array.isArray(setup.agents)||selected&&setup.roomId!==selected)return [];
+ return setup.agents.filter(a=>a&&typeof a==='object').map(a=>
+  (a.host_name||a.node||'Environment')+' · '+(!available?'Status unavailable':a.ready===true?'Ready':a.readiness||a.state||'unconfirmed')+(!available||a.ready===true?'':a.note?' · '+a.note:''));
+}
 
 export function roomOriginPendingState(room){
  if((room?.room||room)?.room_kind==='global'||room?.roomAgents===undefined)return null;

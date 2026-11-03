@@ -23,7 +23,7 @@ test('foreign scope, duplicate environments and malformed readiness never become
  const {roomState}=await import('../web/room-model.mjs');
  const duplicate=setupRoom();duplicate.roomAgents.agents.push({agent:originRoom,node:originNode,ready:true});assert.equal(roomState(duplicate).known,false);
  const foreign=setupRoom();foreign.roomAgents.roomId=originNode;assert.equal(roomState(foreign).known,false);
- const malformed=setupRoom();malformed.roomAgents.agents[0].ready='true';assert.equal(roomState(malformed).known,false);
+ const malformed=setupRoom();malformed.roomAgents.agents[0].ready='true';assert.equal(roomState(malformed).known,false);assert.deepEqual(roomOriginRows({roomAgents:{version:1,agents:'unavailable'}}),[]);assert.deepEqual(roomOriginRows(foreign),[]);
 });
 
 test('retained and Global rooms are not falsely uninitialized',async()=>{const {roomOriginPendingState}=await import('../web/room-identity.mjs');for(const roomKind of ['global','project']){const room={id:originRoom,room_kind:roomKind,roomAgents:{version:1,roomId:originRoom,initializationRequired:false,agents:[]}};assert.equal(roomOriginPendingState(room),null);assert.equal(roomOriginSummary(room),'Room participants');}});
