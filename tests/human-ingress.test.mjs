@@ -5,6 +5,20 @@ import {DatabaseSync} from 'node:sqlite';
 import {HumanIngress,admissionTransaction,humanInputRoute} from '../server/human-ingress.mjs';
 import {mountHollywood} from '../server/hollywood.mjs';
 
+test('local room conversation delegation binds the full query and original paired human, one use',async t=>{
+ const db=new DatabaseSync(':memory:');t.after(()=>db.close());
+ db.exec("CREATE TABLE devices(id TEXT PRIMARY KEY,name TEXT);CREATE TABLE voice_turns(device TEXT,id TEXT,state TEXT);INSERT INTO devices VALUES('phone','Phone');INSERT INTO voice_turns VALUES('phone','voice-room-history','thinking');");
+ const ingress=new HumanIngress(db),app=express();app.use((req,res,next)=>{req.device={id:'owner'};next();});app.use((req,res,next)=>ingress.middleware(req,res,next));
+ const base='/api/hollywood/v3/rooms/11111111-1111-4111-8111-111111111111/history';
+ app.get(base,(req,res)=>res.json({device:req.device.id,before:req.query.before}));
+ app.use((error,_req,res,_next)=>res.status(error.status||500).json({error:error.message}));
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>new Promise(r=>server.close(r)));
+ const path=base+'?view=conversation&limit=12&before=90',actor={deviceId:'phone',voiceTurnId:'voice-room-history'};
+ const grant=ingress.delegate(actor,'GET',path);const response=await fetch('http://127.0.0.1:'+server.address().port+path,{headers:grant.headers});
+ assert.equal(response.status,200);assert.deepEqual(await response.json(),{device:'phone',before:'90'});
+ const changed=ingress.delegate(actor,'GET',path);assert.equal((await fetch('http://127.0.0.1:'+server.address().port+path.replace('before=90','before=91'),{headers:changed.headers})).status,403);
+});
+
 test('canonical mutation classification covers controls and alternate route spellings',()=>{
  const paths=['/api/hollywood/v3/rooms/room/messages','/api/hollywood/v3/attention/item/response',
   '/api/hollywood/v3/deliveries/item/guidance','/api/hollywood/v3/deliveries/item/cancel',
