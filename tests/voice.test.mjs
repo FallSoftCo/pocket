@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {Eve
 import {VoiceSpeech,speechPolicy,CHEAP_SPEECH_MODEL,NEXT_SPEECH_MODEL,SPEECH_UPGRADE_AT,normalizeSpeechWav} from '../server/voice-speech.mjs';
 import {VoiceController,validateVoiceAudio} from '../server/voice-controller.mjs';
 import {COMPUTER_USE_INSTRUCTIONS} from '../server/computer-use.mjs';
+import {qaHuman,gatewayControl,canonicalControl} from './room-control-fixture.mjs';
 const wav=()=>{const b=Buffer.alloc(3244);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(16000,24);b.writeUInt32LE(32000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(b.length-44,40);return b;};
 const tick=()=>new Promise(r=>setImmediate(r));
 class FakeCodex extends EventEmitter{constructor(){super();this.calls=[];}async connect(){} async call(method,params){this.calls.push({method,params});if(method==='thread/start')return {thread:{id:'controller-123'}};if(method==='turn/start')return {turn:{id:'turn-123'}};return {thread:{id:'controller-123'}};}answer(){}}
@@ -113,10 +114,10 @@ test('coordinator creates project rooms with existing agents and retains human p
  db.prepare("INSERT INTO voice_turns(device,id,hash,state,transcript,created_at) VALUES('phone','room-command','hash','thinking','Create a project room',1)").run();
  const agent='11111111-1111-4111-8111-111111111111',sourceRoom='22222222-2222-4222-8222-222222222222',writes=[];
  controller.api=async(path,body,actor)=>{
-  if(path.endsWith('/identity'))return {bindingId:'a'.repeat(64)};
+  if(path.endsWith('/identity'))return {bindingId:'a'.repeat(64),authorityId:'qa',principalId:qaHuman,roomControl:gatewayControl};
   if(body){writes.push({path,body,actor});return {...body,owner:body.ownerId};}
   if(path.endsWith(sourceRoom))return {actors:[{id:agent,kind:'agent',active:true}]};
-  return {rooms:[]};
+  return {authorityId:'qa',rooms:[{id:sourceRoom,name:'Source',owner:agent}],roomControl:canonicalControl('qa',[sourceRoom])};
  };
  const active={device:'phone',id:'room-command'};
  const call={tool:'pocket_control',callId:'create-project-one',arguments:{operation:'createRoom',arguments:{name:'Project One',purpose:'Build a product',ownerId:agent,sourceRoomId:sourceRoom}}};
@@ -132,7 +133,7 @@ test('uncertain room creation is read back rather than submitted again',async()=
  const {controller,db}=setup();await controller.ensure('phone');
  db.prepare("INSERT INTO voice_turns(device,id,hash,state,transcript,created_at) VALUES('phone','room-uncertain','hash','thinking','Create room',1)").run();
  const agent='11111111-1111-4111-8111-111111111111',sourceRoom='22222222-2222-4222-8222-222222222222';let stored,writes=0;
- controller.api=async(path,body)=>{if(path.endsWith('/identity'))return {bindingId:'a'.repeat(64)};if(body){writes++;stored={...body,owner:body.ownerId};throw Error('Lost reply');}return path.endsWith(sourceRoom)?{actors:[{id:agent,kind:'agent'}]}:{room:stored};};
+ controller.api=async(path,body)=>{if(path.endsWith('/identity'))return {bindingId:'a'.repeat(64),authorityId:'qa',principalId:qaHuman,roomControl:gatewayControl};if(path.endsWith('/rooms')&&!body)return {authorityId:'qa',rooms:[{id:sourceRoom,name:'Source',owner:agent}],roomControl:canonicalControl('qa',[sourceRoom])};if(body){writes++;stored={...body,owner:body.ownerId};throw Error('Lost reply');}return path.endsWith(sourceRoom)?{actors:[{id:agent,kind:'agent'}]}:{room:stored};};
  const active={device:'phone',id:'room-uncertain'},call={tool:'pocket_control',callId:'original-room',arguments:{operation:'createRoom',arguments:{name:'Original',purpose:'Original purpose',ownerId:agent,sourceRoomId:sourceRoom}}};
  assert.equal((await controller.tool(active,call)).success,false);assert.equal(writes,1);
  assert.equal((await controller.tool(active,call)).success,false);assert.equal(writes,1);

@@ -4,6 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {EventEmitter} from 'node:events';
 import {VoiceController,VOICE_TOOL,VOICE_TOOL_REVISION} from '../server/voice-controller.mjs';
 import {coordinatorRoomPath} from '../server/coordinator-room-paths.mjs';
+import {gatewayControl,canonicalControl} from './room-control-fixture.mjs';
 const source='11111111-1111-4111-8111-111111111111',agent='22222222-2222-4222-8222-222222222222';
 const human='33333333-3333-4333-8333-333333333333',authority='44444444-4444-4444-8444-444444444444',binding='a'.repeat(64);
 const err=(status,message='Unavailable')=>Object.assign(Error(message),{status});
@@ -12,7 +13,7 @@ function fixture(t){
  let failCreate=false,failSend=false,missing=false,corrupt=false,deny=false,rejectPost=false;
  const api=async(path,body,actor)=>{
   calls.push({path,body,actor});assert.equal(actor.deviceId,'phone');
-  if(path.endsWith('/identity'))return {bindingId:binding,authorityId:authority,principalId:human};
+  if(path.endsWith('/identity'))return {bindingId:binding,authorityId:authority,principalId:human,roomControl:gatewayControl};
   assert.equal(actor.hollywoodBinding,binding);
   if(path==='/api/hollywood/v3/rooms'&&body){rooms.set(body.id,{...body,owner:body.ownerId});if(failCreate){failCreate=false;throw err(503);}return {room:rooms.get(body.id)};}
   if(path.includes('/messages')&&body){
@@ -24,7 +25,7 @@ function fixture(t){
   }
   if(path.includes('/commands/')){const v=receipts.get(path.split('/').at(-1));if(!v)throw err(404);return corrupt?{...v,event:{...v.event,author:agent}}:v;}
   if(path.includes('/history?'))return {events:[{id:'recent',room:source,body:'Actual recent finding'}],nextCursor:88,hasMore:true};
-  if(path==='/api/hollywood/v3/rooms')return {rooms:[...rooms.values()]};
+  if(path==='/api/hollywood/v3/rooms')return {authorityId:authority,rooms:[...rooms.values()],roomControl:canonicalControl(authority,[source])};
   const r=rooms.get(path.split('/').at(-1));if(!r)throw err(404);
   return {room:r,actors:[{id:agent,kind:'agent',active:true}],permissions:{can_read:true,can_request:!deny}};
  };
@@ -39,7 +40,7 @@ const send={roomId:source,text:'Inspect the existing project.',audience:'room'};
 const writes=f=>f.calls.filter(c=>c.body);
 
 test('capability and recent conversation are read-only, exact source/cursor, selected Codex focus unchanged',async t=>{
- const f=fixture(t);assert.equal(VOICE_TOOL_REVISION,4);assert.match(VOICE_TOOL.description,/roomHistory/);
+ const f=fixture(t);assert.equal(VOICE_TOOL_REVISION,5);assert.match(VOICE_TOOL.description,/roomHistory/);
  await f.control('rooms',{});await f.control('roomHistory',{roomId:source,before:99,limit:8});
  assert.equal(writes(f).length,0);assert.ok(f.calls.some(c=>c.path.endsWith('/history?view=conversation&limit=8&before=99')));
  assert.equal(f.controller.session('phone').selected,'selected_codex');assert.equal(f.controller.session('phone').selected_environment,'mac');
@@ -73,7 +74,7 @@ test('lost initial-message ACK + reopen only reads canonical original, never rep
 test('missing receipt remains unknown, changed request held, wrong human receipt cannot accept',async t=>{
  const f=fixture(t);f.sendLost();f.missing();await assert.rejects(f.control('roomReply',send),/Original room command/);
  const row=f.db.prepare('SELECT * FROM coordinator_room_intents').get(),before=row.payload;f.reopen();
- assert.equal((await f.control('roomReceipt',{commandId:row.id})).phase,'sending');
+ const missing=await f.control('roomReceipt',{commandId:row.id});assert.equal(missing.phase,'sending');assert.equal(missing.admission,'inaccessible_unknown');assert.equal(missing.observedReadStatus,404);
  await assert.rejects(f.control('roomReply',{...send,text:'Different instruction'},'human-new-02','new-call'),/Earlier room intent/);
  assert.equal(writes(f).length,1);assert.equal(f.db.prepare('SELECT payload FROM coordinator_room_intents').get().payload,before);
  const p=JSON.parse(before);f.receipts.set(p.message.operationId,{accepted:true,event:{id:source,author:agent},deliveries:[]});f.corrupt();
@@ -112,6 +113,6 @@ test('concurrent identical tool calls share one original dispatch, legacy unknow
  const f=fixture(t);const [a,b]=await Promise.all([f.control('createRoomAndStart',create),f.control('createRoomAndStart',create)]);
  assert.equal(a.commandId,b.commandId);assert.equal(writes(f).length,2);
  f.controller.roomCommands.scope('phone','current',binding).start({operationId:'legacy-uncertain',id:source},'original-hash');
- await assert.rejects(f.control('createRoomAndStart',{...create,name:'Different project'},'human-other-02'),/metadata-only room creation is unresolved/);
+ await assert.rejects(f.control('createRoomAndStart',{...create,name:'Different project'},'human-other-02'),e=>e.code==='ROOM_ORIGINAL_ADMISSION_UNRESOLVED'&&e.admission==='inaccessible_unknown');
  assert.equal(writes(f).length,2);
 });

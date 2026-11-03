@@ -51,8 +51,9 @@ const control=(operation,args,id='human-create-qa',call='original-call')=>contro
 try{
  make();await controller.sources.register('qa-phone',[{environmentId:'cpu',name:'Canonical QA CPU',base:'https://room-qa.example.ts.net',token:paired}]);
  db.prepare("INSERT INTO voice_sessions(device,selected,focus,selected_environment) VALUES('qa-phone','original_codex_focus','selected','mac')").run();
- const capability=await control('rooms',{});assert.equal(capability.rooms.length,2);assert.deepEqual(counts,{create:0,message:0,models:0});
- const history=await control('roomHistory',{roomId:f.room,limit:8});assert.ok(history.events.some(e=>e.id===f.privateSource));
+ const capability=await control('rooms',{});assert.equal(capability.rooms.length,1);assert.equal(capability.creation.authorityId,f.authority);assert.equal(capability.creation.targets[0].environmentId,'cpu');assert.deepEqual(counts,{create:0,message:0,models:0});
+ const history=await control('roomHistory',{roomId:f.room,limit:8});assert.ok(history.events.some(e=>e.id===f.privateSource));assert.ok(history.events.some(e=>e.body==='Canonical useful finding 23'));assert.ok(!history.events.some(e=>e.body==='Canonical useful finding 00'));assert.ok(history.olderCursor);
+ const preceding=await control('roomHistory',{roomId:f.room,limit:8,before:history.olderCursor});assert.ok(preceding.events.length>0);assert.ok(preceding.events.at(-1).seq<history.events[0].seq);assert.ok(!preceding.events.some(e=>history.events.some(h=>h.id===e.id)));
  const ownerAttempt=await fetch(origin+'/api/hollywood/v3/rooms/'+f.room+'/messages',{method:'POST',headers:{Authorization:'Bearer admin','Content-Type':'application/json','X-Hollywood-Binding':binding},body:JSON.stringify({operationId:'forbidden-agent-impersonation',kind:'request',body:'Must not enter',audience:'room'})});
  assert.equal(ownerAttempt.status,403);assert.equal((await ownerAttempt.json()).code,'HUMAN_DEVICE_REQUIRED');
  const create={name:'ISOLATED create-and-start',purpose:'Actual room path, no native runtime',sourceRoomId:f.room,ownerId:f.agent,text:'Initial synthetic human project instruction'};
@@ -68,7 +69,7 @@ try{
  const same=await control('roomReply',{roomId:f.room,text:'PRIVATE_REPLY_CANARY',audience:'direct',recipientId:f.agent,sourceEventId:f.privateSource},'human-send-private','send-original');assert.equal(same.commandId,receipt.commandId);assert.equal(counts.message,3,'Third POST was definitively denied expansion, not an admitted duplicate');
  const focus=controller.session('qa-phone');assert.equal(focus.selected,'original_codex_focus');assert.equal(focus.selected_environment,'mac');
  assert.ok(!trace.some(x=>x.path.includes('/threads/')));
- const result={passed:true,realCanonicalHttpAndPg:true,realPocketGatewayAndHumanIngress:true,remotePairedSourcePath:true,capabilityReadOnly:true,
+ const result={passed:true,realCanonicalHttpAndPg:true,realPocketGatewayAndHumanIngress:true,remotePairedSourcePath:true,capabilityReadOnly:true,ordinaryHumanWithoutAdmin:true,newestConversationAndPrecedingCursor:true,
    lostCreateAckReopenedWithoutSecondCreate:true,lostMessageAckReopenedWithoutSecondSend:true,privateAudienceAndSourceEnforced:true,agentHumanImpersonationRejected:true,
    selectedCodexFocusUnchanged:true,postAttempts:counts,acceptedNewHumanRequests:2,agentOrModelRuntimeStarted:false,workCompletion:'not_inferred',trace,
    limits:'Synthetic human/agent records in isolated PG only; no native execution/model, production credential, phone/client install or physical HTTPS/TLS qualification.'};

@@ -1,5 +1,7 @@
 import {createCipheriv,createDecipheriv,createHash,randomBytes} from 'node:crypto';
 import {coordinatorRoomPath} from './coordinator-room-paths.mjs';
+import {ensureRoomReconciliations,noAdmission} from './coordinator-room-reconciliation.mjs';
+import {definitiveRoomRefusal} from './coordinator-room-errors.mjs';
 const fail=(message,status=400)=>Object.assign(Error(message),{status});
 const id=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value);
 /** Human-device delegated environment credentials. Model arguments never contain
@@ -7,6 +9,7 @@ const id=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value);
 export class CoordinatorSources {
  constructor({db,key,fetchImpl=fetch,localApi,authorize=()=>false,clock=Date.now}){
   Object.assign(this,{db,fetchImpl,localApi,authorize,clock});this.key=createHash('sha256').update('nextcomp-coordinator-source-v1\0'+key).digest();
+  ensureRoomReconciliations(db);
   db.exec(`CREATE TABLE IF NOT EXISTS coordinator_remote_commands(id TEXT PRIMARY KEY,device_id TEXT NOT NULL,source_id TEXT NOT NULL,voice_turn TEXT NOT NULL,path TEXT NOT NULL,body_hash TEXT NOT NULL,state TEXT NOT NULL,result TEXT,at INTEGER NOT NULL)`);
   db.prepare("UPDATE coordinator_remote_commands SET state='unknown' WHERE state='sending'").run();
   if(!db.prepare('PRAGMA table_info(coordinator_remote_commands)').all().some(c=>c.name==='request_id'))db.exec('ALTER TABLE coordinator_remote_commands ADD COLUMN request_id TEXT');
@@ -53,6 +56,7 @@ export class CoordinatorSources {
    const commandId=createHash('sha256').update(JSON.stringify([device,sourceId,actor.voiceTurnId,actor.voiceCallId||body.id||path])).digest('hex');
    const unresolved=this.db.prepare("SELECT * FROM coordinator_remote_commands WHERE device_id=? AND source_id=? AND path=? AND state IN ('sending','unknown') LIMIT 8").all(device,sourceId,path);
    for(const old of unresolved){
+    if(noAdmission(this.db,{remoteId:old.id}))continue;
     let receipt=null;
     if(old.request_id)try{receipt=await this.call(device,sourceId,path==='/api/hollywood/v3/rooms'?'/api/hollywood/v3/rooms/'+encodeURIComponent(old.request_id):roomMessage?'/api/hollywood/v3/commands/'+encodeURIComponent(old.request_id):'/api/coordinator/receipt?id='+encodeURIComponent(old.request_id),undefined,actor);}catch{}
     const roomAccepted=path==='/api/hollywood/v3/rooms'&&receipt?.room?.id===old.request_id;
@@ -68,22 +72,27 @@ export class CoordinatorSources {
    const previous=this.db.prepare('SELECT * FROM coordinator_remote_commands WHERE id=?').get(commandId);
    if(previous){
     if(previous.body_hash!==bodyHash||previous.path!==path)throw fail('Original delegated command identity conflicts; nothing was resent.',409);
+    const disposition=noAdmission(this.db,{remoteId:previous.id});
+    if(disposition)throw Object.assign(fail('Original gateway rejected this operation before canonical admission.',404),{code:'HOLLYWOOD_REQUEST_REJECTED',admission:'no_admission',evidence:disposition});
     if(previous.state==='responded')return JSON.parse(previous.result);
-    if(previous.state==='rejected'){const value=JSON.parse(previous.result);throw fail(value.error,value.status);}
+    if(previous.state==='rejected'){const value=JSON.parse(previous.result);throw Object.assign(fail(value.error,value.status),{code:value.code,admission:'no_admission',evidence:value});}
     throw fail('Original remote delivery is uncertain. Inspect its source receipt before any further send; do not repeat this operation.',409);
    }
    this.db.prepare("INSERT INTO coordinator_remote_commands(id,device_id,source_id,voice_turn,path,body_hash,state,result,at,request_id) VALUES(?,?,?,?,?,?,'sending',NULL,?,?)").run(commandId,device,sourceId,actor.voiceTurnId,path,bodyHash,this.clock(),roomMessage?body.operationId:typeof body.id==='string'?body.id:null);command=commandId;
   }
+  let observedHttp=null;
   try{
   const response=await this.fetchImpl(row.base+path,{redirect:'error',headers:{Authorization:'Bearer '+this.credential(row),'Content-Type':'application/json',...(actor?.hollywoodBinding?{'X-Hollywood-Binding':actor.hollywoodBinding}:{}),'X-NextComp-Coordinator-Hop':'1',...(body===undefined||controlPlane?{}:{'X-NextComp-Coordinator-Turn':actor.voiceTurnId,'X-NextComp-Coordinator-Origin':createHash('sha256').update(this.key).digest('hex').slice(0,24)})},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:options.signal?AbortSignal.any([AbortSignal.timeout(body===undefined||controlPlane?2500:15000),options.signal]):AbortSignal.timeout(body===undefined||controlPlane?2500:15000)});
   let value;try{value=await response.json()}catch{throw fail('The delegated source returned an invalid response.',502)}
   if(!response.ok){
-   const error=fail('The delegated source could not complete this operation (HTTP '+response.status+').',response.status);
+   observedHttp={status:response.status,code:typeof value.code==='string'?value.code.slice(0,100):null,error:typeof value.error==='string'?value.error.slice(0,500):'Delegated source refused the request.'};
+   const error=Object.assign(fail(observedHttp.error,response.status),{code:observedHttp.code,evidence:observedHttp});
    // Typed authentication/admission refusal is not unknown command delivery.
    // Other failures stay uncertain and are never automatically repeated.
-   if(command&&[401,403].includes(response.status)&&typeof value.error==='string'){
-    this.db.prepare("UPDATE coordinator_remote_commands SET state='rejected',result=? WHERE id=?").run(JSON.stringify({error:error.message,status:response.status}),command);
+   if(command&&typeof value.error==='string'&&definitiveRoomRefusal(error)){
+    this.db.prepare("UPDATE coordinator_remote_commands SET state='rejected',result=? WHERE id=?").run(JSON.stringify({...observedHttp,admission:'no_admission'}),command);
     error.definitiveRejection=true;
+    error.admission='no_admission';
    }
    throw error;
   }
@@ -91,7 +100,7 @@ export class CoordinatorSources {
   return value;
   }catch(error){
    if(error.definitiveRejection)throw error;
-   if(command){this.db.prepare("UPDATE coordinator_remote_commands SET state='unknown' WHERE id=?").run(command);throw Object.assign(fail('Remote delivery is unconfirmed for the original command. Inspect that source and receipt; never repeat the send automatically.',409),{code:'REMOTE_DELIVERY_UNKNOWN'});}
+   if(command){this.db.prepare("UPDATE coordinator_remote_commands SET state='unknown',result=? WHERE id=?").run(observedHttp?JSON.stringify(observedHttp):null,command);throw Object.assign(fail('Original remote admission is inaccessible or unconfirmed. Inspect its exact receipt; do not resend or ask for duplicate-risk consent before admission is known.',409),{code:'REMOTE_DELIVERY_UNKNOWN',admission:'inaccessible_unknown',evidence:observedHttp});}
    throw error;
   }
  }

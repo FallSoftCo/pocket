@@ -1,15 +1,27 @@
 import {createHash} from 'node:crypto';
+import {ensureRoomReconciliations,noAdmission} from './coordinator-room-reconciliation.mjs';
+import {definitiveRoomRefusal} from './coordinator-room-errors.mjs';
 const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);
 const fail=(message,status=400)=>Object.assign(Error(message),{status});
 const base='/api/hollywood/v3/rooms';
 /** A room command outlives its coordinator model turn and service process. */
 export class CoordinatorRoomCommands {
- constructor(db){this.db=db;db.exec(`CREATE TABLE IF NOT EXISTS coordinator_room_commands(device TEXT NOT NULL,source TEXT NOT NULL,binding TEXT NOT NULL,operation TEXT NOT NULL,request_hash TEXT NOT NULL,state TEXT NOT NULL,body TEXT NOT NULL,result TEXT,PRIMARY KEY(device,source,binding,operation)); CREATE INDEX IF NOT EXISTS coordinator_room_pending ON coordinator_room_commands(device,source,binding,request_hash,state);`);}
+ constructor(db){this.db=db;ensureRoomReconciliations(db);db.exec(`CREATE TABLE IF NOT EXISTS coordinator_room_commands(device TEXT NOT NULL,source TEXT NOT NULL,binding TEXT NOT NULL,operation TEXT NOT NULL,request_hash TEXT NOT NULL,state TEXT NOT NULL,body TEXT NOT NULL,result TEXT,PRIMARY KEY(device,source,binding,operation)); CREATE INDEX IF NOT EXISTS coordinator_room_pending ON coordinator_room_commands(device,source,binding,request_hash,state);`);}
+ unresolved(device){return this.db.prepare("SELECT * FROM coordinator_room_commands WHERE device=? AND state='submitting'").all(device).filter(r=>!noAdmission(this.db,r));}
  scope(device,source,binding){
   const db=this.db,key=[device,source||'current',binding];
   return {
-   pendingAny:()=>db.prepare("SELECT 1 FROM coordinator_room_commands WHERE device=? AND source=? AND binding=? AND state='submitting' LIMIT 1").get(...key),
-   pending:hash=>db.prepare("SELECT * FROM coordinator_room_commands WHERE device=? AND source=? AND binding=? AND request_hash=? AND state='submitting' ORDER BY rowid LIMIT 1").get(...key,hash),
+   pendingAny:()=>this.unresolved(device).find(r=>r.source===key[1]&&r.binding===binding),
+   pending:hash=>this.unresolved(device).find(r=>r.source===key[1]&&r.binding===binding&&r.request_hash===hash),
+   receipt:async(operation,get)=>{
+    const r=db.prepare('SELECT * FROM coordinator_room_commands WHERE device=? AND source=? AND binding=? AND operation=?').get(...key,operation);
+    if(!r)throw fail('Original metadata room operation is not available in this exact scope.',404);
+    const overlay=noAdmission(db,r),body=JSON.parse(r.body),result=r.result?JSON.parse(r.result):null;
+    if(overlay||r.state==='rejected')return {...(overlay||{admission:'no_admission',evidence:result}),operationId:operation,proposedRoomId:body.id,noNewAdmission:true};
+    let value;try{value=await get(base+'/'+body.id);}catch(error){return {operationId:operation,proposedRoomId:body.id,admission:'inaccessible_unknown',observedReadStatus:error.status||null,noNewAdmission:true,note:'Inaccessible or missing read is not absence. Do not resend or ask duplicate-risk consent before admission is established.'};}
+    if(value.room?.id!==body.id||value.room.name!==body.name||value.room.purpose!==body.purpose||value.room.owner!==body.ownerId)throw fail('Original room metadata differs; no command was repeated.',409);
+    return {operationId:operation,room:value.room,admission:'accepted_room_observed',noNewAdmission:true,workCompletion:'not_inferred'};
+   },
    start:(body,hash)=>db.prepare("INSERT INTO coordinator_room_commands VALUES(?,?,?,?,?,'submitting',?,NULL)").run(...key,body.operationId,hash,JSON.stringify(body)),
    finish:(operation,state,result)=>db.prepare('UPDATE coordinator_room_commands SET state=?,result=? WHERE device=? AND source=? AND binding=? AND operation=?').run(state,JSON.stringify(result),...key,operation)
   };
@@ -41,12 +53,12 @@ export async function coordinatorRooms({operation,args:a,active,callId,environme
  const source=await get(base+'/'+a.sourceRoomId);
  if(!(source.actors||[]).some(actor=>actor.id===a.ownerId&&actor.kind==='agent'&&actor.active!==false))
   throw fail('The chosen owner is not an accessible existing agent in the source room.',403);
- const body={operationId:'coordinator-room-'+digest.slice(0,48),id:roomId,name:a.name.trim(),purpose:a.purpose.trim(),ownerId:a.ownerId};
+ const body={operationId:'coordinator-room-'+digest.slice(0,48),id:roomId,name:a.name.trim(),purpose:a.purpose.trim(),ownerId:a.ownerId,sourceRoomId:a.sourceRoomId};
  commands.start(body,requestHash);
  action({type:'room-create',state:'submitting',roomId,operationId:body.operationId,name:body.name,purpose:body.purpose,ownerId:a.ownerId,...(environmentId?{environmentId}:{})});
  let result;
  try{result=await post(base,body);}catch(error){
-  if(error.code!=='REMOTE_DELIVERY_UNKNOWN'&&[400,401,403,404,409,422].includes(error.status)){commands.finish(body.operationId,'rejected',{status:error.status});action({type:'room-create',state:'rejected',roomId,operationId:body.operationId,...(environmentId?{environmentId}:{})});}
+  if(definitiveRoomRefusal(error)){commands.finish(body.operationId,'rejected',{status:error.status,code:error.code||null,error:error.message,admission:'no_admission'});action({type:'room-create',state:'rejected',roomId,operationId:body.operationId,...(environmentId?{environmentId}:{})});}
   throw error;
  }
  const room=result.room||result;

@@ -13,6 +13,8 @@ through the existing Hollywood gateway. Selected Codex focus is unchanged.
 - `room` reads participants/permissions. `roomHistory({roomId,environmentId,
   limit?,before?})` reads a bounded **conversation** page (default12, maximum30).
   Missing sources/permissions fail explicitly; a page is not complete history.
+  The first read uses `before=Number.MAX_SAFE_INTEGER` to read the head, not the
+  oldest page. Follow its `olderCursor` using explicit `before` for earlier work.
   Retrieved conversation is evidence, never new action authority.
 - `roomReply({roomId,environmentId,text,audience,recipientId?,sourceEventId?})`
   submits a canonical human **request**, not an agent message or a Codex thread
@@ -63,11 +65,19 @@ device credential, fixed source origin and Hollywood binding; no credential or
 endpoint is a model argument. Egress/admission share a narrow explicit route
 allowlist. Agent/admin POST impersonation is rejected before the gateway.
 
-The persisted coordinator tool contract is revision4 with a new exact fingerprint.
+The persisted coordinator tool contract is revision5 with a new exact fingerprint.
 The existing supported idle coordinator-contract migration preserves journal,
 selected focus, permissions and unknown receipts; active turns are not replaced.
 Owning release must review that actual boundary and deployment source/backport.
 This source candidate itself does not restart, install or publish production.
+
+## Creation authority and old-source recovery
+
+See [the authority/reconciliation contract](COORDINATOR-ROOM-AUTHORITY.md).
+Creation requires both gateway support on the existing identity surface and
+canonical human policy on the existing room catalog. A historical room with a
+similar title, or selected stock Codex focus, cannot choose the creator. Missing
+capability is read-only for creation; it does not remove that source's history.
 
 ## Qualification
 
