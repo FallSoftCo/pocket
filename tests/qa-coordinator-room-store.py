@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 from aiohttp.test_utils import TestServer
 from aiohttp import ClientSession
-from hollywood_backbone.store import Store
+from hollywood_backbone.store import Store, Denied
 from hollywood_backbone.server import application
 
 async def main():
@@ -25,6 +25,10 @@ async def main():
     store.create_room(owner,source,'ISOLATED existing project','Synthetic room-intent path; no models',agent)
     store.membership(owner,source,human,{'can_read':True,'can_post':True,'can_request':True},0)
     store.membership(owner,source,peer,{'can_read':True,'can_post':True,'can_request':True},0)
+    for command in (None, {}):
+        try:store.create_room(human,uid(),'ISOLATED unreceipted room','Must be denied',agent,source,command=command)
+        except Denied:pass
+        else:raise AssertionError('Ordinary human needs a stable original command')
     for n in range(24):
         store.post(human,source,uid(),{'kind':'message','body':f'Canonical useful finding {n:02}','audience':'room'})
     original=store.post(human,source,uid(),{'kind':'message','body':'PRIVATE_ROOM_INTENT_CANARY','audience':'direct','recipientId':agent})['event']
@@ -65,7 +69,7 @@ async def main():
         self_principal=store.principal_read(human,human)
         assert store.role_read(owner,agent)==role_before
         assert self_principal['administrator'] is False
-        (root/'canonical-result.private.json').write_text(json.dumps({'requests':events,'rooms':rooms,'humanAdministrator':self_principal['administrator'],'existingOwnerRoleUnchanged':True,'canonicalPolicyNegatives':negative,'nativeOrModelStarted':False},default=str,indent=2))
+        (root/'canonical-result.private.json').write_text(json.dumps({'requests':events,'rooms':rooms,'humanAdministrator':self_principal['administrator'],'stableCommandRequired':True,'existingOwnerRoleUnchanged':True,'canonicalPolicyNegatives':negative,'nativeOrModelStarted':False},default=str,indent=2))
         await server.close();store.close()
 
 if __name__=='__main__':asyncio.run(main())
