@@ -1,3 +1,4 @@
+import {roomOriginPendingState} from './room-identity.mjs';
 /** Canonical Hollywood data, independent of the gateway used to read it.
  * Execution observations stay operations; they never become agent chat replies.
  */
@@ -15,6 +16,11 @@ export function roomActivityState(activity){
  return {label:labels.join(' · ')||'Idle',tone:activity.waitingForHuman||activity.unknown?'attention':labels.length?'live':'idle',known:true};
 }
 export function roomState(room,{available=true,now=Date.now()}={}){
+ const activity=roomActivityStatus(room,{available,now});
+ if(!available||['attention','live'].includes(activity.tone))return activity;
+ return roomOriginPendingState(room)||activity;
+}
+function roomActivityStatus(room,{available=true,now=Date.now()}={}){
  const unavailable={label:'Status unavailable',tone:'unavailable',known:false};
  if(!available)return unavailable;
  if(!Object.hasOwn(room||{},'nativeState'))return roomActivityState(room?.activity);

@@ -1,5 +1,5 @@
 import {HistoryReader} from './native-history.mjs';
-import {roomActorLabel,roomOriginSummary,roomOriginRows} from './room-identity.mjs';
+import {roomActorLabel,roomOriginSummary,roomOriginRows,currentRoomActors} from './room-identity.mjs';
 import {RequestList} from './request-list.mjs';
 import {InlineMedia} from './media-previews.mjs';
 import {ReviewPane} from './review-pane.mjs';
@@ -457,15 +457,15 @@ function renderRoomHeader(){
  const e=rooms.entry(scope),route=rooms.route(scope,{requireAvailable:false}),target=targetFor(scope),detail=current;
  roomControls.hidden=false;$('main').dataset.roomId=e.roomId;
  roomRosterTitle.textContent=roomOriginSummary(detail,{available:!detail?.detailError});
- roomRosterBody.textContent=[...roomOriginRows(detail),...(detail?.actors||[]).filter(a=>a.can_read===true).map(a=>
+ roomRosterBody.textContent=[...roomOriginRows(detail,{available:!detail?.detailError}),...(detail?.actors||[]).filter(a=>a.can_read===true).map(a=>
    roomActorLabel(a)+(a.participation==='retained-source-owner'?' · Retained original-source owner (not public fanout)':a.identity?.originRoomId===e.roomId?' · Origin here':' · Existing/visiting participant'))].join('\n');
  options(roomGateway,e.routes.map(r=>[r.environment,r.name+(r.available?'':' · Unavailable')]),route.environment);
  options(roomProjection,[['all','Conversation + activity'],['conversation','Conversation'],['activity','Activity']],roomView);
- options(roomRecipient,[['','All room agents'],...(detail?.actors||[]).filter(a=>a.kind==='agent').map(a=>[a.id,roomActorLabel(a)])],target.recipientId||'');
+ options(roomRecipient,[['','All room agents'],...currentRoomActors(detail?.actors).filter(a=>a.kind==='agent'||a.id===target.recipientId).map(a=>[a.id,roomActorLabel(a)]),...(detail?.actors||[]).filter(a=>a.participation==='retained-source-owner'&&a.id===target.recipientId).map(a=>[a.id,roomActorLabel(a)+' · Earlier participant'])],target.recipientId||'');
  options(roomAudience,[['room','Public room'],['direct','Private to recipient']],target.audience);
  roomReply.hidden=!target.sourceEventId;roomReply.title=target.sourceEventId||'';
  setLabel($('title'),e.room.name||'Hollywood room');setLabel($('context-label'),'HOLLYWOOD ROOM');
- const readRoute=e.routes.find(r=>r.environment===e.readEnvironment&&r.available)||route,state=roomState(e.room,{available:readRoute.available&&!detail?.detailError});
+ const readRoute=e.routes.find(r=>r.environment===e.readEnvironment&&r.available)||route,state=roomState({...e.room,...(detail?.nativeState?{nativeState:detail.nativeState}:{}),...(detail?.roomAgents?{roomAgents:detail.roomAgents}:{})},{available:readRoute.available&&!detail?.detailError});
  setLabel($('session-state'),state.label+(readRoute.environment!==route.environment?' · Reading via '+readRoute.name+'; saved sends retain '+route.name:'')+(cache.get(scope)?.catchingUp?' · Catching up missed events':'')+(detail?.detailError?' · '+detail.detailError:''));
  $('session-menu').hidden=true;$('parent').hidden=true;$('coordinator').classList.remove('active');$('send-mode').hidden=true;
  const enabled=route.available&&!detail?.detailError&&detail?.permissions?.can_post===true&&

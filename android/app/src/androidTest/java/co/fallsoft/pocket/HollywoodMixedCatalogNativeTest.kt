@@ -159,6 +159,14 @@ class HollywoodMixedCatalogNativeTest {
             await("Room composer not mounted"){device.hasObject(By.text(roomText))&&device.hasObject(By.clazz("android.widget.EditText"))}
             if(InstrumentationRegistry.getArguments().getString("nativeStateExpected")=="true")
                 await("Open-room footer lost native waiting state"){device.hasObject(By.text("Needs you"))}
+            if(InstrumentationRegistry.getArguments().getString("roomOriginExpected")=="true") {
+                click(By.desc("Settings, app updates, usage and activity"))
+                click(By.res("native-room-address"))
+                await("Mac room-owned participant missing"){device.hasObject(By.text("Original room · MacBook Pro"))}
+                assertFalse("Retained Global remained a current recipient",device.hasObject(By.text("Retained Global source owner")))
+                capture("room-origin-address");rawBack()
+                await("Closing room controls lost composer"){device.hasObject(By.clazz("android.widget.EditText"))}
+            }
             focusedIme("before-send")
             click(By.desc("Send message"))
             await("Synthetic send not admitted"){qa("state").optInt("acceptedSyntheticSends")==1}
@@ -172,6 +180,12 @@ class HollywoodMixedCatalogNativeTest {
             assertEquals(1,qa("state").optInt("acceptedSyntheticSends"))
             assertFalse("Room send still targeted a default agent",qa("state").getJSONObject("lastSyntheticMessage").has("recipientId"))
             capture("accepted-conversation-keyboard-draft")
+            if(InstrumentationRegistry.getArguments().getString("roomOriginExpected")=="true") {
+                systemBack("room-origin-send")
+                await("Room list did not expose pending initialization"){device.hasObject(By.desc("Preparing agents · 0/6"))}
+                assertFalse("Pending setup mislabeled idle",device.hasObject(By.text("Idle")))
+                capture("room-origin-initializing-list")
+            }
             if(InstrumentationRegistry.getArguments().getString("nativeStateExpected")=="true") {
                 systemBack("accepted-send")
                 await("Native room list not visible"){device.hasObject(By.desc("Open Chat for Original room"))}

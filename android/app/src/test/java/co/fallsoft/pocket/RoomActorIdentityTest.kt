@@ -13,6 +13,8 @@ class RoomActorIdentityTest {
     @Test fun canonicalHostDisambiguatesWithoutRenamingPrincipal() {
         val a=actor("MacBook Pro native host");assertEquals("Global · MacBook Pro native host",roomActorLabel(a));assertEquals("Global",a.s("name"))
         assertEquals("Global · Mac development VM",roomActorLabel(actor("Mac development VM")))
+        val named=actor("MacBook Pro").put("name","Example room · MacBook Pro")
+        assertEquals("Example room · MacBook Pro",roomActorLabel(named))
     }
     @Test fun wrongIdentityCannotLabelDifferentAuthor() {
         val a=actor("Wrong host");a.getJSONObject("identity").put("agentId",host)
@@ -33,4 +35,31 @@ class RoomActorIdentityTest {
         assertEquals("Room agents: 1/1 ready · Handoff required",roomOriginSummary(detail))
         assertEquals("Room agent status unavailable",roomOriginSummary(detail,false))
     }
+    private val roomId="33333333-3333-4333-8333-333333333333"
+    private fun setup(ready:Boolean=false)=JSONObject().put("room",JSONObject().put("id",roomId)).put("deliveries",JSONArray())
+        .put("roomAgents",JSONObject().put("version",1).put("roomId",roomId)
+            .put("generation",JSONObject().put("phase","active"))
+            .put("agents",JSONArray().put(JSONObject().put("agent",agent).put("node",host).put("ready",ready))))
+    @Test fun setupIsVisibleWithoutHidingActualWork() {
+        val pending=setup();assertEquals("Preparing agents · 0/1",hollywoodRoomWork(pending,"",emptyList()).label)
+        pending.getJSONArray("deliveries").put(JSONObject().put("id",agent).put("state","running"))
+        assertEquals("Running",hollywoodRoomWork(pending,"",emptyList()).label)
+        assertNull(roomOriginPendingLabel(setup(true)))
+    }
+    @Test fun foreignOrDuplicateEnvironmentCannotPretendReady() {
+        val duplicate=setup();val agents=duplicate.getJSONObject("roomAgents").getJSONArray("agents")
+        agents.put(JSONObject().put("agent",roomId).put("node",host).put("ready",true))
+        assertEquals("Room agent status unavailable",roomOriginPendingLabel(duplicate))
+        val foreign=setup();foreign.getJSONObject("roomAgents").put("roomId",host)
+        assertEquals("Room agent status unavailable",roomOriginPendingLabel(foreign))
+        val malformed=setup();malformed.getJSONObject("roomAgents").getJSONArray("agents").getJSONObject(0).put("ready","true")
+        assertEquals("Room agent status unavailable",roomOriginPendingLabel(malformed))
+    }
+
+    @Test fun retainedLegacyProjectionDoesNotInventInitialization() {
+        val retained=setup().apply{getJSONObject("roomAgents").put("initializationRequired",false).put("agents",JSONArray())}
+        assertNull(roomOriginPendingLabel(retained));assertEquals("Room participants",roomOriginSummary(retained))
+        val stale=setup(true);assertTrue(hollywoodRoomWork(stale,"Unavailable",emptyList()).setupAgents.isEmpty())
+    }
+
 }

@@ -9,18 +9,10 @@ import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 
 /** Current room work is a separate projection from history and transport health. */
-internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<JSONObject>,val questions:List<JSONObject>,val nativePresent:Boolean=false,val native:HollywoodRoomActivity?=null) {
+internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<JSONObject>,val questions:List<JSONObject>,val nativePresent:Boolean=false,val native:HollywoodRoomActivity?=null,val setupLabel:String?=null,val setupAgents:List<JSONObject> = emptyList()) {
     val currentDeliveries get()=if(nativePresent)emptyList() else deliveries
     private fun count(state:String)=deliveries.count{it.s("state")==state}
-    val label get()=when {
-        !verified->"Status unavailable"
-        questions.isNotEmpty()->if(questions.all{it.optJSONObject("attention")?.s("method")?.endsWith("requestApproval")==true})"Approval needed" else "Reply needed"
-        nativePresent&&native==null->"Status unavailable"
-        nativePresent&&native?.needsHuman==true->native.summary
-        nativePresent&&native?.executing==true->"Running"
-        nativePresent&&native?.sharedBusyAgents?.let{it>0}==true->native.summary
-        nativePresent&&native?.uncertain==true->native.summary
-        nativePresent->"Idle"
+    private val legacyLabel get()=when {
         deliveries.any{it.s("state")=="running"&&!it.optBoolean("cancellation_requested")}->"Running"
         count("claimed")>0->"Starting"
         count("pending")>0->"Queued"
@@ -29,8 +21,21 @@ internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<J
         count("unknown")>0->"Outcome unknown"
         else->"Idle"
     }
+    val label get()=when {
+        !verified->"Status unavailable"
+        questions.isNotEmpty()->if(questions.all{it.optJSONObject("attention")?.s("method")?.endsWith("requestApproval")==true})"Approval needed" else "Reply needed"
+        nativePresent&&native?.needsHuman==true->native.summary
+        nativePresent&&native?.executing==true->"Running"
+        !nativePresent&&legacyLabel!="Idle"->legacyLabel
+        setupLabel!=null->setupLabel
+        nativePresent&&native==null->"Status unavailable"
+        nativePresent&&native?.sharedBusyAgents?.let{it>0}==true->native.summary
+        nativePresent&&native?.uncertain==true->native.summary
+        nativePresent->"Idle"
+        else->legacyLabel
+    }
     val spinning get()=label=="Running"
-    val icon get()=when(label){"Running"->"Codex";"Queued","Starting","Shared context busy"->"MoreHoriz";"Idle"->"Pause";"Stop requested"->"Stop";else->"ErrorOutline"}
+    val icon get()=if(label==setupLabel&&setupLabel!="Agent setup blocked")"MoreHoriz" else when(label){"Running"->"Codex";"Queued","Starting","Shared context busy"->"MoreHoriz";"Idle"->"Pause";"Stop requested"->"Stop";else->"ErrorOutline"}
 }
 
 internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSONObject>,accepted:List<JSONObject> = emptyList()):HollywoodRoomWork {
@@ -42,7 +47,9 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
     val ordered=deliveries.sortedWith(compareBy<JSONObject>{when(it.s("state")){"running"->0;"claimed"->1;"pending"->2;else->3}}.thenBy{it.s("id")})
     val questions=attention.filter{hollywoodAttentionCanRespond(it)}
     val nativePresent=HollywoodRoomActivity.usesNative(detail)
-    return HollywoodRoomWork(verified,ordered,questions,nativePresent,if(nativePresent)HollywoodRoomActivity.read(detail,verified)else null)
+    val setupLabel=roomOriginPendingLabel(detail)
+    val setupAgents=if(!verified||setupLabel=="Room agent status unavailable")emptyList() else detail.optJSONObject("roomAgents")?.optJSONArray("agents")?.objects().orEmpty()
+    return HollywoodRoomWork(verified,ordered,questions,nativePresent,if(nativePresent)HollywoodRoomActivity.read(detail,verified)else null,setupLabel,setupAgents)
 }
 
 /** Work stays closest to the anchor; keyed rows cannot retarget a press during live updates. */
@@ -50,6 +57,17 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
     stopping:Set<String>,detailError:String,attentionError:String,onAttention:(JSONObject)->Unit,onGuidance:(JSONObject)->Unit,onStop:(JSONObject,Boolean)->Unit){
     SavedVoiceRecordingControls()
     BilingualLabel(work.label,centered=false,color=if(work.label in listOf("Needs you","Approval needed","Reply needed","Outcome unknown","Blocked"))Coral else Muted)
+    if(work.setupLabel!=null)work.setupAgents.forEach{agent->
+        Column(Modifier.fillMaxWidth().padding(vertical=6.dp)){
+            Text(agent.s("host_name").ifBlank{"Environment"},color=Paper,style=MaterialTheme.typography.bodyMedium)
+            BilingualLabel(if(agent.optBoolean("ready"))"Ready" else when(agent.s("readiness",agent.s("state"))){
+                "blocked"->"Blocked";"unknown"->"Status unavailable";else->"Preparing"
+            },centered=false,color=if(agent.s("readiness")=="blocked")Coral else Paper)
+            if(!agent.optBoolean("ready"))agent.s("note").takeIf{it.isNotBlank()}?.let{note->
+                ImmersionText("room-setup:"+client.bindingId+":"+room+":"+agent.s("agent"),note,color=Muted,maxLines=3)
+            }
+        }
+    }
     if(detailError.isNotBlank())Text(detailError.take(180),color=Coral,maxLines=3)
     if(attentionError.isNotBlank())BilingualLabel("Questions could not refresh",centered=false,color=Coral)
     if(work.nativePresent&&work.deliveries.isNotEmpty())BilingualLabel("Earlier work",centered=false,color=Muted)

@@ -22,18 +22,21 @@ import org.json.JSONObject
 @Composable internal fun HollywoodRoomCard(room:JSONObject,available:Boolean,identityScope:String=Pocket.environmentId,headerBadge:(@Composable ()->Unit)?=null,onKeyboard:(()->Unit)?=null,onOpen:()->Unit) {
     val activity=HollywoodRoomActivity.read(room,available)
     val preview=hollywoodRoomPreview(room,available)
+    val setupLabel=if(available)roomOriginPendingLabel(room)else null
+    val showSetup=setupLabel!=null&&activity?.executing!=true&&activity?.needsHuman!=true
     val density=LocalDensity.current
     val lineHeight=with(density){20.sp.toDp()}.coerceAtLeast(24.dp)
     val previewHeight=with(density){18.sp.toDp()}.coerceAtLeast(18.dp)
 
     val spoken=when {
+        showSetup->setupLabel.orEmpty()
         activity==null->"Status unavailable"
         activity.idle->if(activity.native)"Native agents idle at observation" else "Idle; no visible unsettled work at observation"
         else->activity.categories().joinToString("; "){(label,count)->"$count $label"}
     }
-    WorkCardSurface(activity?.scheduled==true,activity?.needsHuman==true,
+    WorkCardSurface(activity?.scheduled==true||showSetup,activity?.needsHuman==true||setupLabel=="Agent setup blocked",
         if(activity?.needsHuman==true||activity?.counts?.get(4)?.let{it>0}==true)Coral else Mint,modifier=Modifier
-            .testTag("native-room:"+room.s("id")).then(if(onKeyboard==null)Modifier.clickable(onClick=onOpen)else Modifier),knownIdle=activity?.idle==true) {
+            .testTag("native-room:"+room.s("id")).then(if(onKeyboard==null)Modifier.clickable(onClick=onOpen)else Modifier),knownIdle=activity?.idle==true&&!showSetup) {
         if(onKeyboard!=null)Row(Modifier.matchParentSize()){
             CardInteractionRegion("Chat",Modifier.weight(.78f).fillMaxHeight(),room.s("name"),onOpen)
             CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight(),room.s("name"),onKeyboard)
@@ -45,6 +48,7 @@ import org.json.JSONObject
                 Box(Modifier.size(24.dp)) {
                     if(activity?.executing==true)SymbolIcon("Codex",spoken,Modifier.fillMaxSize(),spinning=true)
                     else SymbolIcon(when {
+                        showSetup&&setupLabel!="Agent setup blocked"&&setupLabel!="Room agent status unavailable"->Icons.Rounded.MoreHoriz
                         activity==null||activity.uncertain->Icons.Rounded.ErrorOutline
                         activity.needsHuman->Icons.Rounded.ErrorOutline
                         activity.scheduled->Icons.Rounded.MoreHoriz
@@ -54,7 +58,8 @@ import org.json.JSONObject
             }
             Row(Modifier.fillMaxWidth().height(lineHeight).testTag("native-room-activity:"+room.s("id")).semantics{contentDescription=spoken},
                 horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
-                if(activity==null)BilingualLabel("Status unavailable",color=Muted)
+                if(showSetup)BilingualLabel(setupLabel.orEmpty(),color=if(setupLabel=="Agent setup blocked")Coral else Paper,centered=false)
+                else if(activity==null)BilingualLabel("Status unavailable",color=Muted)
                 else if(activity.idle)BilingualLabel("Idle",color=Muted)
                 else {
                     // Surface attention before ordinary execution. These categories overlap;

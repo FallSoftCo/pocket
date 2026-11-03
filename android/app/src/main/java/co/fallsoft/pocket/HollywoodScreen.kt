@@ -261,17 +261,12 @@ import androidx.lifecycle.repeatOnLifecycle
                 Text(roomLabel+" · "+(if(direct)"Private" else "Room")+" → "+recipientLabel,
                     maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
-            Text(roomOriginSummary(detail,feed.detailError.isBlank()),color=Muted,
-                style=MaterialTheme.typography.labelSmall,modifier=Modifier.testTag("room-origin-readiness"))
             if(addressMenu)Column{
-            detail.optJSONObject("roomAgents")?.optJSONArray("agents")?.objects()?.forEach{agent->
-                Text((agent.s("host_name").ifBlank{agent.s("node")})+" · "+
-                    (if(agent.optBoolean("ready"))"ready" else agent.s("readiness",agent.s("state","unconfirmed")))+
-                    (if(agent.optBoolean("ready"))"" else " · "+agent.s("note")),color=Muted,
-                    style=MaterialTheme.typography.labelSmall)
-            }
             Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("All room agents")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
-            actors.filter{it.s("id")!=client.principalId&&it.optBoolean("can_read")}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";addressMenu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(roomActorLabel(actor)+(if(actor.s("participation")=="retained-source-owner")" · Retained source owner (not public fanout)" else if(actor.optJSONObject("identity")?.s("originRoomId")==room)" · Origin here" else " · Existing/visiting"))}}
+            val recipients=actors.filter{it.s("id")!=client.principalId&&it.optBoolean("can_read")}
+            recipients.filter{it.s("participation")!="retained-source-owner"}.forEach{actor->
+                TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";addressMenu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(roomActorLabel(actor))}
+            }
             Row{Checkbox(postOnly,{postOnly=it},Modifier.testTag("native-post-only"));BilingualLabel("Post without requesting work")}
             if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}
             scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->TextButton({recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";addressMenu=false}){BilingualLabel("Saved message",centered=false);Text(" · "+(agentNames[saved.recipient]?:saved.recipient))}}}
