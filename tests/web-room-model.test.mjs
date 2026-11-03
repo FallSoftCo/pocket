@@ -54,3 +54,12 @@ test('mixed native availability is distinct from historical unknown delivery and
  agents[5].status={type:'active',activeFlags:['waitingOnUserInput']};assert.equal(roomState(room,{now}).label,'1 reply needed');
  agents[5].status={type:'idle',activeFlags:[]};assert.equal(roomState(room,{now}).label,'Idle');
 });
+
+test('shared native context busy does not claim room execution or leak foreign waiting flags',()=>{
+ const now=1000,agent={agentId:id(40),nativeThread:'shared',expiresAt:2000,status:{type:'activeElsewhere',activeFlags:[]}};
+ const room={nativeState:{version:1,observedAt:now,runtimeCount:1,agents:[agent]}};
+ const state=roomState(room,{now});
+ assert.equal(state.label,'1 shared context busy');assert.equal(state.tone,'busy');assert.equal(state.sharedBusy,1);assert.equal(state.known,true);
+ agent.status.activeFlags=['waitingOnApproval'];assert.equal(roomState(room,{now}).known,false);
+ agent.status.activeFlags=[];agent.expiresAt=999;assert.equal(roomState(room,{now}).label,'1 agent status unavailable');
+});

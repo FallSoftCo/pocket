@@ -18,6 +18,7 @@ internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<J
         nativePresent&&native==null->"Status unavailable"
         nativePresent&&native?.needsHuman==true->native.summary
         nativePresent&&native?.executing==true->"Running"
+        nativePresent&&native?.sharedBusyAgents?.let{it>0}==true->native.summary
         nativePresent&&native?.uncertain==true->native.summary
         nativePresent->"Idle"
         deliveries.any{it.s("state")=="running"&&!it.optBoolean("cancellation_requested")}->"Running"

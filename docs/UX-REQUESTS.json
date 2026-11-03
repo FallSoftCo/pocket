@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-02",
+  "updated": "2026-11-03T03:39:55.821273+00:00",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -3277,6 +3277,16 @@
         "Do not replay old unknown work or wake models to refresh state.",
         "The two requested project rooms are created with original human read/post/request; delegated work acceptance is distinct from execution."
       ]
+    },
+    {
+      "id": "shared-native-room-response-outcomes-20261103",
+      "request": "Rooms must not silently strand replies or mislabel a shared agent busy elsewhere as idle/offline. Keep original input/publication identities, source privacy and busy relevance; no continuation or polling model loops.",
+      "status": "Candidate: SDK242 connector live; compatible Android162/browser status candidate under release qualification. API capability remains off until client delivery.",
+      "implementation": [
+        "Per-source owner-private response outcomes preserve ambiguous finals and prevent held output from starving later source-bound replies.",
+        "Android parser AND toolbar distinguish Shared context busy. Browser preserves the same distinction, expiry and empty foreign flags."
+      ],
+      "verification": "Actual PostgreSQL/HTTP SDK/API fixture; existing original-receipt regression; real Kotlin5/5 and browser5/5. No handset display or new provider/model execution claimed."
     }
   ],
   "current_state": {
