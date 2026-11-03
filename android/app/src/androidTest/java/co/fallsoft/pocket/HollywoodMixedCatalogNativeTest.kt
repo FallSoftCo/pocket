@@ -63,10 +63,13 @@ class HollywoodMixedCatalogNativeTest {
         val selector=By.text("Original room · Room → All room agents")
         for(step in 0..8){
             if(observedBounds(selector)?.height()?.let{it>20}==true)return
-            assertTrue("Address not reachable in bounded popup scroll",step<8)
+            if(step==8){capture("address-not-reached");fail("Address not reachable in bounded popup scroll")}
             val popup=observedBounds(By.clazz("android.widget.ScrollView").pkg("co.fallsoft.pocket"))
             requireNotNull(popup){"Room controls have no scroll surface"}
-            assertTrue(device.swipe(popup.centerX(),popup.top+popup.height()/4,popup.centerX(),popup.bottom-popup.height()/4,24))
+            android.util.Log.i("ROOM_ORIGIN_QA","address step="+step+" popup="+popup)
+            assertTrue(device.swipe(popup.centerX(),popup.top+popup.height()/4,popup.centerX(),popup.bottom-popup.height()/4,80))
+            Thread.sleep(250)
+            if(step==1)capture("address-scroll-02")
         }
     }
     private fun identity()="environment=${Pocket.environmentId} selected=${Pocket.selected} native=${BackendNavigation.nativeSelected()}"
