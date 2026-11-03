@@ -3594,6 +3594,19 @@
       "No new APK build is required for this tooling-only change."
     ]
   },
+  "coordinator_room_intent_candidate_20261103": {
+    "request": "Read project-room conversation and give human instructions into existing rooms or an explicitly created new room, without switching selected Codex focus.",
+    "status": "implemented source candidate; isolated HTTP/PostgreSQL integration qualified; not production activated",
+    "operations": ["roomHistory", "roomReply", "createRoomAndStart", "roomReceipt"],
+    "evidence": "COORDINATOR-ROOM-INTENTS.md; tests/coordinator-room-intents.test.mjs; tests/integrate-coordinator-room-intents.mjs",
+    "boundaries": ["Capability questions create nothing", "Original paired human and source/binding retained", "Unknown message dispatch is never blindly repeated", "Accepted intent is not finished work", "No agent runtime or phone/pairing changes"]
+  },
+  "coordinator_room_authority_candidate_20261103": {
+    "request": "Create a NEW project room in the supported current federation, not a task to a similarly named legacy owner; show recent room conversation and truthful original admission.",
+    "status": "source candidate; focused and isolated real HTTP/PostgreSQL qualification; not production activated",
+    "evidence": "COORDINATOR-ROOM-AUTHORITY.md; tests/coordinator-room-authority.test.mjs; tests/integrate-coordinator-room-intents.mjs",
+    "boundaries": ["Gateway and canonical human policy both required", "Ordinary human stays non-administrator", "Original positive rejection overlay never rewrites history", "Inaccessible read is not absence", "No native/model or phone/pairing change"]
+  },
   "coordinator_room_capability_20261103": {
     "request": "Coordinator must understand NextComp/Hollywood rooms and discover/create them through existing paired human sources.",
     "status": "implemented; backend release qualification in progress",

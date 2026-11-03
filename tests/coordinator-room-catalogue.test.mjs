@@ -4,6 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {EventEmitter} from 'node:events';
 import {coordinatorRoomCatalogue} from '../server/coordinator-room-catalogue.mjs';
 import {VoiceController} from '../server/voice-controller.mjs';
+import {qaHuman,gatewayControl,canonicalControl} from './room-control-fixture.mjs';
 const room='11111111-1111-4111-8111-111111111111',agent='22222222-2222-4222-8222-222222222222',binding='a'.repeat(64);
 
 test('room catalogue uses each binding, deduplicates federation and keeps source preference despite response latency',async()=>{
@@ -33,10 +34,10 @@ test('selected Codex host cannot override discovered room source or original hum
  db.prepare("INSERT INTO voice_turns(device,id,hash,state,transcript,created_at) VALUES('phone','voice-room','hash','thinking','Create a project room',1)").run();
  controller.sources={list:()=>[{environmentId:'cpu',name:'CPU'},{environmentId:'mac',name:'Mac'}],call:async(device,env,path,body,actor,options)=>{
   calls.push({device,env,path,body,actor});if(env!=='cpu')throw Error('Room source unavailable');
-  if(path.endsWith('/identity'))return {bindingId:binding,authorityId:'fleet'};
+  if(path.endsWith('/identity'))return {bindingId:binding,authorityId:'fleet',principalId:qaHuman,roomControl:gatewayControl};
   assert.equal(actor.hollywoodBinding,binding);
   if(body){stored={...body,owner:body.ownerId};return {room:stored};}
-  if(path.endsWith('/rooms'))return {authorityId:'fleet',rooms:[{id:room,name:'Source',owner:agent}]};
+  if(path.endsWith('/rooms'))return {authorityId:'fleet',rooms:[{id:room,name:'Source',owner:agent}],roomControl:canonicalControl('fleet',[room])};
   if(path.endsWith(room))return {room:{id:room,name:'Source',owner:agent},actors:[{id:agent,kind:'agent'}]};
   return {room:stored};
  }};
@@ -57,13 +58,13 @@ test('HTTP room admission uses the paired human binding; lost ACK is reconciled 
  const server=http.createServer(async(req,res)=>{
   if(req.headers.authorization!=='Bearer original-human-device-token')return res.writeHead(403).end('{}');
   if(req.url==='/api/status')return res.end(JSON.stringify({deviceId:'remote-human'}));
-  if(req.url.endsWith('/identity'))return res.end(JSON.stringify({bindingId:binding,authorityId:'qa'}));
+  if(req.url.endsWith('/identity'))return res.end(JSON.stringify({bindingId:binding,authorityId:'qa',principalId:qaHuman,roomControl:gatewayControl}));
   if(req.headers['x-hollywood-binding']!==binding)return res.writeHead(409).end('{}');
   if(req.method==='POST'){
    assert.equal(req.url,'/api/hollywood/v3/rooms');assert.equal(req.headers['x-nextcomp-coordinator-turn'],'human-create');
    let text='';for await(const chunk of req)text+=chunk;const body=JSON.parse(text);stored={...body,owner:body.ownerId};posts++;req.socket.destroy();return;
   }
-  if(req.url.endsWith('/rooms'))return res.end(JSON.stringify({authorityId:'qa',rooms:[{id:room,name:'QA source',owner:agent}]}));
+  if(req.url.endsWith('/rooms'))return res.end(JSON.stringify({authorityId:'qa',rooms:[{id:room,name:'QA source',owner:agent}],roomControl:canonicalControl('qa',[room])}));
   if(req.url.endsWith(room))return res.end(JSON.stringify({room:{id:room},actors:[{id:agent,kind:'agent'}]}));
   res.end(JSON.stringify({room:stored}));
  });

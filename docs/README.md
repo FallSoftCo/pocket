@@ -4,6 +4,8 @@ NextComp connects a person on Android to ongoing work in their own computing env
 
 ## Understand and evaluate
 
+- [Coordinator room conversation and intent](COORDINATOR-ROOM-INTENTS.md): source-bound room history, human instructions and explicit create-and-start; candidate qualification/recovery and owning release limits.
+
 - [NextComp briefing for Tibo and agent reviewers](NEXTCOMP-BRIEF.md): the complete account of what a person can do, how the system fits personal-agent computing, and what warrants a technical conversation.
 - [Capabilities and evidence](CAPABILITIES.md): user actions, implementation entry points, versioned observations and unresolved gaps.
 - [Brief evaluation](BRIEF-EVALUATION.md): why this briefing was selected, what the evaluations actually tested, and their limits.

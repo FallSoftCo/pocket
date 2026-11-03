@@ -2,6 +2,7 @@ import {contextReviewPath,contextReviewRequest,requireReviewDevice,verifyReviewR
 import {constants,closeSync,existsSync,fstatSync,openSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
+import {GATEWAY_ROOM_CONTROL} from './coordinator-room-control.mjs';
 
 const fail=(status,message,code='HOLLYWOOD_REQUEST_FAILED')=>Object.assign(Error(message),{status,code});
 const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);
@@ -120,7 +121,7 @@ export function hollywoodRequest(method,tail,query,body){
   else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['history','attention'].includes(p[2]))allowed=p[2]==='history'?['after','before','limit','view']:['after','limit'];
   else if(method==='GET'&&p.length===2&&((p[0]==='commands'&&operation(p[1]))||(['attention','deliveries','native-controls'].includes(p[0])&&uuid(p[1]))))allowed=[];
   else if(method==='POST'&&p.length===1&&p[0]==='rooms'){
-    if(!fields(body,['operationId','id','name','purpose','ownerId'])||!operation(body.operationId)||!uuid(body.id)||!uuid(body.ownerId)||
+    if(!fields(body,['operationId','id','name','purpose','ownerId','sourceRoomId'])||!operation(body.operationId)||!uuid(body.id)||!uuid(body.ownerId)||body.sourceRoomId!=null&&!uuid(body.sourceRoomId)||
       !['name','purpose'].every(key=>typeof body[key]==='string'&&body[key].trim()&&body[key].length<=(key==='name'?200:4000)))
       throw fail(400,'A room needs its original identity, name, purpose and existing agent owner.','HOLLYWOOD_REQUEST_REJECTED');
   }else if(method==='POST'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&p[2]==='messages'){
@@ -163,7 +164,7 @@ export function hollywoodRequest(method,tail,query,body){
 /** Mount only after NextComp requireAuth. Registration is private local administration. */
 export function mountHollywood(app,{dir,gateway=new HollywoodGateway(loadHollywood(dir))}){
   app.get('/api/hollywood/v3/identity',async(req,res,next)=>{
-    try{const client=gateway.client(req.device.id);res.json({...await client.verify(),...(gateway.options.contextReviewEnabled?{contextReview:true}:{})});}catch(error){next(error);}
+    try{const client=gateway.client(req.device.id);res.json({...await client.verify(),roomControl:{protocol:GATEWAY_ROOM_CONTROL,createRoom:true},...(gateway.options.contextReviewEnabled?{contextReview:true}:{})});}catch(error){next(error);}
   });
   app.use('/api/hollywood/v3',async(req,res,next)=>{
     try{
