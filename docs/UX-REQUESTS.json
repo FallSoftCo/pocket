@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-03T03:39:55.821273+00:00",
+  "updated": "2026-11-03T13:12:31.425737+00:00",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -3287,6 +3287,18 @@
         "Android parser AND toolbar distinguish Shared context busy. Browser preserves the same distinction, expiry and empty foreign flags."
       ],
       "verification": "Actual PostgreSQL/HTTP SDK/API fixture; existing original-receipt regression; real Kotlin5/5 and browser5/5. No handset display or new provider/model execution claimed."
+    },
+    {
+      "id": "mac-stock-history-opaque-position-rollout-20261103",
+      "request": "Keep stock Codex history ordering correct across every connected host, including delayed input echoes, bounded pages and older native cursor protocols. A current phone build does not establish that each remote backend is current.",
+      "status": "Deployed to the existing Mac stock gateway after exact-source Apple VM qualification; original native runtime and protected app data retained. No Android install required.",
+      "implementation": [
+        "Retain complete-provider-turn identity and ordering evidence before bounding the display page.",
+        "Resolve opaque-only item cursors with bounded exact-target pagination; partial windows cannot prove missing successors.",
+        "Deploy reader and index as one coherent host update; preserve native daemons, pairing, queued intents and history."
+      ],
+      "verification": "Four original focused cases fail; exact old-source real HTTP opaque-cursor case fails; patched pair passes30 affected cases on Linux Node24 and macOS Node22. Synthetic provider, no model or work submission. Existing recent-session reads remain independently observed; no claim all historical lineage or phone rendering is qualified. Actual host: same original message IDs across53ms/13ms reopen reads, original earlier cursor works, original position lookup and unchanged native voice capabilities. Existing client connection re-established; no message/work submitted. Physical phone rendering not newly inspected.",
+      "evidence": "qualification/mac-stock-history-ordering-20261103.json"
     }
   ],
   "current_state": {

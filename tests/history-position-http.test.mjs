@@ -24,6 +24,15 @@ test('HTTP bounded heads preserve complete-turn ordering evidence across reopen 
   if(m.method==='thread/read')result={thread:metadata};
   if(m.method==='thread/list')result={data:[]};
   if(m.method==='thread/turns/list')result={data:[{id:'ordering-turn',status:'completed',items:m.params.itemsView==='full'?items:[]}],backwardsCursor:'anchor'};
+  if(m.method==='thread/items/list'&&m.params.threadId==='opaque-thread'){
+   if(m.params.cursor&&typeof m.params.cursor==='object'){
+    ws.send(JSON.stringify({id:m.id,error:{code:-32602,message:'invalid type: map, expected a string'}}));return;
+   }
+   ws.send(JSON.stringify({id:m.id,result:{data:[
+    {turnId:'opaque-turn',item:{id:'opaque-reply',type:'agentMessage',text:'Synthetic later answer'}},
+    {turnId:'opaque-turn',item:{id:'canonical-input',type:'userMessage',clientId:'send',content:[{type:'text',text:'Synthetic input'}]}}
+   ],nextCursor:null}}));return;
+  }
   if(m.method==='thread/items/list'){ws.send(JSON.stringify({id:m.id,error:{code:-32601,message:'thread/items/list is not supported'}}));return;}
   ws.send(JSON.stringify({id:m.id,result}));
  }));
@@ -43,6 +52,13 @@ test('HTTP bounded heads preserve complete-turn ordering evidence across reopen 
   const position=await api('/api/threads/ordering-thread/timeline/position',{turnId:'ordering-turn',itemId:'live-input-id',clientId:'send',knownItemIds:known});
   assert.deepEqual(position,{available:true,insertBefore:'ordering-turn/'+known[0],cursor:null});
   assert.equal(calls.length,before,'Ordering lookup must use retained evidence without provider reads');
+ }
+ // A live input can precede any ordinary page read. Opaque-only runtimes
+ // reject item anchors, so locate it through bounded native item pagination.
+ for(let n=0;n<2;n++){
+  const position=await api('/api/threads/opaque-thread/timeline/position',{
+   turnId:'opaque-turn',itemId:'live-input-alias',clientId:'send',knownItemIds:['opaque-reply']});
+  assert.deepEqual(position,{available:true,insertBefore:'opaque-turn/opaque-reply',cursor:null});
  }
  assert.ok(!calls.includes('thread/resume')&&!calls.includes('turn/start')&&!calls.includes('turn/steer'));
 });

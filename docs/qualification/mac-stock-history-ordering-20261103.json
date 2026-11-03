@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-03",
+  "scope": "Existing Mac stock backend reader/index backport; Android162 remains installed, no new APK announcement.",
+  "fixSource": "a8bad3db896b4227977528bb845c7b370f3830e1",
+  "baseCodeArchiveSha256": "a23c319d7585172ac690fa1d840bbe85d00d54bcacfc9694121e9aded27c55a2",
+  "releaseArchiveSha256": "f3bc400adfa2308581cc01071376145425d2988179099a3da21c33a27a577228",
+  "changedFiles": [
+    "server/history.mjs",
+    "server/history-position-index.mjs"
+  ],
+  "allOtherProductFilesByteIdentical": true,
+  "dependencyGraphUnchanged": true,
+  "before": {
+    "focusedFailures": 4,
+    "originalHTTP": "Opaque-only cursor position returned unavailable instead of the canonical visible successor.",
+    "retainedPass": "The earlier bounded-head HTTP case passed the original and did not cover this defect."
+  },
+  "qualification": {
+    "linuxNode": "24.21.0",
+    "macOSNode": "22.23.1, exact existing native dependencies, existing Apple development VM",
+    "affectedCasesPassed": 30,
+    "journey": "Actual HTTP gateway and WebSocket RPC transport with synthetic provider. Exact native code/dependencies red then green. Repeated heads retain chronology; opaque position is resolved before an ordinary page read. No thread/start, turn/start, turn/steer or thread/resume.",
+    "modelOrBusinessSubmission": false
+  },
+  "actualDeployment": {
+    "release": "20261103-stock-history-r01",
+    "gatewayOnly": true,
+    "sharedCodexProcessesUnchanged": true,
+    "protectedPairingOutgoingVoiceAndTurnSettingsUnchanged": true,
+    "readMilliseconds": [
+      53,
+      13
+    ],
+    "originalRecentItemIDsRetained": true,
+    "originalEarlierCursorWorks": true,
+    "originalPositionQueryWorks": true,
+    "voiceCapabilitiesUnchanged": true,
+    "existingClientReconnected": true,
+    "newMessagesSubmitted": 0
+  },
+  "limits": [
+    "The recent real-session position query also passed before this update; the original protocol failure was reproduced in the actual HTTP fixture, not claimed as an observed live write failure.",
+    "No fresh physical-phone display or microphone/provider-speech qualification.",
+    "This does not claim all historical lineage errors or all end-to-end session latency are solved."
+  ]
+}
