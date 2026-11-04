@@ -401,7 +401,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     // and only later jump to the current answer. Gate on transcript changes,
     // leaving real gestures and unrelated composer recompositions alone.
     val followRequest=remember(list){arrayOfNulls<Any>(1)}
-    val followIdentity=listOf(PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)},follow,important,restoreRevision,shownRows.size)
+    val followViewport by remember(list){derivedStateOf{list.layoutInfo.viewportEndOffset-list.layoutInfo.viewportStartOffset}}
+    val outgoingIdentity=d?.optJSONObject("outbox")?.optLong("revision")?:d?.optJSONArray("outgoing")
+    val followIdentity=listOf(PocketTranscript.revision,clientReplies.map{Triple(it.id,it.state,it.message)},outgoingIdentity,followViewport,follow,important,restoreRevision,shownRows.size)
     SideEffect{
         if(followRequest[0]!=followIdentity){
             followRequest[0]=followIdentity
