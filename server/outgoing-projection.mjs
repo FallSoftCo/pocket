@@ -18,6 +18,7 @@ export class OutgoingProjection {
     INSERT INTO outgoing_revisions VALUES(OLD.thread_id,1) ON CONFLICT(thread_id) DO UPDATE SET revision=revision+1;
    END;
    CREATE INDEX IF NOT EXISTS outgoing_projection_pending ON outgoing(thread_id,created_at) WHERE state NOT IN ('accepted','cancelled');
+   CREATE INDEX IF NOT EXISTS outgoing_projection_recent ON outgoing(created_at DESC,thread_id) WHERE state NOT IN ('accepted','cancelled');
   `);
  }
  fields(threadId){
@@ -30,5 +31,21 @@ export class OutgoingProjection {
    return {outbox:{version:1,revision,items},outgoing:items};
   }finally{this.db.exec('RELEASE outgoing_projection_snapshot');}
  }
- event(type,payload){return type==='reply'&&payload.threadId?{...payload,...this.fields(payload.threadId)}:payload;}
+ *bootstrap(){
+  // Reconnect hydrates recent delivery metadata, independently of history.
+  // Every emitted snapshot is complete; oversized groups wait for their ordinary
+  // authenticated head read rather than being misrepresented as an empty queue.
+  const recent=this.db.prepare("SELECT thread_id FROM outgoing WHERE state NOT IN ('accepted','cancelled') ORDER BY created_at DESC LIMIT 512").all();
+  let budget=1024*1024;const seen=new Set();
+  for(const row of recent){
+   if(seen.has(row.thread_id))continue;seen.add(row.thread_id);if(seen.size>128)break;
+   let snapshot;this.db.exec('SAVEPOINT outgoing_bootstrap_entry');
+   try{
+    const size=this.db.prepare("SELECT COALESCE(SUM(512+6*(length(CAST(text AS BLOB))+length(CAST(COALESCE(result,'') AS BLOB)))),0) AS bytes FROM outgoing WHERE thread_id=? AND state NOT IN ('accepted','cancelled')").get(row.thread_id).bytes;
+    if(size<=256*1024&&size<=budget){snapshot={threadId:row.thread_id,outbox:this.fields(row.thread_id).outbox};budget-=size;}
+   }finally{this.db.exec('RELEASE outgoing_bootstrap_entry');}
+   if(snapshot)yield snapshot;
+  }
+ }
+ event(type,payload){return type==='reply'&&payload.threadId?{...payload,outbox:this.fields(payload.threadId).outbox}:payload;}
 }
