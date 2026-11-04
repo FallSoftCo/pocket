@@ -249,9 +249,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var renameOpen by remember(Pocket.selected){mutableStateOf(false)}
     var taskName by remember(Pocket.selected){mutableStateOf(TextFieldValue())}
     var confirmArchive by remember(Pocket.selected){mutableStateOf(false)}
-    var editingQueue by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
-    var queuedText by remember(Pocket.selected){mutableStateOf("")}
-    var queueOpen by remember(Pocket.selected){mutableStateOf(false)}
+    var editingQueue by remember(Pocket.environmentId,Pocket.selected){mutableStateOf<JSONObject?>(null)}
+    var queuedText by remember(Pocket.environmentId,Pocket.selected){mutableStateOf("")}
+    var queueOpen by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     val draftKey=Pocket.key("draft:${Pocket.selected}");val editorState=remember(Pocket.environmentId,Pocket.selected){mutableStateOf((Pocket.prefs.getString(draftKey,"")?:"").let{TextFieldValue(it,TextRange(it.length))})};var editor by editorState
     LaunchedEffect(PocketReplies.revision,draftKey,conversation.incarnation){if(PocketReplies.clearedDrafts[draftKey]?.let{it.text==editor.text&&it.generation==replyDraftGeneration(draftKey)}==true&&!Pocket.prefs.contains(draftKey))editor=TextFieldValue("")}
     var keyboardInput by remember(Pocket.selected){mutableStateOf(Pocket.openWithKeyboard)}
@@ -407,7 +407,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             followRequest[0]=followIdentity
             if(follow&&!dragged&&!important&&restoredPosition){
                 val request=shownRows.indexOfLast{it.s("kind")=="request"}
-                val outgoingCount=d?.optJSONArray("outgoing")?.objects()?.count{it.s("state") !in listOf("accepted","cancelled")&&it !in waiting}?:0
+                val outgoingCount=d?.optJSONArray("outgoing")?.objects()?.count{it.s("state") !in listOf("accepted","cancelled")}?:0
                 val emptyLoading=if(rows.isEmpty()&&PocketTranscript.updating)1 else 0
                 val tail=emptyLoading+shownRows.size+outgoingCount+clientReplies.size+
                     (if(conversationError.isNotBlank())1 else 0)+(if(PocketTranscript.updating)1 else 0)
@@ -535,9 +535,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                     }}
                 }
                 if(important&&shownRows.isEmpty())item{BilingualLabel("No important updates yet",color=Muted)}
-                d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") !in listOf("accepted","cancelled")&&it !in waiting}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(6.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+                d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") !in listOf("accepted","cancelled")}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().semantics{testTagsAsResourceId=true}.testTag("outgoing-"+r.s("id")).background(Panel,RoundedCornerShape(6.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                     val recoverable=r.s("state") in listOf("failed","unknown");val busy=Pocket.isReplyActionBusy(r.s("id"))
-                    Label("YOU · ${r.s("state")}",if(recoverable)Coral else Muted);if(!transcriptContainsReply(rows,r.s("id")))ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
+                    BilingualLabel(when(r.s("state")){"queued"->"Queued · next turn";"held"->"Queue paused";else->r.s("state")},color=if(recoverable)Coral else Muted);if(!transcriptContainsReply(rows,r.s("id")))ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
+                    if(r.s("state") in listOf("queued","held")){
+                        Row{TextButton({editingQueue=r;queuedText=r.s("text")},enabled=!busy){BilingualLabel("Edit")}
+                            TextButton({Pocket.queuedReply(r.s("id"),"remove")},enabled=!busy){BilingualLabel("Remove",color=Coral)}}
+                    }
                     if(recoverable){WorkflowText(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)
                         Row{TextButton({if(r.s("state")=="unknown")confirmRetry=r else Pocket.queuedReply(r.s("id"),"retry")},enabled=!busy){BilingualLabel("Retry")}
                             TextButton({editingQueue=r;queuedText=r.s("text")},enabled=!busy){BilingualLabel("Edit")}

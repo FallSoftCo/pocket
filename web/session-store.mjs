@@ -1,3 +1,4 @@
+import {newerOutbox} from './outbox.mjs';
 import {NativeHistory} from './native-history.mjs';
 import {canonicalPage} from './presentation.mjs';
 const previewFields=new Set(['preview','previewKind','previewRole','activityAt','recencyAt']);
@@ -51,9 +52,15 @@ export class SessionStore {
   for(const [key,e]of pages){if(count<=32&&bytes<=16*1024*1024)break;if(key===id||key===this.protectedPage)continue;bytes-=weight(e);count--;e.page=null;delete e.nativeHistory;}
   return this;
  }
+ outbox(id,incoming){
+  const entity=this.entity(id),next=newerOutbox(entity.outbox,incoming);if(next===entity.outbox)return false;
+  entity.outbox=next;if(entity.page?.snapshot)Object.assign(entity.page.snapshot,{outbox:next,outgoing:next.items});return true;
+ }
  head(id,data,{older=false,ticket,cursor=null,anchor=null}={}){
   if(data.thread?.id!==id||!Array.isArray(data.timeline?.rows))throw Error('Conversation response did not include its message page.');
+  this.outbox(id,data.outbox);
   const entity=this.entity(id),old=this.get(id)||{},thread=this.metadata(id,data.thread,ticket);
+  if(entity.outbox)data={...data,outbox:entity.outbox,outgoing:entity.outbox.items};
   if(data.timeline.native===1){
    if(older&&old.protocol==='turns')throw Error('History protocol changed while reading an older page.');
    const history=entity.nativeHistory??=new NativeHistory();

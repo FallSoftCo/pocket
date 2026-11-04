@@ -41,7 +41,21 @@ internal object CodexConversations {
     var selected by mutableStateOf<String?>(null);private set
     private var selectionKey by mutableStateOf<CodexConversationKey?>(null)
     internal val displayKey get()=selectionKey
-    var detail by mutableStateOf<JSONObject?>(null)
+    private val outgoing=CodexOutgoing()
+    private var detailValue by mutableStateOf<JSONObject?>(null)
+    var detail:JSONObject?
+        get()=detailValue
+        set(value){
+            val key=selectionKey
+            if(value==null||key==null){detailValue=value;return}
+            outgoing.accept(key,value.optJSONObject("outbox"))
+            detailValue=outgoing.overlay(key,value)
+        }
+    internal fun outgoing(destination:EnvironmentRequest,thread:String,snapshot:JSONObject?){
+        if(thread.isBlank())return
+        val target=key(destination,thread)
+        if(outgoing.accept(target,snapshot)&&selectionKey==target)detailValue=outgoing.overlay(target,detailValue)
+    }
     private var session by mutableStateOf<Session?>(null,referentialEqualityPolicy())
     private var serial=0L
     private var foreground=false
@@ -69,6 +83,7 @@ internal object CodexConversations {
         val scope=CoroutineScope(SupervisorJob(Pocket.scope.coroutineContext[Job])+Dispatchers.Main.immediate+EnvironmentRequestContext(destination))
         val value=Session(key(destination,id),++serial,destination,scope)
         selectionKey=value.key;session=value
+        detailValue=outgoing.overlay(value.key,null)
         PocketTranscript.resetState(id,scope,openLatest)
         startLatestPump(value)
         startProbe(value)
