@@ -3304,14 +3304,14 @@
     {
       "id": "queued-messages-visible-and-live-20261104",
       "request": "Queued messages do not show up in NextComp. Keep pending delivery visible inline on Android and web, editable/removable without waiting for transcript history. Preserve real queued requests, FIFO, pairing and unknown-delivery holds.",
-      "status": "candidate-164",
+      "status": "published-164",
       "implementation": [
         "Durable versioned outgoing projection on existing reply events and existing HTTP responses",
         "Source-scoped monotonic Android/web outbox snapshots; older transcript reads cannot resurrect removed rows",
         "Queued/held rows visible with immediate edit/remove controls",
         "Queue dispatch reads current runtime metadata only, not historical turns"
       ],
-      "verification": "Actual candidate HTTP/WebSocket/SQLite/restart/FIFO journey passed with deterministic provider; Android native and signed release qualification pending."
+      "verification": "Actual HTTP/WebSocket/SQLite/restart/FIFO journeys passed on full and narrow deployed gateways; current-source14 native journeys passed; unchanged queue instrumentation caught IME viewport failure, then passed after production follow identity correction; exact optimized APK visibly retains queued controls/draft. Android164 published to existing channels, web and narrow gateway active. Physical phone install remains user OS action."
     }
   ],
   "current_state": {

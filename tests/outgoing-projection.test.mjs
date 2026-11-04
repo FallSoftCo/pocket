@@ -44,3 +44,9 @@ test('idle queued destination retains native resume defaults and excludes transc
  assert.deepEqual(calls,[{method:'thread/read',params:{threadId:'same-thread',includeTurns:false}},{method:'thread/resume',params:{threadId:'same-thread',excludeTurns:true}}]);
  assert.equal(checked,2);assert.ok(attached.has('same-thread'));
 });
+
+test('reconnect bootstrap keeps complete groups and omits oversized groups without truncating them',()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE outgoing(id TEXT PRIMARY KEY,thread_id TEXT,text TEXT,mode TEXT,state TEXT,result TEXT,created_at INTEGER,updated_at INTEGER)');const projection=new OutgoingProjection(db),insert=db.prepare('INSERT INTO outgoing VALUES(?,?,?,?,?,?,?,?)');
+ insert.run('small-one','small','First','queue','queued',null,1,1);insert.run('small-two','small','Second','queue','held',null,2,2);insert.run('oversized','large','x'.repeat(100000),'queue','queued',null,3,3);
+ const boot=[...projection.bootstrap()];assert.equal(boot.length,1);assert.equal(boot[0].threadId,'small');assert.deepEqual(boot[0].outbox.items.map(x=>x.id),['small-one','small-two']);assert.equal(projection.fields('large').outbox.items[0].text.length,100000);db.close();
+});

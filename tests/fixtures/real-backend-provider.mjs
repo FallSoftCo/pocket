@@ -17,6 +17,19 @@ createInterface({input:process.stdin}).on('line',line=>{
   switch(m.method){
    case 'initialize':result={userAgent:'NextComp synthetic provider'};break;
    case 'thread/list':result={data:s.threads.map(metadata),nextCursor:null};break;
+   case 'thread/loaded/list':result={data:s.threads.map(t=>t.id),nextCursor:null};break;
+   case 'thread/timeline/list':{
+    if(!t)throw Error('Unknown synthetic thread');
+    const entries=[];let position=0;
+    for(const turn of t.turns){
+     entries.push({position:position++,type:'turnStarted',turnId:turn.id});
+     for(const item of turn.items)entries.push({position:position++,type:'item',turnId:turn.id,item});
+     if(turn.status!=='inProgress')entries.push({position:position++,type:'turnCompleted',turnId:turn.id,status:turn.status});
+    }
+    const end=p.cursor?Number(p.cursor.slice('before:'.length)):entries.length,start=Math.max(0,end-(p.limit||64));
+    result={data:entries.slice(start,end),nextCursor:start?'before:'+start:null,activeRealtimeSessionAtPageStart:null};break;
+   }
+
    case 'thread/read':case 'thread/resume':
     if(!t)throw Error('Unknown synthetic thread');
     result={thread:p.includeTurns===false||p.excludeTurns?metadata(t):t};break;

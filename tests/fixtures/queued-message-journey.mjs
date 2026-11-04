@@ -60,13 +60,14 @@ try{
  const head=outbox=>({thread:{id:thread},timeline:{rows:[],hasEarlier:false},outbox,outgoing:outbox.items});
  cache.head(thread,head(first));cache.outbox(thread,latest);cache.head(thread,head(first));
  if(cache.get(thread).snapshot.outgoing.length!==2||cache.get(thread).snapshot.outgoing[0].text!=='Revised first queued request')throw Error('Late history rolled back live queue');
- ws.terminate();await stop();await launch();await connect();
+ ws.terminate();await stop();await launch();const bootstrapStart=events.length;await connect();
+ await wait(()=>events.slice(bootstrapStart).some(e=>e.type==='reply'&&e.state==='snapshot'&&e.threadId===thread&&e.outbox?.revision===latest.revision&&e.outbox.items.length===2),'reconnect restores metadata before history');
  const restored=await api('/api/replies/queued-ui-1');if(JSON.stringify(restored.outbox)!==JSON.stringify(latest))throw Error('Restart changed queue revision or content');
  const data=JSON.parse(readFileSync(state));data.threads[0].status={type:'idle'};writeFileSync(state,JSON.stringify(data));
  await wait(async()=> (await api('/api/replies/queued-ui-2')).state==='accepted','normal next-turn delivery');
  const final=JSON.parse(readFileSync(state));if(JSON.stringify(final.starts.map(x=>x.clientId))!==JSON.stringify(['queued-ui-1','queued-ui-2']))throw Error('FIFO/duplicate/cancelled delivery failure');
  if((await api('/api/replies/queued-ui-1')).outbox.items.length)throw Error('Accepted queue remains visible');
- const result={passed:true,native,dir,real:['server/index HTTP and human pairing','SQLite durable queue','cross-device WebSocket updates','queue edit/remove','web stale-history merge','real backend restart','FIFO delivery after actual metadata idle'],provider:'deterministic stdio; no tools/model/network',providerStarts:final.starts.length,removedNotExecuted:true,historyReadRequiredForQueue:false};
+ const result={passed:true,native,dir,real:['server/index HTTP and human pairing','SQLite durable queue','cross-device WebSocket updates','queue edit/remove','web stale-history merge','real backend restart','FIFO delivery after actual metadata idle'],provider:'deterministic stdio; no tools/model/network',providerStarts:final.starts.length,reconnectBootstrap:true,removedNotExecuted:true,historyReadRequiredForQueue:false};
  writeFileSync(join(dir,'RESULT.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));
 }catch(e){writeFileSync(join(dir,'FAILURE.json'),JSON.stringify({error:e.message,at:Date.now()}));throw e;}
 finally{ws?.terminate();await stop();writeFileSync(join(dir,'backend.log'),logs);}
