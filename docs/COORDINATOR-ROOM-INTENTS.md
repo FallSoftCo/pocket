@@ -97,3 +97,26 @@ database principals, not runtime agents. Codex/model execution and private HTTPS
 DNS transport are explicitly stubbed. There is no production/phone or physical
 TLS qualification claim. All attempts and exact source hashes belong in the
 owning release receipt; a passing fixture is not live activation.
+
+## Separate transport operations and reviewed recovery
+
+A single create-and-start call contains two different mutations. Room transport
+keys now include the HTTP path and canonical operation identity; exact old keys
+are still honored for their original path/payload. Neither lost replies nor
+403/404 receipt reads authorize resubmission.
+
+The local owner-only `scripts/reconcile-room-intent-collision.mjs` prepares and
+applies a SHA-reviewed plan for the exact shipped legacy collision: an accepted
+creation occupies the original tool-call key, causing its saved kickoff to throw
+before transport insertion/fetch. It requires the original human turn/tool error,
+exact accepted creation and binding, original source hash and absence of any
+contradictory message-dispatch record. No negative HTTP read is used as proof.
+
+An additive recovery ledger retains complete original rows. Continuation claims
+that plan durably and runs normal admission for the identical saved kickoff;
+no room, human voice turn or worker is recreated. A lost response stays inspect-
+only. This is not a general retry facility or permission to replay unknown work.
+
+Qualification: real paired HTTP creation+kickoff in one tool call; original legacy
+receipt compatibility; reviewed pre-dispatch recovery; contradictory/changed-proof
+denial; lost-recovery-ACK reopening with one POST. Synthetic principals only.

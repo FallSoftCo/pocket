@@ -53,7 +53,14 @@ export class CoordinatorSources {
   let command=null;
   if(body!==undefined&&!controlPlane){
    const bodyHash=createHash('sha256').update(JSON.stringify(body)).digest('hex');
-   const commandId=createHash('sha256').update(JSON.stringify([device,sourceId,actor.voiceTurnId,actor.voiceCallId||body.id||path])).digest('hex');
+   const legacyId=createHash('sha256').update(JSON.stringify([device,sourceId,actor.voiceTurnId,actor.voiceCallId||body.id||path])).digest('hex');
+   // One coordinator tool call may create a room AND submit its kickoff.
+   // Preserve exact legacy receipts, but give distinct room operations distinct
+   // durable identities. An existing unknown for the SAME operation still fences.
+   const legacy=this.db.prepare('SELECT * FROM coordinator_remote_commands WHERE id=?').get(legacyId);
+   const exactLegacy=legacy&&legacy.path===path&&legacy.body_hash===bodyHash;
+   const commandId=coordinatorRoomPath(path,'POST')&&!exactLegacy?
+    createHash('sha256').update(JSON.stringify(['room-command-v2',device,sourceId,actor.voiceTurnId,actor.voiceCallId||null,path,body.operationId,body.id||null])).digest('hex'):legacyId;
    const unresolved=this.db.prepare("SELECT * FROM coordinator_remote_commands WHERE device_id=? AND source_id=? AND path=? AND state IN ('sending','unknown') LIMIT 8").all(device,sourceId,path);
    for(const old of unresolved){
     if(noAdmission(this.db,{remoteId:old.id}))continue;

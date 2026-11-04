@@ -1,0 +1,27 @@
+{
+  "schema": "coordinator-room-dispatch-identity-qualification/v1",
+  "sourceBase": "0e3b4675484494e2da5a8692c8c658bf441f9702",
+  "focusedTests": 15,
+  "passed": true,
+  "realLocalHttp": true,
+  "modelCalls": 0,
+  "liveRecoveryNotYetRun": true,
+  "files": {
+    "server/coordinator-sources.mjs": {
+      "bytes": 14136,
+      "sha256": "14753d789b3d8605cadf32e1159a6add32cbaa8d9b0cba0bb39db25b45ac27c5"
+    },
+    "server/coordinator-room-intent-recovery.mjs": {
+      "bytes": 7914,
+      "sha256": "fea115f7a8f290d79c10e84556cefaec17e55026cb1a065cf5efb2766da5902c"
+    },
+    "scripts/reconcile-room-intent-collision.mjs": {
+      "bytes": 2796,
+      "sha256": "ff4ebcded1ce178445d9f4f8314ce7f5e9f3d8f639aa3e5c3bdb1b7b66c78527"
+    },
+    "tests/coordinator-room-dispatch-identity.test.mjs": {
+      "bytes": 8735,
+      "sha256": "5a28401de817444b61b4c8fa8eab13c44240a0ce34bd27cd0d8ab57f3d14aa87"
+    }
+  }
+}
