@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "versionCode": 165,
+  "versionName": "0.5.0-alpha.147",
+  "compiledCommit": "e4fcff3fec8ff7265d556dd3e5910cda01882293",
+  "productionSourceSha": "1144e52a2841ca78cb7f2e1e3e9c5709bd6ad2bfa015eba53f1686b54169b8f9",
+  "baseVersion": 164,
+  "scope": "Current room setup observations independent from retained message previews and original physical write/draft routes",
+  "sourceValidation": {
+    "debug": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "release": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "nativeCases": 2,
+  "optimized": {
+    "state": "complete",
+    "versionCode": 165,
+    "apkSha256": "0345d5236eb81764dd9b76e9b7d83e3367b2c19cb8c7f62faec86b52c5db753e",
+    "physicalPhone": false,
+    "dataSource": "Three synthetic rooms; two bound federation routes, recorded accepted message; no provider/models/business writes",
+    "optimizedPayloadVerified": true,
+    "recoveryDrawnMs": 7630,
+    "nativeRoomListStatusDrawn": true,
+    "freshSetupOldPreviewSeparated": true,
+    "canonicalRoomSnapshot": true,
+    "originalAcceptedMessageSingle": true,
+    "typingDrawn": true,
+    "newFailureStillVisible": true,
+    "sameRecordedMessageAfterReopen": true,
+    "noSubmissionsOrWrongRoutes": true,
+    "finishedAt": 1793773430.9770677,
+    "preferencesRestoredByteExact": true,
+    "fixturesStopped": true
+  },
+  "webCases": 19,
+  "deployment": {
+    "androidPublished": true,
+    "webPublished": true,
+    "webRuntimeChanges": [
+      "web/room-client.mjs"
+    ],
+    "nativeAgentsRestarted": false,
+    "originalTasksReplayed": false,
+    "phoneScreenObserved": false
+  },
+  "limits": [
+    "The three reported phone labels were not directly observed because verified ADB was unavailable. This corrects a reproduced projection defect; current authenticated setup readings were already ready.",
+    "Retained emulator timing is not handset optical latency. Provider audio and physical push display are not newly qualified."
+  ]
+}

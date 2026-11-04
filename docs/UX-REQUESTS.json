@@ -3316,13 +3316,13 @@
     {
       "id": "room-setup-live-projection-20261104",
       "request": "Three rooms show Agent setup blocked. Diagnose actual native setup and ensure stale gateway previews cannot retain an old failure after recovery; preserve original room and agents.",
-      "status": "candidate-165",
+      "status": "published-165",
       "implementation": [
         "Agent setup follows current source observation independently from canonical message preview",
         "Browser metadata uses the latest successful catalog read, leaving original write/draft bindings unchanged",
         "Fresh detail reads replace setup observations; omission cannot restore old failure"
       ],
-      "verification": "Original paired-phone CPU and GPU reads show all six project rooms ready6/6. Phone installed164 verified over SSH; direct screen unavailable. Focused cross-route tests pass; current-source native and optimized review pending."
+      "verification": "Authenticated existing phone-source CPU/GPU catalogs each report all six project rooms ready6/6. Both signed Android variants, both lints and selected12 unit cases per variant passed; two required current-source native integration cases and exact optimized three-room/two-gateway recovery, new failure, typing and reopen passed. Web19 focused checks pass; only room-client.mjs changed in the deployed web closure. Existing update channels publish165/alpha147, one FCM announcement accepted. Physical handset screen not observed."
     }
   ],
   "current_state": {
