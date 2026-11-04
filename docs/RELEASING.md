@@ -53,6 +53,8 @@ For a personal-debug → public-alpha migration, finish/check pending replies, r
 
 ## Updates without ADB
 
+Publish as the backend data owner. Stage the qualified files in that owner’s private directory before invoking the checked publisher; a privileged operator’s root-owned0600 manifest or APK cannot be read by an ordinary service account. Verify the actual authenticated metadata and compatible APK through the serving backend before announcing an update. Preserve private file permissions, pairing and credential ownership.
+
 The release builder prepares verified APK variants in the new private `POCKET_RELEASE_STAGE/app-updates` staging directory. It does not write the live update channel. The manifest includes the actual APK package/version, SHA-256 and signing certificate. Stable release APKs remain the public GitHub artifacts; compatible development-signed APKs are only served to paired devices through authenticated endpoints. Do not upload development APKs or the private runtime directory.
 
 Once the new backend is deployed, announce the prepared update with:
