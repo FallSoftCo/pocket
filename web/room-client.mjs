@@ -27,7 +27,7 @@ export function canAnswer(value){
 /** API calls carry their captured physical binding; history uses logical room
  * identity. Gateway switching can re-read events, never retarget saved writes. */
 export class RoomClient{
- constructor(api,{clock=()=>Date.now()}={}){this.api=api;this.clock=clock;this.entries=new Map();this.histories=new Map();this.sources=[];this.errors=[];this.sourceCache=new Map();this.discoveryEpoch=0;this.readFlights=new Map();this.entryWaiters=new Set();}
+ constructor(api,{clock=()=>Date.now()}={}){this.api=api;this.clock=clock;this.entries=new Map();this.histories=new Map();this.sources=[];this.errors=[];this.sourceCache=new Map();this.discoveryEpoch=0;this.catalogRevision=0;this.readFlights=new Map();this.entryWaiters=new Set();}
  entry(id){const entry=this.entries.get(id);if(!entry)throw Error('Original room is not available in this browser.');return entry;}
  route(id,{requireAvailable=true}={}){const entry=this.entry(id),route=entry.routes.find(r=>r.environment===entry.selected);if(!route||requireAvailable&&!route.available)throw Error('Original room gateway is unavailable. Draft retained.');return route;}
  get(path,options={}){const signal=AbortSignal.any([AbortSignal.timeout(options.timeout||4000),...(options.signal?[options.signal]:[])]);if(signal.aborted)return Promise.reject(cancelled(signal));return abortable(this.api(path,undefined,{...options,signal,timeout:options.timeout||4000}),signal);}
@@ -44,13 +44,16 @@ export class RoomClient{
    if(cached.error)this.errors.push(source.name+': '+cached.error);
    for(const room of cached.rooms||[]){const binding=cached.binding,id=roomKey(binding,room.id),old=this.entries.get(id);
     const entry=found.get(id)||{...old,id,roomId:room.id,binding,room,routes:[],selected:old?.selected||source.id};
-    entry.routes.push({environment:source.id,name:source.name,binding,room,available:cached.available});found.set(id,entry);
+    entry.routes.push({environment:source.id,name:source.name,binding,room,available:cached.available,revision:cached.revision||0});found.set(id,entry);
    }
   }
   for(const e of found.values()){
    const old=this.entries.get(e.id),selected=e.routes.find(r=>r.environment===e.selected);
    if(!selected){const previous=old?.routes.find(r=>r.environment===old.selected);if(previous)e.routes.push({...previous,available:false,retired:true});}
-   e.room=(e.routes.find(r=>r.environment===e.readEnvironment&&r.available)||e.routes.find(r=>r.environment===e.selected&&r.available)||e.routes[0]).room;
+   // Write selection stays captured. Display current metadata from the last
+   // successful catalog read, not an unprobed cached route that was once healthy.
+   const observed=e.routes.filter(r=>r.available).sort((a,b)=>b.revision-a.revision);
+   e.room=(observed[0]||e.routes.find(r=>r.environment===e.readEnvironment)||e.routes[0]).room;
   }
   this.entries=found;
   for(const waiter of [...this.entryWaiters])if(found.has(waiter.id)){waiter.resolve(found.get(waiter.id));this.entryWaiters.delete(waiter);}
@@ -80,7 +83,7 @@ export class RoomClient{
     const value=await this.call({environment:source.id,binding},'rooms',undefined,{signal:controller.signal});
     if(value.authorityId!==binding.authorityId||!Array.isArray(value.rooms)||value.rooms.some(room=>!uuid(room.id)||room.authority!==binding.authorityId))throw Error('Room catalog scope is unconfirmed.');
     if(pass.epoch!==this.discoveryEpoch||controller.signal.aborted)return;
-    this.sourceCache.set(source.id,{binding,identityUntil:old?.binding===binding?old.identityUntil:this.clock()+60000,rooms:value.rooms,available:true});healthy=true;
+    this.sourceCache.set(source.id,{binding,identityUntil:old?.binding===binding?old.identityUntil:this.clock()+60000,rooms:value.rooms,available:true,revision:++this.catalogRevision});healthy=true;
    }catch(error){
     if(pass.epoch!==this.discoveryEpoch||controller.signal.aborted)return;
     if(old)this.sourceCache.set(source.id,{...old,available:false,identityUntil:[401,403,409].includes(error.status)?0:old.identityUntil,error:error.message});
@@ -119,6 +122,8 @@ export class RoomClient{
   else if(!Object.hasOwn(value.room,'nativeState')&&Object.hasOwn(entry.room,'nativeState'))room.nativeState=null;
   if(Object.hasOwn(value,'activity'))room.activity=value.activity;
   else if(!Object.hasOwn(value.room,'activity'))delete room.activity;
+  if(Object.hasOwn(value,'roomAgents'))room.roomAgents=value.roomAgents;
+  else if(!Object.hasOwn(value.room,'roomAgents'))delete room.roomAgents;
   entry.detail=value;entry.room=room;return value;
  }
  history(id,view){

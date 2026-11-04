@@ -67,3 +67,24 @@ test('one federated catalog suffices; bounded first wave and cheap cached identi
  now+=61000;await client.discover(sources);await client.discovery.done;
  assert.equal(calls.filter(p=>p.endsWith('/identity')).length,6);
 });
+
+
+test('fresh fallback catalog clears cached setup failure without retargeting the selected write route',async()=>{
+ let phase=0;const held=deferred();
+ const client=new RoomClient(async path=>{
+  const remote=path.includes('/gpu/'),b=remote?{...binding,bindingId:'b'.repeat(64)}:binding;
+  if(path.endsWith('/identity'))return b;
+  if(phase===1&&!remote)return held.promise;
+  return {authorityId:id(2),rooms:[{...room,roomAgents:{marker:phase===0?'blocked':'ready'}}],binding:b};
+ });
+ const sources=[{id:'current',name:'CPU'},{id:'gpu',name:'GPU'}];
+ const [entry]=await client.discover(sources);await client.discovery.done;
+ entry.selected='current';entry.readEnvironment='current';
+ const captured=structuredClone(client.route(entry.id));
+ phase=1;await client.discover(sources,{force:true});await turn();await turn();
+ assert.equal(client.entry(entry.id).room.roomAgents.marker,'ready');
+ assert.equal(client.entry(entry.id).selected,'current');
+ assert.equal(client.route(entry.id).binding.bindingId,captured.binding.bindingId);
+ held.resolve({authorityId:id(2),rooms:[{...room,roomAgents:{marker:'ready'}}],binding});
+ await client.discovery.done;
+});

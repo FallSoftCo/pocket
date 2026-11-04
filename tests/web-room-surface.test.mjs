@@ -78,3 +78,22 @@ test('detail runtime observation replaces retained catalog status without erasin
  assert.equal(roomState(client.entry(entry.id).room,{now:1500}).known,false);
  assert.equal(client.entry(entry.id).room.nativeState,null);
 });
+
+
+test('detail replaces recovered setup state, surfaces a new failure and removes omitted setup without changing a saved route',async()=>{
+ const setup=blocked=>({version:1,roomId:id(4),initializationRequired:true,generation:{phase:'active'},agents:[{agent:id(5),node:id(6),ready:!blocked,readiness:blocked?'blocked':'ready'}]});
+ const activity={version:1,observedAt:1,pending:0,claimed:0,running:0,cancelRequested:0,unknown:0,waitingForHuman:0};
+ let observed=setup(false);
+ const client=new RoomClient(async path=>{
+  if(path.endsWith('/identity'))return binding;
+  if(path.endsWith('/rooms'))return {authorityId:id(2),rooms:[{...room,activity,roomAgents:setup(true)}],binding};
+  return {room,actors:[],permissions:{can_post:true},activity,binding,...(observed===undefined?{}:{roomAgents:observed})};
+ });
+ const [entry]=await client.discover();await client.discovery.done;
+ const captured=structuredClone(client.route(entry.id));
+ assert.equal(roomState(client.entry(entry.id).room).label,'Agent setup blocked');
+ await client.detail(entry.id);assert.equal(roomState(client.entry(entry.id).room).label,'Idle');
+ observed=setup(true);await client.detail(entry.id);assert.equal(roomState(client.entry(entry.id).room).label,'Agent setup blocked');
+ observed=undefined;await client.detail(entry.id);assert.equal(Object.hasOwn(client.entry(entry.id).room,'roomAgents'),false);
+ assert.equal(client.route(entry.id).binding.bindingId,captured.binding.bindingId);
+});

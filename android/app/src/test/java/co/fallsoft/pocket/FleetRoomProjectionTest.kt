@@ -59,6 +59,36 @@ class FleetRoomProjectionTest {
         assertNull(HollywoodRoomActivity.read(display,true))
         assertTrue(HollywoodRoomActivity.usesNative(display))
     }
+    private fun setup(snapshot:WorkSourceSnapshot<WorkCatalogPayload>,blocked:Boolean):WorkSourceSnapshot<WorkCatalogPayload> {
+        val entry=snapshot.entries.single()
+        val value=JSONObject().put("version",1).put("roomId",id(8)).put("initializationRequired",true)
+            .put("generation",JSONObject().put("phase","active"))
+            .put("agents",org.json.JSONArray().put(JSONObject().put("agent",id(42)).put("node",id(43))
+                .put("ready",!blocked).put("readiness",if(blocked)"blocked" else "ready")))
+        return snapshot.copy(entries=listOf(entry.copy(value=entry.value.copy(body=JSONObject(entry.value.body).put("roomAgents",value).toString()))))
+    }
+    @Test fun currentSetupReplacesRetainedBlockedSetupWithoutMovingPreviewOrReplyRoute() {
+        val retained=setup(snapshot(5,20,false),true)
+        val live=setup(snapshot(4,10),false)
+        val projected=fleetRoomProjections(listOf(live,retained)).single()
+        assertEquals("Agent setup blocked",roomOriginPendingLabel(JSONObject(retained.entries.single().value.body)))
+        val display=projected.displayRoom()
+        assertNull(roomOriginPendingLabel(display))
+        assertEquals(20,display.getJSONObject("feedSummary").getJSONObject("recency").getInt("seq"))
+        assertEquals("private-4",projected.route.value.destination.token)
+        assertEquals("Agent setup blocked",roomOriginPendingLabel(JSONObject(retained.entries.single().value.body)))
+        val nowBlocked=fleetRoomProjections(listOf(setup(live,true),setup(retained,false))).single().displayRoom()
+        assertEquals("Agent setup blocked",roomOriginPendingLabel(nowBlocked))
+    }
+    @Test fun missingLiveSetupCannotResurrectRetainedFailureAndDifferentViewersRemainSeparate() {
+        val retained=setup(snapshot(5,20,false),true)
+        val live=snapshot(4,10)
+        assertFalse(fleetRoomProjections(listOf(live,retained)).single().displayRoom().has("roomAgents"))
+        val otherViewer=setup(snapshot(6,30,viewer=11),true)
+        val separate=fleetRoomProjections(listOf(setup(live,false),otherViewer))
+        assertEquals(2,separate.size)
+        assertEquals(1,separate.count{roomOriginPendingLabel(it.displayRoom())=="Agent setup blocked"})
+    }
     @Test fun availableVoiceGatewayKeepsTheFullInteractionWithoutFakingAnExecutionHost() {
         assertEquals("host5",fleetRoomProjections(listOf(snapshot(4,20),snapshot(5,10,voice=true))).single().route.value.destination.environment.id)
         assertEquals("host4",fleetRoomProjections(listOf(snapshot(4,20),snapshot(5,10,available=false,voice=true))).single().route.value.destination.environment.id)

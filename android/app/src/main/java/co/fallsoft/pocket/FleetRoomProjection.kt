@@ -17,6 +17,10 @@ internal data class FleetRoomProjection(
         // Never carry a stale native observation from the preview gateway.
         if(source.available&&live.has("nativeState"))put("nativeState",live.get("nativeState"))
         else if(has("nativeState"))put("nativeState",JSONObject.NULL)
+        // Setup is a current observation too. A newer chat preview from a
+        // retained gateway must never pin its old blocked initialization state.
+        if(source.available&&live.has("roomAgents"))put("roomAgents",live.get("roomAgents"))
+        else remove("roomAgents")
     }
 }
 
