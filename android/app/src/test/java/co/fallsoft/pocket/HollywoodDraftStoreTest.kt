@@ -17,7 +17,7 @@ class HollywoodDraftStoreTest {
         }} as SharedPreferences
     }
     private fun origin(node:Int)=EnvironmentRequest(EnvironmentIdentity("host$node","Host $node",fleet=FleetMembership(id(1),id(2),id(node),id(3))),"https://host$node.test","opaque-$node")
-    private fun binding(node:Int)=JSONObject().put("bindingId",node.toString().padStart(64,'a')).put("authorityId",id(8)).put("principalId",id(9))
+    private fun binding(node:Int)=JSONObject().put("bindingId",node.toString().padStart(64,'a')).put("installationId",id(6)).put("authorityId",id(8)).put("principalId",id(9))
     @Test fun roomBroadcastHasNoRecipientAndRetainsAddressedDraftAndUnknownSend() {
         val scope=HollywoodScope(id(10),"");val body=scope.message("room-command","Speak to the room")
         assertFalse(body.has("recipientId"));assertEquals(scope,HollywoodScope.from(scope.json()))
