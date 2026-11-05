@@ -96,6 +96,14 @@ class NativeCanonicalTranscriptNativeTest{
             await("Completed native stream did not receive canonical position"){PocketTranscript.rows.any{it.s("text")=="Native stream answer"}&&!PocketTranscript.updating}
             val streamRows=PocketTranscript.rows
             assertTrue(streamRows.indexOfFirst{it.s("text")=="Native stream request"}<streamRows.indexOfFirst{it.s("text")=="Native stream answer"})
+            device.pressHome()
+            await("Backgrounded conversation retained a viewport"){CodexConversations.currentKey==null}
+            val retiredIncarnation=CodexConversations.incarnation
+            main{CodexConversations.reconnected()}
+            assertNull("Reconnect recreated an invisible conversation viewport",CodexConversations.currentKey)
+            assertEquals(retiredIncarnation,CodexConversations.incarnation)
+            open()
+            await("Foreground did not restore the canonical conversation"){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Native stream answer"}}
             val state=qa("state")
             assertEquals(0,state.getInt("legacyReads"));assertEquals(0,state.getInt("positionReads"));assertEquals(0,state.getInt("workSubmissions"))
             assertEquals("Native unsent draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))

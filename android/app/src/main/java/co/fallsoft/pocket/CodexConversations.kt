@@ -217,7 +217,10 @@ internal object CodexConversations {
     }
     fun reconnected(){
         CodexSessionRepository.activate()
-        val value=active()?:return
+        // Repository recovery is independent of a visible conversation. A socket
+        // reconnect must not recreate a viewport retired when the app backgrounded.
+        if(BackendNavigation.teamSelected()||!viewport||(!foreground&&!PocketVoice.foreground))return
+        val value=session?.takeIf{current(it)}?:return
         if(CodexSessionRepository.nativeEnabled(value.destination,value.key.thread)){
             // Recovery joins the same repository lane as live updates. Starting
             // a viewport read here duplicates a just-completed shared repair.
