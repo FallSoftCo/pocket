@@ -77,7 +77,7 @@ const server=http.createServer(async(req,res)=>{
    streamsSent++;
    broadcast({type:'timeline',threadId:'same-thread',turnId:'stream-turn',version:revision,nativeMethod:'item/agentMessage/delta',nativeItemId:'stream-answer',historyHead:{threadId:'same-thread',epoch,version:revision},row:{id:'stream-turn/stream-answer',itemId:'stream-answer',turnId:'stream-turn',kind:'message',text:'Native stream answer',version:revision}});
    if(streamsSent>=20){clearInterval(streamTimer);streamTimer=null;}
-  },100);body={ok:true};
+  },100);body={ok:true,readBaseline:reads.length};
  }else if(path==='/_qa/stream-finish'){
   streamFinished=true;revision++;
   broadcast({type:'timeline',threadId:'same-thread',turnId:'stream-turn',version:revision,nativeMethod:'item/completed',nativeItemId:'stream-answer',historyHead:{threadId:'same-thread',epoch,version:revision},row:{id:'stream-turn/stream-answer',itemId:'stream-answer',turnId:'stream-turn',kind:'message',text:'Native stream answer',version:revision}});body={ok:true};

@@ -85,8 +85,9 @@ class NativeCanonicalTranscriptNativeTest{
             open()
             await("Reopen did not restore canonical native history"){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Native answer two"}}
             assertEquals(1,PocketTranscript.rows.count{it.s("text")=="Native request two"})
-            val beforeStream=qa("state").getJSONArray("reads").length()
-            qa("stream-unpositioned")
+            // The fixture captures the baseline atomically with the stimulus.
+            // A reconnect/reopen read before this boundary is not a token read.
+            val beforeStream=qa("stream-unpositioned").getInt("readBaseline")
             await("Synthetic native stream did not finish"){qa("state").optInt("streamsSent")>=20}
             Thread.sleep(300)
             assertTrue("Unpositioned token deltas caused repeated native reads",qa("state").getJSONArray("reads").length()-beforeStream<=2)

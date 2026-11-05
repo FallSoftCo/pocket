@@ -215,7 +215,16 @@ internal object CodexConversations {
     fun repositoryUpdated(id:String,value:JSONObject){
         PocketTranscript.repositoryUpdated(id,value)
     }
-    fun reconnected(){CodexSessionRepository.activate();invalidate()}
+    fun reconnected(){
+        CodexSessionRepository.activate()
+        val value=active()?:return
+        if(CodexSessionRepository.nativeEnabled(value.destination,value.key.thread)){
+            // Recovery joins the same repository lane as live updates. Starting
+            // a viewport read here duplicates a just-completed shared repair.
+            PocketTranscript.repositoryRefreshPending()
+            CodexSessionRepository.invalidate(value.key.thread,value.destination)
+        }else invalidate()
+    }
     private fun startProbe(value:Session){
         if(!foreground||value.probe?.isActive==true)return
         value.probe=value.scope.launch{while(isActive){delay(5_000);probe(value)}}
