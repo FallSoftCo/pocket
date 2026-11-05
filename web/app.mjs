@@ -1,3 +1,4 @@
+import {roomLead,assertLeadTarget} from './room-lead.mjs';
 import {HistoryReader} from './native-history.mjs';
 import {roomActorLabel,roomOriginSummary,roomOriginRows,currentRoomActors} from './room-identity.mjs';
 import {RequestList} from './request-list.mjs';
@@ -123,7 +124,7 @@ function saveView(){if(!openedScope)return;const list=$('transcript'),first=[...
 function restoreView(view){if(!view||view.follow)return;const list=$('transcript'),anchor=[...list.children].find(n=>n.dataset.id===view.anchor);if(anchor)list.scrollTop+=anchor.getBoundingClientRect().top-list.getBoundingClientRect().top-view.offset;else list.scrollTop=view.top;}
 async function open(id){
  if(isRoom(id)&&!rooms.entries.has(id)){void run(()=>refreshList())();await rooms.waitForEntry(id);}
- saveDraft();saveView();for(const panel of document.querySelectorAll(':popover-open'))panel.hidePopover();scope=id;cache.protect(scope);readFeedback.select(scope);write('scope',scope);const view=readerViews.get(readerKey(id));follow=view?.follow??true;
+ saveDraft();saveView();for(const panel of document.querySelectorAll(':popover-open'))panel.hidePopover();scope=id;if(isRoom(id)){const saved=read('roomView.'+deviceId+'.'+id,'all'),valid=roomLead(rooms.entry(id).room)?['all','conversation','activity','coordination','archive']:['all','conversation','activity'];roomView=valid.includes(saved)?saved:'all';}cache.protect(scope);readFeedback.select(scope);write('scope',scope);const view=readerViews.get(readerKey(id));follow=view?.follow??true;
  current=id==='coordinator'?null:cache.get(id)?.snapshot||null;openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');openedScope=scope;$('requests').dataset.signature='';$('error').hidden=true;$('transcript').replaceChildren();$('attention-panel').hidden=true;$('reports-panel').hidden=true;document.body.classList.add('chat-open');renderHeader();renderList();renderTranscript();renderRequests();renderOutbox();renderNotes();restoreView(view);
  renderUsage();void refreshAccountUsage();await refreshConversation();if(scope===id){if(follow)$('transcript').scrollTop=$('transcript').scrollHeight;else restoreView(view);}
 }
@@ -138,7 +139,9 @@ async function refreshConversation(before=null){
      if(state.status==='fulfilled')next.detailError=null;
      if(attention.status==='fulfilled'){next.roomAttention=attention.value;next.attentionError=null;}
      else next.attentionError=attention.reason.message;
-     const retained=cache.get(selected);if(retained)retained.snapshot=next;
+     const retained=cache.get(selected),policyChanged=JSON.stringify(retained?.snapshot?.room?.leadPolicy)!==JSON.stringify(next.room?.leadPolicy);
+     if(retained){retained.snapshot=next;if(policyChanged&&roomLead(rooms.entry(selected).room)){const h=rooms.history(selected,selectedView);retained.rows=h.rows();retained.hasEarlier=h.olderCursor!==null;retained.before=h.olderCursor;}}
+     if(policyChanged&&scope===selected){renderTranscript();void refreshConversation();}
      if(scope===selected){current=next;renderHeader();renderRequests();renderNotes();}
     }).catch(e=>{if(scope===selected)error(e);});
    }else if(selected==='coordinator'){
@@ -224,7 +227,7 @@ async function refreshList({invalidate=false}={}){
  },{invalidate});
 }
 async function send(){const text=$('draft').value.trim();if(!text)return;if(deliveryFlight)await deliveryFlight;if(pending)throw Error('Check the saved message delivery before sending another.');if($('send').disabled)throw Error('This conversation is currently unavailable for input. Your draft remains saved.');saveDraft();const message={...pendingFor(scope,text,$('send-mode').value),deviceId,draftKey:draftKey(),draftRevision:read('revision.'+draftKey(),0),state:'prepared'};
- if(isRoom(scope)){if(new TextEncoder().encode(text).length>6000)throw Error('Room messages are limited to 6000 UTF-8 bytes. Draft retained.');const entry=rooms.entry(scope),route=structuredClone(rooms.route(scope)),target={...targetFor(scope)};message.room=entry.roomId;message.route=route;message.body={operationId:message.id,kind:'request',body:text,audience:target.audience,...(target.recipientId?{recipientId:target.recipientId}:{}),...(target.sourceEventId?{sourceEventId:target.sourceEventId}:{})};}
+ if(isRoom(scope)){if(new TextEncoder().encode(text).length>6000)throw Error('Room messages are limited to 6000 UTF-8 bytes. Draft retained.');const entry=rooms.entry(scope),route=structuredClone(rooms.route(scope)),target={...targetFor(scope)};assertLeadTarget(entry.room,target);if(roomLead(entry.room)&&['coordination','archive'].includes(roomView))throw Error('Open the lead conversation to send new input. Your draft is retained.');message.room=entry.roomId;message.route=route;message.body={operationId:message.id,kind:'request',body:text,audience:target.audience,...(target.recipientId?{recipientId:target.recipientId}:{}),...(target.sourceEventId?{sourceEventId:target.sourceEventId}:{})};}
  else if(scope==='coordinator'&&status?.backend==='lax')throw Error('Choose an exact Hollywood room on this gateway.');
  persistPending(message);await deliverPending();}
 function clearDelivered(message,receipt){
@@ -460,40 +463,40 @@ roomRoster.append(roomRosterTitle,roomRosterBody);roomControls.append(roomRoster
 $('composer').prepend(roomControls);
 function options(select,values,value){const signature=JSON.stringify(values);if(select.dataset.options!==signature){select.replaceChildren(...values.map(([id,label])=>{const option=el('option','',label);option.value=id;return option;}));select.dataset.options=signature;}select.value=value;}
 function renderRoomHeader(){
- const e=rooms.entry(scope),route=rooms.route(scope,{requireAvailable:false}),target=targetFor(scope),detail=current;
+ const e=rooms.entry(scope),route=rooms.route(scope,{requireAvailable:false}),target=targetFor(scope),detail=current,lead=roomLead(e.room);
  roomControls.hidden=false;$('main').dataset.roomId=e.roomId;
  roomRosterTitle.textContent=roomOriginSummary(detail,{available:!detail?.detailError});
  roomRosterBody.textContent=[...roomOriginRows(detail,{available:!detail?.detailError}),...(detail?.actors||[]).filter(a=>a.can_read===true).map(a=>
    roomActorLabel(a)+(a.participation==='retained-source-owner'?' · Retained original-source owner (not public fanout)':a.identity?.originRoomId===e.roomId?' · Origin here':' · Existing/visiting participant'))].join('\n');
  options(roomGateway,e.routes.map(r=>[r.environment,r.name+(r.available?'':' · Unavailable')]),route.environment);
- options(roomProjection,[['all','Conversation + activity'],['conversation','Conversation'],['activity','Activity']],roomView);
- options(roomRecipient,[['','All room agents'],...currentRoomActors(detail?.actors).filter(a=>a.kind==='agent'||a.id===target.recipientId).map(a=>[a.id,roomActorLabel(a)]),...(detail?.actors||[]).filter(a=>a.participation==='retained-source-owner'&&a.id===target.recipientId).map(a=>[a.id,roomActorLabel(a)+' · Earlier participant'])],target.recipientId||'');
+ options(roomProjection,lead?[['all','Lead + activity'],['conversation','Lead conversation'],['activity','Activity'],['coordination','Team'],['archive','Earlier room']]:[['all','Conversation + activity'],['conversation','Conversation'],['activity','Activity']],roomView);
+ options(roomRecipient,lead?[['','Lead · '+lead.name],[lead.agent,lead.name],...(target.recipientId&&target.recipientId!==lead.agent?[[target.recipientId,'Earlier recipient · saved only']]:[])]:[['','All room agents'],...currentRoomActors(detail?.actors).filter(a=>a.kind==='agent'||a.id===target.recipientId).map(a=>[a.id,roomActorLabel(a)]),...(detail?.actors||[]).filter(a=>a.participation==='retained-source-owner'&&a.id===target.recipientId).map(a=>[a.id,roomActorLabel(a)+' · Earlier participant'])],target.recipientId||'');
  options(roomAudience,[['room','Public room'],['direct','Private to recipient']],target.audience);
  roomReply.hidden=!target.sourceEventId;roomReply.title=target.sourceEventId||'';
  setLabel($('title'),e.room.name||'Hollywood room');setLabel($('context-label'),'HOLLYWOOD ROOM');
  const readRoute=e.routes.find(r=>r.environment===e.readEnvironment&&r.available)||route,state=roomState({...e.room,...(detail?.nativeState?{nativeState:detail.nativeState}:{}),...(detail?.roomAgents?{roomAgents:detail.roomAgents}:{})},{available:readRoute.available&&!detail?.detailError});
  setLabel($('session-state'),state.label+(readRoute.environment!==route.environment?' · Reading via '+readRoute.name+'; saved sends retain '+route.name:'')+(cache.get(scope)?.catchingUp?' · Catching up missed events':'')+(detail?.detailError?' · '+detail.detailError:''));
  $('session-menu').hidden=true;$('parent').hidden=true;$('coordinator').classList.remove('active');$('send-mode').hidden=true;
- const enabled=route.available&&!detail?.detailError&&detail?.permissions?.can_post===true&&
+ const enabled=(!lead||!['coordination','archive'].includes(roomView))&&(!lead||!target.recipientId||target.recipientId===lead.agent)&&route.available&&!detail?.detailError&&detail?.permissions?.can_post===true&&
   (target.recipientId===null||(detail.actors||[]).some(a=>a.id===target.recipientId&&a.kind==='agent'))&&(target.audience!=='direct'||!!target.recipientId);
  $('draft').disabled=false; // An outage must not prevent saving a local draft.
  $('send').disabled=!enabled||!!deliveryFlight||!!pending;
  $('mic').disabled=!voice.recording&&(!enabled||!voice.supported());
- $('draft').placeholder=target.audience==='direct'?'Message the selected agent privately…':'Message this room…';
- setLabel($('draft-note'),target.audience==='room'?'Typed and spoken room input reaches the current room agents.':'Private input to the selected recipient.');
+ $('draft').placeholder=lead?'Message the lead…':target.audience==='direct'?'Message the selected agent privately…':'Message this room…';
+ setLabel($('draft-note'),lead?'Only the lead receives your input. Team contains internal coordination.':target.audience==='room'?'Typed and spoken room input reaches the current room agents.':'Private input to the selected recipient.');
 }
 function changeRoomTarget(target){
  if(!isRoom(scope))throw Error('Open the original room.');saveDraft();
  roomTargets.set(scope,target);write('roomTarget.'+deviceId+'.'+scope,target);
  openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');renderHeader();
 }
-roomRecipient.onchange=run(()=>changeRoomTarget({...targetFor(scope),recipientId:roomRecipient.value||null}));
-roomAudience.onchange=run(()=>{if(roomAudience.value==='direct'&&!targetFor(scope).recipientId){renderHeader();throw Error('Choose an explicit recipient before private input.');}changeRoomTarget({...targetFor(scope),audience:roomAudience.value});});
+roomRecipient.onchange=run(()=>changeRoomTarget({...targetFor(scope),recipientId:roomRecipient.value||null,sourceEventId:null}));
+roomAudience.onchange=run(()=>{if(roomAudience.value==='direct'&&!targetFor(scope).recipientId){renderHeader();throw Error('Choose an explicit recipient before private input.');}changeRoomTarget({...targetFor(scope),audience:roomAudience.value,sourceEventId:null});});
 roomGateway.onchange=run(async()=>{saveDraft();saveView();rooms.select(scope,roomGateway.value);current=null;openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');renderHeader();renderUsage();void refreshAccountUsage();await refreshConversation();});
-roomProjection.onchange=run(async()=>{saveView();roomView=roomProjection.value;const history=rooms.history(scope,roomView),view=readerViews.get(readerKey());follow=view?.follow??true;cache.set(scope,{rows:history.rows(),hasEarlier:history.olderCursor!==null,before:history.olderCursor,snapshot:current});renderHeader();renderTranscript();restoreView(view);await refreshConversation();});
+roomProjection.onchange=run(async()=>{saveView();roomView=roomProjection.value;write('roomView.'+deviceId+'.'+scope,roomView);const history=rooms.history(scope,roomView),view=readerViews.get(readerKey());follow=view?.follow??true;cache.set(scope,{rows:history.rows(),hasEarlier:history.olderCursor!==null,before:history.olderCursor,snapshot:current});renderHeader();renderTranscript();restoreView(view);await refreshConversation();});
 function roomVoiceOptions(){
  if(!isRoom(scope)){if(scope==='coordinator'&&status?.backend==='lax')throw Error('Choose a room before recording.');return {};}
- const e=rooms.entry(scope),route=rooms.route(scope),target={...targetFor(scope)};
+ const e=rooms.entry(scope),route=rooms.route(scope),target={...targetFor(scope)};assertLeadTarget(e.room,target);
  if(target.audience==='direct'&&!target.recipientId)throw Error('Choose an explicit direct recipient.');
  if(current?.detailError||!current?.permissions?.can_request)throw Error('Room voice is unavailable for this human binding.');
  return {destination:{room:{backend:'lax',bindingId:route.binding.bindingId,authorityId:route.binding.authorityId,roomId:e.roomId,...(target.recipientId?{recipientId:target.recipientId}:{}),audience:target.audience,...(target.sourceEventId?{sourceEventId:target.sourceEventId}:{})}},transport:{environment:route.environment}};

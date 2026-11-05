@@ -1,3 +1,4 @@
+import {leadConversation} from './room-lead.mjs';
 import {roomOriginPendingState} from './room-identity.mjs';
 /** Canonical Hollywood data, independent of the gateway used to read it.
  * Execution observations stay operations; they never become agent chat replies.
@@ -89,7 +90,7 @@ export function roomEventRows(events,{authorityId,roomId,principalId,names={}}){
  * transport cursors, never timestamps or inferred offsets. */
 export class RoomHistory {
  constructor(scope,{view='all'}={}){
-  if(!['all','conversation','activity'].includes(view))throw Error('Invalid room history view.');
+  if(!['all','conversation','activity','coordination'].includes(view))throw Error('Invalid room history view.');
   if(![scope.authorityId,scope.roomId,scope.principalId].every(uuid))throw Error('A verified room audience is required.');
   this.scope=Object.freeze({...scope});this.view=view;this.events=new Map();this.olderCursor=null;this.latestSeq=null;this.initialized=false;
  }
@@ -116,5 +117,16 @@ export class RoomHistory {
   for(const seq of sequences.keys())this.latestSeq=this.latestSeq===null?seq:Math.max(this.latestSeq,seq);
   return this.rows();
  }
- rows(names={}){return roomEventRows([...this.events.values()],{...this.scope,names});}
+ rows(names=this.names||{}){const events=this.leadPolicy&&this.view==='conversation'?leadConversation(this.events.values(),this.leadPolicy):[...this.events.values()];return roomEventRows(events,{...this.scope,names});}
+}
+
+/** Composite display over independent canonical conversation/activity cursors. */
+export class RoomConversationHistory {
+ constructor(conversation,activity){this.conversation=conversation;this.activity=activity;this.scope=conversation.scope;this.names={};}
+ get olderCursor(){const values=[this.conversation.olderCursor,this.activity.olderCursor].filter(Number.isSafeInteger);return values.length?Math.max(...values):null;}
+ get gaps(){return [...(this.conversation.gaps||[]),...(this.activity.gaps||[])];}
+ rows(names=this.names){
+  const human=this.conversation.leadPolicy?leadConversation(this.conversation.events.values(),this.conversation.leadPolicy):[...this.conversation.events.values()];
+  return roomEventRows([...human,...this.activity.events.values()],{...this.scope,names});
+ }
 }

@@ -1,4 +1,5 @@
-import {RoomHistory} from './room-model.mjs';
+import {roomLead} from './room-lead.mjs';
+import {RoomHistory,RoomConversationHistory} from './room-model.mjs';
 import {roomActorNames} from './room-identity.mjs';
 import {bindingMatches,jsonEqual} from './receipt-policy.mjs';
 export const uuid=v=>typeof v==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(v);
@@ -127,23 +128,39 @@ export class RoomClient{
   entry.detail=value;entry.room=room;return value;
  }
  history(id,view){
-  const e=this.entry(id),key=id+'/'+view;
-  if(!this.histories.has(key))this.histories.set(key,new RoomHistory({authorityId:e.binding.authorityId,principalId:e.binding.principalId,roomId:e.roomId},{view}));
-  return this.histories.get(key);
+  const e=this.entry(id),key=id+'/'+view,policy=roomLead(e.room);
+  if(view==='all'&&policy){
+   if(!(this.histories.get(key) instanceof RoomConversationHistory)){
+    const previous=this.histories.get(key);if(previous&&!this.histories.has(id+'/archive'))this.histories.set(id+'/archive',previous);
+    const conversation=this.history(id,'conversation'),activity=this.history(id,'activity');
+    if(previous?.events)for(const event of previous.events.values()){
+     if(event.seq>policy.after&&event.data?.channel==='human'&&event.data?.leadRevision===policy.revision)conversation.events.set(event.id,event);
+     if(event.seq>policy.after&&event.data?.type==='executionActivity')activity.events.set(event.id,event);
+    }
+    this.histories.set(key,new RoomConversationHistory(conversation,activity));
+   }
+  }else if(!this.histories.has(key))this.histories.set(key,new RoomHistory({authorityId:e.binding.authorityId,principalId:e.binding.principalId,roomId:e.roomId},{view:view==='archive'?'all':view}));
+  const history=this.histories.get(key);history.leadPolicy=view==='archive'?null:policy;history.names=roomActorNames(e.detail?.actors);
+  return history;
  }
  async read(id,view='all',before=null){
   const entry=this.entry(id),history=this.history(id,view);
-  const query=new URLSearchParams({view,limit:'100',...(before!==null?{before:String(before)}:history.latestSeq!==null?{after:String(history.latestSeq)}:{before:String(Number.MAX_SAFE_INTEGER)})});
+  if(history instanceof RoomConversationHistory){
+   await Promise.all(['conversation','activity'].map(async part=>{const child=this.history(id,part);if(before!==null&&child.olderCursor===null)return;await this.read(id,part,before!==null?child.olderCursor:null);}));
+   return {rows:history.rows(),hasEarlier:history.olderCursor!==null,before:history.olderCursor,catchingUp:history.gaps.length>0};
+  }
+  const wireView=view==='archive'?'all':view;
+  const query=new URLSearchParams({view:wireView,limit:'100',...(before!==null?{before:String(before)}:history.latestSeq!==null?{after:String(history.latestSeq)}:{before:String(Number.MAX_SAFE_INTEGER)})});
   const page=await this.readCall(id,'rooms/'+entry.roomId+'/history?'+query);
   history.apply(page,{older:before!==null});
   if(before===null&&page.events.length===100){
-   const tail=await this.readCall(id,'rooms/'+entry.roomId+'/history?view='+view+'&limit=100&before='+Number.MAX_SAFE_INTEGER);
+   const tail=await this.readCall(id,'rooms/'+entry.roomId+'/history?view='+wireView+'&limit=100&before='+Number.MAX_SAFE_INTEGER);
    const end=page.events.at(-1)?.seq,first=tail.events?.[0]?.seq;
    history.apply(tail);
    if(end<first)(history.gaps??=[]).push({after:end,before:first});
   }
   if(before===null&&history.gaps?.length){
-   const gap=history.gaps[0],fill=await this.readCall(id,'rooms/'+entry.roomId+'/history?view='+view+'&limit=100&after='+gap.after);
+   const gap=history.gaps[0],fill=await this.readCall(id,'rooms/'+entry.roomId+'/history?view='+wireView+'&limit=100&after='+gap.after);
    history.apply(fill);
    const next=fill.events.at(-1)?.seq;
    if(fill.events.length<100||next>=gap.before)history.gaps.shift();

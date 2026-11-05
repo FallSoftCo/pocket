@@ -154,6 +154,42 @@ class HollywoodMixedCatalogNativeTest {
         .put("bindingId","e".repeat(64)).put("installationId",authority).put("authorityId",authority)
         .put("principalId","bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb").put("defaultRoomId",roomId).put("voice",false)
 
+    @Test fun leadConversationSeparatesTeamAndArchiveWithoutRetargetingDrafts(){
+        requireOwnedNativeTarget(device)
+        device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+        val roomOwner=backendOwner(base,"synthetic-mixed-room")
+        check(prefs.edit().clear().putString("environments:v1",JSONArray().put(JSONObject().put("id","room-host").put("name","Room host")).toString())
+            .putString("activeEnvironment","room-host").putString("environment:room-host:server",base)
+            .putString("environment:room-host:token","synthetic-mixed-room").putString("backend:"+roomOwner,"lax").commit())
+        main{Pocket.init(context)}
+        val client=HollywoodClient(roomOwner,binding(),base,"synthetic-mixed-room")
+        val scope=HollywoodScope(roomId,"","room",null,"request")
+        client.saveDraft(scope,"First human request")
+        val config=Configurator.getInstance();val old=config.waitForIdleTimeout;config.waitForIdleTimeout=0
+        try{
+            main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+            await("Lead conversation not mounted"){device.hasObject(By.text("Lead answer after reviewed work"))&&device.hasObject(By.clazz("android.widget.EditText"))}
+            assertFalse("Internal task leaked into human conversation",device.hasObject(By.textContains("Internal task brief")))
+            assertFalse("Pre-policy archive painted as current conversation",device.hasObject(By.text(roomText)))
+            click(By.desc("Settings, app updates, usage and activity"))
+            click(By.res("native-room-team"))
+            await("Team did not retain addressed task"){device.hasObject(By.text("Internal task brief for one selected worker"))}
+            capture("lead-team")
+            click(By.text("Earlier room"))
+            await("Earlier archive lost canonical message"){device.hasObject(By.text(roomText))}
+            click(By.text("Close"))
+            await("Closing Team lost original draft"){device.findObject(By.clazz("android.widget.EditText"))?.text=="First human request"}
+            capture("lead-conversation")
+            click(By.desc("Send message"))
+            await("Original synthetic send not accepted"){qa("state").optInt("acceptedSyntheticSends")==1}
+            val sent=qa("state").getJSONObject("lastSyntheticMessage")
+            assertEquals("First human request",sent.s("body"));assertEquals("room",sent.s("audience"))
+            assertTrue("Human request incorrectly targeted worker",sent.isNull("recipientId")||sent.s("recipientId").isBlank())
+            assertEquals(0,qa("state").optInt("wrongSource"));assertEquals(0,qa("state").optInt("blockedTaskWrites"))
+        }finally{config.waitForIdleTimeout=old}
+    }
+
     @Test fun acceptedConversationSendKeepsKeyboardAndNewDraft(){
         requireOwnedNativeTarget(device)
         device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")

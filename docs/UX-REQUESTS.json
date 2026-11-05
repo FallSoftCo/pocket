@@ -14,6 +14,24 @@
   },
   "requests": [
     {
+      "id": "lead-owned-project-rooms-20261105",
+      "request": "Replace failed human broadcast rooms: humans speak to an accountable lead; agents coordinate tersely and only addressed material enters their contexts. Lead owns original work, selected delegation, technical decisions and event-driven continuation without unchanged check-in loops. Keep internal coordination inspectable separately from readable human conversation, preserve actual approvals, drafts, privacy, action provenance and original unknown receipts.",
+      "status": "isolated-candidate; two actual native model journeys and logical two-node NATS passed; client and rollout pending",
+      "implementation": [
+        "Hollywood owns communication roles and addressed receipt snapshots; LAX owns work and native lifecycle.",
+        "A project lead receives human input. Passive team notes are stored without inference or context admission.",
+        "Stable tasks and directed question/answer retain original work and audience. Technical questions go to the lead; genuine approvals remain with their actual human requester.",
+        "One bounded repair for a turn ending without disposition; material results resume original work. Paused/cancelled work and unchanged blockers stay quiet.",
+        "Android and web separate human conversation/activity, terse Team inspection and earlier archive. Existing old-target drafts and unknown receipts require reconciliation, never silent retargeting."
+      ],
+      "verification": "Real PostgreSQL/HTTP/SDK admission, private actual-requester approval, lost ACK, cancellation, restart and no-progress checks. Native R01: lead2/worker1/observer0 turns; R02: lead2/workerA2/workerB1/observer0, all seven QA contexts archived, no new app-server. Logical NATS nodes on one host are not cross-host native proof.",
+      "remaining": [
+        "Existing room adoption and bounded context handover",
+        "Signed native/client UI qualification and deployment",
+        "Central coordinator/project-lead integration and physical voice/push proof"
+      ]
+    },
+    {
       "id": "canonical-hollywood-android-controls-20261014",
       "request": "Native Hollywood rooms, scoped saved text and attention controls, exact cancellation, session-style condensed execution and independent environment/room drafts.",
       "status": "candidate-real-gateway-PG-native-LAX-Android-emulator-integration-passed; voice-push-physical-phone-and-production-pending",

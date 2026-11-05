@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
@@ -51,7 +52,12 @@ import androidx.lifecycle.repeatOnLifecycle
     val coordinatorFeed=feeds.getOrPut("conversation:"+client.defaultRoomId){HollywoodRoomFeed(client.defaultRoomId,"conversation",client.historyKey(client.defaultRoomId,"conversation")){path->client.call(path)}}
     val activityFeed=feeds.getOrPut("activity:$room"){HollywoodRoomFeed(room,"activity",client.historyKey(room,"activity")){path->client.call(path)}}
     val detail=feed.detail
-    val events=remember(feed.events,activityFeed.events){(feed.events+activityFeed.events).distinctBy{it.s("id")}.sortedBy{it.optLong("seq")}}
+    val rawEvents=remember(feed.events,activityFeed.events){(feed.events+activityFeed.events).distinctBy{it.s("id")}.sortedBy{it.optLong("seq")}}
+    val leadPolicy=remember(detail,feed.events){roomLeadPolicy(detail,feed.events)}
+    val events=remember(rawEvents,leadPolicy){roomLeadConversation(rawEvents,leadPolicy)}
+    val leadInvalid=detail.optJSONObject("room")?.has("leadPolicy")==true&&leadPolicy==null
+    var teamOpen by remember(client.bindingId,room){mutableStateOf(false)}
+    var legacyReview by remember(client.bindingId,room){mutableStateOf(false)}
     val attention=feed.attention
     val work=remember(detail,feed.detailError,attention,feed.justAccepted){hollywoodRoomWork(detail,feed.detailError,attention,feed.justAccepted)}
     var stopping by remember(client.bindingId,room){mutableStateOf(emptySet<String>())}
@@ -71,8 +77,9 @@ import androidx.lifecycle.repeatOnLifecycle
     var inspecting by remember{mutableStateOf<JSONObject?>(null)}
     var guidance by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
     var guidanceReceipt by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
-    val destination=recipient
-    val scope=if(!direct&&destination.isEmpty()||hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source,if(postOnly)"message" else "request")else null
+    val reviewSaved=leadPolicy!=null&&legacyReview&&recipient!=leadPolicy.agent
+    val destination=if(leadPolicy!=null&&!reviewSaved){if(direct)leadPolicy.agent else ""}else recipient
+    val scope=if(leadInvalid)null else if(!direct&&destination.isEmpty()||hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source?.takeIf{id->leadPolicy==null||reviewSaved||events.any{it.s("id")==id&&it.s("author") in setOf(client.principalId,leadPolicy.agent)}},if(postOnly&&(leadPolicy==null||reviewSaved))"message" else "request")else null
     val currentScope by rememberUpdatedState(scope)
     val inputState=remember(scope){mutableStateOf(TextFieldValue(scope?.let(client::draft).orEmpty()))}
     var input by inputState
@@ -96,7 +103,7 @@ import androidx.lifecycle.repeatOnLifecycle
     var following by remember(client.bindingId,room,direct,recipient){mutableStateOf(true)}
     val actors=detail.optJSONArray("actors")?.objects().orEmpty()
     val agentNames=actors.associate{it.s("id") to roomActorLabel(it)}
-    val voiceAllowed=!browsing&&binding.optBoolean("voice")&&scope!=null&&!postOnly&&
+    val voiceAllowed=!reviewSaved&&!browsing&&binding.optBoolean("voice")&&scope!=null&&!postOnly&&
         detail.optJSONObject("permissions")?.optBoolean("can_request")==true&&
         inspecting==null&&guidance==null&&guidanceReceipt==null&&!workflow
     val roomVoiceDestination=remember(voiceAllowed,scope,client.bindingId,room){
@@ -193,8 +200,9 @@ import androidx.lifecycle.repeatOnLifecycle
             }
         }
     }
-    fun choose(value:String){following=true;room=value;recipient="";direct=false;source=null;browsing=false;Pocket.prefs.edit().putString("hollywood-room:$owner:${client.bindingId}",value).apply()}
+    fun choose(value:String){legacyReview=false;teamOpen=false;following=true;room=value;recipient="";direct=false;source=null;browsing=false;Pocket.prefs.edit().putString("hollywood-room:$owner:${client.bindingId}",value).apply()}
     fun send(inspect:Boolean=false){
+        if(reviewSaved&&!inspect){notice="Return to the lead conversation before sending new input";return}
         val captured=scope?:return;if(busy)return
         val intent=pending?:runCatching{client.capture(captured,input.text)}.getOrElse{error=it.message.orEmpty();return}
         pending=intent;busy=true
@@ -234,7 +242,7 @@ import androidx.lifecycle.repeatOnLifecycle
     LaunchedEffect(client.bindingId,requested){
         requested?.takeIf{it.owner==owner&&it.binding==client.bindingId}?.let{target->
             choose(target.room)
-            target.reply?.let{reply->recipient=reply.recipient;direct=reply.audience=="direct";source=reply.sourceEvent;postOnly=reply.kind=="message"}
+            target.reply?.let{reply->legacyReview=reply.recipient.isNotBlank()&&reply.recipient!=leadPolicy?.agent;recipient=reply.recipient;direct=reply.audience=="direct";source=reply.sourceEvent;postOnly=reply.kind=="message"}
             inspecting=target.attention
             if(target.keyboard){keyboardInput=true;requestKeyboard=true}
             headRefreshRevision++
@@ -254,6 +262,22 @@ import androidx.lifecycle.repeatOnLifecycle
         }
     }
     val addressControl:@Composable ()->Unit={
+        if(leadPolicy!=null){
+            Column(Modifier.fillMaxWidth()){
+                if(reviewSaved){
+                    BilingualLabel("Reviewing saved message",centered=false)
+                    if(pending==null&&input.text.isNotBlank())TextButton({
+                        val text=input.text
+                        client.saveDraft(HollywoodScope(room,"","room",null,"request"),text)
+                        legacyReview=false;recipient="";direct=false;source=null;postOnly=false
+                    }){BilingualLabel("Copy draft to lead")}
+                    TextButton({legacyReview=false;recipient="";direct=false;source=null;postOnly=false}){BilingualLabel("Return to lead")}
+                }
+                scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->
+                    TextButton({legacyReview=true;recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";menu=false}){BilingualLabel("Review saved message")}
+                }}
+            }
+        }else
         Column(Modifier.fillMaxWidth()){
             TextButton({addressMenu=!addressMenu},Modifier.fillMaxWidth().testTag("native-room-address")){
                 val roomLabel=detail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
@@ -320,7 +344,7 @@ import androidx.lifecycle.repeatOnLifecycle
         if(feed.catchingUp)Text("Loading missed messages…",color=Muted,modifier=Modifier.testTag("native-room-gap"))
         Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp)){
         LazyColumn(Modifier.fillMaxSize().testTag("native-room-history"),state=list,
-            contentPadding=PaddingValues(bottom=if(visibleMicDestination!=null&&!showTextInput)80.dp else 0.dp),
+            contentPadding=PaddingValues(0.dp),
             verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(older!=null)item(key="room-history-edge"){
                 if(feed.loadingOlder)Text("Loading earlier messages…",color=Muted)
@@ -385,10 +409,10 @@ import androidx.lifecycle.repeatOnLifecycle
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
         if(showTextInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){ConversationComposerRow{
             RoomDraftComposerScope{
-            ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f).focusRequester(keyboardFocus),enabled=scope!=null,
-                onSend={if(!busy&&pending==null&&inputState.value.text.isNotBlank()&&detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true)send()},placeholder={BilingualLabel("Message…",centered=false)})
+            ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f).focusRequester(keyboardFocus),enabled=scope!=null&&!reviewSaved,
+                onSend={if(!reviewSaved&&!busy&&pending==null&&inputState.value.text.isNotBlank()&&detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true)send()},placeholder={BilingualLabel("Message…",centered=false)})
             }
-            ConversationSendButton(hasDraft,scope!=null&&!busy&&pending==null&&hasDraft&&
+            ConversationSendButton(hasDraft,!reviewSaved&&scope!=null&&!busy&&pending==null&&hasDraft&&
                 detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true,busy,"Send message"){send()}
         }
         }
@@ -421,10 +445,14 @@ import androidx.lifecycle.repeatOnLifecycle
             client.savedGuidanceScopes(room).forEach{saved->
                 TextButton({guidance=saved;menu=false},modifier=Modifier.testTag("native-guidance-saved:"+saved.s("deliveryId")+":"+saved.s("nativeTurn"))){Text("Saved guidance · "+(client.guidancePending(saved)?.s("state")?:"draft"))}
             }
-            TextButton({menu=false;workflow=true},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-workflow")){BilingualLabel("Goals & work")}
+            if(leadPolicy==null)TextButton({menu=false;workflow=true},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-workflow")){BilingualLabel("Goals & work")}
             if(client.contextReviewEnabled)TextButton({menu=false;contextReview=true},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-context-open")){BilingualLabel("Context windows")}
             RoomWorkControls(work,agentNames,client,room,stopping,feed.detailError,feed.attentionError,
                 onAttention={menu=false;inspecting=it},onGuidance={menu=false;guidance=it},onStop={target,inspect->stop(target,inspect)})
+            if(leadPolicy!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                Text(leadPolicy.name,Modifier.weight(1f),color=Muted,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                TextButton({menu=false;teamOpen=true},Modifier.heightIn(min=48.dp).testTag("native-room-team")){BilingualLabel("Team")}
+            }
         }
         if(!following||list.canScrollForward)TextButton({following=true;jobs.launch{feed.refreshHistory(preferTail=true);withFrameNanos{};if(list.layoutInfo.totalItemsCount>0)list.scrollToItem(list.layoutInfo.totalItemsCount-1)}},Modifier.heightIn(min=48.dp).testTag("native-room-latest")){BilingualLabel("Latest")}
         ReaderPagingButtons(list,hasEarlier=older!=null,onPrepare={up->
@@ -447,6 +475,7 @@ import androidx.lifecycle.repeatOnLifecycle
             }
         },confirmButton={TextButton({guidanceReceipt=null}){BilingualLabel("Close")}})
     }
+    if(teamOpen&&!browsing)RoomTeamInspector(client,room,agentNames){teamOpen=false}
     if(workflow)HollywoodWorkDialog(client,room){workflow=false}
     if(contextReview)HollywoodContextReviewDialog(client,actors,destination){contextReview=false}
     inspecting?.let{value->HollywoodAttentionDialog(client,value,{inspecting=null}){jobs.launch{refresh(room)}}}

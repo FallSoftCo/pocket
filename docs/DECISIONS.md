@@ -187,3 +187,40 @@ and no separate retained checkpoint has been written yet.
 EOF with retained source identities outside the returned full window is an
 unavailable interval, not successful deletion or complete coverage. Such a marker
 has no manufactured provider cursor; a later canonical page may supply one.
+
+
+## 2026-11-05: human conversation through an accountable lead
+
+The human-broadcast experiment failed in actual use. In one project, a 24-hour
+read-only audit found four human requests and 511 public agent publications,
+about one million body characters. A selected native context had reached about
+406,000 of 475,000 input tokens after six compactions. These are observed traffic
+and context measures, not a bill or an estimate of paid usage. A two-second reply
+window after inference could suppress some replies but could not undo model or
+context consumption. Explicit tool publications caused most traffic, so merely
+suppressing automatic finals was insufficient.
+
+For adopted rooms, a canonical lead receives human requests and owns follow-through.
+Workers receive only selected tasks or necessary addressed questions. The lead
+acts as the accountable delegate, not a paraphrasing relay. Internal coordination
+is terse, attributable and inspectable; it is separate from human conversation and
+execution activity. Passive observations cause no native context injection.
+
+Hollywood owns communication, membership, role revisions and receipts. LAX owns
+native execution, original work, selected assignments and dependency continuation.
+Material results can resume their original work. Fetches, unchanged blocks and
+background reports cannot enroll tasks or wake every worker. Cancellation and
+unknown effects remain explicit. Genuine permission approvals retain the actual
+human requester, including when different from the installation administrator.
+
+The client uses independent conversation, activity, team and archive cursors.
+Existing old-recipient drafts and uncertain receipts stay bound to their original
+destinations; adopting a lead never silently retargets or resubmits them. Old room
+history is retained as an archive rather than repainted as current lead dialogue.
+Expanded team text uses the normal Markdown/image/immersion renderer.
+
+This is the isolated 167 candidate. Real PostgreSQL/HTTP/SDK and two logical NATS
+nodes passed. Actual native model journeys proved selected delegation and a
+worker-to-worker question with zero observer turns, without another app-server.
+These do not prove physical multi-host deployment, the phone UI or provider voice.
+Existing rooms require an explicit reviewed handover and usable client rollout.

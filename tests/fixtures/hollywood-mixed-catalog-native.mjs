@@ -10,6 +10,8 @@ const roomId='cccccccc-cccc-4ccc-8ccc-ccccccccccc1',agent='dddddddd-dddd-4ddd-8d
 const binding={id:'lax',api:3,name:'Synthetic rooms',configured:true,available:true,modes:['rooms','direct'],
  bindingId:'e'.repeat(64),installationId:authority,authorityId:authority,principalId:human,defaultRoomId:roomId,voice:false};
 const room={id:roomId,authority,name:'Original room',owner:agent,purpose:'Synthetic original authority',revision:1};
+const leadMode=process.env.NEXTCOMP_QA_LEAD_ROOM==='1';
+if(leadMode)room.leadPolicy={version:1,mode:'lead',leadAgentId:agent,leadName:'Project lead',leadNodeId:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1',revision:1,inputAfterSeq:1,registration:'registered',coordinationView:'coordination'};
 const originHosts=['CPU','MacBook Pro','GPU','Mac development VM','Workstation','Windows'];
 const originAgents=originHosts.map((name,n)=>({id:n===0?agent:'dddddddd-dddd-4ddd-8ddd-ddddddddddd'+(n+1),name:'Original room · '+name,kind:'agent',can_read:true,
  identity:{version:1,agentId:n===0?agent:'dddddddd-dddd-4ddd-8ddd-ddddddddddd'+(n+1),host:{id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee'+(n+1),name}}}));
@@ -60,6 +62,14 @@ const server=http.createServer(async(req,res)=>{
    const view=u.searchParams.get('view')||'all',after=Number(u.searchParams.get('after')||0);
    const event={id:'00000000-0000-4000-8000-000000000117',seq:1,authority,room:roomId,author:agent,authorName:'Synthetic room agent',audience:'room',kind:'message',body:'Canonical room answer from original authority'};
    body={binding,roomId,view,events:view==='activity'||after>=1?[]:[event],nextCursor:view==='activity'?0:1,hasMore:false,olderCursor:null};
+   if(leadMode){
+    const envelope=(id,seq,author,kind,text,channel)=>({id,seq,authority,room:roomId,author,kind,body:text,audience:'room',recipient:null,source:null,data:{conversationVersion:1,authorKind:author===human?'human':'agent',roomMode:'lead',channel,leadAgentId:agent,leadRevision:1,inputAfterSeq:1}});
+    const leadAnswer=envelope('00000000-0000-4000-8000-000000000120',4,agent,'message','Lead answer after reviewed work','human');
+    const team=envelope('00000000-0000-4000-8000-000000000119',3,agent,'request','Internal task brief for one selected worker','coordination');team.data.coordination={type:'task',taskId:'ffffffff-ffff-4fff-8fff-ffffffffffff',revision:1};
+    const humanInput=envelope('00000000-0000-4000-8000-000000000118',2,human,'request','First human request','human');
+    const values=view==='coordination'?[team]:view==='conversation'?[humanInput,leadAnswer]:view==='activity'?[]:[event,humanInput,team,leadAnswer];
+    body={binding,roomId,view,events:values.filter(e=>e.seq>after),nextCursor:values.at(-1)?.seq||0,hasMore:false,olderCursor:null};
+   }
   }else if(path.endsWith('/attention'))body={binding,attention:[],nextCursor:0};
   else if(path==='/api/hollywood/v3/rooms/'+roomId)body={binding,room,...nativeState(),...roomOrigins(),permissions:{can_post:true,can_request:true},actors:roomActors(),deliveries:[]};
   else {status=404;body={binding,error:'No synthetic receipt; original remains unknown'};}

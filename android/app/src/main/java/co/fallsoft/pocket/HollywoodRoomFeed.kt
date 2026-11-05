@@ -11,7 +11,7 @@ import org.json.JSONObject
  */
 @Stable
 internal class HollywoodRoomFeed(val room:String,val view:String?=null,private val memoryKey:String?=null,private val read:suspend (String)->JSONObject) {
-    init{require(view==null||view in listOf("conversation","activity","all"))}
+    init{require(view==null||view in listOf("conversation","activity","all","coordination"))}
     private fun history(direction:String)="rooms/$room/history?$direction&limit=100"+(view?.let{"&view=$it"}.orEmpty())
     private val historyWriter=Any()
     private val retained=memoryKey?.let(HollywoodRoomHistory::get)

@@ -59,7 +59,7 @@ internal class HollywoodClient(val owner:String,source:JSONObject,
     }
     fun key(scope:HollywoodScope)="hollywood:$owner:$bindingId:${scope.room}:${scope.recipient}:${scope.audience}:${scope.sourceEvent?:"root"}:${scope.kind}"
     fun historyKey(room:String,view:String):String {
-        require(hollywoodUuid(room)&&view in listOf("conversation","activity","all"))
+        require(hollywoodUuid(room)&&view in listOf("conversation","activity","all","coordination"))
         val realm=origin?.environment?.fleet
         val physical="hollywood-history:$owner:$bindingId:$room:$view"
         if(realm==null)return physical
