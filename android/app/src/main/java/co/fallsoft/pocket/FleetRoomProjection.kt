@@ -29,8 +29,9 @@ internal fun fleetRoomIdentity(entry:WorkEntry<WorkCatalogPayload>):String {
     val member=entry.value.destination.environment.fleet?:return entry.key.saveableKey()
     val binding=runCatching{JSONObject(entry.value.binding?:return entry.key.saveableKey())}.getOrNull()
         ?:return entry.key.saveableKey()
-    val viewer=binding.optString("principalId")
-    if(!hollywoodUuid(viewer)||binding.optString("authorityId")!=entry.key.authority)return entry.key.saveableKey()
+    val principal=binding.optString("principalId")
+    if(!hollywoodUuid(principal)||binding.optString("authorityId")!=entry.key.authority)return entry.key.saveableKey()
+    val viewer=entry.value.viewer?.takeIf{it.authority==entry.key.authority}?.let{"viewer-v1:"+it.id}?:principal
     return "fleet-room:"+FleetWorkIdentity(member.fleetId,member.accountId,viewer,WorkKind.ROOM,
         entry.key.authority,entry.key.id).key
 }

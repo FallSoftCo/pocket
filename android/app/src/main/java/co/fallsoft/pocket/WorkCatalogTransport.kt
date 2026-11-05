@@ -37,7 +37,22 @@ internal object WorkCatalogTransport {
     }
 }
 
-internal data class WorkCatalogPayload(val destination:EnvironmentRequest,val body:String,val binding:String?=null) {
+/** Authenticated catalog presentation proof, not an alternate binding or credential. */
+internal data class HollywoodCatalogViewer(val authority:String,val id:String) {
+    companion object {
+        fun read(catalog:JSONObject,binding:JSONObject):HollywoodCatalogViewer? {
+            if(!catalog.has("viewerIdentity"))return null
+            val value=catalog.optJSONObject("viewerIdentity")?:error("Room viewer identity is unavailable")
+            require(value.opt("version")==1&&value.optString("authorityId")==binding.s("authorityId")&&
+                value.optString("viewerId").matches(Regex("[0-9a-f]{64}"))){"Room viewer identity is unavailable"}
+            return HollywoodCatalogViewer(value.getString("authorityId"),value.getString("viewerId"))
+        }
+    }
+    override fun toString()="HollywoodCatalogViewer(private audience)"
+}
+
+internal data class WorkCatalogPayload(val destination:EnvironmentRequest,val body:String,val binding:String?=null,
+    val viewer:HollywoodCatalogViewer?=null) {
     override fun toString()="WorkCatalogPayload(${destination.environment.id}, private catalog data)"
 }
 
@@ -70,13 +85,14 @@ internal class WorkCatalogReader(
             val binding=identity!!
             val result=read(destination,"/api/hollywood/v3/rooms",binding.s("bindingId"))
             require(result.optJSONObject("binding")?.let{hollywoodBindingMatches(binding,it)}==true){"Room audience is unconfirmed"}
+            val viewer=HollywoodCatalogViewer.read(result,binding)
             val rows=result.getJSONArray("rooms").objects()
             require(rows.all{hollywoodUuid(it.s("id"))&&it.s("name").isNotBlank()&&it.s("authority")==binding.s("authorityId")}&&rows.map{it.s("id")}.distinct().size==rows.size){"Room identities unavailable"}
             rows.map{row->
                 // Event epoch-ms is already canonical; never scale it like legacy sessions.
                 val at=HollywoodRoomFeedSummary.read(row)?.workAt?:0L
                 WorkEntry(WorkItemKey(key,WorkKind.ROOM,binding.s("authorityId"),row.s("id")),at.coerceAtLeast(0),
-                    WorkCatalogPayload(destination,row.toString(),binding.toString()))
+                    WorkCatalogPayload(destination,row.toString(),binding.toString(),viewer))
             }
         }
     }

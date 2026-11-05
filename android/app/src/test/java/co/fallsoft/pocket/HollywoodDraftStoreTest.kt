@@ -52,4 +52,30 @@ class HollywoodDraftStoreTest {
         assertTrue(hollywoodOtherSends(preferences,second,binding(5).put("principalId",id(12)),scope.room,listOf(first,second)).isEmpty())
         assertEquals(before,data)
     }
+    @Test fun distinctLocalHumansSharingCatalogViewerKeepBothDraftsAndOriginalUnknownReceipt() {
+        val data=mutableMapOf<String,Any>();val preferences=prefs(data)
+        val first=origin(4);val second=origin(5);val a=binding(4);val b=binding(5).put("principalId",id(12))
+        val scope=HollywoodScope(id(10),"")
+        val aStore=HollywoodDraftStore(preferences,backendOwner(first.endpoint,first.token),a,first)
+        val bStore=HollywoodDraftStore(preferences,backendOwner(second.endpoint,second.token),b,second)
+        aStore.save(scope,"First original draft");bStore.save(scope,"Second original draft")
+        val pending="pending:hollywood:${backendOwner(first.endpoint,first.token)}:${a.s("bindingId")}:${scope.room}::room:root:request"
+        data[pending]=JSONObject().put("binding",a).put("scope",scope.json()).put("state","unknown").toString()
+        fun row(origin:EnvironmentRequest,binding:JSONObject,viewer:String):WorkSourceSnapshot<WorkCatalogPayload> {
+            val key=WorkSourceKey(origin.environment.id,"owner", "lax")
+            val value=WorkCatalogPayload(origin,"{}",binding.toString(),HollywoodCatalogViewer(id(8),viewer))
+            return WorkSourceSnapshot(key,1,listOf(WorkEntry(WorkItemKey(key,WorkKind.ROOM,id(8),scope.room),0,value)))
+        }
+        val catalog=listOf(row(first,a,"a".repeat(64)),row(second,b,"a".repeat(64)));val before=data.toMap()
+        val saved=hollywoodOtherSends(preferences,second,b,scope.room,listOf(first,second),catalog).single()
+        assertTrue(saved.origin.matches(first));assertEquals(a.s("bindingId"),saved.binding.s("bindingId"))
+        val draft=hollywoodOtherDrafts(preferences,second,b,scope.room,catalog).single()
+        assertTrue(draft.origin.matches(first));assertEquals(scope,draft.scope)
+        assertEquals("First original draft",aStore.draft(scope));assertEquals("Second original draft",bStore.draft(scope))
+        assertEquals(before,data)
+        val foreign=listOf(row(first,a,"b".repeat(64)),catalog[1])
+        assertTrue(hollywoodOtherSends(preferences,second,b,scope.room,listOf(first,second),foreign).isEmpty())
+        assertTrue(hollywoodOtherDrafts(preferences,second,b,scope.room,foreign).isEmpty())
+    }
+
 }

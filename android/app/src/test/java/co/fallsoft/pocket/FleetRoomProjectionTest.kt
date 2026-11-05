@@ -99,4 +99,32 @@ class FleetRoomProjectionTest {
             destination=entry.value.destination.copy(environment=EnvironmentIdentity("legacy","Legacy"))))))
         assertEquals(2,fleetRoomProjections(listOf(legacy,snapshot(5,20))).size)
     }
+    private fun proof(row:WorkSourceSnapshot<WorkCatalogPayload>,viewer:Char):WorkSourceSnapshot<WorkCatalogPayload> =
+        row.copy(entries=row.entries.map{it.copy(value=it.value.copy(viewer=HollywoodCatalogViewer(id(9),viewer.toString().repeat(64))))})
+
+    @Test fun federatedHumanHasOneRoomEvenWhenGatewayPrincipalsDifferAndPhysicalRoutesStayIntact() {
+        val first=proof(snapshot(4,10,viewer=7,voice=true),'a')
+        val second=proof(snapshot(5,20,viewer=11),'a')
+        val projected=fleetRoomProjections(listOf(first,second)).single()
+        assertEquals("host4",projected.route.value.destination.environment.id)
+        assertEquals(id(7),JSONObject(projected.route.value.binding!!).getString("principalId"))
+        assertEquals("private-4",projected.route.value.destination.token)
+        assertEquals("host5",projected.content.value.destination.environment.id)
+        assertEquals(id(11),JSONObject(projected.content.value.binding!!).getString("principalId"))
+        assertEquals(projected.identity,fleetRoomProjections(listOf(second,first)).single().identity)
+        assertEquals(2,fleetRoomProjections(listOf(first,proof(second,'b'))).size)
+        // Legacy/unverified routes never acquire another human's audience by account alone.
+        assertEquals(2,fleetRoomProjections(listOf(first,snapshot(5,20,viewer=11))).size)
+    }
+    @Test fun catalogProofIsOptionalButPresentMalformedOrWrongAuthorityIsNotTreatedAsVerified() {
+        val binding=JSONObject().put("authorityId",id(9))
+        assertNull(HollywoodCatalogViewer.read(JSONObject(),binding))
+        val proof=JSONObject().put("version",1).put("authorityId",id(9)).put("viewerId","a".repeat(64))
+        assertEquals("a".repeat(64),HollywoodCatalogViewer.read(JSONObject().put("viewerIdentity",proof),binding)!!.id)
+        for(value in listOf(JSONObject.NULL,JSONObject(proof.toString()).put("viewerId",""),
+            JSONObject(proof.toString()).put("authorityId",id(10)),JSONObject(proof.toString()).put("version",2))) {
+            assertTrue(runCatching{HollywoodCatalogViewer.read(JSONObject().put("viewerIdentity",value),binding)}.isFailure)
+        }
+    }
+
 }

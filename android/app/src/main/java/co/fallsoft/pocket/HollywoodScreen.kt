@@ -368,8 +368,16 @@ import androidx.lifecycle.repeatOnLifecycle
         }
         ForegroundWorkNotice()
         InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
-        val otherSends=remember(client,room,feed.events){hollywoodOtherSends(Pocket.prefs,origin,binding,room,
-            Pocket.environmentProfiles.all().mapNotNull{Pocket.captureEnvironment(it.id)})}
+        val catalogSnapshots=UnifiedWorkCatalog.snapshots
+        val otherSends=remember(client,room,feed.events,catalogSnapshots){hollywoodOtherSends(Pocket.prefs,origin,binding,room,
+            Pocket.environmentProfiles.all().mapNotNull{Pocket.captureEnvironment(it.id)},catalogSnapshots)}
+        val otherDrafts=remember(client,room,feed.events,catalogSnapshots){hollywoodOtherDrafts(Pocket.prefs,origin,binding,room,catalogSnapshots)}
+        otherDrafts.filterNot{draft->otherSends.any{it.origin.matches(draft.origin)&&it.scope==draft.scope}}.forEach{saved->
+            TextButton({try{
+                Pocket.activateEnvironment(saved.origin.environment.id)
+                HollywoodNotifications.openRoom(saved.origin,saved.binding,saved.scope.room,true,saved.scope)
+            }catch(e:Exception){error=e.message.orEmpty()}}){BilingualLabel("Review saved draft",centered=false);Text(" · "+saved.origin.environment.name)}
+        }
         otherSends.forEach{saved->TextButton({try{
             Pocket.activateEnvironment(saved.origin.environment.id)
             HollywoodNotifications.openRoom(saved.origin,saved.binding,saved.scope.room,true,saved.scope)
