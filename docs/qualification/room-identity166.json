@@ -1,0 +1,48 @@
+{
+  "versionCode": 166,
+  "versionName": "0.5.0-alpha.148",
+  "problem": "Gateway-local principal IDs caused the same federated room to appear repeatedly in the Android work list.",
+  "identityContract": "Verified opaque catalog viewer identity is presentation-only; physical send bindings, draft keys and original receipts remain unchanged.",
+  "providerQualification": {
+    "passed": true,
+    "actualPostgreSQL": true,
+    "actualNATS": true,
+    "actualHTTP": true,
+    "sharedViewerAcrossDistinctLocalHumans": true,
+    "distinctViewerAndAgentNotMerged": true,
+    "privateSubjectNotExposed": true,
+    "revokedMembershipRechecked": true,
+    "modelsStarted": 0,
+    "commandsSubmitted": 0,
+    "productionChanged": false
+  },
+  "android": {
+    "productionSourceSha": "584e1ff21a5dc850ec0801bbba16c88418dc682dff25efb615510d3167c453bf",
+    "qualificationInputSha": "9d24b110e3a56df4f586ba50f4c91c84e3432026c98ecf50f9189eeb28822598",
+    "phoneCompatibleApkSha256": "ae68f3cbf35bf2c5e26e2bbdf88ce77d337acc0ed8fac4f3358f0ae1a7bfc25e",
+    "unit": {
+      "debug": {
+        "tests": 475,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      "release": {
+        "tests": 475,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      }
+    },
+    "nativeCasesPassed": 14,
+    "optimizedDistinctPrincipalsOneViewerThreeRooms": true,
+    "originalReceiptAndConflictingDraftRegressionPassed": true,
+    "nativeReopenWithoutResend": true
+  },
+  "physicalPhoneDelivery": "pending",
+  "limits": [
+    "Synthetic native list/rendering qualification is distinct from physical phone evidence.",
+    "No business model work, room membership or profile enrollment is started by this repair.",
+    "Unmapped or invalid viewer proof never merges different human audiences."
+  ]
+}

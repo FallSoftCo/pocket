@@ -3327,13 +3327,13 @@
     {
       "id": "fleet-room-logical-viewer-20261105",
       "request": "Android lists the same room once per gateway after new host enrollment. Show one logical room, without exposing room agents as standalone work or mixing human audiences.",
-      "status": "implemented-candidate166",
+      "status": "qualified-166",
       "implementation": [
         "Authenticated catalog supplies opaque viewerIdentity from bidirectional federation human enrollment; physical local principal/binding stay unchanged",
         "Android groups matching fleet/account/viewer/authority/room, retaining latest canonical preview and independently reachable interaction route",
         "Original cross-gateway drafts and unknown sends remain individually reviewable on their exact original source; discovery never resends or rewrites them"
       ],
-      "verification": "Physical installed165 accessibility read reproduces separate Diwali Room cards via OZZZ-OS, revenue-sleuth and rjuniyer-live. Candidate native and provider qualification pending."
+      "verification": "Real private PostgreSQL/NATS/HTTP viewer equivalence and revocation qualification passed. Both signed variants, both lints and475 unit cases per variant passed;14 native integration cases passed, including provider audio and mixed-source original receipt/draft paths. Exact optimized APK renders three rooms once each across different local human principals, survives source loss/recovery and reopening. Physical delivery pending."
     }
   ],
   "current_state": {
