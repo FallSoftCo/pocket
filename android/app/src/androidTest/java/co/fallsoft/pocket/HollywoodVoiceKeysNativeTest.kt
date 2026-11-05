@@ -57,14 +57,14 @@ class HollywoodVoiceKeysNativeTest{
    // hand volume buttons back to Android or create a second voice controller.
    d.findObject(By.desc("Settings, app updates, usage and activity")).click()
    tap("native-room-team")
-   await("Team view unavailable"){d.hasObject(By.res("native-team-inspector"))}
+   await("Team view unavailable"){d.hasObject(By.text("No team updates"))&&d.hasObject(By.text("Earlier room"))}
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
-   await("Hardware capture blocked by Team view"){PocketVoice.state=="Listening"&&d.hasObject(By.res("native-team-capture-status"))}
+   await("Hardware capture blocked by Team view"){PocketVoice.state=="Listening"&&d.hasObject(By.textStartsWith("Recording "))}
    assertEquals(roomA,PocketVoice.targetRoom?.s("roomId"))
    assertEquals("Team key changed playback volume",initialVolume,audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))
    d.takeScreenshot(c.filesDir.resolve("native-team-recording.png"))
    i.runOnMainSync{PocketVoice.stop()}
-   tap("native-team-close")
+   d.findObject(By.text("Close")).click()
    await("Closing Team lost original room"){d.hasObject(By.res("native-room-controls"))}
    val priorStarts=Pocket.apiEnvironment(source,"/_qa/status").getJSONArray("starts").length()
    assertFalse("Empty voice-primary editor should be behind Keyboard",d.hasObject(By.clazz("android.widget.EditText")))
