@@ -35,6 +35,11 @@ object PocketTranscript {
             if(reads.latestLoading)missedUpdates=true
         }
     }
+    /** The repository owns this refresh, including its bounded failure handoff.
+     * Displaying its pending state must not enqueue a second viewport read. */
+    fun repositoryRefreshPending(){
+        if(owner==Pocket.selected&&ownerScope==scopeKey())refreshPending=true
+    }
     var automaticRetryAllowed by mutableStateOf(true);private set
     var earlier by mutableStateOf(false);private set
     var before:String?=null;private set

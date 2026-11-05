@@ -352,7 +352,7 @@ internal object CodexSessionRepository {
                             // The repository owns a successful native repair. Scheduling
                             // the viewport pump as well issues a second sequential read
                             // after the shared in-flight read has already completed.
-                            withContext(Dispatchers.Main.immediate){if(current(source)&&Pocket.captureEnvironment()?.matches(source.destination)==true&&Pocket.selected==id)PocketTranscript.markRefreshPending()}
+                            withContext(Dispatchers.Main.immediate){if(current(source)&&Pocket.captureEnvironment()?.matches(source.destination)==true&&Pocket.selected==id)PocketTranscript.repositoryRefreshPending()}
                             queue(Intent(source,id))
                         }
                         continue
