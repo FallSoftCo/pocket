@@ -299,6 +299,9 @@ import androidx.lifecycle.repeatOnLifecycle
     }
     BackHandler(browsing&&catalogSearchOpen){catalogSearchOpen=false;catalogQuery="";keyboard?.hide()}
     BackHandler(browsing&&catalogMenu){catalogMenu=false}
+    // Keep one Activity window: volume keys, original voice target and drafts
+    // remain owned by the normal foreground controller while inspecting team work.
+    if(teamOpen&&!browsing){RoomTeamInspector(client,room,agentNames){teamOpen=false};return}
     if(browsing){
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
             Box(Modifier.weight(1f).fillMaxWidth()){
@@ -475,7 +478,6 @@ import androidx.lifecycle.repeatOnLifecycle
             }
         },confirmButton={TextButton({guidanceReceipt=null}){BilingualLabel("Close")}})
     }
-    if(teamOpen&&!browsing)RoomTeamInspector(client,room,agentNames){teamOpen=false}
     if(workflow)HollywoodWorkDialog(client,room){workflow=false}
     if(contextReview)HollywoodContextReviewDialog(client,actors,destination){contextReview=false}
     inspecting?.let{value->HollywoodAttentionDialog(client,value,{inspecting=null}){jobs.launch{refresh(room)}}}

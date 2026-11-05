@@ -1,5 +1,6 @@
 package co.fallsoft.pocket
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,8 +26,8 @@ import org.json.JSONObject
     val rows=remember(feed.events,archive){
         if(archive)feed.events else feed.events.filter{it.optJSONObject("data")?.optJSONObject("coordination")?.s("type")!="wake"}
     }
-    ModalBottomSheet(onDismissRequest=dismiss,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),modifier=Modifier.testTag("native-team-inspector")){
-        Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).padding(horizontal=16.dp)){
+    BackHandler(onBack=dismiss)
+    Column(Modifier.fillMaxSize().imePadding().navigationBarsPadding().testTag("native-team-inspector").padding(horizontal=16.dp)){
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 TextButton({archive=false},Modifier.weight(1f)){BilingualLabel("Team")}
                 TextButton({archive=true},Modifier.weight(1f)){BilingualLabel("Earlier room")}
@@ -54,6 +55,5 @@ import org.json.JSONObject
                 if(feed.older!=null)TextButton({jobs.launch{feed.loadOlder()}},Modifier.weight(1f),enabled=!feed.loadingOlder){BilingualLabel("Earlier updates")}
                 TextButton(dismiss,Modifier.weight(1f).heightIn(min=48.dp).testTag("native-team-close")){BilingualLabel("Close")}
             }
-        }
     }
 }

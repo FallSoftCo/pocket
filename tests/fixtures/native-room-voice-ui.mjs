@@ -10,6 +10,7 @@ const roomA='cccccccc-cccc-4ccc-8ccc-ccccccccccc1',roomB='cccccccc-cccc-4ccc-8cc
 const agentA='dddddddd-dddd-4ddd-8ddd-ddddddddddd1',agentB='dddddddd-dddd-4ddd-8ddd-ddddddddddd2';
 const binding={id:'lax',name:'Synthetic LAX',configured:true,available:true,api:3,modes:['rooms','direct'],bindingId:'e'.repeat(64),installationId:authority,authorityId:authority,principalId:human,defaultRoomId:roomA,voice:true};
 const rooms=[roomA,roomB].map((id,n)=>({id,authority,name:'Synthetic voice room '+(n?'B':'A'),owner:n?agentB:agentA,purpose:'Owned UI fixture; no provider or worker',revision:1}));
+rooms.forEach(r=>r.leadPolicy={version:1,mode:'lead',leadAgentId:r.owner,leadName:'Project lead',leadNodeId:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1',revision:1,inputAfterSeq:0,registration:'registered',coordinationView:'coordination'});
 const sockets=new Set(),starts=[],historyRooms=[];let nativeAttempts=0,blockedTaskWrites=0;
 const journal=process.env.NATIVE_VOICE_UI_LOG||process.env.NEXTCOMP_QA_LOG;
 function record(row){if(journal)fs.appendFileSync(journal,JSON.stringify({at:Date.now(),...row})+'\n',{mode:0o600});}
