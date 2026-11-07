@@ -62,7 +62,23 @@
         "Cold/in-flight reads cannot restore history invalidated by revert.",
         "Same-owner paired devices can inspect and acknowledge orphaned unknown operations without replay.",
         "Native terminal operations are capability-gated and termination requires authenticated human admission."
-      ]
+      ],
+      "integration_testing_owner": {
+        "owner": "integration_quality",
+        "model": "gpt-6-astra",
+        "reasoning": "high",
+        "branch": "parity/integration-quality-20261107",
+        "base": "77636b61",
+        "status": "Auditing supported-product test quality and implementing meaningful cross-component journeys; no qualification outcome yet.",
+        "requirements": [
+          "Map user journeys and actual production integration seams to evidence.",
+          "Assess disjoint unit tests, mocked behavior, silent skips and release failure detection.",
+          "Prioritize history freshness/order, source identity, reconnect/unknown delivery, requests and catalog lifecycle.",
+          "Use actual production composition and schema-correct fixtures; selected negative controls establish regression sensitivity.",
+          "Keep fixture, DOM, rendered UI, native runtime and physical phone evidence distinct.",
+          "Coordinate heavy emulator/build work with root; no production/model actions or new agents."
+        ]
+      }
     },
     {
       "id": "archive-action-feedback-20261107",
