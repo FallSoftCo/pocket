@@ -12,7 +12,8 @@
     "co.fallsoft.pocket.NativeTranscriptStoreNativeTest#versionOneCacheUpgradeRequiresFreshCoverageWithoutDeletingOldBodies",
     "co.fallsoft.pocket.CommandHistoryNativeTest#groupedRunsExpandAndCollapseWithoutHidingAnswersOrMutatingHistory",
     "co.fallsoft.pocket.ReaderPagingFooterNativeTest#bothPagesStayTogetherAndUsableWithNarrowLargeFontAndIme",
-    "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#retiredRoomSelectionOpensStockWorkWithoutReplayingOrLosingDrafts"
+    "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#retiredRoomSelectionOpensStockWorkWithoutReplayingOrLosingDrafts",
+    "co.fallsoft.pocket.EnvironmentRetirementNativeTest#retirementDeletesOriginalUnknownCopiesAndAudioButKeepsOtherHost"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",

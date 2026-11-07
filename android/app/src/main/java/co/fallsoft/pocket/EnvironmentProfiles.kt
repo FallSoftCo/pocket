@@ -15,17 +15,40 @@ class EnvironmentProfiles(private val prefs:SharedPreferences) {
         return profiles
     }
     fun all():List<EnvironmentIdentity> = retained().filterNot{prefs.getBoolean("retiredEnvironment:"+it.id,false)}
-    /** Authoritative removal is scoped to this authenticated fleet/account only.
-     * Metadata, credentials, drafts and uncertain delivery receipts remain retained. */
+    /** Owner-requested deletion, scoped to authenticated retirement evidence.
+     * Retiring a host never sends or retries its original commands. */
     internal fun reconcileFleet(fleet:FleetDescriptor):Boolean = synchronized(prefs) {
         val members=fleet.members.map{it.id}.toSet()
         val removed=retained().filter{p->(!p.local&&prefs.getString(p.key("server"),null)?.trimEnd('/') in fleet.retiredOrigins)||p.fleet?.let{it.fleetId==fleet.id&&it.accountId==fleet.accountId&&it.nodeId !in members}==true}
-        val changed=removed.filterNot{prefs.getBoolean("retiredEnvironment:"+it.id,false)}
-        if(changed.isEmpty())return@synchronized false
-        val edit=prefs.edit();changed.forEach{edit.putBoolean("retiredEnvironment:"+it.id,true)}
-        check(edit.commit()){"Could not retain environment retirement"}
+        if(removed.isEmpty())return@synchronized false
+        val ids=removed.map{it.id}.toSet()
+        val edit=prefs.edit()
+        for(profile in removed){
+            val prefix=profile.key("")
+            val base=prefs.getString(profile.key("server"),"").orEmpty()
+            val token=prefs.getString(profile.key("token"),"").orEmpty()
+            val owner=backendOwner(base,token)
+            // Legacy room journals used pairing hashes rather than profile IDs.
+            val roomPrefixes=listOf("hollywood:","pending:hollywood:","receipt:hollywood:","draft:hollywood:","scope:hollywood:","stop:","guidance:","draft:guidance:","guidance-scope:guidance:","attention:","hollywood-binding:")
+            for(key in prefs.all.keys)if(roomPrefixes.any{key.startsWith(it+owner+":")||key==it+owner})edit.remove(key)
+            for(key in prefs.all.keys)if(if(prefix.isNotEmpty())key.startsWith(prefix) else legacyEnvironmentKey(key))edit.remove(key)
+            edit.remove("retiredEnvironment:"+profile.id)
+        }
+        // The typed outbox is shared across profiles; preserve the other hosts.
+        val replies=JSONArray(prefs.getString("client-replies:v1","[]"))
+        edit.putString("client-replies:v1",JSONArray(replies.objects().filterNot{it.optString("environment") in ids}).toString())
+        val queued=JSONArray(prefs.getString("environmentRetirement:v1","[]"))
+        val cleanup=(0 until queued.length()).map{queued.getString(it)}.toSet()+ids
+        edit.putString("environmentRetirement:v1",JSONArray(cleanup.toList()).toString())
+        val enrollmentPrefix="fleetConnection:${fleet.id}:${fleet.accountId}:enroll:"
+        prefs.all.keys.filter{it.startsWith(enrollmentPrefix)&&it.removePrefix(enrollmentPrefix) !in members}.forEach{edit.remove(it)}
+        edit.putString("environments:v1",encode(retained().filterNot{it.id in ids}))
+        for(key in listOf("activeEnvironment","lastRemoteEnvironment"))if(prefs.getString(key,null) in ids)edit.remove(key)
+        check(edit.commit()){"Could not remove retired environment"}
         true
     }
+    private fun legacyEnvironmentKey(key:String)=key in setOf("server","token","deviceId","seenIds","lastNotification","weeklyUsage","weeklyUsageOwner","usageSamples","firebase","pushReady","needsHistorySync","newTaskRequest","newTaskPrompt","newTaskCwd","lastProject","outgoing") ||
+        listOf("draft:","voiceDraft:","outbox:","attention:","runExpansion:","hollywood:").any{key.startsWith(it)}
     fun lastRemote():EnvironmentIdentity=all().firstOrNull{it.id==prefs.getString("lastRemoteEnvironment",null)&&!it.local&&capture(it.id)!=null}
         ?:all().firstOrNull{!it.local&&capture(it.id)!=null}?:EnvironmentIdentity("workstation","Workstation")
     fun selected():EnvironmentIdentity=all().firstOrNull{it.id==prefs.getString("activeEnvironment",null)}

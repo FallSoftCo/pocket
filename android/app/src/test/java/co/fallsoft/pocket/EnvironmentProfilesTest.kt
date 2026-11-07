@@ -97,20 +97,23 @@ class EnvironmentProfilesTest {
   store.associateFleet("workstation",FleetMembership(id(1),id(2),id(3),id(5)))
   values[removed.key("draft:same-thread")]="Keep this original draft"
   values[removed.key("outgoing")]="unknown-original-command"
+  values["client-replies:v1"]=org.json.JSONArray().put(org.json.JSONObject().put("environment",removed.id).put("state","unknown")).put(org.json.JSONObject().put("environment",mac.id).put("state","unknown")).toString()
   store.select(removed.id)
   val descriptor=FleetDescriptor.read(org.json.JSONObject().put("version",1).put("id",id(1))
    .put("accountId",id(2)).put("nodeId",id(3)).put("sessionPath","/api/fleet/session")
    .put("retiredOrigins",org.json.JSONArray().put("https://manual-retired.example"))
    .put("members",org.json.JSONArray().put(org.json.JSONObject().put("id",id(3)).put("name","Workstation").put("origin","https://original.example"))))
   assertTrue(store.reconcileFleet(descriptor));assertFalse(store.reconcileFleet(descriptor))
-  assertNull(store.capture(removed.id));assertNull(store.capture(manual.id));assertEquals("manual-retained-token",values[manual.key("token")]);assertNull(store.capturePush("retired-device"))
+  assertNull(store.capture(removed.id));assertNull(store.capture(manual.id));assertNull(values[manual.key("token")]);assertNull(store.capturePush("retired-device"))
   assertEquals("workstation",store.selected().id)
   assertEquals(setOf("workstation","phone",mac.id),store.all().map{it.id}.toSet())
-  assertEquals("retired-private-token",values[removed.key("token")])
-  assertEquals("Keep this original draft",values[removed.key("draft:same-thread")])
-  assertEquals("unknown-original-command",values[removed.key("outgoing")])
+  assertNull(values[removed.key("token")])
+  assertNull(values[removed.key("draft:same-thread")])
+  assertNull(values[removed.key("outgoing")])
+  assertEquals(mac.id,org.json.JSONArray(values["client-replies:v1"] as String).getJSONObject(0).getString("environment"))
+  assertEquals(1,org.json.JSONArray(values["client-replies:v1"] as String).length())
   store.add("Another","https://another.example","another-token","another-device")
-  assertTrue((values["environments:v1"] as String).contains(removed.id))
+  assertFalse((values["environments:v1"] as String).contains(removed.id))
   assertNull(EnvironmentProfiles(prefs(values)).capture(removed.id))
  }
 

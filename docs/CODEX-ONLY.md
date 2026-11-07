@@ -13,3 +13,7 @@ Voice admission uses the owner's 8 GiB storage reserve plus recording size and w
 Candidate tests, compatible APK publication, backend activation and physical-phone installation are distinct receipts. See the qualification record for actual current evidence.
 
 Retired room-creation and Hollywood-only gateway journeys remain beside the tests as `*.retired.mjs`, excluded from the supported-product test glob. Their source is retained, but passing them would require re-enabling the deliberately removed product. The active fleet gateway test now runs stock configuration and verifies paired discovery plus explicit room API retirement. Root-owned artifact-reader provisioning has its separate `*.operator.mjs` test entry; it is not an ordinary service-user test.
+
+## Explicit retired-data deletion (169)
+
+The owner subsequently requested deletion, superseding 168 retention of retired environment records. Authenticated fleet retirement now removes credentials and profile metadata, environment-scoped typed drafts and outbox receipts, and retired recording files/journal rows. Browser retirement deletes only identified source-owned state; live Mac/current-host copies survive. No removed command is dispatched or retried. Non-secret retired origin and profile identifiers remain solely to clean up offline clients and prevent obsolete enrollment.

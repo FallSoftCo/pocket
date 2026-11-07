@@ -62,8 +62,9 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
    const identity=await auth.json();
    if(typeof identity.deviceId!=='string'||!identity.deviceId||identity.deviceId==='owner')return res.status(403).json({error:'Use the original paired browser.'});
    await environments?.ensure(identity.deviceId,token);
+   await environments?.fleet?.flights.get(identity.deviceId);
    const sources=environments?.list(identity.deviceId)||[];
-   res.json({environments:[{id:'current',name:identity.host||'Workstation',available:true},...sources.map(s=>({id:s.id,name:s.name,available:!s.retired}))]});
+   res.json({retiredEnvironmentIds:environments?.fleet?.retiredIds?.(identity.deviceId)||[],environments:[{id:'current',name:identity.host||'Workstation',available:true},...sources.map(s=>({id:s.id,name:s.name,available:!s.retired}))]});
   }catch(e){next(e);}
  });
 

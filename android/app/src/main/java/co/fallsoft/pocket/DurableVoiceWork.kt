@@ -13,6 +13,31 @@ internal object DurableVoiceWork {
     const val JOURNAL="voice-recordings-v1"
     private val initialization=Mutex()
     private var initialized=false
+    suspend fun retireEnvironments(context:Context)=withContext(Dispatchers.IO) {
+        initialization.withLock {
+            val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+            val pending=org.json.JSONArray(prefs.getString("environmentRetirement:v1","[]"))
+            VoiceTurnStore(context,JOURNAL).use{store->
+                for(n in 0 until pending.length()){
+                    val environment=pending.getString(n)
+                    val manager=WorkManager.getInstance(context)
+                    for(turn in store.list().filter{it.origin.environment==environment}){
+                        manager.cancelUniqueWork("durable-recording-"+turn.key).result.get()
+                        manager.cancelUniqueWork("cancel-recording-"+turn.key).result.get()
+                    }
+                    store.removeEnvironment(environment)
+                    manager.cancelUniqueWork("pocket-push-registration-$environment")
+                    manager.cancelAllWorkByTag("pocket-attention-$environment")
+                }
+            }
+            synchronized(prefs){
+                val current=org.json.JSONArray(prefs.getString("environmentRetirement:v1","[]"))
+                val completed=(0 until pending.length()).map{pending.getString(it)}.toSet()
+                val remaining=(0 until current.length()).map{current.getString(it)}.filterNot{it in completed}
+                check(prefs.edit().putString("environmentRetirement:v1",org.json.JSONArray(remaining).toString()).commit())
+            }
+        }
+    }
     suspend fun initialize(context:Context)=withContext(Dispatchers.IO) {
         initialization.withLock {
             if(!initialized){VoiceTurnStore(context,JOURNAL).use{it.recoverInterruptedOwner()};initialized=true}
@@ -26,6 +51,7 @@ internal object DurableVoiceWork {
         WorkManager.getInstance(context).enqueueUniqueWork((if(cancellationIntent)"cancel-recording-" else "durable-recording-")+key,ExistingWorkPolicy.KEEP,request)
     }
     suspend fun restore(context:Context)=withContext(Dispatchers.IO) {
+        retireEnvironments(context)
         initialize(context)
         VoiceTurnStore(context,JOURNAL).use { store ->
             store.list().filter { it.cancellation==VoiceTurnStore.Cancellation.REQUESTED || it.capture==VoiceTurnStore.Capture.SEALED && it.delivery !in terminal }.forEach { enqueue(context,it.key,cancellationIntent=it.cancellation==VoiceTurnStore.Cancellation.REQUESTED) }

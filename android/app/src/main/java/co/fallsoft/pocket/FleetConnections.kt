@@ -50,6 +50,7 @@ internal object FleetConnections {
                 val enrolled=FleetMembership(fleet.id,fleet.accountId,fleet.nodeId,session.deviceId)
                 Pocket.environmentProfiles.associateFleet(source.environment.id,enrolled)
                 added=Pocket.environmentProfiles.reconcileFleet(fleet)||source.environment.fleet!=enrolled
+                DurableVoiceWork.retireEnvironments(Pocket.context)
                 if(added)withContext(Dispatchers.Main){unavailable.keys.filter{it.startsWith(key+":")&&it.substringAfterLast(":") !in fleet.members.map{m->m.id}}.forEach{unavailable.remove(it)};changed();added=false}
                 for(member in fleet.members){
                     if(!current(source))return@launch

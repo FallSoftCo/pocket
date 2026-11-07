@@ -45,6 +45,7 @@ export class WebFleet {
  }
  list(device){return this.load(device).profiles.map(profile=>({...profile}));}
  retiredOrigins(device){return this.load(device).retiredOrigins||[];}
+ retiredIds(device){return this.load(device).retiredIds||[];}
  onSources(device,listener){const set=this.listeners.get(device)||new Set();set.add(listener);this.listeners.set(device,set);return()=>{set.delete(listener);if(!set.size)this.listeners.delete(device);};}
  observe(device,token){
   if(!uuid.test(device)||typeof token!=='string'||token.length<32||this.flights.has(device)||this.flights.size>=2||(this.retryAt.get(device)||0)>this.now())return;
@@ -69,8 +70,11 @@ export class WebFleet {
   if(state.fleetId&&(state.fleetId!==fleet.id||state.accountId!==fleet.accountId||state.ownerDeviceId!==session.deviceId))throw fail();
   state={...state,fleetId:fleet.id,accountId:fleet.accountId,ownerDeviceId:session.deviceId,retiredOrigins:fleet.retiredOrigins};
   const liveIds=new Set(fleet.members.map(m=>m.id));
-  // Removed enrollment is not silently routed forever. Its saved data stays on disk.
-  state={...state,profiles:state.profiles.map(p=>({...p,retired:!liveIds.has(p.nodeId)}))};
+  // Keep only non-secret retirement identities for browser-local cleanup.
+  const removed=state.profiles.filter(p=>!liveIds.has(p.nodeId)||fleet.retiredOrigins.includes(p.base));
+  state={...state,retiredIds:[...new Set([...(state.retiredIds||[]),...removed.map(p=>p.id)])],
+   profiles:state.profiles.filter(p=>!removed.includes(p)),
+   pending:Object.fromEntries(Object.entries(state.pending).filter(([id])=>liveIds.has(id)))};
   this.save(device,state);
   let changed=true,failed=false;
   for(const member of fleet.members){

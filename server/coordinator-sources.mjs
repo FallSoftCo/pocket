@@ -2,6 +2,7 @@ import {createCipheriv,createDecipheriv,createHash,randomBytes} from 'node:crypt
 import {coordinatorRoomPath} from './coordinator-room-paths.mjs';
 import {ensureRoomReconciliations,noAdmission} from './coordinator-room-reconciliation.mjs';
 import {definitiveRoomRefusal} from './coordinator-room-errors.mjs';
+import {purgeRetiredSources} from './retired-sources.mjs';
 const fail=(message,status=400)=>Object.assign(Error(message),{status});
 const id=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value);
 /** Human-device delegated environment credentials. Model arguments never contain
@@ -14,11 +15,13 @@ export class CoordinatorSources {
   db.prepare("UPDATE coordinator_remote_commands SET state='unknown' WHERE state='sending'").run();
   if(!db.prepare('PRAGMA table_info(coordinator_remote_commands)').all().some(c=>c.name==='request_id'))db.exec('ALTER TABLE coordinator_remote_commands ADD COLUMN request_id TEXT');
   db.exec(`CREATE TABLE IF NOT EXISTS coordinator_sources(device_id TEXT NOT NULL,source_id TEXT NOT NULL,name TEXT NOT NULL,base TEXT NOT NULL,sealed TEXT NOT NULL,credential_hash TEXT NOT NULL,verified_at INTEGER,problem TEXT,PRIMARY KEY(device_id,source_id));`);
+  purgeRetiredSources(db,sourceAllowed);
  }
  seal(device,source,credential){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',this.key,iv);cipher.setAAD(Buffer.from(JSON.stringify([device,source])));const data=Buffer.concat([cipher.update(credential,'utf8'),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),data]).toString('base64');}
  credential(row){const raw=Buffer.from(row.sealed,'base64'),cipher=createDecipheriv('aes-256-gcm',this.key,raw.subarray(0,12));cipher.setAAD(Buffer.from(JSON.stringify([row.device_id,row.source_id])));cipher.setAuthTag(raw.subarray(12,28));return Buffer.concat([cipher.update(raw.subarray(28)),cipher.final()]).toString('utf8');}
  list(device){return this.db.prepare('SELECT source_id AS environmentId,name,base,verified_at AS verifiedAt,problem FROM coordinator_sources WHERE device_id=? ORDER BY source_id').all(device).filter(row=>this.sourceAllowed(row.base)).map(({base,...row})=>row);}
  async register(device,sources){
+  purgeRetiredSources(this.db,this.sourceAllowed);
   if(!Array.isArray(sources)||sources.length>12)throw fail('Choose up to twelve paired environments.');
   const seen=new Set();
   for(const s of sources){let u;try{u=new URL(s.base)}catch{throw fail('Invalid paired environment origin.')}
