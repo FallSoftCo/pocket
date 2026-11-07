@@ -134,12 +134,20 @@ try{
  if((voiceCase||liveAudioCase)&&!/android\.permission\.RECORD_AUDIO:\s*granted=true/.test(permissions))throw Error('Native setup failed: microphone permission unavailable.');
  if(!/android\.permission\.POST_NOTIFICATIONS:\s*granted=true/.test(permissions))throw Error('Native setup failed: notification permission unavailable.');
  receipt.preflight={state:'complete',notificationPermissionGranted:true,fixtureReady:!liveAudioCase,serviceKind:liveAudioCase?'retained-real-account-audio':'synthetic',installedApkVerified:true,emulatorStartTicks:ticks};persist();
+ if(liveAudioCase){
+  // Package/permission broadcasts can start the retained application during
+  // setup. Install its isolated preferences only after that setup, with no
+  // live SharedPreferences instance able to restore the previous value.
+  run(['shell','am','force-stop','co.fallsoft.pocket']);
+  const setup=spawnSync(adb,['-s',serial,'shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'"],{input:liveAudioPreferences,encoding:'utf8',env:childEnv,timeout:30000});
+  if(setup.status!==0||run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml'])!==liveAudioPreferences)throw Error('Isolated audio preferences readback differs.');
+ }
  const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaAvdName',avdName,'-e','qaRunId','release'+manifest.versionCode+'_'+build.productionSourceSha.slice(0,8)+'_'+build.qualificationInputSha.slice(0,8),'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:name==='co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage'?300000:180000,maxBuffer:4*1024*1024});
  const output=(r.stdout||'')+(r.stderr||'');writeFileSync(join(directory,log),output,{flag:'wx',mode:0o600});receipt.logSha=fileSha(join(directory,log));receipt.exitCode=r.status;
  if(liveAudioCase){
   for(const artifact of ['coordinator-native-audio-live.json','coordinator-native-audio-diagnostics.json']){
    const result=spawnSync(adb,['-s',serial,'exec-out','run-as','co.fallsoft.pocket','cat','files/'+artifact],{encoding:'utf8',env:childEnv,timeout:30000});
-   if(result.status===0){JSON.parse(result.stdout);writeFileSync(join(directory,id+'-'+artifact),result.stdout,{flag:'wx',mode:0o600});}
+   if(result.status===0&&/^[\s]*[\[{]/.test(result.stdout)){JSON.parse(result.stdout);writeFileSync(join(directory,id+'-'+artifact),result.stdout,{flag:'wx',mode:0o600});}
   }
  }
  if(r.status!==0||!nativeOutputPassed(output)||!current()||installed()!==build.qualificationApkSha)throw Error('Native qualification failed; channel must not be published.');
