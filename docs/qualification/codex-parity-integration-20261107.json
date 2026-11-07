@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "date": "2026-11-07",
-  "status": "integrated-unpublished-candidate",
+  "status": "workstation-backend-and-web-live-android-held",
   "base": "fa30781d",
   "implementationCommits": [
     "ef5bfe03",
@@ -39,17 +39,23 @@
       "scope": "Combined source including reviewed source-lifetime corrections; no instrumentation or phone install"
     },
     "production": {
-      "changed": false,
+      "changed": true,
+      "scope": "Workstation backend and both existing web gateways",
+      "releaseDigest": "0b995e80de94bd195ebf6c96040a98e69bcc2f323a89a073add432d932e32269",
+      "sourceCommit": "61c62a6eaf28a74cb0efa0199eca00654eb70a08",
       "phoneInstalled": false,
-      "nativeModelOrTerminalActionsIssued": false
+      "nativeDaemonRestarted": false,
+      "nativeModelOrTerminalActionsIssued": false,
+      "pairingAndQueuedAndUnknownReceiptsPreserved": true,
+      "actualTailnetWebAssetsMatch": true
     },
     "fullBackend": {
-      "tests": 731,
-      "passed": 731,
+      "tests": 736,
+      "passed": 736,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 54687.287179,
-      "logSha256": "16515f924323e680860e063930551c2f385fc645cb7cf1c046937beab57dc4ab"
+      "durationMs": 70994,
+      "productionDependencyAdvisories": 0
     },
     "renderedWeb": {
       "browser": "Existing Chromium main-profile owned synthetic tab",
@@ -83,13 +89,48 @@
         "Preliminary qualification build, not final versioned release",
         "Two preceding failed UI-test interactions retained; no failure relabeled"
       ]
+    },
+    "requiredDom": {
+      "lanes": [
+        "conversation",
+        "execution",
+        "actual-app-controls",
+        "production-composition"
+      ],
+      "passed": true,
+      "actualAppModuleCount": 36,
+      "oldAppNegativeControlFailedAsExpected": true
+    },
+    "native173": {
+      "state": "held",
+      "passed": 14,
+      "failed": 1,
+      "failure": "Foreign archive refusal was recorded but expected explanation not observed; initial hierarchy still showed progress.",
+      "diagnostic": "Same product APK passed with diagnostic-only test changes; intermittent failure cause not yet established. Original failed receipt retained.",
+      "liveAccountAudioPassed": true,
+      "physicalPhoneTested": false
+    },
+    "macRuntime": {
+      "version": "0.163.0",
+      "readMethodsObserved": [
+        "config/read",
+        "skills/list",
+        "mcpServerStatus/list",
+        "app/installed",
+        "plugin/installed",
+        "hooks/list",
+        "thread/backgroundTerminals/list",
+        "thread/list"
+      ],
+      "mutationsExercised": false,
+      "sourceVersionGateUnchanged": true
     }
   },
   "remaining": [
-    "Correct truthful native termination outcome and voice answer request-token contract found by final review",
-    "Final rendered web control-race qualification",
-    "Exact versioned optimized signing and required native release checks",
-    "Coordinated backend/web/Android delivery; physical phone remains separate"
+    "Reconcile intermittent archive observation and complete fresh current-input native qualification",
+    "Inspect exact optimized APK and publish compatible Android update only after checks pass",
+    "Review per-method Mac compatibility without restarting ongoing native work",
+    "Physical phone delivery and interaction remain separate"
   ],
   "limits": [
     "Managed worktree creation, plugin installation, hook editing and native user-verification flow are not implemented remote operations; do not claim full TUI parity.",
