@@ -24,7 +24,7 @@ fun JSONObject.s(key:String, fallback:String="") = if (isNull(key)) fallback els
 data class Task(val id:String,val title:String,val cwd:String,val status:String,val updated:Long,val watched:Boolean,val archived:Boolean=false,val preview:String="",val previewRole:String="context",val previewKind:String="message",val activityAt:Long=0,val recencyAt:Long=0,val parentThreadId:String?=null,val isChild:Boolean=false,val agentNickname:String="",val agentRole:String="",val canAcceptDirectInput:Boolean=true,val unreadCount:Int=0,val catalogContext:String="",val needsInput:Boolean=false)
 data class Message(val id:String,val role:String,val text:String)
 data class ReplyFailure(val id:String,val message:String)
-class PocketApiException(val status:Int,message:String):Exception(message)
+class PocketApiException(val status:Int,message:String,val code:String?=null):Exception(message)
 
 object Pocket {
     lateinit var context:Context
@@ -46,6 +46,7 @@ object Pocket {
     internal var statusRevision=0L
     var codexConnectionMessage by mutableStateOf("")
     var weeklyUsage by mutableStateOf(WeeklyUsage())
+    internal var weeklyUsageOwner by mutableStateOf<String?>(null)
     var openWithKeyboard by mutableStateOf(false)
     var usageSamples by mutableStateOf(emptyList<UsageSample>())
     var error by mutableStateOf(""); var busy by mutableStateOf(false)
@@ -172,7 +173,7 @@ object Pocket {
         CodexCatalog.reset();statusRevision++;sessionOrderRequest=0;sessionOrderHandled=0
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
         PocketLive.stop();PocketTranscript.clear();environmentId=id;local=forLocal;base=nextBase;token=nextToken;host=destination.environment.name
-        sending=false;starting=false;busy=false;error="";startStatus="";connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList();selected=null;detail=null;newTask=false
+        sending=false;starting=false;busy=false;error="";startStatus="";connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";selected=null;detail=null;newTask=false
         lastNotification=prefs.getLong(key("lastNotification"),0);environmentProfiles.select(id)
         fullPermissions=prefs.getBoolean(key("fullPermissions"),prefs.getBoolean("fullPermissions",true))
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))"Firebase push is ready" else "Setting up notifications…"
@@ -188,25 +189,35 @@ object Pocket {
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration-$environmentId")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention-$environmentId")
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
-        val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal)).remove(key("usageSamples",wasLocal))
+        val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal)).remove(key("weeklyUsageOwner",wasLocal)).remove(key("usageSamples",wasLocal))
         if(wasLocal)edit.remove(key("automationSecret",true)).putBoolean("automationAllowed",false)
-        edit.apply();weeklyUsage=WeeklyUsage();CodexCatalog.reset();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
+        edit.apply();weeklyUsage=WeeklyUsage();weeklyUsageOwner=null;CodexCatalog.reset();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
         val fallback=environmentProfiles.all().firstOrNull{it.id!=environmentId&&captureEnvironment(it.id)!=null}
         if(fallback!=null){activateEnvironment(fallback.id)}else{token="";base="";pushStatus="Not paired";local=false;prefs.edit().putBoolean("activeLocal",false).apply();LocalMonitorService.stop(context);PocketSpeech.init()}
     }
-    private fun restoreUsage(){usageSamples=try{JSONArray(prefs.getString(key("usageSamples"),"[]")).objects().map{UsageSample(it.optLong("at"),it.optDouble("remaining"),it.optLong("reset"))}.filter{it.at>0&&it.reset>0&&it.remaining.isFinite()&&it.remaining in 0.0..100.0}}catch(_:Exception){emptyList()};weeklyUsage=try{prefs.getString(key("weeklyUsage"),null)?.let{WeeklyUsage.fromJson(JSONObject(it)).copy(stale=true)}?:WeeklyUsage()}catch(_:Exception){WeeklyUsage()}}
-    internal fun acceptUsage(json:JSONObject?){
+    private fun restoreUsage(){
+        val source=captureEnvironment()
+        val trusted=accountUsageCacheMatches(prefs.getString(key("weeklyUsageOwner"),null),source)
+        weeklyUsageOwner=source?.takeIf{trusted}?.let(::accountUsageOwner)
+        // Pre-marker cache entries have no attributable account. Leave them on
+        // disk, but wait for existing authenticated metadata before showing them.
+        usageSamples=if(!trusted)emptyList()else try{JSONArray(prefs.getString(key("usageSamples"),"[]")).objects().map{UsageSample(it.optLong("at"),it.optDouble("remaining"),it.optLong("reset"))}.filter{it.at>0&&it.reset>0&&it.remaining.isFinite()&&it.remaining in 0.0..100.0}}catch(_:Exception){emptyList()}
+        weeklyUsage=if(!trusted)WeeklyUsage(state="unavailable")else try{prefs.getString(key("weeklyUsage"),null)?.let{WeeklyUsage.fromJson(JSONObject(it)).copy(stale=true)}?:WeeklyUsage()}catch(_:Exception){WeeklyUsage(state="unavailable")}
+    }
+    internal fun acceptUsage(json:JSONObject?,source:EnvironmentRequest?=captureEnvironment()){
+        if(source==null||captureEnvironment()?.matches(source)!=true)return
+        weeklyUsageOwner=accountUsageOwner(source)
         weeklyUsage=WeeklyUsage.fromJson(json)
         usageSamples=UsageForecast.record(usageSamples,weeklyUsage)
         prefs.edit().putString(key("usageSamples"),JSONArray().apply{usageSamples.forEach{put(JSONObject().put("at",it.at).put("remaining",it.remaining).put("reset",it.reset))}}.toString()).apply()
-        val edit=prefs.edit();if(json==null)edit.remove(key("weeklyUsage"))else edit.putString(key("weeklyUsage"),json.toString());edit.apply()
+        val edit=prefs.edit().putString(key("weeklyUsageOwner"),weeklyUsageOwner);if(json==null)edit.remove(key("weeklyUsage"))else edit.putString(key("weeklyUsage"),json.toString());edit.apply()
     }
     fun refresh()=CodexCatalog.refresh(explicit=true)
     val sessionCursor get()=CodexCatalog.cursor
     val loadingSessions get()=CodexCatalog.paging
     fun moreSessions(search:String="")=CodexCatalog.page(search)
     internal fun pauseConversationReads()=CodexConversations.suspendReading()
-    fun open(id:String,keyboard:Boolean=false){if(BackendNavigation.open(id)){CodexConversations.suspendReading();return};openWithKeyboard=keyboard;newTask=false;error="";tab=0;CodexConversations.select(id,force=true);CodexConversations.invalidate(immediate=true);PocketReplies.reconcile(id)}
+    fun open(id:String,keyboard:Boolean=false,resumeReading:Boolean=false){if(BackendNavigation.open(id)){CodexConversations.suspendReading();return};openWithKeyboard=keyboard;newTask=false;error="";tab=0;CodexConversations.select(id,force=true,openLatest=!resumeReading);CodexConversations.invalidate(immediate=true);PocketReplies.reconcile(id)}
     fun refreshDetail()=CodexConversations.invalidate(immediate=true)
     fun closeTask()=CodexConversations.close()
     fun retryConnection(){if(!connected)PocketLive.retryNow();refresh();PocketTranscript.latest()}
@@ -275,15 +286,16 @@ object Pocket {
         val body=JSONObject().put("action",action).put("text",text).put("confirmUnknown",confirmUnknown)
         val request=Request.Builder().url(endpoint.trimEnd('/')+"/api/threads/$threadId/replies/$id").header("Authorization","Bearer $credential").post(body.toString().toRequestBody("application/json".toMediaType())).build()
         scope.launchEnvironment{try{val acknowledged=withContext(Dispatchers.IO){http.newCall(request).execute().use{r->val json=JSONObject(r.body?.string()?:"{}");if(!r.isSuccessful)throw PocketApiException(r.code,ConnectionMessages.server(json.s("error","Could not update outgoing message")));require(json.s("id")==id&&json.s("state").isNotBlank()){"Message update was not acknowledged. Refresh before trying again."};json}}
-            if(local==profileLocal&&base==endpoint&&token==credential){if(acknowledged.s("state") in listOf("accepted","cancelled"))dismissReplyFailure(threadId,id);if(selected==threadId){detail=detail?.let{JSONObject(it.toString()).put("outgoing",acknowledgedOutgoing(it.optJSONArray("outgoing"),id,action,text,acknowledged.s("state")))};if(error==previousError)error="";onDone();scheduleRefresh()}}
+            if(local==profileLocal&&base==endpoint&&token==credential){if(acknowledged.s("state") in listOf("accepted","cancelled"))dismissReplyFailure(threadId,id);if(selected==threadId){captureEnvironment()?.let{CodexConversations.outgoing(it,threadId,acknowledged.optJSONObject("outbox"))};detail=detail?.let{JSONObject(it.toString()).put("outgoing",acknowledgedOutgoing(it.optJSONArray("outgoing"),id,action,text,acknowledged.s("state")))};if(error==previousError)error="";onDone();scheduleRefresh()}}
         }catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;if(local==profileLocal&&base==endpoint&&token==credential&&selected==threadId)error=e.message?:"Could not update outgoing message"}finally{replyActionBusy=replyActionBusy-busyKey}}
     }
     fun resumeQueue(){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/queue/resume",JSONObject());scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not resume queue"}}}
     fun updateTurnSettings(body:JSONObject,onDone:()->Unit){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/settings",body);onDone();scheduleRefresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not save turn settings"}}}
     fun renameTask(name:String,onDone:()->Unit){val id=selected?:return;renameTask(id,name,onDone)}
     fun renameTask(id:String,name:String,onDone:()->Unit){scope.launchEnvironment{try{val renamed=api("/api/threads/$id/rename",JSONObject().put("name",name));PocketNotificationTitles.rename(id,name,renamed.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=renamed.optLong("revision"));onDone();scheduleRefresh();refresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not rename task"}}}
-    fun restoreTask(id:String){scope.launchEnvironment{try{api("/api/threads/$id/unarchive",JSONObject());refresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not restore task"}}}
-    fun archiveTask(){val id=selected?:return;scope.launchEnvironment{try{api("/api/threads/$id/archive",JSONObject());if(selected==id)closeTask();refresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not archive task"}}}
+    fun restoreTask(id:String){scope.launchEnvironment{try{api("/api/threads/$id/unarchive",JSONObject());currentCoroutineContext()[EnvironmentRequestContext]?.destination?.let{CodexCatalog.archiveChanged(it,id,false)};refresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not restore task"}}}
+    fun archiveTask(){selected?.let{archiveTask(it)}}
+    fun archiveTask(id:String){scope.launchEnvironment{try{api("/api/threads/$id/archive",JSONObject());if(!environmentRequestCurrent())return@launchEnvironment;currentCoroutineContext()[EnvironmentRequestContext]?.destination?.let{CodexCatalog.archiveChanged(it,id,true)};if(selected==id)closeTask();refresh()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not archive task"}}}
     fun watchTask(id:String,enabled:Boolean){scope.launchEnvironment{try{
         api("/api/threads/$id/watch",JSONObject().put("enabled",enabled))
         tasks=tasks.map{if(it.id==id)it.copy(watched=enabled)else it}
@@ -294,9 +306,10 @@ object Pocket {
     fun test(){scope.launchEnvironment{try{api("/api/test-notification",JSONObject())}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Test failed"}}}
     fun event(json:JSONObject){scope.launchEnvironment{
         when(json.s("type")){
+            "conversationChanged" -> {val id=json.s("threadId");val destination=coroutineContext[EnvironmentRequestContext]?.destination;if(json.s("kind")=="revert")json.optJSONObject("historyHead")?.let{CodexSessionRepository.historyReplaced(id,it,destination)}else{CodexSessionRepository.invalidate(id,destination);if(selected==id)refreshDetail()};refresh()}
             "hollywoodInbox" -> {coroutineContext[EnvironmentRequestContext]?.destination?.let{HollywoodNotifications.socket(it,json)}}
             "threadRenamed" -> {val applied=PocketNotificationTitles.rename(json.s("threadId"),json.s("name"),json.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=json.optLong("revision"));if(applied)tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(title=json.s("name"))else it}}
-            "rateLimits" -> acceptUsage(json.optJSONObject("usage"))
+            "rateLimits" -> acceptUsage(json.optJSONObject("usage"),coroutineContext[EnvironmentRequestContext]?.destination)
             "sessionInteraction" -> {rememberSessionInteraction(json.s("threadId"),"item:"+json.s("interactionId"));discoverSession(json.s("threadId"))}
             "status" -> {
                 statusRevision++
@@ -306,7 +319,7 @@ object Pocket {
             }
             "coordinatorReport" -> {acceptNotification(json.getJSONObject("notification"),"report");PocketWorkUpdates.refresh()}
             "notification" -> {val n=json.getJSONObject("notification");acceptNotification(n,"socket");CodexCatalog.refresh()}
-            "reply" -> {val thread=json.s("threadId");val receipt=json.s("id");PocketReplies.event(thread,receipt,json.s("state"),json.s("error"));if(json.s("state")=="accepted"){rememberSessionInteraction(thread,"reply:"+receipt);dismissReplyFailure(thread,receipt)};if(json.s("state") in listOf("failed","unknown"))recordReplyFailure(thread,receipt,json.s("error","Reply could not be confirmed"));if(thread==selected)scheduleRefresh()}
+            "reply" -> {val thread=json.s("threadId");coroutineContext[EnvironmentRequestContext]?.destination?.let{CodexConversations.outgoing(it,thread,json.optJSONObject("outbox"))};val receipt=json.s("id");PocketReplies.event(thread,receipt,json.s("state"),json.s("error"));if(json.s("state")=="accepted"){rememberSessionInteraction(thread,"reply:"+receipt);dismissReplyFailure(thread,receipt)};if(json.s("state") in listOf("failed","unknown"))recordReplyFailure(thread,receipt,json.s("error","Reply could not be confirmed"));if(thread==selected&&(json.optJSONObject("outbox")==null||json.s("state")=="accepted"))scheduleRefresh()}
             "attentionResolved" -> {val ids=json.optJSONArray("ids");if(ids!=null)for(i in 0 until ids.length())PocketAttention.dismiss(ids.optLong(i));CodexCatalog.refresh();scheduleRefresh()}
             "turnRecovery" -> {if(json.s("threadId")==selected)detail=detail?.let{JSONObject(it.toString()).put("recovery",json.optJSONObject("recovery"))}}
             "timeline" -> {
@@ -321,7 +334,10 @@ object Pocket {
                 val changed=transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,json.s("preview"),json.s("previewKind","message"),previous?.status)||
                     transcriptLiveActivityAdvanced(previous?.activityAt,json.optLong("activityAt"))
                 discoverSession(id)
-                tasks=tasks.map{if(it.id==id)it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))else it}
+                tasks=tasks.map{if(it.id==id){
+                    val next=it.copy(preview=json.s("preview"),previewRole=json.s("previewRole","context"),previewKind=json.s("previewKind","message"),activityAt=maxOf(it.activityAt,json.optLong("activityAt")))
+                    captureEnvironment()?.let{destination->CodexSessionRepository.nativeCatalogProjection(destination,next)}?:next
+                }else it}
                 if(changed){CodexSessionRepository.preview(id);if(id==selected)scheduleRefresh()}
             }
             "sessionActivity" -> {
@@ -371,8 +387,6 @@ object Pocket {
         n.put("_local",notificationLocal)
         prefs.edit().putStringSet(key("seenIds",notificationLocal,notificationEnvironment),bounded).putString(key("lastDeliveryTransport",notificationLocal,notificationEnvironment),transport).putLong(key("lastDeliveryId",notificationLocal,notificationEnvironment),id).putLong(key("lastDeliveryAt",notificationLocal,notificationEnvironment),System.currentTimeMillis()).apply()
         PocketNotifications.show(context,n)
-        val age=System.currentTimeMillis()-n.optLong("created_at")
-        if(!PocketNotificationReads.isRead(n)&&transport in listOf("fcm","socket")&&age in 0..120000&&(!ForegroundNotifications.active()||(PocketVoice.active&&notificationEnvironment==environmentId&&PocketVoice.targetThread==n.s("thread_id"))))PocketSpeech.request(context,n)
     }
     fun catchUp(){scope.launchEnvironment{try{
         val after=if(prefs.getBoolean(key("needsHistorySync"),false))0 else lastNotification
@@ -389,11 +403,12 @@ internal fun mergeLiveTask(current:Task?, fetched:Task, baseline:Task?):Task {
     if(current==null)return fetched
     val newerLive=current.activityAt>(baseline?.activityAt?:0) && current.activityAt>=fetched.activityAt
     val changedPreview=current.preview!=baseline?.preview||current.previewRole!=baseline?.previewRole||current.previewKind!=baseline?.previewKind
+    val keepPreview=changedPreview||current.activityAt>fetched.activityAt
     return fetched.copy(
         status=if(newerLive||current.status!=baseline?.status)current.status else fetched.status,
-        preview=if(changedPreview)current.preview else fetched.preview,
-        previewRole=if(changedPreview)current.previewRole else fetched.previewRole,
-        previewKind=if(changedPreview)current.previewKind else fetched.previewKind,
+        preview=if(keepPreview)current.preview else fetched.preview,
+        previewRole=if(keepPreview)current.previewRole else fetched.previewRole,
+        previewKind=if(keepPreview)current.previewKind else fetched.previewKind,
         activityAt=maxOf(current.activityAt,fetched.activityAt))
 }
 

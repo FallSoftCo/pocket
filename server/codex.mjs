@@ -1,3 +1,5 @@
+import {rememberRuntimeSettings} from './native-capabilities.mjs';
+import {ManagedDaemonRecovery} from './managed-daemon-recovery.mjs';
 import WebSocket from 'ws';
 import { EventEmitter } from 'node:events';
 import { homedir } from 'node:os';
@@ -6,8 +8,8 @@ import {createInterface} from 'node:readline';
 import {codexConnectionError,isServerDraining,isHistoryLineageError,historyLineageError} from './connection-errors.mjs';
 
 export class Codex extends EventEmitter {
-  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined}={}) {
-    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;
+  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined,managedStart=null}={}) {
+    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.managedRecovery=new ManagedDaemonRecovery(managedStart);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;
   }
   executionOptions(){
     const sandbox=process.env.POCKET_CODEX_SANDBOX,approvalPolicy=process.env.POCKET_CODEX_APPROVAL_POLICY;
@@ -27,7 +29,10 @@ export class Codex extends EventEmitter {
           previous.once('exit',done);previous.kill();
         });
       }
-      return this.openConnection();
+      try{return await this.openConnection();}catch(error){
+        if(!this.command&&await this.managedRecovery.recover(error))return this.openConnection();
+        throw error;
+      }
     })();
     this.connecting=attempt;
     try{return await attempt;}finally{if(this.connecting===attempt)this.connecting=null;}
@@ -45,12 +50,13 @@ export class Codex extends EventEmitter {
             const error=isServerDraining(m.error)?Object.assign(codexConnectionError('CODEX_DRAINING'),{rpc:m.error}):Object.assign(isHistoryLineageError(m.error)?historyLineageError(m.error):new Error(m.error.message),{rpc:m.error});
             if(error.code==='CODEX_DRAINING'&&this.transport===transport){this.problem=error;this.emit('status',this.status());}
             p.reject(error);
-          }else p.resolve(m.result);
+          }else {rememberRuntimeSettings(this,p.method,m.result);p.resolve(m.result);}
         }
       };
       const opened=async()=>{
         try {
-          await this.call('initialize', { clientInfo: { name: 'codex_pocket', title: 'NextComp', version: '0.5.0-alpha.10' }, capabilities: { experimentalApi: true } });
+          this.runtimeSettings=new Map();
+          this.initializeResult=await this.call('initialize', { clientInfo: { name: 'codex_pocket', title: 'NextComp', version: '0.5.0-alpha.10' }, capabilities: { experimentalApi: true } });
           this.send({method:'initialized'}); this.ready = true; this.problem=null;this.emit('connected'); resolve();
         } catch(e) { reject(e); this.closeTransport(transport); }
       };
@@ -83,12 +89,16 @@ export class Codex extends EventEmitter {
       if (!this.canSend()) return reject(this.problem||codexConnectionError('CODEX_UNAVAILABLE'));
       const id = this.seq++;
       const timer = setTimeout(() => { this.pending.delete(id); reject(codexConnectionError('CODEX_TIMEOUT')); }, 25000);
-      this.pending.set(id, {resolve, reject, timer}); this.send({id, method, params});
+      this.pending.set(id, {resolve, reject, timer,method}); this.send({id, method, params});
     });
   }
   answer(id, result) {
     if (!this.ready) throw this.problem||codexConnectionError('CODEX_UNAVAILABLE');
     this.send({id, result});
+  }
+  reject(id, message, code=-32601) {
+    if (!this.ready) throw this.problem||codexConnectionError('CODEX_UNAVAILABLE');
+    this.send({id,error:{code,message}});
   }
   canSend(){return this.command?!!this.child?.stdin?.writable:this.ws?.readyState===WebSocket.OPEN;}
   send(value){const raw=JSON.stringify(value);if(this.command)this.child.stdin.write(raw+'\n');else this.ws.send(raw);}

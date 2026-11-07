@@ -21,7 +21,7 @@ function admissionHash(device,{id,destination,audioSha256,bytes},principal){
 
 /** Durable authenticated audio admission. Media processing cannot dispatch tasks. */
 export class VoiceRecordings {
- constructor({db,root,resolveDestination,transcribe,submit,getReceipt,authorize,cancelTask=null,minFreeBytes=80*1024**3}){
+ constructor({db,root,resolveDestination,transcribe,submit,getReceipt,authorize,cancelTask=null,minFreeBytes=8*1024**3}){
   Object.assign(this,{db,root,resolveDestination,transcribe,submit,getReceipt,authorize,cancelTask,minFreeBytes});
   if([resolveDestination,transcribe,submit,getReceipt,authorize].some(value=>typeof value!=='function'))throw Error('Voice admission requires all authority and execution adapters');
   this.owner=randomUUID();this.cancels=new Map();
@@ -41,7 +41,7 @@ export class VoiceRecordings {
   const result=row.result?JSON.parse(row.result):null;
   return {...(result||{}),id:row.id,phase:row.phase,state:result?.state||phases[row.phase]||'unknown',
    audioSha256:row.audio_sha256,bytes:row.bytes,canRetryAudio:row.phase==='failed'&&!row.result,transcript:result?.transcript||row.transcript||'',
-   response:result?.response||'',actions:result?.actions||[],error:row.error||result?.error||null};
+   response:result?.response||'',actions:result?.actions||[],speechSegments:result?.speechSegments||[],timings:result?.timings||{},speech_error:result?.speech_error||null,error:row.error||result?.error||null};
  }
  async create(device,{id,destination,audioSha256,bytes},principal){
   const requestHash=admissionHash(device,{id,destination,audioSha256,bytes},principal);

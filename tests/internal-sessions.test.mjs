@@ -16,3 +16,19 @@ test('empty fresh stores work and informative blockers do not invent runtime act
  assert.deepEqual(c.get({...thread,status:{type:'active'}}),{});assert.deepEqual(c.get({...thread,activityAt:now+1}),{});
  assert.equal(thread.status.type,'idle');db.close();
 });
+test('retired room provenance is excluded from fresh, cached, searched and watched stock discovery',async()=>{
+ const {SessionDiscovery}=await import('../server/session-discovery.mjs');
+ const db=new DatabaseSync(':memory:');db.exec("CREATE TABLE pocket_discovered_threads(thread_id TEXT PRIMARY KEY,metadata TEXT NOT NULL,archived INTEGER NOT NULL DEFAULT 0,seen_at INTEGER NOT NULL);CREATE TABLE watches(thread_id TEXT,enabled INTEGER)");
+ const legacy={id:'legacy',originator:'lax-host-agent',source:'vscode',preview:'Consent question',status:{type:'notLoaded'}};
+ const user={id:'user',originator:'codex_cli_rs',source:'cli',preview:'Work on lax-host-agent',cwd:'/projects/lax-host-agent',status:{type:'idle'}};
+ db.prepare('INSERT INTO pocket_discovered_threads VALUES(?,?,0,0)').run(legacy.id,JSON.stringify(legacy));
+ db.prepare('INSERT INTO watches VALUES(?,1)').run(legacy.id);
+ const registry=new InternalSessions(db),calls=[];
+ const d=new SessionDiscovery({db,hidden:(id,t)=>registry.owns(id,t),codex:{call:async(m,p)=>{calls.push(m);assert.equal(m,'thread/list');return {data:[legacy,user],nextCursor:null};}}});
+ assert.deepEqual(d.snapshot(false).data,[]);
+ for(const options of [{},{searchTerm:'Consent'},{cursor:'next'},{archived:true}])assert.deepEqual((await d.list(options)).data.map(t=>t.id),['user']);
+ assert.equal(new InternalSessions(db).owns(legacy.id),true);
+ assert.equal(registry.owns('future',{id:'future',originator:'lax-host-agent'}),true);
+ assert.equal(registry.owns(user.id,user),false);
+ assert.ok(calls.length>=4);db.close();
+});

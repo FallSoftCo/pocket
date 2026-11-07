@@ -11,10 +11,8 @@ function inputSha(root,inputs){
  const hash=createHash('sha256');for(const path of files.sort()){hash.update(relative(root,path));hash.update('\0');hash.update(fileSha(path));hash.update('\0');}return hash.digest('hex');
 }
 export const qualificationInputSha=root=>inputSha(root,['android/app/src/test','android/app/src/androidTest','tests/fixtures','server/timeline.mjs']);
-export function productionSourceSha(root){
- const inputs=['android/app/src/main','android/app/src/debug','android/app/src/release','android/app/src/qualification','android/app/build.gradle.kts','android/build.gradle.kts','android/settings.gradle.kts','android/gradle.properties','android/gradle'];
- return inputSha(root,inputs);
-}
+export const productionSourceInputs=['android/app/src/main','android/app/src/debug','android/app/src/release','android/app/src/qualification','android/app/build.gradle.kts','android/build.gradle.kts','android/settings.gradle.kts','android/gradle.properties','android/gradle'];
+export function productionSourceSha(root){return inputSha(root,productionSourceInputs);}
 export function nativeOutputPassed(output,expectedTests=1){
  const successes=output.split(/\r?\n/).map(line=>line.trim().match(/^OK \((\d+) tests?\)$/)).filter(Boolean);
  return successes.length===1&&Number(successes[0][1])===expectedTests&&!/FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|shortMsg=|There (?:was|were) \d+ failures?|Error in [\w$]/i.test(output);
@@ -23,6 +21,14 @@ export function confinedFile(directory,name){
  if(typeof name!=='string'||!name||isAbsolute(name)||name.includes('\0'))fail('Invalid qualification path.');
  const root=realpathSync(directory),path=realpathSync(resolve(root,name)),rel=relative(root,path);
  if((rel==='..'||rel.startsWith('../'))||isAbsolute(rel)||!statSync(path).isFile())fail('Qualification file escapes artifact directory.');return path;
+}
+export function validNativeTargetReceipt(receipt){
+ if(receipt.avdName==='nextcomp_env_qa')return true; // Historical retained receipts.
+ return /^(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)$/.test(receipt.avdName||'')&&
+  /^emulator-[0-9]{4,5}$/.test(receipt.serial||'')&&
+  /^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(receipt.actor||'')&&
+  /^[0-9]+$/.test(receipt.preflight?.emulatorStartTicks||'')&&
+  receipt.preflight?.installedApkVerified===true;
 }
 export function validateReleaseQualification({directory,manifest,build,native,policy,optimizedReview}){
  if(existsSync(join(directory,'visual-rejection.json')))fail('This candidate was visually rejected; preserve it and qualify a new candidate.');
@@ -38,7 +44,7 @@ export function validateReleaseQualification({directory,manifest,build,native,po
  if(policy.schema!==1||!Array.isArray(policy.requiredNativeCases)||!policy.requiredNativeCases.length||new Set(policy.requiredNativeCases).size!==policy.requiredNativeCases.length)fail('Invalid native release policy.');
  if(build.policySha!==sha256(Buffer.from(JSON.stringify(policy))))fail('Release policy changed after build.');
  const byCase=new Map();for(const receipt of native){
-  if(typeof receipt.case!=='string'||!policy.requiredNativeCases.includes(receipt.case)||receipt.schema!==1||receipt.state!=='complete'||receipt.exitCode!==0||receipt.productionSourceSha!==build.productionSourceSha||receipt.qualificationInputSha!==build.qualificationInputSha||receipt.qualificationApkSha!==build.qualificationApkSha||receipt.installedApkSha!==build.qualificationApkSha||receipt.testApkSha!==build.testApkSha||receipt.versionCode!==manifest.versionCode||receipt.finishedAt<receipt.startedAt||receipt.startedAt<build.finishedAt||!Number.isFinite(receipt.startedAt)||!Number.isFinite(receipt.finishedAt)||receipt.avdName!=='nextcomp_env_qa')fail('Native receipt is stale, incomplete or for another APK.');
+  if(typeof receipt.case!=='string'||!policy.requiredNativeCases.includes(receipt.case)||receipt.schema!==1||receipt.state!=='complete'||receipt.exitCode!==0||receipt.productionSourceSha!==build.productionSourceSha||receipt.qualificationInputSha!==build.qualificationInputSha||receipt.qualificationApkSha!==build.qualificationApkSha||receipt.installedApkSha!==build.qualificationApkSha||receipt.testApkSha!==build.testApkSha||receipt.versionCode!==manifest.versionCode||receipt.finishedAt<receipt.startedAt||receipt.startedAt<build.finishedAt||!Number.isFinite(receipt.startedAt)||!Number.isFinite(receipt.finishedAt)||!validNativeTargetReceipt(receipt))fail('Native receipt is stale, incomplete or for another APK.');
   const log=confinedFile(directory,receipt.log);if(fileSha(log)!==receipt.logSha||!nativeOutputPassed(readFileSync(log,'utf8')))fail('Native test failed or its log changed.');
   if(byCase.has(receipt.case))fail('Duplicate native receipt.');byCase.set(receipt.case,receipt);
  }
@@ -46,8 +52,12 @@ export function validateReleaseQualification({directory,manifest,build,native,po
  if(policy.requiredOptimizedReview){
   const review=optimizedReview;
   if(!review||review.schema!==1||review.state!=='complete'||review.kind!==policy.requiredOptimizedReview||review.versionCode!==manifest.versionCode||review.productionSourceSha!==build.productionSourceSha||review.qualificationInputSha!==build.qualificationInputSha||!manifest.variants.some(v=>v.sha256===review.apkSha256)||!Number.isFinite(review.reviewedAt)||review.reviewedAt<build.finishedAt)fail('Optimized review is missing, failed, stale or for another APK.');
-  const observations=policy.requiredOptimizedReview==='native-room-catalog-and-typing'?['typingDrawn','canonicalRoomSnapshot','originalAcceptedMessageSingle','optimizedPayloadVerified']:['searchSurvived','selectedIdentitiesReadable','recipientDraftsPreserved','correctSingleSend'];
-  if(policy.requiredNativeCases.some(name=>typeof name==='string'&&name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#')))observations.push('nativeVoiceHardwareKeys','nativeVoiceTouch','nativeVoiceDraftAndOrigin');
+  const observations=policy.requiredOptimizedReview==='native-codex-catalog-and-history'?['codexCatalogDrawn','canonicalPairOrder','reopenOriginalPairExactlyOnce','questionSkipOnce','optimizedPayloadVerified']:policy.requiredOptimizedReview==='native-room-catalog-and-typing'?['typingDrawn','canonicalRoomSnapshot','originalAcceptedMessageSingle','optimizedPayloadVerified']:['searchSurvived','selectedIdentitiesReadable','recipientDraftsPreserved','correctSingleSend'];
+  if(policy.captureInteraction!==undefined&&policy.captureInteraction!=='volume-buttons')fail('Unknown capture interaction contract.');
+  if(policy.requiredNativeCases.some(name=>typeof name==='string'&&name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#')))observations.push('nativeVoiceHardwareKeys',policy.captureInteraction==='volume-buttons'?'nativeVolumeOnlyControls':'nativeVoiceTouch','nativeVoiceDraftAndOrigin');
+  const extra=policy.requiredOptimizedObservations??[];
+  if(!Array.isArray(extra)||extra.some(key=>typeof key!=='string'||!/^\w{1,80}$/.test(key)))fail('Invalid scoped review observations.');
+  observations.push(...extra);
   if(observations.some(key=>review.observations?.[key]!==true))fail('Required optimized interaction/visual review did not pass.');
   if(!Array.isArray(review.artifacts)||review.artifacts.length!==2||new Set(review.artifacts.map(a=>a.path)).size!==2)fail('Optimized review artifacts missing.');
   for(const artifact of review.artifacts)if(!hex.test(artifact.sha256)||fileSha(confinedFile(directory,artifact.path))!==artifact.sha256)fail('Optimized review artifact changed.');

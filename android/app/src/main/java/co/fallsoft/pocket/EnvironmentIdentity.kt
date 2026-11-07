@@ -1,7 +1,7 @@
 package co.fallsoft.pocket
 
 /** Stable local identities are independent of hostname, credentials and session IDs. */
-data class EnvironmentIdentity(val id:String,val name:String,val local:Boolean=false) {
+data class EnvironmentIdentity(val id:String,val name:String,val local:Boolean=false,internal val fleet:FleetMembership?=null) {
     init { require(id.matches(Regex("[a-zA-Z0-9_-]{1,80}"))); require(name.isNotBlank()) }
     fun key(name:String)=when(id){"workstation"->name;"phone"->"local:$name";else->"environment:$id:$name"}
     fun session(thread:String)="$id:$thread"

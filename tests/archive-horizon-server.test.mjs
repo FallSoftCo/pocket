@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {once} from 'node:events';
+import http from 'node:http';
+import {WebSocketServer} from 'ws';
+import {DatabaseSync} from 'node:sqlite';
+import {archiveInactive} from '../scripts/archive-inactive-sessions.mjs';
+test('real HTTP cleanup inventories delegated pages, ignores metadata churn and removes archived work from all list pages',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'nextcomp-archive-horizon-')),socket=join(dir,'native.sock');
+ const upstream=http.createServer(),wss=new WebSocketServer({server:upstream});await new Promise(r=>upstream.listen(socket,r));
+ const allocation=http.createServer();await new Promise(r=>allocation.listen(0,'127.0.0.1',r));const port=allocation.address().port;await new Promise(r=>allocation.close(r));
+ const cutoff=Date.now()-30*86400000;
+ const old={status:{type:'notLoaded'},createdAt:Math.floor(cutoff/1000)-1000,recencyAt:Math.floor(cutoff/1000)-100,updatedAt:Math.floor(Date.now()/1000)};
+ const rows=[{...old,id:'old-parent',name:'Old parent'},{...old,id:'old-child',source:{subAgent:{thread_spawn:{parent_thread_id:'old-parent'}}},name:'Old child'},{...old,id:'current',recencyAt:Math.floor(Date.now()/1000),status:{type:'active'},name:'Working'}];
+ const ghost={...old,id:'already-archived-child',name:'Old cached child',source:{subAgent:{thread_spawn:{parent_thread_id:'current'}}}};rows.push(ghost);
+ const omitted={...old,id:'omitted-child',name:'Native-list-omitted child',source:{subAgent:{thread_spawn:{parent_thread_id:'current'}}}};rows.push(omitted);
+ const archived=new Set([ghost.id]),calls=[];
+ wss.on('connection',ws=>ws.on('message',raw=>{const m=JSON.parse(raw);if(!m.id)return;calls.push(m);let result={};
+  if(m.method==='thread/list'){
+   const visible=rows.filter(r=>r.id!==omitted.id&&archived.has(r.id)===(m.params.archived===true)&&(!r.source||m.params.sourceKinds?.includes('subAgentThreadSpawn')));
+   const offset=Number(m.params.cursor||0);result={data:visible.slice(offset,offset+1),nextCursor:offset+1<visible.length?String(offset+1):null};
+  }else if(m.method==='thread/read'){if(archived.has(m.params.threadId)){ws.send(JSON.stringify({id:m.id,error:{code:-32603,message:'no rollout found for thread id '+m.params.threadId}}));return;}result={thread:rows.find(r=>r.id===m.params.threadId)};}
+  else if(m.method==='thread/archive'){archived.add(m.params.threadId);if(m.params.threadId==='old-parent')archived.add('old-child');}
+  ws.send(JSON.stringify({id:m.id,result}));
+ }));
+ const child=spawn(process.execPath,['server/index.mjs'],{env:{...process.env,PORT:String(port),POCKET_DATA:dir,CODEX_SOCKET:socket},stdio:'ignore'});
+ t.after(async()=>{if(child.exitCode===null){const done=once(child,'exit');child.kill();await done;}for(const ws of wss.clients)ws.terminate();wss.close();await new Promise(r=>upstream.close(r));await rm(dir,{recursive:true,force:true});});
+ for(let n=0;n<100;n++){try{if((await fetch(`http://127.0.0.1:${port}/health`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,30));}
+ const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json')));
+ const request=async(path,{method='GET',body}={})=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{method,headers:{Authorization:'Bearer '+adminToken,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Object.assign(Error(data.error),{status:r.status});return data;};
+ const db=new DatabaseSync(join(dir,'pocket.sqlite'));db.prepare('INSERT INTO pocket_discovered_threads VALUES(?,?,0,?)').run(ghost.id,JSON.stringify(ghost),Date.now());db.prepare('INSERT INTO pocket_discovered_threads VALUES(?,?,0,?)').run(omitted.id,JSON.stringify(omitted),Date.now());db.close();
+ const result=await archiveInactive({request,cutoff,apply:true,save:()=>{}});
+ assert.equal(result.inventory,4);assert.equal(result.archivedObserved,1);assert.ok(!calls.some(c=>c.method==='thread/archive'&&c.params.threadId===ghost.id));assert.deepEqual([...archived].sort(),['already-archived-child','old-child','old-parent','omitted-child']);
+ assert.equal(result.state,'complete');assert.equal(result.results.find(r=>r.id==='old-child').state,'already-archived');assert.ok(!calls.some(c=>c.method==='thread/archive'&&c.params.threadId==='old-child'),'never replay a descendant archive');
+ const page=await request('/api/threads');assert.deepEqual(page.threads.map(r=>r.id),['current']);assert.equal(page.nextCursor,null);
+ assert.equal(calls.filter(c=>['thread/resume','turn/start','turn/steer'].includes(c.method)).length,0);
+ assert.ok(calls.filter(c=>c.method==='thread/read'&&archived.has(c.params.threadId)).every(c=>c.params.includeTurns===false));
+});

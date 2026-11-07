@@ -69,10 +69,13 @@ class HollywoodRoomControlsNativeTest {
   }
   val oldIdle=Configurator.getInstance().waitForIdleTimeout;Configurator.getInstance().waitForIdleTimeout=0
   var originalDraft=client.draft(scope);var target:JSONObject?=null
+  val profileId=prepareRealRoomQaEnvironment(c,config)
   try{
    control(false)
-   i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment("live_room_qa_20261015",force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
-   await("Native room unavailable"){d.hasObject(By.res("native-room-controls"))&&d.hasObject(By.clazz("android.widget.EditText"))}
+   i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment(profileId,force=true);check(Pocket.environmentId==profileId&&Pocket.base==base){"Paired QA profile failed to activate"};c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+   await("Native room unavailable"){d.hasObject(By.res("native-room-controls"))}
+   if(!d.hasObject(By.clazz("android.widget.EditText")))tap("native-room-keyboard")
+   await("Room keyboard did not open"){d.hasObject(By.clazz("android.widget.EditText"))}
    val priorPrepared=if(journal.exists())JSONObject(journal.readText())else null
    if(priorPrepared!=null&&priorPrepared.s("stage")=="complete"){
     check(priorPrepared.s("codeResourcesManifestSha256")==payloadSha){"Inspect the original completed qualification; do not replay it"}

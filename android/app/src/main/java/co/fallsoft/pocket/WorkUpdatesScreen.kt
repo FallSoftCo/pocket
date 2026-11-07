@@ -55,7 +55,7 @@ import java.util.Date
         }
         InlineCaptureStatus()
         ConversationSpeechDock()
-        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){VoiceLaunchButton(modifier=Modifier.weight(1f),threadId=null,bar=true);InlineSpeechVolume(Modifier.weight(1f))}
+        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){InlineSpeechVolume(Modifier.weight(1f))}
         Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){
             ChatActionButton("Back",Icons.Rounded.ArrowBack,Modifier.weight(1f),{PocketWorkUpdates.close()});UsageDock(Modifier.width(usageDockWidth()),conversationOnly=true)
         }

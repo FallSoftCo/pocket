@@ -1,0 +1,31 @@
+# Voice coordinator
+
+The coordinator is a conversational control plane. Codex sessions remain the execution owners. Acknowledging or speaking a report never resumes an agent.
+
+## Evidence and retrieval
+
+CoordinatorMemory indexes public initiating requests, public answers/results and native-head evidence in the existing SQLite store. FTS retrieves candidates; the coordinator makes the semantic routing decision. Native read verifies the chosen target before a mutation. Initial voice context reads stored metadata, not histories. Source identities, observation time, pending questions and outgoing receipts remain explicit. Raw reasoning and command output are excluded.
+
+Existing SessionCatchup is the material outcome journal and presented/unseen authority. A separate listening cursor begins at activation; historical unread work remains available to deliberate catch-up but does not enter an automatic speech backlog. Coalesce material results by source, preserve pending questions, expire obsolete queued audio, and acknowledge only exact completed spoken items. No model or worker activation is allowed in collection/scheduling.
+
+## Federation
+
+Each paired environment is a distinct authority. The central coordinator needs explicitly device-delegated access to the user's other paired environments. Store such credentials encrypted and scoped to that human device; never log/export them. Every reference and operation carries environment + thread identity. Reconcile unknown delivery using its original receipt; never resend on another environment. Remote outages do not block local speech or overwrite state.
+
+## Dialogue and audio
+
+Preserve immutable recording admission, cancellation tombstones and idempotent outgoing IDs. Deliver stable final-response sentences while the model continues, never speak raw thinking or speculative action success. One native account audio transport owns output; live WebRTC playback starts at first audio instead of waiting for the complete recording. Barge-in silences output before microphone capture. Keep a bounded idle timeout, pause/mute and explicit stop-listening controls. No API billing/model changes.
+
+Measure recording-stop, transcription, context retrieval, model start/first public response, stable sentence, first audio and actual playback boundaries. Emulator events are not physical acoustic evidence.
+
+## Qualification
+
+Verify public-evidence routing with misleading/renamed titles, same thread IDs on different environments, source outage, queue/steer, clarification, exact unknown receipts, interleaved outcomes, unanswered questions, coalescing, restart and heard semantics. Native journeys cover repeated volume keys with IME, capture cancellation, barge-in, partial final speech, mute, listener stop and profile changes. Real model/audio qualification uses a dedicated synthetic controller and no business commands.
+
+Live input streams an audio-only copy while the immutable local recording is captured. A session.closed receipt plus the native final transcript becomes device/recording/hash-bound evidence. It admits no task. The sealed WAV is still verified and admitted through VoiceRecordings; only that boundary can submit the complete request. Failure before this proof falls back to the sealed recording. The subscription runtime rejects WebSocket audio with API-key-auth-required, so that evaluated path is not enabled.
+
+CoordinatorCollector runs independently of the open conversation. It consumes the existing event stream and performs bounded 15-second native catalog reconciliation, carrying opaque pagination across cycles. Changed work gets recent native timeline reads (eight per cycle, two concurrent); background reads explicitly skip runtime subscription and UI read-capture side effects. Existing interactive event subscriptions remain separate. Only public evidence is indexed. First hydration establishes a baseline, not an old audio backlog. Failed reads back off to five minutes; freshness, remaining work and incomplete availability stay explicit. No human message, model turn, agent activation, permission override or read acknowledgement is sent.
+
+Observation compatibility: an owner runtime may reject the timeline method with RPC -32601 while supporting native paginated turns. For observation-only head reads, this exact capability refusal selects a three-turn summary window. The capability is scoped to the thread and rechecked after sixty seconds. Transient/permission failures remain failures. The resulting evidence is explicitly not a canonical UI timeline; normal conversation reads never substitute or merge this window. Actual read/index/catch-up integration was verified without a model turn.
+
+Mac stock gateway launch jobs serve an interactive client and must retain ProcessType=Interactive. A Background-class job was observed taking about ninety seconds in module evaluation; normal-priority dependency import took105ms. The owning correction restored a608ms health boundary without changing native Codex jobs. Preserve this class when regenerating the gateway launch property list; keep the prior plist and protected-data receipts for rollback.

@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 const digest=/^[a-f0-9]{64}$/;
 const fail=message=>Object.assign(Error(message),{status:400});
 export class AppUpdates {
-  constructor({dir,db,push,clock=()=>Date.now()}){this.dir=resolve(dir,'app-updates');this.db=db;this.push=push;this.clock=clock;db.exec(`CREATE TABLE IF NOT EXISTS app_update_announcements(version_code INTEGER PRIMARY KEY,notification_id INTEGER NOT NULL REFERENCES notifications(id));CREATE TABLE IF NOT EXISTS app_update_announced_devices(version_code INTEGER NOT NULL,device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,PRIMARY KEY(version_code,device_id));`);}
+  constructor({dir,feedDir,db,push,clock=()=>Date.now()}){if(feedDir!==undefined&&(typeof feedDir!=='string'||!isAbsolute(feedDir)))throw fail('App update feed must be an installation-owned absolute path.');this.dir=feedDir||resolve(dir,'app-updates');this.db=db;this.push=push;this.clock=clock;db.exec(`CREATE TABLE IF NOT EXISTS app_update_announcements(version_code INTEGER PRIMARY KEY,notification_id INTEGER NOT NULL REFERENCES notifications(id));CREATE TABLE IF NOT EXISTS app_update_announced_devices(version_code INTEGER NOT NULL,device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,PRIMARY KEY(version_code,device_id));`);}
   manifest(){
     const file=resolve(this.dir,'manifest.json');if(!existsSync(file))return null;
     let m;try{m=JSON.parse(readFileSync(file,'utf8'));}catch{throw fail('Invalid app update manifest.');}

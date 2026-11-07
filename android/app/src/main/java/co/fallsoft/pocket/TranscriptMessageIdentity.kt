@@ -9,6 +9,28 @@ import org.json.JSONObject
 internal fun transcriptMessageIdentity(kind:String,turn:String,client:String,provider:String):String =
     if(kind=="user" && turn.isNotBlank() && client.isNotBlank()) "$turn/client-user/$client" else provider
 
+/** Placement authority is independent of payload/version arrival. A source page
+ * or a completed position read grants it; a live event alone does not. */
+internal fun canonicalTranscriptInput(row:JSONObject):JSONObject =
+    if(row.s("kind")!="user"||row.s("_inputOrder")=="canonical")row
+    else JSONObject(row.toString()).put("_inputOrder","canonical")
+
+internal fun positionedTranscriptInput(row:JSONObject,successor:String):JSONObject =
+    if(successor.isBlank())canonicalTranscriptInput(row)
+    else JSONObject(canonicalTranscriptInput(row).toString()).put("_inputSuccessor",successor)
+
+/** Arrival order cannot position a delayed input after an existing same-turn
+ * response. Retain it as pending data, but publish it to the transcript only
+ * together with canonical placement. Initial inputs before output remain instant. */
+internal fun unplacedTranscriptInputs(rows:List<JSONObject>):Set<String>{
+    val firstReply=mutableMapOf<String,Int>()
+    rows.forEachIndexed{index,row->if(row.s("kind")=="message")firstReply.putIfAbsent(row.s("turnId"),index)}
+    return rows.withIndex().filter{(index,row)->
+        row.s("kind")=="user"&&row.s("_inputOrder")!="canonical"&&
+            row.s("turnId").isNotBlank()&&firstReply[row.s("turnId")]?.let{it<index}==true
+    }.mapTo(linkedSetOf()){it.value.s("id")}
+}
+
 internal fun normalizeTranscriptMessage(row:JSONObject):JSONObject {
     val original=row.s("id")
     val identity=transcriptMessageIdentity(row.s("kind"),row.s("turnId"),row.s("clientId"),original)
@@ -41,7 +63,14 @@ internal fun normalizeTranscriptMessages(rows:List<JSONObject>,preferIncoming:Bo
         val aliases=listOfNotNull(old,row).flatMap{v->
             v.optJSONArray("providerRowIds")?.let{a->(0 until a.length()).map{a.optString(it)}}.orEmpty()+v.s("providerRowId")
         }.filter{it.isNotBlank()}.asReversed().distinct().asReversed().takeLast(32)
-        values[id]=if(aliases.isEmpty())chosen else JSONObject(chosen.toString()).put("providerRowIds",org.json.JSONArray(aliases))}
+        var merged=if(aliases.isEmpty())chosen else JSONObject(chosen.toString()).put("providerRowIds",org.json.JSONArray(aliases))
+        if(row.s("kind")=="user"&&(row.s("_inputOrder")=="canonical"||old?.s("_inputOrder")=="canonical"))
+            merged=canonicalTranscriptInput(merged)
+        if(merged.s("kind")=="user"&&merged.s("_inputOrder")=="canonical"){
+            val edge=row.s("_inputSuccessor").ifBlank{old?.s("_inputSuccessor").orEmpty()}
+            if(edge.isNotBlank())merged=positionedTranscriptInput(merged,edge)
+        }
+        values[id]=merged}
     return values.values.toList()
 }
 internal fun transcriptDisplayAnchor(rows:List<JSONObject>,provider:String?):String? =
@@ -52,7 +81,7 @@ internal fun transcriptDisplayAnchor(rows:List<JSONObject>,provider:String?):Str
  * Unknown or conflicting aliases remain unchanged rather than guessing a row.
  */
 internal fun migrateTranscriptAnchors(original:List<JSONObject>,requested:Set<String>):Map<String,String> {
-    require(requested.size<=1026)
+    // One linear pass resolves references from all retained interval windows.
     if(requested.isEmpty())return emptyMap()
     val matches=mutableMapOf<String,String>()
     val ambiguous=mutableSetOf<String>()
@@ -89,7 +118,8 @@ internal fun transcriptInputEvent(previous:List<JSONObject>,raw:JSONObject?):Tra
 
 /** Metadata replacement must retain bounded provider evidence for the same send. */
 internal fun mergeTranscriptMessageEvidence(previous:JSONObject?,incoming:JSONObject,preferIncoming:Boolean=false):JSONObject {
-    if(previous==null||previous.s("id")!=incoming.s("id")||incoming.s("kind")!="user"||incoming.s("clientId").isBlank())return incoming
+    if(previous==null||previous.s("id")!=incoming.s("id")||incoming.s("kind")!="user")return incoming
+    if(incoming.s("clientId").isBlank())return if(previous.s("_inputOrder")=="canonical")positionedTranscriptInput(incoming,previous.s("_inputSuccessor"))else incoming
     return normalizeTranscriptMessages(listOf(previous,incoming),preferIncoming).single()
 }
 
@@ -149,4 +179,19 @@ internal fun groupTranscriptTurns(rows:List<JSONObject>):List<JSONObject>{
         groups.getOrPut(turn){mutableListOf()}.add(row)
     }
     return groups.values.flatten()
+}
+
+/** Reconcile only the current canonical window with its overlapping live tail.
+ * An older retained prefix is not part of this server page and cannot inherit
+ * its cursor. Without an overlap, keep the read's head instead of guessing. */
+internal fun newerTranscriptHead(canonical:List<JSONObject>,live:List<JSONObject>):List<JSONObject>?{
+    val ids=canonical.mapTo(hashSetOf()){it.s("id")}
+    val boundary=live.indexOfLast{it.s("id") in ids}
+    if(boundary<0)return null
+    val previous=live.associateBy{it.s("id")}
+    val current=canonical.map{row->
+        val newer=previous[row.s("id")]?.takeIf{it.optLong("version")>row.optLong("version")}
+        if(newer==null)row else mergeTranscriptMessageEvidence(row,newer,preferIncoming=true)
+    }
+    return groupTranscriptTurns(current+live.drop(boundary+1).filter{it.s("id") !in ids})
 }

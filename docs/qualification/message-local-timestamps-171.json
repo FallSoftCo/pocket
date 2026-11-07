@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "state": "published",
+  "versionCode": 171,
+  "versionName": "0.5.0-alpha.153",
+  "implementationCommit": "828e618b6dba35f5982e9b11546c3c30cb7530a9",
+  "scope": "Terse absolute device-local times beside original user/agent messages and coordinator replies.",
+  "timestampSemantics": {
+    "source": "native item startedAtMs, fallback completedAtMs",
+    "coordinator": "persisted first_response, first_final_response or response_completed; request created_at is used only for the human message",
+    "display": "Nov 7 \u00b7 09:52",
+    "accessibility": "full local date, year, seconds and timezone",
+    "unavailable": "omitted; never fetch/refresh time",
+    "ordering": "native unchanged",
+    "timersOrModelCallsAdded": 0
+  },
+  "backend": {
+    "live": true,
+    "releaseDigest": "348c21aa7fe20439ef4de46448dc438a3058e314ddcd74a218d7844b6a8e8709",
+    "webLive": true,
+    "nativeDaemonRestarted": false,
+    "pairingAndQueuePreserved": true,
+    "actualCurrentThreadTimesObserved": true
+  },
+  "mac": {
+    "gatewayLive": true,
+    "scope": [
+      "server/timeline.mjs",
+      "server/voice-controller.mjs"
+    ],
+    "nativeSupervisorUnchanged": true,
+    "limitation": "Current native history item schema omits per-message timestamps. Those historical messages remain unstamped.",
+    "cutover": "Initial asynchronous launchd stop/bootstrap race retained; original gateway restored, then cutover verified service and old PID fully stopped before bootstrap."
+  },
+  "qualification": {
+    "backendPassed": 687,
+    "unitPerVariant": {
+      "tests": 477,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "webRendered": {
+      "label": "Nov 6 \u00b7 21:05",
+      "iso": "2026-11-07T02:05:00.000Z",
+      "title": "November 6, 2026 at 21:05:00 EST",
+      "aria": "November 6, 2026 at 21:05:00 EST",
+      "fontSize": "10px",
+      "rect": {
+        "width": 60.296875,
+        "height": 14
+      },
+      "zone": "America/New_York"
+    },
+    "native": {
+      "passed": 13,
+      "agentTimestampVisible": true,
+      "canonicalOrderAndReconnectPassed": true,
+      "actualAccountAudioPassed": true,
+      "phoneHardwareNotClaimed": true
+    },
+    "physicalPhone": "Last SSH read version170;171 published, install not yet independently observed.",
+    "optimizedCompatibleSha256": "1020f5b0e1151c08893c642f21aabbdd93a0b64c53c80402f30e576eceee75fc",
+    "ownedQaResourcesStopped": true
+  },
+  "delivery": {
+    "published": true,
+    "notice": 2817,
+    "announcementCount": 1,
+    "fcmAcceptedAttempts": 1,
+    "updateManifestVerified": true
+  },
+  "visualReview": {
+    "androidOptimized": "passed, exact compatible APK screenshots reviewed",
+    "web": "passed, actual Chromium synthetic conversation",
+    "galleryAssets": "new Android/web screenshots served successfully; catalog metadata written",
+    "galleryIndex": "Rebuild blocked by pre-existing missing personal-digital-double-geometry-v37.blend download; no unrelated catalog removed. Existing gallery checker passed, but does not establish new cards indexed."
+  }
+}

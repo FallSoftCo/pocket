@@ -8,16 +8,17 @@ import WebSocket,{WebSocketServer} from 'ws';
 
 test('web gateway authenticates pairing, protects credential and blocks foreign origins and owner routes',async t=>{
  const token='a'.repeat(64);let observed;
- const upstream=http.createServer(async(req,res)=>{observed={url:req.url,authorization:req.headers.authorization};res.setHeader('Content-Type','application/json');if(req.url==='/api/pair')res.end(JSON.stringify({token,id:'browser',host:'fixture'}));else if(req.headers.authorization!==`Bearer ${token}`){res.statusCode=401;res.end(JSON.stringify({error:'Unauthorized'}));}else res.end(JSON.stringify({ok:true}));});upstream.listen(0,'127.0.0.1');await once(upstream,'listening');t.after(()=>upstream.close());
+ const upstream=http.createServer(async(req,res)=>{observed={url:req.url,authorization:req.headers.authorization,encoding:req.headers['accept-encoding']};res.setHeader('Content-Type','application/json');if(req.url==='/api/pair')res.end(JSON.stringify({token,id:'browser',host:'fixture'}));else if(req.headers.authorization!==`Bearer ${token}`){res.statusCode=401;res.end(JSON.stringify({error:'Unauthorized'}));}else res.end(JSON.stringify({ok:true}));});upstream.listen(0,'127.0.0.1');await once(upstream,'listening');t.after(()=>upstream.close());
  const backend=`http://127.0.0.1:${upstream.address().port}`,origin='https://private.example.test';const gateway=createWebClient({backend,origin});gateway.server.listen(0,'127.0.0.1');await once(gateway.server,'listening');t.after(()=>gateway.server.close());const base=`http://127.0.0.1:${gateway.server.address().port}`;
  assert.equal((await fetch(base+'/api/status')).status,401);
  assert.equal((await fetch(base+'/web/pair',{method:'POST',headers:{Origin:'https://evil.example'},body:'{}'})).status,403);
  const pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{"code":"fixture"}'});assert.equal(pair.status,200);assert.equal((await pair.json()).token,undefined);const header=pair.headers.get('set-cookie');assert.match(header,/HttpOnly/);assert.match(header,/Secure/);assert.match(header,/SameSite=Strict/);const cookie=header.split(';')[0];
- const r=await fetch(base+'/api/status',{headers:{Cookie:cookie}});assert.equal(r.status,200);assert.equal(observed.authorization,`Bearer ${token}`);
+ const r=await fetch(base+'/api/status',{headers:{Cookie:cookie}});assert.equal(r.status,200);assert.equal(observed.authorization,`Bearer ${token}`);assert.equal(observed.encoding,'identity');
  assert.equal((await fetch(base+'/api/status',{headers:{Cookie:cookie+'tampered'}})).status,401);
  assert.equal((await fetch(base+'/api/devices',{headers:{Cookie:cookie}})).status,403);
  assert.equal((await fetch(base+'/api/notify',{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:'{}'})).status,403);
  assert.equal((await fetch(base+'/api/threads/thread-123/reply',{method:'POST',headers:{Cookie:cookie,Origin:'https://evil.example','Content-Type':'application/json'},body:'{}'})).status,403);
+ const asset=await fetch(base+'/symbols/nextcomp.png');assert.equal(asset.status,200);assert.equal(asset.headers.get('cache-control'),'private, no-cache');const etag=asset.headers.get('etag');assert.ok(etag);await asset.arrayBuffer();assert.equal(await new Promise((resolve,reject)=>{http.get(base+'/symbols/nextcomp.png',{headers:{'If-None-Match':etag}},res=>{res.resume();res.on('end',()=>resolve(res.statusCode));}).on('error',reject);}),304);
  const staticResponse=await fetch(base+'/');assert.match(staticResponse.headers.get('content-security-policy'),/frame-ancestors 'none'/);assert.match(await staticResponse.text(),/NextComp/);
  const logout=await fetch(base+'/web/logout',{method:'POST',headers:{Cookie:cookie,Origin:origin}});assert.match(logout.headers.get('set-cookie'),/Max-Age=0/);
 });
@@ -88,4 +89,58 @@ test('canonical catalog passes through live identity, recency and pagination; ba
  assert.deepEqual(await (await fetch(base+'/api/threads/child-123?view=timeline',{headers:{Cookie:cookie}})).json(),detail);
  for(const path of ['/api/threads/child-123/reply','/api/voice/start']){const response=await fetch(base+path,{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({threadId:'child-123',text:'Guidance'})});assert.equal(response.status,409);assert.deepEqual(await response.json(),{error:'Open parent task',parentThreadId:'parent-123'});}
  assert.deepEqual(calls.map(x=>x.url),[cursorPath,'/api/threads/child-123?view=timeline','/api/threads/child-123/reply','/api/voice/start']);assert.ok(calls.every(x=>x.authorization===`Bearer ${token}`));
+});
+
+test('paired browser audio upload preserves immutable bytes and room binding without proxying owner authority',async t=>{
+ const token='8'.repeat(64),binding='fixture-binding',payload=Buffer.alloc(4096,37),origin='https://private.example.test';let admitted=0;
+ const upstream=http.createServer(async(req,res)=>{res.setHeader('Content-Type','application/json');if(req.url==='/api/pair'){res.end(JSON.stringify({token,id:'audio-fixture'}));return;}
+  assert.equal(req.method,'PUT');assert.equal(req.headers.authorization,`Bearer ${token}`);assert.equal(req.headers['x-hollywood-binding'],binding);assert.equal(req.headers['content-type'],'audio/wav');const chunks=[];for await(const chunk of req)chunks.push(chunk);assert.deepEqual(Buffer.concat(chunks),payload);admitted++;res.end(JSON.stringify({id:'original-audio',phase:'ready'}));});
+ upstream.listen(0,'127.0.0.1');await once(upstream,'listening');t.after(()=>upstream.close());const gateway=createWebClient({origin,backend:`http://127.0.0.1:${upstream.address().port}`});gateway.server.listen(0,'127.0.0.1');await once(gateway.server,'listening');t.after(()=>gateway.server.close());const base=`http://127.0.0.1:${gateway.server.address().port}`;
+ const pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}),cookie=pair.headers.get('set-cookie').split(';')[0];
+ const headers={Origin:origin,Cookie:cookie,'Content-Type':'audio/wav','X-Hollywood-Binding':binding};
+ assert.equal((await fetch(base+'/api/voice/recordings/original-audio/audio',{method:'PUT',headers:{...headers,Origin:'https://foreign.test'},body:payload})).status,403);
+ const uploaded=await fetch(base+'/api/voice/recordings/original-audio/audio',{method:'PUT',headers,body:payload});assert.equal(uploaded.status,200);assert.equal((await uploaded.json()).id,'original-audio');assert.equal(admitted,1);
+});
+
+test('gateway compresses negotiated JSON while preserving identity, status, and binary representations',async t=>{
+ const {gunzipSync}=await import('node:zlib'),token='f'.repeat(64),data={text:'Una domanda importante. '.repeat(6000)},binary=Buffer.from([82,73,70,70,0,255,9,7]);
+ const backend=http.createServer((req,res)=>{
+  if(req.url==='/api/pair'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({token,id:'compression-fixture'}));}
+  if(req.headers.authorization!=='Bearer '+token){res.writeHead(401).end();return;}
+  if(req.url==='/api/audio'){res.writeHead(206,{'Content-Type':'audio/wav'}).end(binary);return;}
+  res.writeHead(202,{'Content-Type':'application/json'}).end(JSON.stringify(data));
+ });backend.listen(0,'127.0.0.1');await once(backend,'listening');t.after(()=>backend.close());
+ const origin='https://private.example.test',gateway=createWebClient({backend:'http://127.0.0.1:'+backend.address().port,origin});
+ gateway.server.listen(0,'127.0.0.1');await once(gateway.server,'listening');t.after(()=>gateway.server.close());
+ const base='http://127.0.0.1:'+gateway.server.address().port;
+ const pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}),cookie=pair.headers.get('set-cookie').split(';')[0];await pair.arrayBuffer();
+ const read=(path,encoding)=>new Promise((resolve,reject)=>{http.get(base+path,{headers:{Cookie:cookie,'Accept-Encoding':encoding}},res=>{const chunks=[];res.on('data',b=>chunks.push(b));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks)}));}).on('error',reject);});
+ const compressed=await read('/api/threads','gzip');assert.equal(compressed.status,202);assert.equal(compressed.headers['content-encoding'],'gzip');assert.match(compressed.headers.vary,/Accept-Encoding/i);
+ assert.deepEqual(JSON.parse(gunzipSync(compressed.body)),data);assert.ok(compressed.body.length<Buffer.byteLength(JSON.stringify(data))/5);
+ for(const encoding of ['identity','gzip;q=0,identity;q=1']){const plain=await read('/api/threads',encoding);assert.equal(plain.headers['content-encoding'],undefined);assert.deepEqual(JSON.parse(plain.body),data);}
+ const audio=await read('/api/audio','gzip');assert.equal(audio.status,206);assert.equal(audio.headers['content-encoding'],undefined);assert.deepEqual(audio.body,binary);
+});
+
+test('cold-start documents and modules compress without breaking conditional or range delivery',async t=>{
+ const {gunzipSync}=await import('node:zlib');
+ const {readFile}=await import('node:fs/promises');
+ const g=createWebClient({origin:'https://private.example.test'});
+ g.server.listen(0,'127.0.0.1');await once(g.server,'listening');
+ t.after(()=>{g.server.closeAllConnections();g.server.close();});
+ const port=g.server.address().port;
+ const read=(path,headers={})=>new Promise((resolve,reject)=>{
+  http.get({host:'127.0.0.1',port,path,headers},res=>{
+   const chunks=[];res.on('data',x=>chunks.push(x));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks)}));
+  }).on('error',reject);
+ });
+ const expected=await readFile(new URL('../web/app.mjs',import.meta.url));
+ const responses=await Promise.all(Array.from({length:8},()=>read('/app.mjs',{'Accept-Encoding':'gzip'})));
+ for(const r of responses){assert.equal(r.status,200);assert.equal(r.headers['content-encoding'],'gzip');assert.deepEqual(gunzipSync(r.body),expected);assert.ok(r.body.length<expected.length/2);assert.equal(r.headers['cache-control'],'private, no-cache');}
+ assert.equal(new Set(responses.map(x=>x.headers.etag)).size,1);
+ const unchanged=await read('/app.mjs',{'Accept-Encoding':'gzip','If-None-Match':responses[0].headers.etag});
+ assert.equal(unchanged.status,304);assert.equal(unchanged.body.length,0);
+ const identity=await read('/app.mjs',{'Accept-Encoding':'gzip;q=0, identity;q=1'});assert.equal(identity.headers['content-encoding'],undefined);assert.deepEqual(identity.body,expected);
+ const range=await read('/app.mjs',{'Accept-Encoding':'gzip',Range:'bytes=0-7'});assert.equal(range.status,206);assert.equal(range.headers['content-encoding'],undefined);assert.deepEqual(range.body,expected.subarray(0,8));
+ const html=await read('/',{'Accept-Encoding':'gzip'});assert.equal(html.headers['content-encoding'],'gzip');assert.equal(html.headers['cache-control'],'no-store');assert.match(gunzipSync(html.body).toString(),/<!doctype html>/i);
+ assert.equal((await read('/missing-module.mjs',{'Accept-Encoding':'gzip'})).status,404);
 });

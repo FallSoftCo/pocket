@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "versionCode": 164,
+  "versionName": "0.5.0-alpha.146",
+  "compiledProductCommit": "b0f29ebcb7fa96093cc3cbeb1c37be503dba8b43",
+  "productionSourceSha": "b320912e7db1e49b30dfc82d2a95b02541d462843e46c493fa0d42f720e04949",
+  "compatibleApkSha256": "a5380a09b1a7f85d18dac99ed2991adecb127377420bd0648bbc5ecc0be4410a",
+  "changes": [
+    "Queued and held requests visible with edit/remove",
+    "Durable source-scoped outgoing revision independent of transcript history",
+    "Bounded complete outgoing snapshots on authenticated reconnect",
+    "Web live and acknowledgement updates render before a history page",
+    "Current native metadata admission without historical in-progress inference",
+    "Pending delivery and viewport identity keep latest controls visible through IME resizing"
+  ],
+  "evidence": {
+    "actualGatewayHTTPWebSocketSQLiteRestartFIFO": true,
+    "removedSyntheticRequestNeverExecuted": true,
+    "exactlyTwoSyntheticProviderStarts": true,
+    "nativeRequiredCasesPassed": 14,
+    "nativeQueueVisibleBeforeRemove": 3,
+    "nativeQueueAfterRemove": 2,
+    "nativeQueueRemoveObservedMs": 343,
+    "nativeDraftPreserved": true,
+    "optimizedQueueRoomAndVolumeUI": true,
+    "webActualAppVirtualDom": {
+      "queueBeforeHistory": true,
+      "removeFromAckWithoutSocket": true,
+      "staleHistoryCannotResurrect": true,
+      "draftPreserved": true
+    },
+    "androidUnitPerVariant": 470,
+    "debugAndReleaseLints": "passed",
+    "backendExistingPublicationCases": 697
+  },
+  "delivery": {
+    "android": "published to existing authenticated update channels",
+    "web": "active on existing private URLs",
+    "gateway": "minimal owning update; pairing, original queues and native processes preserved",
+    "phoneInstall": "not forced or independently confirmed"
+  },
+  "limits": [
+    "Synthetic provider validates delivery and UI, not business task or model inference.",
+    "Current-source real account audio input/output passed separately; physical handset acoustics and rendered push remain separate.",
+    "Provider-only QA fixture modernization followed completed immutable APK qualification without changing product or compiled test bytes.",
+    "Original failed fixture attempts and rejected first candidate are retained as failures.",
+    "Existing dependency audit findings predate this change; no dependency version changed."
+  ]
+}

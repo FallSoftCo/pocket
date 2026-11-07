@@ -23,8 +23,20 @@ import org.json.JSONObject
  LaunchedEffect(base,token){if(token.isNotBlank())try{settings=request()}catch(_:Exception){error="Check-in settings unavailable"}}
  fun save(enabled:Boolean=settings?.optBoolean("enabled")?:false,interval:Int=settings?.optInt("intervalMinutes",30)?:30,stale:Int=settings?.optInt("staleAfterMinutes",120)?:120){if(busy)return;scope.launch{busy=true;try{val result=request(JSONObject().put("enabled",enabled).put("intervalMinutes",interval).put("staleAfterMinutes",stale));if(Pocket.base==base&&Pocket.token==token){settings=result;error=""}}catch(_:Exception){if(Pocket.base==base&&Pocket.token==token)error="Could not save check-in settings"}finally{if(Pocket.base==base&&Pocket.token==token)busy=false}}}
  Column(verticalArrangement=Arrangement.spacedBy(4.dp)){
+ CoordinatorSpokenUpdatesControl()
  Row(verticalAlignment=Alignment.CenterVertically){BilingualLabel("Coordinator check-ins",modifier=Modifier.weight(1f),centered=false);Switch(settings?.optBoolean("enabled")?:false,{save(enabled=it)},enabled=settings!=null&&!busy)}
  if(settings?.optBoolean("enabled")==true){FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf(30,60,120).forEach{m->FilterChip(settings?.optInt("intervalMinutes")==m,{save(interval=m)},label={Text(if(m<60)"30 min" else "${m/60} h")},enabled=!busy)}};FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){BilingualLabel("Stale after",centered=false);listOf(120,240).forEach{m->FilterChip(settings?.optInt("staleAfterMinutes")==m,{save(stale=m)},label={Text("${m/60} h")},enabled=!busy)}}}
  WorkflowText(error.ifBlank{"Status checks only; agent messages are manual"},color=Muted)
  }
+}
+
+@Composable internal fun CoordinatorSpokenUpdatesControl(){
+ val source=Pocket.captureEnvironment(Pocket.environmentId)
+ var enabled by remember(source?.endpoint,source?.token){mutableStateOf<Boolean?>(null)}
+ var busy by remember(source?.endpoint,source?.token){mutableStateOf(false)}
+ val scope=rememberCoroutineScope()
+ LaunchedEffect(source?.endpoint,source?.token){if(source!=null)try{enabled=CoordinatorVoiceLink.api(source.endpoint,source.token,"/api/coordinator/listening").optBoolean("spokenUpdates",true)}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){}}
+ Row(verticalAlignment=Alignment.CenterVertically){BilingualLabel("Spoken work updates",modifier=Modifier.weight(1f),centered=false);Switch(enabled==true,{value->
+  if(source!=null&&!busy)scope.launch{busy=true;try{val saved=CoordinatorVoiceLink.api(source.endpoint,source.token,"/api/coordinator/voice-preferences",JSONObject().put("spokenUpdates",value));enabled=saved.optBoolean("spokenUpdates")}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){}finally{busy=false}}
+ },enabled=enabled!=null&&!busy)}
 }

@@ -13,7 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -23,8 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** Shared catalog geometry; each backend owns identities, ordering and pagination. */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable internal fun WorkCatalogList(modifier:Modifier,state:LazyListState=rememberLazyListState(),reverseLayout:Boolean=true,contentPadding:PaddingValues=PaddingValues(vertical=12.dp),content:LazyListScope.()->Unit){
-    LazyColumn(modifier.fillMaxWidth().padding(horizontal=16.dp),state=state,reverseLayout=reverseLayout,
+    LazyColumn(modifier.fillMaxWidth().semantics{testTagsAsResourceId=true}.testTag("work-catalog").padding(horizontal=16.dp),state=state,reverseLayout=reverseLayout,
         verticalArrangement=Arrangement.spacedBy(8.dp,if(reverseLayout)Alignment.Bottom else Alignment.Top),contentPadding=contentPadding,content=content)
 }
 
@@ -36,34 +37,41 @@ import androidx.compose.ui.unit.sp
     val surface=if(idle)Color(0xff152137)else Panel
     val outline=if(idle)Color(0xff526e98)else Line.copy(alpha=.7f)
     val shape=RoundedCornerShape(8.dp)
-    Box(modifier.fillMaxWidth().clip(shape).background(surface).drawBehind{
+    Box(modifier.fillMaxWidth().depthSurface(surface,shape).drawWithCache{
         val glow=if(active||needsInput)1f else 0f
-        drawRoundRect(Brush.radialGradient(listOf(accent.copy(alpha=.26f*glow),accent.copy(alpha=.06f*glow),Color.Transparent),Offset(size.width*.85f,0f),size.width*.95f),cornerRadius=CornerRadius(8.dp.toPx()))
+        val light=Brush.radialGradient(listOf(accent.copy(alpha=.26f*glow),accent.copy(alpha=.06f*glow),Color.Transparent),Offset(size.width*.85f,0f),(size.width*.95f).coerceAtLeast(1f))
+        onDrawBehind{drawRoundRect(light,cornerRadius=CornerRadius(8.dp.toPx()))}
     }.border(1.dp,outline,shape).border(2.dp,Mint.copy(alpha=highlight),shape),content=content)
 }
 
 
-/** One catalog dock surface for stock sessions and enterprise rooms. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun WorkCatalogDock(content:@Composable FlowRowScope.()->Unit){
-    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp))
-        .background(Color(0xff101114)).border(1.dp,Paper.copy(alpha=.10f),RoundedCornerShape(24.dp)),
-        horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp),content=content)
+/** One inset control surface for catalogs and conversations. The outer margin
+ * clears the device edge; inner padding keeps every touch target inside the rim.
+ * Flow wraps at larger font sizes instead of clipping or shrinking targets.
+ */
+@OptIn(ExperimentalLayoutApi::class,androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable private fun BottomControlBar(verticalMargin:androidx.compose.ui.unit.Dp,content:@Composable FlowRowScope.()->Unit){
+    val shape=RoundedCornerShape(24.dp)
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=verticalMargin)
+        .depthSurface(Color(0xff15191f),shape,6.dp).border(1.dp,Paper.copy(alpha=.10f),shape)
+        .semantics{testTagsAsResourceId=true}.testTag("bottom-control-bar")
+        .padding(horizontal=8.dp,vertical=6.dp),
+        horizontalArrangement=Arrangement.spacedBy(2.dp,Alignment.CenterHorizontally),
+        verticalArrangement=Arrangement.spacedBy(6.dp),content=content)
 }
 
-/** Identical bottom control geometry for stock sessions and enterprise rooms. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun ConversationFooter(content:@Composable FlowRowScope.()->Unit){
-    FlowRow(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),
-        horizontalArrangement=Arrangement.SpaceEvenly,verticalArrangement=Arrangement.spacedBy(2.dp),content=content)
-}
+@Composable internal fun WorkCatalogDock(content:@Composable FlowRowScope.()->Unit)=BottomControlBar(8.dp,content)
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable internal fun ConversationFooter(content:@Composable FlowRowScope.()->Unit)=BottomControlBar(6.dp,content)
 
 @Composable internal fun ConversationMessageSurface(you:Boolean,content:@Composable ColumnScope.()->Unit){
-    Column(Modifier.fillMaxWidth().then(if(you)Modifier.clip(RoundedCornerShape(6.dp)).background(Panel).padding(14.dp)else Modifier.padding(vertical=5.dp)),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
+    Column(Modifier.fillMaxWidth().then(if(you)Modifier.depthSurface(Panel,RoundedCornerShape(6.dp),1.dp).padding(14.dp)else Modifier.padding(vertical=5.dp)),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
 }
 
 @Composable internal fun ConversationComposerRow(content:@Composable RowScope.()->Unit){
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Panel).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically,content=content)
+    Row(Modifier.fillMaxWidth().depthSurface(Panel,RoundedCornerShape(6.dp),2.dp).padding(start=18.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically,content=content)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -92,12 +100,30 @@ import androidx.compose.ui.unit.sp
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable internal fun ConversationActionsMenu(expanded:Boolean,onExpandedChange:(Boolean)->Unit,
     modifier:Modifier=Modifier,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,bottomActions:Boolean=false,contextLabel:String?=null,
+    accountUsage:WeeklyUsage?=null,accountSourceLabel:String?=null,
     content:@Composable ColumnScope.()->Unit){
     val context=androidx.compose.ui.platform.LocalContext.current
     // A fresh opening starts with current work before the popup is measured.
     val menuScroll=androidx.compose.runtime.remember(expanded,bottomActions){androidx.compose.foundation.ScrollState(if(bottomActions)Int.MAX_VALUE else 0)}
+    // Follow the work edge across measurement changes only while it is the
+    // user's current edge. A manual scroll away suspends following until the
+    // user returns or reopens. This effect observes only the open popup.
+    androidx.compose.runtime.LaunchedEffect(expanded,bottomActions,menuScroll){
+        if(expanded&&bottomActions){
+            var previousMax=-1
+            var followWork=true
+            androidx.compose.runtime.snapshotFlow{Triple(menuScroll.maxValue,menuScroll.value,menuScroll.isScrollInProgress)}.collect{(maximum,value,scrolling)->
+                if(maximum!=Int.MAX_VALUE){
+                    if(scrolling)followWork=value>=maximum-2
+                    else if(maximum==previousMax)followWork=value>=maximum-2
+                    if(maximum!=previousMax&&followWork&&!scrolling)menuScroll.scrollTo(maximum)
+                    previousMax=maximum
+                }
+            }
+        }
+    }
     Box{
-        UsageDock(modifier.width(compactUsageDockWidth()),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)})
+        UsageDock(modifier.width(compactUsageDockWidth(accountSourceLabel!=null)),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)},usage=accountUsage?:Pocket.weeklyUsage,accountSourceLabel=accountSourceLabel)
         DropdownMenu(expanded,{onExpandedChange(false)},scrollState=menuScroll,modifier=Modifier.width(300.dp).heightIn(max=if(bottomActions)280.dp else 420.dp).semantics{testTagsAsResourceId=true},
             properties=androidx.compose.ui.window.PopupProperties(focusable=false),content={
                 val report:@Composable ()->Unit={
@@ -111,9 +137,4 @@ import androidx.compose.ui.unit.sp
                 if(!bottomActions){HorizontalDivider();report()}
             })
     }
-}
-
-/** The same primary capture control floats above either catalog dock. */
-@Composable internal fun WorkCatalogCapture(modifier:Modifier=Modifier,roomDestination:org.json.JSONObject?=null,sourceLabel:String?=null){
-    VoiceLaunchButton(modifier.size(80.dp).semantics{testTagsAsResourceId=true},compact=true,largeFloating=true,roomDestination=roomDestination,sourceLabel=sourceLabel)
 }

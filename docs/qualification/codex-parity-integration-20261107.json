@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-07",
+  "status": "workstation-backend-and-web-live-android-held",
+  "base": "fa30781d",
+  "implementationCommits": [
+    "ef5bfe03",
+    "477772c5",
+    "69ac84ed",
+    "c3803f95"
+  ],
+  "reviewCommits": [
+    "0d89eeb4",
+    "67df390c (selected file diff only)",
+    "b4a0b9e7"
+  ],
+  "evidence": {
+    "combinedNode": {
+      "passed": 59,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "Native control HTTP fixtures, browser DOM, request identity, configuration, timeline and receipt regressions"
+    },
+    "executionDom": {
+      "passed": true,
+      "journeys": 6,
+      "scope": "Actual web request/output/terminal components against fixture transport; not a rendered browser or real host"
+    },
+    "androidInitialCompile": {
+      "passed": true,
+      "durationSeconds": 79,
+      "task": "compileQualificationKotlin",
+      "scope": "Integrated source before subsequent source-lifetime review corrections"
+    },
+    "androidReviewedCompile": {
+      "passed": true,
+      "durationSeconds": 21,
+      "task": "compileQualificationKotlin",
+      "scope": "Combined source including reviewed source-lifetime corrections; no instrumentation or phone install"
+    },
+    "production": {
+      "changed": true,
+      "scope": "Workstation backend and both existing web gateways",
+      "releaseDigest": "0b995e80de94bd195ebf6c96040a98e69bcc2f323a89a073add432d932e32269",
+      "sourceCommit": "61c62a6eaf28a74cb0efa0199eca00654eb70a08",
+      "phoneInstalled": false,
+      "nativeDaemonRestarted": false,
+      "nativeModelOrTerminalActionsIssued": false,
+      "pairingAndQueuedAndUnknownReceiptsPreserved": true,
+      "actualTailnetWebAssetsMatch": true
+    },
+    "fullBackend": {
+      "tests": 736,
+      "passed": 736,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 70994,
+      "productionDependencyAdvisories": 0
+    },
+    "renderedWeb": {
+      "browser": "Existing Chromium main-profile owned synthetic tab",
+      "modelFailurePreservesControls": true,
+      "contextOpened": true,
+      "narrowViewport": {
+        "width": 420,
+        "height": 900
+      },
+      "providerCalls": false
+    },
+    "nativeParityJourney": {
+      "class": "co.fallsoft.pocket.NativeParityControlsNativeTest#nativeControlsPreserveRequestSourceReceiptsAndDrafts",
+      "state": "passed",
+      "durationSeconds": 74.827,
+      "api": 34,
+      "emulator": "retained owned emulator",
+      "appSha256": "b684997806abfe9a118b9e584da0695f9c83a0741ed315bb205aa1870c5ae8eb",
+      "testSha256": "8af9cdedaec43f7b91fa4a24fe974c1789f25bcbe4906503837202107c9a2378",
+      "scope": [
+        "Native request identity and secret replacement",
+        "Native elicitation form",
+        "Source-bound terminal confirmation",
+        "Source-bound conversation confirmation",
+        "Lost fork acknowledgement inspected without repeat",
+        "Draft restoration",
+        "Native settings"
+      ],
+      "limits": [
+        "Synthetic authority only; no provider/model mutation",
+        "Preliminary qualification build, not final versioned release",
+        "Two preceding failed UI-test interactions retained; no failure relabeled"
+      ]
+    },
+    "requiredDom": {
+      "lanes": [
+        "conversation",
+        "execution",
+        "actual-app-controls",
+        "production-composition"
+      ],
+      "passed": true,
+      "actualAppModuleCount": 36,
+      "oldAppNegativeControlFailedAsExpected": true
+    },
+    "native173": {
+      "state": "held",
+      "passed": 14,
+      "failed": 1,
+      "failure": "Foreign archive refusal was recorded but expected explanation not observed; initial hierarchy still showed progress.",
+      "diagnostic": "Same product APK passed with diagnostic-only test changes; intermittent failure cause not yet established. Original failed receipt retained.",
+      "liveAccountAudioPassed": true,
+      "physicalPhoneTested": false
+    },
+    "macRuntime": {
+      "version": "0.163.0",
+      "readMethodsObserved": [
+        "config/read",
+        "skills/list",
+        "mcpServerStatus/list",
+        "app/installed",
+        "plugin/installed",
+        "hooks/list",
+        "thread/backgroundTerminals/list",
+        "thread/list"
+      ],
+      "mutationsExercised": false,
+      "sourceVersionGateUnchanged": true
+    }
+  },
+  "remaining": [
+    "Reconcile intermittent archive observation and complete fresh current-input native qualification",
+    "Inspect exact optimized APK and publish compatible Android update only after checks pass",
+    "Review per-method Mac compatibility without restarting ongoing native work",
+    "Physical phone delivery and interaction remain separate"
+  ],
+  "limits": [
+    "Managed worktree creation, plugin installation, hook editing and native user-verification flow are not implemented remote operations; do not claim full TUI parity.",
+    "New version-sensitive native methods are qualified against0.167.0 only; other advertised runtime versions remain explicit unavailable.",
+    "Unit/HTTP/DOM fixtures and Kotlin compilation do not prove real phone interaction or release readiness."
+  ]
+}

@@ -27,7 +27,7 @@ class TranscriptRefreshNativeTest {
   // Seed permissions only on the asserted disposable emulator, before launch.
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
-  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","First saved draft").putString("draft:second-thread","Second saved draft").commit()
+  context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76-"+java.util.UUID.randomUUID().toString()).putString("deviceId","synthetic-device-a").putString("draft:same-thread","First saved draft").putString("draft:second-thread","Second saved draft").commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   qa("show-second");main{Pocket.refresh()};await{Pocket.tasks.any{it.id=="second-thread"}}
@@ -59,7 +59,7 @@ class TranscriptRefreshNativeTest {
   assertEquals(Pocket.prefs.getString("position-journal-qa-scope",null),PocketTranscript.scopeKey())
   val expected=JSONObject(Pocket.prefs.getString("position-journal-qa-expected",null)!!)
   val started=android.os.SystemClock.elapsedRealtime()
-  main{Pocket.open("same-thread")}
+  main{Pocket.open("same-thread",resumeReading=true)}
   await{has(1)&&PocketTranscript.loading&&PocketTranscript.readPosition?.rowId==expected.s("row")&&PocketTranscript.readPosition?.offset==expected.optInt("offset")}
   val elapsed=android.os.SystemClock.elapsedRealtime()-started
   assertFalse(PocketTranscript.readPosition!!.follow)
@@ -71,6 +71,53 @@ class TranscriptRefreshNativeTest {
   assertEquals("First saved draft",Pocket.prefs.getString("draft:same-thread",null))
   assertEquals(0,qa("state").getJSONArray("replies").length())
   java.io.File(context.cacheDir,"position-journal-restore.json").writeText(JSONObject().put("cachedRestoreMs",elapsed).put("row",expected.s("row")).put("offset",expected.optInt("offset")).put("visible",true).toString())
+ }
+ @Test fun lateDiskInputIsPositionedFromVisibleHistoryWithoutAnotherSend(){
+  twoChats();qa("anchored")
+  val scope=PocketTranscript.scopeKey()
+  val user=JSONObject().put("id","order/live-uuid").put("itemId","live-uuid").put("turnId","order").put("clientId","same-send").put("kind","user").put("text","Restored delayed input")
+  val answer=JSONObject().put("id","order/answer").put("itemId","answer").put("turnId","order").put("kind","message").put("text","Cached ordering answer")
+  val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",org.json.JSONArray().put(answer).put(user))
+   .put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false)
+  assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
+  val release=kotlinx.coroutines.CompletableDeferred<Unit>()
+  try{
+   main{PocketTranscript.reset("same-thread");Pocket.scope.launchEnvironment{PocketTranscript.load(beforeCacheRead={release.await()})}}
+   await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
+   assertFalse(PocketTranscript.rows.any{it.s("clientId")=="same-send"})
+   val reads=qa("state").getJSONArray("reads").objects().count{!it.optBoolean("older")}
+   release.complete(Unit)
+   await{PocketTranscript.rows.any{it.s("clientId")=="same-send"}&&qa("state").getJSONArray("positions").length()>0}
+   assertTrue("Unplaced input was not staged",unplacedTranscriptInputs(PocketTranscript.rows).isNotEmpty())
+   repeat(4){
+    assertFalse("Input painted after its answer before position proof",device.hasObject(By.text("Restored delayed input")))
+    Thread.sleep(100)
+   }
+   qa("release-position")
+   await{PocketTranscript.rows.any{it.s("clientId")=="same-send"&&it.s("_inputOrder")=="canonical"}&&!PocketTranscript.updating}
+   val rows=PocketTranscript.rows
+   assertEquals(1,rows.count{it.s("clientId")=="same-send"})
+   assertTrue(rows.indexOfFirst{it.s("clientId")=="same-send"}<rows.indexOfFirst{it.s("id")=="order/answer"})
+   // Assert one committed accessibility frame, rather than retaining a node
+   // from before Compose replaces the staged input and its surrounding layout.
+   val visibleDeadline=android.os.SystemClock.elapsedRealtime()+3000
+   var visibleOrder=false
+   var lastBounds="no simultaneous input/answer frame"
+   while(android.os.SystemClock.elapsedRealtime()<visibleDeadline&&!visibleOrder){
+    val input=device.findObject(By.text("Restored delayed input"))?.visibleBounds
+    val response=device.findObject(By.text("Stale anchored answer"))?.visibleBounds
+    lastBounds="input=$input answer=$response"
+    visibleOrder=input!=null&&response!=null&&!input.isEmpty&&!response.isEmpty&&input.bottom<=response.top
+    if(!visibleOrder)Thread.sleep(50)
+   }
+   if(!visibleOrder){
+    device.takeScreenshot(java.io.File(context.cacheDir,"late-input-visible-failure.png"))
+    device.dumpWindowHierarchy(java.io.File(context.cacheDir,"late-input-visible-failure.xml"))
+   }
+   assertTrue("Native input and answer did not paint together in canonical order: $lastBounds",visibleOrder)
+   assertEquals("Visible repair restarted current-message reads",reads,qa("state").getJSONArray("reads").objects().count{!it.optBoolean("older")})
+   assertEquals(0,qa("state").getJSONArray("replies").length())
+  }finally{release.complete(Unit);qa("release-position")}
  }
  @Test fun historyEvidenceRepairsDeferredPositionOnce(){
   twoChats();qa("await-position-history");main{Pocket.open("same-thread")}
@@ -121,7 +168,7 @@ class TranscriptRefreshNativeTest {
   val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",org.json.JSONArray().put(bare)).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("position",JSONObject().put("row","identity/item-183").put("offset",17).put("follow",false))
   assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
   val restored=PocketTranscript.cacheRestoreRevision
-  main{Pocket.open("same-thread")};await{PocketTranscript.cacheRestoreRevision>restored&&PocketTranscript.loading}
+  main{Pocket.open("same-thread",resumeReading=true)};await{PocketTranscript.cacheRestoreRevision>restored&&PocketTranscript.loading}
   assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"})
   qa("release-history");await{has(1)&&!PocketTranscript.updating}
   fun users()=PocketTranscript.rows.filter{it.s("kind")=="user"}
@@ -146,7 +193,7 @@ class TranscriptRefreshNativeTest {
   val snapshot=JSONObject().put("schema",1).put("scope",scope).put("id","same-thread").put("rows",old).put("detail",JSONObject().put("thread",JSONObject().put("id","same-thread"))).put("earlier",false).put("position",JSONObject().put("row","identity/item-32").put("offset",17).put("follow",false))
   assertTrue(TranscriptDiskCache(java.io.File(context.noBackupFilesDir,"transcript-cache-v1")).write(scope,"same-thread",snapshot.toString()))
   val restoredBefore=PocketTranscript.cacheRestoreRevision
-  main{Pocket.open("same-thread")};await{PocketTranscript.cacheRestoreRevision>restoredBefore&&PocketTranscript.loading}
+  main{Pocket.open("same-thread",resumeReading=true)};await{PocketTranscript.cacheRestoreRevision>restoredBefore&&PocketTranscript.loading}
   assertEquals("Legacy reading anchor was lost during duplicate collapse","identity/client-user/send-one",PocketTranscript.readPosition?.rowId)
   assertEquals(17,PocketTranscript.readPosition?.offset)
   assertEquals(1,PocketTranscript.rows.count{it.s("kind")=="user"})
@@ -160,7 +207,7 @@ class TranscriptRefreshNativeTest {
   assertEquals(2,users().size);assertEquals(firstId,users().first().s("id"))
   await{device.findObjects(By.text("Same deliberate text")).size==2}
   main{Pocket.open("second-thread")};await{PocketTranscript.rows.any{it.s("text")=="Other response 1"}}
-  main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.updating&&users().firstOrNull{it.s("clientId")=="send-one"}?.s("itemId")=="item-183"}
+  main{Pocket.open("same-thread",resumeReading=true)};await{has(1)&&!PocketTranscript.updating&&users().firstOrNull{it.s("clientId")=="send-one"}?.s("itemId")=="item-183"}
   assertEquals(2,users().size)
   assertEquals("History replacement discarded live provider evidence",firstId,transcriptDisplayAnchor(PocketTranscript.rows,"identity/new-live-id"))
   assertEquals("Canonical history reference no longer addresses the send",firstId,transcriptDisplayAnchor(PocketTranscript.rows,"identity/item-183"))
@@ -571,7 +618,7 @@ class TranscriptRefreshNativeTest {
  @Test fun previewDuringScheduledRecentReadIsNotLost(){
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
-  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Keep my draft").commit()
+  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76-"+java.util.UUID.randomUUID().toString()).putString("deviceId","synthetic-device-a").putString("draft:same-thread","Keep my draft").commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.loading}
@@ -683,7 +730,7 @@ class TranscriptRefreshNativeTest {
  private fun exerciseCurrentHeadsAndInputOrder():android.content.SharedPreferences{
   check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
-  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Unsaved draft preserved").commit()
+  prefs.edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76-"+java.util.UUID.randomUUID().toString()).putString("deviceId","synthetic-device-a").putString("draft:same-thread","Unsaved draft preserved").commit()
   main{Pocket.init(context);context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
   await{Pocket.connected&&Pocket.tasks.isNotEmpty()}
   main{Pocket.open("same-thread")};await{has(1)&&!PocketTranscript.loading}

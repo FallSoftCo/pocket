@@ -10,17 +10,20 @@ const roomA='cccccccc-cccc-4ccc-8ccc-ccccccccccc1',roomB='cccccccc-cccc-4ccc-8cc
 const agentA='dddddddd-dddd-4ddd-8ddd-ddddddddddd1',agentB='dddddddd-dddd-4ddd-8ddd-ddddddddddd2';
 const binding={id:'lax',name:'Synthetic LAX',configured:true,available:true,api:3,modes:['rooms','direct'],bindingId:'e'.repeat(64),installationId:authority,authorityId:authority,principalId:human,defaultRoomId:roomA,voice:true};
 const rooms=[roomA,roomB].map((id,n)=>({id,authority,name:'Synthetic voice room '+(n?'B':'A'),owner:n?agentB:agentA,purpose:'Owned UI fixture; no provider or worker',revision:1}));
-const sockets=new Set(),starts=[];let nativeAttempts=0,blockedTaskWrites=0;
-const journal=process.env.NATIVE_VOICE_UI_LOG;
+rooms.forEach(r=>r.leadPolicy={version:1,mode:'lead',leadAgentId:r.owner,leadName:'Project lead',leadNodeId:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1',revision:1,inputAfterSeq:0,registration:'registered',coordinationView:'coordination'});
+const sockets=new Set(),starts=[],historyRooms=[];let nativeAttempts=0,blockedTaskWrites=0;
+const journal=process.env.NATIVE_VOICE_UI_LOG||process.env.NEXTCOMP_QA_LOG;
 function record(row){if(journal)fs.appendFileSync(journal,JSON.stringify({at:Date.now(),...row})+'\n',{mode:0o600});}
 const server=http.createServer(async(req,res)=>{
  let raw='';for await(const b of req){raw+=b;if(raw.length>32000){res.writeHead(413).end();return}}
  if(req.headers.authorization!=='Bearer '+token){res.writeHead(401).end('{}');return}
- const path=new URL(req.url,'http://127.0.0.1').pathname;let body={},status=200;
- if(path==='/_qa/status')body={starts,nativeAttempts,blockedTaskWrites,noProvider:true};
+ const path=new URL(req.url,'http://127.0.0.1').pathname;record({kind:'request',method:req.method,path,bytes:Buffer.byteLength(raw)});let body={},status=200;
+ if(path==='/_qa/status')body={starts,historyRooms,nativeAttempts,blockedTaskWrites,noProvider:true};
  else if(path==='/api/backends')body={backends:[{id:'codex',configured:false,available:false},binding]};
  else if(path==='/api/status')body={connected:true,host:'Owned synthetic native voice',deviceId:'synthetic-native-voice-device'};
  else if(path==='/api/app/update')body={available:false};
+ else if(path==='/api/immersion/v2'&&['GET','POST'].includes(req.method)){record({kind:'immersion-preference',method:req.method});body={planVersion:'transgrammatic-english-italian-v1',unavailable:true,jobs:[],translations:[]};}
+ else if(path==='/api/immersion/v2/translate'&&req.method==='POST'){record({kind:'translation-unavailable'});status=503;body={error:'Owned voice fixture has no translation provider'};}
  else if(path==='/api/voice/history')body={turns:[],hasEarlier:false};
  else if(path==='/api/voice/start'&&req.method==='POST'){const input=JSON.parse(raw);starts.push(input);record({kind:'voice-start',input});body={ok:true};}
  else if(path==='/api/voice/native/start'){nativeAttempts++;record({kind:'provider-blocked'});status=503;body={error:'Owned QA provider intentionally unavailable'};}
@@ -31,7 +34,7 @@ const server=http.createServer(async(req,res)=>{
  }else if(path.startsWith('/api/hollywood/v3/rooms/')&&req.method==='GET'){
   const id=path.split('/')[5],room=rooms.find(r=>r.id===id);
   if(!room){status=404;body={error:'Unknown synthetic room'};}
-  else if(path.endsWith('/history'))body={binding,roomId:id,view:new URL(req.url,"http://127.0.0.1").searchParams.get("view")||"all",events:[],nextCursor:0,hasMore:false,before:null};
+  else if(path.endsWith('/history')){historyRooms.push({roomId:id});body={binding,roomId:id,view:new URL(req.url,"http://127.0.0.1").searchParams.get("view")||"all",events:[],nextCursor:0,hasMore:false,before:null};}
   else if(path.endsWith('/attention'))body={binding,attention:[],nextCursor:0};
   else body={binding,room,permissions:{can_post:true,can_request:true},actors:[{id:room.owner,name:'Synthetic agent '+(id===roomA?'A':'B'),kind:'agent'},{id:human,name:'Synthetic owner',kind:'human'}],deliveries:[]};
  }else if(req.method==='POST'){blockedTaskWrites++;status=503;body={error:'Owned fixture has no task/provider execution'};}

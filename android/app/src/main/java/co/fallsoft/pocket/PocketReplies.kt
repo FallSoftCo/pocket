@@ -27,6 +27,7 @@ internal object PocketReplies {
     }
     private fun observed(intent:ClientReplyIntent,receipt:JSONObject,lookup:Boolean=false):String{
         val state=checkedReplyReceipt(receipt,intent,lookup)
+        current(intent)?.let{CodexConversations.outgoing(it,intent.thread,receipt.optJSONObject("outbox"))}
         sendingOwners.remove(intent.id);profileChanged()
         val next=journal.update(intent.id){old->if(old.state in listOf("accepted","cancelled"))old else old.copy(phase="observed",state=state,message=receipt.s("result",receipt.s("error")))}
         if(next!=null){

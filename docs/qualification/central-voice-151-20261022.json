@@ -1,0 +1,75 @@
+{
+  "versionCode": 151,
+  "versionName": "0.5.0-alpha.133",
+  "state": "published-workstation-and-mac",
+  "scope": "Codex-native central voice coordinator",
+  "apkSha256": "624e0f56001567168c26a0ef12218b52696d8c30630ce05ab3576150370a42e4",
+  "evidence": {
+    "android": {
+      "debugUnitTests": 426,
+      "releaseUnitTests": 426,
+      "failed": 0,
+      "lints": "pass",
+      "nativeRequiredCases": 3,
+      "optimizedCanonicalOrder": true,
+      "reopenOriginalPairsOnce": true,
+      "legacyReads": 0,
+      "positionRepair": 0,
+      "workSubmissions": 0
+    },
+    "nativeAccountMedia": {
+      "inputDurationMs": 7100,
+      "stopToFinalTranscriptMs": 1545,
+      "ttsFirstAudioMs": 1639,
+      "ttsCompleteBufferMs": 8352,
+      "taskAdmissions": 0
+    },
+    "realModel": {
+      "greetingContextBytes": 981,
+      "turnStartMs": 22,
+      "firstResponseMs": 2990,
+      "firstSpeechSegmentMs": 3116,
+      "completeMs": 3137,
+      "routing": "public request evidence resolves renamed session, fresh read, one synthetic queued follow-up, truthful queued response"
+    },
+    "backend": "49 focused tests pass: source auth, original receipt reconciliation, observation-only collector, durable WAV custody and routing"
+  },
+  "architecture": [
+    "Stored public evidence and FTS retrieval; bounded native head reads instead of history stuffing.",
+    "Read-only background collection: no model turns, worker wakes, execution mutation or UI subscriptions.",
+    "Original device/source/recording authority retained; unresolved delivery is never blindly repeated.",
+    "Live account WebRTC transcription and speech reuse the existing account; no API-key fallback."
+  ],
+  "limits": [
+    "Physical handset microphone acoustics, hardware volume keys, playback and notification rendering are not newly verified.",
+    "Provider and model timings are separate actual journeys, not a claimed full physical round trip.",
+    "Prepared workstation and Mac gateways require controlled cutover; Android update is not yet published.",
+    "Requested rich notification tooling is recorded follow-up, not implemented in this version."
+  ],
+  "delivery": {
+    "gateways": "Both deployed; original native daemons/pairings/outgoing and voice receipts preserved",
+    "update": "151/alpha.133 published in both existing signed channels",
+    "announcement": "One source-workstation notification; accepted by FCM once",
+    "phone": "Last SSH package read remains150; user OS update not yet confirmed",
+    "runtimeCompatibility": "Actual active remote-owned thread rejects thread/timeline/list with -32601; bounded thread/turns/list works54ms. Background evidence backs off and remains explicitly unavailable; no workers restarted."
+  },
+  "compatibilityFollowup": {
+    "state": "deployed-workstation-and-mac",
+    "source": "native-turn-summary for observation-only reads after typed timeline capability refusal",
+    "limits": {
+      "turns": 3,
+      "itemsView": "summary",
+      "capabilityRetryMs": 60000
+    },
+    "actualNativeReadMs": 78,
+    "publicMessages": 3,
+    "catchupMaterialItems": 3,
+    "indexed": true,
+    "modelOrWorkerStarts": 0,
+    "displayChronology": "Native timeline unchanged; evidence windows are never substituted into the UI timeline",
+    "actualLiveGatewayHeadMs": 113,
+    "protectedStateUnchanged": true,
+    "nativeDaemonsRetained": true,
+    "additionalAndroidInstallRequired": false
+  }
+}

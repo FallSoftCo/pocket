@@ -46,38 +46,66 @@ try{
 receipt.originalPreferencesSha=sha256(Buffer.from(originalPreferences));persist();
 
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-// Only reviewed synthetic services can run inside release qualification.
+// Real account audio has its own retained isolated authority. It must never be
+// routed into the synthetic history service or mistaken for task execution proof.
+const liveAudioCase=name==='co.fallsoft.pocket.CoordinatorNativeAudioLiveTest#liveInputFinalizesAndOutputPlaysBeforeCompleteBuffer';
+let liveAudioPreferences;
+// All remaining cases use reviewed synthetic services.
 const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#existingAgentDisclosureOpensIndependentSessionAndKeepsPrivateRepliesScoped'||name.startsWith('co.fallsoft.pocket.RoomNavigationNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomRoutingNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomVoiceNativeTest#');
 const voiceCase=name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#');
 const environmentCase=name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
-const fixtureScript=voiceCase?'tests/fixtures/native-room-voice-ui.mjs':environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
-const portKey=voiceCase?'voice':environmentCase?'environment':teamCase?'team':'transcript';
-const portValue=owner.fixturePorts?.[portKey]??(environmentCase?19995:teamCase?19992:19998);
+const canonicalCase=name.startsWith('co.fallsoft.pocket.NativeReadingParityNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeTranscriptStoreNativeTest#');
+const parityCase=name.startsWith('co.fallsoft.pocket.NativeParityControlsNativeTest#');
+const mixedCase=name.startsWith('co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#');
+const fixtureScript=parityCase?'tests/fixtures/native-parity-controls.mjs':mixedCase?'tests/fixtures/hollywood-mixed-catalog-native.mjs':canonicalCase?'tests/fixtures/native-canonical-transcript.mjs':voiceCase?'tests/fixtures/native-room-voice-ui.mjs':environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
+const portKey=parityCase?'parity':mixedCase?'mixed':voiceCase?'voice':environmentCase?'environment':teamCase?'team':'transcript';
+const portValue=owner.fixturePorts?.[portKey]??(parityCase?19991:environmentCase?19995:teamCase?19992:19998);
 if(!Number.isSafeInteger(portValue)||portValue<1024||portValue>65532)throw Error('Invalid owned fixture port.');
 const fixturePort=String(portValue);
-const fixtureToken=voiceCase?'synthetic-native-voice-only':teamCase?'synthetic-alpha24-only':'synthetic-system76';
-const fixtureHost=voiceCase?'Owned synthetic native voice':environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
-const fixtureReadyMessage=voiceCase?'Owned synthetic native voice fixture ready '+fixturePort:environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
+const fixtureToken=parityCase?'synthetic-parity-0-'+crypto.randomUUID():mixedCase?'synthetic-mixed-room':voiceCase?'synthetic-native-voice-only':teamCase?'synthetic-alpha24-only':'synthetic-system76';
+const fixtureHost=parityCase?'Alpha':mixedCase?'Room host':canonicalCase?'Native canonical source':voiceCase?'Owned synthetic native voice':environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
+const fixtureReadyMessage=parityCase?'Native parity fixture Alpha: '+fixturePort:mixedCase?'Owned mixed catalog fixture ready '+fixturePort:canonicalCase?'Owned native canonical fixture ready':voiceCase?'Owned synthetic native voice fixture ready '+fixturePort:environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
 let fixture;
-const ownedFixtures=['tests/fixtures/native-room-voice-ui.mjs','tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
+const ownedFixtures=['tests/fixtures/native-parity-controls.mjs','tests/fixtures/hollywood-mixed-catalog-native.mjs','tests/fixtures/native-canonical-transcript.mjs','tests/fixtures/native-room-voice-ui.mjs','tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
 try{
+ if(liveAudioCase){
+ const path=owner.liveAudioPreferencesPath;
+ if(!path||!path.startsWith('/'))throw Error('Provide retained isolated audio QA preferences.');
+ liveAudioPreferences=requireQaPreferences(readFileSync(path,'utf8'));
+ if(!/<string name="server">http:\/\/127\.0\.0\.1:18889<\/string>/.test(liveAudioPreferences))throw Error('Live audio must use the retained isolated authority on 18889.');
+ if(!/<string name="token">[^<]+<\/string>/.test(liveAudioPreferences))throw Error('Paired isolated audio device required.');
+}
  if(owner.fixturePid&&existsSync('/proc/'+owner.fixturePid)){
   const args=readFileSync('/proc/'+owner.fixturePid+'/cmdline','utf8');
   if(!ownedFixtures.some(script=>args.includes(script))||realpathSync('/proc/'+owner.fixturePid+'/cwd')!==resolve(root))throw Error('Refuse to stop an unrelated fixture process.');
   process.kill(owner.fixturePid,'SIGTERM');for(let n=0;n<60&&existsSync('/proc/'+owner.fixturePid);n++)await pause(50);
   if(existsSync('/proc/'+owner.fixturePid))throw Error('Old owned fixture has not stopped.');
  }
+ if(!liveAudioCase){
  const fd=openSync(join(directory,'fixture-'+id+'.log'),'wx',0o600);
- fixture=startOwnedFixture(resolve(root,fixtureScript),{cwd:root,env:{...childEnv,PORT:fixturePort,NEXTCOMP_QA_EPOCH:crypto.randomUUID(),NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},fd});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
+ const replayPath=name==='co.fallsoft.pocket.CodexHistoryConcurrencyNativeTest#actualHistoryReplayNeverPaintsAlpha110IslandAndFillsRecentViewport'?process.env.NEXTCOMP_QA_HISTORY_REPLAY:null;
+ if(replayPath&&(!replayPath.startsWith('/')||!existsSync(replayPath)))throw Error('Private history replay capture unavailable.');
+ const nativeCapture=name==='co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#recordedNativeMacPagesOpenCurrentAndRetainNativeKeys'?process.env.NEXTCOMP_QA_NATIVE_CAPTURE:null;
+ if(nativeCapture&&(!nativeCapture.startsWith('/')||!existsSync(nativeCapture)))throw Error('Private native capture unavailable.');
+ fixture=startOwnedFixture(resolve(root,fixtureScript),{cwd:root,env:{...childEnv,...(nativeCapture?{NEXTCOMP_QA_NATIVE_CAPTURE:nativeCapture}:{}),...(replayPath?{NEXTCOMP_QA_HISTORY_REPLAY:replayPath}:{}),PORT:fixturePort,...(name.endsWith('#leadConversationSeparatesTeamAndArchiveWithoutRetargetingDrafts')?{NEXTCOMP_QA_LEAD_ROOM:'1',NEXTCOMP_QA_CONVERSATION_SEND:'1'}:{}),...(name==='co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#acceptedConversationSendKeepsKeyboardAndNewDraft'?{NEXTCOMP_QA_CONVERSATION_SEND:'1'}:{}),NEXTCOMP_QA_EPOCH:crypto.randomUUID(),NEXTCOMP_QA_LOG:join(directory,'fixture-'+id+'.jsonl')},fd});closeSync(fd);let fixtureError=null;fixture.once('error',e=>fixtureError=e);owner.fixturePid=fixture.pid;writeFileSync(ownerPath,JSON.stringify(owner,null,2)+'\n');receipt.fixturePid=fixture.pid;persist();
  let ready=false;for(let n=0;n<40;n++){if(fixtureError||fixture.exitCode!==null)throw Error('Fresh fixture exited.');try{const r=await fetch('http://127.0.0.1:'+fixturePort+'/api/status',{headers:{Authorization:'Bearer '+fixtureToken},signal:AbortSignal.timeout(300)});if(r.ok&&(await r.json()).host===fixtureHost&&readFileSync(join(directory,'fixture-'+id+'.log'),'utf8').includes(fixtureReadyMessage)){ready=true;break;}}catch{}await pause(50);}if(!ready)throw Error('Fresh synthetic fixture unavailable.');
  run(['reverse','tcp:18880','tcp:'+fixturePort]);
  for(const [from,to] of Object.entries(owner.reversePorts||{})){if(!/^\d{4,5}$/.test(from)||!Number.isSafeInteger(to)||to<1024||to>65535)throw Error('Invalid owned QA reverse mapping');run(['reverse','tcp:'+from,'tcp:'+to]);}
  if(name.startsWith('co.fallsoft.pocket.ForegroundNotificationNativeTest#')||name.startsWith('co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#'))run(['reverse','tcp:18907','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.CodexClosedSessionSyncNativeTest#'))run(['reverse','tcp:18903','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.TypingResponsivenessNativeTest#'))run(['reverse','tcp:18891','tcp:'+fixturePort]);
+ if(parityCase)run(['reverse','tcp:18881','tcp:'+String(portValue+1)]);
  if(voiceCase)run(['reverse','tcp:18893','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#')){run(['reverse','tcp:18881','tcp:'+String(portValue+1)]);run(['reverse','tcp:18882','tcp:'+String(portValue+2)]);}
  else if(environmentCase){run(['reverse','tcp:18882','tcp:'+String(portValue+1)]);run(['reverse','tcp:18883','tcp:'+String(portValue+2)]);}
+ }else{
+  run(['reverse','tcp:18889','tcp:18889']);
+  const setup=spawnSync(adb,['-s',serial,'shell',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'"],{input:liveAudioPreferences,encoding:'utf8',env:childEnv,timeout:30000});
+  if(setup.status!==0)throw Error('Isolated audio preferences could not be installed.');
+  receipt.serviceKind='retained-real-account-audio';
+  receipt.taskAdmissions=0;
+  persist();
+ }
  const installedPackageSha=packageName=>{
   const result=spawnSync(adb,['-s',serial,'shell','pm','path',packageName],{encoding:'utf8',env:childEnv,timeout:30000});
   if(result.status!==0)return null;
@@ -103,13 +131,34 @@ try{
  receipt.installedApkSha=installed();if(receipt.installedApkSha!==build.qualificationApkSha)throw Error('Wrong installed qualification APK.');
  // Preflight is setup evidence, not a product assertion. Only the owned AVD.
  run(['shell','pm','grant','co.fallsoft.pocket','android.permission.POST_NOTIFICATIONS']);
- if(voiceCase)run(['shell','pm','grant','co.fallsoft.pocket','android.permission.RECORD_AUDIO']);
+ if(voiceCase||liveAudioCase)run(['shell','pm','grant','co.fallsoft.pocket','android.permission.RECORD_AUDIO']);
  const permissions=run(['shell','dumpsys','package','co.fallsoft.pocket']);
- if(voiceCase&&!/android\.permission\.RECORD_AUDIO:\s*granted=true/.test(permissions))throw Error('Native setup failed: microphone permission unavailable.');
+ if((voiceCase||liveAudioCase)&&!/android\.permission\.RECORD_AUDIO:\s*granted=true/.test(permissions))throw Error('Native setup failed: microphone permission unavailable.');
  if(!/android\.permission\.POST_NOTIFICATIONS:\s*granted=true/.test(permissions))throw Error('Native setup failed: notification permission unavailable.');
- receipt.preflight={state:'complete',notificationPermissionGranted:true,fixtureReady:true,installedApkVerified:true,emulatorStartTicks:ticks};persist();
- const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaRunId','release'+manifest.versionCode+'_'+build.productionSourceSha.slice(0,8)+'_'+build.qualificationInputSha.slice(0,8),'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:180000,maxBuffer:4*1024*1024});
+ receipt.preflight={state:'complete',notificationPermissionGranted:true,fixtureReady:!liveAudioCase,serviceKind:liveAudioCase?'retained-real-account-audio':'synthetic',installedApkVerified:true,emulatorStartTicks:ticks};persist();
+ if(liveAudioCase){
+  // Package/permission broadcasts can start the retained application during
+  // setup. Install its isolated preferences only after that setup, with no
+  // live SharedPreferences instance able to restore the previous value.
+  run(['shell','am','force-stop','co.fallsoft.pocket']);
+  // Android loads the AtomicFile backup in preference to the primary XML.
+  // A force-stopped synthetic test can leave that backup behind. Retain its
+  // evidence, then remove only this owned QA backup before installing new input.
+  const backup=spawnSync(adb,['-s',serial,'exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml.bak'],{encoding:'utf8',env:childEnv,timeout:30000});
+  receipt.audioSetupBackupPresent=/^\s*<\?xml/.test(backup.stdout||'');
+  if(receipt.audioSetupBackupPresent){requireQaPreferences(backup.stdout);writeFileSync(join(directory,'audio-setup-backup.xml'),backup.stdout,{flag:'wx',mode:0o600});}
+  run(['shell','run-as','co.fallsoft.pocket','rm','-f','shared_prefs/pocket.xml.bak']);persist();
+  const setup=spawnSync(adb,['-s',serial,'shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'"],{input:liveAudioPreferences,encoding:'utf8',env:childEnv,timeout:30000});
+  if(setup.status!==0||run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml'])!==liveAudioPreferences)throw Error('Isolated audio preferences readback differs.');
+ }
+ const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaAvdName',avdName,...(parityCase?['-e','nativeParityFixture','loopback']:[]),'-e','qaRunId','release'+manifest.versionCode+'_'+build.productionSourceSha.slice(0,8)+'_'+build.qualificationInputSha.slice(0,8),'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:name==='co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage'?300000:180000,maxBuffer:4*1024*1024});
  const output=(r.stdout||'')+(r.stderr||'');writeFileSync(join(directory,log),output,{flag:'wx',mode:0o600});receipt.logSha=fileSha(join(directory,log));receipt.exitCode=r.status;
+ if(liveAudioCase){
+  for(const artifact of ['coordinator-native-audio-live.json','coordinator-native-audio-diagnostics.json']){
+   const result=spawnSync(adb,['-s',serial,'exec-out','run-as','co.fallsoft.pocket','cat','files/'+artifact],{encoding:'utf8',env:childEnv,timeout:30000});
+   if(result.status===0&&/^[\s]*[\[{]/.test(result.stdout)){JSON.parse(result.stdout);writeFileSync(join(directory,id+'-'+artifact),result.stdout,{flag:'wx',mode:0o600});}
+  }
+ }
  if(r.status!==0||!nativeOutputPassed(output)||!current()||installed()!==build.qualificationApkSha)throw Error('Native qualification failed; channel must not be published.');
  receipt.state='complete';receipt.finishedAt=Date.now();persist();console.log(JSON.stringify({state:'complete',case:name,elapsedMs:receipt.finishedAt-receipt.startedAt}));
 }catch(error){receipt.state='failed';receipt.finishedAt=Date.now();receipt.error=error.message;persist();throw error;}

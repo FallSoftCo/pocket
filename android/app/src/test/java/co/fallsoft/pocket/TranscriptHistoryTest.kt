@@ -43,6 +43,16 @@ class TranscriptHistoryTest {
         assertEquals(listOf("past","turn/header","turn/user","turn/answer","turn/end","new-turn/header"),result.map{it.id})
         assertEquals("new live",result.single{it.id=="turn/answer"}.text)
     }
+    @Test fun repeatedBridgePreservesRetainedOrderInsteadOfInventingAdjacency(){
+        val cached=listOf(Row("older"),Row("same"),Row("new/header"),Row("new/user"),Row("new/answer"))
+        val page=listOf(Row("older"))
+        fun bridge(rows:List<Row>)=mergeTranscriptPage(rows,page,false,{it.id},{it.version},"new/user")
+        assertEquals(cached,bridge(cached))
+        assertEquals(cached,bridge(bridge(cached)))
+        val delayed=listOf(Row("before"),Row("boundary"),Row("late"))
+        assertEquals(listOf("before","new","late","boundary"),
+            mergeTranscriptPage(delayed,listOf(Row("new"),Row("late")),true,{it.id},{it.version},"boundary").map{it.id})
+    }
     @Test fun unavailableBoundaryFallsBackToRetainingRowsWithoutInventingOrder(){
         val cached=listOf(Row("header"),Row("answer"))
         assertEquals(listOf("header","user","answer"),mergeTranscriptPage(cached,listOf(Row("header"),Row("user")),true,{it.id},{it.version},"unavailable").map{it.id})

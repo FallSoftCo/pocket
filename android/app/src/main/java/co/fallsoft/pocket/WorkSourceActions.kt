@@ -1,0 +1,108 @@
+package co.fallsoft.pocket
+
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+import androidx.compose.runtime.mutableStateMapOf
+
+internal data class WorkActionFeedback(val key:String,val source:String,val title:String,val operation:String,val pending:Boolean,val error:String?=null)
+
+/** A list row retains its original authority even after another source becomes selected.
+ * Validation is repeated at admission, never derived from the currently open conversation.
+ */
+internal fun validateWorkDestination(entry:WorkEntry<WorkCatalogPayload>,current:EnvironmentRequest?):EnvironmentRequest {
+    val captured=entry.value.destination
+    require(current?.matches(captured)==true){"This source pairing changed. Refresh the work list."}
+    require(entry.key.source.environment==captured.environment.id){"Work source is unconfirmed"}
+    val owner=backendOwner(captured.endpoint,captured.token)
+    when(entry.key.kind){
+        WorkKind.SESSION->{
+            require(entry.key.source.backend=="codex"&&entry.key.source.owner==owner&&entry.key.authority.isEmpty())
+            require(entry.key.id.isNotBlank()&&JSONObject(entry.value.body).s("id")==entry.key.id)
+        }
+        WorkKind.ROOM->{
+            val binding=JSONObject(requireNotNull(entry.value.binding))
+            require(entry.key.source.backend=="lax"&&entry.key.source.owner==owner+":"+binding.s("bindingId"))
+            require(binding.s("bindingId").matches(Regex("[0-9a-f]{64}")))
+            require(hollywoodUuid(entry.key.id)&&hollywoodUuid(entry.key.authority)&&entry.key.authority==binding.s("authorityId"))
+            val room=JSONObject(entry.value.body)
+            require(room.s("id")==entry.key.id&&room.s("authority")==entry.key.authority)
+        }
+    }
+    return captured
+}
+
+/** Reversible list metadata operations only. No turn/start, retry, steer or outbox replay. */
+internal class WorkSourceCommands(
+    private val capture:(String)->EnvironmentRequest?,
+    private val request:suspend (EnvironmentRequest,String,JSONObject)->JSONObject
+) {
+    suspend fun metadata(entry:WorkEntry<WorkCatalogPayload>,operation:String,body:JSONObject):JSONObject {
+        val destination=validateWorkDestination(entry,capture(entry.key.source.environment))
+        require(entry.key.kind==WorkKind.SESSION)
+        require(operation in setOf("rename","watch","unarchive","archive"))
+        // IDs are escaped as one path segment, never interpreted as a resource/query.
+        val id=java.net.URLEncoder.encode(entry.key.id,"UTF-8").replace("+","%20")
+        return request(destination,"/api/threads/$id/$operation",body)
+    }
+}
+
+internal object WorkSourceActions {
+    // Actions belong to their captured source, not whichever profile is selected
+    // when the response arrives. Feedback is outside the scrolling catalog.
+    val feedback=mutableStateMapOf<String,WorkActionFeedback>()
+    fun dismiss(key:String){if(feedback[key]?.pending==false)feedback.remove(key)}
+    private val commands=WorkSourceCommands(Pocket::captureEnvironment){destination,path,body->
+        Pocket.apiEnvironment(destination,path,body)
+    }
+    fun open(entry:WorkEntry<WorkCatalogPayload>,keyboard:Boolean){
+        try{
+            val destination=validateWorkDestination(entry,Pocket.captureEnvironment(entry.key.source.environment))
+            // Capture/voice owns its navigation admission. An idle voice
+            // presentation is not an ongoing recording and must not lock the list.
+            Pocket.activateEnvironment(destination.environment.id)
+            require(Pocket.captureEnvironment()?.matches(destination)==true){Pocket.error.ifBlank{"Could not select the original source"}}
+            when(entry.key.kind){
+                WorkKind.SESSION->{BackendNavigation.select("codex");Pocket.open(entry.key.id,keyboard)}
+                WorkKind.ROOM->HollywoodNotifications.openRoom(destination,JSONObject(entry.value.binding!!),entry.key.id,keyboard)
+            }
+        }catch(e:Exception){Pocket.error=e.message?:"Could not open the original work"}
+    }
+    private val changing=mutableSetOf<String>()
+    private fun change(entry:WorkEntry<WorkCatalogPayload>,operation:String,body:JSONObject,done:()->Unit={}){
+        val key=entry.key.saveableKey()+":"+operation
+        if(!changing.add(key))return
+        feedback[key]=WorkActionFeedback(key,entry.value.destination.environment.name,
+            JSONObject(entry.value.body).s("name").ifBlank{"Session"},operation,true)
+        Pocket.scope.launch{
+            try{
+                val result=commands.metadata(entry,operation,body)
+                if(operation=="rename"){
+                    val origin=entry.value.destination
+                    PocketNotificationTitles.rename(entry.key.id,body.getString("name"),
+                        result.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),
+                        origin.environment.local,result.optLong("revision"),origin.environment.id)
+                }
+                if(operation in setOf("archive","unarchive")){
+                    require(result.optBoolean("ok")){"Archive update was not acknowledged. Refresh before trying again."}
+                    if(Pocket.captureEnvironment(entry.value.destination.environment.id)?.matches(entry.value.destination)==true)
+                        CodexCatalog.archiveChanged(entry.value.destination,entry.key.id,operation=="archive")
+                }
+                // The HTTP receipt is authoritative. A later refresh failure cannot undo it.
+                done()
+                feedback.remove(key)
+                UnifiedWorkCatalog.refresh()
+                if(Pocket.captureEnvironment()?.matches(entry.value.destination)==true)Pocket.refresh()
+            }catch(e:CancellationException){feedback[key]?.let{feedback[key]=it.copy(pending=false,error="Operation interrupted. Refresh to check its result before trying again.")};throw e}
+            catch(e:Exception){feedback[key]?.let{feedback[key]=it.copy(pending=false,error=PocketNetwork.error(e))}}
+            finally{changing.remove(key)}
+        }
+    }
+    val actions=UnifiedWorkActions(
+        open=::open,
+        rename={entry,name,done->change(entry,"rename",JSONObject().put("name",name),done)},
+        watch={entry,enabled->change(entry,"watch",JSONObject().put("enabled",enabled))},
+        restore={entry->change(entry,"unarchive",JSONObject())},
+        archive={entry->change(entry,"archive",JSONObject())}
+    )
+}

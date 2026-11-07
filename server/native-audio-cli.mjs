@@ -33,7 +33,7 @@ async function run(){
    return {...saved,mediaCacheHit:true};
   }
   const free=statfsSync(cache);
-  if(free.bavail*free.bsize<80*1024**3+64*1024**2)throw Error('Audio worker storage reserve is unavailable; original recording retained');
+  if(free.bavail*free.bsize<8*1024**3+64*1024**2)throw Error('Audio worker storage reserve is unavailable; original recording retained');
  }
  const command=JSON.parse(process.env.POCKET_LAX_AUDIO_COMMAND);
  if(!Array.isArray(command)||command.some(x=>typeof x!=='string')||!command.length)throw Error('Invalid installed native command');

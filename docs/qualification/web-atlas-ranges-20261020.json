@@ -1,0 +1,106 @@
+{
+  "state": "deployed-private-live-qualified",
+  "date": "2026-10-20T06:04:20.587070+00:00",
+  "causeEvidence": {
+    "realHttp2HeaderWaitMs": 11334,
+    "bytesArrivingAheadOfNavigation": {
+      "nextcompAtlas": 330948,
+      "editnoteAtlas": 338920,
+      "catalog": 77335,
+      "staticCodex": 48646
+    },
+    "freshHttp2CurlFirstByteMs": 354,
+    "sameAppHttp1ReopenMs": 2174,
+    "noMotionDiagnostic": "Invalid comparison: Playwright request routing disabled browser caching; not used as proof against motion contention."
+  },
+  "change": "Reassemble immutable original atlas bytes from bounded32KiB HTTP range responses; two page jobs, one sequential range per job; validate representation, length and budget; preserve compressed/decoded LRU, static fallback and no repeated range fetches",
+  "wireTestsPassed": 15,
+  "controlledBrowser": {
+    "state": "complete",
+    "baseline": false,
+    "errors": [],
+    "peakAtlasRequests": 2,
+    "atlasBeforeCatalog": 0,
+    "catalogEncoding": "gzip",
+    "catalogPaintMs": 4272,
+    "clickToMessageMs": 288,
+    "motion": {
+      "draws": 2,
+      "ticks": 5,
+      "active": 7,
+      "decodedBytes": 2097152,
+      "compressedBytes": 330948,
+      "pending": 7,
+      "downloads": 2,
+      "queuedDownloads": 5,
+      "ready": true,
+      "decodeFailures": 0,
+      "scheduled": true
+    },
+    "catalogReads": 2
+  },
+  "motionBrowser": {
+    "passed": true,
+    "evidence": [
+      "actual modeled N and visible dock/message symbols advance rendered pixels on shared display clock; decoded cache <=32MiB",
+      "300 offscreen history icons do not join animation work; drawing leaves transcript geometry and typing intact",
+      "compressed source pages remain bounded and avoid repeated network reads across loops",
+      "live reduced-motion preference stops the shared clock and shows static fallback, then resumes",
+      "browser freeze/resume retains rendered symbols without replaying requests"
+    ]
+  },
+  "limits": [
+    "One actual private HTTP2 reopen measurement; not a universal latency guarantee.",
+    "Physical Android139 exact APK verified separately; no Android binary change in this web release."
+  ],
+  "initialLiveCandidate": {
+    "reopenToMessageMs": 2934,
+    "http2FirstByteMs": 983,
+    "state": "failed-animation-completion; rolled back",
+    "sameDraftAndCanonicalReadPassed": true,
+    "phoneAndBackendChanged": false
+  },
+  "transferBudgets": {
+    "chunkBytes": 32768,
+    "parallelPages": 2,
+    "perRequestStallMs": 10000,
+    "overallDeadlineMs": 60000,
+    "maxPageBytes": 2097152,
+    "reason": "Do not abandon healthy progress because low-priority paced ranges span more than the previous whole-file deadline; individual stalled responses and total work remain bounded"
+  },
+  "revisedBrowserCases": {
+    "state": "passed",
+    "cases": [
+      "web-symbol-motion-check",
+      "web-atlas-upgrade-check"
+    ],
+    "startedAt": 1792476969.1022718,
+    "finishedAt": 1792476982.914017
+  },
+  "warmCacheUpgrade": {
+    "state": "complete",
+    "errors": [],
+    "humanSubmissions": 0,
+    "warmCache": {
+      "originalBytes": 330948,
+      "reconstructedBytes": 330948,
+      "byteExact": true,
+      "ranges": 11
+    }
+  },
+  "finalLive": {
+    "source": "a2ba177",
+    "protocol": "h2",
+    "reopenToMessageMs": 3058,
+    "documentFirstByteMs": 516.6,
+    "maxAtlasResponseBytes": 32768,
+    "positiveAnimation": true,
+    "decodeFailures": 0,
+    "canonicalIdentityAndDraftRetained": true,
+    "duplicateRows": 0,
+    "humanSubmissions": 0,
+    "ownedQaDeviceRevoked": true,
+    "otherPrivateRoutesPreserved": true,
+    "phoneOrBackendRestarted": false
+  }
+}

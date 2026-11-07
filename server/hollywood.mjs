@@ -1,6 +1,8 @@
+import {contextReviewPath,contextReviewRequest,requireReviewDevice,verifyReviewReply} from './hollywood-context-review.mjs';
 import {constants,closeSync,existsSync,fstatSync,openSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
+import {GATEWAY_ROOM_CONTROL} from './coordinator-room-control.mjs';
 
 const fail=(status,message,code='HOLLYWOOD_REQUEST_FAILED')=>Object.assign(Error(message),{status,code});
 const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);
@@ -87,7 +89,7 @@ export class HollywoodClient {
 }
 
 export class HollywoodGateway {
-  constructor(config,options={}){this.config=config;this.options=options;this.clients=new Map();}
+  constructor(config,options={}){this.config=config;this.options={contextReviewEnabled:process.env.POCKET_CONTEXT_REVIEW==='1',...options};this.clients=new Map();}
   client(device){
     if(!this.config||this.config.invalid)throw fail(503,'This environment needs a valid Hollywood installation binding.');
     const config=this.config.devices.get(device)||this.config.defaultBinding;
@@ -96,7 +98,7 @@ export class HollywoodGateway {
     return this.clients.get(config.bindingId);
   }
   async status(device){
-    try{const client=this.client(device);const identity=await client.verify();return {id:'lax',name:'LAX',configured:true,available:true,api:3,modes:['rooms','direct'],...identity};}
+    try{const client=this.client(device);const identity=await client.verify();return {id:'lax',name:'LAX',configured:true,available:true,api:3,modes:['rooms','direct'],...(this.options.contextReviewEnabled?{contextReview:true}:{}),...identity};}
     catch(error){return {id:'lax',name:'LAX',configured:!!this.config&&!this.config.invalid,available:false,api:3,error:error.code||'HOLLYWOOD_UNAVAILABLE'};}
   }
 }
@@ -106,8 +108,8 @@ export function hollywoodRequest(method,tail,query,body){
   const p=tail.split('/').filter(Boolean);
   let allowed=[];
   let uuidCursor=false;
-  if(method==='GET'&&p.length===1&&p[0]==='inbox')allowed=['after','limit'];
-  else if(method==='GET'&&p.length===2&&p[0]==='inbox'&&p[1]==='pending')allowed=['after','limit'];
+  if(method==='GET'&&p.length===1&&p[0]==='inbox')allowed=['after','limit','nodeId'];
+  else if(method==='GET'&&p.length===2&&p[0]==='inbox'&&p[1]==='pending')allowed=['after','limit','nodeId'];
   else if(method==='GET'&&p.length===3&&p[0]==='inbox'&&p[1]==='events'&&uuid(p[2]))allowed=[];
   else if(method==='GET'&&p.length===1&&p[0]==='rooms')allowed=[];
   else if(method==='GET'&&p.length===2&&p[0]==='rooms'&&uuid(p[1]))allowed=[];
@@ -118,16 +120,26 @@ export function hollywoodRequest(method,tail,query,body){
   else if(method==='GET'&&p.length===4&&p[0]==='attention'&&uuid(p[1])&&p[2]==='commands'&&operation(p[3]))allowed=[];
   else if(method==='GET'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&['history','attention'].includes(p[2]))allowed=p[2]==='history'?['after','before','limit','view']:['after','limit'];
   else if(method==='GET'&&p.length===2&&((p[0]==='commands'&&operation(p[1]))||(['attention','deliveries','native-controls'].includes(p[0])&&uuid(p[1]))))allowed=[];
-  else if(method==='POST'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&p[2]==='messages'){
+  else if(method==='POST'&&p.length===1&&p[0]==='rooms'){
+    if(!fields(body,['operationId','id','name','purpose','ownerId','sourceRoomId'])||!operation(body.operationId)||!uuid(body.id)||!uuid(body.ownerId)||body.sourceRoomId!=null&&!uuid(body.sourceRoomId)||
+      !['name','purpose'].every(key=>typeof body[key]==='string'&&body[key].trim()&&body[key].length<=(key==='name'?200:4000)))
+      throw fail(400,'A room needs its original identity, name, purpose and existing agent owner.','HOLLYWOOD_REQUEST_REJECTED');
+  }else if(method==='POST'&&p.length===3&&p[0]==='rooms'&&uuid(p[1])&&p[2]==='messages'){
     if(!fields(body,['operationId','kind','body','audience','recipientId','sourceEventId'])||!operation(body.operationId)||
       !['message','request'].includes(body.kind)||typeof body.body!=='string'||!body.body.trim()||Buffer.byteLength(body.body)>6000||
       !['room','direct'].includes(body.audience)||body.recipientId!=null&&!uuid(body.recipientId)||body.sourceEventId!=null&&!uuid(body.sourceEventId)||
       body.audience==='direct'&&!body.recipientId)throw fail(400,'Keep an exact room, audience and stable message identity.','HOLLYWOOD_REQUEST_REJECTED');
   }else if(method==='POST'&&p.length===3&&p[0]==='attention'&&uuid(p[1])&&p[2]==='response'){
-    if(!fields(body,['operationId','scope','response'])||!operation(body.operationId)||!fields(body.scope,['authorityId','attentionId','deliveryId','agentId','roomId','hostId','generation','nativeThread','nativeTurn','requestDigest'])||
-      body.scope.attentionId!==p[1]||!['authorityId','attentionId','deliveryId','agentId','roomId','hostId'].every(key=>uuid(body.scope[key]))||
-      !Number.isSafeInteger(body.scope.generation)||body.scope.generation<1||!['nativeThread','nativeTurn'].every(key=>typeof body.scope[key]==='string'&&body.scope[key].length>0&&body.scope[key].length<=128)||
-      !/^[0-9a-f]{64}$/.test(body.scope.requestDigest))throw fail(400,'Answer the exact captured Hollywood attention.','HOLLYWOOD_REQUEST_REJECTED');
+    const scope=body?.scope;
+    const common=['authorityId','attentionId','agentId','roomId','nativeThread','nativeTurn','requestDigest'];
+    const conversation=scope?.conversationVersion===1;
+    const keys=conversation?[...common,'conversationVersion','sourceEventId']:[...common,'deliveryId','hostId','generation'];
+    const ids=conversation?['authorityId','attentionId','agentId','roomId','sourceEventId']:['authorityId','attentionId','agentId','roomId','deliveryId','hostId'];
+    if(!fields(body,['operationId','scope','response'])||!operation(body.operationId)||!fields(scope,keys)||Object.keys(scope).length!==keys.length||
+      scope.attentionId!==p[1]||!ids.every(key=>uuid(scope[key]))||
+      !conversation&&(!Number.isSafeInteger(scope.generation)||scope.generation<1)||
+      !['nativeThread','nativeTurn'].every(key=>typeof scope[key]==='string'&&scope[key].length>0&&scope[key].length<=128)||
+      !/^[0-9a-f]{64}$/.test(scope.requestDigest))throw fail(400,'Answer the exact captured Hollywood attention.','HOLLYWOOD_REQUEST_REJECTED');
     const response=body.response;
     const approval=fields(response,['decision'])&&['accept','decline'].includes(response.decision);
     const question=fields(response,['answers'])&&response.answers&&typeof response.answers==='object'&&!Array.isArray(response.answers)&&Object.values(response.answers).every(answer=>fields(answer,['answers'])&&Array.isArray(answer.answers)&&answer.answers.length>0&&answer.answers.length<=12&&answer.answers.every(text=>typeof text==='string'));
@@ -142,7 +154,7 @@ export function hollywoodRequest(method,tail,query,body){
   }else if(method==='POST'&&p.length===3&&p[0]==='deliveries'&&uuid(p[1])&&p[2]==='cancel'){
     if(!fields(body,[])||Object.keys(body).length)throw fail(400,'Cancellation uses the exact original delivery.','HOLLYWOOD_REQUEST_REJECTED');
   }else throw fail(404,'Unknown Hollywood human operation.','HOLLYWOOD_REQUEST_REJECTED');
-  if(Object.keys(query).some(key=>!allowed.includes(key))||Object.entries(query).some(([key,value])=>key==='view'?!['all','conversation','activity'].includes(value):key==='after'&&uuidCursor?!uuid(value):typeof value!=='string'||!/^[0-9]{1,16}$/.test(value)||!Number.isSafeInteger(Number(value))))throw fail(400,'Invalid Hollywood query.','HOLLYWOOD_REQUEST_REJECTED');
+  if(Object.keys(query).some(key=>!allowed.includes(key))||Object.entries(query).some(([key,value])=>key==='nodeId'?!uuid(value):key==='view'?!['all','conversation','activity','coordination'].includes(value):key==='after'&&uuidCursor?!uuid(value):typeof value!=='string'||!/^[0-9]{1,16}$/.test(value)||!Number.isSafeInteger(Number(value))))throw fail(400,'Invalid Hollywood query.','HOLLYWOOD_REQUEST_REJECTED');
   if(query.before!==undefined&&query.after!==undefined)throw fail(400,'Choose one history direction.','HOLLYWOOD_REQUEST_REJECTED');
   if(query.limit!==undefined&&(Number(query.limit)<1||Number(query.limit)>100))throw fail(400,'Invalid room page size.','HOLLYWOOD_REQUEST_REJECTED');
   if(body!==undefined&&Buffer.byteLength(JSON.stringify(body))>14000)throw fail(400,'Hollywood operation exceeds the limit.','HOLLYWOOD_REQUEST_REJECTED');
@@ -152,15 +164,21 @@ export function hollywoodRequest(method,tail,query,body){
 /** Mount only after NextComp requireAuth. Registration is private local administration. */
 export function mountHollywood(app,{dir,gateway=new HollywoodGateway(loadHollywood(dir))}){
   app.get('/api/hollywood/v3/identity',async(req,res,next)=>{
-    try{const client=gateway.client(req.device.id);res.json(await client.verify());}catch(error){next(error);}
+    try{const client=gateway.client(req.device.id);res.json({...await client.verify(),roomControl:{protocol:GATEWAY_ROOM_CONTROL,createRoom:true},...(gateway.options.contextReviewEnabled?{contextReview:true}:{})});}catch(error){next(error);}
   });
   app.use('/api/hollywood/v3',async(req,res,next)=>{
     try{
+      const review=contextReviewPath(req.path);
+      if(review){
+        if(!gateway.options.contextReviewEnabled)throw fail(404,'Context review is not enabled in this environment.');
+        requireReviewDevice(req);
+      }
       const client=gateway.client(req.device.id);
       if(req.get('X-Hollywood-Binding')!==client.config.bindingId)throw fail(409,'This operation belongs to another saved environment or human binding.','HOLLYWOOD_BINDING_MISMATCH');
-      const operation=hollywoodRequest(req.method,req.path,req.query,req.body);
+      const operation=review?contextReviewRequest(req.method,req.path,req.query,req.body):hollywoodRequest(req.method,req.path,req.query,req.body);
       if(operation.body?.scope&&operation.body.scope.authorityId!==client.config.authorityId)throw fail(409,'Attention belongs to another enterprise.','HOLLYWOOD_BINDING_MISMATCH');
       const value=await client.call(operation.path,operation);
+      if(review)verifyReviewReply(operation.path,value,client);
       res.json({...value,binding:client.envelope()});
     }catch(error){next(error);}
   });

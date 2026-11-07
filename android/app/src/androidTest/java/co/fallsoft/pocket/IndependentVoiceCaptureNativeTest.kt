@@ -14,7 +14,7 @@ import org.junit.runner.RunWith
 class IndependentVoiceCaptureNativeTest {
  @Test fun captureStartsAndStopsIndependentlyOfPresentationState() {
   val i=InstrumentationRegistry.getInstrumentation();val device=UiDevice.getInstance(i);val c=i.targetContext
-  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  requireOwnedNativeTarget(device)
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
   fun await(label:String,predicate:()->Boolean){val end=SystemClock.elapsedRealtime()+12000;while(SystemClock.elapsedRealtime()<end){if(predicate())return;Thread.sleep(50)};assertTrue(label+"; active="+PocketVoice.active+"; service="+(PocketVoice.service!=null)+"; state="+PocketVoice.state+"; problem="+PocketVoice.problem,predicate())}
   c.getSharedPreferences("pocket",0).edit().clear()
@@ -50,6 +50,13 @@ class IndependentVoiceCaptureNativeTest {
    i.runOnMainSync { PocketVoice.stop() }
    await("Cancelled microphone released"){!PocketVoice.captureBusy&&PocketVoice.service==null}
    assertNotNull(cancelledKey)
+   // Android service destruction and the NonCancellable IO journal commit are
+   // separate boundaries. Observe the durable result, not service visibility.
+   await("Cancelled recording durably fenced"){
+    VoiceTurnStore(c,DurableVoiceWork.JOURNAL).use { store ->
+     store.get(cancelledKey!!)?.let{it.capture==VoiceTurnStore.Capture.INTERRUPTED&&it.delivery==VoiceTurnStore.Delivery.CANCELLED}==true
+    }
+   }
    VoiceTurnStore(c,DurableVoiceWork.JOURNAL).use { store ->
     val cancelled=store.get(cancelledKey!!)!!
     assertEquals(VoiceTurnStore.Capture.INTERRUPTED,cancelled.capture)

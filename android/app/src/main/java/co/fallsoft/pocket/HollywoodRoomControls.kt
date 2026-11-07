@@ -9,11 +9,10 @@ import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 
 /** Current room work is a separate projection from history and transport health. */
-internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<JSONObject>,val questions:List<JSONObject>) {
+internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<JSONObject>,val questions:List<JSONObject>,val nativePresent:Boolean=false,val native:HollywoodRoomActivity?=null,val setupLabel:String?=null,val setupAgents:List<JSONObject> = emptyList()) {
+    val currentDeliveries get()=if(nativePresent)emptyList() else deliveries
     private fun count(state:String)=deliveries.count{it.s("state")==state}
-    val label get()=when {
-        !verified->"Status unavailable"
-        questions.isNotEmpty()->"Needs you"
+    private val legacyLabel get()=when {
         deliveries.any{it.s("state")=="running"&&!it.optBoolean("cancellation_requested")}->"Running"
         count("claimed")>0->"Starting"
         count("pending")>0->"Queued"
@@ -22,8 +21,21 @@ internal data class HollywoodRoomWork(val verified:Boolean,val deliveries:List<J
         count("unknown")>0->"Outcome unknown"
         else->"Idle"
     }
+    val label get()=when {
+        !verified->"Status unavailable"
+        questions.isNotEmpty()->if(questions.all{it.optJSONObject("attention")?.s("method")?.endsWith("requestApproval")==true})"Approval needed" else "Reply needed"
+        nativePresent&&native?.needsHuman==true->native.summary
+        nativePresent&&native?.executing==true->"Running"
+        !nativePresent&&legacyLabel!="Idle"->legacyLabel
+        setupLabel!=null->setupLabel
+        nativePresent&&native==null->"Status unavailable"
+        nativePresent&&native?.sharedBusyAgents?.let{it>0}==true->native.summary
+        nativePresent&&native?.uncertain==true->native.summary
+        nativePresent->"Idle"
+        else->legacyLabel
+    }
     val spinning get()=label=="Running"
-    val icon get()=when(label){"Running"->"Codex";"Queued","Starting"->"MoreHoriz";"Idle"->"Pause";"Stop requested"->"Stop";else->"ErrorOutline"}
+    val icon get()=if(label==setupLabel&&setupLabel!="Agent setup blocked")"MoreHoriz" else when(label){"Running"->"Codex";"Queued","Starting","Shared context busy"->"MoreHoriz";"Idle"->"Pause";"Stop requested"->"Stop";else->"ErrorOutline"}
 }
 
 internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSONObject>,accepted:List<JSONObject> = emptyList()):HollywoodRoomWork {
@@ -33,17 +45,36 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
     val known=setOf("pending","claimed","running","cancel_requested","blocked","unknown","completed","failed","cancelled")
     val verified=error.isBlank()&&hollywoodUuid(detail.optJSONObject("room")?.s("id").orEmpty())&&raw!=null&&raw.length()==canonical.size&&deliveries.all{it.s("state") in known}
     val ordered=deliveries.sortedWith(compareBy<JSONObject>{when(it.s("state")){"running"->0;"claimed"->1;"pending"->2;else->3}}.thenBy{it.s("id")})
-    val questions=attention.filter{it.optJSONObject("attention")?.s("state")=="pending"&&it.s("deliveryState") in listOf("claimed","running")}
-    return HollywoodRoomWork(verified,ordered,questions)
+    val questions=attention.filter{hollywoodAttentionCanRespond(it)}
+    val nativePresent=HollywoodRoomActivity.usesNative(detail)
+    val setupLabel=roomOriginPendingLabel(detail)
+    val setupAgents=if(!verified||setupLabel=="Room agent status unavailable")emptyList() else detail.optJSONObject("roomAgents")?.optJSONArray("agents")?.objects().orEmpty()
+    return HollywoodRoomWork(verified,ordered,questions,nativePresent,if(nativePresent)HollywoodRoomActivity.read(detail,verified)else null,setupLabel,setupAgents)
 }
 
 /** Work stays closest to the anchor; keyed rows cannot retarget a press during live updates. */
 @Composable internal fun RoomWorkControls(work:HollywoodRoomWork,names:Map<String,String>,client:HollywoodClient,room:String,
     stopping:Set<String>,detailError:String,attentionError:String,onAttention:(JSONObject)->Unit,onGuidance:(JSONObject)->Unit,onStop:(JSONObject,Boolean)->Unit){
     SavedVoiceRecordingControls()
-    BilingualLabel(work.label,centered=false,color=if(work.label in listOf("Needs you","Outcome unknown","Blocked"))Coral else Muted)
+    BilingualLabel(work.label,centered=false,color=if(work.label in listOf("Needs you","Approval needed","Reply needed","Outcome unknown","Blocked"))Coral else Muted)
+    val setupExpanded=androidx.compose.runtime.remember(client.bindingId,room){androidx.compose.runtime.mutableStateOf(false)}
+    if(work.setupLabel!=null&&work.setupAgents.isNotEmpty())TextButton({setupExpanded.value=!setupExpanded.value},Modifier.testTag("native-room-environments")){
+        BilingualLabel("Environments",centered=false);Text(" · ${work.setupAgents.count{it.optBoolean("ready")}}/${work.setupAgents.size}")
+    }
+    if(work.setupLabel!=null&&setupExpanded.value)work.setupAgents.forEach{agent->
+        Column(Modifier.fillMaxWidth().padding(vertical=6.dp)){
+            Text(agent.s("host_name").ifBlank{"Environment"},color=Paper,style=MaterialTheme.typography.bodyMedium)
+            BilingualLabel(if(agent.optBoolean("ready"))"Ready" else when(agent.s("readiness",agent.s("state"))){
+                "blocked"->"Blocked";"unknown"->"Status unavailable";else->"Preparing"
+            },centered=false,color=if(agent.s("readiness")=="blocked")Coral else Paper)
+            if(!agent.optBoolean("ready"))agent.s("note").takeIf{it.isNotBlank()}?.let{note->
+                ImmersionText("room-setup:"+client.bindingId+":"+room+":"+agent.s("agent"),note,color=Muted,maxLines=3)
+            }
+        }
+    }
     if(detailError.isNotBlank())Text(detailError.take(180),color=Coral,maxLines=3)
     if(attentionError.isNotBlank())BilingualLabel("Questions could not refresh",centered=false,color=Coral)
+    if(work.nativePresent&&work.deliveries.isNotEmpty())BilingualLabel("Earlier work",centered=false,color=Muted)
     val shown=work.deliveries.map{it.s("id")}.toSet()
     client.unresolvedStops(room).filter{it.getJSONObject("scope").s("deliveryId") !in shown}.forEach{saved->
         val scope=saved.getJSONObject("scope");val id=scope.s("deliveryId")
@@ -78,7 +109,12 @@ internal fun hollywoodRoomWork(detail:JSONObject,error:String,attention:List<JSO
         val id=question.getJSONObject("attention").s("id")
         androidx.compose.runtime.key("question:"+id){
             TextButton({onAttention(question)},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-room-question:"+id)){
-                BilingualLabel("Needs you",centered=false)
+                val request=question.optJSONObject("attention")?.optJSONObject("request")
+                Column(Modifier.fillMaxWidth()) {
+                    BilingualLabel(if(question.optJSONObject("attention")?.s("method")?.endsWith("requestApproval")==true)"Approval needed" else "Reply needed",centered=false)
+                    val context=request?.s("reason").orEmpty().ifBlank{request?.optJSONArray("questions")?.optJSONObject(0)?.s("question").orEmpty()}
+                    if(context.isNotBlank())Text(context,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,color=Paper)
+                }
             }
         }
     }

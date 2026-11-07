@@ -94,7 +94,7 @@ class MainActivity:ComponentActivity(){
         if(Pocket.token.isNotBlank()){Pocket.refresh()}
         setContent{MaterialTheme(shapes=Shapes(extraSmall=RoundedCornerShape(2.dp),small=RoundedCornerShape(4.dp),medium=RoundedCornerShape(6.dp),large=RoundedCornerShape(8.dp),extraLarge=RoundedCornerShape(10.dp)),typography=Typography(titleLarge=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=20.sp,fontWeight=FontWeight.Medium),titleMedium=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=16.sp,fontWeight=FontWeight.Medium),bodyLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,lineHeight=22.sp,fontFamily=AppFont),bodyMedium=androidx.compose.ui.text.TextStyle(fontSize=14.sp,lineHeight=20.sp,fontFamily=AppFont),labelLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont)),colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,background=Ink,surface=Panel,onSurface=Paper,onBackground=Paper,outline=Muted,secondary=Coral,onSecondary=Ink,surfaceVariant=Panel,onSurfaceVariant=Paper,surfaceContainer=Panel,surfaceContainerHigh=Panel,surfaceContainerHighest=Panel,surfaceContainerLow=Panel,surfaceContainerLowest=Ink,secondaryContainer=Panel,onSecondaryContainer=Paper,primaryContainer=Panel,onPrimaryContainer=Paper,tertiary=NextCerise,onTertiary=Ink,tertiaryContainer=Panel,onTertiaryContainer=Paper)){
             CompositionLocalProvider(LocalImmersionMotionState provides rememberImmersionMotionEnvironment(),LocalImmersionTransitionAnimated provides motionAllowed()){
-            ImmersionReadingWaveHost{Surface(Modifier.fillMaxSize(),color=Ink){Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
+            ImmersionReadingWaveHost{NextCompDepthRoot{Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
                 Box(Modifier.weight(1f)){if(Pocket.token.isBlank()||Pocket.pairingMode)PairScreen(initialServer,initialCode)else BackendApp()}
             }}}}
         }}
@@ -103,7 +103,7 @@ class MainActivity:ComponentActivity(){
     fun beginPairing(server:String=""){initialServer=server;initialCode="";Pocket.pairingMode=true}
     override fun onNewIntent(intent:Intent){super.onNewIntent(intent);readIntent(intent)}
     private fun readIntent(i:Intent){
-        i.getStringExtra("hollywoodNotification")?.let{key->i.removeExtra("hollywoodNotification");HollywoodNotifications.openIntent(key);return}
+        i.getStringExtra("hollywoodNotification")?.let{key->i.removeExtra("hollywoodNotification");Pocket.error="This notification belongs to retired room work";return}
         val requestedEnvironment=i.getStringExtra("environment")
         if(requestedEnvironment!=null&&Pocket.captureEnvironment(requestedEnvironment)==null){Pocket.error="That environment is no longer paired";return}
         if(i.getBooleanExtra("appUpdate",false)){i.removeExtra("appUpdate");if(!PocketVoice.active){Pocket.closeTask();Pocket.newTask=false;Pocket.tab=1};PocketUpdates.installOrCheck(this)}
@@ -223,8 +223,8 @@ class MainActivity:ComponentActivity(){
 
     BackHandler(Pocket.tab==1&&Pocket.selected==null&&!Pocket.newTask){Pocket.tab=0}
     var workToolsOpen by remember{mutableStateOf(false)}
-    val workListState=key(Pocket.local,Pocket.token,Pocket.showArchived){rememberLazyListState()}
-    val workCatalogView=remember(Pocket.environmentId,Pocket.token){SessionCatalogViewState(Pocket.showArchived)}
+    val workListState=rememberLazyListState()
+    val workCatalogView=remember{SessionCatalogViewState(Pocket.showArchived)}
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
     Column(Modifier.fillMaxSize()){
         ConnectionNotice()
@@ -236,7 +236,6 @@ class MainActivity:ComponentActivity(){
             AnimatedContent(targetState=Pocket.tab,modifier=Modifier.fillMaxSize(),label="tab",transitionSpec={
                 (fadeIn(tween(180))+slideInHorizontally(tween(220)){it/12}) togetherWith (fadeOut(tween(100))+slideOutHorizontally(tween(180)){-it/12}) using SizeTransform(clip=false)
             }){tab->when(tab){0->WorkScreen(workToolsOpen,{workToolsOpen=it},workListState,workCatalogView);else->SettingsScreen()}}
-            if(Pocket.tab==0&&!workToolsOpen)WorkCatalogCapture(Modifier.align(Alignment.BottomEnd).padding(end=16.dp,bottom=8.dp).testTag("session-catalog-microphone"))
             }
             ConversationSpeechDock()
             InlineCaptureStatus()
@@ -248,11 +247,8 @@ class MainActivity:ComponentActivity(){
 @Composable fun PocketDock(onFind:()->Unit,onTab:()->Unit,listState:androidx.compose.foundation.lazy.LazyListState?=null){
     WorkCatalogDock{
         IconButton({Pocket.tab=0;onFind()},modifier=Modifier.size(48.dp)){SymbolIcon("Search","Find",Modifier.size(32.dp),tint=Mint)}
-        if(Pocket.tab==0&&listState!=null)ReaderPagingButtons(listState,hasEarlier=Pocket.sessionCursor!=null,onPrepare={up->
-            if(up&&!listState.canScrollForward&&Pocket.sessionCursor!=null&&!Pocket.loadingSessions){
-                Pocket.moreSessions()
-                snapshotFlow{Pocket.loadingSessions}.first{!it}
-            }
+        if(Pocket.tab==0&&listState!=null)ReaderPagingButtons(listState,hasEarlier=UnifiedWorkCatalog.hasEarlier,onPrepare={up->
+            if(up&&!listState.canScrollForward&&UnifiedWorkCatalog.hasEarlier)UnifiedWorkCatalog.more()
         })
         InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
         UsageDock(Modifier.width(compactUsageDockWidth()),compact=true)
@@ -290,6 +286,10 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun SpeechSourceLabel(){
+    if(PocketSpeech.displayedOwner!=null){
+        WorkflowText(PocketSpeech.title,color=Paper,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        return
+    }
     var sourceOpen by remember{mutableStateOf(false)}
     Box{
         TextButton({sourceOpen=true},contentPadding=PaddingValues(horizontal=0.dp),modifier=Modifier.heightIn(min=48.dp)){
@@ -297,7 +297,6 @@ class MainActivity:ComponentActivity(){
         }
         DropdownMenu(expanded=sourceOpen,onDismissRequest={sourceOpen=false},properties=androidx.compose.ui.window.PopupProperties(focusable=false)){
             PocketSpeech.sources.forEach{(source,details)->DropdownMenuItem(text={Text("${if(source==PocketSpeech.activeSource)"• " else ""}${details.first} · ${details.second}")},onClick={sourceOpen=false;PocketSpeech.selectSource(source)})}
-            DropdownMenuItem(text={BilingualLabel("Clear all saved speech",centered=false)},onClick={sourceOpen=false;PocketSpeech.clearAll()})
         }
     }
 }
@@ -346,93 +345,18 @@ class MainActivity:ComponentActivity(){
 class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntStateOf(if(archived)3 else 0);val query=mutableStateOf("")}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={},listState:androidx.compose.foundation.lazy.LazyListState=rememberLazyListState(),view:SessionCatalogViewState=remember{SessionCatalogViewState(Pocket.showArchived)}){
-    DisposableEffect(Pocket.environmentId,Pocket.token,Pocket.showArchived){
-        val environment=Pocket.environmentId;val archived=Pocket.showArchived
-        CodexCatalog.listVisibility(environment,archived,true)
-        onDispose{CodexCatalog.listVisibility(environment,archived,false)}
-    }
-    var filter by view.filter;var query by view.query
-    var touching by remember{mutableStateOf(false)}
-    var listClock by remember{mutableLongStateOf(System.currentTimeMillis())}
-    var displayed by remember(Pocket.environmentId,Pocket.token,Pocket.showArchived){mutableStateOf(Pocket.tasks)}
-    val orderKey=Pocket.key(if(Pocket.showArchived)"archivedWorkActivityOrderV2" else "workActivityOrderV2")
-    var order by remember(Pocket.environmentId,Pocket.token,Pocket.showArchived){mutableStateOf((try{org.json.JSONArray(Pocket.prefs.getString(orderKey,"[]")).let{a->(0 until a.length()).map{a.getString(it)}}}catch(_:Exception){emptyList()}).ifEmpty{Pocket.tasks.sortedByDescending{taskWorkTime(it)}.map{it.id}})}
-    LaunchedEffect(Pocket.environmentId,Pocket.token,Pocket.showArchived){
-        val pacing=SessionListPacing();var observed=Pocket.tasks.associateBy{it.id}
-        while(true){
-            val latest=Pocket.tasks;val now=android.os.SystemClock.elapsedRealtime()
-            if(System.currentTimeMillis()-listClock>=5_000)listClock=System.currentTimeMillis()
-            // Initial membership comes from an authenticated catalog read, not
-            // Codex runtime health. An offline worker must not hide readable work.
-            if(displayed.isEmpty()&&latest.isNotEmpty()&&Pocket.catalogLoad==CatalogLoadState.Ready)displayed=latest
-            val changed=latest.count{observed[it.id]!=it};observed=latest.associateBy{it.id}
-            pacing.record(now,changed)
-            val active=latest.count{it.status in listOf("active","pending")}
-            val interacting=listState.isScrollInProgress||touching||toolsOpen
-            val pacedOrderDue=pacing.orderDue(now,active,interacting)
-            val explicitBoundary=sessionReconcileAllowed(Pocket.sessionOrderRequest!=Pocket.sessionOrderHandled,Pocket.sessionSnapshotComplete,Pocket.connected,Pocket.codexOnline,pacing.interactionSettled(now,interacting))
-            val orderDue=(pacedOrderDue&&Pocket.sessionSnapshotComplete&&Pocket.connected&&Pocket.codexOnline)||explicitBoundary
-            if(pacing.contentDue(now,active)){
-                // Deliver live text/status in place; membership changes wait for a safe moment.
-                displayed=sessionContentInPlace(displayed,latest){it.id};pacing.contentDelivered(now)
-            }
-            // Authenticated complete catalog membership is independent of worker health.
-            // Add/remove identities at a settled reading boundary; preserve existing
-            // relative order and LazyColumn keys instead of promoting stale activity.
-            if(Pocket.sessionSnapshotComplete&&Pocket.connected&&Pocket.catalogLoad==CatalogLoadState.Ready&&pacing.interactionSettled(now,interacting)&&displayed.map{it.id}.toSet()!=latest.map{it.id}.toSet()){
-                val surviving=latest.map{it.id}.toSet()
-                val existing=order.filter{it in surviving}
-                val additions=latest.filter{it.id !in existing}.sortedByDescending{taskWorkTime(it)}.map{it.id}
-                order=additions+existing
-                displayed=latest
-            }
-            if(orderDue){
-                // Safe bounded delivery promotes genuine activity; live peers remain tied.
-                val families=sessionGroups(latest).associateBy{it.task.id}
-                val entries=latest.map{task->val children=families[task.id]?.children.orEmpty();SessionRank(task.id,maxOf(taskWorkTime(task),children.maxOfOrNull{taskWorkTime(it)}?:0),task.status in listOf("active","pending")||children.any{it.status=="active"})}
-                val next=if(Pocket.showArchived)stableSessionOrder(order,entries,System.currentTimeMillis()) else liveSessionOrder(order,entries,System.currentTimeMillis(),explicitBoundary)
-                if(next!=order)order=next
-                val encoded=org.json.JSONArray(next).toString()
-                if(Pocket.prefs.getString(orderKey,null)!=encoded)Pocket.prefs.edit().putString(orderKey,encoded).apply()
-                displayed=latest
-                Pocket.finishSessionOrderRequest(Pocket.sessionOrderRequest,latest.map{it.id}.toSet())
-                if(explicitBoundary)listState.scrollToItem(0)
-                pacing.orderDelivered(now)
-            }
-            delay(100)
-        }
-    }
-    val rank=order.withIndex().associate{it.value to it.index}
-    val showCoordinator=filter!=3&&(filter!=1||PocketCoordinator.busy)&&(query.isBlank()||"Coordinator".contains(query,true)||PocketCoordinator.preview.contains(query,true))
-    LaunchedEffect(query,Pocket.local,Pocket.showArchived){if(query.isNotBlank()){delay(400);Pocket.moreSessions(query)}}
-    val groups=sessionGroups(displayed.sortedBy{rank[it.id]?:Int.MAX_VALUE})
-    fun matches(t:Task)=query.isBlank()||t.title.contains(query,true)||t.cwd.contains(query,true)||t.preview.contains(query,true)||t.catalogContext.contains(query,true)||t.agentNickname.contains(query,true)
-    val shown=groups.filter{filter==4||query.isNotBlank()||meaningfulCatalogTask(it.task)||it.children.any(::meaningfulCatalogTask)}.sortedBy{rank[it.task.id]?:Int.MAX_VALUE}.filter{group->val t=group.task;(filter!=1||t.status in listOf("active","pending")||group.children.any{it.status=="active"})&&(filter!=2||t.watched||group.children.any{it.watched})&&(matches(t)||group.children.any(::matches))}
-    val orphans=if(filter==4||query.isNotBlank())ungroupedChildren(displayed).filter(::matches).sortedByDescending{taskWorkTime(it)} else emptyList()
-    Column(Modifier.fillMaxSize()){
-    WorkCatalogList(Modifier.weight(1f).pointerInput(Unit){
-        awaitPointerEventScope{try{while(true){touching=awaitPointerEvent(PointerEventPass.Initial).changes.any{it.pressed}}}finally{touching=false}}
-    },state=listState,contentPadding=PaddingValues(top=12.dp,bottom=104.dp)){
+    UnifiedWorkScreen(toolsOpen,onToolsOpen,listState,view)
+}
 
-        item{ErrorBanner()}
-        if(showCoordinator)item(key="nextcomp-coordinator"){CoordinatorCard()}
-        if(displayed.isEmpty()&&Pocket.catalogLoad!=CatalogLoadState.Ready)item(key="catalog-startup"){CatalogStartupStatus()}
 
-        val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
-        if(attention.isNotEmpty()){item{Label("NEEDS YOU · ${attention.size}",Coral)};items(attention,key={"attention-${it.optLong("id")}"}){AttentionCard(it)}}
-        if(shown.isEmpty()&&!showCoordinator)item{Empty("No sessions here",if(query.isNotBlank())"Try another name or project." else "Start a task from your phone.")}
-        items(shown,key={it.task.id}){group->SessionGroupCard(if(query.isNotBlank()&&!matches(group.task))group.copy(children=group.children.filter(::matches))else group,listClock)}
-        if(orphans.isNotEmpty()){item(key="unloaded-parent-agents"){Label("AGENT HISTORY · PARENT OUTSIDE THIS LIST",Muted)};items(orphans,key={it.id}){AgentResultCard(it)}}
-        if(Pocket.sessionCursor!=null)item(key="older-session-page"){TextButton({Pocket.moreSessions()},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}}
-    }
-    WorkUpdatesEntry()
-
-    }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable internal fun SessionCatalogTools(toolsOpen:Boolean,onToolsOpen:(Boolean)->Unit,view:SessionCatalogViewState){
+    var query by view.query;var filter by view.filter
     if(toolsOpen)ModalBottomSheet(onDismissRequest={onToolsOpen(false)},containerColor=Panel){
         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=16.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             OutlinedTextField(query,{query=it},placeholder={BilingualLabel("Find sessions",centered=false)},singleLine=true,modifier=Modifier.fillMaxWidth())
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived","History").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(i==0)Pocket.requestSessionOrder();if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.tasks=emptyList();Pocket.refresh()}},label={BilingualLabel(title)})}}
-            if(Pocket.sessionCursor!=null)TextButton({Pocket.moreSessions()},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived","History").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(i==0)Pocket.requestSessionOrder();if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.refresh();UnifiedWorkCatalog.refresh()}},label={BilingualLabel(title)})}}
+            if(UnifiedWorkCatalog.hasEarlier)TextButton({Pocket.scope.launch{UnifiedWorkCatalog.more()}},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}
             ProfileSwitcher()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
                 Button({onToolsOpen(false);Pocket.composeTask()},modifier=Modifier.weight(1f).heightIn(min=56.dp)){BilingualLabel("New task",maxLines=2)}
@@ -456,24 +380,28 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     return when{p<=0.35->androidx.compose.ui.graphics.lerp(NextGreen,Mint,(p/0.35).toFloat());p<=0.7->androidx.compose.ui.graphics.lerp(Mint,Coral,((p-0.35)/0.35).toFloat());else->androidx.compose.ui.graphics.lerp(Coral,NextCerise,((p-0.7)/0.3).toFloat())}
 }
 @Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis(),headerBadge:(@Composable ()->Unit)?=null,
-    modifier:Modifier=Modifier,onOpen:(Boolean)->Unit={Pocket.open(t.id,keyboard=it)},
-    voice:(@Composable (Modifier)->Unit)?={VoiceLaunchButton(modifier=it,threadId=t.id,cardRegion=true)},
+    modifier:Modifier=Modifier,identityScope:String=Pocket.environmentId,onRestore:()->Unit={Pocket.restoreTask(t.id)},onOpen:(Boolean)->Unit={Pocket.open(t.id,keyboard=it)},
     onRename:((String,()->Unit)->Unit)?={name,done->Pocket.renameTask(t.id,name,done)},
-    onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)}){
+    onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)},onArchive:(()->Unit)?={Pocket.archiveTask(t.id)}){
+    LaunchedEffect(identityScope,t.id){if(!t.archived)CodexSessionRepository.previewVisible(identityScope,t.id)}
+    val activitySource=Pocket.captureEnvironment(identityScope)?.let{CodexCatalog.source(it)}
+    val terminalActive by remember(activitySource,t.id){derivedStateOf{activitySource?.activities?.any{row->
+        row.s("threadId")==t.id&&row.s("previewKind")=="terminalInteraction"&&row.s("state")=="working"
+    }==true}}
     val active=t.status in listOf("active","pending");val activityTime=taskWorkTime(t);val ageColor=sessionAgeColor(activityTime,now)
-    LaunchedEffect(Pocket.environmentId,t.id,t.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("card:"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
+    LaunchedEffect(identityScope,t.id,t.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("card:"+identityScope+":"+t.id,t.preview,if(t.previewKind=="thinking")"public reasoning summary" else "session activity")}
     val previewHeight=with(LocalDensity.current){40.sp.toDp()}.coerceAtLeast(48.dp)
-    var rename by remember(Pocket.environmentId,t.id){mutableStateOf(false)};var name by remember(Pocket.environmentId,t.id){mutableStateOf(t.title)}
-    val highlight=remember(Pocket.environmentId,t.id){Animatable(0f)}
+    var rename by remember(identityScope,t.id){mutableStateOf(false)};var name by remember(identityScope,t.id){mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(t.title))}
+    val highlight=remember(identityScope,t.id){Animatable(0f)}
     val revision=Triple(t.preview,t.status,t.activityAt)
-    var observed by remember(Pocket.environmentId,t.id){mutableStateOf(revision)}
-    LaunchedEffect(Pocket.environmentId,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
+    var observed by remember(identityScope,t.id){mutableStateOf(revision)}
+    LaunchedEffect(identityScope,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
     val cardText=Paper
     val stateLabel=when{active->if(t.status=="pending")"Starting" else "Working";t.needsInput->"Needs your input";t.status=="idle"->"Idle";t.status=="blocked"->"Blocked";t.status=="failed"->"Failed";else->"Status unavailable"}
-    WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,modifier,knownIdle=t.status=="idle"&&!t.needsInput){
+    SessionArchiveReveal(t,onArchive,modifier){
+    WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,Modifier,knownIdle=t.status=="idle"&&!t.needsInput){
         if(!t.archived)Row(Modifier.matchParentSize()){
-            voice?.invoke(Modifier.weight(.22f).fillMaxHeight())
-            CardInteractionRegion("Chat",Modifier.weight(if(voice==null).78f else .56f).fillMaxHeight(),t.title){onOpen(false)}
+            CardInteractionRegion("Chat",Modifier.weight(.78f).fillMaxHeight(),t.title){onOpen(false)}
             CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight(),t.title){onOpen(true)}
         }
         Column(Modifier.padding(start=12.dp,end=12.dp,top=2.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
@@ -481,14 +409,14 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             if(rename){
                 val focus=remember{androidx.compose.ui.focus.FocusRequester()}
                 LaunchedEffect(Unit){focus.requestFocus()}
-                OutlinedTextField(name,{name=it.take(120)},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.trim().isNotEmpty())onRename?.invoke(name.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.trim().isNotEmpty())onRename?.invoke(name.trim()){rename=false}}))
+                OutlinedTextField(name,{name=it.copy(text=it.text.take(120))},singleLine=true,modifier=Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent{event->if(event.key==Key.Enter&&event.type==KeyEventType.KeyDown){if(name.text.trim().isNotEmpty())onRename?.invoke(name.text.trim()){rename=false};true}else false},textStyle=androidx.compose.ui.text.TextStyle(fontSize=16.sp,color=Paper),keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={if(name.text.trim().isNotEmpty())onRename?.invoke(name.text.trim()){rename=false}}))
             }else Box(Modifier.weight(1f),contentAlignment=Alignment.CenterStart){
-                LaunchedEffect(Pocket.environmentId,t.id,t.title,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("session-title:"+t.id,t.title,"session title")}
+                LaunchedEffect(identityScope,t.id,t.title,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("session-title:"+identityScope+":"+t.id,t.title,"session title")}
                 val titleConfiguration=androidx.compose.ui.platform.LocalViewConfiguration.current
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalViewConfiguration provides object:androidx.compose.ui.platform.ViewConfiguration by titleConfiguration {
                     override val minimumTouchTargetSize=androidx.compose.ui.unit.DpSize.Zero
                 }){
-                    BilingualLabel(t.title,color=cardText,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,centered=false,onActivate=if(onRename==null)null else {{name=t.title;rename=true}})
+                    BilingualLabel(t.title,color=cardText,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,centered=false,onActivate=if(onRename==null)null else {{name=androidx.compose.ui.text.input.TextFieldValue(t.title,androidx.compose.ui.text.TextRange(0,t.title.length));rename=true}})
                 }
             }
             if(!rename)headerBadge?.invoke()
@@ -502,20 +430,22 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                     BilingualLabel(if(t.watched)"On" else "Off",fontSize=10.sp,color=if(t.watched)Mint else Muted)
                 }
             }
-            if(t.archived)IconButton({Pocket.restoreTask(t.id)},modifier=Modifier.size(48.dp)){SymbolIcon(Icons.Rounded.Unarchive,"Restore conversation",tint=Mint,modifier=Modifier.size(18.dp))}
+            SessionRestoreAction(t,onRestore)
 
         }
         Row(Modifier.fillMaxWidth().height(previewHeight),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
             Box(Modifier.width(18.dp).height(previewHeight)){
-            if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
+            if(terminalActive&&Pocket.codexOnline)SymbolIcon("Terminal",null,Modifier.size(18.dp))
+            else if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            ImmersionText("card:"+t.id,if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(stateLabel+" · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
+            ImmersionText("card:"+identityScope+":"+t.id,if(terminalActive&&Pocket.codexOnline)"Using existing terminal" else if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(stateLabel+" · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
         }
 
     }
     }
 
+    }
 }
 @Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){SymbolIcon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));WorkflowText(title,fontSize=19.sp);WorkflowText(body,color=Muted,fontSize=13.sp)}}
 @OptIn(ExperimentalLayoutApi::class)
@@ -614,8 +544,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                 FilterChip(selected=PocketAudio.mode==value,onClick={PocketAudio.select(value)},label={BilingualLabel(label,fontSize=12.sp)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
             }
         }
-        FilterChip(selected=PocketAudio.mode=="summaries",onClick={PocketAudio.select("summaries")},label={BilingualLabel("Speak messages")},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Mint,selectedLabelColor=Ink))
-        WorkflowText(when(PocketAudio.mode){"summaries"->"A short tone, then the spoken message using your Codex account allowance. Pause and resume from the player or notification, including while locked. Other audio pauses speech and saves your place. Quiet mode and Do Not Disturb silence speech.";"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        WorkflowText(when(PocketAudio.mode){"voice"->"Short labels such as “Codex needs your input.” Task text stays on screen.";"system"->"Uses your phone’s default notification sound.";else->"Finished rises, problems fall, and questions have a distinct two-note cue."},color=Muted,fontSize=13.sp,lineHeight=20.sp)
+        WorkflowText("Replies speak in voice mode or when you tap Speak. Notifications never build a speech backlog.",color=Muted,fontSize=13.sp,lineHeight=20.sp)
         WorkflowText(SpeechUsage.summary(),color=Muted,fontSize=12.sp,lineHeight=18.sp)
         WorkflowText("Generated/played counters cover notification and manual speech. Voice-mode connection time includes idle time. Playback does not prove audibility. Cancelled generation can still consume allowance; these are local activity counters, not billing totals.",color=Muted,fontSize=11.sp,lineHeight=17.sp)
         if(PocketAudio.status.isNotBlank())WorkflowText(PocketAudio.status,color=Mint,fontSize=12.sp)
@@ -642,11 +572,18 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){SymbolIcon(Icons.Rounded.AttachFile,null,tint=Mint,modifier=Modifier.size(18.dp));Text(a.s("name"),color=Mint,fontSize=12.sp,modifier=Modifier.padding(start=8.dp).weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis);SymbolIcon(Icons.AutoMirrored.Rounded.OpenInNew,null,tint=Muted,modifier=Modifier.size(16.dp))}
     }
 }
-@Composable fun RequestCard(r:JSONObject){val p=r.optJSONObject("params")?:return;val id=r.s("id");val isQuestion=r.s("method").contains("requestUserInput");val answers=remember(id){mutableStateMapOf<String,String>()}
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(22.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+@Composable fun RequestCard(r:JSONObject){val p=r.optJSONObject("params")?:return;val id=r.s("id");val isQuestion=r.s("method").contains("requestUserInput")
+    val fingerprint=remember(r.toString()){java.security.MessageDigest.getInstance("SHA-256").digest(r.toString().toByteArray()).take(12).joinToString(""){"%02x".format(it)}}
+    val draftKey=Pocket.key("questionDraft:"+backendOwner(Pocket.base,Pocket.token)+":"+Pocket.selected+":"+id+":"+fingerprint)
+    val answers=remember(draftKey){mutableStateMapOf<String,String>().apply{runCatching{JSONObject(Pocket.prefs.getString(draftKey,"{}")?:"{}").let{saved->saved.keys().forEach{key->put(key,saved.s(key))}}}}}
+    fun saveAnswer(key:String,value:String){answers[key]=value;val saved=JSONObject();answers.forEach{(k,v)->if(p.optJSONArray("questions")?.objects()?.none{it.s("id")==k&&it.optBoolean("isSecret")}!=false)saved.put(k,v)};Pocket.prefs.edit().putString(draftKey,saved.toString()).apply()}
+    val delivery=QuestionDelivery.state(draftKey);val editable=delivery !in listOf("sending","submitted","unconfirmed","expired")
+    fun submit(body:JSONObject)=QuestionDelivery.submit(draftKey,id,body.apply{r.optJSONObject("_pocketUI")?.s("token")?.takeIf{it.isNotBlank()}?.let{put("requestToken",it)}})
+
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(6.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
             Box(Modifier.weight(1f)){Label(if(isQuestion)"YOUR INPUT" else "NEEDS YOUR APPROVAL",Coral)}
-            if(isQuestion)TextButton({PocketQuestionActions.skipRequest(id)},modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp)){BilingualLabel("Skip",color=Mint)}
+            if(isQuestion)TextButton({submit(JSONObject().put("skip",true))},enabled=editable,modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp)){BilingualLabel("Skip",color=Mint)}
         }
         if(isQuestion){p.optJSONArray("questions")?.objects()?.forEach{q->
             val questionId="request:$id:"+q.s("id")
@@ -657,14 +594,17 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                 val label=o.s("label");val optionId="$questionId:option:$index"
                 val description=o.s("description")
                 LaunchedEffect(label,description,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer(optionId,label,"question option");PocketImmersion.offer("$optionId:description",description,"question option explanation")}
-                OutlinedButton({answers[q.s("id")]=label},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){
+                OutlinedButton({saveAnswer(q.s("id"),label)},enabled=editable,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.outlinedButtonColors(containerColor=if(answers[q.s("id")]==label)Mint.copy(alpha=.14f)else Color.Transparent)){
                     Column(Modifier.fillMaxWidth()){
                         ImmersionText(optionId,label,color=Paper,kind="question option",rescue=false)
                         if(description.isNotBlank())ImmersionText("$optionId:description",description,color=Muted,fontSize=14.sp,kind="question option explanation",rescue=false)
                     }
                 }
-            };OutlinedTextField(answers[q.s("id")]?:"",{answers[q.s("id")]=it},label={BilingualLabel("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};Pocket.answer(id,JSONObject().put("answers",a))}){BilingualLabel("Send answers")}}
-        else{ImmersionText("approval:"+id,p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({Pocket.answer(id,JSONObject().put("decision","accept"))}){BilingualLabel("Allow once")};OutlinedButton({Pocket.answer(id,JSONObject().put("decision","decline"))}){BilingualLabel("Decline",color=Coral)}}}else WorkflowText("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
+            };if(q.optBoolean("isOther")&&(q.optJSONArray("options")?.length()?:0)>0)OutlinedButton({saveAnswer(q.s("id"),"None of the above")},enabled=editable){BilingualLabel("None of the above")};OutlinedTextField(answers[q.s("id")]?:"",{saveAnswer(q.s("id"),it)},readOnly=!editable,visualTransformation=if(q.optBoolean("isSecret"))androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,label={BilingualLabel("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};submit(JSONObject().put("answers",a))},enabled=editable){BilingualLabel("Send answers")}}
+        else NativeRequestActions(r,answers,::saveAnswer,editable,::submit)
+        if(delivery.isNotBlank()){WorkflowText(when(delivery){"sending"->"Submitting decision…";"submitted"->"Decision submitted";"expired"->"This request was answered or expired. Check current work.";"unconfirmed"->"Delivery unconfirmed. Check current work before trying again.";else->QuestionDelivery.problem(draftKey).ifBlank{"Decision was not accepted. Review and try again."}},color=if(delivery=="unconfirmed")Coral else Muted,fontSize=13.sp)
+            if(delivery in listOf("unconfirmed","expired"))TextButton({Pocket.refreshDetail();Pocket.refresh()}){BilingualLabel("Check current work")}}
+
     }
 }
 
@@ -685,10 +625,11 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     IconButton({PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")},enabled=available,modifier=Modifier.size(48.dp)){
         SymbolIcon(if(PocketSpeech.paused)Icons.Rounded.PlayArrow else Icons.Rounded.Pause,PocketImmersion.label(if(PocketSpeech.paused)"Resume" else "Pause"),modifier=Modifier.size(28.dp),tint=if(available)Mint else Muted)
     }
-    if(iconOnly)IconButton({PocketSpeech.clear()},enabled=available,modifier=Modifier.size(48.dp)){
-        Icon(Icons.Rounded.Close,PocketImmersion.label("Clear speech from active session"),Modifier.size(28.dp),tint=if(available)Coral else Muted)
-    }else TextButton({PocketSpeech.clear()},enabled=available,modifier=Modifier.heightIn(min=48.dp).widthIn(min=64.dp).semantics{contentDescription=PocketImmersion.label("Clear speech from active session")},contentPadding=PaddingValues(horizontal=8.dp)){
-        BilingualLabel("Clear session",color=if(available)Coral else Muted,fontSize=14.sp)
+    val clearable=available||PocketSpeech.count>0
+    TextButton({PocketSpeech.clearAll()},enabled=clearable,
+        modifier=Modifier.heightIn(min=48.dp).widthIn(min=72.dp).semantics{contentDescription=PocketImmersion.label("Clear all saved speech")},
+        contentPadding=PaddingValues(horizontal=10.dp)){
+        BilingualLabel("Clear all",color=if(clearable)Coral else Muted,fontSize=14.sp)
     }
 }
 

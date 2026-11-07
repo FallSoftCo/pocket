@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "versionCode": 156,
+  "versionName": "0.5.0-alpha.138",
+  "androidSourceCommit": "d9098539be60f568f5f795e3da7e40660bb3d931",
+  "backendSourceCommit": "c56b1c98118047e6f98353fccb89e3df861a95dd",
+  "apkVariants": [
+    {
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "sha256": "12b1c135d6567423113b374e6b34015542ba7a6be86072a1e0a49071c3fe6463"
+    },
+    {
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "sha256": "6421c1ee3fcba32d7d32ddcba313a510f0f42f7de56ecfe8d2e93238f124bbc7"
+    }
+  ],
+  "verification": {
+    "unitVariants": [
+      "debug",
+      "release"
+    ],
+    "bothLintsPassed": true,
+    "nativeCasesPassed": 10,
+    "accountAudioInputAndStreamingOutputPassed": true,
+    "realRoomRequestAcceptedExactlyOnce": true,
+    "sameOriginalMessageAfterDisconnectReopen": true,
+    "qaRequestTarget": "preexisting nonexecuting isolated QA agent",
+    "qaRequestCancelled": true,
+    "clientQaTaskModelsStarted": 0,
+    "optimizedStockCanonicalOrderAndReopenPassed": true,
+    "optimizedQuestionResponseCount": 1,
+    "signingVariantsHaveIdenticalNonSignaturePayload": true,
+    "retainedEmulatorPreferencesRestored": true,
+    "actualPhoneInstalledVersion": 156,
+    "phoneVerificationMethod": "read-only Termux SSH package-manager query",
+    "actualPhoneAutomaticEnrollmentAcceptedByCpuAndGpu": true,
+    "manualPeerPairingsRequired": 0
+  },
+  "historyRepair": {
+    "change": "Successful canonical live repair has one scheduler owner. Only failure hands an active viewport to its existing bounded retry pump.",
+    "nativeDeltaBurst": 20,
+    "canonicalReadsDuringVerifiedBurst": 2,
+    "legacyReads": 0,
+    "positionRepairCalls": 0,
+    "workSubmissions": 0
+  },
+  "distribution": {
+    "qualifiedFeeds": [
+      "workstation",
+      "cpu",
+      "gpu"
+    ],
+    "artifactTransport": "private HTTPS with source/target/SHA-bound machine proofs",
+    "gpuMirrorServedExactQualificationArchiveToWorkstation": true,
+    "announcements": 1,
+    "fcmAccepted": 1,
+    "phoneNotificationRenderingQualified": false
+  },
+  "limits": [
+    "The client QA agent had no model executor; independent native host execution proof is separate.",
+    "Emulator audio/key assertions do not qualify handset acoustics, physical volume keys or rendered push.",
+    "Web room UI integration remains unfinished.",
+    "The stock footer can wrap the page-down control at narrow retained-emulator widths; this delivery does not claim that layout is resolved."
+  ]
+}

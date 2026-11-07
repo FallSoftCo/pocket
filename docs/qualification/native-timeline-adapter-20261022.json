@@ -1,0 +1,30 @@
+{
+  "state": "source-adapter-qualified-not-deployed",
+  "method": "thread/timeline/list",
+  "nativeMacReadback": {
+    "pages": 4,
+    "entries": 128,
+    "milliseconds": [
+      14,
+      5,
+      10,
+      5
+    ],
+    "strictPageContinuation": true,
+    "canonicalTuplePreserved": true,
+    "modelTurns": 0,
+    "threadStarts": 0,
+    "workerResumes": 0
+  },
+  "nativeSystem76Readback": {
+    "entries": 8,
+    "milliseconds": 4
+  },
+  "limits": [
+    "New adapter is not wired into the live gateway or Android.",
+    "149 follow-window fix is containment, not completion of canonical-store replacement.",
+    "Real transcript content/cursors retained only in protected private evidence."
+  ],
+  "source": "server/native-timeline.mjs",
+  "architecture": "docs/CODEX-TIMELINE-ARCHITECTURE.md"
+}
