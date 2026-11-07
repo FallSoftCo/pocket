@@ -24,8 +24,39 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci
-      - run: npm test
+      - name: Install locked dependencies
+        id: dependencies
+        shell: bash
+        run: |
+          mkdir -p dist/ci
+          npm ci 2>&1 | tee dist/ci/dependency-install.log
+      - name: Resolve required DOM dependency
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE' 2>&1 | tee dist/ci/dom-dependency.log
+          import assert from 'node:assert/strict';
+          import {appendFileSync} from 'node:fs';
+          import {createRequire} from 'node:module';
+          const require=createRequire(import.meta.url);
+          assert.equal(require('jsdom/package.json').version,'26.1.0');
+          const modulePath=require.resolve('jsdom');
+          appendFileSync(process.env.GITHUB_ENV,`NEXTCOMP_JSDOM_MODULE=${modulePath}\nJSDOM_MODULE=${modulePath}\n`);
+          console.log('Required DOM module:',modulePath);
+          NODE
+      - name: Backend tests including conversation DOM
+        shell: bash
+        run: npm test 2>&1 | tee dist/ci/backend-tests.log
+      - name: Required DOM and production integration qualification
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: npm run test:dom -- dist/ci/dom
+      - name: Preserve test and qualification logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dom-qualification
+          path: dist/ci/
+          if-no-files-found: warn
+          retention-days: 7
       - run: npm audit --omit=dev
       - run: node scripts/check-public-source.mjs
   android:
