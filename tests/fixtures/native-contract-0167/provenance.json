@@ -1,0 +1,25 @@
+{
+  "runtime": "codex 0.167.0",
+  "command": "codex app-server generate-json-schema --experimental --out DIR",
+  "transformation": "Merge identical definitions; retain each named root under schemas. No schema fields removed or edited.",
+  "generatedFilesSha256": {
+    "ToolRequestUserInputParams.json": "fda15b62e7446105b59c8ed85c908abed2a47db70653e57c92c47a2f204fa77a",
+    "ToolRequestUserInputResponse.json": "5073b245f741fa8ce62ec52e4dd1809b7831f9c4284c279a78abc9b171f8e3f2",
+    "v2/ThreadReadResponse.json": "4ee5071cf8c7245189e5bd0819e459b9d974d5949708372fee68b6fc5329f90d",
+    "v2/ThreadTimelineListResponse.json": "86cda50f37c6432ad17270827aa28d3f5bca024daa9632d0924f66f50659eeb1",
+    "v2/ThreadResumeResponse.json": "9ab25f81ec27b83042c469fd031127c8eaf1a3ac8e2cdc53e76cb24f8e03ce28",
+    "v2/ThreadTurnsListResponse.json": "bccb5eb4fcde318825e4e92cadb85cda57315fceb9e46a3b6dc0582f91c2c72b",
+    "v2/ThreadRevertResponse.json": "f9414442fee237370bf03444e1273a89f25ce2df3eadcab9f034ae27a01ae009",
+    "v2/ThreadCompactStartParams.json": "684b20adf20213a9fcbca31b59108feadcd5a8b693c16431c20d701049df3737",
+    "v1/InitializeParams.json": "c608ff6bdd94e661423dca9b44cd1dcea7eac610f74e1310284c61eab64280bc",
+    "v1/InitializeResponse.json": "62ad689c2cb6379913c1d72749cfd8de5089d35760214123518eb92eef11acc9",
+    "v2/ThreadListParams.json": "1781b1778cb08619f0bf12528b128e55648b86569114196b1b5ec565b9b7935d",
+    "v2/ThreadListResponse.json": "b57fafd7a25fca12c4b3c3e3a6e9775c1473583ea95df66b4a7727b921cfd898",
+    "v2/ThreadReadParams.json": "dfe040c6ac71d30795b8be3f3ff232e66f362a37f883b491e5d1ea367f470db4",
+    "v2/ThreadTimelineListParams.json": "c585f0e23ed65406dd80f0e0b2956f3f87e7a7aa03627e5e002c61bfc4e1f6c5",
+    "v2/ThreadResumeParams.json": "9642460eb42e9a6e8fa8e12b4381e8ed939d10b1ad8690e694d84467ea76d41a",
+    "v2/ThreadTurnsListParams.json": "2a8b93d7d4437cc25e16a1dde16d8db3c338d39e16c5eece2a56e943a21577d7",
+    "v2/ThreadRevertedNotification.json": "570995a91a4436d403bafbf9a4c34ead666b137ecd5406803e14826a6d84cf22",
+    "v2/ServerRequestResolvedNotification.json": "4f03d586a5af04edd912cad08cc97eceb658e7e06744565e6d41a93e04a55966"
+  }
+}
