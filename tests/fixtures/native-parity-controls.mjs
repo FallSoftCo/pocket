@@ -62,6 +62,7 @@ for(const origin of origins){
   }
   else if(/\/conversation-operations\/[^/]+$/.test(path)){body=origin.operations.get(path.split('/').at(-1));if(!body){res.writeHead(404).end('{"error":"Original receipt missing"}');return;}}
   else if(path==='/api/native/capabilities')body={runtime:{version:origin.terminalMode==='qualified'?'0.167.0':'0.168.0'},features:executionFeatures(origin)};
+  else if(path.endsWith('/terminals')&&origin.terminalMode==='read-only'&&(url.searchParams.getAll('terminalPresentation').length!==1||url.searchParams.get('terminalPresentation')!=='1')){res.writeHead(409).end('{"error":"Update this client to inspect read-only background terminals in this environment."}');return;}
   else if(path.endsWith('/terminals'))body={data:[{processId:'shared-process-id',command:`${origin.name} synthetic watcher`,cwd:metadata(origin).cwd,cpuPercent:0}],nextCursor:null,features:executionFeatures(origin)};
   else if(path.endsWith('/terminals/terminate'))body={ok:true,terminated:true};
   else if(path==='/api/native/configuration'){

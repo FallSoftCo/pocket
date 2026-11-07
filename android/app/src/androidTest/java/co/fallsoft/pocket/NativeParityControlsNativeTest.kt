@@ -151,6 +151,7 @@ class NativeParityControlsNativeTest {
             qa("terminal-mode",JSONObject().put("mode","read-only"))
             menu("Background terminals");visible("Alpha synthetic watcher")
             visible("Synthetic runtime permits terminal inspection only.")
+            assertTrue("Native terminal read did not negotiate presentation",calls("/api/threads/$thread/terminals","GET").last().s("query").contains("terminalPresentation=1"))
             absent("Terminate");absent("Confirm terminate");absent("Terminate this process?")
             assertTrue("Read-only inspection dispatched termination",calls("/api/threads/$thread/terminals/terminate").isEmpty())
             capture("02a-terminals-read-only")
