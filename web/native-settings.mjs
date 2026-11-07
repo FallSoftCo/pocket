@@ -14,18 +14,20 @@ export class NativeSettingsPanel {
   const close=node('button','Close');close.onclick=()=>this.dialog.close();this.dialog.append(this.title,this.source,this.tabs,this.feedback,this.body,close);document.body.append(this.dialog);
   for(const section of sections){const b=node('button',titles[section]);b.onclick=()=>this.load(section);this.tabs.append(b);}
  }
- async open(){this.scope=this.getScope();this.threadId=this.scope==='coordinator'?null:this.scope;this.dialog.showModal();await this.load('settings');}
- current(){return this.getScope()===this.scope&&this.dialog.open;}
- async request(section,cursor){return this.api('/api/native/configuration?section='+section+(this.threadId?'&threadId='+encodeURIComponent(this.threadId):'')+(cursor?'&cursor='+encodeURIComponent(cursor):''),undefined,{scope:this.scope});}
+ async open(){this.scope=this.getScope();this.threadId=this.scope==='coordinator'?null:this.scope;this.origin=Object.freeze({scope:this.scope,threadId:this.threadId});this.dialog.showModal();await this.load('settings');}
+ // Object identity distinguishes close/reopen even in the same environment.
+ // Captured operations never acquire the destination of a later panel opening.
+ current(origin=this.origin){return !!origin&&origin===this.origin&&this.getScope()===origin.scope&&this.dialog.open;}
+ async request(section,cursor,origin=this.origin){return this.api('/api/native/configuration?section='+section+(origin.threadId?'&threadId='+encodeURIComponent(origin.threadId):'')+(cursor?'&cursor='+encodeURIComponent(cursor):''),undefined,{scope:origin.scope});}
  async load(section,cursor){
-  const serial=++this.serial;this.feedback.textContent='Loading…';this.section=section;
+  const serial=++this.serial,origin=this.origin;this.feedback.textContent='Loading…';this.section=section;
   if(!cursor)this.body.replaceChildren();
   try{
-   const view=await this.request(section,cursor);if(serial!==this.serial||!this.current())return;
+   const view=await this.request(section,cursor,origin);if(serial!==this.serial||!this.current(origin))return;
    this.source.textContent=`${view.host||'Selected environment'} · Codex ${view.runtime?.version||'version unavailable'}`;
    this.feedback.textContent=view.state==='available'?(view.notice||''):view.reason||'Unavailable';
    if(section==='settings')this.renderSettings(view);else this.renderItems(view,!!cursor);
-  }catch(error){if(serial===this.serial)this.feedback.textContent=error.message;}
+  }catch(error){if(serial===this.serial&&this.current(origin))this.feedback.textContent=error.message;}
  }
  renderSettings(view){
   const requested=node('p','Requested permissions: '+(view.requested?.permissions||'No saved preference for this session'));
@@ -60,13 +62,13 @@ export class NativeSettingsPanel {
  }
  navigate(id){if(!id||!this.current())return;this.dialog.close();this.openThread(id);}
  async change(view,item,button){
-  if(!this.current())return;button.disabled=true;
+  const origin=this.origin;if(!this.current(origin))return;button.disabled=true;
   try{
    let expectedVersion;
-   if(view.section!=='skills'){const settings=await this.request('settings');expectedVersion=settings.configVersion;}
-   if(!this.current())return;
-   const result=await this.api('/api/native/configuration',{threadId:this.threadId,section:view.section,id:item.id,enabled:!item.enabled,...(expectedVersion?{expectedVersion}:{})},{scope:this.scope});
-   if(this.current()){await this.load(view.section);this.feedback.textContent=result.notice;}
-  }catch(error){this.feedback.textContent=error.message+' Reload this catalog to inspect the outcome before retrying.';}
+   if(view.section!=='skills'){const settings=await this.request('settings',undefined,origin);expectedVersion=settings.configVersion;}
+   if(!this.current(origin))return;
+   const result=await this.api('/api/native/configuration',{threadId:origin.threadId,section:view.section,id:item.id,enabled:!item.enabled,...(expectedVersion?{expectedVersion}:{})},{scope:origin.scope});
+   if(this.current(origin)){await this.load(view.section);if(this.current(origin))this.feedback.textContent=result.notice;}
+  }catch(error){if(this.current(origin))this.feedback.textContent=error.message+' Reload this catalog to inspect the outcome before retrying.';}
  }
 }
