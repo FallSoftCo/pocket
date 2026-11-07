@@ -2,7 +2,7 @@
 
 [← NextComp overview](../README.md) · [Documentation](README.md)
 
-The supported product is vanilla Codex sessions and native subagents; rooms, LAX and Hollywood are retired. The [current capability map](CAPABILITIES.md) and [2026-11-07 integration record](qualification/codex-parity-integration-20261107.json) describe runtime-specific support. Android **174 / 0.5.0-alpha.156** is published on both paired update channels; installation on the owner’s handset remains unverified, with **172** last observed. A published update is not an installation receipt.
+The supported product is vanilla Codex sessions and native subagents; NextComp’s room, LAX and Hollywood entry points are retired. This does not imply that separate native runtimes or services are shut down. The [current capability map](CAPABILITIES.md) and [2026-11-07 integration record](qualification/codex-parity-integration-20261107.json) describe runtime-specific support. Android **174 / 0.5.0-alpha.156** is published on both paired update channels; installation on the owner’s handset remains unverified, with **172** last observed. A published update is not an installation receipt.
 
 ## Requirements
 
@@ -168,11 +168,13 @@ Original code and icon are [MIT licensed](../LICENSE). Third-party components re
 
 New Pocket tasks default to full filesystem/network access with command approvals disabled. Change **Full permissions for new tasks** in Settings or on the New task screen; turning it off uses workspace access and approval requests on the workstation (phone-local tasks keep their required full filesystem access). The choice is saved for future tasks, and each task retains its permissions when Pocket reconnects.
 
-## Eyes-free voice mode
+## Voice input and playback
 
-Tap **Talk to Codex** on the session list for the persistent coordinator, or tap the microphone inside a conversation to focus voice on that existing session. Speak naturally; no command vocabulary is required. The coordinator can inspect and direct real sessions, create tasks, steer or queue follow-ups, handle pending questions, and change session settings. Ask to return to the coordinator to clear session focus.
+With Android in the foreground and paired, press either **Volume up** or **Volume down** to start recording. Press either key again to stop and send the turn. The current eligible direct-input session is the target; the coordinator/list or Work updates surface routes to the coordinator. The recording retains its original destination if you navigate elsewhere. Grant microphone access on first use. These foreground controls do not require the Accessibility service; that service does not make recording keys active outside the foreground app.
 
-The bottom Talk control opens the coordinator and starts recording immediately. Each session card has direct Talk and Keyboard entry. One stop tap automatically sends the turn. Chat uses large bottom microphone, keyboard, back and playback controls with an on-screen speech-volume slider. Session cards show labeled last-activity times and dates for older sessions. Volume down starts recording; pressing it again sends the completed turn. Volume up pauses/resumes or replays a response. Starting another recording interrupts speech. Grant microphone access on first use. Enable NextComp's Accessibility service for volume controls outside the app; foreground controls also work without that service.
+Current Android list and conversation surfaces have no microphone tap zones or separate Talk regions. Use the keyboard for text and the visible playback controls for pause, replay and speech volume. Both hardware volume keys control capture in eligible foreground views; Volume up is not a dedicated playback shortcut. Starting another recording interrupts speech. The web client separately retains a clickable Record/Mic control and the F8 shortcut; stopping sends the recording to its original conversation.
+
+The coordinator can inspect and direct real sessions, create tasks, steer or queue follow-ups and handle supported pending decisions. These capabilities depend on the selected runtime. Optional **Coordinator check-ins** are device-specific and off by default; disabled check-ins do not run. The owner has requested that check-ins remain disabled. The **Work updates** inbox can still show retained reports without enabling a schedule.
 
 Voice uses stock Codex's native WebRTC transport with the host's ChatGPT authentication. No separate audio API key is required. A dedicated audio-only connection transcribes the completed recording; the persistent Codex controller handles the full transcript and real session tools. Speech is buffered before playback so pause and replay preserve the entire response. Recordings are capped at ten minutes, silence is discarded, and saved turn IDs prevent automatic replay of uncertain actions. Native voice uses account usage; task-model usage is separate. Experimental app-server voice availability depends on the CLI and account.
 
