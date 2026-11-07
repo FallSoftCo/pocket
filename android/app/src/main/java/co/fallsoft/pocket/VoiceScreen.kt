@@ -65,8 +65,8 @@ import androidx.lifecycle.repeatOnLifecycle
             if(PocketVoice.historyLoading)item{BilingualLabel("Loading history…",color=Muted)}
             if(PocketVoice.historyProblem.isNotBlank())item{ImmersionText("voice:history-problem",PocketVoice.historyProblem,color=Coral);TextButton({PocketVoice.service?.loadHistory()}){BilingualLabel("Retry history")}}
             PocketVoice.messages.forEach{turn->
-                item(key="user:${turn.id}"){VoiceChatMessage("You",turn.first,true)}
-                item(key="assistant:${turn.id}"){VoiceChatMessage("Codex",turn.second,false);PocketVoice.routes[turn.id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketVoice.stop();openCoordinatorRoute(route)},{PocketVoice.correctionOf=route;draft=route.correction+draft;keyboardInput=true})}}
+                item(key="user:${turn.id}"){VoiceChatMessage("You",turn.first,true,turn.userAt)}
+                item(key="assistant:${turn.id}"){VoiceChatMessage("Codex",turn.second,false,turn.responseAt);PocketVoice.routes[turn.id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketVoice.stop();openCoordinatorRoute(route)},{PocketVoice.correctionOf=route;draft=route.correction+draft;keyboardInput=true})}}
             }
             if(PocketVoice.heard.isNotBlank()&&PocketVoice.messages.lastOrNull()?.first!=PocketVoice.heard)item{VoiceChatMessage("You",PocketVoice.heard,true)}
         }
@@ -95,12 +95,15 @@ import androidx.lifecycle.repeatOnLifecycle
 }
 }
 
-@Composable internal fun VoiceChatMessage(speaker:String,text:String,user:Boolean){
+@Composable internal fun VoiceChatMessage(speaker:String,text:String,user:Boolean,at:Long?=null){
     if(text.isBlank())return
     val sourceId="voice:"+text.hashCode()+":"+user
     LaunchedEffect(text,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer(sourceId,text,if(user)"user message" else "Codex response")}
     Column(Modifier.fillMaxWidth(),horizontalAlignment=if(user)Alignment.End else Alignment.Start){
-        SymbolIcon(if(user)"User" else "Codex",PocketImmersion.label(if(user)"Your message" else "Codex message"),Modifier.size(20.dp))
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            SymbolIcon(if(user)"User" else "Codex",PocketImmersion.label(if(user)"Your message" else "Codex message"),Modifier.size(20.dp))
+            Spacer(Modifier.weight(1f));MessageTimestamp(at)
+        }
         Surface(color=if(user)Mint.copy(alpha=0.12f) else MaterialTheme.colorScheme.surfaceVariant,shape=androidx.compose.foundation.shape.RoundedCornerShape(6.dp),modifier=Modifier.padding(top=5.dp)){Column(Modifier.padding(14.dp)){BilingualMessage(sourceId,text)}}
     }
 }

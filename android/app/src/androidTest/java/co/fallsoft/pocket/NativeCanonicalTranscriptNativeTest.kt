@@ -117,6 +117,9 @@ class NativeCanonicalTranscriptNativeTest{
             val user=device.wait(Until.findObject(By.text("Native request two")),4000)
             val answer=device.wait(Until.findObject(By.text("Native answer two")),4000)
             assertNotNull(user);assertNotNull(answer)
+            val stamp=messageTime(1794017100000L+5*60000)!!
+            assertTrue("Agent timestamp not rendered with local time",device.wait(Until.hasObject(By.desc(stamp.full)),4000))
+            assertEquals(1794017100000L+5*60000,PocketTranscript.rows.first{it.s("text")=="Native answer two"}.getLong("startedAtMs"))
             assertTrue("Native answer painted above its input",user!!.visibleBounds.bottom<=answer!!.visibleBounds.top)
             qa("question")
             assertTrue("Native pending question not actionable",device.wait(Until.hasObject(By.text("Native pending question")),8000))

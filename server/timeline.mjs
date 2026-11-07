@@ -11,11 +11,22 @@ export function retainUserSendIdentity(previous,incoming){
   if(typeof known!=='string'||!known||next)return incoming;
   return incoming._pocketRow?{...incoming,_pocketRow:{...incoming._pocketRow,clientId:known}}:{...incoming,clientId:known};
 }
+// Native item times are presentation metadata, never ordering keys or fetch times.
+export function itemTimes(item){
+  return Object.fromEntries(['startedAtMs','completedAtMs'].flatMap(key=>{
+    const value=item?.[key];return Number.isSafeInteger(value)&&value>0&&value<=8640000000000000?[[key,value]]:[];
+  }));
+}
+function retainItemTimes(previous,incoming){
+  if(!previous||previous.id!==incoming.id||previous.type!==incoming.type)return incoming;
+  const times={...itemTimes(previous._pocketRow),...itemTimes(previous),...itemTimes(incoming._pocketRow),...itemTimes(incoming)};
+  return {...incoming,...times,...(incoming._pocketRow?{_pocketRow:{...incoming._pocketRow,...times}}:{})};
+}
 const clip=(v,n=12000)=>String(v??'').slice(-n);
 const textContent=v=>typeof v==='string'?v:Array.isArray(v)?v.map(x=>typeof x==='string'?x:x.text||'').filter(Boolean).join('\n'):'';
 export function itemRow(item,turnId,version=0){
   if(item._pocketRow)return {...item._pocketRow,version};
-  const r={id:`${turnId}/${item.id}`,itemId:item.id,turnId,version,kind:'activity',type:item.type,status:item.status||'completed',title:'',text:'',detail:''};
+  const r={id:`${turnId}/${item.id}`,itemId:item.id,turnId,version,...itemTimes(item),kind:'activity',type:item.type,status:item.status||'completed',title:'',text:'',detail:''};
   switch(item.type){
     case 'userMessage':return {...r,kind:'user',title:'You',text:textContent(item.content),clientId:item.clientId};
     case 'agentMessage':return {...r,kind:'message',title:item.phase==='final_answer'?'Codex · response':'Codex',text:item.text||'',phase:item.phase};
@@ -42,7 +53,7 @@ export function displayItem(item,turnId){
   const original=itemRow(item,turnId);if(!original)return null;
   const row={...original};
   for(const field of ['text','detail','title'])if(typeof row[field]==='string'&&row[field].length>16000){row[field]=row[field].slice(0,16000);row.truncated=true;}
-  const compact=()=>({id:item.id,type:item.type,status:item.status,phase:item.phase,text:item.type==='agentMessage'?row.text:undefined,_pocketRow:row});
+  const compact=()=>({id:item.id,type:item.type,status:item.status,phase:item.phase,...itemTimes(row),text:item.type==='agentMessage'?row.text:undefined,_pocketRow:row});
   for(let shrink=0;shrink<16&&Buffer.byteLength(JSON.stringify(compact()))>64000;shrink++){row.text=row.text.slice(0,Math.floor(row.text.length/2));row.detail=row.detail.slice(0,Math.floor(row.detail.length/2));row.truncated=true;}
   return Buffer.byteLength(JSON.stringify(compact()))<=64000?compact():null;
 }
@@ -54,7 +65,8 @@ export class LiveTimeline {
   prune(){for(const [id,turns] of this.threads)if(this.clock()-turns.touched>=this.ttlMs)this.dropThread(id);}
   removeItem(turn,id){const entry=turn.items.get(id);if(entry){this.bytes-=entry.bytes;turn.items.delete(id);}}
   store(turn,item,version){
-    item=retainUserSendIdentity(turn.items.get(item.id)?.item,item);
+    const previous=turn.items.get(item.id)?.item;
+    item=retainItemTimes(previous,retainUserSendIdentity(previous,item));
     const compact=displayItem(item,turn.id);if(!compact)return;
     const bytes=Buffer.byteLength(JSON.stringify(compact));
     if(bytes>this.maxBytes)return;

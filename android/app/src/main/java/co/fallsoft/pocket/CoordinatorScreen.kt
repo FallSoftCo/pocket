@@ -95,10 +95,10 @@ import kotlinx.coroutines.flow.*
             if(PocketCoordinator.historyProblem.isNotBlank())item{ImmersionText("coordinator:history-problem",PocketCoordinator.historyProblem,color=Coral);TextButton({PocketCoordinator.loadHistory()}){BilingualLabel("Retry history")}}
             PocketCoordinator.messages.forEachIndexed{index,turn->
                 val id=turn.id
-                item(key="coordinator-user:$id"){VoiceChatMessage("You",turn.first,true)}
+                item(key="coordinator-user:$id"){VoiceChatMessage("You",turn.first,true,turn.userAt)}
                 item(key="coordinator-assistant:$id"){
                     Column{
-                        VoiceChatMessage("Codex",turn.second,false)
+                        VoiceChatMessage("Codex",turn.second,false,turn.responseAt)
                         PocketCoordinator.routes[id].orEmpty().forEach{route->CoordinatorRouteReceipt(route,{keyboard?.hide();PocketCoordinator.close();openCoordinatorRoute(route)},{PocketCoordinator.correctionOf=route;updateDraft(route.correction+draft);PocketCoordinator.keyboard(true)})}
                     }
                 }

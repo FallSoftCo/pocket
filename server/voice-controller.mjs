@@ -118,8 +118,8 @@ export class VoiceController {
   }
   history(device,before=Number.MAX_SAFE_INTEGER,{conversationOnly=false}={}){
     const filter=conversationOnly&&this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='coordinator_report_runs'").get()?" AND NOT EXISTS(SELECT 1 FROM coordinator_report_runs r WHERE r.device_id=voice_turns.device AND r.report_id=voice_turns.id)":"";
-    const rows=this.db.prepare('SELECT rowid AS cursor,id,state,transcript,response,error,actions,created_at FROM voice_turns WHERE device=? AND rowid<?'+filter+' ORDER BY rowid DESC LIMIT 101').all(device,before);
-    const hasEarlier=rows.length>100;const turns=rows.slice(0,100).reverse();return {turns:turns.map(t=>({...t,actions:JSON.parse(t.actions||'[]')})),hasEarlier,before:turns[0]?.cursor??null};
+    const rows=this.db.prepare('SELECT rowid AS cursor,id,state,transcript,response,error,actions,created_at,timings FROM voice_turns WHERE device=? AND rowid<?'+filter+' ORDER BY rowid DESC LIMIT 101').all(device,before);
+    const hasEarlier=rows.length>100;const turns=rows.slice(0,100).reverse();return {turns:turns.map(t=>({...t,actions:JSON.parse(t.actions||'[]'),timings:JSON.parse(t.timings||'{}')})),hasEarlier,before:turns[0]?.cursor??null};
   }
   get(device,id){const row=this.db.prepare('SELECT id,state,transcript,response,error,actions,created_at,timings,speech_error FROM voice_turns WHERE device=? AND id=?').get(device,id);return row?{...row,state:row.state==='preparing'?'queued':row.state,actions:JSON.parse(row.actions),timings:JSON.parse(row.timings||'{}'),speechSegments:this.segments.list(device,id)}:null;}
   mark(device,id,stage,at=Date.now()){

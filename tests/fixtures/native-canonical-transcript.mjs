@@ -9,7 +9,7 @@ let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads
 let retainedResult=false,legacyHistoryReads=0,archived=false,archiveCalls=0,restoreCalls=0;
 const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
-const item=(position,id,type,text)=>({type:'item',position,turnId:'native-turn',item:{id,type,...(type==='userMessage'?{content:[{type:'text',text}]}:{text})}});
+const item=(position,id,type,text)=>({type:'item',position,turnId:'native-turn',item:{id,type,startedAtMs:1794017100000+position*60000,...(type==='userMessage'?{content:[{type:'text',text}]}:{text})}});
 function page(){
  return {data:[
   {type:'turnStarted',position:1,turnId:'native-turn',startedAt:1},

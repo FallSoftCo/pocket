@@ -17,7 +17,7 @@ internal data class CoordinatorRoute(
     val correction:String get()="That request belonged in a different session. The intended session is "
 }
 
-data class CoordinatorMessage(val id:String,val first:String,val second:String)
+data class CoordinatorMessage(val id:String,val first:String,val second:String,val userAt:Long?=null,val responseAt:Long?=null)
 
 internal data class CoordinatorItemExposure(val id:String,val offset:Int,val size:Int,val start:Int,val end:Int)
 

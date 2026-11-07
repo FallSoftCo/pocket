@@ -714,9 +714,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         "request"->row.optJSONObject("request")?.let{RequestCard(it)}
         "attachments"->Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Label("SHARED FILES · ${row.s("title")}",Mint);row.optJSONArray("attachments")?.objects()?.forEach{Attachment(it)}}
         "user","message"->{val you=row.s("kind")=="user";ConversationMessageSurface(you){
-            if(showSpeaker){
-                if(speaker!=null&&!you)BilingualLabel(speaker,color=Mint,centered=false)
-                else SymbolIcon(if(you)"User" else "Codex",if(you)"Your message" else "Codex message",Modifier.size(20.dp))
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                if(showSpeaker){
+                    if(speaker!=null&&!you)BilingualLabel(speaker,color=Mint,centered=false)
+                    else SymbolIcon(if(you)"User" else "Codex",if(you)"Your message" else "Codex message",Modifier.size(20.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                MessageTimestamp(row.messageStartedAt(),row.messageCompletedAt())
             }
             val sourceId="row:"+row.s("id")
             LaunchedEffect(row.s("text"),PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer(sourceId,row.s("text"),if(you)"user message" else "Codex response")}
