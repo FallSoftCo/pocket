@@ -1,3 +1,4 @@
+import {registerNativeConfigurationRoutes} from './native-configuration.mjs';
 import {inactiveArchiveReason} from './session-archive.mjs';
 import {mountOperatorNotifications} from './notification-requests.mjs';
 import {CoordinatorHeadReader} from './coordinator-head.mjs';
@@ -784,8 +785,9 @@ app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
   res.json(response);
 }));
 app.post('/api/threads/:id/catchup/read',route(async(req,res)=>res.json(sessionCatchup.acknowledgeCapture(req.device.id,requireId(req.params.id),req.body.token))));
+registerNativeConfigurationRoutes(app,{codex,route,requireId,host:hostName,savedSettings:savedTurnSettings,requestedPermissions:id=>db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(id)?.permissions||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(id)?.permissions||null});
 app.get('/api/models',route(async(_req,res)=>{
-  await codex.connect();res.json({models:(await modelCatalogue(codex)).map(m=>({model:m.model,name:m.displayName,defaultEffort:m.defaultReasoningEffort,efforts:m.supportedReasoningEfforts}))});
+  await codex.connect();res.json({models:(await modelCatalogue(codex)).map(m=>({model:m.model,name:m.displayName,defaultEffort:m.defaultReasoningEffort,efforts:m.supportedReasoningEfforts,serviceTiers:m.serviceTiers||[],defaultServiceTier:m.defaultServiceTier||null}))});
 }));
 app.post('/api/threads/:id/notes',(req,res)=>{try{const id=requireId(req.params.id);conversationNotes.put(id,{...req.body,manual:true});res.json({notes:conversationNotes.list(id)});}catch(e){res.status(e.status||400).json({error:e.message});}});
 app.post('/api/threads/:id/notes/remove',(req,res)=>{const id=requireId(req.params.id);conversationNotes.remove(id,String(req.body.id||''));res.json({notes:conversationNotes.list(id)});});

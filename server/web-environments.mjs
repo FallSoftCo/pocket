@@ -16,7 +16,7 @@ export function qualifyPayload(value,environment,key=''){
  if(!value||typeof value!=='object')return value;
  const result={};for(const [k,v]of Object.entries(value)){
   if(['text','content','arguments','output','detail','command','response','result'].includes(k)){result[k]=v;continue;}
-  if(['threadId','thread_id','parentThreadId','parent_thread_id','forkedFromId','forked_from_id','selectedThreadId'].includes(k)&&typeof v==='string'&&v)result[k]=scopedId(environment,v);
+  if(['threadId','thread_id','parentThreadId','parent_thread_id','forkedFromId','forked_from_id','selectedThreadId','rootThreadId'].includes(k)&&typeof v==='string'&&v)result[k]=scopedId(environment,v);
   else if(['url','href','apkUrl'].includes(k)&&typeof v==='string'&&v.startsWith('/api/'))result[k]='/api/environments/'+environment+v.slice(4);
   else result[k]=qualifyPayload(v,environment,k);
  }
@@ -40,6 +40,10 @@ export function environmentRoute(path){
  else{
   const match=/^\/api\/(threads|requests|notifications|files)\/([^/]+)(.*)$/.exec(url.pathname);
   if(match){const scope=splitScopedId(decodeURIComponent(match[2]));if(scope){environmentId=scope.environmentId;url.pathname='/api/'+match[1]+'/'+encodeURIComponent(scope.id)+match[3];}}
+ }
+ if(environmentId&&url.pathname.startsWith('/api/native/')&&url.searchParams.has('threadId')){
+  const scoped=splitScopedId(url.searchParams.get('threadId'));
+  if(scoped){if(scoped.environmentId!==environmentId)throw fail('This action references a different environment.');url.searchParams.set('threadId',scoped.id);}
  }
  return environmentId?{environmentId,path:url.pathname+url.search}:null;
 }
