@@ -7,6 +7,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import org.json.JSONArray
 import org.json.JSONObject
@@ -45,8 +46,9 @@ class NativeParityControlsNativeTest {
         val matcher=if(inDialog)action and hasAnyAncestor(isDialog()) else action
         await{compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()}
         val target=compose.onAllNodes(matcher).onFirst()
-        // Dialog and footer menu actions can require a genuine scroll into view.
-        runCatching{target.performScrollTo()}
+        // Only offscreen actions need scrolling. A failed scroll is a test failure,
+        // not permission to click a clipped or covered control.
+        if(runCatching{target.assertIsDisplayed()}.isFailure)target.performScrollTo()
         target.assertIsDisplayed().assertIsEnabled().performClick()
     }
     private fun absent(text:String)=compose.onAllNodesWithText(text,useUnmergedTree=true).assertCountEquals(0)
@@ -55,6 +57,22 @@ class NativeParityControlsNativeTest {
     private fun menu(action:String){
         compose.onNodeWithContentDescription("Settings, app updates, usage and activity").assertIsDisplayed().performClick()
         tap(action)
+    }
+    private fun contextTools(){
+        menu("Context & files")
+        visible("Conversation & workspace")
+        // Material opens this tall sheet at its partial anchor. Its measured
+        // scroll viewport extends below the display until the sheet is expanded;
+        // scrolling a descendant alone cannot establish an on-screen action.
+        val handle=device.findObject(By.desc("Drag handle"))
+        assertNotNull("Context sheet drag handle missing",handle)
+        val bounds=handle.visibleBounds
+        if(bounds.centerY()>device.displayHeight/4){
+            assertTrue("Could not drag the visible context sheet",device.swipe(bounds.centerX(),bounds.centerY(),bounds.centerX(),device.displayHeight/8,40))
+            await{device.findObject(By.desc("Drag handle"))?.visibleBounds?.centerY()?.let{it<device.displayHeight/4}==true}
+        }
+        compose.waitForIdle()
+        visible("Conversation & workspace")
     }
     private fun qa(action:String,body:JSONObject?=null):JSONObject{
         val connection=URL("http://127.0.0.1:18880/_qa/$action").openConnection() as HttpURLConnection
@@ -138,15 +156,15 @@ class NativeParityControlsNativeTest {
             capture("02-terminal-origin")
 
             // A turn boundary chosen in A cannot become a confirmation for B.
-            navigate("workstation");menu("Context & files")
+            navigate("workstation");contextTools()
             visible("Conversation & workspace");tap("Branch after selected turn");visible("Confirm conversation action")
             navigate("parity_beta");absent("Confirm conversation action")
             assertTrue(calls("/api/threads/$thread/conversation-operations").isEmpty())
-            menu("Context & files");visible("Working directory: /synthetic/beta");absent("Alpha original request")
+            contextTools();visible("Working directory: /synthetic/beta");absent("Alpha original request")
             capture("03-context-origin")
 
             // Lost fork acknowledgement is inspected by the original ID, never resubmitted.
-            navigate("workstation");menu("Context & files");tap("Branch after selected turn");tap("Confirm")
+            navigate("workstation");contextTools();tap("Branch after selected turn");tap("Confirm")
             await{calls("/api/threads/$thread/conversation-operations").size==1}
             val forkCall=calls("/api/threads/$thread/conversation-operations").single()
             val forkRequest=forkCall.getJSONObject("input")
@@ -157,7 +175,7 @@ class NativeParityControlsNativeTest {
             await{compose.onAllNodesWithText("Conversation & workspace",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
             assertEquals("Alpha retained draft",prefs.getString("draft:$thread",null))
             qa("resolve-fork",JSONObject())
-            menu("Context & files");tap("Check saved operation")
+            contextTools();tap("Check saved operation")
             await{Pocket.selected=="parity-fork"&&PocketTranscript.currentHistoryVerified}
             visible("Alpha branch response")
             assertEquals("Receipt recovery repeated the fork",1,calls("/api/threads/$thread/conversation-operations").size)
@@ -167,7 +185,7 @@ class NativeParityControlsNativeTest {
             // Revert preserves an edited draft and inserts the original message without sending.
             navigate("workstation");tap("Keyboard");editor().performTextReplacement("Alpha edited draft")
             await{prefs.getString("draft:$thread",null)=="Alpha edited draft"}
-            menu("Context & files");tap("Revert before turn & edit");tap("Confirm")
+            contextTools();tap("Revert before turn & edit");tap("Confirm")
             await{calls("/api/threads/$thread/conversation-operations").size==2}
             tap("Close",inDialog=true)
             await{compose.onAllNodesWithText("Conversation & workspace",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
