@@ -1,6 +1,7 @@
 # Supported-product test quality audit — 2026-11-07
 
-Audited candidate base `77636b61`, vanilla Codex Android/web. Rooms, LAX,
+Audited candidate base `77636b61`, vanilla Codex Android/web. The finite CI
+closure below follows the test-only commit `d133e2aa`. Rooms, LAX,
 Hollywood and automatic goals are retired or disabled. Historical tests and
 qualification records do not re-authorize those runtimes. No production source,
 release gate, pairing, phone, account or provider was changed by this audit.
@@ -65,9 +66,10 @@ wiring is still outside this proof.
   debug units, release assembly and release lint. It does not run instrumentation,
   release units, debug lint, optimized visual review or physical-phone checks.
 - `tests/conversation-tools-web.test.mjs:8,27` silently skip when
-  `NEXTCOMP_JSDOM_MODULE` is unset; CI does not supply it. The standalone execution
-  DOM script is also absent from CI. This is a specific gap, not a claim that all
-  test files skip. The new explicit DOM qualifier fails if JSDOM is absent.
+  `NEXTCOMP_JSDOM_MODULE` is unset; The audited CI did not supply it, and the standalone execution DOM script was
+  absent. The CI closure below supplies the resolved pinned dependency and makes
+  both required. Outside CI, direct `npm test` still follows the existing optional
+  environment behavior; `npm run test:dom` is the fail-closed DOM entrypoint.
 - `scripts/release-qualification.mjs` correctly checks actual native log content,
   one expected success summary, immutable APK/source/test fingerprints, required
   cases, review digests and missing/stale/failed receipts. Existing gate tests
@@ -88,10 +90,9 @@ wiring is still outside this proof.
   them accordingly. No exhaustive per-assertion audit of all 136 test files is
   claimed, and the full mixed historical suite was not launched here.
 
-No existing CI or publication behavior was edited. The new core tests enter CI
-through its existing glob. Root should run the explicit composed DOM qualifier
-for this candidate, then own a separate change to pin/provision JSDOM in CI and
-require its receipt. Root/native owner must select affected native journeys and
+The initial test-only change left CI/publication behavior untouched; the finite
+CI closure below now pins JSDOM and requires the browser DOM checks. The new core
+tests enter CI through its existing glob. Root/native owner must select affected native journeys and
 bind them to the exact APK before release. Expanding release fingerprints or
 rejecting all unit skips changes historical gate behavior and needs a separately
 reviewed change; this audit does not silently modify those contracts.
@@ -128,3 +129,34 @@ defect was found in these bounded journeys.
 
 See `qualification/test-quality-integration-20261107.json` for exact commands,
 receipt/log hashes, passed existing regression slice and explicit limitations.
+
+
+## Finite CI closure
+
+`jsdom` is pinned to `26.1.0` as a dev dependency. The lock update adds 35 packages
+and changes no existing package versions. A fresh `npm ci` is the supported setup;
+CI never refers to a workstation-specific dependency path.
+
+The backend job resolves the installed module and exports both
+`NEXTCOMP_JSDOM_MODULE` and `JSDOM_MODULE` before `npm test`, so its two previously
+optional conversation DOM cases execute. A separate required step runs:
+
+```sh
+npm run test:dom -- dist/ci/dom
+```
+
+`scripts/check-dom.mjs` resolves and verifies the installed pinned version, then
+requires all three conversation checks without skips, the existing six-journey
+execution DOM receipt, and the composed qualifier including its two regression
+controls. It does not trust child exit zero alone. It keeps each child log,
+summary and digest, records a failure receipt for missing dependencies, and uses
+a new artifact directory to prevent stale-log reuse. It runs this finite lane
+even if the preceding backend tests fail, provided installation succeeded and
+the workflow was not cancelled. Independent DOM checks still run after another
+DOM check fails, producing one failed overall lane rather than hiding coverage.
+
+Explicit Bash steps preserve pipeline failure through `tee`; `upload-artifact`
+runs with `always()` and retains dependency, backend and DOM logs for seven days.
+No native/emulator job, production service, publication gate or release policy is
+changed. This closes the synthetic browser CI omission, not the native/provider,
+physical-phone, rendered-layout or full `web/app.mjs` gaps in the table above.

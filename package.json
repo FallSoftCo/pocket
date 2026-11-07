@@ -8,7 +8,8 @@
     "mcp": "node server/mcp.mjs",
     "test": "node --test tests/*.test.mjs",
     "doctor": "node scripts/doctor.mjs",
-    "android-local": "node scripts/android-local.mjs"
+    "android-local": "node scripts/android-local.mjs",
+    "test:dom": "node scripts/check-dom.mjs"
   },
   "engines": {
     "node": ">=22.13"
@@ -31,5 +32,8 @@
   },
   "overrides": {
     "uuid": "11.1.1"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
   }
 }
