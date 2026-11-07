@@ -132,7 +132,8 @@
       "physicalPhoneTested": false,
       "phoneInstalledVersionLastObserved": 172,
       "versionCode": 173,
-      "versionName": "0.5.0-alpha.155"
+      "versionName": "0.5.0-alpha.155",
+      "caseScope": "15 native cases including storage/component checks, not15 complete end-to-end user journeys."
     },
     "macRuntime": {
       "version": "0.163.0",
@@ -164,14 +165,17 @@
       "workstationChannel": 173,
       "ownerAnnouncements": 1,
       "notificationId": 2832,
-      "macChannel": "propagation in progress",
-      "phoneInstallation": "not yet verified"
+      "macChannel": 173,
+      "phoneInstallation": "not yet verified",
+      "phoneInstalledVersionLastObserved": 172,
+      "macChannelRestartRequired": false
     }
   },
   "remaining": [
-    "Verify Mac update channel propagation and actual phone installation separately.",
-    "Keep monitoring release and agent integration findings; do not declare project complete.",
-    "Review highest-priority real integration gaps and narrow footer ergonomics."
+    "Verify actual physical phone installation and interaction separately.",
+    "Qualify actual web page restart with original unknown human-send receipt and no replay.",
+    "Add source-bound Mac read-only terminal presentation without exposing unqualified mutation.",
+    "Keep supervised monitoring active; full TUI parity is not complete."
   ],
   "limits": [
     "Managed worktree creation, plugin installation, hook editing and native user-verification flow are not implemented remote operations; do not claim full TUI parity.",
