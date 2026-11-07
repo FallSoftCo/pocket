@@ -28,7 +28,6 @@ internal object FleetConnections {
         val anchor=Pocket.prefs.getString(prefix+"anchor",null)
         val metadataOnly=owner!=null&&anchor!=source.environment.id&&source.environment.fleet?.ownerDeviceId!=owner
         val membership=source.environment.fleet
-        if(metadataOnly&&membership?.fleetId==fleet.id&&membership.accountId==fleet.accountId&&membership.nodeId==fleet.nodeId)return
         val key=if(metadataOnly)realm+":profile:"+source.environment.id else realm
         if(jobs[key]?.isActive==true||System.currentTimeMillis()<(retryAt[key]?:0))return
         val job=Pocket.scope.launch(Dispatchers.IO,start=CoroutineStart.LAZY){
@@ -41,7 +40,9 @@ internal object FleetConnections {
                 if(metadataOnly){
                     Pocket.environmentProfiles.associateFleet(source.environment.id,
                         FleetMembership(fleet.id,fleet.accountId,fleet.nodeId,session.deviceId))
-                    added=true;failures.remove(key);retryAt.remove(key)
+                    Pocket.environmentProfiles.reconcileFleet(fleet)
+                    DurableVoiceWork.retireEnvironments(Pocket.context)
+                    added=true;failures.remove(key);retryAt[key]=System.currentTimeMillis()+60_000
                     withContext(Dispatchers.Main){unavailable.remove(key)}
                     return@launch
                 }

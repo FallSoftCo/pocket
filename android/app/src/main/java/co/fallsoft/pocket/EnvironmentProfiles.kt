@@ -31,6 +31,18 @@ class EnvironmentProfiles(private val prefs:SharedPreferences) {
             // Legacy room journals used pairing hashes rather than profile IDs.
             val roomPrefixes=listOf("hollywood:","pending:hollywood:","receipt:hollywood:","draft:hollywood:","scope:hollywood:","stop:","guidance:","draft:guidance:","guidance-scope:guidance:","attention:","hollywood-binding:")
             for(key in prefs.all.keys)if(roomPrefixes.any{key.startsWith(it+owner+":")||key==it+owner})edit.remove(key)
+            val binding=prefs.getString("hollywood-binding:$owner",null)?.let{runCatching{JSONObject(it)}.getOrNull()}
+            val membership=profile.fleet
+            if(binding!=null&&membership!=null){
+                val rooms=prefs.all.filterKeys{it.startsWith("scope:hollywood:$owner:")}.values.mapNotNull{raw->
+                    runCatching{JSONObject(raw as String).getString("room")}.getOrNull()
+                }.toSet()
+                for(room in rooms){
+                    val logical=runCatching{FleetWorkIdentity(membership.fleetId,membership.accountId,binding.getString("principalId"),WorkKind.ROOM,binding.getString("authorityId"),room).key}.getOrNull()?:continue
+                    prefs.all.keys.filter{it.startsWith("draft:fleet-room:$logical:")||it.startsWith("scope:fleet-room:$logical:")}.forEach{edit.remove(it)}
+                }
+            }
+            for((key,value) in prefs.all)if(key.startsWith("hollywood-")&&value is String&&runCatching{JSONObject(value).optString("owner")==owner}.getOrDefault(false))edit.remove(key)
             for(key in prefs.all.keys)if(if(prefix.isNotEmpty())key.startsWith(prefix) else legacyEnvironmentKey(key))edit.remove(key)
             edit.remove("retiredEnvironment:"+profile.id)
         }
