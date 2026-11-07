@@ -5,10 +5,14 @@ const id=value=>typeof value==='string'&&value.length>0&&value.length<=512&&!/[\
 const unsupported=error=>error?.rpc?.code===-32601||error?.rpc?.code===-32602&&/unsupported|unknown (method|variant)/i.test(error.message);
 export class NativeExecution {
  constructor(codex){this.codex=codex;this.outputBusy=false;}
- async call(method,params){await this.codex.connect();if(!supportsNativeMethod(this.codex,method))fail(409,'This Codex runtime has not been qualified for this execution control.');try{return await this.codex.call(method,params);}catch(error){if(unsupported(error))fail(409,'This Codex host does not support this execution control.');throw error;}}
- async terminals(threadId,cursor){
+ async call(method,params,admit=()=>{}){await this.codex.connect();if(!supportsNativeMethod(this.codex,method))fail(409,'This Codex runtime has not been qualified for this execution control.');admit();try{return await this.codex.call(method,params);}catch(error){if(unsupported(error))fail(409,'This Codex host does not support this execution control.');throw error;}}
+ async terminals(threadId,cursor,terminalPresentation){
   if(!id(threadId)||cursor!==undefined&&(!id(cursor)||cursor.length>512))fail(400,'Invalid terminal page.');
-  const result=await this.call('thread/backgroundTerminals/list',{threadId,limit:30,...(cursor?{cursor}:{})});
+  const result=await this.call('thread/backgroundTerminals/list',{threadId,limit:30,...(cursor?{cursor}:{})},()=>{
+   // This request must advertise that its actual UI hides unavailable controls.
+   // Device versions cannot identify cached web tabs or the selected environment.
+   if(!supportsNativeMethod(this.codex,'thread/backgroundTerminals/terminate')&&terminalPresentation!=='1')fail(409,'Update this client to inspect read-only background terminals in this environment.');
+  });
   if(!Array.isArray(result?.data)||result.data.length>30)fail(502,'Invalid native terminal response.');
   const {backgroundTerminals,executionOutput}=describeNativeCapabilities({version:nativeVersion(this.codex),userAgent:this.codex.initializeResult?.userAgent,connected:this.codex.ready!==false}).features;
   return {threadId,data:result.data,nextCursor:result.nextCursor??null,features:{backgroundTerminals,executionOutput}};
@@ -45,7 +49,7 @@ export class NativeExecution {
 }
 export function mountNativeExecution(app,{codex,route,requireId}){
  const execution=new NativeExecution(codex);
- app.get('/api/threads/:id/terminals',route(async(req,res)=>res.json(await execution.terminals(requireId(req.params.id),req.query.cursor))));
+ app.get('/api/threads/:id/terminals',route(async(req,res)=>res.json(await execution.terminals(requireId(req.params.id),req.query.cursor,req.query.terminalPresentation))));
  app.post('/api/threads/:id/terminals/terminate',route(async(req,res)=>res.json(await execution.terminate(requireId(req.params.id),req.body.processId))));
  app.get('/api/threads/:id/command-output',route(async(req,res)=>res.json(await execution.output(requireId(req.params.id),req.query.turnId,req.query.itemId,{offset:Number(req.query.offset||0),revision:req.query.revision||null}))));
  return execution;

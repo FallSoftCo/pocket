@@ -31,12 +31,19 @@ test('paired execution journey pages exact native output, detects revision chang
  terminated=null;assert.equal((await terminate()).status,502);terminated=true;
 
  codex.initializeResult.userAgent='codex_pocket/0.163.0 (Mac OS 26.6.0; arm64)';
- const [macStatus,macPage]=await get('/api/threads/thread-a/terminals?cursor=next-page');assert.equal(macStatus,200);assert.equal(macPage.data[0].processId,'process-23');assert.equal(macPage.features.backgroundTerminals.state,'available');assert.equal(macPage.features.backgroundTerminals.readOnly,true);assert.equal(macPage.features.backgroundTerminals.mutation.state,'unavailable');assert.equal(macPage.features.executionOutput.state,'unavailable');
+ const beforeNegotiation=calls.length;
+ for(const query of ['', '?terminalPresentation=', '?terminalPresentation=2', '?terminalPresentation=01', '?terminalPresentation=true', '?terminalPresentation=1&terminalPresentation=1', '?terminalPresentation=1&terminalPresentation=2', '?terminalPresentation[version]=1']){
+  const [status,response]=await get('/api/threads/thread-a/terminals'+query);assert.equal(status,409,query);assert.match(response.error,/Update this client/);assert.equal(response.data,undefined);assert.equal(calls.length,beforeNegotiation,'unsupported presentation must not dispatch a native listing');
+ }
+ const [macStatus,macPage]=await get('/api/threads/thread-a/terminals?terminalPresentation=1&cursor=next-page');assert.equal(macStatus,200);assert.equal(macPage.data[0].processId,'process-23');assert.equal(macPage.features.backgroundTerminals.state,'available');assert.equal(macPage.features.backgroundTerminals.readOnly,true);assert.equal(macPage.features.backgroundTerminals.mutation.state,'unavailable');assert.equal(macPage.features.executionOutput.state,'unavailable');
  assert.deepEqual(calls.at(-1),['thread/backgroundTerminals/list',{threadId:'thread-a',limit:30,cursor:'next-page'}]);
  const macCalls=calls.length;
  assert.equal((await terminate()).status,409,'previously available controls cannot carry write capability to a replacement runtime');assert.equal((await get(path))[0],409);assert.equal(calls.length,macCalls,'unqualified termination and output must never reach native transport');
- unsupported=true;assert.equal((await get('/api/threads/thread-a/terminals'))[0],409);
- unsupported=false;codex.initializeResult.userAgent='codex/0.168.0';const count=calls.length;
+ unsupported=true;assert.equal((await get('/api/threads/thread-a/terminals?terminalPresentation=1'))[0],409);
+ unsupported=false;codex.initializeResult.userAgent='codex/0.167.0';
+ codex.connect=async()=>{codex.initializeResult.userAgent='codex_pocket/0.163.0 (Mac OS 26.6.0; arm64)';};
+ const reconnectCount=calls.length;assert.equal((await get('/api/threads/thread-a/terminals'))[0],409);assert.equal(calls.length,reconnectCount);codex.connect=async()=>{};
+ codex.initializeResult.userAgent='codex/0.168.0';const count=calls.length;
  const unqualified=await fetch(base+'/api/threads/thread-a/terminals/terminate',{method:'POST',headers:{Authorization:'Bearer fixture','Content-Type':'application/json'},body:JSON.stringify({processId:'process-23'})});assert.equal(unqualified.status,409);assert.equal(calls.length,count);
  assert.ok(calls.every(([method])=>!['turn/start','thread/resume','command/exec','process/kill'].includes(method)));
 });

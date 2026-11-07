@@ -1,3 +1,7 @@
+// Scoped thread URLs already select their environment at the gateway. Global
+// capability reads need an explicit scope; prefixing a scoped thread twice would
+// leave the encoded thread identity in the remote native request.
+export function executionApiFor(api,origin){return (path,body)=>api(path,body,path.startsWith('/api/threads/')?{}:{scope:origin});}
 function panel(create,title){const dialog=create('dialog','execution-dialog');dialog.style.maxWidth='min(90vw,960px)';const close=create('button','','Close');close.onclick=()=>dialog.close();dialog.append(create('h2','',title),close);dialog.addEventListener('close',()=>dialog.remove(),{once:true});document.body.append(dialog);dialog.showModal();return dialog;}
 const changed='The selected session changed. Open this view again in the original environment.';
 export function commandOutputButton({row,threadId,api,isCurrent=()=>true,create,button}){
@@ -17,7 +21,8 @@ export function openTerminals({threadId,api,isCurrent=()=>true,create,button}){
  const dialog=panel(create,'Background terminals'),status=create('p'),list=create('div');dialog.append(status,list);let serial=0;
  const current=request=>{if(!dialog.isConnected||request!==serial)return false;if(!isCurrent()){serial++;status.textContent=changed;list.replaceChildren();return false;}return true;};
  const read=async(next=null)=>{const request=++serial;if(!current(request))return;status.textContent='Reading terminals…';list.replaceChildren();try{
-  const result=await api(`/api/threads/${encodeURIComponent(threadId)}/terminals${next?'?cursor='+encodeURIComponent(next):''}`);if(!current(request))return;
+  const query=new URLSearchParams({terminalPresentation:'1',...(next?{cursor:next}:{})});
+  const result=await api(`/api/threads/${encodeURIComponent(threadId)}/terminals?${query}`);if(!current(request))return;
   const mutation=result.features?.backgroundTerminals?.mutation,canTerminate=mutation?.state==='available';
   status.textContent=(result.data.length?'Terminals reported by Codex.':'No background terminals reported.')+(canTerminate?'':' '+(mutation?.reason||'Read-only inspection. Termination is unavailable on this runtime.'));
   for(const terminal of result.data){
