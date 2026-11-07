@@ -71,6 +71,11 @@ internal class NativeTranscriptStore(context:android.content.Context,databaseNam
     // Live control envelopes are bounded separately and never restored from disk.
     // Render-memory pressure cannot revoke a currently actionable question.
     fun releaseMemory(){rendered.clear();renderedBytes=0;coverage.clear()}
+    fun replaceHistory(scope:String,id:String){
+        db.beginTransaction()
+        try{for(table in listOf("entry","page","state","reader"))db.delete(table,"scope=? AND thread=?",args(scope,id));db.setTransactionSuccessful()}finally{db.endTransaction()}
+        coverage.remove(scope to id);details.remove(scope to id);views.remove(scope to id)
+    }
     fun close(){db.close()}
     private fun args(scope:String,id:String)=arrayOf(scope,id)
     private fun state(scope:String,id:String)=db.rawQuery("SELECT detail,head,version,notification,revision,bytes FROM state WHERE scope=? AND thread=?",args(scope,id)).use{

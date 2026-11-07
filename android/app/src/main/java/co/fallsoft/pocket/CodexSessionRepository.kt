@@ -61,6 +61,7 @@ internal object CodexSessionRepository {
     private fun native(value:JSONObject)=value.optInt("windowSchema")==3||value.optJSONObject("timeline")?.optInt("native")==1
     private suspend fun nativeCommitted(source:Source,id:String,response:JSONObject,cursor:String?):JSONObject=withContext(lane){
         if(!current(source))throw CancellationException("Pairing changed")
+        if(retiredHistoryEpochs[source.scope to id]?.contains(response.optJSONObject("historyHead")?.s("epoch"))==true)throw java.io.IOException("Conversation history was replaced during this read")
         nativeStore.commit(source.scope,id,response,cursor)
         val protected=inFlight.toMutableSet().apply{add(source.scope to id);Pocket.captureEnvironment()?.let{current->Pocket.selected?.let{add(CodexSessionRepository.source(current).scope to it)}}}
         nativeStore.trim(protected)
@@ -144,6 +145,7 @@ internal object CodexSessionRepository {
     private val wake=Channel<Unit>(Channel.CONFLATED)
     private val pending=linkedMapOf<Pair<String,String>,Intent>()
     private val latest=ConcurrentHashMap<Pair<String,String>,JSONObject>()
+    private val retiredHistoryEpochs=ConcurrentHashMap<Pair<String,String>,MutableSet<String>>()
     // Whole canonical windows are the eviction unit. Cutting rows while keeping
     // the server's original cursor silently skips history on the next page.
     private val memoryWeights=linkedMapOf<Pair<String,String>,Long>()
@@ -374,6 +376,21 @@ internal object CodexSessionRepository {
                 liveScheduled.set(false)
                 if(livePending.isNotEmpty())flushLiveSoon()
             }
+        }
+    }
+    fun historyReplaced(id:String,head:JSONObject,destination:EnvironmentRequest?=Pocket.captureEnvironment()){
+        if(destination==null||id.isBlank())return
+        val source=source(destination);val key=source.scope to id
+        val epoch=latest[key]?.optJSONObject("historyHead")?.s("epoch")
+        if(!epoch.isNullOrBlank()&&epoch!=head.s("epoch"))retiredHistoryEpochs.computeIfAbsent(key){ConcurrentHashMap.newKeySet<String>()}.add(epoch)
+        dirty.add(key);invalidations[key]=invalidationSerial.incrementAndGet()
+        io.launch{
+            if(!current(source))return@launch
+            val stored=nativeStore.snapshot(source.scope,id)?.optJSONObject("historyHead")?.s("epoch")
+            if(!stored.isNullOrBlank()&&stored!=head.s("epoch"))retiredHistoryEpochs.computeIfAbsent(key){ConcurrentHashMap.newKeySet<String>()}.add(stored)
+            latest.remove(key);nativeStore.replaceHistory(source.scope,id)
+            withContext(Dispatchers.Main){if(Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==id){CodexConversations.select(id,force=true,openLatest=true);CodexConversations.invalidate(immediate=true)}}
+            queue(Intent(source,id))
         }
     }
     fun invalidate(id:String,destination:EnvironmentRequest?=Pocket.captureEnvironment(),notification:Long=0,priorityAt:Long=0){
