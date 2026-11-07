@@ -17,3 +17,14 @@ Retired room-creation and Hollywood-only gateway journeys remain beside the test
 ## Explicit retired-data deletion (169)
 
 The owner subsequently requested deletion, superseding 168 retention of retired environment records. Authenticated fleet retirement now removes credentials and profile metadata, environment-scoped typed drafts and outbox receipts, and retired recording files/journal rows. Browser retirement deletes only identified source-owned state; live Mac/current-host copies survive. No removed command is dispatched or retried. Non-secret retired origin and profile identifiers remain solely to clean up offline clients and prevent obsolete enrollment.
+
+## Retired room workers in shared Codex discovery
+
+Legacy LAX used the common Codex rollout directory while keeping paginated history
+in a separate runtime database. Its records can therefore appear in stock native
+metadata with empty stock timelines and writer locks owned by the legacy runtime.
+NextComp excludes the explicit native `originator: lax-host-agent` identity through
+its durable internal-session registry, including cached, searched and archived
+catalogs. Names and workspace substrings are not ownership evidence. Ordinary
+Codex sessions and subagents remain supported. Legacy histories are retained in
+their original runtime store; filtering is not a claimed history migration.

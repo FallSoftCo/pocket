@@ -10,7 +10,11 @@ export class InternalSessions {
   register(id,kind){if(id)this.db.prepare('INSERT OR IGNORE INTO pocket_internal_sessions VALUES(?,?)').run(id,kind);}
   owns(id,thread){
     id=id||thread?.id;if(!id)return false;
-    const kind=typeof thread?.cwd==='string'?this.directories.get(resolve(thread.cwd)):null;
+    // Legacy room workers share Codex's discovery directory, but their owning
+    // runtime has a separate history store. Never present those records as
+    // stock sessions. Use persisted producer identity, not title/path guesses.
+    const kind=thread?.originator==='lax-host-agent'?'retired-room-agent':
+      typeof thread?.cwd==='string'?this.directories.get(resolve(thread.cwd)):null;
     if(kind)this.register(id,kind);
     return !!this.db.prepare('SELECT 1 FROM pocket_internal_sessions WHERE thread_id=?').get(id);
   }
