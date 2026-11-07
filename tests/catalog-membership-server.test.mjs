@@ -20,10 +20,12 @@ test('real gateway reconciles temporary runtime residency across cached/live/sea
  const late={...temporary,id:'late-residency'};
  const missing={...durable,id:'missing-runtime'},offline={...durable,id:'offline-runtime'};
  const pending={...base,id:'pending-user',name:'New human task',ephemeral:false,status:{type:'pending'},discoveryPending:true};
- let promoted=false,reappeared=false;const calls=[];
+ const external={...durable,id:'external-archive'};
+ let promoted=false,reappeared=false,externalArchived=false;const calls=[];
  wss.on('connection',ws=>ws.on('message',raw=>{const m=JSON.parse(raw);if(!m.id)return;calls.push(m);let result={};
-  if(m.method==='thread/list')result={data:[durable,child,pending,...(reappeared?[missing]:[]),...(promoted?[{...temporary,ephemeral:false,path:'/synthetic/sessions/promoted.jsonl'}]:[temporary])],nextCursor:null};
+  if(m.method==='thread/list')result={data:[durable,child,pending,...(!externalArchived?[external]:[]),...(reappeared?[missing]:[]),...(promoted?[{...temporary,ephemeral:false,path:'/synthetic/sessions/promoted.jsonl'}]:[temporary])],nextCursor:null};
   else if(m.method==='thread/read'&&[missing.id,offline.id].includes(m.params.threadId)){const id=m.params.threadId;ws.send(JSON.stringify({id:m.id,error:{code:id===missing.id?-32600:-32603,message:id===missing.id?`thread not loaded: ${id}`:'Native metadata temporarily unavailable'}}));return;}
+  else if(m.method==='thread/read'&&m.params.threadId===external.id)result={thread:{...external,path:'/synthetic/'+(externalArchived?'archived_sessions':'sessions')+'/external.jsonl'}};
   else if(m.method==='thread/read')result={thread:m.params.threadId===late.id?late:[durable,child,pending,temporary].find(t=>t.id===m.params.threadId)};
   ws.send(JSON.stringify({id:m.id,result}));
  }));
@@ -36,7 +38,7 @@ test('real gateway reconciles temporary runtime residency across cached/live/sea
  const db=new DatabaseSync(join(dir,'pocket.sqlite'));
  for(const row of [temporary,{...late,ephemeral:undefined},missing,offline])db.prepare('INSERT INTO pocket_discovered_threads VALUES(?,?,0,?)').run(row.id,JSON.stringify(row),Date.now());
  // Existing stale rows are encountered through native/cache metadata, not names.
- const normal=await get('/api/threads');assert.deepEqual(new Set(normal.threads.map(t=>t.id)),new Set([durable.id,child.id,pending.id,offline.id]));
+ const normal=await get('/api/threads');assert.deepEqual(new Set(normal.threads.map(t=>t.id)),new Set([durable.id,child.id,pending.id,offline.id,external.id]));
  for(const query of ['?search=Temporary','?cursor=older','?archived=true','?view=coordinator&includeChildren=true']){
   const p=await get('/api/threads'+query);assert.ok(p.threads.every(t=>![temporary.id,late.id,missing.id].includes(t.id)),query);
  }
@@ -49,5 +51,7 @@ test('real gateway reconciles temporary runtime residency across cached/live/sea
  reappeared=true;assert.ok((await get('/api/threads')).threads.some(t=>t.id===missing.id),'fresh native evidence restores membership');
  promoted=true;assert.ok((await get('/api/threads')).threads.some(t=>t.id===temporary.id),'explicit native persistence makes the same ID discoverable');
  assert.equal(db.prepare('SELECT 1 FROM pocket_internal_sessions WHERE thread_id=?').get(temporary.id),undefined);
+ externalArchived=true;for(let i=0;i<2;i++)assert.ok(!(await get('/api/threads')).threads.some(t=>t.id===external.id),'native external archive cannot reappear from cached metadata');
+ assert.equal(db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(external.id)?.archived,1);
  assert.ok(!calls.some(c=>['thread/resume','thread/start','turn/start','thread/archive'].includes(c.method)),'catalog reads cannot activate or archive work');db.close();
 });

@@ -80,8 +80,10 @@ export class SessionDiscovery {
         const entry={at:Date.now(),thread:null,work:null};if(this.readCache.size>=512){const prune=[...this.readCache].find(([,value])=>!value.work);if(prune)this.readCache.delete(prune[0]);}this.readCache.set(id,entry);
         const presenceVersion=this.presence.begin(id);
         const work=this.codex.call('thread/read',{threadId:id,includeTurns:false}).then(({thread})=>{
-          entry.thread=thread;entry.at=Date.now();if(!thread||archived(thread)||this.hidden(id,thread)){entry.thread=null;found.delete(id);return;}
-          if((this.archiveChanges.get(id)?.revision||0)>revision)return;entry.thread=this.remember(thread)||thread;found.set(id,entry.thread);freshStatus.add(id);
+          entry.thread=thread;entry.at=Date.now();if((this.archiveChanges.get(id)?.revision||0)>revision)return;
+          if(!thread||this.hidden(id,thread)){entry.thread=null;found.delete(id);return;}
+          if(archived(thread)){this.remember(thread,{archived:true});this.markArchived(id,true);entry.thread=null;found.delete(id);return;}
+          entry.thread=this.remember(thread)||thread;found.set(id,entry.thread);freshStatus.add(id);
         }).catch(error=>{if(this.presence.rejectMissing(id,error,presenceVersion)){entry.thread=null;found.delete(id);this.live.delete(id);}}).finally(()=>{entry.work=null;this.presence.finish(id,presenceVersion);});entry.work=work;fresh.push(work);
       }
       if(fresh.length){let timer;await Promise.race([Promise.all(fresh),new Promise(resolve=>{timer=setTimeout(resolve,750);})]);clearTimeout(timer);}
