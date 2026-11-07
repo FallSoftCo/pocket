@@ -53,7 +53,7 @@ for(const origin of origins){
   }
   else if(/\/conversation-operations\/[^/]+$/.test(path)){body=origin.operations.get(path.split('/').at(-1));if(!body){res.writeHead(404).end('{"error":"Original receipt missing"}');return;}}
   else if(path.endsWith('/terminals'))body={data:[{processId:'shared-process-id',command:`${origin.name} synthetic watcher`,cwd:metadata(origin).cwd,cpuPercent:0}],nextCursor:null};
-  else if(path.endsWith('/terminals/terminate'))body={ok:true};
+  else if(path.endsWith('/terminals/terminate'))body={ok:true,terminated:true};
   else if(path==='/api/native/configuration'){
    const section=url.searchParams.get('section')||'settings';
    body={state:'available',host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:[],features:{}};
