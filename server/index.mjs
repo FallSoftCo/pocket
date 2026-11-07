@@ -1,6 +1,8 @@
 import {registerNativeConfigurationRoutes} from './native-configuration.mjs';
 import {requestPresentation} from './native-request-contract.mjs';
 import {mountNativeExecution} from './native-execution.mjs';
+import {ConversationTools,registerConversationTools} from './conversation-tools.mjs';
+import {supportsNativeMethod} from './native-capabilities.mjs';
 import {inactiveArchiveReason} from './session-archive.mjs';
 import {mountOperatorNotifications} from './notification-requests.mjs';
 import {CoordinatorHeadReader} from './coordinator-head.mjs';
@@ -314,6 +316,7 @@ const recoveryQueue=new RecoveryQueue(db);
 const turnRecovery=new TurnRecovery({db,
   read:async threadId=>{await codex.connect();const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});return history.read(thread,{summary:true});},
   health:async(threadId,kind,thread)=>{
+    try{conversationTools.assertInputAllowed(threadId);}catch{return {ok:false,blocked:true,reason:'Conversation context control is pending or uncertain.'};}
     try{terminalForkImports?.inputAllowed(threadId);}catch{return {ok:false,blocked:true,reason:'This destination is waiting for terminal-fork ownership release.'};}
     if(terminalForks&&!terminalForks.recoveryAllowed(threadId))return {ok:false,blocked:true,reason:'This source has a terminal transfer checkpoint. Recovery must not restart its primary task.'};
     if(!codex.ready||syncing.has(threadId))return false;
@@ -341,6 +344,7 @@ const turnRecovery=new TurnRecovery({db,
   },
   stop:async(threadId,turnId)=>codex.call('turn/interrupt',{threadId,turnId}),
   start:async(threadId,requestId,text)=>{
+    conversationTools.assertInputAllowed(threadId);
     // Inherit the runtime's exact model and permission settings. No original task replay.
     await codex.call('thread/resume',{threadId,excludeTurns:true});attached.add(threadId);
     const recovery=turnRecovery.get(threadId);if(recovery?.state!=='dispatching'||recovery.request_id!==requestId)throw Error('Recovery was cancelled before delivery.');
@@ -426,6 +430,7 @@ async function attach(threadId,{before=null,recent=false}={}){
 const isActive=t=>t.status?.type==='active';
 const savedTurnSettings=id=>{const row=db.prepare('SELECT settings FROM turn_settings WHERE thread_id=?').get(id);return row?JSON.parse(row.settings):null;};
 async function sendOutgoing(row,initialThread=null){
+  try{conversationTools.assertInputAllowed(row.thread_id);}catch{return;}
   const threadId=row.thread_id,id=row.id;
   if(syncing.has(threadId))return;
   syncing.add(threadId);
@@ -788,6 +793,13 @@ app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
 }));
 app.post('/api/threads/:id/catchup/read',route(async(req,res)=>res.json(sessionCatchup.acknowledgeCapture(req.device.id,requireId(req.params.id),req.body.token))));
 registerNativeConfigurationRoutes(app,{codex,route,requireId,host:hostName,savedSettings:savedTurnSettings,requestedPermissions:id=>db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(id)?.permissions||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(id)?.permissions||null});
+const conversationTools=new ConversationTools({db,codex,supports:method=>supportsNativeMethod(codex,method),publish:emit,
+ checkSource:id=>{terminalForkImports?.inputAllowed(id);terminalForks?.inputRole(id);},
+ hasPending:id=>syncing.has(id)||['dispatching','unknown','running'].includes(turnRecovery.get(id)?.state)||!!db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state NOT IN ('accepted','cancelled') LIMIT 1").get(id),
+ onFork:thread=>{sessionDiscovery.remember(thread);recordWork(()=>workRecord.enroll(thread));emit('sessionStarted',{threadId:thread.id,thread});},
+ onChanged:(id,kind)=>{if(kind==='revert'){timeline.dropThread(id);history.positions.clear();historyHeads.invalidate(id);if(['waiting','awaitingAssessment'].includes(turnRecovery.get(id)?.state))turnRecovery.set(id,'cancelled');}emit('conversationChanged',{threadId:id,kind,historyHead:historyHeads.snapshot(id)});return historyHeads.snapshot(id);}
+});
+registerConversationTools(app,conversationTools,route);
 app.get('/api/models',route(async(_req,res)=>{
   await codex.connect();res.json({models:(await modelCatalogue(codex)).map(m=>({model:m.model,name:m.displayName,defaultEffort:m.defaultReasoningEffort,efforts:m.supportedReasoningEfforts,serviceTiers:m.serviceTiers||[],defaultServiceTier:m.defaultServiceTier||null}))});
 }));
@@ -854,6 +866,7 @@ app.post('/api/threads/:id/watch',route(async(req,res)=>{
   res.json({ok:true});
 }));
 app.post('/api/threads/:id/reply',route(async(req,res)=>{
+  conversationTools.assertInputAllowed(requireId(req.params.id));
   terminalForkImports?.inputAllowed(requireId(req.params.id));terminalForks?.inputRole(requireId(req.params.id));
   const threadId=requireId(req.params.id), text=String(req.body.text||'').trim(), id=String(req.body.id||randomUUID()), mode=req.body.mode||'auto';
   if(!text||text.length>32000||id.length>100)return res.status(400).json({error:'Reply must be 1–32000 characters.'});

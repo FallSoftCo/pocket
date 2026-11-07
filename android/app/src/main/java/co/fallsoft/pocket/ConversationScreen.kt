@@ -128,6 +128,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
     var reviewOpen by rememberSaveable(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
+    var conversationToolsOpen by rememberSaveable(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     val reviewRequests=d?.optJSONArray("pending")?.objects().orEmpty()
     val reviewResults=remember(notes,rows){usefulConversationResults(notes,rows)}
     val otherQuestions=Pocket.attention.filter{it.s("thread_id")!=Pocket.selected&&it.s("kind") in listOf("question","approval")}
@@ -449,7 +450,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 }
             }
     }
+    if(conversationToolsOpen)ConversationToolsSheet(onClose={conversationToolsOpen=false},onInsert={text->val next=if(editor.text.isBlank())text else editor.text+"\n\n"+text;editor=TextFieldValue(next,TextRange(next.length));saveReplyDraft(draftKey,next);keyboardInput=true})
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
+            TextButton({actionsOpen=false;conversationToolsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Context & files")}
             if(reviewCount>0)TextButton({actionsOpen=false;reviewOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Needs you · $reviewCount",color=Coral)}
             UsageDetails()
             d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}

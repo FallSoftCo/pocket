@@ -1,5 +1,6 @@
 import {NativeSettingsPanel,addServiceTierControl} from './native-settings.mjs';
 import {commandOutputButton,openTerminals} from './native-execution.mjs';
+import {ConversationToolsPane} from './conversation-tools.mjs';
 import {messageTime} from './message-time.mjs';
 import {roomLead,assertLeadTarget} from './room-lead.mjs';
 import {HistoryReader} from './native-history.mjs';
@@ -57,6 +58,10 @@ async function api(path,body,options={}){
 }
 const error=e=>{if($('startup')){$('startup').hidden=true;if($('app').hidden&&$('pairing').hidden)$('pairing').hidden=false;}$('error').textContent=e.message||String(e);$('error').hidden=false;};
 const run=fn=>async(...args)=>{try{$('error').hidden=true;await fn(...args);}catch(e){error(e);}};
+const conversationToolsPane=new ConversationToolsPane({api,source:()=>scope,device:()=>deviceId,
+ appendDraft:(text,id)=>{if(scope!==id)throw Error('Conversation changed.');$('draft').value=$('draft').value+text;saveDraft(true);},
+ applied:async(receipt,id)=>{if(receipt.kind==='fork'&&receipt.thread?.id){await refreshList({invalidate:true});await open(receipt.thread.id);}else{if(receipt.kind==='revert'&&scope===id){cache.replaceHistory(id,receipt.result?.historyHead);const text=receipt.result?.draft||'';$('draft').value=$('draft').value?$('draft').value+'\n\n'+text:text;saveDraft(true);}if(scope===id)await refreshConversation();}}
+});
 const requestList=new RequestList({holder:$('requests'),create:el,button,api,refresh:refreshConversation});
 const voice=new BrowserVoice(api,(text,p)=>{
  const holder=$('voice-status');holder.hidden=!text&&!voice.records.some(r=>!['cancelled','submitted','completed'].includes(r.state));holder.replaceChildren();if(text&&!voice.records.some(r=>r.error===text))holder.append(el('span','',text));
@@ -118,6 +123,7 @@ async function renameCard(thread,card){
  input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();void finish(true);}else if(e.key==='Escape'){e.preventDefault();void finish(false);}};input.onblur=()=>void finish(true);
 }
 function renderHeader(){
+ if($('conversation-tools-toggle'))$('conversation-tools-toggle').hidden=scope==='coordinator';
  if(isRoom(scope)){if(rooms.entries.has(scope))renderRoomHeader();else{setLabel($('session-state'),'Original room access is unavailable. Saved draft retained.');$('send').disabled=true;$('mic').disabled=!voice.recording;$('room-controls').hidden=true;}return;}
  $('room-controls').hidden=true;delete $('main').dataset.roomId;setLabel($('draft-note'),'Enter to send · Shift+Enter for a new line');
  const t=scope==='coordinator'?null:current?.thread||threads.find(t=>t.id===scope),identity=sessionIdentity(t);setLabel($('title'),t?catalogTitle(t):'Coordinator');$('context-label').textContent=t?identity.isChild?'DELEGATED WORK':'DIRECT SESSION':'DIRECT YOUR COMPUTING';setLabel($('session-state'),t?`${sessionState(t).label} · ${t.cwd||'Work environment'}${identity.isChild&&!identity.canAcceptDirectInput?' · Guide through the parent task':''}`:status?.backend==='lax'?'Choose a Hollywood room. Stock coordinator is unavailable on this gateway.':'Ask here, or open work to guide it directly.');$('coordinator').classList.toggle('active',scope==='coordinator');$('session-menu').hidden=!t||(identity.isChild&&!identity.canAcceptDirectInput);$('parent').hidden=!identity.parentThreadId;$('parent').onclick=run(()=>open(identity.parentThreadId));const enabled=scope==='coordinator'?status?.backend!=='lax':!!current&&identity.canAcceptDirectInput;$('draft').disabled=!enabled;$('send').disabled=!enabled||!!deliveryFlight||!!pending;$('mic').disabled=!enabled||!voice.supported();$('draft').placeholder=!enabled?'Choose an available work conversation…':t?'Guide this session…':'Tell the coordinator what you need…';$('send-mode').hidden=!t;
@@ -276,6 +282,7 @@ async function reconcilePending(){if(deliveryFlight)return deliveryFlight;if(!pe
 }
 let runtimeConnected=null;
 function handleEvent(m){
+ conversationToolsPane.event(m);
  if(m.type==='hollywoodInbox'||m.type==='roomEvent'||m.type==='roomNativeState'){scheduleRefresh({head:isRoom(scope),catalog:true});return;}
  if(m.type==='environmentStatus'){if(m.available===false||m.connected===false)accountUsage.unavailable(m.environmentId);if(m.available===true&&accountSource().environment===m.environmentId)void refreshAccountUsage();renderUsage();scheduleRefresh({head:false,catalog:true});return;}
  if(immersion.handle(m))return;
@@ -286,6 +293,7 @@ function handleEvent(m){
   if(recovered)scheduleRefresh({head:true,catalog:true,attention:true});return;
  }
  const threadId=m.threadId||m.notification?.thread_id||m.event?.params?.threadId;
+ if(m.type==='conversationChanged'){if(m.kind==='revert'){cache.replaceHistory(threadId,m.historyHead);loadSerial++;}scheduleRefresh({head:threadId===scope,catalog:true});return;}
  if(m.type==='timeline'){
   const known=cache.timeline(threadId,m.row);
   if(threadId===scope){if(known){renderTranscript();if(m.row.kind==='request')scheduleRefresh({head:true,attention:true});}else scheduleRefresh({head:true});}
@@ -396,6 +404,7 @@ $('toggle-keyboard').onclick=()=>{$('composer').classList.toggle('keyboard-open'
 let playbackVolume=read('playbackVolume',1);function volume(){voice.volume=playbackVolume;if(voice.audio)voice.audio.volume=playbackVolume;$('playback-volume').textContent=playbackVolume===0?'Muted':`${playbackVolume*100}%`;}$('playback-volume').onclick=()=>{playbackVolume=playbackVolume===0?.5:playbackVolume===.5?1:0;write('playbackVolume',playbackVolume);volume();};volume();
 // One bottom control surface; reading space is not consumed by a second header.
 const toolbar=document.querySelector('.transcript-toolbar'),header=document.querySelector('.conversation-header');
+const conversationToolsToggle=button('Context & files',()=>conversationToolsPane.show());conversationToolsToggle.id='conversation-tools-toggle';conversationToolsToggle.hidden=scope==='coordinator';toolbar.append(conversationToolsToggle);
 const conversationUsage=button('',()=>{renderUsage();anchorPanel($('settings-dialog'),conversationUsage);});conversationUsage.id='conversation-usage';conversationUsage.className='conversation-usage';conversationUsage.dataset.accountUsage='';conversationUsage.append(el('span','account-allowance','Usage unavailable'),el('span','account-source'));toolbar.append(conversationUsage);
 toolbar.prepend($('back'));toolbar.append($('parent'),$('session-menu'));for(const control of toolbar.querySelectorAll('button'))control.type='button';$('composer').append(toolbar);header.classList.add('footer-identity');$('composer').prepend(header);
 $('draft').addEventListener('focus',()=>{$('composer').classList.add('keyboard-open');});

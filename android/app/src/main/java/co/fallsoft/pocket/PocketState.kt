@@ -306,6 +306,7 @@ object Pocket {
     fun test(){scope.launchEnvironment{try{api("/api/test-notification",JSONObject())}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Test failed"}}}
     fun event(json:JSONObject){scope.launchEnvironment{
         when(json.s("type")){
+            "conversationChanged" -> {val id=json.s("threadId");val destination=coroutineContext[EnvironmentRequestContext]?.destination;if(json.s("kind")=="revert")json.optJSONObject("historyHead")?.let{CodexSessionRepository.historyReplaced(id,it,destination)}else{CodexSessionRepository.invalidate(id,destination);if(selected==id)refreshDetail()};refresh()}
             "hollywoodInbox" -> {coroutineContext[EnvironmentRequestContext]?.destination?.let{HollywoodNotifications.socket(it,json)}}
             "threadRenamed" -> {val applied=PocketNotificationTitles.rename(json.s("threadId"),json.s("name"),json.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=json.optLong("revision"));if(applied)tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(title=json.s("name"))else it}}
             "rateLimits" -> acceptUsage(json.optJSONObject("usage"),coroutineContext[EnvironmentRequestContext]?.destination)
