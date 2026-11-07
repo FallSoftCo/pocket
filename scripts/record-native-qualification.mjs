@@ -139,6 +139,13 @@ try{
   // setup. Install its isolated preferences only after that setup, with no
   // live SharedPreferences instance able to restore the previous value.
   run(['shell','am','force-stop','co.fallsoft.pocket']);
+  // Android loads the AtomicFile backup in preference to the primary XML.
+  // A force-stopped synthetic test can leave that backup behind. Retain its
+  // evidence, then remove only this owned QA backup before installing new input.
+  const backup=spawnSync(adb,['-s',serial,'exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml.bak'],{encoding:'utf8',env:childEnv,timeout:30000});
+  receipt.audioSetupBackupPresent=/^\s*<\?xml/.test(backup.stdout||'');
+  if(receipt.audioSetupBackupPresent){requireQaPreferences(backup.stdout);writeFileSync(join(directory,'audio-setup-backup.xml'),backup.stdout,{flag:'wx',mode:0o600});}
+  run(['shell','run-as','co.fallsoft.pocket','rm','-f','shared_prefs/pocket.xml.bak']);persist();
   const setup=spawnSync(adb,['-s',serial,'shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'"],{input:liveAudioPreferences,encoding:'utf8',env:childEnv,timeout:30000});
   if(setup.status!==0||run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml'])!==liveAudioPreferences)throw Error('Isolated audio preferences readback differs.');
  }

@@ -28,7 +28,7 @@ class CoordinatorNativeAudioLiveTest {
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext
   requireOwnedNativeTarget(UiDevice.getInstance(i))
   i.runOnMainSync{Pocket.init(c)}
-  check(Pocket.base=="http://127.0.0.1:18889"){"Only the retained isolated QA authority is allowed"}
+  check(Pocket.base=="http://127.0.0.1:18889"){"Only the retained isolated QA authority is allowed (base=${Pocket.base}, profile=${Pocket.environmentId}, stored=${Pocket.prefs.getString("server","missing")})"}
   val http=OkHttpClient.Builder().callTimeout(40,TimeUnit.SECONDS).build()
   val executor=Executors.newSingleThreadExecutor()
   fun api(path:String,body:JSONObject):JSONObject {
