@@ -15,7 +15,8 @@
     "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#retiredRoomSelectionOpensStockWorkWithoutReplayingOrLosingDrafts",
     "co.fallsoft.pocket.EnvironmentRetirementNativeTest#retirementDeletesOriginalUnknownCopiesAndAudioButKeepsOtherHost",
     "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#archiveFromListKeepsDraftAndRestoresWithoutOpeningOrSending",
-    "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#foreignArchiveProgressAndRefusalStayVisibleWithoutRetargeting"
+    "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#foreignArchiveProgressAndRefusalStayVisibleWithoutRetargeting",
+    "co.fallsoft.pocket.NativeParityControlsNativeTest#nativeControlsPreserveRequestSourceReceiptsAndDrafts"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
@@ -39,7 +40,8 @@
     "155 also retains isolated input/output purposes: speech connections always receive speech-only instructions, quoted passages remain data, and safe completion diagnostics retain counts/timings rather than transcript text. Native question actions observe stable enabled bounds and still submit exactly once with the original acknowledgement assertions.",
     "159 requires visible room account usage with original environment/credential ownership and existing quota inputs; zero/credit/reset/stale/unavailable semantics remain distinct. Added native component matrix, stock paging, accepted-send/next-draft and original volume-key capture guards must pass on the retained owned emulator. Browser shared-toolbar usage and room integration require separately recorded actual rendered desktop/narrow fixtures and authenticated federated read evidence before web activation. No physical-phone installation or handset/provider/push claim follows from these checks.",
     "167 lead-role candidate: human conversation, internal coordination and earlier archive stay distinct. The native UI fixture submits only one synthetic request. Real model lead/worker proof is recorded separately.",
-    "168 retires room product journeys. Existing stock history, reading, capture and actual account audio remain required, plus a saved-room-selection upgrade. Optimized stock catalog/history review replaces retired room snapshots. Physical handset and FCM remain separate evidence."
+    "168 retires room product journeys. Existing stock history, reading, capture and actual account audio remain required, plus a saved-room-selection upgrade. Optimized stock catalog/history review replaces retired room snapshots. Physical handset and FCM remain separate evidence.",
+    "173 additionally requires one composed native MainActivity journey for secret request replacement, native forms, source-bound terminal and conversation confirmations, unknown operation receipts, restored drafts and native settings. Its authority is a disposable two-origin fixture; it does not prove provider model execution or physical phone behavior."
   ],
   "requiredOptimizedReview": "native-codex-catalog-and-history",
   "captureInteraction": "volume-buttons"

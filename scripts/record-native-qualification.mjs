@@ -55,17 +55,18 @@ const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#existing
 const voiceCase=name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#');
 const environmentCase=name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
 const canonicalCase=name.startsWith('co.fallsoft.pocket.NativeReadingParityNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeTranscriptStoreNativeTest#');
+const parityCase=name.startsWith('co.fallsoft.pocket.NativeParityControlsNativeTest#');
 const mixedCase=name.startsWith('co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#');
-const fixtureScript=mixedCase?'tests/fixtures/hollywood-mixed-catalog-native.mjs':canonicalCase?'tests/fixtures/native-canonical-transcript.mjs':voiceCase?'tests/fixtures/native-room-voice-ui.mjs':environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
-const portKey=mixedCase?'mixed':voiceCase?'voice':environmentCase?'environment':teamCase?'team':'transcript';
-const portValue=owner.fixturePorts?.[portKey]??(environmentCase?19995:teamCase?19992:19998);
+const fixtureScript=parityCase?'tests/fixtures/native-parity-controls.mjs':mixedCase?'tests/fixtures/hollywood-mixed-catalog-native.mjs':canonicalCase?'tests/fixtures/native-canonical-transcript.mjs':voiceCase?'tests/fixtures/native-room-voice-ui.mjs':environmentCase?'tests/fixtures/environment-isolation-native.mjs':teamCase?'tests/fixtures/immersion-cycle-team-ui.mjs':'tests/fixtures/transcript-refresh-native.mjs';
+const portKey=parityCase?'parity':mixedCase?'mixed':voiceCase?'voice':environmentCase?'environment':teamCase?'team':'transcript';
+const portValue=owner.fixturePorts?.[portKey]??(parityCase?19991:environmentCase?19995:teamCase?19992:19998);
 if(!Number.isSafeInteger(portValue)||portValue<1024||portValue>65532)throw Error('Invalid owned fixture port.');
 const fixturePort=String(portValue);
-const fixtureToken=mixedCase?'synthetic-mixed-room':voiceCase?'synthetic-native-voice-only':teamCase?'synthetic-alpha24-only':'synthetic-system76';
-const fixtureHost=mixedCase?'Room host':canonicalCase?'Native canonical source':voiceCase?'Owned synthetic native voice':environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
-const fixtureReadyMessage=mixedCase?'Owned mixed catalog fixture ready '+fixturePort:canonicalCase?'Owned native canonical fixture ready':voiceCase?'Owned synthetic native voice fixture ready '+fixturePort:environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
+const fixtureToken=parityCase?'synthetic-parity-0-'+crypto.randomUUID():mixedCase?'synthetic-mixed-room':voiceCase?'synthetic-native-voice-only':teamCase?'synthetic-alpha24-only':'synthetic-system76';
+const fixtureHost=parityCase?'Alpha':mixedCase?'Room host':canonicalCase?'Native canonical source':voiceCase?'Owned synthetic native voice':environmentCase?'System76':teamCase?'Synthetic alpha24':'Synthetic';
+const fixtureReadyMessage=parityCase?'Native parity fixture Alpha: '+fixturePort:mixedCase?'Owned mixed catalog fixture ready '+fixturePort:canonicalCase?'Owned native canonical fixture ready':voiceCase?'Owned synthetic native voice fixture ready '+fixturePort:environmentCase?'Synthetic environment ready System76 '+fixturePort:teamCase?'Synthetic alpha24 fixture'+fixturePort:'Owned transcript fixture ready';
 let fixture;
-const ownedFixtures=['tests/fixtures/hollywood-mixed-catalog-native.mjs','tests/fixtures/native-canonical-transcript.mjs','tests/fixtures/native-room-voice-ui.mjs','tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
+const ownedFixtures=['tests/fixtures/native-parity-controls.mjs','tests/fixtures/hollywood-mixed-catalog-native.mjs','tests/fixtures/native-canonical-transcript.mjs','tests/fixtures/native-room-voice-ui.mjs','tests/fixtures/environment-isolation-native.mjs','tests/fixtures/transcript-refresh-native.mjs','tests/fixtures/immersion-cycle-team-ui.mjs'];
 try{
  if(liveAudioCase){
  const path=owner.liveAudioPreferencesPath;
@@ -93,6 +94,7 @@ try{
  if(name.startsWith('co.fallsoft.pocket.ForegroundNotificationNativeTest#')||name.startsWith('co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#'))run(['reverse','tcp:18907','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.CodexClosedSessionSyncNativeTest#'))run(['reverse','tcp:18903','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.TypingResponsivenessNativeTest#'))run(['reverse','tcp:18891','tcp:'+fixturePort]);
+ if(parityCase)run(['reverse','tcp:18881','tcp:'+String(portValue+1)]);
  if(voiceCase)run(['reverse','tcp:18893','tcp:'+fixturePort]);
  if(name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#')){run(['reverse','tcp:18881','tcp:'+String(portValue+1)]);run(['reverse','tcp:18882','tcp:'+String(portValue+2)]);}
  else if(environmentCase){run(['reverse','tcp:18882','tcp:'+String(portValue+1)]);run(['reverse','tcp:18883','tcp:'+String(portValue+2)]);}
@@ -149,7 +151,7 @@ try{
   const setup=spawnSync(adb,['-s',serial,'shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'"],{input:liveAudioPreferences,encoding:'utf8',env:childEnv,timeout:30000});
   if(setup.status!==0||run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml'])!==liveAudioPreferences)throw Error('Isolated audio preferences readback differs.');
  }
- const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaAvdName',avdName,'-e','qaRunId','release'+manifest.versionCode+'_'+build.productionSourceSha.slice(0,8)+'_'+build.qualificationInputSha.slice(0,8),'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:name==='co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage'?300000:180000,maxBuffer:4*1024*1024});
+ const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaAvdName',avdName,...(parityCase?['-e','nativeParityFixture','loopback']:[]),'-e','qaRunId','release'+manifest.versionCode+'_'+build.productionSourceSha.slice(0,8)+'_'+build.qualificationInputSha.slice(0,8),'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:name==='co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage'?300000:180000,maxBuffer:4*1024*1024});
  const output=(r.stdout||'')+(r.stderr||'');writeFileSync(join(directory,log),output,{flag:'wx',mode:0o600});receipt.logSha=fileSha(join(directory,log));receipt.exitCode=r.status;
  if(liveAudioCase){
   for(const artifact of ['coordinator-native-audio-live.json','coordinator-native-audio-diagnostics.json']){

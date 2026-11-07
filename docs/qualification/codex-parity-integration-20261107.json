@@ -42,12 +42,54 @@
       "changed": false,
       "phoneInstalled": false,
       "nativeModelOrTerminalActionsIssued": false
+    },
+    "fullBackend": {
+      "tests": 731,
+      "passed": 731,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 54687.287179,
+      "logSha256": "16515f924323e680860e063930551c2f385fc645cb7cf1c046937beab57dc4ab"
+    },
+    "renderedWeb": {
+      "browser": "Existing Chromium main-profile owned synthetic tab",
+      "modelFailurePreservesControls": true,
+      "contextOpened": true,
+      "narrowViewport": {
+        "width": 420,
+        "height": 900
+      },
+      "providerCalls": false
+    },
+    "nativeParityJourney": {
+      "class": "co.fallsoft.pocket.NativeParityControlsNativeTest#nativeControlsPreserveRequestSourceReceiptsAndDrafts",
+      "state": "passed",
+      "durationSeconds": 74.827,
+      "api": 34,
+      "emulator": "retained owned emulator",
+      "appSha256": "b684997806abfe9a118b9e584da0695f9c83a0741ed315bb205aa1870c5ae8eb",
+      "testSha256": "8af9cdedaec43f7b91fa4a24fe974c1789f25bcbe4906503837202107c9a2378",
+      "scope": [
+        "Native request identity and secret replacement",
+        "Native elicitation form",
+        "Source-bound terminal confirmation",
+        "Source-bound conversation confirmation",
+        "Lost fork acknowledgement inspected without repeat",
+        "Draft restoration",
+        "Native settings"
+      ],
+      "limits": [
+        "Synthetic authority only; no provider/model mutation",
+        "Preliminary qualification build, not final versioned release",
+        "Two preceding failed UI-test interactions retained; no failure relabeled"
+      ]
     }
   },
   "remaining": [
-    "Actual native Android interaction journeys and rendered web review",
-    "Review current host capability handshakes without mutation",
-    "Complete applicable signing, release and delivery checks; no publication claimed"
+    "Correct truthful native termination outcome and voice answer request-token contract found by final review",
+    "Final rendered web control-race qualification",
+    "Exact versioned optimized signing and required native release checks",
+    "Coordinated backend/web/Android delivery; physical phone remains separate"
   ],
   "limits": [
     "Managed worktree creation, plugin installation, hook editing and native user-verification flow are not implemented remote operations; do not claim full TUI parity.",

@@ -362,10 +362,9 @@ $('new-task').onclick=run(async()=>{if(newPending){await reconcileStart();return
 async function reconcileStart(){if(startFlight)return startFlight;startFlight=performStart();try{return await startFlight;}finally{startFlight=null;}}
 async function performStart(){if(!newPending)return;const p=newPending;let result;try{result=await api(`/api/session-starts/${p.id}`);}catch(e){if(e.status!==404)throw e;try{result=await api('/api/threads',p);}catch(e){if(e.status&&e.status<500){newPending=null;write('newPending',null);}throw e;}}newPending={...p,state:result.state};write('newPending',newPending);renderOutbox();if(result.state==='started'){newPending=null;write('newPending',null);write('newDraft','');$('new-dialog').close();await refreshList({invalidate:true});await open(result.thread_id);}else if(['failed','unknown'].includes(result.state)){if(result.state==='failed'){newPending=null;write('newPending',null);}throw Error(result.error||'Task creation uncertain. Check recent work before starting again.');}else $('new-error').textContent='Task accepted. Waiting for the backend to create it…';}
 $('new-form').onsubmit=async e=>{e.preventDefault();try{if(!newPending){newPending={id:crypto.randomUUID(),cwd:$('cwd').value,prompt:$('new-prompt').value,permissions:$('permissions').value};write('newPending',newPending);}await reconcileStart();}catch(e){$('new-error').textContent=e.message;}};
-$('session-menu').onclick=run(async()=>{$('controls-dialog').showModal();$('watch').textContent=current?.watched?'Unfollow updates':'Follow updates';$('archive').textContent=$('filter').value==='archived'?'Restore':'Archive';const data=await api('/api/models',undefined,{scope});models=data.models;$('model').replaceChildren(...models.map(m=>{const o=el('option','',m.name);o.value=m.model;return o;}));if(current?.turnSettings?.model)$('model').value=current.turnSettings.model;setEfforts();});
 function setEfforts(){const model=models.find(m=>m.model===$('model').value);$('effort').replaceChildren(...(model?.efforts||[]).map(e=>{const o=el('option','',e.reasoningEffort);o.value=e.reasoningEffort;return o;}));$('effort').value=current?.turnSettings?.effort||model?.defaultEffort;serviceTierControl.refresh();$('turn-mode').value=current?.turnSettings?.mode==='plan'?'plan':'build';}$('model').onchange=setEfforts;
 for(const [id,action,body] of [['watch','watch',()=>({enabled:!current?.watched})],['stop','interrupt',()=>({})],['resume','queue/resume',()=>({})]])$(id).onclick=run(async()=>{await api(`/api/threads/${scope}/${id==='archive'&&$('filter').value==='archived'?'unarchive':action}`,body());$('controls-dialog').hidePopover?.();$('controls-dialog').close();await refreshConversation();await refreshList({invalidate:true});});
-$('archive').onclick=run(async()=>{const thread=threads.find(t=>t.id===scope)||{...current?.thread,id:scope};$('controls-dialog').close();await setSessionArchived(thread,thread.archived!==true);});
+$('archive').onclick=run(async()=>{const thread=threads.find(t=>t.id===scope)||{...current?.thread,id:scope};closeControls();await setSessionArchived(thread,thread.archived!==true);});
 $('rename').onclick=run(async()=>{const name=prompt('Session name',current?.thread?.name||'');if(name){await api(`/api/threads/${scope}/rename`,{name});await refreshConversation();await refreshList({invalidate:true});}});$('save-turn').onclick=run(async()=>{await api(`/api/threads/${scope}/settings`,{model:$('model').value,effort:$('effort').value,mode:$('turn-mode').value==='plan'?'plan':'default',serviceTier:serviceTierControl.value()});$('controls-dialog').hidePopover?.();$('controls-dialog').close();await refreshConversation();});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;$('install').hidden=false;});$('install').onclick=run(async()=>{await installEvent?.prompt();installEvent=null;$('install').hidden=true;});
 window.addEventListener('online',()=>{if(authenticated){connectEvents();scheduleRefresh();}});window.addEventListener('offline',()=>{$('connection').textContent='Offline · drafts saved';});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&authenticated){scheduleRefresh();if(ws?.readyState!==WebSocket.OPEN)connectEvents();}});window.addEventListener('pagehide',()=>{saveDraft();void voice.close();});window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();$('search-panel').hidden=false;$('search').focus();}if(e.key==='Escape'&&!document.querySelector('dialog[open],:popover-open')&&innerWidth<=760)document.body.classList.remove('chat-open');});
@@ -404,7 +403,7 @@ $('toggle-keyboard').onclick=()=>{$('composer').classList.toggle('keyboard-open'
 let playbackVolume=read('playbackVolume',1);function volume(){voice.volume=playbackVolume;if(voice.audio)voice.audio.volume=playbackVolume;$('playback-volume').textContent=playbackVolume===0?'Muted':`${playbackVolume*100}%`;}$('playback-volume').onclick=()=>{playbackVolume=playbackVolume===0?.5:playbackVolume===.5?1:0;write('playbackVolume',playbackVolume);volume();};volume();
 // One bottom control surface; reading space is not consumed by a second header.
 const toolbar=document.querySelector('.transcript-toolbar'),header=document.querySelector('.conversation-header');
-const conversationToolsToggle=button('Context & files',()=>conversationToolsPane.show());conversationToolsToggle.id='conversation-tools-toggle';conversationToolsToggle.hidden=scope==='coordinator';toolbar.append(conversationToolsToggle);
+const conversationToolsToggle=button('Context & files',()=>{closeControls();return conversationToolsPane.show();});conversationToolsToggle.id='conversation-tools-toggle';conversationToolsToggle.hidden=scope==='coordinator';$('controls-dialog').append(conversationToolsToggle);
 const conversationUsage=button('',()=>{renderUsage();anchorPanel($('settings-dialog'),conversationUsage);});conversationUsage.id='conversation-usage';conversationUsage.className='conversation-usage';conversationUsage.dataset.accountUsage='';conversationUsage.append(el('span','account-allowance','Usage unavailable'),el('span','account-source'));toolbar.append(conversationUsage);
 toolbar.prepend($('back'));toolbar.append($('parent'),$('session-menu'));for(const control of toolbar.querySelectorAll('button'))control.type='button';$('composer').append(toolbar);header.classList.add('footer-identity');$('composer').prepend(header);
 $('draft').addEventListener('focus',()=>{$('composer').classList.add('keyboard-open');});
@@ -416,8 +415,29 @@ window.addEventListener('keydown',e=>{if(e.code==='F8'&&!e.repeat&&!document.que
 const inputRow=el('div','input-row');inputRow.append($('toggle-keyboard'),$('mic'),$('draft'),$('send'));const composer=$('composer');composer.insertBefore(inputRow,document.querySelector('.composer-actions'));
 const deliveryLabel=el('label','','Next message');deliveryLabel.append($('send-mode'));$('controls-dialog').append(deliveryLabel);
 function anchoredControls(){anchorPanel($('controls-dialog'),$('session-menu'));}
-$('session-menu').onclick=run(async()=>{const data=await api('/api/models',undefined,{scope});models=data.models||[];$('model').replaceChildren(...models.map(m=>{const option=el('option','',m.name||m.model);option.value=m.model;return option;}));$('model').value=current?.turnSettings?.model||models[0]?.model||'';setEfforts();$('watch').textContent=current?.watched?'Unfollow updates':'Follow updates';anchoredControls();});
-document.querySelector('#controls-dialog .close').onclick=e=>{e.preventDefault();$('controls-dialog').hidePopover();};
+let controlsGeneration=0;
+const modelsStatus=el('p','muted');modelsStatus.id='models-status';modelsStatus.setAttribute('role','status');$('model').parentElement.before(modelsStatus);
+function closeControls(){++controlsGeneration;$('controls-dialog').hidePopover?.();$('controls-dialog').close();}
+$('controls-dialog').addEventListener('beforetoggle',event=>{if(event.newState==='closed')++controlsGeneration;});
+$('session-menu').onclick=run(async()=>{
+ const original=scope,generation=++controlsGeneration,panel=$('controls-dialog');
+ const valid=()=>generation===controlsGeneration&&scope===original&&panel.matches(':popover-open');
+ $('watch').textContent=current?.watched?'Unfollow updates':'Follow updates';
+ $('archive').textContent=current?.thread?.archived===true||$('filter').value==='archived'?'Restore':'Archive';
+ models=[];$('model').replaceChildren();$('effort').replaceChildren();
+ for(const id of ['model','effort','turn-mode','service-tier','save-turn'])$(id).disabled=true;
+ modelsStatus.textContent='Loading model settings…';anchoredControls();
+ try{
+  const data=await api('/api/models',undefined,{scope:original});if(!valid())return;
+  models=data.models||[];
+  if(!models.length)throw Error('No models were returned.');
+  $('model').replaceChildren(...models.map(m=>{const option=el('option','',m.name||m.model);option.value=m.model;return option;}));
+  $('model').value=current?.turnSettings?.model||models[0]?.model||'';setEfforts();
+  for(const id of ['model','effort','turn-mode','save-turn'])$(id).disabled=false;
+  modelsStatus.textContent='';
+ }catch(error){if(valid())modelsStatus.textContent='Model settings unavailable. '+error.message;}
+});
+document.querySelector('#controls-dialog .close').onclick=e=>{e.preventDefault();closeControls();};
 
 $('transcript').addEventListener('wheel',event=>{if(event.deltaY<0){const now=performance.now();if(now-lastWheel>220)demandOlder();lastWheel=now;scheduleEdge();}},{passive:true});
 let touchY=null,touchDemanded=false;$('transcript').addEventListener('touchstart',event=>{touchY=event.touches[0]?.clientY;touchDemanded=false;},{passive:true});
@@ -569,10 +589,11 @@ function renderRoomAttention(){
 }
 
 const nativeSettingsPanel=new NativeSettingsPanel({api,getScope:()=>scope,openThread:id=>open(id)});
-const nativeSettingsButton=button('Codex settings & agents',()=>nativeSettingsPanel.open());
+const nativeSettingsButton=button('Codex settings & agents',()=>{closeControls();return nativeSettingsPanel.open();});
 $('controls-dialog').append(nativeSettingsButton);
 $('settings-dialog').append(button('Codex settings & tools',()=>nativeSettingsPanel.open()));
 const serviceTierControl=addServiceTierControl({holder:$('model').parentElement.parentElement,modelSelect:$('model'),getModels:()=>models,getStored:()=>current?.turnSettings});
+$('effort').parentElement.after($('service-tier').parentElement);
 function executionApi(origin){return (path,body)=>api(path,body);}
-const terminalsControl=button('Background terminals',()=>{const origin=scope;openTerminals({threadId:origin,api:executionApi(origin),create:el,button});});
+const terminalsControl=button('Background terminals',()=>{const origin=scope;closeControls();openTerminals({threadId:origin,api:executionApi(origin),create:el,button});});
 $('controls-dialog').append(terminalsControl);
