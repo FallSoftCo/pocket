@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-07",
+  "status": "synthetic-full-app-dom-qualified",
+  "candidateHeadAtVerification": "e10a395a538c25c094c149d4cb23bbb0268acf4c",
+  "owningFix": "0ff3484a",
+  "candidateAppSha256": "948c24f37ca432591d471b02772383770b4a5fe40d84cbd77efd3edeab4aefcd",
+  "testedModules": {
+    "app.mjs": "948c24f37ca432591d471b02772383770b4a5fe40d84cbd77efd3edeab4aefcd",
+    "native-settings.mjs": "750efff1e7de8d5deeb92a46343b028024efded0788229df415113af181caa24",
+    "native-execution.mjs": "437b08d09e02a21b9c9403f2a299dbef935ce3927011ee367fcbd7a3356cf922",
+    "conversation-tools.mjs": "b98559304dca88e452124682ea5a4600d12f73ac231e27642e2f8a380e384454",
+    "message-time.mjs": "030996764346b82368694314bcfd3bfbfd5eb550fbb640c95dd925f1f91cf278",
+    "room-lead.mjs": "9f09e16961374721d6a51d7f1745ff14700fbe8126fb0669b3f6c879f383b965",
+    "native-history.mjs": "efe57c08088ccce82f7c87c78aecda7a587a57dae19806b3b555efd3d8ac242f",
+    "room-identity.mjs": "67f78bba3cb0558f36ab24c10a0fd97ea1fde026d3c7d92f5a90eb0553ff2769",
+    "request-list.mjs": "881df1a65eb487e3bcc422d26f89ab8f1ccefaa98298b78fae88910fa8961b79",
+    "media-previews.mjs": "bc0cc5c0ff60a8e1622cefcc9ecc394bb648b98bb5eec012409f2de19448bb2c",
+    "review-pane.mjs": "553b8e6da2efc476367282fe7e03ac993c0c8ea42c06378b9dd9b9167c0f2de9",
+    "environments.mjs": "79d1fece401e016999aac2f59c21bdfac40e70063a155a9683e40aa917e394db",
+    "session-store.mjs": "ed25494e70d0f1609236b2c2232595f8d4661cf6a25d93b7df1dd03bb9092702",
+    "symbol-motion.mjs": "8778134ead69b1b6cc2cfe3b655df5e89e43fb4ee4c79ce5f7b49932cd4462c8",
+    "read-feedback.mjs": "347c3cdf2908bf24872156f20c12a846c6b3d368fb270da82cd2d7ad19fe5caa",
+    "immersion.mjs": "3a0f22b4aadc705f67bf37c1eef8c4b85041826058134f18b54af9ed1934665c",
+    "presentation.mjs": "af1af4a8dd409952ad675467057b4792acb23e3ffca33f590101012b4a075cdf",
+    "model.mjs": "1d3a5a074beb2e13a8baacf4af18e540b2c7e7f6e55a787a80c584fdc6d54307",
+    "retirement.mjs": "3eabd8e0991b1a8d94fa54ec1baccb96e612aa5ee206be0fe88a91025af4d8fc",
+    "voice-journal.mjs": "aea779bd3eae69cbc51a4f7e2a65d009c20c95cd08cbd5697536289084c796a7",
+    "storage.mjs": "976a1d9787602051b9b925ec469e40d755b54d895db1893cef7292e8c77e4348",
+    "voice.mjs": "6a0f742b16b50cbbd2a3aaa3a310432c99900efa023e79010e02e26f65e4fcca",
+    "paths.mjs": "865c204ff009e0eb114da9480c843c1667433b520ec0759009924218cad895b7",
+    "migration.mjs": "e753318c573522820e972a909d23b9b21208351316f0db2a17aceca633c217cb",
+    "room-client.mjs": "58836d20d0dbb35dc7c5f050112a2200884adc683186b91fef03fd35311c45cf",
+    "room-model.mjs": "f434f6c8d93787a415927afd705ab176d4a0a50f95ab4c974c3e58941e952e17",
+    "receipt-policy.mjs": "e1f70e4942d7cc9c09cf190ba9841a9eccf64ecc63cc97f60613354a546fec57",
+    "account-usage.mjs": "8aa728bd588841c0c3ae82b013721ec20ba4df7b378f8ff5fb467516680f2ac7",
+    "anchored-panel.mjs": "3a7991dafd2fbf7272deccb985d02d0884652d7997f1a53a8b3f6e6e0c423a5a",
+    "native-request.mjs": "923d4c0577d2dfbc33d76b0ba5f56eb3910a8a341b627b7043efe5f21fae677a",
+    "outbox.mjs": "e5f20d28cd7070f6898d36b0efc44e9453e205c21da4c64167c992ba5af627c6",
+    "atlas-download.mjs": "05e02eb6310118047c1afc1b9eff001567a71e3ce70d4d2809a55667163130c8",
+    "phrase-slots.mjs": "459c24043b08bf54bbd47ad00e1acfe1f5ee7595ba5d0307cab01196667c14ff",
+    "flip-flop.mjs": "dbf1aeb27262f0b35bf592dcb0cfd87e9dd1ecfb5b5e72a5b59ab6694e9e954c",
+    "recording-controller.mjs": "beb91c3caec48cf0bd628d7d91d23ab0025feb56f55cd7869b788e85050dae50",
+    "immersion-literals.mjs": "e44b789fadce11855aceb970d6ed6addc3df05141b715e54c05bdbd4fdf4d05f"
+  },
+  "testInputs": {
+    "tests/web-app-controls.dom.mjs": "ab9d08b6db47e5aad0ad3ca1bd9f41b33644025df4091fc4e5c5893153c89ad7",
+    "tests/helpers/web-app-dom-fixture.mjs": "3ff49207676ab4df21ed1f93fe89b031991f7ff17a0fde66f93b79b14ecd7528",
+    "scripts/check-dom.mjs": "aecbe6763a79632ca47370e3e2b5de023fee5ced41a75b3f1561a6821991826a"
+  },
+  "commands": {
+    "candidate": "NEXTCOMP_TEST_WEB_SOURCE_ROOT=\"$CANDIDATE_WEB_SOURCE\" node --experimental-vm-modules --test --test-reporter=tap tests/web-app-controls.dom.mjs",
+    "preFixControl": "node --experimental-vm-modules --test --test-reporter=tap tests/web-app-controls.dom.mjs",
+    "requiredLaneOnPreFixCheckout": "npm run test:dom -- \"$ARTIFACT_DIRECTORY/app-controls-quality-run01/required-lane-old-app\""
+  },
+  "candidate": {
+    "exitCode": 0,
+    "summary": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "log": "app-controls-quality-run01/candidate.log",
+    "logSha256": "752d873a2ae92499a52f047779a9d477d77862da52608fa15390dceec566a292"
+  },
+  "preFixControl": {
+    "exitCode": 1,
+    "appSha256": "36eeb4754e4e2b8d768ba1d1ba5e75ffe9b75816107f3502c4f2d911e09b8412",
+    "summary": {
+      "tests": 2,
+      "pass": 0,
+      "fail": 2,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "expectedFailure": "Both journeys fail CONTROLS_MUST_OPEN_BEFORE_MODEL_RESPONSE",
+    "log": "app-controls-quality-run01/old-app-control.log",
+    "logSha256": "7688c2247633641321441cf0e63a7a2e2feb384b1b1d7f89db434bb7d31d29a0"
+  },
+  "requiredLaneControl": {
+    "state": "failed",
+    "exitCode": 1,
+    "receipt": "app-controls-quality-run01/required-lane-old-app/receipt.json",
+    "receiptSha256": "8292bf3635a0304360903e93458f8259a43f04f7aee914af4429b57484c566e2",
+    "checks": [
+      {
+        "name": "conversation-dom",
+        "state": "complete",
+        "exitCode": 0,
+        "logSha256": "037fdb553995950f075ca1e82957b4f2cd650df30db24f723b1b0bfd0f41b0f9"
+      },
+      {
+        "name": "execution-dom",
+        "state": "complete",
+        "exitCode": 0,
+        "logSha256": "c2ef70fdcd6818cc057069e337ecbe03ca6211ed952ae9611d000a0012bc1749"
+      },
+      {
+        "name": "app-controls-dom",
+        "state": "failed",
+        "exitCode": 1,
+        "logSha256": "a829b14c22b3189098b49fe571113b9c46c22c527841ca29b36c044cea400cf3"
+      },
+      {
+        "name": "production-composition",
+        "state": "complete",
+        "exitCode": 0,
+        "logSha256": "e2f4df19a4e5b6b7ce84afe397a9a6200b65ee3360cfa5dec24d492cf1fad977"
+      }
+    ],
+    "meaning": "Required new lane rejects the old actual app while the other three lanes pass; root must rerun against owning integrated source."
+  },
+  "journeys": [
+    "Actual app boot/navigation/click: Controls opens synchronously while model request remains unresolved; all model-dependent settings and Save disabled.",
+    "Model503 retains visible independent controls; Context/files closes the popover and reads original conversation; terminals open while the next model request is still pending; no settings/task mutation.",
+    "Source switch plus same-source close/reopen: stale model success and failure cannot replace current options, enable stale Save, or overwrite current feedback."
+  ],
+  "fixtureBoundary": {
+    "actual": [
+      "web/index.html",
+      "complete unmodified web/app.mjs ESM graph",
+      "real app event handlers and navigation",
+      "production HTTP web gateway with existing synthetic backend fixture"
+    ],
+    "synthetic": [
+      "controlled Fetch model response barriers and Context/terminal read payloads",
+      "JSDOM DOM (no rendered layout)",
+      "Popover state/beforetoggle/selector adapter and dialog open/close",
+      "empty read-only voice IndexedDB adapter; writes reject",
+      "inert observers/canvas/scroll and reduced-motion media query"
+    ]
+  },
+  "ci": {
+    "lane": "app-controls-dom",
+    "requiredChecks": 2,
+    "skipsAllowed": 0,
+    "sourceOverrideCleared": true,
+    "requiresNodeFlag": "--experimental-vm-modules",
+    "newDependencies": false
+  },
+  "limits": [
+    "No production source edited by this test change.",
+    "JSDOM does not prove rendered top-layer positioning, focus trapping, CSS contrast, browser performance or physical interaction; root Chrome journey is separate evidence.",
+    "No provider/native model calls, terminal mutation, Android/emulator/build/install/deploy or account action.",
+    "This isolated test branch deliberately retains old app code; integrate test commit into the owning fixed source before expecting its required DOM lane to pass."
+  ]
+}
