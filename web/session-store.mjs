@@ -58,8 +58,8 @@ export class SessionStore {
  }
  head(id,data,{older=false,ticket,cursor=null,anchor=null}={}){
   if(data.thread?.id!==id||!Array.isArray(data.timeline?.rows))throw Error('Conversation response did not include its message page.');
-  this.outbox(id,data.outbox);
-  const entity=this.entity(id),old=this.get(id)||{};if(entity.retiredEpochs?.has(data.historyHead?.epoch))throw Error('Conversation history changed while loading. Refresh the current context.');const thread=this.metadata(id,data.thread,ticket);
+  const entity=this.entity(id),old=this.get(id)||{};if(Number.isSafeInteger(ticket)&&ticket<=(entity.historyInvalidationTicket||0)||entity.retiredEpochs?.has(data.historyHead?.epoch))throw Error('Conversation history changed while loading. Refresh the current context.');
+  this.outbox(id,data.outbox);const thread=this.metadata(id,data.thread,ticket);
   if(entity.outbox)data={...data,outbox:entity.outbox,outgoing:entity.outbox.items};
   if(data.timeline.native===1){
    if(older&&old.protocol==='turns')throw Error('History protocol changed while reading an older page.');
@@ -81,6 +81,12 @@ export class SessionStore {
   if((row.version||0)>=(old.version||0))page.rows=page.rows.map(r=>r===old?row:r);
   return true;
  }
- replaceHistory(id,head){const e=this.entity(id),epoch=e.nativeHistory?.epoch||e.page?.snapshot?.historyHead?.epoch;e.retiredEpochs??=new Set();if(epoch&&epoch!==head?.epoch)e.retiredEpochs.add(epoch);e.page=null;delete e.nativeHistory;}
+ replaceHistory(id,head){
+  const e=this.entity(id);if(head?.epoch&&e.historyReplacementEpoch===head.epoch)return;
+  // Foreground and background reads capture ticket() before their network read.
+  // Invalidate those requests even when this session has no cached page/epoch.
+  e.historyInvalidationTicket=this.ticket();e.historyReplacementEpoch=head?.epoch||null;
+  const epoch=e.nativeHistory?.epoch||e.page?.snapshot?.historyHead?.epoch;e.retiredEpochs??=new Set();if(epoch&&epoch!==head?.epoch)e.retiredEpochs.add(epoch);e.page=null;delete e.nativeHistory;
+ }
  clear(){this.entities.clear();this.inventory=[];this.pendingMetadata.clear();this.sequence++;}
 }

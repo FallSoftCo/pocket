@@ -18,6 +18,7 @@ export class ConversationTools {
  constructor({db,codex,supports=()=>false,publish=()=>{},checkSource=()=>{},hasPending=()=>false,onFork=()=>{},onChanged=()=>{},clock=Date.now}){
   Object.assign(this,{db,codex,supports,publish,checkSource,hasPending,onFork,onChanged,clock});this.busy=new Set();this.usage=new Map();this.revertEvents=new Map();
   db.exec(`CREATE TABLE IF NOT EXISTS conversation_operations(id TEXT PRIMARY KEY,device TEXT NOT NULL,thread TEXT NOT NULL,kind TEXT NOT NULL,request TEXT NOT NULL,state TEXT NOT NULL,result TEXT,error TEXT,at INTEGER NOT NULL);
+   CREATE TABLE IF NOT EXISTS conversation_operation_acknowledgements(operation_id TEXT PRIMARY KEY,device TEXT NOT NULL,at INTEGER NOT NULL);
    UPDATE conversation_operations SET state='unknown',error='Connection ended before native acknowledgement. Inspect the session; this operation will not be replayed.' WHERE state='dispatching';`);
   codex.on?.('event',m=>this.observe(m));
  }
@@ -27,13 +28,14 @@ export class ConversationTools {
  }
  allowed(kind){return this.supports(methods[kind]);}
  assertInputAllowed(threadId,{ownOperation=false}={}){if(!ownOperation&&this.busy.has(threadId))throw fail('A conversation control is running. Wait for its receipt before sending more work.');if(this.db.prepare("SELECT 1 FROM conversation_operations WHERE thread=? AND state IN ('dispatching','unknown') AND kind IN ('revert','changeDirectory','compact','review') LIMIT 1").get(threadId))throw fail('A conversation operation is pending or uncertain. Inspect its receipt before sending more work.');}
- receipt(device,thread,id){const r=this.db.prepare('SELECT * FROM conversation_operations WHERE id=?').get(identifier(id));if(!r||r.device!==device||r.thread!==thread)return null;const result=r.result?JSON.parse(r.result):null;return {id:r.id,threadId:r.thread,kind:r.kind,state:r.state,...(result?.thread?{thread:result.thread}:{}),result,error:r.error,createdAt:r.at};}
+ pairedDevice(device){return typeof device==='string'&&device!=='owner'&&!!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='devices'").get()&&!!this.db.prepare('SELECT 1 FROM devices WHERE id=?').get(device);}
+ receipt(device,thread,id){const r=this.db.prepare('SELECT * FROM conversation_operations WHERE id=?').get(identifier(id));if(!r||r.thread!==thread||r.device!==device&&(!['dispatching','unknown','acknowledged'].includes(r.state)||!this.pairedDevice(device)))return null;const acknowledgement=this.db.prepare('SELECT device,at FROM conversation_operation_acknowledgements WHERE operation_id=?').get(r.id);const result=r.result?JSON.parse(r.result):null;return {id:r.id,threadId:r.thread,kind:r.kind,state:r.state,sharedRecovery:r.device!==device,...(acknowledgement?{acknowledgedBy:acknowledgement.device,acknowledgedAt:acknowledgement.at}:{}),...(result?.thread?{thread:result.thread}:{}),result,error:r.error,createdAt:r.at};}
  async source(threadId){identifier(threadId);await this.codex.connect();const {thread}=await this.codex.call('thread/read',{threadId,includeTurns:false});if(thread?.id!==threadId)throw fail('The native response belongs to another session.');return thread;}
  async turns(threadId,cursor=null){if(cursor!==null&&(typeof cursor!=='string'||cursor.length>16384))throw fail('Invalid turn cursor.',400);return this.codex.call('thread/turns/list',{threadId,limit:30,sortDirection:'desc',itemsView:'full',...(cursor?{cursor}:{})});}
  async describe(threadId,device,cursor=null){const thread=await this.source(threadId),page=await this.turns(threadId,cursor);return {threadId,cwd:thread.cwd,historyMode:thread.historyMode,active:thread.status?.type==='active',usage:this.usage.get(threadId)||null,warning:HISTORY_WARNING,
   features:Object.fromEntries(Object.keys(methods).map(k=>[k,{available:this.allowed(k)&&(k!=='revert'||thread.historyMode==='paginated'),reason:k==='revert'&&thread.historyMode!=='paginated'?'Native revert requires paginated history.':this.allowed(k)?null:'This native runtime version is not qualified for this control.'}])),
   turns:(page.data||[]).map(t=>({id:t.id,status:t.status,startedAt:t.startedAt,userText:textOf(t).slice(0,32000)})),nextCursor:page.nextCursor||null,
-  operations:this.db.prepare('SELECT id FROM conversation_operations WHERE device=? AND thread=? ORDER BY at DESC LIMIT 12').all(device,threadId).map(r=>this.receipt(device,threadId,r.id)),
+  operations:this.db.prepare("SELECT id FROM conversation_operations WHERE thread=? AND (device=? OR (? AND state IN ('dispatching','unknown','acknowledged'))) ORDER BY CASE WHEN state IN ('dispatching','unknown') THEN 0 ELSE 1 END,at DESC LIMIT 12").all(threadId,device,this.pairedDevice(device)?1:0).map(r=>this.receipt(device,threadId,r.id)),
   worktree:{available:false,reason:'Managed worktree creation is not exposed by the qualified native protocol. Select an existing worktree folder or use native Codex to create one.'}};}
  validate(threadId,input){identifier(threadId);identifier(input?.id);const kind=input.kind;if(!methods[kind])throw fail('Unsupported conversation operation.',400);const p={id:input.id,kind};
   if(['fork','revert'].includes(kind)){p.turnId=identifier(input.turnId);p.expectedLastTurnId=identifier(input.expectedLastTurnId);}
@@ -58,7 +60,7 @@ export class ConversationTools {
     selected=page.data.find(t=>t.id===p.turnId);if(!selected)throw fail('Choose a turn from the current recent boundary list.');
     if(selected.status==='inProgress')throw fail('Choose a settled turn.');
    }
-   const params={threadId};if(p.kind==='fork')Object.assign(params,{lastTurnId:p.turnId,excludeTurns:true});if(p.kind==='revert')params.beforeTurnId=p.turnId;if(p.kind==='review')Object.assign(params,{target:p.target,delivery:'inline'});if(p.kind==='changeDirectory')params.cwd=p.cwd;
+   const params={threadId};if(p.kind==='fork')Object.assign(params,{lastTurnId:p.turnId,excludeTurns:true,deferGoalContinuation:true});if(p.kind==='revert')params.beforeTurnId=p.turnId;if(p.kind==='review')Object.assign(params,{target:p.target,delivery:'inline'});if(p.kind==='changeDirectory')params.cwd=p.cwd;
    this.db.prepare("INSERT INTO conversation_operations(id,device,thread,kind,request,state,at) VALUES(?,?,?,?,?,'dispatching',?)").run(p.id,device,threadId,p.kind,request,this.clock());
    try{
     // These explicit controls need a loaded session. Resume preserves every native
@@ -75,7 +77,16 @@ export class ConversationTools {
    const receipt=this.receipt(device,threadId,p.id);this.publish('conversationOperation',{threadId,operation:receipt});return receipt;
   }finally{this.busy.delete(threadId);this.revertEvents.delete(threadId);}
  }
- acknowledge(device,threadId,id){const r=this.receipt(device,threadId,id);if(!r)throw fail('Operation not found.',404);if(r.state!=='unknown')return r;this.db.prepare("UPDATE conversation_operations SET state='acknowledged',error='Unknown outcome acknowledged after inspection; operation was not replayed.' WHERE id=?").run(id);return this.receipt(device,threadId,id);}
+ acknowledge(device,threadId,id){
+  if(device==='owner')throw fail('Human recovery requires a paired device; an administrator cannot impersonate it.',403);
+  const r=this.receipt(device,threadId,id);if(!r)throw fail('Operation not found.',404);if(r.state!=='unknown')return r;
+  this.db.exec('BEGIN IMMEDIATE');try{
+   this.db.prepare("UPDATE conversation_operations SET state='acknowledged',error='Unknown outcome acknowledged after inspection; operation was not replayed.' WHERE id=? AND state='unknown'").run(id);
+   this.db.prepare('INSERT OR IGNORE INTO conversation_operation_acknowledgements(operation_id,device,at) VALUES(?,?,?)').run(id,device,this.clock());
+   this.db.exec('COMMIT');
+  }catch(error){this.db.exec('ROLLBACK');throw error;}
+  return this.receipt(device,threadId,id);
+ }
  async files(threadId,query){if(typeof query!=='string'||!query.trim()||query.length>256)throw fail('Enter a file search of 1–256 characters.',400);const t=await this.source(threadId);if(!this.supports('fuzzyFileSearch'))throw fail('Native file search is unavailable.',422);const cwd=projectPath(t.cwd),r=await this.codex.call('fuzzyFileSearch',{query,roots:[cwd]});const files=[];for(const f of (r.files||[]).slice(0,60)){const path=resolve(f.root||cwd,f.path||'');if(!inside(cwd,path))continue;files.push({path,relativePath:relative(cwd,path),type:f.match_type});}return {threadId,cwd,files};}
  async selection(threadId,input){const t=await this.source(threadId),cwd=projectPath(t.cwd);if(typeof input.path!=='string'||input.path.length>4096)throw fail('Choose a host file.',400);const path=await realpath(resolve(cwd,input.path));if(!inside(cwd,path))throw fail('Choose a file within this conversation’s working directory.',400);const st=await stat(path);if(!st.isFile()||st.size>512000)throw fail('Choose a text file smaller than 512 KB.',400);const content=await readFile(path,'utf8');if(content.includes('\0'))throw fail('Binary files cannot be inserted as text.',400);const start=Number(input.start||1),end=Number(input.end||start+79);if(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start||end-start>=200)throw fail('Choose a selection of at most 200 lines.',400);const lines=content.split('\n');if(start>lines.length)throw fail('The selected line is past the end of the file.',400);const text=lines.slice(start-1,end).join('\n');if(text.length>32000)throw fail('This selection is too large. Choose fewer lines.',400);return {threadId,path,start,end:Math.min(end,lines.length),totalLines:lines.length,text};}
  async diff(threadId){const thread=await this.source(threadId);return {threadId,...await workspaceDiff(projectPath(thread.cwd))};}

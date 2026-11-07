@@ -30,6 +30,9 @@ test('canonical mutation classification covers controls and alternate route spel
   for(const method of ['GET','HEAD','OPTIONS'])assert.equal(humanInputRoute(method,path),false,path);
  }
  assert.equal(humanInputRoute('POST','/API/THREADS/task/reply/'),true);
+ assert.equal(humanInputRoute('POST','/API/THREADS/task/terminals/terminate/'),true);
+ assert.equal(humanInputRoute('POST','/api/threads/task/conversation-operations'),true);
+ assert.equal(humanInputRoute('POST','/api/native/configuration'),true);
  assert.equal(humanInputRoute('POST','/api/hollywood/v30/admin'),false);
  assert.equal(humanInputRoute('POST','/api/hollywood/v3/%invalid'),true);
 });

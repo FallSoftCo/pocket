@@ -16,7 +16,7 @@
     {
       "id": "codex-native-parity-20261107",
       "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
-      "status": "Implementation delegated; not yet integrated or delivered",
+      "status": "All three implementation candidates integrated locally; cross-review repairs applied; not published. Native interaction qualification and release still pending.",
       "architecture": [
         "Codex owns execution and native thread/turn/item/request identity.",
         "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",
@@ -46,7 +46,23 @@
         }
       ],
       "integration": "Root owns common integration, serialized heavy builds/native QA, compatible signing and release. Independent disk worktrees at fa30781d; no delegate production deployment.",
-      "validation": "Meaningful native protocol and client journeys, preserved draft/source/receipt semantics, explicit unsupported and uncertain outcomes; deployment evidence separate from fixtures."
+      "validation": "Meaningful native protocol and client journeys, preserved draft/source/receipt semantics, explicit unsupported and uncertain outcomes; deployment evidence separate from fixtures.",
+      "monitoring": "Root inspected completion receipts, merged source, assigned finite cross-reviews and fixed verified defects. No recurring model status polling or agent wake loops.",
+      "ui_owner": {
+        "owner": "ui_standby",
+        "model": "gpt-6-astra",
+        "reasoning": "high",
+        "branch": "parity/ui-20261107",
+        "status": "Dedicated UI owner; one assigned source-lifetime repair delivered as b4a0b9e7; now on standby for concrete tasks."
+      },
+      "review_fixes": [
+        "Panel/session switch cannot retarget native settings or terminal/conversation actions.",
+        "Native request identity token is required and forms do not inherit prior-connection answers.",
+        "Fork explicitly defers inherited goal continuation.",
+        "Cold/in-flight reads cannot restore history invalidated by revert.",
+        "Same-owner paired devices can inspect and acknowledge orphaned unknown operations without replay.",
+        "Native terminal operations are capability-gated and termination requires authenticated human admission."
+      ]
     },
     {
       "id": "archive-action-feedback-20261107",

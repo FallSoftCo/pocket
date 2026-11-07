@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-07",
+  "status": "integrated-unpublished-candidate",
+  "base": "fa30781d",
+  "implementationCommits": [
+    "ef5bfe03",
+    "477772c5",
+    "69ac84ed",
+    "c3803f95"
+  ],
+  "reviewCommits": [
+    "0d89eeb4",
+    "67df390c (selected file diff only)",
+    "b4a0b9e7"
+  ],
+  "evidence": {
+    "combinedNode": {
+      "passed": 59,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "Native control HTTP fixtures, browser DOM, request identity, configuration, timeline and receipt regressions"
+    },
+    "executionDom": {
+      "passed": true,
+      "journeys": 6,
+      "scope": "Actual web request/output/terminal components against fixture transport; not a rendered browser or real host"
+    },
+    "androidInitialCompile": {
+      "passed": true,
+      "durationSeconds": 79,
+      "task": "compileQualificationKotlin",
+      "scope": "Integrated source before subsequent source-lifetime review corrections"
+    },
+    "androidReviewedCompile": {
+      "passed": true,
+      "durationSeconds": 21,
+      "task": "compileQualificationKotlin",
+      "scope": "Combined source including reviewed source-lifetime corrections; no instrumentation or phone install"
+    },
+    "production": {
+      "changed": false,
+      "phoneInstalled": false,
+      "nativeModelOrTerminalActionsIssued": false
+    }
+  },
+  "remaining": [
+    "Actual native Android interaction journeys and rendered web review",
+    "Review current host capability handshakes without mutation",
+    "Complete applicable signing, release and delivery checks; no publication claimed"
+  ],
+  "limits": [
+    "Managed worktree creation, plugin installation, hook editing and native user-verification flow are not implemented remote operations; do not claim full TUI parity.",
+    "New version-sensitive native methods are qualified against0.167.0 only; other advertised runtime versions remain explicit unavailable.",
+    "Unit/HTTP/DOM fixtures and Kotlin compilation do not prove real phone interaction or release readiness."
+  ]
+}

@@ -15,6 +15,7 @@ import org.json.JSONObject
 import java.net.URLEncoder
 
 private fun executionQuery(value:String)=URLEncoder.encode(value,"UTF-8")
+private data class TerminalConfirmation(val destination:EnvironmentRequest,val thread:String,val process:String,val command:String)
 
 @Composable internal fun NativeCommandOutput(row:JSONObject){
     val thread=Pocket.selected;val environment=Pocket.captureEnvironment();val scope=rememberCoroutineScope()
@@ -52,7 +53,7 @@ private fun executionQuery(value:String)=URLEncoder.encode(value,"UTF-8")
     var opened by remember(thread,environment?.environment?.id){mutableStateOf(false)}
     var data by remember(thread,environment?.environment?.id){mutableStateOf<JSONObject?>(null)}
     var problem by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)}
-    var confirmation by remember{mutableStateOf<JSONObject?>(null)}
+    var confirmation by remember(thread,environment?.environment?.id){mutableStateOf<TerminalConfirmation?>(null)}
     val receipts=remember(thread,environment?.environment?.id){mutableStateMapOf<String,String>()}
     fun read(cursor:String=""){
         if(busy||environment==null)return
@@ -70,14 +71,16 @@ private fun executionQuery(value:String)=URLEncoder.encode(value,"UTF-8")
             WorkflowText(terminal.s("cwd")+" · process "+process,fontSize=11.sp,color=Muted)
             if(!terminal.isNull("cpuPercent"))WorkflowText("CPU ${terminal.optDouble("cpuPercent")}%",fontSize=11.sp,color=Muted)
             if(receipt.isNotBlank())WorkflowText(receipt,fontSize=12.sp,color=Coral)
-            TextButton({confirmation=terminal},enabled=!busy&&receipt.isBlank()){BilingualLabel("Terminate",color=Coral)}
+            TextButton({val destination=environment;val source=thread;if(destination!=null&&source!=null)confirmation=TerminalConfirmation(destination,source,process,terminal.s("command"))},enabled=!busy&&receipt.isBlank()){BilingualLabel("Terminate",color=Coral)}
         }
         data?.s("nextCursor")?.takeIf{it.isNotBlank()}?.let{cursor->TextButton({read(cursor)},enabled=!busy){BilingualLabel("Next terminals")}}
     }},confirmButton={TextButton({read()},enabled=!busy){BilingualLabel("Refresh terminals")}},dismissButton={TextButton({opened=false}){BilingualLabel("Close")}})
-    confirmation?.let{terminal->AlertDialog(onDismissRequest={confirmation=null},title={BilingualLabel("Terminate this process?")},text={Text(terminal.s("command"),fontSize=13.sp)},confirmButton={TextButton({
-        confirmation=null;val destination=environment?:return@TextButton;val process=terminal.s("processId");receipts[process]="Submitting termination…"
+    confirmation?.let{terminal->AlertDialog(onDismissRequest={confirmation=null},title={BilingualLabel("Terminate this process?")},text={Text(terminal.command,fontSize=13.sp)},confirmButton={TextButton({
+        confirmation=null
+        if(Pocket.selected!=terminal.thread||Pocket.captureEnvironment()?.matches(terminal.destination)!=true){problem="The selected session changed. Open its terminals again.";return@TextButton}
+        val destination=terminal.destination;val process=terminal.process;receipts[process]="Submitting termination…"
         scope.launch{try{
-            val result=Pocket.apiEnvironment(destination,"/api/threads/$thread/terminals/terminate",JSONObject().put("processId",process));check(result.optBoolean("ok")){"Termination receipt missing"};receipts[process]="Termination accepted. Refresh to inspect current state."
+            val result=Pocket.apiEnvironment(destination,"/api/threads/${terminal.thread}/terminals/terminate",JSONObject().put("processId",process));check(result.optBoolean("ok")){"Termination receipt missing"};receipts[process]="Termination accepted. Refresh to inspect current state."
         }catch(e:Exception){receipts[process]=if(e is PocketApiException&&e.status in 400..499)PocketNetwork.error(e) else "Termination unconfirmed. Refresh before another attempt."}}
     }){BilingualLabel("Confirm terminate",color=Coral)}},dismissButton={TextButton({confirmation=null}){BilingualLabel("Keep running")}})}
 }

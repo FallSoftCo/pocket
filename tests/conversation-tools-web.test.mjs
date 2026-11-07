@@ -11,7 +11,7 @@ test('web pane completes fork, revert/edit, file selection, diff and uncertain r
  const describe=()=>({threadId:selected,cwd:'/fixture',usage:null,active:false,warning:'Files and external actions are not undone.',features:Object.fromEntries(['fork','revert','compact','review','changeDirectory'].map(k=>[k,{available:true}])),turns:[{id:'turn-last',status:'completed',userText:'Edit me'}],operations:receipts,worktree:{available:false,reason:'Use an existing folder.'}});
  const api=async(path,body)=>{calls.push({path,body});if(path.endsWith('/conversation-tools'))return describe();if(path.includes('/workspace-files'))return {files:[{path:'/fixture/file.txt',relativePath:'file.txt',type:'file'}]};if(path.includes('/workspace-selection'))return {path:'/fixture/file.txt',start:1,end:2,text:'source selection'};if(path.endsWith('/workspace-diff'))return {status:' M file.txt',diff:'-before\n+after'};
  if(path.endsWith('/conversation-operations')){if(unknown)throw Error('Connection lost');const r={...body,state:'accepted',threadId:'thread-source',...(body.kind==='fork'?{thread:{id:'branch-thread'}}:{}),result:body.kind==='revert'?{draft:'Edit me'}:{}};receipts.unshift(r);return r;}
- if(path.includes('/conversation-operations/'))return {id:path.split('/').at(-1),kind:'compact',state:'unknown',error:'Inspect; not replayed'};
+ if(path.includes('/conversation-operations/'))return {id:path.split('/').at(-1),kind:'compact',threadId:'thread-source',state:'unknown',error:'Inspect; not replayed'};
  throw Error('Unexpected request '+path);};
  const pane=new ConversationToolsPane({api,source:()=>selected,device:()=> 'phone-fixture',appendDraft:text=>draft+=text,applied:r=>{applied.push(r);if(r.kind==='revert')draft+='\n'+r.result.draft;}});
  const click=async text=>{const b=[...pane.dialog.querySelectorAll('button')].find(b=>b.textContent===text);assert(b,`Missing ${text}`);assert(!b.disabled,`Disabled ${text}`);await b.onclick();};
@@ -22,4 +22,15 @@ test('web pane completes fork, revert/edit, file selection, diff and uncertain r
  unknown=true;await click('Compact context');assert.match(pane.error.textContent,/uncertain/);await pane.refresh();await click('Check saved operation');assert.equal(calls.filter(c=>c.body?.kind==='compact').length,1);
  const previous=draft;selected='different-thread';assert.throws(()=>pane.insert('wrong source'),/original conversation/);assert.equal(draft,previous);
  assert(!calls.some(c=>c.path.includes('/reply')||String(c.body?.text||'').startsWith('/')));
+});
+
+test('late receipt cannot affect a reopened tools pane for another session',{skip:!modulePath},async t=>{
+ const {JSDOM}=await import(modulePath);const dom=new JSDOM('<body></body>',{url:'https://fixture.example.test'});const old={document:globalThis.document,localStorage:globalThis.localStorage};Object.assign(globalThis,{document:dom.window.document,localStorage:dom.window.localStorage});dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true;};dom.window.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new dom.window.Event('close'));};t.after(()=>{Object.assign(globalThis,old);dom.window.close();});
+ let selected='thread-original',resolveReceipt;const applied=[];
+ const api=async(path)=>{if(path.includes('/conversation-operations/'))return new Promise(resolve=>{resolveReceipt=resolve;});return {threadId:selected,cwd:'/fixture',features:{},turns:[],operations:[],worktree:{reason:'Unavailable'}};};
+ const pane=new ConversationToolsPane({api,source:()=>selected,appendDraft:()=>assert.fail('No stale draft insertion'),applied:r=>applied.push(r)});
+ await pane.show();const waiting=pane.check('saved-original');pane.dialog.close();selected='thread-new';await pane.show();
+ resolveReceipt({id:'saved-original',threadId:'thread-original',kind:'fork',state:'accepted',thread:{id:'stale-branch'}});await waiting;
+ assert.equal(applied.length,0);assert.equal(pane.id,'thread-new');assert.equal(pane.error.textContent,'');
+ await assert.rejects(pane.accept({threadId:'thread-original',state:'accepted'}),/another conversation/);
 });

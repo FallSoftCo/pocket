@@ -5,7 +5,7 @@ export class QuestionActions {
   answer(id,body={}){
     const m=this.pending.get(String(id));
     if(!m)fail(409,'This request has already been answered or expired.');
-    if(body.requestToken!==undefined&&m._pocketUI?.token&&body.requestToken!==m._pocketUI.token)fail(409,'This request changed or reconnected. Refresh it before answering.');
+    if(m._pocketUI?.token&&body.requestToken!==m._pocketUI.token)fail(409,'This request needs its current identity token. Refresh it before answering; older clients may need an update.');
     if(this.sent.has(m))return {ok:true,submitted:true};
     let result;
     if(/requestUserInput$/.test(m.method)){

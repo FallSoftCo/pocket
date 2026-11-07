@@ -4,7 +4,7 @@ export class RequestList {
  constructor({holder,create,button,api,refresh}){Object.assign(this,{holder,create,button,api,refresh,cards:new Map()});}
  update(scope,requests){
   let cursor=this.holder.firstChild;const place=box=>{if(box!==cursor)this.holder.insertBefore(box,cursor);cursor=box.nextSibling;};
-  const keep=new Set();for(const request of requests){const key=scope+'/'+request.id;keep.add(key);let entry=this.cards.get(key);const signature=JSON.stringify(request);
+  const keep=new Set();for(const request of requests){const key=scope+'/'+JSON.stringify([request.id,request._pocketUI?.token??null]);keep.add(key);let entry=this.cards.get(key);const signature=JSON.stringify(request);
    if(entry&&(entry.signature===signature||entry.state!=='pending')){place(entry.box);continue;}
    const prior=entry?Object.fromEntries([...entry.box.querySelectorAll('[data-question]')].map(n=>[n.dataset.question,n.multiple?JSON.stringify([...n.selectedOptions].map(o=>o.value)):n.value])):{};
    if(entry?.box===cursor)cursor=entry.box.nextSibling;
