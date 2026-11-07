@@ -3784,5 +3784,11 @@
     "implementation": "Use native originator lax-host-agent to exclude retired room workers from normal, archived, search, cached and coordinator stock discovery; retain durable internal ownership across reconnect.",
     "recovery": "Three specifically reported idle legacy threads archived once through their owning runtime, with accepted receipts and archived-path readback. No model start or stock runtime restart.",
     "verification": "Live on Mac and workstation; 19 focused registry/catalog checks passed. Three owner-acknowledged archives retained, no writer handles remain. Mac authenticated catalog contains four ordinary sessions, each returns history in 93–316 ms. No physical phone UI inspection."
+  },
+  "workstation_catalog_membership_20261107": {
+    "request": "Workstation still lists unusable sessions; fix catalog lifecycle, not individual titles.",
+    "cause": "Saved catalog mixed ephemeral native runtimes with durable sessions and ignored definitive native metadata absence. Audit identified 25 ephemeral entries plus 3 stale native-absent records among 159 displayed entries.",
+    "implementation": "Native residency and ownership govern all catalog admission. Temporary state persists through reconnect but explicit native persistence restores membership. Definitive identity-bound native absence is retained separately from archives/outages; fresh evidence restores membership, late failures cannot overtake newer evidence, and unresolved human outgoing receipts remain protected.",
+    "validation": "Actual gateway restart/search/cursor/coordinator/new-event/persistence journey plus 22 focused checks. Read-only candidate against real current runtime removed exactly 28 affected entries, retained all 42 delegated histories, and started zero models. Production activation pending."
   }
 }

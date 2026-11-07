@@ -28,3 +28,22 @@ its durable internal-session registry, including cached, searched and archived
 catalogs. Names and workspace substrings are not ownership evidence. Ordinary
 Codex sessions and subagents remain supported. Legacy histories are retained in
 their original runtime store; filtering is not a claimed history migration.
+
+## Saved-conversation membership
+
+A native thread event is not automatically a saved conversation. Native
+`ephemeral: true` runtimes have no durable resume lifecycle and stay outside the
+conversation catalog, regardless of producer or title. This classification
+survives reconnect and saved-cache hydration. An explicit native transition to
+`ephemeral: false` releases only temporary classification; it cannot override
+known product-worker ownership. Native residency/provenance survives partial
+metadata updates.
+
+`CatalogPresence` records an exact identity-bearing native metadata absence
+separately from archives. It does not delete histories, drafts, outgoing receipts
+or cached metadata. Timeout, transport failure, a missing list page and an
+unloaded-but-readable session are not absence. Fresh native evidence restores
+membership; an older negative result cannot supersede it. Unsettled outgoing
+human delivery prevents silent removal. The catalog uses this evidence in its
+normal, cached, search and family projections. No session is resumed or archived
+to discover its status, and no model polling is added.
