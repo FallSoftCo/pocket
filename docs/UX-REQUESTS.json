@@ -16,11 +16,12 @@
     {
       "id": "message-local-micro-timestamps-20261107",
       "request": "Show terse absolute device-local timestamps with agent messages on Android and web, not relative age.",
-      "status": "implemented; native/web qualification and release171 pending",
+      "status": "published Android171/alpha153; web and backend live; Mac projection live, older native schema lacks item times",
       "implementation": [
         "Preserve native startedAtMs/completedAtMs in timeline rows and bounded live cache; never sort by time or fabricate fetch-time stamps.",
         "Small Nov 7 \u00b7 09:52 label beside speaker; full local date/time/timezone for accessibility and web hover. Coordinator uses original persisted response timing. No timer/polling added."
-      ]
+      ],
+      "verification": "docs/qualification/message-local-timestamps-171.json"
     },
     {
       "id": "lead-owned-project-rooms-20261105",
