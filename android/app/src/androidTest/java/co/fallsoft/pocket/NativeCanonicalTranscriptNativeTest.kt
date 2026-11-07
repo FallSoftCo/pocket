@@ -18,11 +18,26 @@ class NativeCanonicalTranscriptNativeTest{
     private val context get()=instrumentation.targetContext
     private val device get()=UiDevice.getInstance(instrumentation)
     private fun main(action:()->Unit)=instrumentation.runOnMainSync(action)
+    private fun feedbackEvidence()=org.json.JSONArray(WorkSourceActions.feedback.values.map{action->
+        JSONObject().put("key",action.key).put("source",action.source).put("title",action.title)
+            .put("operation",action.operation).put("pending",action.pending).put("error",action.error?:JSONObject.NULL)
+    })
     private fun await(message:String,timeout:Long=15000,condition:()->Boolean){
         val end=android.os.SystemClock.elapsedRealtime()+timeout
         var passed=condition()
         while(!passed&&android.os.SystemClock.elapsedRealtime()<end){Thread.sleep(30);passed=condition()}
-        val diagnostics=if(passed)"" else " [selected="+Pocket.selected+", native="+PocketTranscript.canonicalMode+", verified="+PocketTranscript.currentHistoryVerified+", updating="+PocketTranscript.updating+", loading="+PocketTranscript.loading+", rows="+PocketTranscript.rows.size+", error="+PocketTranscript.readError+", appError="+Pocket.error+", reads="+runCatching{qa("state").optJSONArray("reads")?.length()}.getOrNull()+"]"
+        val feedback=if(passed)null else feedbackEvidence()
+        if(!passed){
+            // Capture the failed observation, not the earlier model transition.
+            // Keep the original polling/cache behavior while diagnosing the cause.
+            val folder=context.getExternalFilesDir(null)?:context.cacheDir
+            runCatching{device.dumpWindowHierarchy(java.io.File(folder,"archive-feedback-native-failure.xml"))}
+            runCatching{device.takeScreenshot(java.io.File(folder,"archive-feedback-native-failure.png"))}
+            runCatching{java.io.File(folder,"archive-feedback-native-failure.json").writeText(JSONObject()
+                .put("assertion",message).put("feedback",feedback).put("selected",Pocket.selected?:JSONObject.NULL)
+                .put("environment",Pocket.environmentId).put("appError",Pocket.error).toString(2))}
+        }
+        val diagnostics=if(passed)"" else " [selected="+Pocket.selected+", native="+PocketTranscript.canonicalMode+", verified="+PocketTranscript.currentHistoryVerified+", updating="+PocketTranscript.updating+", loading="+PocketTranscript.loading+", rows="+PocketTranscript.rows.size+", error="+PocketTranscript.readError+", appError="+Pocket.error+", feedback="+feedback+", reads="+runCatching{qa("state").optJSONArray("reads")?.length()}.getOrNull()+"]"
         assertTrue(message+diagnostics,passed)
     }
     /** Observe a stable enabled action target, then tap once. No action retry. */
@@ -95,7 +110,7 @@ class NativeCanonicalTranscriptNativeTest{
         qa("archive-refuse")
         await("Archive refusal recorded"){WorkSourceActions.feedback.values.any{it.error!=null}}
         device.dumpWindowHierarchy(java.io.File(context.getExternalFilesDir(null),"archive-feedback-native.xml"))
-        android.util.Log.i("ArchiveQA",WorkSourceActions.feedback.values.toString())
+        android.util.Log.i("ArchiveQA",feedbackEvidence().toString())
         await("Refusal visible above footer"){device.hasObject(By.textContains("Close this session in its Mac terminal"))}
         assertEquals("Close this session in its Mac terminal before archiving.",WorkSourceActions.feedback.values.single().error)
         val bounds=device.findObject(By.textContains("Close this session in its Mac terminal")).visibleBounds
