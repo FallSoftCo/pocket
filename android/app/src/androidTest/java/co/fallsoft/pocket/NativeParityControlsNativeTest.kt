@@ -54,8 +54,13 @@ class NativeParityControlsNativeTest {
     private fun absent(text:String)=compose.onAllNodesWithText(text,useUnmergedTree=true).assertCountEquals(0)
     private fun editor()=compose.onNode(hasSetTextAction())
     private fun editorText()=editor().fetchSemanticsNode().config[SemanticsProperties.EditableText].text
-    private fun menu(action:String){
+    private fun menu(action:String,captureMenu:Boolean=false){
         compose.onNodeWithContentDescription("Settings, app updates, usage and activity").assertIsDisplayed().performClick()
+        // These work controls must be in the initial viewport, before any
+        // performScrollTo in tap() could hide an ordering regression.
+        for(label in listOf("Context & files","Background terminals","Model, effort, tier & mode","Codex settings & agents"))
+            compose.onNode(hasText(label) and hasClickAction()).assertIsDisplayed().assertIsEnabled()
+        if(captureMenu)capture("00-menu-first-viewport")
         tap(action)
     }
     private fun contextTools(){
@@ -149,7 +154,7 @@ class NativeParityControlsNativeTest {
             // Inspection remains useful when mutation is explicitly unavailable,
             // and an absent descriptor must not silently grant termination.
             qa("terminal-mode",JSONObject().put("mode","read-only"))
-            menu("Background terminals");visible("Alpha synthetic watcher")
+            menu("Background terminals",captureMenu=true);visible("Alpha synthetic watcher")
             visible("Synthetic runtime permits terminal inspection only.")
             assertTrue("Native terminal read did not negotiate presentation",calls("/api/threads/$thread/terminals","GET").last().s("query").contains("terminalPresentation=1"))
             absent("Terminate");absent("Confirm terminate");absent("Terminate this process?")

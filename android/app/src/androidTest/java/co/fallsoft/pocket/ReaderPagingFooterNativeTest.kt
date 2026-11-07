@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
@@ -46,6 +47,7 @@ class ReaderPagingFooterNativeTest {
         requireOwnedNativeTarget(device)
         val width=mutableIntStateOf(320)
         val font=mutableFloatStateOf(1f)
+        val usage=mutableStateOf(WeeklyUsage())
         val editor=mutableStateOf(TextFieldValue("Unsent footer regression draft"))
         var availableWidth=0
         var pixelsPerDp=1f
@@ -79,7 +81,7 @@ class ReaderPagingFooterNativeTest {
                                 ConversationFooter{
                                     InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
                                     ConversationNotesControls(2,1,{},true,{"Synthetic passage"})
-                                    ConversationActionsMenu(false,{},statusIcon="Codex",statusLabel="Idle"){}
+                                    ConversationActionsMenu(false,{},statusIcon="Codex",statusLabel="Idle",contextLabel="QA",accountUsage=usage.value){}
                                     ReaderPagingButtons(list)
                                 }
                             }
@@ -115,8 +117,18 @@ class ReaderPagingFooterNativeTest {
                     }
                     assertEquals("$label orphaned Page down",up.top,down.top,1f)
                     assertEquals("$label changed page spacing",2*pixelsPerDp,down.left-up.right,1f)
-                    for(description in listOf("Speech volume","Questions and results","Settings, app updates, usage and activity"))
-                        compose.onNodeWithContentDescription(description).assertIsDisplayed()
+                    val footerTargets=listOf("Speech volume","Questions and results","Settings, app updates, usage and activity").map{description->
+                        val node=compose.onNodeWithContentDescription(description).assertIsDisplayed()
+                        val target=node.fetchSemanticsNode().boundsInRoot
+                        assertTrue("$label shrank $description",target.width>=48*pixelsPerDp-1&&target.height>=48*pixelsPerDp-1)
+                        assertTrue("$label clipped $description",contained(container,target)&&contained(root,target))
+                        target
+                    }
+                    if(w>=400&&f==1f){
+                        // With no numeric usage and normal text, this portrait
+                        // width fits the real controls without a paging-only row.
+                        for(target in footerTargets)assertTrue("$label unnecessarily wrapped paging",up.top<target.bottom&&up.bottom>target.top)
+                    }
                     compose.onNodeWithContentDescription(PocketImmersion.label("Speak visible conversation")).assertIsDisplayed()
                     val before=compose.runOnIdle{list.firstVisibleItemIndex to list.firstVisibleItemScrollOffset}
                     compose.onNodeWithTag("reader-page-down").performTouchInput{click()}
@@ -134,6 +146,34 @@ class ReaderPagingFooterNativeTest {
                 }
             }
             compose.runOnIdle{keyboard?.hide()}
+            compose.waitUntil(5000){!imeVisible()}
+            // Real numeric modes still reserve their rendered bold value and
+            // reset line. Large text may wrap the footer, never truncate usage.
+            for(value in listOf(
+                WeeklyUsage(remainingPercent=0.05,resetsAt=1794017100),
+                WeeklyUsage(remainingPercent=0.0,credits=CreditUsage(balance="99900"))
+            ))for(f in listOf(1f,2f)){
+                compose.runOnIdle{width.intValue=availableWidth;font.floatValue=f;usage.value=value}
+                compose.waitForIdle()
+                val primary=if(value.remainingPercent==0.0)value.credits.compact()!! else value.remainingLabel().replace(" left","")
+                val text=compose.onNodeWithText(primary,useUnmergedTree=true).assertIsDisplayed()
+                val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+                text.performSemanticsAction(SemanticsActions.GetTextLayoutResult){it(layouts)}
+                assertTrue("Usage layout missing for $primary font=$f",layouts.isNotEmpty())
+                // FlowRow's intrinsic pass can report overflow even when the
+                // final glyph boxes fit; inspect the rendered text itself.
+                assertTrue("Usage clipped for $primary font=$f",layouts.all{layout->
+                    layout.lineCount>0&&layout.getLineEnd(layout.lineCount-1,true)==layout.layoutInput.text.length&&
+                        (0 until layout.lineCount).none{layout.isLineEllipsized(it)}&&
+                        layout.layoutInput.text.indices.all{index->val box=layout.getBoundingBox(index)
+                            box.left>=-1f&&box.top>=-1f&&box.right<=layout.size.width+1f&&box.bottom<=layout.size.height+1f}
+                })
+                compose.onNodeWithContentDescription("Settings, app updates, usage and activity").assertIsDisplayed()
+                assertEquals("Numeric usage orphaned Page down",bounds("reader-page-up").top,bounds("reader-page-down").top,1f)
+                records.put(JSONObject().put("widthDp",availableWidth).put("fontScale",f).put("ime",false)
+                    .put("usage",primary).put("pageUp",bounds("reader-page-up").toString()).put("pageDown",bounds("reader-page-down").toString()))
+                assertTrue(device.takeScreenshot(i.targetContext.filesDir.resolve("footer-usage-${if(value.remainingPercent==0.0)"credits" else "allowance"}-$f.png")))
+            }
         }
         i.targetContext.filesDir.resolve("footer-paging-matrix.json").writeText(JSONObject()
             .put("scope","Native component fixture, not full conversation send or physical phone proof")
