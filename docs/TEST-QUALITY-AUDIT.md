@@ -193,3 +193,32 @@ not another disconnected unit-count target. Root owns release/phone work;
 integration-quality owns the cold-page journey and execution-parity owns the
 Mac read-only terminal presentation. Monitoring remains active without recurring
 model wake timers or unrelated worker activation.
+
+
+## Release174 observations and active follow-up
+
+The cold-page unknown-send journey now passes on the actual app, gateway, backend
+and SQLite outbox with a schema-validated disposable native wire. One original
+POST and one native dispatch survive page recreation, preserving source, pairing,
+draft and unknown receipt. A served replay mutant fails the mandatory assertion.
+The exact release source was rerun successfully. This is page recreation, not a
+browser-process or backend restart; diagnostic screenshot failures are retained
+and no layout proof is inferred.
+
+Release174 passes all15 required native cases, including the extended original
+parity journey for read-only and absent terminal capabilities. The exact optimized
+APK also passed canonical ordering/reopen/question dismissal and a touch-driven
+read-only terminal review. Unsupported termination was absent. Mac listing uses
+per-request presentation negotiation; old clients receive an upgrade-needed
+response before native dispatch, while the existing0.167 legacy behavior remains.
+All five required DOM lanes passed. Debug and release unit suites each had477
+cases, with two pre-existing skips reported rather than hidden.
+
+A source review identified the next concrete hypothesis: a remote-only stream
+reconnect refreshes the catalog, but an unchanged catalog may leave conversation
+and attention stale until the ten-second fallback. It has not yet been reproduced.
+The integration owner is qualifying automatic recovery through two disposable
+backends and the real gateway/browser, retaining same-ID source isolation and
+proving there are no new work submissions. A separate UI owner is correcting
+observed footer wrapping and menu action placement. These follow-ups are active;
+174 publication is not a claim of complete TUI parity.

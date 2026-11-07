@@ -16,7 +16,7 @@
     {
       "id": "codex-native-parity-20261107",
       "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
-      "status": "Workstation backend/web and Mac read-only catalog backend live. Android173/alpha155 published on both current channels after15 native cases and exact optimized canonical/control review. Single owner announcement sent; phone last observed172. Monitoring remains active.",
+      "status": "Backend/web174 live on workstation and Mac; Android174/alpha156 published on both channels after15 native cases and optimized canonical/read-only terminal review. One owner announcement accepted by FCM. Phone last observed172. Work remains active.",
       "architecture": [
         "Codex owns execution and native thread/turn/item/request identity.",
         "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",
@@ -47,13 +47,13 @@
       ],
       "integration": "Root owns common integration, serialized heavy builds/native QA, compatible signing and release. Independent disk worktrees at fa30781d; no delegate production deployment.",
       "validation": "Meaningful native protocol and client journeys, preserved draft/source/receipt semantics, explicit unsupported and uncertain outcomes; deployment evidence separate from fixtures.",
-      "monitoring": "Active: cold web-page recovery passed against real app/gateway/backend/outbox with1POST/1dispatch and replay negative control. Mac read-only terminal candidate integrated; Kotlin and requiredDOM pass, native release qualification pending. No recurring model polling or wake timers.",
+      "monitoring": "Current-source actual browser cold-page recovery passed with1POST/1dispatch; live workstation history30ms, Mac16ms. No native process restart or model/task submission. Focused followup reviews cover footer/menu ergonomics and notification/history freshness integration gaps.",
       "ui_owner": {
         "owner": "ui_standby",
         "model": "gpt-6-astra",
         "reasoning": "high",
         "branch": "parity/ui-20261107",
-        "status": "Astra high reviewer confirmed Settings popup opens via physical emulator input and timestamp discrepancy is fixture-only; footer wrapping retained as follow-up."
+        "status": "Bounded footer width and menu ordering correction assigned in isolated worktree; root retains shared builds/native QA/release."
       },
       "review_fixes": [
         "Panel/session switch cannot retarget native settings or terminal/conversation actions.",
@@ -69,7 +69,7 @@
         "reasoning": "high",
         "branch": "parity/integration-quality-20261107",
         "base": "77636b61",
-        "status": "Auditing supported-product test quality and implementing meaningful cross-component journeys; no qualification outcome yet.",
+        "status": "Composed actual-app recovery delivered; auditing next notification/history integration seam. No recurring model wakeups.",
         "requirements": [
           "Map user journeys and actual production integration seams to evidence.",
           "Assess disjoint unit tests, mocked behavior, silent skips and release failure detection.",
