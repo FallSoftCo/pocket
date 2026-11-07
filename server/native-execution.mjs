@@ -16,7 +16,8 @@ export class NativeExecution {
   if(!id(threadId)||!id(processId))fail(400,'Invalid terminal identity.');
   // Native thread-scoped ownership remains authoritative, including exit races.
   const result=await this.call('thread/backgroundTerminals/terminate',{threadId,processId});
-  return {ok:true,threadId,processId,result};
+  if(typeof result?.terminated!=='boolean')fail(502,'Codex did not confirm the terminal outcome. Refresh before another attempt.');
+  return {ok:true,threadId,processId,terminated:result.terminated,result};
  }
  async output(threadId,turnId,itemId,{offset=0,revision=null}={}){
   if(![threadId,turnId,itemId].every(id)||!Number.isSafeInteger(offset)||offset<0)fail(400,'Invalid command output position.');
