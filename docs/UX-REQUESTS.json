@@ -16,7 +16,7 @@
     {
       "id": "archive-month-horizon-correction-20261107",
       "request": "Old sessions still appear when scrolling beyond the month horizon. Fix actual archive coverage and work-age criteria across normal list pagination.",
-      "status": "implementation and real catalog cleanup in progress",
+      "status": "backend correction live on workstation and Mac; full catalog cleanup verified",
       "findings": [
         "Original1370 workstation archives remained absent; current paginated catalog still had1018 old entries,768 not present in original cleanup inventory.",
         "Coordinator inventory excluded spawned children; cleanup incorrectly used maximum metadata updatedAt as activity and protected every loaded idle session."
@@ -24,8 +24,11 @@
       "implementation": [
         "Include native delegated-session metadata in explicit cleanup inventory, with the same private-controller exclusions.",
         "Use real recency/activity when present; metadata updatedAt is only a fallback for runtimes without work time.",
-        "Retain active/recent work and its ancestors; archive acknowledged idle work without worker/model starts or deleting history."
-      ]
+        "Retain active/recent work and its ancestors; archive acknowledged idle work without worker/model starts or deleting history.",
+        "Reconcile native archived membership before cleanup, then include displayed child sessions omitted by native list.",
+        "After an uncertain archive reply, confirm native archived state without repeating the mutation; otherwise stop."
+      ],
+      "verification": "docs/qualification/archive-month-horizon-20261107.json"
     },
     {
       "id": "message-local-micro-timestamps-20261107",
