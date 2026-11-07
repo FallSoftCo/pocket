@@ -45,9 +45,16 @@ class CommandHistoryNativeTest {
   assertFalse(device.hasObject(By.text("First command stdout")))
   assertFalse(device.hasObject(By.text("Waiting for the operation")))
   val source=PocketTranscript.rows.map{it.toString()}
+  fun assertOriginalPassageUnchanged(message:String){
+   val rows=PocketTranscript.rows
+   // Page-up can legitimately prepend canonical history while runs are open.
+   // Existing records must stay byte-identical and ordered; no duplicate IDs.
+   assertEquals(message,source,rows.takeLast(source.size).map{it.toString()})
+   assertEquals("Duplicate canonical row",rows.size,rows.map{it.s("id")}.distinct().size)
+  }
   main{Pocket.activities=listOf(JSONObject().put("threadId","same-thread").put("previewKind","terminalInteraction").put("state","working"))}
   assertTrue(device.wait(Until.hasObject(By.text("Using existing terminal")),5000))
-  assertEquals("Live terminal activity changed canonical history",source,PocketTranscript.rows.map{it.toString()})
+  assertOriginalPassageUnchanged("Live terminal activity changed canonical history")
   main{Pocket.activities=listOf(JSONObject().put("threadId","other-thread").put("previewKind","terminalInteraction").put("state","working"))}
   assertTrue(device.wait(Until.gone(By.text("Using existing terminal")),5000))
   main{Pocket.activities=listOf(JSONObject().put("threadId","same-thread").put("previewKind","terminalInteraction").put("state","finished"))}
@@ -73,7 +80,7 @@ class CommandHistoryNativeTest {
   }
   assertTrue("Expanded wait detail missing from viewport; source="+PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")},waitVisible)
   assertTrue(reveal("Answer after commands"))
-  assertEquals("Expansion changed canonical history",source,PocketTranscript.rows.map{it.toString()})
+  assertOriginalPassageUnchanged("Expansion changed canonical history")
   val protected=PocketTranscript.rows.filter{it.s("id").startsWith("command-native/")}.map{Triple(it.s("id"),it.s("text"),it.s("detail"))}
   main{Pocket.open("second-thread")}
   await{Pocket.selected=="second-thread"&&!PocketTranscript.loading}
