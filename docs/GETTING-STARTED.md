@@ -2,9 +2,11 @@
 
 [← NextComp overview](../README.md) · [Documentation](README.md)
 
+The supported product is vanilla Codex sessions and native subagents; rooms, LAX and Hollywood are retired. The [current capability map](CAPABILITIES.md) and [2026-11-07 integration record](qualification/codex-parity-integration-20261107.json) describe runtime-specific support. Android **174 / 0.5.0-alpha.156** is published on both paired update channels; installation on the owner’s handset remains unverified, with **172** last observed. A published update is not an installation receipt.
+
 ## Requirements
 
-- Linux workstation with Node.js **22.13+**, authenticated Codex CLI, and its shared app-server socket.
+- Paired host with Node.js **22.13+**, authenticated Codex, and its existing shared app-server socket. Current deployment evidence covers the workstation and Mac; available native controls differ by runtime.
 - Android **9+ (API 28)** with Google Play services for FCM. Physical testing currently covers a Pixel 9 Pro Fold; other vendors are unverified.
 - Your own Firebase project with Cloud Messaging enabled and a server credential.
 - A trusted HTTPS connection from phone to workstation. Tailscale Serve is the recommended private-network deployment. Both devices must belong to your tailnet to read/reply; FCM alerts can arrive without Tailscale connected.
@@ -21,14 +23,14 @@ cd pocket
 npm ci
 ```
 
-Run Codex CLI **0.157.1** interactively and authenticate it. In another terminal, from the Pocket checkout, check compatibility **before configuring Firebase**:
+Use the existing authenticated shared Codex app-server for the selected environment. The current native-control adapter is qualified against **0.167.0**, with a narrower read-only profile for the observed Mac ARM64 **0.163.0** runtime. This is not blanket support for every 0.163 build or permission to replace an active daemon. From the Pocket checkout, check connectivity **before configuring Firebase**:
 
 ```bash
 codex --version
 npm run doctor -- --preflight
 ```
 
-The preflight does not require Firebase or a running Pocket backend. It checks that the existing shared Codex runtime responds. Stop here if it fails; see [missing-socket troubleshooting](DEPLOYMENT.md#diagnosis). Other Codex versions are unverified.
+The preflight does not require Firebase or a running Pocket backend. It checks that the existing shared runtime responds. Stop here if it fails; see [missing-socket troubleshooting](DEPLOYMENT.md#diagnosis). Its older 0.157.1 version warning is historical and does not certify the current native controls or require a downgrade. The CLI found on PATH can differ from the daemon serving the socket; use the connected runtime and per-method availability shown in **Codex settings & agents**, with the [current qualification record](qualification/codex-parity-integration-20261107.json), to assess those controls.
 
 Pocket connects to the existing socket at `~/.codex/app-server-control/app-server-control.sock` (or under `CODEX_HOME`). Set `CODEX_SOCKET` if your installation uses another existing shared socket. Use the same OS user and Codex home as the interactive CLI. Pocket does not start a competing app-server or migrate your conversations.
 
@@ -106,7 +108,13 @@ Followed tasks recover missed completion/failure alerts after the Pocket backend
 
 Open a task and tap its bell to follow it. Replying also follows it. The conversation preserves turn/item order, including compact expandable commands and diffs. Scroll up without losing your place; **Latest** returns to live activity. **Load earlier activity** pages backward. Public reasoning summaries can appear; raw reasoning is excluded.
 
-**Queued** means Pocket received a reply; **sent** means Codex accepted it, not that the task finished. Native questions and supported command/file approvals retain their exact outstanding request IDs. Unsupported request types must be handled in the terminal. Approval requests are shown when the task uses approval mode; full-permission tasks run commands without approval prompts.
+**Queued** means Pocket received a reply; **sent** means Codex accepted it, not that the task finished. Native questions, supported command/file/permission approvals and supported MCP elicitation forms retain their original source, outstanding request ID and request token. Offered decisions come from the native request; replaced requests cannot reuse a prior answer. Unsupported request types remain explicit and must be handled through a supported native client. Approval requests are shown when the task uses approval mode; full-permission tasks run commands without approval prompts.
+
+Use **Codex settings & agents** to inspect effective configuration, installed tools and native child sessions. Requested preferences and observed runtime permissions are shown separately. Catalog reads do not execute tools or resume work. Enablement controls appear only where native writes are qualified.
+
+Use the context/files controls for supported workspace/context actions, including native branching and revert where available. Reverting a conversation does not undo working files. Unknown operation receipts remain available for inspection; do not assume a lost acknowledgement means no action occurred.
+
+**Read command output** retrieves retained output in bounded pages where qualified. **Background terminals** lists processes for the original session; **Terminate** appears only where independently supported. On the qualified Mac 0.163 runtime, catalogs and terminal listing are read-only, and retained output and termination are unavailable. Older clients must update before reading that terminal list so they cannot display an unusable Terminate control. Neither managed worktree creation nor plugin installation, hook editing or native user verification is exposed as a remote operation.
 
 Questions, approvals, and errors appear in **Needs you**. Reminders use delays of 5 minutes, then 15 and 30 minutes between repeats, up to three repeats. Swipe away, dismiss, reply, or resolve the request to stop them. **Later · 30m** snoozes. Android may delay these approximate timers; opening a task alone does not dismiss its request.
 
@@ -166,7 +174,7 @@ Tap **Talk to Codex** on the session list for the persistent coordinator, or tap
 
 The bottom Talk control opens the coordinator and starts recording immediately. Each session card has direct Talk and Keyboard entry. One stop tap automatically sends the turn. Chat uses large bottom microphone, keyboard, back and playback controls with an on-screen speech-volume slider. Session cards show labeled last-activity times and dates for older sessions. Volume down starts recording; pressing it again sends the completed turn. Volume up pauses/resumes or replays a response. Starting another recording interrupts speech. Grant microphone access on first use. Enable NextComp's Accessibility service for volume controls outside the app; foreground controls also work without that service.
 
-Voice uses stock Codex's native WebRTC transport with the host's ChatGPT authentication. No separate audio API key is required. A dedicated audio-only connection transcribes the completed recording; the persistent Codex controller handles the full transcript and real session tools. Speech is buffered before playback so pause and replay preserve the entire response. Recordings are capped at 120 seconds, silence is discarded, and saved turn IDs prevent automatic replay of uncertain actions. Native voice uses account usage; task-model usage is separate. Experimental app-server voice availability depends on the CLI and account.
+Voice uses stock Codex's native WebRTC transport with the host's ChatGPT authentication. No separate audio API key is required. A dedicated audio-only connection transcribes the completed recording; the persistent Codex controller handles the full transcript and real session tools. Speech is buffered before playback so pause and replay preserve the entire response. Recordings are capped at ten minutes, silence is discarded, and saved turn IDs prevent automatic replay of uncertain actions. Native voice uses account usage; task-model usage is separate. Experimental app-server voice availability depends on the CLI and account.
 
 Session cards show recent input or output beneath their titles, identify the speaker, support preview search, and offer renaming directly from the list. Recent previews load without resuming tasks.
 
