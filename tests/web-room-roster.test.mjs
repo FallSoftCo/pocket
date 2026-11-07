@@ -16,6 +16,6 @@ test('room roster authenticates the original browser without stock inventory or 
  const origin='https://private.example.test',g=createWebClient({backend:'http://127.0.0.1:'+upstream.address().port,origin,environments:env});g.server.listen(0,'127.0.0.1');await once(g.server,'listening');t.after(()=>g.server.close());const base='http://127.0.0.1:'+g.server.address().port;
  assert.equal((await fetch(base+'/web/environments')).status,401);assert.deepEqual(calls,[]);
  const pair=await fetch(base+'/web/pair',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}),cookie=pair.headers.get('set-cookie').split(';')[0];
- const response=await fetch(base+'/web/environments',{headers:{Cookie:cookie}});assert.equal(response.status,200);assert.deepEqual(await response.json(),{environments:[{id:'current',name:'Native room host',available:true},{id:'gpu',name:'GPU',available:true}]});assert.deepEqual(calls,['/api/pair','/api/status']);
+ const response=await fetch(base+'/web/environments',{headers:{Cookie:cookie}});assert.equal(response.status,200);assert.deepEqual(await response.json(),{retiredEnvironmentIds:[],environments:[{id:'current',name:'Native room host',available:true},{id:'gpu',name:'GPU',available:true}]});assert.deepEqual(calls,['/api/pair','/api/status']);
  revoked=true;const denied=await fetch(base+'/web/environments',{headers:{Cookie:cookie}});assert.equal(denied.status,401);assert.match(denied.headers.get('set-cookie'),/Max-Age=0/);
 });

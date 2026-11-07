@@ -43,3 +43,16 @@ test('web enrollment reconciles a lost ACK after restart without repeating admis
   const files=readdirSync(directory);assert.equal(files.length,1);assert.equal(statSync(join(directory,files[0])).mode&0o077,0);
  }finally{rmSync(directory,{recursive:true,force:true});}
 });
+
+test('authenticated retirement deletes credentials and pending enrollment from disk across restart',async()=>{
+ const directory=mkdtempSync(join(tmpdir(),'nextcomp-fleet-retirement-'));
+ const current={...fleet,members:[fleet.members[0]],retiredOrigins:[fleet.members[1].origin]};
+ const fetchImpl=async(url)=>new URL(url).pathname==='/api/backends'?reply({fleet:current}):reply({version:1,fleetId:id(1),accountId:id(2),deviceId:id(6),token:portable,expiresAt:Date.now()+60000});
+ try{
+  const first=new WebFleet({directory,backend:'http://127.0.0.1:19427',fetchImpl});
+  const state=first.load(id(7));state.profiles=[{id:'oldhost',nodeId:id(4),base:fleet.members[1].origin,token:'delete-secret'}];state.pending={[id(4)]:{operationId:'original-unknown-enrollment',origin:fleet.members[1].origin}};first.save(id(7),state);
+  await first.discover(id(7),token);
+  const disk=readFileSync(first.file(id(7)),'utf8');assert.ok(!disk.includes('delete-secret'));assert.ok(!disk.includes('original-unknown-enrollment'));
+  const next=new WebFleet({directory,backend:'http://127.0.0.1:19427',fetchImpl});assert.deepEqual(next.list(id(7)),[]);assert.deepEqual(next.retiredIds(id(7)),['oldhost']);
+ }finally{rmSync(directory,{recursive:true,force:true});}
+});
