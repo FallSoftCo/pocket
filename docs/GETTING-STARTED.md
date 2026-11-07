@@ -2,7 +2,7 @@
 
 [← NextComp overview](../README.md) · [Documentation](README.md)
 
-The supported product is vanilla Codex sessions and native subagents; NextComp’s room, LAX and Hollywood entry points are retired. This does not imply that separate native runtimes or services are shut down. The [current capability map](CAPABILITIES.md) and [2026-11-07 integration record](qualification/codex-parity-integration-20261107.json) describe runtime-specific support. Android **175 / 0.5.0-alpha.157** is published on both paired update channels; installation on the owner’s handset remains unverified, with **172** last observed. A published update is not an installation receipt.
+The supported product is vanilla Codex sessions and native subagents; NextComp’s room, LAX and Hollywood entry points are retired. This does not imply that separate native runtimes or services are shut down. The [current capability map](CAPABILITIES.md) and [2026-11-07 integration record](qualification/codex-parity-integration-20261107.json) describe runtime-specific support. Android **175 / 0.5.0-alpha.157** is published on both paired update channels; installation on the owner’s handset remains unverified, with **174** last observed. A published update is not an installation receipt.
 
 ## Requirements
 

@@ -16,7 +16,7 @@
     {
       "id": "codex-native-parity-20261107",
       "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
-      "status": "Android175/alpha157 published both channels after15 native cases and exact optimized history/menu/terminal review. Both web gateways175 live, backends174 retained. One175 owner announcement accepted by FCM. Phone last verified172; no newer installation claimed. Monitoring and remaining parity work active.",
+      "status": "Android175/alpha157 published both channels after15 native cases and exact optimized history/menu/terminal review. Both web gateways175 live, backends174 retained. One175 owner announcement accepted by FCM. Phone last verified174; no newer installation claimed. Monitoring and remaining parity work active.",
       "architecture": [
         "Codex owns execution and native thread/turn/item/request identity.",
         "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",

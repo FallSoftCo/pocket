@@ -168,11 +168,12 @@
       "notificationId": 2834,
       "macChannel": 175,
       "phoneInstallation": "not yet verified",
-      "phoneInstalledVersionLastObserved": 172,
+      "phoneInstalledVersionLastObserved": 174,
       "macChannelRestartRequired": false,
       "macChannelState": "Published with exact compatible signed artifact; no second announcement",
       "pushState": "accepted_by_fcm",
-      "pushAttempts": 1
+      "pushAttempts": 1,
+      "phoneReadOnlyCheck": "SSH package-manager list confirmed174 after175 publication;175 installation not claimed."
     },
     "coldPageRecovery": {
       "state": "passed",
