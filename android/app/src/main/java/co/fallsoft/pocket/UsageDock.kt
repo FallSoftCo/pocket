@@ -46,6 +46,28 @@ import java.util.Locale
     return maxOf(with(density){settings.toDp()+8.dp},with(density){maxOf(balance,allowance).toDp()+32.dp},with(density){accountLabel.toDp()+8.dp},80.dp)
 }
 
+/** Conversation status needs room for its visible value, not an absent balance.
+ * Profile names retain their existing bounded/ellipsized presentation.
+ */
+@Composable internal fun conversationUsageDockWidth(usage:WeeklyUsage,contextLabel:String?=null):androidx.compose.ui.unit.Dp{
+    val density=LocalDensity.current
+    val measure=androidx.compose.ui.text.rememberTextMeasurer()
+    val textStyle=LocalTextStyle.current
+    fun textWidth(text:String,size:androidx.compose.ui.unit.TextUnit,weight:FontWeight=FontWeight.Normal)=with(density){
+        measure.measure(androidx.compose.ui.text.AnnotatedString(text),style=textStyle.copy(fontSize=size,fontWeight=weight)).size.width.toDp()
+    }
+    val primary=if(usage.remainingPercent==0.0&&usage.credits.compact()!=null)usage.credits.compact()
+        else usage.remainingPercent?.let{usage.remainingLabel().replace(" left","")}
+    val valueWidth=primary?.let{textWidth(it,16.sp,FontWeight.SemiBold)+32.dp}?:48.dp
+    val resetWidth=usage.resetsAt?.let{
+        textWidth(SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),12.sp)+8.dp
+    }?:0.dp
+    val profiles=Pocket.environmentProfiles.all()
+    val profile=contextLabel?:if(profiles.size>1)profiles.firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host else null
+    val profileWidth=profile?.let{(textWidth(PocketImmersion.label(it),12.sp)+8.dp).coerceAtMost(compactUsageDockWidth())}?:0.dp
+    return maxOf(48.dp,valueWidth,resetWidth,profileWidth)
+}
+
 @Composable fun UsageDetails(onNavigate:()->Unit={}){
     val context=androidx.compose.ui.platform.LocalContext.current
     TextButton({onNavigate();PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask();if(Pocket.tab==1){Pocket.requestSessionOrder();Pocket.tab=0}else Pocket.tab=1}){BilingualLabel(if(Pocket.tab==1)"Work" else "Settings")}

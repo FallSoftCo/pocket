@@ -123,7 +123,9 @@ import androidx.compose.ui.unit.sp
         }
     }
     Box{
-        UsageDock(modifier.width(compactUsageDockWidth(accountSourceLabel!=null)),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)},usage=accountUsage?:Pocket.weeklyUsage,accountSourceLabel=accountSourceLabel)
+        val usage=accountUsage?:Pocket.weeklyUsage
+        val dockWidth=if(accountSourceLabel!=null)compactUsageDockWidth(account=true)else conversationUsageDockWidth(usage,contextLabel)
+        UsageDock(modifier.width(dockWidth),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)},usage=usage,accountSourceLabel=accountSourceLabel)
         DropdownMenu(expanded,{onExpandedChange(false)},scrollState=menuScroll,modifier=Modifier.width(300.dp).heightIn(max=if(bottomActions)280.dp else 420.dp).semantics{testTagsAsResourceId=true},
             properties=androidx.compose.ui.window.PopupProperties(focusable=false),content={
                 val report:@Composable ()->Unit={
