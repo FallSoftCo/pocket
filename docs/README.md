@@ -1,6 +1,6 @@
 # NextComp documentation
 
-NextComp provides Android and web control of vanilla Codex sessions and native subagents across paired environments. Rooms, LAX and Hollywood were retired from the supported product on 2026-11-07. Their documentation and original evidence remain historical; they do not describe selectable backends or authorize restarting retired services. See [the Codex-only transition](CODEX-ONLY.md).
+NextComp provides Android and web control of vanilla Codex sessions and native subagents across paired environments. NextComp’s room, LAX and Hollywood entry points were retired on 2026-11-07. Their documentation and original evidence remain historical; they do not describe selectable NextComp backends. This retirement does not establish that separate native runtimes or services are shut down; their lifecycle is outside this release. See [the Codex-only transition](CODEX-ONLY.md).
 
 As of 2026-11-07, Android **174 / 0.5.0-alpha.156** is published on both paired update channels, and the corresponding backend/web source **b12de8ea** is live on the workstation and Mac. Physical handset installation of 174 is **not verified**; the last observed installed version is **172**. [Current integration and delivery evidence](qualification/codex-parity-integration-20261107.json) separates publication, synthetic/emulator qualification and physical-phone observations.
 
