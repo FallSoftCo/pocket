@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "date": "2026-11-07",
-  "status": "android174-published-both-channels-monitoring-and-followup-active",
+  "status": "android175-published-both-channels-monitoring-and-followup-active",
   "base": "fa30781d",
   "implementationCommits": [
     "ef5bfe03",
@@ -163,10 +163,10 @@
       "terminalTerminationAvailable": false
     },
     "delivery": {
-      "workstationChannel": 174,
+      "workstationChannel": 175,
       "ownerAnnouncements": 1,
-      "notificationId": 2833,
-      "macChannel": 174,
+      "notificationId": 2834,
+      "macChannel": 175,
       "phoneInstallation": "not yet verified",
       "phoneInstalledVersionLastObserved": 172,
       "macChannelRestartRequired": false,
@@ -287,7 +287,7 @@
       ]
     },
     "native175": {
-      "state": "held-on-native-footer-ime-observation",
+      "state": "published-both-channels",
       "sourceCommit": "5177bcdd",
       "footer": "Measure actual displayed account/profile content with48dp minimum",
       "menu": "Prioritize Context, terminals and Codex controls ahead of account details",
@@ -296,14 +296,33 @@
         "skipped": 2,
         "failed": 0
       },
-      "nativePassed": 0,
+      "nativePassed": 15,
       "phoneChanged": false,
-      "initialFailure": "Original five-second IME-visible precondition timed out before layout assertions; cause under investigation; original failure retained.",
-      "candidateProductChangedAfterFailure": false
+      "initialFailure": "Original footer IME and menu preconditions failed while a System UI ANR dialog covered the emulator. DropBox and current window/pixel evidence place OS ANR before both tests. Both failures retained.",
+      "candidateProductChangedAfterFailure": false,
+      "recovery": "One explicit Wait tap on the observed System UI dialog; unchanged APK/test bytes passed all15 cases in a separately recorded attempt.",
+      "optimizedReview": "Exact signed APK canonical order/reopen/Skip and one-tap read-only terminals passed; original QA preferences restored.",
+      "menuPriorityVisibleWithoutScroll": true,
+      "footerDefaultOneRow": true,
+      "largeTextCreditsUnclipped": true,
+      "physicalPhoneTested": false,
+      "phoneCompatibleSha256": "132ae6d7a6454b903903a7592d110cc335f5b473c87fdc593788b053054b5215",
+      "versionCode": 175,
+      "versionName": "0.5.0-alpha.157",
+      "caseScope": "15 required native cases including storage/component checks; not15 complete user journeys.",
+      "liveAccountEmulatorAudioPassed": true
+    },
+    "nativeAdmission": {
+      "sourceCommit": "2699a51f",
+      "scope": "Read-only current hierarchy capture rejects already-visible Android ANR/crash dialogs before fixture/app/test changes. No automatic dismissal or retry.",
+      "cliBoundaryTests": 13,
+      "failed": 0,
+      "skipped": 0,
+      "actualEmulatorReadOnlyCapture": "passed",
+      "appliedTo175Batch": false
     }
   },
   "remaining": [
-    "Complete175 changed-layout native journeys and optimized review before Android publication.",
     "Verify physical handset installation and interaction separately.",
     "Retain required Pocket review gate; no bypass.",
     "Continue useful integration monitoring; full TUI parity remains open."
