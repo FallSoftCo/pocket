@@ -41,7 +41,7 @@ export function question(id=73,threadId='thread-shared'){
 export async function productionFixture(t,{name='Source A'}={}){
  const dir=await mkdtemp(join(tmpdir(),'nextcomp-seam-')),socket=join(dir,'native.sock');
  await mkdir(join(dir,'home'));const calls=[],answers=[],faults=[],events=[];
- const f={dir,calls,answers,faults,events,thread:nativeThread('thread-shared',name),page:nativePage(name),hold:null,dropNext:false,loseCompact:false};
+ const f={dir,calls,answers,faults,events,thread:nativeThread('thread-shared',name),page:nativePage(name),hold:null,dropNext:false,loseCompact:false,loseSend:false};
  let child,logs='',base,admin,device;
  const native=http.createServer(),wss=new WebSocketServer({server:native});
  await new Promise(resolve=>native.listen(socket,resolve));
@@ -51,7 +51,7 @@ export async function productionFixture(t,{name='Source A'}={}){
   if(!m.method){try{wireCheck('ToolRequestUserInputResponse',m.result);answers.push(m);}catch(e){faults.push(e.message);}return;}
   calls.push(m);
   try{
-   const paramsSchema={initialize:'InitializeParams','thread/list':'ThreadListParams','thread/read':'ThreadReadParams','thread/timeline/list':'ThreadTimelineListParams','thread/turns/list':'ThreadTurnsListParams','thread/resume':'ThreadResumeParams'}[m.method];if(paramsSchema)wireCheck(paramsSchema,m.params);
+   const paramsSchema={initialize:'InitializeParams','thread/list':'ThreadListParams','thread/read':'ThreadReadParams','thread/timeline/list':'ThreadTimelineListParams','thread/turns/list':'ThreadTurnsListParams','thread/resume':'ThreadResumeParams','thread/items/list':'ThreadItemsListParams'}[m.method];if(paramsSchema)wireCheck(paramsSchema,m.params);
    if(m.method==='initialize')return send(ws,m.id,{userAgent:'codex/0.167.0',codexHome:join(dir,'home'),platformFamily:'unix',platformOs:'linux'},'InitializeResponse');
    if(m.method==='thread/list')return send(ws,m.id,{data:[f.thread],nextCursor:null},'ThreadListResponse');
    if(m.method==='thread/read')return send(ws,m.id,{thread:f.thread},'ThreadReadResponse');
@@ -66,6 +66,20 @@ export async function productionFixture(t,{name='Source A'}={}){
    if(m.method==='thread/compact/start'){
     wireCheck('ThreadCompactStartParams',m.params);
     assert.equal(f.loseCompact,true,'Fixture only permits explicitly armed synthetic compaction loss');
+    ws.terminate();return;
+   }
+   if(m.method==='thread/items/list'){
+    assert.equal(m.params.threadId,f.thread.id);
+    assert.ok(!m.params.cursor,'Cold-page fixture has only one retained items page');
+    const entries=f.page.data.filter(e=>e.type==='item'&&(!m.params.turnId||e.turnId===m.params.turnId)).map(e=>({turnId:e.turnId,item:e.item,startedAtMs:null,completedAtMs:null}));
+    if(m.params.sortDirection==='desc')entries.reverse();
+    return send(ws,m.id,{data:entries,nextCursor:null,backwardsCursor:null},'ThreadItemsListResponse');
+   }
+   if(m.method==='turn/start'){
+    wireCheck('TurnStartParams',m.params);
+    assert.equal(f.loseSend,true,'Fixture only permits explicitly armed synthetic human-send loss');
+    assert.equal(m.params.threadId,f.thread.id);
+    assert.ok(m.params.clientUserMessageId,'Synthetic send must retain its original client ID');
     ws.terminate();return;
    }
    // Startup probes are explicitly unsupported, never permissive empty success.
@@ -94,7 +108,7 @@ export async function productionFixture(t,{name='Source A'}={}){
  f.barrier=()=>{let started,release;const entered=new Promise(r=>started=r),wait=new Promise(r=>release=r);f.hold={started,wait};return {entered,release};};
  f.watch=async()=>{const ws=new WebSocket(base.replace('http','ws')+'/events',{headers:{Authorization:'Bearer '+device.token}});ws.on('message',raw=>events.push(JSON.parse(raw)));await once(ws,'open');t.after(()=>ws.terminate());return ws;};
  f.assertClean=()=>assert.deepEqual(faults,[],`Fixture contract failures; backend tail: ${logs}`);
- Object.defineProperties(f,{base:{get:()=>base},token:{get:()=>device.token},deviceId:{get:()=>device.id}});
+ Object.defineProperties(f,{pid:{get:()=>child?.pid},logs:{get:()=>logs},base:{get:()=>base},token:{get:()=>device.token},deviceId:{get:()=>device.id}});
  await f.boot();const pairing=await f.request('/api/pairing',{},admin);assert.equal(pairing.status,200);const paired=await f.request('/api/pair',{code:pairing.data.code,name:'Disposable integration client'},'');assert.equal(paired.status,200);device=paired.data;
  await f.api('/api/threads/thread-shared/native-timeline');f.assertClean();return f;
 }
