@@ -6,21 +6,26 @@ import {ownerRequest} from './local-client.mjs';
 import {inactiveArchiveReason} from '../server/session-archive.mjs';
 
 export async function archiveInactive({request,cutoff,save,protectedIds=[],apply=false}){
-  const rows=new Map(),cursors=new Set();let cursor=null;
-  do{
-    const page=await request('/api/threads?view=coordinator&includeChildren=true'+(cursor?'&cursor='+encodeURIComponent(cursor):''));
-    if(page.refreshPending)throw Error('Catalog is still refreshing; no archive sweep started');
-    for(const t of page.threads||[])rows.set(t.id,t);
-    cursor=page.nextCursor||null;
-    if(cursor&&cursors.has(cursor))throw Error('Catalog cursor repeated; no archive sweep started');
-    if(cursor)cursors.add(cursor);
-  }while(cursor);
+  // Reading canonical archived pages reconciles the backend's cached membership,
+  // including children archived outside NextComp. No archive RPC is replayed.
+  const rows=new Map();let archivedObserved=0;
+  for(const archived of [true,false]){
+    const cursors=new Set();let cursor=null;
+    do{
+      const page=await request('/api/threads?view=coordinator&includeChildren=true&archived='+archived+(cursor?'&cursor='+encodeURIComponent(cursor):''));
+      if(page.refreshPending)throw Error('Catalog is still refreshing; no archive sweep started');
+      for(const t of page.threads||[])if(archived)archivedObserved++;else rows.set(t.id,t);
+      cursor=page.nextCursor||null;
+      if(cursor&&cursors.has(cursor))throw Error('Catalog cursor repeated; no archive sweep started');
+      if(cursor)cursors.add(cursor);
+    }while(cursor);
+  }
   const protectedSet=new Set(protectedIds);
   for(const t of rows.values())if(inactiveArchiveReason(t,cutoff)||protectedSet.has(t.id)){
     let parent=t.parentThreadId;const seen=new Set();
     while(parent&&!seen.has(parent)){seen.add(parent);protectedSet.add(parent);parent=rows.get(parent)?.parentThreadId;}
   }
-  const receipt={version:1,cutoff,observedAt:Date.now(),apply,inventory:rows.size,results:[]};save(receipt);
+  const receipt={version:1,cutoff,observedAt:Date.now(),apply,inventory:rows.size,archivedObserved,results:[]};save(receipt);
   for(const t of rows.values()){
     const reason=protectedSet.has(t.id)?'Protected draft, selected session or descendant':inactiveArchiveReason(t,cutoff);
     const row={id:t.id,title:t.name||'',state:reason?'skipped':apply?'intent':'eligible',...(reason?{reason}:{})};receipt.results.push(row);save(receipt);

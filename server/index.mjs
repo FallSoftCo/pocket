@@ -688,9 +688,10 @@ app.get('/api/threads',route(async(req,res)=>{
     const cursor=typeof req.query.cursor==='string'?req.query.cursor:null;
     if(cursor&&cursor.length>4096)return res.status(400).json({error:'Invalid discovery cursor.'});
     const includeChildren=req.query.includeChildren==='true';
-    const result=await sessionDiscovery.page({limit:100,sortKey:'recency_at',sortDirection:'desc',archived:false,useStateDbOnly:true,sourceKinds:includeChildren?[...INTERACTIVE_SOURCES,'subAgentThreadSpawn']:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
-    const found=new Map();for(const thread of result.data||[]){if(catchupHidden(thread.id))continue;sessionDiscovery.remember(thread,{archived:false});found.set(thread.id,thread);}
-    if(!cursor)for(const row of db.prepare("SELECT d.metadata FROM session_starts s JOIN pocket_discovered_threads d ON d.thread_id=s.thread_id WHERE s.state='started' AND d.archived=0 ORDER BY s.updated_at DESC LIMIT 100").all()){
+    const archived=req.query.archived==='true';
+    const result=await sessionDiscovery.page({limit:100,sortKey:'recency_at',sortDirection:'desc',archived,useStateDbOnly:true,sourceKinds:includeChildren?[...INTERACTIVE_SOURCES,'subAgentThreadSpawn']:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
+    const found=new Map();for(const thread of result.data||[]){if(internalSessions.owns(thread.id,thread)||voiceController.owns(thread.id)||nativeVoice.owns(thread.id)||immersion.ownsThread(thread.id)||(!includeChildren&&!archived&&catchupHidden(thread.id)))continue;sessionDiscovery.remember(thread,{archived});found.set(thread.id,thread);}
+    if(!cursor&&!includeChildren&&!archived)for(const row of db.prepare("SELECT d.metadata FROM session_starts s JOIN pocket_discovered_threads d ON d.thread_id=s.thread_id WHERE s.state='started' AND d.archived=0 ORDER BY s.updated_at DESC LIMIT 100").all()){
       const thread=JSON.parse(row.metadata);if(!found.has(thread.id)&&!catchupHidden(thread.id))found.set(thread.id,{...thread,...sessionDiscovery.live.get(thread.id)});
     }
     return res.json({threads:[...found.values()].map(thread=>({id:thread.id,name:catalogName(thread),preview:thread.preview||'',cwd:thread.cwd,status:thread.status,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,discoveryPending:!!thread.discoveryPending,...catalogFields(thread)})),nextCursor:result.nextCursor||null,refreshPending:false});

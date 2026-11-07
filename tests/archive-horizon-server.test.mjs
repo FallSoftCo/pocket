@@ -7,6 +7,7 @@ import {join} from 'node:path';
 import {once} from 'node:events';
 import http from 'node:http';
 import {WebSocketServer} from 'ws';
+import {DatabaseSync} from 'node:sqlite';
 import {archiveInactive} from '../scripts/archive-inactive-sessions.mjs';
 test('real HTTP cleanup inventories delegated pages, ignores metadata churn and removes archived work from all list pages',async t=>{
  const dir=await mkdtemp(join(tmpdir(),'nextcomp-archive-horizon-')),socket=join(dir,'native.sock');
@@ -15,7 +16,8 @@ test('real HTTP cleanup inventories delegated pages, ignores metadata churn and 
  const cutoff=Date.now()-30*86400000;
  const old={status:{type:'notLoaded'},createdAt:Math.floor(cutoff/1000)-1000,recencyAt:Math.floor(cutoff/1000)-100,updatedAt:Math.floor(Date.now()/1000)};
  const rows=[{...old,id:'old-parent',name:'Old parent'},{...old,id:'old-child',source:{subAgent:{thread_spawn:{parent_thread_id:'old-parent'}}},name:'Old child'},{...old,id:'current',recencyAt:Math.floor(Date.now()/1000),status:{type:'active'},name:'Working'}];
- const archived=new Set(),calls=[];
+ const ghost={...old,id:'already-archived-child',name:'Old cached child',source:{subAgent:{thread_spawn:{parent_thread_id:'current'}}}};rows.push(ghost);
+ const archived=new Set([ghost.id]),calls=[];
  wss.on('connection',ws=>ws.on('message',raw=>{const m=JSON.parse(raw);if(!m.id)return;calls.push(m);let result={};
   if(m.method==='thread/list'){
    const visible=rows.filter(r=>archived.has(r.id)===(m.params.archived===true)&&(!r.source||m.params.sourceKinds?.includes('subAgentThreadSpawn')));
@@ -29,8 +31,9 @@ test('real HTTP cleanup inventories delegated pages, ignores metadata churn and 
  for(let n=0;n<100;n++){try{if((await fetch(`http://127.0.0.1:${port}/health`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,30));}
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json')));
  const request=async(path,{method='GET',body}={})=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{method,headers:{Authorization:'Bearer '+adminToken,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Object.assign(Error(data.error),{status:r.status});return data;};
+ const db=new DatabaseSync(join(dir,'pocket.sqlite'));db.prepare('INSERT INTO pocket_discovered_threads VALUES(?,?,0,?)').run(ghost.id,JSON.stringify(ghost),Date.now());db.close();
  const result=await archiveInactive({request,cutoff,apply:true,save:()=>{}});
- assert.equal(result.inventory,3);assert.deepEqual([...archived].sort(),['old-child','old-parent']);
+ assert.equal(result.inventory,3);assert.equal(result.archivedObserved,1);assert.ok(!calls.some(c=>c.method==='thread/archive'&&c.params.threadId===ghost.id));assert.deepEqual([...archived].sort(),['already-archived-child','old-child','old-parent']);
  const page=await request('/api/threads');assert.deepEqual(page.threads.map(r=>r.id),['current']);assert.equal(page.nextCursor,null);
  assert.equal(calls.filter(c=>['thread/resume','turn/start','turn/steer'].includes(c.method)).length,0);
  assert.ok(calls.filter(c=>c.method==='thread/read'&&archived.has(c.params.threadId)).every(c=>c.params.includeTurns===false));
