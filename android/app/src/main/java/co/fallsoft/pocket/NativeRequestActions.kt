@@ -9,11 +9,16 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONObject
+import org.json.JSONArray
 
 /** Decisions are indexes into the original live native request, never invented grants. */
 @Composable internal fun NativeRequestActions(request:JSONObject,answers:Map<String,String>,save:(String,String)->Unit,editable:Boolean,submit:(JSONObject)->Unit){
     val p=request.optJSONObject("params")?:return
-    val ui=request.optJSONObject("_pocketUI")
+    val ui=request.optJSONObject("_pocketUI")?:if(request.s("method") in listOf("item/commandExecution/requestApproval","item/fileChange/requestApproval")){
+        val offered=p.optJSONArray("availableDecisions")?:JSONArray(listOf("accept","decline","cancel"));val actions=JSONArray()
+        for(index in 0 until offered.length()){val decision=offered.optString(index);if(decision in listOf("accept","decline","cancel"))actions.put(JSONObject().put("id",decision).put("label",when(decision){"accept"->"Allow once";"decline"->"Decline";else->"Cancel request"}))}
+        JSONObject().put("kind","approval").put("legacy",true).put("actions",actions)
+    }else null
     val uriHandler=LocalUriHandler.current
     if(ui==null||ui.s("kind")=="unsupported"){WorkflowText("This runtime request must be handled in the terminal.",color=Coral);return}
     ImmersionText("native-request:"+request.s("id"),p.s("reason",p.s("message",p.s("title","Review this request."))),fontSize=15.sp)
@@ -30,15 +35,21 @@ import org.json.JSONObject
     val schema=p.optJSONObject("requestedSchema")
     val properties=schema?.optJSONObject("properties")
     val fields=properties?.keys()?.asSequence()?.toList().orEmpty()
-    val simple=schema?.s("type")=="object"&&fields.all{properties?.optJSONObject(it)?.s("type") in listOf("string","number","integer","boolean")}
+    val simple=schema?.s("type")=="object"&&fields.all{val field=properties?.optJSONObject(it);field?.s("type") in listOf("string","number","integer","boolean")||(field?.s("type")=="array"&&(field.optJSONObject("items")?.has("enum")==true||field.optJSONObject("items")?.has("anyOf")==true))}
     if(mode in listOf("form","openai/form","openaiForm")){
         if(simple)fields.forEach{key->
             val field=properties?.optJSONObject(key)?:JSONObject();val draft="form:$key"
-            val choices=field.optJSONArray("enum")?.let{a->(0 until a.length()).map{a.get(it).toString()}}?:if(field.s("type")=="boolean")listOf("true","false")else emptyList()
+            val multiple=field.s("type")=="array";val enumField=if(multiple)field.optJSONObject("items")?:JSONObject()else field
+            val choices=enumField.optJSONArray("enum")?.let{a->(0 until a.length()).map{a.get(it).toString() to (enumField.optJSONArray("enumNames")?.optString(it)?.takeIf{it.isNotBlank()}?:a.get(it).toString())}}
+                ?:(enumField.optJSONArray("oneOf")?:enumField.optJSONArray("anyOf"))?.objects()?.map{it.s("const") to it.s("title",it.s("const"))}
+                ?:if(field.s("type")=="boolean")listOf("true" to "Yes","false" to "No")else emptyList()
+            val current=answers[draft]?:field.opt("default")?.toString().orEmpty()
+            val selected=if(multiple)runCatching{JSONArray(current.ifBlank{"[]"}).let{a->(0 until a.length()).map{a.getString(it)}}}.getOrDefault(emptyList())else emptyList()
+
             WorkflowText(field.s("title",key)+(if(schema?.optJSONArray("required")?.let{a->(0 until a.length()).any{a.optString(it)==key}}==true)" (required)" else ""),fontSize=14.sp)
             if(field.s("description").isNotBlank())WorkflowText(field.s("description"),fontSize=12.sp,color=Muted)
-            choices.forEach{value->OutlinedButton({save(draft,value)},enabled=editable){BilingualLabel(value)}}
-            OutlinedTextField(answers[draft]?:field.opt("default")?.toString().orEmpty(),{save(draft,it)},readOnly=!editable,label={BilingualLabel(field.s("title",key))},modifier=Modifier.fillMaxWidth())
+            choices.forEach{(value,label)->OutlinedButton({save(draft,if(multiple)JSONArray(if(value in selected)selected-value else selected+value).toString()else value)},enabled=editable){BilingualLabel((if(multiple&&value in selected)"✓ " else "")+label)}}
+            if(!multiple)OutlinedTextField(answers[draft]?:field.opt("default")?.toString().orEmpty(),{save(draft,it)},readOnly=!editable,label={BilingualLabel(field.s("title",key))},modifier=Modifier.fillMaxWidth())
         }else{
             SelectionContainer{Text(schema?.toString(2).orEmpty(),fontSize=12.sp,color=Muted)}
             OutlinedTextField(answers["form:json"]?:"{}",{save("form:json",it)},readOnly=!editable,label={BilingualLabel("Form values (JSON)")},modifier=Modifier.fillMaxWidth())
@@ -47,9 +58,9 @@ import org.json.JSONObject
     ui.optJSONArray("actions")?.objects()?.forEach{action->
         if(action.s("detail").isNotBlank())SelectionContainer{Text(action.s("detail"),fontSize=12.sp,color=Muted)}
         OutlinedButton({
-            val body=JSONObject().put("actionId",action.s("id"))
+            val body=JSONObject().put(if(ui.optBoolean("legacy"))"decision" else "actionId",action.s("id"))
             if(action.s("id")=="accept"&&mode in listOf("form","openai/form","openaiForm")){
-                if(simple){val content=JSONObject();fields.forEach{key->val field=properties?.optJSONObject(key)?:JSONObject();val value=answers["form:$key"]?:field.opt("default")?.toString().orEmpty();if(value.isNotEmpty())content.put(key,when(field.s("type")){"boolean"->if(value=="true")true else if(value=="false")false else value;"integer","number"->value.toDoubleOrNull()?:value;else->value})};body.put("content",content)}
+                if(simple){val content=JSONObject();fields.forEach{key->val field=properties?.optJSONObject(key)?:JSONObject();val value=answers["form:$key"]?:field.opt("default")?.toString().orEmpty();if(value.isNotEmpty())content.put(key,when(field.s("type")){"array"->runCatching{JSONArray(value)}.getOrDefault(JSONArray());"boolean"->if(value=="true")true else if(value=="false")false else value;"integer","number"->value.toDoubleOrNull()?:value;else->value})};body.put("content",content)}
                 else body.put("content",answers["form:json"]?:"{}")
             }
             submit(body)

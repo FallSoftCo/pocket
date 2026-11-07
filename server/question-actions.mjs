@@ -15,8 +15,9 @@ export class QuestionActions {
       for(const q of questions){
         if(body.skip===true){answers[q.id]={answers:[]};continue;}
         const answer=body.answers?.[q.id];
-        if(typeof answer!=='string'||!answer.trim())fail(400,`Answer ${q.header||q.id} first.`);
-        answers[q.id]={answers:[answer.trim().slice(0,8000)]};
+        if(typeof answer!=='string'||!(q.isSecret?answer:answer.trim()))fail(400,`Answer ${q.header||q.id} first.`);
+        if(answer.length>8000)fail(400,`Answer ${q.header||q.id} is too long.`);
+        answers[q.id]={answers:[q.isSecret?answer:answer.trim()]};
       }
       result={answers};
     }else result=nativeRequestResult(m,body);

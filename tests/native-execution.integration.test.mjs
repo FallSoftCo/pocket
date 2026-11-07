@@ -42,6 +42,7 @@ test('native requests preserve offered structured decisions, scope, elicitation 
  actions.answer(17,{actionId:'accept',content:{count:2,allow:false}});assert.deepEqual(writes.at(-1)[1],{action:'accept',content:{count:2,allow:false},_meta:null});
  enqueue('mcpServer/elicitation/request',{mode:'openai/userVerification'});assert.throws(()=>actions.answer(17,{actionId:'accept'}),{status:400});actions.answer(17,{actionId:'cancel'});assert.equal(writes.at(-1)[1].action,'cancel');
  enqueue('execCommandApproval',{});actions.answer(17,{actionId:'2'});assert.equal(writes.at(-1)[1].decision.denied.rejection,'Declined by the user.');
+ enqueue('item/tool/requestUserInput',{questions:[{id:'secret',isSecret:true}]});actions.answer(17,{answers:{secret:' spaced secret '}});assert.equal(writes.at(-1)[1].answers.secret.answers[0],' spaced secret ');
  enqueue('account/chatgptAuthTokens/refresh',{});assert.throws(()=>actions.answer(17,{decision:'accept'}),{status:400});
  pending.clear();assert.throws(()=>actions.answer(17,{actionId:'0'}),{status:409});
 });
