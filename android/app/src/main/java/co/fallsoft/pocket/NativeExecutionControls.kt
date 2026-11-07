@@ -80,7 +80,7 @@ private data class TerminalConfirmation(val destination:EnvironmentRequest,val t
         val request=++generation
         busy=true;problem="";data=null;confirmation=null
         scope.launch{try{
-            val result=Pocket.apiEnvironment(environment,"/api/threads/$thread/terminals"+(if(cursor.isBlank())"" else "?cursor="+executionQuery(cursor)))
+            val result=Pocket.apiEnvironment(environment,"/api/threads/$thread/terminals?terminalPresentation=1"+(if(cursor.isBlank())"" else "&cursor="+executionQuery(cursor)))
             if(current(request))data=result
         }catch(e:Exception){if(current(request))problem=PocketNetwork.error(e)}finally{if(current(request))busy=false}}
     }

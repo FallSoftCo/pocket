@@ -1,5 +1,5 @@
 import {NativeSettingsPanel,addServiceTierControl} from './native-settings.mjs';
-import {commandOutputButton,openTerminals} from './native-execution.mjs';
+import {commandOutputButton,openTerminals,executionApiFor} from './native-execution.mjs';
 import {ConversationToolsPane} from './conversation-tools.mjs';
 import {messageTime} from './message-time.mjs';
 import {roomLead,assertLeadTarget} from './room-lead.mjs';
@@ -594,7 +594,7 @@ $('controls-dialog').append(nativeSettingsButton);
 $('settings-dialog').append(button('Codex settings & tools',()=>nativeSettingsPanel.open()));
 const serviceTierControl=addServiceTierControl({holder:$('model').parentElement.parentElement,modelSelect:$('model'),getModels:()=>models,getStored:()=>current?.turnSettings});
 $('effort').parentElement.after($('service-tier').parentElement);
-function executionApi(origin){return (path,body)=>api(path,body,{scope:origin});}
+function executionApi(origin){return executionApiFor(api,origin);}
 function executionCurrent(origin){return ()=>scope===origin;}
 const terminalsControl=button('Background terminals',()=>{const origin=scope;closeControls();openTerminals({threadId:origin,api:executionApi(origin),isCurrent:executionCurrent(origin),create:el,button});});
 $('controls-dialog').append(terminalsControl);
