@@ -398,7 +398,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     LaunchedEffect(identityScope,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
     val cardText=Paper
     val stateLabel=when{active->if(t.status=="pending")"Starting" else "Working";t.needsInput->"Needs your input";t.status=="idle"->"Idle";t.status=="blocked"->"Blocked";t.status=="failed"->"Failed";else->"Status unavailable"}
-    WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,modifier,knownIdle=t.status=="idle"&&!t.needsInput){
+    SessionArchiveReveal(t,onArchive,modifier){
+    WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,Modifier,knownIdle=t.status=="idle"&&!t.needsInput){
         if(!t.archived)Row(Modifier.matchParentSize()){
             CardInteractionRegion("Chat",Modifier.weight(.78f).fillMaxHeight(),t.title){onOpen(false)}
             CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight(),t.title){onOpen(true)}
@@ -429,7 +430,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                     BilingualLabel(if(t.watched)"On" else "Off",fontSize=10.sp,color=if(t.watched)Mint else Muted)
                 }
             }
-            SessionArchiveAction(t,onArchive,onRestore)
+            SessionRestoreAction(t,onRestore)
 
         }
         Row(Modifier.fillMaxWidth().height(previewHeight),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
@@ -444,6 +445,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     }
     }
 
+    }
 }
 @Composable fun Empty(title:String,body:String){Column(Modifier.fillMaxWidth().padding(vertical=45.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)){SymbolIcon(Icons.Rounded.Inbox,null,tint=Muted,modifier=Modifier.size(40.dp));WorkflowText(title,fontSize=19.sp);WorkflowText(body,color=Muted,fontSize=13.sp)}}
 @OptIn(ExperimentalLayoutApi::class)

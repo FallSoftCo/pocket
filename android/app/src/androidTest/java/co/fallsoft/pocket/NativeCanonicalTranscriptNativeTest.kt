@@ -53,15 +53,15 @@ class NativeCanonicalTranscriptNativeTest{
     @Test fun archiveFromListKeepsDraftAndRestoresWithoutOpeningOrSending(){
         prepare()
         main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.closeTask();Pocket.showArchived=false}
-        await("List archive action"){device.hasObject(By.desc("Archive conversation"))}
-        device.findObject(By.desc("Archive conversation")).click()
-        await("Archive confirmation"){device.hasObject(By.text("Archive conversation?"))}
-        device.findObject(By.text("Cancel")).click()
-        assertEquals(0,qa("state").getInt("archiveCalls"))
-        device.findObject(By.desc("Archive conversation")).click()
-        await("Archive confirmation again"){device.hasObject(By.text("Archive"))}
+        await("Visible current card"){device.hasObject(By.desc("Open Chat for Native canonical work"))}
+        assertFalse("Archive must be hidden before swiping",device.hasObject(By.text("Archive")))
+        val bounds=device.findObject(By.desc("Open Chat for Native canonical work")).visibleBounds
+        device.swipe(bounds.right-8,bounds.centerY(),bounds.left+8,bounds.centerY(),20)
+        await("Swipe reveals archive"){device.hasObject(By.text("Archive"))}
+        assertEquals("Swipe alone cannot archive",0,qa("state").getInt("archiveCalls"))
+        assertNull("Swipe cannot open chat",Pocket.selected)
         device.findObject(By.text("Archive")).click()
-        await("Card leaves current catalog"){!device.hasObject(By.desc("Archive conversation"))&&Pocket.tasks.none{it.id=="same-thread"}}
+        await("Card leaves current catalog"){Pocket.tasks.none{it.id=="same-thread"}}
         assertEquals(1,qa("state").getInt("archiveCalls"));assertNull(Pocket.selected)
         assertEquals("Native unsent draft",Pocket.prefs.getString("draft:same-thread",null))
         main{Pocket.showArchived=true;UnifiedWorkCatalog.refresh()}
@@ -69,7 +69,8 @@ class NativeCanonicalTranscriptNativeTest{
         device.findObject(By.desc("Restore conversation")).click()
         await("Restored card leaves archive"){!device.hasObject(By.desc("Restore conversation"))}
         main{Pocket.showArchived=false;UnifiedWorkCatalog.refresh()}
-        await("Restored current card"){device.hasObject(By.desc("Archive conversation"))}
+        await("Restored current card"){device.hasObject(By.desc("Open Chat for Native canonical work"))}
+        assertFalse("Restore closes swipe action",device.hasObject(By.text("Archive")))
         val evidence=qa("state");assertEquals(1,evidence.getInt("archiveCalls"));assertEquals(1,evidence.getInt("restoreCalls"));assertEquals(0,evidence.getInt("workSubmissions"))
         assertEquals("Native unsent draft",Pocket.prefs.getString("draft:same-thread",null));assertNull(Pocket.selected)
     }

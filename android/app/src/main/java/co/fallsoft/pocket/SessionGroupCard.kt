@@ -52,16 +52,18 @@ import androidx.compose.ui.unit.dp
     }
 }
 @Composable fun AgentResultCard(task:Task,onOpen:()->Unit={Pocket.open(task.id)},parentTitle:String?=null,headerBadge:(@Composable ()->Unit)?=null,onArchive:(()->Unit)?={Pocket.archiveTask(task.id)},onRestore:()->Unit={Pocket.restoreTask(task.id)}){
+    SessionArchiveReveal(task,onArchive){
     Column(Modifier.fillMaxWidth().background(Panel).clickable(onClick=onOpen).padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
             Text(listOf(task.agentNickname.ifBlank{task.title},task.agentRole,if(task.status=="notLoaded")"Status not yet checked" else task.status,if(task.unreadCount>0)"${task.unreadCount} unread" else "").filter{it.isNotBlank()}.joinToString(" · "),modifier=Modifier.weight(1f),color=Mint,minLines=2,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             headerBadge?.invoke()
-            SessionArchiveAction(task,onArchive,onRestore)
+            SessionRestoreAction(task,onRestore)
         }
         val parent=if(parentTitle==null)Pocket.tasks.firstOrNull{it.id==task.parentThreadId}else null
         Text(parentTitle?:parent?.let{"Parent: "+it.agentNickname.ifBlank{it.title}}?:if(task.parentThreadId!=null)"Parent task outside this page" else "Parent identity unavailable",color=Muted,minLines=1,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Text(task.preview.ifBlank{"Open to review this agent’s available work."},color=Paper,minLines=3,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Text(if(task.canAcceptDirectInput)"Open agent · direct guidance available" else "Review results · guide through parent task",color=Muted,minLines=2,maxLines=2)
+    }
     }
 }
 internal fun conversationIdentityPending()=Pocket.selected!=null&&Pocket.tasks.none{it.id==Pocket.selected}&&Pocket.detail?.optJSONObject("thread")==null

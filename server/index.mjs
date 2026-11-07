@@ -1,3 +1,4 @@
+import {inactiveArchiveReason} from './session-archive.mjs';
 import {mountOperatorNotifications} from './notification-requests.mjs';
 import {CoordinatorHeadReader} from './coordinator-head.mjs';
 import {CoordinatorCollector} from './coordinator-collector.mjs';
@@ -816,6 +817,16 @@ app.post('/api/threads/:id/archive',route(async(req,res)=>{
   const {thread:t}=await codex.call('thread/read',{threadId:id,includeTurns:false});
   if(t?.id!==id)throw Error('Session identity unavailable');
   if(isActive(t))return res.status(409).json({error:'Stop the running turn before archiving.'});
+  if(req.body.inactiveBefore!==undefined){
+    const cutoff=req.body.inactiveBefore;
+    if(!Number.isSafeInteger(cutoff)||cutoff<=0||cutoff>Date.now()-28*86400000)return res.status(400).json({error:'Automatic archive requires an inactivity cutoff at least 28 days ago.'});
+    const reason=inactiveArchiveReason({...t,...sessionDiscovery.live.get(id)},cutoff);
+    const protectedWork=[...pending.values()].some(m=>m.params?.threadId===id)||
+      !!db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('unknown','sending','queued','held')").get(id)||
+      !!db.prepare('SELECT 1 FROM notifications n JOIN notification_attention a ON a.notification_id=n.id WHERE n.thread_id=? AND a.resolved_at IS NULL').get(id)||
+      catalogContext.get(t).needsInput===true;
+    if(reason||protectedWork)return res.status(409).json({error:reason||'Session has pending messages or needs attention.'});
+  }
   await codex.call('thread/archive',{threadId:t.id});turnRecovery.cancel(t.id);sessionDiscovery.markArchived(t.id,true);
   db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND state='queued'").run(now(),t.id);
   db.prepare('UPDATE watches SET enabled=0 WHERE thread_id=?').run(t.id);attached.delete(t.id);res.json({ok:true});
