@@ -3356,14 +3356,15 @@
     {
       "id": "retired-environment-data-deletion-20261107",
       "request": "Delete retired host registrations, credentials, drafts and unresolved receipts; retain current system76, Mac and phone profiles. Do not replay removed work.",
-      "status": "Implemented in 169 candidate; backend/private web credential purge applied, client delivery pending native qualification.",
+      "status": "Delivered backend/web and published Android169 alpha151; physical phone169 installation not yet verified.",
       "implementation": [
         "server/retired-sources.mjs",
         "server/web-fleet.mjs",
         "web/retirement.mjs",
         "android/app/src/main/java/co/fallsoft/pocket/EnvironmentProfiles.kt",
         "android/app/src/main/java/co/fallsoft/pocket/DurableVoiceWork.kt"
-      ]
+      ],
+      "verification": "682 backend tests;476 unit cases per Android variant (2 skipped), both lints;12 native integration cases including actual retired drafts/unknown receipts/audio deletion with current host preserved; exact optimized compatible APK reviewed. No removed operation sent or retried."
     }
   ],
   "current_state": {

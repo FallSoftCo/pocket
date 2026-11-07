@@ -6,7 +6,7 @@ Android replaces a saved backend selection with Codex without moving drafts or u
 
 The coordinator's dynamic-tool contract changes through its existing context-preserving migration. New and resumed coordinators have session controls only. A stale room tool invocation is rejected before side effects. Original accepted or unknown room operations are not replayed, translated or marked complete.
 
-Fleet retirement uses the authenticated same-fleet/account descriptor. Absent enrolled nodes leave Android's active profiles and the browser catalog; credentials, drafts and original receipts remain private and retained. A failed discovery is not a removal. Manual non-fleet Mac and phone pairings are unaffected. Explicit pairing can restore a retired profile; stale discovery cannot do so.
+Fleet retirement uses the authenticated same-fleet/account descriptor and explicit retired origins. Version 169 deletes retired registrations, credentials, drafts and local command receipts, superseding version 168's retention behavior. A failed discovery is not a removal. Current Mac and phone pairings are unaffected. Removing a local record never submits or retries the original operation.
 
 Voice admission uses the owner's 8 GiB storage reserve plus recording size and write headroom, replacing an obsolete 80 GiB default. The ten-minute capture limit and authenticated original destination remain intact.
 
