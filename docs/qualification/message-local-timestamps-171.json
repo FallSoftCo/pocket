@@ -69,5 +69,11 @@
     "announcementCount": 1,
     "fcmAcceptedAttempts": 1,
     "updateManifestVerified": true
+  },
+  "visualReview": {
+    "androidOptimized": "passed, exact compatible APK screenshots reviewed",
+    "web": "passed, actual Chromium synthetic conversation",
+    "galleryAssets": "new Android/web screenshots served successfully; catalog metadata written",
+    "galleryIndex": "Rebuild blocked by pre-existing missing personal-digital-double-geometry-v37.blend download; no unrelated catalog removed. Existing gallery checker passed, but does not establish new cards indexed."
   }
 }
