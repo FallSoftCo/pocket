@@ -3356,7 +3356,7 @@
     {
       "id": "session-list-archive-20261107",
       "request": "Archive any Codex session directly from the Android/web work list; roughly200mostlyfinished sessions should not crowd current work. Preserve history and allow restoration. Follow-up: swipe to reveal Archive; authorize cleanup of sessions inactive for over a month.",
-      "status": "Swipe170 revision in qualification; initial button candidate withheld from Android publication.",
+      "status": "Delivered: backend/web live and Android170 alpha152 published; phone170 install not yet verified.",
       "implementation": [
         "Existing native thread/archive and unarchive; no new endpoint or local hide-only flags",
         "Source-bound list-card actions and Archived filter; queued messages held, notifications disabled, drafts/history preserved",
@@ -3364,7 +3364,9 @@
         "Running work is rejected with actionable stop-first message rather than silently interrupted",
         "Horizontal swipe reveals a dedicated archive action without opening or archiving; accessibility reveal action; no permanent header icon",
         "Owner-operated month-old bulk cleanup inventories all pages before mutation; fresh inactivity guard protects running/recent/pending work; unknown outcomes stop the sweep; no model calls"
-      ]
+      ],
+      "verification": "13 final native journeys passed, including actual swipe/reveal/archive/restore with draft retention and zero sends. Exact optimized APK history/reopen verified. Actual web Archive/Restore passed with one write each. Authorized cleanup archived1370workstation and75Mac sessions; subsequent catalogs contained none of those IDs.",
+      "evidence": "docs/qualification/session-list-archive-170.json"
     },
     {
       "id": "retired-environment-data-deletion-20261107",

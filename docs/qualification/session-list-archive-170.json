@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "state": "published",
+  "versionCode": 170,
+  "versionName": "0.5.0-alpha.152",
+  "implementationCommit": "aa38656f1f0701a9476e3a4d4dc20cb313a0200c",
+  "qualificationSourceCommit": "2feca5d6",
+  "scope": "Source-bound native Codex session archive/restore; Android swipe to reveal action, web card action and owner-authorized month-old cleanup.",
+  "backend": {
+    "releaseDigest": "e83c41bb6392cff3591f16f0c6afeed9568f645de891becefe3b7263c4dda9bb",
+    "live": true,
+    "sharedCodexRestarted": false
+  },
+  "qualification": {
+    "backendTestsPassed": 685,
+    "unitPerVariant": {
+      "debug": {
+        "tests": 476,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      "release": {
+        "tests": 476,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      }
+    },
+    "lints": [
+      "debug",
+      "release"
+    ],
+    "nativePassed": 13,
+    "swipeAloneDoesNotArchiveOrOpen": true,
+    "archiveAndRestoreKeepDraft": true,
+    "nativeTaskSubmissions": 0,
+    "webRenderedArchiveRestore": {
+      "archived": 1,
+      "restored": 1,
+      "selectedChatUnchanged": true,
+      "narrowViewport": 390
+    },
+    "optimizedCompatibleSha256": "05ccf26a4340408e784381ea351786114b7e5ebba42cd028f56efa47bd647910",
+    "optimizedReopenCanonicalOrder": true
+  },
+  "cleanup": {
+    "workstationArchived": 1370,
+    "macArchived": 75,
+    "archivedIdsStillInCurrentCatalog": 0,
+    "historyDeleted": false,
+    "loadedAndPendingWorkProtected": true,
+    "recurringScheduleEnabled": false
+  },
+  "delivery": {
+    "signedVariants": 2,
+    "oneAnnouncement": true,
+    "fcmAcceptedAttempts": 1,
+    "lastVerifiedPhoneVersion": 168,
+    "physicalInstall170Verified": false
+  },
+  "limits": [
+    "Actual native software-emulator interaction and account audio, not physical-phone performance or rendered push proof.",
+    "Earlier QA failures retained: AtomicFile preference backup overrode isolated audio setup; a run-expansion assertion incorrectly rejected legitimate older-history pagination. Both corrected, final current-source required cases passed.",
+    "Generic historical virtual-DOM suite was not qualified; current archive/restore uses actual rendered-browser evidence.",
+    "Unchanged dependencies retain13 audit findings (11moderate,2high); this release does not claim a clean audit.",
+    "Cleanup preserves offline local drafts but cannot inspect them from the server; those remain recoverable after restore."
+  ]
+}
