@@ -14,6 +14,41 @@
   },
   "requests": [
     {
+      "id": "codex-native-parity-20261107",
+      "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
+      "status": "Implementation delegated; not yet integrated or delivered",
+      "architecture": [
+        "Codex owns execution and native thread/turn/item/request identity.",
+        "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",
+        "No slash-command prompt emulation, replay of uncertain actions, goal activation or retired room runtime restoration."
+      ],
+      "workstreams": [
+        {
+          "owner": "parity_execution",
+          "model": "gpt-6-astra",
+          "reasoning": "high",
+          "scope": "Native events/full output, background commands, supported questions/approvals/elicitation",
+          "branch": "parity/execution-20261107"
+        },
+        {
+          "owner": "parity_conversation",
+          "model": "gpt-6-astra",
+          "reasoning": "high",
+          "scope": "Fork/rollback, compaction/context, workspace/file selection, diff/review/worktrees",
+          "branch": "parity/conversation-20261107"
+        },
+        {
+          "owner": "parity_configuration",
+          "model": "gpt-6-astra",
+          "reasoning": "high",
+          "scope": "Shared capabilities, permissions/model/tier, skills/MCP/plugins/apps/hooks, agent controls",
+          "branch": "parity/configuration-20261107"
+        }
+      ],
+      "integration": "Root owns common integration, serialized heavy builds/native QA, compatible signing and release. Independent disk worktrees at fa30781d; no delegate production deployment.",
+      "validation": "Meaningful native protocol and client journeys, preserved draft/source/receipt semantics, explicit unsupported and uncertain outcomes; deployment evidence separate from fixtures."
+    },
+    {
       "id": "archive-action-feedback-20261107",
       "request": "Mac archive appears to do nothing; verify original delivery and make source-bound progress/errors visible while scrolled.",
       "status": "Android172/alpha154 published on workstation and Mac; exact user archive target still unspecified",
