@@ -7,7 +7,7 @@ import java.security.MessageDigest
 /** An authenticated fleet descriptor is metadata, never a bag of peer passwords. */
 internal data class FleetMember(val id:String,val name:String,val origin:String)
 internal class FleetDescriptor private constructor(
-    val id:String,val accountId:String,val nodeId:String,val members:List<FleetMember>,val enrollmentPath:String?
+    val id:String,val accountId:String,val nodeId:String,val members:List<FleetMember>,val enrollmentPath:String?,val retiredOrigins:Set<String>
 ) {
     override fun toString()="FleetDescriptor(${members.size} members)"
     companion object {
@@ -36,7 +36,11 @@ internal class FleetDescriptor private constructor(
                 members.map{it.origin}.distinct().size==members.size&&members.any{it.id==node})
             val enrollment=value.opt("enrollmentPath").takeUnless{it==JSONObject.NULL}
             require(enrollment==null||enrollment=="/api/fleet/enroll")
-            return FleetDescriptor(id,account,node,members,enrollment as? String)
+            val retiredRaw=value.optJSONArray("retiredOrigins")?:org.json.JSONArray()
+            require(retiredRaw.length()<=128)
+            val retired=(0 until retiredRaw.length()).map{origin(retiredRaw.getString(it))}.toSet()
+            require(retired.size==retiredRaw.length()&&members.none{it.origin in retired})
+            return FleetDescriptor(id,account,node,members,enrollment as? String,retired)
         }
     }
 }

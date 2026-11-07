@@ -1,9 +1,9 @@
 import {CoordinatorMemory} from './coordinator-memory.mjs';
 import {CoordinatorSources} from './coordinator-sources.mjs';
 import {CoordinatorListening} from './coordinator-listening.mjs';
-export function createCoordinatorHub({db,controller,catchup,hidden,key,read,authorize,app,route}){
+export function createCoordinatorHub({db,controller,catchup,hidden,key,read,authorize,sourceAllowed,app,route}){
  const memory=new CoordinatorMemory({db,hidden,read}),listening=new CoordinatorListening({db,catchup,hidden});
- const sources=new CoordinatorSources({db,key,localApi:controller.api,authorize});
+ const sources=new CoordinatorSources({db,key,localApi:controller.api,authorize,sourceAllowed});
  controller.memory=memory;controller.listening=listening;controller.sources=sources;controller.discovery.memory=memory;
  const paired=req=>{if(!req.device?.id||req.device.id==='owner')throw Object.assign(Error('Use the original paired human device.'),{status:403});return req.device.id;};
  return {memory,listening,sources,mount(){

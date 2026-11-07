@@ -53,21 +53,6 @@ def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",sig
     time.sleep(.1)
   adb('shell','am','force-stop','co.fallsoft.pocket');adb('install','-r',str(data/'qualification.apk'))
   original=adb('exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml');assert ET.fromstring(original).tag=='map'
-  # The framework probe captures the live canonical room before restoring its
-  # profile. Harvest that exact image before a cold AVD cleanup can discard it.
-  if room_capture is not None:
-   # A separate real-room journey may own the optimized capture. Bind its
-   # actual bytes and APK rather than copying a picture into app private data.
-   assert room_evidence and room_evidence['state']=='complete' and room_evidence['apkSha256']==variant['sha256']
-   assert room_evidence['originalAcceptedMessageSingle'] and room_evidence['canonicalRoomSnapshot']
-   room_bytes=Path(room_capture).read_bytes();room_stamp=room_evidence['capturedAt']/1000
-   assert hashlib.sha256(room_bytes).hexdigest()==room_evidence['captureSha256']
-  else:
-   room_bytes=adb('exec-out','run-as','co.fallsoft.pocket','cat','files/optimized-native-room.png')
-   room_stamp=float(adb('shell','run-as','co.fallsoft.pocket','stat','-c','%Y','files/optimized-native-room.png'))
-  assert room_bytes.startswith(bytes([137,80,78,71])) and room_stamp>=build['finishedAt']/1000-2,'Fresh optimized room capture required'
-  (data/'optimized-native-room.png').write_bytes(room_bytes)
-
   prefs=ET.Element('map')
   for key,value in {'server':'http://127.0.0.1:18880','token':'synthetic-system76-'+str(uuid.uuid4()),'deviceId':'synthetic-device-a','draft:same-thread':'Native optimized retained draft'}.items():ET.SubElement(prefs,'string',name=key).text=value
   adb('shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'",input=ET.tostring(prefs,encoding='utf-8',xml_declaration=True))
@@ -78,6 +63,7 @@ def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",sig
   xml,tree=wait('Native answer one');result['coldVisibleMs']=round((time.monotonic()-start)*1000);result['timingMeaning']='adb launch to first matching UI snapshot; not optical latency';save()
   assert len(texts(tree,'Native request one'))==1 and len(texts(tree,'Native answer one'))==1
   (data/'optimized-native-canonical-initial.xml').write_bytes(xml)
+  (data/'optimized-native-initial.png').write_bytes(adb('exec-out','screencap','-p'))
   qa('advance-held');time.sleep(.5);xml=dump();tree=ET.fromstring(xml)
   assert not texts(tree,'Native answer two') and not texts(tree,'Native request two'),'Unpositioned pair painted in exact release'
   qa('release');xml,tree=wait('Native answer two');users=texts(tree,'Native request two');answers=texts(tree,'Native answer two')
@@ -115,7 +101,8 @@ def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",sig
   assert len(texts(tree,'Native request two'))==len(texts(tree,'Native answer two'))==1
   (data/'optimized-native-canonical.xml').write_bytes(xml);(data/'optimized-native-canonical.png').write_bytes(adb('exec-out','screencap','-p'))
   state=qa('state');assert state['legacyReads']==state['positionReads']==state['workSubmissions']==0 and state['answers']==1
-  result.update(state='complete',canonicalPairOrder=True,reopenOriginalPairExactlyOnce=True,questionSkipOnce=True,legacyReads=0,positionRepair=0,workSubmissions=0,reads=len(state['reads']),finishedAt=time.time());save()
+  (data/'optimized-native-catalog.png').write_bytes(adb('exec-out','screencap','-p'))
+  result.update(state='complete',codexCatalogDrawn=True,optimizedPayloadVerified=True,canonicalPairOrder=True,reopenOriginalPairExactlyOnce=True,questionSkipOnce=True,legacyReads=0,positionRepair=0,workSubmissions=0,reads=len(state['reads']),finishedAt=time.time());save()
  except BaseException as error:
   result.update(state='failed',error=str(error));save()
   try:(q/'native-canonical-failure.png').write_bytes(adb('exec-out','screencap','-p'))

@@ -85,4 +85,33 @@ class EnvironmentProfilesTest {
   assertTrue(runCatching{store.enroll(changed,changed.members[1],access(changed,changed.members[1],"d".repeat(64)))}.isFailure)
   assertEquals(before,values)
  }
+ @Test fun removedFleetMemberLeavesActiveCatalogWithoutLosingPairingDraftOrUnknownDelivery(){
+  fun id(n:Int)="00000000-0000-4000-8000-"+n.toString().padStart(12,'0')
+  val values=mutableMapOf<String,Any>("server" to "https://original.example","token" to "original-token",
+   "local:server" to "http://127.0.0.1:18880","local:token" to "phone-token")
+  val store=EnvironmentProfiles(prefs(values))
+  val removed=store.add("Retired host","https://retired.example","retired-private-token","retired-device")
+  val manual=store.add("Old manual host","https://manual-retired.example","manual-retained-token","manual-device")
+  val mac=store.add("Mac","https://mac.example","mac-private-token","mac-device")
+  store.associateFleet(removed.id,FleetMembership(id(1),id(2),id(4),id(5)))
+  store.associateFleet("workstation",FleetMembership(id(1),id(2),id(3),id(5)))
+  values[removed.key("draft:same-thread")]="Keep this original draft"
+  values[removed.key("outgoing")]="unknown-original-command"
+  store.select(removed.id)
+  val descriptor=FleetDescriptor.read(org.json.JSONObject().put("version",1).put("id",id(1))
+   .put("accountId",id(2)).put("nodeId",id(3)).put("sessionPath","/api/fleet/session")
+   .put("retiredOrigins",org.json.JSONArray().put("https://manual-retired.example"))
+   .put("members",org.json.JSONArray().put(org.json.JSONObject().put("id",id(3)).put("name","Workstation").put("origin","https://original.example"))))
+  assertTrue(store.reconcileFleet(descriptor));assertFalse(store.reconcileFleet(descriptor))
+  assertNull(store.capture(removed.id));assertNull(store.capture(manual.id));assertEquals("manual-retained-token",values[manual.key("token")]);assertNull(store.capturePush("retired-device"))
+  assertEquals("workstation",store.selected().id)
+  assertEquals(setOf("workstation","phone",mac.id),store.all().map{it.id}.toSet())
+  assertEquals("retired-private-token",values[removed.key("token")])
+  assertEquals("Keep this original draft",values[removed.key("draft:same-thread")])
+  assertEquals("unknown-original-command",values[removed.key("outgoing")])
+  store.add("Another","https://another.example","another-token","another-device")
+  assertTrue((values["environments:v1"] as String).contains(removed.id))
+  assertNull(EnvironmentProfiles(prefs(values)).capture(removed.id))
+ }
+
 }

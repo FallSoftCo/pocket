@@ -26,6 +26,7 @@ export function gitProductionSourceSha(root,ref){
 }
 export function selectNativePolicy(full,{changedFiles=[],baselineVerified=false,versionOnly=false}={}){
  const fallback=reason=>({policy:structuredClone(full),plan:{schema:1,profile:'full-regression',reason,changedFiles}});
+ if(full.requiredOptimizedReview==='native-codex-catalog-and-history')return fallback('Codex-only product does not select retired room profiles');
  if(!baselineVerified)return fallback('No verified qualified baseline');
  const android=changedFiles.filter(p=>p.startsWith('android/'));
  if(!android.some(p=>roomFiles.has(p)))return fallback('No isolated room-status production change');

@@ -21,7 +21,7 @@ function admissionHash(device,{id,destination,audioSha256,bytes},principal){
 
 /** Durable authenticated audio admission. Media processing cannot dispatch tasks. */
 export class VoiceRecordings {
- constructor({db,root,resolveDestination,transcribe,submit,getReceipt,authorize,cancelTask=null,minFreeBytes=80*1024**3}){
+ constructor({db,root,resolveDestination,transcribe,submit,getReceipt,authorize,cancelTask=null,minFreeBytes=8*1024**3}){
   Object.assign(this,{db,root,resolveDestination,transcribe,submit,getReceipt,authorize,cancelTask,minFreeBytes});
   if([resolveDestination,transcribe,submit,getReceipt,authorize].some(value=>typeof value!=='function'))throw Error('Voice admission requires all authority and execution adapters');
   this.owner=randomUUID();this.cancels=new Map();

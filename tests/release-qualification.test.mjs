@@ -116,7 +116,9 @@ test('explicit owned emulator receipts require retained runtime preflight',()=>{
 
 test('room-status plans keep core integration and exact UI review; unmapped, voice and unverified changes keep full regression',async()=>{
  const {selectNativePolicy}=await import('../scripts/native-test-plan.mjs');
- const full=JSON.parse(readFileSync('scripts/release-policy.json','utf8'));
+ const current=JSON.parse(readFileSync('scripts/release-policy.json','utf8'));
+ assert.equal(selectNativePolicy(current,{changedFiles:['android/app/src/main/java/co/fallsoft/pocket/HollywoodRoomActivity.kt'],baselineVerified:true}).plan.profile,'full-regression');
+ const full={...current,requiredOptimizedReview:'native-room-catalog-and-typing',requiredNativeCases:[...current.requiredNativeCases,'co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#acceptedConversationSendKeepsKeyboardAndNewDraft']};
  const status='android/app/src/main/java/co/fallsoft/pocket/HollywoodRoomActivity.kt';
  const scoped=selectNativePolicy(full,{changedFiles:[status,'android/app/build.gradle.kts'],baselineVerified:true,versionOnly:true});
  assert.equal(scoped.plan.profile,'room-status');assert.equal(scoped.policy.requiredNativeCases.length,2);

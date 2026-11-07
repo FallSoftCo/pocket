@@ -123,7 +123,10 @@ test('matching legacy revision never substitutes for the exact coordinator tool 
  assert.equal(result.thread_id,'candidate_1');
  assert.equal(result.tool_contract,(await import('../server/voice-controller.mjs')).VOICE_TOOL_CONTRACT);
  const start=codex.calls.find(c=>c.method==='thread/start');
- assert.ok(start.params.dynamicTools[0].inputSchema.properties.operation.enum.includes('createRoom'));
+ const operations=start.params.dynamicTools[0].inputSchema.properties.operation.enum;
+ assert.ok(operations.includes('create')&&operations.includes('reply'));
+ assert.equal(operations.some(op=>/room/i.test(op)),false);
+ await assert.rejects(controller.control({device:'phone'},{operation:'createRoom',arguments:{name:'Old queued request'}}),/Invalid NextComp control/);
  assert.equal(codex.calls.some(c=>['turn/start','turn/steer','turn/interrupt'].includes(c.method)),false);
  await controller.ensure('phone');assert.equal(codex.starts,1);
 });

@@ -91,6 +91,13 @@ internal object UnifiedWorkCatalog {
                 }
             }
         }
+        // Retirement never rewrites a draft or receipt. Leave a removed profile
+        // only when capture permits an ordinary environment switch.
+        if(Pocket.captureEnvironment()==null){
+            Pocket.environmentProfiles.all().firstOrNull{Pocket.captureEnvironment(it.id)!=null}?.let{
+                Pocket.activateEnvironment(it.id)
+            }
+        }
         CodexCatalog.refresh()
         val next=Pocket.environmentProfiles.all().mapNotNull{Pocket.captureEnvironment(it.id)}.associateBy(::key)
         val removed=profiles.keys-next.keys
@@ -133,13 +140,11 @@ internal object UnifiedWorkCatalog {
                 FleetConnections.observe(destination,status.optJSONObject("fleet")){refresh()}
                 val available=status.getJSONArray("backends").objects()
                 require(available.map{it.s("id")}.distinct().size==available.size){"Backend discovery is unconfirmed"}
-                require(available.any{it.s("id") in setOf("codex","lax")&&it.optBoolean("configured")}){"No supported work catalog is confirmed"}
+                require(available.any{it.s("id")=="codex"&&it.optBoolean("configured")}){"No supported work catalog is confirmed"}
                 val old=readers[source].orEmpty()
                 val discovered=available.flatMap{backend->
                     when{
                         backend.s("id")=="codex"&&backend.optBoolean("configured")->listOf(codexReader(destination))
-                        backend.s("id")=="lax"&&!archived&&backend.optBoolean("available")->listOf(WorkCatalogReader(destination,"lax",backend))
-                        backend.s("id")=="lax"&&!archived&&backend.optBoolean("configured")->old.filter{it.backend=="lax"}
                         else->emptyList()
                     }
                 }

@@ -103,7 +103,7 @@ class MainActivity:ComponentActivity(){
     fun beginPairing(server:String=""){initialServer=server;initialCode="";Pocket.pairingMode=true}
     override fun onNewIntent(intent:Intent){super.onNewIntent(intent);readIntent(intent)}
     private fun readIntent(i:Intent){
-        i.getStringExtra("hollywoodNotification")?.let{key->i.removeExtra("hollywoodNotification");HollywoodNotifications.openIntent(key);return}
+        i.getStringExtra("hollywoodNotification")?.let{key->i.removeExtra("hollywoodNotification");Pocket.error="This notification belongs to retired room work";return}
         val requestedEnvironment=i.getStringExtra("environment")
         if(requestedEnvironment!=null&&Pocket.captureEnvironment(requestedEnvironment)==null){Pocket.error="That environment is no longer paired";return}
         if(i.getBooleanExtra("appUpdate",false)){i.removeExtra("appUpdate");if(!PocketVoice.active){Pocket.closeTask();Pocket.newTask=false;Pocket.tab=1};PocketUpdates.installOrCheck(this)}

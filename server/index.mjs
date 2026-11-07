@@ -26,8 +26,7 @@ import {CoordinatorReports} from './coordinator-reports.mjs';
 import {recoverReply} from './reply-recovery.mjs';
 import {OutgoingProjection} from './outgoing-projection.mjs';
 import {queuedDestination} from './queued-destination.mjs';
-import {mountLosangelex} from './losangelex.mjs';
-import {mountHollywood,HollywoodGateway,loadHollywood} from './hollywood.mjs';
+import {loadHollywood} from './hollywood.mjs';
 import {teamNotificationFields} from './losangelex-attention.mjs';
 import {computerUseStatus} from './computer-use.mjs';
 import {NotificationTitles} from './notification-titles.mjs';
@@ -44,11 +43,6 @@ import {VoiceRenderings,SPEECH_POLICY} from './voice-renderings.mjs';
 import {NativeAudioTranscriber} from './native-audio-transcriber.mjs';
 import {VoiceRecordings} from './voice-recordings.mjs';
 import {RemoteAudioTranscriber} from './remote-audio-transcriber.mjs';
-import {RoomVoice} from './room-voice.mjs';
-import {HollywoodVoice} from './hollywood-voice.mjs';
-import {HollywoodPush} from './hollywood-push.mjs';
-import {RoomProgress} from './room-progress.mjs';
-import {Losangelex,loadLosangelex} from './losangelex.mjs';
 import {ThreadPreviews,sessionInteraction} from './thread-previews.mjs';
 import express from 'express';
 import http from 'node:http';
@@ -93,8 +87,8 @@ if(fleet)fleet.config(); // Reject incomplete enrollment before opening a listen
 const backendArtifacts=process.env.POCKET_BACKEND_ARTIFACTS_DIR?new BackendArtifacts({dir:process.env.POCKET_BACKEND_ARTIFACTS_DIR,keyFile:process.env.POCKET_BACKEND_ARTIFACTS_KEY_FILE,dataDir:dir}):null;
 if(process.env.POCKET_BACKEND_ARTIFACTS_KEY_FILE&&!backendArtifacts)throw Error('Artifact store directory is required.');
 const backendRelease=existsSync(resolve(root,'backend-release.json'))?JSON.parse(readFileSync(resolve(root,'backend-release.json'),'utf8')):null;
-const hollywood=new HollywoodGateway(loadHollywood(dir));
-const nativeHollywood=process.env.POCKET_EXECUTION_BACKEND==='hollywood'||!!hollywood.config?.native;
+// Never reinterpret a deployed room gateway as a stock execution host.
+if(process.env.POCKET_EXECUTION_BACKEND==='hollywood'||loadHollywood(dir)?.native)throw Error('This NextComp release supports vanilla Codex only. Keep the original room gateway/data separately; configure an authenticated stock Codex app-server.');
 const sendIdentity=new SendIdentity(db);
 const workObservations=new WorkObservations(db);
 const catalogContext=new CatalogContext(db);
@@ -108,7 +102,6 @@ const automation=localMode?(existsSync(automationPath)?JSON.parse(readFileSync(a
 if(automation&&!existsSync(automationPath))writeFileSync(automationPath,JSON.stringify(automation),{mode:0o600});
 if(automation)chmodSync(automationPath,0o600);
 const push=loadPush(db,dir);
-if(nativeHollywood)push.allowedKinds=new Set(['app_update']);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex(undefined,{managedStart:process.env.POCKET_CODEX_MANAGED_START});
 const nativeTimelineReader=new NativeTimelineReader(codex);
@@ -117,10 +110,7 @@ const nativeSubscriptions=new NativeSubscriptions(codex);
 const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
 app.use('/api',nativeJsonCompression());
 const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
-const hollywoodPush=nativeHollywood?new HollywoodPush({db,gateway:hollywood,push,publish:(device,event)=>{
- for(const ws of sockets.clients)if(ws.deviceId===device&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(event));
-}}):null;
-if(hollywoodPush)setInterval(()=>void hollywoodPush.tick().catch(error=>console.error('Hollywood inbox',error.code||error.name)),5000).unref();
+
 const attached=new Set(), pending=new Map(), syncing=new Set();
 db.exec('CREATE TABLE IF NOT EXISTS immersion_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
 const immersionCwd=resolve(dir,'immersion');mkdirSync(immersionCwd,{recursive:true,mode:0o700});
@@ -149,37 +139,33 @@ if(audioCommand&&(!Array.isArray(audioCommand)||!audioCommand.length||audioComma
 const nativeAudioWorkspace=resolve(dir,'native-audio-workspace');
 mkdirSync(nativeAudioWorkspace,{recursive:true,mode:0o700});
 const nativeVoiceCodex=new Codex(undefined,{command:audioCommand,processCwd:nativeAudioWorkspace});
-const immersion=new ImmersionWorker({codex:nativeHollywood?nativeVoiceCodex:codex,cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
+const immersion=new ImmersionWorker({codex:codex,cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
 // Existing devices retain their old endpoint/cache; reuse native authenticated transport.
 db.exec('CREATE TABLE IF NOT EXISTS immersion_transgrammatic_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
 const transgrammaticImmersion=new ImmersionWorker({
- codex:nativeHollywood?nativeVoiceCodex:codex,cwd:immersionCwd,contract:transgrammaticContract,
+ codex:codex,cwd:immersionCwd,contract:transgrammaticContract,
  registerThread:id=>internalSessions.register(id,'immersion'),
  load:id=>{const row=db.prepare('SELECT state FROM immersion_transgrammatic_profiles WHERE device_id=?').get(id);if(row)return JSON.parse(row.state);const old=immersion.snapshot(id);return {enabled:old.enabled,density:old.density,translations:[]};},
  save:(id,state)=>db.prepare('INSERT INTO immersion_transgrammatic_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),
  publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}
 });
 
-const hollywoodVoice=new HollywoodVoice({db,gateway:hollywood});
-const roomVoice=new RoomVoice({db,client:new Losangelex(loadLosangelex(dir))});
-const roomVoiceFocus=new Map();
 const audioController={db,
- capture:device=>roomVoiceFocus.get(device)?JSON.parse(JSON.stringify(roomVoiceFocus.get(device))):voiceController.capture(device),
- get:(device,id)=>nativeHollywood?hollywoodVoice.refresh(device,id):roomVoice.get(device,id)?roomVoice.refresh(device,id):voiceController.get(device,id),
- submitText:(device,id,text,destination)=>nativeHollywood?hollywoodVoice.submitText(device,id,text,destination):destination?.backend==='stock-codex-voice'?voiceController.submitText(device,id,text,null,destination):destination?roomVoice.submitText(device,id,text,destination):voiceController.submitText(device,id,text),
- mark:(device,id,...args)=>{if(nativeHollywood)return;if(!roomVoice.get(device,id))voiceController.mark(device,id,...args);}
+ capture:device=>voiceController.capture(device),
+ get:(device,id)=>voiceController.get(device,id),
+ submitText:(device,id,text,destination)=>{
+  if(destination&&destination.backend!=='stock-codex-voice')throw Object.assign(Error('This recording belongs to retired room work; it was not redirected or submitted.'),{status:410});
+  return voiceController.submitText(device,id,text,null,destination);
+ },
+ mark:(device,id,...args)=>voiceController.mark(device,id,...args)
 };
-const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:audioController,cwd:nativeAudioWorkspace,requireFinalTranscript:nativeHollywood,observe:process.env.POCKET_NATIVE_AUDIO_TRACE?event=>import('node:fs/promises').then(fs=>fs.appendFile(process.env.POCKET_NATIVE_AUDIO_TRACE,JSON.stringify(event)+'\n',{mode:0o600})):null});
+const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:audioController,cwd:nativeAudioWorkspace,requireFinalTranscript:false,observe:process.env.POCKET_NATIVE_AUDIO_TRACE?event=>import('node:fs/promises').then(fs=>fs.appendFile(process.env.POCKET_NATIVE_AUDIO_TRACE,JSON.stringify(event)+'\n',{mode:0o600})):null});
 const nativeLiveInput=new NativeLiveInput({db,voice:nativeVoice});
 // Validate a per-turn destination without consulting or changing mutable device focus.
 // Missing destination retains compatibility with already installed clients only.
 async function voiceDestination(device,value){
  if(!value||typeof value!=='object'||Array.isArray(value))throw Object.assign(Error('Choose a voice destination.'),{status:400});
- if(value.room){
-  if(value.threadId)throw Object.assign(Error('Choose one room or session destination.'),{status:400});
-  return nativeHollywood?hollywoodVoice.destination(device,value.room):roomVoice.destination(value.room);
- }
- if(nativeHollywood)throw Object.assign(Error('Choose an exact Hollywood room before recording.'),{status:400});
+ if(value.room)throw Object.assign(Error('Room voice is retired. Choose a Codex session.'),{status:410});
  const threadId=value.threadId?requireId(value.threadId):null;
  if(threadId){
   if(catchupHidden(threadId))throw Object.assign(Error('Choose a work session.'),{status:400});
@@ -209,7 +195,7 @@ const voiceRecordings=new VoiceRecordings({
  },
  getReceipt:(device,id)=>audioController.get(device,id),
  cancelTask:(device,id)=>{
-  if(nativeHollywood||roomVoice.get(device,id))throw Object.assign(Error('Use the original room work controls.'),{status:409});
+
   return voiceController.cancelQueued(device,id);
  },
  authorize:async(device,principal)=>{
@@ -247,13 +233,13 @@ const coordinatorReports=new CoordinatorReports({db,catchup:sessionCatchup,hidde
     void push.flush().catch(error=>console.error('Report push retry',error.message));
   }});
 voiceController.reports=coordinatorReports;
-const coordinatorHub=createCoordinatorHub({db,controller:voiceController,catchup:sessionCatchup,hidden:catchupHidden,key:secrets.adminToken,authorize:actor=>humanIngress.active(actor),app,route:fn=>route(fn),read:async path=>{const result=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`},signal:AbortSignal.timeout(2500)});if(!result.ok)throw Error('Native public evidence unavailable');return result.json();}});
+const coordinatorHub=createCoordinatorHub({db,controller:voiceController,catchup:sessionCatchup,hidden:catchupHidden,key:secrets.adminToken,sourceAllowed:base=>!fleet?.config().retiredOrigins?.includes(base.replace(/\/$/,'')),authorize:actor=>humanIngress.active(actor),app,route:fn=>route(fn),read:async path=>{const result=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`},signal:AbortSignal.timeout(2500)});if(!result.ok)throw Error('Native public evidence unavailable');return result.json();}});
 const coordinatorCollector=new CoordinatorCollector({db,discovery:sessionDiscovery,memory:coordinatorHub.memory,catchup:sessionCatchup,hidden:catchupHidden,
- ready:()=>!nativeHollywood&&codex.ready,
+ ready:()=>codex.ready,
  read:path=>coordinatorHub.memory.read(path)});
 coordinatorHub.memory.collection=()=>coordinatorCollector.status();
-if(!nativeHollywood)setInterval(()=>void coordinatorCollector.tick().catch(error=>console.error('Coordinator evidence collection unavailable',error.code||error.name)),15000).unref();
-if(!nativeHollywood)setInterval(()=>void coordinatorReports.tick().catch(error=>console.error('Coordinator report',error.message)),60000).unref();
+setInterval(()=>void coordinatorCollector.tick().catch(error=>console.error('Coordinator evidence collection unavailable',error.code||error.name)),15000).unref();
+setInterval(()=>void coordinatorReports.tick().catch(error=>console.error('Coordinator report',error.message)),60000).unref();
 
 const timeline=new LiveTimeline();
 const historyHeads=new HistoryHeads();
@@ -267,7 +253,7 @@ const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unav
 for(const row of db.prepare("SELECT thread_id FROM watches WHERE enabled=1 UNION SELECT thread_id FROM outgoing UNION SELECT thread_id FROM session_starts WHERE thread_id IS NOT NULL").all())workRecord.enroll({id:row.thread_id});
 let scanningWork=false;
 setInterval(async()=>{
-  if(nativeHollywood||scanningWork||!codex.ready)return;
+  if(scanningWork||!codex.ready)return;
   scanningWork=true;
   try{await workRecord.scan(history,id=>JSON.parse(db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.metadata||'{}'));}
   catch(e){console.error('Work record history unavailable:',e.code||e.name);}
@@ -279,19 +265,8 @@ const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery
 const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);recordWork(()=>workRecord.enroll(known));attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);},humanIngress);
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...outgoingProjection.event(type,payload)}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
-const rateLimits=new AccountRateLimits(nativeHollywood?nativeVoiceCodex:codex,usage=>emit('rateLimits',{usage}),{observations:new CreditObservations(db,secrets.adminToken),creditAuthorization:creditContinuation});
-if(nativeHollywood){
-  // Observe an already-connected account audio transport; quota reads never
-  // launch an agent or open audio just to refresh a number.
-  rateLimits.disconnected();
-  nativeVoiceCodex.on('connected',()=>void rateLimits.refresh({force:true}));
-  nativeVoiceCodex.on('disconnected',()=>rateLimits.disconnected());
-  nativeVoiceCodex.on('event',m=>{
-    if(m.method==='account/rateLimits/updated')rateLimits.liveUpdate(m.params);
-    if(m.method==='account/updated'){rateLimits.clear();void rateLimits.refresh({force:true});}
-  });
-}
-setInterval(()=>{if(!nativeHollywood&&sockets.clients.size)void rateLimits.refresh();},60000).unref();
+const rateLimits=new AccountRateLimits(codex,usage=>emit('rateLimits',{usage}),{observations:new CreditObservations(db,secrets.adminToken),creditAuthorization:creditContinuation});
+setInterval(()=>{if(sockets.clients.size)void rateLimits.refresh();},60000).unref();
 const safeEqual=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const getToken=req=>(req.headers.authorization||'').replace(/^Bearer /,'');
 const identity=async req=>{const t=getToken(req);if(!t)return null;if(t&&safeEqual(t,secrets.adminToken))return {id:'owner',name:'Local owner'};
@@ -324,7 +299,7 @@ const terminalForks=terminalForkConfig?new TerminalForks({db,codex,codeHome:term
     const {goal}=await codex.call('thread/goal/get',{threadId});if(goal?.status==='active')throw Error('This source has an automatic native goal. Its budget and autonomous admission need an explicit ownership handover before terminal transfer can run.');
   }
 }):null;
-if(!nativeHollywood&&terminalForks)setInterval(()=>{if(codex.ready)void terminalForks.tick().catch(e=>console.error('Terminal fork check',e.code||e.name));},30000).unref();
+if(terminalForks)setInterval(()=>{if(codex.ready)void terminalForks.tick().catch(e=>console.error('Terminal fork check',e.code||e.name));},30000).unref();
 const notificationSessionFields=id=>{const row=db.prepare("SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?").get(id);return row?sessionIdentity(JSON.parse(row.metadata)):{};};
 const notificationRow=r=>({...notificationSessionFields(r.thread_id),...r,...teamNotificationFields(db,r.id),title_revision:notificationTitles.revision(r.thread_id),spoken_text:r.spoken_text||spokenText(r.title,r.body),attachments:JSON.parse(r.attachments||'[]')});
 function rememberSpeechContext(threadId,turn){
@@ -371,7 +346,7 @@ const turnRecovery=new TurnRecovery({db,
   publish:(threadId,recovery)=>{if(recovery.state==='completed'&&recoveryQueue.release(threadId,recovery.source_turn)){emit('reply',{threadId,state:'queued'});void flush();}if(recovery.state==='cancelled')recoveryQueue.forget(threadId,recovery.source_turn);emit('turnRecovery',{threadId,recovery});if(recovery.message){sessionCatchup.put(threadId,{key:'recovery:'+recovery.source_turn,kind:'blocked',text:recovery.message,turnId:recovery.current_turn});notify(threadId,'Task recovery',recovery.message,'update');}}
 });
 sessionCatchup.recoverableFailure=(threadId,turnId)=>turnRecovery.recoverableFailure(threadId,turnId);
-if(!nativeHollywood)setInterval(()=>void turnRecovery.tick().catch(error=>console.error('Turn recovery',error.message)),10000).unref();
+setInterval(()=>void turnRecovery.tick().catch(error=>console.error('Turn recovery',error.message)),10000).unref();
 const completions=new CompletionRecovery(db,(threadId,title,body,kind,turnId,prompt)=>notify(threadId,title,body,kind,[],null,null,turnId,prompt?promptContext(prompt):null));
 function notify(threadId,title,body,kind='update',attachments=[],requestId=null,speech=null,turnId=null,context=null,onPersist=null) {
   title=notificationTitles.title(threadId,title);
@@ -546,7 +521,7 @@ codex.on('status',status=>emit('status',status));
 codex.on('disconnected',error=>{activityBoard.disconnected();liveDelivery.activity(()=>activityBoard.snapshot());rateLimits.disconnected();console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();sessionDiscovery.clearLiveStatus();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
 let reconnecting=false;
 setInterval(async()=>{
-  if(nativeHollywood||reconnecting)return;reconnecting=true;
+  if(reconnecting)return;reconnecting=true;
   try{
     await codex.connect();
     await sessionStarts.flush();
@@ -554,7 +529,7 @@ setInterval(async()=>{
     await flush();
   }catch(e){ /* Reconnect without changing the running Codex process. */ }finally{reconnecting=false;}
 },5000).unref();
-if(!nativeHollywood)codex.connect().catch(()=>{});
+codex.connect().catch(()=>{});
 
 app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
 app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:appVersion,...(backendRelease?{releaseDigest:backendRelease.releaseDigest,sourceCommit:backendRelease.sourceCommit}:{})}));
@@ -585,19 +560,6 @@ if(fleet){
  app.get('/api/backends',(req,res,next)=>{const send=res.json.bind(res);res.json=value=>send({...value,fleet:fleet.discovery()});next();});
 }
 app.use('/api',(req,res,next)=>humanIngress.middleware(req,res,next));
-// An enterprise room gateway cannot expose the old single-owner session lanes.
-// Retained work stays in the database; native mode never starts its schedulers.
-app.use('/api',(req,res,next)=>{
-  if(!nativeHollywood)return next();
-  const safe=/^\/coordinator\/(?:evidence|receipt|sources|listening|voice-preferences|catchup(?:\/presented)?|voice-updates(?:\/presented)?)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}\/timing$/.test(req.path)||/^\/immersion(?:\/v2)?(?:\/translate)?$/.test(req.path)||req.path.startsWith('/hollywood/v3/')||['/voice/start','/voice/text','/voice/history'].includes(req.path)||/^\/voice\/native\/(start|stop|input|commit|speak|heartbeat|capabilities)$/.test(req.path)||/^\/voice\/native\/input\/(begin|finalize|cancel)$/.test(req.path)||/^\/voice\/turns\/[a-zA-Z0-9_-]{8,100}(?:\/presented)?$/.test(req.path)||/^\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel))?$/.test(req.path)||/^\/voice\/recordings(?:\/[a-zA-Z0-9_-]{8,100}(?:\/(?:audio|cancel|retry-audio|cancel-request))?)?$/.test(req.path)||['/backends','/status','/pairing','/devices','/device/push','/device/disconnect','/app/update','/app/update/apk','/app/update/announce'].includes(req.path)||
-    req.method==='DELETE'&&/^\/devices\/[0-9a-f-]{36}$/.test(req.path);
-  if(!safe)return res.status(403).json({error:'Use the original Hollywood room and identity for this environment.',code:'HOLLYWOOD_NATIVE_ROUTE_REQUIRED'});
-  if(req.path==='/status'){void rateLimits.refresh();return void hollywood.status(req.device.id).then(status=>res.json({connected:status.available,backend:'lax',binding:status,usage:rateLimits.snapshot(),
-    host:hostName,local:localMode,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,
-    push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}})).catch(next);}
-  next();
-});
-
 app.get('/api/terminal-forks',owner,(_req,res)=>res.json({enabled:!!terminalForks,targets:Object.keys(terminalForkConfig?.targets||{}),transfers:terminalForks?db.prepare('SELECT id FROM terminal_forks ORDER BY created_at DESC LIMIT 100').all().map(r=>terminalForks.view(r.id)):[]}));
 app.post('/api/terminal-forks',owner,route(async(req,res)=>{if(!terminalForks)return res.status(503).json({error:'The environment owner has not registered terminal-fork destinations.'});res.status(202).json(terminalForks.request(req.body));}));
 app.get('/api/terminal-forks/imports/:id',owner,(req,res)=>res.json(terminalForkImports?.view(requireId(req.params.id))||{id:req.params.id,state:'disabled'}));
@@ -606,16 +568,9 @@ app.post('/api/terminal-forks/imports/:id/activate',owner,route(async(req,res)=>
 app.get('/api/terminal-forks/:id',owner,(req,res)=>{const result=terminalForks?.view(requireId(req.params.id));if(!result)return res.status(404).json({error:'Transfer not found.'});res.json(result);});
 app.post('/api/terminal-forks/:id/release',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.release(requireId(req.params.id)));if(codex.ready)void terminalForks.tick().catch(()=>{});}catch(e){res.status(e.status||409).json({error:e.message});}});
 app.post('/api/terminal-forks/:id/cancel',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.cancel(requireId(req.params.id)));}catch(e){res.status(e.status||409).json({error:e.message});}});
-const roomProgressConfig=resolve(dir,'room-progress.json');
-const roomProgressScopes=existsSync(roomProgressConfig)?JSON.parse(readFileSync(roomProgressConfig,'utf8')):[];
-const roomProgress=new RoomProgress({db,client:roomVoice.client,scopes:roomProgressScopes,
- publish:(thread,title,event,onPersist)=>notify(thread,title,event.body,'update',[],null,null,null,null,onPersist)});
-roomProgress.mount(app);
-const roomProgressPoll=()=>void roomProgress.poll().catch(e=>console.error('Room progress unavailable',e.name));
-if(!nativeHollywood){setInterval(roomProgressPoll,10000).unref();roomProgressPoll();}
-mountHollywood(app,{dir,gateway:hollywood});
-if(nativeHollywood)app.get('/api/backends',route(async(req,res)=>res.json({defaultBackend:'lax',canonical:true,backends:[{...await hollywood.status(req.device.id),voice:!!audioCommand}]})));
-if(!nativeHollywood)mountLosangelex(app,{dir,codex,db,workRecord,hollywood,publish:(thread,onPersist,event)=>notify(thread,'Losangelex needs you',event?.body||'Open the team conversation to review its request.',event?.kind==='approval'?'approval':'question',[],null,null,null,null,onPersist),resolve:resolveAttention});
+// Explicit retirement prevents old clients from replaying room intents as stock input.
+app.use(['/api/hollywood','/api/losangelex','/api/room-progress'],(_req,res)=>res.status(410).json({code:'ROOMS_RETIRED',error:'Rooms and Losangelex are no longer supported in NextComp. Original records are retained.'}));
+app.get('/api/backends',(_req,res)=>res.json({defaultBackend:'codex',product:'codex',backends:[{id:'codex',name:'Codex',configured:true,available:codex.ready,modes:['session','coordinator'],voice:true}]}));
 app.get('/api/computer-use',route(async(_req,res)=>res.json(await computerUseStatus())));
 mountAppUpdates(app,{updates:new AppUpdates({dir,feedDir:process.env.POCKET_APP_UPDATES_DIR,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
 coordinatorHub.mount();
@@ -624,20 +579,9 @@ app.post('/api/coordinator/reporting',route(async(req,res)=>res.json(coordinator
 app.get('/api/coordinator/reporting/:deviceId',owner,(req,res)=>res.json(coordinatorReports.settings(req.params.deviceId)));
 app.post('/api/coordinator/reporting/:deviceId',owner,route(async(req,res)=>res.json(coordinatorReports.configure(req.params.deviceId,req.body))));
 app.get('/api/coordinator/reports',(req,res)=>{try{res.json(coordinatorReports.inbox(req.device.id,{before:Number(req.query.before||Number.MAX_SAFE_INTEGER),limit:Number(req.query.limit||40)}));}catch(e){res.status(e.status||500).json({error:e.message});}});
-app.get('/api/voice/history',route(async(req,res)=>{if(nativeHollywood)return res.json(await hollywoodVoice.history(req.device.id,Number(req.query.before||Number.MAX_SAFE_INTEGER)));const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before,{conversationOnly:req.query.conversationOnly==='1'}));}));
+app.get('/api/voice/history',route(async(req,res)=>{const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before,{conversationOnly:req.query.conversationOnly==='1'}));}));
 app.post('/api/voice/start',route(async(req,res)=>{
-  if(nativeHollywood){
-    if(req.body.threadId||!req.body.room)throw Object.assign(Error('Choose an exact Hollywood room before recording.'),{status:400});
-    const destination=await hollywoodVoice.destination(req.device.id,req.body.room);roomVoiceFocus.set(req.device.id,destination);
-    return res.json({focus:'room',room:destination,host:hostName,native:true,backend:'lax'});
-  }
-  if(req.body.room){
-    if(req.body.threadId)throw Object.assign(Error('Choose one room or session focus.'),{status:400});
-    const destination=await roomVoice.destination(req.body.room);
-    roomVoiceFocus.set(req.device.id,destination);
-    return res.json({focus:'room',room:destination,host:hostName,native:true});
-  }
-  roomVoiceFocus.delete(req.device.id);
+  if(req.body.room)throw Object.assign(Error('Room voice is retired. Choose a Codex session.'),{status:410});
   let threadId=null;
   if(req.body.threadId){threadId=requireId(req.body.threadId);if(catchupHidden(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();const result=await codex.call('thread/read',{threadId,includeTurns:false});if(result.thread?.id!==threadId)return res.status(409).json({error:'Session identity changed. Choose the intended session again.'});requireDirectSessionInput(result.thread);}
   await voiceController.ensure(req.device.id);
@@ -677,7 +621,7 @@ app.post('/api/voice/recordings/:id/retry-audio',route(async(req,res)=>{
  res.status(202).json(receipt);
 }));
 app.post('/api/voice/recordings/:id/cancel',route(async(req,res)=>res.json(await voiceRecordings.cancel(req.device.id,req.params.id,req.body,req.humanPrincipal))));
-app.post('/api/voice/native/start',route(async(req,res)=>{if(req.body.purpose!==undefined&&!['voice','speech','transcription'].includes(req.body.purpose))throw Object.assign(Error('Invalid audio purpose.'),{status:400});if(nativeHollywood&&!audioCommand)throw Object.assign(Error('Native room audio is not configured on this environment.'),{status:503});res.json(await nativeVoice.start(req.device.id,req.body.sdp,req.body.purpose,req.body.text??null));}));
+app.post('/api/voice/native/start',route(async(req,res)=>{if(req.body.purpose!==undefined&&!['voice','speech','transcription'].includes(req.body.purpose))throw Object.assign(Error('Invalid audio purpose.'),{status:400});res.json(await nativeVoice.start(req.device.id,req.body.sdp,req.body.purpose,req.body.text??null));}));
 app.post('/api/voice/native/input/begin',route(async(req,res)=>res.json(nativeLiveInput.begin(req.device.id,req.body.id,req.body.connectionId))));
 app.post('/api/voice/native/input/finalize',route(async(req,res)=>res.json(await nativeLiveInput.finalize(req.device.id,req.body))));
 app.post('/api/voice/native/input/cancel',route(async(req,res)=>{nativeLiveInput.cancel(req.device.id,req.body.id);res.json({ok:true});}));
@@ -689,10 +633,10 @@ app.post('/api/voice/native/input',route(async(req,res)=>{
 app.post('/api/voice/native/commit',route(async(req,res)=>res.json(await nativeVoice.commit(req.device.id,req.body.connectionId,req.body.turnId,req.body.audioSha256??null))));
 app.post('/api/voice/native/speak',route(async(req,res)=>res.json(await nativeVoice.speak(req.device.id,req.body.connectionId,req.body.text,req.body.voiceTurnId))));
 app.post('/api/voice/native/heartbeat',route(async(req,res)=>{nativeVoice.session(req.device.id,req.body.connectionId);res.json({ok:true});}));
-app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),(req,res,next)=>{try{if(nativeHollywood)return res.status(400).json({error:'Use native recorded room input on this environment.'});if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
-app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(nativeHollywood?await hollywoodVoice.submitText(req.device.id,req.body.turnId,req.body.text,roomVoiceFocus.get(req.device.id)):roomVoiceFocus.has(req.device.id)?roomVoice.submitText(req.device.id,req.body.turnId,req.body.text,roomVoiceFocus.get(req.device.id)):voiceController.submitText(req.device.id,req.body.turnId,req.body.text,req.body.correctionOf));}));
-app.get('/api/voice/turns/:id',route(async(req,res)=>{const row=nativeHollywood?await hollywoodVoice.refresh(req.device.id,req.params.id):roomVoice.get(req.device.id,req.params.id)?await roomVoice.refresh(req.device.id,req.params.id):voiceController.get(req.device.id,req.params.id);if(!row){const admission=nativeVoice.receipt(req.device.id,req.params.id);if(admission)return res.json(admission);return res.status(404).json({error:'Voice turn not found.'});}if(!nativeHollywood&&row.state==='completed')voiceController.mark(req.device.id,req.params.id,'response_first_fetched');const admission=nativeVoice.admission(req.device.id,req.params.id);res.json(admission?{...row,audioSha256:admission.audio_sha256||null}:row);}));
-app.post('/api/voice/turns/:id/presented',route(async(req,res)=>res.json(nativeHollywood?{ok:true}:roomVoice.get(req.device.id,req.params.id)?.state==='completed'?{ok:true}:await voiceController.presented(req.device.id,req.params.id))));
+app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),(req,res,next)=>{try{if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
+app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(voiceController.submitText(req.device.id,req.body.turnId,req.body.text,req.body.correctionOf));}));
+app.get('/api/voice/turns/:id',route(async(req,res)=>{const row=voiceController.get(req.device.id,req.params.id);if(!row){const admission=nativeVoice.receipt(req.device.id,req.params.id);if(admission)return res.json(admission);return res.status(404).json({error:'Voice turn not found.'});}if(row.state==='completed')voiceController.mark(req.device.id,req.params.id,'response_first_fetched');const admission=nativeVoice.admission(req.device.id,req.params.id);res.json(admission?{...row,audioSha256:admission.audio_sha256||null}:row);}));
+app.post('/api/voice/turns/:id/presented',route(async(req,res)=>res.json(await voiceController.presented(req.device.id,req.params.id))));
 app.get('/api/voice/speech',(_req,res)=>res.json(voiceSpeech.status()));
 app.post('/api/voice/speech',route(async(req,res)=>{
   if(speechRequests>=2)return res.status(429).json({error:'Speech is busy. Retry shortly.'});
@@ -961,7 +905,7 @@ app.get('/api/devices',owner,(_req,res)=>res.json({devices:db.prepare('SELECT id
 app.delete('/api/devices/:id',owner,(req,res)=>{if(fleet)fleet.revokeLocal(req.params.id);db.prepare('DELETE FROM devices WHERE id=?').run(req.params.id);for(const s of sockets.clients)if(s.deviceId===req.params.id)s.close();res.json({ok:true});});
 server.on('upgrade',async(req,socket,head)=>{
   const device=await identity(req);if(!device||req.url!=='/events'){socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');socket.destroy();return;}
-  sockets.handleUpgrade(req,socket,head,ws=>{ws.deviceId=device.id;ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.on('error',()=>{});db.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(now(),device.id);if(nativeHollywood){void hollywood.status(device.id).then(value=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'status',backend:'lax',connected:value.available,binding:value}));});}else{ws.send(JSON.stringify({type:'status',...codex.status()}));ws.send(JSON.stringify({type:'rateLimits',usage:rateLimits.snapshot()}));for(const snapshot of outgoingProjection.bootstrap()){if(ws.readyState!==WebSocket.OPEN)break;ws.send(JSON.stringify({type:'reply',id:'',state:'snapshot',...snapshot}));}}if(!nativeHollywood)void rateLimits.refresh();sockets.emit('connection',ws,req);});
+  sockets.handleUpgrade(req,socket,head,ws=>{ws.deviceId=device.id;ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.on('error',()=>{});db.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(now(),device.id);ws.send(JSON.stringify({type:'status',...codex.status()}));ws.send(JSON.stringify({type:'rateLimits',usage:rateLimits.snapshot()}));for(const snapshot of outgoingProjection.bootstrap()){if(ws.readyState!==WebSocket.OPEN)break;ws.send(JSON.stringify({type:'reply',id:'',state:'snapshot',...snapshot}));}void rateLimits.refresh();sockets.emit('connection',ws,req);});
   if(fleet&&device.id!=='owner'){const timer=setInterval(async()=>{if(!await identity(req))socket.destroy();},15000);timer.unref();socket.once('close',()=>clearInterval(timer));}
 });
 setInterval(()=>{for(const ws of sockets.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000).unref();
@@ -970,6 +914,6 @@ const port=Number(process.env.PORT||18880);
 server.listen(port,'127.0.0.1',()=>{
  if(fleet)fleet.startRevocationSync();
  console.log(`NextComp listening on 127.0.0.1:${port}`);
- if(!nativeHollywood){voiceController.restoreQueued();void coordinatorCollector.tick().catch(()=>{});}
+ {voiceController.restoreQueued();void coordinatorCollector.tick().catch(()=>{});}
  if(nativeAudioIntake)void voiceRecordings.start().catch(error=>console.error('Voice recording recovery unavailable',error.message));
 });

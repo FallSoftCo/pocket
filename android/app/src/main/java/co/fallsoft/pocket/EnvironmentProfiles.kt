@@ -7,17 +7,29 @@ import java.util.UUID
 
 /** Metadata only. Pairing credentials remain in existing private preference namespaces. */
 class EnvironmentProfiles(private val prefs:SharedPreferences) {
-    fun all():List<EnvironmentIdentity> {
+    private fun retained():List<EnvironmentIdentity> {
         val saved=runCatching{JSONArray(prefs.getString("environments:v1","[]"))}.getOrElse{JSONArray()}
         val profiles=saved.objects().mapNotNull{row->runCatching{EnvironmentIdentity(row.getString("id"),row.getString("name"),row.optBoolean("local"),row.optJSONObject("fleet")?.let{runCatching{FleetMembership.read(it)}.getOrNull()})}.getOrNull()}.distinctBy{it.id}.toMutableList()
         if(prefs.getString("token","").orEmpty().isNotBlank()&&profiles.none{it.id=="workstation"})profiles.add(0,EnvironmentIdentity("workstation","Workstation"))
         if(prefs.getString("local:token","").orEmpty().isNotBlank()&&profiles.none{it.id=="phone"})profiles.add(EnvironmentIdentity("phone","This phone",true))
         return profiles
     }
+    fun all():List<EnvironmentIdentity> = retained().filterNot{prefs.getBoolean("retiredEnvironment:"+it.id,false)}
+    /** Authoritative removal is scoped to this authenticated fleet/account only.
+     * Metadata, credentials, drafts and uncertain delivery receipts remain retained. */
+    internal fun reconcileFleet(fleet:FleetDescriptor):Boolean = synchronized(prefs) {
+        val members=fleet.members.map{it.id}.toSet()
+        val removed=retained().filter{p->(!p.local&&prefs.getString(p.key("server"),null)?.trimEnd('/') in fleet.retiredOrigins)||p.fleet?.let{it.fleetId==fleet.id&&it.accountId==fleet.accountId&&it.nodeId !in members}==true}
+        val changed=removed.filterNot{prefs.getBoolean("retiredEnvironment:"+it.id,false)}
+        if(changed.isEmpty())return@synchronized false
+        val edit=prefs.edit();changed.forEach{edit.putBoolean("retiredEnvironment:"+it.id,true)}
+        check(edit.commit()){"Could not retain environment retirement"}
+        true
+    }
     fun lastRemote():EnvironmentIdentity=all().firstOrNull{it.id==prefs.getString("lastRemoteEnvironment",null)&&!it.local&&capture(it.id)!=null}
         ?:all().firstOrNull{!it.local&&capture(it.id)!=null}?:EnvironmentIdentity("workstation","Workstation")
     fun selected():EnvironmentIdentity=all().firstOrNull{it.id==prefs.getString("activeEnvironment",null)}
-        ?:EnvironmentIdentity(if(prefs.getBoolean("activeLocal",false))"phone" else "workstation",if(prefs.getBoolean("activeLocal",false))"This phone" else "Workstation",prefs.getBoolean("activeLocal",false))
+        ?:all().firstOrNull{!it.local}?:all().firstOrNull()?:EnvironmentIdentity(if(prefs.getBoolean("activeLocal",false))"phone" else "workstation",if(prefs.getBoolean("activeLocal",false))"This phone" else "Workstation",prefs.getBoolean("activeLocal",false))
     fun capture(id:String=selected().id):EnvironmentRequest? {
         val profile=all().firstOrNull{it.id==id}?:return null
         val base=prefs.getString(profile.key("server"),"").orEmpty();val token=prefs.getString(profile.key("token"),"").orEmpty()
@@ -39,12 +51,12 @@ class EnvironmentProfiles(private val prefs:SharedPreferences) {
     fun add(name:String,base:String,token:String,deviceId:String,local:Boolean=false):EnvironmentIdentity = synchronized(prefs) {
         require(name.isNotBlank()&&token.isNotBlank())
         require(base.startsWith("https://")||local&&base in listOf("http://127.0.0.1:18880","http://localhost:18880"))
-        val profiles=all().toMutableList()
+        val profiles=retained().toMutableList()
         val existing=profiles.firstOrNull{prefs.getString(it.key("server"),null)==base&&it.local==local}
         val profile=existing?:EnvironmentIdentity(if(local)"phone" else "remote_"+UUID.randomUUID().toString().replace("-",""),name.trim(),local)
         if(existing==null)profiles.add(profile)
         val encoded=encode(profiles)
-        check(prefs.edit().putString("environments:v1",encoded).putString(profile.key("server"),base).putString(profile.key("token"),token).putString(profile.key("deviceId"),deviceId).commit()){ "Could not save environment" }
+        check(prefs.edit().putString("environments:v1",encoded).putString(profile.key("server"),base).putString(profile.key("token"),token).putString(profile.key("deviceId"),deviceId).remove("retiredEnvironment:"+profile.id).commit()){ "Could not save environment" }
         profile
     }
 
@@ -56,7 +68,7 @@ class EnvironmentProfiles(private val prefs:SharedPreferences) {
 
     /** Metadata adoption never rotates a pairing or changes selection. */
     internal fun associateFleet(id:String,membership:FleetMembership) = synchronized(prefs) {
-        val profiles=all().toMutableList();val old=profiles.single{it.id==id&&!it.local}
+        val profiles=retained().toMutableList();val old=profiles.single{it.id==id&&!it.local}
         old.fleet?.let{require(it==membership){"Existing fleet owner changed"}}
         if(old.fleet==membership)return@synchronized
         profiles[profiles.indexOf(old)]=old.copy(fleet=membership)
@@ -67,7 +79,7 @@ class EnvironmentProfiles(private val prefs:SharedPreferences) {
     internal fun enroll(fleet:FleetDescriptor,member:FleetMember,access:FleetEnrollment):EnvironmentIdentity = synchronized(prefs) {
         require(access.membership.fleetId==fleet.id&&access.membership.accountId==fleet.accountId&&
             access.membership.nodeId==member.id&&fleet.members.any{it==member})
-        val profiles=all().toMutableList()
+        val profiles=retained().toMutableList()
         val existing=profiles.firstOrNull{!it.local&&
             prefs.getString(it.key("server"),null)?.trimEnd('/')==member.origin}
         existing?.fleet?.let{require(it==access.membership){"Existing fleet pairing owner changed"}}

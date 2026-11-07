@@ -71,9 +71,10 @@ export class WebEnvironments {
   this.refresh?.();const saved=this.profiles[device]||[];
   if(!Array.isArray(saved))throw Error('Invalid environment roster.');
   const imported=this.fleet?.list(device)||[];
+  const retiredOrigins=this.fleet?.retiredOrigins?.(device)||[];
   const roster=[...saved,...imported.filter(source=>!saved.some(p=>p.id===source.id||p.base===source.base))];
   if(!Array.isArray(roster)||roster.length>128||new Set(roster.map(s=>s.id)).size!==roster.length)throw Error('Invalid environment roster.');
-  return roster.map(source=>{
+  return roster.filter(source=>!source.retired&&!retiredOrigins.includes(source.base)&&!imported.some(p=>p.retired&&(p.id===source.id||p.base===source.base))).map(source=>{
    const url=new URL(source.base);
    if(!idPattern.test(source.id)||source.id==='current'||typeof source.name!=='string'||!source.name||typeof source.token!=='string'||source.token.length<12||url.username||url.password||url.pathname!=='/'||url.search||url.hash||
     (this.secure&&(url.protocol!=='https:'||!url.hostname.endsWith('.ts.net'))))throw Error('Invalid private environment profile.');

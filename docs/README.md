@@ -1,6 +1,7 @@
 # NextComp documentation
 
-NextComp connects a person on Android to ongoing work in their own computing environments. The enterprise candidate presents canonical Hollywood rooms and LAX execution; the retained stock Codex backend supports existing profiles. Read [the canonical room contract](HOLLYWOOD-ROOMS.md) for its current evidence and release limits. Start with the briefing for the broader interaction goals, then distinguish historical stock/team behavior from the candidate architecture.
+NextComp provides Android and web control of vanilla Codex sessions and native subagents across paired environments. The 168 candidate removes room/LAX/Hollywood entry points, including coordinator room tools. Historical room documentation below describes retired experiments, not supported product capabilities. Original private room records remain retained; they are never converted into Codex commands. Read [the Codex-only transition](CODEX-ONLY.md) for scope and qualification.
+
 
 ## Understand and evaluate
 

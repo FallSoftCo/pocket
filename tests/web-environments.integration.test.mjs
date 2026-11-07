@@ -83,3 +83,18 @@ test('source qualification preserves opaque tool data, and stale empty flags nev
  const presenter=new CatalogPresentation(),row={id:'incomplete',name:'Untitled task',status:{type:'idle'}};
  await presenter.annotate([row],{read:async()=>({thread:row,timeline:{rows:[]},pending:[],outgoing:[]})});assert.equal(row.catalogEmpty,false);
 });
+
+test('retired fleet routes leave the catalog and cannot route commands, while original credentials remain retained',async()=>{
+ const retired={id:'oldhost',name:'Old host',base:'https://oldhost.example.ts.net',token:'saved-original-token',retired:true};
+ const mac={id:'macbook',name:'Mac',base:'https://mac.example.ts.net',token:'saved-mac-token'};
+ const profiles={'browser':[structuredClone(retired),mac]};
+ const env=new WebEnvironments({profiles,fleet:{list:()=>[retired]}});
+ assert.deepEqual(env.list('browser').map(p=>p.id),['macbook']);
+ await assert.rejects(env.forward('browser','oldhost','/api/threads/old/reply','POST',{id:'unknown-original',text:'must not send'}),/not connected/);
+ assert.equal(profiles.browser[0].token,'saved-original-token');
+ const manual={...retired,retired:false};
+ const legacy=new WebEnvironments({profiles:{browser:[manual,mac]},fleet:{list:()=>[],retiredOrigins:()=>[manual.base]}});
+ assert.deepEqual(legacy.list('browser').map(p=>p.id),['macbook']);
+ await assert.rejects(legacy.forward('browser','oldhost','/api/threads/old/reply','POST',{id:'unknown-original'}),/not connected/);
+ assert.equal(manual.token,'saved-original-token');
+});

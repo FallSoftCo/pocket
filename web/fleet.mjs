@@ -20,7 +20,8 @@ export function fleetDescriptor(value){
  if(new Set(members.map(x=>x.id)).size!==members.length||new Set(members.map(x=>x.origin)).size!==members.length||
     !members.some(x=>x.id===nodeId))throw Error('Ambiguous fleet members');
  if(value.enrollmentPath!=null&&value.enrollmentPath!=='/api/fleet/enroll')throw Error('Invalid fleet enrollment path');
- return Object.freeze({version:1,id,accountId,nodeId,members:Object.freeze(members),sessionPath:'/api/fleet/session',enrollmentPath:value.enrollmentPath??null});
+ const retiredOrigins=value.retiredOrigins??[];if(!Array.isArray(retiredOrigins)||retiredOrigins.length>128||retiredOrigins.some(x=>origin(x)!==x||members.some(m=>m.origin===x)))throw Error('Invalid retired fleet origins');
+ return Object.freeze({version:1,id,accountId,nodeId,retiredOrigins:Object.freeze([...new Set(retiredOrigins)]),members:Object.freeze(members),sessionPath:'/api/fleet/session',enrollmentPath:value.enrollmentPath??null});
 }
 export function fleetSession(value,descriptor,now=Date.now()){
  if(!value||value.version!==1||value.fleetId!==descriptor.id||value.accountId!==descriptor.accountId||

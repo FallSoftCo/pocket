@@ -25,6 +25,8 @@ setSymbolMotionReady(false);
 function setLabel(node,text){const source=String(text??'');if(node.dataset.labelSource!==source){node.dataset.labelSource=source;node.textContent=source;if(node.tagName==='BUTTON')node.setAttribute('aria-label',source);}}
 const $=id=>document.getElementById(id),el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)setLabel(n,text);return n;};
 let scope=read('scope','coordinator'),deviceId='',threads=[],current=null,status=null,ws=null,authenticated=false,polling=false,installEvent=null,models=[],loadSerial=0,earlierBusy=false,reconnectTimer,follow=true;
+// Preserve saved room drafts/receipts; a retired selection never becomes a stock ID.
+if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}
 let openedScope=null,openedDraftKey=null,catalogSettled=false,catalogFailure=false;const readerViews=new Map();
 const readerKey=(id=scope)=>id+(isRoom(id)?'/'+roomView:'');
 let seatOrder=[],deliveryFlight=null,startFlight=null,review=null;let attentionItems=[];
@@ -39,6 +41,7 @@ let roomEntries=[],roomView='all';const roomTargets=new Map();
 const targetFor=id=>{if(!roomTargets.has(id))roomTargets.set(id,read('roomTarget.'+deviceId+'.'+id,{recipientId:null,audience:'room',sourceEventId:null}));return roomTargets.get(id);};
 const cache=new SessionStore(),receipts=new Set(),notifySeen=new Set();cache.protect(scope);
 cache.subscribeMetadata(id=>{if(id===scope)renderHeader();});let pending=read('pending',null),newPending=read('newPending',null);
+if(pending?.room){write('retiredRoomPending.'+pending.deviceId+'.'+pending.id,pending);pending=null;write('pending',null);}
 async function api(path,body,options={}){
  const outgoingThread=/^\/api\/threads\/([^/?]+)\/(?:reply|replies\/[^/?]+|queue\/resume)$/.exec(path)?.[1]||(path.startsWith('/api/replies/')?options.scope:null);
  path=environmentPath(path,options.scope);
@@ -123,7 +126,7 @@ function currentReadAnchor(id){if(id!==scope||follow)return null;const list=$('t
 function saveView(){if(!openedScope)return;const list=$('transcript'),first=[...list.children].find(n=>n.getBoundingClientRect().bottom>list.getBoundingClientRect().top);readerViews.set(readerKey(openedScope),{follow,anchor:first?.dataset.id,offset:first?first.getBoundingClientRect().top-list.getBoundingClientRect().top:0,top:list.scrollTop});}
 function restoreView(view){if(!view||view.follow)return;const list=$('transcript'),anchor=[...list.children].find(n=>n.dataset.id===view.anchor);if(anchor)list.scrollTop+=anchor.getBoundingClientRect().top-list.getBoundingClientRect().top-view.offset;else list.scrollTop=view.top;}
 async function open(id){
- if(isRoom(id)&&!rooms.entries.has(id)){void run(()=>refreshList())();await rooms.waitForEntry(id);}
+ if(isRoom(id))throw Error('Rooms are retired from NextComp. Original drafts and receipts are retained.');
  saveDraft();saveView();for(const panel of document.querySelectorAll(':popover-open'))panel.hidePopover();scope=id;if(isRoom(id)){const saved=read('roomView.'+deviceId+'.'+id,'all'),valid=roomLead(rooms.entry(id).room)?['all','conversation','activity','coordination','archive']:['all','conversation','activity'];roomView=valid.includes(saved)?saved:'all';}cache.protect(scope);readFeedback.select(scope);write('scope',scope);const view=readerViews.get(readerKey(id));follow=view?.follow??true;
  current=id==='coordinator'?null:cache.get(id)?.snapshot||null;openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');openedScope=scope;$('requests').dataset.signature='';$('error').hidden=true;$('transcript').replaceChildren();$('attention-panel').hidden=true;$('reports-panel').hidden=true;document.body.classList.add('chat-open');renderHeader();renderList();renderTranscript();renderRequests();renderOutbox();renderNotes();restoreView(view);
  renderUsage();void refreshAccountUsage();await refreshConversation();if(scope===id){if(follow)$('transcript').scrollTop=$('transcript').scrollHeight;else restoreView(view);}
@@ -199,30 +202,11 @@ function pumpBackgroundHeads(){
 async function refreshList({invalidate=false}={}){
  const filter=$('filter').value,profile=deviceId,query=$('search').value.trim();
  return lanes.run('catalog/'+profile+'/'+filter+'/'+query,false,async()=>{
-  const metadataTicket=cache.ticket();let data;catalogFailure=false;if(isRoom(scope)&&rooms.entries.has(scope))saveDraft();
-  let roster=[{id:'current',name:status?.host||'Workstation'}];
-  try{const value=await api('/web/environments');if(!Array.isArray(value.environments)||value.environments.length>128||value.environments.some(e=>typeof e.id!=='string'||e.id!=='current'&&!/^[a-z][a-z0-9-]{1,30}$/.test(e.id)||typeof e.name!=='string')||new Set(value.environments.map(e=>e.id)).size!==value.environments.length)throw Error('Gateway roster is invalid.');roster=value.environments;}catch(e){if(e.status!==404)rooms.errors=[e.message];}
-  const publishRooms=()=>{
-   if(deviceId!==profile||$('filter').value!==filter||$('search').value.trim()!==query)return;
-   roomEntries=[...rooms.entries.values()];
-   if(roomEntries.length)catalogSettled=true;
-   if(isRoom(scope)&&rooms.entries.has(scope)&&openedDraftKey!==draftKey()){saveDraft();openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');current=null;}
-   renderList();if(isRoom(scope))renderHeader();
-  };
-  // Start room discovery BEFORE any slow legacy merged-session inventory. Its
-  // incremental healthy publication and active head are independent lanes.
-  const initialDiscovery=rooms.discover(roster,{onUpdate:publishRooms});
+  const metadataTicket=cache.ticket();let data;catalogFailure=false;
   const suffix='?'+new URLSearchParams({... (filter==='archived'?{archived:'true'}:{}),...(query?{search:query}:{})});
-  try{data=status?.backend==='lax'?{threads:[]}:await api('/api/threads'+suffix);}catch(error){catalogFailure=true;data={threads:threads};}
-  if(data.environments)roster=[...roster,...data.environments.filter(e=>e.id!=='remote'&&!roster.some(r=>r.id===e.id)&&/^[a-z][a-z0-9-]{1,30}$/.test(e.id))];
-  if(status?.backend==='lax')for(const source of roster.filter(e=>e.id!=='current')){
-   try{const value=await api(sourcePath(source.id,'/api/threads'+suffix));data.threads.push(...(value.threads||[]));}catch(e){if(e.status!==403)catalogFailure=true;}
-  }
-  await initialDiscovery;
-  if(JSON.stringify(roster.map(s=>[s.id,s.name]))!==rooms.discovery?.signature)await rooms.discover(roster,{onUpdate:publishRooms});
-  publishRooms();
+  try{data=await api('/api/threads'+suffix);}catch(error){catalogFailure=true;data={threads};}
   if(deviceId!==profile||$('filter').value!==filter||$('search').value.trim()!==query)return;
-  catalogSettled=true;threads=cache.catalog(data.threads||[],metadataTicket);$('catalog-note').textContent=rooms.errors.join(' · ')||(data.environments?.some(e=>!e.available)?'An environment is unavailable; its last known work remains visible.':data.catalogPartial?'Showing a bounded inventory. Search or open known work.':'');renderList();setSymbolMotionReady(true);
+  catalogSettled=true;threads=cache.catalog(data.threads||[],metadataTicket);$('catalog-note').textContent=(data.environments?.some(e=>!e.available)?'An environment is unavailable; its last known work remains visible.':data.catalogPartial?'Showing a bounded inventory. Search or open known work.':'');renderList();setSymbolMotionReady(true);
   for(const id of cache.catalogChanges){if(id===scope)scheduleRefresh({head:true});else queueBackgroundHead(id);}
  },{invalidate});
 }
@@ -338,7 +322,7 @@ function scheduleRefresh({head=true,catalog=false,attention=false}={}){
 async function refreshAttention(){const data=status?.backend==='lax'?{notifications:[]}:await api('/api/attention');attentionItems=data.notifications;renderNotes();renderList();$('attention-count').textContent=data.notifications.length;$('reports-toggle').dataset.count=data.notifications.length||'';$('attention-panel').replaceChildren(el('h2','','Needs your attention'));for(const n of data.notifications){const box=el('div','inbox-item');box.append(el('p','',n.environmentName?n.title+' · '+n.environmentName:n.title),el('p','',n.body),button('Open original work',()=>open(n.thread_id)));$('attention-panel').append(box);}}
 async function showReports(before=null){const data=await api('/api/coordinator/reports'+(before?'?before='+before:''));if(!before)$('reports-panel').replaceChildren(el('h2','','Work updates'));for(const r of data.reports||data.items||[]){const box=el('div','inbox-item');box.append(el('p','',r.response||r.text||''),button('Mark this report read',async()=>{await api(`/api/voice/turns/${r.id}/presented`,{});}));for(const a of r.actions||[])if(a.threadId)box.append(button('Open work',()=>open(a.threadId)));$('reports-panel').append(box);}if($('reports-panel').children.length===1)$('reports-panel').append(el('p','muted','No scheduled reports yet. Enable scheduling in Settings for this browser.'));if(data.hasEarlier)$('reports-panel').append(button('Older reports',()=>showReports(data.before)));if(!before)$('reports-panel').hidden=false;}
 function readThemePreference(){try{return JSON.parse(localStorage.getItem('nextcomp.web.theme'));}catch{return null;}}
-async function boot(){try{try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;if(await importPreviousProfile(base,deviceId)){scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);}authenticated=true;$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;if(read('deviceId')&&read('deviceId')!==deviceId){const original=read('deviceId');if(pending)write('detachedPending.'+original,pending);if(newPending)write('detachedStart.'+original,newPending);pending=null;newPending=null;write('pending',null);write('newPending',null);scope='coordinator';}write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();const initial=await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);if(initial[0].status==='rejected')error(initial[0].reason);else if(initial[1].status==='rejected')error(initial[1].reason);await voice.restore();void voice.loadCapabilities();if(pending)await reconcilePending();if(newPending)await reconcileStart();}catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}}
+async function boot(){try{try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;if(await importPreviousProfile(base,deviceId)){scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}if(pending?.room){write('retiredRoomPending.'+pending.deviceId+'.'+pending.id,pending);pending=null;write('pending',null);}const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);}authenticated=true;$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;if(read('deviceId')&&read('deviceId')!==deviceId){const original=read('deviceId');if(pending)write('detachedPending.'+original,pending);if(newPending)write('detachedStart.'+original,newPending);pending=null;newPending=null;write('pending',null);write('newPending',null);scope='coordinator';}write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();const initial=await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);if(initial[0].status==='rejected')error(initial[0].reason);else if(initial[1].status==='rejected')error(initial[1].reason);await voice.restore();void voice.loadCapabilities();if(pending)await reconcilePending();if(newPending)await reconcileStart();}catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}}
 $('pair-form').onsubmit=async e=>{e.preventDefault();const b=$('pair-form').querySelector('button');b.disabled=true;try{await api('/web/pair',Object.fromEntries(new FormData(e.target)));await boot();}catch(err){$('pair-error').textContent=err.message;}finally{b.disabled=false;}};
 $('composer').onsubmit=run(async e=>{e.preventDefault();await send();});$('draft').oninput=()=>saveDraft(true);$('draft').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();void run(send)();}};
 $('send').onpointerdown=e=>{if(document.activeElement===$('draft'))e.preventDefault();};

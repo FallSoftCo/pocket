@@ -17,13 +17,16 @@ export function fleetConfig(v){
   const u=new URL(m.origin);requireValue(uuid.test(m.id)&&typeof m.name==='string'&&m.name.length<=100&&u.protocol==='https:'&&!u.username&&!u.password&&!u.search&&!u.hash&&u.pathname==='/'&&u.origin===m.origin&&!ids.has(m.id)&&!origins.has(m.origin));
   const key=createPublicKey(m.publicKey);requireValue(key.asymmetricKeyType==='ed25519');ids.add(m.id);origins.add(m.origin);
  }
- requireValue(ids.has(v.nodeId));artifactReaders(v);return v;
+ requireValue(ids.has(v.nodeId));
+ const retired=v.retiredOrigins??[];requireValue(Array.isArray(retired)&&retired.length<=128&&new Set(retired).size===retired.length);
+ for(const value of retired){const u=new URL(value);requireValue(u.protocol==='https:'&&u.origin===value&&!origins.has(value));}
+ artifactReaders(v);return v;
 }
 export function loadFleet(file){return fleetConfig(JSON.parse(protectedFile(file)));}
 export class FleetProofs{
  constructor({config,now=Date.now}){this.getConfig=typeof config==='function'?config:()=>fleetConfig(config);this.now=now;}
  config(){return fleetConfig(this.getConfig());}
- discovery(){const c=this.config();return {version:1,id:c.fleetId,accountId:c.accountId,nodeId:c.nodeId,members:c.members.map(({id,name,origin})=>({id,name,origin})),sessionPath:'/api/fleet/session'};}
+ discovery(){const c=this.config();return {version:1,id:c.fleetId,accountId:c.accountId,nodeId:c.nodeId,members:c.members.map(({id,name,origin})=>({id,name,origin})),sessionPath:'/api/fleet/session',retiredOrigins:c.retiredOrigins??[]};}
  privateKey(){const c=this.config(),key=createPrivateKey(protectedFile(c.privateKeyFile));requireValue(key.asymmetricKeyType==='ed25519'&&createPublicKey(key).export({type:'spki',format:'pem'})===createPublicKey(c.members.find(m=>m.id===c.nodeId).publicKey).export({type:'spki',format:'pem'}));return key;}
  async sign(type,claims,audience,ttl){
   const c=this.config(),iat=Math.floor(this.now()/1000);

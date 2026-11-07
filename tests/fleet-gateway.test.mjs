@@ -15,7 +15,7 @@ test('actual gateway mounted discovery/session: paired login survives restart, o
  const {db,secrets}=openStore(data);db.prepare('INSERT INTO devices(id,name,token_hash,created_at) VALUES(?,?,?,?)').run(device,'Paired fixture only',hash(opaque),Date.now());db.close();
  let port;await new Promise(r=>{const s=createServer();s.listen(0,'127.0.0.1',()=>{port=s.address().port;s.close(r);});});
  const log=resolve(root,'gateway.log');let child;
- async function launch(){const fd=openSync(log,'a',0o600);child=startOwnedFixture(fileURLToPath(new URL('../server/index.mjs',import.meta.url)),{cwd:root,env:{...process.env,PORT:String(port),POCKET_DATA:data,POCKET_FLEET_CONFIG:configFile,POCKET_EXECUTION_BACKEND:'hollywood',POCKET_LOCAL:'',POCKET_VOICE_API_KEY:'',POCKET_BACKEND_ARTIFACTS_DIR:'',POCKET_BACKEND_ARTIFACTS_KEY_FILE:''},fd});closeSync(fd);
+ async function launch(){const fd=openSync(log,'a',0o600);child=startOwnedFixture(fileURLToPath(new URL('../server/index.mjs',import.meta.url)),{cwd:root,env:{...process.env,PORT:String(port),POCKET_DATA:data,POCKET_FLEET_CONFIG:configFile,POCKET_EXECUTION_BACKEND:'codex',CODEX_SOCKET:resolve(root,'nonexistent-qa-codex.sock'),POCKET_CODEX_COMMAND:'',POCKET_CODEX_MANAGED_START:'',POCKET_LOCAL:'',POCKET_VOICE_API_KEY:'',POCKET_BACKEND_ARTIFACTS_DIR:'',POCKET_BACKEND_ARTIFACTS_KEY_FILE:''},fd});closeSync(fd);
   for(let i=0;i<80;i++){if(child.exitCode!==null)throw Error(readFileSync(log,'utf8'));try{if((await fetch('http://127.0.0.1:'+port+'/health')).ok)return;}catch{}await new Promise(r=>setTimeout(r,50));}throw Error('Owned fixture readiness timeout');
  }
  const call=(path,token,method='GET')=>fetch('http://127.0.0.1:'+port+path,{method,headers:{Authorization:'Bearer '+token}});
@@ -25,6 +25,7 @@ test('actual gateway mounted discovery/session: paired login survives restart, o
   const response=await call('/api/fleet/session',opaque,'POST');assert.equal(response.status,200);const session=await response.json();
   assert.equal((await call('/api/backends',session.token)).status,200);
   assert.equal((await call('/api/hollywood/v3/rooms/fake/messages',secrets.adminToken,'POST')).status,403);
+  const retired=await call('/api/hollywood/v3/rooms/fake/history',opaque);assert.equal(retired.status,410);assert.equal((await retired.json()).code,'ROOMS_RETIRED');
   await stopOwnedFixture(child);await launch();
   const refresh=await (await call('/api/fleet/session',session.token,'POST')).json();assert.equal(refresh.deviceId,session.deviceId);assert.notEqual(refresh.token,session.token);
   // Original paired device row is unchanged; no token/identity replacement.

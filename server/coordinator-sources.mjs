@@ -7,8 +7,8 @@ const id=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value);
 /** Human-device delegated environment credentials. Model arguments never contain
  * credentials or URLs; all egress and mutations resolve a registered source ID. */
 export class CoordinatorSources {
- constructor({db,key,fetchImpl=fetch,localApi,authorize=()=>false,clock=Date.now}){
-  Object.assign(this,{db,fetchImpl,localApi,authorize,clock});this.key=createHash('sha256').update('nextcomp-coordinator-source-v1\0'+key).digest();
+ constructor({db,key,fetchImpl=fetch,localApi,authorize=()=>false,sourceAllowed=()=>true,clock=Date.now}){
+  Object.assign(this,{db,fetchImpl,localApi,authorize,sourceAllowed,clock});this.key=createHash('sha256').update('nextcomp-coordinator-source-v1\0'+key).digest();
   ensureRoomReconciliations(db);
   db.exec(`CREATE TABLE IF NOT EXISTS coordinator_remote_commands(id TEXT PRIMARY KEY,device_id TEXT NOT NULL,source_id TEXT NOT NULL,voice_turn TEXT NOT NULL,path TEXT NOT NULL,body_hash TEXT NOT NULL,state TEXT NOT NULL,result TEXT,at INTEGER NOT NULL)`);
   db.prepare("UPDATE coordinator_remote_commands SET state='unknown' WHERE state='sending'").run();
@@ -17,13 +17,14 @@ export class CoordinatorSources {
  }
  seal(device,source,credential){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',this.key,iv);cipher.setAAD(Buffer.from(JSON.stringify([device,source])));const data=Buffer.concat([cipher.update(credential,'utf8'),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),data]).toString('base64');}
  credential(row){const raw=Buffer.from(row.sealed,'base64'),cipher=createDecipheriv('aes-256-gcm',this.key,raw.subarray(0,12));cipher.setAAD(Buffer.from(JSON.stringify([row.device_id,row.source_id])));cipher.setAuthTag(raw.subarray(12,28));return Buffer.concat([cipher.update(raw.subarray(28)),cipher.final()]).toString('utf8');}
- list(device){return this.db.prepare('SELECT source_id AS environmentId,name,verified_at AS verifiedAt,problem FROM coordinator_sources WHERE device_id=? ORDER BY source_id').all(device);}
+ list(device){return this.db.prepare('SELECT source_id AS environmentId,name,base,verified_at AS verifiedAt,problem FROM coordinator_sources WHERE device_id=? ORDER BY source_id').all(device).filter(row=>this.sourceAllowed(row.base)).map(({base,...row})=>row);}
  async register(device,sources){
   if(!Array.isArray(sources)||sources.length>12)throw fail('Choose up to twelve paired environments.');
   const seen=new Set();
   for(const s of sources){let u;try{u=new URL(s.base)}catch{throw fail('Invalid paired environment origin.')}
    if(!id(s.environmentId)||s.environmentId==='current'||seen.has(s.environmentId)||typeof s.name!=='string'||!s.name.trim()||s.name.length>100||typeof s.token!=='string'||s.token.length<12||s.token.length>4096||u.protocol!=='https:'||u.username||u.password||u.search||u.hash||!u.hostname.endsWith('.ts.net')||u.pathname!=='/')throw fail('Use the private HTTPS origin and original paired-device credential.');seen.add(s.environmentId);
   }
+  sources=sources.filter(s=>this.sourceAllowed(s.base.replace(/\/$/,'')));
   // Credential replacement is atomic per source, before verification. A revoked
   // old credential is never used as a fallback for a changed pairing.
   for(const s of sources)this.db.prepare('INSERT INTO coordinator_sources VALUES(?,?,?,?,?,?,NULL,NULL) ON CONFLICT(device_id,source_id) DO UPDATE SET name=excluded.name,base=excluded.base,sealed=excluded.sealed,credential_hash=excluded.credential_hash,verified_at=NULL,problem=NULL').run(device,s.environmentId,s.name,s.base.replace(/\/$/,''),this.seal(device,s.environmentId,s.token),createHash('sha256').update(s.token).digest('hex'));
@@ -36,7 +37,7 @@ export class CoordinatorSources {
  }
  async call(device,sourceId,path,body,actor,options={}){
   if(!sourceId||sourceId==='current')return this.localApi(path,body,actor,options);
-  const row=this.db.prepare('SELECT * FROM coordinator_sources WHERE device_id=? AND source_id=?').get(device,sourceId);if(!row)throw fail('This environment is not delegated to this human device.',403);
+  const row=this.db.prepare('SELECT * FROM coordinator_sources WHERE device_id=? AND source_id=?').get(device,sourceId);if(!row||!this.sourceAllowed(row.base))throw fail('This environment is not delegated to this human device.',403);
   // No arbitrary proxy, pairing/admin/credential endpoints or nested federation.
   const roomRead=coordinatorRoomPath(path);
   const roomMessage=/^\/api\/hollywood\/v3\/rooms\/[0-9a-f-]{36}\/messages$/.test(path);

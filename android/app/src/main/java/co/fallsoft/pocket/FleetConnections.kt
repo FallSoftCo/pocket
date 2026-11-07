@@ -49,8 +49,8 @@ internal object FleetConnections {
                     .putString(prefix+"anchor",source.environment.id).commit())
                 val enrolled=FleetMembership(fleet.id,fleet.accountId,fleet.nodeId,session.deviceId)
                 Pocket.environmentProfiles.associateFleet(source.environment.id,enrolled)
-                added=source.environment.fleet!=enrolled
-                if(added)withContext(Dispatchers.Main){changed();added=false}
+                added=Pocket.environmentProfiles.reconcileFleet(fleet)||source.environment.fleet!=enrolled
+                if(added)withContext(Dispatchers.Main){unavailable.keys.filter{it.startsWith(key+":")&&it.substringAfterLast(":") !in fleet.members.map{m->m.id}}.forEach{unavailable.remove(it)};changed();added=false}
                 for(member in fleet.members){
                     if(!current(source))return@launch
                     val memberKey=key+":"+member.id

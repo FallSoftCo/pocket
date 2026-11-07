@@ -44,6 +44,7 @@ export class WebFleet {
   }finally{if(fd!==undefined)closeSync(fd);try{unlinkSync(tmp);}catch(e){if(e.code!=='ENOENT')throw e;}}
  }
  list(device){return this.load(device).profiles.map(profile=>({...profile}));}
+ retiredOrigins(device){return this.load(device).retiredOrigins||[];}
  onSources(device,listener){const set=this.listeners.get(device)||new Set();set.add(listener);this.listeners.set(device,set);return()=>{set.delete(listener);if(!set.size)this.listeners.delete(device);};}
  observe(device,token){
   if(!uuid.test(device)||typeof token!=='string'||token.length<32||this.flights.has(device)||this.flights.size>=2||(this.retryAt.get(device)||0)>this.now())return;
@@ -66,12 +67,12 @@ export class WebFleet {
   const session=fleetSession(await this.json(this.backend,'/api/fleet/session',token,{}),fleet,this.now());
   let state=this.load(device);
   if(state.fleetId&&(state.fleetId!==fleet.id||state.accountId!==fleet.accountId||state.ownerDeviceId!==session.deviceId))throw fail();
-  state={...state,fleetId:fleet.id,accountId:fleet.accountId,ownerDeviceId:session.deviceId};
+  state={...state,fleetId:fleet.id,accountId:fleet.accountId,ownerDeviceId:session.deviceId,retiredOrigins:fleet.retiredOrigins};
   const liveIds=new Set(fleet.members.map(m=>m.id));
   // Removed enrollment is not silently routed forever. Its saved data stays on disk.
   state={...state,profiles:state.profiles.map(p=>({...p,retired:!liveIds.has(p.nodeId)}))};
   this.save(device,state);
-  let changed=false,failed=false;
+  let changed=true,failed=false;
   for(const member of fleet.members){
    if(member.id===fleet.nodeId||state.profiles.some(p=>p.nodeId===member.id&&p.base===member.origin&&!p.retired))continue;
    try{

@@ -50,6 +50,26 @@ class NativeCanonicalTranscriptNativeTest{
     }
     private fun qa(action:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+action,JSONObject())}
     private fun open(){main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}}
+    @Test fun retiredRoomSelectionOpensStockWorkWithoutReplayingOrLosingDrafts(){
+        prepare()
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+        val owner=backendOwner(Pocket.base,Pocket.token)
+        prefs.edit().putString("backend:$owner","lax")
+            .putString("retained-room-draft","Original room words")
+            .putString("retained-room-command","unknown-original-id").commit()
+        main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+        await("Upgrade did not select Codex"){prefs.getString("backend:$owner",null)=="codex"}
+        assertTrue("Stock session was not discoverable",device.wait(Until.hasObject(By.text("Native canonical work")),12000))
+        assertFalse(device.hasObject(By.text("Connecting to Hollywood…")))
+        main{Pocket.open("same-thread")}
+        await("Stock native history did not load"){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
+        assertTrue(device.wait(Until.hasObject(By.text("Native answer one")),5000))
+        assertEquals("Original room words",prefs.getString("retained-room-draft",null))
+        assertEquals("unknown-original-id",prefs.getString("retained-room-command",null))
+        assertEquals(0,qa("state").getInt("workSubmissions"))
+        assertFalse(BackendNavigation.nativeSelected());assertFalse(BackendNavigation.teamSelected())
+    }
+
     @Test fun nativeOrderSurvivesDelayedArrivalQuestionsAndReconnectWithoutLegacyRepair(){
         prepare()
         try{
