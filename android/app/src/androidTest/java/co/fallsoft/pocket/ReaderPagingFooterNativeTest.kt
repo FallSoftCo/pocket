@@ -13,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
@@ -52,12 +54,43 @@ class ReaderPagingFooterNativeTest {
         var availableWidth=0
         var pixelsPerDp=1f
         var keyboard:SoftwareKeyboardController?=null
+        var activity:NativeComponentFixtureActivity?=null
+        var stage="launch"
+        var caseLabel="initial"
+        var windowReadyOnEntry:Boolean?=null
         lateinit var list:LazyListState
         fun imeVisible()=i.uiAutomation.windows.any{it.type==AccessibilityWindowInfo.TYPE_INPUT_METHOD}
         fun bounds(tag:String)=compose.onNodeWithTag(tag,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
         val records=JSONArray()
+        val imeEvents=JSONArray()
+        fun windowReady()=compose.runOnUiThread{
+            activity?.let{it.lifecycle.currentState==androidx.lifecycle.Lifecycle.State.RESUMED&&
+                it.window.decorView.isAttachedToWindow&&it.hasWindowFocus()}==true
+        }
+        fun imeEvidence():JSONObject{
+            val evidence=compose.runOnUiThread{
+                JSONObject().put("stage",stage).put("case",caseLabel).put("at",System.currentTimeMillis())
+                    .put("windowReadyOnEntry",windowReadyOnEntry)
+                    .put("lifecycle",activity?.lifecycle?.currentState?.name)
+                    .put("windowFocus",activity?.hasWindowFocus()).put("attached",activity?.window?.decorView?.isAttachedToWindow)
+                    .put("focusedView",activity?.currentFocus?.javaClass?.name).put("keyboardController",keyboard!=null)
+            }
+            evidence.put("editorFocused",runCatching{compose.onNodeWithTag("footer-test-editor").fetchSemanticsNode()
+                .config.getOrNull(SemanticsProperties.Focused)}.getOrNull())
+            evidence.put("windows",JSONArray().apply{i.uiAutomation.windows.forEach{window->
+                val rect=android.graphics.Rect();window.getBoundsInScreen(rect)
+                put(JSONObject().put("type",window.type).put("active",window.isActive).put("focused",window.isFocused).put("bounds",rect.toShortString()))
+            }})
+            return evidence
+        }
+        fun recordIme(){
+            val evidence=imeEvidence();imeEvents.put(evidence)
+            i.targetContext.filesDir.resolve("footer-ime-events.json").writeText(imeEvents.toString(2))
+            android.util.Log.i("FooterImeQA",evidence.toString())
+        }
         ActivityScenario.launch(NativeComponentFixtureActivity::class.java).use{scenario->
-            scenario.onActivity{activity->activity.setContent{
+            try{
+            scenario.onActivity{fixture->activity=fixture;fixture.setContent{
                 val density=LocalDensity.current
                 pixelsPerDp=density.density
                 keyboard=LocalSoftwareKeyboardController.current
@@ -94,14 +127,28 @@ class ReaderPagingFooterNativeTest {
             for(w in listOf(320,360,availableWidth).filter{it<=availableWidth}.distinct())for(f in listOf(1f,2f)){
                 compose.runOnIdle{width.intValue=w;font.floatValue=f}
                 for(ime in listOf(false,true)){
-                    compose.onNodeWithTag("footer-test-editor").performClick()
-                    compose.runOnIdle{keyboard?.show()}
+                    caseLabel="width=$w font=$f ime=$ime"
+                    // A measured Compose tree does not establish Android window
+                    // focus on a cold ActivityScenario launch. Do not issue a
+                    // best-effort IME request before its actual prerequisites.
+                    stage="await-resumed-window"
+                    windowReadyOnEntry=windowReady()
+                    compose.waitUntil(5000){windowReady()}
+                    compose.onNodeWithTag("footer-test-editor").assertIsDisplayed().assertIsEnabled().performClick()
+                    stage="await-editor-focus"
+                    compose.waitUntil(5000){windowReady()&&compose.onAllNodes(hasTestTag("footer-test-editor") and isFocused()).fetchSemanticsNodes().isNotEmpty()}
+                    stage="before-keyboard-show";recordIme()
+                    compose.runOnIdle{checkNotNull(keyboard){"Software keyboard controller missing"}.show()}
                     // Observe the real show before hide; do not pass a hidden-IME
                     // case merely because an asynchronous show has not arrived yet.
+                    stage="await-visible-ime"
                     compose.waitUntil(5000){imeVisible()}
+                    stage="ime-visible";recordIme()
                     if(!ime)compose.runOnIdle{keyboard?.hide()}
+                    stage="await-requested-ime-state"
                     compose.waitUntil(5000){imeVisible()==ime}
                     compose.waitForIdle()
+                    stage="layout-and-paging"
                     val label="width=$w font=$f ime=$ime"
                     val container=bounds("bottom-control-bar")
                     val up=bounds("reader-page-up")
@@ -145,6 +192,7 @@ class ReaderPagingFooterNativeTest {
                     assertTrue(device.takeScreenshot(i.targetContext.filesDir.resolve("footer-paging-$w-$f-$ime.png")))
                 }
             }
+            stage="hide-ime-for-usage"
             compose.runOnIdle{keyboard?.hide()}
             compose.waitUntil(5000){!imeVisible()}
             // Real numeric modes still reserve their rendered bold value and
@@ -153,6 +201,7 @@ class ReaderPagingFooterNativeTest {
                 WeeklyUsage(remainingPercent=0.05,resetsAt=1794017100),
                 WeeklyUsage(remainingPercent=0.0,credits=CreditUsage(balance="99900"))
             ))for(f in listOf(1f,2f)){
+                stage="numeric-usage-layout";caseLabel="usage=${value.remainingPercent} font=$f"
                 compose.runOnIdle{width.intValue=availableWidth;font.floatValue=f;usage.value=value}
                 compose.waitForIdle()
                 val primary=if(value.remainingPercent==0.0)value.credits.compact()!! else value.remainingLabel().replace(" left","")
@@ -173,6 +222,15 @@ class ReaderPagingFooterNativeTest {
                 records.put(JSONObject().put("widthDp",availableWidth).put("fontScale",f).put("ime",false)
                     .put("usage",primary).put("pageUp",bounds("reader-page-up").toString()).put("pageDown",bounds("reader-page-down").toString()))
                 assertTrue(device.takeScreenshot(i.targetContext.filesDir.resolve("footer-usage-${if(value.remainingPercent==0.0)"credits" else "allowance"}-$f.png")))
+            }
+            }catch(failure:Throwable){
+                // Retain the live failure before ActivityScenario closes the
+                // window and makes IME/focus evidence describe cleanup instead.
+                runCatching{recordIme()}.onFailure{failure.addSuppressed(it)}
+                runCatching{device.takeScreenshot(i.targetContext.filesDir.resolve("footer-ime-failure.png"))}.onFailure{failure.addSuppressed(it)}
+                runCatching{device.dumpWindowHierarchy(i.targetContext.filesDir.resolve("footer-ime-failure.xml"))}.onFailure{failure.addSuppressed(it)}
+                runCatching{i.targetContext.filesDir.resolve("footer-ime-failure-input-method.txt").writeText(device.executeShellCommand("dumpsys input_method"))}.onFailure{failure.addSuppressed(it)}
+                throw failure
             }
         }
         i.targetContext.filesDir.resolve("footer-paging-matrix.json").writeText(JSONObject()
