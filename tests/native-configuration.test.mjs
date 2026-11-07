@@ -91,3 +91,44 @@ test('remote native settings queries and agent navigation preserve host identity
  const result=qualifyPayload({rootThreadId:'parent-one',items:[{threadId:'child-one',parentThreadId:'parent-one',id:'child-one'}]},'mac');
  assert.equal(result.items[0].threadId,child);assert.equal(result.rootThreadId,scopedId('mac','parent-one'));
 });
+
+const macUserAgent='codex_pocket/0.163.0 (Mac OS 26.6.0; arm64) unknown (nextcomp_compatibility_readonly; 1)';
+test('Mac 0.163 qualification grants only observed catalog methods, not platform-wide or write compatibility',()=>{
+ const f=fixture();f.codex.initializeResult.userAgent=macUserAgent;
+ for(const method of ['config/read','skills/list','mcpServerStatus/list','app/installed','plugin/installed','hooks/list','thread/list','thread/read'])assert.equal(supportsNativeMethod(f.codex,method),true,method);
+ for(const method of ['config/value/write','skills/config/write','config/mcpServer/reload','thread/settings/update','thread/fork','thread/revert','thread/compact/start','review/start','thread/backgroundTerminals/list','thread/backgroundTerminals/terminate','thread/items/read','thread/goal/set'])assert.equal(supportsNativeMethod(f.codex,method),false,method);
+ const descriptor=f.native.descriptor('parent-one');
+ assert.equal(descriptor.runtime.compatibilityProfile,'mac-arm64-0.163-catalog-reads-20261107');
+ for(const key of ['configuration','skills','mcp','apps']){
+  assert.equal(descriptor.features[key].state,'available');assert.equal(descriptor.features[key].readOnly,true);assert.equal(descriptor.features[key].mutation.state,'unavailable');
+ }
+ assert.equal(descriptor.features.backgroundTerminals.state,'unavailable');assert.match(descriptor.features.backgroundTerminals.reason,/read-only client presentation/);
+ assert.equal(descriptor.features.nativeRequests.state,'unavailable');
+ assert.equal(describeNativeCapabilities({version:'0.163.0',userAgent:macUserAgent,connected:false}).features.skills.state,'unavailable');
+ for(const userAgent of ['codex_cli_rs/0.163.0 (linux)','codex_pocket/0.163.0 (Mac OS 26.6.0; x86_64)','codex_pocket/0.164.0 (Mac OS 26.6.0; arm64)','codex/0.163.0']){
+  f.codex.initializeResult.userAgent=userAgent;assert.equal(supportsNativeMethod(f.codex,'skills/list'),false,userAgent);
+ }
+ assert.equal(describeNativeCapabilities({version:'0.163.0'}).features.skills.state,'unavailable');
+});
+test('Mac catalogs retain redaction and scope, and reject stale or forged mutations before any native dispatch',async()=>{
+ const f=fixture();f.codex.initializeResult.userAgent=macUserAgent;
+ for(const section of ['settings','skills','mcp','apps','plugins','hooks','agents']){
+  const view=await f.native.inspect({threadId:'child-one',section});
+  assert.equal(view.state,'available',section);assert.equal(view.readOnly,true,section);assert.match(view.notice,/Configuration changes remain unavailable/);
+  assert.ok(view.items.every(i=>i.configurable!==true),section);assert.ok(!/NEVER RETURN|SECRET TOKEN/.test(JSON.stringify(view)),section);
+ }
+ assert.equal(f.calls.find(c=>c.method==='thread/list').params.ancestorThreadId,'parent-one');
+ const count=f.calls.length;
+ for(const [section,id] of [['skills','/skills/fixture/SKILL.md'],['apps','app_fixture'],['mcp','native_tool']])for(const expectedVersion of [undefined,'old','v1']){
+  await assert.rejects(f.native.configure({threadId:'child-one',section,id,enabled:false,expectedVersion}),error=>error.status===409&&/remain read-only/.test(error.message));
+ }
+ assert.equal(f.calls.length,count,'rejected changes must not even refresh catalogs or inspect a replacement thread');
+ assert.ok(f.calls.every(c=>!/write|resume|start|turn\/|goal|reconcile|reload/.test(c.method)));
+});
+
+test('a runtime changed during the settings read cannot inherit the previous connection’s write capability',async()=>{
+ const f=fixture(),call=f.codex.call.bind(f.codex);
+ f.codex.call=async(method,params)=>{const result=await call(method,params);if(method==='config/read'&&params.includeLayers)f.codex.initializeResult.userAgent=macUserAgent;return result;};
+ await assert.rejects(f.native.configure({section:'apps',id:'app_fixture',enabled:false,expectedVersion:'v1'}),error=>error.status===409&&/remain read-only/.test(error.message));
+ assert.ok(!f.calls.some(c=>c.method==='config/value/write'));
+});
