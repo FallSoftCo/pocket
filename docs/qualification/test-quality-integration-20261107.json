@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-07",
+  "status": "test-only-candidate-qualified",
+  "base": "77636b61",
+  "scope": "Six composed synthetic HTTP/native-wire/DOM journeys plus one fixture-contract rejection check. No production source/gate changes.",
+  "audit": "../TEST-QUALITY-AUDIT.md",
+  "command": "NEXTCOMP_JSDOM_MODULE=/home/ai/Development/nextcomp-codex-only-20261107/web-qa/node_modules/jsdom/lib/api.js node scripts/qualify-production-integration.mjs /home/ai/Development/nextcomp-codex-only-20261107/integration-quality-run03",
+  "receipt": {
+    "path": "/home/ai/Development/nextcomp-codex-only-20261107/integration-quality-run03/receipt.json",
+    "sha256": "9eb342c7840c0147f6119d873af45597f1272a2f40bc876cbcab8643d38e541c",
+    "sourceFingerprint": "7788c51da6345373f8aaf695b2f473fe34b7c77d86d96409be9039d39d88f1d6",
+    "startedAt": "2026-11-07T20:47:02.902Z",
+    "finishedAt": "2026-11-07T20:47:13.258Z",
+    "checks": [
+      {
+        "name": "production-composition",
+        "args": [
+          "--test",
+          "tests/production-continuity.integration.test.mjs",
+          "tests/production-controls.dom.mjs"
+        ],
+        "exitCode": 0,
+        "durationMs": 7331,
+        "log": "production-composition.log",
+        "logSha256": "20e9c23262b29e9a94aa20b11293d3b88b4bd5f223cab82e09ed66ef134caa98",
+        "summary": {
+          "tests": 7,
+          "pass": 7,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "expectedFailure": null
+      },
+      {
+        "name": "reject-disabled-history-fence",
+        "args": [
+          "--test",
+          "--test-name-pattern=cold history replacement",
+          "tests/production-continuity.integration.test.mjs"
+        ],
+        "exitCode": 1,
+        "durationMs": 1378,
+        "log": "reject-disabled-history-fence.log",
+        "logSha256": "9837f0694f0f65c3f97222751c0be800edc86d80b18104a716621e4840ab2763",
+        "summary": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "expectedFailure": "Missing expected exception"
+      },
+      {
+        "name": "reject-request-id-only-key",
+        "args": [
+          "--test",
+          "--test-name-pattern=real request controls",
+          "tests/production-controls.dom.mjs"
+        ],
+        "exitCode": 1,
+        "durationMs": 1619,
+        "log": "reject-request-id-only-key.log",
+        "logSha256": "7d0a295de886ae6447e2816c83ce4b7dbb4331d6de076e0c1118dac23e48be6f",
+        "summary": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "expectedFailure": "REUSED_REQUEST_SECRET_MUST_CLEAR"
+      }
+    ]
+  },
+  "existingRegressionSlice": {
+    "command": "node --test tests/release-qualification.test.mjs tests/catalog-membership-server.test.mjs tests/history-server.test.mjs tests/web-native-history.test.mjs tests/conversation-control-recovery.test.mjs tests/send-identity-durable.test.mjs tests/outgoing-projection.test.mjs tests/native-execution.integration.test.mjs tests/native-configuration-integration.test.mjs",
+    "passed": 36,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 2503.599142,
+    "evidence": "Completed tool command output; no separate retained file log claimed. Historical release-policy tests use disposable local files, not retired runtimes."
+  },
+  "rejectedEvidence": [
+    {
+      "path": "/home/ai/Development/nextcomp-codex-only-20261107/integration-quality-run01/receipt.json",
+      "reason": "Request-ID-key mutation initially escaped because the test did not await refresh completion; fixed synchronization and retained this failed receipt."
+    }
+  ],
+  "negativeControls": {
+    "productionSourceModified": false,
+    "historyFenceRemoved": "Rejected by the cold stale response assertion",
+    "requestTokenRemovedFromCardKey": "Rejected by REUSED_REQUEST_SECRET_MUST_CLEAR",
+    "requireExpectedAssertionAndOneFailure": true
+  },
+  "runtime": {
+    "node": "22+ with built-in SQLite",
+    "nativeProtocol": "0.167.0 offline-generated JSON schemas",
+    "nativeRuntimeStarted": false,
+    "providerCalls": false,
+    "productionChanged": false,
+    "nativeAndroidOrPhoneTested": false
+  },
+  "limits": [
+    "Native RPC authority is synthetic; schema validation establishes shape only.",
+    "DOM is JSDOM production components over real HTTP, not rendered browser/full web app or Android interaction.",
+    "Cold-history test applies the forwarded event to the production store explicitly; full web app event binding remains outside proof.",
+    "Existing CI includes new core HTTP integration via glob; composed DOM requires the explicit qualifier and existing JSDOM.",
+    "No whole-suite, native APK, provider, physical-phone, publication or deployment qualification claimed.",
+    "Changed backend/web inputs require a fresh output-directory qualifier run; historical receipt is not transferable."
+  ]
+}
