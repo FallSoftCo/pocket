@@ -8,7 +8,7 @@ import {inactiveArchiveReason} from '../server/session-archive.mjs';
 export async function archiveInactive({request,cutoff,save,protectedIds=[],apply=false}){
   const rows=new Map(),cursors=new Set();let cursor=null;
   do{
-    const page=await request('/api/threads?view=coordinator'+(cursor?'&cursor='+encodeURIComponent(cursor):''));
+    const page=await request('/api/threads?view=coordinator&includeChildren=true'+(cursor?'&cursor='+encodeURIComponent(cursor):''));
     if(page.refreshPending)throw Error('Catalog is still refreshing; no archive sweep started');
     for(const t of page.threads||[])rows.set(t.id,t);
     cursor=page.nextCursor||null;

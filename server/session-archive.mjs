@@ -1,9 +1,10 @@
 import {milliseconds} from './session-catalog.mjs';
 
-/** Never use catalog fetch time as work recency. updatedAt is a conservative
- * fallback for older runtimes that do not expose recencyAt. */
+/** Native work recency wins over metadata edits (rename/index/migration).
+ * Only runtimes without work timestamps use updatedAt as a fallback. */
 export function archiveActivityAt(thread){
-  return Math.max(...['recencyAt','activityAt','updatedAt','createdAt'].map(key=>milliseconds(thread?.[key])));
+  const work=Math.max(milliseconds(thread?.recencyAt),milliseconds(thread?.activityAt));
+  return Math.max(work||milliseconds(thread?.updatedAt),milliseconds(thread?.createdAt));
 }
 export function inactiveArchiveReason(thread,cutoff){
   if(!Number.isSafeInteger(cutoff)||cutoff<=0)return 'Invalid archive cutoff';

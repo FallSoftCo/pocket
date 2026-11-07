@@ -14,6 +14,20 @@
   },
   "requests": [
     {
+      "id": "archive-month-horizon-correction-20261107",
+      "request": "Old sessions still appear when scrolling beyond the month horizon. Fix actual archive coverage and work-age criteria across normal list pagination.",
+      "status": "implementation and real catalog cleanup in progress",
+      "findings": [
+        "Original1370 workstation archives remained absent; current paginated catalog still had1018 old entries,768 not present in original cleanup inventory.",
+        "Coordinator inventory excluded spawned children; cleanup incorrectly used maximum metadata updatedAt as activity and protected every loaded idle session."
+      ],
+      "implementation": [
+        "Include native delegated-session metadata in explicit cleanup inventory, with the same private-controller exclusions.",
+        "Use real recency/activity when present; metadata updatedAt is only a fallback for runtimes without work time.",
+        "Retain active/recent work and its ancestors; archive acknowledged idle work without worker/model starts or deleting history."
+      ]
+    },
+    {
       "id": "message-local-micro-timestamps-20261107",
       "request": "Show terse absolute device-local timestamps with agent messages on Android and web, not relative age.",
       "status": "published Android171/alpha153; web and backend live; Mac projection live, older native schema lacks item times",
