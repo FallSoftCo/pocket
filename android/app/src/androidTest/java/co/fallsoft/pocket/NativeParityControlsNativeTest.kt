@@ -40,8 +40,9 @@ class NativeParityControlsNativeTest {
         await{compose.onAllNodesWithText(text,useUnmergedTree=true).fetchSemanticsNodes().any{!it.boundsInRoot.isEmpty}}
         compose.onNodeWithText(text,useUnmergedTree=true).assertIsDisplayed()
     }
-    private fun tap(text:String){
-        val matcher=hasText(text) and hasClickAction() and isEnabled()
+    private fun tap(text:String,inDialog:Boolean=false){
+        val action=hasText(text) and hasClickAction() and isEnabled()
+        val matcher=if(inDialog)action and hasAnyAncestor(isDialog()) else action
         await{compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()}
         val target=compose.onAllNodes(matcher).onFirst()
         // Dialog and footer menu actions can require a genuine scroll into view.
@@ -120,6 +121,12 @@ class NativeParityControlsNativeTest {
             assertEquals("request-token-3",form.s("requestToken"));assertEquals("accept",form.s("actionId"))
             assertEquals("Selected synthetic files",form.getJSONObject("content").s("scope"))
             await{compose.onAllNodesWithText("Synthetic native form",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            // Resolving the request keeps the review drawer open for inspection.
+            // Close its actual visible control before interacting with the footer.
+            visible("No unanswered questions")
+            compose.onNodeWithContentDescription("Close questions").assertIsDisplayed().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithContentDescription("Close questions").assertIsNotDisplayed()
 
             // A terminal confirmation opened on A must disappear on same-ID source B.
             menu("Background terminals");visible("Alpha synthetic watcher");tap("Terminate");visible("Terminate this process?")
@@ -146,7 +153,8 @@ class NativeParityControlsNativeTest {
             assertEquals("Alpha",forkCall.s("origin"));assertEquals("alpha-turn",forkRequest.s("turnId"))
             val originalId=forkRequest.s("id")
             await{prefs.getString("conversationOperation:$thread",null)?.contains(originalId)==true}
-            tap("Close")
+            tap("Close",inDialog=true)
+            await{compose.onAllNodesWithText("Conversation & workspace",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
             assertEquals("Alpha retained draft",prefs.getString("draft:$thread",null))
             qa("resolve-fork",JSONObject())
             menu("Context & files");tap("Check saved operation")
@@ -161,7 +169,8 @@ class NativeParityControlsNativeTest {
             await{prefs.getString("draft:$thread",null)=="Alpha edited draft"}
             menu("Context & files");tap("Revert before turn & edit");tap("Confirm")
             await{calls("/api/threads/$thread/conversation-operations").size==2}
-            tap("Close")
+            tap("Close",inDialog=true)
+            await{compose.onAllNodesWithText("Conversation & workspace",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
             await{editorText().contains("Alpha original request")}
             assertEquals("Alpha edited draft\n\nAlpha original request",editorText())
             assertEquals("Beta retained draft",prefs.getString("environment:parity_beta:draft:$thread",null))
@@ -174,7 +183,7 @@ class NativeParityControlsNativeTest {
             tap("Skills");visible("Synthetic skill")
             assertTrue("Settings did not request the selected host",calls("/api/native/configuration","GET").any{it.s("origin")=="Alpha"&&it.s("query").contains("section=skills")})
             capture("06-native-settings")
-            tap("Close")
+            tap("Close",inDialog=true)
             assertEquals("Alpha edited draft\n\nAlpha original request",prefs.getString("draft:$thread",null))
         }catch(failure:Throwable){runCatching{capture("failure")};throw failure}
     }
