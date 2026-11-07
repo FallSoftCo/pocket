@@ -80,7 +80,7 @@ private data class TerminalConfirmation(val destination:EnvironmentRequest,val t
         if(Pocket.selected!=terminal.thread||Pocket.captureEnvironment()?.matches(terminal.destination)!=true){problem="The selected session changed. Open its terminals again.";return@TextButton}
         val destination=terminal.destination;val process=terminal.process;receipts[process]="Submitting termination…"
         scope.launch{try{
-            val result=Pocket.apiEnvironment(destination,"/api/threads/${terminal.thread}/terminals/terminate",JSONObject().put("processId",process));check(result.optBoolean("ok")){"Termination receipt missing"};receipts[process]="Termination accepted. Refresh to inspect current state."
+            val result=Pocket.apiEnvironment(destination,"/api/threads/${terminal.thread}/terminals/terminate",JSONObject().put("processId",process));check(result.optBoolean("ok")&&result.opt("terminated") is Boolean){"Termination receipt missing"};receipts[process]=if(result.optBoolean("terminated"))"Termination accepted. Refresh to inspect current state." else "No matching background process was terminated. Refresh to inspect current state."
         }catch(e:Exception){receipts[process]=if(e is PocketApiException&&e.status in 400..499)PocketNetwork.error(e) else "Termination unconfirmed. Refresh before another attempt."}}
     }){BilingualLabel("Confirm terminate",color=Coral)}},dismissButton={TextButton({confirmation=null}){BilingualLabel("Keep running")}})}
 }
