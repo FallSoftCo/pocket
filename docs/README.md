@@ -1,11 +1,12 @@
 # NextComp documentation
 
-NextComp provides Android and web control of vanilla Codex sessions and native subagents across paired environments. The 168 candidate removes room/LAX/Hollywood entry points, including coordinator room tools. Historical room documentation below describes retired experiments, not supported product capabilities. Original private room records remain retained; they are never converted into Codex commands. Read [the Codex-only transition](CODEX-ONLY.md) for scope and qualification.
+NextComp provides Android and web control of vanilla Codex sessions and native subagents across paired environments. Rooms, LAX and Hollywood were retired from the supported product on 2026-11-07. Their documentation and original evidence remain historical; they do not describe selectable backends or authorize restarting retired services. See [the Codex-only transition](CODEX-ONLY.md).
 
+As of 2026-11-07, Android **174 / 0.5.0-alpha.156** is published on both paired update channels, and the corresponding backend/web source **b12de8ea** is live on the workstation and Mac. Physical handset installation of 174 is **not verified**; the last observed installed version is **172**. [Current integration and delivery evidence](qualification/codex-parity-integration-20261107.json) separates publication, synthetic/emulator qualification and physical-phone observations.
+
+The current controls include native session branching/context actions, configuration and installed-tool inspection, supported questions/approvals, retained command output and background terminals where the selected runtime supports them. The qualified Mac 0.163 runtime exposes read-only catalogs and terminal listing; configuration changes, retained output and termination remain unavailable there. [Capabilities and limits](CAPABILITIES.md) are method-specific; this is not a claim of complete Codex TUI parity.
 
 ## Understand and evaluate
-
-- [Coordinator room conversation and intent](COORDINATOR-ROOM-INTENTS.md): source-bound room history, human instructions and explicit create-and-start; candidate qualification/recovery and owning release limits.
 
 - [NextComp briefing for Tibo and agent reviewers](NEXTCOMP-BRIEF.md): the complete account of what a person can do, how the system fits personal-agent computing, and what warrants a technical conversation.
 - [Capabilities and evidence](CAPABILITIES.md): user actions, implementation entry points, versioned observations and unresolved gaps.
@@ -18,10 +19,8 @@ NextComp provides Android and web control of vanilla Codex sessions and native s
 
 ## Install and operate
 
-- [Self-service terminal forks](TERMINAL-FORK.md): native session succession, retained dependency scopes and qualification limits; disabled pending owning release.
 - [Named development environments](MULTI-ENVIRONMENT.md): retained remote pairings, source-bound actions and the phone profile.
 
-- [Codex and Losangelex backend selection](LOSANGELEX-BACKEND.md): interaction modes, private registration, team controls and origin-bound attention.
 - [Browser client for Pixelbook Go](WEB-CLIENT.md): private gateway, keyboard/touch flows, pairing, PWA and browser limitations.
 - [Setup and everyday use](GETTING-STARTED.md), [deployment](DEPLOYMENT.md) and [Firebase configuration](FIREBASE.md).
 - [Android local execution and phone control](ANDROID_LOCAL.md).
@@ -29,7 +28,6 @@ NextComp provides Android and web control of vanilla Codex sessions and native s
 - [Notification read handling](NOTIFICATION-READS.md) and [spoken captions](SPEECH-CAPTIONS.md).
 - [Speech activity tracking](SPEECH-USAGE.md): local generation/playback counters, blocked-audio safeguards and billing limits.
 - [Automatic work record](WORK-RECORD.md): requests, observed outputs, file evidence and linked follow-ups; implementation candidate, with private retention and qualification limits.
-- [Context snapshots and independent workers](CONTEXT-CONTROL.md): verified provider branching, portable manifests, compaction provenance and Hollywood coordination design; not a deployed context editor.
 - [Work updates](WORK-UPDATES.md): scheduled reports outside coordinator chat, retained history, exact unread state and direct session links.
 - [Saved typed replies and recovery](CLIENT-REPLY-RECOVERY.md): durable source-bound intents, validated receipts and unknown-delivery limits.
 - [Audited task continuation](CONTINUATION.md): evidence-backed resumption, durable checkpoints, sparse recovery and protected stops.
@@ -40,6 +38,13 @@ NextComp provides Android and web control of vanilla Codex sessions and native s
 - [Inline language immersion](ITALIAN-VIRTUAL-IMMERSION.md), [reading and motion design](IMMERSION-PERCEPTION-DESIGN.md), and [versioned qualification](qualification/automatic-inline-cycling.md).
 - [Maintaining the backend](MAINTAINER.md) and [release process](RELEASING.md).
 - [Shared computer-use ownership](COMPUTER-USE.md): optional, separately installed broker and cooperative worker instructions; direct tools are not automatically fenced by NextComp.
+
+## Historical designs and retired integrations
+
+- [Coordinator room conversation and intent](COORDINATOR-ROOM-INTENTS.md): retired room workflow and its original qualification limits.
+- [Codex and Losangelex backend selection](LOSANGELEX-BACKEND.md): historical backend/team contract; Losangelex is no longer selectable.
+- [Context snapshots and independent workers](CONTEXT-CONTROL.md): earlier branching and Hollywood coordination design; consult the current capability map for implemented native session controls.
+- [Self-service terminal forks](TERMINAL-FORK.md): historical terminal succession proposal, distinct from current native conversation branching.
 
 ## Read the evidence correctly
 
