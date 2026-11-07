@@ -3783,6 +3783,6 @@
     "request": "Mac archive reports active writer; three legacy room agents display no messages or status in stock clients.",
     "implementation": "Use native originator lax-host-agent to exclude retired room workers from normal, archived, search, cached and coordinator stock discovery; retain durable internal ownership across reconnect.",
     "recovery": "Three specifically reported idle legacy threads archived once through their owning runtime, with accepted receipts and archived-path readback. No model start or stock runtime restart.",
-    "verification": "19 focused registry/catalog checks pass; live gateway deployment pending."
+    "verification": "Live on Mac and workstation; 19 focused registry/catalog checks passed. Three owner-acknowledged archives retained, no writer handles remain. Mac authenticated catalog contains four ordinary sessions, each returns history in 93–316 ms. No physical phone UI inspection."
   }
 }

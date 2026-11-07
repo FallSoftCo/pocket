@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-07",
+  "sourceCommit": "7df7c6732501f8868657ae527a345eb8aac39ad8",
+  "cause": "Legacy room metadata shared the stock Codex discovery directory; paginated histories and loaded writers belonged to the separate legacy runtime. Stock history was empty and stock archive correctly refused its foreign writer.",
+  "fix": "Explicit native lax-host-agent provenance is registered as retired internal ownership, excluding normal/search/cached/archived/coordinator stock catalogs without title heuristics.",
+  "recovery": {
+    "reportedTargets": 3,
+    "owningRuntimeArchivesAcknowledged": 3,
+    "allTargetsIdleBeforeArchive": true,
+    "archiveFilesRetained": true,
+    "remainingTargetWriterHandles": 0,
+    "modelsStarted": 0,
+    "stockDaemonRestarted": false
+  },
+  "deployment": {
+    "mac": "live",
+    "workstation": "live",
+    "workstationDigest": "f6cf86147f83b476cda488bda066dc0aa3d585a0c95540f74136d881b078485c",
+    "macModuleSha": "81faaaca08825f13f8b9d2e041358a8ebb78c9b87ba4129a8c09206ecc5ad5b5",
+    "pairingAndQueuedRequestsPreserved": true,
+    "newApkRequired": false
+  },
+  "validation": {
+    "focusedChecks": 19,
+    "ordinaryMacCatalogCount": 4,
+    "ordinaryMacHistoryHttp": [
+      200,
+      200,
+      200,
+      200
+    ],
+    "historyReadMilliseconds": [
+      316,
+      128,
+      96,
+      93
+    ],
+    "physicalPhoneUi": "not inspected",
+    "clientEffect": "Both Android and web consume the corrected backend catalog"
+  },
+  "limits": [
+    "Retained legacy histories remain in their owning runtime store; no cross-runtime history migration claimed.",
+    "No blanket legacy runtime stop or unrelated worker interruption."
+  ]
+}
