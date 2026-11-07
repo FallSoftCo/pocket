@@ -160,3 +160,36 @@ runs with `always()` and retains dependency, backend and DOM logs for seven days
 No native/emulator job, production service, publication gate or release policy is
 changed. This closes the synthetic browser CI omission, not the native/provider,
 physical-phone, rendered-layout or full `web/app.mjs` gaps in the table above.
+
+## Release173 follow-through and next boundary
+
+The November7 owning release subsequently passed15 required native cases, exact
+optimized request/response ordering, reopen and question dismissal, and actual
+emulator touch opening Settings/Skills and Context. These are15 cases including
+storage/component checks, not15 full user journeys. The original archive
+observation failure and optimized preference-setup failure remain retained.
+The corrected preference helper verifies isolation after installation and restores
+both the main and backup preference files; it does not weaken ambiguity assertions.
+
+Workstation/web and Mac read-only catalogs are live. Both private update channels
+offer173; physical handset installation and interaction remain separate evidence.
+Mac0.163 mutations and terminal controls are intentionally unavailable pending
+method-specific capability and presentation qualification. Unsupported controls
+must not be reported as exercised product behavior.
+
+The next bounded integration is a **cold web-page restart with an unknown human
+send**, distinct from an unknown conversation-control operation. It uses the
+actual app, gateway, backend and outbox with a disposable native-wire substitute.
+After one synthetic native dispatch loses acknowledgement, recreate only the owned
+page with its original paired storage. Assert receipt reads retain the original
+source/message ID, draft and unknown state, with no second reply POST or native
+dispatch. The backend stays running; this cannot be called browser-process or
+backend-restart proof. Existing backend-restart and pane-reopen tests remain.
+
+Subsequent gaps, in order: rendered configuration writes/conflict refusal;
+Android output paging and structured approvals; source-bound file insertion,
+directory changes and child-agent navigation. Each needs a composed journey,
+not another disconnected unit-count target. Root owns release/phone work;
+integration-quality owns the cold-page journey and execution-parity owns the
+Mac read-only terminal presentation. Monitoring remains active without recurring
+model wake timers or unrelated worker activation.
