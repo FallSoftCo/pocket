@@ -6,8 +6,13 @@ import {projectNativeTimeline} from '../../server/native-timeline.mjs';
 
 const port=Number(process.env.PORT||19991);
 const threadId='parity-thread',forkId='parity-fork';
-const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false}));
+const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified'}));
 const calls=[];
+function executionFeatures(origin){
+ if(origin.terminalMode==='missing')return undefined;
+ const readOnly=origin.terminalMode==='read-only';
+ return {backgroundTerminals:{state:'available',readOnly,mutation:readOnly?{state:'unavailable',reason:'Synthetic runtime permits terminal inspection only.'}:{state:'available'}},executionOutput:{state:'available'}};
+}
 function frame(socket,value){const b=Buffer.from(JSON.stringify(value));socket.write(Buffer.concat([b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]),b]));}
 function head(origin,id=threadId){return {threadId:id,epoch:origin.epoch,version:origin.revision};}
 function changed(origin){origin.revision++;for(const socket of origin.sockets)frame(socket,{type:'timeline',threadId,version:origin.revision,reload:true,historyHead:head(origin)});}
@@ -32,6 +37,10 @@ for(const origin of origins){
   calls.push({origin:origin.name,path,query:url.search,method:req.method,input});
   let body={};
   if(path==='/_qa/state')body={calls:calls.filter(c=>!c.path.startsWith('/_qa/')),operations:[...origin.operations.values()]};
+  else if(path==='/_qa/terminal-mode'){
+   if(!['qualified','read-only','missing'].includes(input.mode)){res.writeHead(400).end('{"error":"Unknown synthetic terminal mode"}');return;}
+   origin.terminalMode=input.mode;body={ok:true};
+  }
   else if(path==='/_qa/question'){origin.question=input.version;changed(origin);body={ok:true};}
   else if(path==='/_qa/resolve-fork'){for(const op of origin.operations.values())if(op.kind==='fork')op.state='accepted';body={ok:true};}
   else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
@@ -52,7 +61,9 @@ for(const origin of origins){
    origin.operations.set(body.id,body);
   }
   else if(/\/conversation-operations\/[^/]+$/.test(path)){body=origin.operations.get(path.split('/').at(-1));if(!body){res.writeHead(404).end('{"error":"Original receipt missing"}');return;}}
-  else if(path.endsWith('/terminals'))body={data:[{processId:'shared-process-id',command:`${origin.name} synthetic watcher`,cwd:metadata(origin).cwd,cpuPercent:0}],nextCursor:null};
+  else if(path==='/api/native/capabilities')body={runtime:{version:origin.terminalMode==='qualified'?'0.167.0':'0.168.0'},features:executionFeatures(origin)};
+  else if(path.endsWith('/terminals')&&origin.terminalMode==='read-only'&&(url.searchParams.getAll('terminalPresentation').length!==1||url.searchParams.get('terminalPresentation')!=='1')){res.writeHead(409).end('{"error":"Update this client to inspect read-only background terminals in this environment."}');return;}
+  else if(path.endsWith('/terminals'))body={data:[{processId:'shared-process-id',command:`${origin.name} synthetic watcher`,cwd:metadata(origin).cwd,cpuPercent:0}],nextCursor:null,features:executionFeatures(origin)};
   else if(path.endsWith('/terminals/terminate'))body={ok:true,terminated:true};
   else if(path==='/api/native/configuration'){
    const section=url.searchParams.get('section')||'settings';

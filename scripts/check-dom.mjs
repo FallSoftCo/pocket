@@ -64,6 +64,11 @@ try{
   const [result]=results;assert.equal(result.ok,true);assert.equal(result.journeys?.length,6);assert.equal(new Set(result.journeys).size,6);
   check.journeys=result.journeys;
  });
+ await run('execution-capabilities-dom',['--test','--test-reporter=tap','tests/native-execution.dom.mjs'],env,(output,check)=>{
+  const summary=Object.fromEntries([...output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gm)].map(m=>[m[1],Number(m[2])]));
+  check.summary=summary;
+  assert.deepEqual(summary,{tests:5,pass:5,fail:0,cancelled:0,skipped:0,todo:0},'Execution capability and source-binding DOM journeys must execute without skips.');
+ });
  await run('app-controls-dom',['--experimental-vm-modules','--test','--test-reporter=tap','tests/web-app-controls.dom.mjs'],{...env,NEXTCOMP_TEST_WEB_SOURCE_ROOT:''},(output,check)=>{
   const summary=Object.fromEntries([...output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gm)].map(m=>[m[1],Number(m[2])]));
   check.summary=summary;

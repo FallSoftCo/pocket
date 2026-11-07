@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "date": "2026-11-07",
-  "status": "android173-published-monitoring-and-delivery-active",
+  "status": "android174-published-both-channels-monitoring-and-followup-active",
   "base": "fa30781d",
   "implementationCommits": [
     "ef5bfe03",
@@ -40,9 +40,9 @@
     },
     "production": {
       "changed": true,
-      "scope": "Workstation backend and both existing web gateways",
-      "releaseDigest": "0b995e80de94bd195ebf6c96040a98e69bcc2f323a89a073add432d932e32269",
-      "sourceCommit": "61c62a6eaf28a74cb0efa0199eca00654eb70a08",
+      "scope": "Workstation backend, both web gateways and Mac backend",
+      "releaseDigest": "477b9eb0e6e8336c1f058d67e7109998128ef0835aaf6aa75543aadc64f18cce",
+      "sourceCommit": "b12de8ea037d85027ea625f309438f4d3c716563",
       "phoneInstalled": false,
       "nativeDaemonRestarted": false,
       "nativeModelOrTerminalActionsIssued": false,
@@ -50,11 +50,11 @@
       "actualTailnetWebAssetsMatch": true
     },
     "fullBackend": {
-      "tests": 736,
-      "passed": 736,
+      "tests": 740,
+      "passed": 740,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 70994,
+      "durationMs": 91000.346953,
       "productionDependencyAdvisories": 0
     },
     "renderedWeb": {
@@ -95,7 +95,8 @@
         "conversation",
         "execution",
         "actual-app-controls",
-        "production-composition"
+        "production-composition",
+        "execution-capabilities"
       ],
       "passed": true,
       "actualAppModuleCount": 36,
@@ -151,35 +152,122 @@
       "sourceVersionGateUnchanged": false,
       "readOnlyProfileQualified": true,
       "configurationWritesAvailable": false,
-      "terminalControlsAvailable": false,
+      "terminalControlsAvailable": "listing only with presentation negotiation",
       "nativeDaemonRestarted": false,
       "backendLive": true,
       "historyReadMs": [
-        31,
-        25
+        16
       ],
-      "catalogReadMs": 41,
-      "qualification": "14 focused tests and actual read-only backend requests; no model work or native runtime upgrade"
+      "catalogReadMs": 37,
+      "qualification": "14 focused tests and actual read-only backend requests; no model work or native runtime upgrade",
+      "terminalTerminationAvailable": false
     },
     "delivery": {
-      "workstationChannel": 173,
+      "workstationChannel": 174,
       "ownerAnnouncements": 1,
-      "notificationId": 2832,
-      "macChannel": 173,
+      "notificationId": 2833,
+      "macChannel": 174,
       "phoneInstallation": "not yet verified",
       "phoneInstalledVersionLastObserved": 172,
-      "macChannelRestartRequired": false
+      "macChannelRestartRequired": false,
+      "macChannelState": "Published with exact compatible signed artifact; no second announcement",
+      "pushState": "accepted_by_fcm",
+      "pushAttempts": 1
+    },
+    "coldPageRecovery": {
+      "state": "passed",
+      "candidateBase": "f138753d",
+      "testCommit": "3eec49f8",
+      "realComponents": [
+        "web app",
+        "gateway",
+        "backend",
+        "SQLite outbox"
+      ],
+      "substitution": "schema-validated disposable native wire",
+      "replyPosts": 1,
+      "nativeDispatches": 1,
+      "originalReceiptReadsAfterPageRecreation": 2,
+      "samePairingSourceMessageIdAndDraft": true,
+      "backendProcessRetained": true,
+      "negativeControl": "served app replay mutant produced2 POSTs and failed mandatory assertion; native dedup retained1dispatch",
+      "layoutQualified": false,
+      "captureErrorsRetained": true,
+      "retainedFailures": [
+        "strict fixture missing legitimate thread/items/list",
+        "diagnostic screenshot timeout"
+      ],
+      "browserProcessRestarted": false,
+      "productionMutated": false,
+      "currentSourceRerun": "b12de8ea037d85027ea625f309438f4d3c716563",
+      "currentSourceRerunPassed": true
+    },
+    "terminalFollowup": {
+      "sourceCommits": [
+        "792e6348",
+        "dd734969",
+        "7674a7a5"
+      ],
+      "integratedCommits": [
+        "9c28c79c",
+        "f226db72",
+        "03c8503f",
+        "b12de8ea"
+      ],
+      "state": "backend-and-web-live-android174-published-both-channels",
+      "apiTestsPassed": 18,
+      "executionDomCasesPassed": 5,
+      "requiredDomLanesPassed": 5,
+      "androidCompileSeconds": 17,
+      "androidNativeQualification": "passed extended original journey and exact optimized read-only terminal review",
+      "macListOnly": true,
+      "unqualifiedOutputAndTerminationBlocked": true,
+      "sourceCapturedBeforeRequests": true,
+      "perRequestPresentationNegotiation": true,
+      "legacyMacClientRejectedBeforeNativeDispatch": true,
+      "remoteThreadRouting": "Captured scoped thread routes through existing gateway without a duplicate environment prefix"
+    },
+    "native174": {
+      "state": "published-both-channels",
+      "versionCode": 174,
+      "versionName": "0.5.0-alpha.156",
+      "passed": 15,
+      "failed": 0,
+      "caseScope": "Required native cases include component checks, not15 complete user journeys.",
+      "extendedParityJourneySeconds": 114.302,
+      "unitPerVariant": {
+        "tests": 477,
+        "skipped": 2,
+        "failures": 0
+      },
+      "optimizedCanonical": {
+        "exactShippingApk": true,
+        "requestBeforeResponse": true,
+        "reopenOriginalExactlyOnce": true,
+        "questionSkipOnce": true
+      },
+      "optimizedReadOnlyTerminals": {
+        "actualEmulatorTouch": true,
+        "watcherVisible": true,
+        "unsupportedTerminationAbsent": true,
+        "presentationNegotiated": true,
+        "preferencesRestored": true,
+        "workSubmissions": 0
+      },
+      "liveAccountEmulatorAudioPassed": true,
+      "physicalPhoneTested": false,
+      "phoneCompatibleSha256": "d4a55255671f0ea6bdcb5d14e0f05299fc3b98c6fbf5b14f85b2ae24e0c5271c"
     }
   },
   "remaining": [
     "Verify actual physical phone installation and interaction separately.",
-    "Qualify actual web page restart with original unknown human-send receipt and no replay.",
-    "Add source-bound Mac read-only terminal presentation without exposing unqualified mutation.",
-    "Keep supervised monitoring active; full TUI parity is not complete."
+    "Retain required Pocket review gate on PR15; backend and Android CI have passed.",
+    "Review narrow footer/menu ergonomics and remaining notification/history integration gaps.",
+    "Continue useful integration monitoring; full TUI parity remains open."
   ],
   "limits": [
     "Managed worktree creation, plugin installation, hook editing and native user-verification flow are not implemented remote operations; do not claim full TUI parity.",
-    "Native mutations qualified against0.167.0; qualified Mac0.163 ARM64 family exposes read-only catalogs, with configuration writes and terminal controls explicitly unavailable.",
+    "Native mutations qualified against0.167.0; qualified Mac0.163 ARM64 family exposes read-only catalogs, with configuration writes, terminal termination and retained output explicitly unavailable; terminal listing read-only.",
     "Unit/HTTP/DOM fixtures and Kotlin compilation do not prove real phone interaction or release readiness."
   ]
 }

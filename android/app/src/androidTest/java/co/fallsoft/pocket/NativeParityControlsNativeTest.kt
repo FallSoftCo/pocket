@@ -146,8 +146,26 @@ class NativeParityControlsNativeTest {
             compose.waitForIdle()
             compose.onNodeWithContentDescription("Close questions").assertIsNotDisplayed()
 
-            // A terminal confirmation opened on A must disappear on same-ID source B.
-            menu("Background terminals");visible("Alpha synthetic watcher");tap("Terminate");visible("Terminate this process?")
+            // Inspection remains useful when mutation is explicitly unavailable,
+            // and an absent descriptor must not silently grant termination.
+            qa("terminal-mode",JSONObject().put("mode","read-only"))
+            menu("Background terminals");visible("Alpha synthetic watcher")
+            visible("Synthetic runtime permits terminal inspection only.")
+            assertTrue("Native terminal read did not negotiate presentation",calls("/api/threads/$thread/terminals","GET").last().s("query").contains("terminalPresentation=1"))
+            absent("Terminate");absent("Confirm terminate");absent("Terminate this process?")
+            assertTrue("Read-only inspection dispatched termination",calls("/api/threads/$thread/terminals/terminate").isEmpty())
+            capture("02a-terminals-read-only")
+            qa("terminal-mode",JSONObject().put("mode","missing"));tap("Refresh terminals")
+            visible("Read-only inspection. Termination is unavailable on this runtime.")
+            visible("Alpha synthetic watcher")
+            absent("Terminate");absent("Confirm terminate");absent("Terminate this process?")
+            assertTrue("Missing descriptor dispatched termination",calls("/api/threads/$thread/terminals/terminate").isEmpty())
+            capture("02b-terminals-missing-descriptor")
+
+            // Restoring the qualified runtime restores the actual action. Its
+            // confirmation on A must still disappear on same-ID source B.
+            qa("terminal-mode",JSONObject().put("mode","qualified"));tap("Refresh terminals")
+            visible("Alpha synthetic watcher");tap("Terminate");visible("Terminate this process?")
             navigate("parity_beta");absent("Terminate this process?");absent("Alpha synthetic watcher")
             assertTrue(calls("/api/threads/$thread/terminals/terminate").isEmpty())
             menu("Background terminals");visible("Beta synthetic watcher");tap("Terminate");tap("Confirm terminate")
