@@ -3789,6 +3789,6 @@
     "request": "Workstation still lists unusable sessions; fix catalog lifecycle, not individual titles.",
     "cause": "Saved catalog mixed ephemeral native runtimes with durable sessions and ignored definitive native metadata absence. Audit identified 25 ephemeral entries plus 3 stale native-absent records among 159 displayed entries.",
     "implementation": "Native residency and ownership govern all catalog admission. Temporary state persists through reconnect but explicit native persistence restores membership. Definitive identity-bound native absence is retained separately from archives/outages; fresh evidence restores membership, late failures cannot overtake newer evidence, and unresolved human outgoing receipts remain protected.",
-    "validation": "Actual gateway restart/search/cursor/coordinator/new-event/persistence journey plus 22 focused checks. Read-only candidate against real current runtime removed exactly 28 affected entries, retained all 42 delegated histories, and started zero models. Production activation pending."
+    "validation": "Deployed to workstation: 159 -> 131 entries, exactly 28 confirmed-unreadable listings removed, 42 child histories retained. Authenticated Tailscale readback matches. All 24 legacy-history sessions read successfully through supported fallback. Real gateway lifecycle journey and 22 focused checks pass. Native workers, pairing, unknown/queued outgoing receipts and data retained; physical phone UI not independently inspected."
   }
 }

@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-07",
+  "sourceCommit": "36d6255348a498b64c77a8e747e904250f3e0e59",
+  "releaseDigest": "0a54db4416d5fb9b68fa78ed0f3d51c8872a7b1957de4c467cac38f2f10cef22",
+  "scope": "Workstation saved Codex conversation catalog; Android and web consume this backend.",
+  "before": {
+    "displayed": 159,
+    "nativeMetadataAbsent": 28,
+    "ephemeral": 25,
+    "stalePreviouslyPersistent": 3
+  },
+  "invariants": [
+    "Ephemeral native runtimes are not durable saved conversations.",
+    "Explicit native persistence can admit the same identity; product ownership cannot be overridden.",
+    "Exact identity-bearing native absence is separate from archive and transient transport failure.",
+    "Fresh evidence wins over an older negative result; overlapping read tracking is released.",
+    "Unresolved human outgoing delivery prevents silent removal.",
+    "Canonical external archive cannot be resurrected by the saved metadata cache.",
+    "Saved histories, drafts and receipts are retained."
+  ],
+  "validation": {
+    "focusedChecks": 22,
+    "realHttpNativeFixture": [
+      "startup hydration",
+      "normal/search/pagination/coordinator catalogs",
+      "new ephemeral event",
+      "gateway restart",
+      "native persistence transition",
+      "transient failure retention",
+      "native disappearance and reappearance",
+      "external archive and repeat refresh"
+    ],
+    "liveCandidateModelsStarted": 0,
+    "liveReadback": {
+      "displayed": 131,
+      "confirmedUnusableRemoved": 28,
+      "remainingKnownUnreadable": 0,
+      "retainedChildren": 42,
+      "tailnetHttp": 200,
+      "tailnetCount": 131
+    },
+    "legacyFallback": {
+      "read": 24,
+      "successful": 24,
+      "maximumReadMilliseconds": 283
+    }
+  },
+  "deployment": {
+    "gateway": "live",
+    "nativeCodexRestarted": false,
+    "pairingAndOutboxPreserved": true,
+    "archiveMutations": 0,
+    "newApkRequired": false,
+    "macGatewayChangedThisRelease": false
+  },
+  "limits": [
+    "Physical Android UI was not independently inspected.",
+    "A legitimate empty persisted session remains a valid native session; lack of a preview alone does not remove it.",
+    "No broad claim that every future native error means absence."
+  ]
+}
