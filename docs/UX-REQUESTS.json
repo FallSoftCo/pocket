@@ -47,7 +47,7 @@
       ],
       "integration": "Root owns common integration, serialized heavy builds/native QA, compatible signing and release. Independent disk worktrees at fa30781d; no delegate production deployment.",
       "validation": "Meaningful native protocol and client journeys, preserved draft/source/receipt semantics, explicit unsupported and uncertain outcomes; deployment evidence separate from fixtures.",
-      "monitoring": "User explicitly asks continued monitoring, not completion. Finite Astra high followups: actual web page restart with unknown human-send receipt; Mac read-only terminal presentation. No recurring model polling or wake timers.",
+      "monitoring": "Active: cold web-page recovery passed against real app/gateway/backend/outbox with1POST/1dispatch and replay negative control. Mac read-only terminal candidate integrated; Kotlin and requiredDOM pass, native release qualification pending. No recurring model polling or wake timers.",
       "ui_owner": {
         "owner": "ui_standby",
         "model": "gpt-6-astra",

@@ -169,13 +169,58 @@
       "phoneInstallation": "not yet verified",
       "phoneInstalledVersionLastObserved": 172,
       "macChannelRestartRequired": false
+    },
+    "coldPageRecovery": {
+      "state": "passed",
+      "candidateBase": "f138753d",
+      "testCommit": "3eec49f8",
+      "realComponents": [
+        "web app",
+        "gateway",
+        "backend",
+        "SQLite outbox"
+      ],
+      "substitution": "schema-validated disposable native wire",
+      "replyPosts": 1,
+      "nativeDispatches": 1,
+      "originalReceiptReadsAfterPageRecreation": 2,
+      "samePairingSourceMessageIdAndDraft": true,
+      "backendProcessRetained": true,
+      "negativeControl": "served app replay mutant produced2 POSTs and failed mandatory assertion; native dedup retained1dispatch",
+      "layoutQualified": false,
+      "captureErrorsRetained": true,
+      "retainedFailures": [
+        "strict fixture missing legitimate thread/items/list",
+        "diagnostic screenshot timeout"
+      ],
+      "browserProcessRestarted": false,
+      "productionMutated": false
+    },
+    "terminalFollowup": {
+      "sourceCommits": [
+        "792e6348",
+        "dd734969"
+      ],
+      "integratedCommits": [
+        "9c28c79c",
+        "f226db72"
+      ],
+      "state": "candidate-not-deployed",
+      "apiTestsPassed": 18,
+      "executionDomCasesPassed": 5,
+      "requiredDomLanesPassed": 5,
+      "androidCompileSeconds": 17,
+      "androidNativeQualification": "pending",
+      "macListOnly": true,
+      "unqualifiedOutputAndTerminationBlocked": true,
+      "sourceCapturedBeforeRequests": true
     }
   },
   "remaining": [
     "Verify actual physical phone installation and interaction separately.",
-    "Qualify actual web page restart with original unknown human-send receipt and no replay.",
-    "Add source-bound Mac read-only terminal presentation without exposing unqualified mutation.",
-    "Keep supervised monitoring active; full TUI parity is not complete."
+    "Qualify terminal followup in native Android journey before its next versioned delivery.",
+    "Retain required Pocket review gate on PR15; backend and Android CI have passed.",
+    "Continue useful integration monitoring; full TUI parity remains open."
   ],
   "limits": [
     "Managed worktree creation, plugin installation, hook editing and native user-verification flow are not implemented remote operations; do not claim full TUI parity.",
