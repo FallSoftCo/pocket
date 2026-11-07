@@ -16,7 +16,7 @@
     {
       "id": "codex-native-parity-20261107",
       "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
-      "status": "Workstation backend/web candidate live; 736 backend checks and four required DOM lanes pass. Android173 held after14/15 native cases; archive observation under diagnosis. Phone not updated by this release.",
+      "status": "Workstation backend/web and Mac read-only catalog backend live. Android173/alpha155 published after15 native cases and exact optimized canonical/control review. Single owner announcement sent; phone install and Mac channel propagation being monitored.",
       "architecture": [
         "Codex owns execution and native thread/turn/item/request identity.",
         "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",
@@ -53,7 +53,7 @@
         "model": "gpt-6-astra",
         "reasoning": "high",
         "branch": "parity/ui-20261107",
-        "status": "Dedicated Astra high UI owner delivered source-lifetime and native test diagnostics; final review found no proven product defect. Standby while root runs fresh diagnostic qualification."
+        "status": "Astra high reviewer confirmed Settings popup opens via physical emulator input and timestamp discrepancy is fixture-only; footer wrapping retained as follow-up."
       },
       "review_fixes": [
         "Panel/session switch cannot retarget native settings or terminal/conversation actions.",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "date": "2026-11-07",
-  "status": "workstation-backend-and-web-live-android-held",
+  "status": "android173-published-monitoring-and-delivery-active",
   "base": "fa30781d",
   "implementationCommits": [
     "ef5bfe03",
@@ -102,13 +102,37 @@
       "oldAppNegativeControlFailedAsExpected": true
     },
     "native173": {
-      "state": "held",
-      "passed": 14,
-      "failed": 1,
-      "failure": "Foreign archive refusal was recorded but expected explanation not observed; initial hierarchy still showed progress.",
-      "diagnostic": "Same product APK passed with diagnostic-only test changes; intermittent failure cause not yet established. Original failed receipt retained.",
+      "state": "published",
+      "passed": 15,
+      "failed": 0,
+      "originalAttempt": {
+        "state": "held",
+        "passed": 14,
+        "failed": 1,
+        "failure": "Foreign archive refusal was recorded but expected explanation not observed; initial hierarchy still showed progress.",
+        "diagnostic": "Same product APK passed with diagnostic-only test changes; intermittent failure cause not yet established. Original failed receipt retained.",
+        "liveAccountAudioPassed": true,
+        "physicalPhoneTested": false
+      },
+      "optimizedCanonical": {
+        "passed": true,
+        "exactShippingApk": true,
+        "requestBeforeResponse": true,
+        "reopenOriginalExactlyOnce": true,
+        "questionSkipOnce": true,
+        "isolatedPreferencesRestored": true
+      },
+      "optimizedControls": {
+        "nativeSettingsAndSkillsDrawn": true,
+        "contextAndWorkspaceDrawn": true,
+        "actualTouch": true,
+        "workSubmissions": 0
+      },
       "liveAccountAudioPassed": true,
-      "physicalPhoneTested": false
+      "physicalPhoneTested": false,
+      "phoneInstalledVersionLastObserved": 172,
+      "versionCode": 173,
+      "versionName": "0.5.0-alpha.155"
     },
     "macRuntime": {
       "version": "0.163.0",
@@ -123,18 +147,35 @@
         "thread/list"
       ],
       "mutationsExercised": false,
-      "sourceVersionGateUnchanged": true
+      "sourceVersionGateUnchanged": false,
+      "readOnlyProfileQualified": true,
+      "configurationWritesAvailable": false,
+      "terminalControlsAvailable": false,
+      "nativeDaemonRestarted": false,
+      "backendLive": true,
+      "historyReadMs": [
+        31,
+        25
+      ],
+      "catalogReadMs": 41,
+      "qualification": "14 focused tests and actual read-only backend requests; no model work or native runtime upgrade"
+    },
+    "delivery": {
+      "workstationChannel": 173,
+      "ownerAnnouncements": 1,
+      "notificationId": 2832,
+      "macChannel": "propagation in progress",
+      "phoneInstallation": "not yet verified"
     }
   },
   "remaining": [
-    "Reconcile intermittent archive observation and complete fresh current-input native qualification",
-    "Inspect exact optimized APK and publish compatible Android update only after checks pass",
-    "Review per-method Mac compatibility without restarting ongoing native work",
-    "Physical phone delivery and interaction remain separate"
+    "Verify Mac update channel propagation and actual phone installation separately.",
+    "Keep monitoring release and agent integration findings; do not declare project complete.",
+    "Review highest-priority real integration gaps and narrow footer ergonomics."
   ],
   "limits": [
     "Managed worktree creation, plugin installation, hook editing and native user-verification flow are not implemented remote operations; do not claim full TUI parity.",
-    "New version-sensitive native methods are qualified against0.167.0 only; other advertised runtime versions remain explicit unavailable.",
+    "Native mutations qualified against0.167.0; qualified Mac0.163 ARM64 family exposes read-only catalogs, with configuration writes and terminal controls explicitly unavailable.",
     "Unit/HTTP/DOM fixtures and Kotlin compilation do not prove real phone interaction or release readiness."
   ]
 }
