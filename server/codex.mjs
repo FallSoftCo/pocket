@@ -1,3 +1,4 @@
+import {rememberRuntimeSettings} from './native-capabilities.mjs';
 import {ManagedDaemonRecovery} from './managed-daemon-recovery.mjs';
 import WebSocket from 'ws';
 import { EventEmitter } from 'node:events';
@@ -49,12 +50,13 @@ export class Codex extends EventEmitter {
             const error=isServerDraining(m.error)?Object.assign(codexConnectionError('CODEX_DRAINING'),{rpc:m.error}):Object.assign(isHistoryLineageError(m.error)?historyLineageError(m.error):new Error(m.error.message),{rpc:m.error});
             if(error.code==='CODEX_DRAINING'&&this.transport===transport){this.problem=error;this.emit('status',this.status());}
             p.reject(error);
-          }else p.resolve(m.result);
+          }else {rememberRuntimeSettings(this,p.method,m.result);p.resolve(m.result);}
         }
       };
       const opened=async()=>{
         try {
-          await this.call('initialize', { clientInfo: { name: 'codex_pocket', title: 'NextComp', version: '0.5.0-alpha.10' }, capabilities: { experimentalApi: true } });
+          this.runtimeSettings=new Map();
+          this.initializeResult=await this.call('initialize', { clientInfo: { name: 'codex_pocket', title: 'NextComp', version: '0.5.0-alpha.10' }, capabilities: { experimentalApi: true } });
           this.send({method:'initialized'}); this.ready = true; this.problem=null;this.emit('connected'); resolve();
         } catch(e) { reject(e); this.closeTransport(transport); }
       };
@@ -87,7 +89,7 @@ export class Codex extends EventEmitter {
       if (!this.canSend()) return reject(this.problem||codexConnectionError('CODEX_UNAVAILABLE'));
       const id = this.seq++;
       const timer = setTimeout(() => { this.pending.delete(id); reject(codexConnectionError('CODEX_TIMEOUT')); }, 25000);
-      this.pending.set(id, {resolve, reject, timer}); this.send({id, method, params});
+      this.pending.set(id, {resolve, reject, timer,method}); this.send({id, method, params});
     });
   }
   answer(id, result) {

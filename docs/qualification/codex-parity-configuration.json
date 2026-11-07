@@ -1,0 +1,61 @@
+{
+  "scope": "NextComp native Codex capability, configuration and agent inspection candidate",
+  "date": "2026-11-07",
+  "base": "fa30781d",
+  "runtime": {
+    "version": "0.167.0",
+    "source": "Installed standalone CLI; app-server generate-json-schema --experimental",
+    "schemaSha256": {
+      "ClientRequest.json": "2d629aaaceea335d7e58ab19ce5908c8dd75ca3f3a6161a5f015bf59aadd3295",
+      "v1/InitializeResponse.json": "62ad689c2cb6379913c1d72749cfd8de5089d35760214123518eb92eef11acc9",
+      "v2/ModelListResponse.json": "2fb387a2ed258fc74258828ea342d68f89ce4e8e22cd0329ca59d2b423f9108b",
+      "v2/SkillsConfigWriteParams.json": "6e7dea83b649bfd118828b60446eb2eab2f5ce3cafe287c933b830c9cae9b170",
+      "v2/ConfigValueWriteParams.json": "b9032e35bf64d4628bfc72e22b58b71bbcf754aeb720a86eacb091e0137547c9",
+      "v2/ThreadSettingsUpdateParams.json": "749419634bb7ed66216d72bf9d8734ecf0e6efaa8cd46fe51a117d1b42ed9657"
+    },
+    "officialDocumentation": "https://learn.chatgpt.com/docs/app-server#api-overview"
+  },
+  "implementation": [
+    "Shared schemaVersion 1 capability descriptor, connected initialize response version; unknown versions unavailable for newly added native operations.",
+    "Passive last-observed native runtime permissions distinct from saved requested permissions and disk configuration. Reads never resume a session.",
+    "Model catalog service tiers validated and stored for newly started turns; inherit omits native override. Steering remains unchanged.",
+    "User-opened Android and web runtime/settings, installed skills, MCP connections/tools, installed apps/plugins, hooks and native descendant views; no periodic polling.",
+    "Explicit enablement of catalog-verified skills/apps/MCP; app and MCP writes use native expectedVersion CAS. No arbitrary keyPath or filePath forwarding.",
+    "Native parent/child identity and direct-input capability determine navigation; source-qualified remote query and returned thread identity.",
+    "Goal controls unavailable; no goal or continuation activation introduced."
+  ],
+  "verification": {
+    "automatedModuleAndRegressionTests": {
+      "command": "node --test tests/turn-controls.test.mjs tests/native-configuration.test.mjs tests/human-ingress.test.mjs tests/web-environments.test.mjs tests/permissions.test.mjs",
+      "passed": 25
+    },
+    "pairedHttpIntegration": {
+      "command": "node --test tests/native-configuration-integration.test.mjs",
+      "passed": 1,
+      "runtime": "Disposable fake app-server and backend; no real account/tool/config mutation"
+    },
+    "webDomSmoke": {
+      "runtime": "jsdom 26.1.0 fixture",
+      "passed": [
+        "no automatic reads",
+        "requested versus observed permissions",
+        "scoped child navigation",
+        "untrusted catalog text rendered as text",
+        "changed-source mutation blocked",
+        "single explicit configuration write",
+        "catalog-only service tier selection"
+      ]
+    },
+    "syntax": "node --check server/index.mjs server/codex.mjs server/native-configuration.mjs web/app.mjs web/native-settings.mjs; git diff --check"
+  },
+  "limits": [
+    "Android compile/lint and integrated visual QA are reserved for root release owner; not claimed by this receipt.",
+    "No production service restart, deployment, APK install or real account/configuration mutations performed.",
+    "Exact 0.167.0 protocol qualification is not entitlement, policy permission, or successful tool execution.",
+    "Runtime permission observation can become stale when another client changes the thread; timestamp and source are shown.",
+    "Plugin installed inventory is inspection-only. Official plugin installation APIs remain under development; native disabledPluginIds explicitly does not filter capabilities yet.",
+    "Hooks inspect only; protocol has no dedicated hook configuration write RPC. Commands/prompts are not returned.",
+    "App/MCP enablement writes affect subsequent configuration loads; existing connections/turns may retain prior state. No automatic reload or restart.",
+    "Catalog discovery failures stay unavailable/unsupported and are never treated as an empty successful catalog; no retries of uncertain writes."
+  ]
+}

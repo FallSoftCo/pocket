@@ -1,0 +1,6 @@
+.native-settings{width:min(48rem,calc(100vw - 2rem));max-height:85dvh;overflow:auto;color:inherit;background:var(--paper,#171b21);border:1px solid currentColor;border-radius:16px;padding:20px}
+.native-settings nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.native-settings article{border-top:1px solid #7775;padding:12px 0;overflow-wrap:anywhere}
+.native-settings p{white-space:pre-wrap;overflow-wrap:anywhere}
+.native-settings button{min-height:44px;margin:4px}
+.native-settings details{padding:8px 0}

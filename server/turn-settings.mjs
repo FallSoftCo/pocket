@@ -15,9 +15,14 @@ export function validateTurnSettings(input,models){
  const effort=input.effort||model.defaultReasoningEffort;
  if(!model.supportedReasoningEfforts?.some(e=>e.reasoningEffort===effort))throw Object.assign(Error('Choose a reasoning effort supported by this model.'),{status:400});
  if(!['default','plan'].includes(input.mode))throw Object.assign(Error('Choose Build or Plan mode.'),{status:400});
- return {model:model.model,effort,mode:input.mode};
+ const settings={model:model.model,effort,mode:input.mode};
+ if(Object.hasOwn(input,'serviceTier')){
+  if(input.serviceTier!==null&&!model.serviceTiers?.some(t=>t.id===input.serviceTier))throw Object.assign(Error('Choose a service tier advertised for this model.'),{status:400});
+  settings.serviceTier=input.serviceTier;
+ }
+ return settings;
 }
 export function turnOverrides(settings){
  if(!settings)return {};
- return {model:settings.model,effort:settings.effort,collaborationMode:{mode:settings.mode,settings:{model:settings.model,reasoning_effort:settings.effort,developer_instructions:null}}};
+ return {model:settings.model,effort:settings.effort,...(settings.serviceTier?{serviceTier:settings.serviceTier}:{}),collaborationMode:{mode:settings.mode,settings:{model:settings.model,reasoning_effort:settings.effort,developer_instructions:null}}};
 }

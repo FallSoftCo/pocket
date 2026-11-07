@@ -8,6 +8,7 @@ export function humanInputRoute(method,path){
  // All canonical mutations carry human intent, including attention and future
  // controls. Read-only administration is not permission to submit room work.
  if(!['GET','HEAD','OPTIONS'].includes(method)&&/^\/api\/hollywood\/v3(?:\/|$)/.test(path))return true;
+ if(method==='POST'&&path==='/api/native/configuration')return true;
  if(method==='POST'&&/^\/api\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/cancel)?$/.test(path))return true;
  if(method==='PUT'&&/^\/api\/voice\/recordings\/[^/]+\/audio$/.test(path))return true;
  if(method==='POST'&&/^\/api\/voice\/recordings(?:\/[^/]+\/(?:cancel|retry-audio|cancel-request))?$/.test(path))return true;

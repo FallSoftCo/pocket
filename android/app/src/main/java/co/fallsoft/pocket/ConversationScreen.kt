@@ -246,6 +246,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var removingNotes by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(setOf<String>())}
     val spokenRows=remember(Pocket.environmentId,Pocket.selected){mutableStateMapOf<String,Pair<String,String>>()}
     var settingsOpen by remember(Pocket.selected){mutableStateOf(false)}
+    var nativeSettingsOpen by remember(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     var renameOpen by remember(Pocket.selected){mutableStateOf(false)}
     var taskName by remember(Pocket.selected){mutableStateOf(TextFieldValue())}
     var confirmArchive by remember(Pocket.selected){mutableStateOf(false)}
@@ -264,7 +265,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         if(fresh&&!keyboardInput&&!PocketVoice.captureBusy&&!BlackoutVisibility.active)reviewOpen=true
     }
     LaunchedEffect(keyboardInput,conversation.incarnation){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
-    val dismissingControl=actionsOpen||reviewOpen||settingsOpen||renameOpen||confirmArchive||
+    val dismissingControl=actionsOpen||reviewOpen||settingsOpen||nativeSettingsOpen||renameOpen||confirmArchive||
         editingQueue!=null||queueOpen||confirmRetry!=null
     ConversationBack(hideKeyboard=!dismissingControl){
         when{
@@ -272,6 +273,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             editingQueue!=null->editingQueue=null
             confirmArchive->confirmArchive=false
             renameOpen->renameOpen=false
+            nativeSettingsOpen->nativeSettingsOpen=false
             settingsOpen->settingsOpen=false
             queueOpen->queueOpen=false
             reviewOpen->reviewOpen=false
@@ -454,7 +456,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
             if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue · ${waiting.size}")}
             TextButton({rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"},modifier=Modifier.fillMaxWidth()){BilingualLabel("Keep latest reply in notes")}
-            TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Model, effort & mode")}
+            TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Model, effort, tier & mode")}
+            TextButton({actionsOpen=false;nativeSettingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Codex settings & agents")}
             TextButton({actionsOpen=false;taskName=t?.s("name").orEmpty().let{TextFieldValue(it,TextRange(0,it.length))};renameOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Rename")}
             TextButton({actionsOpen=false;confirmArchive=true},enabled=!active,modifier=Modifier.fillMaxWidth()){BilingualLabel("Archive")}
             TextButton({actionsOpen=false;submit("queue")},enabled=hasDraft&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue message")}
@@ -685,6 +688,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
     }
     if(settingsOpen)TurnSettingsDialog{settingsOpen=false}
+    if(nativeSettingsOpen)NativeSettingsDialog{nativeSettingsOpen=false}
     if(renameOpen)AlertDialog(onDismissRequest={renameOpen=false},title={BilingualLabel("Rename conversation")},text={val renameFocus=remember{androidx.compose.ui.focus.FocusRequester()};LaunchedEffect(Unit){renameFocus.requestFocus()};OutlinedTextField(taskName,{taskName=it},singleLine=true,modifier=Modifier.focusRequester(renameFocus))},confirmButton={TextButton({Pocket.renameTask(taskName.text){renameOpen=false}},enabled=taskName.text.isNotBlank()){BilingualLabel("Save")}},dismissButton={TextButton({renameOpen=false}){BilingualLabel("Cancel")}})
     if(confirmArchive)AlertDialog(onDismissRequest={confirmArchive=false},title={BilingualLabel("Archive conversation?")},text={WorkflowText("This hides the conversation from recent tasks, pauses queued messages, and stops its notifications. Its history stays on the Codex host.")},confirmButton={TextButton({confirmArchive=false;Pocket.archiveTask()}){BilingualLabel("Archive")}},dismissButton={TextButton({confirmArchive=false}){BilingualLabel("Cancel")}})
     confirmRetry?.let{outgoing->AlertDialog(onDismissRequest={confirmRetry=null},title={BilingualLabel("Send this message again?")},text={WorkflowText("Codex may already have received this message. Retrying can send it twice. Check the conversation first.")},confirmButton={TextButton({Pocket.queuedReply(outgoing.s("id"),"retry",confirmUnknown=true){confirmRetry=null}},enabled=!Pocket.isReplyActionBusy(outgoing.s("id"))){BilingualLabel("Retry anyway")}},dismissButton={TextButton({confirmRetry=null}){BilingualLabel("Cancel")}})}
@@ -767,6 +771,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var model by remember{mutableStateOf(stored?.s("model")?:thread?.s("model").orEmpty())}
     var effort by remember{mutableStateOf(stored?.s("effort")?:thread?.s("reasoningEffort").orEmpty())}
     var plan by remember{mutableStateOf(stored?.s("mode")=="plan")}
+    var serviceTier by remember{mutableStateOf(stored?.s("serviceTier").orEmpty())}
+    var tierMenu by remember{mutableStateOf(false)}
     var modelMenu by remember{mutableStateOf(false)};var effortMenu by remember{mutableStateOf(false)}
     var problem by remember{mutableStateOf("")};var loading by remember{mutableStateOf(true)}
     LaunchedEffect(Unit){try{
@@ -782,11 +788,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         if(problem.isNotBlank())WorkflowText(problem,color=Coral,fontSize=12.sp)
         if(Pocket.error.isNotBlank())WorkflowText(Pocket.error,color=Coral,fontSize=12.sp)
         Box{OutlinedButton({modelMenu=true},enabled=models.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text(selected?.s("name")?:model.ifBlank{"Model"});Spacer(Modifier.weight(1f));SymbolIcon(Icons.Rounded.ExpandMore,null)}
-            DropdownMenu(modelMenu,{modelMenu=false}){models.forEach{m->DropdownMenuItem(text={Text(m.s("name"))},onClick={model=m.s("model");effort=m.s("defaultEffort");modelMenu=false})}}}
+            DropdownMenu(modelMenu,{modelMenu=false}){models.forEach{m->DropdownMenuItem(text={Text(m.s("name"))},onClick={model=m.s("model");effort=m.s("defaultEffort");serviceTier="";modelMenu=false})}}}
         Box{OutlinedButton({effortMenu=true},enabled=efforts.isNotEmpty(),modifier=Modifier.fillMaxWidth()){BilingualLabel("Reasoning: ${effort.ifBlank{"default"}}");Spacer(Modifier.weight(1f));SymbolIcon(Icons.Rounded.ExpandMore,null)}
             DropdownMenu(effortMenu,{effortMenu=false}){efforts.forEach{e->DropdownMenuItem(text={BilingualLabel(e.s("reasoningEffort"))},onClick={effort=e.s("reasoningEffort");effortMenu=false})}}}
+        val tiers=selected?.optJSONArray("serviceTiers")?.objects()?:emptyList()
+        Box{OutlinedButton({tierMenu=true},enabled=tiers.isNotEmpty(),modifier=Modifier.fillMaxWidth()){BilingualLabel("Service tier: ${serviceTier.ifBlank{"inherit native setting"}}")}
+            DropdownMenu(tierMenu,{tierMenu=false}){DropdownMenuItem(text={BilingualLabel("Inherit native setting")},onClick={serviceTier="";tierMenu=false});tiers.forEach{tier->DropdownMenuItem(text={Text(tier.s("name").ifBlank{tier.s("id")})},onClick={serviceTier=tier.s("id");tierMenu=false})}}}
         Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){BilingualLabel(if(plan)"Plan mode" else "Build mode");WorkflowText(if(plan)"Propose a plan before implementation" else "Carry out the requested work",fontSize=11.sp,color=Muted)};Switch(plan,{plan=it})}
-    }},confirmButton={TextButton({Pocket.updateTurnSettings(JSONObject().put("model",model).put("effort",effort).put("mode",if(plan)"plan" else "default"),onDismiss)},enabled=selected!=null&&effort.isNotBlank()&&!loading){BilingualLabel("Save")}},dismissButton={TextButton(onDismiss){BilingualLabel("Cancel")}})
+    }},confirmButton={TextButton({Pocket.updateTurnSettings(JSONObject().put("model",model).put("effort",effort).put("serviceTier",serviceTier.takeIf{it.isNotBlank()}?:JSONObject.NULL).put("mode",if(plan)"plan" else "default"),onDismiss)},enabled=selected!=null&&effort.isNotBlank()&&!loading){BilingualLabel("Save")}},dismissButton={TextButton(onDismiss){BilingualLabel("Cancel")}})
 }
 
 internal data class FilterVisibleRow(val id:String,val offset:Int,val size:Int=0)
