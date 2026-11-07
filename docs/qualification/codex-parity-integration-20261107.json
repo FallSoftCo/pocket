@@ -257,12 +257,53 @@
       "liveAccountEmulatorAudioPassed": true,
       "physicalPhoneTested": false,
       "phoneCompatibleSha256": "d4a55255671f0ea6bdcb5d14e0f05299fc3b98c6fbf5b14f85b2ae24e0c5271c"
+    },
+    "remoteStreamRecovery": {
+      "state": "web-live",
+      "sourceCommit": "0f5ba5d505be328c69ce711f9466e15c59747fa3",
+      "releaseDigest": "5fd261e18b5b3ba6fb335d8e1b3f31abacf4073cbcd9edf9a5bc75d0050228c4",
+      "failuresReproduced": [
+        "Remote recovery with unchanged catalog did not refresh selected history or attention",
+        "One503 at status probe stopped further remote connection attempts"
+      ],
+      "actualBrowserVariants": [
+        "normal recovery",
+        "one503 then recovery",
+        "returned401 refusal control"
+      ],
+      "beforePeriodicFallback": true,
+      "pageClockMsAtRecovery": 1500,
+      "localSocketCount": 1,
+      "offSourceHistoryAndAcknowledgementPreserved": true,
+      "modelOrWorkSubmissions": 0,
+      "focusedHttpTests": 17,
+      "fullAppDomTests": 2,
+      "runtimeScope": "Only the existing two web gateways replaced; backend/native processes and cookie/configuration files unchanged.",
+      "limits": [
+        "Actual app/gateway/two backend compositions with synthetic native transport, not actual provider or physical phone",
+        "Controlled page timer and real gateway backoff; not a latency benchmark",
+        "No full browser-socket recreation proof",
+        "Original immediate post-start asset read preceded listener readiness; original processes verified afterward without restarting again"
+      ]
+    },
+    "native175": {
+      "state": "built-native-qualification-running",
+      "sourceCommit": "5177bcdd",
+      "footer": "Measure actual displayed account/profile content with48dp minimum",
+      "menu": "Prioritize Context, terminals and Codex controls ahead of account details",
+      "unitPerVariant": {
+        "passed": 475,
+        "skipped": 2,
+        "failed": 0
+      },
+      "nativePassed": 0,
+      "phoneChanged": false
     }
   },
   "remaining": [
-    "Verify actual physical phone installation and interaction separately.",
-    "Retain required Pocket review gate on PR15; backend and Android CI have passed.",
-    "Review narrow footer/menu ergonomics and remaining notification/history integration gaps.",
+    "Complete175 changed-layout native journeys and optimized review before Android publication.",
+    "Verify physical handset installation and interaction separately.",
+    "Retain required Pocket review gate; no bypass.",
     "Continue useful integration monitoring; full TUI parity remains open."
   ],
   "limits": [
