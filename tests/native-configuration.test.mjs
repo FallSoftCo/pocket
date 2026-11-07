@@ -95,14 +95,14 @@ test('remote native settings queries and agent navigation preserve host identity
 const macUserAgent='codex_pocket/0.163.0 (Mac OS 26.6.0; arm64) unknown (nextcomp_compatibility_readonly; 1)';
 test('Mac 0.163 qualification grants only observed catalog methods, not platform-wide or write compatibility',()=>{
  const f=fixture();f.codex.initializeResult.userAgent=macUserAgent;
- for(const method of ['config/read','skills/list','mcpServerStatus/list','app/installed','plugin/installed','hooks/list','thread/list','thread/read'])assert.equal(supportsNativeMethod(f.codex,method),true,method);
- for(const method of ['config/value/write','skills/config/write','config/mcpServer/reload','thread/settings/update','thread/fork','thread/revert','thread/compact/start','review/start','thread/backgroundTerminals/list','thread/backgroundTerminals/terminate','thread/items/read','thread/goal/set'])assert.equal(supportsNativeMethod(f.codex,method),false,method);
+ for(const method of ['config/read','skills/list','mcpServerStatus/list','app/installed','plugin/installed','hooks/list','thread/list','thread/read','thread/backgroundTerminals/list'])assert.equal(supportsNativeMethod(f.codex,method),true,method);
+ for(const method of ['config/value/write','skills/config/write','config/mcpServer/reload','thread/settings/update','thread/fork','thread/revert','thread/compact/start','review/start','thread/backgroundTerminals/terminate','thread/items/read','thread/goal/set'])assert.equal(supportsNativeMethod(f.codex,method),false,method);
  const descriptor=f.native.descriptor('parent-one');
  assert.equal(descriptor.runtime.compatibilityProfile,'mac-arm64-0.163-catalog-reads-20261107');
  for(const key of ['configuration','skills','mcp','apps']){
   assert.equal(descriptor.features[key].state,'available');assert.equal(descriptor.features[key].readOnly,true);assert.equal(descriptor.features[key].mutation.state,'unavailable');
  }
- assert.equal(descriptor.features.backgroundTerminals.state,'unavailable');assert.match(descriptor.features.backgroundTerminals.reason,/read-only client presentation/);
+ assert.equal(descriptor.features.backgroundTerminals.state,'available');assert.equal(descriptor.features.backgroundTerminals.readOnly,true);assert.equal(descriptor.features.backgroundTerminals.mutation.state,'unavailable');
  assert.equal(descriptor.features.nativeRequests.state,'unavailable');
  assert.equal(describeNativeCapabilities({version:'0.163.0',userAgent:macUserAgent,connected:false}).features.skills.state,'unavailable');
  for(const userAgent of ['codex_cli_rs/0.163.0 (linux)','codex_pocket/0.163.0 (Mac OS 26.6.0; x86_64)','codex_pocket/0.164.0 (Mac OS 26.6.0; arm64)','codex/0.163.0']){
