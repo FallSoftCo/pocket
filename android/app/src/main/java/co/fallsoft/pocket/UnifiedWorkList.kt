@@ -20,7 +20,8 @@ internal data class UnifiedWorkActions(
     val open:(WorkEntry<WorkCatalogPayload>,Boolean)->Unit,
     val rename:(WorkEntry<WorkCatalogPayload>,String,()->Unit)->Unit,
     val watch:(WorkEntry<WorkCatalogPayload>,Boolean)->Unit,
-    val restore:(WorkEntry<WorkCatalogPayload>)->Unit
+    val restore:(WorkEntry<WorkCatalogPayload>)->Unit,
+    val archive:(WorkEntry<WorkCatalogPayload>)->Unit={}
 )
 private data class UnifiedWorkRow(
     val entry:WorkEntry<WorkCatalogPayload>,val source:WorkSourceSnapshot<WorkCatalogPayload>,
@@ -110,14 +111,16 @@ private data class UnifiedWorkRow(
                 SessionGroupCard(row.group,System.currentTimeMillis(),
                     onChild={child->row.source.entries.firstOrNull{it.key.kind==WorkKind.SESSION&&it.key.id==child.id}?.let{actions.open(it,false)}},
                     identityScope=identity,preferenceKey=entry.value.destination.environment::key,
+                    onArchiveChild={child->row.source.entries.firstOrNull{it.key.id==child.id}?.let{actions.archive(it)}},
+                    onRestoreChild={child->row.source.entries.firstOrNull{it.key.id==child.id}?.let{actions.restore(it)}},
                     sourceNotifications=if(Pocket.captureEnvironment()?.matches(entry.value.destination)==true)Pocket.notifications else emptyList()
                 ){badge->
                     TaskCard(row.task!!,headerBadge={WorkOriginBadge(entry,row.source.available);badge?.invoke()},
                         modifier=Modifier.testTag("unified-work:"+identity),identityScope=identity,
-                        onRestore={actions.restore(entry)},onOpen={actions.open(entry,it)},onRename={name,done->actions.rename(entry,name,done)},onWatch={actions.watch(entry,it)})
+                        onArchive={actions.archive(entry)},onRestore={actions.restore(entry)},onOpen={actions.open(entry,it)},onRename={name,done->actions.rename(entry,name,done)},onWatch={actions.watch(entry,it)})
                 }
             }else if(row.task!=null){
-                AgentResultCard(row.task,onOpen={actions.open(entry,false)},parentTitle=if(row.task.parentThreadId!=null)"Parent task outside this catalog page" else "Parent identity unavailable",headerBadge={WorkOriginBadge(entry,row.source.available)})
+                AgentResultCard(row.task,onArchive={actions.archive(entry)},onRestore={actions.restore(entry)},onOpen={actions.open(entry,false)},parentTitle=if(row.task.parentThreadId!=null)"Parent task outside this catalog page" else "Parent identity unavailable",headerBadge={WorkOriginBadge(entry,row.source.available)})
             }
         }
         snapshots.filter{it.error!=null}.forEach{source->

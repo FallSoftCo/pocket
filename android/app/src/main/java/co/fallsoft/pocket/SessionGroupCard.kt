@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
     onChild:(Task)->Unit={Pocket.open(it.id)},parentTitle:String?=null,
     identityScope:String=Pocket.environmentId,preferenceKey:(String)->String={Pocket.key(it)},
     sourceNotifications:List<org.json.JSONObject> = Pocket.notifications,
+    onArchiveChild:(Task)->Unit={Pocket.archiveTask(it.id)},onRestoreChild:(Task)->Unit={Pocket.restoreTask(it.id)},
     parentCard:(@Composable ((@Composable ()->Unit)?)->Unit)?=null){
     var expanded by remember(group.task.id,identityScope){mutableStateOf(Pocket.prefs.getBoolean(preferenceKey("agentsExpanded:${group.task.id}"),false))}
     var childStart by remember(group.task.id,identityScope){mutableIntStateOf(Pocket.prefs.getInt(preferenceKey("agentsPage:${group.task.id}"),0))}
@@ -40,7 +41,7 @@ import androidx.compose.ui.unit.dp
         }}
         if(parentCard!=null)parentCard(badge)else TaskCard(group.task,now,headerBadge=badge)
         if(group.children.isNotEmpty()){
-            if(expanded){group.children.drop(start).take(8).forEach{task->AgentResultCard(task,onOpen={onChild(task)},parentTitle=parentTitle)}
+            if(expanded){group.children.drop(start).take(8).forEach{task->AgentResultCard(task,onOpen={onChild(task)},parentTitle=parentTitle,onArchive={onArchiveChild(task)},onRestore={onRestoreChild(task)})}
                 if(group.children.size>8)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
                     TextButton({childStart=(start-8).coerceAtLeast(0);Pocket.prefs.edit().putInt(preferenceKey("agentsPage:${group.task.id}"),childStart).apply()},enabled=start>0){BilingualLabel("Previous agents")}
                     Text("${start+1}–${minOf(start+8,group.children.size)} / ${group.children.size}",color=Muted,modifier=Modifier.padding(top=14.dp))
@@ -50,11 +51,12 @@ import androidx.compose.ui.unit.dp
         }
     }
 }
-@Composable fun AgentResultCard(task:Task,onOpen:()->Unit={Pocket.open(task.id)},parentTitle:String?=null,headerBadge:(@Composable ()->Unit)?=null){
+@Composable fun AgentResultCard(task:Task,onOpen:()->Unit={Pocket.open(task.id)},parentTitle:String?=null,headerBadge:(@Composable ()->Unit)?=null,onArchive:(()->Unit)?={Pocket.archiveTask(task.id)},onRestore:()->Unit={Pocket.restoreTask(task.id)}){
     Column(Modifier.fillMaxWidth().background(Panel).clickable(onClick=onOpen).padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
             Text(listOf(task.agentNickname.ifBlank{task.title},task.agentRole,if(task.status=="notLoaded")"Status not yet checked" else task.status,if(task.unreadCount>0)"${task.unreadCount} unread" else "").filter{it.isNotBlank()}.joinToString(" · "),modifier=Modifier.weight(1f),color=Mint,minLines=2,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             headerBadge?.invoke()
+            SessionArchiveAction(task,onArchive,onRestore)
         }
         val parent=if(parentTitle==null)Pocket.tasks.firstOrNull{it.id==task.parentThreadId}else null
         Text(parentTitle?:parent?.let{"Parent: "+it.agentNickname.ifBlank{it.title}}?:if(task.parentThreadId!=null)"Parent task outside this page" else "Parent identity unavailable",color=Muted,minLines=1,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)

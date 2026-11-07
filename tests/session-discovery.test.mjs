@@ -86,3 +86,13 @@ test('renamed cached owners remain discoverable when native search is empty with
  assert.equal((await f.discovery.list({searchTerm:'AcceleratorCon'})).data[0].status.type,'active');
  assert.ok(f.calls.every(c=>c.m==='thread/list'));f.db.close();
 });
+
+test('late catalog cannot resurrect a confirmed archive; later restore remains discoverable',async()=>{
+ let release;const held=new Promise(resolve=>release=resolve);let first=true;
+ const f=setup(async(method)=>{if(method==='thread/list'){if(first){first=false;await held;}return {data:[{id:'listed',name:'Retained history'}]};}throw Error('not found');});
+ f.discovery.remember({id:'listed',name:'Retained history'});
+ const pending=f.discovery.refreshList(false);f.discovery.markArchived('listed',true);release();
+ assert.ok(!(await pending).data.some(t=>t.id==='listed'));
+ assert.ok(f.discovery.snapshot(true).data.some(t=>t.id==='listed'));
+ f.discovery.markArchived('listed',false);assert.ok((await f.discovery.refreshList(false)).data.some(t=>t.id==='listed'));f.db.close();
+});

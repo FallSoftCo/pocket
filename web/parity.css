@@ -155,3 +155,7 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .conversation-usage[data-usage-state=stale],.conversation-usage[data-usage-state=unavailable]{opacity:.72}
 .anchored-panel>form[method=dialog]{position:sticky;top:0;z-index:3;background:var(--paper);min-block-size:60px;padding-inline-end:52px}
 .anchored-panel>form[method=dialog]>.close{top:0;right:0;min-width:44px;min-height:44px;margin:0}
+
+/* Archive belongs to the card, with a full touch target and no extra row. */
+.card-archive{flex:0 0 auto;min-height:44px;padding:8px 10px;color:var(--muted);font-size:12px;}
+.card-heading .card-title{min-width:0;overflow:hidden;text-overflow:ellipsis;}

@@ -85,6 +85,8 @@ function renderList(){
   n._thread=t;
   if(!n.querySelector('input')){let title=n.querySelector('.card-title');if(!title){title=button('',()=>isRoom(n._thread.id)?open(n._thread.id):renameCard(n._thread,n));title.className='card-title';title.addEventListener('click',e=>e.stopPropagation());n.children[0].prepend(title);}setLabel(title,t._room?'Room · '+t.name:catalogTitle(t));
    const agents=children.get(t.id)||[];let badge=n.querySelector('.child-badge');if(agents.length){if(!badge){badge=button('',()=>{expandedParents.has(t.id)?expandedParents.delete(t.id):expandedParents.add(t.id);renderList();});badge.className='child-badge';badge.addEventListener('click',e=>e.stopPropagation());n.children[0].append(badge);}setLabel(badge,`${agents.length} agent${agents.length===1?'':'s'}`);}else badge?.remove();}
+  let archive=n.querySelector('.card-archive');
+  if(!t._room){if(!archive){archive=button('',()=>setSessionArchived(n._thread,!n._thread.archived));archive.className='card-archive';archive.addEventListener('click',e=>e.stopPropagation());n.children[0].append(archive);}setLabel(archive,t.archived?'Restore':'Archive');archive.disabled=archiving.has(t.id);archive.title=t.archived?'Return to current sessions':'Move to Archived; keep history';}else archive?.remove();
   const waiting=attentionItems.filter(item=>item.thread_id===t.id&&['question','approval'].includes(item.kind)).length;let question=n.querySelector('.question-badge');if(waiting){if(!question){question=button('',async()=>{await open(t.id);review.show(true);});question.className='question-badge';question.addEventListener('click',e=>e.stopPropagation());n.children[0].append(question);}setLabel(question,waiting+' needs you');}else question?.remove();
   setLabel(n.children[1],t.preview||'Open conversation');if(!n.children[2].children.length)n.children[2].append(el('span','card-state'),el('span','card-age'));setLabel(n.children[2].children[0],state.label+(t.unreadCount?' · '+t.unreadCount+' unread':''));setLabel(n.children[2].children[1],stamp(workTime(t))+(t.environmentName?' · '+t.environmentName:'')+(t.environmentUnavailable?' · Unavailable':''));
   n.style.setProperty('--recency',`hsl(${state.tone==='idle'?275:state.tone==='attention'?38:205} ${Math.max(20,75-Math.log2(1+Math.max(0,now-workTime(t))/3600000)*7)}% 65%)`);
@@ -92,6 +94,20 @@ function renderList(){
  }for(const n of old.values())n.remove();
  if(wasBottom&&now>listReadingUntil)list.scrollTop=list.scrollHeight;else if(anchor?.isConnected&&anchorOffset!=null)list.scrollTop+=anchor.getBoundingClientRect().top-anchorOffset;
  if(!ordered.length)$('catalog-note').textContent=catalogFailure?'Could not load work. Refresh to retry.':!catalogSettled?'Loading work…':'No work matches this view.';
+}
+const archiving=new Set();
+async function setSessionArchived(thread,archived){
+ const id=thread.id;
+ if(archiving.has(id))return;
+ if(archived&&!confirm(`Archive “${catalogTitle(thread)}”?\n\nHide from current sessions, hold queued messages and stop notifications. History and drafts stay available. Restore from Archived. Running turns must be stopped first.`))return;
+ archiving.add(id);renderList();
+ try{
+  const result=await api(`/api/threads/${id}/${archived?'archive':'unarchive'}`,{}, {scope:id});
+  if(result.ok!==true)throw Error('Archive update was not acknowledged. Refresh before trying again.');
+  cache.summary(id,{archived});threads=cache.list();renderList();
+  if(archived&&scope===id)await open('coordinator');
+  await refreshList({invalidate:true});
+ }finally{archiving.delete(id);renderList();}
 }
 async function renameCard(thread,card){
  const input=el('input');input.value=thread.name||'';input.setAttribute('aria-label','Session name');input.onclick=e=>e.stopPropagation();card.children[0].replaceChildren(input);input.focus();input.select();let finished=false;
@@ -208,7 +224,7 @@ async function refreshList({invalidate=false}={}){
   const suffix='?'+new URLSearchParams({... (filter==='archived'?{archived:'true'}:{}),...(query?{search:query}:{})});
   try{data=await api('/api/threads'+suffix);}catch(error){catalogFailure=true;data={threads};}
   if(deviceId!==profile||$('filter').value!==filter||$('search').value.trim()!==query)return;
-  catalogSettled=true;threads=cache.catalog(data.threads||[],metadataTicket);$('catalog-note').textContent=(data.environments?.some(e=>!e.available)?'An environment is unavailable; its last known work remains visible.':data.catalogPartial?'Showing a bounded inventory. Search or open known work.':'');renderList();setSymbolMotionReady(true);
+  catalogSettled=true;threads=cache.catalog((data.threads||[]).map(t=>({...t,archived:filter==='archived'})),metadataTicket);$('catalog-note').textContent=(data.environments?.some(e=>!e.available)?'An environment is unavailable; its last known work remains visible.':data.catalogPartial?'Showing a bounded inventory. Search or open known work.':'');renderList();setSymbolMotionReady(true);
   for(const id of cache.catalogChanges){if(id===scope)scheduleRefresh({head:true});else queueBackgroundHead(id);}
  },{invalidate});
 }
@@ -337,7 +353,8 @@ async function performStart(){if(!newPending)return;const p=newPending;let resul
 $('new-form').onsubmit=async e=>{e.preventDefault();try{if(!newPending){newPending={id:crypto.randomUUID(),cwd:$('cwd').value,prompt:$('new-prompt').value,permissions:$('permissions').value};write('newPending',newPending);}await reconcileStart();}catch(e){$('new-error').textContent=e.message;}};
 $('session-menu').onclick=run(async()=>{$('controls-dialog').showModal();$('watch').textContent=current?.watched?'Unfollow updates':'Follow updates';$('archive').textContent=$('filter').value==='archived'?'Restore':'Archive';const data=await api('/api/models',undefined,{scope});models=data.models;$('model').replaceChildren(...models.map(m=>{const o=el('option','',m.name);o.value=m.model;return o;}));if(current?.turnSettings?.model)$('model').value=current.turnSettings.model;setEfforts();});
 function setEfforts(){const model=models.find(m=>m.model===$('model').value);$('effort').replaceChildren(...(model?.efforts||[]).map(e=>{const o=el('option','',e.reasoningEffort);o.value=e.reasoningEffort;return o;}));$('effort').value=current?.turnSettings?.effort||model?.defaultEffort;}$('model').onchange=setEfforts;
-for(const [id,action,body] of [['watch','watch',()=>({enabled:!current?.watched})],['stop','interrupt',()=>({})],['resume','queue/resume',()=>({})],['archive','archive',()=>({})]])$(id).onclick=run(async()=>{await api(`/api/threads/${scope}/${id==='archive'&&$('filter').value==='archived'?'unarchive':action}`,body());$('controls-dialog').hidePopover?.();$('controls-dialog').close();await refreshConversation();await refreshList({invalidate:true});});
+for(const [id,action,body] of [['watch','watch',()=>({enabled:!current?.watched})],['stop','interrupt',()=>({})],['resume','queue/resume',()=>({})]])$(id).onclick=run(async()=>{await api(`/api/threads/${scope}/${id==='archive'&&$('filter').value==='archived'?'unarchive':action}`,body());$('controls-dialog').hidePopover?.();$('controls-dialog').close();await refreshConversation();await refreshList({invalidate:true});});
+$('archive').onclick=run(async()=>{const thread=threads.find(t=>t.id===scope)||{...current?.thread,id:scope};$('controls-dialog').close();await setSessionArchived(thread,thread.archived!==true);});
 $('rename').onclick=run(async()=>{const name=prompt('Session name',current?.thread?.name||'');if(name){await api(`/api/threads/${scope}/rename`,{name});await refreshConversation();await refreshList({invalidate:true});}});$('save-turn').onclick=run(async()=>{await api(`/api/threads/${scope}/settings`,{model:$('model').value,effort:$('effort').value,mode:$('turn-mode').value==='plan'?'plan':'default'});$('controls-dialog').hidePopover?.();$('controls-dialog').close();await refreshConversation();});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;$('install').hidden=false;});$('install').onclick=run(async()=>{await installEvent?.prompt();installEvent=null;$('install').hidden=true;});
 window.addEventListener('online',()=>{if(authenticated){connectEvents();scheduleRefresh();}});window.addEventListener('offline',()=>{$('connection').textContent='Offline · drafts saved';});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&authenticated){scheduleRefresh();if(ws?.readyState!==WebSocket.OPEN)connectEvents();}});window.addEventListener('pagehide',()=>{saveDraft();void voice.close();});window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();$('search-panel').hidden=false;$('search').focus();}if(e.key==='Escape'&&!document.querySelector('dialog[open],:popover-open')&&innerWidth<=760)document.body.classList.remove('chat-open');});

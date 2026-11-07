@@ -382,7 +382,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 @Composable fun TaskCard(t:Task,now:Long=System.currentTimeMillis(),headerBadge:(@Composable ()->Unit)?=null,
     modifier:Modifier=Modifier,identityScope:String=Pocket.environmentId,onRestore:()->Unit={Pocket.restoreTask(t.id)},onOpen:(Boolean)->Unit={Pocket.open(t.id,keyboard=it)},
     onRename:((String,()->Unit)->Unit)?={name,done->Pocket.renameTask(t.id,name,done)},
-    onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)}){
+    onWatch:((Boolean)->Unit)?={Pocket.watchTask(t.id,it)},onArchive:(()->Unit)?={Pocket.archiveTask(t.id)}){
     LaunchedEffect(identityScope,t.id){if(!t.archived)CodexSessionRepository.previewVisible(identityScope,t.id)}
     val activitySource=Pocket.captureEnvironment(identityScope)?.let{CodexCatalog.source(it)}
     val terminalActive by remember(activitySource,t.id){derivedStateOf{activitySource?.activities?.any{row->
@@ -429,7 +429,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                     BilingualLabel(if(t.watched)"On" else "Off",fontSize=10.sp,color=if(t.watched)Mint else Muted)
                 }
             }
-            if(t.archived)IconButton(onRestore,modifier=Modifier.size(48.dp)){SymbolIcon(Icons.Rounded.Unarchive,"Restore conversation",tint=Mint,modifier=Modifier.size(18.dp))}
+            SessionArchiveAction(t,onArchive,onRestore)
 
         }
         Row(Modifier.fillMaxWidth().height(previewHeight),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){

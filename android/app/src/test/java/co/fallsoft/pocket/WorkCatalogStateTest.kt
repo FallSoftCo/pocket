@@ -115,6 +115,8 @@ class WorkCatalogStateTest {
   assertEquals(2,calls.size)
   commands.metadata(entry(a,"id/with?path"),"unarchive",org.json.JSONObject())
   assertEquals("/api/threads/id%2Fwith%3Fpath/unarchive",calls.last().second)
+  commands.metadata(entry(b),"archive",org.json.JSONObject())
+  assertEquals(b,calls.last().first);assertEquals("/api/threads/same-id/archive",calls.last().second)
  }
 
  @Test fun canonicalTaskProjectionPreservesIdentityCapabilitiesAndLiveContext(){

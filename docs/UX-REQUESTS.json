@@ -3354,6 +3354,17 @@
       "verification": "Real private PostgreSQL/NATS/HTTP viewer equivalence and revocation qualification passed. Both signed variants, both lints and475 unit cases per variant passed;14 native integration cases passed, including provider audio and mixed-source original receipt/draft paths. Exact optimized APK renders three rooms once each across different local human principals, survives source loss/recovery and reopening. Physical delivery pending."
     },
     {
+      "id": "session-list-archive-20261107",
+      "request": "Archive any Codex session directly from the Android/web work list; roughly200mostlyfinished sessions should not crowd current work. Preserve history and allow restoration.",
+      "status": "Implemented170candidate; signed/native/browser qualification in progress.",
+      "implementation": [
+        "Existing native thread/archive and unarchive; no new endpoint or local hide-only flags",
+        "Source-bound list-card actions and Archived filter; queued messages held, notifications disabled, drafts/history preserved",
+        "Confirmed archive removes cached list entries; delayed reads cannot undo the acknowledged archive; archive avoids history/resume reads",
+        "Running work is rejected with actionable stop-first message rather than silently interrupted"
+      ]
+    },
+    {
       "id": "retired-environment-data-deletion-20261107",
       "request": "Delete retired host registrations, credentials, drafts and unresolved receipts; retain current system76, Mac and phone profiles. Do not replay removed work.",
       "status": "Delivered backend/web and published Android169 alpha151; physical phone169 installation not yet verified.",

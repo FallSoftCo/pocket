@@ -6,7 +6,7 @@ const port=Number(process.env.PORT||19998),epoch=process.env.NEXTCOMP_QA_EPOCH||
 const capture=process.env.NEXTCOMP_QA_NATIVE_CAPTURE?JSON.parse(fs.readFileSync(process.env.NEXTCOMP_QA_NATIVE_CAPTURE,'utf8')):null;
 const captured=new Map((capture?.pages||[]).map(p=>[p.cursor??'',p.response]));
 let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads=0,positionReads=0,workSubmissions=0,question=false,answers=0,streamFinished=false,streamsSent=0,streamTimer=null;
-let retainedResult=false,legacyHistoryReads=0;
+let retainedResult=false,legacyHistoryReads=0,archived=false,archiveCalls=0,restoreCalls=0;
 const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
 const item=(position,id,type,text)=>({type:'item',position,turnId:'native-turn',item:{id,type,...(type==='userMessage'?{content:[{type:'text',text}]}:{text})}});
@@ -53,7 +53,9 @@ const server=http.createServer(async(req,res)=>{
   const rows=[{id:'legacy-turn/'+(older?'earlier':'request'),turnId:'legacy-turn',kind:'user',text:older?'Earlier legacy request':'Legacy request'},{id:'legacy-turn/'+(older?'old-answer':'answer'),turnId:'legacy-turn',kind:'message',text:older?'Earlier legacy answer':'Legacy answer'}];
   body={thread:{...meta(),id:'legacy-thread',historyMode:'legacy'},timeline:{rows,canonicalIds:rows.map(r=>r.id),hasEarlier:!older,before:older?null:'legacy-opaque-cursor'},revision,historyHead:{threadId:'legacy-thread',epoch,version:revision},pending:[],outgoing:[],notes:[],notifications:[]};
  }
- else if(path==='/api/threads')body={threads:[{...meta(),preview:revision>1?'Native answer two':'Native answer one',previewRole:'codex',previewKind:'message'}]};
+ else if(path==='/api/threads')body={threads:archived===(url.searchParams.get('archived')==='true')?[{...meta(),archived,preview:revision>1?'Native answer two':'Native answer one',previewRole:'codex',previewKind:'message'}]:[]};
+ else if(path==='/api/threads/same-thread/archive'&&req.method==='POST'){archived=true;archiveCalls++;body={ok:true};}
+ else if(path==='/api/threads/same-thread/unarchive'&&req.method==='POST'){archived=false;restoreCalls++;body={ok:true};}
  else if(path==='/api/threads/same-thread/native-timeline'){
   const cursor=url.searchParams.get('before')||'';
   reads.push({cursor,at:Date.now(),replay});
@@ -96,7 +98,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/enable-capture'){
   if(!capture){res.writeHead(409).end('{"error":"Private native capture required"}');return;}
   replay=true;body={source:'recorded-native-timeline',pages:captured.size,firstBefore:captured.get('')?.nextCursor};
- }else if(path==='/_qa/state')body={reads,legacyReads,legacyHistoryReads,positionReads,workSubmissions,answers,streamsSent,galleryMetadataReads,galleryImageReads,galleryCredentialLeaks};
+ }else if(path==='/_qa/state')body={reads,archived,archiveCalls,restoreCalls,legacyReads,legacyHistoryReads,positionReads,workSubmissions,answers,streamsSent,galleryMetadataReads,galleryImageReads,galleryCredentialLeaks};
  else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
  else if(path==='/api/notifications')body={notifications:[]};
  else if(path==='/api/activity')body={items:[]};

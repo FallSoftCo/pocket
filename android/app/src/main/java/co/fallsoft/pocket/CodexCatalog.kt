@@ -176,6 +176,14 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
         errors[CodexCatalogLane.CATALOG]?.let{throw IllegalStateException(it)}
         return tasks.toList()
     }
+    fun archiveChanged(id:String,isArchived:Boolean){
+        // Cancel earlier reads before publishing the acknowledged mutation. A
+        // delayed old head/page must not put the card back into the wrong lane.
+        retire()
+        tasks=if(archived!=isArchived)tasks.filterNot{it.id==id}else tasks.map{if(it.id==id)it.copy(archived=isArchived)else it}
+        transcriptHints.remove(id);cursor=null;cursorInitialized=false;catalogAcceptedAt=0L
+        refresh(explicit=true)
+    }
     fun markForeground(visible:Boolean){foreground=visible}
     suspend fun readPage(search:String=""){
         page(search)
@@ -267,6 +275,11 @@ internal object CodexCatalog {
     }
     fun refresh(explicit:Boolean=false){
         selected()?.let{it.markForeground(foreground);it.refresh(explicit)}
+    }
+    fun archiveChanged(destination:EnvironmentRequest,id:String,archived:Boolean){
+        val owner=backendOwner(destination.endpoint,destination.token)
+        stores.filterKeys{it.environment==destination.environment.id&&it.backend==owner}.values.toList()
+            .forEach{it.archiveChanged(id,archived)}
     }
     fun page(search:String="")=selected()?.page(search)?:Unit
     fun discover(id:String)=selected()?.discover(id)?:Unit

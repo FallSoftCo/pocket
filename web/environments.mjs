@@ -8,6 +8,7 @@ export function environmentPath(path,scope){
 }
 const hasWork=thread=>['active','pending'].includes(thread.status?.type)||thread.pendingCount>0||!!thread.preview?.trim();
 export function catalogVisible(thread,filter,query=''){
+ if((thread.archived===true)!==(filter==='archived'))return false;
  const busy=hasWork(thread);
  if(filter==='empty')return thread.catalogEmpty===true&&!busy;
  if(filter==='temporary')return thread.ephemeral===true;

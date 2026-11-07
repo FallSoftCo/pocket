@@ -37,7 +37,7 @@ internal class WorkSourceCommands(
     suspend fun metadata(entry:WorkEntry<WorkCatalogPayload>,operation:String,body:JSONObject):JSONObject {
         val destination=validateWorkDestination(entry,capture(entry.key.source.environment))
         require(entry.key.kind==WorkKind.SESSION)
-        require(operation in setOf("rename","watch","unarchive"))
+        require(operation in setOf("rename","watch","unarchive","archive"))
         // IDs are escaped as one path segment, never interpreted as a resource/query.
         val id=java.net.URLEncoder.encode(entry.key.id,"UTF-8").replace("+","%20")
         return request(destination,"/api/threads/$id/$operation",body)
@@ -61,7 +61,10 @@ internal object WorkSourceActions {
             }
         }catch(e:Exception){Pocket.error=e.message?:"Could not open the original work"}
     }
+    private val changing=mutableSetOf<String>()
     private fun change(entry:WorkEntry<WorkCatalogPayload>,operation:String,body:JSONObject,done:()->Unit={}){
+        val key=entry.key.saveableKey()+":"+operation
+        if(!changing.add(key))return
         Pocket.scope.launch{
             try{
                 val result=commands.metadata(entry,operation,body)
@@ -71,18 +74,25 @@ internal object WorkSourceActions {
                         result.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),
                         origin.environment.local,result.optLong("revision"),origin.environment.id)
                 }
+                if(operation in setOf("archive","unarchive")){
+                    require(result.optBoolean("ok")){"Archive update was not acknowledged. Refresh before trying again."}
+                    if(Pocket.captureEnvironment(entry.value.destination.environment.id)?.matches(entry.value.destination)==true)
+                        CodexCatalog.archiveChanged(entry.value.destination,entry.key.id,operation=="archive")
+                }
                 // The HTTP receipt is authoritative. A later refresh failure cannot undo it.
                 done()
                 UnifiedWorkCatalog.refresh()
                 if(Pocket.captureEnvironment()?.matches(entry.value.destination)==true)Pocket.refresh()
             }catch(e:CancellationException){throw e}
             catch(e:Exception){Pocket.error=PocketNetwork.error(e)}
+            finally{changing.remove(key)}
         }
     }
     val actions=UnifiedWorkActions(
         open=::open,
         rename={entry,name,done->change(entry,"rename",JSONObject().put("name",name),done)},
         watch={entry,enabled->change(entry,"watch",JSONObject().put("enabled",enabled))},
-        restore={entry->change(entry,"unarchive",JSONObject())}
+        restore={entry->change(entry,"unarchive",JSONObject())},
+        archive={entry->change(entry,"archive",JSONObject())}
     )
 }

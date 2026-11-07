@@ -812,10 +812,11 @@ app.post('/api/threads/:id/unarchive',route(async(req,res)=>{
   await codex.call('thread/unarchive',{threadId});sessionDiscovery.markArchived(threadId,false);res.json({ok:true});
 }));
 app.post('/api/threads/:id/archive',route(async(req,res)=>{
-  const t=await attach(req.params.id);
-  if(isActive(t)||t.turns?.some(x=>x.status==='inProgress'))return res.status(409).json({error:'Stop the running turn before archiving.'});
-  turnRecovery.cancel(t.id);
-  await codex.call('thread/archive',{threadId:t.id});sessionDiscovery.markArchived(t.id,true);
+  const id=requireId(req.params.id);await codex.connect();
+  const {thread:t}=await codex.call('thread/read',{threadId:id,includeTurns:false});
+  if(t?.id!==id)throw Error('Session identity unavailable');
+  if(isActive(t))return res.status(409).json({error:'Stop the running turn before archiving.'});
+  await codex.call('thread/archive',{threadId:t.id});turnRecovery.cancel(t.id);sessionDiscovery.markArchived(t.id,true);
   db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND state='queued'").run(now(),t.id);
   db.prepare('UPDATE watches SET enabled=0 WHERE thread_id=?').run(t.id);attached.delete(t.id);res.json({ok:true});
 }));
