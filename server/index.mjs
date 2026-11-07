@@ -1,4 +1,6 @@
 import {registerNativeConfigurationRoutes} from './native-configuration.mjs';
+import {requestPresentation} from './native-request-contract.mjs';
+import {mountNativeExecution} from './native-execution.mjs';
 import {inactiveArchiveReason} from './session-archive.mjs';
 import {mountOperatorNotifications} from './notification-requests.mjs';
 import {CoordinatorHeadReader} from './coordinator-head.mjs';
@@ -469,7 +471,7 @@ db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during 
 
 codex.on('event',m=>{
   m=sendIdentity.event(m);
-  const p=m.params||{}, threadId=p.threadId || p.thread?.id;
+  const p=m.params||{}, threadId=p.threadId || p.thread?.id || p.conversationId;
   if(threadId&&(internalSessions.owns(threadId,p.thread)||voiceController.owns(threadId)||nativeVoice.owns(threadId)||immersion.ownsThread(threadId)))return;
   const activity=sessionDiscovery.observe(m);
   if(activity){
@@ -498,7 +500,7 @@ codex.on('event',m=>{
   if(m.method==='turn/started'&&threadId)resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=?)',threadId);
   if(m.id!==undefined && threadId){
     const duplicate=pending.has(String(m.id));
-    pending.set(String(m.id),m);
+    if(!duplicate)pending.set(String(m.id),{...m,params:{...p,threadId},_pocketUI:{...requestPresentation(m),token:randomUUID()}});
     const question=/requestUserInput/.test(m.method);
     if(!duplicate)notify(threadId,question?'Codex has a question':'Codex needs your attention',p.questions?.map(q=>q.question).join('\n')||p.reason||p.command||p.message||'Open the task to review the request.',question?'question':'approval',[],String(m.id),null,p.turnId);
   }
@@ -889,6 +891,7 @@ app.get('/api/replies/:id',(req,res)=>{
   if(!row)return res.status(404).json({error:'Reply not found.'});
   res.json({...row,...outgoingProjection.fields(row.thread_id)});
 });
+mountNativeExecution(app,{codex,route,requireId});
 app.post('/api/requests/:id/answer',route(async(req,res)=>res.json(questionActions.answer(req.params.id,req.body))));
 app.post('/api/notifications/:id/presented',route(async(req,res)=>res.json(sessionCatchup.presentedNotification(req.device.id,req.params.id,requireId(req.body.threadId)))));
 app.post('/api/notifications/:id/skip',route(async(req,res)=>res.json(questionActions.skipNotification(req.params.id))));

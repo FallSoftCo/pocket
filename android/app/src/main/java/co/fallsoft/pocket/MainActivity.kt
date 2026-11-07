@@ -576,9 +576,9 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     val fingerprint=remember(r.toString()){java.security.MessageDigest.getInstance("SHA-256").digest(r.toString().toByteArray()).take(12).joinToString(""){"%02x".format(it)}}
     val draftKey=Pocket.key("questionDraft:"+backendOwner(Pocket.base,Pocket.token)+":"+Pocket.selected+":"+id+":"+fingerprint)
     val answers=remember(draftKey){mutableStateMapOf<String,String>().apply{runCatching{JSONObject(Pocket.prefs.getString(draftKey,"{}")?:"{}").let{saved->saved.keys().forEach{key->put(key,saved.s(key))}}}}}
-    fun saveAnswer(key:String,value:String){answers[key]=value;val saved=JSONObject();answers.forEach{(k,v)->saved.put(k,v)};Pocket.prefs.edit().putString(draftKey,saved.toString()).apply()}
+    fun saveAnswer(key:String,value:String){answers[key]=value;val saved=JSONObject();answers.forEach{(k,v)->if(p.optJSONArray("questions")?.objects()?.none{it.s("id")==k&&it.optBoolean("isSecret")}!=false)saved.put(k,v)};Pocket.prefs.edit().putString(draftKey,saved.toString()).apply()}
     val delivery=QuestionDelivery.state(draftKey);val editable=delivery !in listOf("sending","submitted","unconfirmed","expired")
-    fun submit(body:JSONObject)=QuestionDelivery.submit(draftKey,id,body)
+    fun submit(body:JSONObject)=QuestionDelivery.submit(draftKey,id,body.apply{r.optJSONObject("_pocketUI")?.s("token")?.takeIf{it.isNotBlank()}?.let{put("requestToken",it)}})
 
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(6.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
@@ -600,8 +600,8 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
                         if(description.isNotBlank())ImmersionText("$optionId:description",description,color=Muted,fontSize=14.sp,kind="question option explanation",rescue=false)
                     }
                 }
-            };OutlinedTextField(answers[q.s("id")]?:"",{saveAnswer(q.s("id"),it)},readOnly=!editable,label={BilingualLabel("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};submit(JSONObject().put("answers",a))},enabled=editable){BilingualLabel("Send answers")}}
-        else{ImmersionText("approval:"+id,p.s("reason",p.s("message","Review this request before continuing.")),fontSize=15.sp);RichText(p.s("command",p.toString(2)));if(r.s("method").contains("commandExecution")||r.s("method").contains("fileChange")){Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Button({submit(JSONObject().put("decision","accept"))},enabled=editable){BilingualLabel("Allow once")};OutlinedButton({submit(JSONObject().put("decision","decline"))},enabled=editable){BilingualLabel("Decline",color=Coral)}}}else WorkflowText("Answer this request in the terminal.",color=Coral,fontSize=13.sp)}
+            };if(q.optBoolean("isOther")&&(q.optJSONArray("options")?.length()?:0)>0)OutlinedButton({saveAnswer(q.s("id"),"None of the above")},enabled=editable){BilingualLabel("None of the above")};OutlinedTextField(answers[q.s("id")]?:"",{saveAnswer(q.s("id"),it)},readOnly=!editable,visualTransformation=if(q.optBoolean("isSecret"))androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,label={BilingualLabel("Your answer")},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))};Button({val a=JSONObject();answers.forEach{(k,v)->a.put(k,v)};submit(JSONObject().put("answers",a))},enabled=editable){BilingualLabel("Send answers")}}
+        else NativeRequestActions(r,answers,::saveAnswer,editable,::submit)
         if(delivery.isNotBlank()){WorkflowText(when(delivery){"sending"->"Submitting decision…";"submitted"->"Decision submitted";"expired"->"This request was answered or expired. Check current work.";"unconfirmed"->"Delivery unconfirmed. Check current work before trying again.";else->QuestionDelivery.problem(draftKey).ifBlank{"Decision was not accepted. Review and try again."}},color=if(delivery=="unconfirmed")Coral else Muted,fontSize=13.sp)
             if(delivery in listOf("unconfirmed","expired"))TextButton({Pocket.refreshDetail();Pocket.refresh()}){BilingualLabel("Check current work")}}
 
