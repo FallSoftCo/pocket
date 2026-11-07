@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {supportsNativeMethod} from './native-capabilities.mjs';
+import {supportsNativeMethod,describeNativeCapabilities,nativeVersion} from './native-capabilities.mjs';
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 const id=value=>typeof value==='string'&&value.length>0&&value.length<=512&&!/[\u0000-\u001f]/.test(value);
 const unsupported=error=>error?.rpc?.code===-32601||error?.rpc?.code===-32602&&/unsupported|unknown (method|variant)/i.test(error.message);
@@ -10,7 +10,8 @@ export class NativeExecution {
   if(!id(threadId)||cursor!==undefined&&(!id(cursor)||cursor.length>512))fail(400,'Invalid terminal page.');
   const result=await this.call('thread/backgroundTerminals/list',{threadId,limit:30,...(cursor?{cursor}:{})});
   if(!Array.isArray(result?.data)||result.data.length>30)fail(502,'Invalid native terminal response.');
-  return {threadId,data:result.data,nextCursor:result.nextCursor??null};
+  const {backgroundTerminals,executionOutput}=describeNativeCapabilities({version:nativeVersion(this.codex),userAgent:this.codex.initializeResult?.userAgent,connected:this.codex.ready!==false}).features;
+  return {threadId,data:result.data,nextCursor:result.nextCursor??null,features:{backgroundTerminals,executionOutput}};
  }
  async terminate(threadId,processId){
   if(!id(threadId)||!id(processId))fail(400,'Invalid terminal identity.');
