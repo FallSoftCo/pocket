@@ -3,6 +3,9 @@ package co.fallsoft.pocket
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import androidx.compose.runtime.mutableStateMapOf
+
+internal data class WorkActionFeedback(val key:String,val source:String,val title:String,val operation:String,val pending:Boolean,val error:String?=null)
 
 /** A list row retains its original authority even after another source becomes selected.
  * Validation is repeated at admission, never derived from the currently open conversation.
@@ -45,6 +48,10 @@ internal class WorkSourceCommands(
 }
 
 internal object WorkSourceActions {
+    // Actions belong to their captured source, not whichever profile is selected
+    // when the response arrives. Feedback is outside the scrolling catalog.
+    val feedback=mutableStateMapOf<String,WorkActionFeedback>()
+    fun dismiss(key:String){if(feedback[key]?.pending==false)feedback.remove(key)}
     private val commands=WorkSourceCommands(Pocket::captureEnvironment){destination,path,body->
         Pocket.apiEnvironment(destination,path,body)
     }
@@ -65,6 +72,8 @@ internal object WorkSourceActions {
     private fun change(entry:WorkEntry<WorkCatalogPayload>,operation:String,body:JSONObject,done:()->Unit={}){
         val key=entry.key.saveableKey()+":"+operation
         if(!changing.add(key))return
+        feedback[key]=WorkActionFeedback(key,entry.value.destination.environment.name,
+            JSONObject(entry.value.body).s("name").ifBlank{"Session"},operation,true)
         Pocket.scope.launch{
             try{
                 val result=commands.metadata(entry,operation,body)
@@ -81,10 +90,11 @@ internal object WorkSourceActions {
                 }
                 // The HTTP receipt is authoritative. A later refresh failure cannot undo it.
                 done()
+                feedback.remove(key)
                 UnifiedWorkCatalog.refresh()
                 if(Pocket.captureEnvironment()?.matches(entry.value.destination)==true)Pocket.refresh()
-            }catch(e:CancellationException){throw e}
-            catch(e:Exception){Pocket.error=PocketNetwork.error(e)}
+            }catch(e:CancellationException){feedback[key]?.let{feedback[key]=it.copy(pending=false,error="Operation interrupted. Refresh to check its result before trying again.")};throw e}
+            catch(e:Exception){feedback[key]?.let{feedback[key]=it.copy(pending=false,error=PocketNetwork.error(e))}}
             finally{changing.remove(key)}
         }
     }

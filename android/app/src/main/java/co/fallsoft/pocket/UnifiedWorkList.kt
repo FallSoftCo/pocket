@@ -173,7 +173,27 @@ private data class UnifiedWorkRow(
                 val attention=Pocket.attention.filter{!PocketAttention.dismissed(it.optLong("id"))}
                 if(attention.isNotEmpty()){Label("NEEDS YOU · "+attention.size,Coral);attention.forEach{AttentionCard(it)}}
             })
+        WorkActionFeedbackBar()
         WorkUpdatesEntry()
     }
     SessionCatalogTools(toolsOpen,onToolsOpen,view)
+}
+
+/** Failures remain visible at the thumb edge even when the failed row is far
+ * down the catalog. Never offer a blind retry for an uncertain mutation. */
+@Composable internal fun WorkActionFeedbackBar(){
+    val entries=WorkSourceActions.feedback.values.toList()
+    val action=entries.lastOrNull{!it.pending}?:entries.lastOrNull()?:return
+    Surface(color=if(action.error!=null)Coral.copy(alpha=.12f)else Mint.copy(alpha=.1f),
+        modifier=Modifier.fillMaxWidth().testTag("work-action-feedback")){
+        Row(Modifier.padding(horizontal=12.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f).semantics{liveRegion=LiveRegionMode.Polite}){
+                val verb=when(action.operation){"archive"->"Archiving";"unarchive"->"Restoring";"rename"->"Renaming";else->"Updating"}
+                Text("${action.source} · ${action.title}",fontSize=12.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(if(action.pending)"$verb…"else action.error.orEmpty(),fontSize=13.sp,color=if(action.error!=null)Coral else Paper,maxLines=3,overflow=TextOverflow.Ellipsis)
+                if(entries.size>1)Text("${entries.size} actions",fontSize=11.sp,color=Muted)
+            }
+            if(!action.pending)TextButton({WorkSourceActions.dismiss(action.key)}){BilingualLabel("Dismiss")}
+        }
+    }
 }

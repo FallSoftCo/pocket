@@ -61,3 +61,13 @@ an HTTP/native-transport integration journey covering pagination, metadata churn
 cached and native-list-omitted children, and an archive becoming canonical before
 its later read fails. No native worker restart or new APK was required. Physical
 phone rendering of the refreshed list has not been independently inspected.
+
+## Action feedback (172)
+
+List metadata actions retain the originating environment and session. While an
+archive is pending, its progress is visible above the footer; a refusal or
+connection error stays there until dismissed, even when its card is far down the
+list. Repeated pending activation sends once. Dismiss is not retry. Successful
+archive/restore follows the existing native acknowledgement and draft-preserving
+catalog update. Native Codex can refuse an archive held by an active writer; a
+refusal does not mean its host is offline and must not silently stop that worker.

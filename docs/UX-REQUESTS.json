@@ -14,6 +14,20 @@
   },
   "requests": [
     {
+      "id": "archive-action-feedback-20261107",
+      "request": "Mac archive appears to do nothing; verify original delivery and make source-bound progress/errors visible while scrolled.",
+      "status": "Android172/alpha154 published on workstation and Mac; exact user archive target still unspecified",
+      "findings": [
+        "Authenticated Mac status/catalog reachability confirmed from workstation; phone-to-Mac health200. Historical Mac active-writer refusals are not evidence of the latest tap.",
+        "Action errors were rendered at the top of the scrollable catalog, outside the viewport."
+      ],
+      "implementation": [
+        "Persistent source/session-bound action progress and failure feedback immediately above footer, without changing selection or replaying failed mutations.",
+        "Repeated activation remains single-flight; dismissing feedback never resends a command."
+      ],
+      "verification": "docs/qualification/archive-feedback-172.json"
+    },
+    {
       "id": "archive-month-horizon-correction-20261107",
       "request": "Old sessions still appear when scrolling beyond the month horizon. Fix actual archive coverage and work-age criteria across normal list pagination.",
       "status": "backend correction live on workstation and Mac; full catalog cleanup verified",

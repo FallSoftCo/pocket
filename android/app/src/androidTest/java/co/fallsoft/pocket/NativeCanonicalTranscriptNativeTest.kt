@@ -74,6 +74,38 @@ class NativeCanonicalTranscriptNativeTest{
         val evidence=qa("state");assertEquals(1,evidence.getInt("archiveCalls"));assertEquals(1,evidence.getInt("restoreCalls"));assertEquals(0,evidence.getInt("workSubmissions"))
         assertEquals("Native unsent draft",Pocket.prefs.getString("draft:same-thread",null));assertNull(Pocket.selected)
     }
+    @Test fun foreignArchiveProgressAndRefusalStayVisibleWithoutRetargeting(){
+        prepare()
+        val profile=EnvironmentIdentity("qa_mac_archive","MacBook QA")
+        val destination=EnvironmentRequest(profile,"http://localhost:18880","synthetic-system76-mac-archive")
+        main{
+            Pocket.prefs.edit().putString("environments:v1",org.json.JSONArray().put(JSONObject().put("id",profile.id).put("name",profile.name)).toString())
+                .putString(profile.key("server"),destination.endpoint).putString(profile.key("token"),destination.token).commit()
+            WorkSourceActions.feedback.clear()
+            context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.closeTask()
+        }
+        qa("archive-hold")
+        val source=WorkSourceKey(profile.id,backendOwner(destination.endpoint,destination.token))
+        val entry=WorkEntry(WorkItemKey(source,WorkKind.SESSION,"","same-thread"),1L,
+            WorkCatalogPayload(destination,JSONObject().put("id","same-thread").put("name","Mac archive test").toString()))
+        main{WorkSourceActions.actions.archive(entry);WorkSourceActions.actions.archive(entry)}
+        await("Visible archive progress"){device.hasObject(By.text("Archiving…"))}
+        assertEquals("Repeated activation must not dispatch twice",1,qa("state").getInt("archiveCalls"))
+        assertEquals("workstation",Pocket.environmentId)
+        qa("archive-refuse")
+        await("Archive refusal recorded"){WorkSourceActions.feedback.values.any{it.error!=null}}
+        device.dumpWindowHierarchy(java.io.File(context.getExternalFilesDir(null),"archive-feedback-native.xml"))
+        android.util.Log.i("ArchiveQA",WorkSourceActions.feedback.values.toString())
+        await("Refusal visible above footer"){device.hasObject(By.textContains("Close this session in its Mac terminal"))}
+        assertEquals("Close this session in its Mac terminal before archiving.",WorkSourceActions.feedback.values.single().error)
+        val bounds=device.findObject(By.textContains("Close this session in its Mac terminal")).visibleBounds
+        assertTrue("Action feedback must remain at bottom of viewport",bounds.centerY()>device.displayHeight/2)
+        assertEquals("synthetic-system76-mac-archive",qa("state").getJSONArray("archiveOrigins").getString(0).removePrefix("Bearer "))
+        assertFalse(qa("state").getBoolean("archived"));assertEquals(0,qa("state").getInt("workSubmissions"))
+        device.findObject(By.text("Dismiss")).click()
+        await("Dismiss clears feedback"){WorkSourceActions.feedback.isEmpty()}
+        assertEquals(1,qa("state").getInt("archiveCalls"));assertEquals("workstation",Pocket.environmentId)
+    }
     @Test fun retiredRoomSelectionOpensStockWorkWithoutReplayingOrLosingDrafts(){
         prepare()
         val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
