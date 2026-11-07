@@ -3705,8 +3705,9 @@
   },
   "codex_only_20261107": {
     "request": "Return Android/web/coordinator to vanilla Codex and native subagents; remove retired hosts; preserve source-bound pairing, drafts, original receipts, voice and immersion.",
-    "state": "candidate168_not_published",
+    "state": "published168_backend_web_live_phone_install_unverified",
     "retirement": "Authenticated fleet snapshots remove same-account absent members from active profiles without deleting their namespaces. Web retained retired credentials cannot route commands. No room-to-session retarget or room worker activation.",
-    "auth_blockers": "Maintainer dedicated Codex login and RevenueSleuth original Neon account require owner authentication; no shared refresh-token copy or old database substitution."
+    "auth_blockers": "Maintainer dedicated Codex login and RevenueSleuth original Neon account require owner authentication; no shared refresh-token copy or old database substitution.",
+    "evidence": "docs/qualification/codex-only-168.json"
   }
 }

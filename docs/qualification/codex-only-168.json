@@ -1,0 +1,57 @@
+{
+  "versionCode": 168,
+  "versionName": "0.5.0-alpha.150",
+  "runtimeCommit": "4771e24073c952095f8a325abc405c1ae34df2cb",
+  "state": "published",
+  "android": {
+    "unitTestsPerVariant": 476,
+    "unitFailures": 0,
+    "lints": [
+      "debug",
+      "release"
+    ],
+    "requiredNativeJourneys": 11,
+    "passedNativeJourneys": 11,
+    "optimizedCompatibleJourney": "passed",
+    "originalQaPreferencesRestored": true,
+    "actualAccountAudio": {
+      "finalTranscriptAfterStopMs": 1630,
+      "speechFirstAudioMs": 973,
+      "speechCompleteMs": 7083,
+      "taskAdmissions": 0
+    },
+    "unitSkippedPerVariant": 2
+  },
+  "web": {
+    "renderedSyntheticUpgrade": "passed",
+    "savedRoomDraftAndUnknownReceiptRetained": true,
+    "directReplySubmissions": 1,
+    "childAndParentReadback": true,
+    "roomApiReads": 0,
+    "desktopAndNarrowInspected": true
+  },
+  "backend": {
+    "supportedSuiteTests": 679,
+    "failed": 0,
+    "realHttpSqliteWebSocketRestartJourney": "passed with deterministic provider",
+    "retiredRoomAdmission": 410,
+    "nativeHollywoodConfiguration": "refused instead of silently converted",
+    "oldRoomTests": "retained as retired journeys",
+    "rootOwnerFixture": "separate operator entry; not claimed"
+  },
+  "delivery": {
+    "compatibleAndPublicSignersVerified": true,
+    "privateUpdaterPublished": true,
+    "bothWebGatewaysLive": true,
+    "servedApkDigestVerified": true,
+    "authAndPairingPreserved": true,
+    "codexDaemonRestarted": false,
+    "originalTaskReplay": false
+  },
+  "limits": [
+    "Physical phone installation and microphone acoustics are not established by emulator tests.",
+    "FCM accepted the one update notification; handset display is not independently verified.",
+    "Historical failed QA authority setup remains retained and is not relabeled as passed.",
+    "Maintainer login and the unrelated RevenueSleuth database authentication are not repaired by this release."
+  ]
+}
