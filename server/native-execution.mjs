@@ -1,10 +1,11 @@
 import {createHash} from 'node:crypto';
+import {supportsNativeMethod} from './native-capabilities.mjs';
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 const id=value=>typeof value==='string'&&value.length>0&&value.length<=512&&!/[\u0000-\u001f]/.test(value);
 const unsupported=error=>error?.rpc?.code===-32601||error?.rpc?.code===-32602&&/unsupported|unknown (method|variant)/i.test(error.message);
 export class NativeExecution {
  constructor(codex){this.codex=codex;this.outputBusy=false;}
- async call(method,params){await this.codex.connect();try{return await this.codex.call(method,params);}catch(error){if(unsupported(error))fail(409,'This Codex host does not support this execution control.');throw error;}}
+ async call(method,params){await this.codex.connect();if(!supportsNativeMethod(this.codex,method))fail(409,'This Codex runtime has not been qualified for this execution control.');try{return await this.codex.call(method,params);}catch(error){if(unsupported(error))fail(409,'This Codex host does not support this execution control.');throw error;}}
  async terminals(threadId,cursor){
   if(!id(threadId)||cursor!==undefined&&(!id(cursor)||cursor.length>512))fail(400,'Invalid terminal page.');
   const result=await this.call('thread/backgroundTerminals/list',{threadId,limit:30,...(cursor?{cursor}:{})});
