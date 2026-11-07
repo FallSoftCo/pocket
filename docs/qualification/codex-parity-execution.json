@@ -4,14 +4,26 @@
   "protocol": {
     "version": "0.167.0",
     "evidence": "Offline app-server generate-ts --experimental from the installed standalone binary; no app-server was started and no model was invoked.",
-    "nativeMethods": ["thread/items/read", "thread/backgroundTerminals/list", "thread/backgroundTerminals/terminate"],
-    "humanRequests": ["item/tool/requestUserInput", "item/commandExecution/requestApproval", "item/fileChange/requestApproval", "item/permissions/requestApproval", "mcpServer/elicitation/request", "execCommandApproval", "applyPatchApproval"],
+    "nativeMethods": [
+      "thread/items/read",
+      "thread/backgroundTerminals/list",
+      "thread/backgroundTerminals/terminate"
+    ],
+    "humanRequests": [
+      "item/tool/requestUserInput",
+      "item/commandExecution/requestApproval",
+      "item/fileChange/requestApproval",
+      "item/permissions/requestApproval",
+      "mcpServer/elicitation/request",
+      "execCommandApproval",
+      "applyPatchApproval"
+    ],
     "fallbackDecisionEvidence": "Native protocol approvals.rs ExecApprovalRequestEvent::default_available_decisions: managed-network, additional-permission and ordinary-command branches. Explicit availableDecisions always overrides defaults."
   },
   "journeys": [
     "Expand a command and read every page of Codex-retained output; exact thread/turn/item identities, revision hash and surrogate-safe replacement pages.",
     "Open background terminals, inspect command/cwd/native process identity, explicitly confirm one termination, refresh after accepted or unconfirmed delivery.",
-    "Answer native questions including secret masking and None of the above; retain existing source-bound decision/draft handling.",
+    "Answer native questions including secret masking and None of the above; retain existing source-bound decision/draft handling. Secret values retain exact whitespace; oversized answers fail instead of being silently truncated.",
     "Review and submit actual offered structured command/network decisions, session file decisions, turn/session permission grants, legacy approvals and MCP form/URL elicitations.",
     "See a safe visible placeholder for new native item types; keep raw reasoning/private provider payloads omitted; amend exact existing MCP/file item progress."
   ],
@@ -21,8 +33,23 @@
     "terminals": "30 native records per opaque cursor page; on-demand refresh only."
   },
   "verification": {
-    "focusedNodeTests": {"passed": 22, "command": "node --test tests/question-actions.test.mjs tests/native-execution.integration.test.mjs tests/native-timeline.test.mjs tests/sessions-timeline.test.mjs tests/timeline-event-filter.test.mjs tests/terminal-interaction.test.mjs"},
-    "browserDom": {"passed": true, "script": "scripts/qualify-execution-ui.mjs", "runtime": "Node 22 with existing jsdom 26.1 dependency", "coverage": ["offered structured approvals and duplicate send", "MCP fields and focus during competing request", "masked secret question", "output replacement paging", "confirmed exact terminal and unknown mutation without replay"]},
+    "focusedNodeTests": {
+      "passed": 22,
+      "command": "node --test tests/question-actions.test.mjs tests/native-execution.integration.test.mjs tests/native-timeline.test.mjs tests/sessions-timeline.test.mjs tests/timeline-event-filter.test.mjs tests/terminal-interaction.test.mjs"
+    },
+    "browserDom": {
+      "passed": true,
+      "script": "scripts/qualify-execution-ui.mjs",
+      "runtime": "Node 22 with existing jsdom 26.1 dependency",
+      "coverage": [
+        "offered structured approvals and duplicate send",
+        "MCP fields and focus during competing request",
+        "masked secret question",
+        "output replacement paging",
+        "confirmed exact terminal and unknown mutation without replay",
+        "MCP titled multi-select and older gateway approval compatibility"
+      ]
+    },
     "syntaxAndWhitespace": "node --check for changed JavaScript; git diff --check passed",
     "android": "Source implemented; shared compile/QA deliberately left to release owner to avoid concurrent heavy builds.",
     "liveNative": "Not exercised; no real user request, terminal or model was started/stopped."
@@ -35,10 +62,26 @@
     "No release, install, deployment, production restart, push, phone/emulator test or live native mutation is claimed."
   ],
   "integrationHooks": {
-    "server/index.mjs": ["Import requestPresentation and mountNativeExecution", "Resolve legacy request conversationId as source identity", "Attach offered-action descriptor and request token once per pending native request", "Mount native execution routes beside request answer route"],
-    "web/app.mjs": ["Import native execution UI", "Command output action in grouped and ordinary activity rows", "Background terminals button in controls dialog"],
-    "ConversationScreen.kt": ["NativeTerminalsControl inside conversation actions", "NativeCommandOutput for expanded command rows"],
-    "MainActivity.kt": ["RequestCard delegates non-question actions to NativeRequestActions", "Question secret masking and memory-only secret drafts", "Offered None of the above option and request token submission"]
+    "server/index.mjs": [
+      "Import requestPresentation and mountNativeExecution",
+      "Resolve legacy request conversationId as source identity",
+      "Attach offered-action descriptor and request token once per pending native request",
+      "Mount native execution routes beside request answer route"
+    ],
+    "web/app.mjs": [
+      "Import native execution UI",
+      "Command output action in grouped and ordinary activity rows",
+      "Background terminals button in controls dialog"
+    ],
+    "ConversationScreen.kt": [
+      "NativeTerminalsControl inside conversation actions",
+      "NativeCommandOutput for expanded command rows"
+    ],
+    "MainActivity.kt": [
+      "RequestCard delegates non-question actions to NativeRequestActions",
+      "Question secret masking and memory-only secret drafts",
+      "Offered None of the above option and request token submission"
+    ]
   },
   "ownerFollowup": [
     "Integrate configuration agent supportsNativeMethod gate for native execution mutation after Codex.connect, with explicit unsupported error for an unaudited runtime.",

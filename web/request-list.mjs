@@ -6,7 +6,7 @@ export class RequestList {
   let cursor=this.holder.firstChild;const place=box=>{if(box!==cursor)this.holder.insertBefore(box,cursor);cursor=box.nextSibling;};
   const keep=new Set();for(const request of requests){const key=scope+'/'+request.id;keep.add(key);let entry=this.cards.get(key);const signature=JSON.stringify(request);
    if(entry&&(entry.signature===signature||entry.state!=='pending')){place(entry.box);continue;}
-   const prior=entry?Object.fromEntries([...entry.box.querySelectorAll('[data-question]')].map(n=>[n.dataset.question,n.value])):{};
+   const prior=entry?Object.fromEntries([...entry.box.querySelectorAll('[data-question]')].map(n=>[n.dataset.question,n.multiple?JSON.stringify([...n.selectedOptions].map(o=>o.value)):n.value])):{};
    if(entry?.box===cursor)cursor=entry.box.nextSibling;
    const focused=entry?.box.contains(document.activeElement)?document.activeElement:null,focusField=focused?.dataset.question,selection=focused?[focused.selectionStart,focused.selectionEnd]:null;
    entry?.box.remove();
@@ -23,7 +23,7 @@ export class RequestList {
     for(const question of request.params?.questions||[]){const label=this.create('label','question-label',question.question),input=this.create('input');input.placeholder='Your answer';input.type=question.isSecret?'password':'text';input.dataset.question=question.id;input.setAttribute('aria-label',question.question);input.value=prior[question.id]||'';label.append(input);box.append(label);controls.push(input);
      for(const option of [...(question.options||[]),...(question.isOther&&question.options?.length?[{label:'None of the above'}]:[])]){const choice=action(option.label,()=>{input.value=option.label;input.dispatchEvent(new Event('input',{bubbles:true}));});choice.classList.add('question-option');choice.setAttribute('aria-label',option.label);if(option.description)choice.append(this.create('small','',option.description));}
     }
-    action('Submit answers',()=>send({answers:Object.fromEntries([...box.querySelectorAll('[data-question]')].map(n=>[n.dataset.question,n.value]))}));action('Skip',()=>send({skip:true}));
+    action('Submit answers',()=>send({answers:Object.fromEntries([...box.querySelectorAll('[data-question]')].map(n=>[n.dataset.question,n.multiple?JSON.stringify([...n.selectedOptions].map(o=>o.value)):n.value]))}));action('Skip',()=>send({skip:true}));
    }else renderNativeRequest({request,box,create:this.create,action,send,controls,prior});
    box.append(status);place(box);if(focusField){const input=[...box.querySelectorAll('[data-question]')].find(n=>n.dataset.question===focusField);input?.focus({preventScroll:true});if(input&&selection&&typeof input.setSelectionRange==='function'){try{input.setSelectionRange(...selection);}catch{}}}
   }
