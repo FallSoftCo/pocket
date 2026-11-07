@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.UUID
@@ -21,13 +22,21 @@ internal fun conversationUsageLabel(value:JSONObject?):String {
 
 /** All async reads/actions retain the original pairing and thread. Editing
  * inserts into the existing draft; only the ordinary Send control submits it. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun ConversationToolsSheet(onClose:()->Unit,onInsert:(String)->Unit){
     val thread=Pocket.selected?:return
-    val destination=remember(thread,Pocket.environmentId){Pocket.captureEnvironment()}?:return
+    val destination=Pocket.captureEnvironment()?:return
+    // Confirmation, file selections and pending reads belong to this exact source.
+    key(destination,thread){ConversationToolsSheetContent(destination,thread,onClose,onInsert)}
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun ConversationToolsSheetContent(destination:EnvironmentRequest,thread:String,onClose:()->Unit,onInsert:(String)->Unit){
     val scope=rememberCoroutineScope()
+    var alive by remember{mutableStateOf(true)}
+    // An old callback stays invalid even if navigation later returns to its source.
+    DisposableEffect(Unit){onDispose{alive=false}}
     val root="/api/threads/"+android.net.Uri.encode(thread)
-    val key=remember(destination,thread){Pocket.key("conversationOperation:$thread")}
+    val key=remember(destination,thread){destination.environment.key("conversationOperation:$thread")}
     var data by remember(destination,thread){mutableStateOf<JSONObject?>(null)}
     var error by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)}
     var boundary by remember{mutableStateOf("")};var query by remember{mutableStateOf("")}
@@ -35,14 +44,18 @@ internal fun conversationUsageLabel(value:JSONObject?):String {
     var cwd by remember{mutableStateOf("")};var reviewTarget by remember{mutableStateOf("")}
     var confirmation by remember{mutableStateOf<JSONObject?>(null)}
     var file by remember{mutableStateOf<JSONObject?>(null)};var first by remember{mutableStateOf("1")};var last by remember{mutableStateOf("40")};var selection by remember{mutableStateOf<JSONObject?>(null)}
-    fun current()=Pocket.selected==thread&&Pocket.captureEnvironment()?.matches(destination)==true
-    suspend fun request(path:String,body:JSONObject?=null)=Pocket.apiEnvironment(destination,root+path,body)
+    fun current()=alive&&Pocket.selected==thread&&Pocket.captureEnvironment()?.matches(destination)==true
+    suspend fun request(path:String,body:JSONObject?=null):JSONObject{
+        check(current()){ "Open conversation tools again in the original conversation." }
+        return Pocket.apiEnvironment(destination,root+path,body)
+    }
     suspend fun refresh(){val response=request("/conversation-tools");if(current()){data=response;cwd=response.s("cwd");if(boundary.isBlank())boundary=response.optJSONArray("turns")?.objects()?.firstOrNull{it.s("status")!="inProgress"}?.s("id").orEmpty()}}
-    fun run(action:suspend ()->Unit){if(busy)return;busy=true;scope.launch{try{error="";action()}catch(e:Exception){if(current())error=e.message?:"Operation unavailable"}finally{busy=false}}}
+    fun run(action:suspend ()->Unit){if(busy||!current())return;busy=true;scope.launch{try{if(!current())return@launch;error="";action()}catch(e:CancellationException){throw e}catch(e:Exception){if(current())error=e.message?:"Operation unavailable"}finally{if(current())busy=false}}}
     suspend fun accepted(receipt:JSONObject){if(!current())return
         val state=receipt.s("state");error=receipt.s("error").ifBlank{state}
         if(state!="accepted")return
-        val appliedKey=Pocket.key("conversationOperationApplied:"+receipt.s("id"))
+        check(receipt.s("threadId")==thread){"The operation receipt belongs to another conversation."}
+        val appliedKey=destination.environment.key("conversationOperationApplied:"+receipt.s("id"))
         val result=receipt.optJSONObject("result")?:JSONObject()
         if(!Pocket.prefs.getBoolean(appliedKey,false)){
             Pocket.prefs.edit().putBoolean(appliedKey,true).apply()
@@ -51,7 +64,7 @@ internal fun conversationUsageLabel(value:JSONObject?):String {
             if(receipt.s("kind")=="changeDirectory")Pocket.refreshDetail()
         }
     }
-    fun prepare(kind:String,extra:JSONObject=JSONObject()){extra.put("kind",kind);if(kind=="fork"||kind=="revert")extra.put("turnId",boundary).put("expectedLastTurnId",data?.optJSONArray("turns")?.optJSONObject(0)?.s("id"));if(kind=="revert")extra.put("confirmContextOnly",true);confirmation=extra}
+    fun prepare(kind:String,extra:JSONObject=JSONObject()){if(!current())return;extra.put("kind",kind);if(kind=="fork"||kind=="revert")extra.put("turnId",boundary).put("expectedLastTurnId",data?.optJSONArray("turns")?.optJSONObject(0)?.s("id"));if(kind=="revert")extra.put("confirmContextOnly",true);confirmation=extra}
     LaunchedEffect(destination,thread){run{refresh()}}
     ModalBottomSheet(onDismissRequest=onClose){
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
@@ -91,9 +104,9 @@ internal fun conversationUsageLabel(value:JSONObject?):String {
             data?.optJSONArray("operations")?.objects()?.forEach{receipt->
                 Text(receipt.s("kind")+": "+receipt.s("state")+" "+receipt.s("error"))
                 if(receipt.s("state") in listOf("dispatching","unknown"))TextButton({run{accepted(request("/conversation-operations/"+receipt.s("id")));refresh()}},enabled=!busy){Text("Check receipt")}
-                if(receipt.s("state")=="unknown")TextButton({confirmation=JSONObject().put("kind","acknowledge").put("id",receipt.s("id"))},enabled=!busy){Text("Acknowledge after inspection")}
+                if(receipt.s("state")=="unknown")TextButton({prepare("acknowledge",JSONObject().put("id",receipt.s("id")))},enabled=!busy){Text("Acknowledge after inspection")}
                 if(receipt.s("kind")=="revert"&&receipt.s("state")=="accepted")TextButton({if(current())onInsert(receipt.optJSONObject("result")?.s("draft").orEmpty())}){Text("Restore original message to draft")}
-                if(receipt.s("kind")=="fork"&&receipt.s("state")=="accepted")TextButton({receipt.optJSONObject("thread")?.s("id")?.let{onClose();Pocket.open(it)}}){Text("Open branch")}
+                if(receipt.s("kind")=="fork"&&receipt.s("state")=="accepted")TextButton({if(current())receipt.optJSONObject("thread")?.s("id")?.let{onClose();Pocket.open(it)}}){Text("Open branch")}
             }
             Pocket.prefs.getString(key,null)?.let{saved->TextButton({run{val id=JSONObject(saved).s("id");accepted(request("/conversation-operations/$id"));refresh()}},enabled=!busy){Text("Check saved operation")}}
             TextButton({run{refresh()}},enabled=!busy){Text("Refresh context and receipts")}
@@ -104,7 +117,7 @@ internal fun conversationUsageLabel(value:JSONObject?):String {
         val kind=operation.s("kind");val text=when(kind){"revert"->data?.s("warning").orEmpty()+" Remove the selected turn and every later turn from conversation context?";"review"->"Start native code review? This uses model capacity.";"compact"->"Ask Codex to compact this conversation context?";"changeDirectory"->"Use this folder for subsequent turns? Existing files are not moved.";"acknowledge"->"Have you inspected the conversation and workspace for the uncertain effect? This unlocks subsequent input without retrying the operation.";else->"Create a new conversation through this turn? Working files are shared."}
         AlertDialog(onDismissRequest={confirmation=null},title={Text("Confirm conversation action")},text={Text(text)},confirmButton={TextButton({confirmation=null;run{
             if(kind=="acknowledge")request("/conversation-operations/"+operation.s("id")+"/acknowledge",JSONObject().put("inspected",true))
-            else {operation.put("id",UUID.randomUUID().toString());Pocket.prefs.edit().putString(key,operation.toString()).commit();try{accepted(request("/conversation-operations",operation))}catch(e:Exception){error="Delivery is uncertain. Check the saved operation; it will not be sent again. "+e.message}}
+            else {operation.put("id",UUID.randomUUID().toString());check(Pocket.prefs.edit().putString(key,operation.toString()).commit()){"Could not save the operation before sending."};try{accepted(request("/conversation-operations",operation))}catch(e:CancellationException){throw e}catch(e:Exception){if(current())error="Delivery is uncertain. Check the saved operation; it will not be sent again. "+e.message}}
             refresh()
         }}){Text("Confirm")}},dismissButton={TextButton({confirmation=null}){Text("Cancel")}})
     }
