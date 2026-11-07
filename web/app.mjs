@@ -280,11 +280,17 @@ async function reconcilePending(){if(deliveryFlight)return deliveryFlight;if(!pe
  const inspect=async()=>{try{await checkOriginalPending(p);}catch(e){if(pending?.id===p.id)persistPending({...pending,state:'unknown',error:e.status===404?'Original receipt missing; delivery remains uncertain. No resubmission.':e.message});throw e;}};
  deliveryFlight=inspect();try{return await deliveryFlight;}finally{deliveryFlight=null;renderHeader();}
 }
-let runtimeConnected=null;
+let runtimeConnected=null;const unavailableEnvironments=new Set();
 function handleEvent(m){
  conversationToolsPane.event(m);
  if(m.type==='hollywoodInbox'||m.type==='roomEvent'||m.type==='roomNativeState'){scheduleRefresh({head:isRoom(scope),catalog:true});return;}
- if(m.type==='environmentStatus'){if(m.available===false||m.connected===false)accountUsage.unavailable(m.environmentId);if(m.available===true&&accountSource().environment===m.environmentId)void refreshAccountUsage();renderUsage();scheduleRefresh({head:false,catalog:true});return;}
+ if(m.type==='environmentStatus'){
+  const available=m.available??m.connected;
+  const recovered=available===true&&unavailableEnvironments.delete(m.environmentId);
+  if(available===false){unavailableEnvironments.add(m.environmentId);accountUsage.unavailable(m.environmentId);}
+  if(available===true&&accountSource().environment===m.environmentId)void refreshAccountUsage();
+  renderUsage();scheduleRefresh({head:recovered&&environmentOf(scope)===m.environmentId,catalog:true,attention:recovered});return;
+ }
  if(immersion.handle(m))return;
  if(m.type==='rateLimits'){const environment=m.environmentId||'current';if(environment==='current')status={...status,usage:m.usage};accountUsage.limits(environment,m.usage);renderUsage();return;}
  if(m.type==='status'){
@@ -329,7 +335,7 @@ function handleEvent(m){
  // The independent periodic reconciliation remains the compatibility fallback.
 }
 function connectEvents(){
- clearTimeout(reconnectTimer);if(!authenticated)return;ws?.close();
+ clearTimeout(reconnectTimer);if(!authenticated)return;ws?.close();unavailableEnvironments.clear();
  ws=new WebSocket(clientURL(base,'events').replace(/^http/,'ws'));const own=ws;
  ws.onopen=()=>{$('connection').textContent='Connected';void run(async()=>{await Promise.all([refreshList(),refreshConversation(),refreshAttention()]);await reconcilePending();})()};
  ws.onmessage=e=>{if(ws!==own||!authenticated)return;let m;try{m=JSON.parse(e.data);}catch{return;}handleEvent(m);};
