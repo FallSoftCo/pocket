@@ -82,6 +82,22 @@ export async function productionFixture(t,{name='Source A'}={}){
     assert.ok(m.params.clientUserMessageId,'Synthetic send must retain its original client ID');
     ws.terminate();return;
    }
+   // Opt-in synthetic configuration state. Validate both directions against
+   // the generated protocol; never write a real config or refresh connectors.
+   if(f.configuration&&['config/read','app/installed','config/value/write'].includes(m.method)){
+    const state=f.configuration,version=()=>`fixture-config-${state.version}`,filePath=join(dir,'home','config.toml');
+    wireCheck({'config/read':'ConfigReadParams','app/installed':'AppsInstalledParams','config/value/write':'ConfigValueWriteParams'}[m.method],m.params);
+    if(m.method==='app/installed'){
+     assert.equal(m.params.forceRefresh,false);assert.equal(m.params.threadId,f.thread.id);
+     return send(ws,m.id,{apps:[{id:state.id,runtimeName:state.name,enabled:state.enabled,callable:false}]},'AppsInstalledResponse');
+    }
+    const config={model:'fixture-no-model',apps:{[state.id]:{enabled:state.enabled}}};
+    if(m.method==='config/read')return send(ws,m.id,{config,origins:{},layers:m.params.includeLayers?[{name:{type:'user',file:filePath,profile:null},version:version(),config,disabledReason:null}]:null},'ConfigReadResponse');
+    assert.equal(m.params.keyPath,`apps.${state.id}.enabled`);assert.equal(m.params.mergeStrategy,'replace');assert.equal(typeof m.params.value,'boolean');
+    if(m.params.expectedVersion!==version())return ws.send(JSON.stringify({id:m.id,error:{code:-32600,message:'Synthetic native configuration version conflict'}}));
+    state.enabled=m.params.value;state.version++;
+    return send(ws,m.id,{status:'ok',version:version(),filePath,overriddenMetadata:null},'ConfigWriteResponse');
+   }
    // Startup probes are explicitly unsupported, never permissive empty success.
    if(!['account/read','account/rateLimits/read','model/list','thread/loaded/list'].includes(m.method))faults.push(`Unexpected native method ${m.method}`);
    ws.send(JSON.stringify({id:m.id,error:{code:-32601,message:`${m.method} not supported by bounded fixture`}}));

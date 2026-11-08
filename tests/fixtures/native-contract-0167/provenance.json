@@ -23,6 +23,12 @@
     "v2/ServerRequestResolvedNotification.json": "4f03d586a5af04edd912cad08cc97eceb658e7e06744565e6d41a93e04a55966",
     "v2/TurnStartParams.json": "d13cb408b906669e8d3e8694b42148a75180d4dcd0eeac6867271add8dfa1864",
     "v2/ThreadItemsListParams.json": "d5cf9784413f1d1abba756e04e48b273a9d12ab2c5675442e91b6a4ee55e19f0",
-    "v2/ThreadItemsListResponse.json": "054ebb1e51fad510f1ff9bd2fd06a96d9db06ca4f8963207dccfef91ea8e540b"
+    "v2/ThreadItemsListResponse.json": "054ebb1e51fad510f1ff9bd2fd06a96d9db06ca4f8963207dccfef91ea8e540b",
+    "v2/ConfigReadParams.json": "257c54a423b47c1d209ff1076765a1564d82322fd5161670fd489a2874de1bac",
+    "v2/ConfigReadResponse.json": "4ec77e1a3eed746037149799c3b6bb8fe7b4b593e5930fc9f410e6282de9df50",
+    "v2/ConfigValueWriteParams.json": "b9032e35bf64d4628bfc72e22b58b71bbcf754aeb720a86eacb091e0137547c9",
+    "v2/ConfigWriteResponse.json": "1d690287d9e8a0c552f664038d3810dfc3903ec8042eb2c0f772856414f59954",
+    "v2/AppsInstalledParams.json": "c2027510d5d041c2205349036f9c2bea10b20df309de5330beab9de8a9e50bdb",
+    "v2/AppsInstalledResponse.json": "d8ef8dd14dcba8aaaaaf2b0b80db90d66edf8f4ff422589b844ae2b0edcb46d4"
   }
 }
