@@ -24,6 +24,16 @@ class NativeCanonicalTranscriptNativeTest{
         JSONObject().put("key",action.key).put("source",action.source).put("title",action.title)
             .put("operation",action.operation).put("pending",action.pending).put("error",action.error?:JSONObject.NULL)
     })
+    /** A live-region update can leave an old text node in UiAutomation's cache
+     * even while a new sibling and the rendered pixels are current. Read the
+     * actual accessibility tree before judging progress/refusal visibility.
+     * This is observation only: it never repeats the archive or dismiss action.
+     */
+    private fun freshArchiveNode(selector:BySelector):UiObject2?{
+        if(android.os.Build.VERSION.SDK_INT>=34)
+            assertTrue("Accessibility observation cache did not clear",instrumentation.uiAutomation.clearCache())
+        return device.findObject(selector)
+    }
     private fun await(message:String,timeout:Long=15000,condition:()->Boolean){
         val end=android.os.SystemClock.elapsedRealtime()+timeout
         var passed=condition()
@@ -106,20 +116,22 @@ class NativeCanonicalTranscriptNativeTest{
         val entry=WorkEntry(WorkItemKey(source,WorkKind.SESSION,"","same-thread"),1L,
             WorkCatalogPayload(destination,JSONObject().put("id","same-thread").put("name","Mac archive test").toString()))
         main{WorkSourceActions.actions.archive(entry);WorkSourceActions.actions.archive(entry)}
-        await("Visible archive progress"){device.hasObject(By.text("Archiving…"))}
+        await("Visible archive progress"){freshArchiveNode(By.text("Archiving…"))!=null}
         assertEquals("Repeated activation must not dispatch twice",1,qa("state").getInt("archiveCalls"))
         assertEquals("workstation",Pocket.environmentId)
         qa("archive-refuse")
         await("Archive refusal recorded"){WorkSourceActions.feedback.values.any{it.error!=null}}
         device.dumpWindowHierarchy(java.io.File(context.getExternalFilesDir(null),"archive-feedback-native.xml"))
         android.util.Log.i("ArchiveQA",feedbackEvidence().toString())
-        await("Refusal visible above footer"){device.hasObject(By.textContains("Close this session in its Mac terminal"))}
+        await("Refusal visible above footer"){freshArchiveNode(By.textContains("Close this session in its Mac terminal"))!=null}
         assertEquals("Close this session in its Mac terminal before archiving.",WorkSourceActions.feedback.values.single().error)
-        val bounds=device.findObject(By.textContains("Close this session in its Mac terminal")).visibleBounds
+        val bounds=requireNotNull(freshArchiveNode(By.textContains("Close this session in its Mac terminal"))).visibleBounds
         assertTrue("Action feedback must remain at bottom of viewport",bounds.centerY()>device.displayHeight/2)
+        device.dumpWindowHierarchy(java.io.File(context.getExternalFilesDir(null),"archive-feedback-native-fresh.xml"))
+        device.takeScreenshot(java.io.File(context.getExternalFilesDir(null),"archive-feedback-native-fresh.png"))
         assertEquals("synthetic-system76-mac-archive",qa("state").getJSONArray("archiveOrigins").getString(0).removePrefix("Bearer "))
         assertFalse(qa("state").getBoolean("archived"));assertEquals(0,qa("state").getInt("workSubmissions"))
-        device.findObject(By.text("Dismiss")).click()
+        requireNotNull(freshArchiveNode(By.text("Dismiss"))).click()
         await("Dismiss clears feedback"){WorkSourceActions.feedback.isEmpty()}
         assertEquals(1,qa("state").getInt("archiveCalls"));assertEquals("workstation",Pocket.environmentId)
     }
