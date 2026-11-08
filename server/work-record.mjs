@@ -1,7 +1,11 @@
 import {itemRow} from './timeline.mjs';
+import {threadReadError} from './thread-read-availability.mjs';
 
 const clip=value=>String(value||'').slice(0,16000);
 const timestamp=value=>value ? (Number(value)<1e12?Number(value)*1000:Number(value)) : null;
+const scanCodes=new Set(['THREAD_EPHEMERAL_UNAVAILABLE','THREAD_HISTORY_UNAVAILABLE','THREAD_ARCHIVED',
+  'CODEX_DISCONNECTED','CODEX_UNAVAILABLE','CODEX_TIMEOUT','CODEX_DRAINING','CODEX_HISTORY_TOO_LARGE',
+  'CODEX_HISTORY_LINEAGE_UNAVAILABLE','WORK_RECORD_SOURCE_MISMATCH']);
 
 /** A local, derived record. Completion is a protocol state, never a success rating. */
 export class WorkRecord {
@@ -77,10 +81,29 @@ export class WorkRecord {
     const session=this.db.prepare('SELECT * FROM work_record_sessions ORDER BY last_scan,id LIMIT 1').get();
     if(!session)return;
     this.db.prepare('UPDATE work_record_sessions SET last_scan=? WHERE id=?').run(this.clock(),session.id);
-    const thread=await history.read({...metadata(session.id),id:session.id},{before:session.cursor||null,preferPaging:true,maxTurns:4,maxItems:80,maxBytes:160000});
-    this.remember(thread);
-    this.db.prepare('UPDATE work_record_sessions SET cursor=?,hydrated=? WHERE id=?')
-      .run(thread._pocketPage?.hasEarlier?thread._pocketPage.before:null,thread._pocketPage?.hasEarlier?0:1,session.id);
+    let known,operation='catalog/read';
+    try{
+      known=metadata(session.id);
+      if(known?.id!=null&&known.id!==session.id)throw Object.assign(Error('Work record metadata identity changed.'),{code:'WORK_RECORD_SOURCE_MISMATCH'});
+      operation='history/read';
+      const thread=await history.read({...known,id:session.id},{before:session.cursor||null,preferPaging:true,maxTurns:4,maxItems:80,maxBytes:160000});
+      if(thread?.id!==session.id)throw Object.assign(Error('Work record history identity changed.'),{code:'WORK_RECORD_SOURCE_MISMATCH'});
+      operation='work-record/store';
+      this.remember(thread);
+      this.db.prepare('UPDATE work_record_sessions SET cursor=?,hydrated=? WHERE id=?')
+        .run(thread._pocketPage?.hasEarlier?thread._pocketPage.before:null,thread._pocketPage?.hasEarlier?0:1,session.id);
+    }catch(error){
+      // Cached notLoaded status is not negative native evidence. Only classify
+      // an exact identity-bearing RPC refusal, and never turn it into completion.
+      const failure=operation==='history/read'?threadReadError(error,{threadId:session.id,metadata:known,operation}):error;
+      const code=scanCodes.has(failure?.code)?failure.code:({'catalog/read':'WORK_RECORD_METADATA_UNAVAILABLE','history/read':'WORK_RECORD_HISTORY_READ_FAILED','work-record/store':'WORK_RECORD_STORAGE_UNAVAILABLE'})[operation];
+      const diagnostic={source:{backend:'codex',threadId:session.id},operation,code,
+        ...(operation==='history/read'&&Number.isInteger(failure?.rpc?.code)?{nativeRpcCode:failure.rpc.code}:{})};
+      // Preserve cursor/content and the fair-scan clock on failure. The next
+      // existing tick can read another session; a later scan may recover this one.
+      // Only this closed diagnostic is logged: no raw RPC text, paths or tokens.
+      throw Object.assign(new Error('Work record scan did not complete.',{cause:failure}),{code,workRecordDiagnostic:diagnostic});
+    }
   }
   list({before=null,limit=30}={}) {
     let edge=[Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER];

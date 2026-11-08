@@ -264,7 +264,7 @@ setInterval(async()=>{
   if(scanningWork||!codex.ready)return;
   scanningWork=true;
   try{await workRecord.scan(history,id=>JSON.parse(db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.metadata||'{}'));}
-  catch(e){console.error('Work record history unavailable:',e.code||e.name);}
+  catch(e){console.error('Work record history unavailable:',JSON.stringify(e.workRecordDiagnostic||{code:'WORK_RECORD_SCAN_FAILED',operation:'work-record/scan'}));}
   finally{scanningWork=false;}
 },15000).unref();
 const activityBoard=new ActivityBoard();
