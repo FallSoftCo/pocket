@@ -15,6 +15,7 @@ class TranscriptReadRetryTest {
   for(status in listOf(408,429,500,502,503,504))assertTrue("status$status",retryableTranscriptRead(PocketApiException(status,"synthetic")))
  }
  @Test fun unchangedPermissionOrCursorFailureMustNotPoll(){
+  assertFalse(retryableTranscriptRead(PocketApiException(409,"Codex has not stored a first message for this session yet.","THREAD_NOT_MATERIALIZED")))
   for(status in listOf(400,401,403,404,409,410,422))assertFalse("status$status",retryableTranscriptRead(PocketApiException(status,"synthetic")))
   assertFalse(retryableTranscriptRead(IllegalArgumentException("malformed history")))
  }

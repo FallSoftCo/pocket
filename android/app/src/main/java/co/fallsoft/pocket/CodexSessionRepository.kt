@@ -212,6 +212,10 @@ internal object CodexSessionRepository {
             while(cursor.moveToNext())backgroundRefusals[source.scope to cursor.getString(0)]=BackgroundRefusal(cursor.getString(1),cursor.getString(2),cursor.getLong(3),cursor.getInt(4),cursor.getLong(5))
         }
     }
+    private val emptyReadInspections=java.util.concurrent.ConcurrentHashMap.newKeySet<Pair<String,String>>()
+    fun inspectEmptyRead(id:String,destination:EnvironmentRequest?=Pocket.captureEnvironment()){
+        if(destination!=null)emptyReadInspections.add(source(destination).scope to id)
+    }
     private fun recoveryDue(key:Pair<String,String>)=backgroundRefusals[key]?.let{it.code=="THREAD_HISTORY_UNAVAILABLE"&&System.currentTimeMillis()>=it.retryAt}==true
     private fun backgroundAllowed(key:Pair<String,String>)=backgroundMembership[key]?.admitted==true&&(key !in backgroundRefusals||recoveryDue(key))
     private fun clearBackgroundRefusal(key:Pair<String,String>){
@@ -273,7 +277,7 @@ internal object CodexSessionRepository {
         }
     }
     private suspend fun refuseBackground(source:Source,id:String,error:PocketApiException,evidence:String,generation:Long,notification:Long){
-        if(error.status!=409||error.code !in setOf("THREAD_EPHEMERAL_UNAVAILABLE","THREAD_HISTORY_UNAVAILABLE","THREAD_ARCHIVED"))return
+        if(error.status!=409||error.code !in setOf("THREAD_EPHEMERAL_UNAVAILABLE","THREAD_HISTORY_UNAVAILABLE","THREAD_ARCHIVED","THREAD_NOT_MATERIALIZED"))return
         withContext(lane){
             if(!current(source))return@withContext
             restoreBackground(source)
@@ -289,6 +293,14 @@ internal object CodexSessionRepository {
     /** Shared current read, independent of viewport lifetime. Consumers own private JSON copies. */
     suspend fun readCurrent(destination:EnvironmentRequest,id:String,background:Boolean=false):JSONObject {
         val source=source(destination);val key=source.scope to id
+        // An explicit native empty-session refusal is read availability, never a
+        // successful empty snapshot. Re-admit on new catalog/notification evidence.
+        withContext(lane){
+            restoreBackground(source)
+            if(emptyReadInspections.remove(key)&&backgroundRefusals[key]?.code=="THREAD_NOT_MATERIALIZED")clearBackgroundRefusal(key)
+            if(backgroundRefusals[key]?.code=="THREAD_NOT_MATERIALIZED")throw PocketApiException(409,
+                "Codex has not stored a first message for this session yet. Previously saved messages are retained.","THREAD_NOT_MATERIALIZED")
+        }
         val request=requestMutex.withLock{
             requests[key]?.takeIf{it.isActive}?:network.async{
                 if(!current(source))throw CancellationException("Pairing changed")
@@ -314,7 +326,11 @@ internal object CodexSessionRepository {
                     if(!useNative||!sessionUnsupported&&!routeMissing)throw error
                     if(sessionUnsupported)turnHistorySessions.add(key)else nativeCapabilities[source.scope]=false
                     useNative=false
-                    CodexReadTransport.read(destination,base+if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
+                    try{CodexReadTransport.read(destination,base+if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)}
+                    catch(fallback:PocketApiException){
+                        refuseBackground(source,id,fallback,backgroundEvidence.first,backgroundEvidence.second,notificationAtStart)
+                        throw fallback
+                    }
                 }
                 if(archiveAtStart!=null)withContext(lane){
                     if(!current(source))throw CancellationException("Pairing changed")
@@ -458,6 +474,7 @@ internal object CodexSessionRepository {
     fun timeline(destination:EnvironmentRequest,update:JSONObject){
         val id=update.s("threadId");if(id.isBlank())return
         val source=source(destination)
+        inspectEmptyRead(id,destination)
         liveGenerations[source.scope to id]=liveSequence.incrementAndGet()
         val item=update.optJSONObject("row")?.s("id")?:update.s("turnId","head")
         livePending[Triple(source.scope,id,item)]=source to update
