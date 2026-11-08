@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,7 +58,9 @@ private data class TerminalConfirmation(val destination:EnvironmentRequest,val t
         if(problem.isNotBlank()){WorkflowText(problem,color=Coral,fontSize=13.sp);TextButton({qualified=false;read(0,0,true)},enabled=!busy){BilingualLabel("Read from beginning")}}
         page?.let{value->
             WorkflowText("${value.optLong("offset")}–${value.optLong("offset")+value.s("text").length} of ${value.optLong("totalCharacters")} characters",fontSize=11.sp,color=Muted)
-            SelectionContainer{Text(value.s("text"),fontFamily=FontFamily.Monospace,fontSize=11.sp,modifier=Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState()))}
+            key(generation,value.s("revision"),value.optLong("offset")){
+                SelectionContainer{Text(value.s("text"),fontFamily=FontFamily.Monospace,fontSize=11.sp,modifier=Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState()).testTag("native-command-output"))}
+            }
             Row{if(position>0)TextButton({read(offsets[position-1],position-1)},enabled=!busy){BilingualLabel("Previous page")}
                 if(!value.isNull("nextOffset"))TextButton({val next=value.optLong("nextOffset");if(offsets.size<=position+1)offsets.add(next)else offsets[position+1]=next;read(next,position+1)},enabled=!busy){BilingualLabel("Next page")}}
         }

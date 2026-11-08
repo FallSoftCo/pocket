@@ -39,6 +39,24 @@ def save_stopped_preferences(adb,q):
  evidence={name:None if value is None else {'path':str((backup/name).relative_to(q)),'sha256':hashlib.sha256(value).hexdigest()} for name,value in retained.items()}
  return retained,evidence
 
+def read_visible_hierarchy(adb,q):
+ # Read this invocation's stdout, never a persistent device file: uiautomator
+ # can return success with a null-root error while leaving its old file intact.
+ for attempt in range(3):
+  raw=adb('exec-out','uiautomator','dump','/proc/self/fd/1')
+  match=re.search(rb'(?:<\?xml[^>]*\?>\s*)?<hierarchy\b[\s\S]*?</hierarchy>',raw)
+  try:
+   if match is None or raw.count(b'<hierarchy')!=1:raise ValueError('No unique current hierarchy')
+   xml=match.group(0)
+   if ET.fromstring(xml).tag!='hierarchy':raise ValueError('Unexpected UI root')
+   (q/'last-visible-hierarchy.xml').write_bytes(xml)
+   return xml
+  except (ET.ParseError,ValueError):
+   stem=q/('hierarchy-capture-'+str(time.time_ns()))
+   stem.with_suffix('.raw').write_bytes(raw)
+   if attempt<2:time.sleep(.25)
+ raise RuntimeError('UIAutomation returned no valid current hierarchy; raw capture retained at '+str(stem))
+
 def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",signer_sha="22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",room_capture=None,room_evidence=None):
  assert re.fullmatch(r'(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)',avd_name)
  assert adb('shell','getprop','ro.boot.qemu.avd_name').decode().strip()==avd_name,'Owned NextComp emulator required'
@@ -53,22 +71,7 @@ def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",sig
   req=urllib.request.Request('http://127.0.0.1:'+str(port)+'/_qa/'+name,headers={'Authorization':'Bearer synthetic-system76'},method='POST')
   with urllib.request.urlopen(req,timeout=4)as response:return json.load(response)
  def dump():
-  # A completed framework instrumentation can leave UIAutomation briefly busy.
-  # Retain every failed read; retry only this observational capture, never taps,
-  # commands, fixture transitions or app launches.
-  for attempt in range(3):
-   command=adb('shell','uiautomator','dump','/sdcard/owned-native150.xml')
-   raw=adb('exec-out','cat','/sdcard/owned-native150.xml')
-   try:
-    assert ET.fromstring(raw).tag=='hierarchy'
-    (q/'last-visible-hierarchy.xml').write_bytes(raw)
-    return raw
-   except (ET.ParseError,AssertionError):
-    stem=q/('hierarchy-capture-'+str(time.time_ns()))
-    stem.with_suffix('.stdout').write_bytes(command)
-    stem.with_suffix('.raw').write_bytes(raw)
-    if attempt<2:time.sleep(.25)
-  raise RuntimeError('UIAutomation returned no valid hierarchy; raw capture retained at '+str(stem))
+  return read_visible_hierarchy(adb,q)
  def texts(tree,text):return[n for n in tree.iter('node')if n.get('text')==text]
  def wait(text,timeout=25,contains=False):
   deadline=time.monotonic()+timeout

@@ -16,7 +16,7 @@
     {
       "id": "codex-native-parity-20261107",
       "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
-      "status": "Android175/alpha157 published both channels after15 native cases and exact optimized history/menu/terminal review. Both web gateways175 live, backends174 retained. One175 owner announcement accepted by FCM. Phone last verified174; no newer installation claimed. Monitoring and remaining parity work active.",
+      "status": "Android176/alpha158 published both channels; approval callbacks bound to original source and output-page scroll resets.15 native cases and exact optimized history/output review passed. One176 announcement accepted by FCM. Phone last verified175;176 installation not claimed. Web175 and backend174 retained; monitoring active.",
       "architecture": [
         "Codex owns execution and native thread/turn/item/request identity.",
         "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",
@@ -47,7 +47,7 @@
       ],
       "integration": "Root owns common integration, serialized heavy builds/native QA, compatible signing and release. Independent disk worktrees at fa30781d; no delegate production deployment.",
       "validation": "Meaningful native protocol and client journeys, preserved draft/source/receipt semantics, explicit unsupported and uncertain outcomes; deployment evidence separate from fixtures.",
-      "monitoring": "Actual web remote-only recovery and one503 retry defect fixed and live; normal/503/401 composed browser controls passed.15 unchanged native175 cases and exact optimized history/menu/terminal review passed. Original SystemUI obstruction failures retained. No native process restart, model/task submission or uncertain-send replay.",
+      "monitoring": "All finite Astra/high handoffs reviewed; UI diagnostic remains intentionally unintegrated. Configuration full-browser positive/negative proof passed.176 native source/paging and fresh-only capture checks passed. No daemon restart or model/task replay.",
       "ui_owner": {
         "owner": "ui_standby",
         "model": "gpt-6-astra",

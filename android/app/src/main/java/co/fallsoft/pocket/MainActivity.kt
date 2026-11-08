@@ -573,12 +573,13 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     }
 }
 @Composable fun RequestCard(r:JSONObject){val p=r.optJSONObject("params")?:return;val id=r.s("id");val isQuestion=r.s("method").contains("requestUserInput")
+    val destination=Pocket.captureEnvironment();val sourceThread=Pocket.selected
     val fingerprint=remember(r.toString()){java.security.MessageDigest.getInstance("SHA-256").digest(r.toString().toByteArray()).take(12).joinToString(""){"%02x".format(it)}}
     val draftKey=Pocket.key("questionDraft:"+backendOwner(Pocket.base,Pocket.token)+":"+Pocket.selected+":"+id+":"+fingerprint)
     val answers=remember(draftKey){mutableStateMapOf<String,String>().apply{runCatching{JSONObject(Pocket.prefs.getString(draftKey,"{}")?:"{}").let{saved->saved.keys().forEach{key->put(key,saved.s(key))}}}}}
     fun saveAnswer(key:String,value:String){answers[key]=value;val saved=JSONObject();answers.forEach{(k,v)->if(p.optJSONArray("questions")?.objects()?.none{it.s("id")==k&&it.optBoolean("isSecret")}!=false)saved.put(k,v)};Pocket.prefs.edit().putString(draftKey,saved.toString()).apply()}
     val delivery=QuestionDelivery.state(draftKey);val editable=delivery !in listOf("sending","submitted","unconfirmed","expired")
-    fun submit(body:JSONObject)=QuestionDelivery.submit(draftKey,id,body.apply{r.optJSONObject("_pocketUI")?.s("token")?.takeIf{it.isNotBlank()}?.let{put("requestToken",it)}})
+    fun submit(body:JSONObject){if(destination!=null)QuestionDelivery.submit(draftKey,id,body.apply{r.optJSONObject("_pocketUI")?.s("token")?.takeIf{it.isNotBlank()}?.let{put("requestToken",it)}},destination,sourceThread)}
 
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Coral.copy(alpha=.12f)).border(1.dp,Coral.copy(alpha=.3f),RoundedCornerShape(6.dp)).padding(19.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
