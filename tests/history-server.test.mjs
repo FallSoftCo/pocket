@@ -13,10 +13,14 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
  const dir=await mkdtemp(join(tmpdir(),'pocket-history-http-')),socket=join(dir,'codex.sock');
  const upstream=http.createServer(),wss=new WebSocketServer({server:upstream});await new Promise(r=>upstream.listen(socket,r));
  const allocator=http.createServer();await new Promise(r=>allocator.listen(0,'127.0.0.1',r));const port=allocator.address().port;await new Promise(r=>allocator.close(r));
- const calls=[];let disconnect=false;const blockedRecovery=[],readFaults=new Map(),readMetadata=new Map();
+ const calls=[];let disconnect=false,holdRead=null;const blockedRecovery=[],readFaults=new Map(),readMetadata=new Map();
  const metadata={id:'large-thread',historyMode:'paginated',name:'Large conversation',status:{type:'idle'},turns:[]};
  wss.on('connection',ws=>ws.on('message',raw=>{
    const m=JSON.parse(raw);if(!m.id)return;calls.push(m);
+   if(m.method==='thread/read'&&holdRead?.threadId===m.params.threadId){
+    const held=holdRead,thread=structuredClone(readMetadata.get(m.params.threadId));holdRead=null;
+    held.release=()=>ws.send(JSON.stringify({id:m.id,result:{thread}}));held.started();return;
+   }
    const fault=readFaults.get(m.method+':'+m.params?.threadId);
    if(fault){ws.send(JSON.stringify({id:m.id,error:fault}));return;}
    if(m.method==='thread/turns/list'&&m.params.itemsView==='summary'){blockedRecovery.push(m);return;}
@@ -138,6 +142,20 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
   const readable=await api('/api/threads/archived-readable'+suffix);assert.equal(readable.status,200);assert.equal(readable.data.thread.id,'archived-readable');assert.ok(readable.data.timeline.rows.length>0);assert.equal(readable.data.catchup,undefined);
  }
  assert.equal(captureCount(),beforeCapture);assert.equal(evidenceDb.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get('archived-readable').archived,1);
+ // An ordinary read started before an explicit archive must not undo the
+ // confirmed archive when its old metadata finally arrives.
+ cached('archive-during-read',false,'/fixture/sessions/source.jsonl');
+ let started;const readStarted=new Promise(resolve=>started=resolve);
+ const held={threadId:'archive-during-read',started};holdRead=held;
+ const staleHead=api('/api/threads/archive-during-read/head');
+ let timer;try{await Promise.race([readStarted,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Metadata read did not reach barrier')),2000);})]);}finally{clearTimeout(timer);}
+ const archiveResponse=await fetch(`http://127.0.0.1:${port}/api/threads/archive-during-read/archive`,{method:'POST',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},body:'{}'});
+ assert.equal(archiveResponse.status,200);assert.equal(evidenceDb.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get('archive-during-read').archived,1);
+ held.release();const staleReadable=await staleHead;
+ assert.equal(staleReadable.status,200);assert.equal(staleReadable.data.thread.id,'archive-during-read');assert.ok(staleReadable.data.timeline.rows.length>0);assert.equal(staleReadable.data.catchup,undefined);
+ assert.equal(evidenceDb.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get('archive-during-read').archived,1);
+ assert.equal(evidenceDb.prepare('SELECT count(*) AS n FROM session_catchup_captures WHERE thread_id=?').get('archive-during-read').n,0);
+ assert.equal(calls.filter(c=>c.method==='thread/archive'&&c.params.threadId==='archive-during-read').length,1,'only the explicit synthetic action may archive');
  // Auth failures and mismatched identities are not lifecycle evidence.
  readFaults.set('thread/read:durable-thread',{code:-32001,message:'thread not loaded: durable-thread'});
  let other=await api('/api/threads/durable-thread/head');assert.equal(other.status,400);assert.equal(other.data.code,undefined);assert.equal(other.data.readAvailability,undefined);
