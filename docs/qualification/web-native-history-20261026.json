@@ -1,0 +1,21 @@
+{
+  "at": "2026-10-26T04:12:44.808995+00:00",
+  "source": "nextcomp/web-history-20261026-r01",
+  "scope": "native/legacy per-session read protocol, source-proven page adjacency, one catalog/live/transcript entity, bounded inactive history retention",
+  "integration": "21 focused checks including actual HTTP authenticated gateway, two environment authorities and WebSocket qualification passed",
+  "browser": {
+    "id": "nextcomp-web-native-history-browser-final-20261026",
+    "actualMainChrome": true,
+    "canonicalUserBeforeAnswer": true,
+    "nativeAndLegacyNavigation": true,
+    "draftPreserved": true,
+    "pageErrors": [],
+    "syntheticOnly": true,
+    "taskWrites": 0
+  },
+  "limits": [
+    "No physical handset browser claim",
+    "Remote hosts without native timeline retain their provider turn-history protocol",
+    "No model or work resumed; all original unknown deliveries preserved"
+  ]
+}

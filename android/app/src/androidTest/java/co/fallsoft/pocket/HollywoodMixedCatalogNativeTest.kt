@@ -1,0 +1,394 @@
+package co.fallsoft.pocket
+
+import android.content.Context
+import android.content.Intent
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.*
+import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/** Actual MainActivity/Profile/HollywoodScreen HTTP/WebSocket fixture journey.
+ * Seeded unknown receipts are NEVER submitted. Fresh owned nextcomp_env_qa only.
+ * Routing/rendering proof is not provider, phone, push or voice qualification.
+ */
+@RunWith(AndroidJUnit4::class)
+class HollywoodMixedCatalogNativeTest {
+    private val i=InstrumentationRegistry.getInstrumentation()
+    private val context get()=i.targetContext
+    private val device get()=UiDevice.getInstance(i)
+    private val roomId="cccccccc-cccc-4ccc-8ccc-ccccccccccc1"
+    private val agent="dddddddd-dddd-4ddd-8ddd-ddddddddddd1"
+    private val authority="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    private val base="http://127.0.0.1:18880"
+    private val roomText="Canonical room answer from original authority"
+    private val sessionText="Stock session answer from original stock host"
+    private val roomDraft="Room draft edited in mounted conversation"
+    private val stockDraft="Session draft edited in mounted conversation"
+    private fun main(b:()->Unit)=i.runOnMainSync(b)
+    private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+path,JSONObject())}
+    private fun await(label:String,b:()->Boolean){
+        val end=System.currentTimeMillis()+20000
+        while(System.currentTimeMillis()<end){
+            if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
+            if(try{b()}catch(_:StaleObjectException){false})return
+            Thread.sleep(80)
+        }
+        capture("failed")
+        java.io.File(context.cacheDir,"mixed-failed-ime.txt").writeText(device.executeShellCommand("dumpsys input_method"))
+        fail(label)
+    }
+    private fun capture(name:String){
+        device.dumpWindowHierarchy(java.io.File(context.cacheDir,"mixed-"+name+".xml"))
+        // UiDevice.takeScreenshot hangs on the installed API33 image; the
+        // supported shell screencap path is finite and independently exercised.
+        val path="/data/local/tmp/mixed-"+name+".png"
+        device.executeShellCommand("screencap -p "+path)
+        assertTrue(device.executeShellCommand("stat -c %s "+path).trim().toLong()>1000)
+    }
+    private fun observedBounds(selector:BySelector):android.graphics.Rect?{
+        // UiObject2 handles may retire during an ordinary rendered frame.
+        // Retry only observation; no input has been injected at this point.
+        return try{
+            val node=device.findObject(selector)?:return null
+            if(!node.isEnabled)return null
+            android.graphics.Rect(node.visibleBounds).takeUnless{it.isEmpty}
+        }catch(_:StaleObjectException){null}
+    }
+    private fun showAddressControl(){
+        val selector=By.text("Original room · Room → All room agents")
+        for(step in 0..8){
+            if(observedBounds(selector)?.height()?.let{it>20}==true)return
+            if(step==8){capture("address-not-reached");fail("Address not reachable in bounded popup scroll")}
+            val popup=observedBounds(By.clazz("android.widget.ScrollView").pkg("co.fallsoft.pocket"))
+            requireNotNull(popup){"Room controls have no scroll surface"}
+            android.util.Log.i("ROOM_ORIGIN_QA","address step="+step+" popup="+popup)
+            assertTrue(device.swipe(popup.centerX(),popup.top+popup.height()/4,popup.centerX(),popup.bottom-popup.height()/4,80))
+            Thread.sleep(250)
+            if(step==1)capture("address-scroll-02")
+        }
+    }
+    private fun identity()="environment=${Pocket.environmentId} selected=${Pocket.selected} native=${BackendNavigation.nativeSelected()}"
+    private fun click(selector:BySelector,retired:()->Boolean={false}):Boolean{
+        var bounds:android.graphics.Rect?=null;var stableAt=0L
+        val end=android.os.SystemClock.elapsedRealtime()+20000
+        while(android.os.SystemClock.elapsedRealtime()<end){
+            if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
+            if(retired())return false
+            val next=observedBounds(selector)
+            val now=android.os.SystemClock.elapsedRealtime()
+            if(next!=null){
+                if(next==bounds&&now-stableAt>=250){
+                    println("LIVE_TAP "+selector+" bounds="+next+" "+identity())
+                    // One actual native touch. No stale handle is dereferenced
+                    // after observation, and dispatched input is never retried.
+                    if(retired())return false
+                    assertTrue("Touch injection failed: "+selector,device.click(next.centerX(),next.centerY()))
+                    return true
+                }
+                if(next!=bounds){bounds=android.graphics.Rect(next);stableAt=now}
+            }else{bounds=null;stableAt=now}
+            Thread.sleep(50)
+        }
+        capture("unstable-target");fail("Tap target did not settle: "+selector);return false
+    }
+    private fun openBlackout(){
+        click(By.desc("Settings, app updates, usage and activity"))
+        await("Room popup missing"){device.hasObject(By.text("Work"))}
+        for(step in 0..10){
+            if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
+            val control=observedBounds(By.text("Blackout"))
+            if(control!=null&&control.height()>20){
+                capture("blackout-visible");click(By.text("Blackout"));return
+            }
+            assertTrue("Blackout not reachable in bounded popup scroll",step<10)
+            var popup:android.graphics.Rect?=null
+            await("Popup scroll surface missing"){
+                popup=observedBounds(By.clazz("android.widget.ScrollView").pkg("co.fallsoft.pocket"))
+                (popup?.height()?:0)>100&&(popup?.width()?:0)>100
+            }
+            val b=requireNotNull(popup)
+            capture("popup-scroll-"+step)
+            assertTrue("Popup swipe failed",device.swipe(b.centerX(),b.bottom-b.height()/5,b.centerX(),b.top+b.height()/5,24))
+            Thread.sleep(180)
+        }
+    }
+    private fun focusedIme(label:String){
+        click(By.clazz("android.widget.EditText"))
+        await(label+" editor not focused with visible IME"){
+            device.findObject(By.clazz("android.widget.EditText"))?.isFocused==true&&
+                i.uiAutomation.windows.any { window ->
+                    val bounds=android.graphics.Rect()
+                    window.getBoundsInScreen(bounds)
+                    window.type==android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD&&bounds.height()>300
+                }
+        }
+        println("FOCUSED_IME "+label+" "+device.executeShellCommand("dumpsys input_method").lineSequence()
+            .filter{it.contains("mInputShown")||it.contains("mImeWindowVis")}.joinToString(" | "))
+        println("BACK_CALLBACK "+label+" "+device.executeShellCommand("dumpsys window windows").lineSequence()
+            .filter{it.contains("OnBackInvoked")}.joinToString(" | "))
+        capture(label+"-focused-ime")
+    }
+    private fun rawBack(){device.executeShellCommand("input keyevent KEYCODE_BACK")}
+    private fun systemBack(label:String){focusedIme(label);rawBack()}
+    private fun menuBack(label:String,text:String,draft:String,marker:String){
+        val environment=Pocket.environmentId;val selected=Pocket.selected;val native=BackendNavigation.nativeSelected()
+        assertTrue(label+" source text not mounted before menu",device.hasObject(By.text(text)))
+        click(By.desc("Settings, app updates, usage and activity"))
+        await(label+" menu not opened"){device.hasObject(By.text(marker))}
+        capture(label+"-menu")
+        rawBack()
+        await(label+" Back navigated instead of closing menu"){
+            !device.hasObject(By.text(marker))&&Pocket.environmentId==environment&&Pocket.selected==selected&&
+                BackendNavigation.nativeSelected()==native&&
+                device.findObject(By.clazz("android.widget.EditText"))?.text==draft
+        }
+        capture(label+"-menu-dismissed")
+        println("MENU_BACK_PRESERVED "+label)
+    }
+    private fun binding()=JSONObject().put("id","lax").put("api",3).put("configured",true).put("available",true)
+        .put("bindingId","e".repeat(64)).put("installationId",authority).put("authorityId",authority)
+        .put("principalId","bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb").put("defaultRoomId",roomId).put("voice",false)
+
+    @Test fun leadConversationSeparatesTeamAndArchiveWithoutRetargetingDrafts(){
+        requireOwnedNativeTarget(device)
+        device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+        val roomOwner=backendOwner(base,"synthetic-mixed-room")
+        check(prefs.edit().clear().putString("environments:v1",JSONArray().put(JSONObject().put("id","room-host").put("name","Room host")).toString())
+            .putString("activeEnvironment","room-host").putString("environment:room-host:server",base)
+            .putString("environment:room-host:token","synthetic-mixed-room").putString("backend:"+roomOwner,"lax").commit())
+        main{Pocket.init(context)}
+        val client=HollywoodClient(roomOwner,binding(),base,"synthetic-mixed-room")
+        val scope=HollywoodScope(roomId,"","room",null,"request")
+        client.saveDraft(scope,"First human request")
+        val config=Configurator.getInstance();val old=config.waitForIdleTimeout;config.waitForIdleTimeout=0
+        try{
+            main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+            await("Lead conversation not mounted"){device.hasObject(By.text("Lead answer after reviewed work"))&&device.hasObject(By.clazz("android.widget.EditText"))}
+            assertFalse("Internal task leaked into human conversation",device.hasObject(By.textContains("Internal task brief")))
+            assertFalse("Pre-policy archive painted as current conversation",device.hasObject(By.text(roomText)))
+            click(By.desc("Settings, app updates, usage and activity"))
+            click(By.res("native-room-team"))
+            await("Team did not retain addressed task"){device.hasObject(By.text("Internal task brief for one selected worker"))}
+            capture("lead-team")
+            click(By.text("Earlier room"))
+            await("Earlier archive lost canonical message"){device.hasObject(By.text(roomText))}
+            click(By.text("Close"))
+            await("Closing Team lost original draft"){device.findObject(By.clazz("android.widget.EditText"))?.text=="First human request"}
+            capture("lead-conversation")
+            click(By.desc("Send message"))
+            await("Original synthetic send not accepted"){qa("state").optInt("acceptedSyntheticSends")==1}
+            val sent=qa("state").getJSONObject("lastSyntheticMessage")
+            assertEquals("First human request",sent.s("body"));assertEquals("room",sent.s("audience"))
+            assertTrue("Human request incorrectly targeted worker",sent.isNull("recipientId")||sent.s("recipientId").isBlank())
+            assertEquals(0,qa("state").optInt("wrongSource"));assertEquals(0,qa("state").optInt("blockedTaskWrites"))
+        }finally{config.waitForIdleTimeout=old}
+    }
+
+    @Test fun acceptedConversationSendKeepsKeyboardAndNewDraft(){
+        requireOwnedNativeTarget(device)
+        device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+        val roomOwner=backendOwner(base,"synthetic-mixed-room")
+        check(prefs.edit().clear().putString("environments:v1",JSONArray().put(JSONObject().put("id","room-host").put("name","Room host")).toString())
+            .putString("activeEnvironment","room-host").putString("environment:room-host:server",base)
+            .putString("environment:room-host:token","synthetic-mixed-room").putString("backend:"+roomOwner,"lax").commit())
+        main{Pocket.init(context)}
+        val client=HollywoodClient(roomOwner,binding(),base,"synthetic-mixed-room")
+        val scope=HollywoodScope(roomId,"","room",null,"request")
+        client.saveDraft(scope,"First human request")
+        main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+        val config=Configurator.getInstance();val old=config.waitForIdleTimeout;config.waitForIdleTimeout=0
+        try{
+            await("Room composer not mounted"){device.hasObject(By.text(roomText))&&device.hasObject(By.clazz("android.widget.EditText"))}
+            if(InstrumentationRegistry.getArguments().getString("nativeStateExpected")=="true")
+                await("Open-room footer lost native waiting state"){device.hasObject(By.text("Needs you"))}
+            if(InstrumentationRegistry.getArguments().getString("roomOriginExpected")=="true") {
+                click(By.desc("Settings, app updates, usage and activity"))
+                showAddressControl();click(By.text("Original room · Room → All room agents"))
+                await("Mac room-owned participant missing"){device.hasObject(By.text("Original room · MacBook Pro"))}
+                assertFalse("Retained Global remained a current recipient",device.hasObject(By.text("Retained Global source owner")))
+                capture("room-origin-address");rawBack();rawBack()
+                await("Closing room controls lost composer"){device.hasObject(By.clazz("android.widget.EditText"))}
+            }
+            focusedIme("before-send")
+            click(By.desc("Send message"))
+            await("Synthetic send not admitted"){qa("state").optInt("acceptedSyntheticSends")==1}
+            val editor=device.findObject(By.clazz("android.widget.EditText"))
+            assertTrue("Sending disabled the editor",editor.isEnabled)
+            assertTrue("Sending removed editor focus",editor.isFocused)
+            assertTrue("Sending dismissed the IME",i.uiAutomation.windows.any{it.type==android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD})
+            editor.text="Next draft while request is pending"
+            await("Pending send did not preserve new draft"){client.pending(scope)==null&&client.draft(scope)=="Next draft while request is pending"}
+            assertEquals("Next draft while request is pending",device.findObject(By.clazz("android.widget.EditText")).text)
+            assertEquals(1,qa("state").optInt("acceptedSyntheticSends"))
+            assertFalse("Room send still targeted a default agent",qa("state").getJSONObject("lastSyntheticMessage").has("recipientId"))
+            capture("accepted-conversation-keyboard-draft")
+            if(InstrumentationRegistry.getArguments().getString("roomOriginExpected")=="true") {
+                systemBack("room-origin-send")
+                await("Room list did not expose pending initialization"){device.hasObject(By.desc("Preparing agents · 0/6"))}
+                assertFalse("Pending setup mislabeled idle",device.hasObject(By.text("Idle")))
+                capture("room-origin-initializing-list")
+            }
+            if(InstrumentationRegistry.getArguments().getString("nativeStateExpected")=="true") {
+                systemBack("accepted-send")
+                await("Native room list not visible"){device.hasObject(By.desc("Open Chat for Original room"))}
+                await("Native working/waiting state was replaced by legacy idle"){device.hasObject(By.descContains("1 Needs you"))}
+                capture("native-state-list")
+            }
+
+        }finally{config.waitForIdleTimeout=old}
+    }
+
+    @Test fun hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage(){
+        requireOwnedNativeTarget(device)
+        device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+        val roomOwner=backendOwner(base,"synthetic-mixed-room")
+        val stockOwner=backendOwner(base,"synthetic-mixed-stock")
+        val stockKey="environment:stock-host:draft:existing-session"
+        val stockIntent=ClientReplyIntent("00000000-0000-4000-8000-000000000119","stock-host",stockOwner,
+            "existing-session","Saved unknown stock input","auto",stockKey,phase="observed",state="unknown")
+        // Only this fresh disposable app is initialized, never a historical pairing.
+        check(prefs.edit().clear()
+            .putString("environments:v1",JSONArray().put(JSONObject().put("id","room-host").put("name","Room host"))
+                .put(JSONObject().put("id","stock-host").put("name","Stock host")).toString())
+            .putString("activeEnvironment","room-host")
+            .putString("environment:room-host:server",base).putString("environment:room-host:token","synthetic-mixed-room")
+            .putString("environment:stock-host:server",base).putString("environment:stock-host:token","synthetic-mixed-stock")
+            .putString("backend:"+roomOwner,"lax").putString("backend:"+stockOwner,"codex")
+            .putString(stockKey,"Initial stock draft")
+            .putString("client-replies:v1",JSONArray().put(stockIntent.json()).toString()).commit())
+        main{Pocket.init(context)}
+        val client=HollywoodClient(roomOwner,binding(),base,"synthetic-mixed-room")
+        val scope=HollywoodScope(roomId,"","room",null,"request")
+        client.saveDraft(scope,"Initial room draft")
+        val roomIntent=client.capture(scope,"Saved unknown room input").put("state","unknown").toString()
+        val roomPendingKey="pending:"+client.key(scope)
+        check(prefs.edit().putString(roomPendingKey,roomIntent).commit())
+        val voiceBefore=listOf(PocketVoice.active,PocketVoice.captureBusy,PocketVoice.targetThread,PocketVoice.targetRoom?.toString())
+        fun preserved(){
+            assertEquals("Navigation changed voice state",voiceBefore,listOf(PocketVoice.active,PocketVoice.captureBusy,PocketVoice.targetThread,PocketVoice.targetRoom?.toString()))
+            assertEquals(roomDraft,client.draft(scope));assertEquals(stockDraft,prefs.getString(stockKey,null))
+            assertEquals("Changed unknown room receipt",roomIntent,prefs.getString(roomPendingKey,null))
+            val saved=ClientReplyJournal({prefs.getString("client-replies:v1","[]")!!},{false}).all().single()
+            assertEquals(stockIntent.id,saved.id);assertEquals(stockOwner,saved.owner)
+            assertEquals("stock-host",saved.environment);assertEquals("unknown",saved.state)
+        }
+        // Match the existing repository MainActivity probes; no idle-dependent
+        // ActivityScenario cleanup can conceal a routing assertion failure.
+        main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+        // Continuous live UI is synchronized by state and stable target geometry.
+        val configuration=Configurator.getInstance()
+        val previousIdleTimeout=configuration.waitForIdleTimeout
+        configuration.waitForIdleTimeout=0
+        try {
+            await("Original room text/editor not mounted"){device.hasObject(By.text(roomText))&&device.hasObject(By.clazz("android.widget.EditText"))}
+            assertEquals("room-host",Pocket.environmentId);assertTrue(BackendNavigation.nativeSelected())
+            assertEquals("Initial room draft",device.findObject(By.clazz("android.widget.EditText")).text)
+            device.findObject(By.clazz("android.widget.EditText")).text=roomDraft
+            await("Room typing not persisted"){client.draft(scope)==roomDraft};capture("room")
+            menuBack("room",roomText,roomDraft,"Work")
+            systemBack("room")
+            await("Hollywood list missing mixed sources"){device.hasObject(By.desc("Open Chat for Original room"))&&device.hasObject(By.desc("Open Chat for Original session"))}
+            val entries=UnifiedWorkCatalog.snapshots.flatMap{it.entries}
+            val room=entries.single{it.key.kind==WorkKind.ROOM&&it.key.id==roomId}
+            val stock=entries.single{it.key.kind==WorkKind.SESSION&&it.key.id=="existing-session"}
+            assertEquals("room-host",room.key.source.environment);assertEquals(authority,room.key.authority)
+            assertEquals("stock-host",stock.key.source.environment);assertEquals("",stock.key.authority)
+            assertTrue(room.key.source.owner.startsWith(roomOwner));assertEquals(stockOwner,stock.key.source.owner)
+            capture("mixed-list");click(By.desc("Open Keyboard for Original session"))
+            await("Original stock text/editor not mounted"){Pocket.environmentId=="stock-host"&&Pocket.selected=="existing-session"&&device.hasObject(By.text(sessionText))&&device.hasObject(By.clazz("android.widget.EditText"))}
+            assertFalse(BackendNavigation.nativeSelected())
+            assertEquals("Initial stock draft",device.findObject(By.clazz("android.widget.EditText")).text)
+            device.findObject(By.clazz("android.widget.EditText")).text=stockDraft
+            await("Stock typing not persisted"){prefs.getString(stockKey,null)==stockDraft}
+            preserved();capture("session");menuBack("stock",sessionText,stockDraft,"Back");systemBack("stock")
+            await("Stock shared list lost room"){Pocket.selected==null&&device.hasObject(By.desc("Open Chat for Original room"))}
+            click(By.desc("Open Keyboard for Original room"))
+            await("Original room/draft not mounted on return"){Pocket.environmentId=="room-host"&&device.hasObject(By.text(roomText))&&device.findObject(By.clazz("android.widget.EditText"))?.text==roomDraft}
+            preserved();capture("returned-room");systemBack("returned-room")
+            await("Room list missing"){device.hasObject(By.desc("Open Chat for Original session"))}
+            qa("room-outage");main{UnifiedWorkCatalog.refresh()}
+            await("Unavailable source not isolated"){
+                val snapshots=UnifiedWorkCatalog.snapshots
+                snapshots.any{it.key.environment=="room-host"&&!it.available&&it.entries.isNotEmpty()}&&
+                    snapshots.any{it.key.environment=="stock-host"&&it.available&&it.entries.isNotEmpty()}&&
+                    device.hasObject(By.textContains("Synthetic room catalog unavailable"))
+            }
+            assertTrue(device.hasObject(By.desc("Open Chat for Original room")));capture("isolated-outage")
+            click(By.desc("Open Keyboard for Original session"))
+            await("Room outage blocked stock"){Pocket.environmentId=="stock-host"&&device.hasObject(By.text(sessionText))}
+            preserved();click(By.text("Stock host"));click(By.text("Back"))
+            await("Shared list missing after outage"){Pocket.selected==null&&device.hasObject(By.desc("Open Chat for Original session"))}
+            // A stale card must refuse changed pairing, not borrow selected credentials.
+            check(prefs.edit().putString("environment:stock-host:token","synthetic-changed").commit())
+            val staleTarget=By.desc("Open Chat for Original session")
+            val sourceInvalidated:()->Boolean={
+                UnifiedWorkCatalog.discoveryErrors.keys.any{it.environment=="stock-host"}&&
+                    !device.hasObject(staleTarget)
+            }
+            // Real refresh can retire the old credential-bound row before a
+            // thumb reaches it. Do not require a removed card to remain tappable.
+            val tappedStale=click(staleTarget,sourceInvalidated)
+            await("Changed pairing remained actionable"){
+                sourceInvalidated()||
+                    (tappedStale&&Pocket.error=="This source pairing changed. Refresh the work list.")
+            }
+            assertNull("Stale card retargeted conversation",Pocket.selected)
+            preserved()
+            println("PAIRING_FENCED "+if(tappedStale)"retained-card-refused" else "catalog-invalidated")
+            capture("pairing-fenced")
+            check(prefs.edit().putString("environment:stock-host:token","synthetic-mixed-stock").commit())
+            qa("room-online");main{UnifiedWorkCatalog.refresh()}
+            await("Room source not recovered"){UnifiedWorkCatalog.snapshots.any{it.key.environment=="room-host"&&it.available}}
+            click(By.desc("Open Keyboard for Original room"))
+            await("Original room not mounted after recovery"){Pocket.environmentId=="room-host"&&device.hasObject(By.text(roomText))}
+            preserved();capture("final-room")
+            openBlackout()
+            await("Blackout overlay missing"){BlackoutVisibility.active&&device.hasObject(By.desc("Blackout active. Tap to return to NextComp."))}
+            // A fresh Android image presents its own first-use immersive
+            // education window. Acknowledge that exact OS prompt before testing
+            // app Back; never treat a system-window Back as blackout navigation.
+            capture("blackout-entry")
+            val education=By.pkg("android").text("Got it")
+            var acknowledgedEducation=false
+            var focusedSince=0L
+            await("Blackout does not own the foreground window"){
+                if(device.hasObject(education)&&!acknowledgedEducation){
+                    capture("blackout-system-education")
+                    click(education)
+                    acknowledgedEducation=true
+                    focusedSince=0L
+                }
+                val appFocused=i.uiAutomation.windows.any{
+                    it.isFocused&&it.root?.packageName?.toString()=="co.fallsoft.pocket"
+                }&&!device.hasObject(education)
+                val now=android.os.SystemClock.elapsedRealtime()
+                if(!appFocused)focusedSince=0L
+                else if(focusedSince==0L)focusedSince=now
+                appFocused&&now-focusedSince>=1500
+            }
+            capture("blackout")
+            rawBack()
+            await("Back did not dismiss blackout before conversation navigation"){
+                !BlackoutVisibility.active&&Pocket.environmentId=="room-host"&&BackendNavigation.nativeSelected()&&device.hasObject(By.text(roomText))&&
+                    device.findObject(By.clazz("android.widget.EditText"))?.text==roomDraft
+            }
+            preserved();capture("blackout-dismissed")
+            println("BLACKOUT_BACK_PRESERVED")
+            val state=qa("state")
+            assertEquals("Navigation admitted task/provider write",0,state.getInt("blockedTaskWrites"))
+            assertEquals("Wrong source route accepted",0,state.getInt("wrongSource"))
+            assertTrue("Room WebSocket missing",state.getJSONArray("websockets").objects().any{it.s("source")=="room"})
+            assertTrue("Stock WebSocket missing",state.getJSONArray("websockets").objects().any{it.s("source")=="stock"})
+            assertTrue(state.getJSONArray("reads").objects().any{it.s("source")=="room"&&it.s("path").contains("/"+roomId+"/history")})
+            assertTrue(state.getJSONArray("reads").objects().any{it.s("source")=="stock"&&it.s("path").contains("/existing-session")})
+        }finally{configuration.waitForIdleTimeout=previousIdleTimeout;main{PocketLive.stop()}}
+    }
+}

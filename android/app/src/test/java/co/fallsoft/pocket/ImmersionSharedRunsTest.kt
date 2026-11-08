@@ -5,6 +5,24 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ImmersionSharedRunsTest {
+ @Test fun flipFlopReplacesEveryAlignedWordIncludingFunctionWords(){
+  fun sentence(words:List<String>)=buildAnnotatedString{
+   words.forEachIndexed{index,word->
+    if(index>0)append(' ')
+    val start=length;append(word)
+    addStringAnnotation("immersion-reserve","lexical:"+index,start,length)
+   }
+  }
+  val italian=listOf("Il","lavoro","continua")
+  val english=listOf("The","work","continues")
+  val forms=immersionFlipForms(sentence(italian),sentence(english))!!
+  assertEquals(english.joinToString(" "),forms[0].text);assertEquals(forms[0].text,forms[2].text)
+  val first=forms[1].text.split(' ');val second=forms[3].text.split(' ')
+  italian.indices.forEach{index->
+   assertEquals(setOf(italian[index],english[index]),setOf(first[index],second[index]))
+  }
+  assertEquals(3,forms[0].getStringAnnotations("immersion-reserve",0,forms[0].length).size)
+ }
  private fun form(word:String)=buildAnnotatedString{
   append("Please ");val start=length;append(word)
   addStringAnnotation("immersion-reserve","7:13",start,length)
@@ -59,6 +77,24 @@ class ImmersionSharedRunsTest {
   assertEquals(listOf(" next."," next."),runs.last().forms.map{it.text})
   assertEquals(source.text,runs.joinToString(""){it.forms[0].text})
   assertEquals(target.text,runs.joinToString(""){it.forms[1].text})
+ }
+
+ @Test fun grammaticalPhraseAssignmentsStayWholeAndComplementary() {
+  val pairs=listOf("Puoi aprire" to "Can-you open","l’ultimo messaggio" to "the latest message","in questa conversazione" to "in this conversation")
+  fun form(italian:Boolean)=buildAnnotatedString {
+   pairs.forEachIndexed { i,pair ->
+    if(i>0)append(" ")
+    val at=length;append(if(italian)pair.first else pair.second)
+    addStringAnnotation("immersion-reserve","phrase:$i",at,length)
+   }
+   append("?")
+  }
+  val forms=requireNotNull(immersionFlipForms(form(true),form(false))).map{it.text}
+  pairs.forEach{(it,en)->
+   assertTrue(forms.any{form->form.contains(it)})
+   assertTrue(forms.any{form->form.contains(en)})
+  }
+  assertTrue(forms.all{it.endsWith("?")})
  }
 
 }

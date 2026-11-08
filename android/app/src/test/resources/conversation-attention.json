@@ -1,0 +1,51 @@
+{
+  "attention": {
+    "id": "8a9b60cf-2cb6-4870-afc8-04b5077853c8",
+    "authority": "0a08d6dd-db93-47c3-a514-ee86a4084ee2",
+    "delivery": null,
+    "agent": "c4a78830-c719-49bd-859a-dfaec698d632",
+    "human": "7a8d211c-7233-4a08-a44d-742088212033",
+    "room": "e47e3997-2ef6-4ebd-97f8-c023c7d4bc64",
+    "event": "8f83cc2a-22c9-4d1f-8c05-f7b2849326f4",
+    "generation": null,
+    "claim_id": null,
+    "native_thread": "android-fixture-thread",
+    "native_turn": "android-fixture-turn",
+    "native_slot": "android-fixture-question",
+    "method": "item/tool/requestUserInput",
+    "request": {
+      "questions": [
+        {
+          "id": "choice",
+          "header": "Choice",
+          "question": "Choose the local artifact label."
+        }
+      ],
+      "isBlocking": true
+    },
+    "digest": "7feb51bc6c491eb23dfb5eaf604cd8096f450419899892f658a20065b7b82580",
+    "state": "pending",
+    "response": null,
+    "response_author": null,
+    "response_event": null,
+    "revision": 1,
+    "created_at": "2026-10-31 02:50:40.792343+00:00",
+    "updated_at": "2026-10-31 02:50:40.792343+00:00"
+  },
+  "scope": {
+    "conversationVersion": 1,
+    "authorityId": "0a08d6dd-db93-47c3-a514-ee86a4084ee2",
+    "attentionId": "8a9b60cf-2cb6-4870-afc8-04b5077853c8",
+    "agentId": "c4a78830-c719-49bd-859a-dfaec698d632",
+    "roomId": "e47e3997-2ef6-4ebd-97f8-c023c7d4bc64",
+    "sourceEventId": "8f83cc2a-22c9-4d1f-8c05-f7b2849326f4",
+    "nativeThread": "android-fixture-thread",
+    "nativeTurn": "android-fixture-turn",
+    "requestDigest": "7feb51bc6c491eb23dfb5eaf604cd8096f450419899892f658a20065b7b82580"
+  },
+  "deliveryState": null,
+  "nativeConsumptionProved": false,
+  "canRespond": true,
+  "responseMode": "native-callback",
+  "continuation": null
+}

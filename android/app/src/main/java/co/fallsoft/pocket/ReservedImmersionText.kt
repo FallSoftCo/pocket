@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.*
     fontSize:TextUnit,lineHeight:TextUnit,color:Color,fontWeight:FontWeight?,maxLines:Int,
     overflow:TextOverflow,cycle:ImmersionCycleRender,
     onTextLayout:((TextLayoutResult)->Unit)?=null,
-    textAlign:androidx.compose.ui.text.style.TextAlign=androidx.compose.ui.text.style.TextAlign.Start
+    textAlign:androidx.compose.ui.text.style.TextAlign=androidx.compose.ui.text.style.TextAlign.Start,phraseTaps:Boolean=true
 ){
     val partId=remember {java.util.UUID.randomUUID().toString()}
     val visibilityReport by rememberUpdatedState(cycle.reportVisible)
@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.*
         val support=alternate(content,immersionCyclePlan(plan,plan.spans.indices.toSet()))
         SharedInlineImmersionText(immersionGrammarParagraph(content,plan),immersionGrammarParagraph(support,plan),{1f},
             snapshot=immersionGrammarParagraph(content,plan),reserve=listOf(immersionGrammarParagraph(content,plan),immersionGrammarParagraph(support,plan)),
-            fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,fillWidth=true,textAlign=textAlign,
+            fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,fillWidth=true,textAlign=textAlign,phraseTaps=phraseTaps,
             readingWave=cycle.readingWave,onTextLayout={onTextLayout?.invoke(it)},
             onVisibleRanges={ids,_->visibilityReport(partId,ids.map{it.substringBefore("/lexical:")}.toSet())})
         return
@@ -61,7 +61,7 @@ import androidx.compose.ui.unit.*
     val progress:()->Float=if(cycle.cueActive)cycle.cueProgress else ({1f})
     SharedInlineImmersionText(immersionGrammarParagraph(from,plan),immersionGrammarParagraph(to,plan),progress,snapshot=immersionGrammarParagraph(content,plan),
         fontSize=fontSize,lineHeight=lineHeight,color=color,fontWeight=fontWeight,
-        maxLines=maxLines,overflow=overflow,fillWidth=true,textAlign=textAlign,reserve=forms.map{immersionGrammarParagraph(it,plan)},
+        maxLines=maxLines,overflow=overflow,fillWidth=true,textAlign=textAlign,phraseTaps=phraseTaps,reserve=forms.map{immersionGrammarParagraph(it,plan)},
         onTextLayout={onTextLayout?.invoke(it)},
         onVisibleRanges={ids,_->visibilityReport(partId,ids.map{it.substringBefore("/lexical:")}.toSet())})
 }

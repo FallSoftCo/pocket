@@ -1,0 +1,27 @@
+{
+  "state": "source-and-wire-qualified; owning release pending",
+  "date": "2026-10-20T06:35:37.657022+00:00",
+  "observedNativeCatalog": {
+    "acceptEncoding": "gzip",
+    "contentEncoding": "identity",
+    "wireBytes": 552048
+  },
+  "change": "Maintained compression1.8.2 middleware negotiated only for JSON; binary/range/event/upgrade paths unchanged. Web internal forward requests identity to avoid loopback compress/decompress/recompress.",
+  "qualification": {
+    "realHttpProtocolTestsPassed": 14,
+    "authStatusUtf8CanonicalBytes": true,
+    "singleSyntheticIntentAndOriginalReceipt": true,
+    "binaryAndEventDeliveryUntouched": true
+  },
+  "deploymentContract": [
+    "Patch actual running backend closure only; preserve all other code, old dependency versions and private data",
+    "New dependency and its transitive packages are isolated by standard nested npm install; no runtime resolver overrides",
+    "Verify target Node22 compatibility and exact dependency manifest before cutover",
+    "No backend cutover during active voice/typing; preserve original outgoing IDs, transcripts, pairing and native Codex processes"
+  ],
+  "limits": [
+    "Physical ADB unavailable; SSH proves installed139 but has not proved current keyboard/capture state.",
+    "Wire behavior is qualified; actual live compression and real phone response timing remain pending.",
+    "No per-session cost, model generation or paid API changes"
+  ]
+}

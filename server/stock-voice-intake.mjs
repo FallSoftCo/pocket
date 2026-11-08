@@ -5,7 +5,7 @@ import {VoiceRecordings} from './voice-recordings.mjs';
 import {RemoteAudioTranscriber} from './remote-audio-transcriber.mjs';
 
 /** Stock execution adapter: shared audio custody, existing coordinator authority and original profile. */
-export function mountStockVoiceIntake(app,{db,dir,controller,humanIngress,resolveDestination,remoteCommand,route}){
+export function mountStockVoiceIntake(app,{db,dir,controller,humanIngress,resolveDestination,remoteCommand,route,liveInput=null}){
  const transcriber=remoteCommand?new RemoteAudioTranscriber(remoteCommand):null;
  const authorize=async(device,principal)=>{
   if(principal.deviceId!==device||!db.prepare('SELECT 1 FROM devices WHERE id=?').get(device))
@@ -13,14 +13,14 @@ export function mountStockVoiceIntake(app,{db,dir,controller,humanIngress,resolv
  };
  controller.authorizeQueued=device=>authorize(device,{deviceId:device});
  const recordings=new VoiceRecordings({db,root:resolve(dir,'voice-recordings'),resolveDestination,
-  transcribe:input=>{if(!transcriber)throw Object.assign(Error('Native audio worker is not installed. Recording retained.'),{status:503});return transcriber.transcribe(input);},
+  transcribe:input=>{const cached=liveInput?.cached(input);if(cached)return cached;if(!transcriber)throw Object.assign(Error('Native audio worker is not installed. Recording retained.'),{status:503});return transcriber.transcribe(input);},
   authorize,getReceipt:(device,id)=>controller.get(device,id),cancelTask:(device,id)=>controller.cancelQueued(device,id),
   submit:(device,id,text,destination,principal)=>{
    humanIngress.record('voice-recording',recordings.key(device,id),principal);
    return controller.submitText(device,id,text,null,destination);
   }
  });
- app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,maxRecordingSeconds:MAX_RECORDING_SECONDS,maxRecordingBytes:MAX_RECORDING_WAV_BYTES,immutableDestination:true,recordingDigest:true,durableAudioAdmission:!!transcriber,cancellationTombstones:true,renderedSpeechVersion:0}));
+ app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,maxRecordingSeconds:MAX_RECORDING_SECONDS,maxRecordingBytes:MAX_RECORDING_WAV_BYTES,immutableDestination:true,recordingDigest:true,durableAudioAdmission:!!transcriber,cancellationTombstones:true,liveTranscriptionVersion:liveInput?1:0,renderedSpeechVersion:0}));
  app.post('/api/voice/recordings',route(async(req,res)=>{
   if(!transcriber)throw Object.assign(Error('This environment needs its native audio worker. Audio remains saved on your device.'),{status:503});
   res.status(202).json(await recordings.create(req.device.id,req.body,req.humanPrincipal));

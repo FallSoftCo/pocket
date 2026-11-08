@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
@@ -24,7 +25,11 @@ import androidx.lifecycle.repeatOnLifecycle
 /** Native Hollywood conversation; existing session surfaces, canonical room identities. */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class,ExperimentalLayoutApi::class)
 @Composable internal fun HollywoodScreen(owner:String,binding:JSONObject,onSettings:()->Unit){
-    val client=remember(owner,binding.s("bindingId")){HollywoodClient(owner,binding)}
+    val origin=Pocket.captureEnvironment()?.takeIf{backendOwner(it.endpoint,it.token)==owner}
+    if(origin==null){BilingualLabel("Original connection unavailable",Modifier.padding(16.dp));return}
+    val client=remember(owner,binding.s("bindingId"),origin){HollywoodClient(owner,binding,origin.endpoint.trimEnd('/'),origin.token,origin)}
+    val accountUsage=accountUsageForToolbar(Pocket.weeklyUsageOwner,origin,Pocket.captureEnvironment(),Pocket.weeklyUsage)
+    val accountSourceLabel="Account · "+origin.environment.name
     val jobs=rememberCoroutineScope()
     var room by remember(client.bindingId){mutableStateOf(Pocket.prefs.getString("hollywood-room:$owner:${client.bindingId}",client.defaultRoomId)?:client.defaultRoomId)}
     var browsing by remember(client.bindingId){mutableStateOf(false)}
@@ -33,8 +38,6 @@ import androidx.lifecycle.repeatOnLifecycle
         ForegroundNotifications.visibleRoom=visible
         onDispose{if(ForegroundNotifications.visibleRoom==visible)ForegroundNotifications.visibleRoom=null}
     }
-    val catalog=remember(client){HollywoodRoomCatalog{client.call("rooms")}}
-    val rooms=catalog.rooms
     val catalogList=remember(client.bindingId){androidx.compose.foundation.lazy.LazyListState()}
     var catalogSearchOpen by remember(client.bindingId){mutableStateOf(false)}
     var catalogQuery by remember(client.bindingId){mutableStateOf("")}
@@ -44,12 +47,17 @@ import androidx.lifecycle.repeatOnLifecycle
 
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     var headRefreshRevision by remember(client.bindingId){mutableIntStateOf(0)}
-    val feeds=remember(client.bindingId){mutableMapOf<String,HollywoodRoomFeed>()}
-    val feed=feeds.getOrPut("conversation:$room"){HollywoodRoomFeed(room,"conversation"){path->client.call(path)}}
-    val coordinatorFeed=feeds.getOrPut("conversation:"+client.defaultRoomId){HollywoodRoomFeed(client.defaultRoomId,"conversation"){path->client.call(path)}}
-    val activityFeed=feeds.getOrPut("activity:$room"){HollywoodRoomFeed(room,"activity"){path->client.call(path)}}
+    val feeds=remember(client){mutableMapOf<String,HollywoodRoomFeed>()}
+    val feed=feeds.getOrPut("conversation:$room"){HollywoodRoomFeed(room,"conversation",client.historyKey(room,"conversation")){path->client.call(path)}}
+    val coordinatorFeed=feeds.getOrPut("conversation:"+client.defaultRoomId){HollywoodRoomFeed(client.defaultRoomId,"conversation",client.historyKey(client.defaultRoomId,"conversation")){path->client.call(path)}}
+    val activityFeed=feeds.getOrPut("activity:$room"){HollywoodRoomFeed(room,"activity",client.historyKey(room,"activity")){path->client.call(path)}}
     val detail=feed.detail
-    val events=remember(feed.events,activityFeed.events){(feed.events+activityFeed.events).distinctBy{it.s("id")}.sortedBy{it.optLong("seq")}}
+    val rawEvents=remember(feed.events,activityFeed.events){(feed.events+activityFeed.events).distinctBy{it.s("id")}.sortedBy{it.optLong("seq")}}
+    val leadPolicy=remember(detail,feed.events){roomLeadPolicy(detail,feed.events)}
+    val events=remember(rawEvents,leadPolicy){roomLeadConversation(rawEvents,leadPolicy)}
+    val leadInvalid=detail.optJSONObject("room")?.has("leadPolicy")==true&&leadPolicy==null
+    var teamOpen by remember(client.bindingId,room){mutableStateOf(false)}
+    var legacyReview by remember(client.bindingId,room){mutableStateOf(false)}
     val attention=feed.attention
     val work=remember(detail,feed.detailError,attention,feed.justAccepted){hollywoodRoomWork(detail,feed.detailError,attention,feed.justAccepted)}
     var stopping by remember(client.bindingId,room){mutableStateOf(emptySet<String>())}
@@ -65,11 +73,13 @@ import androidx.lifecycle.repeatOnLifecycle
     var menu by remember{mutableStateOf(false)}
     var addressMenu by remember(client.bindingId,room){mutableStateOf(false)}
     var workflow by remember(client.bindingId,room){mutableStateOf(false)}
+    var contextReview by remember(client.bindingId,room){mutableStateOf(false)}
     var inspecting by remember{mutableStateOf<JSONObject?>(null)}
     var guidance by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
     var guidanceReceipt by remember(client.bindingId,room){mutableStateOf<JSONObject?>(null)}
-    val destination=recipient.ifBlank{detail.optJSONObject("room")?.s("owner").orEmpty()}
-    val scope=if(hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source,if(postOnly)"message" else "request")else null
+    val reviewSaved=leadPolicy!=null&&legacyReview&&recipient!=leadPolicy.agent
+    val destination=if(leadPolicy!=null&&!reviewSaved){if(direct)leadPolicy.agent else ""}else recipient
+    val scope=if(leadInvalid)null else if(!direct&&destination.isEmpty()||hollywoodUuid(destination))HollywoodScope(room,destination,if(direct)"direct" else "room",source?.takeIf{id->leadPolicy==null||reviewSaved||events.any{it.s("id")==id&&it.s("author") in setOf(client.principalId,leadPolicy.agent)}},if(postOnly&&(leadPolicy==null||reviewSaved))"message" else "request")else null
     val currentScope by rememberUpdatedState(scope)
     val inputState=remember(scope){mutableStateOf(TextFieldValue(scope?.let(client::draft).orEmpty()))}
     var input by inputState
@@ -92,13 +102,13 @@ import androidx.lifecycle.repeatOnLifecycle
     val list=rememberLazyListState()
     var following by remember(client.bindingId,room,direct,recipient){mutableStateOf(true)}
     val actors=detail.optJSONArray("actors")?.objects().orEmpty()
-    val agentNames=actors.associate{it.s("id") to it.s("name")}
-    val voiceAllowed=!browsing&&binding.optBoolean("voice")&&scope!=null&&!postOnly&&
+    val agentNames=actors.associate{it.s("id") to roomActorLabel(it)}
+    val voiceAllowed=!reviewSaved&&!browsing&&binding.optBoolean("voice")&&scope!=null&&!postOnly&&
         detail.optJSONObject("permissions")?.optBoolean("can_request")==true&&
         inspecting==null&&guidance==null&&guidanceReceipt==null&&!workflow
     val roomVoiceDestination=remember(voiceAllowed,scope,client.bindingId,room){
         if(!voiceAllowed)null else JSONObject().put("backend","lax").put("bindingId",client.bindingId).put("authorityId",client.authorityId)
-            .put("roomId",room).put("recipientId",scope!!.recipient).put("audience",scope.audience)
+            .put("roomId",room).put("audience",scope!!.audience).apply{scope.recipient.takeIf{it.isNotBlank()}?.let{put("recipientId",it)}}
             .apply{scope.sourceEvent?.let{put("sourceEventId",it)}}
     }
     val roomVoiceName=detail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
@@ -108,14 +118,13 @@ import androidx.lifecycle.repeatOnLifecycle
     val visibleMicDestination=roomVoiceDestination?:PocketVoice.targetRoom?.takeIf{stoppingRoomCapture}
     val visibleMicLabel=if(roomVoiceDestination==null)PocketVoice.targetSourceLabel else roomVoiceLabel
     val coordinatorDetail=coordinatorFeed.detail
-    val coordinatorOwner=coordinatorDetail.optJSONObject("room")?.s("owner").orEmpty()
+    // The room is the destination; its owner is not a default execution recipient.
     val coordinatorVoiceDestination=remember(browsing,binding.optBoolean("voice"),coordinatorDetail,coordinatorFeed.detailError){
         if(!browsing||!binding.optBoolean("voice")||coordinatorFeed.detailError.isNotBlank()||
             coordinatorDetail.optJSONObject("permissions")?.optBoolean("can_request")!=true||
-            !hollywoodUuid(coordinatorOwner)||
-            coordinatorDetail.optJSONArray("actors")?.objects().orEmpty().none{it.s("id")==coordinatorOwner&&it.s("kind")=="agent"})null
+            !hollywoodUuid(client.defaultRoomId))null
         else JSONObject().put("backend","lax").put("bindingId",client.bindingId).put("authorityId",client.authorityId)
-            .put("roomId",client.defaultRoomId).put("recipientId",coordinatorOwner).put("audience","room")
+            .put("roomId",client.defaultRoomId).put("audience","room")
     }
     val coordinatorVoiceLabel=coordinatorDetail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
     val foregroundVoiceDestination=if(browsing)coordinatorVoiceDestination else roomVoiceDestination
@@ -123,7 +132,7 @@ import androidx.lifecycle.repeatOnLifecycle
     val catalogMicDestination=if(stoppingRoomCapture)PocketVoice.targetRoom else coordinatorVoiceDestination
     val catalogMicLabel=if(stoppingRoomCapture)PocketVoice.targetSourceLabel else coordinatorVoiceLabel
     val roomVoiceOrigin=Pocket.captureEnvironment(Pocket.environmentId)
-    DisposableEffect(roomVoiceOrigin,foregroundVoiceDestination?.toString(),foregroundVoiceLabel){
+    DisposableEffect(owner,roomVoiceOrigin?.environment?.id,foregroundVoiceDestination?.toString(),foregroundVoiceLabel){
         val detach=if(roomVoiceOrigin!=null&&foregroundVoiceDestination!=null)
             ForegroundRoomInput.attach(CaptureDestination(roomVoiceOrigin,null,foregroundVoiceDestination.toString(),foregroundVoiceLabel,true)) else null
         onDispose{detach?.invoke()}
@@ -171,8 +180,15 @@ import androidx.lifecycle.repeatOnLifecycle
             while(isActive){coordinatorFeed.refreshDetail();delay(15000)}
         }
     }
-    LaunchedEffect(catalog,browsing,PocketLive.connectionRevision,lifecycle){
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){while(isActive){catalog.refresh();delay(if(browsing)5000 else 15000)}}
+    LaunchedEffect(browsing,PocketLive.connectionRevision,lifecycle){
+        if(!browsing)return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
+            val detach=UnifiedWorkCatalog.attach()
+            try{UnifiedWorkCatalog.refresh();awaitCancellation()}finally{detach()}
+        }
+    }
+    LaunchedEffect(browsing,catalogQuery){
+        if(browsing&&catalogQuery.isNotBlank()){delay(400);UnifiedWorkCatalog.search(catalogQuery)}
     }
     LaunchedEffect(feed,list){
         snapshotFlow{Triple(list.isScrollInProgress,list.firstVisibleItemIndex,following)}.collect{(scrolling,index,follow)->
@@ -184,8 +200,9 @@ import androidx.lifecycle.repeatOnLifecycle
             }
         }
     }
-    fun choose(value:String){following=true;room=value;recipient="";direct=false;source=null;browsing=false;Pocket.prefs.edit().putString("hollywood-room:$owner:${client.bindingId}",value).apply()}
+    fun choose(value:String){legacyReview=false;teamOpen=false;following=true;room=value;recipient="";direct=false;source=null;browsing=false;Pocket.prefs.edit().putString("hollywood-room:$owner:${client.bindingId}",value).apply()}
     fun send(inspect:Boolean=false){
+        if(reviewSaved&&!inspect){notice="Return to the lead conversation before sending new input";return}
         val captured=scope?:return;if(busy)return
         val intent=pending?:runCatching{client.capture(captured,input.text)}.getOrElse{error=it.message.orEmpty();return}
         pending=intent;busy=true
@@ -225,34 +242,55 @@ import androidx.lifecycle.repeatOnLifecycle
     LaunchedEffect(client.bindingId,requested){
         requested?.takeIf{it.owner==owner&&it.binding==client.bindingId}?.let{target->
             choose(target.room)
-            target.reply?.let{reply->recipient=reply.recipient;direct=reply.audience=="direct";source=reply.sourceEvent;postOnly=reply.kind=="message"}
+            target.reply?.let{reply->legacyReview=reply.recipient.isNotBlank()&&reply.recipient!=leadPolicy?.agent;recipient=reply.recipient;direct=reply.audience=="direct";source=reply.sourceEvent;postOnly=reply.kind=="message"}
             inspecting=target.attention
+            if(target.keyboard){keyboardInput=true;requestKeyboard=true}
             headRefreshRevision++
             HollywoodNotifications.consumed(target)
         }
     }
-    if(!browsing)ConversationBack(hideKeyboard=!menu&&!addressMenu&&guidance==null&&guidanceReceipt==null&&inspecting==null&&!workflow){
+    if(!browsing)ConversationBack(hideKeyboard=!menu&&!addressMenu&&guidance==null&&guidanceReceipt==null&&inspecting==null&&!workflow&&!contextReview){
         when{
             addressMenu->addressMenu=false
             menu->menu=false
             guidance!=null->guidance=null
             guidanceReceipt!=null->guidanceReceipt=null
             inspecting!=null->inspecting=null
+            contextReview->contextReview=false
             workflow->workflow=false
             else->browsing=true
         }
     }
     val addressControl:@Composable ()->Unit={
+        if(leadPolicy!=null){
+            Column(Modifier.fillMaxWidth()){
+                if(reviewSaved){
+                    BilingualLabel("Reviewing saved message",centered=false)
+                    if(pending==null&&input.text.isNotBlank())TextButton({
+                        val text=input.text
+                        client.saveDraft(HollywoodScope(room,"","room",null,"request"),text)
+                        legacyReview=false;recipient="";direct=false;source=null;postOnly=false
+                    }){BilingualLabel("Copy draft to lead")}
+                    TextButton({legacyReview=false;recipient="";direct=false;source=null;postOnly=false}){BilingualLabel("Return to lead")}
+                }
+                scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->
+                    TextButton({legacyReview=true;recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";menu=false}){BilingualLabel("Review saved message")}
+                }}
+            }
+        }else
         Column(Modifier.fillMaxWidth()){
             TextButton({addressMenu=!addressMenu},Modifier.fillMaxWidth().testTag("native-room-address")){
                 val roomLabel=detail.optJSONObject("room")?.s("name").orEmpty().ifBlank{"Room"}
-                val recipientLabel=agentNames[destination].orEmpty().ifBlank{"Choose recipient"}
+                val recipientLabel=agentNames[destination].orEmpty().ifBlank{if(direct)"Choose recipient" else "All room agents"}
                 Text(roomLabel+" · "+(if(direct)"Private" else "Room")+" → "+recipientLabel,
                     maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
             if(addressMenu)Column{
-            Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("Room default")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
-            actors.filter{it.s("id")!=client.principalId}.forEach{actor->TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";addressMenu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(actor.s("name"))}}
+            Row{TextButton({recipient="";source=null;direct=false;postOnly=false}){BilingualLabel("All room agents")};Switch(direct,{direct=it;source=null},modifier=Modifier.testTag("native-room-private"));BilingualLabel("Private")}
+            val recipients=actors.filter{it.s("id")!=client.principalId&&it.optBoolean("can_read")}
+            recipients.filter{it.s("participation")!="retained-source-owner"}.forEach{actor->
+                TextButton({recipient=actor.s("id");source=null;postOnly=actor.s("kind")=="human";addressMenu=false},Modifier.testTag("native-recipient:"+actor.s("id"))){Text(roomActorLabel(actor))}
+            }
             Row{Checkbox(postOnly,{postOnly=it},Modifier.testTag("native-post-only"));BilingualLabel("Post without requesting work")}
             if(source!=null)TextButton({source=null}){BilingualLabel("Clear reply target")}
             scope?.let{current->client.savedScopes(room).filter{it!=current}.forEach{saved->TextButton({recipient=saved.recipient;direct=saved.audience=="direct";source=saved.sourceEvent;postOnly=saved.kind=="message";addressMenu=false}){BilingualLabel("Saved message",centered=false);Text(" · "+(agentNames[saved.recipient]?:saved.recipient))}}}
@@ -261,34 +299,25 @@ import androidx.lifecycle.repeatOnLifecycle
     }
     BackHandler(browsing&&catalogSearchOpen){catalogSearchOpen=false;catalogQuery="";keyboard?.hide()}
     BackHandler(browsing&&catalogMenu){catalogMenu=false}
+    // Keep one Activity window: volume keys, original voice target and drafts
+    // remain owned by the normal foreground controller while inspecting team work.
+    if(teamOpen&&!browsing){RoomTeamInspector(client,room,agentNames){teamOpen=false};return}
     if(browsing){
     Column(Modifier.fillMaxSize().semantics{testTagsAsResourceId=true}.imePadding()){
-            if(catalog.loading&&rooms.isEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().testTag("native-room-catalog-loading"))
-            if(!catalog.available&&!catalog.loading){
-                BilingualLabel("Rooms could not refresh",Modifier.padding(horizontal=16.dp),color=Coral)
-                TextButton({jobs.launch{catalog.refresh()}},Modifier.testTag("native-room-catalog-retry")){BilingualLabel("Retry")}
-            }
-            if(catalog.available&&rooms.isEmpty())BilingualLabel("No rooms available",Modifier.padding(16.dp),color=Muted)
             Box(Modifier.weight(1f).fillMaxWidth()){
-            WorkCatalogList(Modifier.fillMaxSize(),state=catalogList,reverseLayout=true,contentPadding=PaddingValues(top=12.dp,bottom=if(catalogMicDestination!=null&&!catalogSearchOpen)104.dp else 12.dp)){
-                val terms=catalogQuery.trim().split(Regex("\\s+")).filter{it.isNotBlank()}
-                val ordered=rooms.filter{item->terms.all{term->(item.s("name")+" "+item.s("purpose")).contains(term,ignoreCase=true)}}
-                    .sortedWith(compareBy<JSONObject>{it.s("id")!=client.defaultRoomId}.thenBy{it.s("name").lowercase()})
-                if(ordered.isEmpty()&&terms.isNotEmpty())item{BilingualLabel("No matching rooms",Modifier.fillMaxWidth().padding(16.dp),color=Muted)}
-                items(ordered,key={it.s("id")}){item->
-                    HollywoodRoomCard(item,catalog.available){choose(item.s("id"))}
-                }
+                HollywoodWorkCatalog(UnifiedWorkCatalog.snapshots,UnifiedWorkCatalog.discovering.isNotEmpty(),
+                    catalogList,catalogQuery,{UnifiedWorkCatalog.refresh()},
+                    discoveryErrors=UnifiedWorkCatalog.discoveryErrors)
             }
-            if(catalogMicDestination!=null&&!catalogSearchOpen)WorkCatalogCapture(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end=16.dp,bottom=8.dp).testTag("native-catalog-microphone"),
-                roomDestination=catalogMicDestination,sourceLabel=catalogMicLabel)
-            }
+            if(UnifiedWorkCatalog.hasEarlier)TextButton({jobs.launch{UnifiedWorkCatalog.more()}},
+                Modifier.testTag("native-catalog-earlier")){BilingualLabel("Earlier work")}
             ConversationSpeechDock()
             InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
             if(catalogSearchOpen){
                 Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
                     androidx.compose.material3.OutlinedTextField(catalogQuery,{catalogQuery=it},singleLine=true,
                         modifier=Modifier.weight(1f).testTag("native-room-search").focusRequester(catalogSearchFocus),
-                        placeholder={BilingualLabel("Find rooms")},
+                        placeholder={BilingualLabel("Find work")},
                         keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Search),
                         keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSearch={keyboard?.hide()}))
                     IconButton({catalogSearchOpen=false;catalogQuery="";keyboard?.hide()},Modifier.size(48.dp).testTag("native-room-search-close")){
@@ -301,7 +330,7 @@ import androidx.lifecycle.repeatOnLifecycle
                     Modifier.size(48.dp).testTag("native-catalog-find")){SymbolIcon("Search",PocketImmersion.label("Find"),Modifier.size(32.dp),tint=Mint)}
                 ReaderPagingButtons(catalogList)
                 InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-                ConversationActionsMenu(catalogMenu,{catalogMenu=it},modifier=Modifier.testTag("native-catalog-controls"),contextLabel="Rooms"){
+                ConversationActionsMenu(catalogMenu,{catalogMenu=it},modifier=Modifier.testTag("native-catalog-controls"),contextLabel="Work",accountUsage=accountUsage,accountSourceLabel=accountSourceLabel){
                     TextButton({catalogMenu=false;onSettings()},Modifier.testTag("native-catalog-settings")){BilingualLabel("Settings")}
                     ProfileSwitcher(inlineOptions=true){catalogMenu=false}
                     PocketUpdateControl()
@@ -318,7 +347,7 @@ import androidx.lifecycle.repeatOnLifecycle
         if(feed.catchingUp)Text("Loading missed messages…",color=Muted,modifier=Modifier.testTag("native-room-gap"))
         Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal=16.dp)){
         LazyColumn(Modifier.fillMaxSize().testTag("native-room-history"),state=list,
-            contentPadding=PaddingValues(bottom=if(visibleMicDestination!=null&&!showTextInput)80.dp else 0.dp),
+            contentPadding=PaddingValues(0.dp),
             verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(older!=null)item(key="room-history-edge"){
                 if(feed.loadingOlder)Text("Loading earlier messages…",color=Muted)
@@ -363,28 +392,36 @@ import androidx.lifecycle.repeatOnLifecycle
             SymbolIcon("Codex",PocketImmersion.label("Loading messages"),Modifier.align(androidx.compose.ui.Alignment.Center).size(96.dp).testTag("native-room-loading"),spinning=true)
         if(visible.isEmpty()&&!feed.loading&&feed.historyError.isBlank())
             BilingualLabel("No messages yet",Modifier.align(androidx.compose.ui.Alignment.Center).testTag("native-room-empty"),color=Muted)
-        if(visibleMicDestination!=null&&!showTextInput){
-            VoiceLaunchButton(modifier=Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end=4.dp,bottom=8.dp).testTag("native-room-microphone"),
-                compact=true,roomDestination=visibleMicDestination,sourceLabel=visibleMicLabel)
-        }
         }
         ForegroundWorkNotice()
         InlineCaptureStatus(modifier=Modifier.testTag("native-room-capture-status"))
+        val catalogSnapshots=UnifiedWorkCatalog.snapshots
+        val otherSends=remember(client,room,feed.events,catalogSnapshots){hollywoodOtherSends(Pocket.prefs,origin,binding,room,
+            Pocket.environmentProfiles.all().mapNotNull{Pocket.captureEnvironment(it.id)},catalogSnapshots)}
+        val otherDrafts=remember(client,room,feed.events,catalogSnapshots){hollywoodOtherDrafts(Pocket.prefs,origin,binding,room,catalogSnapshots)}
+        otherDrafts.filterNot{draft->otherSends.any{it.origin.matches(draft.origin)&&it.scope==draft.scope}}.forEach{saved->
+            TextButton({try{
+                Pocket.activateEnvironment(saved.origin.environment.id)
+                HollywoodNotifications.openRoom(saved.origin,saved.binding,saved.scope.room,true,saved.scope)
+            }catch(e:Exception){error=e.message.orEmpty()}}){BilingualLabel("Review saved draft",centered=false);Text(" · "+saved.origin.environment.name)}
+        }
+        otherSends.forEach{saved->TextButton({try{
+            Pocket.activateEnvironment(saved.origin.environment.id)
+            HollywoodNotifications.openRoom(saved.origin,saved.binding,saved.scope.room,true,saved.scope)
+        }catch(e:Exception){error=e.message.orEmpty()}}){BilingualLabel("Review saved send",centered=false);Text(" · "+saved.origin.environment.name)}}
         if(pending!=null)TextButton({send(true)},enabled=!busy){BilingualLabel("Check original delivery")}
         if(showTextInput)Box(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){ConversationComposerRow{
-            if(visibleMicDestination!=null)VoiceLaunchButton(Modifier.size(64.dp).testTag("native-room-microphone"),
-                compact=true,roomDestination=visibleMicDestination,sourceLabel=visibleMicLabel)
             RoomDraftComposerScope{
-            ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f).focusRequester(keyboardFocus),enabled=scope!=null&&!busy,
-                onSend={if(!busy&&pending==null&&inputState.value.text.isNotBlank()&&detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true)send()},placeholder={BilingualLabel("Message…",centered=false)})
+            ConversationDraftField(inputState.value,{inputState.value=it;scope?.let{target->client.saveDraft(target,it.text)}},Modifier.weight(1f).focusRequester(keyboardFocus),enabled=scope!=null&&!reviewSaved,
+                onSend={if(!reviewSaved&&!busy&&pending==null&&inputState.value.text.isNotBlank()&&detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true)send()},placeholder={BilingualLabel("Message…",centered=false)})
             }
-            ConversationSendButton(hasDraft,scope!=null&&!busy&&pending==null&&hasDraft&&
+            ConversationSendButton(hasDraft,!reviewSaved&&scope!=null&&!busy&&pending==null&&hasDraft&&
                 detail.optJSONObject("permissions")?.optBoolean(if(postOnly)"can_post" else "can_request")==true,busy,"Send message"){send()}
         }
         }
         ConversationFooter{
         InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-        val singleStop=work.deliveries.filter{it.optBoolean("can_cancel")&&!it.optBoolean("cancellation_requested")&&
+        val singleStop=work.currentDeliveries.filter{it.optBoolean("can_cancel")&&!it.optBoolean("cancellation_requested")&&
             it.s("state")!="cancel_requested"&&client.stopRecord(it.s("id"))==null}.singleOrNull().takeIf{work.verified}
         if(singleStop!=null)key(singleStop.s("id")){
             TextButton({stop(singleStop,false)},enabled=singleStop.s("id") !in stopping,
@@ -395,25 +432,30 @@ import androidx.lifecycle.repeatOnLifecycle
         },enabled=scope!=null,modifier=Modifier.size(48.dp).testTag("native-room-keyboard")){
             SymbolIcon("Keyboard",PocketImmersion.label("Keyboard"),Modifier.size(32.dp),tint=Paper)
         }
-        ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,contextLabel=detail.optJSONObject("room")?.s("name")){
+        ConversationActionsMenu(menu,{menu=it},modifier=Modifier.testTag("native-room-controls"),bottomActions=true,statusIcon=work.icon,statusLabel=work.label,statusSpinning=work.spinning,contextLabel=detail.optJSONObject("room")?.s("name"),accountUsage=accountUsage,accountSourceLabel=accountSourceLabel){
             addressControl()
             TextButton({menu=false;onSettings()}){BilingualLabel("Settings")}
             if(activityFeed.historyError.isNotBlank())BilingualLabel("Activity unavailable",color=Coral,centered=false)
-            val account=Pocket.weeklyUsage
+            val account=accountUsage
             if(account.remainingPercent!=null)Text(account.remainingLabel(),color=Muted)
             account.credits.compact()?.let{Text(it,color=Muted)}
             if(account.remainingPercent==null&&account.credits.compact()==null)BilingualLabel("Account usage unavailable",centered=false,color=Muted)
             PocketUpdateControl()
-            TextButton({menu=false;browsing=true},Modifier.testTag("native-room-catalog")){BilingualLabel("Rooms")}
+            TextButton({menu=false;browsing=true},Modifier.testTag("native-room-catalog")){BilingualLabel("Work")}
             ProfileSwitcher(inlineOptions=true){menu=false}
             val context=androidx.compose.ui.platform.LocalContext.current
             TextButton({menu=false;context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}
             client.savedGuidanceScopes(room).forEach{saved->
                 TextButton({guidance=saved;menu=false},modifier=Modifier.testTag("native-guidance-saved:"+saved.s("deliveryId")+":"+saved.s("nativeTurn"))){Text("Saved guidance · "+(client.guidancePending(saved)?.s("state")?:"draft"))}
             }
-            TextButton({menu=false;workflow=true},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-workflow")){BilingualLabel("Goals & work")}
+            if(leadPolicy==null)TextButton({menu=false;workflow=true},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-workflow")){BilingualLabel("Goals & work")}
+            if(client.contextReviewEnabled)TextButton({menu=false;contextReview=true},Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-context-open")){BilingualLabel("Context windows")}
             RoomWorkControls(work,agentNames,client,room,stopping,feed.detailError,feed.attentionError,
                 onAttention={menu=false;inspecting=it},onGuidance={menu=false;guidance=it},onStop={target,inspect->stop(target,inspect)})
+            if(leadPolicy!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                Text(leadPolicy.name,Modifier.weight(1f),color=Muted,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                TextButton({menu=false;teamOpen=true},Modifier.heightIn(min=48.dp).testTag("native-room-team")){BilingualLabel("Team")}
+            }
         }
         if(!following||list.canScrollForward)TextButton({following=true;jobs.launch{feed.refreshHistory(preferTail=true);withFrameNanos{};if(list.layoutInfo.totalItemsCount>0)list.scrollToItem(list.layoutInfo.totalItemsCount-1)}},Modifier.heightIn(min=48.dp).testTag("native-room-latest")){BilingualLabel("Latest")}
         ReaderPagingButtons(list,hasEarlier=older!=null,onPrepare={up->
@@ -437,7 +479,32 @@ import androidx.lifecycle.repeatOnLifecycle
         },confirmButton={TextButton({guidanceReceipt=null}){BilingualLabel("Close")}})
     }
     if(workflow)HollywoodWorkDialog(client,room){workflow=false}
+    if(contextReview)HollywoodContextReviewDialog(client,actors,destination){contextReview=false}
     inspecting?.let{value->HollywoodAttentionDialog(client,value,{inspecting=null}){jobs.launch{refresh(room)}}}
+}
+
+
+/** Hollywood entry uses the same source-bound body/actions as the stock entry.
+ * Discovery never borrows the selected room's client or converts rooms to sessions.
+ */
+@Composable internal fun HollywoodWorkCatalog(
+    snapshots:List<WorkSourceSnapshot<WorkCatalogPayload>>,discovering:Boolean,
+    state:LazyListState,query:String,onRefresh:()->Unit,
+    actions:UnifiedWorkActions=WorkSourceActions.actions,
+    discoveryErrors:Map<WorkSourceKey,String> = emptyMap()
+){
+    UnifiedWorkList(snapshots,discovering,actions,Modifier.fillMaxSize(),state=state,
+        query=query,showHistory=Pocket.showArchived,onRefresh=onRefresh,leading={
+            ErrorBanner()
+            discoveryErrors.forEach{(source,message)->
+                val name=Pocket.environmentProfiles.all().firstOrNull{it.id==source.environment}?.name?:source.environment
+                Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
+                    Text("$name · $message",Modifier.weight(1f),color=Coral,maxLines=2,
+                        overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    TextButton(onRefresh){BilingualLabel("Retry")}
+                }
+            }
+        })
 }
 
 @Composable private fun HollywoodAttentionDialog(client:HollywoodClient,source:JSONObject,dismiss:()->Unit,changed:()->Unit){
@@ -452,7 +519,7 @@ import androidx.lifecycle.repeatOnLifecycle
     val request=attention.getJSONObject("request")
     val questions=request.optJSONArray("questions")?.objects().orEmpty()
     val approval=attention.s("method") !in listOf("hollywood/question","item/tool/requestUserInput")
-    val open=attention.s("state")=="pending"&&current.s("deliveryState") in listOf("claimed","running")&&pending==null
+    val open=hollywoodAttentionCanRespond(current)&&pending==null
     fun answer(decision:String?=null,inspect:Boolean=false){
         busy=true;jobs.launch{try{
             val fresh=client.call("attention/$id")

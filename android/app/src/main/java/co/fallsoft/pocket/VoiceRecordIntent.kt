@@ -15,4 +15,4 @@ internal fun voiceTextBlock(recording:Boolean,starting:Boolean,working:Boolean,p
     else -> null
 }
 internal fun voiceDraftAfterSubmit(draft:String,accepted:Boolean)=if(accepted)"" else draft.replace('\n',' ')
-internal fun voiceRecordingProblem(hasSpeech:Boolean,captureProblem:String?):String?=captureProblem?:if(hasSpeech)null else "No speech was captured. Check microphone privacy, then tap the microphone to record again."
+internal fun voiceRecordingProblem(hasSpeech:Boolean,captureProblem:String?):String?=captureProblem?:if(hasSpeech)null else "No speech was captured. Check microphone privacy, then press a volume button to record again."

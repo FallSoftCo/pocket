@@ -19,9 +19,11 @@ Pocket lets Codex notify its own user about its own work. Notifications lead int
 
 The app-server protocol is version-sensitive. See [official protocol documentation](https://developers.openai.com/codex/app-server/) and the installed CLI's generated schema when adapting it. The implemented target and actual test evidence are in VERIFICATION.md.
 
-## Inline immersion cycling reserves geometry
+## Complementary inline immersion (alpha121 candidate)
 
-Automatic source/target cycling remains a display transformation of canonical content. Native inline phrase slots reserve the larger natural form at the current font scale; long forms split into contiguous chunks for wrapping. The initial per-word reservation was rejected after native large-font review exposed sparse columns. Phrase clocks are staggered and change displayed-text callbacks only at language changes; graphics-layer fades do not emit parent callbacks every frame. A deliberate source hold overrides its clock. Displayed speech recovers the captured variant set independently of current phases so navigation does not change the words underneath playback. Existing links and control targets keep their actions; no bilingual second lines or dialogs are added. Unequal word counts can leave blank reservation, which requires native review.
+The former wave/fade and larger-form space reservation are superseded by the user's complementary flip-flop requirement. Prepared lexical units retain contextual Italian phrase order and paired transgrammatical English. Each phase displays both languages within one normal text flow; changing phase reverses the language of every paired unit instantly. There is no per-frame animation, duplicate translation line, modal, or blank width reservation. Canonical messages remain unchanged. Translation preparation and the display clock are separate from transcript and input state, so a display change does not trigger network reads or rebuild unrelated controls.
+
+Missing or invalid provider pairs stay honest source text, rather than invented translations or claims of complete coverage. Existing links and actions preserve their destinations. Qualification must cover complementary units, retained history, recycled content, scrolling and IME interaction. This describes the alpha121 candidate; publication and physical-phone evidence must be reported separately.
 
 ## Confirmed transient turn recovery (alpha37)
 
@@ -73,3 +75,152 @@ different actions. Human identity, room/request permission and native ownership
 are server checked; native message recording is distinct from model consumption
 and accepted work. Alpha100 implementation and build are not physical-phone
 or general multi-host certification.
+
+### Browser read feedback (2026-10-19)
+
+Browser events invalidate their own projection and scope. Session previews update list entities; other sessions' timeline deltas, aggregate activity and repeated status observations do not reread the selected transcript. Known current rows apply by stable identity/version. Unknown current rows and semantic completion/receipt changes request the independent current-head lane; requests coalesce without concurrent duplicate reads. A quiet periodic reconciliation remains for missed events and older transports, with no worker/model activation.
+
+The reading-edge status observes the entire logical head promise, including its coalesced follow-up, rather than individual HTTP requests. First snapshots show loading immediately; cached reads must last 400 ms before appearing. Once shown, feedback holds at least 500 ms and settles for 160 ms across nearby work. Scope changes isolate feedback; stale completions cannot clear the selected reader. The indicator sits inside the reader frame without changing its dimensions. Errors retain existing messages and surface their actual failure.
+
+## Browser modeled symbol playback (2026-10-19)
+
+The browser reuses the native modeled WebP atlases instead of static-only PNG copies. One shared requestAnimationFrame clock draws only visible connected symbols into fixed-size canvases. It never updates transcript state, DOM text or layout per frame. Page visibility and reduced-motion preferences stop playback; PNGs remain the accessible fallback if motion or a resource is unavailable. Decoded pages use a 32 MiB LRU; compressed source pages use a separate 12 MiB LRU so looping does not repeatedly fetch evicted decoded pages. Pending decodes are single-flight by page, and failed pages do not retry on every animation frame. Removed nodes are unobserved, and no per-symbol timer/listener survives transcript reconciliation.
+
+## Shared browser session entities and read-only history (2026-10-19)
+
+Catalog and paginated history are payload projections of one session entity, not independent client authorities. SessionStore owns metadata, causal read tickets, canonical rows and snapshots. A matching live row patches the cached entity even when closed. Message/interaction previews and changed catalog summaries signal missing content; they are not substituted for complete messages or used to guess chronology. Selected reads have their own lane; at most two changed sessions prewarm in the background with a 5-second per-session bound and a 32-entry queue. Background loading does not mark work read. Cold background loading is enabled only when the server advertises readOnlyTimeline; legacy servers retain cached live rows without background history GETs. Background requests use the dedicated /head endpoint, so a backend rollback returns404 instead of falling through to a runtime attachment. Modern history GET uses the bounded projection reader and never thread/resume. Explicit write/control paths retain attachment and permissions handling. Older in-flight metadata cannot overwrite a newer live observation in either view.
+
+## Grammatical flip units (2026-10-20)
+
+The immersion teacher authors small grammatical phrases as the atomic complementary flip units. Determiners stay with noun modifiers/heads, prepositions with their noun phrase, and negation/clitics/auxiliaries with their verb. Idioms stay intact. Italian order remains canonical for both language forms; ordinary intra-phrase spaces remain spaces, with hyphens reserved for bound grammatical glosses. Existing renderers already preserve each aligned segment as one unit, so this adds no per-frame parsing or animation.
+
+Semantic plan revision v3 invalidates word-oriented teacher caches; old content is regenerated only when offered as visible content, under the existing deduplicated bounded worker. Android and web accept v2 during coordinated rollout. The browser clears retained plans on semantic revision so an open view cannot indefinitely retain the old segmentation. Common authored controls have explicit reviewed groupings; longer legacy authored settings strings still need individual grouping review. Structural validation proves complete aligned coverage, not linguistic correctness or improved learning outcomes.
+
+Grammatical flip implementation (2026-10-20): the teacher returns Italian lexical alignments plus contiguous grammatical group IDs. The server derives each group’s English support from those lexical meanings in Italian order, rather than asking for freely reordered phrase glosses. Determiners/modifiers stay with nouns, prepositions with their phrase and negation/clitics/auxiliaries with the verb. Missing, discontinuous or incomplete groups are rejected; validated phrase segments are cached and rendered atomically. This adds neither a second model pass nor a client-side language parser.
+
+2026-10-20 user revision: remove alternating lexical/phrase parity. Each reading cycle now has a complete English-vocabulary scaffold in Italian grammar followed by complete Italian (the100% endpoint of the requested50–100% Italian range). No phase animation, per-word parity, extra model pass or translation-cache invalidation is required; the same aligned cached phrase plan supplies both complete forms.
+
+Correction: the user explicitly requires the50–100%range, not merely its100%endpoint. Supersede the preceding all-or-nothing decision with precomputed English/50%Italian/English/75%Italian/English/100%Italian forms. Coverage counts Italian lexical words and selects whole contiguous grammatical groups; indivisible groups can overshoot a target. English remains complete at every reference phase, while full Italian once per cycle prevents permanently untranslated eligible phrases. No additional inference, fade or per-frame layout work.
+
+Latest correction: user explicitly requires0%Italian↔50%Italian for comprehensibility. Supersede the50–100%cycle. Precompute complete English, a nearest-half whole-phrase Italian block, English, and its complementary phrase block. Whole-group granularity makes short passages approximate. Never add dedicated75%or full-Italian message phases; no extra inference or animation.
+
+Native speech liveness correction: an actual release journey showed audio advancing to17seconds before a duration-derived timeout falsely paused it. Cached WebM can lack duration metadata. Playback now uses monotonic position progress with a15-second inactivity window, reset on start/resume; preparation retains its separate90-second bound. Completion still comes from the player callback, not an invented duration. Original failed evidence retained.
+
+## Native catalog/message consistency (candidate146)
+
+Head, search and additional catalog pages enter one acceptance path. The accepted merge invalidates the same environment-bound shared transcript; a card cannot advance through a page-only path that leaves its saved messages clean. An older inventory response preserves newer preview evidence while still merging ordinary metadata. Native qualification checks a search-only advance, background synchronization and reopening while foreground history is deliberately held.
+
+Backend discovery preserves HTTP status before parsing an error body. A404 from the discovery endpoint permits stock compatibility only after the paired canonical session catalog validates. Authorization, network and malformed successful responses remain failures. This does not grant room capabilities or borrow another profile.
+
+Cold background transcript reads require advertised readOnlyTimeline capability and use the strict /head route, so an older backend cannot turn a missing route into runtime attachment. Two reads have a separate dispatcher and five-second call bound, with32 admitted pending intents ordered by work evidence. Dirty state remains durable when a source is unsupported or an intent is outside that bounded queue. Foreground history retains its own admission and source-bound single-flight results. Capability observations and background reads neither mark content read nor submit model work. Candidate status and physical-phone delivery remain separate from this design.
+
+
+Known missing-content evidence marks the shared cache dirty synchronously before the updated card can be tapped. Dirty cached text is not current presentation. Each read carries the invalidation generation it observed; an earlier in-flight read cannot clear a newer invalidation. A superseded foreground result quietly requests the next owned read, rather than showing a connection error or presenting stale text as current.
+
+
+## Canonical history windows and entry intent (2026-10-21)
+
+A server page and its cursor are one presentation-cache unit. Trimming a row prefix
+while keeping that cursor skips the removed prefix on the next request, so shared
+caches now retain complete bounded windows and evict whole snapshots under byte
+budgets. Legacy shared snapshots require current revalidation. Eviction never
+changes draft, pairing, delivery or read-acknowledgement journals.
+
+A current window does not establish coverage back to an older retained window.
+Shared-cache ingress and disk/memory restoration register explicit missing
+intervals through the same window-boundary reducer as current HTTP reads.
+Historical demand remains independent of the current-message lane.
+
+An explicit conversation opening targets latest. Foreground restoration and an
+explicit resume-reading intent retain the saved anchor. UI restoration state is
+scoped to the conversation incarnation as well as its source, preventing a
+retired viewport's anchor from controlling a newly selected one.
+
+Provider turn/item/client identity establishes message order. Native versions
+that support only opaque item cursors use bounded descending position lookup,
+carrying the nearest visible successor across source-bound continuations.
+No history repair starts a model turn, resends input, or uses message text as
+identity. Candidate qualification is recorded separately from deployment.
+
+
+### Retained-cache upgrade and disconnected history
+
+Version1 retained checkpoints can already contain old and recent islands with an
+incorrect coverage flag. The version2 decoder keeps their messages and reading
+anchors but does not trust that flag. Revalidation tracks every retained
+content identity through contiguous canonical pages. Encountering a cached recent
+prefix or the first saved row cannot silently close an older missing interval;
+all retained references in the unverified prefix must be corroborated. Current metadata written by version2
+continues to retain explicit independent windows.
+
+A source EOF without the retained anchor leaves an unavailable interval. It is
+not treated as a successful join. The marker and retained messages persist;
+unchanged failed intervals do not repeatedly fetch on every scroll. Reopening
+permits a fresh user-demanded attempt, and explicit refresh can retry the
+interval. No model work or command replay is part of this recovery.
+
+
+Visible retained inputs also use the existing canonical-position lane. Settled
+viewport demand admits at most four suspect inputs; undispatched offscreen
+viewport requests are dropped, and one serial owner performs bounded read-only
+lookups with a five-second per-request timeout. A late disk restoration therefore
+does not need another user send or a coincidental head message to repair order.
+A successful independent current read can retry failed visible ordering once;
+this never starts a model, sends input or recursively triggers another read.
+
+
+### Canonical membership is independent of live projection
+
+A shared current-window cache records the identities read from its canonical
+server page. Live updates may change text or add visible rows, but cannot add to
+that page's canonical membership. The retained transcript separately persists
+the union of corroborated source identities and its missing-interval ledger.
+
+A current page joins an older window only through corroborated identities, not
+through an arbitrary live overlay that happens to reappear in the page. Otherwise
+its canonical cursor opens a missing interval back to the older verified window.
+Older and gap pages corroborate additional identities as they are read. Version1
+checkpoints and version2 bodies without proof metadata retain their data but
+cannot supply coverage proof. This also applies when only the shared cache exists
+and no separate retained checkpoint has been written yet.
+
+EOF with retained source identities outside the returned full window is an
+unavailable interval, not successful deletion or complete coverage. Such a marker
+has no manufactured provider cursor; a later canonical page may supply one.
+
+
+## 2026-11-05: human conversation through an accountable lead
+
+The human-broadcast experiment failed in actual use. In one project, a 24-hour
+read-only audit found four human requests and 511 public agent publications,
+about one million body characters. A selected native context had reached about
+406,000 of 475,000 input tokens after six compactions. These are observed traffic
+and context measures, not a bill or an estimate of paid usage. A two-second reply
+window after inference could suppress some replies but could not undo model or
+context consumption. Explicit tool publications caused most traffic, so merely
+suppressing automatic finals was insufficient.
+
+For adopted rooms, a canonical lead receives human requests and owns follow-through.
+Workers receive only selected tasks or necessary addressed questions. The lead
+acts as the accountable delegate, not a paraphrasing relay. Internal coordination
+is terse, attributable and inspectable; it is separate from human conversation and
+execution activity. Passive observations cause no native context injection.
+
+Hollywood owns communication, membership, role revisions and receipts. LAX owns
+native execution, original work, selected assignments and dependency continuation.
+Material results can resume their original work. Fetches, unchanged blocks and
+background reports cannot enroll tasks or wake every worker. Cancellation and
+unknown effects remain explicit. Genuine permission approvals retain the actual
+human requester, including when different from the installation administrator.
+
+The client uses independent conversation, activity, team and archive cursors.
+Existing old-recipient drafts and uncertain receipts stay bound to their original
+destinations; adopting a lead never silently retargets or resubmits them. Old room
+history is retained as an archive rather than repainted as current lead dialogue.
+Expanded team text uses the normal Markdown/image/immersion renderer.
+
+This is the isolated 167 candidate. Real PostgreSQL/HTTP/SDK and two logical NATS
+nodes passed. Actual native model journeys proved selected delegation and a
+worker-to-worker question with zero observer turns, without another app-server.
+These do not prove physical multi-host deployment, the phone UI or provider voice.
+Existing rooms require an explicit reviewed handover and usable client rollout.

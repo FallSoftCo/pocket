@@ -14,7 +14,7 @@ internal data class CodexCatalogSnapshot(
 /** Environment-owned read admission. Slow ancillary lanes never serialize catalog freshness.
  * Catalog timestamps remain server work timestamps; observation time is not activity.
  */
-internal object CodexCatalog {
+internal class CodexCatalogStore(private val destination:EnvironmentRequest,private val archived:Boolean) {
     private data class Session(val key:CodexCatalogKey,val incarnation:Long,val destination:EnvironmentRequest,val scope:CoroutineScope,
         var catalog:Job?=null,var metadata:Job?=null,var activity:Job?=null,var notifications:Job?=null,var attention:Job?=null,
         var page:Job?=null,var discovery:Job?=null,var ticker:Job?=null,var lastDiscovery:Long=0)
@@ -38,15 +38,18 @@ internal object CodexCatalog {
     private var cursorInitialized=false
     private var foreground=false
     private var listVisible=false
-    private fun current(value:Session)=session===value&&Pocket.captureEnvironment()?.matches(value.destination)==true&&Pocket.showArchived==value.key.archived
+    private fun selected()=Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.showArchived==archived
+    private fun current(value:Session)=session===value&&Pocket.captureEnvironment(value.destination.environment.id)?.matches(value.destination)==true
+    private var catalogAcceptedAt=0L
+    private val transcriptHints=mutableMapOf<String,Task>()
     private fun retire(){val old=session;session=null;old?.scope?.cancel();inFlight.clear();paging=false;pageSerial++}
     fun reset(){
         retire();retainedKey=null;tasks=emptyList();activities=emptyList();notifications=emptyList();attention=emptyList()
         load=CatalogLoadState.Loading;complete=false;cursor=null;cursorInitialized=false;errors.clear()
     }
     private fun active():Session?{
-        val destination=Pocket.captureEnvironment()?:return null
-        val key=CodexCatalogKey(destination.environment.id,backendOwner(destination.endpoint,destination.token),Pocket.showArchived)
+        if(Pocket.captureEnvironment(destination.environment.id)?.matches(destination)!=true)return null
+        val key=CodexCatalogKey(destination.environment.id,backendOwner(destination.endpoint,destination.token),archived)
         session?.takeIf{it.key==key&&current(it)}?.let{startTicker(it);return it}
         retire()
         if(retainedKey!=key){tasks=emptyList();load=CatalogLoadState.Loading;complete=false;cursor=null;cursorInitialized=false;errors.clear();retainedKey=key}
@@ -59,7 +62,7 @@ internal object CodexCatalog {
         refresh()
     }
     fun listVisibility(environment:String,archived:Boolean,visible:Boolean){
-        if(Pocket.environmentId!=environment||Pocket.showArchived!=archived)return
+        if(destination.environment.id!=environment||this.archived!=archived)return
         listVisible=visible
         if(visible){val value=active()?:return;startTicker(value);refresh()}
         else{session?.ticker?.cancel();session?.ticker=null}
@@ -90,6 +93,7 @@ internal object CodexCatalog {
     fun refresh(explicit:Boolean=false){
         if(!explicit&&!foreground)return
         val value=active()?:return
+        if(!selected()){catalog(value);return}
         metadata(value)
         if(BackendNavigation.nativeSelected())return
         catalog(value)
@@ -115,8 +119,13 @@ internal object CodexCatalog {
         value.metadata=launch(value,CodexCatalogLane.METADATA){
             val revision=Pocket.statusRevision
             val result=read(value,"/api/status")
-            if(result.s("backend")=="lax"){Pocket.prefs.edit().putString("backend:"+backendOwner(Pocket.base,Pocket.token),"lax").apply();CodexConversations.suspendReading()}
-            Pocket.acceptUsage(result.optJSONObject("usage"))
+            CodexSessionRepository.observeCapabilities(value.destination,result.optJSONObject("capabilities"))
+            if(!selected())return@launch
+            val backendKey="backend:"+backendOwner(value.destination.endpoint,value.destination.token)
+            if(result.s("backend")=="lax"&&!Pocket.prefs.contains(backendKey)){
+                Pocket.prefs.edit().putString(backendKey,"lax").apply();CodexConversations.suspendReading()
+            }
+            Pocket.acceptUsage(result.optJSONObject("usage"),value.destination)
             if(Pocket.statusRevision==revision){Pocket.codexOnline=result.optBoolean("connected");Pocket.codexConnectionMessage=ConnectionMessages.server(result.optJSONObject("problem")?.s("message").orEmpty())}
             Pocket.host=result.s("host");Pocket.defaultCwd=result.s("defaultCwd")
             val changed=Pocket.prefs.getString(Pocket.key("deviceId"),"")!=result.s("deviceId")
@@ -131,23 +140,57 @@ internal object CodexCatalog {
         value.catalog=launch(value,CodexCatalogLane.CATALOG){
             val baseline=tasks.associateBy{it.id}
             val result=read(value,if(value.key.archived)"/api/threads?archived=true"else "/api/threads")
-            val fetched=result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}.orEmpty()
-            val previous=tasks.firstOrNull{it.id==Pocket.selected}
-            fetched.forEach{next->
-                val old=baseline[next.id]
-                if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,next.preview,next.previewKind,next.status)||transcriptLiveActivityAdvanced(old.activityAt,next.activityAt))
-                    CodexSessionRepository.invalidate(next.id,value.destination)
-            }
-            tasks=mergeLiveTaskSnapshot(tasks,fetched,baseline,result.optBoolean("refreshPending")||result.s("nextCursor").isNotBlank())
-            tasks.firstOrNull{it.id==Pocket.selected}?.let{latest->
-                if(transcriptPresentationChanged(previous?.preview,previous?.previewKind,previous?.status,latest.preview,latest.previewKind,latest.status)||
-                    transcriptLiveActivityAdvanced(previous?.activityAt,latest.activityAt))CodexConversations.invalidate()
-            }
+            val fetched=result.getJSONArray("threads").objects().map{catalogTask(it)}
+            acceptCatalog(fetched,baseline,result.optBoolean("refreshPending")||result.s("nextCursor").isNotBlank())
             complete=!result.optBoolean("refreshPending")
             if(!cursorInitialized&&complete){cursor=result.s("nextCursor").takeIf{it.isNotBlank()};cursorInitialized=true}
-            load=CatalogLoadState.Ready
+            load=CatalogLoadState.Ready;catalogAcceptedAt=android.os.SystemClock.elapsedRealtime()
         }
     }
+    /** Every accepted catalog lane publishes work evidence and invalidates the
+     * corresponding shared transcript. Search/page results are not a second
+     * source of card-only freshness. Compare accepted merges, not stale HTTP rows.
+     */
+    private fun acceptCatalog(fetched:List<Task>,baseline:Map<String,Task>,partial:Boolean){
+        val previous=tasks.associateBy{it.id}
+        val merged=mergeLiveTaskSnapshot(tasks,fetched,baseline,partial)
+        tasks=merged.map{CodexSessionRepository.nativeCatalogProjection(destination,it)}
+        merged.forEach{next->
+            val old=if(CodexSessionRepository.nativeEnabled(destination,next.id))transcriptHints[next.id] else previous[next.id]
+            if(old==null||next.activityAt>=old.activityAt)transcriptHints[next.id]=next
+            if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,next.preview,next.previewKind,next.status)||
+                transcriptLiveActivityAdvanced(old.activityAt,next.activityAt)){
+                CodexSessionRepository.invalidate(next.id,destination,priorityAt=next.activityAt)
+                if(selected()&&Pocket.selected==next.id)CodexConversations.invalidate()
+            }
+        }
+    }
+    /** Same canonical store serves the merged list and selected conversation.
+     * Joining an admitted read does not create a second catalog HTTP request.
+     */
+    suspend fun head():List<Task>{
+        val value=active()?:throw IllegalStateException("Source pairing changed")
+        if(android.os.SystemClock.elapsedRealtime()-catalogAcceptedAt>=2_000||load!=CatalogLoadState.Ready)catalog(value)
+        value.catalog?.join()
+        if(!current(value))throw CancellationException("Source pairing changed")
+        errors[CodexCatalogLane.CATALOG]?.let{throw IllegalStateException(it)}
+        return tasks.toList()
+    }
+    fun archiveChanged(id:String,isArchived:Boolean){
+        // Cancel earlier reads before publishing the acknowledged mutation. A
+        // delayed old head/page must not put the card back into the wrong lane.
+        retire()
+        tasks=if(archived!=isArchived)tasks.filterNot{it.id==id}else tasks.map{if(it.id==id)it.copy(archived=isArchived)else it}
+        transcriptHints.remove(id);cursor=null;cursorInitialized=false;catalogAcceptedAt=0L
+        refresh(explicit=true)
+    }
+    fun markForeground(visible:Boolean){foreground=visible}
+    suspend fun readPage(search:String=""){
+        page(search)
+        session?.page?.join()
+        errors[CodexCatalogLane.PAGE]?.let{throw IllegalStateException(it)}
+    }
+    fun detach(){foreground=false;listVisible=false;retire()}
     fun page(search:String=""){
         val value=active()?:return
         if(value.page?.isActive==true){if(search.isBlank()||pageSearch==search)return;value.page?.cancel()}
@@ -161,7 +204,7 @@ internal object CodexCatalog {
                     (next?.let{"&cursor="+android.net.Uri.encode(it)}?:"")+
                     (if(search.isNotBlank())"&search="+android.net.Uri.encode(search)else ""))
                 if(ticket!=pageSerial)return@launch
-                tasks=mergeLiveTaskSnapshot(tasks,result.optJSONArray("threads")?.objects()?.map{catalogTask(it)}.orEmpty(),baseline,true)
+                acceptCatalog(result.getJSONArray("threads").objects().map{catalogTask(it)},baseline,true)
                 if(search.isBlank())cursor=result.s("nextCursor").takeIf{it.isNotBlank()}
             }finally{if(current(value)&&ticket==pageSerial)paging=false}
         }
@@ -177,4 +220,67 @@ internal object CodexCatalog {
         }
     }
     val snapshot get()=CodexCatalogSnapshot(session?.key,session?.incarnation?:serial,tasks,load,complete,paging,errors.toMap(),inFlight.keys.toSet())
+}
+
+
+/** Registry owns one canonical catalog per pairing and archive query. The existing
+ * selected-profile API is a projection, not a second cache or read scheduler.
+ */
+internal object CodexCatalog {
+    private val stores=mutableMapOf<CodexCatalogKey,CodexCatalogStore>()
+    private var foreground=false
+    private fun prune(){
+        stores.keys.filter{key->Pocket.captureEnvironment(key.environment)?.let{
+            backendOwner(it.endpoint,it.token)==key.backend
+        }!=true}.toList().forEach{stores.remove(it)?.detach()}
+    }
+    fun source(destination:EnvironmentRequest,archived:Boolean=false):CodexCatalogStore {
+        prune()
+        require(Pocket.captureEnvironment(destination.environment.id)?.matches(destination)==true){"Source pairing changed"}
+        val key=CodexCatalogKey(destination.environment.id,backendOwner(destination.endpoint,destination.token),archived)
+        return stores.getOrPut(key){CodexCatalogStore(destination,archived)}
+    }
+    private fun selected()=Pocket.captureEnvironment()?.let{source(it,Pocket.showArchived)}
+    var tasks:List<Task>
+        get()=selected()?.tasks.orEmpty()
+        set(value){selected()?.tasks=value}
+    var activities:List<JSONObject>
+        get()=selected()?.activities.orEmpty()
+        set(value){selected()?.activities=value}
+    var notifications:List<JSONObject>
+        get()=selected()?.notifications.orEmpty()
+        set(value){selected()?.notifications=value}
+    var attention:List<JSONObject>
+        get()=selected()?.attention.orEmpty()
+        set(value){selected()?.attention=value}
+    val error get()=selected()?.error.orEmpty()
+    val load get()=selected()?.load?:CatalogLoadState.Loading
+    val complete get()=selected()?.complete?:false
+    val cursor get()=selected()?.cursor
+    val paging get()=selected()?.paging?:false
+    val snapshot get()=selected()?.snapshot?:CodexCatalogSnapshot(null,0,emptyList(),CatalogLoadState.Loading,false,false,emptyMap(),emptySet())
+    // Switching leaves the old source's canonical content intact. Its transport
+    // admission is retired; a later late response cannot overwrite another source.
+    fun reset(){selected()?.detach();prune()}
+    fun onForeground(visible:Boolean){
+        foreground=visible
+        if(visible)selected()?.onForeground(true)else stores.values.forEach{it.detach()}
+    }
+    fun listVisibility(environment:String,archived:Boolean,visible:Boolean){
+        Pocket.captureEnvironment(environment)?.let{destination->
+            val store=source(destination,archived)
+            if(visible&&foreground)store.onForeground(true)
+            store.listVisibility(environment,archived,visible)
+        }
+    }
+    fun refresh(explicit:Boolean=false){
+        selected()?.let{it.markForeground(foreground);it.refresh(explicit)}
+    }
+    fun archiveChanged(destination:EnvironmentRequest,id:String,archived:Boolean){
+        val owner=backendOwner(destination.endpoint,destination.token)
+        stores.filterKeys{it.environment==destination.environment.id&&it.backend==owner}.values.toList()
+            .forEach{it.archiveChanged(id,archived)}
+    }
+    fun page(search:String="")=selected()?.page(search)?:Unit
+    fun discover(id:String)=selected()?.discover(id)?:Unit
 }

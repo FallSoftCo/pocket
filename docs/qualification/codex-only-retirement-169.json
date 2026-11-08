@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "versionCode": 169,
+  "versionName": "0.5.0-alpha.151",
+  "state": "published",
+  "sourceCommit": "aaad9eaf",
+  "scope": "Owner-authorized deletion of retired environment registrations, credentials, typed drafts, unresolved local receipts and recordings; current environments preserved. No dispatch or retry from deletion.",
+  "backendWeb": "Live;18 retired private web credentials removed, retired coordinator source/command/room admission records deleted. Non-secret retirement markers retained for offline client cleanup.",
+  "qualification": {
+    "backendPassed": 682,
+    "androidUnitCasesPerVariant": 476,
+    "androidSkippedPerVariant": 2,
+    "nativePassed": 12,
+    "bothLints": true,
+    "optimizedCompatibleApk": "e2c0462eebbc8fe04e0a4b699574711573f732adf700fe7720b31f1bb8abaa48",
+    "originalPairAfterReopenExactlyOnce": true,
+    "retiredDataDeletionOtherHostPreserved": true
+  },
+  "delivery": {
+    "signedVariants": 2,
+    "announcementAcceptedByFcm": true,
+    "attempts": 1,
+    "physicalInstall169Verified": false,
+    "lastVerifiedPhoneVersion": 168
+  },
+  "limits": [
+    "Software emulator evidence does not establish physical phone audio/rendered push performance.",
+    "Unchanged dependencies have13 audit findings (11 moderate,2 high); no claim of a clean dependency audit.",
+    "First candidate rejected after emulator SystemUI ANR interfered with hardware-key test; final source rebuilt and all required cases passed."
+  ]
+}

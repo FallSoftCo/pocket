@@ -13,11 +13,11 @@ export class HollywoodVoice {
  }
  async destination(device,value){
   if(!value||Object.keys(value).some(k=>!['backend','bindingId','authorityId','roomId','recipientId','audience','sourceEventId'].includes(k))||value.backend!=='lax'||
-    ![value.authorityId,value.roomId,value.recipientId].every(uuid)||!['room','direct'].includes(value.audience)||value.sourceEventId!=null&&!uuid(value.sourceEventId))throw fail('Choose an exact Hollywood room and recipient.');
+    ![value.authorityId,value.roomId].every(uuid)||value.recipientId!=null&&!uuid(value.recipientId)||value.audience==='direct'&&!uuid(value.recipientId)||!['room','direct'].includes(value.audience)||value.sourceEventId!=null&&!uuid(value.sourceEventId))throw fail('Choose a Hollywood room, or an explicit direct recipient.');
   const client=this.gateway.client(device);await client.verify();
   if(value.bindingId!==client.config.bindingId||value.authorityId!==client.config.authorityId)throw fail('Recording belongs to another environment or human identity.',409);
   const detail=await client.call('rooms/'+value.roomId);
-  if(!detail.permissions.can_request||!detail.actors.some(a=>a.id===value.recipientId&&a.kind==='agent'))throw fail('This human cannot request work from that room and agent.',403);
+  if(!detail.permissions.can_request||value.recipientId!=null&&!detail.actors.some(a=>a.id===value.recipientId&&a.kind==='agent'&&a.can_read!==false))throw fail('This human cannot request work from that room and agent.',403);
   return {...value,binding:client.envelope(),title:detail.room.name};
  }
  row(device,id){return this.db.prepare('SELECT * FROM hollywood_voice_turns WHERE device=? AND id=?').get(device,id);}
@@ -31,7 +31,7 @@ export class HollywoodVoice {
   if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id)||typeof text!=='string'||!text.trim()||Buffer.byteLength(text)>6000)throw fail('Invalid recorded room request.');
   const client=this.client(device,destination);
   const detail=await client.call('rooms/'+destination.roomId);
-  if(!detail.permissions.can_request||!detail.actors.some(a=>a.id===destination.recipientId&&a.kind==='agent'))throw fail('This human can no longer request work in the captured room.',403);
+  if(!detail.permissions.can_request||destination.recipientId!=null&&!detail.actors.some(a=>a.id===destination.recipientId&&a.kind==='agent'&&a.can_read!==false))throw fail('This human can no longer request work in the captured room.',403);
   const digest=createHash('sha256').update(JSON.stringify([text,destination])).digest('hex');
   const old=this.row(device,id);
   if(old){if(old.digest!==digest)throw fail('This recording ID belongs to another captured request.',409);return this.get(device,id);}
@@ -41,12 +41,12 @@ export class HollywoodVoice {
   const key=JSON.stringify([device,id]),work=this.dispatch(device,id);this.dispatching.set(key,work);
   void work.finally(()=>this.dispatching.delete(key));return this.get(device,id);
  }
- body(row,d){return {operationId:row.operation,kind:'request',body:row.text,audience:d.audience,recipientId:d.recipientId,...(d.sourceEventId?{sourceEventId:d.sourceEventId}:{})};}
+ body(row,d){return {operationId:row.operation,kind:'request',body:row.text,audience:d.audience,...(d.recipientId!=null?{recipientId:d.recipientId}:{}),...(d.sourceEventId?{sourceEventId:d.sourceEventId}:{})};}
  accepted(row,d,value){
   const e=value.event,deliveries=value.deliveries;
   if(!value.accepted||!uuid(e?.id)||e.authority!==d.binding.authorityId||e.author!==d.binding.principalId||e.room!==d.roomId||e.body!==row.text||
-    e.kind!=='request'||e.audience!==d.audience||e.recipient!==d.recipientId||(e.source??null)!==(d.sourceEventId??null)||
-    !Array.isArray(deliveries)||deliveries.length!==1||deliveries[0].agent!==d.recipientId)throw fail('Original recording receipt is unconfirmed.',502);
+    e.kind!=='request'||e.audience!==d.audience||(e.recipient??null)!==(d.recipientId??null)||(e.source??null)!==(d.sourceEventId??null)||
+    !Array.isArray(deliveries)||!(deliveries.length===1&&deliveries[0].agent===d.recipientId||deliveries.length===0&&e.data?.conversationVersion===1&&e.data?.authorKind==='human'))throw fail('Original recording receipt is unconfirmed.',502);
   return e;
  }
  async dispatch(device,id){
@@ -79,21 +79,29 @@ export class HollywoodVoice {
   const outputs=JSON.parse(row.outputs);let cursor=page.nextCursor;
   for(let count=0;count<5;count++){
    for(const item of page.events){
-    if(item.source!==event.id||item.author!==d.recipientId||item.room!==d.roomId)continue;
-    if(['message','result'].includes(item.kind)&&!outputs.some(o=>o.id===item.id))outputs.push({id:item.id,text:item.body,kind:item.kind});
+    if((item.source!==event.id&&item.data?.humanInputEventId!==event.id)||d.recipientId!=null&&item.author!==d.recipientId||item.room!==d.roomId)continue;
+    if(d.recipientId==null&&item.data?.authorKind!=='agent'||item.recipient&&item.recipient!==d.binding.principalId)continue;
+    if(['message','result'].includes(item.kind)&&!outputs.some(o=>o.id===item.id))outputs.push({id:item.id,text:item.body,kind:item.kind,...(item.data?.responseVersion===1?{phase:item.data.responsePhase}: {})});
    }
    cursor=page.nextCursor;if(page.events.length<100||count===4)break;
    page=await client.call('rooms/'+d.roomId+'/history',{query:{after:cursor,limit:100}});
   }
   const delivery=receipt.deliveries[0];
-  // Do not settle before the result event was actually read through this cursor.
-  const resultSeen=!delivery.result_event||outputs.some(o=>o.id===delivery.result_event);
-  const state=delivery.state==='completed'&&resultSeen?'completed':['failed','cancelled'].includes(delivery.state)&&resultSeen?'failed':delivery.state==='unknown'?'unknown':'thinking';
+  let state;
+  if(delivery){
+   // Preserve original legacy receipts and their original cursor semantics.
+   const resultSeen=!delivery.result_event||outputs.some(o=>o.id===delivery.result_event);
+   state=delivery.state==='completed'&&resultSeen?'completed':['failed','cancelled'].includes(delivery.state)&&resultSeen?'failed':delivery.state==='unknown'?'unknown':'thinking';
+  }else{
+   // This is response availability, never inferred completion of all work.
+   state=outputs.some(o=>['answer','blocked'].includes(o.phase))?'completed':'thinking';
+  }
+  const answers=outputs.filter(o=>['answer','blocked'].includes(o.phase));
   const messages=outputs.filter(o=>o.kind==='message');
-  const response=(messages.length?messages:outputs).map(o=>o.text).join('\n\n');
+  const response=(answers.length?answers:messages.length?messages:outputs).map(o=>o.text).join('\n\n');
   const bounded=response.length>15000?response.slice(0,14900)+'\nFurther details remain in the room.':response;
   this.db.prepare('UPDATE hollywood_voice_turns SET event=?,cursor=?,outputs=?,response=?,state=?,error=? WHERE device=? AND id=?')
-    .run(event.id,cursor,JSON.stringify(outputs),bounded||null,state,state==='unknown'?'Original native delivery is unknown; do not repeat.':state==='failed'?'Native work '+delivery.state+'.':null,device,id);
+    .run(event.id,cursor,JSON.stringify(outputs),bounded||null,state,state==='unknown'?'Original native delivery is unknown; do not repeat.':state==='failed'?'Native work '+delivery?.state+'.':null,device,id);
   return this.get(device,id);
  }
  async history(device,before=Number.MAX_SAFE_INTEGER){

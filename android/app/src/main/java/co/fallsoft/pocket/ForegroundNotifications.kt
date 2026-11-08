@@ -120,7 +120,7 @@ internal object ForegroundNotifications {
         if(backendOwner(origin.endpoint,origin.token)!=value.s("owner"))return
         val n=JSONObject().put("_environment",origin.environment.id).put("_hollywoodKey",key).put("_binding",value.s("bindingId")).put("_room",value.s("roomId"))
             .put("id",value.optLong("revision")).put("kind",if(status==null&&value.has("attention"))"question"else "update").put("_hollywoodGeneric",generic).put("_hollywoodStatus",status)
-            .put("title",status?:if(generic)"Room update" else value.optJSONObject("hint")?.s("roomName","Room update"))
+            .put("title",status?:if(generic)"Room update" else roomNotificationTitle(value))
             .put("body",if(generic)"Open the room to review"else value.optJSONObject("event")?.s("body").orEmpty())
         offer(n)
     }

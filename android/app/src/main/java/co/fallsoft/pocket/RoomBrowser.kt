@@ -21,7 +21,7 @@ internal fun roomForTask(rooms:List<JSONObject>, task:String):JSONObject? =
 @Composable internal fun RoomBrowser(
     teams:List<JSONObject>, team:String, rooms:List<JSONObject>, error:String,
     onTeam:(String)->Unit, onRoom:(JSONObject,Boolean)->Unit, onSettings:()->Unit,
-    onSession:(JSONObject,String)->Unit, voice: @Composable (JSONObject,Modifier)->Unit,
+    onSession:(JSONObject,String)->Unit,
     onNew:()->Unit
 ){
     var toolsOpen by remember(team){mutableStateOf(false)}
@@ -34,7 +34,7 @@ internal fun roomForTask(rooms:List<JSONObject>, task:String):JSONObject? =
                 val group=roomSessionGroup(room)
                 SessionGroupCard(group,System.currentTimeMillis(),onChild={onSession(room,it.agentNickname)},parentTitle=group.task.title){badge->
                     TaskCard(group.task,headerBadge=badge,modifier=Modifier.testTag("hollywood-room:"+room.s("id")),
-                        onOpen={keyboard->onRoom(room,keyboard)},voice={voice(room,it)},onRename=null,onWatch=null)
+                        onOpen={keyboard->onRoom(room,keyboard)},onRename=null,onWatch=null)
                 }
             }
         }

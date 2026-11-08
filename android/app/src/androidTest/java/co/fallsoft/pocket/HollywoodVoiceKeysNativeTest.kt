@@ -16,7 +16,7 @@ import org.junit.runner.RunWith
 /** Actual foreground keys/IME/AudioRecord; synthetic loopback boundary has no provider. */
 @RunWith(AndroidJUnit4::class)
 class HollywoodVoiceKeysNativeTest{
- @Test fun nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable():Unit=runBlocking{
+ @Test fun nativeVolumeKeysKeepOriginalRoomAndDraftWhileProviderIsUnavailable():Unit=runBlocking{
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val d=UiDevice.getInstance(i)
   check(d.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
   val base="http://127.0.0.1:18893";val token="synthetic-native-voice-only";val id="synthetic_native_voice_20261016"
@@ -30,7 +30,7 @@ class HollywoodVoiceKeysNativeTest{
    .putString("backend:"+backendOwner(base,token),"lax")
    .putString("hollywood-room:"+backendOwner(base,token)+":"+bindingId,roomA).commit()
   val oldIdle=Configurator.getInstance().waitForIdleTimeout;Configurator.getInstance().waitForIdleTimeout=0
-  fun await(label:String,test:()->Boolean){val end=SystemClock.elapsedRealtime()+30000;while(SystemClock.elapsedRealtime()<end){i.uiAutomation.clearCache();if(test())return;Thread.sleep(100)};assertTrue(label,test())}
+  fun await(label:String,limit:Long=30000,test:()->Boolean){val end=SystemClock.elapsedRealtime()+limit;while(SystemClock.elapsedRealtime()<end){i.uiAutomation.clearCache();if(test())return;Thread.sleep(100)};assertTrue(label,test())}
   fun tap(tag:String){await("Missing "+tag){runCatching{d.findObject(By.res(tag))?.let{it.click();true}?:false}.getOrDefault(false)}}
   val source=EnvironmentRequest(EnvironmentIdentity(id,"Owned synthetic voice"),base,token)
   val binding=JSONObject().put("bindingId",bindingId).put("authorityId","aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
@@ -39,23 +39,39 @@ class HollywoodVoiceKeysNativeTest{
   val draft="Owned draft stays in room A"
   val audio=c.getSystemService(android.media.AudioManager::class.java)
   val initialVolume=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
-  val originalDraft=client.draft(HollywoodScope(roomA,agentA))
-  val originalDraftB=client.draft(HollywoodScope(roomB,agentB))
+  val originalDraft=client.draft(HollywoodScope(roomA,""))
+  val originalDraftB=client.draft(HollywoodScope(roomB,""))
+  var catalogFeedbackMs=-1L
+  var journeyFailure:Throwable?=null
   try{
    // Retained app data is intentional. Only the synthetic fixture's two scopes
    // begin empty for the voice-primary assertion; finally restores both drafts.
-   client.saveDraft(HollywoodScope(roomA,agentA),"")
-   client.saveDraft(HollywoodScope(roomB,agentB),"")
+   client.saveDraft(HollywoodScope(roomA,""),"")
+   client.saveDraft(HollywoodScope(roomB,""),"")
    i.runOnMainSync{Pocket.init(c);Pocket.activateEnvironment(id,force=true);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
-   await("Floating native mic unavailable"){d.hasObject(By.res("native-room-microphone"))}
+   await("Native room controls unavailable"){d.hasObject(By.res("native-room-controls"))}
+   assertFalse("Removed room microphone returned",d.hasObject(By.res("native-room-microphone")))
    await("Synthetic room history failed"){d.hasObject(By.res("native-room-empty"))&&!d.hasObject(By.res("native-room-read-error"))}
    d.takeScreenshot(c.filesDir.resolve("native-room-mic-ready.png"))
+   // Read-only Team stays in the same Activity window. Its presence must not
+   // hand volume buttons back to Android or create a second voice controller.
+   d.findObject(By.desc("Settings, app updates, usage and activity")).click()
+   tap("native-room-team")
+   await("Team view unavailable"){d.hasObject(By.text("No team updates"))&&d.hasObject(By.text("Earlier room"))}
+   d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
+   await("Hardware capture blocked by Team view"){PocketVoice.state=="Listening"&&d.hasObject(By.textStartsWith("Recording "))}
+   assertEquals(roomA,PocketVoice.targetRoom?.s("roomId"))
+   assertEquals("Team key changed playback volume",initialVolume,audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))
+   d.takeScreenshot(c.filesDir.resolve("native-team-recording.png"))
+   i.runOnMainSync{PocketVoice.stop()}
+   d.findObject(By.text("Close")).click()
+   await("Closing Team lost original room"){d.hasObject(By.res("native-room-controls"))}
    val priorStarts=Pocket.apiEnvironment(source,"/_qa/status").getJSONArray("starts").length()
    assertFalse("Empty voice-primary editor should be behind Keyboard",d.hasObject(By.clazz("android.widget.EditText")))
    tap("native-room-keyboard")
    await("Native keyboard editor did not focus"){d.hasObject(By.clazz("android.widget.EditText"))&&d.hasObject(By.pkg("com.google.android.inputmethod.latin"))}
    d.findObject(By.clazz("android.widget.EditText")).text=draft
-   await("Typed draft not saved"){client.draft(HollywoodScope(roomA,agentA))==draft}
+   await("Typed draft not saved"){client.draft(HollywoodScope(roomA,""))==draft}
    assertFalse("Keyboard action remains after opening the editor",d.hasObject(By.res("native-room-keyboard")))
    val strandedId=java.util.UUID.randomUUID().toString()
    val strandedAudio=VoiceRecording.wav(ByteArray(32000){(it%127).toByte()})
@@ -69,47 +85,56 @@ class HollywoodVoiceKeysNativeTest{
    key(KeyEvent.ACTION_DOWN)
    await("Hardware did not start actual microphone"){PocketVoice.state=="Listening"&&PocketVoice.recordingStartedAt>0}
    assertEquals("Old receipt was overwritten",strandedId,p.getString("voicePendingId",null))
+   assertEquals("Original saved environment changed at capture start",id,p.getString("voicePendingEnvironment",null))
    assertArrayEquals("Original unresolved audio changed",strandedAudio,c.filesDir.resolve("voice-pending.wav").readBytes())
    assertTrue("Starting capture closed the IME",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
    assertEquals(roomA,PocketVoice.targetRoom?.s("roomId"))
-   assertEquals(agentA,PocketVoice.targetRoom?.s("recipientId"))
+   assertTrue("Room capture retained a default agent",PocketVoice.targetRoom?.isNull("recipientId")==true)
    assertTrue(PocketVoice.targetSourceLabel.orEmpty().startsWith("Synthetic voice room A"))
    assertTrue(d.hasObject(By.res("native-room-capture-status")))
    repeat(3){key(KeyEvent.ACTION_DOWN,it+1)}
    Thread.sleep(1100);assertEquals("Held key toggled twice","Listening",PocketVoice.state)
    d.takeScreenshot(c.filesDir.resolve("native-room-recording-ime.png"))
    key(KeyEvent.ACTION_UP)
+   val catalogFeedbackBegan=SystemClock.elapsedRealtime()
    d.pressBack()
-   await("Back with IME did not reach rooms"){d.hasObject(By.res("native-room:"+roomB))}
-   assertTrue("Catalog hid active capture feedback",d.hasObject(By.res("native-room-capture-status")))
-   assertTrue("Catalog hid the stop control",d.hasObject(By.res("native-catalog-microphone")))
+   // The catalog's first accessibility tree can precede its status-row layout.
+   // Require the whole visible destination, clearing that cache on each check.
+   await("Back with IME did not reveal rooms and active capture feedback",2000){
+    d.hasObject(By.res("native-room:"+roomB))&&d.hasObject(By.res("native-room-capture-status"))
+   }
+   catalogFeedbackMs=SystemClock.elapsedRealtime()-catalogFeedbackBegan
+   assertEquals("Navigation cancelled active recording","Listening",PocketVoice.state)
+   android.util.Log.i("NextCompVoiceQA","catalogFeedbackMs="+catalogFeedbackMs)
+   assertFalse("Removed catalog microphone returned",d.hasObject(By.res("native-catalog-microphone")))
    tap("native-room:"+roomB)
-   await("Other room did not open"){d.hasObject(By.res("native-room-controls"))&&d.hasObject(By.text("Synthetic voice room B"))}
+   await("Other room did not open"){d.hasObject(By.res("native-room-controls"))&&p.getString("hollywood-room:"+backendOwner(base,token)+":"+bindingId,null)==roomB&&runBlocking{Pocket.apiEnvironment(source,"/_qa/status")}.getJSONArray("historyRooms").objects().any{it.s("roomId")==roomB}}
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_UP)
    await("Hardware stop did not complete"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
    assertEquals("Navigation retargeted captured recording",roomA,PocketVoice.targetRoom?.s("roomId"))
    assertEquals("Capture keys changed playback volume",initialVolume,audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))
-   assertEquals(draft,client.draft(HollywoodScope(roomA,agentA)))
+   assertEquals(draft,client.draft(HollywoodScope(roomA,"")))
    assertTrue("Capture failure is only a sound",d.hasObject(By.res("native-room-capture-status")))
-   // A second explicitly requested turn exercises the touch alternative in room B.
+   // A second hardware turn in room B keeps the visible IME and its draft.
    i.runOnMainSync{PocketVoice.stop()}
    tap("native-room-keyboard")
    await("Room B keyboard did not open"){d.hasObject(By.clazz("android.widget.EditText"))&&d.hasObject(By.pkg("com.google.android.inputmethod.latin"))}
    val draftB="Owned draft stays in room B"
    d.findObject(By.clazz("android.widget.EditText")).text=draftB
-   await("Room B draft not saved"){client.draft(HollywoodScope(roomB,agentB))==draftB}
-   tap("native-room-microphone")
-   await("Touch did not start actual microphone"){PocketVoice.state=="Listening"}
+   await("Room B draft not saved"){client.draft(HollywoodScope(roomB,""))==draftB}
+   d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
+   await("Room B key did not start actual microphone"){PocketVoice.state=="Listening"}
    assertEquals(roomB,PocketVoice.targetRoom?.s("roomId"))
-   assertTrue("Touch mic closed the keyboard",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
-   assertEquals(draftB,client.draft(HollywoodScope(roomB,agentB)))
-   d.takeScreenshot(c.filesDir.resolve("native-room-touch-recording-ime.png"))
-   tap("native-room-microphone")
-   await("Touch stop did not surface capture/provider outcome"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
+   assertTrue("Recording key closed the keyboard",d.hasObject(By.pkg("com.google.android.inputmethod.latin")))
+   assertEquals(draftB,client.draft(HollywoodScope(roomB,"")))
+   d.takeScreenshot(c.filesDir.resolve("native-room-second-key-recording-ime.png"))
+   d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
+   await("Recording key stop did not surface capture/provider outcome"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
    i.runOnMainSync{PocketVoice.stop()}
    d.pressBack()
-   await("Catalog assistant unavailable"){d.hasObject(By.res("native-catalog-microphone"))}
-   tap("native-catalog-microphone")
+   await("Catalog unavailable"){d.hasObject(By.res("native-room:"+roomA))}
+   assertFalse("Catalog restored a recording button",d.hasObject(By.res("native-catalog-microphone")))
+   d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
    await("Catalog mic did not start default room capture"){PocketVoice.state=="Listening"}
    assertEquals("Catalog voice used a stale selected room",roomA,PocketVoice.targetRoom?.s("roomId"))
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
@@ -117,7 +142,8 @@ class HollywoodVoiceKeysNativeTest{
    i.runOnMainSync{PocketVoice.stop()}
    tap("native-catalog-controls")
    tap("native-catalog-settings")
-   await("Settings hid the work-context mic"){d.hasObject(By.res("native-settings-microphone"))}
+   await("Settings did not open"){d.hasObject(By.res("native-settings-back"))}
+   assertFalse("Settings restored a recording button",d.hasObject(By.res("native-settings-microphone")))
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_UP)
    await("Settings hardware capture did not start"){PocketVoice.state=="Listening"}
    assertEquals(roomA,PocketVoice.targetRoom?.s("roomId"))
@@ -125,6 +151,7 @@ class HollywoodVoiceKeysNativeTest{
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)
    await("Settings hardware stop failed"){PocketVoice.state !in listOf("Listening","Starting microphone","Finishing recording")&&PocketVoice.problem.isNotBlank()}
    tap("native-settings-back")
+   assertEquals("Original saved environment changed during later captures",id,p.getString("voicePendingEnvironment",null))
    val status=Pocket.apiEnvironment(source,"/_qa/status")
    val starts=status.getJSONArray("starts").objects().drop(priorStarts)
    assertTrue("Capture initialized an unrelated coordinator",starts.isEmpty())
@@ -134,26 +161,36 @@ class HollywoodVoiceKeysNativeTest{
    assertTrue("Capture lost original room B",rooms.contains(roomB))
    assertEquals(0,status.getInt("blockedTaskWrites"))
    assertTrue(status.getBoolean("noProvider"))
-   c.filesDir.resolve("native-room-volume-ime-receipt.json").writeText(status.put("hardwareStartStop",true).put("touchStartStop",true)
-    .put("draftPreserved",true).put("navigationKeptOriginalRoom",true).put("catalogDefaultRoom",true).put("settingsCapture",true).put("providerQualified",false).put("physicalPhone",false).toString())
+   c.filesDir.resolve("native-room-volume-ime-receipt.json").writeText(status.put("hardwareStartStop",true).put("volumeOnlyControls",true)
+    .put("draftPreserved",true).put("navigationKeptOriginalRoom",true).put("catalogDefaultRoom",true).put("catalogFeedbackMs",catalogFeedbackMs).put("settingsCapture",true).put("providerQualified",false).put("physicalPhone",false).toString())
    d.takeScreenshot(c.filesDir.resolve("native-room-volume-ime.png"))
+  }catch(failure:Throwable){
+   journeyFailure=failure
+   android.util.Log.e("NextCompVoiceQA","Native voice journey failed before cleanup",failure)
+   d.takeScreenshot(c.filesDir.resolve("native-room-capture-failure.png"))
+   d.dumpWindowHierarchy(c.filesDir.resolve("native-room-capture-failure.xml"))
+   throw failure
   }finally{
    i.runOnMainSync{PocketVoice.stop()}
    // Only this disposable fixture's recording can be cleared, and only after
    // its no-provider/task-write boundary answers definitively.
+   val cleanup=runCatching {
    val pending=p.getString("voicePendingId",null)
    if(pending!=null){
-    require(p.getString("voicePendingEnvironment",null)==id)
+    android.util.Log.i("NextCompVoiceQA","Saved source before cleanup: "+p.getString("voicePendingEnvironment",null)+"; expected "+id)
+    require(p.getString("voicePendingEnvironment",null)==id){"Cleanup refused an unrelated saved receipt; it remains untouched"}
     val status=Pocket.apiEnvironment(source,"/_qa/status");require(status.getBoolean("noProvider")&&status.getInt("blockedTaskWrites")==0)
     c.filesDir.resolve("qa-synthetic-voice-pending-"+pending+".json").writeText(JSONObject().put("id",pending).put("noProvider",true).toString())
     c.filesDir.resolve("voice-pending.wav").takeIf{it.exists()}?.copyTo(c.filesDir.resolve("qa-synthetic-voice-"+pending+".wav"),overwrite=false)
     p.edit().remove("voicePendingId").remove("voicePendingRoom").remove("voicePendingSourceLabel").remove("voicePendingTarget")
      .remove("voicePendingLocal").remove("voicePendingEnvironment").remove("voicePendingOwner").remove("voicePendingTextRequest").commit()
    }
-   client.saveDraft(HollywoodScope(roomA,agentA),originalDraft)
-   client.saveDraft(HollywoodScope(roomB,agentB),originalDraftB)
+   }
+   client.saveDraft(HollywoodScope(roomA,""),originalDraft)
+   client.saveDraft(HollywoodScope(roomB,""),originalDraftB)
    Configurator.getInstance().waitForIdleTimeout=oldIdle
    i.runOnMainSync{if(Pocket.captureEnvironment(old)!=null)Pocket.activateEnvironment(old,force=true)}
+   cleanup.exceptionOrNull()?.let{failure->journeyFailure?.addSuppressed(failure)?:throw failure}
   }
  }
 }

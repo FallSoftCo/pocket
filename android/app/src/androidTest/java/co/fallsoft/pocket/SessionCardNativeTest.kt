@@ -34,7 +34,7 @@ class SessionCardNativeTest {
   val parent=Task("card-parent","Review the release","/synthetic","idle",1000,false,preview="Ready for review")
   val child=Task("card-child","Check native controls","/synthetic","idle",1000,false,
    preview="Native controls verified",parentThreadId=parent.id,isChild=true,agentNickname="Control reviewer")
-  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+  ActivityScenario.launch(NativeComponentFixtureActivity::class.java).use{scenario->
    scenario.onActivity{it.setContent{
     CompositionLocalProvider(LocalImmersionMotionState provides false,LocalImmersionTransitionAnimated provides false){
      MaterialTheme{Column{SessionGroupCard(SessionGroup(parent,listOf(child)),1000)}}
@@ -69,7 +69,7 @@ class SessionCardNativeTest {
    Task("visual-working","Working session","/synthetic","active",1000,false,preview="Checking the release candidate"),
    Task("visual-idle","Idle session","/synthetic","idle",1000,false,preview="Checks completed and results ready"),
    Task("visual-blocked","Waiting for your answer","/synthetic","idle",1000,false,preview="Which environment should this use?",needsInput=true))
-  ActivityScenario.launch(MainActivity::class.java).use{scenario->
+  ActivityScenario.launch(NativeComponentFixtureActivity::class.java).use{scenario->
    scenario.onActivity{it.setContent{
     CompositionLocalProvider(LocalImmersionMotionState provides false,LocalImmersionTransitionAnimated provides false){
      MaterialTheme{Column(Modifier.statusBarsPadding()){tasks.forEach{TaskCard(it,1000)}}}
@@ -90,7 +90,8 @@ class SessionCardNativeTest {
     }
    }}
    compose.onNodeWithText("Idle session").performClick()
-   compose.onNode(hasSetTextAction()).performTextReplacement("Unsaved host A name")
+   compose.onNode(hasSetTextAction()).assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.TextSelectionRange,androidx.compose.ui.text.TextRange(0,"Idle session".length)))
+   compose.onNode(hasSetTextAction()).performTextInput("Unsaved host A name")
    compose.onNodeWithText("Unsaved host A name").assertExists()
    i.runOnMainSync{
     context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit()

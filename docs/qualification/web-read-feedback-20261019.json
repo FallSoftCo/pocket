@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "evidence": [
+    "360 real WebSocket events for previews, other threads, status and aggregates do not read or flash the selected transcript",
+    "known current row streams directly without a head reread",
+    "a genuine fast cached-head read completes without a loading flash",
+    "slow logical head plus coalesced follow-up shows one continuous loading interval and never resizes the reader",
+    "late failure from another scope cannot hide current loading or inject its error; navigation preserves drafts",
+    "genuine read failure remains actionable while retained messages and unsent input remain intact"
+  ],
+  "headReads": 7,
+  "pageErrors": [],
+  "status": "web-deployed",
+  "scope": "web-only",
+  "desktopParityPassed": true,
+  "touchParityPassed": true,
+  "authenticatedGatewayChecksPassed": true,
+  "productionDeployed": true,
+  "nativePhoneUpdated": false,
+  "closureSha256": "85e25646527f5c9f46316ad1926f1e1b2b8c86ac0fd10f4abfc18aeb6121b296",
+  "livePairedLoginStatus": 200,
+  "liveAuthenticatedStatus": 200,
+  "disposableDeviceRevoked": true,
+  "existingBrowserConnectionsPreserved": true,
+  "backendRestarted": false
+}

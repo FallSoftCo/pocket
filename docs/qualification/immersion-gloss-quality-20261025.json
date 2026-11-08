@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "candidate": {
+    "versionCode": 153,
+    "versionName": "0.5.0-alpha.135",
+    "productionPublished": false
+  },
+  "cause": "Overlapping English meaning ownership across teacher lexical alignments, not duplicate DOM layers.",
+  "architecture": [
+    "Versioned v4 quality gate rejects introduced repetitions; no generic repeated-word deletion.",
+    "Quality-checked valid v3 cache migrates without inference; attempts and retry blocks retained.",
+    "Invalid cached plans excluded and repaired only through existing visible-source bounded worker.",
+    "Native natural paragraph line layout honors reserved placeholder height; compact control labels retain existing line height."
+  ],
+  "cacheSample": {
+    "input": 600,
+    "retainedUnchanged": 520,
+    "excluded": 80,
+    "modelCalls": 0,
+    "loadMs": 79
+  },
+  "teacherEvaluation": {
+    "requests": 2,
+    "cases": 5,
+    "toolsOrBusinessSends": 0,
+    "result": "passed targeted possessive, adjective/article, compound-auxiliary and fixed-expression cases",
+    "physicalAudioQualified": false
+  },
+  "nativePreflight": {
+    "state": "passed-not-final-release-qualified",
+    "elapsedSeconds": 43.162,
+    "wrappedRowsDoNotOverlap": true,
+    "fixedGeometryAcrossFourPhases": true,
+    "directTap": true,
+    "questionDraftAndGallery": true,
+    "sourceBeforeMixedCatalogIntegration": true
+  },
+  "browser": {
+    "state": "passed",
+    "tool": "registered computer-use MCP; existing main Chrome; owned temporary tab",
+    "desktopAndMobile": true,
+    "lineGapsPx": [
+      4,
+      4
+    ],
+    "radiusPx": 4,
+    "bodyFontPx": 16,
+    "lineHeightPx": 29.6,
+    "fixedGeometryAcrossFourPhases": true,
+    "directTap": true,
+    "errors": [],
+    "existingTabsPreserved": true,
+    "modelCalls": 0
+  },
+  "catalogIntegration": {
+    "commit": "fbde6a8",
+    "handoffPatchSha256": "15a710ddb350cd7bf8e3eff9c4a5154133648e2b576e29d29d5f14ed5988908e",
+    "focusedImeBackFix": "separate Global-owned follow-up pending; not claimed fixed"
+  },
+  "limits": [
+    "No153 production publication/install or service restart performed at this checkpoint.",
+    "Actual installed phone version152 verified by Termux SSH pm on2026-10-25.",
+    "Final combined signed APK/native gates and real media-only input/output still required; preflight is not substituted."
+  ],
+  "webDeployment": {
+    "state": "spacing-and-authored-label-assets-live",
+    "routes": [
+      "private443/nextcomp/",
+      "private8448/"
+    ],
+    "cookieAndExistingSocketsPreserved": true,
+    "backendTeacherV4": "staged-not-active"
+  },
+  "releaseQualification": {
+    "r01": "Signed153 built; actual media passed; held on unchanged IndependentVoiceCaptureNativeTest hardware stop failure. Never published.",
+    "rootCause": "Actual Android ANR trace main thread blocked in ToneGenerator native_setup inside PocketVoiceService constructor. The system ANR window intercepted the volume key.",
+    "productionFix": "VoiceFeedback serial background owner; no native tone setup/play/release on Main or under state lock. One coalesced pending cue, stale/closed-owner suppression and asynchronous idle resource release; zero service/context references retained.",
+    "regressionProof": "Blocked-factory test500 queued feedback calls: one native owner, cancelled sound suppressed and resource released; actual unchanged AudioRecord/hardware-stop/durable-cancel journey passed26.404s on owned emulator.",
+    "r02": "Current signed application passed live account media, actual independent capture/volume-stop/cancel, canonical order/question/reconnect, and reading slots/gallery/decisions. Mixed catalog assertions reached JUnit dot; automatic UI synchronization exceeded runner budget before final result. Never published.",
+    "r03": "Application source unchanged25a6a528ce18ad0c4a5e2e88fe021e5843b568be60b59bf1fe455e433c1694b5; test synchronization changed, final strict input/test-APK qualification must be rebuilt. Existing per-step assertions and180s native command budget retained."
+  },
+  "nativeMethodology": {
+    "causeEvidence": "Repeated UiObject2 actions separated by roughly10s on continuously updating UI. All original mixed-source assertions completed before the prior command deadline.",
+    "change": "Disable implicit global-idle wait only within mixed-catalog test; explicit app-state waits and250ms stable-target geometry; restore prior Configurator value in finally. No app animation suppression, source mutation, assertion deletion or deadline increase.",
+    "targetedPreflight": "Actual unchanged source/draft/receipt/outage assertions passed with terminal OK(1test);160.917s on the bounded software emulator; owned resources stopped. This is functional qualification, not handset response/frame-time measurement."
+  },
+  "nativeSpeechStartup": {
+    "state": "preflight_pass_not_signed_release",
+    "oldPath": "Two retained follow-on appendText attempts had no assistant output after acknowledged negotiation. No upstream capacity cause asserted.",
+    "newPath": "Immutable passage at purpose speech startup; receiver armed before answer; no idle output prewarm; completed cache releases transport.",
+    "preflightSeconds": 35.486,
+    "inputDurationMs": 7100,
+    "stopToFinalTranscriptMs": 1607,
+    "firstAudioIncludingConnectionMs": 4470,
+    "speechCompletedIncludingConnectionMs": 11003,
+    "taskAdmissions": 0,
+    "sourceLimit": "Two lifecycle refinements (immediate local-cache transport handoff and prearmed live unmute) follow this media preflight and remain part of final signed qualification.",
+    "physicalPhone": false
+  }
+}

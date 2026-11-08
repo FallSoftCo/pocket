@@ -1,0 +1,66 @@
+{
+  "date": "2026-11-07",
+  "versionCode": 172,
+  "versionName": "0.5.0-alpha.154",
+  "problem": "Source metadata action failures were placed above the scroll position; pending state had no visible feedback.",
+  "connectivity": {
+    "workstationAuthenticatedMacStatusHttp": 200,
+    "workstationAuthenticatedMacCatalogHttp": 200,
+    "catalogMs": 63,
+    "phoneToMacHealthHttp": 200,
+    "phoneHealthSeconds": 0.331441,
+    "macLaterHealthHttp": 200
+  },
+  "limits": [
+    "The user did not identify the target session, so the latest tap has not been correlated to a backend request.",
+    "Three historical native active-writer archive refusals were found; they are not claimed as the cause of the latest tap.",
+    "Phone installed171 at initial inspection;172 is published, not claimed installed. ADB unavailable; SSH health verified.",
+    "Gallery media and catalog metadata added, but index rebuild blocked by an unrelated missing personal-digital-double-v37.blend asset."
+  ],
+  "implementation": [
+    "Captured source/session action progress and persistent error feedback above catalog footer.",
+    "Repeated pending activation dispatches once; dismiss never retries or changes source.",
+    "HTTP-acknowledged archive still removes the original-source card and preserves its draft."
+  ],
+  "verification": {
+    "debugUnit": {
+      "tests": 477,
+      "failures": 0,
+      "skipped": 2
+    },
+    "releaseUnit": {
+      "tests": 477,
+      "failures": 0,
+      "skipped": 2
+    },
+    "bothLintsPassed": true,
+    "nativeCasesPassed": 14,
+    "nativeArchiveAndRestore": true,
+    "foreignArchiveFailure": {
+      "correctSource": true,
+      "selectionUnchanged": true,
+      "requestCount": 1,
+      "progressVisible": true,
+      "errorVisibleAboveFooter": true,
+      "dismissDidNotReplay": true
+    },
+    "actualNativeAudioPassed": true,
+    "optimizedPhoneCompatibleApkPassed": true,
+    "earlyFailuresRetained": [
+      "System UI ANR obscured owned emulator",
+      "Dynamic accessibility observation synchronized to the recorded HTTP outcome; diagnostic hierarchy retained"
+    ],
+    "physicalPhoneUiVerified": false
+  },
+  "delivery": {
+    "system76Version": 172,
+    "macVersion": 172,
+    "macPreviousVersion": 154,
+    "phoneVariantSha256": "fc51f33aed4020e12fe62936186cca28c555d562fb71441e4fabc0fa680d6e4e",
+    "fcmAnnouncements": 1,
+    "fcmAcceptedAttempts": 1,
+    "backendRestarts": 0,
+    "nativeRestarts": 0,
+    "businessArchiveAttemptsReplayed": 0
+  }
+}

@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {Eve
 import {VoiceSpeech,speechPolicy,CHEAP_SPEECH_MODEL,NEXT_SPEECH_MODEL,SPEECH_UPGRADE_AT,normalizeSpeechWav} from '../server/voice-speech.mjs';
 import {VoiceController,validateVoiceAudio} from '../server/voice-controller.mjs';
 import {COMPUTER_USE_INSTRUCTIONS} from '../server/computer-use.mjs';
+import {qaHuman,gatewayControl,canonicalControl} from './room-control-fixture.mjs';
 const wav=()=>{const b=Buffer.alloc(3244);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(16000,24);b.writeUInt32LE(32000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(b.length-44,40);return b;};
 const tick=()=>new Promise(r=>setImmediate(r));
 class FakeCodex extends EventEmitter{constructor(){super();this.calls=[];}async connect(){} async call(method,params){this.calls.push({method,params});if(method==='thread/start')return {thread:{id:'controller-123'}};if(method==='turn/start')return {turn:{id:'turn-123'}};return {thread:{id:'controller-123'}};}answer(){}}
@@ -105,5 +106,17 @@ test('admitted voice routing survives navigation before asynchronous startup and
   assert.equal(codex.calls.filter(c=>c.method==='turn/start').length,before);
   assert.throws(()=>controller.submitText('phone','captured-turn-0001','Continue that work',null,controller.capture('phone')),/different voice destination/);
   codex.emit('event',{method:'turn/completed',params:{threadId:'controller-123',turn:{id:'turn-123',status:'completed'}}});
+ }finally{db.close();}
+});
+
+test('retired coordinator room tools cannot dispatch or reinterpret old work',async()=>{
+ const {controller,db}=setup();await controller.ensure('phone');
+ const calls=[];controller.api=async(...args)=>{calls.push(args);throw Error('No retired route should execute')};
+ try{
+  for(const operation of ['createRoom','readRoom','replyRoom','roomStatus']){
+   const result=await controller.tool({device:'phone',id:'old-room-command'},{tool:'pocket_control',callId:'old-'+operation,arguments:{operation,arguments:{roomId:'saved-room',text:'original'}}});
+   assert.equal(result.success,false);assert.match(result.contentItems[0].text,/Invalid NextComp control/);
+  }
+  assert.equal(calls.length,0);
  }finally{db.close();}
 });

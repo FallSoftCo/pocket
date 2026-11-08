@@ -89,6 +89,17 @@ internal class VoiceTurnStore(context: Context, name: String = "voice-turns") : 
     }
     fun get(key: String): Turn? = db.query("turns", null, "turn_key=?", arrayOf(key),null,null,null).use { if(it.moveToFirst()) row(it) else null }
     fun list(): List<Turn> = db.query("turns",null,null,null,null,null,"created_at,turn_key").use { cursor -> buildList { while(cursor.moveToNext()) add(row(cursor)) } }
+    /** Local deletion only. No cancellation or re-admission on a retired host. */
+    fun removeEnvironment(environment:String):List<String> {
+        val turns=list().filter{it.origin.environment==environment}
+        for(turn in turns)for(suffix in listOf(".wav",".preparing",".capturing.pcm")){
+            val file=File(root,turn.key+suffix)
+            check(!file.exists()||file.delete()){"Could not remove retired recording"}
+        }
+        db.delete("turns","environment=?",arrayOf(environment))
+        syncDirectory()
+        return turns.map{it.key}
+    }
     fun begin(id: String, origin: Origin): Turn {
         require(id.matches(Regex("[a-zA-Z0-9_-]{8,100}")))
         val key = key(origin,id)

@@ -30,7 +30,7 @@ internal object CodexReadTransport {
     suspend fun read(destination:EnvironmentRequest,path:String,body:JSONObject?=null,client:OkHttpClient=if(body==null)historyClient else positionClient):JSONObject {
         val resource=path.substringBefore('?')
         require(
-            body==null&&(resource.matches(Regex("/api/threads/[^/]+"))||resource in setOf("/api/threads","/api/status","/api/activity","/api/notifications","/api/attention"))||
+            body==null&&(resource.matches(Regex("/api/threads/[^/]+(?:/head|/native-timeline)?"))||resource in setOf("/api/threads","/api/status","/api/activity","/api/notifications","/api/attention"))||
             body!=null&&resource.matches(Regex("/api/threads/[^/]+/timeline/position"))
         ){"Only canonical history reads are supported"}
 
@@ -49,7 +49,7 @@ internal object CodexReadTransport {
                         val value=response.use{
                             val raw=it.body?.string().orEmpty()
                             val json=try{JSONObject(raw)}catch(_:Exception){throw PocketApiException(it.code,"Unexpected history response")}
-                            if(!it.isSuccessful)throw PocketApiException(it.code,ConnectionMessages.server(json.s("error","History unavailable")))
+                            if(!it.isSuccessful)throw PocketApiException(it.code,ConnectionMessages.server(json.s("error","History unavailable")),json.optString("code").takeIf{it.isNotBlank()})
                             json
                         }
                         if(continuation.isActive)continuation.resume(value)

@@ -228,7 +228,6 @@ import androidx.lifecycle.repeatOnLifecycle
             {team=it;task="";rooms=emptyList();recipient="";direct=false;replyTo=null},
             {room,typing->task=room.s("task");recipient="";direct=false;replyTo=null;keyboardInput=typing;roomBrowsing=false},onSettings,
             {room,agent->task=room.s("task");recipient=agent;direct=true;replyTo=null;keyboardInput=false;roomBrowsing=false},
-            {room,modifier->voiceDestination(room,"")?.let{destination->VoiceLaunchButton(modifier=modifier,cardRegion=true,roomDestination=destination)}?:CardInteractionRegion("Chat",modifier,room.s("title")){task=room.s("task");recipient="";direct=false;replyTo=null;keyboardInput=false;roomBrowsing=false}},
             {newTask=true})
         if(newTask)RoomCreateDialog(client,team,{newTask=false}){id->task=id;recipient="";direct=false;replyTo=null;newTask=false;roomBrowsing=false}
         return
@@ -258,7 +257,6 @@ import androidx.lifecycle.repeatOnLifecycle
         if(replyTo!=null||!direct&&recipient.isNotBlank())TextButton({replyTo=null;if(!direct)recipient="";receipt="";error=""},modifier=Modifier.testTag("team-reply-clear")){BilingualLabel(if(replyTo!=null)"Cancel reply" else "Close saved message")}
         if(receipt.isNotBlank())ImmersionText("team-receipt:$owner:$team",receipt,fontSize=12.sp,color=Muted)
         if(keyboardInput)ConversationComposerRow{
-            voiceDestination(selectedRoom)?.let{VoiceLaunchButton(modifier=Modifier.size(64.dp),compact=true,roomDestination=it)}
             if(activeSession)IconButton({interruptSession()},enabled=!busy,modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
             val displayedInput=if(pending!=null){val captured=pending?.optJSONObject("body")?.s("body").orEmpty();TextFieldValue(captured,TextRange(captured.length))}else input
             ConversationDraftField(displayedInput,{input=it;client.saveDraft(target,it.text)},enabled=pending==null&&!busy,
@@ -278,7 +276,6 @@ import androidx.lifecycle.repeatOnLifecycle
                 if(pending!=null)"Retry message" else "Send message",modifier=Modifier.testTag("team-send")){send()}
         }
         if(!keyboardInput)Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
-            voiceDestination(selectedRoom)?.let{VoiceLaunchButton(modifier=Modifier.weight(1f),bar=true,roomDestination=it)}
             if(activeSession)IconButton({interruptSession()},enabled=!busy,modifier=Modifier.size(48.dp)){SymbolIcon("Stop","Stop agent",Modifier.size(32.dp),tint=Coral)}
             ChatActionButton("Keyboard",Icons.Rounded.Keyboard,Modifier.weight(1f),{keyboardInput=true})
         }

@@ -14,16 +14,19 @@ import androidx.compose.ui.unit.dp
 
 @Composable fun SessionGroupCard(group:SessionGroup,now:Long,
     onChild:(Task)->Unit={Pocket.open(it.id)},parentTitle:String?=null,
+    identityScope:String=Pocket.environmentId,preferenceKey:(String)->String={Pocket.key(it)},
+    sourceNotifications:List<org.json.JSONObject> = Pocket.notifications,
+    onArchiveChild:(Task)->Unit={Pocket.archiveTask(it.id)},onRestoreChild:(Task)->Unit={Pocket.restoreTask(it.id)},
     parentCard:(@Composable ((@Composable ()->Unit)?)->Unit)?=null){
-    var expanded by remember(group.task.id,Pocket.environmentId){mutableStateOf(Pocket.prefs.getBoolean(Pocket.key("agentsExpanded:${group.task.id}"),false))}
-    var childStart by remember(group.task.id,Pocket.environmentId){mutableIntStateOf(Pocket.prefs.getInt(Pocket.key("agentsPage:${group.task.id}"),0))}
+    var expanded by remember(group.task.id,identityScope){mutableStateOf(Pocket.prefs.getBoolean(preferenceKey("agentsExpanded:${group.task.id}"),false))}
+    var childStart by remember(group.task.id,identityScope){mutableIntStateOf(Pocket.prefs.getInt(preferenceKey("agentsPage:${group.task.id}"),0))}
     val start=childStart.coerceAtMost(((group.children.size-1).coerceAtLeast(0)/8)*8)
     val childIds=group.children.map{it.id}.toSet()
-    val unread=maxOf(group.children.sumOf{it.unreadCount},Pocket.notifications.count{it.s("thread_id") in childIds&&!it.optBoolean("_read")&&!PocketAttention.dismissed(it.optLong("id"))})
+    val unread=maxOf(group.children.sumOf{it.unreadCount},sourceNotifications.count{it.s("thread_id") in childIds&&!it.optBoolean("_read")&&!PocketAttention.dismissed(it.optLong("id"))})
     Column{
         val badge:(@Composable ()->Unit)?=if(group.children.isEmpty())null else {{
             val working=group.children.count{it.status in listOf("active","pending")}
-            Surface(onClick={expanded=!expanded;Pocket.prefs.edit().putBoolean(Pocket.key("agentsExpanded:${group.task.id}"),expanded).apply()},
+            Surface(onClick={expanded=!expanded;Pocket.prefs.edit().putBoolean(preferenceKey("agentsExpanded:${group.task.id}"),expanded).apply()},
                 color=if(unread>0)Mint.copy(alpha=.16f)else Ink,
                 shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                 modifier=Modifier.height(48.dp).widthIn(min=48.dp).semantics{
@@ -38,23 +41,29 @@ import androidx.compose.ui.unit.dp
         }}
         if(parentCard!=null)parentCard(badge)else TaskCard(group.task,now,headerBadge=badge)
         if(group.children.isNotEmpty()){
-            if(expanded){group.children.drop(start).take(8).forEach{task->AgentResultCard(task,onOpen={onChild(task)},parentTitle=parentTitle)}
+            if(expanded){group.children.drop(start).take(8).forEach{task->AgentResultCard(task,onOpen={onChild(task)},parentTitle=parentTitle,onArchive={onArchiveChild(task)},onRestore={onRestoreChild(task)})}
                 if(group.children.size>8)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                    TextButton({childStart=(start-8).coerceAtLeast(0);Pocket.prefs.edit().putInt(Pocket.key("agentsPage:${group.task.id}"),childStart).apply()},enabled=start>0){BilingualLabel("Previous agents")}
+                    TextButton({childStart=(start-8).coerceAtLeast(0);Pocket.prefs.edit().putInt(preferenceKey("agentsPage:${group.task.id}"),childStart).apply()},enabled=start>0){BilingualLabel("Previous agents")}
                     Text("${start+1}–${minOf(start+8,group.children.size)} / ${group.children.size}",color=Muted,modifier=Modifier.padding(top=14.dp))
-                    TextButton({childStart=start+8;Pocket.prefs.edit().putInt(Pocket.key("agentsPage:${group.task.id}"),childStart).apply()},enabled=start+8<group.children.size){BilingualLabel("Next agents")}
+                    TextButton({childStart=start+8;Pocket.prefs.edit().putInt(preferenceKey("agentsPage:${group.task.id}"),childStart).apply()},enabled=start+8<group.children.size){BilingualLabel("Next agents")}
                 }
             }
         }
     }
 }
-@Composable fun AgentResultCard(task:Task,onOpen:()->Unit={Pocket.open(task.id)},parentTitle:String?=null){
+@Composable fun AgentResultCard(task:Task,onOpen:()->Unit={Pocket.open(task.id)},parentTitle:String?=null,headerBadge:(@Composable ()->Unit)?=null,onArchive:(()->Unit)?={Pocket.archiveTask(task.id)},onRestore:()->Unit={Pocket.restoreTask(task.id)}){
+    SessionArchiveReveal(task,onArchive){
     Column(Modifier.fillMaxWidth().background(Panel).clickable(onClick=onOpen).padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-        Text(listOf(task.agentNickname.ifBlank{task.title},task.agentRole,if(task.status=="notLoaded")"Status not yet checked" else task.status,if(task.unreadCount>0)"${task.unreadCount} unread" else "").filter{it.isNotBlank()}.joinToString(" · "),color=Mint,minLines=2,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-        val parent=Pocket.tasks.firstOrNull{it.id==task.parentThreadId}
+        Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
+            Text(listOf(task.agentNickname.ifBlank{task.title},task.agentRole,if(task.status=="notLoaded")"Status not yet checked" else task.status,if(task.unreadCount>0)"${task.unreadCount} unread" else "").filter{it.isNotBlank()}.joinToString(" · "),modifier=Modifier.weight(1f),color=Mint,minLines=2,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            headerBadge?.invoke()
+            SessionRestoreAction(task,onRestore)
+        }
+        val parent=if(parentTitle==null)Pocket.tasks.firstOrNull{it.id==task.parentThreadId}else null
         Text(parentTitle?:parent?.let{"Parent: "+it.agentNickname.ifBlank{it.title}}?:if(task.parentThreadId!=null)"Parent task outside this page" else "Parent identity unavailable",color=Muted,minLines=1,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Text(task.preview.ifBlank{"Open to review this agent’s available work."},color=Paper,minLines=3,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Text(if(task.canAcceptDirectInput)"Open agent · direct guidance available" else "Review results · guide through parent task",color=Muted,minLines=2,maxLines=2)
+    }
     }
 }
 internal fun conversationIdentityPending()=Pocket.selected!=null&&Pocket.tasks.none{it.id==Pocket.selected}&&Pocket.detail?.optJSONObject("thread")==null
@@ -75,7 +84,6 @@ internal fun conversationInputUnavailable()=conversationIdentityPending()||readO
         Text(task?.agentNickname?.ifBlank{task.title}?:t?.s("name","Delegated agent")?:"Delegated agent",modifier=Modifier.padding(16.dp),color=Paper,style=MaterialTheme.typography.titleLarge)
         InterfaceText("This agent reports to its parent task. Review its results here and open the parent to send guidance. Direct replies to this agent are unavailable.",modifier=Modifier.padding(horizontal=16.dp),color=Muted)
         InlineCaptureStatus()
-        if(captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND)VoiceLaunchButton(threadId=PocketVoice.targetThread,bar=true,modifier=Modifier.padding(horizontal=16.dp))
         ErrorBanner()
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(PocketTranscript.loading)item{CircularProgressIndicator()}

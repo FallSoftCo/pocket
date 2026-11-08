@@ -17,3 +17,11 @@ internal fun ungroupedChildren(tasks:List<Task>):List<Task>{val grouped=sessionG
 
 /** Empty shells remain searchable in History; new/working/watched work is never hidden. */
 internal fun meaningfulCatalogTask(t:Task)=t.status in listOf("active","pending")||t.watched||t.unreadCount>0||t.preview.isNotBlank()||t.title.isNotBlank()&&t.title !in listOf("Untitled task","New task","Untitled")
+
+internal fun Task.catalogJson()=JSONObject().put("id",id).put("name",title).put("cwd",cwd)
+    .put("status",JSONObject().put("type",status)).put("updatedAt",updated).put("watched",watched)
+    .put("archived",archived).put("preview",preview).put("previewRole",previewRole).put("previewKind",previewKind)
+    .put("activityAt",activityAt).put("recencyAt",recencyAt).put("parentThreadId",parentThreadId)
+    .put("isChild",isChild).put("agentNickname",agentNickname).put("agentRole",agentRole)
+    .put("canAcceptDirectInput",canAcceptDirectInput).put("unreadCount",unreadCount)
+    .put("catalogContext",catalogContext).put("needsInput",needsInput)

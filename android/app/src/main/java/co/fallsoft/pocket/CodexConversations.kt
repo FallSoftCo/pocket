@@ -41,7 +41,21 @@ internal object CodexConversations {
     var selected by mutableStateOf<String?>(null);private set
     private var selectionKey by mutableStateOf<CodexConversationKey?>(null)
     internal val displayKey get()=selectionKey
-    var detail by mutableStateOf<JSONObject?>(null)
+    private val outgoing=CodexOutgoing()
+    private var detailValue by mutableStateOf<JSONObject?>(null)
+    var detail:JSONObject?
+        get()=detailValue
+        set(value){
+            val key=selectionKey
+            if(value==null||key==null){detailValue=value;return}
+            outgoing.accept(key,value.optJSONObject("outbox"))
+            detailValue=outgoing.overlay(key,value)
+        }
+    internal fun outgoing(destination:EnvironmentRequest,thread:String,snapshot:JSONObject?){
+        if(thread.isBlank())return
+        val target=key(destination,thread)
+        if(outgoing.accept(target,snapshot)&&selectionKey==target)detailValue=outgoing.overlay(target,detailValue)
+    }
     private var session by mutableStateOf<Session?>(null,referentialEqualityPolicy())
     private var serial=0L
     private var foreground=false
@@ -58,18 +72,19 @@ internal object CodexConversations {
         val old=session;session=null;old?.scope?.cancel()
     }
     /** Selection is owned here even through legacy/test adapters; no read is implied. */
-    fun select(id:String?,force:Boolean=false){
+    fun select(id:String?,force:Boolean=false,openLatest:Boolean=false){
         if(!force&&selected==id&&session?.let{current(it)}==true)return
         retire();selected=id;detail=null;viewport=id!=null
         if(id==null){selectionKey=null;serial++;PocketTranscript.clearState();return}
-        attach(id)
+        attach(id,openLatest)
     }
-    private fun attach(id:String):Session? {
+    private fun attach(id:String,openLatest:Boolean=false):Session? {
         val destination=Pocket.captureEnvironment()?:return null
         val scope=CoroutineScope(SupervisorJob(Pocket.scope.coroutineContext[Job])+Dispatchers.Main.immediate+EnvironmentRequestContext(destination))
         val value=Session(key(destination,id),++serial,destination,scope)
         selectionKey=value.key;session=value
-        PocketTranscript.resetState(id,scope)
+        detailValue=outgoing.overlay(value.key,null)
+        PocketTranscript.resetState(id,scope,openLatest)
         startLatestPump(value)
         startProbe(value)
         return value
@@ -172,6 +187,9 @@ internal object CodexConversations {
         val value=session?:return false
         return viewport&&value.key==key&&value.incarnation==incarnation&&current(value)
     }
+    suspend fun readGapFrom(key:CodexConversationKey?,incarnation:Long,cursor:String){
+        if(owns(key,incarnation))read(bridgeCursor=cursor)
+    }
     suspend fun readFrom(key:CodexConversationKey?,incarnation:Long,older:Boolean=false){
         if(owns(key,incarnation))read(older=older)
     }
@@ -197,7 +215,19 @@ internal object CodexConversations {
     fun repositoryUpdated(id:String,value:JSONObject){
         PocketTranscript.repositoryUpdated(id,value)
     }
-    fun reconnected(){CodexSessionRepository.activate();invalidate()}
+    fun reconnected(){
+        CodexSessionRepository.activate()
+        // Repository recovery is independent of a visible conversation. A socket
+        // reconnect must not recreate a viewport retired when the app backgrounded.
+        if(BackendNavigation.teamSelected()||!viewport||(!foreground&&!PocketVoice.foreground))return
+        val value=session?.takeIf{current(it)}?:return
+        if(CodexSessionRepository.nativeEnabled(value.destination,value.key.thread)){
+            // Recovery joins the same repository lane as live updates. Starting
+            // a viewport read here duplicates a just-completed shared repair.
+            PocketTranscript.repositoryRefreshPending()
+            CodexSessionRepository.invalidate(value.key.thread,value.destination)
+        }else invalidate()
+    }
     private fun startProbe(value:Session){
         if(!foreground||value.probe?.isActive==true)return
         value.probe=value.scope.launch{while(isActive){delay(5_000);probe(value)}}
@@ -211,10 +241,14 @@ internal object CodexConversations {
         }catch(error:CancellationException){throw error}
         catch(_:Exception){/* Unavailable read evidence changes neither commands nor verified work. */}
     }
+    fun visibleRows(key:CodexConversationKey?,incarnation:Long,ids:Set<String>){
+        if(owns(key,incarnation))PocketTranscript.reconcileVisibleInputs(ids)
+    }
     fun timeline(update:JSONObject){
         if(!viewport||(!foreground&&!PocketVoice.foreground))return
         val value=active()?:return
         if(!current(value)||update.s("threadId")!=value.key.thread)return
+        if(PocketTranscript.canonicalMode)return // Repository commits the only native projection.
         val input=transcriptInputEvent(PocketTranscript.rows,update.optJSONObject("row"))
         PocketTranscript.apply(update)
         if(input.needsPosition)input.row?.let{PocketTranscript.reconcileInputPosition(it)}
@@ -224,20 +258,20 @@ internal object CodexConversations {
         val rows=if(PocketTranscript.presentationReady)PocketTranscript.rows else emptyList();val d=detail
         val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
         val task=Pocket.tasks.firstOrNull{it.id==selected}
-        val turn=rows.lastOrNull{it.s("kind")=="turn"}
+        val turn=if(PocketTranscript.canonicalMode)d?.optJSONObject("nativeExecutionTurn")else rows.lastOrNull{it.s("kind")=="turn"}
         val verified=PocketTranscript.currentWorkVerified
         val current=session!=null&&PocketTranscript.currentHistoryVerified
-        val error=PocketTranscript.readError
+        val error=PocketTranscript.currentReadError
         val phase=when{
             session==null&&selected!=null->CodexReadPhase.PAUSED
             error.isNotBlank()->CodexReadPhase.FAILED
-            PocketTranscript.updating||PocketTranscript.loading->CodexReadPhase.UPDATING
+            PocketTranscript.updating->CodexReadPhase.UPDATING
             current->CodexReadPhase.CURRENT
             rows.isNotEmpty()->CodexReadPhase.CACHED
             else->CodexReadPhase.EMPTY
         }
         return CodexConversationSnapshot(selectionKey,incarnation,rows,d,
-            CodexFreshness(phase,current,PocketTranscript.loading,error),
+            CodexFreshness(phase,current,PocketTranscript.currentLoading,error),
             CodexCoverage(PocketTranscript.earlier,PocketTranscript.before,PocketTranscript.browsingEarlier),
             conversationRunState(pending,task?.status.orEmpty(),d?.optJSONObject("thread")?.optJSONObject("status")?.s("type").orEmpty(),
                 if(verified)turn?.s("status").orEmpty()else "",d!=null&&verified,PocketTranscript.loading),

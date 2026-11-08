@@ -39,6 +39,7 @@ object PocketCoordinator {
     private var ready=false
     private var work:Job?=null
     private var historyJob:Job?=null
+    private val turnTimes=mutableMapOf<String,Pair<Long?,Long?>>()
     private val turns=linkedMapOf<String,Pair<String,String>>()
     private data class Ticket(val local:Boolean,val identity:String,val generation:Int,val base:String,val token:String)
     private fun identity(local:Boolean):String {
@@ -49,9 +50,9 @@ object PocketCoordinator {
         val local=Pocket.local;val id=identity(local)
         if(owner!=id){
             generation++;work?.cancel();historyJob?.cancel();work=null;historyJob=null
-            owner=id;ready=false;historyCoverageLoaded=false;before=null;historyEarlier=false;historyLoading=false;historyProblem="";problem="";state="Ready";pendingText="";turns.clear();routes.clear();actionsByTurn.clear();presentationTickets.clear();correctionOf=null
-            runCatching{JSONArray(Pocket.prefs.getString("coordinator-history:$id","[]")!!).objects().forEach{row->val turnId=row.s("id");if(scheduledCoordinatorReport(turnId,row.s("user")))return@forEach;turns[turnId]=Pair(row.s("user"),row.s("response"));val actions=row.optJSONArray("actions")?.objects().orEmpty();actionsByTurn[turnId]=actions;routes[turnId]=routeReceipts(actions,turnId)}}
-            messages=turns.map{(id,text)->CoordinatorMessage(id,text.first,text.second)};turnIds=turns.keys.toList();messageIds=turns.keys.toSet()
+            owner=id;ready=false;historyCoverageLoaded=false;before=null;historyEarlier=false;historyLoading=false;historyProblem="";problem="";state="Ready";pendingText="";turns.clear();turnTimes.clear();routes.clear();actionsByTurn.clear();presentationTickets.clear();correctionOf=null
+            runCatching{JSONArray(Pocket.prefs.getString("coordinator-history:$id","[]")!!).objects().forEach{row->val turnId=row.s("id");if(scheduledCoordinatorReport(turnId,row.s("user")))return@forEach;turns[turnId]=Pair(row.s("user"),row.s("response"));turnTimes[turnId]=Pair(row.optLong("userAt").takeIf{it>0},row.optLong("responseAt").takeIf{it>0});val actions=row.optJSONArray("actions")?.objects().orEmpty();actionsByTurn[turnId]=actions;routes[turnId]=routeReceipts(actions,turnId)}}
+            messages=turns.map{(id,text)->CoordinatorMessage(id,text.first,text.second,turnTimes[id]?.first,turnTimes[id]?.second)};turnIds=turns.keys.toList();messageIds=turns.keys.toSet()
         }
         return Ticket(local,id,generation,Pocket.savedBase(local).trimEnd('/'),Pocket.savedToken(local))
     }
@@ -71,12 +72,12 @@ object PocketCoordinator {
         return result
     }
     private fun publish(){
-        messages=turns.map{(id,text)->CoordinatorMessage(id,text.first,text.second)};turnIds=turns.keys.toList();messageIds=turns.keys.toSet()
-        val cached=JSONArray(turns.entries.toList().takeLast(100).map{(id,text)->JSONObject().put("id",id).put("user",text.first).put("response",text.second).put("actions",JSONArray(actionsByTurn[id].orEmpty()))})
+        messages=turns.map{(id,text)->CoordinatorMessage(id,text.first,text.second,turnTimes[id]?.first,turnTimes[id]?.second)};turnIds=turns.keys.toList();messageIds=turns.keys.toSet()
+        val cached=JSONArray(turns.entries.toList().takeLast(100).map{(id,text)->JSONObject().put("id",id).put("user",text.first).put("response",text.second).put("userAt",turnTimes[id]?.first).put("responseAt",turnTimes[id]?.second).put("actions",JSONArray(actionsByTurn[id].orEmpty()))})
         Pocket.prefs.edit().putString("coordinator-history:$owner",cached.toString()).apply()
     }
     fun keyboard(show:Boolean){keyboardRequested=show}
-    fun open(keyboard:Boolean=false){capture();if(!visible)ready=false;visible=true;keyboardRequested=keyboard;loadHistory();resumePending()}
+    fun open(keyboard:Boolean=false){CoordinatorVoiceLink.prepare();capture();if(!visible)ready=false;visible=true;keyboardRequested=keyboard;loadHistory();resumePending()}
     fun close(){visible=false;keyboardRequested=false}
     fun olderHistory(){loadHistory(true)}
     fun loadHistory(older:Boolean=false){
@@ -94,7 +95,7 @@ object PocketCoordinator {
                     if(row.s("id")==ownPendingId&&row.s("state") !in setOf("completed","failed","unknown"))return@forEachIndexed
                     if(user.isNotBlank()||response.isNotBlank()){
                         val id=row.s("id").ifBlank{"history:${row.optLong("cursor")}:$index:${user.hashCode()}"}
-                        page[id]=Pair(user,response);rememberActions(t,id,row.optJSONArray("actions")?.objects().orEmpty(),row.s("state")=="completed")
+                        turnTimes[id]=Pair(row.optLong("created_at").takeIf{it>0},row.coordinatorResponseAt());page[id]=Pair(user,response);rememberActions(t,id,row.optJSONArray("actions")?.objects().orEmpty(),row.s("state")=="completed")
                     }
                 }
                 val merged=mergeCoordinatorHistory(page,initialTurns,turns.toMap(),older)
@@ -125,7 +126,7 @@ object PocketCoordinator {
         if(clean.isBlank()||clean.length>24000||work?.isActive==true)return false
         if(savedPending(t)!=null){problem="Check the previous turn before sending another message.";return false}
         val pending=JSONObject().put("id",UUID.randomUUID().toString()).put("text",clean)
-        correctionOf?.let{pending.put("correctionOf",JSONObject().put("turnId",it.turnId).put("threadId",it.threadId))}
+        correctionOf?.let{pending.put("correctionOf",JSONObject().put("turnId",it.turnId).put("threadId",it.threadId).put("environmentId",it.environmentId))}
         Pocket.prefs.edit().putString("coordinator-pending:${t.identity}",pending.toString()).commit()
         pendingText=clean;problem="";runTurn(t,pending);return true
     }
@@ -151,7 +152,7 @@ object PocketCoordinator {
                 val finished=result?:throw IllegalStateException("The coordinator returned no turn")
                 val user=finished.s("transcript").ifBlank{pending.s("text")}
                 val response=finished.s("response").ifBlank{finished.s("error")}
-                turns[id]=Pair(user,response);rememberActions(t,id,finished.optJSONArray("actions")?.objects().orEmpty(),finished.s("state")=="completed");publish()
+                turnTimes[id]=Pair(finished.optLong("created_at").takeIf{it>0},finished.coordinatorResponseAt());turns[id]=Pair(user,response);rememberActions(t,id,finished.optJSONArray("actions")?.objects().orEmpty(),finished.s("state")=="completed");publish()
                 Pocket.prefs.edit().remove("coordinator-pending:${t.identity}").commit()
                 pendingText="";state="Ready"
                 if(finished.s("state")!="completed")problem=finished.s("error","The turn stopped. Check what happened before repeating it.")
@@ -160,7 +161,7 @@ object PocketCoordinator {
         }
     }
     private fun applyActions(actions:List<JSONObject>){for(action in actions)when(action.s("type")){
-        "select"->{val id=action.s("threadId").takeIf{it.isNotBlank()};PocketVoice.targetThread=id;if(visible){close();if(id==null)Pocket.closeTask()else Pocket.open(id)}}
+        "select"->{action.s("environmentId").takeIf{it.isNotBlank()&&it!="current"}?.let{Pocket.activateEnvironment(it)};val id=action.s("threadId").takeIf{it.isNotBlank()};PocketVoice.targetThread=id;if(visible){close();if(id==null)Pocket.closeTask()else Pocket.open(id)}}
         "permissions"->Pocket.updateFullPermissions(action.optBoolean("full"))
         "profile"->{if(!visible)continue;val local=action.optBoolean("local");if(Pocket.savedToken(local).isBlank())problem="That device is not paired. Pair it in NextComp first." else {Pocket.activate(local);capture();loadHistory()}}
         "exit"->close()

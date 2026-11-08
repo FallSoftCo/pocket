@@ -27,13 +27,14 @@ internal fun immersionPhraseIdentity(span:ImmersionSpan)="${span.start}:${span.e
 @Composable internal fun rememberImmersionCycle(plan:ImmersionPresentation,readingKey:ImmersionReadingKey,selected:ImmersionSpan?,enabled:Boolean):ImmersionCycleRender {
     val sharedWave=LocalImmersionReadingWave.current
     val waveAnimation=immersionTransitionAnimated()
+    val flipEnabled=LocalImmersionFlip.current!=null
     if(sharedWave!=null){
         // Production uses fixed paired forms and native viewport geometry. The
         // old phrase queue must not run alongside the continuous screen wave.
         val selectedIndex=plan.spans.indexOf(selected)
         val shown=immersionCyclePlan(plan,if(enabled&&selectedIndex>=0)setOf(selectedIndex)else emptySet())
         return ImmersionCycleRender(shown,readingWave=sharedWave.takeIf{
-            enabled&&selectedIndex<0&&PocketImmersion.motionEnabled&&waveAnimation
+            enabled&&(flipEnabled||(selectedIndex<0&&PocketImmersion.motionEnabled&&waveAnimation))
         })
     }
     val ready=immersionMotionReady()

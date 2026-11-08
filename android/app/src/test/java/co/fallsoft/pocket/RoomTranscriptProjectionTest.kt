@@ -100,4 +100,15 @@ class RoomTranscriptProjectionTest {
         assertEquals(setOf("Violet","Amber"),opened.rows.filter{it.s("kind")=="activity"}.map{it.s("roomAuthor")}.toSet())
     }
 
+    @Test fun executorLifecycleIsInspectableActivityRatherThanRepeatedChat(){
+        val source=event(1,"Violet","control").put("authority","authority-a").apply{
+            getJSONObject("data").put("type","executorState").put("deliveryId","delivery-a")
+                .put("generation",1).put("executorId","executor-a").put("deliveryState","unknown")
+        }
+        val rows=roomTranscriptRows(listOf(source),"scope")
+        assertEquals("activity",rows.single().s("kind"))
+        assertEquals("unknown",rows.single().s("status"))
+        assertEquals("executorState",source.getJSONObject("data").s("type"))
+    }
+
 }

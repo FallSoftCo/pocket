@@ -11,17 +11,28 @@ export function retainUserSendIdentity(previous,incoming){
   if(typeof known!=='string'||!known||next)return incoming;
   return incoming._pocketRow?{...incoming,_pocketRow:{...incoming._pocketRow,clientId:known}}:{...incoming,clientId:known};
 }
+// Native item times are presentation metadata, never ordering keys or fetch times.
+export function itemTimes(item){
+  return Object.fromEntries(['startedAtMs','completedAtMs'].flatMap(key=>{
+    const value=item?.[key];return Number.isSafeInteger(value)&&value>0&&value<=8640000000000000?[[key,value]]:[];
+  }));
+}
+function retainItemTimes(previous,incoming){
+  if(!previous||previous.id!==incoming.id||previous.type!==incoming.type)return incoming;
+  const times={...itemTimes(previous._pocketRow),...itemTimes(previous),...itemTimes(incoming._pocketRow),...itemTimes(incoming)};
+  return {...incoming,...times,...(incoming._pocketRow?{_pocketRow:{...incoming._pocketRow,...times}}:{})};
+}
 const clip=(v,n=12000)=>String(v??'').slice(-n);
 const textContent=v=>typeof v==='string'?v:Array.isArray(v)?v.map(x=>typeof x==='string'?x:x.text||'').filter(Boolean).join('\n'):'';
 export function itemRow(item,turnId,version=0){
   if(item._pocketRow)return {...item._pocketRow,version};
-  const r={id:`${turnId}/${item.id}`,itemId:item.id,turnId,version,kind:'activity',type:item.type,status:item.status||'completed',title:'',text:'',detail:''};
+  const r={id:`${turnId}/${item.id}`,itemId:item.id,turnId,version,...itemTimes(item),kind:'activity',type:item.type,status:item.status||'completed',title:'',text:'',detail:''};
   switch(item.type){
     case 'userMessage':return {...r,kind:'user',title:'You',text:textContent(item.content),clientId:item.clientId};
     case 'agentMessage':return {...r,kind:'message',title:item.phase==='final_answer'?'Codex · response':'Codex',text:item.text||'',phase:item.phase};
     case 'plan':return {...r,kind:'message',title:'Plan',text:item.text||''};
     case 'reasoning':{const summary=textContent(item.summary);return summary?{...r,title:'Thinking',text:summary}:null;}
-    case 'commandExecution':return {...r,title:item.commandActions?.[0]?.type==='read'?'Read file':item.commandActions?.[0]?.type==='search'?'Search files':'Run command',text:clip(item.command,1600),detail:clip(item.aggregatedOutput),exitCode:item.exitCode,durationMs:item.durationMs,truncated:String(item.aggregatedOutput||'').length>12000};
+    case 'commandExecution':return {...r,title:item.commandActions?.[0]?.type==='read'?'Read file':item.commandActions?.[0]?.type==='search'?'Search files':'Run command',text:clip(item.command,1600),detail:clip(item.aggregatedOutput),exitCode:item.exitCode,durationMs:item.durationMs,cwd:item.cwd,processId:item.processId,outputAvailable:true,truncated:String(item.aggregatedOutput||'').length>12000};
     case 'fileChange':return {...r,title:'File changes',text:(item.changes||[]).map(c=>c.path).join('\n'),detail:clip((item.changes||[]).map(c=>`${c.path}\n${c.diff||''}`).join('\n\n'))};
     case 'mcpToolCall':return {...r,title:`${item.server} · ${item.tool}`,text:item.status==='inProgress'?'Running tool…':item.error?.message||'Tool finished',detail:clip(textContent(item.result?.content)||item.error?.message),durationMs:item.durationMs};
     case 'dynamicToolCall':return {...r,title:[item.namespace,item.tool].filter(Boolean).join(' · '),text:item.status==='inProgress'?'Running tool…':'Tool finished',detail:clip(textContent(item.contentItems)),durationMs:item.durationMs};
@@ -34,7 +45,8 @@ export function itemRow(item,turnId,version=0){
     case 'contextCompaction':return {...r,title:'Context compacted',text:'Earlier context was condensed. The conversation continues here.'};
     case 'enteredReviewMode':case 'exitedReviewMode':return {...r,title:'Code review',text:item.review||''};
     case 'sleep':return {...r,title:'Waiting',text:`${Math.round((item.durationMs||0)/1000)} seconds`};
-    default:return null;
+    case 'hookPrompt':return {...r,title:'Hook context',text:'Context supplied by a configured hook.'};
+    default:return {...r,title:'Native activity',text:`${String(item.type||'Unknown item').slice(0,100)} · details are not supported by this client`,unsupported:true};
   }
 }
 // Cache only bounded display data. Original content remains in Codex history.
@@ -42,11 +54,11 @@ export function displayItem(item,turnId){
   const original=itemRow(item,turnId);if(!original)return null;
   const row={...original};
   for(const field of ['text','detail','title'])if(typeof row[field]==='string'&&row[field].length>16000){row[field]=row[field].slice(0,16000);row.truncated=true;}
-  const compact=()=>({id:item.id,type:item.type,status:item.status,phase:item.phase,text:item.type==='agentMessage'?row.text:undefined,_pocketRow:row});
+  const compact=()=>({id:item.id,type:item.type,status:item.status,phase:item.phase,...itemTimes(row),text:item.type==='agentMessage'?row.text:undefined,_pocketRow:row});
   for(let shrink=0;shrink<16&&Buffer.byteLength(JSON.stringify(compact()))>64000;shrink++){row.text=row.text.slice(0,Math.floor(row.text.length/2));row.detail=row.detail.slice(0,Math.floor(row.detail.length/2));row.truncated=true;}
   return Buffer.byteLength(JSON.stringify(compact()))<=64000?compact():null;
 }
-const displayEventMethods=new Set(['turn/started','turn/completed','item/started','item/completed','item/agentMessage/delta','item/plan/delta','item/commandExecution/outputDelta','item/reasoning/summaryTextDelta']);
+const displayEventMethods=new Set(['turn/started','turn/completed','item/started','item/completed','item/agentMessage/delta','item/plan/delta','item/commandExecution/outputDelta','item/reasoning/summaryTextDelta','item/mcpToolCall/progress','item/fileChange/outputDelta','item/fileChange/patchUpdated']);
 export class LiveTimeline {
   constructor({maxBytes=8*1024*1024,maxThreads=32,maxItems=500,ttlMs=15*60000,clock=Date.now}={}){this.threads=new Map();this.version=0;this.bytes=0;Object.assign(this,{maxBytes,maxThreads,maxItems,ttlMs,clock});}
   clear(){this.threads.clear();this.bytes=0;}
@@ -54,7 +66,8 @@ export class LiveTimeline {
   prune(){for(const [id,turns] of this.threads)if(this.clock()-turns.touched>=this.ttlMs)this.dropThread(id);}
   removeItem(turn,id){const entry=turn.items.get(id);if(entry){this.bytes-=entry.bytes;turn.items.delete(id);}}
   store(turn,item,version){
-    item=retainUserSendIdentity(turn.items.get(item.id)?.item,item);
+    const previous=turn.items.get(item.id)?.item;
+    item=retainItemTimes(previous,retainUserSendIdentity(previous,item));
     const compact=displayItem(item,turn.id);if(!compact)return;
     const bytes=Buffer.byteLength(JSON.stringify(compact));
     if(bytes>this.maxBytes)return;
@@ -112,14 +125,21 @@ export class LiveTimeline {
       const cached=turn.items.get(p.itemId)?.item;
       if(!cached)return {threadId,turnId,version,reload:true};
       if(m.method==='item/agentMessage/delta'||m.method==='item/plan/delta')item={...(cached||{id:p.itemId,type:m.method.includes('/plan/')?'plan':'agentMessage',status:'inProgress'}),text:(cached?.text||'')+(p.delta||'')};
-      else if(m.method==='item/commandExecution/outputDelta')item={...(cached||{id:p.itemId,type:'commandExecution',status:'inProgress'}),command:cached?.command||cached?._pocketRow?.text,aggregatedOutput:clip((cached?.aggregatedOutput||cached?._pocketRow?.detail||'')+(p.delta||''))};
-      else if(m.method==='item/reasoning/summaryTextDelta'){
+      else if(m.method==='item/commandExecution/outputDelta')item={...(cached||{id:p.itemId,type:'commandExecution',status:'inProgress'}),command:cached?.command||cached?._pocketRow?.text,aggregatedOutput:(cached?.aggregatedOutput||cached?._pocketRow?.detail||'')+(p.delta||''),cwd:cached?._pocketRow?.cwd,processId:cached?._pocketRow?.processId};
+      else if(m.method==='item/mcpToolCall/progress'){
+        const row={...cached._pocketRow,text:clip(p.message,1600)};
+        item={...cached,_pocketRow:row};
+      }else if(m.method==='item/fileChange/outputDelta'){
+        item={...cached,_pocketRow:{...cached._pocketRow,detail:clip((cached._pocketRow?.detail||'')+(p.delta||'')),truncated:cached._pocketRow?.truncated||((cached._pocketRow?.detail||'')+(p.delta||'')).length>12000}};
+      }else if(m.method==='item/fileChange/patchUpdated'){
+        item={...cached,changes:p.changes};
+      }else if(m.method==='item/reasoning/summaryTextDelta'){
         item={...(cached||{id:p.itemId,type:'reasoning',status:'inProgress'}),summary:[...(cached?.summary||(cached?._pocketRow?.text?[cached._pocketRow.text]:[]))]};
         item.summary[p.summaryIndex||0]=(item.summary[p.summaryIndex||0]||'')+(p.delta||'');
       }
     }
     if(!item)return null;
-    delete item._pocketRow;
+    if(!['item/mcpToolCall/progress','item/fileChange/outputDelta'].includes(m.method))delete item._pocketRow;
     // Raw reasoning and raw Responses API content never enter the phone transcript.
     if(item.type==='reasoning')delete item.content;
     const compact=this.store(turn,item,version);const row=compact?itemRow(compact,turnId,version):null;return row?{threadId,turnId,version,row}:null;

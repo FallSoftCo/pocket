@@ -5,15 +5,63 @@ import {join} from 'node:path';
 import {LiveTimeline,timelinePage} from '../../server/timeline.mjs';
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';
 let holdAncillaries=false,heldAncillaries=0,holdSearch=false,searchBlocked=false;const abortedReads=[];const statusReads=[];let catalogReads=0;const voiceReceiptReads=[];const replyReceipts=new Map(),receiptReads=[],recoveries=[];let replyAckState="accepted";let badReply=false,holdReceipt=false,wrongReceiptThread=false;let failedReadsRemaining=0;let malformedRead=false;let failReply=false,holdReply=false;let quietReading=false;let visibility=false;const acknowledgements=[],ackAttempts=[];let failedAckReads=0;let anchored=false,holdPosition=false,failPosition=false;const positions=[];let boundary=false;let pacing=false;let clippedPreview=false;let revision=1,ordering=false,holdRefresh=false,failRead=false,failStatus=503;let secondRevision=1,secondVisible=false;const sockets=new Set(),reads=[],replies=[];const log=process.env.NEXTCOMP_QA_LOG||'/tmp/nextcomp-transcript-fixture-events.jsonl';
-let coordinatorPaging=false;const coordinatorHistoryReads=[];let catalogPagingCount=0;let awaitingPosition=false,positionEvidence=false;let holdHistory=false;let messageIdentity=false;let sameTurnGap=false;let omitSnapshotHead=false;let headEpoch=process.env.NEXTCOMP_QA_EPOCH||"synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false,holdActivity=false,failCatalog=false,runtimeOffline=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
+let frozenCatalog=null;let coordinatorPaging=false;const coordinatorHistoryReads=[];let catalogPagingCount=0;let awaitingPosition=false,positionEvidence=false;let holdHistory=false;let messageIdentity=false;let sameTurnGap=false;let longRetainedGap=false;let longWindow=1;let omitSnapshotHead=false;let headEpoch=process.env.NEXTCOMP_QA_EPOCH||"synthetic-runtime",headCounter=null,holdCatalog=false,catalogBlocked=false,holdActivity=false,failCatalog=false,runtimeOffline=false;let notificationOverflow=false;let pendingNavigation=false;let notificationOnly=false;let quietReconnect=false,rejectLive=false,connections=0;
+// Private optional capture of actual read-only native pages. Never a live
+// authority/proxy and never an execution endpoint. Not included in source.
+const replay=process.env.NEXTCOMP_QA_HISTORY_REPLAY?JSON.parse(fs.readFileSync(process.env.NEXTCOMP_QA_HISTORY_REPLAY,'utf8')):null;
+let replayEnabled=false,replayHold=false;const replayReads=[];
+const replayPages=new Map((replay?.pages||[]).map(p=>[p.cursor??'',p.response]));
+const replayResponse=value=>{
+ const body=structuredClone(value);body.thread={...body.thread,id:'same-thread'};
+ if(body.historyHead)body.historyHead.threadId='same-thread';
+ body.notifications=[];body.notes=[];body.pending=[];body.outgoing=[];delete body.catchup;
+ return body;
+};
 const thread=()=>({id:'same-thread',name:'Synthetic freshness work',cwd:'/synthetic',canAcceptDirectInput:true,status:{type:'idle'},preview:'Fresh response '+(clippedPreview?1:revision),previewKind:'message',previewRole:'codex',activityAt:(notificationOnly?1:revision)*1000,updatedAt:(notificationOnly?1:revision)*1000,recencyAt:(notificationOnly?1:revision)*1000});
 const secondThread=()=>({...thread(),id:'second-thread',name:'Other synthetic work',preview:'Other response '+secondRevision,activityAt:secondRevision*1000});
 function send(socket,event){const b=Buffer.from(JSON.stringify(event));const h=b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]);socket.write(Buffer.concat([h,b]));}
 let notificationAttention=[];
+// Each independent native test may own a fresh synthetic authority; legacy fixtures remain valid.
+const authorized=req=>req.headers.authorization==='Bearer synthetic-system76'||/^Bearer synthetic-system76-[a-f0-9-]{36}$/.test(req.headers.authorization||'');
 const server=http.createServer(async(req,res)=>{
  let raw='';for await(const b of req)raw+=b;
- if(req.headers.authorization!=='Bearer synthetic-system76'){res.writeHead(401);res.end('{}');return;}
- const path=new URL(req.url,'http://localhost').pathname;let body={};
+ if(!authorized(req)){res.writeHead(401);res.end('{}');return;}
+ const path=new URL(req.url,'http://localhost').pathname.replace(/^(\/api\/threads\/[^/]+)\/head$/,'$1');let body={};
+ if(path==='/_qa/enable-history-replay'){
+  if(!replay){res.writeHead(409,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Private canonical history capture required'}));return;}
+  replayEnabled=true;headEpoch=replay.pages[0].response.historyHead.epoch;headCounter=replay.pages[0].response.historyHead.version;
+  res.setHeader('Content-Type','application/json');res.end(JSON.stringify({ok:true,source:'recorded-native-read-only',pages:replay.pages.length}));return;
+ }
+ if(path==='/_qa/hold-replay-head'){replayHold=true;res.setHeader('Content-Type','application/json');res.end('{"ok":true}');return;}
+ if(path==='/_qa/release-replay-head'){replayHold=false;res.setHeader('Content-Type','application/json');res.end('{"ok":true}');return;}
+ if(path==='/_qa/replay-state'){
+  res.setHeader('Content-Type','application/json');res.end(JSON.stringify({reads:replayReads,submissions:replies.length}));return;
+ }
+ if(replayEnabled&&path==='/api/threads/same-thread'&&req.method==='GET'){
+  const cursor=new URL(req.url,'http://localhost').searchParams.get('before')||'';
+  replayReads.push({older:!!cursor,at:Date.now()});
+  while(!cursor&&replayHold&&!res.destroyed)await new Promise(r=>setTimeout(r,20));
+  if(res.destroyed)return;
+  const page=replayPages.get(cursor);
+  if(!page){res.writeHead(409,{'Content-Type':'application/json'});res.end('{"error":"Read-only capture boundary; not EOF"}');return;}
+  res.setHeader('Content-Type','application/json');res.end(JSON.stringify(replayResponse(page)));return;
+ }
+ if(replayEnabled&&path==='/api/threads/same-thread/timeline/position'&&req.method==='POST'){
+  const input=JSON.parse(raw);const order=[],seen=new Set();
+  for(const page of [...replay.pages].reverse())for(const row of page.response.timeline.rows){
+   if(row.turnId===input.turnId&&!['turn','turnEnd','request','attachments'].includes(row.kind)&&!seen.has(row.id)){seen.add(row.id);order.push(row);}
+  }
+  const item=r=>r.itemId||r.id?.replace(input.turnId+'/','');
+  const at=order.findIndex(r=>item(r)===input.itemId||input.clientId&&r.clientId===input.clientId);
+  const known=new Set(input.knownItemIds||[]);
+  const next=at<0?null:order.slice(at+1).find(r=>known.has(item(r)));
+  res.setHeader('Content-Type','application/json');
+  res.end(JSON.stringify({available:at>=0,insertBefore:next?.id||null,cursor:null}));return;
+ }
+ if(replayEnabled&&req.method!=='GET'&&path.startsWith('/api/')){
+  res.writeHead(403,{'Content-Type':'application/json'});res.end('{"error":"Read-only history replay; no work admission"}');return;
+ }
+
  if(holdAncillaries&&['/api/status','/api/activity','/api/notifications','/api/attention'].includes(path)){
   heldAncillaries++;
   try{while(holdAncillaries&&!res.destroyed)await new Promise(r=>setTimeout(r,20));}finally{heldAncillaries--;}
@@ -22,10 +70,11 @@ const server=http.createServer(async(req,res)=>{
 
  if(path==='/api/voice/history'){const older=new URL(req.url,'http://localhost').searchParams.has('before');coordinatorHistoryReads.push({older});body={turns:coordinatorPaging?Array.from({length:older?5:25},(_,n)=>({id:'coordinator-passage-'+(older?n:n+5),transcript:'Coordinator request '+(older?n:n+5),response:'Coordinator passage '+(older?n:n+5)+': retained synthetic response for a normal reading viewport.',state:'completed'})):[],hasEarlier:coordinatorPaging&&!older,before:coordinatorPaging&&!older?5:null};}
  else if(path==='/_qa/coordinator-pages'){coordinatorPaging=true;body={ok:true};}
- else if(path==='/api/status'){statusReads.push({at:Date.now(),threadId:new URL(req.url,'http://localhost').searchParams.get('threadId')});const selected=new URL(req.url,'http://localhost').searchParams.get('threadId');body={host:'Synthetic',connected:!runtimeOffline,deviceId:'synthetic-device-a',...(selected?{historyHead:{threadId:selected,epoch:headEpoch,version:selected==='same-thread'?(headCounter??revision):secondRevision}}:{})};}
+ else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
+  else if(path==='/api/status'){statusReads.push({at:Date.now(),threadId:new URL(req.url,'http://localhost').searchParams.get('threadId')});const selected=new URL(req.url,'http://localhost').searchParams.get('threadId');body={host:'Synthetic',capabilities:{readOnlyTimeline:true},connected:!runtimeOffline,deviceId:'synthetic-device-a',...(selected?{historyHead:{threadId:selected,epoch:headEpoch,version:selected==='same-thread'?(headCounter??revision):secondRevision}}:{})};}
  else if(path==='/api/voice/turns/saved-unknown'){voiceReceiptReads.push(path);body={id:'saved-unknown',state:'unknown',error:'Synthetic uncertain delivery'};}
  else if(path==='/api/voice/native/start'){res.statusCode=503;body={error:'Synthetic native transport unavailable'};}
- else if(path==='/api/threads'){catalogReads++;const searchSnapshot=new URL(req.url,'http://localhost').searchParams.has('search')?thread():null;catalogBlocked=holdCatalog;if(searchSnapshot)searchBlocked=holdSearch;while((holdCatalog||holdSearch&&searchSnapshot)&&!res.destroyed)await new Promise(resolve=>setTimeout(resolve,30));catalogBlocked=false;if(searchSnapshot)searchBlocked=false;if(res.destroyed)return;if(failCatalog){failCatalog=false;res.statusCode=503;body={error:'Synthetic catalog temporarily unavailable'};}else body={threads:[searchSnapshot||thread(),...(secondVisible?[secondThread()]:[]),...Array.from({length:catalogPagingCount},(_,n)=>({...thread(),id:"catalog-page-"+n,name:"Catalog passage "+n,activityAt:Date.now()-n*60000,updatedAt:Date.now()-n*60000,recencyAt:Date.now()-n*60000}))]};}
+ else if(path==='/api/threads'){catalogReads++;const searchSnapshot=new URL(req.url,'http://localhost').searchParams.has('search')?thread():null;catalogBlocked=holdCatalog;if(searchSnapshot)searchBlocked=holdSearch;while((holdCatalog||holdSearch&&searchSnapshot)&&!res.destroyed)await new Promise(resolve=>setTimeout(resolve,30));catalogBlocked=false;if(searchSnapshot)searchBlocked=false;if(res.destroyed)return;if(failCatalog){failCatalog=false;res.statusCode=503;body={error:'Synthetic catalog temporarily unavailable'};}else body={threads:[searchSnapshot||frozenCatalog||thread(),...(secondVisible?[secondThread()]:[]),...Array.from({length:catalogPagingCount},(_,n)=>({...thread(),id:"catalog-page-"+n,name:"Catalog passage "+n,activityAt:Date.now()-n*60000,updatedAt:Date.now()-n*60000,recencyAt:Date.now()-n*60000}))]};}
  else if(path==='/_qa/unknown-reply'){replyAckState='unknown';body={ok:true};}
  else if(path==='/_qa/provider-identity-echo'){
   const sent=replies.at(-1);if(!sent){res.statusCode=409;body={error:'No synthetic send recorded'};}else{
@@ -80,6 +129,8 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/hold-history'){holdHistory=true;body={ok:true};}
  else if(path==='/_qa/release-history'){holdHistory=false;body={ok:true};}
  else if(path==='/_qa/message-identity'){messageIdentity=true;body={ok:true};}
+ else if(path==='/_qa/new-long-window'){longWindow++;revision++;body={ok:true};}
+ else if(path==='/_qa/long-retained-gap'){longRetainedGap=true;body={ok:true};}
  else if(path==='/_qa/same-turn-gap'){sameTurnGap=true;body={ok:true};}
  else if(path==='/_qa/show-second'){secondVisible=true;body={ok:true};}
  else if(path==='/_qa/advance-second'){secondRevision++;for(const s of sockets)send(s,{type:'sessionPreview',threadId:'second-thread',preview:secondThread().preview,previewKind:'message',activityAt:secondRevision*1000});body={revision:secondRevision};}
@@ -93,9 +144,9 @@ const server=http.createServer(async(req,res)=>{
   if(malformedRead){malformedRead=false;res.setHeader('Content-Type','application/json');res.end(JSON.stringify({error:'Synthetic invalid successful response'}));return;}
   if(failRead||failedReadsRemaining>0){if(failedReadsRemaining>0)failedReadsRemaining--;reads.push({at:Date.now(),older:req.url.includes("before="),revision,status:failStatus});failRead=false;res.writeHead(failStatus,{'Content-Type':'application/json'});res.end(JSON.stringify({error:failStatus===401?'Synthetic history permission rejected':'Synthetic history refresh unavailable'}));return;}
   if(awaitingPosition&&positions.length)positionEvidence=true;
-  const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev});const entry=reads.at(-1);res.once('close',()=>{if(!res.writableEnded)abortedReads.push(entry)});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
+  const older=req.url.includes('before=');const rev=revision;reads.push({at:Date.now(),older,revision:rev,cursor:new URL(req.url,'http://localhost').searchParams.get('before')});const entry=reads.at(-1);res.once('close',()=>{if(!res.writableEnded)abortedReads.push(entry)});fs.appendFileSync(log,JSON.stringify(reads.at(-1))+'\n');
   await new Promise(r=>setTimeout(r,older?2200:1700));
-  while(holdHistory&&!res.destroyed)await new Promise(r=>setTimeout(r,30));
+  while(holdHistory&&(!longRetainedGap||older)&&!res.destroyed)await new Promise(r=>setTimeout(r,30));
   if(res.destroyed)return;
   while(!older&&rev===2&&holdRefresh&&!res.destroyed)await new Promise(r=>setTimeout(r,50));
   if(res.destroyed)return;
@@ -107,6 +158,18 @@ const server=http.createServer(async(req,res)=>{
    const answer={id:'gap-new-answer',kind:'message',turnId:'synthetic-turn',text:'Fresh response 2'};
    const tool={id:'gap-new-tool',kind:'activity',turnId:'synthetic-turn',text:'New tool action'};
    body.timeline=rev===1?{rows:[header,...old],hasEarlier:false,before:null}:cursor==='gap-answer'?{rows:[header,answer],hasEarlier:true,before:'gap-old',insertBefore:tool.id}:cursor==='gap-old'?{rows:[header,...old],hasEarlier:false,before:null,insertBefore:answer.id}:{rows:[header,tool],hasEarlier:true,before:'gap-answer'};
+  }
+  if(longRetainedGap){
+   const cursor=new URL(req.url,'http://localhost').searchParams.get('before');
+   const newer=cursor?.startsWith('next-gap-')||(!cursor&&longWindow>1);
+   const prefix=newer?'next-gap-':'long-gap-';const headId=newer?'long-head-new':'long-head';const itemPrefix=newer?'new-missing-':'long-missing-';
+   const end=cursor?Number(cursor.replace(prefix,'')):null;
+   if(end==null)body.timeline={rows:[{id:headId,kind:'message',turnId:'long-turn',text:'Fresh response '+rev}],hasEarlier:true,before:prefix+'1000'};
+   else{
+    const start=Math.max(1,end-7);
+    const rows=end>0?Array.from({length:end-start+1},(_,i)=>({id:itemPrefix+(start+i),kind:'message',turnId:'long-turn',text:'Missing interval message '+(start+i)})):[{id:newer?'long-head':'retained-old-999',kind:'message',turnId:newer?'long-turn':'old-turn',text:newer?'Fresh response 3':'Retained old message 999'}];
+    body.timeline={rows,hasEarlier:end>0,before:end>0?prefix+(start-1):null,insertBefore:end===1000?headId:itemPrefix+(end+1)};
+   }
   }
   if(messageIdentity)body.timeline={rows:[{id:'identity/header',kind:'turn',turnId:'identity'},
    {id:'identity/item-183',itemId:'item-183',kind:'user',turnId:'identity',clientId:'send-one',text:'Same deliberate text'},
@@ -137,6 +200,7 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/_qa/release-concurrent-reads'){holdAncillaries=false;holdSearch=false;body={ok:true};}
  else if(path==='/_qa/hold-catalog'){holdCatalog=true;body={ok:true};}
  else if(path==='/_qa/release-catalog'){holdCatalog=false;body={ok:true};}
+ else if(path==='/_qa/search-only-update'){frozenCatalog=thread();revision++;body={revision};}
  else if(path==='/_qa/head-only-update'){headCounter=(headCounter??revision)+1;revision++;body={revision};}
  else if(path==='/_qa/head-live-update'){revision++;headCounter=81;for(const socket of sockets)send(socket,{type:'timeline',threadId:'same-thread',turnId:'synthetic-turn',version:81,historyHead:{threadId:'same-thread',epoch:headEpoch,version:81},row:{id:'same-message',turnId:'synthetic-turn',kind:'message',text:'Fresh response '+revision,version:81}});body={revision};}
  else if(path==='/_qa/reset-history-head'){headEpoch='synthetic-runtime-restarted';headCounter=1;revision++;body={revision};}
@@ -160,5 +224,5 @@ const server=http.createServer(async(req,res)=>{
  else if(path==='/api/activity'){while(holdActivity)await new Promise(r=>setTimeout(r,30));body={items:[]};}
  res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));
 });
-server.on('upgrade',(req,socket)=>{if(rejectLive){socket.destroy();return;}if(req.headers.authorization!=='Bearer synthetic-system76'){socket.destroy();return;}socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+crypto.createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n\r\n');connections++;sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));if(!quietReconnect)send(socket,{type:'status',connected:!runtimeOffline});});
+server.on('upgrade',(req,socket)=>{if(rejectLive){socket.destroy();return;}if(!authorized(req)){socket.destroy();return;}socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+crypto.createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n\r\n');connections++;sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));if(!quietReconnect)send(socket,{type:'status',connected:!runtimeOffline});});
 server.listen(Number(process.env.PORT||19998),'127.0.0.1',()=>console.log('Owned transcript fixture ready'));

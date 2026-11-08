@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {displayItem} from './timeline.mjs';
 import {HistoryPositionIndex} from './history-position-index.mjs';
 
@@ -14,7 +15,11 @@ export class ThreadHistory {
     const validId=v=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,256}$/.test(v);
     if(!validId(threadId)||!validId(turnId)||!validId(itemId)||!Array.isArray(knownItemIds)||knownItemIds.length>256||knownItemIds.some(id=>!validId(id)))throw invalid();
     if(clientId!=null&&!validId(clientId))throw invalid();
+    if(cursor!=null&&(typeof cursor!=='string'||cursor.length>16000))throw invalid();
     const observed=this.positions.resolve(threadId,turnId,{itemId,clientId,knownItemIds});if(observed)return observed;
+    if(cursor?.startsWith('position-scan:'))return this.scanItemSuccessor(threadId,{turnId,itemId,clientId,knownItemIds,cursor});
+    if(this.itemAnchorsSupported===false&&!this.turnOnlyThreads.has(threadId))
+      return this.scanItemSuccessor(threadId,{turnId,itemId,clientId,knownItemIds});
     let next={type:'item',itemId};
     if(cursor!=null){
       if(typeof cursor!=='string'||cursor.length>16000||!cursor.startsWith('position:'))throw invalid();
@@ -30,7 +35,10 @@ export class ThreadHistory {
       try{page=await this.codex.call('thread/items/list',{threadId,turnId,cursor:next,sortDirection:'asc',limit:8});}
       catch(e){
         if(unsupportedItems(e)||/invalid type: map, expected a string/i.test(e.message||'')){
-          if(!unsupportedItems(e))this.itemAnchorsSupported=false;
+          if(!unsupportedItems(e)){
+            this.itemAnchorsSupported=false;
+            return this.scanItemSuccessor(threadId,{turnId,itemId,clientId,knownItemIds});
+          }
           return {available:false,insertBefore:null,cursor:null};
         }
         throw e;
@@ -43,6 +51,45 @@ export class ThreadHistory {
       next=page.nextCursor;
     }
     return {available:true,insertBefore:null,cursor:encode('position:',{threadId,turnId,itemId,next})};
+  }
+  // Some native versions accept only opaque list cursors, not item anchors.
+  // Walk bounded descending pages for this exact input, carrying the nearest
+  // already-visible successor across continuations. This never resumes a thread
+  // and never sorts by arrival time, text or opaque item IDs.
+  async scanItemSuccessor(threadId,{turnId,itemId,clientId,knownItemIds,cursor=null}){
+    const known=new Set(knownItemIds);known.delete(itemId);
+    const digest=createHash('sha256').update(JSON.stringify([...known].sort())).digest('hex');
+    let next=null,successor=null;
+    if(cursor){
+      let state;try{state=JSON.parse(Buffer.from(cursor.slice(14),'base64url').toString());}catch{throw Object.assign(Error('Invalid item position.'),{status:400});}
+      if(state.threadId!==threadId||state.turnId!==turnId||state.itemId!==itemId||state.clientId!==clientId||state.knownDigest!==digest||
+          typeof state.next!=='string'||!state.next||state.successor!=null&&!known.has(state.successor))
+        throw Object.assign(Error('Invalid item position.'),{status:400});
+      next=state.next;successor=state.successor;
+    }
+    const visited=new Set();
+    for(let n=0;n<4;n++){
+      if(visited.has(next))throw Error('Codex returned a repeated item position.');visited.add(next);
+      let page;
+      try{page=await this.codex.call('thread/items/list',{threadId,turnId,sortDirection:'desc',limit:8,...(next?{cursor:next}:{})});}
+      catch(error){
+        if(unsupportedItems(error)||/invalid type: map, expected a string/i.test(error.message||''))
+          return {available:false,insertBefore:null,cursor:null};
+        throw error;
+      }
+      for(const entry of page.data||[]){
+        if(entry.turnId!=null&&entry.turnId!==turnId)throw Error('Codex returned an item outside the requested turn.');
+        const raw=entry.item;if(!raw)continue;
+        const item=this.identity?.item(threadId,turnId,raw)||raw;
+        const row=item._pocketRow||item;
+        const same=item.type==='userMessage'&&(clientId?(row.clientId||row.clientUserMessageId)===clientId:raw.id===itemId);
+        if(same)return {available:true,insertBefore:successor?turnId+'/'+successor:null,cursor:null};
+        if(known.has(raw.id)&&displayItem(item,turnId))successor=raw.id;
+      }
+      if(!page.nextCursor)return {available:false,insertBefore:null,cursor:null,awaitingHistory:true};
+      next=page.nextCursor;
+    }
+    return {available:false,insertBefore:null,cursor:encode('position-scan:',{threadId,turnId,itemId,clientId,knownDigest:digest,next,successor})};
   }
   async preview(metadata){
     const thread=await this.read(metadata,{summary:true});this.onPreview(thread);
@@ -57,14 +104,21 @@ export class ThreadHistory {
   }
   async read(metadata,options={}){
     let thread;
-    if(this.fullSnapshotThreads.has(metadata.id))thread=await this.fullSnapshotPage(metadata,options);
+    // A persisted cursor identifies its protocol across process restarts. Never
+    // reinterpret a complete-turn boundary using volatile capability state.
+    const completeTurnCursor=typeof options.before==='string'&&options.before.startsWith('turnfull:');
+    if(completeTurnCursor)thread=await this.turnPage(metadata,options);
+    else if(this.fullSnapshotThreads.has(metadata.id))thread=await this.fullSnapshotPage(metadata,options);
     else if(this.turnOnlyThreads.has(metadata.id)&&!options.summary)thread=await this.turnPage(metadata,options);
     else try{thread=await this.readPaged(metadata,options);}
     catch(e){if(!unsupportedItems(e))throw e;this.turnOnlyThreads.add(metadata.id);thread=await this.turnPage(metadata,options);}
-    return this.observeSnapshot(this.identity?.snapshot(thread)||thread);
+    const display=this.identity?.snapshot(thread)||thread;
+    // Turn-only reads already indexed the complete provider turn. This result
+    // is only a bounded presentation window, including inherited-history paths.
+    return completeTurnCursor||this.turnOnlyThreads.has(metadata.id)?display:this.observeSnapshot(display);
   }
 
-  async readPaged(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8,preferPaging=false}={}){
+  async readPaged(metadata,{before=null,summary=false,maxItems=this.maxItems,maxBytes=this.maxBytes,maxTurns=8,preferPaging=false,maxSourcePages=8,stopAfterConversation=false}={}){
     const threadId=metadata.id;
     if(metadata.historyMode!=='paginated'&&!preferPaging)return this.observeSnapshot((await this.codex.call('thread/read',{threadId,includeTurns:true})).thread);
     if(this.paginationSupported!==true){
@@ -90,7 +144,8 @@ export class ThreadHistory {
       else throw Error('That history position is no longer available. Reopen the task.');
     }
     const insertBefore=state.olderThanRow||null;
-    const turns=[];let count=0,bytes=0;const visited=new Set();
+    const turns=[];let count=0,bytes=0,sourcePages=0;const visited=new Set();
+    const hasConversation=()=>stopAfterConversation&&turns.some(turn=>turn.items.some(item=>['userMessage','agentMessage','plan'].includes(item.type)));
     const finish=next=>({...metadata,turns:turns.reverse(),_pocketPage:{hasEarlier:!!next,before:next?encode('items:',next):null,...(insertBefore?{insertBefore}:{})}});
     for(let turnCount=0;turnCount<maxTurns;turnCount++){
       const resumed=!!state.anchor;
@@ -104,6 +159,7 @@ export class ThreadHistory {
         const key=JSON.stringify([header.id,cursor]);if(visited.has(key))throw Error('Codex returned a repeated history cursor.');visited.add(key);
         const limit=Math.max(1,Math.min(8,maxItems,Math.floor(maxBytes/64000)));
         const part=await this.codex.call('thread/items/list',{threadId,turnId:header.id,limit,sortDirection:'desc',...(cursor?{cursor}:{})});
+        sourcePages++;
         const items=part.data.map(entry=>displayItem(entry.item,header.id)).filter(Boolean);
         const size=items.reduce((n,item)=>n+Buffer.byteLength(JSON.stringify(item)),0);
         if(count&&(count+items.length>maxItems||bytes+size>maxBytes)){
@@ -114,7 +170,7 @@ export class ThreadHistory {
         turn.items.push(...items);count+=items.length;bytes+=size;
         if(!part.nextCursor)break;
         cursor=part.nextCursor;
-        if(count>=maxItems||bytes>=maxBytes){
+        if(count>=maxItems||bytes>=maxBytes||sourcePages>=maxSourcePages||hasConversation()){
           turn.items.reverse();
           if(!anchor)throw Error('Codex did not provide a history anchor. Update Codex to continue paging.');
           return finish({anchor,nextTurn,itemCursor:cursor,olderThanRow:turn.items.length?`${header.id}/${turn.items[0].id}`:turns.at(-1)?`${turns.at(-1).id}/header`:null});
@@ -123,7 +179,7 @@ export class ThreadHistory {
       turn.items.reverse();
       if(!nextTurn)return finish(null);
       state={nextTurn,olderThanRow:`${header.id}/header`};
-      if(count>=maxItems||bytes>=maxBytes)return finish(state);
+      if(count>=maxItems||bytes>=maxBytes||sourcePages>=maxSourcePages||hasConversation())return finish(state);
     }
     return finish(state);
   }
@@ -138,11 +194,15 @@ export class ThreadHistory {
       else throw Error('That history position changed with Codex. Reopen the task.');
     }
     const page=await this.codex.call('thread/turns/list',{threadId:metadata.id,limit:1,sortDirection:state.anchor?'asc':'desc',itemsView:'full',...((state.anchor||state.cursor)?{cursor:state.anchor||state.cursor}:{})});
-    const turn=page.data[0];
-    if(!turn)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
-    if(state.turnId&&turn.id!==state.turnId)throw Error('The history turn boundary is no longer available. Reopen the task.');
+    const providerTurn=page.data[0];
+    if(!providerTurn)return {...metadata,turns:[],_pocketPage:{hasEarlier:false,before:null}};
+    if(state.turnId&&providerTurn.id!==state.turnId)throw Error('The history turn boundary is no longer available. Reopen the task.');
+    // Send identity and chronological evidence belong to the complete provider
+    // turn, before the wire page is bounded. Re-observing that bounded result
+    // would discard the very input needed to position a delayed live echo.
+    const turn=this.identity?.snapshot({id:metadata.id,turns:[providerTurn]})?.turns[0]||providerTurn;
     const items=(turn.items||[]).map(item=>displayItem(item,turn.id)).filter(Boolean);
-    this.positions.observe(metadata.id,turn.id,items);
+    this.positions.observe(metadata.id,turn.id,items,{complete:true});
     const end=state.beforeItemId?items.findIndex(item=>item.id===state.beforeItemId):Math.max(0,items.length-state.offset);
     if(end<0)throw Error('The history item boundary is no longer available. Reopen the task.');
     let start=end,bytes=0;

@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-07",
+  "scope": "Archive coverage and cache membership; no history deletion or model work",
+  "backend": {
+    "system76ReleaseDigest": "64877aa510dc46a74ffe6f4030af23225283a83a33033196067be9099ee4af57",
+    "sourceCommit": "979fa8dd736ee0089cf285f79c87c0a279075335",
+    "macRelease": "20261107-archive-horizon-r02",
+    "pairingPreserved": true,
+    "nativeWorkersRestarted": false
+  },
+  "cleanup": {
+    "additionalWorkstationAcknowledgedArchives": 430,
+    "additionalMacAcknowledgedArchives": 1,
+    "reconciledNativeDescendantArchives": 516,
+    "originalUncertainReceiptsPreserved": true,
+    "unknownMutationsReplayed": false
+  },
+  "finalCatalog": {
+    "workstation": {
+      "pages": 1,
+      "threads": 157,
+      "olderThan30DaysByWork": 0,
+      "refreshPending": false,
+      "nextCursor": null
+    },
+    "mac": {
+      "pages": 1,
+      "threads": 8,
+      "olderThan30DaysByWork": 0,
+      "refreshPending": false,
+      "nextCursor": null
+    }
+  },
+  "validation": {
+    "gatewayBackendChecksPassed": 688,
+    "finalCleanupFocusedChecksPassed": 3,
+    "realHttpNativeTransportIntegration": true,
+    "phoneUiInspected": false
+  },
+  "clientDelivery": {
+    "newApkRequired": false,
+    "currentPublishedVersionCode": 171,
+    "announcementRepeated": false
+  },
+  "limitations": [
+    "Cleanup is an explicit authorized sweep, not an enabled daily scheduler.",
+    "Physical phone refreshed-list rendering has not been independently inspected."
+  ]
+}

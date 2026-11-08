@@ -34,7 +34,7 @@ test('artifact/log escapes and duplicate receipts cannot qualify',()=>{
 });
 
 test('release executables parse before any build, emulator or publication effect',()=>{
- for(const file of ['scripts/build-release.mjs','scripts/release-qualification.mjs','scripts/record-native-qualification.mjs','scripts/publish-qualified-update.mjs','scripts/prepare-app-update.mjs']){
+ for(const file of ['scripts/native-test-plan.mjs','scripts/build-release.mjs','scripts/release-qualification.mjs','scripts/record-native-qualification.mjs','scripts/publish-qualified-update.mjs','scripts/prepare-app-update.mjs']){
   const r=spawnSync(process.execPath,['--check',file],{encoding:'utf8',timeout:10000});assert.equal(r.status,0,file+': '+r.stderr);
  }
 });
@@ -71,19 +71,24 @@ test('optimized catalog/input review requires its actual observations',()=>{
  }finally{rmSync(f.root,{recursive:true,force:true});}
 });
 
-test('native room voice requires optimized key, touch and captured-origin evidence',()=>{
+test('native room voice requires evidence for its declared input interaction',()=>{
+ for(const mode of [undefined,'volume-buttons']){
  const f=fixture();try{
-  const name='co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable';
-  f.policy.requiredNativeCases=[name];f.native[0].case=name;f.policy.requiredOptimizedReview='native-room-catalog-and-typing';f.build.policySha=digest(f.policy);
+  const name='co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#'+(mode?'nativeVolumeKeysKeepOriginalRoomAndDraftWhileProviderIsUnavailable':'nativeVolumeAndTouchKeepOriginalRoomAndDraftWhileProviderIsUnavailable');
+  f.policy.requiredNativeCases=[name];f.native[0].case=name;f.policy.requiredOptimizedReview='native-room-catalog-and-typing';
+  if(mode)f.policy.captureInteraction=mode;
+  f.build.policySha=digest(f.policy);
   const sample=Buffer.from('Synthetic review artifact');
   for(const file of ['input.json','native.png'])writeFileSync(join(f.directory,file),sample);
   const review={schema:1,state:'complete',kind:f.policy.requiredOptimizedReview,versionCode:2,productionSourceSha:f.build.productionSourceSha,qualificationInputSha:f.build.qualificationInputSha,apkSha256:f.manifest.variants[0].sha256,reviewedAt:5,
-   observations:{typingDrawn:true,canonicalRoomSnapshot:true,originalAcceptedMessageSingle:true,optimizedPayloadVerified:true},
+   observations:{typingDrawn:true,canonicalRoomSnapshot:true,originalAcceptedMessageSingle:true,optimizedPayloadVerified:true,nativeVoiceHardwareKeys:true,nativeVoiceDraftAndOrigin:true},
    artifacts:['input.json','native.png'].map(path=>({path,sha256:sha256(sample)}))};
+  review.observations[mode?'nativeVoiceTouch':'nativeVolumeOnlyControls']=true;
   assert.throws(()=>validateReleaseQualification({...f,optimizedReview:review}),/optimized interaction/);
-  for(const name of ['nativeVoiceHardwareKeys','nativeVoiceTouch','nativeVoiceDraftAndOrigin'])review.observations[name]=true;
+  review.observations[mode?'nativeVolumeOnlyControls':'nativeVoiceTouch']=true;
   assert.equal(validateReleaseQualification({...f,optimizedReview:review}).nativeCases,1);
  }finally{rmSync(f.root,{recursive:true,force:true});}
+ }
 });
 
 test('a visually rejected candidate cannot publish even with prior green checks',()=>{
@@ -94,5 +99,47 @@ test('a visually rejected candidate cannot publish even with prior green checks'
   assert.throws(()=>validateReleaseQualification(f),/visually rejected/);
   assert.throws(()=>publishQualifiedUpdate({...f,expectedVersion:1,checkOnly:true}),/visually rejected/);
   assert.equal(JSON.parse(readFileSync(join(f.destination,'manifest.json'))).versionCode,1);
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});
+
+// A custom retained AVD needs the runner's live process/installation preflight;
+// changing only the name cannot make an arbitrary target a qualified emulator.
+test('explicit owned emulator receipts require retained runtime preflight',()=>{
+ const f=fixture();try{
+  const receipt=f.native[0];receipt.avdName='nextcomp_federation_20261030';
+  assert.throws(()=>validateReleaseQualification(f),/Native receipt/);
+  Object.assign(receipt,{serial:'emulator-5650',actor:'01a0f2bc-ff5a-70c2-b682-10f0987dab80',preflight:{emulatorStartTicks:'1058124440',installedApkVerified:true}});
+  assert.equal(validateReleaseQualification(f).nativeCases,1);
+  receipt.serial='100.101.220.29:5555';assert.throws(()=>validateReleaseQualification(f),/Native receipt/);
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});
+
+test('room-status plans keep core integration and exact UI review; unmapped, voice and unverified changes keep full regression',async()=>{
+ const {selectNativePolicy}=await import('../scripts/native-test-plan.mjs');
+ const current=JSON.parse(readFileSync('scripts/release-policy.json','utf8'));
+ assert.equal(selectNativePolicy(current,{changedFiles:['android/app/src/main/java/co/fallsoft/pocket/HollywoodRoomActivity.kt'],baselineVerified:true}).plan.profile,'full-regression');
+ const full={...current,requiredOptimizedReview:'native-room-catalog-and-typing',requiredNativeCases:[...current.requiredNativeCases,'co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#acceptedConversationSendKeepsKeyboardAndNewDraft']};
+ const status='android/app/src/main/java/co/fallsoft/pocket/HollywoodRoomActivity.kt';
+ const scoped=selectNativePolicy(full,{changedFiles:[status,'android/app/build.gradle.kts'],baselineVerified:true,versionOnly:true});
+ assert.equal(scoped.plan.profile,'room-status');assert.equal(scoped.policy.requiredNativeCases.length,2);
+ assert.ok(scoped.policy.requiredNativeCases.every(c=>full.requiredNativeCases.includes(c)));
+ assert.ok(scoped.policy.requiredNativeCases.every(c=>!c.includes('AudioLiveTest')));
+ assert.deepEqual(scoped.policy.requiredOptimizedObservations,['nativeRoomListStatusDrawn']);
+ for(const input of [{changedFiles:[status]},
+  {changedFiles:[status,'android/app/src/main/java/co/fallsoft/pocket/HollywoodScreen.kt'],baselineVerified:true},
+  {changedFiles:[status,'android/app/build.gradle.kts'],baselineVerified:true},
+  {changedFiles:[status,'scripts/build-release.mjs'],baselineVerified:true}]){
+  const x=selectNativePolicy(full,input);assert.equal(x.plan.profile,'full-regression');assert.deepEqual(x.policy.requiredNativeCases,full.requiredNativeCases);
+ }
+ assert.notEqual(scoped.policy,full);assert.notEqual(scoped.policy.requiredNativeCases,full.requiredNativeCases);
+});
+
+test('scoped status publication still rejects missing exact-APK room-list observation',()=>{
+ const f=fixture();try{
+  f.policy.requiredOptimizedReview='native-room-catalog-and-typing';f.policy.requiredOptimizedObservations=['nativeRoomListStatusDrawn'];f.build.policySha=digest(f.policy);f.save();
+  const capture=Buffer.from('Synthetic gate artifact; no rendering proof');for(const name of ['typing.png','status.png'])writeFileSync(join(f.directory,name),capture);
+  const review={schema:1,state:'complete',kind:f.policy.requiredOptimizedReview,versionCode:2,productionSourceSha:f.build.productionSourceSha,qualificationInputSha:f.build.qualificationInputSha,apkSha256:f.manifest.variants[0].sha256,reviewedAt:5,observations:{typingDrawn:true,canonicalRoomSnapshot:true,originalAcceptedMessageSingle:true,optimizedPayloadVerified:true},artifacts:['typing.png','status.png'].map(path=>({path,sha256:sha256(capture)}))};
+  assert.throws(()=>validateReleaseQualification({...f,optimizedReview:review}),/review did not pass/);
+  review.observations.nativeRoomListStatusDrawn=true;assert.equal(validateReleaseQualification({...f,optimizedReview:review}).nativeCases,1);
  }finally{rmSync(f.root,{recursive:true,force:true});}
 });

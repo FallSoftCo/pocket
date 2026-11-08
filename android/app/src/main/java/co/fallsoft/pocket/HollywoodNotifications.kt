@@ -13,7 +13,7 @@ import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-internal data class HollywoodOpenTarget(val owner:String,val binding:String,val room:String,val event:String,val attention:JSONObject?,val reply:HollywoodScope?)
+internal data class HollywoodOpenTarget(val owner:String,val binding:String,val room:String,val event:String,val attention:JSONObject?,val reply:HollywoodScope?,val keyboard:Boolean=false)
 
 /** Notification identity never becomes a stock thread or follows the selected workstation. */
 internal object HollywoodNotifications {
@@ -86,7 +86,7 @@ internal object HollywoodNotifications {
         val c=Pocket.context;val manager=c.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel("hollywood", "Hollywood rooms",NotificationManager.IMPORTANCE_HIGH))
         val b=NotificationCompat.Builder(c,"hollywood").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(status?:if(generic)"Hollywood update" else value.optJSONObject("hint")?.s("roomName","Hollywood").orEmpty())
+            .setContentTitle(status?:if(generic)"Hollywood update" else roomNotificationTitle(value))
             .setContentText(if(generic)"Open the room to review" else value.optJSONObject("event")?.s("body")?.take(2000).orEmpty())
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setSilent(quiet).setOnlyAlertOnce(true).setAutoCancel(false).setContentIntent(open(key))
             .addExtras(Bundle().apply{putString("hollywoodEvent",value.s("eventId"));putString("hollywoodBinding",value.s("bindingId"));putString("hollywoodEnvironment",value.s("environment"));putLong("hollywoodRevision",value.optLong("revision"))})
@@ -111,14 +111,15 @@ internal object HollywoodNotifications {
         if(owner(origin)!=old.s("owner"))return null
         val binding=Pocket.apiEnvironment(origin,"/api/hollywood/v3/identity")
         if(listOf("bindingId","authorityId","principalId").any{binding.s(it)!=old.s(it)})return null
-        val client=HollywoodClient(old.s("owner"),binding,origin.endpoint.trimEnd('/'),origin.token)
+        val client=HollywoodClient(old.s("owner"),binding,origin.endpoint.trimEnd('/'),origin.token,origin)
         val value=client.call("inbox/events/"+old.s("eventId"));val h=value.getJSONObject("hint");val event=value.getJSONObject("event")
         require(h.s("eventId")==old.s("eventId")&&h.s("roomId")==old.s("roomId")&&event.s("id")==old.s("eventId")&&event.s("room")==old.s("roomId"))
         require(h.s("authorityId")==binding.s("authorityId")&&h.s("principalId")==binding.s("principalId"))
         if(h.optLong("revision")<old.optLong("revision"))return null
         val result=JSONObject(old.toString()).put("revision",h.getLong("revision")).put("binding",binding).put("hint",h).put("event",event)
             .put("action",if(h.optBoolean("notify"))"notify" else "resolve").put("state",if(h.optBoolean("notify"))"verified" else "resolved")
-        result.remove("reply");result.remove("attention")
+        result.remove("reply");result.remove("attention");result.remove("author")
+        value.optJSONObject("author")?.takeIf{it.s("agentId")==event.s("author")}?.let{result.put("author",it)}
         if(h.s("attentionId").isNotBlank())result.put("attention",client.call("attention/"+h.s("attentionId")))
         else if(h.optBoolean("notify")){
             val room=client.call("rooms/"+h.s("roomId"));val actor=room.getJSONArray("actors").objects().firstOrNull{it.s("id")==event.s("author")}
@@ -131,6 +132,16 @@ internal object HollywoodNotifications {
             save(key,result)
         }
         rememberBinding(origin,binding);return result
+    }
+    /** Direct catalog navigation shares the existing typed room destination, not a fake alert. */
+    fun openRoom(origin:EnvironmentRequest,binding:JSONObject,room:String,keyboard:Boolean=false,reply:HollywoodScope?=null){
+        require(Pocket.captureEnvironment()?.matches(origin)==true){"Select the original environment"}
+        // Reading another room in the current environment must not retarget
+        // capture. PocketVoice retains the immutable original destination.
+        require(!PocketVoice.active||BackendNavigation.nativeSelected()){"Finish voice before changing backends"}
+        require(hollywoodUuid(room)&&binding.s("bindingId").matches(Regex("[0-9a-f]{64}")))
+        BackendNavigation.select("lax")
+        target=HollywoodOpenTarget(owner(origin),binding.s("bindingId"),room,"",null,reply,keyboard)
     }
     fun openIntent(key:String){
         if(PocketVoice.active){Pocket.error="Finish voice before opening another room";return}
@@ -147,7 +158,7 @@ internal object HollywoodNotifications {
     fun catchUp(origin:EnvironmentRequest,binding:JSONObject){
         val identity=JSONObject(binding.toString());val who=owner(origin);val key="$who:${identity.s("bindingId")}";if(!syncing.add(key))return
         Pocket.scope.launch{try{
-            val client=HollywoodClient(who,identity,origin.endpoint.trimEnd('/'),origin.token)
+            val client=HollywoodClient(who,identity,origin.endpoint.trimEnd('/'),origin.token,origin)
             fun accept(h:JSONObject){receive(origin,mapOf("binding_id" to identity.s("bindingId"),"authority_id" to identity.s("authorityId"),"principal_id" to identity.s("principalId"),
                 "event_id" to h.s("eventId"),"room_id" to h.s("roomId"),"revision" to h.optLong("revision").toString(),"action" to if(h.optBoolean("notify"))"notify" else "resolve"),forceRefresh=true)}
             val cursorKey="hollywood-inbox-cursor:$key"
@@ -212,7 +223,7 @@ class HollywoodReplyReceiver:BroadcastReceiver(){
         if(record==null)return
         val origin=Pocket.captureEnvironment(record.s("environment"))?:return
         if(backendOwner(origin.endpoint,origin.token)!=record.s("owner"))return
-        val binding=record.optJSONObject("binding")?:return;val client=HollywoodClient(record.s("owner"),binding,origin.endpoint.trimEnd('/'),origin.token)
+        val binding=record.optJSONObject("binding")?:return;val client=HollywoodClient(record.s("owner"),binding,origin.endpoint.trimEnd('/'),origin.token,origin)
         val id=backendOwner(key,record.optLong("revision").toString())
         val existing=Pocket.prefs.getString("hollywood-reply:$id",null)?.let{JSONObject(it)}
         if(existing!=null){
@@ -245,7 +256,7 @@ class HollywoodReplyWorker(c:Context,p:WorkerParameters):Worker(c,p){
         if(backendOwner(origin.endpoint,origin.token)!=saved.s("owner"))return Result.failure()
         return try{runBlocking{
             val binding=Pocket.apiEnvironment(origin,"/api/hollywood/v3/identity");require(hollywoodBindingMatches(saved.getJSONObject("binding"),binding))
-            val client=HollywoodClient(saved.s("owner"),binding,origin.endpoint.trimEnd('/'),origin.token);val intent=saved.getJSONObject("intent")
+            val client=HollywoodClient(saved.s("owner"),binding,origin.endpoint.trimEnd('/'),origin.token,origin);val intent=saved.getJSONObject("intent")
             val inspect=saved.s("state")!="saved"
             if(!inspect){
                 client.call("inbox/events/"+saved.s("eventId"))

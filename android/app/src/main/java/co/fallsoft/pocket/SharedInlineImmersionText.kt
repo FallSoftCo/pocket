@@ -38,9 +38,22 @@ import androidx.compose.ui.unit.*
     onWipeGeometry:(ImmersionSharedWipeGeometry)->Unit={},
     textAlign:androidx.compose.ui.text.style.TextAlign=androidx.compose.ui.text.style.TextAlign.Start,
     trackWholeTextVisibility:Boolean=false,
-    readingWave:ImmersionReadingWaveClock?=null
+    readingWave:ImmersionReadingWaveClock?=null,phraseTaps:Boolean=true
 ){
     val owner=rememberSaveable{java.util.UUID.randomUUID().toString()}
+    val flipClock=LocalImmersionFlip.current
+    val paired=remember(from,to){immersionFlipForms(from,to)}
+    if(flipClock!=null&&paired!=null){
+        var heldPhase by rememberSaveable(owner){mutableIntStateOf(flipClock.phase)}
+        var observedPhase by remember{mutableIntStateOf(flipClock.phase)}
+        val tick=flipClock.phase
+        SideEffect{if(observedPhase!=tick){heldPhase=(heldPhase+1)%paired.size;observedPhase=tick}}
+        StableImmersionPhrases(paired,heldPhase,modifier=modifier,color=color,fontSize=fontSize,lineHeight=lineHeight,
+            fontWeight=fontWeight,maxLines=maxLines,overflow=overflow,textAlign=textAlign,phraseTaps=phraseTaps,
+            onTextLayout={layout->onTextLayout(layout);onFragmentLayout(layout)
+                onVisibleRanges?.invoke(paired[heldPhase].getStringAnnotations("immersion-reserve",0,paired[heldPhase].length).map{it.item}.toSet(),true)})
+        return
+    }
     val selectionScope=LocalImmersionSelectionScope.current
     val uriHandler=LocalUriHandler.current
     var layouts by remember{mutableStateOf<Pair<TextLayoutResult,TextLayoutResult>?>(null)}

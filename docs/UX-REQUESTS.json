@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-10-19",
+  "updated": "2026-11-07",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,132 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "codex-native-parity-20261107",
+      "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
+      "status": "Workstation backend/web candidate live; 736 backend checks and four required DOM lanes pass. Android173 held after14/15 native cases; archive observation under diagnosis. Phone not updated by this release.",
+      "architecture": [
+        "Codex owns execution and native thread/turn/item/request identity.",
+        "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",
+        "No slash-command prompt emulation, replay of uncertain actions, goal activation or retired room runtime restoration."
+      ],
+      "workstreams": [
+        {
+          "owner": "parity_execution",
+          "model": "gpt-6-astra",
+          "reasoning": "high",
+          "scope": "Native events/full output, background commands, supported questions/approvals/elicitation",
+          "branch": "parity/execution-20261107"
+        },
+        {
+          "owner": "parity_conversation",
+          "model": "gpt-6-astra",
+          "reasoning": "high",
+          "scope": "Fork/rollback, compaction/context, workspace/file selection, diff/review/worktrees",
+          "branch": "parity/conversation-20261107"
+        },
+        {
+          "owner": "parity_configuration",
+          "model": "gpt-6-astra",
+          "reasoning": "high",
+          "scope": "Shared capabilities, permissions/model/tier, skills/MCP/plugins/apps/hooks, agent controls",
+          "branch": "parity/configuration-20261107"
+        }
+      ],
+      "integration": "Root owns common integration, serialized heavy builds/native QA, compatible signing and release. Independent disk worktrees at fa30781d; no delegate production deployment.",
+      "validation": "Meaningful native protocol and client journeys, preserved draft/source/receipt semantics, explicit unsupported and uncertain outcomes; deployment evidence separate from fixtures.",
+      "monitoring": "User explicitly asks continued monitoring, not completion. Root is supervising finite review/test work, fixing concrete findings, and serializing native builds. No recurring model polling or wake timers.",
+      "ui_owner": {
+        "owner": "ui_standby",
+        "model": "gpt-6-astra",
+        "reasoning": "high",
+        "branch": "parity/ui-20261107",
+        "status": "Dedicated Astra high UI owner delivered source-lifetime and native test diagnostics; final review found no proven product defect. Standby while root runs fresh diagnostic qualification."
+      },
+      "review_fixes": [
+        "Panel/session switch cannot retarget native settings or terminal/conversation actions.",
+        "Native request identity token is required and forms do not inherit prior-connection answers.",
+        "Fork explicitly defers inherited goal continuation.",
+        "Cold/in-flight reads cannot restore history invalidated by revert.",
+        "Same-owner paired devices can inspect and acknowledge orphaned unknown operations without replay.",
+        "Native terminal operations are capability-gated and termination requires authenticated human admission."
+      ],
+      "integration_testing_owner": {
+        "owner": "integration_quality",
+        "model": "gpt-6-astra",
+        "reasoning": "high",
+        "branch": "parity/integration-quality-20261107",
+        "base": "77636b61",
+        "status": "Auditing supported-product test quality and implementing meaningful cross-component journeys; no qualification outcome yet.",
+        "requirements": [
+          "Map user journeys and actual production integration seams to evidence.",
+          "Assess disjoint unit tests, mocked behavior, silent skips and release failure detection.",
+          "Prioritize history freshness/order, source identity, reconnect/unknown delivery, requests and catalog lifecycle.",
+          "Use actual production composition and schema-correct fixtures; selected negative controls establish regression sensitivity.",
+          "Keep fixture, DOM, rendered UI, native runtime and physical phone evidence distinct.",
+          "Coordinate heavy emulator/build work with root; no production/model actions or new agents."
+        ]
+      }
+    },
+    {
+      "id": "archive-action-feedback-20261107",
+      "request": "Mac archive appears to do nothing; verify original delivery and make source-bound progress/errors visible while scrolled.",
+      "status": "Android172/alpha154 published on workstation and Mac; exact user archive target still unspecified",
+      "findings": [
+        "Authenticated Mac status/catalog reachability confirmed from workstation; phone-to-Mac health200. Historical Mac active-writer refusals are not evidence of the latest tap.",
+        "Action errors were rendered at the top of the scrollable catalog, outside the viewport."
+      ],
+      "implementation": [
+        "Persistent source/session-bound action progress and failure feedback immediately above footer, without changing selection or replaying failed mutations.",
+        "Repeated activation remains single-flight; dismissing feedback never resends a command."
+      ],
+      "verification": "docs/qualification/archive-feedback-172.json"
+    },
+    {
+      "id": "archive-month-horizon-correction-20261107",
+      "request": "Old sessions still appear when scrolling beyond the month horizon. Fix actual archive coverage and work-age criteria across normal list pagination.",
+      "status": "backend correction live on workstation and Mac; full catalog cleanup verified",
+      "findings": [
+        "Original1370 workstation archives remained absent; current paginated catalog still had1018 old entries,768 not present in original cleanup inventory.",
+        "Coordinator inventory excluded spawned children; cleanup incorrectly used maximum metadata updatedAt as activity and protected every loaded idle session."
+      ],
+      "implementation": [
+        "Include native delegated-session metadata in explicit cleanup inventory, with the same private-controller exclusions.",
+        "Use real recency/activity when present; metadata updatedAt is only a fallback for runtimes without work time.",
+        "Retain active/recent work and its ancestors; archive acknowledged idle work without worker/model starts or deleting history.",
+        "Reconcile native archived membership before cleanup, then include displayed child sessions omitted by native list.",
+        "After an uncertain archive reply, confirm native archived state without repeating the mutation; otherwise stop."
+      ],
+      "verification": "docs/qualification/archive-month-horizon-20261107.json"
+    },
+    {
+      "id": "message-local-micro-timestamps-20261107",
+      "request": "Show terse absolute device-local timestamps with agent messages on Android and web, not relative age.",
+      "status": "published Android171/alpha153; web and backend live; Mac projection live, older native schema lacks item times",
+      "implementation": [
+        "Preserve native startedAtMs/completedAtMs in timeline rows and bounded live cache; never sort by time or fabricate fetch-time stamps.",
+        "Small Nov 7 \u00b7 09:52 label beside speaker; full local date/time/timezone for accessibility and web hover. Coordinator uses original persisted response timing. No timer/polling added."
+      ],
+      "verification": "docs/qualification/message-local-timestamps-171.json"
+    },
+    {
+      "id": "lead-owned-project-rooms-20261105",
+      "request": "Replace failed human broadcast rooms: humans speak to an accountable lead; agents coordinate tersely and only addressed material enters their contexts. Lead owns original work, selected delegation, technical decisions and event-driven continuation without unchanged check-in loops. Keep internal coordination inspectable separately from readable human conversation, preserve actual approvals, drafts, privacy, action provenance and original unknown receipts.",
+      "status": "isolated-candidate; two actual native model journeys and logical two-node NATS passed; client and rollout pending",
+      "implementation": [
+        "Hollywood owns communication roles and addressed receipt snapshots; LAX owns work and native lifecycle.",
+        "A project lead receives human input. Passive team notes are stored without inference or context admission.",
+        "Stable tasks and directed question/answer retain original work and audience. Technical questions go to the lead; genuine approvals remain with their actual human requester.",
+        "One bounded repair for a turn ending without disposition; material results resume original work. Paused/cancelled work and unchanged blockers stay quiet.",
+        "Android and web separate human conversation/activity, terse Team inspection and earlier archive. Existing old-target drafts and unknown receipts require reconciliation, never silent retargeting."
+      ],
+      "verification": "Real PostgreSQL/HTTP/SDK admission, private actual-requester approval, lost ACK, cancellation, restart and no-progress checks. Native R01: lead2/worker1/observer0 turns; R02: lead2/workerA2/workerB1/observer0, all seven QA contexts archived, no new app-server. Logical NATS nodes on one host are not cross-host native proof.",
+      "remaining": [
+        "Existing room adoption and bounded context handover",
+        "Signed native/client UI qualification and deployment",
+        "Central coordinator/project-lead integration and physical voice/push proof"
+      ]
+    },
     {
       "id": "canonical-hollywood-android-controls-20261014",
       "request": "Native Hollywood rooms, scoped saved text and attention controls, exact cancellation, session-style condensed execution and independent environment/room drafts.",
@@ -2860,6 +2986,508 @@
       "status": "signed135 qualified and published to both existing channels; phone install and physical performance pending",
       "design": "Snapshot visible rows once per sweep; same-row fragments share a slot; 420ms constant row wipe followed by next row; 1800ms whole-form hold; no per-frame text layout or translation.",
       "evidence": "docs/qualification/line-reading-wave-alpha117.json"
+    },
+    {
+      "id": "bounded-current-head-and-demanded-history-gaps-20261019",
+      "request": "Long sessions must open the newest content promptly; retained old windows must not cause an unbounded eager gap walk or remain globally updating. Preserve all local text and make missing intervals load from thumb scrolling/paging without taps. Current reads remain independent of historical reads.",
+      "status": "implementation in progress; real native RPC1-2ms and local backend62ms/75KB; phone unauthenticated network0.9-6.4seconds; physical ADB unavailable",
+      "design": "Stable interval cursor independent of subsequent head refreshes, one bounded initial overlap probe, explicit inline gap and gesture-scoped historical demand; no background full-history drain."
+    },
+    {
+      "id": "cached-depth-and-classic-dot-grid-20261019",
+      "request": "Replace flat solid black with classic dot grid and coherent depth across shared session/room surfaces. Preserve completed 3D icons.",
+      "status": "implemented in isolated candidate; native visual/performance qualification and delivery pending",
+      "implementation": [
+        "Cached repeating raster tile in stationary root draw layer; no immersion or typing state reads",
+        "Shared raised card/dock/composer planes; idle blue hue and full contrast retained",
+        "Native blackout remains opaque black; no icon modifications"
+      ],
+      "verification": []
+    },
+    {
+      "id": "voice-service-owned-late-presentation-20261019",
+      "request": "Old recording-service cleanup and audio-focus callbacks must not overwrite the replacement service capture state; cancellation remains durably fenced independently of service destruction.",
+      "status": "implemented in candidate; native requalification pending",
+      "implementation": [
+        "Only the current service owner publishes presentation state, capture release and recording errors",
+        "Native capture test observes the asynchronous durable cancellation result, not merely service destruction"
+      ],
+      "deliveryEvidence": {
+        "nativeVersionCode": 139,
+        "exactPhoneApkVerified": true,
+        "requiredNativeCasesPassed": 28,
+        "physicalVoiceVerified": false,
+        "qualification": "docs/qualification/alpha121-20261019.json"
+      }
+    },
+    {
+      "id": "volume-only-capture-and-selected-title-edit-20261019",
+      "request": "Remove Android microphone buttons/FABs and microphone card tap regions; use physical volume buttons for recording. Select the complete existing title when its editor opens.",
+      "status": "follow-up implementation in isolated actual-head worktree; current signed build preserved",
+      "constraints": [
+        "Retain visible recording state/timer/error and cancellation feedback",
+        "No dead card regions or hidden touch recording action; former mic area opens conversation",
+        "Keep volume-button operation with keyboard, coordinator and direct conversations, navigation/origin/drafts intact",
+        "Select existing title only on entering edit, never reset selection while typing",
+        "Update native touch-specific qualification expectations to volume-only UX rather than fake old touch results"
+      ],
+      "deliveryEvidence": {
+        "nativeVersionCode": 139,
+        "exactPhoneApkVerified": true,
+        "requiredNativeCasesPassed": 28,
+        "physicalVoiceVerified": false,
+        "qualification": "docs/qualification/alpha121-20261019.json"
+      }
+    },
+    {
+      "id": "web-tailnet-automatic-browser-signin-20261019",
+      "request": "Allow anyone on the tailnet to open the web client without manually exchanging a pairing code, including BLD.",
+      "implementation": "Opt-in Serve-source verification using local tailscale whois, exact-origin login, separate ordinary device cookie per browser, existing backend pair contract; no Android pairing changes.",
+      "verification": "Remote gateway integration and origin/source rejection checks passed. Live deployment/readback remains required."
+    },
+    {
+      "id": "web-mobile-functional-parity-20261019",
+      "request": "Bring the browser interface to parity with current mobile, preserving tailnet sign-in, pairing, drafts and outgoing identities.",
+      "plan": "docs/WEB-MOBILE-PARITY.md",
+      "state": "implementation",
+      "browser_limits": [
+        "OS volume interception",
+        "closed-browser push",
+        "native Android local execution"
+      ]
+    },
+    {
+      "id": "complementary-flip-flop-all-units-20261019",
+      "request": "Replace the wave with instant roughly 50/50 Italian/English. Every eligible unit must be assigned the opposite language on each flip, with no permanently untranslated ordinary content.",
+      "contract": "Stable aligned lexical/phrase units in Italian grammar, complementary phase assignments, one shared ten-second foreground clock, no fade/wipe/frame loop, no tap-initiated phase or scroll reshuffle. Protected literals remain canonical. Missing plans are incomplete coverage, never successful immersion.",
+      "state": "implementation",
+      "deliveryEvidence": {
+        "nativeVersionCode": 139,
+        "exactPhoneApkVerified": true,
+        "requiredNativeCasesPassed": 28,
+        "physicalVoiceVerified": false,
+        "qualification": "docs/qualification/alpha121-20261019.json"
+      }
+    },
+    {
+      "id": "web-reading-edge-refresh-flicker-20261019",
+      "request": "Stop the rapidly flickering Updating messages footer in the web client.",
+      "contract": "Route event invalidations by scope and projection; session previews and unrelated activity do not reread the selected conversation. Initial load remains immediate; cached fast refreshes stay quiet, slow logical head reads and queued follow-up share one stable reading-edge status, no reader resize, no stale-scope completion hiding current state, and real errors remain actionable.",
+      "state": "deployed-web"
+    },
+    {
+      "id": "web-saved-answers-single-reading-surface-20261019",
+      "request": "Remove confusing horizontal saved-message carousel, repair dismissal, polish spacing, borders and scroll areas.",
+      "contract": "Saved answers remain optional in-place transcript filter with contextual dismissal. Apply canonical removal response immediately, fence older head reads against newer note observations, deduplicate pending removal by scope/id, retain saved data until explicit dismissal. No extra carousel or transcript deletion.",
+      "state": "deployed-web"
+    },
+    {
+      "id": "web-modeled-symbol-animation-20261019",
+      "request": "Web modeled icons must animate like their existing native counterparts.",
+      "contract": "Reuse exact authored native atlas pages for the N, dock controls and message author marks. One display clock, draw-only canvas updates, viewport and page lifecycle gating, reduced-motion stills, bounded decoded/compressed caches, no per-icon timers or repeating asset downloads.",
+      "state": "deployed-web"
+    },
+    {
+      "id": "shared-web-session-state-and-readonly-projection-20261019",
+      "request": "Web list shows latest messages while conversation loading lags; both views must share session state.",
+      "contract": "One session entity owns catalog metadata and timeline. Meaningful preview/interaction changes invalidate missing content; HTTP catalog changes also reconcile. Live known rows update closed cached sessions; bounded background prewarm requires a read-only timeline capability and its dedicated endpoint. Late responses cannot roll back live metadata. History reads never resume runtime work; explicit commands retain original IDs and control paths.",
+      "state": "deployed",
+      "status": "deployed web and native139; exact phone APK verified; ongoing transport-latency work is recorded separately"
+    },
+    {
+      "id": "bounded-semantic-head-20261019",
+      "request": "Fast latest history with recent conversational context during operation bursts; hidden internal items must not cause unbounded history scanning.",
+      "status": "deployed; local native read and actual private browser message readback passed",
+      "implementation": "Initial readonly head seeks a conversational item within four provider pages, two turns, 32 displayed items and 512000 display bytes. Every provider item page consumes the read budget, including filtered internal content. Older pages retain exact cursors and use a two-source-page budget. No runtime attachment or model calls.",
+      "limits": [
+        "If recent source pages contain no message, the response remains honestly partial with an older cursor; this does not promise every opening contains a message.",
+        "Production minute-long stall not reproduced; code-level unbounded hidden-item scan confirmed."
+      ]
+    },
+    {
+      "id": "shared-catalog-read-lane-20261019",
+      "request": "Avoid duplicate startup/reconnect inventory work and late responses replacing a newly selected catalog filter.",
+      "status": "deployed; actual private browser one startup read and 296ms selected-message readback",
+      "implementation": "Startup/WebSocket/poll readers join a shared per-device/filter lane. Explicit refresh and event invalidation coalesce to one follow-up. Old filter/profile responses cannot commit into current list.",
+      "evidence": "docs/qualification/web-shared-session-state-20261019.json"
+    },
+    {
+      "id": "critical-web-content-before-decorative-media-20261019",
+      "request": "Text/session loading must remain prompt while modeled icons animate; slow network cannot leave a blank or misleading catalog.",
+      "status": "deployed; actual open/reopen preserved draft and canonical identities without submissions or duplicate rows",
+      "evidence": "docs/qualification/web-critical-traffic-20261019.json"
+    },
+    {
+      "id": "immersion-grammatical-flip-groups",
+      "request": "Flip connected grammatical phrases, not individual lexical fragments: noun groups, prepositional groups, verb groups and fixed expressions. Preserve Italian order and complete complementary switching.",
+      "status": "implemented-candidate-awaiting-coordinated-release",
+      "implementation": "Teacher authors complete contextual phrase anchors under semantic plan revision v3. Exact coverage remains validated. Ordinary intra-phrase spaces preserved; bound grammatical glosses retain hyphens. Android/web use existing atomic shared units. Browser invalidates old generation on revision change; old plan caches are not reused. Sixteen common authored controls have explicit phrase groups.",
+      "verification": "17 focused server/flip checks passed; Android ImmersionSharedRunsTest passed. Native/rendered candidate qualification pending. No entire-history regeneration or new playback/model queue."
+    },
+    {
+      "id": "immersion-complete-english-reference-phase",
+      "requested": "2026-10-20",
+      "status": "zero-to-half-italian-correction-in-progress",
+      "request": "Latest user correction:0%Italian alternates with50%Italian so all words remain comprehensible.",
+      "implementation": "English,nearest-half Italian phrase block,English,complementary Italian phrase block. Split only at a grammatical-group boundary nearest half the lexical word count; short indivisible phrases require approximate coverage. No75%or full-Italian message phases. Every target phrase gets an English reference.",
+      "validation": "17 focused checks and rendered browser journey passed with exactly one visible-source submission, zero human message writes and original text restored when disabled. Android141/alpha123 build and bounded native qualification running.",
+      "delivery": "Prior all-or-nothing web version being superseded. Android141 candidate intentionally stopped as obsolete;142/alpha124 follows correction.",
+      "constraints": [
+        "No per-word alternation",
+        "No fade or animation",
+        "Reuse cached aligned phrase plans",
+        "No extra inference to construct phases"
+      ]
+    },
+    {
+      "id": "unified-cross-environment-work-list-20261021",
+      "request": "One combined work list across all connected environments and Codex sessions/LAX rooms. Environment is an item badge/provenance, not prerequisite navigation. Rooms/sessions visually distinct within same list.",
+      "status": "in_progress",
+      "acceptance": [
+        "Discover all saved connected profiles without switching environment; merge catalogs, not credentials or canonical stores.",
+        "Use composite profile/authority/kind/item identity for caches, selection, drafts, receipts and notifications; every mutation routes to original source.",
+        "Room/session type and source badges, unified meaningful work recency, optional filters rather than environment-exclusive default.",
+        "Partial host outage preserves cached items with honest per-host freshness and disconnected state; no global blocking serial fetch.",
+        "Opening/replying/voice/questions/cancel and notification deep links stay bound to correct source; no unknown-delivery replay.",
+        "Preserve existing pairings/profiles/drafts and deliberate backend ownership boundaries.",
+        "Native and web parity, test two real environments with overlapping IDs and offline/reconnect; do not infer merged list from a single-host fixture."
+      ],
+      "progress": [
+        "Source-bound read state and bounded independent poller verified.",
+        "All-paired-profile discovery and source-badged unified renderer now compile; existing card edit/expansion/restore callbacks are source-explicit.",
+        "Staged UI is not connected to product roots or published. Canonical source-store integration, retained heads, pagination and native navigation journeys remain.",
+        "A separate stock Mac native catalog and real authenticated isolated NextComp gateway both returned the Mac session. Probe processes stopped and original terminal/auth state preserved; no phone enrollment or work submission.",
+        "Room latest-work timestamp/preview projection is absent in current verified live contract; do not invent it from observation timestamps."
+      ],
+      "source_action_progress_20261021": "Captured-source navigation and rename/watch/restore admission compiled and focused tests passed on final r15. Pairing rotation, overlapping IDs, path identity and explicit backend selection protected. Controllers/renderer remain staged; root wiring and persistent Mac enrollment not delivered.",
+      "candidate_20261021": "Merged Codex list mounted. Shared per-source CodexCatalogStore registry owns selected and merged state, live projection, retained pages, recent/archive/search cursors. Focused native cross-source same-ID navigation/draft/unknown-delivery and startup/retry/paging journeys passed. Signed145 release qualification pending; native room Back/list and browser parity remain."
+    },
+    {
+      "id": "mac-stock-session-visibility-20261021",
+      "request": "User cannot see the MacBook session. Include stock Mac Codex work in the unified list with correct source identity and safe original execution ownership.",
+      "status": "in_progress",
+      "acceptance": [
+        "Use the real stock Codex profile, not the separate Losangelex profile.",
+        "Add a persistent authenticated source without overwriting existing phone profiles or copying session history between hosts.",
+        "Preserve existing standalone terminal work; notLoaded in a new reader is not proof of idle.",
+        "Keep canonical identity, drafts and action routing bound to Mac; no duplicate work/model startup merely to make the session visible.",
+        "Verify the actual Mac session in the delivered native/web list and opening/reply capabilities honestly before claiming fixed."
+      ],
+      "candidate_20261021": "Existing stock CLI0.156.1 native managed Unix daemon started once without changing auth/model/permissions or stopping terminals. Independent gateway returned known stock thread through authenticated private HTTPS. Phone not yet paired; no model turn started and no session migrated."
+    },
+    {
+      "id": "canonical-history-windows-and-input-order-147",
+      "request": "Eliminate old-cache-first presentation, hidden intervening messages, delayed latest history and responses preceding their inputs. Preserve retained history, reading position, drafts and source identity.",
+      "status": "published-147-alpha129; phone install unverified",
+      "implementation": [
+        "Preserve whole canonical pages and their matching cursors",
+        "Keep canonical coverage separate from live overlays; expose missing retained intervals",
+        "Open explicit session selections at latest; preserve intentional history restoration",
+        "Resolve delayed/restored input placement using bounded canonical position reads",
+        "Treat bridge cursors as before constraints, not adjacency",
+        "Exclude invalidated pairing stores from catalog footer projections"
+      ],
+      "qualification": "Ten required native journeys and exact compatible optimized APK passed. Further intentional-reading checks tracked separately; emulator and physical-phone evidence are distinguished.",
+      "evidence": "docs/qualification/android-history-windows-147.json"
+    },
+    {
+      "id": "actual-alpha110-visible-window-and-viewport-demand-148",
+      "request": "Installed147 still shows Alpha110 installed messages, missing intervening content, then latest. Do not treat an interval marker as success. Render connected current history and hydrate a usable viewport, preserving stored old content and deliberate reading restoration.",
+      "status": "published148; actual replay and held-placement native journeys passed; subsequent Mac following-window defect and canonical-authority redesign remain open",
+      "acceptance": [
+        "Actual session read-only pages with stale Alpha110 cache and stale saved anchor never paint the old island as current predecessor",
+        "Bounded viewport hydration handles tool-heavy raw pages and collapsed runs without repeated user gestures or whole-history download",
+        "Keep old local bodies, input order, drafts, pairing, source isolation and current/older read independence",
+        "Out-of-order live/restored inputs are not painted in arrival order; native test holds canonical placement lookup and requires no wrong-position bubble before proof, then one correctly placed bubble."
+      ]
+    },
+    {
+      "id": "native-canonical-transcript-authority-20261022",
+      "request": "Stop patching independent chronology/freshness paths. Use the actual native Codex ordered timeline and one source-scoped conversation store for list, chat, notification reconciliation and reopening. Preserve existing controls, caches, drafts, unknown receipts, voice and deliberate history reading.",
+      "status": "Android150 native authority qualified and published; PC/Mac thin native gateways deployed with original daemons/receipts preserved. Phone still149 at readback; real-device install/journey and browser normalized-store replacement remain open.",
+      "acceptance": [
+        "Carry native (position,kind-rank,ID) chronology and opaque cursors unchanged, including tied positions and realtime entries.",
+        "No wrong-order first paint or later input jump from live/snapshot overlap.",
+        "One committed transcript revision drives chat/list freshness; notification fetch does not independently define history or mark seen.",
+        "Bounded per-item/page updates, no whole-transcript copying for each token; no model polling or worker activation to read.",
+        "Latest following never selects a historical component; deliberate reading remains anchored.",
+        "Native actual-session integration on Mac and system76, reconnect, concurrent older paging, provider-alias correlation and source isolation; no existing work replay."
+      ],
+      "evidence": "docs/qualification/native-transcript-probe-150.json",
+      "architecture": "docs/CODEX-TIMELINE-ARCHITECTURE.md"
+    },
+    {
+      "id": "mac-following-window-149",
+      "request": "Installed148 MacBook conversation remains on older content while its canonical head is current. A following reader must follow the newest connected window, preserving deliberate older reading.",
+      "status": "published149; eight native journeys and exact optimized APK qualified; actual phone SSH confirms version149 installed",
+      "evidence": "docs/qualification/android-mac-following-149.json",
+      "remaining": "Native canonical-store replacement remains separate open work."
+    },
+    {
+      "id": "central-eyes-free-coordinator-20261022",
+      "request": "One primarily spoken central coordinator controlling existing Codex work across paired environments; proactive meaningful audio updates, fast first audio, indexed durable evidence rather than huge context. Preserve native recording, routing, questions, permissions, drafts and receipts.",
+      "status": "implementation in progress; not deployed",
+      "architecture": "docs/VOICE-COORDINATOR-ARCHITECTURE.md",
+      "acceptance": [
+        "Stored public evidence retrieval, no model polling or blanket worker wakes",
+        "Environment-qualified references and authenticated delegation",
+        "Stable final speech begins before whole response/audio buffering",
+        "Meaningful fresh outcomes only, coalesced by source; heard differs from fetched",
+        "Native/real model/audio journey and compatible update delivery"
+      ],
+      "background_collection": "Native events plus bounded read-only catalog and recent-page reconciliation, independent of open chat. No agent messages, model turns, wakeups or read acknowledgements; durable observations, freshness, pagination and backoff."
+    },
+    {
+      "id": "agent-notification-intents-20261022",
+      "status": "in-progress",
+      "request": "User-defined specific notifications and richer agent pushes; distinguish requested outcomes and important decisions from frequent fine-grained progress.",
+      "requirements": [
+        "Durable task-scoped notify-me-when intents with explicit conditions and original user provenance.",
+        "Typed agent notification tooling, never human reply/turn impersonation; stable idempotency identities and receipts.",
+        "Rich bounded previews, source attribution and direct open/reply/decision actions; requested priority remains distinguishable.",
+        "Coalesce routine activity and suppress redundant foreground alerts; preserve meaningful outcomes, pending questions and unseen semantics.",
+        "Coordinate spoken updates and notification preferences; no unsolicited transcript audio or model polling."
+      ],
+      "progress": [
+        "Optional duplicate-safe operator delivery receipts and metadata-only notification admission implemented and actual HTTP qualified; not yet deployed.",
+        "User-bound intents, typed agent-tool schema refresh, priority/actions and native rendering remain pending."
+      ]
+    },
+    {
+      "id": "immersion-contextual-cognates-20261022",
+      "status": "delivered-incrementally",
+      "request": "Prefer closer accurate English/Italian teaching equivalents, such as correction/correzione instead of fix/correzione. Awkward Italian-grammar English is explicitly acceptable for acquisition.",
+      "requirements": [
+        "Choose contextual cognates and recognizable synonyms for display glosses; do not preserve original English wording merely for native fluency.",
+        "Keep Italian grammatical order, articles and complete phrase grouping. Preserve meaning and grammatical role; reject false friends.",
+        "Do not force equal lengths or alter canonical task inputs, code, names or identifiers.",
+        "Qualify bounded actual model output and deliver incrementally; preserve existing validated cache and avoid mass regeneration."
+      ],
+      "delivery": {
+        "scope": "New teacher-generated plans on workstation and Mac; no APK, no cache purge or retry-budget reset",
+        "evidence": "Seven synthetic cases plus one actual production-runtime canary reviewed; normal plan generation remains one model pass",
+        "limits": "Contextual synonym selection is model-generated, not universally guaranteed."
+      }
+    },
+    {
+      "id": "web-unified-mac-catalog-20261024",
+      "status": "deployed-verified",
+      "request": "Mac web cannot see sets and shows untitled/unnamed inventory.",
+      "requirements": [
+        "One source-qualified list with environment attribution; no manual browser re-pair required.",
+        "Open/reply/questions/receipts/recordings route to original environment; identical IDs never collide.",
+        "Contextual labels, positive empty/temporary classification and accessible filters; no deleting or guessing idle work.",
+        "Read-only real-session verification and rendered synthetic browser journeys; preserve original state and native workers."
+      ]
+    },
+    {
+      "id": "reading-slots-media-questions-20261024",
+      "status": "web-and-android152-published",
+      "request": "Try stable bilingual phrase spaces with subtle background and minimal corner rounding; inline gallery/image previews without app switching; visible actionable questions in desktop right pane/mobile drawer; replace ineffective Answers UI.",
+      "implementation": [
+        "CSS intrinsic dual-language phrase cells, instant visibility changes and direct phrase toggle; no per-flip reshaping or font shrinking",
+        "Existing gallery catalog resolves ordinary gallery links without agent-specific messages or new endpoint; inline image attachments",
+        "One Needs you/questions/results pane, actionable approvals and input, source-qualified global attention and catalog badges, deduplicated non-user saved results"
+      ],
+      "nativeAndroid": "152/alpha134 published with existing compatible signer. Fixed phrase placeholders, inline gallery metadata previews, adaptive Questions/results, source-bound durable answer drafts and independent decision receipts. Four final native cases and exact optimized room/typing/canonical review passed. Physical phone readback151; installation of152 still requires its normal update confirmation."
+    },
+    {
+      "id": "english-gloss-quality-and-readable-fixed-slots-20261025",
+      "request": "Reject duplicated English lexical gloss ownership while preserving real repetition and Italian grammar. Improve fixed bilingual phrase line spacing and subtle rounding across Android and web. Retain exact text layout while flipping and direct text help.",
+      "status": "candidate153-semantic-cache-migration-native-preflight-and-actual-desktop-mobile-browser-passed; combined-signed-release-and-production-activation-pending",
+      "evidence": "docs/qualification/immersion-gloss-quality-20261025.json"
+    },
+    {
+      "id": "voice-feedback-nonblocking-service-startup-20261025",
+      "request": "Voice recording and volume keys must remain responsive during native audio setup. Confirmation sounds are optional and must never block Android service startup, capture control, or shutdown; fence stale sounds and bound resource ownership.",
+      "status": "actual-service-constructor-ANR-diagnosed; single-background-feedback-owner-and-unchanged-native-recording-journey-passed; signed153-r02-pending",
+      "evidence": "docs/qualification/immersion-gloss-quality-20261025.json"
+    },
+    {
+      "id": "history-protocol-per-session-20261025",
+      "request": "Fix delayed/failed session message reads across modern and legacy Codex histories; preserve pagination across process restarts.",
+      "status": "native-qualified-awaiting-owning-release",
+      "requirements": [
+        "Persisted cursor protocol determines its reader after restart; preserve exact provider turn/item boundaries.",
+        "Per-environment session history negotiation: typed native-timeline unsupported changes only that session, never every session on the host.",
+        "Network/auth/permission errors remain errors, never trigger compatibility reads.",
+        "Reuse the negotiated legacy snapshot for the initial viewport; avoid a duplicate head fetch and false retry.",
+        "Keep canonical native positions and legacy turn/item cursors in separate presentation stores.",
+        "All absent revision/watermark counters are typed Long zero; a fresh snapshot without prior catalog invalidation must settle, not trigger an unbounded refresh loop."
+      ],
+      "evidence": [
+        "Four original production saved cursors fail before and succeed after the reader change in read-only replay; no cursor deletion, task resume or worker start.",
+        "27 focused Node checks including real gateway HTTP protocol refusal/read-only history pass.",
+        "Android debug Kotlin compilation passed; current qualification APK/emulator journey in progress.",
+        "Visible native check exposed Long-vs-Int zero comparison. Decompiled bytecode and 30-read/second fixture trace confirm fresh-zero snapshot rejection; current fix rebuilding before rerunning original assertions.",
+        "Actual visible API35 native journey passed5.437s after Long revision fix; 5 total legacy history reads, bounded <=8 assertion; exact legacy -> modern source binding retained.",
+        "Original failing native logs r04/r05 retained; current r06 restored original emulator preferences and stopped owned children."
+      ],
+      "limits": [
+        "Not yet installed on phone or production gateway.",
+        "Fast per-thread history failures do not by themselves establish the cause of all observed minute-long update delays."
+      ]
+    },
+    {
+      "id": "web-native-history-source-pages-20261026",
+      "request": "Web session list and conversation must share fresh canonical state without old disconnected history islands or cross-session protocol fallback.",
+      "status": "implemented-qualified",
+      "evidence": "docs/qualification/web-native-history-20261026.json"
+    },
+    {
+      "id": "retained-terminal-live-activity-20261029",
+      "request": "Retained terminal interactions must appear as current source-owned live work in Android conversation/list without duplicate or reordered history, stdin disclosure, or misleading completion. Recover managed Codex connectivity after failed automatic update without requiring terminal launch, native restart or task replay.",
+      "status": "published155-phone-installation-pending",
+      "evidence": "Qualified Android155/alpha137 published to original workstation and OZZZ native channels. All10 final native journeys, exact optimized payload/source/order/question/typing/volume checks and actual visual review pass. One update announcement; phone last reports154, so physical installation and acoustic/FCM-display proof remain pending. Actual workstation activity feed now reports retained-terminal interactions, native daemon stayed running, pairing/outgoing state preserved. Speech-only output instructions corrected and capture remains transcription-only. Original failed QA attempts retained. Existing narrow footer wrap remains follow-up."
+    },
+    {
+      "id": "federated-node-notification-cursors",
+      "request": "Transparent access to independently owned Hollywood rooms with source-bound notification cursors, without replacing Codex environments, pairing or accepted work. Preserve local delivery during peer outage and original receipts across restart.",
+      "status": "candidate; durable queue/restart integration passed; physical gateway and client qualification pending",
+      "evidence": [
+        "tests/integrate-hollywood-node-inbox.mjs",
+        "docs/FEDERATED-HOLLYWOOD.md"
+      ]
+    },
+    {
+      "id": "fleet-single-connection-clients-20261030",
+      "request": "Android and web must discover all authorized fleet hosts from an existing authenticated connection, show one combined rooms/sessions list, and not require manual environment pairing per host. Host execution identity, scoped drafts/outgoing receipts and existing pairings remain intact. Qualified fleet gateways must support reconnect without replaying unknown commands. Host enrollment is operator work, not normal user UX. Include compatible Android delivery and web update in architecture completion.",
+      "status": "Android156 delivered and installed; actual automatic CPU/GPU enrollment verified. Web rooms integration remains in progress.",
+      "acceptance": [
+        "Existing paired client discovers the new development room without manual Add environment",
+        "No origin token sent to a merely advertised or untrusted endpoint",
+        "Stable fleet/node/work identities deduplicate rooms across gateways and preserve native session owner",
+        "Peer outage does not hide healthy work or mark failed history as empty",
+        "Reconnect and uncertain writes inspect original receipts; no automatic mutation replay",
+        "Native emulator and actual private HTTPS web journeys, with physical phone limits stated honestly"
+      ],
+      "qualification": "docs/qualification/fleet-client-156.json",
+      "remaining": [
+        "Complete browser mixed-room catalog, source-bound room controls and voice integration.",
+        "Finish account/profile replacement lifecycle and alias ergonomics without retargeting saved commands.",
+        "Complete narrow stock-footer ergonomic follow-up."
+      ]
+    },
+    {
+      "id": "room-visible-toolbar-account-usage-20261031",
+      "request": "Show account usage in the room toolbar, matching the sessions toolbar; deliver next alongside web room integration. User explicitly requests this as the next room-owned implementation and delivery cycle.",
+      "status": "Integrated into Global-owned159/alpha141 candidate. Android29 JVM cases and main/instrumentation compile; browser24 own focused cases. Independent actual Chromium3a5094a passes desktop/touch/2x-footer usage, shared-caption and pane reachability plus original Send/Reply/draft journeys; separate38 synthetic regressions pass. Original rendered failures retained. Signed159/native-device/authenticated live-browser and final publication gates remain; not delivered.",
+      "acceptance": [
+        "Usage stays visible in the room bottom toolbar, not hidden inside controls menu.",
+        "Reuse existing shared account usage presentation and cheap cached observation; no separate per-room quota transport/model polling.",
+        "Preserve account/environment provenance, freshness, credit/reset semantics and honest unavailable state.",
+        "Check narrow width, large text, keyboard, drafts and recording controls; preserve stock session toolbar.",
+        "Deliver compatible monotonic Android update and qualified web integration without replaying unknown sends or forcing phone input."
+      ]
+    },
+    {
+      "id": "coordinator-create-project-rooms-20261102",
+      "request": "Create and discover project rooms naturally through the coordinator, using existing host agents and canonical Hollywood; preserve human authorship and unknown outcomes.",
+      "status": "Candidate implemented;26 focused checks and real isolated Hollywood human creation/read-back pass. No production deployment yet.",
+      "acceptance": [
+        "No new agent process for room creation.",
+        "Original human device and environment binding retained.",
+        "A lost creation reply is read back under its original room ID, never replaced.",
+        "Existing native Globals retain Hollywood creation/membership tools.",
+        "Existing configured room-default membership remains authoritative; selective host defaults are a design recommendation, not silently changed."
+      ]
+    },
+    {
+      "id": "room-status-work-availability-20261102",
+      "request": "Core room UX must distinguish actual current work, actionable approvals/questions, unavailable participant status and historical unconfirmed requests. Unknown must not be the default room label when another participant is healthy.",
+      "status": "Implementation candidate; actual production snapshots diagnosed. Native compilation and focused model checks pass; rendered qualification and delivery pending.",
+      "acceptance": [
+        "Participant availability is separate from unknown delivery outcomes.",
+        "Show idle participants alongside unavailable participants without claiming complete room idleness.",
+        "Distinguish approval needed from reply needed, with the actual request context actionable.",
+        "Do not replay old unknown work or wake models to refresh state.",
+        "The two requested project rooms are created with original human read/post/request; delegated work acceptance is distinct from execution."
+      ]
+    },
+    {
+      "id": "shared-native-room-response-outcomes-20261103",
+      "request": "Rooms must not silently strand replies or mislabel a shared agent busy elsewhere as idle/offline. Keep original input/publication identities, source privacy and busy relevance; no continuation or polling model loops.",
+      "status": "Candidate: SDK242 connector live; compatible Android162/browser status candidate under release qualification. API capability remains off until client delivery.",
+      "implementation": [
+        "Per-source owner-private response outcomes preserve ambiguous finals and prevent held output from starving later source-bound replies.",
+        "Android parser AND toolbar distinguish Shared context busy. Browser preserves the same distinction, expiry and empty foreign flags."
+      ],
+      "verification": "Actual PostgreSQL/HTTP SDK/API fixture; existing original-receipt regression; real Kotlin5/5 and browser5/5. No handset display or new provider/model execution claimed."
+    },
+    {
+      "id": "room-origin-per-environment-20261103",
+      "request": "Every project room initializes one room-owned persistent agent per enrolled environment. Global agents originate only in a separate typed Global room. One host runtime and shared app-server manage distinct logical room sessions. Preserve original/private/unknown work during explicit future-fanout handoff; identify environments in participants and distinguish preparing/blocked setup from business status.",
+      "status": "candidate-local-native-bootstrap-and-canonical-allocation-qualified; cross-host-enrollment-and-production-migration-pending",
+      "evidence": "docs/ROOM-ORIGINS.md"
+    },
+    {
+      "id": "coordinator-room-original-kickoff-collision",
+      "request": "Recover original create-and-start without duplicate room or uncertain replay; paired phone room visibility and kickoff admission separately.",
+      "status": "implemented-focused-http-qualified",
+      "implementation": "Room operation-scoped transport identities with exact legacy receipt compatibility; explicit owner-reviewed positive pre-dispatch collision recovery; durable one-attempt claim and original-row snapshots.",
+      "verification": "15 focused checks, actual paired local HTTP. Physical phone visibility and live original recovery recorded privately by owner; no synthetic test is phone proof."
+    },
+    {
+      "id": "queued-messages-visible-and-live-20261104",
+      "request": "Queued messages do not show up in NextComp. Keep pending delivery visible inline on Android and web, editable/removable without waiting for transcript history. Preserve real queued requests, FIFO, pairing and unknown-delivery holds.",
+      "status": "published-164",
+      "implementation": [
+        "Durable versioned outgoing projection on existing reply events and existing HTTP responses",
+        "Source-scoped monotonic Android/web outbox snapshots; older transcript reads cannot resurrect removed rows",
+        "Queued/held rows visible with immediate edit/remove controls",
+        "Queue dispatch reads current runtime metadata only, not historical turns"
+      ],
+      "verification": "Actual HTTP/WebSocket/SQLite/restart/FIFO journeys passed on full and narrow deployed gateways; current-source14 native journeys passed; unchanged queue instrumentation caught IME viewport failure, then passed after production follow identity correction; exact optimized APK visibly retains queued controls/draft. Android164 published to existing channels, web and narrow gateway active. Physical phone install remains user OS action."
+    },
+    {
+      "id": "room-setup-live-projection-20261104",
+      "request": "Three rooms show Agent setup blocked. Diagnose actual native setup and ensure stale gateway previews cannot retain an old failure after recovery; preserve original room and agents.",
+      "status": "published-165",
+      "implementation": [
+        "Agent setup follows current source observation independently from canonical message preview",
+        "Browser metadata uses the latest successful catalog read, leaving original write/draft bindings unchanged",
+        "Fresh detail reads replace setup observations; omission cannot restore old failure"
+      ],
+      "verification": "Authenticated existing phone-source CPU/GPU catalogs each report all six project rooms ready6/6. Both signed Android variants, both lints and selected12 unit cases per variant passed; two required current-source native integration cases and exact optimized three-room/two-gateway recovery, new failure, typing and reopen passed. Web19 focused checks pass; only room-client.mjs changed in the deployed web closure. Existing update channels publish165/alpha147, one FCM announcement accepted. Physical handset screen not observed."
+    },
+    {
+      "id": "fleet-room-logical-viewer-20261105",
+      "request": "Android lists the same room once per gateway after new host enrollment. Show one logical room, without exposing room agents as standalone work or mixing human audiences.",
+      "status": "qualified-166",
+      "implementation": [
+        "Authenticated catalog supplies opaque viewerIdentity from bidirectional federation human enrollment; physical local principal/binding stay unchanged",
+        "Android groups matching fleet/account/viewer/authority/room, retaining latest canonical preview and independently reachable interaction route",
+        "Original cross-gateway drafts and unknown sends remain individually reviewable on their exact original source; discovery never resends or rewrites them"
+      ],
+      "verification": "Real private PostgreSQL/NATS/HTTP viewer equivalence and revocation qualification passed. Both signed variants, both lints and475 unit cases per variant passed;14 native integration cases passed, including provider audio and mixed-source original receipt/draft paths. Exact optimized APK renders three rooms once each across different local human principals, survives source loss/recovery and reopening. Physical delivery pending."
+    },
+    {
+      "id": "session-list-archive-20261107",
+      "request": "Archive any Codex session directly from the Android/web work list; roughly200mostlyfinished sessions should not crowd current work. Preserve history and allow restoration. Follow-up: swipe to reveal Archive; authorize cleanup of sessions inactive for over a month.",
+      "status": "Delivered: backend/web live and Android170 alpha152 published; phone170 install not yet verified.",
+      "implementation": [
+        "Existing native thread/archive and unarchive; no new endpoint or local hide-only flags",
+        "Source-bound list-card actions and Archived filter; queued messages held, notifications disabled, drafts/history preserved",
+        "Confirmed archive removes cached list entries; delayed reads cannot undo the acknowledged archive; archive avoids history/resume reads",
+        "Running work is rejected with actionable stop-first message rather than silently interrupted",
+        "Horizontal swipe reveals a dedicated archive action without opening or archiving; accessibility reveal action; no permanent header icon",
+        "Owner-operated month-old bulk cleanup inventories all pages before mutation; fresh inactivity guard protects running/recent/pending work; unknown outcomes stop the sweep; no model calls"
+      ],
+      "verification": "13 final native journeys passed, including actual swipe/reveal/archive/restore with draft retention and zero sends. Exact optimized APK history/reopen verified. Actual web Archive/Restore passed with one write each. Authorized cleanup archived1370workstation and75Mac sessions; subsequent catalogs contained none of those IDs.",
+      "evidence": "docs/qualification/session-list-archive-170.json"
+    },
+    {
+      "id": "retired-environment-data-deletion-20261107",
+      "request": "Delete retired host registrations, credentials, drafts and unresolved receipts; retain current system76, Mac and phone profiles. Do not replay removed work.",
+      "status": "Delivered backend/web and published Android169 alpha151; physical phone169 installation not yet verified.",
+      "implementation": [
+        "server/retired-sources.mjs",
+        "server/web-fleet.mjs",
+        "web/retirement.mjs",
+        "android/app/src/main/java/co/fallsoft/pocket/EnvironmentProfiles.kt",
+        "android/app/src/main/java/co/fallsoft/pocket/DurableVoiceWork.kt"
+      ],
+      "verification": "682 backend tests;476 unit cases per Android variant (2 skipped), both lints;12 native integration cases including actual retired drafts/unknown receipts/audio deletion with current host preserved; exact optimized compatible APK reviewed. No removed operation sent or retried."
     }
   ],
   "current_state": {
@@ -2997,5 +3625,237 @@
     "sharedStockRuntime": "Session, coordinator and legacy/new immersion use the same multiplexed stock Codex connection. Native audio retains its explicitly configured workspace/command. Integration verifies coordinator start then direct session routing with one initialization/connection.",
     "cleanupDelivered": "Retired six exact orphan QA processes across two cleanup passes, preserved private data and accepted receipts, moved three owned worktrees off RAM.",
     "androidCandidate": "v2 acceptance compiles in memory-capped transient service; phone observed134. Not a delivered v2 update."
+  },
+  "bottom_toolbar_inner_spacing_20261019": {
+    "status": "implemented; native visual qualification pending",
+    "requirement": "Bottom toolbar controls, including the focus/important control, must not collide with their container",
+    "implementation": "One shared dock/footer surface;8dp horizontal and6dp vertical interior clearances, minimum2dp sibling gap and6dp wrapped-row gap. Important filter uses explicit12dp horizontal/8dp vertical content padding, retaining48dp minimum targets. No control removal or behavior change.",
+    "qualification": "Verify normal and large text in native emulator before publication; physical phone not claimed."
+  },
+  "on_demand_speech_no_unsolicited_backlog_20261019": {
+    "status": "source candidate; native migration and playback qualification pending",
+    "problem": "Spoken-message mode admits notifications into unbounded persistent queues; paused queues accumulate hundreds. Clear selected-source does not clear global count.",
+    "design": "Notification arrival never admits playback; requested voice replies retain their existing owner. Manual Speak reads the chosen passage. Retire legacy notification-ID backlog on profile restoration without marking sources read/heard. One direct Clear all playback action. No new automatic announcements or model polling.",
+    "cost": "Pending count measures queued text, not proof of rendered audio. Remove unnecessary notification-speech immersion preparation. No billing totals inferred."
+  },
+  "alpha121_delivery_20261019": {
+    "state": "published",
+    "versionCode": 139,
+    "evidence": "docs/qualification/alpha121-20261019.json",
+    "scope": "Complementary instant inline immersion, canonical history/order recovery, on-demand speech, padded controls/depth, retained volume-key capture, foreground notification handling",
+    "physicalPhoneInstallVerified": true,
+    "next": [
+      "Reduce real reused HTTP2 navigation delay using confirmed bounded-background-transfer architecture",
+      "Unify on-demand read-aloud and live voice playback lifecycle; reduce full-clip startup delay",
+      "Verify physical voice/foreground notification interactions; continue immersion coverage and browser/mobile parity"
+    ]
+  },
+  "web_cold_start_static_20261020": {
+    "state": "deployed",
+    "evidence": "docs/qualification/web-cold-static-20261020.json",
+    "purpose": "Reduce avoidable cold startup transfer; preserve critical content priority and shared state",
+    "next": "Versioned gateway closure, actual private open/reopen and original draft/row identity verification"
+  },
+  "web_bounded_atlas_transport_20261020": {
+    "state": "deployed-private-live-qualified",
+    "evidence": "docs/qualification/web-atlas-ranges-20261020.json",
+    "next": "Native direct API transport parity and unified deliberate speech playback; preserve original assets and bounded background delivery"
+  },
+  "native_api_transport_parity_20261020": {
+    "state": "source-and-wire-qualified; owning release pending",
+    "observation": "Direct stock /api/threads returns552048 identity bytes despite Accept-Encoding:gzip; web gateway already compresses the same catalog",
+    "requirements": [
+      "Negotiate JSON compression on authenticated native API without touching canonical data or write admission",
+      "Preserve binary/audio/APK and range/event streaming",
+      "Avoid redundant loopback compression on web forward path",
+      "Qualify real byte identity/status/auth and activate only through controlled quiet owning release"
+    ],
+    "evidence": "docs/qualification/native-json-transport-20261020.json"
+  },
+  "catalog_consistency_20261021": {
+    "status": "146/alpha128 qualified and published; physical installation pending verification",
+    "requirements": [
+      "Legacy paired stock gateways without backend discovery remain readable only after authenticated canonical catalog verification; retain real authentication/network errors",
+      "Every accepted head/search/page catalog update invalidates the same environment-bound message snapshot",
+      "Older inventory must not replace newer preview evidence; opening after a search-only update immediately presents synchronized local messages",
+      "Cold background message reads require advertised readOnlyTimeline, use strict /head only, and have separate2-call5s admission and32-intent bound; no legacy attachment or foreground starvation"
+    ],
+    "verification": [
+      "Focused HTTP404HTML/auth/outage/malformed payload tests pass before publication",
+      "Native same-ID multi-environment test now includes legacy phone discovery",
+      "Native closed-session search-only update must advance shared message cache before reopening with history held; preserve draft and no worker input"
+    ],
+    "limits": [
+      "Observed live workstation head63ms and consistent idle catalog/history samples do not prove every phone viewport is current",
+      "Physical phone was at system UI during further receive-path inspection; no unlock or phone settings changes"
+    ]
+  },
+  "message_ordering_20261021": {
+    "request": "Installed146 still shows some assistant responses before their triggering user input.",
+    "status": "candidate_backend_fix_http_qualified_not_deployed",
+    "finding": "Complete turn-only ordering evidence was overwritten by the bounded presentation window in ThreadHistory.read. A hidden input then could not resolve its successor.",
+    "change": "Enrich send identity before slicing the complete turn and preserve that ordering index through bounded ordinary and inherited-history reads.",
+    "verification": "Original hidden-input regression failed through read() before the correction. Focused HTTP head/reopen/position and history/identity cases pass without thread/resume or turn/start/steer.",
+    "limits": [
+      "Exact reported handset pair not yet identified.",
+      "Existing broad history-server case fails on expected background recovery count; not claimed passing.",
+      "No production restart or new APK publication.",
+      "Continue native cached/live ordering verification."
+    ]
+  },
+  "history_windows_20261021": {
+    "request": "This chat opens October10 content, then latest messages with nothing between; preserve canonical user/response ordering.",
+    "status": "implementation_native_qualification_pending",
+    "contract": [
+      "Explicit conversation entry opens latest; foreground continuation and explicit resume retain reading position.",
+      "Every bounded authoritative window keeps its own original cursor. Cache budget eviction removes whole windows, never a row prefix while retaining its cursor.",
+      "Shared head, memory restoration, disk restoration and HTTP current windows all register missing intervals before joining retained content.",
+      "Scrolling requests bounded history without blocking current messages or discarding retained local history.",
+      "Canonical input placement uses provider/client identity and provider order, including opaque-only native pagination; no text or timestamp guesses."
+    ],
+    "limits": [
+      "Physical phone reproduction remains user-reported; native equivalent seeded with distant old window and saved old anchor.",
+      "Backend ordering changes are not yet activated.",
+      "No message resend or model turn is part of verification."
+    ]
+  },
+  "native_speech_startup_20261025": {
+    "request": "Reliable eyes-free speech with minimal latency and no idle/unrequested generation.",
+    "status": "implemented_live_media_preflight_passed_signed_release_pending",
+    "observed": "Two same-build legacy follow-on speech attempts negotiated successfully but emitted no assistant output; transcription succeeded. Startup-bound isolated speech produced assistant events and complete live audio.",
+    "contract": [
+      "Bind each spoken passage to isolated speech startup using existing API; never send it as task/user input.",
+      "Arm local playback and recording before applying the peer answer so first audio is retained.",
+      "Retain explicitly negotiated compatibility with older gateways; no endpoint proliferation.",
+      "No speculative output model while work is thinking; release provider transport when complete local replay cache owns the passage.",
+      "Preserve recording origin, cancellation, saved work receipt and pause/resume; speech retries cannot rerun Codex work."
+    ],
+    "limits": [
+      "Native preflight only; current final APK and real phone remain to be qualified.",
+      "Workstation existing route forwarding needs narrow owning rollout; Mac/OZZZ already forward startup text.",
+      "First audio4470ms includes fresh connection setup; this is not a complete coordinator/task latency measurement."
+    ]
+  },
+  "native_history_generation_20261027": {
+    "request": "Mac sessions remain stale across clients; native derived index may exceed rewritten rollout and obsolete larger cached ordinals must not hide repaired history.",
+    "status": "mac_repaired_web_live_android154_published_native_qualified",
+    "contract": [
+      "Codex canonical projector rebuilds only affected derived records; original rollouts, agents, receipts and pairing remain unchanged.",
+      "Cache coverage and anchors are scoped to native history epoch; retained old bodies are not rendered as proven current history.",
+      "SQLite v1 upgrade retains bodies and requires fresh current-generation page coverage.",
+      "Compare newest API message identity against canonical source, not merely against another API using the same index."
+    ],
+    "evidence": {
+      "macReadMs": [
+        51.58,
+        39.07
+      ],
+      "nativeProcessPreserved": true,
+      "naturalProjectionAdvance": true
+    },
+    "limits": [
+      "Android154 published on all3 existing channels; physical handset install/render remains separate.",
+      "Native source shrink rejection is isolated maintenance source, not a newly installed Mac Codex runtime."
+    ]
+  },
+  "room_wide_human_input_20261102": {
+    "requirement": "Speak or type to the room without a default execution recipient; retiring an agent cannot prevent publication. Explicit direct messages remain separate.",
+    "implementation": "Recipient-free default Android composer and captured voice; web room-wide voice; Hollywood human requests skip legacy owner fallback; preserved addressed drafts, original operations, receipts and unknown deliveries.",
+    "status": "Backend176 live on CPU; Android160 signed candidate building and native qualification pending; web/gateway changes not yet deployed.",
+    "verification": "Real PG/HTTP retired-owner publication, fanout, same-ID receipt, revoked private recipient denied; five focused node checks pass. Production isolated-authority POST rejected400 with zero canonical command/events, not counted as passed."
+  },
+  "room_native_status_freshness_20261102": {
+    "request": "All rooms show Unknown 6; retain latest room previews but show current native runtime status, distinguishing unavailable observations from unknown deliveries and approvals from questions.",
+    "status": "Android161 published to both channels; web deployed; physical installation unverified",
+    "implementation": [
+      "Fleet-room display overlays nativeState from the reachable authenticated route independently of the retained newest message preview.",
+      "A missing current native observation cannot fall back to retained native state or legacy Idle.",
+      "The existing bottom-anchored room menu opens with current work nearest the footer."
+    ],
+    "qualification": [
+      "Regression: newest retained message from an offline gateway with a fresh Idle observation on the live route.",
+      "Regression: missing current native state is unavailable; retained body and route credentials remain unchanged."
+    ],
+    "limits": [
+      "No physical phone installation proof.",
+      "Unavailable runtime observations remain honestly unavailable; labels are not worker recovery."
+    ]
+  },
+  "change_scoped_release_checks_20261102": {
+    "request": "Separate unrelated tests and stop forcing full provider/audio regression on narrow fixes.",
+    "status": "implemented for subsequent builds; current161 completed records unchanged",
+    "implementation": [
+      "Verified baseline commit must match complete prior qualified native source fingerprint.",
+      "Known room-status changes select affected model tests, two release integration invariants and exact-APK room-list review.",
+      "Voice, footer, navigation and unmapped changes retain full regression.",
+      "No model/provider/emulator activation when calculating a test plan."
+    ],
+    "limits": [
+      "First scoped family is room status; other feature families retain full regression.",
+      "No new APK build is required for this tooling-only change."
+    ]
+  },
+  "coordinator_room_intent_candidate_20261103": {
+    "request": "Read project-room conversation and give human instructions into existing rooms or an explicitly created new room, without switching selected Codex focus.",
+    "status": "implemented source candidate; isolated HTTP/PostgreSQL integration qualified; not production activated",
+    "operations": [
+      "roomHistory",
+      "roomReply",
+      "createRoomAndStart",
+      "roomReceipt"
+    ],
+    "evidence": "COORDINATOR-ROOM-INTENTS.md; tests/coordinator-room-intents.test.mjs; tests/integrate-coordinator-room-intents.mjs",
+    "boundaries": [
+      "Capability questions create nothing",
+      "Original paired human and source/binding retained",
+      "Unknown message dispatch is never blindly repeated",
+      "Accepted intent is not finished work",
+      "No agent runtime or phone/pairing changes"
+    ]
+  },
+  "coordinator_room_authority_candidate_20261103": {
+    "request": "Create a NEW project room in the supported current federation, not a task to a similarly named legacy owner; show recent room conversation and truthful original admission.",
+    "status": "source candidate; focused and isolated real HTTP/PostgreSQL qualification; not production activated",
+    "evidence": "COORDINATOR-ROOM-AUTHORITY.md; tests/coordinator-room-authority.test.mjs; tests/integrate-coordinator-room-intents.mjs",
+    "boundaries": [
+      "Gateway and canonical human policy both required",
+      "Ordinary human stays non-administrator",
+      "Original positive rejection overlay never rewrites history",
+      "Inaccessible read is not absence",
+      "No native/model or phone/pairing change"
+    ]
+  },
+  "coordinator_room_capability_20261103": {
+    "request": "Coordinator must understand NextComp/Hollywood rooms and discover/create them through existing paired human sources.",
+    "status": "implemented; backend release qualification in progress",
+    "architecture": [
+      "Exact persisted coordinator tool/instruction contract fingerprint, safe idle upgrade preserving full journal/focus/unknown receipts",
+      "On-demand bound room catalogue across original paired sources, same-authority dedup and stable writer preference",
+      "Room binding independent of selected Codex host, original human command provenance and durable creation receipt; no automatic replay"
+    ],
+    "verification": [
+      "27 focused checks passed including migration, routing, creation provenance and lost ACK",
+      "Original device-paired live GETs verified existing federated rooms with explicit binding"
+    ],
+    "phoneInstallRequired": false
+  },
+  "codex_only_20261107": {
+    "request": "Return Android/web/coordinator to vanilla Codex and native subagents; remove retired hosts; preserve source-bound pairing, drafts, original receipts, voice and immersion.",
+    "state": "published168_backend_web_live_phone_install_unverified",
+    "retirement": "Authenticated fleet snapshots remove same-account absent members from active profiles without deleting their namespaces. Web retained retired credentials cannot route commands. No room-to-session retarget or room worker activation.",
+    "auth_blockers": "Maintainer dedicated Codex login and RevenueSleuth original Neon account require owner authentication; no shared refresh-token copy or old database substitution.",
+    "evidence": "docs/qualification/codex-only-168.json"
+  },
+  "retired_room_session_discovery_20261107": {
+    "request": "Mac archive reports active writer; three legacy room agents display no messages or status in stock clients.",
+    "implementation": "Use native originator lax-host-agent to exclude retired room workers from normal, archived, search, cached and coordinator stock discovery; retain durable internal ownership across reconnect.",
+    "recovery": "Three specifically reported idle legacy threads archived once through their owning runtime, with accepted receipts and archived-path readback. No model start or stock runtime restart.",
+    "verification": "Live on Mac and workstation; 19 focused registry/catalog checks passed. Three owner-acknowledged archives retained, no writer handles remain. Mac authenticated catalog contains four ordinary sessions, each returns history in 93\u2013316 ms. No physical phone UI inspection."
+  },
+  "workstation_catalog_membership_20261107": {
+    "request": "Workstation still lists unusable sessions; fix catalog lifecycle, not individual titles.",
+    "cause": "Saved catalog mixed ephemeral native runtimes with durable sessions and ignored definitive native metadata absence. Audit identified 25 ephemeral entries plus 3 stale native-absent records among 159 displayed entries.",
+    "implementation": "Native residency and ownership govern all catalog admission. Temporary state persists through reconnect but explicit native persistence restores membership. Definitive identity-bound native absence is retained separately from archives/outages; fresh evidence restores membership, late failures cannot overtake newer evidence, and unresolved human outgoing receipts remain protected.",
+    "validation": "Deployed to workstation: 159 -> 131 entries, exactly 28 confirmed-unreadable listings removed, 42 child histories retained. Authenticated Tailscale readback matches. All 24 legacy-history sessions read successfully through supported fallback. Real gateway lifecycle journey and 22 focused checks pass. Native workers, pairing, unknown/queued outgoing receipts and data retained; physical phone UI not independently inspected."
   }
 }
