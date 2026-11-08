@@ -13,7 +13,8 @@ export class NativeSettingsPanel {
   Object.assign(this,{api,getScope,openThread});this.serial=0;
   this.dialog=node('dialog');this.dialog.className='native-settings';this.dialog.setAttribute('aria-label','Codex settings and agents');
   this.title=node('h2','Codex settings & agents');this.source=node('p');this.tabs=node('nav');this.tabs.setAttribute('aria-label','Settings sections');this.body=node('section');this.feedback=node('p');this.feedback.setAttribute('role','status');this.pluginFooter=node('footer');this.pluginFooter.dataset.pluginPager='';
-  const close=node('button','Close');close.onclick=()=>this.dialog.close();this.dialog.append(this.title,this.source,this.tabs,this.feedback,this.body,this.pluginFooter,close);document.body.append(this.dialog);
+  this.scroll=node('div');this.scroll.className='native-settings-scroll';this.scroll.append(this.title,this.source,this.tabs,this.feedback,this.body);
+  const close=node('button','Close');close.onclick=()=>this.dialog.close();this.dialog.append(this.scroll,this.pluginFooter,close);document.body.append(this.dialog);
   for(const section of sections){const b=node('button',titles[section]);b.onclick=()=>this.load(section);this.tabs.append(b);}
  }
  async open(){this.pluginView='installed';this.pluginQuery='';this.scope=this.getScope();this.threadId=this.scope==='coordinator'?null:this.scope;this.origin=Object.freeze({scope:this.scope,threadId:this.threadId});this.dialog.showModal();await this.load('settings');}
@@ -25,7 +26,7 @@ export class NativeSettingsPanel {
   if(section==='plugins'){this.pluginView=plugin.view||this.pluginView||'installed';this.pluginQuery=plugin.query??this.pluginQuery??'';plugin={...plugin,view:this.pluginView,query:this.pluginQuery};}
   const serial=++this.serial,origin=this.origin;this.feedback.textContent='Loading…';this.section=section;
   this.dialog.classList.toggle('plugin-catalog',section==='plugins');this.pluginFooter.replaceChildren();
-  if(section==='plugins'){this.body.scrollTop=0;this.dialog.scrollTop=0;}
+  if(section==='plugins'){this.scroll.scrollTop=0;this.body.scrollTop=0;this.dialog.scrollTop=0;}
   if(!cursor||section==='plugins')this.body.replaceChildren();
   try{
    const view=await this.request(section,cursor,origin,plugin);if(serial!==this.serial||!this.current(origin))return;
@@ -33,6 +34,7 @@ export class NativeSettingsPanel {
    this.source.textContent=`${view.host||'Selected environment'} · Codex ${view.runtime?.version||'version unavailable'}`;
    this.feedback.textContent=view.state==='available'?(view.notice||''):view.reason||'Unavailable';
    if(section==='settings')this.renderSettings(view);else this.renderItems(view,section!=='plugins'&&!!cursor);
+   if(section==='plugins'&&cursor){const first=this.body.querySelector('[data-plugin-row]');if(first)this.scroll.scrollTop+=first.getBoundingClientRect().top-this.scroll.getBoundingClientRect().top;}
   }catch(error){if(serial===this.serial&&this.current(origin)){
    this.feedback.textContent=error.message;
    if(section==='plugins'){const retry=node('button','Reload Plugins');retry.onclick=()=>{if(this.current(origin)&&this.serial===serial)return this.load('plugins',undefined,{...plugin,refresh:true});};this.body.replaceChildren(retry);}
