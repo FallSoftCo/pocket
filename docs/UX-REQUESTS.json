@@ -3907,5 +3907,23 @@
     "cause": "Saved catalog mixed ephemeral native runtimes with durable sessions and ignored definitive native metadata absence. Audit identified 25 ephemeral entries plus 3 stale native-absent records among 159 displayed entries.",
     "implementation": "Native residency and ownership govern all catalog admission. Temporary state persists through reconnect but explicit native persistence restores membership. Definitive identity-bound native absence is retained separately from archives/outages; fresh evidence restores membership, late failures cannot overtake newer evidence, and unresolved human outgoing receipts remain protected.",
     "validation": "Deployed to workstation: 159 -> 131 entries, exactly 28 confirmed-unreadable listings removed, 42 child histories retained. Authenticated Tailscale readback matches. All 24 legacy-history sessions read successfully through supported fallback. Real gateway lifecycle journey and 22 focused checks pass. Native workers, pairing, unknown/queued outgoing receipts and data retained; physical phone UI not independently inspected."
+  },
+  "native_first_message_availability_20261108": {
+    "request": "Investigate recurring history-read errors and retain recovery after native progress or reopening, without pretending unavailable history is an empty successful transcript.",
+    "state": "source-reviewed candidate; Android compilation and native repository journeys pending",
+    "implementation": [
+      "Classify only exact identity-bound native turns/list refusal before first message; preserve unknown missing-history cases.",
+      "Keep cached content and original outgoing receipts; suppress unchanged refused reads without model calls.",
+      "Source-scoped monotonic reinspection prevents late refusals from swallowing a reopen or native progress; shared older reads permit one bounded follow-up."
+    ],
+    "verification": [
+      "14 focused Node checks and 2 standalone Kotlin concurrency checks passed in isolated source.",
+      "Independent backend and quality source reviews passed; actual Android repository tests include an observed shared-request-join barrier."
+    ],
+    "limits": [
+      "No real session resumed, created or replayed.",
+      "A missing rollout alone is not proof of an empty or permanently lost session.",
+      "No new timers or polling model turns."
+    ]
   }
 }
