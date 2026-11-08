@@ -1,3 +1,5 @@
+import {environmentRoute,unqualifyPayload,qualifyPayload,scopedId} from '../server/web-environments.mjs';
+import {environmentPath} from '../web/environments.mjs';
 // Explicit DOM qualification: fails closed when JSDOM is unavailable. npm test
 // covers the sibling wire/HTTP suite; this file is intentionally a separate tier.
 import test from 'node:test';
@@ -50,4 +52,40 @@ test('real conversation pane recovers an unknown operation after backend restart
  assert.equal(calls.filter(c=>c.body?.kind==='compact').length,1);assert.equal(f.calls.filter(c=>c.method==='thread/compact/start').length,1);
  selected='other-thread';ui.click('Compact context');await until(()=>pane.error.textContent,text=>text.includes('original conversation'),'source change blocks old pane action');
  assert.equal(calls.filter(c=>c.body).length,1);f.assertClean();
+});
+
+test('settings plugin journey binds review to source and retains uncertain native effects across restart',{timeout:25000},async t=>{
+ const ui=documentFixture(t),f=await productionFixture(t),{pluginState}=await import('./helpers/native-plugin-fixture.mjs'),{NativeSettingsPanel}=await import('../web/native-settings.mjs');
+ f.plugins=pluginState();f.configuration={id:'fixture-app',name:'Fixture app',enabled:true,version:1};const origin=scopedId('remote',f.thread.id);let selected=origin,loseHttpAck=false;const calls=[];
+ const panel=new NativeSettingsPanel({getScope:()=>selected,openThread:()=>assert.fail('Plugin controls never navigate or submit work'),api:async(path,body,options)=>{
+  calls.push({path,body,scope:options.scope});assert.equal(options.scope,origin,'every read/write remains on the captured source');
+  const routed=environmentRoute(environmentPath(path,options.scope));assert.equal(routed.environmentId,'remote');
+  const result=qualifyPayload(await f.api(routed.path,body?unqualifyPayload(body,'remote'):undefined),'remote');if(body&&loseHttpAck){loseHttpAck=false;throw Error('Synthetic HTTP acknowledgement loss');}return result;
+ }});
+ const waitText=text=>until(()=>panel.dialog.textContent,s=>s.includes(text),text);
+ const plugins=async()=>{await panel.open();await panel.load('plugins');};
+ await plugins();assert.equal(f.calls.some(c=>c.method==='plugin/install'),false);ui.click('Review plugin');await waitText('Review installation');
+ const other=await productionFixture(t,{name:'Other source with the same native IDs'});other.plugins=pluginState();
+ const originalView=await f.api('/api/native/plugins/detail?threadId='+f.thread.id+'&key='+((await f.api('/api/native/configuration?section=plugins')).items[0].key));
+ const otherView=await other.api('/api/native/plugins/detail?threadId='+other.thread.id+'&key='+originalView.detail.key);
+ assert.notEqual(originalView.reviewToken,otherView.reviewToken,'review snapshots are sealed to the original backend');
+ assert.equal((await other.request('/api/native/configuration',{section:'plugins',threadId:other.thread.id,key:originalView.detail.key,reviewToken:originalView.reviewToken,action:'install',attemptId:'wrong-backend-attempt',confirmEffects:true,confirmInterstitial:true})).status,409);
+ assert.equal(other.calls.some(c=>c.method==='plugin/install'),false);other.assertClean();
+ ui.click('Review installation');assert.ok(panel.body.textContent.includes('browser on the host'));
+ let checkbox=panel.body.querySelector('input[type=checkbox]');assert.ok(checkbox);assert.equal([...panel.body.querySelectorAll('button')].find(b=>b.textContent==='Confirm installation').disabled,true);
+ checkbox.checked=true;checkbox.dispatchEvent(new Event('change'));selected=f.thread.id;ui.click('Confirm installation');assert.equal(calls.filter(c=>c.body).length,0,'source switch before confirmation prevents POST');
+ selected=origin;panel.dialog.close();await plugins();
+ let entered,release;f.plugins.holdRead={started:()=>entered?.(),wait:new Promise(r=>release=r)};const reading=new Promise(r=>entered=r);ui.click('Review plugin');await reading;
+ panel.dialog.close();await plugins();release();await new Promise(r=>setTimeout(r,50));assert.equal(panel.body.querySelectorAll('input[type=checkbox]').length,0);assert.ok(panel.body.textContent.includes('Review plugin'),'late detail must not replace a new opening');
+ ui.click('Review plugin');await waitText('Review installation');ui.click('Review installation');checkbox=panel.body.querySelector('input');checkbox.checked=true;checkbox.dispatchEvent(new Event('change'));ui.click('Confirm installation');await waitText('Installation acknowledged');
+ assert.ok(panel.feedback.textContent.includes('Readiness is unverified'));assert.equal(f.calls.filter(c=>c.method==='plugin/install').length,1);assert.equal(panel.body.querySelectorAll('a').length,0,'no invented authentication URL');
+ ui.click('Reload plugin details');await waitText('Review removal');assert.ok(panel.body.textContent.includes('Fixture app'));ui.click('Review removal');ui.click('Confirm removal');await waitText('Removal acknowledged');
+ ui.click('Reload plugin details');await waitText('Review installation');ui.click('Review installation');checkbox=panel.body.querySelector('input');checkbox.checked=true;checkbox.dispatchEvent(new Event('change'));
+ loseHttpAck=true;f.plugins.dropInstall=true;ui.click('Confirm installation');await waitText('Delivery unconfirmed');const original=calls.filter(c=>c.body).at(-1).body;
+ panel.dialog.close();await f.restart();await plugins();assert.ok(panel.body.textContent.includes('unknown'),'receipt survives backend and dialog restart');
+ ui.click('Review plugin');await waitText('Review uncertain outcome');assert.ok(![...panel.body.querySelectorAll('button')].some(b=>b.textContent==='Review removal'));
+ assert.equal(f.calls.filter(c=>c.method==='plugin/install').length,2);assert.equal(calls.filter(c=>c.body?.attemptId===original.attemptId).length,1);
+ ui.click('Review uncertain outcome');ui.click('Acknowledge uncertain outcome');await waitText('Outcome unconfirmed');ui.click('Reload plugin details');await waitText('Review removal');
+ assert.equal(f.calls.filter(c=>c.method==='plugin/install').length,2,'explicit receipt acknowledgement never retries installation');
+ assert.ok(!f.calls.some(c=>['turn/start','thread/resume'].includes(c.method)));f.assertClean();
 });

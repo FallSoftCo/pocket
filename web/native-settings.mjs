@@ -1,3 +1,4 @@
+import {pluginDetailsButton} from './native-plugins.mjs';
 const node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 const sections=['settings','agents','skills','mcp','apps','plugins','hooks'];
 const titles={settings:'Runtime & permissions',agents:'Agents',skills:'Skills',mcp:'MCP servers',apps:'Apps',plugins:'Plugins',hooks:'Hooks'};
@@ -43,6 +44,7 @@ export class NativeSettingsPanel {
   if(!append)this.body.replaceChildren();
   this.body.querySelector('[data-more]')?.remove();
   if(view.parentThreadId||view.rootThreadId){const id=view.parentThreadId||view.rootThreadId;if(id!==this.threadId){const parent=node('button','Open parent task');parent.onclick=()=>this.navigate(id);this.body.append(parent);}}
+  if(view.section==='plugins')for(const receipt of view.receipts||[]){const row=node('article');row.append(node('p',`${receipt.name} · ${receipt.action} · ${receipt.state}: ${receipt.notice}`),pluginDetailsButton(this,{key:receipt.key},'Review operation'));this.body.append(row);}
   if(!view.items?.length)this.body.append(node('p',view.state==='available'?'No items reported by this native catalog.':'Catalog unavailable.'));
   for(const item of view.items||[]){
    const row=node('article');row.append(node('h3',item.name||item.id));
@@ -53,6 +55,7 @@ export class NativeSettingsPanel {
     if(!item.canAcceptDirectInput){row.append(node('p','Direct input is unavailable; guide this agent from its parent.'));if(item.parentThreadId){const parent=node('button','Open owning task');parent.onclick=()=>this.navigate(item.parentThreadId);row.append(parent);}}
    }
    if(item.tools?.length){const details=node('details');details.append(node('summary',`${item.toolCount} tools`));for(const tool of item.tools)details.append(node('p',tool.name+(tool.description?' · '+tool.description:'')));row.append(details);}
+   if(view.section==='plugins'&&item.inspectable===true)row.append(pluginDetailsButton(this,item));
    if(item.configurable){const toggle=node('button',`${item.enabled?'Disable':'Enable'} for this environment`);toggle.onclick=()=>this.change(view,item,toggle);row.append(toggle);}
    this.body.append(row);
   }

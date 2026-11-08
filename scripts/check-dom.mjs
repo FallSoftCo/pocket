@@ -78,7 +78,7 @@ try{
   const path=join(directory,'production-composition','receipt.json'),bytes=await readFile(path),result=JSON.parse(bytes);
   assert.equal(result.state,'complete','Composed qualification receipt is incomplete.');
   assert.equal(result.checks.length,3,'Both composed regression controls must execute.');
-  assert.deepEqual(result.checks[0].summary,{tests:7,pass:7,fail:0,cancelled:0,skipped:0,todo:0});
+  assert.deepEqual(result.checks[0].summary,{tests:8,pass:8,fail:0,cancelled:0,skipped:0,todo:0});
   check.receipt='production-composition/receipt.json';check.receiptSha256=sha(bytes);check.sourceSha256=result.source.sha256;
  },120000);
  receipt.state=receipt.checks.every(check=>check.state==='complete')?'complete':'failed';

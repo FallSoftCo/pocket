@@ -30,7 +30,7 @@ async function run(name,args,env={},expectedFailure=null){
  assert.equal(expired,false,`${name} exceeded the 30 s bound; inspect ${log}`);
  assert.equal(summary.cancelled,0,`${name}: cancelled tests are not proof`);
  if(expectedFailure){assert.notEqual(code,0,`${name}: mutant unexpectedly passed`);assert.equal(summary.fail,1,`${name}: wrong failure shape`);assert.ok(text.includes(expectedFailure),`${name}: failed for an unrelated reason; inspect ${log}`);}
- else{assert.equal(code,0,`${name} failed; inspect ${log}`);assert.equal(summary.tests,7);assert.equal(summary.pass,7);for(const key of ['fail','skipped','todo'])assert.equal(summary[key],0,`${name}: ${key} is not acceptable`);}
+ else{assert.equal(code,0,`${name} failed; inspect ${log}`);assert.equal(summary.tests,8);assert.equal(summary.pass,8);for(const key of ['fail','skipped','todo'])assert.equal(summary[key],0,`${name}: ${key} is not acceptable`);}
 }
 const temp=await mkdtemp(join(tmpdir(),'nextcomp-negative-controls-'));
 try{

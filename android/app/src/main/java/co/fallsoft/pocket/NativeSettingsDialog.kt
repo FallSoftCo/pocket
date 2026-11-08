@@ -27,6 +27,7 @@ import org.json.JSONObject
     var notice by remember{mutableStateOf("")}
     var changing by remember{mutableStateOf<String?>(null)}
     var uncertain by remember{mutableStateOf(false)}
+    var pluginKey by remember{mutableStateOf<String?>(null)}
     val sections=listOf("settings" to "Runtime", "agents" to "Agents", "skills" to "Skills", "mcp" to "MCP", "apps" to "Apps", "plugins" to "Plugins", "hooks" to "Hooks")
     fun current()=destination!=null&&Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==threadId
     suspend fun request(target:String,cursor:String?=null):JSONObject{
@@ -36,6 +37,7 @@ import org.json.JSONObject
         check(current()){ "The selected environment changed." }
         return response
     }
+    pluginKey?.let{key->NativePluginDialog(destination,threadId,key){pluginKey=null;revision++};return}
     LaunchedEffect(section,revision){
         loading=true;problem="";uncertain=false;view=null;rows=emptyList()
         try{val result=request(section);view=result;rows=result.optJSONArray("items")?.objects()?:emptyList()}
@@ -64,6 +66,10 @@ import org.json.JSONObject
                 }else{
                     val parent=data.s("parentThreadId").ifBlank{data.s("rootThreadId")}
                     if(parent.isNotBlank()&&parent!=threadId)TextButton({if(current()){onDismiss();Pocket.open(parent)}}){BilingualLabel("Open parent task")}
+                    if(section=="plugins")data.optJSONArray("receipts")?.objects()?.forEach{receipt->
+                        WorkflowText("${receipt.s("name")} · ${receipt.s("action")} · ${receipt.s("state")}: ${receipt.s("notice")}",fontSize=12.sp,color=Muted)
+                        TextButton({if(current())pluginKey=receipt.s("key")},enabled=current()&&!loading){BilingualLabel("Review operation")}
+                    }
                     if(rows.isEmpty())WorkflowText(if(data.s("state")=="available")"No items reported by this native catalog." else "Catalog unavailable.",fontSize=13.sp)
                     rows.forEach{item->
                         HorizontalDivider()
@@ -84,6 +90,7 @@ import org.json.JSONObject
                             TextButton({expanded=!expanded}){BilingualLabel("${tools.size} tools · ${if(expanded)"Hide" else "Show"}")}
                             if(expanded)tools.forEach{tool->WorkflowText("${tool.s("name")} · ${tool.s("description")}",fontSize=11.sp,color=Muted)}
                         }
+                        if(section=="plugins"&&item.optBoolean("inspectable"))OutlinedButton({if(current())pluginKey=item.s("key")},enabled=current()&&!loading&&changing==null){BilingualLabel("Review plugin")}
                         if(item.optBoolean("configurable"))OutlinedButton(onClick={
                             if(current())scope.launch{
                                 changing=item.s("id");problem=""

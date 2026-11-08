@@ -793,7 +793,7 @@ app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
   res.json(response);
 }));
 app.post('/api/threads/:id/catchup/read',route(async(req,res)=>res.json(sessionCatchup.acknowledgeCapture(req.device.id,requireId(req.params.id),req.body.token))));
-registerNativeConfigurationRoutes(app,{codex,route,requireId,host:hostName,savedSettings:savedTurnSettings,requestedPermissions:id=>db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(id)?.permissions||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(id)?.permissions||null});
+registerNativeConfigurationRoutes(app,{codex,db,admissions:humanIngress,route,requireId,host:hostName,savedSettings:savedTurnSettings,requestedPermissions:id=>db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(id)?.permissions||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(id)?.permissions||null});
 const conversationTools=new ConversationTools({db,codex,supports:method=>supportsNativeMethod(codex,method),publish:emit,
  checkSource:id=>{terminalForkImports?.inputAllowed(id);terminalForks?.inputRole(id);},
  hasPending:id=>syncing.has(id)||['dispatching','unknown','running'].includes(turnRecovery.get(id)?.state)||!!db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state NOT IN ('accepted','cancelled') LIMIT 1").get(id),

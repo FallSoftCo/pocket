@@ -9,7 +9,7 @@ import {requestPresentation} from '../../server/native-request-contract.mjs';
 
 const port=Number(process.env.PORT||19991);
 const threadId='parity-thread',forkId='parity-fork',otherId='parity-other';
-const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false}));
+const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false,pluginInstalled:false,pluginReceipts:[]}));
 const calls=[],nativeAnswers=[],nativeReads=[];
 function executionFeatures(origin){
  if(origin.terminalMode==='missing')return undefined;
@@ -97,9 +97,20 @@ for(const origin of origins){
   else if(path.endsWith('/terminals'))body={data:[{processId:'shared-process-id',command:`${origin.name} synthetic watcher`,cwd:metadata(origin).cwd,cpuPercent:0}],nextCursor:null,features:executionFeatures(origin)};
   else if(path.endsWith('/terminals/terminate')&&executionFeatures(origin)?.backgroundTerminals?.mutation?.state!=='available'){res.writeHead(409).end('{"error":"Synthetic runtime does not permit termination."}');return;}
   else if(path.endsWith('/terminals/terminate'))body={ok:true,terminated:true};
+  else if(path==='/api/native/plugins/detail'){
+   const key=crypto.createHash('sha256').update('synthetic-plugin').digest('hex'),reviewToken=crypto.createHash('sha256').update(origin.name+':'+origin.pluginInstalled).digest('hex');
+   if(url.searchParams.get('key')!==key){res.writeHead(409).end('{"error":"Synthetic plugin identity mismatch"}');return;}
+   body={threadId,reviewToken,detail:{key,name:origin.name+' synthetic plugin',marketplace:'Synthetic marketplace',installed:origin.pluginInstalled,enabled:origin.pluginInstalled,installPolicy:'AVAILABLE',authPolicy:'ON_INSTALL',mustShowInstallationInterstitial:true,description:'Synthetic plugin capability notice',skills:[],hooks:[],mcpServers:['fixture-mcp'],apps:[],links:{},capabilities:['Synthetic task inspection']},canInstall:!origin.pluginInstalled,canUninstall:origin.pluginInstalled,effects:'Installation may open a browser on the host and save credentials. This remote client cannot continue host authentication. Installation does not establish readiness.',removalEffects:'Removal leaves bundled app authorization unchanged.',receipts:origin.pluginReceipts};
+  }
+  else if(path==='/api/native/plugins/receipts')body={receipts:origin.pluginReceipts};
+  else if(path==='/api/native/configuration'&&req.method==='POST'){
+   const key=crypto.createHash('sha256').update('synthetic-plugin').digest('hex'),reviewToken=crypto.createHash('sha256').update(origin.name+':'+origin.pluginInstalled).digest('hex');
+   if(input.section!=='plugins'||input.action!=='install'||input.key!==key||input.threadId!==threadId||input.reviewToken!==reviewToken||input.confirmEffects!==true||input.confirmInterstitial!==true||!input.attemptId){res.writeHead(409).end('{"error":"Synthetic source or explicit plugin confirmation missing"}');return;}
+   origin.pluginInstalled=true;body={attemptId:input.attemptId,key,name:origin.name+' synthetic plugin',action:'install',state:'acknowledged',readiness:'unverified',appsNeedingAuth:[{id:'fixture-app',name:'Synthetic connector'}],notice:'Installation acknowledged. Some apps need authentication. Host authentication may still be pending. Readiness is unverified.'};origin.pluginReceipts.push(body);
+  }
   else if(path==='/api/native/configuration'){
    const section=url.searchParams.get('section')||'settings';
-   body={state:'available',host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:[],features:{}};
+   body={state:'available',host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:section==='plugins'?[{id:'synthetic-plugin',key:crypto.createHash('sha256').update('synthetic-plugin').digest('hex'),name:origin.name+' synthetic plugin',inspectable:true}]:[],features:{}};
   }
   else if(path==='/api/notifications'||path==='/api/attention'||path==='/api/activity')body={notifications:[],items:[]};
   else if(path==='/api/app/update')body={available:false};
