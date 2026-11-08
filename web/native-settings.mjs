@@ -1,5 +1,5 @@
 import {pluginBrowserControls} from './native-plugin-browser.mjs';
-import {pluginDetailsButton} from './native-plugins.mjs';
+import {pluginDetailsButton,operationLabel} from './native-plugins.mjs';
 const node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 const sections=['settings','agents','skills','mcp','apps','plugins','hooks'];
 const titles={settings:'Runtime & permissions',agents:'Agents',skills:'Skills',mcp:'MCP servers',apps:'Apps',plugins:'Plugins',hooks:'Hooks'};
@@ -53,7 +53,7 @@ export class NativeSettingsPanel {
   this.body.querySelector('[data-more]')?.remove();
   if(view.parentThreadId||view.rootThreadId){const id=view.parentThreadId||view.rootThreadId;if(id!==this.threadId){const parent=node('button','Open parent task');parent.onclick=()=>this.navigate(id);this.body.append(parent);}}
   if(view.section==='plugins')this.body.append(pluginBrowserControls(this,view));
-  if(view.section==='plugins')for(const receipt of view.receipts||[]){const row=node('article');row.append(node('p',`${receipt.name} · ${receipt.action} · ${receipt.state}: ${receipt.notice}`),pluginDetailsButton(this,{key:receipt.key},'Review operation'));this.body.append(row);}
+  if(view.section==='plugins')for(const receipt of view.receipts||[]){const row=node('article');row.append(node('p',`${receipt.name} · ${receipt.action} · ${operationLabel(receipt.state)}: ${receipt.notice}`),pluginDetailsButton(this,{key:receipt.key},'Review operation'));this.body.append(row);}
   if(!view.items?.length)this.body.append(node('p',view.state==='available'?'No items reported by this native catalog.':'Catalog unavailable.'));
   for(const item of view.items||[]){
    const row=node('article');if(view.section==='plugins')row.dataset.pluginRow='';row.append(node('h3',item.name||item.id));

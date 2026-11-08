@@ -85,7 +85,7 @@ import org.json.JSONObject
                         WorkflowText("${if(data.s("pluginView")=="browse")"Catalog" else "Installed plugins"} · ${if(total>0)offset+1 else 0}–${offset+rows.size} of $total",fontSize=12.sp,color=Muted)
                     }
                     if(section=="plugins")data.optJSONArray("receipts")?.objects()?.forEach{receipt->
-                        WorkflowText("${receipt.s("name")} · ${receipt.s("action")} · ${receipt.s("state")}: ${receipt.s("notice")}",fontSize=12.sp,color=Muted)
+                        WorkflowText("${receipt.s("name")} · ${receipt.s("action")} · ${pluginOperationLabel(receipt.s("state"))}: ${receipt.s("notice")}",fontSize=12.sp,color=Muted)
                         TextButton({if(current())pluginKey=receipt.s("key")},enabled=current()&&!loading){BilingualLabel("Review operation")}
                     }
                     if(rows.isEmpty())WorkflowText(if(data.s("state")=="available")"No items reported by this native catalog." else "Catalog unavailable.",fontSize=13.sp)

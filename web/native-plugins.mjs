@@ -3,7 +3,7 @@ const button=(label,fn)=>{const n=node('button',label);n.onclick=fn;return n;};
 const yesNo=value=>value===true?'Yes':value===false?'No':'Unavailable';
 const policyLabel=value=>({AVAILABLE:'Installation allowed',NOT_AVAILABLE:'Installation restricted',INSTALLED_BY_DEFAULT:'Managed installation'}[value]||'Installation policy unavailable');
 const authLabel=value=>({ON_INSTALL:'Authentication during setup',ON_USE:'Authentication when used'}[value]||'Authentication policy unavailable');
-const operationLabel=value=>({dispatching:'Waiting for Codex',acknowledged:'Reply received',unknown:'Outcome unconfirmed'}[value]||'Status unavailable');
+export const operationLabel=value=>({dispatching:'Waiting for Codex',acknowledged:'Reply received',unknown:'Outcome unconfirmed'}[value]||'Status unavailable');
 // This pane lives inside the existing settings dialog. Every callback retains
 // its opening and source; tab changes and close/reopen invalidate old callbacks.
 export function pluginDetailsButton(panel,item,label='Review plugin'){

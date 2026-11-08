@@ -27,7 +27,7 @@ private fun pluginAuthLabel(value:String):String=when(value){
     "ON_USE"->"Authentication when used"
     else->"Authentication policy unavailable"
 }
-private fun pluginOperationLabel(value:String):String=when(value){
+internal fun pluginOperationLabel(value:String):String=when(value){
     "dispatching"->"Waiting for Codex"
     "acknowledged"->"Reply received"
     "unknown"->"Outcome unconfirmed"
