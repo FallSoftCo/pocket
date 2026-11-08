@@ -61,7 +61,15 @@ test('native requests preserve offered structured decisions, scope, elicitation 
  enqueue('mcpServer/elicitation/request',{mode:'form',requestedSchema:{type:'object',required:['count','allow'],properties:{count:{type:'integer',minimum:1},allow:{type:'boolean'}},additionalProperties:false}});
  assert.throws(()=>actions.answer(17,{actionId:'accept',content:{count:0,allow:true}}),{status:400});
  actions.answer(17,{actionId:'accept',content:{count:2,allow:false}});assert.deepEqual(writes.at(-1)[1],{action:'accept',content:{count:2,allow:false},_meta:null});
- enqueue('mcpServer/elicitation/request',{mode:'openai/userVerification'});assert.throws(()=>actions.answer(17,{actionId:'accept'}),{status:400});actions.answer(17,{actionId:'cancel'});assert.equal(writes.at(-1)[1].action,'cancel');
+ request=enqueue('mcpServer/elicitation/request',{mode:'openai/userVerification'});
+ assert.deepEqual(requestPresentation(request).actions.map(a=>a.id),['decline','cancel']);
+ const beforeVerification=writes.length,proof={credentialId:'untrusted-credential',signature:'untrusted-proof'};
+ assert.throws(()=>actions.answer(17,{actionId:'accept',content:proof}),error=>error.status===400&&error.message.includes('This remote client cannot complete identity verification.')&&!error.message.includes('terminal'));
+ assert.equal(writes.length,beforeVerification,'a client-authored proof must never reach native transport');
+ for(const actionId of ['decline','cancel']){
+  enqueue('mcpServer/elicitation/request',{mode:'openai/userVerification'});
+  actions.answer(17,{actionId,content:proof});assert.deepEqual(writes.at(-1),[17,{action:actionId,content:null,_meta:null}]);
+ }
  enqueue('execCommandApproval',{});actions.answer(17,{actionId:'2'});assert.equal(writes.at(-1)[1].decision.denied.rejection,'Declined by the user.');
  enqueue('item/tool/requestUserInput',{questions:[{id:'secret',isSecret:true}]});actions.answer(17,{answers:{secret:' spaced secret '}});assert.equal(writes.at(-1)[1].answers.secret.answers[0],' spaced secret ');
  enqueue('account/chatgptAuthTokens/refresh',{});assert.throws(()=>actions.answer(17,{decision:'accept'}),{status:400});

@@ -12,6 +12,8 @@ Native controls are qualified per method and runtime, rather than from a stored 
 
 Managed worktree creation, plugin installation, hook editing and native user-verification flows are not implemented remote operations. Goal controls remain deliberately disabled. Opening catalogs does not start model work, resume a session or grant tool authority. Full Codex TUI parity remains open; [native capability descriptors](../server/native-capabilities.mjs) and the qualification record define the supported subset.
 
+Native verification has a platform and transport boundary: pinned Codex 0.167 source supports its provider only on macOS, and permits status—but not enrollment, deletion or signing—over WebSocket/RemoteControl. A single status read on the existing Linux runtime returned `providerUnavailable`; opening a Linux terminal does not resolve that limitation. The next source candidate corrects the Android/web guidance while retaining decline/cancel. This wording is not yet part of installed 177. See [verification availability evidence](qualification/native-verification-availability-20261108.json).
+
 ## What the person can do
 
 | Situation | Available interaction | Mechanism and evidence |

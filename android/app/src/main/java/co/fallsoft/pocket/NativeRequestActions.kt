@@ -31,7 +31,7 @@ import org.json.JSONArray
         if(valid)OutlinedButton({runCatching{uriHandler.openUri(url)}.onFailure{Pocket.error="Could not open this link."}}){BilingualLabel("Open verification link")}
         WorkflowText(if(valid)"Complete the external step, then continue here." else "Unsupported link. Open this request in the terminal.",fontSize=12.sp,color=Muted)
     }
-    if(mode=="openai/userVerification")WorkflowText("Complete identity verification in the terminal. You can decline or cancel here.",color=Coral,fontSize=13.sp)
+    if(mode=="openai/userVerification")WorkflowText("This remote client cannot complete identity verification. A supported local Codex setup is required. You can decline or cancel here.",color=Coral,fontSize=13.sp)
     val schema=p.optJSONObject("requestedSchema")
     val properties=schema?.optJSONObject("properties")
     val fields=properties?.keys()?.asSequence()?.toList().orEmpty()

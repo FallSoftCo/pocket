@@ -26,6 +26,17 @@ view.update('host-a/thread-a',[secret]);document.querySelector('[data-question="
 const replacement={...secret,_pocketUI:{...secret._pocketUI,token:'new-connection-token'}};pending.set('6',replacement);view.update('host-a/thread-a',[replacement]);assert.equal(document.querySelector('[data-question="reused"]').value,'');
 document.querySelector('[data-question="reused"]').value='new secret';await click('Submit answers');assert.equal(writes.at(-1)[1].answers.reused.answers[0],'new secret');
 const nextRequest={...replacement,_pocketUI:{...replacement._pocketUI,token:'third-connection-token'}};pending.set('6',nextRequest);view.update('host-a/thread-a',[nextRequest]);assert.equal(document.querySelector('[data-question="reused"]').value,'');assert.equal(document.querySelector('[data-question="reused"]').disabled,false);
+for(const [id,label,actionId] of [[7,'Decline','decline'],[8,'Cancel request','cancel']]){
+ const verification=request(id,'mcpServer/elicitation/request',{mode:'openai/userVerification',message:'Confirm identity'});
+ view.update('host-a/thread-a',[verification]);
+ const holder=document.querySelector('#requests');
+ assert.ok(holder.textContent.includes('This remote client cannot complete identity verification.'));
+ assert.ok(!holder.textContent.includes('in the terminal'));
+ assert.deepEqual([...holder.querySelectorAll('button')].map(n=>n.textContent),['Decline','Cancel request']);
+ assert.equal(holder.querySelectorAll('input,textarea,select').length,0,'no raw proof entry or form submission');
+ const before=writes.length;await click(label,holder);
+ assert.equal(writes.length,before+1);assert.deepEqual(writes.at(-1),[id,{action:actionId,content:null,_meta:null}]);
+}
 let reads=0;const output=commandOutputButton({row:{turnId:'turn-a',itemId:'command-a'},threadId:'thread-a',create,button,api:async(path)=>{if(path==='/api/native/capabilities?threadId=thread-a')return {runtime:{version:'0.167.0'},features:{executionOutput:{state:'available'}}};reads++;assert.ok(path.includes('thread-a/command-output'));return {source:'Codex retained command output',revision:'one',text:reads===1?'FIRST':'SECOND',nextOffset:reads===1?5:null,totalCharacters:11};}});document.body.append(output);output.click();await tick();await click('Next page');assert.equal(document.querySelector('dialog pre').textContent,'SECOND');assert.ok(!document.querySelector('dialog').textContent.includes('FIRST'));await click('Close');
 let mutations=0;openTerminals({threadId:'original-thread',create,button,api:async(path,body)=>{assert.ok(path.includes('/original-thread/'));if(body){mutations++;assert.equal(body.processId,'exact-process');throw Error('Lost response');}return {data:[{processId:'exact-process',command:'sleep 60',cwd:'/work',cpuPercent:0}],nextCursor:null,features:{backgroundTerminals:{state:'available',mutation:{state:'available'}}}};}});await tick();await click('Terminate');assert.equal(mutations,0);await click('Confirm terminate');assert.equal(mutations,1);assert.ok(document.querySelector('dialog').textContent.includes('Termination unconfirmed'));await click('Refresh terminals');assert.equal(mutations,1);
 await click('Close');
@@ -38,4 +49,4 @@ for(const terminated of [false,true,null]){
  else assert.ok(text.includes('Termination unconfirmed.'));
  await click('Close');
 }
-console.log(JSON.stringify({ok:true,journeys:['offered structured approvals and duplicate send','MCP fields and focus during competing request','masked secret question and reconnected request identity','MCP titled multi-select and older gateway approvals','output replacement paging','confirmed exact terminal, explicit false and missing outcome, unknown mutation without replay']}));dom.window.close();
+console.log(JSON.stringify({ok:true,journeys:['offered structured approvals and duplicate send','MCP fields and focus during competing request','masked secret question and reconnected request identity','MCP titled multi-select and older gateway approvals','verification unavailable guidance with decline/cancel only','output replacement paging','confirmed exact terminal, explicit false and missing outcome, unknown mutation without replay']}));dom.window.close();

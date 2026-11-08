@@ -25,7 +25,7 @@ export function renderNativeRequest({request,box,create,action,send,controls,pri
  if(ui.kind==='permissions')box.append(create('pre','',JSON.stringify(p.permissions,null,2)));
  if(ui.kind==='approval')box.append(create('pre','',p.command?Array.isArray(p.command)?p.command.join(' '):p.command:JSON.stringify(p.fileChanges||p,null,2)));
  if(p.cwd)box.append(create('p','',`Working directory: ${p.cwd}`));
- if(p.mode==='openai/userVerification')box.append(create('p','','Complete identity verification in the terminal. You can decline or cancel here.'));
+ if(p.mode==='openai/userVerification')box.append(create('p','','This remote client cannot complete identity verification. A supported local Codex setup is required. You can decline or cancel here.'));
  for(const choice of ui.actions||[]){if(choice.detail)box.append(create('pre','',choice.detail));action(choice.label,()=>{
   let content;if(form?.tagName==='TEXTAREA')content=form.value;else if(form){content={};for(const [key,{input,field}] of Object.entries(form)){if(input.multiple){content[key]=[...input.selectedOptions].map(o=>o.value);continue;}if(input.value==='')continue;content[key]=['number','integer'].includes(field.type)?Number(input.value):field.type==='boolean'?input.value==='true':input.value;}}
   send({...ui.legacy?{decision:choice.id}:{actionId:choice.id},...(content!==undefined?{content}:{})});

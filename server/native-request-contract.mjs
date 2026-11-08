@@ -63,7 +63,7 @@ export function nativeRequestResult(request,body){
  }
  if(request.method==='mcpServer/elicitation/request'){
   const action=body.actionId||body.action;
-  if(!requestPresentation(request).actions.some(a=>a.id===action))fail('This elicitation needs the terminal verification flow.');
+  if(!requestPresentation(request).actions.some(a=>a.id===action))fail(p.mode==='openai/userVerification'?'This remote client cannot complete identity verification. A supported local Codex setup is required. Decline or cancel this request here.':'This action is not offered for this elicitation.');
   let content=null;
   if(action==='accept'&&p.mode!=='url'){
    content=body.content;
