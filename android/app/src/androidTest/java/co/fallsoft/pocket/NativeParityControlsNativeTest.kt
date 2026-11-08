@@ -128,9 +128,24 @@ class NativeParityControlsNativeTest {
         assertTrue("Exercise the current native timeline path",PocketTranscript.canonicalMode)
     }
 
-    @Test fun nativeControlsPreserveRequestSourceReceiptsAndDrafts(){
-        prepare()
+    private fun workflow(name:String,actions:()->Unit){
         try{
+            prepare()
+            actions()
+        }catch(failure:Throwable){
+            // Keep the original setup/assertion failure even if diagnostics fail.
+            runCatching{capture("$name-failure")}.exceptionOrNull()?.let{failure.addSuppressed(it)}
+            throw failure
+        }
+    }
+    private fun assertOriginalDraftsAndNoReplies(){
+        assertEquals("Alpha retained draft",prefs.getString("draft:$thread",null))
+        assertEquals("Beta retained draft",prefs.getString("environment:parity_beta:draft:$thread",null))
+        assertTrue("Inspection submitted a human reply",calls("/api/threads/$thread/reply").isEmpty())
+    }
+
+    @Test fun requestsKeepOriginalIdentityAndReturnToCommandOutput(){
+        workflow("requests"){
             // Same request ID is replaced while its secret field is being edited.
             qa("question",JSONObject().put("version",1));visible("Synthetic secret version 1")
             editor().performTextReplacement("synthetic-old-secret")
@@ -204,6 +219,22 @@ class NativeParityControlsNativeTest {
             compose.waitForIdle()
             compose.onNodeWithContentDescription("Close questions").assertIsNotDisplayed()
 
+            // Preserve the resolved-request drawer -> canonical command output
+            // transition. Full pagination and failure modes belong to execution.
+            qa("command",JSONObject().put("enabled",true))
+            await{compose.onAllNodesWithText("Runs").fetchSemanticsNodes().isNotEmpty()}
+            openOutput();await{outputStarts("Alpha retained output page one")}
+            val outputRead=calls("/api/threads/$thread/command-output","GET").single()
+            assertEquals("Alpha",outputRead.s("origin"))
+            assertTrue(outputRead.s("query").contains("turnId=alpha-turn")&&outputRead.s("query").contains("itemId=shared-command")&&outputRead.s("query").contains("offset=0"))
+            capture("01e-request-to-command-output");tap("Close",inDialog=true)
+            await{compose.onAllNodesWithText("Command output",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            assertOriginalDraftsAndNoReplies()
+        }
+    }
+
+    @Test fun executionInspectionAndTerminationStaySourceBound(){
+        workflow("execution"){
             // Expand the actual canonical command row and read real adapter
             // pages. Page replacement must reset scrolling without appending text.
             qa("command",JSONObject().put("enabled",true));qa("command",JSONObject().put("enabled",true),origin=1)
@@ -263,6 +294,20 @@ class NativeParityControlsNativeTest {
             assertEquals("Beta",calls("/api/threads/$thread/terminals/terminate").single().s("origin"))
             capture("02-terminal-origin")
 
+            // Preserve terminal-dialog invalidation when returning to another
+            // source's Context sheet, without carrying state into the next case.
+            navigate("workstation");absent("Terminate this process?");absent("Beta synthetic watcher")
+            compose.onAllNodes(hasText("Background terminals") and hasAnyAncestor(isDialog())).assertCountEquals(0)
+            contextTools();visible("Working directory: /synthetic/alpha");absent("Beta original request")
+            assertTrue("Inspection submitted a context operation",calls("/api/threads/$thread/conversation-operations").isEmpty())
+            capture("02c-terminal-to-context");tap("Close",inDialog=true)
+            await{compose.onAllNodesWithText("Conversation & workspace",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            assertOriginalDraftsAndNoReplies()
+        }
+    }
+
+    @Test fun contextRecoveryRevertAndSettingsPreserveDrafts(){
+        workflow("context"){
             // A turn boundary chosen in A cannot become a confirmation for B.
             navigate("workstation");contextTools()
             visible("Conversation & workspace");tap("Branch after selected turn");visible("Confirm conversation action")
@@ -311,6 +356,7 @@ class NativeParityControlsNativeTest {
             capture("06-native-settings")
             tap("Close",inDialog=true)
             assertEquals("Alpha edited draft\n\nAlpha original request",prefs.getString("draft:$thread",null))
-        }catch(failure:Throwable){runCatching{capture("failure")};throw failure}
+        }
     }
+
 }
