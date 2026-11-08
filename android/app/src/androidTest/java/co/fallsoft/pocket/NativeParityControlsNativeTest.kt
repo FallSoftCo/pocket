@@ -135,6 +135,13 @@ class NativeParityControlsNativeTest {
         }catch(failure:Throwable){
             // Keep the original setup/assertion failure even if diagnostics fail.
             runCatching{capture("$name-failure")}.exceptionOrNull()?.let{failure.addSuppressed(it)}
+            runCatching{
+                val folder=context.cacheDir.resolve("native-parity-$runId").apply{mkdirs()}
+                folder.resolve("$name-failure-stacks.txt").writeText(Thread.getAllStackTraces().entries
+                    .sortedBy{it.key.name}.joinToString("\n\n"){(thread,stack)->
+                        "${thread.name} (${thread.state})\n"+stack.joinToString("\n"){"  at $it"}
+                    })
+            }.exceptionOrNull()?.let{failure.addSuppressed(it)}
             throw failure
         }
     }
@@ -354,7 +361,42 @@ class NativeParityControlsNativeTest {
             tap("Skills");visible("Synthetic skill")
             assertTrue("Settings did not request the selected host",calls("/api/native/configuration","GET").any{it.s("origin")=="Alpha"&&it.s("query").contains("section=skills")})
             capture("06-native-settings")
-            tap("Close",inDialog=true)
+            tap("Plugins");visible("Installed plugins · 0–0 of 0")
+            tap("Browse catalog");visible("Catalog · 1–30 of 10074")
+            tap("Next plugin page");visible("Catalog · 31–60 of 10074")
+            compose.onAllNodes(hasText("catalog plugin",substring=true)).assertCountEquals(30)
+            absent("Alpha catalog plugin 00000");absent("Beta catalog plugin 00000")
+            compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performScrollTo().performTextInput("synthetic plugin")
+            tap("Search catalog");visible("Catalog · 1–1 of 1")
+            tap("Review plugin");visible("Plugin details")
+            assertTrue("Catalog page did not retain selected source",calls("/api/native/configuration","GET").any{it.s("origin")=="Alpha"&&it.s("query").contains("cursor=")})
+            tap("Review installation");visible("Synthetic plugin capability notice")
+            compose.onNode(hasText("Confirm installation") and hasClickAction()).assertIsNotEnabled()
+            compose.onNode(isToggleable() and hasAnyAncestor(isDialog())).performScrollTo().performClick()
+            // The same plugin identity exists on both hosts; this confirmation belongs to Alpha.
+            navigate("parity_beta");absent("Plugin details")
+            assertTrue("Source switch dispatched a plugin installation",calls("/api/native/configuration").isEmpty())
+            menu("Codex settings & agents");tap("Plugins");visible("Installed plugins · 0–0 of 0")
+            tap("Browse catalog");visible("Catalog · 1–30 of 10074")
+            tap("Next plugin page");visible("Catalog · 31–60 of 10074")
+            compose.onAllNodes(hasText("catalog plugin",substring=true)).assertCountEquals(30)
+            absent("Alpha catalog plugin 00000");absent("Beta catalog plugin 00000")
+            compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performScrollTo().performTextInput("synthetic plugin")
+            tap("Search catalog");visible("Catalog · 1–1 of 1")
+            tap("Review plugin");visible("Plugin details")
+            tap("Review installation")
+            compose.onNode(isToggleable() and hasAnyAncestor(isDialog())).performScrollTo().performClick()
+            tap("Confirm installation")
+            visible("Installation acknowledged. Some apps need authentication. Host authentication may still be pending. Readiness is unverified.")
+            val installation=calls("/api/native/configuration").single()
+            assertEquals("Beta",installation.s("origin"));assertEquals(thread,installation.getJSONObject("input").s("threadId"))
+            assertTrue(installation.getJSONObject("input").optBoolean("confirmInterstitial"))
+            assertTrue(installation.getJSONObject("input").s("attemptId").isNotBlank())
+            tap("Reload plugin details")
+            compose.onNodeWithText("Apps requiring authentication: Synthetic connector").performScrollTo().assertIsDisplayed()
+            capture("06b-plugin-auth-pending")
+            tap("Back to plugins");tap("Close",inDialog=true)
+            navigate("workstation")
             assertEquals("Alpha edited draft\n\nAlpha original request",prefs.getString("draft:$thread",null))
         }
     }

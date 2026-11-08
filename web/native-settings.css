@@ -1,6 +1,18 @@
-.native-settings{width:min(48rem,calc(100vw - 2rem));max-height:85dvh;overflow:auto;color:inherit;background:var(--paper,#171b21);border:1px solid currentColor;border-radius:16px;padding:20px}
+.native-settings{width:min(48rem,calc(100vw - 2rem));max-height:85dvh;box-sizing:border-box;overflow:hidden;color:inherit;background:var(--paper,#171b21);border:1px solid currentColor;border-radius:16px;padding:20px}
 .native-settings nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
 .native-settings article{border-top:1px solid #7775;padding:12px 0;overflow-wrap:anywhere}
 .native-settings p{white-space:pre-wrap;overflow-wrap:anywhere}
 .native-settings button{min-height:44px;margin:4px}
 .native-settings details{padding:8px 0}
+
+/* One scroll region includes heading/status/navigation so short landscapes
+   cannot let fixed headings consume the catalog viewport. Actions stay outside. */
+.native-settings[open]{display:flex;flex-direction:column}
+.native-settings-scroll{overflow:auto;min-height:0;flex:1 1 auto;overscroll-behavior:contain}
+.native-settings>footer:empty{display:none}
+.native-settings.plugin-catalog>footer{display:flex;flex:none;gap:4px}
+.native-settings.plugin-catalog>footer:empty{display:none}
+.native-settings.plugin-catalog>footer button{flex:1 1 0;min-width:0;white-space:normal}
+.native-settings>button{align-self:flex-end;flex-shrink:0}
+.native-settings [data-plugin-browser] form{display:flex;flex-wrap:wrap;gap:4px}
+.native-settings [data-plugin-browser] input{min-width:0;max-width:100%;flex:1 1 10rem;min-height:44px}

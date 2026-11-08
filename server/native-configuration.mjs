@@ -1,3 +1,4 @@
+import {NativePlugins} from './native-plugins.mjs';
 import {describeNativeCapabilities,nativeVersion,supportsNativeMethod,observedRuntimeSettings} from './native-capabilities.mjs';
 import {catalogName,sessionIdentity} from './session-catalog.mjs';
 
@@ -9,9 +10,9 @@ const sections=new Set(['settings','skills','mcp','apps','plugins','hooks','agen
 const mutationFor={settings:'config/value/write',skills:'skills/config/write',mcp:'config/value/write',apps:'config/value/write'};
 const methodFor={settings:'config/read',skills:'skills/list',mcp:'mcpServerStatus/list',apps:'app/installed',plugins:'plugin/installed',hooks:'hooks/list',agents:'thread/list'};
 
-// Installed catalogs only: never refresh accounts, execute tools, run hooks, or probe writes.
+// User-opened native catalogs. Catalog RPCs may refresh native caches; never use writes as probes.
 export class NativeConfiguration {
- constructor({codex,savedSettings=()=>null,requestedPermissions=()=>null,host=''}={}){Object.assign(this,{codex,savedSettings,requestedPermissions,host});}
+ constructor({codex,db,admissions,savedSettings=()=>null,requestedPermissions=()=>null,accountEvidence=()=>null,host=''}={}){Object.assign(this,{codex,savedSettings,requestedPermissions,host});if(db)this.plugins=new NativePlugins({db,codex,admissions,accountEvidence,context:id=>this.context(id)});}
  async context(threadId){
   await this.codex.connect();
   if(!threadId)return null;
@@ -20,11 +21,12 @@ export class NativeConfiguration {
   return thread;
  }
  descriptor(threadId){return {...describeNativeCapabilities({version:nativeVersion(this.codex),userAgent:this.codex.initializeResult?.userAgent,connected:this.codex.ready!==false}),host:this.host,threadId:threadId||null,requested:{turnSettings:threadId?this.savedSettings(threadId):null,permissions:threadId?this.requestedPermissions(threadId):null},observed:observedRuntimeSettings(this.codex,threadId)};}
- async inspect({threadId,section='settings',cursor}={}){
+ async inspect({threadId,section='settings',cursor,pluginView,query,refresh}={}){
   if(!sections.has(section))throw fail('Unknown native settings section.');
   if(cursor!==undefined&&(typeof cursor!=='string'||cursor.length>4096))throw fail('Invalid catalog cursor.');
-  const thread=await this.context(threadId),descriptor=this.descriptor(threadId);
-  if(!supportsNativeMethod(this.codex,methodFor[section]))return {...descriptor,section,state:'unavailable',reason:descriptor.features.configuration.reason,items:[]};
+  let thread;try{let source;if(section==='plugins'&&this.plugins){await this.codex.connect();source=this.plugins.capture();}thread=await this.context(threadId);if(source)this.plugins.check(source);}catch(error){if(section!=='plugins'||!this.plugins||error.status===409)throw error;return {...this.descriptor(threadId),section,...unavailable(error),items:[],receipts:this.plugins.recent()};}
+  const descriptor=this.descriptor(threadId);
+  if(!supportsNativeMethod(this.codex,methodFor[section]))return {...descriptor,section,state:'unavailable',reason:descriptor.features.configuration.reason,items:[],...(section==='plugins'&&this.plugins?{receipts:this.plugins.recent()}:{})};
   const cwd=thread?.cwd,scope=cwd?{cwds:[cwd]}:{},canConfigure=!!mutationFor[section]&&supportsNativeMethod(this.codex,mutationFor[section]);
   try{
    let result,items=[],extra={};
@@ -46,6 +48,10 @@ export class NativeConfiguration {
     result=await this.codex.call('app/installed',{...(threadId?{threadId}:{}),forceRefresh:false});
     items=(result.apps||[]).map(a=>({...pick(a,['id','enabled','callable']),name:a.runtimeName||a.id,configurable:canConfigure&&safeId(a.id)}));
    }else if(section==='plugins'){
+    if(this.plugins){
+     const browseAvailable=supportsNativeMethod(this.codex,'plugin/list'),page=await this.plugins.catalogPage({threadId,cwd,view:pluginView,query,cursor,refresh});
+     return {...descriptor,section,state:'available',...page,items:page.items.map(item=>({...item,inspectable:browseAvailable&&item.inspectable===true})),browseAvailable,readOnly:!browseAvailable,receipts:this.plugins.recent(),notice:browseAvailable?'Catalog snapshot for browsing only. Review fresh details before changing a plugin; installed does not mean ready.':'Installed plugin state only. Read-only inspection on this Codex 0.163 runtime. Configuration changes remain unavailable.'};
+    }
     result=await this.codex.call('plugin/installed',scope);
     items=(result.marketplaces||[]).flatMap(m=>(m.plugins||[]).filter(p=>p.installed).map(p=>({...pick(p,['id','name','enabled','installed','availability','disabledReason','version','localVersion']),marketplace:m.name})));
     extra={errorCount:result.marketplaceLoadErrors?.length||0,notice:'Installed plugin state only. Installation and removal remain in Codex; disabling a thread plugin is not yet enforced by this native version.'};
@@ -62,7 +68,7 @@ export class NativeConfiguration {
    }
    if(descriptor.runtime.compatibilityProfile)extra.notice=[extra.notice,'Read-only inspection on this Codex 0.163 runtime. Configuration changes remain unavailable.'].filter(Boolean).join(' ');
    return {...descriptor,section,state:'available',items,...extra,readOnly:!canConfigure};
-  }catch(error){if(error.status===400||error.status===409)throw error;return {...descriptor,section,...unavailable(error),items:[]};}
+  }catch(error){if(error.pluginCatalog||error.status===400||error.status===409)throw error;return {...descriptor,section,...unavailable(error),items:[],...(section==='plugins'&&this.plugins?{receipts:this.plugins.recent()}:{})};}
  }
  async configure({threadId,section,id,enabled,expectedVersion}={}){
   if(typeof enabled!=='boolean'||!['skills','apps','mcp'].includes(section))throw fail('Only explicit skill, app or MCP enablement changes are supported.');
@@ -89,7 +95,9 @@ export function registerNativeConfigurationRoutes(app,{codex,route,requireId,...
  const native=new NativeConfiguration({codex,...options});
  const threadId=req=>req.query.threadId?requireId(req.query.threadId):undefined;
  app.get('/api/native/capabilities',route(async(req,res)=>{await codex.connect();res.json(native.descriptor(threadId(req)));}));
- app.get('/api/native/configuration',route(async(req,res)=>res.json(await native.inspect({threadId:threadId(req),section:req.query.section||'settings',cursor:req.query.cursor}))));
- app.post('/api/native/configuration',route(async(req,res)=>res.json(await native.configure({...req.body,threadId:req.body.threadId?requireId(req.body.threadId):undefined}))));
+ app.get('/api/native/configuration',route(async(req,res)=>res.json(await native.inspect({threadId:threadId(req),section:req.query.section||'settings',cursor:req.query.cursor,pluginView:req.query.pluginView,query:req.query.query,refresh:req.query.refresh}))));
+ app.get('/api/native/plugins/receipts',route(async(req,res)=>res.json({receipts:native.plugins?.recent(typeof req.query.key==='string'?req.query.key:undefined)||[]})));
+ app.get('/api/native/plugins/detail',route(async(req,res)=>{if(!native.plugins)throw fail('Plugin management is unavailable.',409);const {_origin,_snapshot,...view}=await native.plugins.detail({threadId:threadId(req),key:req.query.key});res.json(view);}));
+ app.post('/api/native/configuration',route(async(req,res)=>{const body={...req.body,threadId:req.body.threadId?requireId(req.body.threadId):undefined};if(body.section==='plugins'){if(!native.plugins)throw fail('Plugin management is unavailable.',409);return res.json(await native.plugins.mutate(body,req.humanPrincipal));}res.json(await native.configure(body));}));
  return native;
 }

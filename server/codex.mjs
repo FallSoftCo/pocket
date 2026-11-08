@@ -84,14 +84,31 @@ export class Codex extends EventEmitter {
       }
     });
   }
-  call(method, params = {}) {
-    return new Promise((resolve, reject) => {
-      if (!this.canSend()) return reject(this.problem||codexConnectionError('CODEX_UNAVAILABLE'));
-      const id = this.seq++;
-      const timer = setTimeout(() => { this.pending.delete(id); reject(codexConnectionError('CODEX_TIMEOUT')); }, 25000);
-      this.pending.set(id, {resolve, reject, timer,method}); this.send({id, method, params});
+  // Plugin mutation lifetime is distinct from the caller's ordinary 25 s wait.
+  // Native globally serializes these writes: retain at most one original reply.
+  operationCapacityAvailable(){return ![...this.pending.values()].some(p=>p.operation);}
+  callOperation(method,params,onOutcome){
+    if(!['plugin/install','plugin/uninstall'].includes(method)||typeof onOutcome!=='function'||!this.operationCapacityAvailable())return Promise.reject(Error('Native operation observation is unavailable.'));
+    return this.callPending(method,params,onOutcome);
+  }
+  call(method,params={}){return this.callPending(method,params);}
+  callPending(method,params,onOutcome=null){
+    return new Promise((resolve,reject)=>{
+      const observe=outcome=>{if(onOutcome)try{onOutcome(outcome);}catch{console.error('CODEX_OPERATION_RECEIPT_UPDATE_FAILED');}};
+      const rejected=error=>{observe({error,terminal:!!error.rpc});reject(error);};
+      if(!this.canSend())return rejected(this.problem||codexConnectionError('CODEX_UNAVAILABLE'));
+      const id=this.seq++;
+      const timer=setTimeout(()=>{
+        // UI expiry never cancels or resubmits an admitted mutation. Its one
+        // observer remains until the original response or transport closure.
+        if(!onOutcome)this.pending.delete(id);
+        reject(codexConnectionError('CODEX_TIMEOUT'));
+      },25000);
+      this.pending.set(id,{resolve:result=>{observe({result,terminal:true});resolve(result);},reject:rejected,timer,method,operation:!!onOutcome});
+      try{this.send({id,method,params});}catch(error){clearTimeout(timer);this.pending.delete(id);rejected(error);}
     });
   }
+
   answer(id, result) {
     if (!this.ready) throw this.problem||codexConnectionError('CODEX_UNAVAILABLE');
     this.send({id, result});

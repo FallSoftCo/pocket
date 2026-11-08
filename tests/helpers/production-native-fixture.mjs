@@ -1,3 +1,4 @@
+import {pluginReply,pluginAccountReply} from './native-plugin-fixture.mjs';
 // Real server/index composition; the only substituted authority is native RPC.
 // All data and credentials are disposable. No inherited provider/runtime config.
 import assert from 'node:assert/strict';
@@ -52,6 +53,7 @@ export async function productionFixture(t,{name='Source A'}={}){
   calls.push(m);
   try{
    const paramsSchema={initialize:'InitializeParams','thread/list':'ThreadListParams','thread/read':'ThreadReadParams','thread/timeline/list':'ThreadTimelineListParams','thread/turns/list':'ThreadTurnsListParams','thread/resume':'ThreadResumeParams','thread/items/list':'ThreadItemsListParams'}[m.method];if(paramsSchema)wireCheck(paramsSchema,m.params);
+   if(m.method==='account/rateLimits/read')return send(ws,m.id,pluginAccountReply(m.params));
    if(m.method==='initialize')return send(ws,m.id,{userAgent:'codex/0.167.0',codexHome:join(dir,'home'),platformFamily:'unix',platformOs:'linux'},'InitializeResponse');
    if(m.method==='thread/list')return send(ws,m.id,{data:[f.thread],nextCursor:null},'ThreadListResponse');
    if(m.method==='thread/read')return send(ws,m.id,{thread:f.thread},'ThreadReadResponse');
@@ -98,6 +100,7 @@ export async function productionFixture(t,{name='Source A'}={}){
     state.enabled=m.params.value;state.version++;
     return send(ws,m.id,{status:'ok',version:version(),filePath,overriddenMetadata:null},'ConfigWriteResponse');
    }
+   if(f.plugins&&m.method.startsWith('plugin/')){const reply=await pluginReply(f.plugins,m.method,m.params);if(reply){if(reply.drop){ws.terminate();return;}return ws.send(JSON.stringify({id:m.id,...reply}));}}
    // Startup probes are explicitly unsupported, never permissive empty success.
    if(!['account/read','account/rateLimits/read','model/list','thread/loaded/list'].includes(m.method))faults.push(`Unexpected native method ${m.method}`);
    ws.send(JSON.stringify({id:m.id,error:{code:-32601,message:`${m.method} not supported by bounded fixture`}}));

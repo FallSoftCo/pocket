@@ -1,6 +1,8 @@
 // Disposable Android UI authority. No provider, shell, model or host operations.
 // PORT and PORT+1 must be reversed to emulator loopback 18880 and 18881.
 import http from 'node:http';
+import fs from 'node:fs';
+import {PluginCatalogPages} from '../../server/native-plugin-catalog.mjs';
 import crypto from 'node:crypto';
 import {projectNativeTimeline} from '../../server/native-timeline.mjs';
 import {NativeExecution} from '../../server/native-execution.mjs';
@@ -9,8 +11,15 @@ import {requestPresentation} from '../../server/native-request-contract.mjs';
 
 const port=Number(process.env.PORT||19991);
 const threadId='parity-thread',forkId='parity-fork',otherId='parity-other';
-const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false}));
+const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false,pluginInstalled:false,pluginReceipts:[]}));
 const calls=[],nativeAnswers=[],nativeReads=[];
+const pluginCount=10074,pluginKey=crypto.createHash('sha256').update('synthetic-plugin').digest('hex');
+for(const origin of origins)origin.pluginCatalog=new PluginCatalogPages({secret:'synthetic-catalog-'+origin.name,capture:()=>({origin:origin.name,installed:origin.pluginInstalled}),check:source=>{if(source.origin!==origin.name||source.installed!==origin.pluginInstalled)throw Object.assign(Error('Synthetic plugin catalog changed'),{status:409});},load:async view=>{
+ nativeReads.push({origin:origin.name,method:view==='browse'?'plugin/list':'plugin/installed'});
+ const rows=Array.from({length:pluginCount},(_,index)=>index===pluginCount-1?{id:'synthetic-plugin',key:pluginKey,name:origin.name+' synthetic plugin',inspectable:true,installed:origin.pluginInstalled}:{id:'synthetic-catalog-'+index,key:crypto.createHash('sha256').update('synthetic-catalog-'+index).digest('hex'),name:origin.name+' catalog plugin '+String(index).padStart(5,'0'),inspectable:false,installed:false});
+ return {entries:rows.filter(item=>view==='browse'||item.installed).map(item=>({item})),errorCount:0};
+}});
+
 function executionFeatures(origin){
  if(origin.terminalMode==='missing')return undefined;
  const readOnly=origin.terminalMode==='read-only'||origin.outputMode==='unavailable';
@@ -50,6 +59,13 @@ for(const origin of origins){
   res.setHeader('Content-Type','application/json');
   if(!authorized(req)){res.writeHead(401).end('{"error":"Synthetic credential required"}');return;}
   const url=new URL(req.url,'http://localhost'),path=url.pathname;
+  // Retain transport completion separately from request admission. A received
+  // GET alone cannot explain a native dialog that remains in its loading state.
+  if(process.env.NEXTCOMP_QA_LOG&&path==='/api/native/plugins/detail'){
+   const requestId=crypto.randomUUID(),startedAt=Date.now();
+   const trace=phase=>fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify({at:Date.now(),requestId,origin:origin.name,path,phase,elapsedMs:Date.now()-startedAt,status:res.statusCode,writableFinished:res.writableFinished})+'\n',{mode:0o600});
+   trace('request');res.once('finish',()=>trace('finish'));res.once('close',()=>trace('close'));
+  }
   let raw='';for await(const chunk of req)raw+=chunk;
   const input=raw?JSON.parse(raw):{};
   calls.push({origin:origin.name,path,query:url.search,method:req.method,input});
@@ -97,9 +113,21 @@ for(const origin of origins){
   else if(path.endsWith('/terminals'))body={data:[{processId:'shared-process-id',command:`${origin.name} synthetic watcher`,cwd:metadata(origin).cwd,cpuPercent:0}],nextCursor:null,features:executionFeatures(origin)};
   else if(path.endsWith('/terminals/terminate')&&executionFeatures(origin)?.backgroundTerminals?.mutation?.state!=='available'){res.writeHead(409).end('{"error":"Synthetic runtime does not permit termination."}');return;}
   else if(path.endsWith('/terminals/terminate'))body={ok:true,terminated:true};
+  else if(path==='/api/native/plugins/detail'){
+   const key=crypto.createHash('sha256').update('synthetic-plugin').digest('hex'),reviewToken=crypto.createHash('sha256').update(origin.name+':'+origin.pluginInstalled).digest('hex');
+   if(url.searchParams.get('key')!==key){res.writeHead(409).end('{"error":"Synthetic plugin identity mismatch"}');return;}
+   body={threadId,reviewToken,detail:{key,name:origin.name+' synthetic plugin',marketplace:'Synthetic marketplace',installed:origin.pluginInstalled,enabled:origin.pluginInstalled,installPolicy:'AVAILABLE',authPolicy:'ON_INSTALL',mustShowInstallationInterstitial:true,description:'Synthetic plugin capability notice',skills:[],hooks:[],mcpServers:['fixture-mcp'],apps:[],links:{},capabilities:['Synthetic task inspection']},canInstall:!origin.pluginInstalled,canUninstall:origin.pluginInstalled,effects:'Installation may open a browser on the host and save credentials. This remote client cannot continue host authentication. Installation does not establish readiness.',removalEffects:'Removal leaves bundled app authorization unchanged.',receipts:origin.pluginReceipts};
+  }
+  else if(path==='/api/native/plugins/receipts')body={receipts:origin.pluginReceipts};
+  else if(path==='/api/native/configuration'&&req.method==='POST'){
+   const key=crypto.createHash('sha256').update('synthetic-plugin').digest('hex'),reviewToken=crypto.createHash('sha256').update(origin.name+':'+origin.pluginInstalled).digest('hex');
+   if(input.section!=='plugins'||input.action!=='install'||input.key!==key||input.threadId!==threadId||input.reviewToken!==reviewToken||input.confirmEffects!==true||input.confirmInterstitial!==true||!input.attemptId){res.writeHead(409).end('{"error":"Synthetic source or explicit plugin confirmation missing"}');return;}
+   origin.pluginInstalled=true;body={attemptId:input.attemptId,key,name:origin.name+' synthetic plugin',action:'install',state:'acknowledged',readiness:'unverified',appsNeedingAuth:[{id:'fixture-app',name:'Synthetic connector'}],notice:'Installation acknowledged. Some apps need authentication. Host authentication may still be pending. Readiness is unverified.'};origin.pluginReceipts.push(body);
+  }
   else if(path==='/api/native/configuration'){
    const section=url.searchParams.get('section')||'settings';
-   body={state:'available',host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:[],features:{}};
+   let page=null;if(section==='plugins'){try{page=await origin.pluginCatalog.page({threadId,cwd:metadata(origin).cwd,view:url.searchParams.get('pluginView')||undefined,query:url.searchParams.get('query')||'',cursor:url.searchParams.get('cursor')||undefined,refresh:url.searchParams.get('refresh')||undefined});}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}}
+   body={state:'available',section,host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:section==='plugins'?page.items:[],features:{},...(page?{...page,browseAvailable:true,readOnly:false,receipts:origin.pluginReceipts}:{})};
   }
   else if(path==='/api/notifications'||path==='/api/attention'||path==='/api/activity')body={notifications:[],items:[]};
   else if(path==='/api/app/update')body={available:false};

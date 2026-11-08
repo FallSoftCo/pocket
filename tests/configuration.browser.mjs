@@ -10,6 +10,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {createWebClient} from '../server/web-client.mjs';
 import {WebEnvironments,scopedId} from '../server/web-environments.mjs';
 import {productionFixture,nativePage,until} from './helpers/production-native-fixture.mjs';
+import {pluginState} from './helpers/native-plugin-fixture.mjs';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
 
@@ -20,15 +21,15 @@ export async function qualifyConfiguration({context,outputDir,negativeControl=fa
  const save=()=>writeFile(join(output,'receipt.json'),JSON.stringify(receipt,null,2)+'\n');await save();
  try{
   const t={after:fn=>cleanup.push(fn)};a=await productionFixture(t,{name:'Local configuration fixture'});b=await productionFixture(t,{name:'Remote configuration fixture'});
-  for(const [f,label]of [[a,'Local'],[b,'Remote']]){f.page=nativePage(label+' retained answer');f.configuration={id:'app_shared',name:label+' connector',version:1,enabled:true};}
+  for(const [f,label]of [[a,'Local'],[b,'Remote']]){f.page=nativePage(label+' retained answer');f.configuration={id:'app_shared',name:label+' connector',version:1,enabled:true};f.plugins={...pluginState(),catalogSize:10074};}
   const environments=new WebEnvironments({secure:false});
   const allocator=http.createServer();await new Promise(r=>allocator.listen(0,'127.0.0.1',r));const port=allocator.address().port;await new Promise(r=>allocator.close(r));
   host='nextcomp-config-'+randomUUID()+'.localhost';const origin=`http://${host}:${port}`;
   gateway=createWebClient({backend:a.base,origin,secure:false,environments});
   gateway.server.prependListener('request',(req,res)=>{const record={phase,method:req.method,path:req.url};requests.push(record);let body='';req.on('data',c=>body+=c);req.on('end',()=>{if(body)record.body=JSON.parse(body);});res.on('finish',()=>record.status=res.statusCode);});
   await new Promise(r=>gateway.server.listen(port,'127.0.0.1',r));cleanup.push(async()=>{for(const ws of gateway.sockets.clients)ws.terminate();gateway.server.closeAllConnections();await new Promise(r=>gateway.server.close(r));});
-  receipt.inputSha256={};for(const file of ['web/app.mjs','web/native-settings.mjs','server/native-configuration.mjs','server/web-client.mjs','server/web-environments.mjs','tests/configuration.browser.mjs','tests/helpers/production-native-fixture.mjs','tests/fixtures/native-contract-0167/schemas.json'])receipt.inputSha256[file]=hash(await readFile(new URL('../'+file,import.meta.url)));
-  page=await context.newPage();page.setDefaultTimeout(8000);await page.emulateMedia({reducedMotion:'reduce'});page.on('pageerror',e=>pageErrors.push(e.message));
+  receipt.inputSha256={};for(const file of ['web/app.mjs','web/native-settings.mjs','web/native-settings.css','web/native-plugin-browser.mjs','web/native-plugins.mjs','server/native-configuration.mjs','server/native-plugin-catalog.mjs','server/native-plugins.mjs','server/web-client.mjs','server/web-environments.mjs','tests/configuration.browser.mjs','tests/helpers/production-native-fixture.mjs','tests/helpers/native-plugin-fixture.mjs','tests/fixtures/native-contract-0167/schemas.json','tests/fixtures/native-contract-0167/plugins.json'])receipt.inputSha256[file]=hash(await readFile(new URL('../'+file,import.meta.url)));
+  page=await context.newPage();page.setDefaultTimeout(8000);await page.setViewportSize({width:1280,height:360});await page.emulateMedia({reducedMotion:'reduce'});page.on('pageerror',e=>pageErrors.push(e.message));
   if(negativeControl)await page.route(origin+'/native-settings.mjs',async route=>{
    const response=await route.fetch(),source=await response.text(),needle='   if(!this.current(origin))return;\n   const result=';
    assert.equal(hash(source),receipt.inputSha256['web/native-settings.mjs']);assert.equal(source.split(needle).length,2);
@@ -94,10 +95,75 @@ export async function qualifyConfiguration({context,outputDir,negativeControl=fa
   assert.equal(posts().length,2,'CONFIGURATION_STALE_CLICK_MUST_NOT_WRITE');
   assert.equal(nativeWrites(a).length,0);assert.equal(nativeWrites(b).length,1);assert.equal(a.configuration.enabled,true);assert.equal(b.configuration.enabled,false);
   await dialog.getByRole('button',{name:'Enable for this environment',exact:true}).waitFor();
+  // Continue through the same actual settings dialog, gateway and native wire.
+  // Large catalogs must remain finite in the browser, not merely in a DOM shim.
+  phase='bounded-plugin-catalog';
+  const nativePlugins=(f,method)=>f.calls.filter(c=>c.method==='plugin/'+method);
+  const rows=dialog.locator('[data-plugin-row]');
+  await dialog.getByRole('button',{name:'Plugins',exact:true}).click();
+  await dialog.getByText('Installed plugins · 0–0 of 0',{exact:true}).waitFor();
+  assert.equal(await rows.count(),0);assert.equal(nativePlugins(b,'list').length,0);
+  await dialog.getByRole('button',{name:'Browse catalog',exact:true}).click();
+  await dialog.getByText('Catalog · 1–30 of 10074',{exact:true}).waitFor();
+  assert.equal(await rows.count(),30);assert.equal(nativePlugins(b,'list').length,1);
+  await page.screenshot({path:join(output,'plugins-catalog-short.png')});
+  await page.setViewportSize({width:390,height:844});
+  const pagerGeometry=await dialog.getByRole('button',{name:'Next plugin page',exact:true}).evaluate(n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,height:innerHeight,width:innerWidth};});
+  assert.ok(pagerGeometry.top>=0&&pagerGeometry.bottom<=pagerGeometry.height&&pagerGeometry.left>=0&&pagerGeometry.right<=pagerGeometry.width,'Plugin paging must be reachable without scrolling to the top');
+  await page.screenshot({path:join(output,'plugins-catalog-narrow.png')});
+  await dialog.getByRole('button',{name:'Next plugin page',exact:true}).click();
+  await dialog.getByText('Catalog · 31–60 of 10074',{exact:true}).waitFor();
+  assert.equal(await rows.count(),30);assert.equal(nativePlugins(b,'list').length,1,'Paging must reuse the original browsing snapshot');
+  assert.equal(await dialog.getByRole('heading',{name:'Catalog plugin 00000',exact:true}).count(),0,'Paging replaces earlier rows');
+  await page.setViewportSize({width:1440,height:900});
+  await rows.filter({has:page.getByRole('heading',{name:'Catalog plugin 00030',exact:true})}).getByRole('button',{name:'Review plugin',exact:true}).click();
+  await dialog.getByRole('button',{name:'Review installation',exact:true}).waitFor();
+  assert.equal(await dialog.getByRole('heading',{name:'Catalog plugin 00030',exact:true}).count(),1);
+  assert.equal(nativePlugins(b,'read').at(-1).params.pluginName,'plugins_bulk_00030');
+  await dialog.getByRole('button',{name:'Back to plugins',exact:true}).click();
+  await dialog.getByLabel('Search plugins',{exact:true}).fill('fixture');
+  const beforeSearch=nativePlugins(b,'list').length;
+  await dialog.getByRole('button',{name:'Search catalog',exact:true}).click();
+  await dialog.getByText('Catalog · 1–1 of 1',{exact:true}).waitFor();
+  assert.equal(await rows.count(),1);assert.equal(nativePlugins(b,'list').length,beforeSearch,'Search must reuse the same bounded snapshot');
+  await rows.getByRole('button',{name:'Review plugin',exact:true}).click();
+  await dialog.getByRole('button',{name:'Review installation',exact:true}).click();
+  assert.equal(await dialog.getByRole('button',{name:'Confirm installation',exact:true}).isDisabled(),true);
+  await dialog.getByRole('checkbox').check();
+  phase='synthetic-plugin-install';await dialog.getByRole('button',{name:'Confirm installation',exact:true}).click();
+  await until(()=>feedback.innerText(),s=>s.includes('Installation acknowledged.'),'rendered synthetic plugin acknowledgement');
+  assert.match(await feedback.innerText(),/Readiness is unverified/);
+  assert.equal(nativePlugins(a,'install').length,0);assert.equal(nativePlugins(b,'install').length,1);
+  assert.equal(nativePlugins(b,'install')[0].params.pluginName,'plugins_fixture');
+  const pluginPosts=posts().filter(r=>r.body?.section==='plugins');assert.equal(pluginPosts.length,1);assert.equal(pluginPosts[0].status,200);assert.equal(pluginPosts[0].path,configurationPath);assert.equal(pluginPosts[0].body.threadId,remote);
+  await dialog.getByRole('button',{name:'Reload plugin details',exact:true}).click();
+  await dialog.getByRole('button',{name:'Review removal',exact:true}).waitFor();
+  await dialog.getByRole('button',{name:'Back to plugins',exact:true}).click();
+  await dialog.getByRole('button',{name:'Installed plugins',exact:true}).click();
+  await dialog.getByText('Installed plugins · 1–1 of 1',{exact:true}).waitFor();
+  assert.equal(await rows.count(),1);
+  await page.setViewportSize({width:390,height:844});
+  const geometry=await dialog.evaluate(n=>{const r=n.getBoundingClientRect();return {left:r.left,right:r.right,width:innerWidth,scrollWidth:n.scrollWidth,clientWidth:n.clientWidth};});
+  assert.ok(geometry.left>=0&&geometry.right<=geometry.width+1&&geometry.scrollWidth<=geometry.clientWidth+1,'Settings dialog must remain within the narrow viewport');
+  await page.screenshot({path:join(output,'plugins-narrow.png')});
+  await page.setViewportSize({width:1440,height:900});
+  await page.screenshot({path:join(output,'plugins-desktop.png')});
+  await close();await select(local,'Local');assert.equal(await page.locator('#draft').inputValue(),'Local draft remains original');
+  await select(remote,'Remote');assert.equal(await page.locator('#draft').inputValue(),'Remote draft remains original');
+  receipt.pluginCatalog={nativeEntries:10074,maxRenderedRows:30,pageReplacement:true,searchReusesSnapshot:true,selectedNativeId:'plugins_bulk_00030',syntheticInstallCount:1,originalEnvironment:true,narrowGeometry:geometry,pagerGeometry,providerCalls:0};
   for(const f of [a,b]){f.assertClean();assert.equal(f.calls.some(c=>/^(?:turn\/|review\/|thread\/(?:start|resume|fork|compact)|.*terminate)/.test(c.method)),false);}
   assert.ok(requests.filter(r=>r.method==='POST').every(r=>['/web/pair','/web/tailnet-login',configurationPath].includes(r.path)||r.path.endsWith('/catchup/read')),'No unrelated mutations');
   assert.deepEqual(pageErrors,[]);receipt.state='passed';receipt.draftsPreserved=true;receipt.workSubmissions=0;return receipt;
- }catch(error){receipt.state='failed';receipt.error=error.message;receipt.stack=error.stack;throw error;}
+ }catch(error){
+  receipt.state='failed';receipt.error=error.message;receipt.stack=error.stack;
+  if(page&&!page.isClosed()){
+   try{
+    await page.screenshot({path:join(output,'failure.png')});
+    receipt.failureGeometry=await page.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight},nodes:[...document.querySelectorAll('.native-settings,.native-settings>* , .native-settings [data-plugin-browser]>*')].map(n=>{const r=n.getBoundingClientRect(),s=getComputedStyle(n);return {tag:n.tagName,text:n.innerText?.slice(0,180),rect:{x:r.x,y:r.y,width:r.width,height:r.height},scrollHeight:n.scrollHeight,clientHeight:n.clientHeight,display:s.display,overflow:s.overflow,flex:s.flex};})}));
+   }catch(capture){receipt.failureCaptureError=capture.message;}
+  }
+  throw error;
+ }
  finally{
   releaseSettings?.();receipt.pageErrors=pageErrors;
   await writeFile(join(output,'http.json'),JSON.stringify(requests,null,2)+'\n');
